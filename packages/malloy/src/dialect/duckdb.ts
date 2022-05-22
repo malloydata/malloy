@@ -29,6 +29,40 @@ import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = "-- hack: split on this";
 
+/* We could do JOIN UNNEST this way...
+
+  WITH data as (
+    SELECT UNNEST([
+      {'who':'lloyd'
+        , bikes: [
+          {'bike':'masi', weight: 10},
+          {'bike':'vado', weight: 20},
+          {'bike':'superdelite', weight: 20}
+        ],
+        bags: [
+          {'bag':'paper', weight: 10},
+          {'bag':'plastic', weight: 20},
+          {'bag':'rubber', weight: 20}
+        ]
+      }
+    ]) d
+  )
+  SELECT
+    d.who,
+    d.bikes[bike_index.a].bike,
+    d.bags[bag_index.a].bag,
+    m.a
+    from data
+  CROSS JOIN (select max(array_length(d.bikes)) as a FROM data) as m
+  CROSS JOIN (SELECT UNNEST(generate_series(1,10000,1)) as a) as bike_index
+  CROSS JOIN (SELECT UNNEST(generate_series(1,10000,1)) as a) as bag_index
+  WHERE
+    bike_index.a <= array_length(d.bikes)
+    AND bag_index.a <= array_length(d.bags)
+    ;
+
+ */
+
 const castMap: Record<string, string> = {
   number: "double precision",
   string: "varchar",
@@ -165,10 +199,11 @@ export class DuckDBDialect extends Dialect {
     return "(SELECT UNNEST(_param) as base)";
   }
 
-  sqlCreateFunction(id: string, funcText: string): string {
-    return `DROP MACRO ${id}; \n${hackSplitComment}\n CREATE MACRO ${id}(_param) AS (\n${indent(
-      funcText
-    )}\n);\n${hackSplitComment}\n`;
+  sqlCreateFunction(_id: string, _funcText: string): string {
+    return "FORCE FAIL";
+    //return `DROP MACRO ${id}; \n${hackSplitComment}\n CREATE MACRO ${id}(_param) AS (\n${indent(
+    //   funcText
+    // )}\n);\n${hackSplitComment}\n`;
   }
 
   sqlCreateFunctionCombineLastStage(lastStageName: string): string {
@@ -269,14 +304,21 @@ export class DuckDBDialect extends Dialect {
     }
   }
 
+  // sqlSumDistinct(key: string, value: string): string {
+  //   // return `sum_distinct(list({key:${key}, val: ${value}}))`;
+  //   return `(
+  //     fail -- force the query for fail until the bug is fixed.
+  //     SELECT sum(a.val) as value
+  //     FROM (
+  //       SELECT UNNEST(list(distinct {key:${key}, val: ${value}})) a
+  //     )
+  //   )`;
+  // }
   sqlSumDistinct(key: string, value: string): string {
-    // return `sum_distinct(list({key:${key}, val: ${value}}))`;
-    return `(
-      fail -- force the query for fail until the bug is fixed.
-      SELECT sum(a.val) as value
-      FROM (
-        SELECT UNNEST(list(distinct {key:${key}, val: ${value}})) a
-      )
-    )`;
+    const factor = "10000000000000000";
+    const precision = 0.000001;
+    return `
+    (SUM(DISTINCT md5_number(${key}::varchar)/${factor} + FLOOR(${value}/${precision})::int128) -  SUM(DISTINCT md5_number(${key}::varchar)/${factor}))*${precision}
+    `;
   }
 }
