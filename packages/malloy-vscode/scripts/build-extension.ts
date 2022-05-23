@@ -12,18 +12,13 @@
  */
 
 /* eslint-disable no-console */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { build } from "esbuild";
+import fs from "fs";
+import { build, Plugin } from "esbuild";
 import { nativeNodeModulesPlugin } from "../../../third_party/github.com/evanw/esbuild/native-modules-plugin";
 import * as path from "path";
 import { execSync } from "child_process";
 import { noNodeModulesSourceMaps } from "../../../third_party/github.com/evanw/esbuild/no-node-modules-sourcemaps";
 import svgrPlugin from "esbuild-plugin-svgr";
-
-// importing this in normal fashion seems to import an older API?!
-// for ex, when imported, "Property 'rmSync' does not exist on type 'typeof import("fs")'"
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const fs = require("fs");
 
 export type Target =
   | "linux-x64"
@@ -50,10 +45,10 @@ export const outDir = "dist/";
 
 // This plugin replaces keytar's attempt to load the keytar.node native binary (built in node_modules
 // on npm install) with a require function to load a .node file from the filesystem
-const keytarReplacerPlugin = {
+const keytarReplacerPlugin: Plugin = {
   name: "keytarReplacer",
-  setup(build: any) {
-    build.onResolve({ filter: /build\/Release\/keytar.node/ }, (args: any) => {
+  setup(build) {
+    build.onResolve({ filter: /build\/Release\/keytar.node/ }, (args) => {
       return {
         path: args.path,
         namespace: "keytar-replacer",
@@ -61,7 +56,7 @@ const keytarReplacerPlugin = {
     });
     build.onLoad(
       { filter: /build\/Release\/keytar.node/, namespace: "keytar-replacer" },
-      (_args: any) => {
+      (_args) => {
         return {
           contents: `
             try { module.exports = require('./keytar-native.node')}
