@@ -35,8 +35,6 @@ import {
   Connection,
   QueryDataRow,
   toAsyncGenerator,
-  MalloyResultCache,
-  ResultCacheEntry,
 } from "@malloydata/malloy";
 import { parseTableURL } from "@malloydata/malloy";
 import { PooledConnection } from "@malloydata/malloy";
@@ -46,7 +44,10 @@ import {
   PersistSQLResults,
   StreamingConnection,
 } from "@malloydata/malloy/src/runtime_types";
-
+import {
+  MalloyResultCache,
+  ResultCacheEntry,
+} from "@malloydata/malloy/src/result_cache";
 export interface BigQueryManagerOptions {
   credentials?: {
     clientId: string;

@@ -304,6 +304,9 @@ export function runMalloyQuery(
                 name
               );
             }
+            if (message.type === QueryMessageType.Refresh) {
+              runMalloyQuery(query, false, panelId, name);
+            }
           });
 
           const runEnd = performance.now();

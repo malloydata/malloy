@@ -17,7 +17,7 @@ import { QueryDownloadOptions } from "../../webview_message_manager";
 import { Dropdown, TextField, VSCodeButton } from "../components";
 
 interface DownloadFormProps {
-  onDownload: (options: QueryDownloadOptions) => Promise<void>;
+  onDownload: (options: QueryDownloadOptions) => void;
 }
 
 export const DownloadForm: React.FC<DownloadFormProps> = ({ onDownload }) => {

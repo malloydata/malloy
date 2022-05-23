@@ -157,7 +157,7 @@ export const App: React.FC = () => {
           <ResultControlsItems>
             <ResultKindToggle kind={resultKind} setKind={setResultKind} />
             <DownloadButton
-              onDownload={async (downloadOptions) => {
+              onDownload={(downloadOptions) => {
                 vscode.postMessage({
                   type: QueryMessageType.StartDownload,
                   downloadOptions,
@@ -190,13 +190,22 @@ export const App: React.FC = () => {
         </Scroll>
       )}
       {error && <div>{error}</div>}
+      {warning && <Warning>{warning}</Warning>}
       {cacheData && (
         <CacheData>
           {cacheData.fromCache && "Cached result: "}
-          {`Ran at ${new Date(cacheData.ranAt).toLocaleString()}`}
+          {`Query ran at ${new Date(cacheData.ranAt).toLocaleString()} `}
+          <button
+            onClick={() => {
+              vscode.postMessage({
+                type: QueryMessageType.Refresh,
+              });
+            }}
+          >
+            Refresh
+          </button>
         </CacheData>
       )}
-      {warning && <Warning>{warning}</Warning>}
       {drillTooltipVisible && (
         <DrillTooltip ref={setTooltipRef} {...getTooltipProps()}>
           Drill copied!
@@ -298,9 +307,12 @@ const DrillTooltip = styled.div`
 `;
 
 const CacheData = styled.div`
-  color: var(--vscode-statusBar-foreground);
-  background-color: var(--vscode-statusBar-background);
+  color: var(--vscode-debugToolBar-background);
+  background-color: var(--vscode-foreground);
   padding: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 `;
 
 const Warning = styled.div`

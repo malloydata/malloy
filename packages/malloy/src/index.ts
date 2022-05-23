@@ -115,5 +115,3 @@ export type {
 export { URL } from "./runtime_types";
 export type { Loggable } from "./malloy";
 export { toAsyncGenerator } from "./connection_utils";
-export { MalloyResultCache } from "./result_cache";
-export type { ResultCacheEntry } from "./result_cache";

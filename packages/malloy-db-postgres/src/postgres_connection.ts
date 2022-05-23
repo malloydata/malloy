@@ -22,7 +22,6 @@ import {
   SQLBlock,
   Connection,
   QueryDataRow,
-  MalloyResultCache,
 } from "@malloydata/malloy";
 import {
   FetchSchemaAndRunSimultaneously,
@@ -30,6 +29,7 @@ import {
   PersistSQLResults,
   StreamingConnection,
 } from "@malloydata/malloy/src/runtime_types";
+import { MalloyResultCache } from "@malloydata/malloy/src/result_cache";
 import { Client, Pool, PoolClient } from "pg";
 import QueryStream from "pg-query-stream";
 

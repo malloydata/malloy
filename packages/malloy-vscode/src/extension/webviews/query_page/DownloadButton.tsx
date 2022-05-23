@@ -19,7 +19,7 @@ import { DownloadForm } from "./DownloadForm";
 import DownloadIcon from "../assets/download_hover.svg";
 
 interface DownloadButtonProps {
-  onDownload: (options: QueryDownloadOptions) => Promise<void>;
+  onDownload: (options: QueryDownloadOptions) => void;
 }
 
 export const DownloadButton: React.FC<DownloadButtonProps> = ({
@@ -43,7 +43,7 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
       >
         <PopoverContent>
           <DownloadForm
-            onDownload={async (options) => {
+            onDownload={(options) => {
               onDownload(options);
               setOpen(false);
             }}
