@@ -19,6 +19,7 @@ export function runQueryFileCommand(queryIndex = -1): void {
   if (document) {
     runMalloyQuery(
       { type: "file", index: queryIndex, file: document },
+      true,
       document.uri.toString(),
       document.fileName.split("/").pop() || document.fileName
     );

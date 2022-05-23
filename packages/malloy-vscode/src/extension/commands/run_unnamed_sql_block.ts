@@ -22,6 +22,7 @@ export function runUnnamedSQLBlock(index: number): void {
   if (document) {
     runMalloyQuery(
       { type: "unnamed_sql", index, file: document },
+      true,
       document.uri.toString(),
       document.fileName.split("/").pop() || document.fileName
     );

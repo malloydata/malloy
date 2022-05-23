@@ -109,6 +109,15 @@ export interface InfoConnection {
 }
 
 /**
+ * Options for runSQL
+ */
+export interface RunSQLOptions {
+  rowLimit?: number;
+  allowCache?: boolean;
+  noLastStage?: boolean;
+}
+
+/**
  * An object capable of running SQL.
  */
 export interface Connection extends InfoConnection {
@@ -120,10 +129,7 @@ export interface Connection extends InfoConnection {
    * @returns The rows of data resulting from running the given SQL query
    * and the total number of rows available.
    */
-  runSQL(
-    sql: string,
-    options?: { rowLimit?: number; noLastStage?: boolean }
-  ): Promise<MalloyQueryData>;
+  runSQL(sql: string, options?: RunSQLOptions): Promise<MalloyQueryData>;
 
   // TODO feature-sql-block Comment
   isPool(): this is PooledConnection;
@@ -157,14 +163,14 @@ export interface PersistSQLResults extends Connection {
 export interface FetchSchemaAndRunSimultaneously extends Connection {
   runSQLBlockAndFetchResultSchema(
     sqlBlock: SQLBlock,
-    options?: { rowLimit?: number }
+    options?: RunSQLOptions
   ): Promise<{ data: MalloyQueryData; schema: StructDef }>;
 }
 
 export interface StreamingConnection extends Connection {
   runSQLStream(
     sqlCommand: string,
-    options?: { rowLimit?: number }
+    options?: RunSQLOptions
   ): AsyncIterableIterator<QueryDataRow>;
 }
 
@@ -173,7 +179,7 @@ export interface FetchSchemaAndRunStreamSimultaneously
     FetchSchemaAndRunSimultaneously {
   runSQLBlockStreamAndFetchResultSchema(
     sqlCommand: string,
-    options?: { rowLimit?: number }
+    options?: RunSQLOptions
   ): Promise<{
     stream: AsyncIterableIterator<QueryDataRow>;
     schema: StructDef;

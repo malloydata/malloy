@@ -22,6 +22,7 @@ export function runQueryCommand(query: string, name?: string): void {
   if (document) {
     runMalloyQuery(
       { type: "string", text: query, file: document },
+      true,
       `${document.uri.toString()} ${name}`,
       name || document.uri.toString()
     );

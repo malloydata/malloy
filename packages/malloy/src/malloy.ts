@@ -50,6 +50,7 @@ import {
   ModelURL,
   QueryString,
   QueryURL,
+  RunSQLOptions,
   URL,
   URLReader,
   Connection,

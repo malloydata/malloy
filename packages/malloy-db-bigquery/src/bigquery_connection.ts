@@ -29,13 +29,13 @@ import {
   QueryData,
   StructDef,
   MalloyQueryData,
-  MalloyResultCache,
   FieldTypeDef,
   NamedStructDefs,
   SQLBlock,
   Connection,
   QueryDataRow,
   toAsyncGenerator,
+  MalloyResultCache,
   ResultCacheEntry,
 } from "@malloydata/malloy";
 import { parseTableURL } from "@malloydata/malloy";
@@ -59,6 +59,7 @@ export interface BigQueryManagerOptions {
 
 export interface BigQueryQueryOptions {
   rowLimit: number;
+  allowCache: boolean;
 }
 
 interface BigQueryConnectionConfiguration {
@@ -118,6 +119,7 @@ export class BigQueryConnection
 {
   static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
     rowLimit: 10,
+    allowCache: true,
   };
 
   private bigQuery: BigQuerySDK;
@@ -224,16 +226,18 @@ export class BigQueryConnection
 
   private async _runSQL(
     sqlCommand: string,
-    options: Partial<BigQueryQueryOptions> = {},
+    { rowLimit, allowCache }: Partial<BigQueryQueryOptions> = {},
     rowIndex = 0
   ): Promise<{ data: MalloyQueryData; schema: bigquery.ITableFieldSchema }> {
     const defaultOptions = this.readQueryOptions();
-    const pageSize = options.rowLimit ?? defaultOptions.rowLimit;
+    const pageSize = rowLimit ?? defaultOptions.rowLimit;
 
     const hash = this.resultCache.getHash(sqlCommand, pageSize, rowIndex);
-    const cached = this.resultCache.retrieve(hash);
-    if (cached !== undefined) {
-      return cached;
+    if (allowCache) {
+      const cached = this.resultCache.retrieve(hash);
+      if (cached !== undefined) {
+        return cached;
+      }
     }
 
     try {
@@ -283,7 +287,10 @@ export class BigQueryConnection
 
   public async runSQLBlockAndFetchResultSchema(
     sqlBlock: SQLBlock,
-    options?: { rowLimit?: number | undefined }
+    options?: {
+      rowLimit?: number | undefined;
+      allowCache?: boolean | undefined;
+    }
   ): Promise<{ data: MalloyQueryData; schema: StructDef }> {
     const { data, schema: schemaRaw } = await this._runSQL(
       sqlBlock.select,

@@ -14,7 +14,6 @@
 import {
   StructDef,
   MalloyQueryData,
-  MalloyResultCache,
   NamedStructDefs,
   AtomicFieldTypeInner,
   QueryData,
@@ -23,6 +22,7 @@ import {
   SQLBlock,
   Connection,
   QueryDataRow,
+  MalloyResultCache,
 } from "@malloydata/malloy";
 import {
   FetchSchemaAndRunSimultaneously,
@@ -222,16 +222,19 @@ export class PostgresConnection implements Connection, StreamingConnection {
     sqlCommand: string,
     pageSize: number,
     rowIndex: number,
+    allowCache: boolean,
     deJSON: boolean
   ): Promise<MalloyQueryData> {
     const client = await this.getClient();
     await client.connect();
 
     const hash = this.resultCache.getHash(sqlCommand, pageSize, rowIndex);
-    const cached = this.resultCache.retrieve(hash);
-    if (cached !== undefined) {
-      const { data } = cached;
-      return data;
+    if (allowCache) {
+      const cached = this.resultCache.retrieve(hash);
+      if (cached !== undefined) {
+        const { data } = cached;
+        return data;
+      }
     }
     let result = await client.query(sqlCommand);
     if (result instanceof Array) {
@@ -295,6 +298,7 @@ export class PostgresConnection implements Connection, StreamingConnection {
       infoQuery,
       SCHEMA_PAGE_SIZE,
       0,
+      false,
       false
     );
     for (const row of result.rows) {
@@ -363,6 +367,7 @@ export class PostgresConnection implements Connection, StreamingConnection {
       query,
       config.rowLimit || DEFAULT_PAGE_SIZE,
       0,
+      false,
       false
     );
     return queryData.rows;
@@ -374,7 +379,7 @@ export class PostgresConnection implements Connection, StreamingConnection {
 
   public async runSQL(
     sql: string,
-    { rowLimit }: { rowLimit?: number } = {},
+    { rowLimit, allowCache }: { rowLimit?: number; allowCache?: boolean } = {},
     rowIndex = 0
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
@@ -383,6 +388,7 @@ export class PostgresConnection implements Connection, StreamingConnection {
       sql,
       rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
+      allowCache ?? true,
       true
     );
   }
@@ -431,13 +437,16 @@ export class PooledPostgresConnection
     sqlCommand: string,
     pageSize: number,
     rowIndex: number,
+    allowCache: boolean,
     deJSON: boolean
   ): Promise<MalloyQueryData> {
     const hash = this.resultCache.getHash(sqlCommand, pageSize, rowIndex);
-    const cached = this.resultCache.retrieve(hash);
-    if (cached !== undefined) {
-      const { data } = cached;
-      return data;
+    if (allowCache) {
+      const cached = this.resultCache.retrieve(hash);
+      if (cached !== undefined) {
+        const { data } = cached;
+        return data;
+      }
     }
 
     let result = await this.pool.query(sqlCommand);

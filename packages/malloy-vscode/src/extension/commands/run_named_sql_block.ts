@@ -22,6 +22,7 @@ export function runNamedSQLBlock(name: string): void {
   if (document) {
     runMalloyQuery(
       { type: "named_sql", name, file: document },
+      true,
       `${document.uri.toString()} ${name}`,
       name
     );

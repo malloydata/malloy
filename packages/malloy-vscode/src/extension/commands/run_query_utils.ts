@@ -134,6 +134,7 @@ class HackyDataStylesAccumulator implements URLReader {
 
 export function runMalloyQuery(
   query: QuerySpec,
+  allowCache: boolean,
   panelId: string,
   name: string
 ): void {
@@ -291,7 +292,7 @@ export function runMalloyQuery(
             status: QueryRunStatus.Running,
           });
           progress.report({ increment: 40, message: "Running" });
-          const queryResult = await runnable.run({ rowLimit });
+          const queryResult = await runnable.run({ rowLimit, allowCache });
           if (canceled) return;
 
           current.messages.onReceiveMessage((message) => {

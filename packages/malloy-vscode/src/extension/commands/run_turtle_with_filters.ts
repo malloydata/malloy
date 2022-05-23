@@ -32,6 +32,7 @@ export function runQueryWithEdit(
       if (query) {
         runMalloyQuery(
           { type: "string", text: query, file: document },
+          true,
           `${document.uri.toString()} ${exploreName} | ...`,
           `${exploreName} | ...`
         );
