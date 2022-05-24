@@ -15,6 +15,8 @@ import { ConnectionConfig, ConnectionManager } from "../common";
 import * as vscode from "vscode";
 
 const DEFAULT_ROW_LIMIT = 50;
+/** Default cache duration (seconds) */
+const DEFAULT_CACHE_DURATION = 18000;
 
 export class VSCodeConnectionManager extends ConnectionManager {
   constructor() {
@@ -22,9 +24,7 @@ export class VSCodeConnectionManager extends ConnectionManager {
   }
 
   static getConnectionsConfig(): ConnectionConfig[] {
-    return vscode.workspace
-      .getConfiguration("malloy")
-      .get("connections") as ConnectionConfig[];
+    return getSetting("connections") as ConnectionConfig[];
   }
 
   onConfigurationUpdated(): Promise<void> {
@@ -38,22 +38,28 @@ export class VSCodeConnectionManager extends ConnectionManager {
     // because the Language Server doesn't actually care about row limits, because it never
     // runs queries, and because it's slightly harder to get settings from within the language
     // server.
-    const rowLimitRaw = vscode.workspace
-      .getConfiguration("malloy")
-      .get("rowLimit");
-    if (rowLimitRaw === undefined) {
-      return DEFAULT_ROW_LIMIT;
-    }
-    if (typeof rowLimitRaw === "string") {
-      try {
-        return parseInt(rowLimitRaw);
-      } catch (_error) {
-        return DEFAULT_ROW_LIMIT;
-      }
-    }
-    if (typeof rowLimitRaw !== "number") {
-      return DEFAULT_ROW_LIMIT;
-    }
-    return rowLimitRaw;
+    return getNumericSetting("rowLimit", DEFAULT_ROW_LIMIT);
+  }
+
+  getCurrentCacheDuration(): number {
+    return getNumericSetting("cacheDuration", DEFAULT_CACHE_DURATION);
   }
 }
+
+const getSetting = (name: string) =>
+  vscode.workspace.getConfiguration("malloy").get(name);
+
+const getNumericSetting = (name: string, defaultValue: number) => {
+  const rawValue = getSetting(name) ?? defaultValue;
+  if (typeof rawValue === "string") {
+    try {
+      return parseInt(rawValue);
+    } catch (_error) {
+      return defaultValue;
+    }
+  }
+  if (typeof rawValue !== "number") {
+    return defaultValue;
+  }
+  return rawValue;
+};

@@ -6,12 +6,8 @@ export interface ResultCacheEntry {
   data: MalloyQueryData;
 }
 
-const DEFAULT_CACHE_DURATION = 30 * 60 * 1000;
-
 export class MalloyResultCache<T extends ResultCacheEntry = ResultCacheEntry> {
   private resultCache = new Map<string, T>();
-
-  constructor(private cacheDuration = DEFAULT_CACHE_DURATION) {}
 
   getHash(...keys: Array<string | number>): string {
     const hash = crypto.createHash("md5");
@@ -23,11 +19,11 @@ export class MalloyResultCache<T extends ResultCacheEntry = ResultCacheEntry> {
     this.resultCache.set(hash, entry);
   }
 
-  retrieve(hash: string): T | undefined {
+  retrieve(hash: string, cacheDuration: number): T | undefined {
     const entry = this.resultCache.get(hash);
     if (entry) {
       const { data } = entry;
-      if (data.metadata.ranAt + this.cacheDuration > Date.now()) {
+      if (data.metadata.ranAt + cacheDuration * 1000 > Date.now()) {
         return {
           ...entry,
           data: { ...data, metadata: { ...data.metadata, fromCache: true } },

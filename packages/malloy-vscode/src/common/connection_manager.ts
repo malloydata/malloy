@@ -40,6 +40,10 @@ export class ConnectionManager {
     return undefined;
   }
 
+  protected getCurrentCacheDuration(): number | undefined {
+    return undefined;
+  }
+
   public get connections(): FixedConnectionMap {
     return this._connections;
   }
@@ -54,6 +58,8 @@ export class ConnectionManager {
         "bigquery",
         new BigQueryConnection("bigquery", () => ({
           rowLimit: this.getCurrentRowLimit(),
+          cacheDuration: this.getCurrentCacheDuration(),
+          allowCache: true,
         }))
       );
       defaultName = "bigquery";
@@ -86,7 +92,11 @@ export class ConnectionManager {
       case ConnectionBackend.BigQuery:
         return new BigQueryConnection(
           connectionConfig.name,
-          () => ({ rowLimit: this.getCurrentRowLimit() }),
+          () => ({
+            rowLimit: this.getCurrentRowLimit(),
+            cacheDuration: this.getCurrentCacheDuration(),
+            allowCache: true,
+          }),
           {
             defaultProject: connectionConfig.projectName,
             serviceAccountKeyPath: connectionConfig.serviceAccountKeyPath,
@@ -115,7 +125,11 @@ export class ConnectionManager {
         };
         return new PostgresConnection(
           connectionConfig.name,
-          () => ({ rowLimit: this.getCurrentRowLimit() }),
+          () => ({
+            rowLimit: this.getCurrentRowLimit(),
+            cacheDuration: this.getCurrentCacheDuration(),
+            allowCache: true,
+          }),
           configReader
         );
       }

@@ -2,11 +2,12 @@
   "extends": "../../tsconfig.packages.json",
   "compilerOptions": {
     "jsx": "react",
-    "outDir": "out",
-    "rootDir": "src"
+    "outDir": "dist",
+    "rootDir": "src",
+    "noEmit": true
   },
   "include": ["./src", "src/malloy.tmGrammar.json"],
-  "exclude": ["node_modules", ".vscode-test", "out"],
+  "exclude": ["node_modules", ".vscode-test", "dist"],
   "references": [
     {
       "path": "../malloy"

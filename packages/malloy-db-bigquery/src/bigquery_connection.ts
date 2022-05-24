@@ -60,6 +60,9 @@ export interface BigQueryManagerOptions {
 
 export interface BigQueryQueryOptions {
   rowLimit: number;
+  /** Cache duration (seconds) */
+  cacheDuration: number;
+  /** Allow results from cache */
   allowCache: boolean;
 }
 
@@ -80,7 +83,8 @@ interface BigQueryResultCacheEntry extends ResultCacheEntry {
 
 type QueryOptionsReader =
   | Partial<BigQueryQueryOptions>
-  | (() => Partial<BigQueryQueryOptions>);
+  | (() => Partial<BigQueryQueryOptions>)
+  | (() => Promise<Partial<BigQueryQueryOptions>>);
 
 // BigQuery SDK apparently throws various authentication errors from Gaxios (https://github.com/googleapis/gaxios) and from
 // @google-cloud/common (https://www.npmjs.com/package/@google-cloud/common)
@@ -120,6 +124,7 @@ export class BigQueryConnection
 {
   static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
     rowLimit: 10,
+    cacheDuration: 1800,
     allowCache: true,
   };
 
@@ -140,13 +145,7 @@ export class BigQueryConnection
     | { error: string; schema?: undefined }
   >();
 
-  private queryOptions?: QueryOptionsReader;
-
-  private config: BigQueryConnectionConfiguration;
-
   private location: string;
-
-  public readonly name: string;
 
   bqToMalloyTypes: { [key: string]: Partial<FieldTypeDef> } = {
     DATE: { type: "date" },
@@ -168,11 +167,10 @@ export class BigQueryConnection
   };
 
   constructor(
-    name: string,
-    queryOptions?: QueryOptionsReader,
-    config: BigQueryConnectionConfiguration = {}
+    public name: string,
+    private queryOptions: QueryOptionsReader = {},
+    private config: BigQueryConnectionConfiguration = {}
   ) {
-    this.name = name;
     this.bigQuery = new BigQuerySDK({
       userAgent: `Malloy/${Malloy.version}`,
       keyFilename: config.serviceAccountKeyPath,
@@ -182,9 +180,6 @@ export class BigQueryConnection
     // we want to use the tables API
     this.projectId = this.bigQuery.projectId;
     this.defaultProject = config.defaultProject || this.bigQuery.projectId;
-
-    this.queryOptions = queryOptions;
-    this.config = config;
     this.location = config.location || "US";
   }
 
@@ -192,16 +187,12 @@ export class BigQueryConnection
     return "standardsql";
   }
 
-  private readQueryOptions(): BigQueryQueryOptions {
+  private async readQueryOptions(): Promise<BigQueryQueryOptions> {
     const options = BigQueryConnection.DEFAULT_QUERY_OPTIONS;
-    if (this.queryOptions) {
-      if (this.queryOptions instanceof Function) {
-        return { ...options, ...this.queryOptions() };
-      } else {
-        return { ...options, ...this.queryOptions };
-      }
+    if (this.queryOptions instanceof Function) {
+      return { ...options, ...(await this.queryOptions()) };
     } else {
-      return options;
+      return { ...options, ...this.queryOptions };
     }
   }
 
@@ -227,15 +218,18 @@ export class BigQueryConnection
 
   private async _runSQL(
     sqlCommand: string,
-    { rowLimit, allowCache }: Partial<BigQueryQueryOptions> = {},
+    config: Partial<BigQueryQueryOptions> = {},
     rowIndex = 0
   ): Promise<{ data: MalloyQueryData; schema: bigquery.ITableFieldSchema }> {
-    const defaultOptions = this.readQueryOptions();
-    const pageSize = rowLimit ?? defaultOptions.rowLimit;
+    const defaultOptions = await this.readQueryOptions();
+    const { rowLimit, cacheDuration, allowCache } = {
+      ...defaultOptions,
+      ...config,
+    };
 
-    const hash = this.resultCache.getHash(sqlCommand, pageSize, rowIndex);
+    const hash = this.resultCache.getHash(sqlCommand, rowLimit, rowIndex);
     if (allowCache) {
-      const cached = this.resultCache.retrieve(hash);
+      const cached = this.resultCache.retrieve(hash, cacheDuration);
       if (cached !== undefined) {
         return cached;
       }
@@ -243,7 +237,7 @@ export class BigQueryConnection
 
     try {
       const queryResultsOptions = {
-        maxResults: pageSize,
+        maxResults: rowLimit,
         startIndex: rowIndex.toString(),
       };
 

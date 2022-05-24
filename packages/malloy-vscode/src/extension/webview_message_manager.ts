@@ -91,6 +91,7 @@ export enum QueryMessageType {
   QueryStatus = "query-status",
   AppReady = "app-ready",
   StartDownload = "start-download",
+  Refresh = "refresh",
 }
 
 interface QueryMessageStatusCompiling {
@@ -136,10 +137,15 @@ interface QueryMessageStartDownload {
   downloadOptions: QueryDownloadOptions;
 }
 
+interface QueryMessageRefresh {
+  type: QueryMessageType.Refresh;
+}
+
 export type QueryPanelMessage =
   | QueryMessageStatus
   | QueryMessageAppReady
-  | QueryMessageStartDownload;
+  | QueryMessageStartDownload
+  | QueryMessageRefresh;
 
 export enum ConnectionMessageType {
   SetConnections = "set-connections",

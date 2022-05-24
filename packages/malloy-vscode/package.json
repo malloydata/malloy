@@ -205,6 +205,11 @@
           "description": "Maximum number of top-level rows to fetch when running queries.",
           "default": 50
         },
+        "malloy.cacheDuration": {
+          "type": "string",
+          "description": "Maximum cache duration (seconds)",
+          "default": "1800"
+        },
         "malloy.downloadsPath": {
           "type": "string",
           "description": "Path to directory to save downloaded results",
