@@ -14,6 +14,7 @@
 export enum ConnectionBackend {
   BigQuery = "bigquery",
   Postgres = "postgres",
+  DuckDB = "duckdb",
 }
 
 export interface BigQueryConnectionConfig {
@@ -39,9 +40,18 @@ export interface PostgresConnectionConfig {
   useKeychainPassword?: boolean;
 }
 
+export interface DuckDBConnectionConfig {
+  backend: ConnectionBackend.DuckDB;
+  name: string;
+  isDefault: boolean;
+  id: string;
+  databasePath?: string;
+}
+
 export type ConnectionConfig =
   | BigQueryConnectionConfig
-  | PostgresConnectionConfig;
+  | PostgresConnectionConfig
+  | DuckDBConnectionConfig;
 
 /**
  * Return the index of the connection that should be treated as

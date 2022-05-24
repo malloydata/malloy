@@ -22,8 +22,11 @@ import {
   SQLBlock,
   StructDef,
 } from "@malloydata/malloy";
-import { FetchSchemaAndRunSimultaneously, FetchSchemaAndRunStreamSimultaneously, StreamingConnection } from "@malloydata/malloy/src/runtime_types";
-
+import {
+  FetchSchemaAndRunSimultaneously,
+  FetchSchemaAndRunStreamSimultaneously,
+  StreamingConnection,
+} from "@malloydata/malloy/src/runtime_types";
 
 // duckdb node bindings do not come with Typescript types, require is required
 // https://github.com/duckdb/duckdb/tree/master/tools/nodejs
@@ -110,7 +113,7 @@ export class DuckDBConnection implements Connection {
 
   public async runSQL(sql: string): Promise<MalloyQueryData> {
     await this.setup();
-    console.log(sql);
+    // console.log(sql);
 
     const statements = sql.split("-- hack: split on this");
 
@@ -118,7 +121,9 @@ export class DuckDBConnection implements Connection {
       try {
         await this.runDuckDBQuery(statements[0]);
         statements.unshift();
-      } catch (e) {}
+      } catch (e) {
+        /* Do nothing */
+      }
     }
     const retVal = await this.runDuckDBQuery(statements[0]);
     const result = JSON.parse(retVal.rows[0].results);
@@ -276,5 +281,9 @@ export class DuckDBConnection implements Connection {
 
   canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously {
     return false;
+  }
+
+  public async test(): Promise<void> {
+    await this.runRawSQL("SELECT 1");
   }
 }

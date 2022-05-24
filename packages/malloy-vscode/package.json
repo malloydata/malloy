@@ -320,6 +320,7 @@
   "dependencies": {
     "@malloydata/db-bigquery": "*",
     "@malloydata/db-postgres": "*",
+    "@malloydata/db-duckdb": "*",
     "@malloydata/malloy": "*",
     "@malloydata/render": "*",
     "@observablehq/plot": "^0.1.0",

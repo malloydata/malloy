@@ -13,6 +13,7 @@
 
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { PostgresConnection } from "@malloydata/db-postgres";
+import { DuckDBConnection } from "@malloydata/db-duckdb";
 import {
   FixedConnectionMap,
   Connection,
@@ -117,6 +118,9 @@ export class ConnectionManager {
           () => ({ rowLimit: this.getCurrentRowLimit() }),
           configReader
         );
+      }
+      case ConnectionBackend.DuckDB: {
+        return new DuckDBConnection(connectionConfig.name);
       }
     }
   }
