@@ -51,3 +51,6 @@ out/
 gems/
 .vscode/settings.json
 .vscode/spellright.dict
+.tmp
+.s.PGSQL.*.lock
+logfile
