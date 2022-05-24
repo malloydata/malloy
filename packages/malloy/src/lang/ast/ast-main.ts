@@ -1741,14 +1741,21 @@ abstract class PipelineDesc extends MalloyElement {
   protected appendOps(
     modelPipe: model.PipeSegment[],
     existingEndSpace: FieldSpace
-  ): model.StructDef {
+  ) {
     let nextFS = existingEndSpace;
+    let returnPipe: model.PipeSegment[] | undefined;
     for (const qop of this.qops) {
       const next = qop.getOp(nextFS);
-      modelPipe.push(next.segment);
+      if (returnPipe == undefined) {
+        returnPipe = [...modelPipe];
+      }
+      returnPipe.push(next.segment);
       nextFS = next.outputSpace();
     }
-    return nextFS.structDef();
+    return {
+      opList: returnPipe || modelPipe,
+      structDef: nextFS.structDef(),
+    };
   }
 
   protected refinePipeline(
@@ -1840,19 +1847,21 @@ export class ExistingQuery extends PipelineDesc {
     this.has({ queryHead });
     const exploreStruct = queryHead.structDef();
     const exploreFS = new DynamicSpace(exploreStruct);
-    const resultPipe = this.refinePipeline(exploreFS, seedQuery);
-    const walkStruct = this.getOutputStruct(exploreStruct, resultPipe.pipeline);
-    const outputStruct = this.appendOps(
-      resultPipe.pipeline,
+    const sourcePipe = this.refinePipeline(exploreFS, seedQuery);
+    const walkStruct = this.getOutputStruct(exploreStruct, sourcePipe.pipeline);
+    const appended = this.appendOps(
+      sourcePipe.pipeline,
       new DynamicSpace(walkStruct)
     );
+
     const query: model.Query = {
-      ...resultPipe,
       type: "query",
+      ...sourcePipe,
+      ...appended.opList,
       structRef: queryHead.structRef(),
       location: this.location,
     };
-    return { outputStruct, query };
+    return { outputStruct: appended.structDef, query };
   }
 
   query(): model.Query {
@@ -1918,8 +1927,9 @@ export class FullQuery extends TurtleHeadedPipe {
       const pipeStruct = this.getOutputStruct(structDef, refined);
       pipeFs = new DynamicSpace(pipeStruct);
     }
-    const outputStruct = this.appendOps(destQuery.pipeline, pipeFs);
-    return { outputStruct, query: destQuery };
+    const appended = this.appendOps(destQuery.pipeline, pipeFs);
+    destQuery.pipeline = appended.opList;
+    return { outputStruct: appended.structDef, query: destQuery };
   }
 
   query(): model.Query {
@@ -1965,7 +1975,8 @@ export class TurtleDecl extends TurtleHeadedPipe {
       }
       appendInput = new DynamicSpace(endStruct);
     }
-    this.appendOps(modelPipe.pipeline, appendInput);
+    const appended = this.appendOps(modelPipe.pipeline, appendInput);
+    modelPipe.pipeline = appended.opList;
     return modelPipe;
   }
 

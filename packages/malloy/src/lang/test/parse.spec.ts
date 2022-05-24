@@ -306,6 +306,20 @@ describe("model statements", () => {
       "refine explore",
       modelOK(`explore: aa is a { dimension: a is astr }`)
     );
+    test("source refinement preserves original", () => {
+      const x = new BetaModel("source: na is a + { dimension: one is 1 }");
+      expect(x).toTranslate();
+      const t = x.translate().translated;
+      expect(t).toBeDefined();
+      if (t) {
+        const a = t.modelDef.contents.a;
+        if (a.type == "struct") {
+          const aFields = a.fields.map((f) => f.as || f.name);
+          expect(aFields).toContain("astr");
+          expect(aFields).not.toContain("one");
+        }
+      }
+    });
   });
   describe("query:", () => {
     test(
@@ -380,6 +394,41 @@ describe("model statements", () => {
         query: -> a_by_str { aggregate: str_count is count() }
       `)
     );
+    test("query refinement preserves original", () => {
+      const x = new BetaModel(`
+        query: q is a -> { aggregate: acount is count() }
+        query: nq is -> q + { group_by: astr }
+      `);
+      expect(x).toTranslate();
+      const t = x.translate().translated;
+      expect(t).toBeDefined();
+      if (t) {
+        const q = t.modelDef.contents.q;
+        expect(q).toBeDefined();
+        expect(q?.type).toBe("query");
+        if (q && q.type == "query") {
+          const qFields = q.pipeline[0].fields;
+          expect(qFields.length).toBe(1);
+        }
+      }
+    });
+    test("query composition preserves original", () => {
+      const x = new BetaModel(`
+        query: q is ab -> { aggregate: acount }
+        query: nq is -> q -> { project: * }
+      `);
+      expect(x).toTranslate();
+      const t = x.translate().translated;
+      expect(t).toBeDefined();
+      if (t) {
+        const q = t.modelDef.contents.q;
+        expect(q).toBeDefined();
+        expect(q?.type).toBe("query");
+        if (q && q.type == "query") {
+          expect(q.pipeline.length).toBe(1);
+        }
+      }
+    });
   });
   describe("import:", () => {
     test("simple import", () => {

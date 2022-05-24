@@ -55,6 +55,7 @@ import {
   isJoinOn,
   isQuerySegment,
   DialectFragment,
+  isDialectFragment,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -1503,6 +1504,30 @@ class QueryQuery extends QueryField {
             filterCond.expression,
             joinStack
           );
+        }
+      } else if (isDialectFragment(expr)) {
+        const expressions: Expr[] = [];
+        switch (expr.function) {
+          case "timeDiff":
+            expressions.push(expr.left.value, expr.right.value);
+            break;
+          case "delta":
+            expressions.push(expr.base.value, expr.delta);
+            break;
+          case "trunc":
+          case "extract":
+            expressions.push(expr.expr.value);
+            break;
+          case "cast":
+            expressions.push(expr.expr);
+            break;
+          default:
+            throw new Error(
+              "Unknown dialect Fragment type.  Can't generate dependancies"
+            );
+        }
+        for (const e of expressions) {
+          this.addDependantExpr(resultStruct, context, e, joinStack);
         }
       } else if (isAggregateFragment(expr)) {
         if (isAsymmetricFragment(expr)) {

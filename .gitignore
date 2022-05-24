@@ -6,9 +6,6 @@ docs/.jekyll-cache/
 docs/js/generated/
 docs/aux/generated/
 
-# config file
-malloy.json
-
 # Workspace related exclusions
 packages/**/build
 packages/**/dist
@@ -21,12 +18,12 @@ packages/malloy/src/lang/grammar/.antlr
 demo/**/build
 demo/**/dist
 demo/**/node_modules
-demo/malloy/src/lang/lib
 demo/**/tsconfig.tsbuildinfo
 demo/**/package-lock.json
 demo/**/.eslintcache
 /node_modules
 demo/malloy-demo-composer/composer_config.json
+demo/malloy-demo-composer/public/js
 
 # misc
 .DS_Store
@@ -51,6 +48,6 @@ out/
 gems/
 .vscode/settings.json
 .vscode/spellright.dict
-.tmp
-.s.PGSQL.*.lock
+.tmp/
 logfile
+.s.PGSQL.5432.lock
