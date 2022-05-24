@@ -36,6 +36,7 @@ describe("duckdb tests", () => {
           }
         } -> {
           group_by: state, airport_count, by_fac_type.fac_type
+          order_by: 2 desc
         }
         `
       )

@@ -51,6 +51,7 @@ export class StandardSQLDialect extends Dialect {
   stringTypeName = "STRING";
   divisionIsInteger = false;
   supportsSumDistinctFunction = false;
+  unnestWithNumbers = false;
 
   functionInfo: Record<string, FunctionInfo> = {
     timestamp_seconds: { returnType: "timestamp" },
@@ -153,7 +154,8 @@ export class StandardSQLDialect extends Dialect {
     alias: string,
     fieldName: string,
     _fieldType: string,
-    _isNested: boolean
+    _isNested: boolean,
+    _isArray: boolean
   ): string {
     return `${alias}.${fieldName}`;
   }

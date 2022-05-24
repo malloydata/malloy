@@ -17,11 +17,12 @@ import {
   NamedStructDefs,
   parseTableURL,
   PersistSQLResults,
+  FieldTypeDef,
   PooledConnection,
   SQLBlock,
   StructDef,
 } from "@malloydata/malloy";
-import { ColumnSpaceField } from "@malloydata/malloy/src/lang/space-field";
+
 
 // duckdb node bindings do not come with Typescript types, require is required
 // https://github.com/duckdb/duckdb/tree/master/tools/nodejs
@@ -36,6 +37,7 @@ const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   TIMESTAMP: "timestamp",
   "DECIMAL(38,9)": "number",
   BOOLEAN: "boolean",
+  INTEGER: "number",
 };
 
 export class DuckDBConnection implements Connection {
@@ -151,14 +153,18 @@ export class DuckDBConnection implements Connection {
 
     // TODO -- Should be a uuid
     const tempTableName = `malloy${Math.floor(Math.random() * 10000000)}`;
-    const infoQuery = `
-      drop table if exists ${tempTableName};
+    await this.runRawSQL(`drop table if exists ${tempTableName};`);
+    const createQuery = `
       create temp table ${tempTableName} as SELECT * FROM (
         ${sqlRef.select}
-      ) as x where false;
-      SELECT column_name, data_type FROM information_schema.columns where table_name='${tempTableName}';
+      ) as x where false;;
     `;
-    await this.schemaFromQuery(infoQuery, structDef);
+    console.log(createQuery);
+    await this.runRawSQL(createQuery);
+    await this.schemaFromQuery(
+      `SELECT column_name, data_type FROM information_schema.columns where table_name='${tempTableName}'`,
+      structDef
+    );
     return structDef;
   }
 
@@ -168,15 +174,31 @@ export class DuckDBConnection implements Connection {
   ): Promise<void> {
     const result = await this.runDuckDBQuery(infoQuery);
     for (const row of result.rows) {
-      const duckDBType = row["data_type"] as string;
-      const malloyType = duckDBToMalloyTypes[duckDBType];
-      if (malloyType !== undefined) {
-        structDef.fields.push({
-          type: malloyType,
-          name: row["column_name"] as string,
-        });
+      let duckDBType = row["data_type"] as string;
+      let malloyType = duckDBToMalloyTypes[duckDBType];
+      const name = row["column_name"] as string;
+      const arrayMatch = duckDBType.match(/(?<duckDBType>.*)\[\]$/);
+      if (arrayMatch && arrayMatch.groups) {
+        duckDBType = arrayMatch.groups["duckDBType"];
+        malloyType = duckDBToMalloyTypes[duckDBType];
+        const innerStructDef: StructDef = {
+          type: "struct",
+          name,
+          dialect: this.dialectName,
+          structSource: { type: "nested" },
+          structRelationship: { type: "nested", field: name, isArray: true },
+          fields: [{ type: malloyType, name: "value" } as FieldTypeDef],
+        };
+        structDef.fields.push(innerStructDef);
       } else {
-        throw new Error(`unknown duckdb type ${duckDBType}`);
+        if (malloyType !== undefined) {
+          structDef.fields.push({
+            type: malloyType,
+            name,
+          });
+        } else {
+          throw new Error(`unknown duckdb type ${duckDBType}`);
+        }
       }
     }
   }

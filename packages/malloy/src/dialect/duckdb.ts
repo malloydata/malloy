@@ -90,6 +90,7 @@ export class DuckDBDialect extends Dialect {
   stringTypeName = "VARCHAR";
   divisionIsInteger = true;
   supportsSumDistinctFunction = true;
+  unnestWithNumbers = true;
 
   functionInfo: Record<string, FunctionInfo> = {};
 
@@ -174,7 +175,11 @@ export class DuckDBDialect extends Dialect {
       return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__distinct_key', gen_random_uuid()::text)|| __xx::jsonb as b FROM  JSONB_ARRAY_ELEMENTS(${source}) __xx ))) as ${alias} ON true`;
     } else {
       // return `CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS(${source}) as ${alias}`;
-      return `LEFT JOIN JSONB_ARRAY_ELEMENTS(${source}) as ${alias} ON true`;
+      // return `LEFT JOIN JSONB_ARRAY_ELEMENTS(${source}) as ${alias} ON true`;
+      return `LEFT JOIN (select UNNEST(generate_series(1,
+        1000000, --
+        -- (SELECT genres_length FROM movies limit 1),
+        1)) as i) as ${alias} ON  ${alias}.i <= array_length(${source})`
     }
   }
 
@@ -190,9 +195,14 @@ export class DuckDBDialect extends Dialect {
     alias: string,
     fieldName: string,
     _fieldType: string,
-    _isNested: boolean
+    _isNested: boolean,
+    isArray: boolean
   ): string {
-    return `${alias}.${fieldName}`;
+    if (isArray) {
+      return alias;
+    } else {
+      return `${alias}.${fieldName}`;
+    }
   }
 
   sqlUnnestPipelineHead(): string {

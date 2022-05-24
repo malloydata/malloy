@@ -46,6 +46,7 @@ export abstract class Dialect {
   abstract stringTypeName: string;
   abstract divisionIsInteger: boolean;
   abstract supportsSumDistinctFunction: boolean;
+  abstract unnestWithNumbers: boolean;
   protected abstract functionInfo: Record<string, FunctionInfo>;
 
   // return a quoted string for use as a table path.
@@ -93,7 +94,8 @@ export abstract class Dialect {
     alias: string,
     fieldName: string,
     fieldType: string,
-    isNested: boolean
+    isNested: boolean,
+    isArray: boolean
   ): string;
 
   abstract sqlUnnestPipelineHead(isSingleton: boolean): string;

@@ -20,8 +20,8 @@ import "./is-sql-eq";
 import { mkSqlEqWith } from "./sql-eq";
 
 const runtimes = new RuntimeList([
-  // "bigquery", //
-  // "postgres", //
+  "bigquery", //
+  "postgres", //
   "duckdb", //
 ]);
 

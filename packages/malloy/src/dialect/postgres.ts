@@ -60,6 +60,7 @@ export class PostgresDialect extends Dialect {
   stringTypeName = "VARCHAR";
   divisionIsInteger = true;
   supportsSumDistinctFunction = false;
+  unnestWithNumbers = false;
 
   functionInfo: Record<string, FunctionInfo> = {};
 
@@ -193,7 +194,8 @@ export class PostgresDialect extends Dialect {
     alias: string,
     fieldName: string,
     fieldType: string,
-    isNested: boolean
+    isNested: boolean,
+    _isArray: boolean
   ): string {
     let ret = `${alias}->>'${fieldName}'`;
     if (isNested) {

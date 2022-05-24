@@ -19,19 +19,21 @@ import { RuntimeList } from "./runtimes";
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
 const runtimes = new RuntimeList([
-  // "bigquery", //
+  "bigquery", //
   "postgres", //
-  // "duckdb", //
+  "duckdb", //
 ]);
 
 const splitFunction: Record<string, string> = {
   bigquery: "split",
   postgres: "string_to_array",
+  duckdb: "string_to_array",
 };
 
 const rootDbPath: Record<string, string> = {
   bigquery: "malloy-data.",
   postgres: "",
+  duckdb: "",
 };
 
 afterAll(async () => {
@@ -496,6 +498,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         source: title is from_sql(atitle){}
 
         query: title ->  {
+          where: words.value != null
           group_by: words.value
           aggregate: c is count()
         }

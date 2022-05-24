@@ -541,13 +541,15 @@ class QueryField extends QueryNode {
     }
     return [
       this.parent.dialect.sqlFieldReference(
-        this.parent.getIdentifier(),
+        this.parent.getSQLIdentifier(),
         this.fieldDef.name,
         this.fieldDef.type,
         this.parent.fieldDef.structSource.type === "nested" ||
           this.parent.fieldDef.structSource.type === "inline" ||
           (this.parent.fieldDef.structSource.type === "sql" &&
-            this.parent.fieldDef.structSource.method === "nested")
+            this.parent.fieldDef.structSource.method === "nested"),
+        this.parent.fieldDef.structRelationship.type === "nested" &&
+          this.parent.fieldDef.structRelationship.isArray
       ),
     ];
   }
@@ -687,7 +689,8 @@ class QueryFieldDistinctKey extends QueryAtomicField {
         this.parent.getIdentifier(),
         "__distinct_key",
         "string",
-        this.parent.fieldDef.structRelationship.type === "nested"
+        this.parent.fieldDef.structRelationship.type === "nested",
+        false
       );
     }
   }
@@ -1901,7 +1904,9 @@ class QueryQuery extends QueryField {
         qs.parent.getIdentifier(),
         structRelationship.field as string,
         "struct",
-        qs.parent.fieldDef.structRelationship.type === "nested"
+        qs.parent.fieldDef.structRelationship.type === "nested",
+        this.parent.fieldDef.structRelationship.type === "nested" &&
+          this.parent.fieldDef.structRelationship.isArray
       );
       // we need to generate primary key.  If parent has a primary key combine
       s += `${this.parent.dialect.sqlUnnestAlias(
@@ -2865,6 +2870,23 @@ class QueryStruct extends QueryNode {
       ],
     };
     return new QueryFieldStruct(fieldDef, this, `${aliasName}.${pkName}`);
+  }
+
+  getSQLIdentifier(): string {
+    if (
+      this.dialect.unnestWithNumbers &&
+      this.fieldDef.structRelationship.type === "nested" &&
+      this.parent !== undefined
+    ) {
+      const x =
+        this.parent.getSQLIdentifier() +
+        "." +
+        getIdentifier(this.fieldDef) +
+        `[${this.getIdentifier()}.i]`;
+      return x;
+    } else {
+      return this.getIdentifier();
+    }
   }
 
   // return the name of the field in SQL
