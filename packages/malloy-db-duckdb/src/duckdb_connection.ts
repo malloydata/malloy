@@ -22,6 +22,7 @@ import {
   SQLBlock,
   StructDef,
 } from "@malloydata/malloy";
+import { FetchSchemaAndRunSimultaneously, FetchSchemaAndRunStreamSimultaneously, StreamingConnection } from "@malloydata/malloy/src/runtime_types";
 
 
 // duckdb node bindings do not come with Typescript types, require is required
@@ -263,5 +264,17 @@ export class DuckDBConnection implements Connection {
 
     await this.schemaFromQuery(infoQuery, structDef);
     return structDef;
+  }
+
+  canFetchSchemaAndRunSimultaneously(): this is FetchSchemaAndRunSimultaneously {
+    return false;
+  }
+
+  canStream(): this is StreamingConnection {
+    return false;
+  }
+
+  canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously {
+    return false;
   }
 }
