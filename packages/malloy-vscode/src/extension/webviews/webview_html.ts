@@ -15,18 +15,25 @@ import * as vscode from "vscode";
 import { randomInt } from "crypto";
 
 export function getWebviewHtml(
-  entrySrc: string,
+  entrySrc: vscode.Uri,
   webview: vscode.Webview
 ): string {
   const cspSrc = webview.cspSource;
+  const codiconsUri = webview.asWebviewUri(
+    vscode.Uri.joinPath(entrySrc, "..", "codicon.css")
+  );
 
   const nonce = getNonce();
   return `<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="base-uri 'none'; default-src 'none'; style-src 'unsafe-inline'; img-src ${cspSrc} https:; script-src 'nonce-${nonce}' 'unsafe-eval';">
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="base-uri 'none'; default-src 'none'; style-src ${cspSrc} 'unsafe-inline'; img-src ${cspSrc} https:; script-src 'nonce-${nonce}' 'unsafe-eval'; font-src ${cspSrc}"
+    >
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="${codiconsUri}" rel="stylesheet" />
     <title>Malloy Query Results</title>
   </head>
   <style>

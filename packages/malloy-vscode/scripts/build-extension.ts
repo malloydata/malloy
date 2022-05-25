@@ -14,6 +14,7 @@
 /* eslint-disable no-console */
 import fs from "fs";
 import { build, Plugin } from "esbuild";
+import { copy } from "esbuild-plugin-copy";
 import { nativeNodeModulesPlugin } from "../../../third_party/github.com/evanw/esbuild/native-modules-plugin";
 import * as path from "path";
 import { execSync } from "child_process";
@@ -224,6 +225,14 @@ export async function doBuild(target?: Target): Promise<void> {
   const webviewPlugins = [
     svgrPlugin({
       typescript: true,
+    }),
+    copy({
+      resolveFrom: "cwd",
+      assets: {
+        from: ["../../node_modules/@vscode/codicons/dist/**/*"],
+        to: [outDir],
+        keepStructure: true,
+      },
     }),
   ];
 

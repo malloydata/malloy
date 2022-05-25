@@ -189,21 +189,21 @@ export const App: React.FC = () => {
           </PrismContainer>
         </Scroll>
       )}
-      {error && <div>{error}</div>}
+      {error && <Error>{error}</Error>}
       {warning && <Warning>{warning}</Warning>}
       {cacheData && (
         <CacheData>
           {cacheData.fromCache && "Cached result: "}
-          {`Query ran at ${new Date(cacheData.ranAt).toLocaleString()} `}
-          <button
+          {`Query ran at ${new Date(cacheData.ranAt)?.toLocaleString()} `}
+          <Reload
             onClick={() => {
               vscode.postMessage({
                 type: QueryMessageType.Refresh,
               });
             }}
           >
-            Refresh
-          </button>
+            <i className="codicon codicon-refresh" />
+          </Reload>
         </CacheData>
       )}
       {drillTooltipVisible && (
@@ -307,18 +307,31 @@ const DrillTooltip = styled.div`
 `;
 
 const CacheData = styled.div`
-  color: var(--vscode-debugToolBar-background);
-  background-color: var(--vscode-foreground);
-  padding: 5px;
+  background-color: var(--vscode-debugToolBar-background);
+  color: var(--vscode-foreground);
   display: flex;
   justify-content: space-between;
   align-items: center;
+`;
+
+const Error = styled.div`
+  color: var(--vscode-statusBarItem-errorForeground);
+  background-color: var(--vscode-statusBarItem-errorBackground);
+  padding: 5px;
 `;
 
 const Warning = styled.div`
   color: var(--vscode-statusBarItem-warningForeground);
   background-color: var(--vscode-statusBarItem-warningBackground);
   padding: 5px;
+`;
+
+const Reload = styled.div`
+  padding: 2px 5px;
+  cursor: pointer;
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.5);
+  }
 `;
 
 const ResultControlsBar = styled.div`

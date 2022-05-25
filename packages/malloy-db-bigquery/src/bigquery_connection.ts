@@ -218,14 +218,13 @@ export class BigQueryConnection
 
   private async _runSQL(
     sqlCommand: string,
-    config: Partial<BigQueryQueryOptions> = {},
+    { rowLimit, cacheDuration, allowCache }: Partial<BigQueryQueryOptions> = {},
     rowIndex = 0
   ): Promise<{ data: MalloyQueryData; schema: bigquery.ITableFieldSchema }> {
     const defaultOptions = await this.readQueryOptions();
-    const { rowLimit, cacheDuration, allowCache } = {
-      ...defaultOptions,
-      ...config,
-    };
+    rowLimit = rowLimit ?? defaultOptions.rowLimit;
+    cacheDuration = cacheDuration ?? defaultOptions.cacheDuration;
+    allowCache = allowCache ?? defaultOptions.allowCache;
 
     const hash = this.resultCache.getHash(sqlCommand, rowLimit, rowIndex);
     if (allowCache) {

@@ -206,7 +206,7 @@ export function runMalloyQuery(
       const entrySrc = current.panel.webview.asWebviewUri(onDiskPath);
 
       current.panel.webview.html = getWebviewHtml(
-        entrySrc.toString(),
+        entrySrc,
         current.panel.webview
       );
 

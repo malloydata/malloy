@@ -392,14 +392,17 @@ export class PostgresConnection implements Connection, StreamingConnection {
 
   public async runSQL(
     sql: string,
-    config: Partial<PostgresQueryConfiguration> = {},
+    {
+      rowLimit,
+      cacheDuration,
+      allowCache,
+    }: Partial<PostgresQueryConfiguration> = {},
     rowIndex = 0
   ): Promise<MalloyQueryData> {
     const defaultConfig = await this.readQueryConfig();
-    const { rowLimit, cacheDuration, allowCache } = {
-      ...defaultConfig,
-      ...config,
-    };
+    rowLimit = rowLimit ?? defaultConfig.rowLimit;
+    cacheDuration = cacheDuration ?? defaultConfig.cacheDuration;
+    allowCache = allowCache ?? defaultConfig.allowCache;
 
     return await this.runPostgresQuery(
       sql,

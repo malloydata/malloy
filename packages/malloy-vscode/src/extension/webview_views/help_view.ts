@@ -23,7 +23,7 @@ import {
 export class HelpViewProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
 
-  constructor(private readonly _extensionUri: vscode.Uri) {}
+  constructor(private readonly extensionUri: vscode.Uri) {}
 
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
@@ -42,10 +42,7 @@ export class HelpViewProvider implements vscode.WebviewViewProvider {
 
     const entrySrc = webviewView.webview.asWebviewUri(onDiskPath);
 
-    webviewView.webview.html = getWebviewHtml(
-      entrySrc.toString(),
-      webviewView.webview
-    );
+    webviewView.webview.html = getWebviewHtml(entrySrc, webviewView.webview);
 
     const messageManager = new WebviewMessageManager<HelpPanelMessage>(
       webviewView
