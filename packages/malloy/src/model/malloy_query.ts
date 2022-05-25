@@ -1901,7 +1901,7 @@ class QueryQuery extends QueryField {
         throw new Error("Internal Error, nested structure with no parent.");
       }
       const fieldExpression = this.parent.dialect.sqlFieldReference(
-        qs.parent.getIdentifier(),
+        qs.parent.getSQLIdentifier(),
         structRelationship.field as string,
         "struct",
         qs.parent.fieldDef.structRelationship.type === "nested",
