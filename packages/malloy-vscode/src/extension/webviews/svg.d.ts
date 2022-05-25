@@ -11,4 +11,7 @@
  * GNU General Public License for more details.
  */
 
-export const API = "http://localhost:4000/api";
+declare module "*.svg" {
+  const content: JSX.IntrinsicElements.svg;
+  export default content;
+}

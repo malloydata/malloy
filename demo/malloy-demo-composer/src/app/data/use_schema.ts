@@ -13,7 +13,6 @@
 
 import { useQuery } from "react-query";
 import * as explore from "../../types";
-import { API } from "./api";
 
 export function KEY(analysis?: explore.Analysis): string {
   return analysis
@@ -41,13 +40,11 @@ async function fetchSchema(
   if (analysis.path) {
     params.path = analysis.path;
   }
-  const raw = await (
-    await fetch(`${API}/schema?` + new URLSearchParams(params))
-  ).json();
-  analysis.modelDef = raw.modelDef;
-  analysis.malloy = raw.malloy;
+  const schema = await window.malloy.schema(params);
+  analysis.modelDef = schema.modelDef;
+  analysis.malloy = schema.malloy;
   setAnalysis(analysis);
-  return raw.schema as explore.Schema;
+  return schema.schema as explore.Schema;
 }
 
 export function useSchema(

@@ -11,18 +11,4 @@
  * GNU General Public License for more details.
  */
 
-module.exports = {
-  globals: {
-    "ts-jest": { tsconfig: "<rootDir>/tsconfig.json" },
-  },
-  moduleFileExtensions: ["js", "jsx", "ts", "tsx"],
-  setupFilesAfterEnv: ["jest-expect-message"],
-  testMatch: ["**/?(*.)spec.(ts|js)?(x)"],
-  testPathIgnorePatterns: ["/node_modules/", "/dist/", "/out/"],
-  transform: {
-    "^.+\\.(ts|tsx)$": "ts-jest",
-  },
-  testTimeout: 100000,
-  verbose: true,
-  testEnvironment: "node",
-};
+export { Popover } from "./Popover";

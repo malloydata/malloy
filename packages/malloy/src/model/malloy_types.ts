@@ -155,6 +155,10 @@ export function isFilterFragment(f: Fragment): f is FilterFragment {
   return (f as FilterFragment)?.type === "filterExpression";
 }
 
+export function isDialectFragment(f: Fragment): f is DialectFragment {
+  return (f as DialectFragment)?.type === "dialect";
+}
+
 export interface AggregateFragment {
   type: "aggregate";
   function: string;

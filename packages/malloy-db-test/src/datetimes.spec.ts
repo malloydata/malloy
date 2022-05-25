@@ -486,4 +486,29 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
     });
   });
+
+  describe(`join object - ${databaseName}`, () => {
+    it(`dependant join dialect fragments- ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
+        sql: one is ||
+          ${basicTypes[databaseName]}
+        ;;
+
+        source: main is from_sql(one) {
+          join_one: joined is from_sql(one) on t_date = joined.t_date
+        }
+
+        query: main -> {
+          group_by: t_month is joined.t_timestamp.month
+        }
+        `
+        )
+        .run();
+      expect(result.data.path(0, "t_month").value).toEqual(
+        new Date("2021-02-01")
+      );
+    });
+  });
 });

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -15,7 +15,13 @@ import * as path from "path";
 import { performance } from "perf_hooks";
 import * as vscode from "vscode";
 import { CONNECTION_MANAGER, MALLOY_EXTENSION_STATE, RunState } from "../state";
-import { URL, Runtime, URLReader, QueryMaterializer } from "@malloydata/malloy";
+import {
+  URL,
+  Runtime,
+  URLReader,
+  QueryMaterializer,
+  SQLBlockMaterializer,
+} from "@malloydata/malloy";
 import { DataStyles } from "@malloydata/render";
 import turtleIcon from "../../media/turtle.svg";
 import { fetchFile, VSCodeURLReader } from "../utils";
@@ -25,6 +31,7 @@ import {
   QueryRunStatus,
   WebviewMessageManager,
 } from "../webview_message_manager";
+import { queryDownload } from "./query_download";
 
 const malloyLog = vscode.window.createOutputChannel("Malloy");
 
@@ -230,7 +237,7 @@ export function runMalloyQuery(
           });
           progress.report({ increment: 20, message: "Compiling" });
 
-          let runnable;
+          let runnable: QueryMaterializer | SQLBlockMaterializer;
           let styles: DataStyles = {};
           const queryFileURL = URL.fromString(
             "file://" + query.file.uri.fsPath
@@ -286,6 +293,17 @@ export function runMalloyQuery(
           progress.report({ increment: 40, message: "Running" });
           const queryResult = await runnable.run({ rowLimit });
           if (canceled) return;
+
+          current.messages.onReceiveMessage((message) => {
+            if (message.type === QueryMessageType.StartDownload) {
+              queryDownload(
+                runnable,
+                message.downloadOptions,
+                queryResult,
+                name
+              );
+            }
+          });
 
           const runEnd = performance.now();
           logTime("Run", runBegin, runEnd);

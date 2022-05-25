@@ -22,7 +22,7 @@ interface ComposerConfig {
 
 export async function getConfig(): Promise<ComposerConfig> {
   let config = {
-    modelsPath: path.join(__filename, "../../../../../samples"),
+    modelsPath: path.join(__filename, "../../../../samples"),
   };
   const configFilePath = path.resolve("./composer_config.json");
   if (existsSync(configFilePath)) {

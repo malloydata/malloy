@@ -15,7 +15,7 @@ import { TextFieldType } from "@vscode/webview-ui-toolkit";
 import React, { useState } from "react";
 import { PostgresConnectionConfig } from "../../../../../common/connection_manager_types";
 import { TextField } from "../../../components";
-import { VSCodeCheckbox, VSCodeRadio } from "../../../components/fast";
+import { VSCodeCheckbox, VSCodeRadio } from "@vscode/webview-ui-toolkit/react";
 import { Label } from "../Label";
 import { LabelCell } from "../LabelCell";
 

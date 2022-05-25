@@ -13,13 +13,11 @@
 
 import { useQuery } from "react-query";
 import * as explore from "../../types";
-import { API } from "./api";
 
 export const KEY = "directory";
 
 async function fetchDirectory(): Promise<explore.Directory> {
-  const raw = await (await fetch(`${API}/analyses`)).json();
-  return raw.directory as explore.Directory;
+  return window.malloy.analyses();
 }
 
 export function useDirectory(): explore.Directory | undefined {
