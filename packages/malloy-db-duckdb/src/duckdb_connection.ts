@@ -23,7 +23,6 @@ import {
   StructDef,
 } from "@malloydata/malloy";
 
-
 // duckdb node bindings do not come with Typescript types, require is required
 // https://github.com/duckdb/duckdb/tree/master/tools/nodejs
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -221,7 +220,7 @@ export class DuckDBConnection implements Connection {
       try {
         schemas[tableURL] = await this.getTableSchema(tableURL);
       } catch (error) {
-        errors[tableURL] = error;
+        errors[tableURL] = error.toString();
       }
     }
     return { schemas, errors };
@@ -251,7 +250,7 @@ export class DuckDBConnection implements Connection {
     //     AND table_schema = '${schema}'
     // `;
 
-    const infoQuery = `DESCRIBE SELECT * FROM ${tableURL};`;
+    const infoQuery = `DESCRIBE SELECT * FROM '${tableURL}';`;
     await this.schemaFromQuery(infoQuery, structDef);
     return structDef;
   }
