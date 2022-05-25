@@ -31,7 +31,7 @@ import {
 // duckdb node bindings do not come with Typescript types, require is required
 // https://github.com/duckdb/duckdb/tree/master/tools/nodejs
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const duckdb = require("duckdb");
+const duckdb = require("../../../third_party/github.com/duckdb/duckdb/tools/nodejs/lib/duckdb.js").duckdb;
 
 const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   BIGINT: "number",
@@ -51,11 +51,12 @@ export class DuckDBConnection implements Connection {
   protected database;
   protected isSetup = false;
 
-  constructor(name: string) {
+  constructor(name: string, databasePath = "test/data/duckdb/duckdb_test.db") {
     this.name = name;
 
     // TODO temp! For now, just connect to the test database
-    this.database = new duckdb.Database("test/data/duckdb/duckdb_test.db");
+    console.log("DUCKDB PATH", databasePath);
+    this.database = new duckdb.Database(databasePath, 1);
     this.connection = this.database.connect();
   }
 

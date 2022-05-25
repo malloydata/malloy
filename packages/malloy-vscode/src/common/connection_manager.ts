@@ -120,7 +120,12 @@ export class ConnectionManager {
         );
       }
       case ConnectionBackend.DuckDB: {
-        return new DuckDBConnection(connectionConfig.name);
+        try {
+          return new DuckDBConnection(connectionConfig.name, connectionConfig.databasePath);
+        } catch (error) {
+          console.log("Could not create DuckDB connection:", error);
+          throw error;
+        }
       }
     }
   }
