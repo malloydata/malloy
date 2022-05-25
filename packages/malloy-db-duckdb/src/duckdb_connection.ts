@@ -54,6 +54,8 @@ export class DuckDBConnection implements Connection {
   constructor(name: string, databasePath = "test/data/duckdb/duckdb_test.db", workingDirectory = "/") {
     this.name = name;
 
+    console.log(duckdb)
+
     // TODO temp! For now, just connect to the test database
     this.database = new duckdb.Database(databasePath, duckdb.OPEN_READONLY);
     this.connection = this.database.connect();

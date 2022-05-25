@@ -1,5 +1,6 @@
 // Adapted from https://github.com/duckdb/duckdb/blob/master/tools/nodejs/lib/duckdb.js
-export const duckdb = require("duckdb/lib/binding/duckdb.node");
+var duckdb = require("duckdb/lib/binding/duckdb.node");
+module.exports.duckdb = duckdb;
 
 // some wrappers for compatibilities sake
 var Database = duckdb.Database;
