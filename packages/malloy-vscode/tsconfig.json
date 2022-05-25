@@ -18,6 +18,9 @@
       "path": "../malloy-db-postgres"
     },
     {
+      "path": "../malloy-db-duckdb"
+    },
+    {
       "path": "../malloy-render"
     }
   ]

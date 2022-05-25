@@ -22,11 +22,16 @@ import {
   SQLBlock,
   StructDef,
 } from "@malloydata/malloy";
+import {
+  FetchSchemaAndRunSimultaneously,
+  FetchSchemaAndRunStreamSimultaneously,
+  StreamingConnection,
+} from "@malloydata/malloy/src/runtime_types";
 
 // duckdb node bindings do not come with Typescript types, require is required
 // https://github.com/duckdb/duckdb/tree/master/tools/nodejs
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const duckdb = require("duckdb");
+const duckdb = require("../../../third_party/github.com/duckdb/duckdb/tools/nodejs/lib/duckdb.js").duckdb;
 
 const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   BIGINT: "number",
@@ -46,11 +51,11 @@ export class DuckDBConnection implements Connection {
   protected database;
   protected isSetup = false;
 
-  constructor(name: string) {
+  constructor(name: string, databasePath = "test/data/duckdb/duckdb_test.db", workingDirectory = "/") {
     this.name = name;
 
     // TODO temp! For now, just connect to the test database
-    this.database = new duckdb.Database("test/data/duckdb/duckdb_test.db");
+    this.database = new duckdb.Database(databasePath, duckdb.OPEN_READONLY);
     this.connection = this.database.connect();
   }
 
@@ -108,7 +113,7 @@ export class DuckDBConnection implements Connection {
 
   public async runSQL(sql: string): Promise<MalloyQueryData> {
     await this.setup();
-    console.log(sql);
+    // console.log(sql);
 
     const statements = sql.split("-- hack: split on this");
 
@@ -116,7 +121,9 @@ export class DuckDBConnection implements Connection {
       try {
         await this.runDuckDBQuery(statements[0]);
         statements.unshift();
-      } catch (e) {}
+      } catch (e) {
+        /* Do nothing */
+      }
     }
     const retVal = await this.runDuckDBQuery(statements[0]);
     const result = JSON.parse(retVal.rows[0].results);
@@ -275,9 +282,10 @@ export class DuckDBConnection implements Connection {
   }
 
   private async getTableSchema(tableURL: string): Promise<StructDef> {
+    const { tablePath: tableName } = parseTableURL(tableURL);
     const structDef: StructDef = {
       type: "struct",
-      name: tableURL,
+      name: tableName,
       dialect: "duckdb",
       structSource: { type: "table" },
       structRelationship: {
@@ -299,9 +307,25 @@ export class DuckDBConnection implements Connection {
     // `;
 
     const infoQuery = `DESCRIBE SELECT * FROM ${
-      tableURL.match(/\//) ? `'${tableURL}'` : tableURL
+      tableName.match(/\//) ? `'${tableName}'` : tableName
     };`;
     await this.schemaFromQuery(infoQuery, structDef);
     return structDef;
+  }
+
+  canFetchSchemaAndRunSimultaneously(): this is FetchSchemaAndRunSimultaneously {
+    return false;
+  }
+
+  canStream(): this is StreamingConnection {
+    return false;
+  }
+
+  canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously {
+    return false;
+  }
+
+  public async test(): Promise<void> {
+    await this.runRawSQL("SELECT 1");
   }
 }
