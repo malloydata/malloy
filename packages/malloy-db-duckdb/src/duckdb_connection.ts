@@ -158,18 +158,8 @@ export class DuckDBConnection implements Connection {
       fields: [],
     };
 
-    // TODO -- Should be a uuid
-    const tempTableName = `malloy${Math.floor(Math.random() * 10000000)}`;
-    await this.runRawSQL(`drop table if exists ${tempTableName};`);
-    const createQuery = `
-      create temp table ${tempTableName} as SELECT * FROM (
-        ${sqlRef.select}
-      ) as x where false;;
-    `;
-    console.log(createQuery);
-    await this.runRawSQL(createQuery);
     await this.schemaFromQuery(
-      `SELECT column_name, data_type FROM information_schema.columns where table_name='${tempTableName}'`,
+      `DESCRIBE SELECT * FROM (${sqlRef.select})`,
       structDef
     );
     return structDef;
@@ -181,7 +171,7 @@ export class DuckDBConnection implements Connection {
   ): Promise<void> {
     const result = await this.runDuckDBQuery(infoQuery);
     for (const row of result.rows) {
-      let duckDBType = row["data_type"] as string;
+      let duckDBType = row["column_type"] as string;
       let malloyType = duckDBToMalloyTypes[duckDBType];
       const name = row["column_name"] as string;
       const arrayMatch = duckDBType.match(/(?<duckDBType>.*)\[\]$/);
@@ -238,7 +228,7 @@ export class DuckDBConnection implements Connection {
       try {
         schemas[tableURL] = await this.getTableSchema(tableURL);
       } catch (error) {
-        errors[tableURL] = error;
+        errors[tableURL] = error.toString();
       }
     }
     return { schemas, errors };
@@ -257,17 +247,18 @@ export class DuckDBConnection implements Connection {
       fields: [],
     };
 
-    const { tablePath: tableName } = parseTableURL(tableURL);
-    const [schema, table] = tableName.split(".");
-    if (table === undefined) {
-      throw new Error("Default schema not yet supported in DuckDB");
-    }
-    const infoQuery = `
-      SELECT column_name, data_type FROM information_schema.columns
-      WHERE table_name = '${table}'
-        AND table_schema = '${schema}'
-    `;
+    // const { tablePath: tableName } = parseTableURL(tableURL);
+    // const [schema, table] = tableName.split(".");
+    // if (table === undefined) {
+    //   throw new Error("Default schema not yet supported in DuckDB");
+    // }
+    // const infoQuery = `
+    //   SELECT column_name, data_type FROM information_schema.columns
+    //   WHERE table_name = '${table}'
+    //     AND table_schema = '${schema}'
+    // `;
 
+    const infoQuery = `DESCRIBE SELECT * FROM '${tableURL}';`;
     await this.schemaFromQuery(infoQuery, structDef);
     return structDef;
   }
