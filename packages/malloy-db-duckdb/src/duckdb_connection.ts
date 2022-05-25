@@ -157,39 +157,87 @@ export class DuckDBConnection implements Connection {
     return structDef;
   }
 
-  private async schemaFromQuery(
-    infoQuery: string,
-    structDef: StructDef
-  ): Promise<void> {
-    const result = await this.runDuckDBQuery(infoQuery);
-    for (const row of result.rows) {
-      let duckDBType = row["column_type"] as string;
+  private stringToTypeMap(s: string): { [name: string]: string } {
+    const ret: { [name: string]: string } = {};
+    const columns = s.split(", ");
+    for (const c of columns) {
+      //const [name, type] = c.split(" ", 1);
+      const columnMatch = c.match(/^(?<name>[^\s]+) (?<type>.*)$/);
+      if (columnMatch && columnMatch.groups) {
+        ret[columnMatch.groups["name"]] = columnMatch.groups["type"];
+      } else {
+        throw `Badly form Structure definition ${s}`;
+      }
+    }
+    return ret;
+  }
+
+  private fillStructDefFromTypeMap(
+    structDef: StructDef,
+    typeMap: { [name: string]: string }
+  ) {
+    for (const name in typeMap) {
+      let duckDBType = typeMap[name];
       let malloyType = duckDBToMalloyTypes[duckDBType];
-      const name = row["column_name"] as string;
       const arrayMatch = duckDBType.match(/(?<duckDBType>.*)\[\]$/);
       if (arrayMatch && arrayMatch.groups) {
         duckDBType = arrayMatch.groups["duckDBType"];
-        malloyType = duckDBToMalloyTypes[duckDBType];
+      }
+      const structMatch = duckDBType.match(/^STRUCT\((?<fields>.*)\)$/);
+      if (structMatch && structMatch.groups) {
+        console.log(structMatch.groups["fields"]);
+        const newTypeMap = this.stringToTypeMap(structMatch.groups["fields"]);
         const innerStructDef: StructDef = {
           type: "struct",
           name,
           dialect: this.dialectName,
-          structSource: { type: "nested" },
-          structRelationship: { type: "nested", field: name, isArray: true },
-          fields: [{ type: malloyType, name: "value" } as FieldTypeDef],
+          structSource: { type: arrayMatch ? "nested" : "inline" },
+          structRelationship: {
+            type: arrayMatch ? "nested" : "inline",
+            field: name,
+            isArray: false,
+          },
+          fields: [],
         };
+        this.fillStructDefFromTypeMap(innerStructDef, newTypeMap);
         structDef.fields.push(innerStructDef);
       } else {
-        if (malloyType !== undefined) {
-          structDef.fields.push({
-            type: malloyType,
+        if (arrayMatch) {
+          malloyType = duckDBToMalloyTypes[duckDBType];
+          const innerStructDef: StructDef = {
+            type: "struct",
             name,
-          });
+            dialect: this.dialectName,
+            structSource: { type: "nested" },
+            structRelationship: { type: "nested", field: name, isArray: true },
+            fields: [{ type: malloyType, name: "value" } as FieldTypeDef],
+          };
+          structDef.fields.push(innerStructDef);
         } else {
-          throw new Error(`unknown duckdb type ${duckDBType}`);
+          if (malloyType !== undefined) {
+            structDef.fields.push({
+              type: malloyType,
+              name,
+            });
+          } else {
+            throw new Error(`unknown duckdb type ${duckDBType}`);
+          }
         }
       }
     }
+  }
+
+  private async schemaFromQuery(
+    infoQuery: string,
+    structDef: StructDef
+  ): Promise<void> {
+    const typeMap: { [key: string]: string } = {};
+
+    const result = await this.runDuckDBQuery(infoQuery);
+    for (const row of result.rows) {
+      typeMap[row["column_name"] as string] = row["column_type"] as string;
+    }
+    this.fillStructDefFromTypeMap(structDef, typeMap);
   }
 
   public async fetchSchemaForSQLBlocks(sqlRefs: SQLBlock[]): Promise<{
@@ -250,7 +298,9 @@ export class DuckDBConnection implements Connection {
     //     AND table_schema = '${schema}'
     // `;
 
-    const infoQuery = `DESCRIBE SELECT * FROM '${tableURL}';`;
+    const infoQuery = `DESCRIBE SELECT * FROM ${
+      tableURL.match(/\//) ? `'${tableURL}'` : tableURL
+    };`;
     await this.schemaFromQuery(infoQuery, structDef);
     return structDef;
   }

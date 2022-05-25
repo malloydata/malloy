@@ -100,7 +100,7 @@ export class DuckDBDialect extends Dialect {
   }
 
   quoteTablePath(tableName: string): string {
-    return `${tableName}`;
+    return tableName.match(/\//) ? `'${tableName}'` : tableName;
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
@@ -325,10 +325,10 @@ export class DuckDBDialect extends Dialect {
   //   )`;
   // }
   sqlSumDistinct(key: string, value: string): string {
-    const factor = "10000000000000000";
+    const factor = 28;
     const precision = 0.000001;
     return `
-    (SUM(DISTINCT md5_number(${key}::varchar)/${factor} + FLOOR(${value}/${precision})::int128) -  SUM(DISTINCT md5_number(${key}::varchar)/${factor}))*${precision}
+    (SUM(DISTINCT (md5_number(${key}::varchar) >> ${factor}) + FLOOR(${value}/${precision})::int128) -  SUM(DISTINCT (md5_number(${key}::varchar) >> ${factor})))*${precision}
     `;
   }
 }
