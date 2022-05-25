@@ -51,12 +51,11 @@ export class DuckDBConnection implements Connection {
   protected database;
   protected isSetup = false;
 
-  constructor(name: string, databasePath = "test/data/duckdb/duckdb_test.db") {
+  constructor(name: string, databasePath = "test/data/duckdb/duckdb_test.db", workingDirectory = "/") {
     this.name = name;
 
     // TODO temp! For now, just connect to the test database
-    console.log("DUCKDB PATH", databasePath);
-    this.database = new duckdb.Database(databasePath, 1);
+    this.database = new duckdb.Database(databasePath, duckdb.OPEN_READONLY);
     this.connection = this.database.connect();
   }
 
@@ -283,9 +282,10 @@ export class DuckDBConnection implements Connection {
   }
 
   private async getTableSchema(tableURL: string): Promise<StructDef> {
+    const { tablePath: tableName } = parseTableURL(tableURL);
     const structDef: StructDef = {
       type: "struct",
-      name: tableURL,
+      name: tableName,
       dialect: "duckdb",
       structSource: { type: "table" },
       structRelationship: {
@@ -307,7 +307,7 @@ export class DuckDBConnection implements Connection {
     // `;
 
     const infoQuery = `DESCRIBE SELECT * FROM ${
-      tableURL.match(/\//) ? `'${tableURL}'` : tableURL
+      tableName.match(/\//) ? `'${tableName}'` : tableName
     };`;
     await this.schemaFromQuery(infoQuery, structDef);
     return structDef;

@@ -121,7 +121,7 @@ export class ConnectionManager {
       }
       case ConnectionBackend.DuckDB: {
         try {
-          return new DuckDBConnection(connectionConfig.name, connectionConfig.databasePath);
+          return new DuckDBConnection(connectionConfig.name, ":memory:", connectionConfig.workingDirectory);
         } catch (error) {
           console.log("Could not create DuckDB connection:", error);
           throw error;

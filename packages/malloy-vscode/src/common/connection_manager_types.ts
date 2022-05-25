@@ -45,7 +45,7 @@ export interface DuckDBConnectionConfig {
   name: string;
   isDefault: boolean;
   id: string;
-  databasePath?: string;
+  workingDirectory?: string;
 }
 
 export type ConnectionConfig =

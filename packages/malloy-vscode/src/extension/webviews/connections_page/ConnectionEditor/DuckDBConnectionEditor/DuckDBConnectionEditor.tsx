@@ -13,7 +13,7 @@
 
 import React from "react";
 import { DuckDBConnectionConfig } from "../../../../../common/connection_manager_types";
-import { TextField, VSCodeButton } from "../../../components";
+import { TextField } from "../../../components";
 import { Label } from "../Label";
 import { LabelCell } from "../LabelCell";
 
@@ -44,13 +44,13 @@ export const DuckDBConnectionEditor: React.FC<DuckDBConnectionEditorProps> = ({
         </tr>
         <tr>
           <LabelCell>
-            <Label>Database Path:</Label>
+            <Label>Working Directory:</Label>
           </LabelCell>
           <td>
             <TextField
-              value={config.databasePath || ""}
-              setValue={(databasePath) => {
-                setConfig({ ...config, databasePath });
+              value={config.workingDirectory || ""}
+              setValue={(workingDirectory) => {
+                setConfig({ ...config, workingDirectory });
               }}
             />
           </td>
