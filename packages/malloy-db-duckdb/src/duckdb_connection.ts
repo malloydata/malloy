@@ -27,11 +27,7 @@ import {
   FetchSchemaAndRunStreamSimultaneously,
   StreamingConnection,
 } from "@malloydata/malloy/src/runtime_types";
-
-// duckdb node bindings do not come with Typescript types, require is required
-// https://github.com/duckdb/duckdb/tree/master/tools/nodejs
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const duckdb = require("../../../third_party/github.com/duckdb/duckdb/tools/nodejs/lib/duckdb.js").duckdb;
+import { Database, OPEN_READONLY } from "duckdb";
 
 const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   BIGINT: "number",
@@ -51,13 +47,15 @@ export class DuckDBConnection implements Connection {
   protected database;
   protected isSetup = false;
 
-  constructor(name: string, databasePath = "test/data/duckdb/duckdb_test.db", workingDirectory = "/") {
+  constructor(
+    name: string,
+    databasePath = "test/data/duckdb/duckdb_test.db",
+    workingDirectory = "/"
+  ) {
     this.name = name;
 
-    console.log(duckdb)
-
     // TODO temp! For now, just connect to the test database
-    this.database = new duckdb.Database(databasePath, duckdb.OPEN_READONLY);
+    this.database = new Database(databasePath, OPEN_READONLY);
     this.connection = this.database.connect();
   }
 
@@ -96,7 +94,7 @@ export class DuckDBConnection implements Connection {
   protected async runDuckDBQuery(sql: string): Promise<any> {
     return new Promise((resolve, reject) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      this.connection.all(sql, (err: any, result: any) => {
+      this.connection.all(sql, (err: Error, result: any) => {
         if (err) {
           reject(err);
         } else
@@ -108,6 +106,7 @@ export class DuckDBConnection implements Connection {
     });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public async runRawSQL(sql: string): Promise<any> {
     await this.setup();
     return this.runDuckDBQuery(sql);

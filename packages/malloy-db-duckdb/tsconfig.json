@@ -9,9 +9,5 @@
     {
       "path": "../malloy"
     }
-  ],
-  "include": [
-    "src",
-    "../../third_party/github.com/duckdb"
   ]
 }
