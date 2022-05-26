@@ -7,6 +7,9 @@
   },
   "references": [
     {
+      "path": "../malloy-db-connection"
+    },
+    {
       "path": "../malloy"
     }
   ]
