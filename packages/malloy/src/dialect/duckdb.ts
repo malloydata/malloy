@@ -171,7 +171,7 @@ export class DuckDBDialect extends Dialect {
     return `LEFT JOIN (select UNNEST(generate_series(1,
         100000, --
         -- (SELECT genres_length FROM movies limit 1),
-        1)) as i) as ${alias} ON  ${alias}.i <= array_length(${source})`;
+        1)) as __row_id) as ${alias} ON  ${alias}.__row_id <= array_length(${source})`;
   }
 
   sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
@@ -316,7 +316,7 @@ export class DuckDBDialect extends Dialect {
   //   )`;
   // }
   sqlSumDistinct(key: string, value: string): string {
-    const factor = 28;
+    const factor = 38;
     const precision = 0.000001;
     return `
     (SUM(DISTINCT (md5_number(${key}::varchar) >> ${factor}) + FLOOR(IFNULL(${value},0)/${precision})::int128) -  SUM(DISTINCT (md5_number(${key}::varchar) >> ${factor})))*${precision}

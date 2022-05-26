@@ -683,11 +683,11 @@ class QueryFieldDistinctKey extends QueryAtomicField {
     if (this.parent.primaryKey()) {
       const pk = this.parent.getPrimaryKeyField(this.fieldDef);
       return pk.generateExpression(resultSet);
-    } else if (this.parent.unnestWithNumbers()) {
+    } else if (this.parent.fieldDef.structSource.type === "nested") {
       const parentKey = this.parent.parent
         ?.getDistinctKey()
         .generateExpression(resultSet);
-      return `CONCAT(${parentKey}, 'x', ${this.parent.getIdentifier()}.i)`;
+      return `CONCAT(${parentKey}, 'x', ${this.parent.getIdentifier()}.__row_id)`;
     } else {
       // return this.parent.getIdentifier() + "." + "__distinct_key";
       return this.parent.dialect.sqlFieldReference(
@@ -2883,7 +2883,7 @@ class QueryStruct extends QueryNode {
         this.parent.getSQLIdentifier() +
         "." +
         getIdentifier(this.fieldDef) +
-        `[${this.getIdentifier()}.i]`;
+        `[${this.getIdentifier()}.__row_id]`;
       return x;
     } else {
       return this.getIdentifier();
