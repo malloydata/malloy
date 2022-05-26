@@ -169,6 +169,10 @@ export async function doBuild(target?: Target): Promise<void> {
       ),
       path.join(outDir, "keytar-native.node")
     );
+    const duckDBBinaryName = targetDuckDBMap[target];
+    if (duckDBBinaryName === undefined) {
+      throw new Error(`No DuckDB binary for ${target} is available`);
+    }
     fs.copyFileSync(
       path.join(
         "..",
@@ -177,7 +181,7 @@ export async function doBuild(target?: Target): Promise<void> {
         "github.com",
         "duckdb",
         "duckdb",
-        targetDuckDBMap[target]
+        duckDBBinaryName
       ),
       path.join(outDir, "duckdb-native.node")
     );
