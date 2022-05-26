@@ -684,6 +684,11 @@ class QueryFieldDistinctKey extends QueryAtomicField {
     if (this.parent.primaryKey()) {
       const pk = this.parent.getPrimaryKeyField(this.fieldDef);
       return pk.generateExpression(resultSet);
+    } else if (this.parent.fieldDef.structSource.type === "nested") {
+      const parentKey = this.parent.parent
+        ?.getDistinctKey()
+        .generateExpression(resultSet);
+      return `CONCAT(${parentKey}, 'x', ${this.parent.getIdentifier()}.__row_id)`;
     } else {
       // return this.parent.getIdentifier() + "." + "__distinct_key";
       return this.parent.dialect.sqlFieldReference(
@@ -2898,16 +2903,12 @@ class QueryStruct extends QueryNode {
   }
 
   getSQLIdentifier(): string {
-    if (
-      this.dialect.unnestWithNumbers &&
-      this.fieldDef.structRelationship.type === "nested" &&
-      this.parent !== undefined
-    ) {
+    if (this.unnestWithNumbers() && this.parent !== undefined) {
       const x =
         this.parent.getSQLIdentifier() +
         "." +
         getIdentifier(this.fieldDef) +
-        `[${this.getIdentifier()}.i]`;
+        `[${this.getIdentifier()}.__row_id]`;
       return x;
     } else {
       return this.getIdentifier();
@@ -2950,6 +2951,13 @@ class QueryStruct extends QueryNode {
       return !join.leafiest;
     }
     throw new Error(`Join ${joinName} not found in result set`);
+  }
+
+  unnestWithNumbers(): boolean {
+    return (
+      this.dialect.unnestWithNumbers &&
+      this.fieldDef.structRelationship.type === "nested"
+    );
   }
 
   getJoinableParent(): QueryStruct {

@@ -16,8 +16,8 @@ import * as malloy from "@malloydata/malloy";
 import { RuntimeList } from "./runtimes";
 
 const runtimes = new RuntimeList([
-  // "bigquery", //
-  // "postgres", //
+  "bigquery", //
+  "postgres", //
   "duckdb", //
 ]);
 

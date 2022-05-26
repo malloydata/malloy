@@ -126,12 +126,12 @@ export class StandardSQLDialect extends Dialect {
   ): string {
     if (isArray) {
       if (needDistinctKey) {
-        return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, value FROM UNNEST(${source}) value))) as ${alias}`;
+        return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT row_number() over() as __row_id, value FROM UNNEST(${source}) value))) as ${alias}`;
       } else {
         return `LEFT JOIN UNNEST(ARRAY((SELECT AS STRUCT value FROM unnest(${source}) value))) as ${alias}`;
       }
     } else if (needDistinctKey) {
-      return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
+      return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT row_number() over() as __row_id, * FROM UNNEST(${source})))) as ${alias}`;
     } else {
       return `LEFT JOIN UNNEST(${source}) as ${alias}`;
     }

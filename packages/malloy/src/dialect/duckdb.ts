@@ -165,20 +165,13 @@ export class DuckDBDialect extends Dialect {
   sqlUnnestAlias(
     source: string,
     alias: string,
-    fieldList: DialectFieldList,
-    needDistinctKey: boolean
+    _fieldList: DialectFieldList,
+    _needDistinctKey: boolean
   ): string {
-    if (needDistinctKey) {
-      // return `UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
-      return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__distinct_key', gen_random_uuid()::text)|| __xx::jsonb as b FROM  JSONB_ARRAY_ELEMENTS(${source}) __xx ))) as ${alias} ON true`;
-    } else {
-      // return `CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS(${source}) as ${alias}`;
-      // return `LEFT JOIN JSONB_ARRAY_ELEMENTS(${source}) as ${alias} ON true`;
-      return `LEFT JOIN (select UNNEST(generate_series(1,
+    return `LEFT JOIN (select UNNEST(generate_series(1,
         100000, --
         -- (SELECT genres_length FROM movies limit 1),
-        1)) as i) as ${alias} ON  ${alias}.i <= array_length(${source})`;
-    }
+        1)) as __row_id) as ${alias} ON  ${alias}.__row_id <= array_length(${source})`;
   }
 
   sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
@@ -323,7 +316,7 @@ export class DuckDBDialect extends Dialect {
   //   )`;
   // }
   sqlSumDistinct(key: string, value: string): string {
-    const factor = 28;
+    const factor = 38;
     const precision = 0.000001;
     return `
     (SUM(DISTINCT (md5_number(${key}::varchar) >> ${factor}) + FLOOR(IFNULL(${value},0)/${precision})::int128) -  SUM(DISTINCT (md5_number(${key}::varchar) >> ${factor})))*${precision}

@@ -112,7 +112,7 @@ export class DuckDBConnection implements Connection {
   }
 
   public async runSQL(sql: string): Promise<MalloyQueryData> {
-    console.log(sql);
+    // console.log(sql);
     await this.setup();
 
     const statements = sql.split("-- hack: split on this");
