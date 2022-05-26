@@ -34,9 +34,9 @@ export type Target =
   | "darwin-x64"
   | "darwin-arm64";
 
-export type TargetKeytarMap = { [target in Target]: string };
+export type BinaryTargetMap = { [target in Target]: string };
 
-export const targetKeytarMap: TargetKeytarMap = {
+export const targetKeytarMap: BinaryTargetMap = {
   "linux-x64": "keytar-v7.7.0-napi-v3-linux-x64.node",
   "linux-arm64": "keytar-v7.7.0-napi-v3-linux-arm64.node",
   "linux-armhf": "keytar-v7.7.0-napi-v3-linux-ia32.node",
@@ -46,14 +46,9 @@ export const targetKeytarMap: TargetKeytarMap = {
   "darwin-arm64": "keytar-v7.7.0-napi-v3-darwin-arm64.node",
 };
 
-export const targetDuckDBMap: TargetKeytarMap = {
-  "linux-x64": "keytar-v7.7.0-napi-v3-linux-x64.node",
-  "linux-arm64": "keytar-v7.7.0-napi-v3-linux-arm64.node",
-  "linux-armhf": "keytar-v7.7.0-napi-v3-linux-ia32.node",
-  "alpine-x64": "keytar-v7.7.0-napi-v3-linuxmusl-x64.node",
-  "alpine-arm64": "keytar-v7.7.0-napi-v3-linuxmusl-arm64.node",
-  "darwin-x64": "duckdb.node",
-  "darwin-arm64": "keytar-v7.7.0-napi-v3-darwin-arm64.node",
+export const targetDuckDBMap: Partial<BinaryTargetMap> = {
+  "linux-x64": "duckdb-v0.3.4-node-v93-linux-x64.node",
+  "darwin-x64": "duckdb-v0.3.4-node-v93-darwin-x64.node",
 };
 
 export const outDir = "dist/";
