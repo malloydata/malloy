@@ -11,7 +11,6 @@
  * GNU General Public License for more details.
  */
 
-import { DateTimeframe, TimestampTimeframe } from "..";
 import {
   DateUnit,
   Expr,
@@ -23,7 +22,6 @@ import {
   TimeValue,
   TypecastFragment,
 } from "../model";
-import { indent } from "../model/utils";
 import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
@@ -177,9 +175,9 @@ export class DuckDBDialect extends Dialect {
       // return `CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS(${source}) as ${alias}`;
       // return `LEFT JOIN JSONB_ARRAY_ELEMENTS(${source}) as ${alias} ON true`;
       return `LEFT JOIN (select UNNEST(generate_series(1,
-        1000000, --
+        100000, --
         -- (SELECT genres_length FROM movies limit 1),
-        1)) as i) as ${alias} ON  ${alias}.i <= array_length(${source})`
+        1)) as i) as ${alias} ON  ${alias}.i <= array_length(${source})`;
     }
   }
 
@@ -328,7 +326,7 @@ export class DuckDBDialect extends Dialect {
     const factor = 28;
     const precision = 0.000001;
     return `
-    (SUM(DISTINCT (md5_number(${key}::varchar) >> ${factor}) + FLOOR(${value}/${precision})::int128) -  SUM(DISTINCT (md5_number(${key}::varchar) >> ${factor})))*${precision}
+    (SUM(DISTINCT (md5_number(${key}::varchar) >> ${factor}) + FLOOR(IFNULL(${value},0)/${precision})::int128) -  SUM(DISTINCT (md5_number(${key}::varchar) >> ${factor})))*${precision}
     `;
   }
 }
