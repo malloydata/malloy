@@ -44,10 +44,7 @@ import {
   PersistSQLResults,
   StreamingConnection,
 } from "@malloydata/malloy/src/runtime_types";
-import {
-  MalloyResultCache,
-  ResultCacheEntry,
-} from "@malloydata/malloy/src/result_cache";
+import { MalloyResultCache, ResultCacheEntry } from "@malloydata/db-connection";
 export interface BigQueryManagerOptions {
   credentials?: {
     clientId: string;
@@ -74,7 +71,7 @@ interface BigQueryConnectionConfiguration {
 
 interface SchemaInfo {
   schema: bigquery.ITableFieldSchema;
-  needsPartitionPsuedoColumn: boolean;
+  needsPartitionPseudoColumn: boolean;
 }
 
 interface BigQueryResultCacheEntry extends ResultCacheEntry {
@@ -363,7 +360,7 @@ export class BigQueryConnection
       const [metadata] = await metadataPromise;
       return {
         schema: metadata.schema,
-        needsPartitionPsuedoColumn:
+        needsPartitionPseudoColumn:
           metadata.timePartitioning?.type !== undefined &&
           metadata.timePartitioning?.field === undefined,
       };
@@ -562,7 +559,7 @@ export class BigQueryConnection
       fields: [],
     };
     this.addFieldsToStructDef(structDef, schemaInfo.schema);
-    if (schemaInfo.needsPartitionPsuedoColumn) {
+    if (schemaInfo.needsPartitionPseudoColumn) {
       structDef.fields.push({
         type: "timestamp",
         name: "_PARTITIONTIME",

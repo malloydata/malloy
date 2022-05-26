@@ -36,6 +36,7 @@
   "devDependencies": {
     "@jest/globals": "^26.6.2",
     "@malloydata/db-bigquery": "*",
+    "@malloydata/db-connection": "*",
     "@malloydata/malloy": "*",
     "@malloydata/render": "*",
     "@types/archiver": "^5.3.1",

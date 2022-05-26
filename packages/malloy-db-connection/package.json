@@ -1,5 +1,5 @@
 {
-  "name": "@malloydata/db-postgres",
+  "name": "@malloydata/db-connection",
   "version": "0.0.1",
   "license": "GPL-2.0",
   "main": "dist/index.js",
@@ -11,11 +11,5 @@
     "build": "yarn tsc --build",
     "malloyc": "ts-node ../../scripts/malloy-to-json"
   },
-  "dependencies": {
-    "@types/pg": "^8.6.1",
-    "@malloydata/malloy": "*",
-    "@malloydata/db-connection": "*",
-    "pg": "^8.7.1",
-    "pg-query-stream": "4.2.3"
-  }
+  "dependencies": {}
 }

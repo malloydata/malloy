@@ -29,7 +29,7 @@ import {
   PersistSQLResults,
   StreamingConnection,
 } from "@malloydata/malloy/src/runtime_types";
-import { MalloyResultCache } from "@malloydata/malloy/src/result_cache";
+import { MalloyResultCache } from "@malloydata/db-connection";
 import { Client, Pool, PoolClient } from "pg";
 import QueryStream from "pg-query-stream";
 

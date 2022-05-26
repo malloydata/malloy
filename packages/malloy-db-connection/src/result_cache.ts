@@ -1,6 +1,6 @@
 import * as crypto from "crypto";
 
-import { MalloyQueryData } from "./model/malloy_types";
+import { MalloyQueryData } from "@malloydata/malloy";
 
 export interface ResultCacheEntry {
   data: MalloyQueryData;
