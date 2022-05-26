@@ -106,15 +106,14 @@ export class DuckDBConnection implements Connection {
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public async runRawSQL(sql: string): Promise<any> {
+  public async runRawSQL(sql: string): Promise<unknown> {
     await this.setup();
     return this.runDuckDBQuery(sql);
   }
 
   public async runSQL(sql: string): Promise<MalloyQueryData> {
+    console.log(sql);
     await this.setup();
-    // console.log(sql);
 
     const statements = sql.split("-- hack: split on this");
 
@@ -193,7 +192,6 @@ export class DuckDBConnection implements Connection {
       }
       const structMatch = duckDBType.match(/^STRUCT\((?<fields>.*)\)$/);
       if (structMatch && structMatch.groups) {
-        console.log(structMatch.groups["fields"]);
         const newTypeMap = this.stringToTypeMap(structMatch.groups["fields"]);
         const innerStructDef: StructDef = {
           type: "struct",
