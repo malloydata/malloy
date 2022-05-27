@@ -3382,10 +3382,13 @@ export class QueryModel {
 
     const ret = q.generateSQLFromPipeline(stageWriter);
     if (emitFinalStage && q.parent.dialect.hasFinalStage) {
-      const fieldNames: string[] = [];
-      for (const f of ret.outputStruct.fields) {
-        fieldNames.push(getIdentifier(f));
-      }
+      // const fieldNames: string[] = [];
+      // for (const f of ret.outputStruct.fields) {
+      //   fieldNames.push(getIdentifier(f));
+      // }
+      const fieldNames = getPhysicalFields(ret.outputStruct).map(
+        (fieldDef) => fieldDef.name
+      );
       ret.lastStageName = stageWriter.addStage(
         q.parent.dialect.sqlFinalStage(ret.lastStageName, fieldNames)
       );
