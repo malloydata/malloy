@@ -545,14 +545,14 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
         query: title ->  {
           aggregate:
-            // b is count()
+            b is count()
             c is words.count()
             a is abreak.count()
         }
       `
       )
       .run();
-    // expect(result.data.value[0].b).toBe(3552);
+    expect(result.data.value[0].b).toBe(3552);
     expect(result.data.value[0].c).toBe(4586);
     expect(result.data.value[0].a).toBe(6601);
   });

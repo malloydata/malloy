@@ -689,7 +689,13 @@ class QueryFieldDistinctKey extends QueryAtomicField {
       const parentKey = this.parent.parent
         ?.getDistinctKey()
         .generateExpression(resultSet);
-      return `CONCAT(${parentKey}, 'x', ${this.parent.getIdentifier()}.__row_id)`;
+      return `CONCAT(${parentKey}, 'x', ${this.parent.dialect.sqlFieldReference(
+        this.parent.getIdentifier(),
+        "__row_id",
+        "string",
+        true,
+        false
+      )})`;
     } else {
       // return this.parent.getIdentifier() + "." + "__distinct_key";
       return this.parent.dialect.sqlFieldReference(
