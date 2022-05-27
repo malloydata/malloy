@@ -22,7 +22,7 @@ it(`silly test}`, async () => {
   // // eslint-disable-next-line @typescript-eslint/nom-var-requires
   // // const count = await duckDB.runSQL("SELECT COUNT(*) FROM 'airports';");
   const count = await duckDB.runRawSQL(
-`
+    `
 select sum_distinct([{key:1, val: 2},{key:1, val: 2},{key:3, val: 4}]) as val ;
 `
   );
