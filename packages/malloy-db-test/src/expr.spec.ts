@@ -15,7 +15,7 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 import * as malloy from "@malloydata/malloy";
-import { RuntimeList } from "./runtimes";
+import { duckdbBug3721, RuntimeList } from "./runtimes";
 import "./is-sql-eq";
 import { mkSqlEqWith } from "./sql-eq";
 
@@ -108,21 +108,24 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
 
   // Model based version of sums.
-  it(`model: expression fixups. - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+  (duckdbBug3721 && databaseName === "duckdb" ? it.skip : it)(
+    `model: expression fixups. - ${databaseName}`,
+    async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `
             query: aircraft->{
               aggregate:
                 aircraft_models.total_seats
                 aircraft_models.boeing_seats
             }
           `
-      )
-      .run();
-    expect(result.data.path(0, "total_seats").value).toBe(18294);
-    expect(result.data.path(0, "boeing_seats").value).toBe(6244);
-  });
+        )
+        .run();
+      expect(result.data.path(0, "total_seats").value).toBe(18294);
+      expect(result.data.path(0, "boeing_seats").value).toBe(6244);
+    }
+  );
 
   // turtle expressions
   it(`model: turtle - ${databaseName}`, async () => {
@@ -274,7 +277,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.data.path(0, "boeing_max_model").value).toBe("YL-15");
   });
 
-  (databaseName === "postgres" ? it.skip : it)(
+  (databaseName !== "bigquery" ? it.skip : it)(
     `model: dates named - ${databaseName}`,
     async () => {
       const result = await expressionModel
@@ -414,11 +417,12 @@ expressionModels.forEach((expressionModel, databaseName) => {
           project:
             aircraft.aircraft.first_three
             aircraft_count
+            order_by: 2 desc, 1
         }
       `
       )
       .run();
-    expect(result.data.path(0, "first_three").value).toBe("SAN");
+    expect(result.data.path(0, "first_three").value).toBe("SAB");
   });
 
   it.skip("join foreign_key reverse", async () => {
