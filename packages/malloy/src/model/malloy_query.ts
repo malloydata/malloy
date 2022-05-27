@@ -56,6 +56,7 @@ import {
   isQuerySegment,
   DialectFragment,
   isDialectFragment,
+  getPhysicalFields,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -1914,8 +1915,14 @@ class QueryQuery extends QueryField {
         let joins = "";
         for (const childJoin of ji.children) {
           joins += this.generateSQLJoinBlock(stageWriter, childJoin);
+          const physicalFields = getPhysicalFields(
+            childJoin.queryStruct.fieldDef
+          ).map((fieldDef) =>
+            this.parent.dialect.sqlMaybeQuoteIdentifier(fieldDef.name)
+          );
           select += `, ${this.parent.dialect.sqlSelectAliasAsStruct(
-            childJoin.alias
+            childJoin.alias,
+            physicalFields
           )} AS ${childJoin.alias}`;
         }
         select += `\nFROM ${structSQL} AS ${
@@ -3402,10 +3409,13 @@ export class QueryModel {
 
     const ret = q.generateSQLFromPipeline(stageWriter);
     if (emitFinalStage && q.parent.dialect.hasFinalStage) {
-      const fieldNames: string[] = [];
-      for (const f of ret.outputStruct.fields) {
-        fieldNames.push(getIdentifier(f));
-      }
+      // const fieldNames: string[] = [];
+      // for (const f of ret.outputStruct.fields) {
+      //   fieldNames.push(getIdentifier(f));
+      // }
+      const fieldNames = getPhysicalFields(ret.outputStruct).map((fieldDef) =>
+        q.parent.dialect.sqlMaybeQuoteIdentifier(fieldDef.name)
+      );
       ret.lastStageName = stageWriter.addStage(
         q.parent.dialect.sqlFinalStage(ret.lastStageName, fieldNames)
       );

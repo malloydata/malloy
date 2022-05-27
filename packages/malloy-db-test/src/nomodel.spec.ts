@@ -14,13 +14,13 @@
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
-import { RuntimeList } from "./runtimes";
+import { duckdbBug3721, RuntimeList } from "./runtimes";
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
 const runtimes = new RuntimeList([
   "bigquery", //
-  // "postgres", //
+  "postgres", //
   "duckdb", //
 ]);
 
@@ -104,10 +104,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(error.toString()).not.toContain("Unknown Dialect");
   });
 
-  it(`join_many - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+  (duckdbBug3721 && databaseName === "duckdb" ? it.skip : it)(
+    `join_many - ${databaseName}`,
+    async () => {
+      const result = await runtime
+        .loadQuery(
+          `
       explore: a is table('malloytest.aircraft'){
         measure: avg_year is floor(avg(year_built))
       }
@@ -117,11 +119,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
       query: m->{aggregate: avg_seats, a.avg_year}
       `
-      )
-      .run();
-    expect(result.data.value[0].avg_year).toBe(1969);
-    expect(result.data.value[0].avg_seats).toBe(7);
-  });
+        )
+        .run();
+      expect(result.data.value[0].avg_year).toBe(1969);
+      expect(result.data.value[0].avg_seats).toBe(7);
+    }
+  );
   it(`join_many condition no primary key - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
@@ -137,10 +140,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.value[0].c).toBe(19701);
   });
 
-  it(`join_many filter multiple values - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+  (duckdbBug3721 && databaseName === "duckdb" ? it.skip : it)(
+    `join_many filter multiple values - ${databaseName}`,
+    async () => {
+      const result = await runtime
+        .loadQuery(
+          `
       explore: a is table('malloytest.airports'){
         where: state = 'NH' | 'CA'
       }
@@ -152,20 +157,23 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         group_by: a.state
       }
       `
-      )
-      .run();
-    expect(result.data.value[0].c).toBe(18605);
-    expect(result.data.value[0].state).toBeNull();
-    expect(result.data.value[1].c).toBe(984);
-    expect(result.data.value[1].state).toBe("CA");
-    expect(result.data.value[2].c).toBe(112);
-    expect(result.data.value[2].state).toBe("NH");
-  });
+        )
+        .run();
+      expect(result.data.value[0].c).toBe(18605);
+      expect(result.data.value[0].state).toBeNull();
+      expect(result.data.value[1].c).toBe(984);
+      expect(result.data.value[1].state).toBe("CA");
+      expect(result.data.value[2].c).toBe(112);
+      expect(result.data.value[2].state).toBe("NH");
+    }
+  );
 
-  it(`join_one condition no primary key - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+  (duckdbBug3721 && databaseName === "duckdb" ? it.skip : it)(
+    `join_one condition no primary key - ${databaseName}`,
+    async () => {
+      const result = await runtime
+        .loadQuery(
+          `
       explore: a is table('malloytest.state_facts'){}
       explore: b is table('malloytest.airports') {
         join_one: a on state=a.state
@@ -173,10 +181,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       query: b->{aggregate: c is a.airport_count.sum()}
 
       `
-      )
-      .run();
-    expect(result.data.value[0].c).toBe(19701);
-  });
+        )
+        .run();
+      expect(result.data.value[0].c).toBe(19701);
+    }
+  );
 
   it(`join_one filter multiple values - ${databaseName}`, async () => {
     const result = await runtime
@@ -202,13 +211,15 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.value).toContainEqual({ c: null, state: null });
   });
 
-  it(`join_many cross from  - ${databaseName}`, async () => {
-    // a cross join produces a Many to Many result.
-    // symmetric aggregate are needed on both sides of the join
-    // Check the row count and that sums on each side work properly.
-    const result = await runtime
-      .loadQuery(
-        `
+  (duckdbBug3721 && databaseName === "duckdb" ? it.skip : it)(
+    `join_many cross from  - ${databaseName}`,
+    async () => {
+      // a cross join produces a Many to Many result.
+      // symmetric aggregate are needed on both sides of the join
+      // Check the row count and that sums on each side work properly.
+      const result = await runtime
+        .loadQuery(
+          `
       explore: a is table('malloytest.state_facts')
       explore: f is a{
         join_cross: a
@@ -222,13 +233,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           right_sum is a.airport_count.sum()
       }
       `
-      )
-      .run();
-    console.log(result.data.toObject());
-    expect(result.data.value[0].row_count).toBe(51 * 51);
-    expect(result.data.value[0].left_sum).toBe(19701);
-    expect(result.data.value[0].right_sum).toBe(19701);
-  });
+        )
+        .run();
+      expect(result.data.value[0].row_count).toBe(51 * 51);
+      expect(result.data.value[0].left_sum).toBe(19701);
+      expect(result.data.value[0].right_sum).toBe(19701);
+    }
+  );
 
   it(`join_one only  - ${databaseName}`, async () => {
     // a cross join produces a Many to Many result.
@@ -259,13 +270,15 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.value[0].sum_sum).toBe(19701 + 51 * 19701);
   });
 
-  it(`join_many cross ON  - ${databaseName}`, async () => {
-    // a cross join produces a Many to Many result.
-    // symmetric aggregate are needed on both sides of the join
-    // Check the row count and that sums on each side work properly.
-    const result = await runtime
-      .loadQuery(
-        `
+  (duckdbBug3721 && databaseName === "duckdb" ? it.skip : it)(
+    `join_many cross ON  - ${databaseName}`,
+    async () => {
+      // a cross join produces a Many to Many result.
+      // symmetric aggregate are needed on both sides of the join
+      // Check the row count and that sums on each side work properly.
+      const result = await runtime
+        .loadQuery(
+          `
       explore: a is table('malloytest.state_facts')
       explore: f is a{
         join_cross: a on a.state = 'CA' | 'NY'
@@ -277,12 +290,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           right_sum is a.airport_count.sum()
       }
       `
-      )
-      .run();
-    expect(result.data.value[0].row_count).toBe(51 * 2);
-    expect(result.data.value[0].left_sum).toBe(19701);
-    expect(result.data.value[0].right_sum).toBe(1560);
-  });
+        )
+        .run();
+      expect(result.data.value[0].row_count).toBe(51 * 2);
+      expect(result.data.value[0].left_sum).toBe(19701);
+      expect(result.data.value[0].right_sum).toBe(1560);
+    }
+  );
 
   it(`limit - provided - ${databaseName}`, async () => {
     // a cross join produces a Many to Many result.
@@ -340,10 +354,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.resultExplore.limit).toBe(3);
   });
 
-  it(`single value to udf - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+  (databaseName === "duckdb" ? it.skip : it)(
+    `single value to udf - ${databaseName}`,
+    async () => {
+      const result = await runtime
+        .loadQuery(
+          `
       source: f is  table('malloytest.state_facts') {
         query: fun is {
           aggregate: t is count()
@@ -356,11 +372,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         nest: fun
       }
       `
-      )
-      .run();
-    // console.log(result.sql);
-    expect(result.data.path(0, "fun", 0, "t1").value).toBe(52);
-  });
+        )
+        .run();
+      // console.log(result.sql);
+      expect(result.data.path(0, "fun", 0, "t1").value).toBe(52);
+    }
+  );
 
   it(`sql_block - ${databaseName}`, async () => {
     const result = await runtime

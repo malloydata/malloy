@@ -105,7 +105,10 @@ export abstract class Dialect {
   abstract sqlCreateFunctionCombineLastStage(lastStageName: string): string;
   abstract sqlCreateTableAsSelect(tableName: string, sql: string): string;
 
-  abstract sqlSelectAliasAsStruct(alias: string): string;
+  abstract sqlSelectAliasAsStruct(
+    alias: string,
+    physicalFieldNames: string[]
+  ): string;
 
   sqlFinalStage(_lastStageName: string, _fields: string[]): string {
     throw new Error("Dialect has no final Stage but called Anyway");

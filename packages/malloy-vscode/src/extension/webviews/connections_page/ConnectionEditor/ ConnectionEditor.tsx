@@ -107,7 +107,9 @@ export const ConnectionEditor: React.FC<ConnectionEditorProps> = ({
         />
       ) : config.backend === ConnectionBackend.Postgres ? (
         <PostgresConnectionEditor config={config} setConfig={setConfig} />
-      ) : <DuckDBConnectionEditor config={config} setConfig={setConfig} />}
+      ) : (
+        <DuckDBConnectionEditor config={config} setConfig={setConfig} />
+      )}
       <VSCodeDivider />
       <table>
         <tbody>
