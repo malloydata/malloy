@@ -24,6 +24,7 @@ import {
   SchemaProvider,
 } from "./tree_views/schema_view";
 import {
+  clearCacheCommand,
   copyFieldPathCommand,
   editConnectionsCommand,
   runNamedQuery,
@@ -130,6 +131,10 @@ export function activate(context: vscode.ExtensionContext): void {
       "malloy.editConnections",
       editConnectionsCommand
     )
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("malloy.clearCache", clearCacheCommand)
   );
 
   const provider = new HelpViewProvider(context.extensionUri);

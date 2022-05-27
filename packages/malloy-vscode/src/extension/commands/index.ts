@@ -11,6 +11,7 @@
  * GNU General Public License for more details.
  */
 
+export { clearCacheCommand } from "./clear_cache";
 export { runQueryFileCommand } from "./run_query_file";
 export { runQueryCommand } from "./run_query";
 export { runQueryWithEdit } from "./run_turtle_with_filters";

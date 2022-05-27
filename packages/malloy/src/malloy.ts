@@ -1062,15 +1062,10 @@ export class InMemoryURLReader implements URLReader {
  * A fixed mapping of connection names to connections.
  */
 export class FixedConnectionMap implements LookupConnection<Connection> {
-  private connections: Map<string, Connection>;
-  private defaultConnectionName?: string;
   constructor(
-    connections: Map<string, Connection>,
-    defaultConnectionName?: string
-  ) {
-    this.connections = connections;
-    this.defaultConnectionName = defaultConnectionName;
-  }
+    private connections: Map<string, Connection>,
+    private defaultConnectionName?: string
+  ) {}
 
   /**
    * Get a connection by name.
@@ -1098,6 +1093,10 @@ export class FixedConnectionMap implements LookupConnection<Connection> {
 
   public async lookupConnection(connectionName?: string): Promise<Connection> {
     return this.getConnection(connectionName);
+  }
+
+  public toArray(): Connection[] {
+    return Array.from(this.connections.values());
   }
 
   public static fromArray(connections: Connection[]): FixedConnectionMap {

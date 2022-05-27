@@ -32,6 +32,7 @@
     "onCommand:malloy.runTurtleWithFilters",
     "onCommand:malloy.copyFieldPath",
     "onCommand:malloy.refreshSchema",
+    "onCommand:malloy.clearCache",
     "onCommand:malloy.editConnections",
     "onLanguage:malloy",
     "workspaceContains:**/.malloy",
@@ -109,15 +110,19 @@
         "command": "malloy.refreshSchema",
         "title": "Refresh Schema",
         "category": "Malloy",
-        "icon": {
-          "light": "img/refresh.svg",
-          "dark": "img/refresh.svg"
-        }
+        "icon": "$(refresh)"
       },
       {
         "command": "malloy.editConnections",
         "title": "Edit Connections",
-        "category": "Malloy"
+        "category": "Malloy",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "malloy.clearCache",
+        "title": "Clear Cache",
+        "category": "Malloy",
+        "icon": "$(trash)"
       },
       {
         "command": "malloy.runNamedSQLBlock",
@@ -141,6 +146,11 @@
         },
         {
           "command": "malloy.editConnections",
+          "when": "view == malloyConnections",
+          "group": "navigation"
+        },
+        {
+          "command": "malloy.clearCache",
           "when": "view == malloyConnections",
           "group": "navigation"
         }
@@ -207,8 +217,8 @@
         },
         "malloy.cacheDuration": {
           "type": "string",
-          "description": "Maximum cache duration (seconds)",
-          "default": "1800"
+          "description": "Cache duration in minutes",
+          "default": "30"
         },
         "malloy.downloadsPath": {
           "type": "string",

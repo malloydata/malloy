@@ -6,6 +6,11 @@ export interface ResultCacheEntry {
   data: MalloyQueryData;
 }
 
+/**
+ * Cache duration (minutes)
+ */
+export const DEFAULT_CACHE_DURATION = 30;
+
 export class MalloyResultCache<T extends ResultCacheEntry = ResultCacheEntry> {
   private resultCache = new Map<string, T>();
 
@@ -21,9 +26,10 @@ export class MalloyResultCache<T extends ResultCacheEntry = ResultCacheEntry> {
 
   retrieve(hash: string, cacheDuration: number): T | undefined {
     const entry = this.resultCache.get(hash);
+    const cacheDurationMs = cacheDuration * 1000 * 60;
     if (entry) {
       const { data } = entry;
-      if (data.metadata.ranAt + cacheDuration * 1000 > Date.now()) {
+      if (data.metadata.ranAt + cacheDuration * cacheDurationMs > Date.now()) {
         return {
           ...entry,
           data: { ...data, metadata: { ...data.metadata, fromCache: true } },
@@ -37,5 +43,9 @@ export class MalloyResultCache<T extends ResultCacheEntry = ResultCacheEntry> {
 
   eject(hash: string): void {
     this.resultCache.delete(hash);
+  }
+
+  ejectAll(): void {
+    this.resultCache.clear();
   }
 }

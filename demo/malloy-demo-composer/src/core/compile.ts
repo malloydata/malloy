@@ -85,6 +85,10 @@ class DummyConnection implements Connection {
   canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously {
     return false;
   }
+
+  clearCache(): void {
+    // n/a
+  }
 }
 
 export async function compileModel(

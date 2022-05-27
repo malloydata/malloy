@@ -141,6 +141,8 @@ export interface Connection extends InfoConnection {
   canStream(): this is StreamingConnection;
 
   canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously;
+
+  clearCache(): void;
 }
 
 // TODO feature-sql-block Comment

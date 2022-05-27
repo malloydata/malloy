@@ -73,6 +73,10 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
     return true;
   }
 
+  public clearCache(): void {
+    // TODO
+  }
+
   // @bporterfield need help writing this. it needs to wait if a setup is in process.
   protected async setup(): Promise<void> {
     if (!this.isSetup) {
@@ -143,7 +147,11 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
     if (result.length > rowLimit) {
       result = result.slice(0, rowLimit);
     }
-    return { rows: result, totalRows: result.length };
+    return {
+      rows: result,
+      totalRows: result.length,
+      metadata: { ranAt: Date.now(), fromCache: false },
+    };
   }
 
   public async runSQLBlockAndFetchResultSchema(

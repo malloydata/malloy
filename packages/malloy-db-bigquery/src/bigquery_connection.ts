@@ -44,7 +44,11 @@ import {
   PersistSQLResults,
   StreamingConnection,
 } from "@malloydata/malloy/src/runtime_types";
-import { MalloyResultCache, ResultCacheEntry } from "@malloydata/db-connection";
+import {
+  MalloyResultCache,
+  ResultCacheEntry,
+  DEFAULT_CACHE_DURATION,
+} from "@malloydata/db-connection";
 export interface BigQueryManagerOptions {
   credentials?: {
     clientId: string;
@@ -121,7 +125,7 @@ export class BigQueryConnection
 {
   static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
     rowLimit: 10,
-    cacheDuration: 1800,
+    cacheDuration: DEFAULT_CACHE_DURATION,
     allowCache: true,
   };
 
@@ -211,6 +215,10 @@ export class BigQueryConnection
 
   public canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously {
     return false;
+  }
+
+  public clearCache(): void {
+    this.resultCache.ejectAll();
   }
 
   private async _runSQL(

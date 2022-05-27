@@ -15,8 +15,8 @@ import { ConnectionConfig, ConnectionManager } from "../common";
 import * as vscode from "vscode";
 
 const DEFAULT_ROW_LIMIT = 50;
-/** Default cache duration (seconds) */
-const DEFAULT_CACHE_DURATION = 18000;
+/** Default cache duration (minutes) */
+const DEFAULT_CACHE_DURATION = 30;
 
 export class VSCodeConnectionManager extends ConnectionManager {
   constructor() {

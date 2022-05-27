@@ -39,6 +39,29 @@ enum Status {
   Done = "done",
 }
 
+const toRelativeTime = (time: number) => {
+  const format = new Intl.RelativeTimeFormat();
+  const delta = Date.now() - time;
+  const deltaSeconds = Math.round(delta / 1000);
+  let result = "now";
+
+  switch (true) {
+    case deltaSeconds < 60:
+      result = format.format(-deltaSeconds, "seconds");
+      break;
+    case deltaSeconds < 60 * 60:
+      result = format.format(-deltaSeconds, "minutes");
+      break;
+    case deltaSeconds < 60 * 60 * 24:
+      result = format.format(-deltaSeconds, "hours");
+      break;
+    default:
+      result = format.format(-deltaSeconds, "days");
+      break;
+  }
+  return result;
+};
+
 export const App: React.FC = () => {
   const [status, setStatus] = useState<Status>(Status.Ready);
   const [html, setHTML] = useState<HTMLElement>(document.createElement("span"));
@@ -193,17 +216,19 @@ export const App: React.FC = () => {
       {warning && <Warning>{warning}</Warning>}
       {cacheData && (
         <CacheData>
-          {cacheData.fromCache && "Cached result: "}
-          {`Query ran at ${new Date(cacheData.ranAt)?.toLocaleString()} `}
           <Reload
             onClick={() => {
               vscode.postMessage({
                 type: QueryMessageType.Refresh,
               });
             }}
+            title="Refresh query results"
           >
             <i className="codicon codicon-refresh" />
           </Reload>
+          {cacheData.fromCache
+            ? `Cache updated ${toRelativeTime(cacheData.ranAt)}`
+            : `Query ran now`}
         </CacheData>
       )}
       {drillTooltipVisible && (
@@ -307,27 +332,30 @@ const DrillTooltip = styled.div`
 `;
 
 const CacheData = styled.div`
-  background-color: var(--vscode-debugToolBar-background);
-  color: var(--vscode-foreground);
+  border-top: 1px solid #efefef;
+  color: #b1b1b1;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  padding: 0 10px;
+  user-select: none;
 `;
 
 const Error = styled.div`
   color: var(--vscode-statusBarItem-errorForeground);
   background-color: var(--vscode-statusBarItem-errorBackground);
   padding: 5px;
+  user-select: none;
 `;
 
 const Warning = styled.div`
   color: var(--vscode-statusBarItem-warningForeground);
   background-color: var(--vscode-statusBarItem-warningBackground);
   padding: 5px;
+  user-select: none;
 `;
 
 const Reload = styled.div`
-  padding: 2px 5px;
+  padding: 5px 5px 0 2px;
   cursor: pointer;
   &:hover {
     background-color: rgba(255, 255, 255, 0.5);

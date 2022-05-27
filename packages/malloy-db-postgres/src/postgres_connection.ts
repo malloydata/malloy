@@ -29,7 +29,10 @@ import {
   PersistSQLResults,
   StreamingConnection,
 } from "@malloydata/malloy/src/runtime_types";
-import { MalloyResultCache } from "@malloydata/db-connection";
+import {
+  MalloyResultCache,
+  DEFAULT_CACHE_DURATION,
+} from "@malloydata/db-connection";
 import { Client, Pool, PoolClient } from "pg";
 import QueryStream from "pg-query-stream";
 
@@ -90,7 +93,7 @@ const SCHEMA_PAGE_SIZE = 1000;
 export class PostgresConnection implements Connection, StreamingConnection {
   static DEFAULT_QUERY_OPTIONS: PostgresQueryConfiguration = {
     rowLimit: 10,
-    cacheDuration: 1800,
+    cacheDuration: DEFAULT_CACHE_DURATION,
     allowCache: true,
   };
 
@@ -158,6 +161,10 @@ export class PostgresConnection implements Connection, StreamingConnection {
 
   public canStream(): this is StreamingConnection {
     return true;
+  }
+
+  public clearCache(): void {
+    this.resultCache.ejectAll();
   }
 
   public async fetchSchemaForTables(missing: string[]): Promise<{
