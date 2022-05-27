@@ -274,7 +274,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.data.path(0, "boeing_max_model").value).toBe("YL-15");
   });
 
-  (databaseName === "postgres" ? it.skip : it)(
+  (databaseName !== "bigquery" ? it.skip : it)(
     `model: dates named - ${databaseName}`,
     async () => {
       const result = await expressionModel
@@ -414,11 +414,12 @@ expressionModels.forEach((expressionModel, databaseName) => {
           project:
             aircraft.aircraft.first_three
             aircraft_count
+            order_by: 2 desc, 1
         }
       `
       )
       .run();
-    expect(result.data.path(0, "first_three").value).toBe("SAN");
+    expect(result.data.path(0, "first_three").value).toBe("SAB");
   });
 
   it.skip("join foreign_key reverse", async () => {
