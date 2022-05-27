@@ -56,6 +56,7 @@ import {
   isQuerySegment,
   DialectFragment,
   isDialectFragment,
+  getPhysicalFields,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -369,7 +370,11 @@ class QueryField extends QueryNode {
       expr.structPath
     );
     if (distinctKeySQL) {
-      return sqlSumDistinct(this.parent.dialect, dimSQL, distinctKeySQL);
+      if (this.parent.dialect.supportsSumDistinctFunction) {
+        return this.parent.dialect.sqlSumDistinct(distinctKeySQL, dimSQL);
+      } else {
+        return sqlSumDistinct(this.parent.dialect, dimSQL, distinctKeySQL);
+      }
     } else {
       return `SUM(${dimSQL})`;
     }
@@ -407,11 +412,20 @@ class QueryField extends QueryNode {
       if (state.whereSQL) {
         countDistinctKeySQL = `CASE WHEN ${state.whereSQL} THEN ${distinctKeySQL} END`;
       }
-      return `${sqlSumDistinct(
-        this.parent.dialect,
-        dimSQL,
-        distinctKeySQL
-      )}/NULLIF(COUNT(DISTINCT ${countDistinctKeySQL}),0)`;
+      let sumDistinctSQL;
+      if (this.parent.dialect.supportsSumDistinctFunction) {
+        sumDistinctSQL = this.parent.dialect.sqlSumDistinct(
+          distinctKeySQL,
+          dimSQL
+        );
+      } else {
+        sumDistinctSQL = sqlSumDistinct(
+          this.parent.dialect,
+          dimSQL,
+          distinctKeySQL
+        );
+      }
+      return `(${sumDistinctSQL})/NULLIF(COUNT(DISTINCT ${countDistinctKeySQL}),0)`;
     } else {
       return `AVG(${dimSQL})`;
     }
@@ -529,13 +543,15 @@ class QueryField extends QueryNode {
     }
     return [
       this.parent.dialect.sqlFieldReference(
-        this.parent.getIdentifier(),
+        this.parent.getSQLIdentifier(),
         this.fieldDef.name,
         this.fieldDef.type,
         this.parent.fieldDef.structSource.type === "nested" ||
           this.parent.fieldDef.structSource.type === "inline" ||
           (this.parent.fieldDef.structSource.type === "sql" &&
-            this.parent.fieldDef.structSource.method === "nested")
+            this.parent.fieldDef.structSource.method === "nested"),
+        this.parent.fieldDef.structRelationship.type === "nested" &&
+          this.parent.fieldDef.structRelationship.isArray
       ),
     ];
   }
@@ -669,13 +685,25 @@ class QueryFieldDistinctKey extends QueryAtomicField {
     if (this.parent.primaryKey()) {
       const pk = this.parent.getPrimaryKeyField(this.fieldDef);
       return pk.generateExpression(resultSet);
+    } else if (this.parent.fieldDef.structSource.type === "nested") {
+      const parentKey = this.parent.parent
+        ?.getDistinctKey()
+        .generateExpression(resultSet);
+      return `CONCAT(${parentKey}, 'x', ${this.parent.dialect.sqlFieldReference(
+        this.parent.getIdentifier(),
+        "__row_id",
+        "string",
+        true,
+        false
+      )})`;
     } else {
       // return this.parent.getIdentifier() + "." + "__distinct_key";
       return this.parent.dialect.sqlFieldReference(
         this.parent.getIdentifier(),
         "__distinct_key",
         "string",
-        this.parent.fieldDef.structRelationship.type === "nested"
+        this.parent.fieldDef.structRelationship.type === "nested",
+        false
       );
     }
   }
@@ -1893,8 +1921,14 @@ class QueryQuery extends QueryField {
         let joins = "";
         for (const childJoin of ji.children) {
           joins += this.generateSQLJoinBlock(stageWriter, childJoin);
+          const physicalFields = getPhysicalFields(
+            childJoin.queryStruct.fieldDef
+          ).map((fieldDef) =>
+            this.parent.dialect.sqlMaybeQuoteIdentifier(fieldDef.name)
+          );
           select += `, ${this.parent.dialect.sqlSelectAliasAsStruct(
-            childJoin.alias
+            childJoin.alias,
+            physicalFields
           )} AS ${childJoin.alias}`;
         }
         select += `\nFROM ${structSQL} AS ${
@@ -1910,10 +1944,12 @@ class QueryQuery extends QueryField {
         throw new Error("Internal Error, nested structure with no parent.");
       }
       const fieldExpression = this.parent.dialect.sqlFieldReference(
-        qs.parent.getIdentifier(),
+        qs.parent.getSQLIdentifier(),
         structRelationship.field as string,
         "struct",
-        qs.parent.fieldDef.structRelationship.type === "nested"
+        qs.parent.fieldDef.structRelationship.type === "nested",
+        this.parent.fieldDef.structRelationship.type === "nested" &&
+          this.parent.fieldDef.structRelationship.isArray
       );
       // we need to generate primary key.  If parent has a primary key combine
       s += `${this.parent.dialect.sqlUnnestAlias(
@@ -2879,6 +2915,19 @@ class QueryStruct extends QueryNode {
     return new QueryFieldStruct(fieldDef, this, `${aliasName}.${pkName}`);
   }
 
+  getSQLIdentifier(): string {
+    if (this.unnestWithNumbers() && this.parent !== undefined) {
+      const x =
+        this.parent.getSQLIdentifier() +
+        "." +
+        getIdentifier(this.fieldDef) +
+        `[${this.getIdentifier()}.__row_id]`;
+      return x;
+    } else {
+      return this.getIdentifier();
+    }
+  }
+
   // return the name of the field in SQL
   getIdentifier(): string {
     // if it is the root table, use provided alias if we have one.
@@ -2915,6 +2964,13 @@ class QueryStruct extends QueryNode {
       return !join.leafiest;
     }
     throw new Error(`Join ${joinName} not found in result set`);
+  }
+
+  unnestWithNumbers(): boolean {
+    return (
+      this.dialect.unnestWithNumbers &&
+      this.fieldDef.structRelationship.type === "nested"
+    );
   }
 
   getJoinableParent(): QueryStruct {
@@ -3359,8 +3415,15 @@ export class QueryModel {
 
     const ret = q.generateSQLFromPipeline(stageWriter);
     if (emitFinalStage && q.parent.dialect.hasFinalStage) {
+      // const fieldNames: string[] = [];
+      // for (const f of ret.outputStruct.fields) {
+      //   fieldNames.push(getIdentifier(f));
+      // }
+      const fieldNames = getPhysicalFields(ret.outputStruct).map((fieldDef) =>
+        q.parent.dialect.sqlMaybeQuoteIdentifier(fieldDef.name)
+      );
       ret.lastStageName = stageWriter.addStage(
-        q.parent.dialect.sqlFinalStage(ret.lastStageName)
+        q.parent.dialect.sqlFinalStage(ret.lastStageName, fieldNames)
       );
     }
     return {
@@ -3386,7 +3449,8 @@ export class QueryModel {
         : "(need to figure this out)";
     if (this.dialect.hasFinalStage) {
       ret.lastStageName = ret.stageWriter.addStage(
-        this.dialect.sqlFinalStage(ret.lastStageName)
+        // note this will be broken on duckDB waiting on a real fix.
+        this.dialect.sqlFinalStage(ret.lastStageName, [])
       );
     }
     return {

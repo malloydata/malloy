@@ -327,7 +327,7 @@ export class PostgresConnection implements Connection, StreamingConnection {
     const { tablePath: tableName } = parseTableURL(tableURL);
     const [schema, table] = tableName.split(".");
     if (table === undefined) {
-      throw new Error("Default schema not supported Yet in Postgres");
+      throw new Error("Default schema not yet supported in Postgres");
     }
     const infoQuery = `
       SELECT column_name, c.data_type, e.data_type as element_type
@@ -358,14 +358,14 @@ export class PostgresConnection implements Connection, StreamingConnection {
   }
 
   public async runSQL(
-    sqlCommand: string,
+    sql: string,
     { rowLimit }: { rowLimit?: number } = {},
     rowIndex = 0
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
 
     return await this.runPostgresQuery(
-      sqlCommand,
+      sql,
       rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
       true

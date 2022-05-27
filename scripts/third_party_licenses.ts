@@ -49,6 +49,7 @@ const malloyPackages = [
   "@malloydata/db-test",
   "@malloydata/db-bigquery",
   "@malloydata/db-postgres",
+  "@malloydata/db-duckdb",
 ];
 
 // licenses that we would need to mirror source for, if we included (we don't today)

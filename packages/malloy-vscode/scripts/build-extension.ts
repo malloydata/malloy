@@ -29,9 +29,9 @@ export type Target =
   | "darwin-x64"
   | "darwin-arm64";
 
-export type TargetKeytarMap = { [target in Target]: string };
+export type BinaryTargetMap = { [target in Target]: string };
 
-export const targetKeytarMap: TargetKeytarMap = {
+export const targetKeytarMap: BinaryTargetMap = {
   "linux-x64": "keytar-v7.7.0-napi-v3-linux-x64.node",
   "linux-arm64": "keytar-v7.7.0-napi-v3-linux-arm64.node",
   "linux-armhf": "keytar-v7.7.0-napi-v3-linux-ia32.node",
@@ -39,6 +39,11 @@ export const targetKeytarMap: TargetKeytarMap = {
   "alpine-arm64": "keytar-v7.7.0-napi-v3-linuxmusl-arm64.node",
   "darwin-x64": "keytar-v7.7.0-napi-v3-darwin-x64.node",
   "darwin-arm64": "keytar-v7.7.0-napi-v3-darwin-arm64.node",
+};
+
+export const targetDuckDBMap: Partial<BinaryTargetMap> = {
+  "linux-x64": "duckdb-v0.3.4-node-v93-linux-x64.node",
+  "darwin-x64": "duckdb-v0.3.4-node-v93-darwin-x64.node",
 };
 
 export const outDir = "dist/";
@@ -67,6 +72,46 @@ const keytarReplacerPlugin: Plugin = {
     );
   },
 };
+
+function makeDuckdbNoNodePreGypPlugin(target: string | undefined) {
+  const localPath = require.resolve("duckdb/lib/binding/duckdb.node");
+  return {
+    name: "duckdbNoNodePreGypPlugin",
+    setup(build: any) {
+      build.onResolve({ filter: /duckdb-binding\.js/ }, (args: any) => {
+        return {
+          path: args.path,
+          namespace: "duckdb-no-node-pre-gyp-plugin",
+        };
+      });
+      build.onLoad(
+        {
+          filter: /duckdb-binding\.js/,
+          namespace: "duckdb-no-node-pre-gyp-plugin",
+        },
+        (_args: any) => {
+          return {
+            contents: `
+              var path = require("path");
+              var os = require("os");
+
+              var binding_path = ${
+                target
+                  ? `require.resolve("./duckdb-native.node")`
+                  : `"${localPath}"`
+              };
+
+              // dlopen is used because we need to specify the RTLD_GLOBAL flag to be able to resolve duckdb symbols
+              // on linux where RTLD_LOCAL is the default.
+              process.dlopen(module, binding_path, os.constants.dlopen.RTLD_NOW | os.constants.dlopen.RTLD_GLOBAL);
+            `,
+            resolveDir: ".",
+          };
+        }
+      );
+    },
+  };
+}
 
 // building without a target does a default build using whatever keytar native lib is in node_modules
 export async function doBuild(target?: Target): Promise<void> {
@@ -119,15 +164,34 @@ export async function doBuild(target?: Target): Promise<void> {
       ),
       path.join(outDir, "keytar-native.node")
     );
+    const duckDBBinaryName = targetDuckDBMap[target];
+    if (duckDBBinaryName === undefined) {
+      throw new Error(`No DuckDB binary for ${target} is available`);
+    }
+    fs.copyFileSync(
+      path.join(
+        "..",
+        "..",
+        "third_party",
+        "github.com",
+        "duckdb",
+        "duckdb",
+        duckDBBinaryName
+      ),
+      path.join(outDir, "duckdb-native.node")
+    );
   }
 
   // if we're building with a target, replace keytar imports using plugin that imports
   // binary builds of keytar. if we're building for dev, use a .node plugin to
   // ensure ketyar's node_modules .node file is in the build
   // NOTE: adding any additional npm packages that create native libs will require a different strategy
-  const extensionPlugins = target
-    ? [keytarReplacerPlugin]
-    : [nativeNodeModulesPlugin];
+  const extensionPlugins = [makeDuckdbNoNodePreGypPlugin(target)];
+  if (target) {
+    extensionPlugins.push(keytarReplacerPlugin);
+  } else {
+    extensionPlugins.push(nativeNodeModulesPlugin);
+  }
   if (development) extensionPlugins.push(noNodeModulesSourceMaps);
 
   // build the extension and server
@@ -139,7 +203,12 @@ export async function doBuild(target?: Target): Promise<void> {
     sourcemap: development,
     outdir: outDir,
     platform: "node",
-    external: ["vscode", "pg-native", "./keytar-native.node"],
+    external: [
+      "vscode",
+      "pg-native",
+      "./keytar-native.node",
+      "./duckdb-native.node",
+    ],
     loader: { [".png"]: "file", [".svg"]: "file" },
     plugins: extensionPlugins,
     watch: development

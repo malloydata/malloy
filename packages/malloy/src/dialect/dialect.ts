@@ -45,6 +45,8 @@ export abstract class Dialect {
   abstract hasFinalStage: boolean;
   abstract stringTypeName: string;
   abstract divisionIsInteger: boolean;
+  abstract supportsSumDistinctFunction: boolean;
+  abstract unnestWithNumbers: boolean;
   protected abstract functionInfo: Record<string, FunctionInfo>;
 
   // return a quoted string for use as a table path.
@@ -92,7 +94,8 @@ export abstract class Dialect {
     alias: string,
     fieldName: string,
     fieldType: string,
-    isNested: boolean
+    isNested: boolean,
+    isArray: boolean
   ): string;
 
   abstract sqlUnnestPipelineHead(isSingleton: boolean): string;
@@ -102,9 +105,12 @@ export abstract class Dialect {
   abstract sqlCreateFunctionCombineLastStage(lastStageName: string): string;
   abstract sqlCreateTableAsSelect(tableName: string, sql: string): string;
 
-  abstract sqlSelectAliasAsStruct(alias: string): string;
+  abstract sqlSelectAliasAsStruct(
+    alias: string,
+    physicalFieldNames: string[]
+  ): string;
 
-  sqlFinalStage(_lastStageName: string): string {
+  sqlFinalStage(_lastStageName: string, _fields: string[]): string {
     throw new Error("Dialect has no final Stage but called Anyway");
   }
 
@@ -160,5 +166,9 @@ export abstract class Dialect {
       case "cast":
         return this.sqlCast(df);
     }
+  }
+
+  sqlSumDistinct(_key: string, _value: string): string {
+    return "sqlSumDistinct called bu not implemented";
   }
 }

@@ -42,6 +42,7 @@ const joinModelText = `
 const runtimes = new RuntimeList([
   "bigquery", //
   "postgres", //
+  "duckdb", //
 ]);
 
 afterAll(async () => {
