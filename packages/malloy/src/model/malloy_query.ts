@@ -55,6 +55,7 @@ import {
   isJoinOn,
   isQuerySegment,
   DialectFragment,
+  getPhysicalFields,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -1889,8 +1890,12 @@ class QueryQuery extends QueryField {
         let joins = "";
         for (const childJoin of ji.children) {
           joins += this.generateSQLJoinBlock(stageWriter, childJoin);
+          const physicalFields = getPhysicalFields(
+            childJoin.queryStruct.fieldDef
+          ).map((fieldDef) => fieldDef.name);
           select += `, ${this.parent.dialect.sqlSelectAliasAsStruct(
-            childJoin.alias
+            childJoin.alias,
+            physicalFields
           )} AS ${childJoin.alias}`;
         }
         select += `\nFROM ${structSQL} AS ${

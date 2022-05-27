@@ -211,8 +211,10 @@ export class DuckDBDialect extends Dialect {
     return `SELECT * FROM ${lastStageName}\n`;
   }
 
-  sqlSelectAliasAsStruct(alias: string): string {
-    return `ROW(${alias})`;
+  sqlSelectAliasAsStruct(alias: string, physicalFieldNames: string[]): string {
+    return `ROW(${physicalFieldNames
+      .map((name) => `${alias}.${name}`)
+      .join(", ")})`;
   }
   // TODO
   sqlMaybeQuoteIdentifier(identifier: string): string {
