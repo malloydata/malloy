@@ -62,7 +62,11 @@ class ConnectionItem extends vscode.TreeItem {
   ) {
     super(name, vscode.TreeItemCollapsibleState.None);
     const backendName =
-      backend === ConnectionBackend.BigQuery ? "BigQuery" : "Postgres";
+      backend === ConnectionBackend.BigQuery
+      ? "BigQuery"
+      : backend === ConnectionBackend.Postgres
+      ? "Postgres"
+      : "DuckDB";
     this.description = `(${backendName}${isDefault ? ", default" : ""})`;
 
     this.iconPath = {
