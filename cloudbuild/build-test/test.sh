@@ -7,6 +7,6 @@ nix-shell --pure --command "$(cat <<NIXCMD
   export PGUSER=673673622326@cloudbuild
   cd /workspace
   yarn install --frozen-lockfile
-  yarn lint && yarn build && yarn test
+  yarn lint && yarn build && yarn build-duckdb-db && yarn test
 NIXCMD
 )"
