@@ -36,7 +36,7 @@ async function validateCompilation(
     }
     await (
       await runtime.connections.lookupConnection(databaseName)
-    ).runSQL(`WITH test AS(\n${sql}) SELECT 1`);
+    ).runSQL(`WITH test AS(\n${sql}) SELECT '[{"foo":1}]' as results`);
   } catch (e) {
     console.log(`SQL: didn't compile\n=============\n${sql}`);
     throw e;

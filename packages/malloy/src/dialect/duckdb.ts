@@ -27,6 +27,86 @@ import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = "-- hack: split on this";
 
+const keywords = `
+ALL
+ANALYSE
+ANALYZE
+AND
+ANY
+ARRAY
+AS
+ASC_P
+ASYMMETRIC
+BOTH
+CASE
+CAST
+CHECK_P
+COLLATE
+COLUMN
+CONSTRAINT
+CREATE_P
+CURRENT_CATALOG
+CURRENT_DATE
+CURRENT_ROLE
+CURRENT_TIME
+CURRENT_TIMESTAMP
+CURRENT_USER
+DEFAULT
+DEFERRABLE
+DESC_P
+DISTINCT
+DO
+ELSE
+END_P
+EXCEPT
+FALSE_P
+FETCH
+FOR
+FOREIGN
+FROM
+GRANT
+GROUP_P
+HAVING
+IN_P
+INITIALLY
+INTERSECT
+INTO
+LATERAL_P
+LEADING
+LIMIT
+LOCALTIME
+LOCALTIMESTAMP
+NOT
+NULL_P
+OFFSET
+ON
+ONLY
+OR
+ORDER
+PLACING
+PRIMARY
+REFERENCES
+RETURNING
+SELECT
+SESSION_USER
+SOME
+SYMMETRIC
+TABLE
+THEN
+TO
+TRAILING
+TRUE_P
+UNION
+UNIQUE
+USER
+USING
+VARIADIC
+WHEN
+WHERE
+WINDOW
+WITH
+`.split(/\s/);
+
 /* We could do JOIN UNNEST this way...
 
   WITH data as (
@@ -218,7 +298,9 @@ export class DuckDBDialect extends Dialect {
   }
   // TODO
   sqlMaybeQuoteIdentifier(identifier: string): string {
-    return identifier;
+    return keywords.indexOf(identifier.toUpperCase()) > 0
+      ? '"' + identifier + '"'
+      : identifier;
   }
 
   // The simple way to do this is to add a comment on the table

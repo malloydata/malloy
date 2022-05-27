@@ -1892,7 +1892,9 @@ class QueryQuery extends QueryField {
           joins += this.generateSQLJoinBlock(stageWriter, childJoin);
           const physicalFields = getPhysicalFields(
             childJoin.queryStruct.fieldDef
-          ).map((fieldDef) => fieldDef.name);
+          ).map((fieldDef) =>
+            this.parent.dialect.sqlMaybeQuoteIdentifier(fieldDef.name)
+          );
           select += `, ${this.parent.dialect.sqlSelectAliasAsStruct(
             childJoin.alias,
             physicalFields
@@ -3386,8 +3388,8 @@ export class QueryModel {
       // for (const f of ret.outputStruct.fields) {
       //   fieldNames.push(getIdentifier(f));
       // }
-      const fieldNames = getPhysicalFields(ret.outputStruct).map(
-        (fieldDef) => fieldDef.name
+      const fieldNames = getPhysicalFields(ret.outputStruct).map((fieldDef) =>
+        q.parent.dialect.sqlMaybeQuoteIdentifier(fieldDef.name)
       );
       ret.lastStageName = stageWriter.addStage(
         q.parent.dialect.sqlFinalStage(ret.lastStageName, fieldNames)
