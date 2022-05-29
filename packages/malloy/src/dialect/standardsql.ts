@@ -355,6 +355,10 @@ ${indent(sql)}
     return cast.expr;
   }
 
+  sqlRegexpMatch(expr: Expr, regexp: string): Expr {
+    return mkExpr`REGEXP_CONTAINS(${expr}, r${regexp})`;
+  }
+
   sqlLiteralTime(
     timeString: string,
     type: "date" | "timestamp",

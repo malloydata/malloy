@@ -375,6 +375,10 @@ export class DuckDBDialect extends Dialect {
     return cast.expr;
   }
 
+  sqlRegexpMatch(expr: Expr, regexp: string): Expr {
+    return mkExpr`REGEXP_MATCHES(${expr}, ${regexp})`;
+  }
+
   sqlLiteralTime(
     timeString: string,
     type: TimeFieldType,

@@ -244,12 +244,19 @@ export interface TypecastFragment extends DialectFragmentBase {
   srcType?: AtomicFieldType;
 }
 
+export interface RegexpMatchFragment extends DialectFragmentBase {
+  function: "regexpMatch";
+  expr: Expr;
+  regexp: string;
+}
+
 export type DialectFragment =
   | TimeDeltaFragment
   | TimeDiffFragment
   | TimeTruncFragment
   | TypecastFragment
-  | TimeExtractFragment;
+  | TimeExtractFragment
+  | RegexpMatchFragment;
 
 export type Fragment =
   | string

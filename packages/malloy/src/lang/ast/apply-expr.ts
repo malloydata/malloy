@@ -83,11 +83,25 @@ function allAre(oneType: FieldValueType, ...values: ExprValue[]): boolean {
 function regexEqual(left: ExprValue, right: ExprValue): Expr | undefined {
   if (left.dataType === "string") {
     if (right.dataType === "regular expression") {
-      return ["REGEXP_CONTAINS(", ...left.value, ",", right.value[0], ")"];
+      return [
+        {
+          type: "dialect",
+          function: "regexpMatch",
+          expr: left.value,
+          regexp: (right.value[0] as string).replace(/^r'/, "'"),
+        },
+      ];
     }
   } else if (right.dataType === "string") {
     if (left.dataType === "regular expression") {
-      return ["REGEXP_CONTAINS(", ...right.value, ",", left.value[0], ")"];
+      return [
+        {
+          type: "dialect",
+          function: "regexpMatch",
+          expr: right.value,
+          regexp: (left.value[0] as string).replace(/^r'/, "'"),
+        },
+      ];
     }
   }
   return undefined;
