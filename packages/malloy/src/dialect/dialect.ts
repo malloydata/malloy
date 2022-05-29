@@ -149,6 +149,8 @@ export abstract class Dialect {
     timezone: string
   ): string;
 
+  abstract sqlRegexpMatch(expr: Expr, regex: string): Expr;
+
   getFunctionInfo(functionName: string): FunctionInfo | undefined {
     return this.functionInfo[functionName.toLowerCase()];
   }
@@ -165,6 +167,8 @@ export abstract class Dialect {
         return this.sqlExtract(df.expr, df.units);
       case "cast":
         return this.sqlCast(df);
+      case "regexpMatch":
+        return this.sqlRegexpMatch(df.expr, df.regexp);
     }
   }
 

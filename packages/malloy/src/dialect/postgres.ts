@@ -290,6 +290,9 @@ export class PostgresDialect extends Dialect {
     return cast.expr;
   }
 
+  sqlRegexpMatch(expr: Expr, regexp: string): Expr {
+    return mkExpr`(${expr} ~ ${regexp})`;
+  }
   sqlLiteralTime(
     timeString: string,
     type: TimeFieldType,

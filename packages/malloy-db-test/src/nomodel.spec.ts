@@ -484,6 +484,26 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.value[0].d).toBe(3);
   });
 
+  it(`regexp match- ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      sql: one is ||
+        SELECT 'hello mom' as a, 'cheese tastes good' as b
+        UNION ALL SELECT 'lloyd is a bozo', 'michael likes poetry'
+      ;;
+
+      query: from_sql(one) -> {
+        aggregate: llo is count() {? a ~ r'llo'}
+        aggregate: m2 is count() {? a !~ r'bozo'}
+      }
+      `
+      )
+      .run();
+    expect(result.data.value[0].llo).toBe(2);
+    expect(result.data.value[0].m2).toBe(1);
+  });
+
   it(`substitution precidence- ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(

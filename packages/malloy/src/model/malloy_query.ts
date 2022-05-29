@@ -1530,6 +1530,7 @@ class QueryQuery extends QueryField {
           case "extract":
             expressions.push(expr.expr.value);
             break;
+          case "regexpMatch":
           case "cast":
             expressions.push(expr.expr);
             break;
