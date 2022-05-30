@@ -111,9 +111,14 @@ export class DuckDBConnection implements Connection {
     return this.runDuckDBQuery(sql);
   }
 
-  public async runSQL(sql: string): Promise<MalloyQueryData> {
+  public async runSQL(
+    sql: string,
+    options: { rowLimit?: number } = {}
+  ): Promise<MalloyQueryData> {
     // console.log(sql);
     await this.setup();
+
+    const rowLimit = options.rowLimit ?? 10;
 
     const statements = sql.split("-- hack: split on this");
 
@@ -125,8 +130,12 @@ export class DuckDBConnection implements Connection {
         /* Do nothing */
       }
     }
+
     const retVal = await this.runDuckDBQuery(statements[0]);
-    const result = JSON.parse(retVal.rows[0].results);
+    let result = JSON.parse(retVal.rows[0].results);
+    if (result.length > rowLimit) {
+      result = result.slice(0, rowLimit);
+    }
     return { rows: result, totalRows: result.length };
   }
 

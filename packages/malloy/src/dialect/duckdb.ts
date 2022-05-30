@@ -107,40 +107,6 @@ WINDOW
 WITH
 `.split(/\s/);
 
-/* We could do JOIN UNNEST this way...
-
-  WITH data as (
-    SELECT UNNEST([
-      {'who':'lloyd'
-        , bikes: [
-          {'bike':'masi', weight: 10},
-          {'bike':'vado', weight: 20},
-          {'bike':'superdelite', weight: 20}
-        ],
-        bags: [
-          {'bag':'paper', weight: 10},
-          {'bag':'plastic', weight: 20},
-          {'bag':'rubber', weight: 20}
-        ]
-      }
-    ]) d
-  )
-  SELECT
-    d.who,
-    d.bikes[bike_index.a].bike,
-    d.bags[bag_index.a].bag,
-    m.a
-    from data
-  CROSS JOIN (select max(array_length(d.bikes)) as a FROM data) as m
-  CROSS JOIN (SELECT UNNEST(generate_series(1,10000,1)) as a) as bike_index
-  CROSS JOIN (SELECT UNNEST(generate_series(1,10000,1)) as a) as bag_index
-  WHERE
-    bike_index.a <= array_length(d.bikes)
-    AND bag_index.a <= array_length(d.bags)
-    ;
-
- */
-
 const castMap: Record<string, string> = {
   number: "double precision",
   string: "varchar",
