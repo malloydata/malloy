@@ -29,7 +29,7 @@ import {
   StreamingConnection,
 } from "@malloydata/malloy/src/runtime_types";
 import { Database, OPEN_READONLY } from "duckdb";
-import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
+import { RunSQLOptions } from "@malloydata/malloy";
 
 const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   BIGINT: "number",

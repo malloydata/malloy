@@ -63,11 +63,6 @@ export interface Loggable {
   error: (message?: unknown, ...optionalParams: unknown[]) => void;
 }
 
-export interface RunSQLOptions {
-  rowLimit?: number;
-  noLastStage?: boolean;
-}
-
 export class Malloy {
   // TODO load from file built during release
   public static get version(): string {

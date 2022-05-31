@@ -109,6 +109,7 @@ export type {
   QueryURL,
   ModelURL,
   PooledConnection,
+  RunSQLOptions,
   TestableConnection,
   PersistSQLResults,
 } from "./runtime_types";

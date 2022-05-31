@@ -20,7 +20,7 @@ import {
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { PooledPostgresConnection } from "@malloydata/db-postgres";
 import { DuckDBConnection } from "@malloydata/db-duckdb";
-import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
+import { RunSQLOptions } from "@malloydata/malloy";
 
 // https://github.com/duckdb/duckdb/issues/3721
 //  computes symmetric aggregates incorrectly.  When we have a fix,
