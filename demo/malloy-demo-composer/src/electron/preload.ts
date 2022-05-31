@@ -16,7 +16,8 @@ import { contextBridge, ipcRenderer } from "electron";
 import { Analysis } from "../types";
 
 contextBridge.exposeInMainWorld("malloy", {
-  analyses: () => ipcRenderer.invoke("get:analyses"),
+  analyses: (path: string | undefined) =>
+    ipcRenderer.invoke("get:analyses", path),
   analysis: (path: string) => ipcRenderer.invoke("get:analysis", path),
   models: () => ipcRenderer.invoke("get:models"),
   schema: (analysis: Analysis) => ipcRenderer.invoke("get:schema", analysis),
@@ -32,4 +33,5 @@ contextBridge.exposeInMainWorld("malloy", {
     ipcRenderer.invoke("post:search", source, searchTerm, fieldPath),
   topValues: (source: StructDef) =>
     ipcRenderer.invoke("post:top_values", source),
+  openDirectory: () => ipcRenderer.invoke("post:open_directory"),
 });

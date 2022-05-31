@@ -106,38 +106,42 @@ export async function readMalloyDirectory(
     type: "directory",
     contents: [],
   } as explore.Directory;
-  for (const childPath of await fs.readdir(thePath)) {
-    if (childPath.startsWith(".")) {
-      continue;
-    }
-    let fullChildPath = path.join(thePath, childPath);
-    try {
-      let stat = await fs.lstat(fullChildPath);
-      let symlinkMax = 10;
-      while (stat.isSymbolicLink()) {
-        fullChildPath = await fs.realpath(fullChildPath);
-        stat = await fs.lstat(fullChildPath);
-        if (symlinkMax <= 0) {
-          // eslint-disable-next-line no-console
-          console.log("Error: reached maximum symlink depth");
-          break;
+  await Promise.all(
+    (
+      await fs.readdir(thePath)
+    ).map(async (childPath) => {
+      if (childPath.startsWith(".")) {
+        return;
+      }
+      let fullChildPath = path.join(thePath || "/", childPath);
+      try {
+        let stat = await fs.lstat(fullChildPath);
+        let symlinkMax = 10;
+        while (stat.isSymbolicLink()) {
+          fullChildPath = await fs.realpath(fullChildPath);
+          stat = await fs.lstat(fullChildPath);
+          if (symlinkMax <= 0) {
+            // eslint-disable-next-line no-console
+            console.log("Error: reached maximum symlink depth");
+            break;
+          }
+          symlinkMax--;
         }
-        symlinkMax--;
+        if (stat.isSymbolicLink()) {
+          return;
+        }
+        if (stat.isDirectory()) {
+          directory.contents.push(await readMalloyDirectory(fullChildPath));
+        } else if (childPath.endsWith(".a.malloy")) {
+          directory.contents.push(await getAnalysis(fullChildPath));
+        } else if (childPath.endsWith(".malloy")) {
+          directory.contents.push(await getModel(fullChildPath));
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.log(error);
       }
-      if (stat.isSymbolicLink()) {
-        continue;
-      }
-      if (stat.isDirectory()) {
-        directory.contents.push(await readMalloyDirectory(fullChildPath));
-      } else if (childPath.endsWith(".a.malloy")) {
-        directory.contents.push(await getAnalysis(fullChildPath));
-      } else if (childPath.endsWith(".malloy")) {
-        directory.contents.push(await getModel(fullChildPath));
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.log(error);
-    }
-  }
+    })
+  );
   return directory;
 }

@@ -24,6 +24,7 @@ export interface MalloyElectronAPI {
     fieldPath?: string
   ) => Promise<SearchIndexResult[] | undefined>;
   topValues: (source: StructDef) => Promise<SearchValueMapResult[] | undefined>;
+  openDirectory: () => Promise<string | undefined>;
 }
 
 declare global {

@@ -33,6 +33,7 @@ import { DataStyles } from "@malloydata/render";
 import { DirectoryPicker } from "../DirectoryPicker";
 import { HotKeys } from "react-hotkeys";
 import { useTopValues } from "../data/use_top_values";
+import { useOpenDirectory } from "../data/use_open_directory";
 
 const KEY_MAP = {
   REMOVE_FIELDS: "command+k",
@@ -51,7 +52,8 @@ function withAnalysisSource(
 
 export const Explore: React.FC = () => {
   const [analysis, setAnalysis] = useState<Analysis>();
-  const directory = useDirectory();
+  const { openDirectory, beginOpenDirectory } = useOpenDirectory();
+  const directory = useDirectory(openDirectory);
   const queryBuilder = useRef<QueryBuilder>();
   const [queryMalloy, setQueryMalloy] = useState<string>("");
   const [querySummary, setQuerySummary] = useState<QuerySummary>();
@@ -411,6 +413,11 @@ export const Explore: React.FC = () => {
             analysis={analysis}
             selectAnalysis={selectAnalysis}
           />
+          <ActionIcon
+            action="open-directory"
+            onClick={beginOpenDirectory}
+            color="dimension"
+          />
         </HeaderLeft>
         {!isRunning && <Button onClick={() => runQuery()}>Run</Button>}
         {isRunning && (
@@ -582,7 +589,7 @@ const Header = styled.div`
 const HeaderLeft = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 5px;
 `;
 
 const QueryButtons = styled.div`

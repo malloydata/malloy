@@ -31,6 +31,7 @@ import { ReactComponent as ActionIconPipeline } from "../assets/img/insert_icons
 import { ReactComponent as ActionIconLoad } from "../assets/img/type_icons/type-icon-projection.svg";
 import { ReactComponent as ActionIconMove } from "../assets/img/insert_icons/move_icon_outline.svg";
 import { ReactComponent as ActionIconSearch } from "../assets/img/insert_icons/search.svg";
+import { ReactComponent as ActionIconOpen } from "../assets/img/vis_icons/viz_list.svg";
 import { ReactComponent as AnalysisIcon } from "../assets/img/source.svg";
 import { ColorKey, COLORS } from "../colors";
 import styled from "styled-components";
@@ -56,7 +57,8 @@ export type ActionIconName =
   | "move"
   | "edit"
   | "search"
-  | "analysis";
+  | "analysis"
+  | "open-directory";
 
 interface ActionIconProps {
   action: ActionIconName;
@@ -117,6 +119,8 @@ export const ActionIcon: React.FC<ActionIconProps> = ({
         <ActionIconEdit {...props} />
       ) : action === "search" ? (
         <ActionIconSearch {...props} />
+      ) : action === "open-directory" ? (
+        <ActionIconOpen {...props} />
       ) : action === "analysis" ? (
         <AnalysisIcon {...props} />
       ) : null}
