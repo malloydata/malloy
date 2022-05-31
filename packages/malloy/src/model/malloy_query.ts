@@ -2665,6 +2665,13 @@ class QueryQueryIndex extends QueryQuery {
   generateSQL(stageWriter: StageWriter): string {
     let measureSQL = "COUNT(*)";
     const dialect = this.parent.dialect;
+
+    // postgres quoting rules say that if a name has a capital letter in it it must be quoted.
+    const fieldName = dialect.sqlMaybeQuoteIdentifier("fieldName");
+    const fieldValue = dialect.sqlMaybeQuoteIdentifier("fieldValue");
+    const fieldType = dialect.sqlMaybeQuoteIdentifier("fieldType");
+    const fieldRange = dialect.sqlMaybeQuoteIdentifier("fieldRabge");
+
     const measureName = (this.firstSegment as IndexSegment).weightMeasure;
     if (measureName) {
       measureSQL = this.rootResult
@@ -2686,19 +2693,19 @@ class QueryQueryIndex extends QueryQuery {
     for (let i = 0; i < fields.length; i++) {
       s += `    WHEN ${i} THEN '${fields[i].name}'\n`;
     }
-    s += `  END as fieldName,`;
+    s += `  END as ${fieldName},`;
     s += `  CASE group_set\n`;
     for (let i = 0; i < fields.length; i++) {
       s += `    WHEN ${i} THEN '${fields[i].type}'\n`;
     }
-    s += `  END as fieldType,`;
+    s += `  END as ${fieldType},`;
     s += `  CASE group_set\n`;
     for (let i = 0; i < fields.length; i++) {
       if (fields[i].type === "string") {
         s += `    WHEN ${i} THEN ${fields[i].expression}\n`;
       }
     }
-    s += `  END as fieldValue,\n`;
+    s += `  END as ${fieldValue},\n`;
     s += ` ${measureSQL} as weight,\n`;
 
     // just in case we don't have any field types, force the case statement to have at least one value.
@@ -2715,7 +2722,7 @@ class QueryQueryIndex extends QueryQuery {
         )})\n`;
       }
     }
-    s += `  END as fieldRange\n`;
+    s += `  END as ${fieldRange}\n`;
 
     // CASE
     //   WHEN field_type = 'timestamp' or field_type = 'date'
@@ -2741,10 +2748,10 @@ class QueryQueryIndex extends QueryQuery {
     const resultStage = stageWriter.addStage(s);
     this.resultStage = stageWriter.addStage(
       `SELECT
-  fieldName,
-  fieldType,
-  COALESCE(fieldValue, fieldRange) as fieldValue,
-  weight
+  ${fieldName},
+  ${fieldType},
+  COALESCE(${fieldValue}, ${fieldRange}) as ${fieldValue},
+  weight+0 as weight  -- postgres bug??
 FROM ${resultStage}\n`
     );
     return this.resultStage;
@@ -3505,26 +3512,30 @@ export class QueryModel {
       sqlPDT = (await this.compileQuery(indexQuery, false)).sql;
       this.exploreSearchSQLMap.set(explore, sqlPDT);
     }
+    const fieldName = struct.dialect.sqlMaybeQuoteIdentifier("fieldName");
+    const fieldValue = struct.dialect.sqlMaybeQuoteIdentifier("fieldValue");
+    const fieldType = struct.dialect.sqlMaybeQuoteIdentifier("fieldType");
+
     const result = await connection.runSQL(
       `SELECT
-          fieldName,
-          fieldValue,
-          fieldType,
-          weight,
-          CASE WHEN lower(fieldValue) LIKE  lower(${generateSQLStringLiteral(
-            searchValue + "%"
-          )}) THEN 1 ELSE 0 END as match_first
+          ${fieldName},
+          ${fieldValue},
+          ${fieldType},
+          CAST(weight as DOUBLE Precision) as weight,
+          CASE WHEN lower(${fieldValue}) LIKE  lower(${generateSQLStringLiteral(
+        searchValue + "%"
+      )}) THEN 1 ELSE 0 END as match_first
         FROM  ${await connection.manifestTemporaryTable(sqlPDT)}
-        WHERE lower(fieldValue) LIKE lower(${generateSQLStringLiteral(
-          "%" + searchValue + "%"
-        )}) ${
+        WHERE lower(${fieldValue}) LIKE lower(${generateSQLStringLiteral(
+        "%" + searchValue + "%"
+      )}) ${
         searchField !== undefined
-          ? " AND fieldName = '" + searchField + "' \n"
+          ? ` AND ${fieldName} = '${searchField}' \n`
           : ""
       }
-        ORDER BY CASE WHEN lower(fieldValue) LIKE  lower(${generateSQLStringLiteral(
-          searchValue + "%"
-        )}) THEN 1 ELSE 0 END DESC, weight DESC
+        ORDER BY CASE WHEN lower(${fieldValue}) LIKE  lower(${generateSQLStringLiteral(
+        searchValue + "%"
+      )}) THEN 1 ELSE 0 END DESC, weight DESC
         LIMIT ${limit}
       `,
       { rowLimit: 1000, noLastStage: true }

@@ -19,8 +19,9 @@ import { RuntimeList } from "./runtimes";
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
 const runtimes = new RuntimeList([
-  "bigquery", //
-  "duckdb", //
+  // "bigquery", //
+  "postgres", //
+  // "duckdb", //
 ]);
 
 afterAll(async () => {
@@ -36,11 +37,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     `
     );
     let result = await model.search("airports", "SANTA", 10);
-    // if (result !== undefined) {
-    //   console.log(result);
-    // } else {
-    //   console.log("no result");
-    // }
+    if (result !== undefined) {
+      console.log(result);
+    } else {
+      console.log("no result");
+    }
     expect(result).toBeDefined();
     if (result !== undefined) {
       expect(result[0].fieldName).toBe("county");
