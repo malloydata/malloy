@@ -20,6 +20,7 @@ import {
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { PooledPostgresConnection } from "@malloydata/db-postgres";
 import { DuckDBConnection } from "@malloydata/db-duckdb";
+import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
 
 // https://github.com/duckdb/duckdb/issues/3721
 //  computes symmetric aggregates incorrectly.  When we have a fix,
@@ -29,9 +30,12 @@ export const duckdbBug3721 = true;
 export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.
 
-  public async runSQL(sqlCommand: string): Promise<MalloyQueryData> {
+  public async runSQL(
+    sqlCommand: string,
+    options?: RunSQLOptions
+  ): Promise<MalloyQueryData> {
     try {
-      return await super.runSQL(sqlCommand);
+      return await super.runSQL(sqlCommand, options);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.log(`Error in SQL:\n ${sqlCommand}`);
@@ -43,9 +47,12 @@ export class BigQueryTestConnection extends BigQueryConnection {
 export class PostgresTestConnection extends PooledPostgresConnection {
   // we probably need a better way to do this.
 
-  public async runSQL(sqlCommand: string): Promise<MalloyQueryData> {
+  public async runSQL(
+    sqlCommand: string,
+    options?: RunSQLOptions
+  ): Promise<MalloyQueryData> {
     try {
-      return await super.runSQL(sqlCommand);
+      return await super.runSQL(sqlCommand, options);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.log(`Error in SQL:\n ${sqlCommand}`);
@@ -61,9 +68,12 @@ export class DuckDBTestConnection extends DuckDBConnection {
     super(name);
   }
 
-  public async runSQL(sqlCommand: string): Promise<MalloyQueryData> {
+  public async runSQL(
+    sqlCommand: string,
+    options?: RunSQLOptions
+  ): Promise<MalloyQueryData> {
     try {
-      return await super.runSQL(sqlCommand);
+      return await super.runSQL(sqlCommand, options);
     } catch (e) {
       // eslint-disable-next-line no-console
       console.log(`Error in SQL:\n ${sqlCommand}`);

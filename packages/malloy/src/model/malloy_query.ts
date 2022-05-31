@@ -3436,10 +3436,10 @@ export class QueryModel {
     };
   }
 
-  compileQuery(query: Query): CompiledQuery {
+  compileQuery(query: Query, finalize = true): CompiledQuery {
     let newModel: QueryModel | undefined;
     const m = newModel || this;
-    const ret = m.loadQuery(query, undefined, true);
+    const ret = m.loadQuery(query, undefined, finalize);
     const sourceExplore =
       typeof query.structRef === "string"
         ? query.structRef
@@ -3448,7 +3448,8 @@ export class QueryModel {
         query.structRef.type === "struct"
         ? query.structRef.as || query.structRef.name
         : "(need to figure this out)";
-    if (this.dialect.hasFinalStage) {
+    // LTNote:  I don't understand why this might be here.  It should have happened in loadQuery...
+    if (finalize && this.dialect.hasFinalStage) {
       ret.lastStageName = ret.stageWriter.addStage(
         // note this will be broken on duckDB waiting on a real fix.
         this.dialect.sqlFinalStage(ret.lastStageName, [])
@@ -3501,7 +3502,7 @@ export class QueryModel {
     // if we've compiled the SQL before use it otherwise
     let sqlPDT = this.exploreSearchSQLMap.get(explore);
     if (sqlPDT === undefined) {
-      sqlPDT = (await this.compileQuery(indexQuery)).sql;
+      sqlPDT = (await this.compileQuery(indexQuery, false)).sql;
       this.exploreSearchSQLMap.set(explore, sqlPDT);
     }
     const result = await connection.runSQL(
@@ -3513,7 +3514,7 @@ export class QueryModel {
           CASE WHEN lower(fieldValue) LIKE  lower(${generateSQLStringLiteral(
             searchValue + "%"
           )}) THEN 1 ELSE 0 END as match_first
-        FROM  \`${await connection.manifestTemporaryTable(sqlPDT)}\`
+        FROM  ${await connection.manifestTemporaryTable(sqlPDT)}
         WHERE lower(fieldValue) LIKE lower(${generateSQLStringLiteral(
           "%" + searchValue + "%"
         )}) ${
@@ -3526,7 +3527,7 @@ export class QueryModel {
         )}) THEN 1 ELSE 0 END DESC, weight DESC
         LIMIT ${limit}
       `,
-      { rowLimit: 1000 }
+      { rowLimit: 1000, noLastStage: true }
     );
     return result.rows as unknown as SearchIndexResult[];
   }
