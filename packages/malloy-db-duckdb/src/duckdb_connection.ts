@@ -10,6 +10,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
+import * as crypto from "crypto";
 import {
   AtomicFieldTypeInner,
   Connection,
@@ -28,6 +29,7 @@ import {
   StreamingConnection,
 } from "@malloydata/malloy/src/runtime_types";
 import { Database, OPEN_READONLY } from "duckdb";
+import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
 
 const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   BIGINT: "number",
@@ -40,7 +42,7 @@ const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   INTEGER: "number",
 };
 
-export class DuckDBConnection implements Connection {
+export class DuckDBConnection implements Connection, PersistSQLResults {
   public readonly name;
 
   protected connection;
@@ -68,7 +70,7 @@ export class DuckDBConnection implements Connection {
   }
 
   public canPersist(): this is PersistSQLResults {
-    return false;
+    return true;
   }
 
   // @bporterfield need help writing this. it needs to wait if a setup is in process.
@@ -111,9 +113,14 @@ export class DuckDBConnection implements Connection {
     return this.runDuckDBQuery(sql);
   }
 
-  public async runSQL(sql: string): Promise<MalloyQueryData> {
+  public async runSQL(
+    sql: string,
+    options: RunSQLOptions = {}
+  ): Promise<MalloyQueryData> {
     // console.log(sql);
     await this.setup();
+
+    const rowLimit = options.rowLimit ?? 10;
 
     const statements = sql.split("-- hack: split on this");
 
@@ -125,8 +132,17 @@ export class DuckDBConnection implements Connection {
         /* Do nothing */
       }
     }
+
     const retVal = await this.runDuckDBQuery(statements[0]);
-    const result = JSON.parse(retVal.rows[0].results);
+    let result;
+    if (options.noLastStage) {
+      result = retVal.rows;
+    } else {
+      result = JSON.parse(retVal.rows[0].results);
+    }
+    if (result.length > rowLimit) {
+      result = result.slice(0, rowLimit);
+    }
     return { rows: result, totalRows: result.length };
   }
 
@@ -326,5 +342,15 @@ export class DuckDBConnection implements Connection {
 
   public async test(): Promise<void> {
     await this.runRawSQL("SELECT 1");
+  }
+
+  public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
+    const hash = crypto.createHash("md5").update(sqlCommand).digest("hex");
+    const tableName = `tt${hash}`;
+
+    const cmd = `CREATE TEMPORARY TABLE IF NOT EXISTS ${tableName} AS (${sqlCommand});`;
+    console.log(cmd);
+    await this.runRawSQL(cmd);
+    return tableName;
   }
 }

@@ -20,6 +20,7 @@ import { RuntimeList } from "./runtimes";
 
 const runtimes = new RuntimeList([
   "bigquery", //
+  "duckdb", //
 ]);
 
 afterAll(async () => {
