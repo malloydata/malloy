@@ -64,7 +64,7 @@ export const Explore: React.FC = () => {
     isRunning,
     clearResult,
   } = useRunQuery(queryMalloy, queryName, analysis);
-  const { saveField } = useSaveField(analysis, (newAnalysis) => {
+  const { saveField } = useSaveField(openDirectory, analysis, (newAnalysis) => {
     setAnalysis(newAnalysis);
     withAnalysisSource(newAnalysis, (source) => {
       queryBuilder.current?.updateSource(source);
