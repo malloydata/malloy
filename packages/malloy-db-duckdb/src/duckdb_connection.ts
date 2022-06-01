@@ -349,7 +349,7 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
     const tableName = `tt${hash}`;
 
     const cmd = `CREATE TEMPORARY TABLE IF NOT EXISTS ${tableName} AS (${sqlCommand});`;
-    console.log(cmd);
+    // console.log(cmd);
     await this.runRawSQL(cmd);
     return tableName;
   }

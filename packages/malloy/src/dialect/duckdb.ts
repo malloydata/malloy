@@ -172,7 +172,7 @@ export class DuckDBDialect extends Dialect {
     const fields = fieldList
       .map((f) => `\n  ${f.sqlOutputName}: ${f.sqlExpression}`)
       .join(", ");
-    return `LIST({${fields}} ${orderBy}) FILTER (WHERE group_set=${groupSet})${tail}`;
+    return `COALESCE(LIST({${fields}} ${orderBy}) FILTER (WHERE group_set=${groupSet})${tail},[])`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {

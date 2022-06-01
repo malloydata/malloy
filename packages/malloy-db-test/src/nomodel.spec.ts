@@ -576,4 +576,34 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.value[0].c).toBe(4586);
     expect(result.data.value[0].a).toBe(6601);
   });
+
+  it(`nest null - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        query: table('malloytest.airports') -> {
+          where: faa_region = null
+          group_by: faa_region
+          aggregate: airport_count is count()
+          nest: by_state is {
+            where: state != null
+            group_by: state
+            aggregate: airport_count is count()
+          }
+          nest: by_state1 is {
+            where: state != null
+            group_by: state
+            aggregate: airport_count is count()
+            limit: 1
+          }
+        }
+      `
+      )
+      .run();
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const d: any = result.data.toObject();
+    expect(d[0]["by_state"]).not.toBe(null);
+    expect(d[0]["by_state1"]).not.toBe(null);
+  });
 });
