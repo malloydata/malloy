@@ -15,6 +15,12 @@
       "path": "../../packages/malloy-db-bigquery"
     },
     {
+      "path": "../../packages/malloy-db-duckdb"
+    },
+    {
+      "path": "../../packages/malloy-db-postgres"
+    },
+    {
       "path": "../../packages/malloy-render"
     }
   ]

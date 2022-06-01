@@ -51,6 +51,7 @@ const commonElectronConfig = (development = false): BuildOptions => {
     bundle: true,
     platform: "node",
     external: ["electron"],
+    plugins: [makeDuckdbNoNodePreGypPlugin(undefined), ignorePgNativePlugin],
   };
 };
 
@@ -71,6 +72,70 @@ function copyDir(src: string, dest: string) {
 const errorHandler = (e: any) => {
   console.log(e);
   process.exit(1);
+};
+
+function makeDuckdbNoNodePreGypPlugin(target: string | undefined) {
+  const localPath = require.resolve("duckdb/lib/binding/duckdb.node");
+  return {
+    name: "duckdbNoNodePreGypPlugin",
+    setup(build: any) {
+      build.onResolve({ filter: /duckdb-binding\.js/ }, (args: any) => {
+        return {
+          path: args.path,
+          namespace: "duckdb-no-node-pre-gyp-plugin",
+        };
+      });
+      build.onLoad(
+        {
+          filter: /duckdb-binding\.js/,
+          namespace: "duckdb-no-node-pre-gyp-plugin",
+        },
+        (_args: any) => {
+          return {
+            contents: `
+              var path = require("path");
+              var os = require("os");
+
+              var binding_path = ${
+                target
+                  ? `require.resolve("./duckdb-native.node")`
+                  : `"${localPath}"`
+              };
+
+              // dlopen is used because we need to specify the RTLD_GLOBAL flag to be able to resolve duckdb symbols
+              // on linux where RTLD_LOCAL is the default.
+              process.dlopen(module, binding_path, os.constants.dlopen.RTLD_NOW | os.constants.dlopen.RTLD_GLOBAL);
+            `,
+            resolveDir: ".",
+          };
+        }
+      );
+    },
+  };
+}
+
+const ignorePgNativePlugin = {
+  name: "ignorePgNativePlugin",
+  setup(build: any) {
+    build.onResolve({ filter: /pg-native/ }, (args: any) => {
+      return {
+        path: args.path,
+        namespace: "ignore-pg-native-plugin",
+      };
+    });
+    build.onLoad(
+      {
+        filter: /pg-native/,
+        namespace: "ignore-pg-native-plugin",
+      },
+      (_args: any) => {
+        return {
+          contents: ``,
+          resolveDir: ".",
+        };
+      }
+    );
+  },
 };
 
 async function doBuild() {
