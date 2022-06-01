@@ -30,11 +30,19 @@ export function getWebviewHtml(
     <title>Malloy Query Results</title>
   </head>
   <style>
+    :root {
+      --malloy-font-family: var(--vscode-font-family, Roboto);
+      --malloy-title-color: var(--vscode-titleBar-activeForeground);
+      --malloy-label-color: var(--vscode-tab-activeForeground);
+      --malloy-border-color: var(--vscode-tab-border);
+      --malloy-tile-background-color: var(--vscode-tab-inactiveBackground);
+    }
     html,body,#app {
       height: 100%;
       margin: 0;
       padding: 0;
       overflow: hidden;
+      font-family: var(--malloy-font-family);
     }
     body {
       background-color: transparent;
@@ -69,7 +77,7 @@ export function getWebviewHtml(
     }
     .placeholder-label {
       margin-bottom: 10px;
-      color: #505050;
+      color: var(--malloy-title-color, #505050);
       font-size: 15px;
     }
   </style>

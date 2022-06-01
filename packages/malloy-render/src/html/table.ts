@@ -33,15 +33,23 @@ export class HTMLTableRenderer extends ContainerRenderer {
       const childRenderer = this.childRenderers[name];
       const isNumeric = childRenderer instanceof HTMLNumberRenderer;
       const headerCell = this.document.createElement("th");
-      headerCell.style.cssText = `padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; text-align: ${
-        isNumeric ? "right" : "left"
-      };`;
+      headerCell.style.cssText = `
+        padding: 8px;
+        color: var(--malloy-title-color, #505050);
+        border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
+        text-align: ${isNumeric ? "right" : "left"};
+      `;
       headerCell.innerHTML = name.replace(/_/g, "_&#8203;");
       header.appendChild(headerCell);
     });
     if (this.options.isDrillingEnabled) {
       const drillHeader = this.document.createElement("th");
-      drillHeader.style.cssText = `padding: 8px; color: #505050; border-bottom: 1px solid #eaeaea; width: 25px;`;
+      drillHeader.style.cssText = `
+        padding: 8px;
+        color: var(--malloy-title-color, #505050);
+        border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
+        width: 25px;
+      `;
       header.appendChild(drillHeader);
     }
 
@@ -55,11 +63,12 @@ export class HTMLTableRenderer extends ContainerRenderer {
         await yieldTask();
         const rendered = await childRenderer.render(row.cell(field));
         const cellElement = this.document.createElement("td");
-        cellElement.style.cssText = `padding: ${
-          childRenderer instanceof HTMLTableRenderer ? "0" : "8px"
-        }; vertical-align: top; border-bottom: 1px solid #eaeaea; ${
-          isNumeric ? "text-align: right;" : ""
-        }`;
+        cellElement.style.cssText = `
+          padding: ${childRenderer instanceof HTMLTableRenderer ? "0" : "8px"};
+          vertical-align: top;
+          border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
+          ${isNumeric ? "text-align: right;" : ""}
+        `;
         cellElement.appendChild(rendered);
         rowElement.appendChild(cellElement);
       }
@@ -67,7 +76,13 @@ export class HTMLTableRenderer extends ContainerRenderer {
         const drillCell = this.document.createElement("td");
         const drillIcon = createDrillIcon(this.document);
         drillCell.appendChild(drillIcon);
-        drillCell.style.cssText = `padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; width: 25px; cursor: pointer`;
+        drillCell.style.cssText = `
+          padding: 8px;
+          vertical-align: top;
+          border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
+          width: 25px;
+          cursor: pointer
+        `;
         drillCell.onclick = () => {
           if (this.options.onDrill) {
             const { drillQuery, drillFilters } = getDrillQuery(row);
@@ -79,7 +94,13 @@ export class HTMLTableRenderer extends ContainerRenderer {
       tableBody.appendChild(rowElement);
     }
     const tableElement = this.document.createElement("table");
-    tableElement.style.cssText = `border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;`;
+    tableElement.style.cssText = `
+      border: 1px solid var(--malloy-border-color, #eaeaea);
+      vertical-align: top;
+      border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
+      border-collapse: collapse;
+      width: 100%;
+    `;
     const tableHead = this.document.createElement("thead");
     tableHead.appendChild(header);
     tableElement.appendChild(tableHead);
