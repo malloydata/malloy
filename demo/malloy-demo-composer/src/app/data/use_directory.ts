@@ -14,16 +14,18 @@
 import { useQuery } from "react-query";
 import * as explore from "../../types";
 
-export const KEY = "directory";
+export const KEY = (path: string | undefined): string => `directory/${path}`;
 
-async function fetchDirectory(): Promise<explore.Directory> {
-  return window.malloy.analyses();
-}
-
-export function useDirectory(): explore.Directory | undefined {
-  const { data: directory } = useQuery(KEY, fetchDirectory, {
-    refetchOnWindowFocus: false,
-  });
+export function useDirectory(
+  path: string | undefined
+): explore.Directory | undefined {
+  const { data: directory } = useQuery(
+    KEY(path),
+    () => window.malloy.analyses(path),
+    {
+      refetchOnWindowFocus: false,
+    }
+  );
 
   return directory;
 }

@@ -14,5 +14,11 @@
 import logoSrc from "../assets/img/logo.png";
 
 export const MalloyLogo: React.FC = () => {
-  return <img src={logoSrc} alt="Malloy" style={{ height: "40px" }} />;
+  return (
+    <img
+      src={logoSrc}
+      alt="Malloy"
+      style={{ height: "40px", marginRight: "5px" }}
+    />
+  );
 };
