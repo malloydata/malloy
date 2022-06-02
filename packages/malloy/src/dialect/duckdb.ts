@@ -15,7 +15,6 @@ import {
   DateUnit,
   Expr,
   ExtractUnit,
-  isDateUnit,
   mkExpr,
   TimeFieldType,
   TimestampUnit,
@@ -112,9 +111,9 @@ const castMap: Record<string, string> = {
   string: "varchar",
 };
 
-const extractMap: Record<string, string> = {
-  day_of_week: "dayofweek",
-  day_of_year: "dayofyear",
+const pgExtractionMap: Record<string, string> = {
+  day_of_week: "dow",
+  day_of_year: "doy",
 };
 
 const pgMakeIntervalMap: Record<string, string> = {
@@ -125,6 +124,14 @@ const pgMakeIntervalMap: Record<string, string> = {
   hour: "hours",
   minute: "mins",
   second: "secs",
+};
+
+const inSeconds: Record<string, number> = {
+  second: 1,
+  minute: 60,
+  hour: 3600,
+  day: 86400,
+  week: 604800,
 };
 
 export class DuckDBDialect extends Dialect {
@@ -228,6 +235,10 @@ export class DuckDBDialect extends Dialect {
     return `GEN_RANDOM_UUID()`;
   }
 
+  sqlDateToString(sqlDateExp: string): string {
+    return `(${sqlDateExp})::date::varchar`;
+  }
+
   sqlFieldReference(
     alias: string,
     fieldName: string,
@@ -280,43 +291,46 @@ export class DuckDBDialect extends Dialect {
     return undefined;
   }
 
-  sqlExtract(expr: TimeValue, units: ExtractUnit): Expr {
-    const extractTo = extractMap[units] || units;
-    return mkExpr`EXTRACT(${extractTo} FROM ${expr.value})`;
-  }
-
   sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
     let lVal = from.value;
     let rVal = to.value;
-    let diffUsing = "TIMESTAMP_DIFF";
-
-    if (units == "second" || units == "minute" || units == "hour") {
-      if (from.valueType != "timestamp") {
-        lVal = mkExpr`TIMESTAMP(${lVal})`;
-      }
-      if (to.valueType != "timestamp") {
-        rVal = mkExpr`TIMESTAMP(${rVal})`;
-      }
-    } else {
-      diffUsing = "DATE_DIFF";
-      if (from.valueType != "date") {
-        lVal = mkExpr`DATE(${lVal})`;
-      }
-      if (to.valueType != "date") {
-        rVal = mkExpr`DATE(${rVal})`;
-      }
+    if (inSeconds[units]) {
+      lVal = mkExpr`EXTRACT(EPOCH FROM ${lVal})`;
+      rVal = mkExpr`EXTRACT(EPOCH FROM ${rVal})`;
+      const duration = mkExpr`(${rVal} - ${lVal})`;
+      return units == "second"
+        ? duration
+        : mkExpr`TRUNC(${duration}/${inSeconds[units].toString()})`;
     }
-    return mkExpr`${diffUsing}(${rVal}, ${lVal}, ${units})`;
+    const yearDiff = mkExpr`TRUNC(EXTRACT(YEAR FROM ${rVal}) - EXTRACT(YEAR FROM ${lVal}))`;
+    if (units == "year") {
+      return yearDiff;
+    }
+    if (units == "month") {
+      const monthDiff = mkExpr`TRUNC(EXTRACT(MONTH FROM ${rVal}) - EXTRACT(MONTH FROM ${lVal}))`;
+      return mkExpr`${yearDiff} * 12 + ${monthDiff}`;
+    }
+    if (units == "quarter") {
+      const qDiff = mkExpr`TRUNC(EXTRACT(QUARTER FROM ${rVal}) - EXTRACT(QUARTER FROM ${lVal}))`;
+      return mkExpr`${yearDiff} * 4 + ${qDiff}`;
+    }
+    throw new Error(`Unknown or unhandled postgres time unit: ${units}`);
   }
 
   sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {
-    if (sqlTime.valueType == "date") {
-      if (isDateUnit(units)) {
-        return mkExpr`DATE_TRUNC(${sqlTime.value},${units})`;
-      }
-      return mkExpr`TIMESTAMP(${sqlTime.value})`;
-    }
-    return mkExpr`TIMESTAMP_TRUNC(${sqlTime.value},${units})`;
+    // adjusting for monday/sunday weeks
+    const week = units == "week";
+    const truncThis = week
+      ? mkExpr`${sqlTime.value}+interval'1'day`
+      : sqlTime.value;
+    const trunced = mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
+    return week ? mkExpr`(${trunced}-interval'1'day)` : trunced;
+  }
+
+  sqlExtract(from: TimeValue, units: ExtractUnit): Expr {
+    const pgUnits = pgExtractionMap[units] || units;
+    const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${from.value})`;
+    return units == "day_of_week" ? mkExpr`(${extracted}+1)` : extracted;
   }
 
   sqlAlterTime(
@@ -370,10 +384,11 @@ export class DuckDBDialect extends Dialect {
   //   )`;
   // }
   sqlSumDistinct(key: string, value: string): string {
-    const factor = 38;
+    const _factor = 32;
     const precision = 0.000001;
+    const keySQL = `md5_number_lower(${key}::varchar)::int128`;
     return `
-    (SUM(DISTINCT (md5_number(${key}::varchar) >> ${factor}) + FLOOR(IFNULL(${value},0)/${precision})::int128) -  SUM(DISTINCT (md5_number(${key}::varchar) >> ${factor})))*${precision}
+    (SUM(DISTINCT ${keySQL} + FLOOR(IFNULL(${value},0)/${precision})::int128) -  SUM(DISTINCT ${keySQL}))*${precision}
     `;
   }
 }
