@@ -34,8 +34,8 @@ export function getWebviewHtml(
       --malloy-font-family: var(--vscode-font-family, Roboto);
       --malloy-title-color: var(--vscode-titleBar-activeForeground);
       --malloy-label-color: var(--vscode-tab-activeForeground);
-      --malloy-border-color: var(--vscode-tab-border);
-      --malloy-tile-background-color: var(--vscode-tab-inactiveBackground);
+      --malloy-border-color: var(--vscode-notifications-border);
+      --malloy-tile-background-color: var(--vscode-notifications-background);
     }
     html,body,#app {
       height: 100%;
