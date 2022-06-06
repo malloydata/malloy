@@ -36,5 +36,8 @@ export function makeSQLBlock(from: SQLBlockRequest): SQLBlock {
   if (from.after) {
     theBlock.after = from.after;
   }
+  if (from.connection) {
+    theBlock.connection = from.connection;
+  }
   return theBlock;
 }
