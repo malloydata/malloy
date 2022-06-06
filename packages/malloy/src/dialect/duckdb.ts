@@ -249,7 +249,7 @@ export class DuckDBDialect extends Dialect {
     if (isArray) {
       return alias;
     } else {
-      return `${alias}.${fieldName}`;
+      return `${alias}.${this.sqlMaybeQuoteIdentifier(fieldName)}`;
     }
   }
 
@@ -274,10 +274,15 @@ export class DuckDBDialect extends Dialect {
       .join(", ")})`;
   }
   // TODO
+  // sqlMaybeQuoteIdentifier(identifier: string): string {
+  //   return keywords.indexOf(identifier.toUpperCase()) > 0 ||
+  //     identifier.match(/[a-zA-Z][a-zA-Z0-9]*/) === null || true
+  //     ? '"' + identifier + '"'
+  //     : identifier;
+  // }
+
   sqlMaybeQuoteIdentifier(identifier: string): string {
-    return keywords.indexOf(identifier.toUpperCase()) > 0
-      ? '"' + identifier + '"'
-      : identifier;
+    return '"' + identifier + '"';
   }
 
   // The simple way to do this is to add a comment on the table
