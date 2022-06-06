@@ -589,7 +589,7 @@ NUMERIC_LITERAL
   | DOT DIGIT+ (E [-+]? DIGIT+)?
   ;
 
-OBJECT_NAME_LITERAL: '`' ID_CHAR ( ID_CHAR | DIGIT )* '`';
+OBJECT_NAME_LITERAL: '`' ID_CHAR ( ID_CHAR | DIGIT | SPACE_CHAR )* '`';
 
 fragment ID_CHAR: [\p{Alphabetic}_] ;
 fragment DIGIT: [0-9];

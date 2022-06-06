@@ -2084,6 +2084,9 @@ class QueryQuery extends QueryField {
     stageWriter: StageWriter
   ) {
     for (const [name, fi] of resultSet.allFields) {
+      const outputName = this.parent.dialect.sqlMaybeQuoteIdentifier(
+        `${name}__${resultSet.groupSet}`
+      );
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === "result") {
           if (isScalarField(fi.f)) {
@@ -2092,12 +2095,12 @@ class QueryQuery extends QueryField {
               resultSet.groupSet > 0 ? resultSet.childGroups : [],
               exp
             );
-            output.sql.push(`${exp} as ${name}__${resultSet.groupSet}`);
+            output.sql.push(`${exp} as ${outputName}`);
             output.dimensionIndexes.push(output.fieldIndex++);
           } else if (isAggregateField(fi.f)) {
             let exp = fi.f.generateExpression(resultSet);
             exp = this.caseGroup([resultSet.groupSet], exp);
-            output.sql.push(`${exp} as ${name}__${resultSet.groupSet}`);
+            output.sql.push(`${exp} as ${outputName}`);
             output.fieldIndex++;
           }
         }
@@ -2106,7 +2109,7 @@ class QueryQuery extends QueryField {
           this.generateStage0Fields(fi, output, stageWriter);
         } else if (fi.firstSegment.type === "project") {
           const s = this.generateTurtleSQL(fi, stageWriter);
-          output.sql.push(`${s} as ${name}__${resultSet.groupSet}`);
+          output.sql.push(`${s} as ${outputName}`);
           output.fieldIndex++;
         }
       }
@@ -2184,7 +2187,11 @@ class QueryQuery extends QueryField {
         let r: FieldInstanceResult | undefined = result;
         while (r) {
           for (const name of r.fieldNames((fi) => isScalarField(fi.f))) {
-            dimensions.push(`${name}__${r.groupSet}`);
+            dimensions.push(
+              this.parent.dialect.sqlMaybeQuoteIdentifier(
+                `${name}__${r.groupSet}`
+              )
+            );
           }
           r = r.parent;
         }
@@ -2257,7 +2264,9 @@ class QueryQuery extends QueryField {
   ) {
     const groupsToMap = [];
     for (const [name, fi] of resultSet.allFields) {
-      const sqlFieldName = `${name}__${resultSet.groupSet}`;
+      const sqlFieldName = this.parent.dialect.sqlMaybeQuoteIdentifier(
+        `${name}__${resultSet.groupSet}`
+      );
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === "result") {
           if (isScalarField(fi.f)) {
@@ -2337,7 +2346,10 @@ class QueryQuery extends QueryField {
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === "result") {
           if (isScalarField(fi.f)) {
-            fieldsSQL.push(`${name}__0 as ${sqlName}`);
+            fieldsSQL.push(
+              this.parent.dialect.sqlMaybeQuoteIdentifier(`${name}__0`) +
+                ` as ${sqlName}`
+            );
             dimensionIndexes.push(fieldIndex++);
           } else if (isAggregateField(fi.f)) {
             fieldsSQL.push(
@@ -2418,9 +2430,11 @@ class QueryQuery extends QueryField {
       }
       if (resultStruct.firstSegment.type === "reduce") {
         obSQL.push(
-          ` ${orderingField.name}__${resultStruct.groupSet} ${
-            ordering.dir || "ASC"
-          }`
+          " " +
+            this.parent.dialect.sqlMaybeQuoteIdentifier(
+              `${orderingField.name}__${resultStruct.groupSet}`
+            ) +
+            ` ${ordering.dir || "ASC"}`
         );
       } else if (resultStruct.firstSegment.type === "project") {
         obSQL.push(
@@ -2451,7 +2465,9 @@ class QueryQuery extends QueryField {
             field instanceof FieldInstanceField
               ? field.f.fieldDef.type
               : "struct",
-          sqlExpression: `${name}__${resultStruct.groupSet}`,
+          sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
+            `${name}__${resultStruct.groupSet}`
+          ),
           sqlOutputName: sqlName,
         });
       } else if (
