@@ -410,7 +410,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
 };
 
 export function isDataContainer(a: unknown): a is DataContainer {
-  return a instanceof Array || a instanceof Object;
+  return Array.isArray(a) || typeof a === "object";
 }
 
 export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
@@ -460,17 +460,17 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
   }
 
   translateFields(node: DataContainer, explore: Explore): void {
-    if (node instanceof Array) {
+    if (Array.isArray(node)) {
       for (const e of node) {
         if (isDataContainer(e)) {
           this.translateFields(e, explore);
         }
       }
-    } else if (node instanceof Object) {
+    } else if (typeof node === "object") {
       for (const [key, value] of Object.entries(node)) {
         if (key === "field" && typeof value === "string") {
           node[key] = this.translateField(explore, value);
-        } else if (key === "repeat" && value instanceof Array) {
+        } else if (key === "repeat" && Array.isArray(value)) {
           for (const k of value.keys()) {
             const fieldName = value[k];
             if (typeof fieldName === "string") {

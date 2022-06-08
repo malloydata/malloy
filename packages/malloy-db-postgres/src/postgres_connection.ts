@@ -226,7 +226,7 @@ export class PostgresConnection implements Connection, StreamingConnection {
     await client.connect();
 
     let result = await client.query(sqlCommand);
-    if (result instanceof Array) {
+    if (Array.isArray(result)) {
       result = result.pop();
     }
     if (deJSON) {
@@ -420,7 +420,7 @@ export class PooledPostgresConnection
   ): Promise<MalloyQueryData> {
     let result = await this.pool.query(sqlCommand);
 
-    if (result instanceof Array) {
+    if (Array.isArray(result)) {
       result = result.pop();
     }
     if (deJSON) {
