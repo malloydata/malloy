@@ -2909,7 +2909,7 @@ export class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
         return new DataString(value as string, field);
       }
     } else if (field.isExploreField()) {
-      if (value instanceof Array) {
+      if (Array.isArray(value)) {
         return new DataArray(value, field, this);
       } else {
         return new DataRecord(value as QueryDataRow, undefined, field, this);
