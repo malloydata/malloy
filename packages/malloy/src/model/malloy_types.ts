@@ -496,11 +496,26 @@ export function isQuerySegment(pe: PipeSegment): pe is QuerySegment {
   return isProjectSegment(pe) || isReduceSegment(pe);
 }
 
+export type Sampling = SamplingRows | SamplingEnable | SamplingPercent;
+
+interface SamplingRows {
+  rows: number;
+}
+
+interface SamplingPercent {
+  percent: number;
+}
+
+interface SamplingEnable {
+  enable: boolean;
+}
+
 export interface IndexSegment extends Filtered {
   type: "index";
   fields: string[];
   limit?: number;
   weightMeasure?: string; // only allow the name of the field to use for weights
+  sample?: Sampling;
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === "index";

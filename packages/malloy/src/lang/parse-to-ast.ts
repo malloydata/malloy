@@ -1130,4 +1130,17 @@ export class MalloyToAST
     }
     return this.astAt(sqlStmt, pcx);
   }
+
+  visitSampleStatement(pcx: parse.SampleStatementContext): ast.SampleProperty {
+    const rowCx = pcx.sampleSpec().INTEGER_LITERAL();
+    if (rowCx) {
+      return new ast.SampleProperty({ rows: this.getNumber(rowCx) });
+    }
+    const limitCx = pcx.sampleSpec().PERCENT_LITERAL();
+    if (limitCx) {
+      return new ast.SampleProperty({ rows: this.getNumber(limitCx) });
+    }
+    const enabled = pcx.sampleSpec().TRUE() != undefined;
+    return new ast.SampleProperty({ enable: enabled });
+  }
 }
