@@ -1138,7 +1138,7 @@ export class MalloyToAST
     }
     const limitCx = pcx.sampleSpec().PERCENT_LITERAL();
     if (limitCx) {
-      return new ast.SampleProperty({ rows: this.getNumber(limitCx) });
+      return new ast.SampleProperty({ percent: this.getNumber(limitCx) });
     }
     const enabled = pcx.sampleSpec().TRUE() != undefined;
     return new ast.SampleProperty({ enable: enabled });
