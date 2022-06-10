@@ -19,7 +19,7 @@ import {
   DialectFragment,
   TimeValue,
 } from "..";
-import { Expr, TypecastFragment } from "../model";
+import { Expr, Sampling, TypecastFragment } from "../model";
 
 interface DialectField {
   type: string;
@@ -48,6 +48,7 @@ export abstract class Dialect {
   abstract supportsSumDistinctFunction: boolean;
   abstract unnestWithNumbers: boolean;
   protected abstract functionInfo: Record<string, FunctionInfo>;
+  abstract defaultSampling: Sampling;
 
   // return a quoted string for use as a table path.
   abstract quoteTablePath(tablePath: string): string;
@@ -174,5 +175,12 @@ export abstract class Dialect {
 
   sqlSumDistinct(_key: string, _value: string): string {
     return "sqlSumDistinct called bu not implemented";
+  }
+
+  sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
+    if (sample !== undefined) {
+      throw new Error(`Sampling is not supported on dialect ${this.name}.`);
+    }
+    return tableSQL;
   }
 }

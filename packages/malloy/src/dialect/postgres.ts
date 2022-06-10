@@ -61,6 +61,7 @@ export class PostgresDialect extends Dialect {
   divisionIsInteger = true;
   supportsSumDistinctFunction = false;
   unnestWithNumbers = false;
+  defaultSampling = { enable: false };
 
   functionInfo: Record<string, FunctionInfo> = {};
 

@@ -502,12 +502,24 @@ interface SamplingRows {
   rows: number;
 }
 
+export function isSamplingRows(s: Sampling): s is SamplingRows {
+  return (s as SamplingRows).rows !== undefined;
+}
+
 interface SamplingPercent {
   percent: number;
 }
 
+export function isSamplingPercent(s: Sampling): s is SamplingPercent {
+  return (s as SamplingPercent).percent !== undefined;
+}
+
 interface SamplingEnable {
   enable: boolean;
+}
+
+export function isSamplingEnable(s: Sampling): s is SamplingEnable {
+  return (s as SamplingEnable).enable !== undefined;
 }
 
 export interface IndexSegment extends Filtered {
