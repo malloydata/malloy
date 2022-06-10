@@ -57,6 +57,7 @@ import {
   DialectFragment,
   isDialectFragment,
   getPhysicalFields,
+  isIndexSegment,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -1984,6 +1985,12 @@ class QueryQuery extends QueryField {
     const qs = ji.queryStruct;
     // Joins
     let structSQL = qs.structSourceSQL(stageWriter);
+    if (isIndexSegment(this.firstSegment)) {
+      structSQL = this.parent.dialect.sqlSampleTable(
+        structSQL,
+        this.firstSegment.sample
+      );
+    }
     const structRelationship = qs.fieldDef.structRelationship;
     if (structRelationship.type === "basetable") {
       if (ji.makeUniqueKey) {
@@ -3505,7 +3512,13 @@ export class QueryModel {
     if (!struct.nameMap.get("search_index")) {
       indexQuery = {
         structRef: explore,
-        pipeline: [{ type: "index", fields: ["*"] }],
+        pipeline: [
+          {
+            type: "index",
+            fields: ["*"],
+            sample: struct.dialect.defaultSampling,
+          },
+        ],
       };
     } else {
       indexQuery = {

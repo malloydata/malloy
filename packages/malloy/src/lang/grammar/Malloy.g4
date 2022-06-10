@@ -229,6 +229,7 @@ queryStatement
   | whereStatement
   | havingStatement
   | nestStatement
+  | sampleStatement
   ;
 
 groupByStatement
@@ -304,6 +305,17 @@ indexFields
 indexStatement
   : INDEX indexFields (BY fieldName)?
   ;
+
+sampleStatement
+  : SAMPLE sampleSpec
+  ;
+
+sampleSpec
+  : PERCENT_LITERAL
+  | INTEGER_LITERAL
+  | TRUE
+  | FALSE;
+
 
 aggregate: SUM | COUNT | AVG | MIN | MAX;
 malloyType: STRING | NUMBER | BOOLEAN | DATE | TIMESTAMP;
@@ -471,6 +483,7 @@ PRIMARY_KEY: P R I M A R Y '_' K E Y SPACE_CHAR* ':';
 PROJECT: P R O J E C T SPACE_CHAR* ':';
 QUERY: Q U E R Y SPACE_CHAR* ':';
 RENAME: R E N A M E SPACE_CHAR* ':';
+SAMPLE: S A M P L E SPACE_CHAR* ':';
 SOURCE: S O U R C E SPACE_CHAR* ':';
 SQL: S Q L SPACE_CHAR* ':';
 TOP: T O P SPACE_CHAR* ':';
@@ -582,6 +595,7 @@ LITERAL_YEAR:    '@' F_YEAR LX?;
 
 IDENTIFIER: ID_CHAR ( ID_CHAR | DIGIT )*;
 
+PERCENT_LITERAL: DIGIT+ '%' ;
 INTEGER_LITERAL: DIGIT+ ;
 
 NUMERIC_LITERAL

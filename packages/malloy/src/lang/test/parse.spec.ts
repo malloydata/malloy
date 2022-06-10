@@ -643,6 +643,10 @@ describe("qops", () => {
   test("index multiple", modelOK("query:a->{index: astr,af}"));
   test("index star", modelOK("query:a->{index: *}"));
   test("index by", modelOK("query:a->{index: * by ai}"));
+  test("index sampled", modelOK("query:a->{index: *; sample: true}"));
+  test("index unsampled", modelOK("query:a->{index: *; sample: false}"));
+  test("index sample-percent", modelOK("query:a->{index: *; sample: 27%}"));
+  test("index sample-rows", modelOK("query:a->{index: *; sample: 100000}"));
   test("top N", modelOK("query: a->{ top: 5; group_by: astr }"));
   test("top N by field", modelOK("query: a->{top: 5 by af; group_by: astr}"));
   test(

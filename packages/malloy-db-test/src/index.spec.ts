@@ -77,6 +77,64 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     }
   });
 
+  it(`index no sample rows - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: t is table('malloytest.state_facts') {
+          dimension: one is 'one'
+        }
+
+        query: t-> {index:one, state }
+          -> {project: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
+    `
+      )
+      .run();
+    console.log(result.data.toObject());
+    expect(result.data.path(0, "fieldName").value).toBe("one");
+    expect(result.data.path(0, "weight").value).toBe(51);
+  });
+
+  // bigquery doesn't support row count based sampling.
+  (databaseName === "bigquery" || databaseName === "postgres" ? it.skip : it)(
+    `index rows count - ${databaseName}`,
+    async () => {
+      const result = await runtime
+        .loadQuery(
+          `
+        source: t is table('malloytest.state_facts') {
+          dimension: one is 'one'
+        }
+
+        query: t-> {index:one, state; sample: 10 }
+          -> {project: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
+    `
+        )
+        .run();
+      expect(result.data.path(0, "fieldName").value).toBe("one");
+      expect(result.data.path(0, "weight").value).toBe(10);
+    }
+  );
+
+  it(`index rows count - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: t is table('malloytest.flights') {
+          dimension: one is 'one'
+        }
+
+        query: t-> {index:one, tailnum; sample: 50% }
+          -> {project: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
+    `
+      )
+      .run();
+    // console.log(result.sql);
+    // Hard to get consistent results here so just check that we get a value back.
+    //console.log(result.data.toObject());
+    expect(result.data.path(0, "fieldName").value).toBe("one");
+  });
+
   // it(`fanned data index  - ${databaseName}`, async () => {
   //   const result = await runtime
   //     .loadModel(

@@ -21,6 +21,10 @@ import {
   TimeValue,
   TypecastFragment,
   isDateUnit,
+  isSamplingEnable,
+  isSamplingPercent,
+  isSamplingRows,
+  Sampling,
 } from "../model";
 import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 
@@ -52,6 +56,7 @@ export class StandardSQLDialect extends Dialect {
   divisionIsInteger = false;
   supportsSumDistinctFunction = false;
   unnestWithNumbers = false;
+  defaultSampling = { enable: false };
 
   functionInfo: Record<string, FunctionInfo> = {
     timestamp_seconds: { returnType: "timestamp" },
@@ -395,5 +400,21 @@ ${indent(sql)}
       }
     }
     return mkExpr`${diffUsing}(${rVal}, ${lVal}, ${units})`;
+  }
+
+  sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
+    if (sample !== undefined) {
+      if (isSamplingEnable(sample) && sample.enable) {
+        sample = this.defaultSampling;
+      }
+      if (isSamplingRows(sample)) {
+        throw new Error(
+          `StandardSQL doesn't support sampling by rows only percent`
+        );
+      } else if (isSamplingPercent(sample)) {
+        return `(SELECT * FROM ${tableSQL}  TABLESAMPLE SYSTEM (${sample.percent} PERCENT))`;
+      }
+    }
+    return tableSQL;
   }
 }

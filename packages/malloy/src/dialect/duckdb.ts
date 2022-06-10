@@ -15,7 +15,11 @@ import {
   DateUnit,
   Expr,
   ExtractUnit,
+  isSamplingEnable,
+  isSamplingPercent,
+  isSamplingRows,
   mkExpr,
+  Sampling,
   TimeFieldType,
   TimestampUnit,
   TimeValue,
@@ -142,6 +146,7 @@ export class DuckDBDialect extends Dialect {
   divisionIsInteger = true;
   supportsSumDistinctFunction = true;
   unnestWithNumbers = true;
+  defaultSampling = { rows: 50000 };
 
   functionInfo: Record<string, FunctionInfo> = {};
 
@@ -395,5 +400,20 @@ export class DuckDBDialect extends Dialect {
     return `
     (SUM(DISTINCT ${keySQL} + FLOOR(IFNULL(${value},0)/${precision})::int128) -  SUM(DISTINCT ${keySQL}))*${precision}
     `;
+  }
+
+  // default duckdb to sampling 50K rows.
+  sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
+    if (sample !== undefined) {
+      if (isSamplingEnable(sample) && sample.enable) {
+        sample = this.defaultSampling;
+      }
+      if (isSamplingRows(sample)) {
+        return `(SELECT * FROM ${tableSQL} USING SAMPLE ${sample.rows})`;
+      } else if (isSamplingPercent(sample)) {
+        return `(SELECT * FROM ${tableSQL} USING SAMPLE ${sample.percent} PERCENT (bernoulli))`;
+      }
+    }
+    return tableSQL;
   }
 }
