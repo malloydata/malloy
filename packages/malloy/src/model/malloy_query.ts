@@ -3531,6 +3531,10 @@ export class QueryModel {
         pipeline: [],
       };
     }
+    const fieldNameColumn = struct.dialect.sqlMaybeQuoteIdentifier("fieldName");
+    const fieldValueColumn =
+      struct.dialect.sqlMaybeQuoteIdentifier("fieldValue");
+    const fieldTypeColumn = struct.dialect.sqlMaybeQuoteIdentifier("fieldType");
 
     // if we've compiled the SQL before use it otherwise
     let sqlPDT = this.exploreSearchSQLMap.get(explore);
@@ -3538,30 +3542,43 @@ export class QueryModel {
       sqlPDT = (await this.compileQuery(indexQuery, false)).sql;
       this.exploreSearchSQLMap.set(explore, sqlPDT);
     }
-    const result = await connection.runSQL(
-      `SELECT
-          fieldName,
-          fieldValue,
-          fieldType,
-          weight,
-          CASE WHEN lower(fieldValue) LIKE  lower(${generateSQLStringLiteral(
-            searchValue + "%"
-          )}) THEN 1 ELSE 0 END as match_first
-        FROM  ${await connection.manifestTemporaryTable(sqlPDT)}
-        WHERE lower(fieldValue) LIKE lower(${generateSQLStringLiteral(
-          "%" + searchValue + "%"
-        )}) ${
-        searchField !== undefined
-          ? " AND fieldName = '" + searchField + "' \n"
-          : ""
-      }
-        ORDER BY CASE WHEN lower(fieldValue) LIKE  lower(${generateSQLStringLiteral(
-          searchValue + "%"
-        )}) THEN 1 ELSE 0 END DESC, weight DESC
-        LIMIT ${limit}
-      `,
-      { rowLimit: 1000, noLastStage: true }
-    );
+
+    let query = `SELECT
+              ${fieldNameColumn},
+              ${fieldValueColumn},
+              ${fieldTypeColumn},
+              weight,
+              CASE WHEN lower(${fieldValueColumn}) LIKE  lower(${generateSQLStringLiteral(
+      searchValue + "%"
+    )}) THEN 1 ELSE 0 END as match_first
+            FROM  ${await connection.manifestTemporaryTable(sqlPDT)}
+            WHERE lower(${fieldValueColumn}) LIKE lower(${generateSQLStringLiteral(
+      "%" + searchValue + "%"
+    )}) ${
+      searchField !== undefined
+        ? ` AND ${fieldNameColumn} = '` + searchField + "' \n"
+        : ""
+    }
+            ORDER BY CASE WHEN lower(${fieldValueColumn}) LIKE  lower(${generateSQLStringLiteral(
+      searchValue + "%"
+    )}) THEN 1 ELSE 0 END DESC, weight DESC
+            LIMIT ${limit}
+          `;
+    if (struct.dialect.hasFinalStage) {
+      query = `WITH __stage0 AS(\n${query}\n)\n${struct.dialect.sqlFinalStage(
+        "__stage0",
+        [
+          fieldNameColumn,
+          fieldValueColumn,
+          fieldTypeColumn,
+          "weight",
+          "match_first",
+        ]
+      )}`;
+    }
+    const result = await connection.runSQL(query, {
+      rowLimit: 1000,
+    });
     return result.rows as unknown as SearchIndexResult[];
   }
 }

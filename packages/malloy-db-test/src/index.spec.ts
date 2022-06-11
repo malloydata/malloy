@@ -37,6 +37,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     `
     );
     let result = await model.search("airports", "SANTA", 10);
+
     // if (result !== undefined) {
     //   console.log(result);
     // } else {
@@ -91,7 +92,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     `
       )
       .run();
-    console.log(result.data.toObject());
+    // console.log(result.data.toObject());
     expect(result.data.path(0, "fieldName").value).toBe("one");
     expect(result.data.path(0, "weight").value).toBe(51);
   });
