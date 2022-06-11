@@ -21,6 +21,10 @@ import {
   TimeValue,
   mkExpr,
   TypecastFragment,
+  isSamplingEnable,
+  isSamplingPercent,
+  isSamplingRows,
+  Sampling,
 } from "../model";
 import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 
@@ -61,7 +65,7 @@ export class PostgresDialect extends Dialect {
   divisionIsInteger = true;
   supportsSumDistinctFunction = false;
   unnestWithNumbers = false;
-  defaultSampling = { enable: false };
+  defaultSampling = { rows: 50000 };
 
   functionInfo: Record<string, FunctionInfo> = {};
 
@@ -346,5 +350,19 @@ export class PostgresDialect extends Dialect {
         SELECT UNNEST(array_agg(distinct row_to_json(row(${key},${value}))::text)) a
       ) a
     )`;
+  }
+
+  sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
+    if (sample !== undefined) {
+      if (isSamplingEnable(sample) && sample.enable) {
+        sample = this.defaultSampling;
+      }
+      if (isSamplingRows(sample)) {
+        return `(SELECT * FROM ${tableSQL} TABLESAMPLE SYSTEM_ROWS(${sample.rows}))`;
+      } else if (isSamplingPercent(sample)) {
+        return `(SELECT * FROM ${tableSQL} TABLESAMPLE SYSTEM (${sample.percent}))`;
+      }
+    }
+    return tableSQL;
   }
 }

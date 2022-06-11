@@ -19,8 +19,9 @@ import { RuntimeList } from "./runtimes";
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
 const runtimes = new RuntimeList([
-  "bigquery", //
-  "duckdb", //
+  // "bigquery", //
+  // "duckdb", //
+  "postgres",
 ]);
 
 afterAll(async () => {
@@ -96,7 +97,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   // bigquery doesn't support row count based sampling.
-  (databaseName === "bigquery" || databaseName === "postgres" ? it.skip : it)(
+  (databaseName === "bigquery" ? it.skip : it)(
     `index rows count - ${databaseName}`,
     async () => {
       const result = await runtime

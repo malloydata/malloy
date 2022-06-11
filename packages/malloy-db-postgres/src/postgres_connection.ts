@@ -11,6 +11,12 @@
  * GNU General Public License for more details.
  */
 
+// LTNOTE: we need this extension to be installed to correctly index
+//  postgres data...  We should probably do this on connection creation...
+//
+//     create extension if not exists tsm_system_rows
+//
+
 import {
   StructDef,
   MalloyQueryData,
