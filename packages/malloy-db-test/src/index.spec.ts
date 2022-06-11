@@ -21,6 +21,7 @@ import { RuntimeList } from "./runtimes";
 const runtimes = new RuntimeList([
   "bigquery", //
   "duckdb", //
+  "postgres",
 ]);
 
 afterAll(async () => {
@@ -36,6 +37,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     `
     );
     let result = await model.search("airports", "SANTA", 10);
+
     // if (result !== undefined) {
     //   console.log(result);
     // } else {
@@ -90,13 +92,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     `
       )
       .run();
-    console.log(result.data.toObject());
+    // console.log(result.data.toObject());
     expect(result.data.path(0, "fieldName").value).toBe("one");
     expect(result.data.path(0, "weight").value).toBe(51);
   });
 
   // bigquery doesn't support row count based sampling.
-  (databaseName === "bigquery" || databaseName === "postgres" ? it.skip : it)(
+  (databaseName === "bigquery" ? it.skip : it)(
     `index rows count - ${databaseName}`,
     async () => {
       const result = await runtime

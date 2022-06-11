@@ -2688,6 +2688,10 @@ class QueryQueryIndex extends QueryQuery {
   generateSQL(stageWriter: StageWriter): string {
     let measureSQL = "COUNT(*)";
     const dialect = this.parent.dialect;
+    const fieldNameColumn = dialect.sqlMaybeQuoteIdentifier("fieldName");
+    const fieldValueColumn = dialect.sqlMaybeQuoteIdentifier("fieldValue");
+    const fieldTypeColumn = dialect.sqlMaybeQuoteIdentifier("fieldType");
+    const fieldRangeColumn = dialect.sqlMaybeQuoteIdentifier("fieldRange");
     const measureName = (this.firstSegment as IndexSegment).weightMeasure;
     if (measureName) {
       measureSQL = this.rootResult
@@ -2709,19 +2713,19 @@ class QueryQueryIndex extends QueryQuery {
     for (let i = 0; i < fields.length; i++) {
       s += `    WHEN ${i} THEN '${fields[i].name}'\n`;
     }
-    s += `  END as fieldName,`;
+    s += `  END as ${fieldNameColumn},`;
     s += `  CASE group_set\n`;
     for (let i = 0; i < fields.length; i++) {
       s += `    WHEN ${i} THEN '${fields[i].type}'\n`;
     }
-    s += `  END as fieldType,`;
+    s += `  END as ${fieldTypeColumn},`;
     s += `  CASE group_set\n`;
     for (let i = 0; i < fields.length; i++) {
       if (fields[i].type === "string") {
         s += `    WHEN ${i} THEN ${fields[i].expression}\n`;
       }
     }
-    s += `  END as fieldValue,\n`;
+    s += `  END as ${fieldValueColumn},\n`;
     s += ` ${measureSQL} as weight,\n`;
 
     // just in case we don't have any field types, force the case statement to have at least one value.
@@ -2738,7 +2742,7 @@ class QueryQueryIndex extends QueryQuery {
         )})\n`;
       }
     }
-    s += `  END as fieldRange\n`;
+    s += `  END as ${fieldRangeColumn}\n`;
 
     // CASE
     //   WHEN field_type = 'timestamp' or field_type = 'date'
@@ -2764,9 +2768,9 @@ class QueryQueryIndex extends QueryQuery {
     const resultStage = stageWriter.addStage(s);
     this.resultStage = stageWriter.addStage(
       `SELECT
-  fieldName,
-  fieldType,
-  COALESCE(fieldValue, fieldRange) as fieldValue,
+  ${fieldNameColumn},
+  ${fieldTypeColumn},
+  COALESCE(${fieldValueColumn}, ${fieldRangeColumn}) as ${fieldValueColumn},
   weight
 FROM ${resultStage}\n`
     );
@@ -3527,6 +3531,10 @@ export class QueryModel {
         pipeline: [],
       };
     }
+    const fieldNameColumn = struct.dialect.sqlMaybeQuoteIdentifier("fieldName");
+    const fieldValueColumn =
+      struct.dialect.sqlMaybeQuoteIdentifier("fieldValue");
+    const fieldTypeColumn = struct.dialect.sqlMaybeQuoteIdentifier("fieldType");
 
     // if we've compiled the SQL before use it otherwise
     let sqlPDT = this.exploreSearchSQLMap.get(explore);
@@ -3534,30 +3542,43 @@ export class QueryModel {
       sqlPDT = (await this.compileQuery(indexQuery, false)).sql;
       this.exploreSearchSQLMap.set(explore, sqlPDT);
     }
-    const result = await connection.runSQL(
-      `SELECT
-          fieldName,
-          fieldValue,
-          fieldType,
-          weight,
-          CASE WHEN lower(fieldValue) LIKE  lower(${generateSQLStringLiteral(
-            searchValue + "%"
-          )}) THEN 1 ELSE 0 END as match_first
-        FROM  ${await connection.manifestTemporaryTable(sqlPDT)}
-        WHERE lower(fieldValue) LIKE lower(${generateSQLStringLiteral(
-          "%" + searchValue + "%"
-        )}) ${
-        searchField !== undefined
-          ? " AND fieldName = '" + searchField + "' \n"
-          : ""
-      }
-        ORDER BY CASE WHEN lower(fieldValue) LIKE  lower(${generateSQLStringLiteral(
-          searchValue + "%"
-        )}) THEN 1 ELSE 0 END DESC, weight DESC
-        LIMIT ${limit}
-      `,
-      { rowLimit: 1000, noLastStage: true }
-    );
+
+    let query = `SELECT
+              ${fieldNameColumn},
+              ${fieldValueColumn},
+              ${fieldTypeColumn},
+              weight,
+              CASE WHEN lower(${fieldValueColumn}) LIKE  lower(${generateSQLStringLiteral(
+      searchValue + "%"
+    )}) THEN 1 ELSE 0 END as match_first
+            FROM  ${await connection.manifestTemporaryTable(sqlPDT)}
+            WHERE lower(${fieldValueColumn}) LIKE lower(${generateSQLStringLiteral(
+      "%" + searchValue + "%"
+    )}) ${
+      searchField !== undefined
+        ? ` AND ${fieldNameColumn} = '` + searchField + "' \n"
+        : ""
+    }
+            ORDER BY CASE WHEN lower(${fieldValueColumn}) LIKE  lower(${generateSQLStringLiteral(
+      searchValue + "%"
+    )}) THEN 1 ELSE 0 END DESC, weight DESC
+            LIMIT ${limit}
+          `;
+    if (struct.dialect.hasFinalStage) {
+      query = `WITH __stage0 AS(\n${query}\n)\n${struct.dialect.sqlFinalStage(
+        "__stage0",
+        [
+          fieldNameColumn,
+          fieldValueColumn,
+          fieldTypeColumn,
+          "weight",
+          "match_first",
+        ]
+      )}`;
+    }
+    const result = await connection.runSQL(query, {
+      rowLimit: 1000,
+    });
     return result.rows as unknown as SearchIndexResult[];
   }
 }

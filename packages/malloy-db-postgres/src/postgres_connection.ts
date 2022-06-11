@@ -11,6 +11,13 @@
  * GNU General Public License for more details.
  */
 
+// LTNOTE: we need this extension to be installed to correctly index
+//  postgres data...  We should probably do this on connection creation...
+//
+//     create extension if not exists tsm_system_rows
+//
+
+import * as crypto from "crypto";
 import {
   StructDef,
   MalloyQueryData,
@@ -132,7 +139,7 @@ export class PostgresConnection implements Connection, StreamingConnection {
   }
 
   public canPersist(): this is PersistSQLResults {
-    return false;
+    return true;
   }
 
   public canFetchSchemaAndRunSimultaneously(): this is FetchSchemaAndRunSimultaneously {
@@ -359,7 +366,10 @@ export class PostgresConnection implements Connection, StreamingConnection {
 
   public async runSQL(
     sql: string,
-    { rowLimit }: { rowLimit?: number } = {},
+    {
+      rowLimit,
+      noLastStage,
+    }: { rowLimit?: number; noLastStage?: boolean } = {},
     rowIndex = 0
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
@@ -368,7 +378,7 @@ export class PostgresConnection implements Connection, StreamingConnection {
       sql,
       rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
-      true
+      !noLastStage
     );
   }
 
@@ -464,5 +474,15 @@ export class PooledPostgresConnection
       }
     }
     releaseClient();
+  }
+
+  public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
+    const hash = crypto.createHash("md5").update(sqlCommand).digest("hex");
+    const tableName = `tt${hash}`;
+
+    const cmd = `CREATE TEMPORARY TABLE IF NOT EXISTS ${tableName} AS (${sqlCommand});`;
+    // console.log(cmd);
+    await this.runPostgresQuery(cmd, 1000, 0, false);
+    return tableName;
   }
 }
