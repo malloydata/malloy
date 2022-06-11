@@ -19,8 +19,8 @@ import { RuntimeList } from "./runtimes";
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
 const runtimes = new RuntimeList([
-  // "bigquery", //
-  // "duckdb", //
+  "bigquery", //
+  "duckdb", //
   "postgres",
 ]);
 
