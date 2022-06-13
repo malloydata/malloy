@@ -410,7 +410,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
 };
 
 export function isDataContainer(a: unknown): a is DataContainer {
-  return Array.isArray(a) || typeof a === "object";
+  return Array.isArray(a) || (a !== null && typeof a === "object");
 }
 
 export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
@@ -466,7 +466,7 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
           this.translateFields(e, explore);
         }
       }
-    } else if (typeof node === "object") {
+    } else if (node && typeof node === "object") {
       for (const [key, value] of Object.entries(node)) {
         if (key === "field" && typeof value === "string") {
           node[key] = this.translateField(explore, value);
