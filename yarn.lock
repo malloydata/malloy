@@ -2926,10 +2926,10 @@ domutils@^2.5.2, domutils@^2.6.0, domutils@^2.7.0:
     domelementtype "^2.2.0"
     domhandler "^4.2.0"
 
-duckdb@^0.3.4:
-  version "0.3.4"
-  resolved "https://registry.yarnpkg.com/duckdb/-/duckdb-0.3.4.tgz#f7071ae867bebbc6b8237f83bcb521bceb674433"
-  integrity sha512-3vl/MbpZWa2vgkccnMXPtcJVvYl5WWCf6NfHG7GGOCNzJKViu8nfH0W+FMnHQbaM08TDjnKHFcHkW+Vvpx85qg==
+duckdb@next:
+  version "0.3.5-dev1253.0"
+  resolved "https://registry.yarnpkg.com/duckdb/-/duckdb-0.3.5-dev1253.0.tgz#17235f2cd862219126016633a3281859c5acde01"
+  integrity sha512-4rH8mXAbRZzoeDVMnfEIMJnw1ETunynZXQl98PymDSeB2FQpRqTq0vqfSJVmxWlmtCynBrYr/kTfbKzcY34azg==
   dependencies:
     "@mapbox/node-pre-gyp" "^1.0.0"
     node-addon-api "*"
