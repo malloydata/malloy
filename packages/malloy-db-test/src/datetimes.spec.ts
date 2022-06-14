@@ -52,7 +52,7 @@ test("check for double truncation", async () => {
   if (runtime) {
     const src = `
       query: table('malloy-data.faa.flights') -> {
-        group_by: takeof_week is dep_time.week
+        group_by: takeoff_week is dep_time.week
       }
     `;
     const result = await runtime.loadQuery(src).run();
