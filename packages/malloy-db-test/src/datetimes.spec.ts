@@ -56,10 +56,9 @@ test("check for double truncation", async () => {
       }
     `;
     const result = await runtime.loadQuery(src).run();
-    const sql = result.sql;
-    const truncs = sql.match(/TIMESTAMP_TRUNC/gi);
-    if (truncs?.length != 1) {
-      fail(`Expected one TIMESTAMP_TRUNC, got ${truncs?.length}\n${sql}`);
+    const truncs = (result.sql.match(/TIMESTAMP_TRUNC/gi) || []).length;
+    if (truncs != 1) {
+      fail(`Expected 1 TIMESTAMP_TRUNC, got ${truncs}\n${result.sql}`);
     }
   }
 });
