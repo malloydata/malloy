@@ -252,7 +252,7 @@ export class FieldDeclaration extends MalloyElement {
     const circularDef = exprFS instanceof DefSpace && exprFS.foundCircle;
     if (!circularDef) {
       const badType = FT.inspect(exprValue);
-      this.log(`Cannot define '${exprName}', unexpected type ${badType}`);
+      this.log(`Cannot define '${exprName}', unexpected type: ${badType}`);
     }
     return {
       name: `error_defining_${exprName}`,
@@ -997,9 +997,9 @@ export class Pick extends ExpressionDef {
       if (returnType) {
         if (!FT.typeEq(returnType, thenExpr, true)) {
           this.log(
-            `pick value types do not match ${FT.inspect(returnType, thenExpr)}`
+            `Pick when type mismatch: ${FT.inspect(returnType, thenExpr)}`
           );
-          return errorFor("pick value type");
+          return errorFor("pick when type");
         }
       } else {
         returnType = thenExpr;
@@ -1010,8 +1010,9 @@ export class Pick extends ExpressionDef {
     const elseVal = elsePart.getExpression(fs);
     returnType ||= elseVal;
     if (!FT.typeEq(returnType, elseVal, true)) {
+      const errSrc = this.elsePick ? "else" : "default";
       this.log(
-        `else value types do not match ${FT.inspect(returnType, elseVal)}`
+        `Pick ${errSrc} type mismatch: ${FT.inspect(returnType, elseVal)}`
       );
       return errorFor("pick else type");
     }
