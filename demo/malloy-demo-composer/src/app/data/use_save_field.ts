@@ -42,6 +42,7 @@ interface UseSaveFieldResult {
 }
 
 export function useSaveField(
+  directoryPath: string | undefined,
   analysis: Analysis | undefined,
   setAnalysis: (analysis: Analysis) => void
 ): UseSaveFieldResult {
@@ -58,7 +59,7 @@ export function useSaveField(
     }) => saveField(type, field, name, analysis),
     {
       onSuccess: () => {
-        queryClient.invalidateQueries(DIRECTORY_KEY);
+        queryClient.invalidateQueries(DIRECTORY_KEY(directoryPath));
       },
     }
   );

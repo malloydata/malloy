@@ -21,6 +21,10 @@ import {
   TimeValue,
   mkExpr,
   TypecastFragment,
+  isSamplingEnable,
+  isSamplingPercent,
+  isSamplingRows,
+  Sampling,
 } from "../model";
 import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 
@@ -59,6 +63,10 @@ export class PostgresDialect extends Dialect {
   hasFinalStage = true;
   stringTypeName = "VARCHAR";
   divisionIsInteger = true;
+  supportsSumDistinctFunction = false;
+  unnestWithNumbers = false;
+  defaultSampling = { rows: 50000 };
+
   functionInfo: Record<string, FunctionInfo> = {};
 
   quoteTablePath(tablePath: string): string {
@@ -100,7 +108,7 @@ export class PostgresDialect extends Dialect {
     }
     const fields = this.mapFields(fieldList);
     // return `(ARRAY_AGG((SELECT __x FROM (SELECT ${fields}) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail}`;
-    return `TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail})`;
+    return `COALESCE(TO_JSONB((ARRAY_AGG((SELECT TO_JSONB(__x) FROM (SELECT ${fields}\n  ) as __x) ${orderBy} ) FILTER (WHERE group_set=${groupSet}))${tail}),'[]'::JSONB)`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
@@ -166,13 +174,13 @@ export class PostgresDialect extends Dialect {
   ): string {
     if (isArray) {
       if (needDistinctKey) {
-        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__distinct_key', gen_random_uuid()::text, 'value', v) FROM UNNEST(${source}) as v))) as ${alias} ON true`;
+        return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__row_id', row_number() over (), 'value', v) FROM UNNEST(${source}) as v))) as ${alias} ON true`;
       } else {
         return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('value', v) FROM UNNEST(${source}) as v))) as ${alias} ON true`;
       }
     } else if (needDistinctKey) {
       // return `UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
-      return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__distinct_key', gen_random_uuid()::text)|| __xx::jsonb as b FROM  JSONB_ARRAY_ELEMENTS(${source}) __xx ))) as ${alias} ON true`;
+      return `LEFT JOIN UNNEST(ARRAY((SELECT jsonb_build_object('__row_number', row_number() over())|| __xx::jsonb as b FROM  JSONB_ARRAY_ELEMENTS(${source}) __xx ))) as ${alias} ON true`;
     } else {
       // return `CROSS JOIN LATERAL JSONB_ARRAY_ELEMENTS(${source}) as ${alias}`;
       return `LEFT JOIN JSONB_ARRAY_ELEMENTS(${source}) as ${alias} ON true`;
@@ -191,7 +199,8 @@ export class PostgresDialect extends Dialect {
     alias: string,
     fieldName: string,
     fieldType: string,
-    isNested: boolean
+    isNested: boolean,
+    _isArray: boolean
   ): string {
     let ret = `${alias}->>'${fieldName}'`;
     if (isNested) {
@@ -229,7 +238,7 @@ export class PostgresDialect extends Dialect {
     return `SELECT JSONB_AGG(__stage0) FROM ${lastStageName}\n`;
   }
 
-  sqlFinalStage(lastStageName: string): string {
+  sqlFinalStage(lastStageName: string, _fields: string[]): string {
     return `SELECT row_to_json(finalStage) as row FROM ${lastStageName} AS finalStage`;
   }
 
@@ -286,6 +295,9 @@ export class PostgresDialect extends Dialect {
     return cast.expr;
   }
 
+  sqlRegexpMatch(expr: Expr, regexp: string): Expr {
+    return mkExpr`(${expr} ~ ${regexp})`;
+  }
   sqlLiteralTime(
     timeString: string,
     type: TimeFieldType,
@@ -328,5 +340,29 @@ export class PostgresDialect extends Dialect {
       return mkExpr`${yearDiff} * 4 + ${qDiff}`;
     }
     throw new Error(`Unknown or unhandled postgres time unit: ${units}`);
+  }
+
+  sqlSumDistinct(key: string, value: string): string {
+    // return `sum_distinct(list({key:${key}, val: ${value}}))`;
+    return `(
+      SELECT sum((a::json->>'f2')::DOUBLE PRECISION) as value
+      FROM (
+        SELECT UNNEST(array_agg(distinct row_to_json(row(${key},${value}))::text)) a
+      ) a
+    )`;
+  }
+
+  sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
+    if (sample !== undefined) {
+      if (isSamplingEnable(sample) && sample.enable) {
+        sample = this.defaultSampling;
+      }
+      if (isSamplingRows(sample)) {
+        return `(SELECT * FROM ${tableSQL} TABLESAMPLE SYSTEM_ROWS(${sample.rows}))`;
+      } else if (isSamplingPercent(sample)) {
+        return `(SELECT * FROM ${tableSQL} TABLESAMPLE SYSTEM (${sample.percent}))`;
+      }
+    }
+    return tableSQL;
   }
 }

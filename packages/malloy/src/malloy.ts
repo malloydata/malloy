@@ -65,6 +65,11 @@ export interface Loggable {
   error: (message?: any, ...optionalParams: any[]) => void;
 }
 
+export interface RunSQLOptions {
+  rowLimit?: number;
+  noLastStage?: boolean;
+}
+
 export class Malloy {
   // TODO load from file built during release
   public static get version(): string {
@@ -282,7 +287,7 @@ export class Malloy {
   private static async runSQLBlockAndFetchResultSchema(
     connection: Connection,
     sqlBlock: SQLBlock,
-    options?: { rowLimit?: number }
+    options?: RunSQLOptions
   ) {
     if (connection.canFetchSchemaAndRunSimultaneously()) {
       return connection.runSQLBlockAndFetchResultSchema(sqlBlock, options);
@@ -306,32 +311,32 @@ export class Malloy {
   public static async run(params: {
     connections: LookupConnection<Connection>;
     preparedResult: PreparedResult;
-    options?: { rowLimit?: number };
+    options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connection: Connection;
     preparedResult: PreparedResult;
-    options?: { rowLimit?: number };
+    options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connection: Connection;
     sqlBlock: SQLBlock;
-    options?: { rowLimit?: number };
+    options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connections: LookupConnection<Connection>;
     sqlBlock: SQLBlock;
-    options?: { rowLimit?: number };
+    options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connection: Connection;
     sqlBlock: SQLBlock;
-    options?: { rowLimit?: number };
+    options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connections: LookupConnection<Connection>;
     sqlBlock: SQLBlock;
-    options?: { rowLimit?: number };
+    options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run({
     connections,
@@ -344,7 +349,7 @@ export class Malloy {
     preparedResult?: PreparedResult;
     sqlBlock?: SQLBlock;
     connections?: LookupConnection<Connection>;
-    options?: { rowLimit?: number };
+    options?: RunSQLOptions;
   }): Promise<Result> {
     if (sqlBlock === undefined && preparedResult === undefined) {
       throw new Error(
@@ -412,32 +417,32 @@ export class Malloy {
   public static runStream(params: {
     connections: LookupConnection<Connection>;
     preparedResult: PreparedResult;
-    options?: { rowLimit?: number };
+    options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
     connection: Connection;
     preparedResult: PreparedResult;
-    options?: { rowLimit?: number };
+    options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
     connection: Connection;
     sqlBlock: SQLBlock;
-    options?: { rowLimit?: number };
+    options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
     connections: LookupConnection<Connection>;
     sqlBlock: SQLBlock;
-    options?: { rowLimit?: number };
+    options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
     connection: Connection;
     sqlBlock: SQLBlock;
-    options?: { rowLimit?: number };
+    options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
     connections: LookupConnection<Connection>;
     sqlBlock: SQLBlock;
-    options?: { rowLimit?: number };
+    options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord>;
   public static async *runStream({
     connections,
@@ -450,7 +455,7 @@ export class Malloy {
     preparedResult?: PreparedResult;
     sqlBlock?: SQLBlock;
     connections?: LookupConnection<Connection>;
-    options?: { rowLimit?: number };
+    options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord> {
     if (sqlBlock === undefined && preparedResult === undefined) {
       throw new Error(
@@ -2308,7 +2313,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    *
    * @returns The query results from running this loaded query.
    */
-  async run(options?: { rowLimit?: number }): Promise<Result> {
+  async run(options?: RunSQLOptions): Promise<Result> {
     const connections = this.runtime.connections;
     const preparedResult = await this.getPreparedResult();
     return Malloy.run({ connections, preparedResult, options });
@@ -2376,7 +2381,7 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
    *
    * @returns A promise to the query result data.
    */
-  async run(options?: { rowLimit?: number }): Promise<Result> {
+  async run(options?: RunSQLOptions): Promise<Result> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
     return Malloy.run({ connections, preparedResult, options });
@@ -2423,7 +2428,7 @@ export class SQLBlockMaterializer extends FluentState<SQLBlock> {
    *
    * @returns A promise to the query result data.
    */
-  async run(options?: { rowLimit?: number }): Promise<Result> {
+  async run(options?: RunSQLOptions): Promise<Result> {
     const sqlBlock = await this.getSQLBlock();
     const connections = this.runtime.connections;
     return Malloy.run({
@@ -2530,6 +2535,10 @@ export class Result extends PreparedResult {
    */
   public get data(): DataArray {
     return new DataArray(this.inner.result, this.resultExplore, undefined);
+  }
+
+  public get totalRows(): number {
+    return this.inner.totalRows;
   }
 
   public toJSON(): ResultJSON {
@@ -2900,7 +2909,7 @@ export class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
         return new DataString(value as string, field);
       }
     } else if (field.isExploreField()) {
-      if (value instanceof Array) {
+      if (Array.isArray(value)) {
         return new DataArray(value, field, this);
       } else {
         return new DataRecord(value as QueryDataRow, undefined, field, this);

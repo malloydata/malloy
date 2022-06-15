@@ -23,6 +23,7 @@ import { getSchema } from "./schema";
 import { searchIndex } from "./search";
 import { topValues } from "./top_values";
 import { Analysis } from "../types";
+import { getOpenDirectory } from "./file_system";
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -77,8 +78,8 @@ app.on("web-contents-created", (event, contents) => {
 });
 
 async function registerIPC(): Promise<void> {
-  ipcMain.handle("get:analyses", async () => {
-    return await readMalloyDirectory();
+  ipcMain.handle("get:analyses", async (_event, path) => {
+    return await readMalloyDirectory(path);
   });
 
   ipcMain.handle("get:analysis", async (_event, path) => {
@@ -120,5 +121,9 @@ async function registerIPC(): Promise<void> {
 
   ipcMain.handle("post:top_values", async (_event, source) => {
     return await topValues(source);
+  });
+
+  ipcMain.handle("post:open_directory", async (_event) => {
+    return await getOpenDirectory();
   });
 }

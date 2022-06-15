@@ -29,6 +29,7 @@ import { BigQueryConnectionEditor } from "./BigQueryConnectionEditor";
 import { Label } from "./Label";
 import { LabelCell } from "./LabelCell";
 import { PostgresConnectionEditor } from "./PostgresConnectionEditor";
+import { DuckDBConnectionEditor } from "./DuckDBConnectionEditor";
 
 interface ConnectionEditorProps {
   config: ConnectionConfig;
@@ -89,6 +90,7 @@ export const ConnectionEditor: React.FC<ConnectionEditorProps> = ({
                 options={[
                   { value: ConnectionBackend.BigQuery, label: "BigQuery" },
                   { value: ConnectionBackend.Postgres, label: "Postgres" },
+                  { value: ConnectionBackend.DuckDB, label: "DuckDB" },
                 ]}
               />
             </td>
@@ -103,8 +105,10 @@ export const ConnectionEditor: React.FC<ConnectionEditorProps> = ({
             requestServiceAccountKeyPath(config.id)
           }
         />
-      ) : (
+      ) : config.backend === ConnectionBackend.Postgres ? (
         <PostgresConnectionEditor config={config} setConfig={setConfig} />
+      ) : (
+        <DuckDBConnectionEditor config={config} setConfig={setConfig} />
       )}
       <VSCodeDivider />
       <table>

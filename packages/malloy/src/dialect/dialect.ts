@@ -19,7 +19,7 @@ import {
   DialectFragment,
   TimeValue,
 } from "..";
-import { Expr, TypecastFragment } from "../model";
+import { Expr, Sampling, TypecastFragment } from "../model";
 
 interface DialectField {
   type: string;
@@ -45,7 +45,10 @@ export abstract class Dialect {
   abstract hasFinalStage: boolean;
   abstract stringTypeName: string;
   abstract divisionIsInteger: boolean;
+  abstract supportsSumDistinctFunction: boolean;
+  abstract unnestWithNumbers: boolean;
   protected abstract functionInfo: Record<string, FunctionInfo>;
+  abstract defaultSampling: Sampling;
 
   // return a quoted string for use as a table path.
   abstract quoteTablePath(tablePath: string): string;
@@ -92,7 +95,8 @@ export abstract class Dialect {
     alias: string,
     fieldName: string,
     fieldType: string,
-    isNested: boolean
+    isNested: boolean,
+    isArray: boolean
   ): string;
 
   abstract sqlUnnestPipelineHead(isSingleton: boolean): string;
@@ -102,9 +106,12 @@ export abstract class Dialect {
   abstract sqlCreateFunctionCombineLastStage(lastStageName: string): string;
   abstract sqlCreateTableAsSelect(tableName: string, sql: string): string;
 
-  abstract sqlSelectAliasAsStruct(alias: string): string;
+  abstract sqlSelectAliasAsStruct(
+    alias: string,
+    physicalFieldNames: string[]
+  ): string;
 
-  sqlFinalStage(_lastStageName: string): string {
+  sqlFinalStage(_lastStageName: string, _fields: string[]): string {
     throw new Error("Dialect has no final Stage but called Anyway");
   }
 
@@ -143,6 +150,8 @@ export abstract class Dialect {
     timezone: string
   ): string;
 
+  abstract sqlRegexpMatch(expr: Expr, regex: string): Expr;
+
   getFunctionInfo(functionName: string): FunctionInfo | undefined {
     return this.functionInfo[functionName.toLowerCase()];
   }
@@ -159,6 +168,19 @@ export abstract class Dialect {
         return this.sqlExtract(df.expr, df.units);
       case "cast":
         return this.sqlCast(df);
+      case "regexpMatch":
+        return this.sqlRegexpMatch(df.expr, df.regexp);
     }
+  }
+
+  sqlSumDistinct(_key: string, _value: string): string {
+    return "sqlSumDistinct called bu not implemented";
+  }
+
+  sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
+    if (sample !== undefined) {
+      throw new Error(`Sampling is not supported on dialect ${this.name}.`);
+    }
+    return tableSQL;
   }
 }

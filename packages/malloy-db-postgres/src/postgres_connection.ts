@@ -11,6 +11,13 @@
  * GNU General Public License for more details.
  */
 
+// LTNOTE: we need this extension to be installed to correctly index
+//  postgres data...  We should probably do this on connection creation...
+//
+//     create extension if not exists tsm_system_rows
+//
+
+import * as crypto from "crypto";
 import {
   StructDef,
   MalloyQueryData,
@@ -132,7 +139,7 @@ export class PostgresConnection implements Connection, StreamingConnection {
   }
 
   public canPersist(): this is PersistSQLResults {
-    return false;
+    return true;
   }
 
   public canFetchSchemaAndRunSimultaneously(): this is FetchSchemaAndRunSimultaneously {
@@ -226,7 +233,7 @@ export class PostgresConnection implements Connection, StreamingConnection {
     await client.connect();
 
     let result = await client.query(sqlCommand);
-    if (result instanceof Array) {
+    if (Array.isArray(result)) {
       result = result.pop();
     }
     if (deJSON) {
@@ -327,7 +334,7 @@ export class PostgresConnection implements Connection, StreamingConnection {
     const { tablePath: tableName } = parseTableURL(tableURL);
     const [schema, table] = tableName.split(".");
     if (table === undefined) {
-      throw new Error("Default schema not supported Yet in Postgres");
+      throw new Error("Default schema not yet supported in Postgres");
     }
     const infoQuery = `
       SELECT column_name, c.data_type, e.data_type as element_type
@@ -358,17 +365,20 @@ export class PostgresConnection implements Connection, StreamingConnection {
   }
 
   public async runSQL(
-    sqlCommand: string,
-    { rowLimit }: { rowLimit?: number } = {},
+    sql: string,
+    {
+      rowLimit,
+      noLastStage,
+    }: { rowLimit?: number; noLastStage?: boolean } = {},
     rowIndex = 0
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
 
     return await this.runPostgresQuery(
-      sqlCommand,
+      sql,
       rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
-      true
+      !noLastStage
     );
   }
 
@@ -420,7 +430,7 @@ export class PooledPostgresConnection
   ): Promise<MalloyQueryData> {
     let result = await this.pool.query(sqlCommand);
 
-    if (result instanceof Array) {
+    if (Array.isArray(result)) {
       result = result.pop();
     }
     if (deJSON) {
@@ -464,5 +474,15 @@ export class PooledPostgresConnection
       }
     }
     releaseClient();
+  }
+
+  public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
+    const hash = crypto.createHash("md5").update(sqlCommand).digest("hex");
+    const tableName = `tt${hash}`;
+
+    const cmd = `CREATE TEMPORARY TABLE IF NOT EXISTS ${tableName} AS (${sqlCommand});`;
+    // console.log(cmd);
+    await this.runPostgresQuery(cmd, 1000, 0, false);
+    return tableName;
   }
 }

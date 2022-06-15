@@ -21,6 +21,10 @@ import {
   TimeValue,
   TypecastFragment,
   isDateUnit,
+  isSamplingEnable,
+  isSamplingPercent,
+  isSamplingRows,
+  Sampling,
 } from "../model";
 import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 
@@ -50,6 +54,10 @@ export class StandardSQLDialect extends Dialect {
   hasFinalStage = false;
   stringTypeName = "STRING";
   divisionIsInteger = false;
+  supportsSumDistinctFunction = false;
+  unnestWithNumbers = false;
+  defaultSampling = { enable: false };
+
   functionInfo: Record<string, FunctionInfo> = {
     timestamp_seconds: { returnType: "timestamp" },
   };
@@ -123,12 +131,12 @@ export class StandardSQLDialect extends Dialect {
   ): string {
     if (isArray) {
       if (needDistinctKey) {
-        return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, value FROM UNNEST(${source}) value))) as ${alias}`;
+        return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT row_number() over() as __row_id, value FROM UNNEST(${source}) value))) as ${alias}`;
       } else {
         return `LEFT JOIN UNNEST(ARRAY((SELECT AS STRUCT value FROM unnest(${source}) value))) as ${alias}`;
       }
     } else if (needDistinctKey) {
-      return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT GENERATE_UUID() as __distinct_key, * FROM UNNEST(${source})))) as ${alias}`;
+      return `LEFT JOIN UNNEST(ARRAY(( SELECT AS STRUCT row_number() over() as __row_id, * FROM UNNEST(${source})))) as ${alias}`;
     } else {
       return `LEFT JOIN UNNEST(${source}) as ${alias}`;
     }
@@ -151,7 +159,8 @@ export class StandardSQLDialect extends Dialect {
     alias: string,
     fieldName: string,
     _fieldType: string,
-    _isNested: boolean
+    _isNested: boolean,
+    _isArray: boolean
   ): string {
     return `${alias}.${fieldName}`;
   }
@@ -351,6 +360,10 @@ ${indent(sql)}
     return cast.expr;
   }
 
+  sqlRegexpMatch(expr: Expr, regexp: string): Expr {
+    return mkExpr`REGEXP_CONTAINS(${expr}, r${regexp})`;
+  }
+
   sqlLiteralTime(
     timeString: string,
     type: "date" | "timestamp",
@@ -387,5 +400,21 @@ ${indent(sql)}
       }
     }
     return mkExpr`${diffUsing}(${rVal}, ${lVal}, ${units})`;
+  }
+
+  sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
+    if (sample !== undefined) {
+      if (isSamplingEnable(sample) && sample.enable) {
+        sample = this.defaultSampling;
+      }
+      if (isSamplingRows(sample)) {
+        throw new Error(
+          `StandardSQL doesn't support sampling by rows only percent`
+        );
+      } else if (isSamplingPercent(sample)) {
+        return `(SELECT * FROM ${tableSQL}  TABLESAMPLE SYSTEM (${sample.percent} PERCENT))`;
+      }
+    }
+    return tableSQL;
   }
 }

@@ -958,6 +958,7 @@ export type QueryProperty =
   | Limit
   | Filter
   | Index
+  | SampleProperty
   | Joins
   | DeclareFields
   | ProjectStatement
@@ -974,6 +975,7 @@ export function isQueryProperty(q: MalloyElement): q is QueryProperty {
     q instanceof Limit ||
     q instanceof Filter ||
     q instanceof Index ||
+    q instanceof SampleProperty ||
     q instanceof Joins ||
     q instanceof DeclareFields ||
     q instanceof ProjectStatement ||
@@ -1377,6 +1379,7 @@ class IndexExecutor implements QueryExecutor {
   filters: model.FilterExpression[] = [];
   limit?: Limit;
   indexOn?: FieldName;
+  sample?: model.Sampling;
 
   constructor(baseFS: FieldSpace) {
     this.inputFS = baseFS;
@@ -1399,6 +1402,8 @@ class IndexExecutor implements QueryExecutor {
         }
         this.indexOn = qp.weightBy;
       }
+    } else if (qp instanceof SampleProperty) {
+      this.sample = qp.sampling();
     } else {
       qp.log("Not legal in an index query operation");
     }
@@ -1428,6 +1433,13 @@ class IndexExecutor implements QueryExecutor {
 
     if (this.indexOn) {
       indexSegment.weightMeasure = this.indexOn.refString;
+    }
+
+    if (from?.sample) {
+      indexSegment.sample = from.sample;
+    }
+    if (this.sample) {
+      indexSegment.sample = this.sample;
     }
 
     return indexSegment;
@@ -2286,5 +2298,15 @@ export class SQLStatement extends MalloyElement implements DocStatement {
     if (!doc.defineSQL(this.sqlBlock(), this.is)) {
       this.log(`${this.is} already defined`);
     }
+  }
+}
+
+export class SampleProperty extends MalloyElement {
+  elementType = "sampleProperty";
+  constructor(readonly sample: model.Sampling) {
+    super();
+  }
+  sampling(): model.Sampling {
+    return this.sample;
   }
 }

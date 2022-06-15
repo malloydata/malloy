@@ -122,7 +122,7 @@ export interface Connection extends InfoConnection {
    */
   runSQL(
     sql: string,
-    options?: { rowLimit?: number }
+    options?: { rowLimit?: number; noLastStage?: boolean }
   ): Promise<MalloyQueryData>;
 
   // TODO feature-sql-block Comment

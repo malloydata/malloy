@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@malloydata/malloy": "*",
-    "@malloydata/db-bigquery": "*"
+    "@malloydata/db-bigquery": "*",
+    "@malloydata/db-postgres": "*",
+    "@malloydata/db-duckdb": "*"
   }
 }

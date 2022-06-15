@@ -1,8 +1,13 @@
 # Malloy Composer Demo
 
-The Malloy Composer Demo is provided as a working example of an application built on top of Malloy. If you have any questions about getting it running, please reach out to us for help! If you find bugs or have feature requests, you can submit them as issues in this repo.
+The Malloy Composer Demo is provided as a working example of an application built on top of Malloy. If you have any questions about getting it running, please reach out to us for help! If you find bugs or have feature requests, you can submit them as issues in this repo. [Learn how to use the composer](https://docs.google.com/presentation/d/18KUl_rrz2K-hbsiKJYS3rtTcYxZMXKklyPllLmTtIYY/edit#slide=id.g1269816dcbe_0_140)
 
-_The composer is only intended for demo purposes, and is not a finished or supported product._
+The composer is only intended for demo purposes, and is not a finished or supported product.
+
+_GitHub mutes videos by default, so make sure to unmute._
+
+https://user-images.githubusercontent.com/7178946/170373869-3cf43dd2-25c4-4ed0-b038-450c33903ad5.mov
+
 
 ## Running the Composer
 

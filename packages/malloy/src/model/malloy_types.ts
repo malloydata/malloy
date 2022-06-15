@@ -244,12 +244,19 @@ export interface TypecastFragment extends DialectFragmentBase {
   srcType?: AtomicFieldType;
 }
 
+export interface RegexpMatchFragment extends DialectFragmentBase {
+  function: "regexpMatch";
+  expr: Expr;
+  regexp: string;
+}
+
 export type DialectFragment =
   | TimeDeltaFragment
   | TimeDiffFragment
   | TimeTruncFragment
   | TypecastFragment
-  | TimeExtractFragment;
+  | TimeExtractFragment
+  | RegexpMatchFragment;
 
 export type Fragment =
   | string
@@ -489,11 +496,38 @@ export function isQuerySegment(pe: PipeSegment): pe is QuerySegment {
   return isProjectSegment(pe) || isReduceSegment(pe);
 }
 
+export type Sampling = SamplingRows | SamplingEnable | SamplingPercent;
+
+interface SamplingRows {
+  rows: number;
+}
+
+export function isSamplingRows(s: Sampling): s is SamplingRows {
+  return (s as SamplingRows).rows !== undefined;
+}
+
+interface SamplingPercent {
+  percent: number;
+}
+
+export function isSamplingPercent(s: Sampling): s is SamplingPercent {
+  return (s as SamplingPercent).percent !== undefined;
+}
+
+interface SamplingEnable {
+  enable: boolean;
+}
+
+export function isSamplingEnable(s: Sampling): s is SamplingEnable {
+  return (s as SamplingEnable).enable !== undefined;
+}
+
 export interface IndexSegment extends Filtered {
   type: "index";
   fields: string[];
   limit?: number;
   weightMeasure?: string; // only allow the name of the field to use for weights
+  sample?: Sampling;
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
   return (pe as IndexSegment).type === "index";
@@ -533,16 +567,19 @@ export type StructRelationship =
   | { type: "inline" }
   | { type: "nested"; field: FieldRef; isArray: boolean };
 
+export interface SQLSelectStatements {
+  before?: string[];
+  select: string;
+  after?: string[];
+}
+
 /**
  * Use factory makeSQLBlock to create one of these, it will compute the
  * name: property and fill it in.
  */
-export interface SQLBlock extends NamedObject {
+export interface SQLBlock extends NamedObject, SQLSelectStatements {
   type: "sqlBlock";
   name: string; //  hash of the connection and the select
-  before?: string[];
-  select: string;
-  after?: string[];
   connection?: string;
 }
 

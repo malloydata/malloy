@@ -15,4 +15,5 @@ export { Dialect } from "./dialect";
 export type { DialectFieldList } from "./dialect";
 export { StandardSQLDialect } from "./standardsql";
 export { PostgresDialect } from "./postgres";
+export { DuckDBDialect } from "./duckdb";
 export { getDialect, registerDialect } from "./dialect_map";

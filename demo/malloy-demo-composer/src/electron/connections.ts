@@ -11,10 +11,18 @@
  * GNU General Public License for more details.
  */
 
-import { FixedConnectionMap } from "@malloydata/malloy";
+import { Connection, FixedConnectionMap } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
+import { DuckDBConnection } from "@malloydata/db-duckdb";
+import { PostgresConnection } from "@malloydata/db-postgres";
+
+const connections: [string, Connection][] = [
+  ["bigquery", new BigQueryConnection("bigquery")],
+  ["postgres", new PostgresConnection("postgres")],
+  ["duckdb", new DuckDBConnection("duckdb", ":memory:")],
+];
 
 export const CONNECTIONS = new FixedConnectionMap(
-  new Map([["bigquery", new BigQueryConnection("bigquery")]]),
+  new Map(connections),
   "bigquery"
 );

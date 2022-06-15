@@ -643,6 +643,10 @@ describe("qops", () => {
   test("index multiple", modelOK("query:a->{index: astr,af}"));
   test("index star", modelOK("query:a->{index: *}"));
   test("index by", modelOK("query:a->{index: * by ai}"));
+  test("index sampled", modelOK("query:a->{index: *; sample: true}"));
+  test("index unsampled", modelOK("query:a->{index: *; sample: false}"));
+  test("index sample-percent", modelOK("query:a->{index: *; sample: 27%}"));
+  test("index sample-rows", modelOK("query:a->{index: *; sample: 100000}"));
   test("top N", modelOK("query: a->{ top: 5; group_by: astr }"));
   test("top N by field", modelOK("query: a->{top: 5 by af; group_by: astr}"));
   test(
@@ -965,6 +969,38 @@ describe("sql backdoor", () => {
     "single sql statement",
     modelOK("sql: users is || SELECT * FROM USERS;;")
   );
+  test("connection shows up in model", () => {
+    const model = new BetaModel(`
+      sql: users IS || SELECT * FROM aTable ;; on "someConnection";
+      source: malloyUsers is from_sql(users) { primary_key: ai }
+    `);
+    const needReq = model.translate();
+    expect(model).toBeErrorless();
+    const needs = needReq?.sqlStructs;
+    expect(needs).toBeDefined();
+    if (needs) {
+      expect(needs.length).toBe(1);
+      const sql = makeSQLBlock({
+        select: " SELECT * FROM aTable ",
+        connection: "someConnection",
+      });
+      expect(needs[0]).toMatchObject(sql);
+      const refKey = needs[0].name;
+      expect(refKey).toBeDefined();
+      if (refKey) {
+        model.update({ sqlStructs: { [refKey]: makeSchemaResponse(sql) } });
+        expect(model).toTranslate();
+      }
+      const modelDef = model.translate().translated?.modelDef;
+      expect(modelDef).toBeDefined();
+      const users = modelDef?.contents.malloyUsers;
+      expect(users).toBeDefined();
+      expect(users).toHaveProperty(
+        "structSource.sqlBlock.connection",
+        "someConnection"
+      );
+    }
+  });
   test("explore from sql", () => {
     const model = new BetaModel(`
       sql: users IS || SELECT * FROM aTable ;;
