@@ -12,6 +12,6 @@
     "malloyc": "ts-node ../../scripts/malloy-to-json"
   },
   "dependencies": {
-    "duckdb": "^0.3.4"
+    "duckdb": "next"
   }
 }
