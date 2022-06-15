@@ -68,3 +68,21 @@ For example, a `composer_config.json` with the following content would configure
   "modelsPath": "~/malloy"
 }
 ```
+
+### Packaging Notes
+
+* Download XCode
+* Join developer program
+* Download Developer ID — G2 (from https://www.apple.com/certificateauthority/)
+* Make a cert signing request
+* Get a certificate from Apple (using cert signing request) — Make sure it’s a "Developer ID Application”
+* `yarn package` might take ~10m to run while Apple notarizes the build
+* If you see the following (but the command keeps running), just wait it out.
+
+```
+WARNING: Code sign failed; please retry manually. Error: Command failed: spctl --assess --type execute --verbose --ignore-cache --no-cache /var/folders/6q/dq6hklkn309f1_7737gmbvvw00r7jt/T/electron-packager/darwin-x64/malloy-composer-demo-darwin-x64/malloy-composer-demo.app
+/var/folders/6q/dq6hklkn309f1_7737gmbvvw00r7jt/T/electron-packager/darwin-x64/malloy-composer-demo-darwin-x64/malloy-composer-demo.app: rejected
+source=Unnotarized Developer ID
+```
+
+* When running `yarn package` make sure the environment variables `NOTARIZER_APPLE_ID` and `NOTARIZER_APPLE_ID_PASSWORD` are set.

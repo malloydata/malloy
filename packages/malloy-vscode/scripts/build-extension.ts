@@ -28,6 +28,7 @@ export type Target =
   | "alpine-arm64"
   | "darwin-x64"
   | "darwin-arm64";
+// | "win32-x64";
 
 export type BinaryTargetMap = { [target in Target]: string };
 
@@ -44,6 +45,7 @@ export const targetKeytarMap: BinaryTargetMap = {
 export const targetDuckDBMap: Partial<BinaryTargetMap> = {
   "linux-x64": "duckdb-v0.3.4-node-v93-linux-x64.node",
   "darwin-x64": "duckdb-v0.3.4-node-v93-darwin-x64.node",
+  // "win32-x64": "duckdb-v0.3.4-node-v93-win32-x64.node",
 };
 
 export const outDir = "dist/";

@@ -14,30 +14,34 @@
 /* eslint-disable no-console */
 
 import packager from "electron-packager";
+import { exit } from "process";
 
 async function packageDemo() {
+  const appleId = process.env.NOTARIZER_APPLE_ID;
+  const appleIdPassword = process.env.NOTARIZER_APPLE_ID_PASSWORD;
+  if (appleId === undefined || appleIdPassword === undefined) {
+    console.log(
+      "Specify NOTARIZER_APPLE_ID and NOTARIZER_APPLE_ID_PASSWORD in environment."
+    );
+    exit(1);
+  }
   const appPaths = await packager({
     dir: ".",
     out: "./dist",
     overwrite: true,
     icon: "./public/icon.icns",
+    osxSign: {
+      identity: "Developer ID Application: Christopher Swenson (FP9B5B6FCU)",
+      hardenedRuntime: true,
+      entitlements: "entitlements.plist",
+      "entitlements-inherit": "entitlements.plist",
+    },
+    osxNotarize: {
+      appleId,
+      appleIdPassword,
+    },
   });
   console.log(`Electron app bundles created:\n${appPaths.join("\n")}`);
-
-  // {
-  //   dir: '/path/to/my/app',
-  // osxSign: {
-  //   identity: 'Developer ID Application: Felix Rieseberg (LT94ZKYDCJ)',
-  //   'hardened-runtime': true,
-  //   entitlements: 'entitlements.plist',
-  //   'entitlements-inherit': 'entitlements.plist',
-  //   'signature-flags': 'library'
-  // },
-  // osxNotarize: {
-  //   appleId: 'felix@felix.fun',
-  //   appleIdPassword: 'my-apple-id-password'
-  // }
-  // }
 }
 
 packageDemo()
