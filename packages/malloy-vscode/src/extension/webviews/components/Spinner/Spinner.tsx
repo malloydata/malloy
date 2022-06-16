@@ -49,7 +49,7 @@ const SpinningSVG = styled.div`
 
 const Label = styled.div`
   margin-bottom: 10px;
-  color: #505050;
+  color: var(--malloy-title-color, #505050);
   font-size: 15px;
 `;
 

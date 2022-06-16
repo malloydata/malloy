@@ -23,27 +23,49 @@ type DataContainer = Array<unknown> | Record<string, unknown>;
 export const DEFAULT_SPEC: Partial<lite.TopLevelSpec> = {
   $schema: "https://vega.github.io/schema/vega-lite/v5.json",
   config: {
+    params: [
+      {
+        name: "defaultFont",
+        value: "var(--malloy-font-family, 'Roboto')",
+      },
+      { name: "titleColor", value: "var(--malloy-title-color, #505050)" },
+      { name: "labelColor", value: "var(--malloy-label-color, #505050)" },
+    ],
+    background: undefined,
+    color: { expr: "titleColor" },
     header: {
-      labelFont: "Roboto",
-      titleFont: "Roboto",
+      labelFont: { expr: "defaultFont" },
+      titleFont: { expr: "defaultFont" },
       titleFontWeight: 500,
     },
-    text: { font: "Roboto" },
-    mark: { font: "Roboto" },
-    title: { font: "Roboto", subtitleFont: "Roboto", fontWeight: 500 },
+    text: {
+      font: { expr: "defaultFont" },
+      color: { expr: "labelColor" },
+    },
+    mark: {
+      font: { expr: "defaultFont" },
+      color: { expr: "labelColor" },
+    },
+    title: {
+      font: { expr: "defaultFont" },
+      subtitleFont: { expr: "defaultFont" },
+      fontWeight: 500,
+    },
     axis: {
-      labelFont: "Roboto",
-      titleFont: "Roboto",
+      labelColor: { expr: "labelColor" },
+      labelFont: { expr: "defaultFont" },
+      titleFont: { expr: "defaultFont" },
       titleFontWeight: 500,
-      titleColor: "#505050",
+      titleColor: { expr: "titleColor" },
       titleFontSize: 12,
     },
     legend: {
       titleFontWeight: 500,
-      titleColor: "#505050",
+      titleColor: { expr: "titleColor" },
       titleFontSize: 12,
-      labelFont: "Roboto",
-      titleFont: "Roboto",
+      labelColor: { expr: "labelColor" },
+      labelFont: { expr: "defaultFont" },
+      titleFont: { expr: "defaultFont" },
     },
   },
 };
