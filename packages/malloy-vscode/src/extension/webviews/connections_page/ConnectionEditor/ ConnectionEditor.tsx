@@ -30,6 +30,7 @@ import { Label } from "./Label";
 import { LabelCell } from "./LabelCell";
 import { PostgresConnectionEditor } from "./PostgresConnectionEditor";
 import { DuckDBConnectionEditor } from "./DuckDBConnectionEditor";
+import { isDuckDBAvailable } from "../../../../common/duckdb_availability";
 
 interface ConnectionEditorProps {
   config: ConnectionConfig;
@@ -52,6 +53,15 @@ export const ConnectionEditor: React.FC<ConnectionEditorProps> = ({
   isDefault,
   makeDefault,
 }) => {
+  const backendOptions: { value: ConnectionBackend; label: string }[] = [
+    { value: ConnectionBackend.BigQuery, label: "BigQuery" },
+    { value: ConnectionBackend.Postgres, label: "Postgres" },
+  ];
+
+  if (isDuckDBAvailable) {
+    backendOptions.push({ value: ConnectionBackend.DuckDB, label: "DuckDB" });
+  }
+
   return (
     <ConnectionEditorBox>
       <div
@@ -79,7 +89,7 @@ export const ConnectionEditor: React.FC<ConnectionEditorProps> = ({
             <td>
               <Dropdown
                 value={config.backend}
-                setValue={(backend) =>
+                setValue={(backend: string) =>
                   setConfig({
                     name: config.name,
                     backend: backend as ConnectionBackend,
@@ -87,11 +97,7 @@ export const ConnectionEditor: React.FC<ConnectionEditorProps> = ({
                     isDefault: config.isDefault,
                   })
                 }
-                options={[
-                  { value: ConnectionBackend.BigQuery, label: "BigQuery" },
-                  { value: ConnectionBackend.Postgres, label: "Postgres" },
-                  { value: ConnectionBackend.DuckDB, label: "DuckDB" },
-                ]}
+                options={backendOptions}
               />
             </td>
           </tr>
