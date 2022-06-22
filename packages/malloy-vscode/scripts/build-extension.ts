@@ -42,8 +42,8 @@ export const targetKeytarMap: BinaryTargetMap = {
 };
 
 export const targetDuckDBMap: Partial<BinaryTargetMap> = {
-  "linux-x64": "duckdb-v0.3.4-node-v93-linux-x64.node",
-  "darwin-x64": "duckdb-v0.3.4-node-v93-darwin-x64.node",
+  "linux-x64": "duckdb-v0.4.0-node-v93-linux-x64.node",
+  "darwin-x64": "duckdb-v0.4.0-node-v93-darwin-x64.node",
 };
 
 export const outDir = "dist/";
