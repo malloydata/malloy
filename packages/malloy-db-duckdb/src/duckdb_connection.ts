@@ -28,7 +28,7 @@ import {
   FetchSchemaAndRunStreamSimultaneously,
   StreamingConnection,
 } from "@malloydata/malloy/src/runtime_types";
-import { Database, OPEN_READONLY } from "duckdb";
+import { Database, OPEN_READONLY, OPEN_READWRITE } from "duckdb";
 import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
 
 const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
@@ -43,22 +43,28 @@ const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
 };
 
 export class DuckDBConnection implements Connection, PersistSQLResults {
-  public readonly name;
-
   protected connection;
   protected database;
   protected isSetup = false;
 
   constructor(
-    name: string,
+    public readonly name: string,
     databasePath = "test/data/duckdb/duckdb_test.db",
     workingDirectory = "/"
   ) {
-    this.name = name;
-
-    // TODO temp! For now, just connect to the test database
-    this.database = new Database(databasePath, OPEN_READONLY);
+    this.database = new Database(
+      databasePath,
+      databasePath === ":memory:" ? OPEN_READWRITE : OPEN_READONLY,
+      (err) => {
+        if (err) {
+          return console.error(err);
+        }
+      }
+    );
     this.connection = this.database.connect();
+    if (workingDirectory) {
+      this.runDuckDBQuery(`SET FILE_SEARCH_PATH='${workingDirectory}'`);
+    }
   }
 
   get dialectName(): string {
