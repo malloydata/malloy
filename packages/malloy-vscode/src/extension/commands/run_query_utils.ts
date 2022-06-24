@@ -16,7 +16,6 @@ import { performance } from "perf_hooks";
 import * as vscode from "vscode";
 import { CONNECTION_MANAGER, MALLOY_EXTENSION_STATE, RunState } from "../state";
 import {
-  URL,
   Runtime,
   URLReader,
   QueryMaterializer,
@@ -223,7 +222,12 @@ export function runMalloyQuery(
 
       const vscodeFiles = new VSCodeURLReader();
       const files = new HackyDataStylesAccumulator(vscodeFiles);
-      const runtime = new Runtime(files, CONNECTION_MANAGER.connections);
+      const url = new URL(panelId);
+
+      const runtime = new Runtime(
+        files,
+        CONNECTION_MANAGER.getConnectionManager(url)
+      );
 
       return (async () => {
         try {
@@ -239,9 +243,7 @@ export function runMalloyQuery(
 
           let runnable: QueryMaterializer | SQLBlockMaterializer;
           let styles: DataStyles = {};
-          const queryFileURL = URL.fromString(
-            "file://" + query.file.uri.fsPath
-          );
+          const queryFileURL = new URL("file://" + query.file.uri.fsPath);
           if (query.type === "string") {
             runnable = runtime.loadModel(queryFileURL).loadQuery(query.text);
           } else if (query.type === "named") {

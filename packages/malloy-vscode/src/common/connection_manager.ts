@@ -11,13 +11,15 @@
  * GNU General Public License for more details.
  */
 
+import * as path from "path";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { PostgresConnection } from "@malloydata/db-postgres";
 import { DuckDBConnection } from "@malloydata/db-duckdb";
 import { isDuckDBAvailable } from "../common/duckdb_availability";
 import {
-  FixedConnectionMap,
   Connection,
+  FixedConnectionMap,
+  LookupConnection,
   TestableConnection,
 } from "@malloydata/malloy";
 import {
@@ -26,9 +28,11 @@ import {
   getDefaultIndex,
 } from "./connection_manager_types";
 import { getPassword } from "keytar";
+import { DynamicConnectionManager } from "./dynamic_connection_manager";
 
 export class ConnectionManager {
   private _connections: FixedConnectionMap;
+  private _managers: Record<string, DynamicConnectionManager> = {};
 
   constructor(connections: ConnectionConfig[]) {
     this._connections = new FixedConnectionMap(new Map());
@@ -147,5 +151,16 @@ export class ConnectionManager {
         }
       }
     }
+  }
+
+  getConnectionManager(url: URL): LookupConnection<Connection> {
+    const dirname = path.dirname(url.pathname);
+    if (!this._managers[dirname]) {
+      this._managers[dirname] = new DynamicConnectionManager(
+        this.connections,
+        dirname
+      );
+    }
+    return this._managers[dirname];
   }
 }

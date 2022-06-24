@@ -15,7 +15,6 @@ import * as explore from "../types";
 import { promises as fs } from "fs";
 import * as path from "path";
 import { RUNTIME } from "./runtime";
-import { URL } from "@malloydata/malloy";
 import { getConfig } from "./config";
 
 export async function getModels(): Promise<explore.Model[]> {
