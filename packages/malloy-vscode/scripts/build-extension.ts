@@ -27,7 +27,8 @@ export type Target =
   | "alpine-x64"
   | "alpine-arm64"
   | "darwin-x64"
-  | "darwin-arm64";
+  | "darwin-arm64"
+  | "win32-x64";
 
 export type BinaryTargetMap = { [target in Target]: string };
 
@@ -39,11 +40,13 @@ export const targetKeytarMap: BinaryTargetMap = {
   "alpine-arm64": "keytar-v7.7.0-napi-v3-linuxmusl-arm64.node",
   "darwin-x64": "keytar-v7.7.0-napi-v3-darwin-x64.node",
   "darwin-arm64": "keytar-v7.7.0-napi-v3-darwin-arm64.node",
+  "win32-x64": "keytar-v7.7.0-napi-v3-win32-x64.node",
 };
 
 export const targetDuckDBMap: Partial<BinaryTargetMap> = {
   "linux-x64": "duckdb-v0.4.0-node-v93-linux-x64.node",
   "darwin-x64": "duckdb-v0.4.0-node-v93-darwin-x64.node",
+  "win32-x64": "duckdb-v0.4.0-node-v93-win32-x64.node"
 };
 
 export const outDir = "dist/";
@@ -156,7 +159,7 @@ function makeDuckdbNoNodePreGypPlugin(target: Target | undefined) {
 
 // building without a target does a default build using whatever keytar native lib is in node_modules
 export async function doBuild(target?: Target): Promise<void> {
-  const development = process.env.NODE_ENV == "development";
+  const development = true;//process.env.NODE_ENV == "development";
 
   if (target && !targetKeytarMap[target])
     throw new Error(`Invalid target: ${target}`);
