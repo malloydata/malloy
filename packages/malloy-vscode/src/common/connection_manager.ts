@@ -194,14 +194,20 @@ export class ConnectionManager {
           id: "bigquery-default",
           isDefault: true,
         },
-        {
+      ]
+    }
+
+    // Create a default duckdb connection if one isn't configured
+    if (!configs.find((config) => config.name === "duckdb")) {
+      configs.push({
           name: "duckdb",
           backend: ConnectionBackend.DuckDB,
           id: "duckdb-default",
           isDefault: false,
-        },
-      ];
+        }
+      )
     }
+
     configs.forEach((config) => {
       if (config.isDefault) {
         this.configs[DEFAULT_CONFIG] = config;
