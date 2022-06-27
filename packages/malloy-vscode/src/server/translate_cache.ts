@@ -49,7 +49,7 @@ export async function translateWithCache(
   };
   const runtime = new Runtime(
     files,
-    CONNECTION_MANAGER.getConnectionManager(new URL(document.uri))
+    CONNECTION_MANAGER.getConnectionLookup(new URL(document.uri))
   );
 
   const model = await runtime.getModel(new URL(uri));

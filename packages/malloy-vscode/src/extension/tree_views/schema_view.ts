@@ -117,7 +117,7 @@ async function getStructs(
   try {
     const runtime = new Runtime(
       files,
-      CONNECTION_MANAGER.getConnectionManager(url)
+      CONNECTION_MANAGER.getConnectionLookup(url)
     );
     const model = await runtime.getModel(url);
 

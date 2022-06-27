@@ -29,7 +29,7 @@ export class VSCodeConnectionManager extends ConnectionManager {
     );
   }
 
-  onConfigurationUpdated(): Promise<void> {
+  async onConfigurationUpdated(): Promise<void> {
     return this.setConnectionsConfig(
       VSCodeConnectionManager.getConnectionsConfig()
     );

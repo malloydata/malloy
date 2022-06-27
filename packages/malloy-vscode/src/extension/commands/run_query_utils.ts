@@ -226,7 +226,7 @@ export function runMalloyQuery(
 
       const runtime = new Runtime(
         files,
-        CONNECTION_MANAGER.getConnectionManager(url)
+        CONNECTION_MANAGER.getConnectionLookup(url)
       );
 
       return (async () => {
