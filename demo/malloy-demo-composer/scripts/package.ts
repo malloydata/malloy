@@ -15,13 +15,21 @@
 
 import packager from "electron-packager";
 import { exit } from "process";
+import { doBuild } from "./build";
 
 async function packageDemo() {
+  doBuild("darwin-x64");
   const appleId = process.env.NOTARIZER_APPLE_ID;
   const appleIdPassword = process.env.NOTARIZER_APPLE_ID_PASSWORD;
-  if (appleId === undefined || appleIdPassword === undefined) {
+  const signerIdentity = process.env.SIGNER_IDENTITY;
+  const shouldSignAndNotarize = process.env.DISABLE_SIGNING === undefined;
+  if (
+    appleId === undefined ||
+    appleIdPassword === undefined ||
+    signerIdentity == undefined
+  ) {
     console.log(
-      "Specify NOTARIZER_APPLE_ID and NOTARIZER_APPLE_ID_PASSWORD in environment."
+      "Specify NOTARIZER_APPLE_ID, NOTARIZER_APPLE_ID_PASSWORD, and SIGNER_IDENTITY in environment."
     );
     exit(1);
   }
@@ -30,16 +38,28 @@ async function packageDemo() {
     out: "./dist",
     overwrite: true,
     icon: "./public/icon.icns",
-    osxSign: {
-      identity: "Developer ID Application: Christopher Swenson (FP9B5B6FCU)",
-      hardenedRuntime: true,
-      entitlements: "entitlements.plist",
-      "entitlements-inherit": "entitlements.plist",
-    },
-    osxNotarize: {
-      appleId,
-      appleIdPassword,
-    },
+    osxSign: shouldSignAndNotarize
+      ? {
+          identity: signerIdentity,
+          hardenedRuntime: true,
+          entitlements: "entitlements.plist",
+          "entitlements-inherit": "entitlements.plist",
+        }
+      : undefined,
+    osxNotarize: shouldSignAndNotarize
+      ? {
+          appleId,
+          appleIdPassword,
+        }
+      : undefined,
+    ignore: [
+      /node_modules/,
+      /env/,
+      /src/,
+      /scripts/,
+      /composer_config\.sample\.json/,
+    ],
+    extraResource: ["../../samples/"],
   });
   console.log(`Electron app bundles created:\n${appPaths.join("\n")}`);
 }

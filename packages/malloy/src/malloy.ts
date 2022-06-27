@@ -662,6 +662,12 @@ export class Model {
     return explores;
   }
 
+  public get exportedExplores(): Explore[] {
+    return this.explores.filter((explore) =>
+      this.modelDef.exports.includes(explore.name)
+    );
+  }
+
   public get _modelDef(): ModelDef {
     return this.modelDef;
   }
