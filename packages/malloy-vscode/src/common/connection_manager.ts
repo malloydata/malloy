@@ -28,7 +28,7 @@ import {
 import { getPassword } from "keytar";
 
 const DEFAULT_CONFIG = Symbol("default-config");
-const ConnectionPool: Record<string, TestableConnection> = {}
+let ConnectionPool: Record<string, TestableConnection> = {}
 
 interface ConfigOptions {
   workingDirectory: string;
@@ -149,6 +149,7 @@ export class ConnectionManager {
   public setConnectionsConfig(connectionsConfig: ConnectionConfig[]): void {
     // Force existing connections to be regenerated
     this.connectionLookups = {};
+    ConnectionPool = {};
     this.buildConfigMap(connectionsConfig);
   }
 
