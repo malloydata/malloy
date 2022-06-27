@@ -26,20 +26,25 @@ import {
   ConnectionConfig,
 } from "./connection_manager_types";
 import { getPassword } from "keytar";
+import { config } from "process";
 
-const DEFAULT_CONFIG = "__default__";
+const DEFAULT_CONFIG = Symbol("default-config");
+const ConnectionPool: Record<string, TestableConnection> = {}
 
 interface ConfigOptions {
   workingDirectory: string;
   rowLimit?: number;
+  usePool?: boolean;
 }
 
 const getConnectionForConfig = async (
   connectionConfig: ConnectionConfig,
-  { workingDirectory, rowLimit }: ConfigOptions = { workingDirectory: "/" }
+  { workingDirectory, rowLimit, usePool }: ConfigOptions = { workingDirectory: "/" }
 ): Promise<TestableConnection> => {
   let connection: TestableConnection;
-
+  if (usePool && ConnectionPool[connectionConfig.name]) {
+    return ConnectionPool[connectionConfig.name];
+  }
   switch (connectionConfig.backend) {
     case ConnectionBackend.BigQuery:
       connection = new BigQueryConnection(
@@ -51,6 +56,9 @@ const getConnectionForConfig = async (
           location: connectionConfig.location,
         }
       );
+      if (usePool) {
+        ConnectionPool[connectionConfig.name] = connection;
+      }
       break;
     case ConnectionBackend.Postgres: {
       const configReader = async () => {
@@ -77,6 +85,9 @@ const getConnectionForConfig = async (
         () => ({ rowLimit }),
         configReader
       );
+      if (usePool) {
+        ConnectionPool[connectionConfig.name] = connection;
+      }
       break;
     }
     case ConnectionBackend.DuckDB: {
@@ -102,35 +113,35 @@ const getConnectionForConfig = async (
 };
 
 export class DynamicConnectionLookup implements LookupConnection<Connection> {
-  connections: Record<string, Promise<Connection>> = {};
+  connections: Record<string | symbol, Promise<Connection>> = {};
 
   constructor(
-    private configs: Record<string, ConnectionConfig>,
+    private configs: Record<string | symbol, ConnectionConfig>,
     private options: ConfigOptions
   ) {}
 
   async lookupConnection(
     connectionName?: string | undefined
   ): Promise<Connection> {
-    connectionName = connectionName || DEFAULT_CONFIG;
-    if (!this.connections[connectionName]) {
-      const connectionConfig = this.configs[connectionName];
+    const connectionKey = connectionName || DEFAULT_CONFIG;
+    if (!this.connections[connectionKey]) {
+      const connectionConfig = this.configs[connectionKey];
       if (connectionConfig) {
-        this.connections[connectionName] = getConnectionForConfig(
+        this.connections[connectionKey] = getConnectionForConfig(
           connectionConfig,
-          this.options
+          { usePool: true, ...this.options }
         );
       } else {
         throw `No connection found with name ${connectionName}`;
       }
     }
-    return this.connections[connectionName];
+    return this.connections[connectionKey];
   }
 }
 
 export class ConnectionManager {
   private connectionLookups: Record<string, DynamicConnectionLookup> = {};
-  configs: Record<string, ConnectionConfig> = {};
+  configs: Record<string | symbol, ConnectionConfig> = {};
 
   constructor(configs: ConnectionConfig[]) {
     this.buildConfigMap(configs);
