@@ -3056,10 +3056,10 @@ domutils@^2.5.2, domutils@^2.6.0, domutils@^2.7.0:
     domelementtype "^2.2.0"
     domhandler "^4.2.0"
 
-duckdb@^0.3.4:
-  version "0.3.4"
-  resolved "https://registry.yarnpkg.com/duckdb/-/duckdb-0.3.4.tgz#f7071ae867bebbc6b8237f83bcb521bceb674433"
-  integrity sha512-3vl/MbpZWa2vgkccnMXPtcJVvYl5WWCf6NfHG7GGOCNzJKViu8nfH0W+FMnHQbaM08TDjnKHFcHkW+Vvpx85qg==
+duckdb@^0.4.0:
+  version "0.4.0"
+  resolved "https://registry.yarnpkg.com/duckdb/-/duckdb-0.4.0.tgz#0058e81da77460e5ca06cea841b0c690531b2609"
+  integrity sha512-xSi5ZMm+OVegutwn4IQxP7zui/lV4r4S8y6+abkcLIiA6b7WWV97UrEYLdN5lxg67nS9aZ+YDfNm3hCgnpruqw==
   dependencies:
     "@mapbox/node-pre-gyp" "^1.0.0"
     node-addon-api "*"

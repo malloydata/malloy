@@ -14,6 +14,7 @@
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { PostgresConnection } from "@malloydata/db-postgres";
 import { DuckDBConnection } from "@malloydata/db-duckdb";
+import { isDuckDBAvailable } from "../common/duckdb_availability";
 import {
   FixedConnectionMap,
   Connection,
@@ -44,9 +45,20 @@ export class ConnectionManager {
     return this._connections;
   }
 
+  protected static filterUnavailableConnectionBackends(
+    connectionsConfig: ConnectionConfig[]
+  ): ConnectionConfig[] {
+    return connectionsConfig.filter(
+      (config) =>
+        isDuckDBAvailable || config.backend !== ConnectionBackend.DuckDB
+    );
+  }
+
   private async buildConnectionMap(
     connectionsConfig: ConnectionConfig[]
   ): Promise<FixedConnectionMap> {
+    connectionsConfig =
+      ConnectionManager.filterUnavailableConnectionBackends(connectionsConfig);
     const map = new Map<string, Connection>();
     let defaultName: string | undefined;
     if (connectionsConfig.length === 0) {
@@ -120,6 +132,9 @@ export class ConnectionManager {
         );
       }
       case ConnectionBackend.DuckDB: {
+        if (!isDuckDBAvailable) {
+          throw new Error("DuckDB is not available.");
+        }
         try {
           return new DuckDBConnection(
             connectionConfig.name,
