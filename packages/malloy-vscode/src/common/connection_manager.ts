@@ -26,7 +26,6 @@ import {
   ConnectionConfig,
 } from "./connection_manager_types";
 import { getPassword } from "keytar";
-import { config } from "process";
 
 const DEFAULT_CONFIG = Symbol("default-config");
 const ConnectionPool: Record<string, TestableConnection> = {}
