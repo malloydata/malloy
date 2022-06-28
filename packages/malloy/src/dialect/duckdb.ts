@@ -141,7 +141,7 @@ const inSeconds: Record<string, number> = {
 export class DuckDBDialect extends Dialect {
   name = "duckdb";
   defaultNumberType = "DOUBLE";
-  hasFinalStage = true;
+  hasFinalStage = false;
   stringTypeName = "VARCHAR";
   divisionIsInteger = true;
   supportsSumDistinctFunction = true;
@@ -198,12 +198,12 @@ export class DuckDBDialect extends Dialect {
     return `(LIST(${name}__0) FILTER (WHERE group_set=0 AND ${name}__0 IS NOT NULL))[1] as ${sqlName}`;
   }
 
-  // we should remov this code when https://github.com/duckdb/duckdb/issues/3544 is fixed.
-  sqlFinalStage(lastStageName: string, fields: string[]): string {
-    return `SELECT to_json(list(row(${fields.join(
-      ", "
-    )})))::VARCHAR as results FROM ${lastStageName} AS finalStage`;
-  }
+  // // we should remov this code when https://github.com/duckdb/duckdb/issues/3544 is fixed.
+  // sqlFinalStage(lastStageName: string, fields: string[]): string {
+  //   return `SELECT to_json(list(row(${fields.join(
+  //     ", "
+  //   )})))::VARCHAR as results FROM ${lastStageName} AS finalStage`;
+  // }
 
   sqlCoaleseMeasuresInline(
     groupSet: number,

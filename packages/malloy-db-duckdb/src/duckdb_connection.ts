@@ -140,12 +140,7 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
     }
 
     const retVal = await this.runDuckDBQuery(statements[0]);
-    let result;
-    if (options.noLastStage) {
-      result = retVal.rows;
-    } else {
-      result = JSON.parse(retVal.rows[0].results);
-    }
+    let result = retVal.rows;
     if (result.length > rowLimit) {
       result = result.slice(0, rowLimit);
     }
