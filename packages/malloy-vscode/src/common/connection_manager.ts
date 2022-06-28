@@ -28,7 +28,7 @@ import {
 import { getPassword } from "keytar";
 
 const DEFAULT_CONFIG = Symbol("default-config");
-let ConnectionPool: Record<string, TestableConnection> = {}
+let ConnectionPool: Record<string, TestableConnection> = {};
 
 interface ConfigOptions {
   workingDirectory: string;
@@ -38,7 +38,9 @@ interface ConfigOptions {
 
 const getConnectionForConfig = async (
   connectionConfig: ConnectionConfig,
-  { workingDirectory, rowLimit, usePool }: ConfigOptions = { workingDirectory: "/" }
+  { workingDirectory, rowLimit, usePool }: ConfigOptions = {
+    workingDirectory: "/",
+  }
 ): Promise<TestableConnection> => {
   let connection: TestableConnection;
   if (usePool && ConnectionPool[connectionConfig.name]) {
@@ -195,18 +197,17 @@ export class ConnectionManager {
           id: "bigquery-default",
           isDefault: true,
         },
-      ]
+      ];
     }
 
     // Create a default duckdb connection if one isn't configured
     if (!configs.find((config) => config.name === "duckdb")) {
       configs.push({
-          name: "duckdb",
-          backend: ConnectionBackend.DuckDB,
-          id: "duckdb-default",
-          isDefault: false,
-        }
-      )
+        name: "duckdb",
+        backend: ConnectionBackend.DuckDB,
+        id: "duckdb-default",
+        isDefault: false,
+      });
     }
 
     configs.forEach((config) => {
