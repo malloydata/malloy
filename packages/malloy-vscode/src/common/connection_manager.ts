@@ -28,23 +28,23 @@ import {
 import { getPassword } from "keytar";
 
 const DEFAULT_CONFIG = Symbol("default-config");
-let ConnectionPool: Record<string, TestableConnection> = {};
+let ConnectionCache: Record<string, TestableConnection> = {};
 
 interface ConfigOptions {
   workingDirectory: string;
   rowLimit?: number;
-  usePool?: boolean;
+  useCache?: boolean;
 }
 
 const getConnectionForConfig = async (
   connectionConfig: ConnectionConfig,
-  { workingDirectory, rowLimit, usePool }: ConfigOptions = {
+  { workingDirectory, rowLimit, useCache }: ConfigOptions = {
     workingDirectory: "/",
   }
 ): Promise<TestableConnection> => {
   let connection: TestableConnection;
-  if (usePool && ConnectionPool[connectionConfig.name]) {
-    return ConnectionPool[connectionConfig.name];
+  if (useCache && ConnectionCache[connectionConfig.name]) {
+    return ConnectionCache[connectionConfig.name];
   }
   switch (connectionConfig.backend) {
     case ConnectionBackend.BigQuery:
@@ -57,8 +57,8 @@ const getConnectionForConfig = async (
           location: connectionConfig.location,
         }
       );
-      if (usePool) {
-        ConnectionPool[connectionConfig.name] = connection;
+      if (useCache) {
+        ConnectionCache[connectionConfig.name] = connection;
       }
       break;
     case ConnectionBackend.Postgres: {
@@ -86,8 +86,8 @@ const getConnectionForConfig = async (
         () => ({ rowLimit }),
         configReader
       );
-      if (usePool) {
-        ConnectionPool[connectionConfig.name] = connection;
+      if (useCache) {
+        ConnectionCache[connectionConfig.name] = connection;
       }
       break;
     }
@@ -130,7 +130,7 @@ export class DynamicConnectionLookup implements LookupConnection<Connection> {
       if (connectionConfig) {
         this.connections[connectionKey] = getConnectionForConfig(
           connectionConfig,
-          { usePool: true, ...this.options }
+          { useCache: true, ...this.options }
         );
       } else {
         throw `No connection found with name ${connectionName}`;
@@ -151,7 +151,7 @@ export class ConnectionManager {
   public setConnectionsConfig(connectionsConfig: ConnectionConfig[]): void {
     // Force existing connections to be regenerated
     this.connectionLookups = {};
-    ConnectionPool = {};
+    ConnectionCache = {};
     this.buildConfigMap(connectionsConfig);
   }
 
