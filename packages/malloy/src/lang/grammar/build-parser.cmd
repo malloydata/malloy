@@ -17,11 +17,11 @@
 @ECHO OFF
 SETLOCAL ENABLEDELAYEDEXPANSION
 
-SET lib=src/lang/lib/Malloy
+SET lib=../lib/Malloy
 SET digest=%lib%/Malloy.md5
 SET target=%lib%/MalloyParser.ts
 
-FOR /F "tokens=* USEBACKQ" %%V IN (`md5sum src\lang\grammar\Malloy.g4`) DO ( SET newmd5=%%V )
+FOR /F "tokens=* USEBACKQ" %%V IN (`md5sum Malloy.g4`) DO ( SET newmd5=%%V )
 SET newmd5=%newmd5:~1,32%
 
 SET oldmd5=Hash Not Found
@@ -31,6 +31,5 @@ SET oldmd5=%oldmd5:~0,32%
 IF "%newmd5%" == "%oldmd5%" (
   @ECHO ANTLR parser %target% is up too date
 ) ELSE (
-  @ECHO NEED TO BUILD
-  antlr4ts -visitor -Xexact-output-dir -o %lib% src\lang\grammar\Malloy.g4 && echo %newmd5% > %digest%
+  antlr4ts -visitor -Xexact-output-dir -o %lib% Malloy.g4 && echo %newmd5% > %digest%
 )
