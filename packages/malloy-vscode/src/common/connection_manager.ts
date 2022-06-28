@@ -28,7 +28,6 @@ import {
 import { getPassword } from "keytar";
 
 const DEFAULT_CONFIG = Symbol("default-config");
-let ConnectionCache: Record<string, TestableConnection> = {};
 
 interface ConfigOptions {
   workingDirectory: string;
@@ -37,14 +36,15 @@ interface ConfigOptions {
 }
 
 const getConnectionForConfig = async (
+  connectionCache: Record<string, TestableConnection>,
   connectionConfig: ConnectionConfig,
   { workingDirectory, rowLimit, useCache }: ConfigOptions = {
     workingDirectory: "/",
   }
 ): Promise<TestableConnection> => {
   let connection: TestableConnection;
-  if (useCache && ConnectionCache[connectionConfig.name]) {
-    return ConnectionCache[connectionConfig.name];
+  if (useCache && connectionCache[connectionConfig.name]) {
+    return connectionCache[connectionConfig.name];
   }
   switch (connectionConfig.backend) {
     case ConnectionBackend.BigQuery:
@@ -58,7 +58,7 @@ const getConnectionForConfig = async (
         }
       );
       if (useCache) {
-        ConnectionCache[connectionConfig.name] = connection;
+        connectionCache[connectionConfig.name] = connection;
       }
       break;
     case ConnectionBackend.Postgres: {
@@ -87,7 +87,7 @@ const getConnectionForConfig = async (
         configReader
       );
       if (useCache) {
-        ConnectionCache[connectionConfig.name] = connection;
+        connectionCache[connectionConfig.name] = connection;
       }
       break;
     }
@@ -117,6 +117,7 @@ export class DynamicConnectionLookup implements LookupConnection<Connection> {
   connections: Record<string | symbol, Promise<Connection>> = {};
 
   constructor(
+    private connectionCache: Record<string, TestableConnection>,
     private configs: Record<string | symbol, ConnectionConfig>,
     private options: ConfigOptions
   ) {}
@@ -129,6 +130,7 @@ export class DynamicConnectionLookup implements LookupConnection<Connection> {
       const connectionConfig = this.configs[connectionKey];
       if (connectionConfig) {
         this.connections[connectionKey] = getConnectionForConfig(
+          this.connectionCache,
           connectionConfig,
           { useCache: true, ...this.options }
         );
@@ -143,6 +145,7 @@ export class DynamicConnectionLookup implements LookupConnection<Connection> {
 export class ConnectionManager {
   private connectionLookups: Record<string, DynamicConnectionLookup> = {};
   configs: Record<string | symbol, ConnectionConfig> = {};
+  connectionCache: Record<string | symbol, TestableConnection> = {};
 
   constructor(configs: ConnectionConfig[]) {
     this.buildConfigMap(configs);
@@ -151,20 +154,21 @@ export class ConnectionManager {
   public setConnectionsConfig(connectionsConfig: ConnectionConfig[]): void {
     // Force existing connections to be regenerated
     this.connectionLookups = {};
-    ConnectionCache = {};
+    this.connectionCache = {};
     this.buildConfigMap(connectionsConfig);
   }
 
   public async connectionForConfig(
     connectionConfig: ConnectionConfig
   ): Promise<TestableConnection> {
-    return getConnectionForConfig(connectionConfig);
+    return getConnectionForConfig(this.connectionCache, connectionConfig);
   }
 
   public getConnectionLookup(url: URL): LookupConnection<Connection> {
     const workingDirectory = path.dirname(url.pathname);
     if (!this.connectionLookups[workingDirectory]) {
       this.connectionLookups[workingDirectory] = new DynamicConnectionLookup(
+        this.connectionCache,
         this.configs,
         {
           workingDirectory,
