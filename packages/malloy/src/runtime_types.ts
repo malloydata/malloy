@@ -14,34 +14,6 @@
 import { MalloyQueryData, QueryDataRow, SQLBlock, StructDef } from "./model";
 
 /**
- * A URL.
- */
-export class URL {
-  private _url: string;
-
-  constructor(stringURL: string) {
-    this._url = stringURL;
-  }
-
-  /**
-   * @returns The string form of this URL.
-   */
-  public toString(): string {
-    return this._url;
-  }
-
-  /**
-   * Construct a URL from string.
-   *
-   * @param stringURL The string form of the URL.
-   * @returns A URL.
-   */
-  public static fromString(stringURL: string): URL {
-    return new URL(stringURL);
-  }
-}
-
-/**
  * The contents of a Malloy query document.
  */
 export type QueryString = string;

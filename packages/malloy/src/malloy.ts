@@ -49,7 +49,6 @@ import {
   ModelURL,
   QueryString,
   QueryURL,
-  URL,
   URLReader,
   Connection,
 } from "./runtime_types";
@@ -88,7 +87,7 @@ export class Malloy {
 
   private static _parse(source: string, url?: URL): Parse {
     if (url === undefined) {
-      url = URL.fromString("internal://internal.malloy");
+      url = new URL("internal://internal.malloy");
     }
     const translator = new MalloyTranslator(url.toString(), {
       urls: { [url.toString()]: source },
@@ -196,9 +195,7 @@ export class Malloy {
                   "In order to use relative imports, you must compile a file via a URL."
                 );
               }
-              const neededText = await urlReader.readURL(
-                URL.fromString(neededUrl)
-              );
+              const neededText = await urlReader.readURL(new URL(neededUrl));
               const urls = { [neededUrl]: neededText };
               translator.update({ urls });
             } catch (error) {
