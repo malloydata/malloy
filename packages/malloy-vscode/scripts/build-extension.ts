@@ -159,7 +159,7 @@ function makeDuckdbNoNodePreGypPlugin(target: Target | undefined) {
 
 // building without a target does a default build using whatever keytar native lib is in node_modules
 export async function doBuild(target?: Target): Promise<void> {
-  const development = true;//process.env.NODE_ENV == "development";
+  const development = process.env.NODE_ENV == "development";
 
   if (target && !targetKeytarMap[target])
     throw new Error(`Invalid target: ${target}`);
