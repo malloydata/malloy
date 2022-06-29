@@ -28,6 +28,7 @@ export type Target =
   | "alpine-arm64"
   | "darwin-x64"
   | "darwin-arm64";
+// | "win32-x64";
 
 export type BinaryTargetMap = { [target in Target]: string };
 

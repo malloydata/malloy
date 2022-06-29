@@ -33,7 +33,7 @@ export async function getModels(): Promise<explore.Model[]> {
 export async function getModel(fullPath: string): Promise<explore.Model> {
   const content = await fs.readFile(fullPath, "utf8");
   const model = await RUNTIME.getModel(new URL("file://" + fullPath));
-  const sources = model.explores.map((explore) => {
+  const sources = model.exportedExplores.map((explore) => {
     return {
       name: explore.name,
     };
