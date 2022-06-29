@@ -67,7 +67,6 @@ export interface Loggable {
 
 export interface RunSQLOptions {
   rowLimit?: number;
-  noLastStage?: boolean;
 }
 
 export class Malloy {
