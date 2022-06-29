@@ -11,6 +11,7 @@
  * GNU General Public License for more details.
  */
 
+import { RunSQLOptions } from "./malloy";
 import { MalloyQueryData, QueryDataRow, SQLBlock, StructDef } from "./model";
 
 /**
@@ -92,10 +93,7 @@ export interface Connection extends InfoConnection {
    * @returns The rows of data resulting from running the given SQL query
    * and the total number of rows available.
    */
-  runSQL(
-    sql: string,
-    options?: { rowLimit?: number; noLastStage?: boolean }
-  ): Promise<MalloyQueryData>;
+  runSQL(sql: string, options?: RunSQLOptions): Promise<MalloyQueryData>;
 
   // TODO feature-sql-block Comment
   isPool(): this is PooledConnection;
