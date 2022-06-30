@@ -12,7 +12,6 @@
  */
 
 /* eslint-disable no-console */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { serve } from "esbuild";
 import { appDirectory, buildDirectory, commonAppConfig } from "./build";
@@ -25,7 +24,7 @@ async function doServe() {
       port: 3000,
     },
     commonAppConfig(true)
-  ).catch((e: any) => {
+  ).catch((e: unknown) => {
     console.log(e);
     process.exit(1);
   });

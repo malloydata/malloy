@@ -95,6 +95,6 @@ source=Unnotarized Developer ID
 ### Debugging
 
 ## Using VSCode
-* Start the server using `yarn workspace malloy-composer-demo start-app`
 * From VSCode Run & Debug Panel Select "Launch Composer" from the dropdown, then "Start Debugging" using the Run button or `F5`
+* Then select "Launch Composer" from the dropdown, then "Start Debugging" using the Run button or `F5`
 * To connect to the render process select "Attach to Composer Render Process"

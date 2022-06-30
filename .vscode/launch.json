@@ -43,6 +43,14 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "Launch Composer Server",
+      "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/ts-node",
+      "cwd": "${workspaceRoot}/demo/malloy-demo-composer",
+      "program": "./scripts/serve.ts"
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "Launch Composer",
       "preLaunchTask": "build-composer-task",
       "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/electron",
