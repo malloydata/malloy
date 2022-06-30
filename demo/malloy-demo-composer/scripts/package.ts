@@ -17,8 +17,8 @@ import packager from "electron-packager";
 import { exit } from "process";
 import { doBuild } from "./build";
 
-async function packageDemo() {
-  doBuild("darwin-x64");
+async function packageDemo(platform: string, architecture: string) {
+  doBuild(`${platform}-${architecture}`);
   const appleId = process.env.NOTARIZER_APPLE_ID;
   const appleIdPassword = process.env.NOTARIZER_APPLE_ID_PASSWORD;
   const signerIdentity = process.env.SIGNER_IDENTITY;
@@ -59,12 +59,21 @@ async function packageDemo() {
       /scripts/,
       /composer_config\.sample\.json/,
     ],
+    platform,
+    arch: architecture,
     extraResource: ["../../samples/"],
   });
   console.log(`Electron app bundles created:\n${appPaths.join("\n")}`);
 }
 
-packageDemo()
+(async () => {
+  const platform = process.argv[2];
+  const architecture = process.argv[3];
+  if (platform === undefined || architecture === undefined) {
+    throw new Error("Specify platform and architecture.");
+  }
+  await packageDemo(platform, architecture);
+})()
   .then(() => {
     console.log("Demo application built successfully");
   })
