@@ -14,11 +14,10 @@
 import * as explore from "../types";
 import { promises as fs } from "fs";
 import * as path from "path";
-import { RUNTIME } from "./runtime";
-import { Runtime, URL } from "@malloydata/malloy";
 import { getConfig } from "./config";
 import { URL_READER } from "./urls";
 import { CONNECTION_MANAGER } from "./connections";
+import { Runtime } from "@malloydata/malloy";
 
 export async function getModels(): Promise<explore.Model[]> {
   const { modelsPath } = await getConfig();

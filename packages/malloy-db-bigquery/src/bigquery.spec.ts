@@ -11,7 +11,7 @@ describe("db:BigQuery", () => {
   beforeAll(() => {
     bq = new BigQueryConnection("test");
     const files = {
-      readURL: async (url: malloy.URL) => {
+      readURL: async (url: URL) => {
         const filePath = url.toString().replace(/^file:\/\//, "");
         return await util.promisify(fs.readFile)(filePath, "utf8");
       },

@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { URL, URLReader } from "@malloydata/malloy";
+import { URLReader } from "@malloydata/malloy";
 import { promises as fs } from "fs";
 
 export const URL_READER: URLReader = {

@@ -111,6 +111,5 @@ export type {
   TestableConnection,
   PersistSQLResults,
 } from "./runtime_types";
-export { URL } from "./runtime_types";
 export type { Loggable } from "./malloy";
 export { toAsyncGenerator } from "./connection_utils";
