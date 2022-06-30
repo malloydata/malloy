@@ -15,7 +15,7 @@ import * as explore from "../types";
 import { promises as fs } from "fs";
 import * as path from "path";
 import { URLReader, Runtime } from "@malloydata/malloy";
-import { CONNECTIONS } from "./connections";
+import { CONNECTION_MANAGER } from "./connections";
 import { URL_READER } from "./urls";
 import { getModel } from "./models";
 import { getConfig } from "./config";
@@ -47,7 +47,10 @@ export async function getAnalysis(fullPath: string): Promise<explore.Analysis> {
   const urls = new FirstImportCapturingURLReader();
   const content = await fs.readFile(fullPath, "utf8");
   urls.startCapture();
-  const model = await new Runtime(urls, CONNECTIONS).getModel(content);
+  const connections = CONNECTION_MANAGER.getConnectionLookup(
+    new URL("file://" + fullPath)
+  );
+  const model = await new Runtime(urls, connections).getModel(content);
   const modelFullPath = urls.stopCapture();
   let modelDataStyles;
   try {

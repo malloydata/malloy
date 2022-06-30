@@ -17,13 +17,19 @@ import { useQuery } from "react-query";
 
 async function search(
   source: StructDef | undefined,
+  analysisPath: string | undefined,
   searchTerm: string,
   fieldPath?: string
 ) {
-  if (source === undefined) {
+  if (source === undefined || analysisPath === undefined) {
     return undefined;
   }
-  return await window.malloy.search(source, searchTerm, fieldPath);
+  return await window.malloy.search(
+    source,
+    analysisPath,
+    searchTerm,
+    fieldPath
+  );
 }
 
 interface UseSearchResult {
@@ -33,12 +39,13 @@ interface UseSearchResult {
 
 export function useSearch(
   source: StructDef | undefined,
+  analysisPath: string | undefined,
   searchTerm: string,
   fieldPath?: string
 ): UseSearchResult {
   const { data: searchResults, isLoading } = useQuery(
     [source, searchTerm, fieldPath],
-    () => search(source, searchTerm, fieldPath),
+    () => search(source, analysisPath, searchTerm, fieldPath),
     {
       refetchOnWindowFocus: true,
     }

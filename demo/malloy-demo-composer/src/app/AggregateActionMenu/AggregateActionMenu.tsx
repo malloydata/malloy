@@ -45,6 +45,7 @@ interface AggregateActionMenuProps {
   ) => void;
   orderByField: OrderByField;
   stagePath: StagePath;
+  analysisPath: string;
 }
 
 export const AggregateActionMenu: React.FC<AggregateActionMenuProps> = ({
@@ -66,6 +67,7 @@ export const AggregateActionMenu: React.FC<AggregateActionMenuProps> = ({
   addOrderBy,
   orderByField,
   stagePath,
+  analysisPath,
 }) => {
   return (
     <ActionMenu
@@ -80,6 +82,7 @@ export const AggregateActionMenu: React.FC<AggregateActionMenuProps> = ({
           closeOnComplete: true,
           Component: ({ onComplete }) => (
             <FilterContextBar
+              analysisPath={analysisPath}
               source={source}
               addFilter={addFilter}
               onComplete={onComplete}

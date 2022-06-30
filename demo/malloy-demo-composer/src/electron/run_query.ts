@@ -11,18 +11,23 @@
  * GNU General Public License for more details.
  */
 
-import { Result } from "@malloydata/malloy";
+import { Result, Runtime } from "@malloydata/malloy";
 import { Analysis } from "../types";
-import { RUNTIME } from "./runtime";
+import { CONNECTION_MANAGER } from "./connections";
+import { URL_READER } from "./urls";
 
 export async function runQuery(
   query: string,
   queryName: string,
   analysis: Analysis
 ): Promise<Result> {
-  const runnable = RUNTIME.loadModel(
-    analysis.malloy + "\n" + query
-  ).loadQueryByName(queryName);
+  const connections = CONNECTION_MANAGER.getConnectionLookup(
+    new URL("file://" + (analysis.fullPath || analysis.modelFullPath))
+  );
+  const runtime = new Runtime(URL_READER, connections);
+  const runnable = runtime
+    .loadModel(analysis.malloy + "\n" + query)
+    .loadQueryByName(queryName);
   const rowLimit = (await runnable.getPreparedResult()).resultExplore.limit;
   return runnable.run({ rowLimit });
 }

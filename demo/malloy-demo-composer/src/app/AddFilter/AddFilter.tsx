@@ -52,6 +52,7 @@ interface AddFilterProps {
   addFilter: (filter: FilterExpression, as?: string) => void;
   needsRename: boolean;
   onComplete: () => void;
+  analysisPath: string;
 }
 
 export const AddFilter: React.FC<AddFilterProps> = ({
@@ -61,6 +62,7 @@ export const AddFilter: React.FC<AddFilterProps> = ({
   needsRename,
   onComplete,
   fieldPath,
+  analysisPath,
 }) => {
   const type =
     field.type === "struct"
@@ -133,6 +135,7 @@ export const AddFilter: React.FC<AddFilterProps> = ({
         )}
         {type === "string" && (
           <StringFilterBuilder
+            analysisPath={analysisPath}
             source={source}
             fieldPath={fieldPath}
             filter={stringFilter}
