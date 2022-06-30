@@ -22,6 +22,7 @@ import fs from "fs";
 export const targetDuckDBMap: Record<string, string> = {
   "linux-x64": "duckdb-v0.4.0-node-v93-linux-x64.node",
   "darwin-x64": "duckdb-v0.4.0-node-v93-darwin-x64.node",
+  "darwin-arm64": "duckdb-v0.4.0-node-v93-darwin-arm64.node",
 };
 
 export const buildDirectory = "build/";
