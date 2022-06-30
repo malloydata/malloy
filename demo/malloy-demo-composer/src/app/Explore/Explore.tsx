@@ -440,6 +440,7 @@ export const Explore: React.FC = () => {
                   />
                   <Popover open={insertOpen} setOpen={setInsertOpen}>
                     <TopQueryActionMenu
+                      analysisPath={analysis.fullPath || analysis.modelFullPath}
                       source={source}
                       toggleField={toggleField}
                       addFilter={addFilter}
@@ -476,6 +477,7 @@ export const Explore: React.FC = () => {
               <QueryBarInner>
                 {source && querySummary && (
                   <QuerySummaryPanel
+                    analysisPath={analysis.fullPath || analysis.modelFullPath}
                     source={source}
                     querySummary={querySummary}
                     removeField={removeField}

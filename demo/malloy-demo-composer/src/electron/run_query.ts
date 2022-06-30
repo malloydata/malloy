@@ -22,7 +22,7 @@ export async function runQuery(
   analysis: Analysis
 ): Promise<Result> {
   const connections = CONNECTION_MANAGER.getConnectionLookup(
-    new URL("file://" + analysis.fullPath)
+    new URL("file://" + (analysis.fullPath || analysis.modelFullPath))
   );
   const runtime = new Runtime(URL_READER, connections);
   const runnable = runtime

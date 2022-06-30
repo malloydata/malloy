@@ -29,9 +29,20 @@ contextBridge.exposeInMainWorld("malloy", {
     name: string,
     analysis: Analysis
   ) => ipcRenderer.invoke("post:save_field", type, field, name, analysis),
-  search: (source: StructDef, searchTerm: string, fieldPath?: string) =>
-    ipcRenderer.invoke("post:search", source, searchTerm, fieldPath),
-  topValues: (source: StructDef) =>
-    ipcRenderer.invoke("post:top_values", source),
+  search: (
+    source: StructDef,
+    analysisPath: string,
+    searchTerm: string,
+    fieldPath?: string
+  ) =>
+    ipcRenderer.invoke(
+      "post:search",
+      source,
+      analysisPath,
+      searchTerm,
+      fieldPath
+    ),
+  topValues: (source: StructDef, analysisPath: string) =>
+    ipcRenderer.invoke("post:top_values", source, analysisPath),
   openDirectory: () => ipcRenderer.invoke("post:open_directory"),
 });

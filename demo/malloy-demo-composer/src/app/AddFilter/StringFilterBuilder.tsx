@@ -47,6 +47,7 @@ interface StringFilterBuilderProps {
   fieldPath: string;
   filter: StringFilter;
   setFilter: (filter: StringFilter) => void;
+  analysisPath: string;
 }
 
 export const StringFilterBuilder: React.FC<StringFilterBuilderProps> = ({
@@ -54,6 +55,7 @@ export const StringFilterBuilder: React.FC<StringFilterBuilderProps> = ({
   filter,
   setFilter,
   fieldPath,
+  analysisPath,
 }) => {
   const changeType = (type: StringFilterType) => {
     setFilter(stringFilterChangeType(filter, type));
@@ -63,7 +65,8 @@ export const StringFilterBuilder: React.FC<StringFilterBuilderProps> = ({
     source,
     filter,
     setFilter,
-    fieldPath
+    fieldPath,
+    analysisPath
   );
   const startsWith = useStringContainsBuilder(filter, setFilter);
   const doesNotStartWith = useStringNotContainsBuilder(filter, setFilter);
@@ -150,11 +153,13 @@ function useStringEqualToOrNotBuilder(
   source: StructDef,
   filter: StringFilter,
   setFilter: (filter: StringEqualToFilter | StringNotEqualToFilter) => void,
-  fieldPath: string
+  fieldPath: string,
+  analysisPath: string
 ) {
   const [searchValue, setSearchValue] = useState("");
   const { searchResults, isLoading } = useSearch(
     source,
+    analysisPath,
     searchValue,
     fieldPath
   );

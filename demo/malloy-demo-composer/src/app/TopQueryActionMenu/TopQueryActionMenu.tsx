@@ -67,6 +67,7 @@ interface TopQueryActionMenuProps {
   stageSummary: QuerySummaryItem[];
   queryName: string;
   isOnlyStage: boolean;
+  analysisPath: string;
 }
 
 export const TopQueryActionMenu: React.FC<TopQueryActionMenuProps> = ({
@@ -86,11 +87,13 @@ export const TopQueryActionMenu: React.FC<TopQueryActionMenuProps> = ({
   loadQuery,
   addStage,
   topValues,
+  analysisPath,
 }) => {
   return (
     <ActionMenu
       topValues={topValues}
       valueSearchSource={source}
+      valueSearchAnalysisPath={analysisPath}
       addFilter={(filter) => addFilter(stagePath, filter)}
       closeMenu={closeMenu}
       actions={[
@@ -157,6 +160,7 @@ export const TopQueryActionMenu: React.FC<TopQueryActionMenuProps> = ({
               addFilter={(filter, as) => addFilter(stagePath, filter, as)}
               onComplete={onComplete}
               needsRename={false}
+              analysisPath={analysisPath}
             />
           ),
         },
