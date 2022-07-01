@@ -19,39 +19,43 @@ import { doBuild } from "./build";
 
 async function packageDemo(platform: string, architecture: string) {
   doBuild(`${platform}-${architecture}`);
-  const appleId = process.env.NOTARIZER_APPLE_ID;
-  const appleIdPassword = process.env.NOTARIZER_APPLE_ID_PASSWORD;
-  const signerIdentity = process.env.SIGNER_IDENTITY;
-  const shouldSignAndNotarize = process.env.DISABLE_SIGNING === undefined;
-  if (
-    appleId === undefined ||
-    appleIdPassword === undefined ||
-    signerIdentity == undefined
-  ) {
-    console.log(
-      "Specify NOTARIZER_APPLE_ID, NOTARIZER_APPLE_ID_PASSWORD, and SIGNER_IDENTITY in environment."
-    );
-    exit(1);
-  }
-  const appPaths = await packager({
-    dir: ".",
-    out: "./dist",
-    overwrite: true,
-    icon: "./public/icon.icns",
-    osxSign: shouldSignAndNotarize
+  const extraOptions: Partial<packager.Options> = {};
+  if (platform === "darwin") {
+    const appleId = process.env.NOTARIZER_APPLE_ID;
+    const appleIdPassword = process.env.NOTARIZER_APPLE_ID_PASSWORD;
+    const signerIdentity = process.env.SIGNER_IDENTITY;
+    const shouldSignAndNotarize = false;
+    if (
+      appleId === undefined ||
+      appleIdPassword === undefined ||
+      signerIdentity == undefined
+    ) {
+      console.log(
+        "Specify NOTARIZER_APPLE_ID, NOTARIZER_APPLE_ID_PASSWORD, and SIGNER_IDENTITY in environment."
+      );
+      exit(1);
+    }
+    extraOptions.osxSign = shouldSignAndNotarize
       ? {
           identity: signerIdentity,
           hardenedRuntime: true,
           entitlements: "entitlements.plist",
           "entitlements-inherit": "entitlements.plist",
         }
-      : undefined,
-    osxNotarize: shouldSignAndNotarize
+      : undefined;
+    extraOptions.osxNotarize = shouldSignAndNotarize
       ? {
           appleId,
           appleIdPassword,
         }
-      : undefined,
+      : undefined;
+  }
+  const appPaths = await packager({
+    dir: ".",
+    out: "./dist",
+    overwrite: true,
+    icon: "./public/icon.icns",
+
     ignore: [
       /node_modules/,
       /env/,
@@ -62,6 +66,7 @@ async function packageDemo(platform: string, architecture: string) {
     platform,
     arch: architecture,
     extraResource: ["../../samples/"],
+    ...extraOptions,
   });
   console.log(`Electron app bundles created:\n${appPaths.join("\n")}`);
 }
