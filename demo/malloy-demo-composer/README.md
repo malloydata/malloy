@@ -91,3 +91,10 @@ WARNING: Code sign failed; please retry manually. Error: Command failed: spctl -
 /var/folders/6q/dq6hklkn309f1_7737gmbvvw00r7jt/T/electron-packager/darwin-x64/malloy-composer-demo-darwin-x64/malloy-composer-demo.app: rejected
 source=Unnotarized Developer ID
 ```
+
+### Debugging
+
+## Using VSCode
+* From VSCode Run & Debug Panel Select "Launch Composer" from the dropdown, then "Start Debugging" using the Run button or `F5`
+* Then select "Launch Composer" from the dropdown, then "Start Debugging" using the Run button or `F5`
+* To connect to the render process select "Attach to Composer Render Process"

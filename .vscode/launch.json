@@ -39,6 +39,38 @@
       "port": 6009,
       "restart": true,
       "outFiles": ["${workspaceRoot}/packages/malloy-vscode/dist/server.js"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Launch Composer Server",
+      "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/ts-node",
+      "cwd": "${workspaceRoot}/demo/malloy-demo-composer",
+      "program": "./scripts/serve.ts"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Launch Composer",
+      "preLaunchTask": "build-composer-task",
+      "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/electron",
+      "program": "${workspaceRoot}/demo/malloy-demo-composer/src",
+      "runtimeArgs": [
+        "${workspaceRoot}/demo/malloy-demo-composer",
+        // this args for attaching render process
+        "--remote-debugging-port=7151"
+      ],
+      "windows": {
+        "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/electron.cmd"
+      },
+      "protocol": "legacy"
+    },
+    {
+      "type": "chrome",
+      "request": "attach",
+      "name": "Attach to Composer Render Process",
+      "port": 7151,
+      "webRoot": "${workspaceRoot}/html"
     }
   ]
 }
