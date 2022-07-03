@@ -672,10 +672,13 @@ export class QueryWriter extends SourceUtils {
   }
 
   private maybeQuoteIdentifier(name: string) {
-    if (!name.match(/^[A-Za-z_][A-Za-z_0-9]*$/)) {
-      return `\`${name}\``;
+    const path = name.split(".");
+    for (let i = 0; i < path.length; i++) {
+      if (!path[i].match(/^[A-Za-z_][A-Za-z_0-9]*$/)) {
+        path[i] = `\`${path[i]}\``;
+      }
     }
-    return name;
+    return path.join(".");
   }
 
   private codeInfoForField(
