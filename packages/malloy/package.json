@@ -28,8 +28,8 @@
   },
   "cross-os": {
     "build-parser": {
-      "darwin": "build-parser.sh)",
-      "linux": "build-parser.sh)",
+      "darwin": "sh build-parser.sh",
+      "linux": "sh build-parser.sh",
       "win32": "build-parser.cmd"
     }
   }
