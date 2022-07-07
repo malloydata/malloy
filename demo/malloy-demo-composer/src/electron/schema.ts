@@ -11,20 +11,25 @@
  * GNU General Public License for more details.
  */
 
-import * as malloy from "@malloydata/malloy";
+import { Runtime, ModelDef, Field } from "@malloydata/malloy";
 import * as explore from "../types";
 import { promises as fs } from "fs";
-import { RUNTIME } from "./runtime";
+import { CONNECTION_MANAGER } from "./connections";
+import { URL_READER } from "./urls";
 
 export async function getSchema(analysis: explore.Analysis): Promise<{
   schema: explore.Schema;
-  modelDef: malloy.ModelDef;
+  modelDef: ModelDef;
   malloy: string;
 }> {
   const malloy = analysis.fullPath
     ? await fs.readFile(analysis.fullPath, "utf8")
     : analysis.malloy;
-  const model = await RUNTIME.getModel(malloy);
+  const connections = CONNECTION_MANAGER.getConnectionLookup(
+    new URL("file://" + analysis.fullPath)
+  );
+  const runtime = new Runtime(URL_READER, connections);
+  const model = await runtime.getModel(malloy);
   const source = model.explores.find(
     (source) => source.name === analysis.sourceName
   );
@@ -42,10 +47,7 @@ export async function getSchema(analysis: explore.Analysis): Promise<{
   };
 }
 
-function mapField(
-  field: malloy.Field,
-  path: string | undefined
-): explore.SchemaField {
+function mapField(field: Field, path: string | undefined): explore.SchemaField {
   const newPath = path !== undefined ? `${path}.${field.name}` : field.name;
   if (field.isExploreField()) {
     return {

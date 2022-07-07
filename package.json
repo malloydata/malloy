@@ -29,6 +29,7 @@
     "docs-serve": "yarn docs-prebuild && yarn concurrently --kill-others 'yarn docs-preprocess' 'yarn docs-postprocess'",
     "vscode-build-extension-dev": "yarn workspace malloy-vscode build-extension-dev",
     "vscode-publish-extensions": "yarn workspace malloy-vscode publish-extensions",
+    "vscode-build-composer-dev": "yarn workspace malloy-composer-demo build",
     "third-party-licenses": "ts-node scripts/third_party_licenses",
     "malloyc": "ts-node scripts/malloy-to-json",
     "build-duckdb-db": "ts-node  scripts/build_duckdb_test_database"

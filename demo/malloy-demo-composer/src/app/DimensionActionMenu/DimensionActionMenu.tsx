@@ -52,6 +52,7 @@ interface DimensionActionMenuProps {
     direction?: "asc" | "desc"
   ) => void;
   orderByField: OrderByField;
+  analysisPath: string;
 }
 
 export const DimensionActionMenu: React.FC<DimensionActionMenuProps> = ({
@@ -73,6 +74,7 @@ export const DimensionActionMenu: React.FC<DimensionActionMenuProps> = ({
   stagePath,
   addOrderBy,
   orderByField,
+  analysisPath,
 }) => {
   return (
     <ActionMenu
@@ -99,6 +101,7 @@ export const DimensionActionMenu: React.FC<DimensionActionMenuProps> = ({
           Component: ({ onComplete }) =>
             filterField && filterFieldPath ? (
               <AddFilter
+                analysisPath={analysisPath}
                 onComplete={onComplete}
                 source={source}
                 field={filterField}

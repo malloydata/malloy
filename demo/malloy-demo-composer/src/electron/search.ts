@@ -11,18 +11,26 @@
  * GNU General Public License for more details.
  */
 
-import { SearchIndexResult, StructDef } from "@malloydata/malloy";
-import { RUNTIME } from "./runtime";
+import { Runtime, SearchIndexResult, StructDef } from "@malloydata/malloy";
+import { CONNECTION_MANAGER } from "./connections";
+import { URL_READER } from "./urls";
 
 export async function searchIndex(
   source: StructDef,
+  analysisPath: string,
   searchTerm: string,
   fieldPath?: string
 ): Promise<SearchIndexResult[] | undefined> {
   const sourceName = source.as || source.name;
-  return RUNTIME._loadModelFromModelDef({
-    name: "_generated",
-    contents: { [sourceName]: source },
-    exports: [],
-  }).search(sourceName, searchTerm, undefined, fieldPath);
+  const connections = CONNECTION_MANAGER.getConnectionLookup(
+    new URL("file://" + analysisPath)
+  );
+  const runtime = new Runtime(URL_READER, connections);
+  return runtime
+    ._loadModelFromModelDef({
+      name: "_generated",
+      contents: { [sourceName]: source },
+      exports: [],
+    })
+    .search(sourceName, searchTerm, undefined, fieldPath);
 }

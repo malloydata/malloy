@@ -11,38 +11,176 @@
  * GNU General Public License for more details.
  */
 
+import * as path from "path";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { PostgresConnection } from "@malloydata/db-postgres";
 import { DuckDBConnection } from "@malloydata/db-duckdb";
 import { isDuckDBAvailable } from "../common/duckdb_availability";
 import {
-  FixedConnectionMap,
   Connection,
+  LookupConnection,
   TestableConnection,
 } from "@malloydata/malloy";
 import {
   ConnectionBackend,
   ConnectionConfig,
-  getDefaultIndex,
 } from "./connection_manager_types";
 import { getPassword } from "keytar";
 
+const DEFAULT_CONFIG = Symbol("default-config");
+
+interface ConfigOptions {
+  workingDirectory: string;
+  rowLimit?: number;
+  useCache?: boolean;
+}
+
+const getConnectionForConfig = async (
+  connectionCache: Record<string, TestableConnection>,
+  connectionConfig: ConnectionConfig,
+  { workingDirectory, rowLimit, useCache }: ConfigOptions = {
+    workingDirectory: "/",
+  }
+): Promise<TestableConnection> => {
+  let connection: TestableConnection;
+  if (useCache && connectionCache[connectionConfig.name]) {
+    return connectionCache[connectionConfig.name];
+  }
+  switch (connectionConfig.backend) {
+    case ConnectionBackend.BigQuery:
+      connection = new BigQueryConnection(
+        connectionConfig.name,
+        () => ({ rowLimit }),
+        {
+          defaultProject: connectionConfig.projectName,
+          serviceAccountKeyPath: connectionConfig.serviceAccountKeyPath,
+          location: connectionConfig.location,
+        }
+      );
+      if (useCache) {
+        connectionCache[connectionConfig.name] = connection;
+      }
+      break;
+    case ConnectionBackend.Postgres: {
+      const configReader = async () => {
+        let password;
+        if (connectionConfig.password !== undefined) {
+          password = connectionConfig.password;
+        } else if (connectionConfig.useKeychainPassword) {
+          password =
+            (await getPassword(
+              "com.malloy-lang.vscode-extension",
+              `connections.${connectionConfig.id}.password`
+            )) || undefined;
+        }
+        return {
+          username: connectionConfig.username,
+          host: connectionConfig.host,
+          password,
+          port: connectionConfig.port,
+          databaseName: connectionConfig.databaseName,
+        };
+      };
+      connection = new PostgresConnection(
+        connectionConfig.name,
+        () => ({ rowLimit }),
+        configReader
+      );
+      if (useCache) {
+        connectionCache[connectionConfig.name] = connection;
+      }
+      break;
+    }
+    case ConnectionBackend.DuckDB: {
+      if (!isDuckDBAvailable) {
+        throw new Error("DuckDB is not available.");
+      }
+      try {
+        connection = new DuckDBConnection(
+          connectionConfig.name,
+          ":memory:",
+          connectionConfig.workingDirectory || workingDirectory
+        );
+      } catch (error) {
+        console.log("Could not create DuckDB connection:", error);
+        throw error;
+      }
+      break;
+    }
+  }
+
+  // Retain async signature for future reference
+  return Promise.resolve(connection);
+};
+
+export class DynamicConnectionLookup implements LookupConnection<Connection> {
+  connections: Record<string | symbol, Promise<Connection>> = {};
+
+  constructor(
+    private connectionCache: Record<string, TestableConnection>,
+    private configs: Record<string | symbol, ConnectionConfig>,
+    private options: ConfigOptions
+  ) {}
+
+  async lookupConnection(
+    connectionName?: string | undefined
+  ): Promise<Connection> {
+    const connectionKey = connectionName || DEFAULT_CONFIG;
+    if (!this.connections[connectionKey]) {
+      const connectionConfig = this.configs[connectionKey];
+      if (connectionConfig) {
+        this.connections[connectionKey] = getConnectionForConfig(
+          this.connectionCache,
+          connectionConfig,
+          { useCache: true, ...this.options }
+        );
+      } else {
+        throw `No connection found with name ${connectionName}`;
+      }
+    }
+    return this.connections[connectionKey];
+  }
+}
+
 export class ConnectionManager {
-  private _connections: FixedConnectionMap;
+  private connectionLookups: Record<string, DynamicConnectionLookup> = {};
+  configs: Record<string | symbol, ConnectionConfig> = {};
+  connectionCache: Record<string | symbol, TestableConnection> = {};
 
-  constructor(connections: ConnectionConfig[]) {
-    this._connections = new FixedConnectionMap(new Map());
-    this.buildConnectionMap(connections).then((map) => {
-      this._connections = map;
-    });
+  constructor(configs: ConnectionConfig[]) {
+    this.buildConfigMap(configs);
   }
 
-  protected getCurrentRowLimit(): number | undefined {
+  public setConnectionsConfig(connectionsConfig: ConnectionConfig[]): void {
+    // Force existing connections to be regenerated
+    this.connectionLookups = {};
+    this.connectionCache = {};
+    this.buildConfigMap(connectionsConfig);
+  }
+
+  public async connectionForConfig(
+    connectionConfig: ConnectionConfig
+  ): Promise<TestableConnection> {
+    return getConnectionForConfig(this.connectionCache, connectionConfig);
+  }
+
+  public getConnectionLookup(url: URL): LookupConnection<Connection> {
+    const workingDirectory = path.dirname(url.pathname);
+    if (!this.connectionLookups[workingDirectory]) {
+      this.connectionLookups[workingDirectory] = new DynamicConnectionLookup(
+        this.connectionCache,
+        this.configs,
+        {
+          workingDirectory,
+          rowLimit: this.getCurrentRowLimit(),
+        }
+      );
+    }
+    return this.connectionLookups[workingDirectory];
+  }
+
+  public getCurrentRowLimit(): number | undefined {
     return undefined;
-  }
-
-  public get connections(): FixedConnectionMap {
-    return this._connections;
   }
 
   protected static filterUnavailableConnectionBackends(
@@ -54,98 +192,33 @@ export class ConnectionManager {
     );
   }
 
-  private async buildConnectionMap(
-    connectionsConfig: ConnectionConfig[]
-  ): Promise<FixedConnectionMap> {
-    connectionsConfig =
-      ConnectionManager.filterUnavailableConnectionBackends(connectionsConfig);
-    const map = new Map<string, Connection>();
-    let defaultName: string | undefined;
-    if (connectionsConfig.length === 0) {
-      map.set(
-        "bigquery",
-        new BigQueryConnection("bigquery", () => ({
-          rowLimit: this.getCurrentRowLimit(),
-        }))
-      );
-      defaultName = "bigquery";
-    } else {
-      for (const connectionConfig of connectionsConfig) {
-        map.set(
-          connectionConfig.name,
-          await this.connectionForConfig(connectionConfig)
-        );
-      }
-      const defaultIndex = getDefaultIndex(connectionsConfig);
-      defaultName =
-        defaultIndex !== undefined
-          ? connectionsConfig[defaultIndex].name
-          : undefined;
+  buildConfigMap(configs: ConnectionConfig[]): void {
+    if (configs.length === 0) {
+      configs = [
+        {
+          name: "bigquery",
+          backend: ConnectionBackend.BigQuery,
+          id: "bigquery-default",
+          isDefault: true,
+        },
+      ];
     }
-    return new FixedConnectionMap(map, defaultName);
-  }
 
-  public async setConnectionsConfig(
-    connectionsConfig: ConnectionConfig[]
-  ): Promise<void> {
-    this._connections = await this.buildConnectionMap(connectionsConfig);
-  }
-
-  public async connectionForConfig(
-    connectionConfig: ConnectionConfig
-  ): Promise<TestableConnection> {
-    switch (connectionConfig.backend) {
-      case ConnectionBackend.BigQuery:
-        return new BigQueryConnection(
-          connectionConfig.name,
-          () => ({ rowLimit: this.getCurrentRowLimit() }),
-          {
-            defaultProject: connectionConfig.projectName,
-            serviceAccountKeyPath: connectionConfig.serviceAccountKeyPath,
-            location: connectionConfig.location,
-          }
-        );
-      case ConnectionBackend.Postgres: {
-        const configReader = async () => {
-          let password;
-          if (connectionConfig.password !== undefined) {
-            password = connectionConfig.password;
-          } else if (connectionConfig.useKeychainPassword) {
-            password =
-              (await getPassword(
-                "com.malloy-lang.vscode-extension",
-                `connections.${connectionConfig.id}.password`
-              )) || undefined;
-          }
-          return {
-            username: connectionConfig.username,
-            host: connectionConfig.host,
-            password,
-            port: connectionConfig.port,
-            databaseName: connectionConfig.databaseName,
-          };
-        };
-        return new PostgresConnection(
-          connectionConfig.name,
-          () => ({ rowLimit: this.getCurrentRowLimit() }),
-          configReader
-        );
-      }
-      case ConnectionBackend.DuckDB: {
-        if (!isDuckDBAvailable) {
-          throw new Error("DuckDB is not available.");
-        }
-        try {
-          return new DuckDBConnection(
-            connectionConfig.name,
-            ":memory:",
-            connectionConfig.workingDirectory
-          );
-        } catch (error) {
-          console.log("Could not create DuckDB connection:", error);
-          throw error;
-        }
-      }
+    // Create a default duckdb connection if one isn't configured
+    if (!configs.find((config) => config.name === "duckdb")) {
+      configs.push({
+        name: "duckdb",
+        backend: ConnectionBackend.DuckDB,
+        id: "duckdb-default",
+        isDefault: false,
+      });
     }
+
+    configs.forEach((config) => {
+      if (config.isDefault) {
+        this.configs[DEFAULT_CONFIG] = config;
+      }
+      this.configs[config.name] = config;
+    });
   }
 }

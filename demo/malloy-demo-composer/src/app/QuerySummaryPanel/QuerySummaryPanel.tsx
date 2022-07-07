@@ -133,6 +133,7 @@ interface QuerySummaryPanelProps {
   ) => void;
   topValues: SearchValueMapResult[] | undefined;
   queryName: string;
+  analysisPath: string;
 }
 
 export const QuerySummaryPanel: React.FC<QuerySummaryPanelProps> = ({
@@ -140,6 +141,7 @@ export const QuerySummaryPanel: React.FC<QuerySummaryPanelProps> = ({
   stagePath,
   queryName,
   topValues,
+  analysisPath,
   ...query
 }) => {
   if (
@@ -169,6 +171,7 @@ export const QuerySummaryPanel: React.FC<QuerySummaryPanelProps> = ({
               <ClickToPopover
                 popoverContent={({ closeMenu }) => (
                   <StageActionMenu
+                    analysisPath={analysisPath}
                     source={stage.inputSource}
                     toggleField={query.toggleField}
                     addFilter={query.addFilter}
@@ -207,6 +210,7 @@ export const QuerySummaryPanel: React.FC<QuerySummaryPanelProps> = ({
               />
             )}
             <StageSummaryUI
+              analysisPath={analysisPath}
               stage={stage}
               {...query}
               stagePath={nestStagePath}
@@ -225,6 +229,7 @@ interface SummaryStageProps {
   stage: StageSummary;
   stagePath: StagePath;
   source: StructDef;
+  analysisPath: string;
   removeField: (stagePath: StagePath, fieldIndex: number) => void;
   removeFilter: (
     stagePath: StagePath,
@@ -307,6 +312,7 @@ interface SummaryStageProps {
 const StageSummaryUI: React.FC<SummaryStageProps> = ({
   stage,
   topValues,
+  analysisPath,
   ...summaryProps
 }) => {
   const [selectedFieldIndex, setSelectedFieldIndex] = useState<number>();
@@ -349,6 +355,7 @@ const StageSummaryUI: React.FC<SummaryStageProps> = ({
     <FieldListDiv>
       {stage.items.map((item, index) => (
         <SummaryItem
+          analysisPath={analysisPath}
           key={`${item.type}/${index}`}
           item={item}
           stageSummary={stage.items}
@@ -416,6 +423,7 @@ const ClickToPopoverDiv = styled.div`
 
 interface SummaryItemProps {
   item: QuerySummaryItem;
+  analysisPath: string;
   source: StructDef;
   removeField: (stagePath: StagePath, fieldIndex: number) => void;
   removeFilter: (
@@ -511,6 +519,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
   beginReorderingField,
   deselect,
   topValues,
+  analysisPath,
   ...query
 }) => {
   const ref = useRef<HTMLDivElement>(null);
@@ -540,6 +549,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
             if (item.kind === "dimension") {
               return (
                 <DimensionActionMenu
+                  analysisPath={analysisPath}
                   source={source}
                   removeField={() =>
                     query.removeField(stagePath, item.fieldIndex)
@@ -596,6 +606,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                 (item.kind === "measure" && item.isRenamed);
               return (
                 <AggregateActionMenu
+                  analysisPath={analysisPath}
                   stagePath={stagePath}
                   source={source}
                   removeField={() =>
@@ -739,6 +750,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
             });
             return (
               <NestQueryActionMenu
+                analysisPath={analysisPath}
                 source={source}
                 toggleField={query.toggleField}
                 addFilter={query.addFilter}
@@ -979,6 +991,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                 <ClickToPopover
                   popoverContent={({ closeMenu }) => (
                     <StageActionMenu
+                      analysisPath={analysisPath}
                       source={stage.inputSource}
                       toggleField={query.toggleField}
                       addFilter={query.addFilter}
@@ -1017,6 +1030,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                 />
               )}
               <StageSummaryUI
+                analysisPath={analysisPath}
                 stage={stage}
                 stagePath={nestStagePath}
                 source={source}
@@ -1045,6 +1059,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
             {children.map(({ childItem, fieldIndex }, index) => {
               return (
                 <SummaryItem
+                  analysisPath={analysisPath}
                   key={"child:" + index}
                   item={childItem}
                   source={source}

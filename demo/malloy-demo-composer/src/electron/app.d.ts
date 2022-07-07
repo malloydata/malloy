@@ -20,10 +20,11 @@ export interface MalloyElectronAPI {
   ) => Promise<Analysis>;
   search: (
     source: StructDef,
+    analysisPath: string,
     searchTerm: string,
     fieldPath?: string
   ) => Promise<SearchIndexResult[] | undefined>;
-  topValues: (source: StructDef) => Promise<SearchValueMapResult[] | undefined>;
+  topValues: (source: StructDef, analysisPath: string) => Promise<SearchValueMapResult[] | undefined>;
   openDirectory: () => Promise<string | undefined>;
 }
 

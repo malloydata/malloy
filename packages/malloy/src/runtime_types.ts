@@ -11,35 +11,8 @@
  * GNU General Public License for more details.
  */
 
+import { RunSQLOptions } from "./malloy";
 import { MalloyQueryData, QueryDataRow, SQLBlock, StructDef } from "./model";
-
-/**
- * A URL.
- */
-export class URL {
-  private _url: string;
-
-  constructor(stringURL: string) {
-    this._url = stringURL;
-  }
-
-  /**
-   * @returns The string form of this URL.
-   */
-  public toString(): string {
-    return this._url;
-  }
-
-  /**
-   * Construct a URL from string.
-   *
-   * @param stringURL The string form of the URL.
-   * @returns A URL.
-   */
-  public static fromString(stringURL: string): URL {
-    return new URL(stringURL);
-  }
-}
 
 /**
  * The contents of a Malloy query document.
@@ -120,10 +93,7 @@ export interface Connection extends InfoConnection {
    * @returns The rows of data resulting from running the given SQL query
    * and the total number of rows available.
    */
-  runSQL(
-    sql: string,
-    options?: { rowLimit?: number; noLastStage?: boolean }
-  ): Promise<MalloyQueryData>;
+  runSQL(sql: string, options?: RunSQLOptions): Promise<MalloyQueryData>;
 
   // TODO feature-sql-block Comment
   isPool(): this is PooledConnection;
