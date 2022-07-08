@@ -251,8 +251,12 @@ export class FieldDeclaration extends MalloyElement {
     }
     const circularDef = exprFS instanceof DefSpace && exprFS.foundCircle;
     if (!circularDef) {
-      const badType = FT.inspect(exprValue);
-      this.log(`Cannot define '${exprName}', unexpected type: ${badType}`);
+      if (exprValue.dataType == "unknown") {
+        this.log(`Cannot define '${exprName}', value has unknown type`);
+      } else {
+        const badType = FT.inspect(exprValue);
+        this.log(`Cannot define '${exprName}', unexpected type: ${badType}`);
+      }
     }
     return {
       name: `error_defining_${exprName}`,
@@ -996,8 +1000,9 @@ export class Pick extends ExpressionDef {
       anyAggregate ||= whenExpr.aggregate || thenExpr.aggregate;
       if (returnType) {
         if (!FT.typeEq(returnType, thenExpr, true)) {
+          const whenType = FT.inspect(thenExpr);
           this.log(
-            `Pick when type mismatch: ${FT.inspect(returnType, thenExpr)}`
+            `pick type '${whenType}', expected '${returnType.dataType}'`
           );
           return errorFor("pick when type");
         }
@@ -1010,9 +1015,11 @@ export class Pick extends ExpressionDef {
     const elseVal = elsePart.getExpression(fs);
     returnType ||= elseVal;
     if (!FT.typeEq(returnType, elseVal, true)) {
-      const errSrc = this.elsePick ? "else" : "default";
+      const errSrc = this.elsePick ? "else" : "pick default";
       this.log(
-        `Pick ${errSrc} type mismatch: ${FT.inspect(returnType, elseVal)}`
+        `${errSrc} type '${FT.inspect(elseVal)}', expected '${
+          returnType.dataType
+        }'`
       );
       return errorFor("pick else type");
     }
@@ -1025,7 +1032,7 @@ export class Pick extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     if (this.elsePick === undefined) {
-      this.log("'pick' has no value, must specify 'else' or use ':'");
+      this.log("pick incomplete, missing 'else'");
       return errorFor("no value for partial pick");
     }
 
@@ -1052,19 +1059,13 @@ export class Pick extends ExpressionDef {
     for (const aChoice of choiceValues) {
       if (!FT.typeEq(aChoice.when, FT.boolT)) {
         this.log(
-          `Cannot generate value from pick. WHEN value of type ${FT.inspect(
-            aChoice.when
-          )}`
+          `when expression must be boolean, not '${FT.inspect(aChoice.when)}`
         );
         return errorFor("pick when type");
       }
       if (!FT.typeEq(returnType, aChoice.pick, true)) {
-        this.log(
-          `pick value types do not match ${FT.inspect(
-            returnType,
-            aChoice.pick
-          )}`
-        );
+        const whenType = FT.inspect(aChoice.pick);
+        this.log(`pick type '${whenType}', expected '${returnType.dataType}'`);
         return errorFor("pick value type");
       }
       anyAggregate ||= aChoice.pick.aggregate || aChoice.when.aggregate;
@@ -1075,15 +1076,15 @@ export class Pick extends ExpressionDef {
         ...aChoice.pick.value
       );
     }
-    const elseValue = this.elsePick.getExpression(fs);
-    anyAggregate ||= elseValue.aggregate;
-    if (!FT.typeEq(returnType, elseValue, true)) {
+    const defVal = this.elsePick.getExpression(fs);
+    anyAggregate ||= defVal.aggregate;
+    if (!FT.typeEq(returnType, defVal, true)) {
       this.elsePick.log(
-        `pick value types do not match ${FT.inspect(returnType, elseValue)}`
+        `else type '${FT.inspect(defVal)}', expected '${returnType.dataType}'`
       );
-      return errorFor("pick vlaue type mismatch");
+      return errorFor("pick value type mismatch");
     }
-    caseValue.push(" ELSE ", ...elseValue.value, " END");
+    caseValue.push(" ELSE ", ...defVal.value, " END");
     return {
       dataType: returnType.dataType,
       aggregate: !!anyAggregate,
