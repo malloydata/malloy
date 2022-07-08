@@ -100,26 +100,32 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
       background: "transparent",
       config: {
         axis: {
-          labelFont: "Roboto",
-          titleFont: "Roboto",
+          labelFont: "var(--malloy-font-family, Roboto)",
+          titleFont: "var(--malloy-font-family, Roboto)",
           titleFontWeight: 500,
-          titleColor: "#505050",
+          titleColor: "var(--malloy-title-color, #505050)",
+          labelColor: "var(--malloy-label-color, #000000)",
           titleFontSize: 12,
         },
         legend: {
-          labelFont: "Roboto",
-          titleFont: "Roboto",
+          labelFont: "var(--malloy-font-family, Roboto)",
+          titleFont: "var(--malloy-font-family, Roboto)",
           titleFontWeight: 500,
-          titleColor: "#505050",
+          titleColor: "var(--malloy-title-color, #505050)",
+          labelColor: "var(--malloy-label-color, #000000)",
           titleFontSize: 12,
         },
         header: {
-          labelFont: "Roboto",
-          titleFont: "Roboto",
+          labelFont: "var(--malloy-font-family, Roboto)",
+          titleFont: "var(--malloy-font-family, Roboto)",
           titleFontWeight: 500,
         },
-        mark: { font: "Roboto" },
-        title: { font: "Roboto", subtitleFont: "Roboto", fontWeight: 500 },
+        mark: { font: "var(--malloy-font-family, Roboto)" },
+        title: {
+          font: "var(--malloy-font-family, Roboto)",
+          subtitleFont: "var(--malloy-font-family, Roboto)",
+          fontWeight: 500,
+        },
       },
     };
   }

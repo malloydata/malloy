@@ -38,6 +38,7 @@ import {
 } from "@malloydata/malloy/src/runtime_types";
 import { Client, Pool, PoolClient } from "pg";
 import QueryStream from "pg-query-stream";
+import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
 
 const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   "character varying": "string",
@@ -89,7 +90,9 @@ type PostgresConnectionConfigurationReader =
 const DEFAULT_PAGE_SIZE = 1000;
 const SCHEMA_PAGE_SIZE = 1000;
 
-export class PostgresConnection implements Connection, StreamingConnection {
+export class PostgresConnection
+  implements Connection, StreamingConnection, PersistSQLResults
+{
   private schemaCache = new Map<
     string,
     | { schema: StructDef; error?: undefined }
@@ -366,10 +369,7 @@ export class PostgresConnection implements Connection, StreamingConnection {
 
   public async runSQL(
     sql: string,
-    {
-      rowLimit,
-      noLastStage,
-    }: { rowLimit?: number; noLastStage?: boolean } = {},
+    { rowLimit }: RunSQLOptions = {},
     rowIndex = 0
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
@@ -378,7 +378,7 @@ export class PostgresConnection implements Connection, StreamingConnection {
       sql,
       rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
-      !noLastStage
+      true
     );
   }
 
@@ -400,6 +400,16 @@ export class PostgresConnection implements Connection, StreamingConnection {
       }
     }
     await client.end();
+  }
+
+  public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
+    const hash = crypto.createHash("md5").update(sqlCommand).digest("hex");
+    const tableName = `tt${hash}`;
+
+    const cmd = `CREATE TEMPORARY TABLE IF NOT EXISTS ${tableName} AS (${sqlCommand});`;
+    // console.log(cmd);
+    await this.runPostgresQuery(cmd, 1000, 0, false);
+    return tableName;
   }
 }
 
@@ -474,15 +484,5 @@ export class PooledPostgresConnection
       }
     }
     releaseClient();
-  }
-
-  public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
-    const hash = crypto.createHash("md5").update(sqlCommand).digest("hex");
-    const tableName = `tt${hash}`;
-
-    const cmd = `CREATE TEMPORARY TABLE IF NOT EXISTS ${tableName} AS (${sqlCommand});`;
-    // console.log(cmd);
-    await this.runPostgresQuery(cmd, 1000, 0, false);
-    return tableName;
   }
 }

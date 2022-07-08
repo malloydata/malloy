@@ -28,6 +28,7 @@ export type Target =
   | "alpine-arm64"
   | "darwin-x64"
   | "darwin-arm64";
+// | "win32-x64";
 
 export type BinaryTargetMap = { [target in Target]: string };
 
@@ -42,8 +43,9 @@ export const targetKeytarMap: BinaryTargetMap = {
 };
 
 export const targetDuckDBMap: Partial<BinaryTargetMap> = {
-  "linux-x64": "duckdb-v0.3.4-node-v93-linux-x64.node",
-  "darwin-x64": "duckdb-v0.3.4-node-v93-darwin-x64.node",
+  "linux-x64": "duckdb-v0.4.0-node-v93-linux-x64.node",
+  "darwin-x64": "duckdb-v0.4.0-node-v93-darwin-x64.node",
+  "darwin-arm64": "duckdb-v0.4.0-node-v93-darwin-arm64.node",
 };
 
 export const outDir = "dist/";
@@ -73,8 +75,10 @@ const keytarReplacerPlugin: Plugin = {
   },
 };
 
-function makeDuckdbNoNodePreGypPlugin(target: string | undefined) {
+function makeDuckdbNoNodePreGypPlugin(target: Target | undefined) {
   const localPath = require.resolve("duckdb/lib/binding/duckdb.node");
+  const isDuckDBAvailable =
+    target === undefined || targetDuckDBMap[target] !== undefined;
   return {
     name: "duckdbNoNodePreGypPlugin",
     setup(build: any) {
@@ -109,6 +113,45 @@ function makeDuckdbNoNodePreGypPlugin(target: string | undefined) {
           };
         }
       );
+      build.onResolve({ filter: /duckdb_availability/ }, (args: any) => {
+        return {
+          path: args.path,
+          namespace: "duckdb-no-node-pre-gyp-plugin",
+        };
+      });
+      build.onLoad(
+        {
+          filter: /duckdb_availability/,
+          namespace: "duckdb-no-node-pre-gyp-plugin",
+        },
+        (args: any) => {
+          return {
+            contents: `
+              export const isDuckDBAvailable = ${isDuckDBAvailable};
+            `,
+            resolveDir: ".",
+          };
+        }
+      );
+      if (!isDuckDBAvailable) {
+        build.onResolve({ filter: /^duckdb$/ }, (args: any) => {
+          return {
+            path: args.path,
+            namespace: "duckdb-no-node-pre-gyp-plugin",
+          };
+        });
+        build.onLoad(
+          { filter: /^duckdb$/, namespace: "duckdb-no-node-pre-gyp-plugin" },
+          (args: any) => {
+            return {
+              contents: `
+              module.exports = {};
+            `,
+              resolveDir: ".",
+            };
+          }
+        );
+      }
     },
   };
 }
@@ -165,28 +208,27 @@ export async function doBuild(target?: Target): Promise<void> {
       path.join(outDir, "keytar-native.node")
     );
     const duckDBBinaryName = targetDuckDBMap[target];
-    if (duckDBBinaryName === undefined) {
-      throw new Error(`No DuckDB binary for ${target} is available`);
+    const isDuckDBAvailable = duckDBBinaryName !== undefined;
+    if (isDuckDBAvailable) {
+      fs.copyFileSync(
+        path.join(
+          "..",
+          "..",
+          "third_party",
+          "github.com",
+          "duckdb",
+          "duckdb",
+          duckDBBinaryName
+        ),
+        path.join(outDir, "duckdb-native.node")
+      );
     }
-    fs.copyFileSync(
-      path.join(
-        "..",
-        "..",
-        "third_party",
-        "github.com",
-        "duckdb",
-        "duckdb",
-        duckDBBinaryName
-      ),
-      path.join(outDir, "duckdb-native.node")
-    );
   }
-
+  const duckDBPlugin = makeDuckdbNoNodePreGypPlugin(target);
+  const extensionPlugins = [duckDBPlugin];
   // if we're building with a target, replace keytar imports using plugin that imports
   // binary builds of keytar. if we're building for dev, use a .node plugin to
   // ensure ketyar's node_modules .node file is in the build
-  // NOTE: adding any additional npm packages that create native libs will require a different strategy
-  const extensionPlugins = [makeDuckdbNoNodePreGypPlugin(target)];
   if (target) {
     extensionPlugins.push(keytarReplacerPlugin);
   } else {
@@ -225,6 +267,7 @@ export async function doBuild(target?: Target): Promise<void> {
     svgrPlugin({
       typescript: true,
     }),
+    duckDBPlugin,
   ];
 
   if (development) {

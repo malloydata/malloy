@@ -14,9 +14,10 @@
 import * as explore from "../types";
 import { promises as fs } from "fs";
 import * as path from "path";
-import { RUNTIME } from "./runtime";
-import { URL } from "@malloydata/malloy";
 import { getConfig } from "./config";
+import { URL_READER } from "./urls";
+import { CONNECTION_MANAGER } from "./connections";
+import { Runtime } from "@malloydata/malloy";
 
 export async function getModels(): Promise<explore.Model[]> {
   const { modelsPath } = await getConfig();
@@ -33,8 +34,12 @@ export async function getModels(): Promise<explore.Model[]> {
 
 export async function getModel(fullPath: string): Promise<explore.Model> {
   const content = await fs.readFile(fullPath, "utf8");
-  const model = await RUNTIME.getModel(new URL("file://" + fullPath));
-  const sources = model.explores.map((explore) => {
+  const connections = CONNECTION_MANAGER.getConnectionLookup(
+    new URL("file://" + fullPath)
+  );
+  const runtime = new Runtime(URL_READER, connections);
+  const model = await runtime.getModel(new URL("file://" + fullPath));
+  const sources = model.exportedExplores.map((explore) => {
     return {
       name: explore.name,
     };

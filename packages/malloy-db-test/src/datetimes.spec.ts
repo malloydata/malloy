@@ -46,6 +46,23 @@ const basicTypes: Record<DialectNames, string> = {
   `,
 };
 
+test("check for double truncation", async () => {
+  const runtime = runtimes.runtimeMap.get("bigquery");
+  expect(runtime).toBeDefined();
+  if (runtime) {
+    const src = `
+      query: table('malloy-data.faa.flights') -> {
+        group_by: takeoff_week is dep_time.week
+      }
+    `;
+    const result = await runtime.loadQuery(src).run();
+    const truncs = (result.sql.match(/TIMESTAMP_TRUNC/gi) || []).length;
+    if (truncs != 1) {
+      fail(`Expected 1 TIMESTAMP_TRUNC, got ${truncs}\n${result.sql}`);
+    }
+  }
+});
+
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   const sqlEq = mkSqlEqWith(runtime, { sql: basicTypes[databaseName] });
 

@@ -1,14 +1,21 @@
 {
-  "name": "malloy-explore-demo",
+  "name": "malloy-composer-demo",
+  "description": "Run/Explore/Build Malloy Data Models",
   "version": "0.1.0",
   "private": true,
   "main": "./build/main.js",
+  "author": "Malloy",
   "license": "GPL-2.0",
   "scripts": {
     "start": "yarn build && concurrently --kill-others \"yarn start-app\" \"wait-on tcp:3000 && sleep 1 && yarn electron .\"",
     "start-app": "ts-node scripts/serve",
     "build": "ts-node scripts/build",
+    "package": "ts-node scripts/package",
+    "debug-package": "open ./dist/malloy-composer-demo-darwin-x64/malloy-composer-demo.app/ --args --remote-debugging-port=8315 && node -e \"const x=require('react-dev-utils/openBrowser');x('http://localhost:8315')\"",
+    "package-linux": "ts-node scripts/package linux x64",
+    "debian": "electron-installer-debian --src dist//malloy-composer-demo-linux-x64/ --dest dist/installers/ --arch amd64",
     "clean": "rm -rf ./node_modules"
+
   },
   "dependencies": {
     "@malloydata/db-bigquery": "*",
@@ -35,8 +42,10 @@
     "@types/react-dom": "^17.0.11",
     "@types/styled-components": "^5.1.19",
     "concurrently": "^6.2.1",
+    "electron-packager": "^15.5.1",
     "esbuild": "^0.14.13",
     "esbuild-plugin-svgr": "^1.0.1",
-    "wait-on": "^6.0.1"
+    "wait-on": "^6.0.1",
+    "electron-installer-debian": "^3.1.0"
   }
 }

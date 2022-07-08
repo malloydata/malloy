@@ -671,6 +671,16 @@ export class QueryWriter extends SourceUtils {
     return fragments;
   }
 
+  private maybeQuoteIdentifier(name: string) {
+    const path = name.split(".");
+    for (let i = 0; i < path.length; i++) {
+      if (!path[i].match(/^[A-Za-z_][A-Za-z_0-9]*$/)) {
+        path[i] = `\`${path[i]}\``;
+      }
+    }
+    return path.join(".");
+  }
+
   private codeInfoForField(
     field: QueryFieldDef,
     source: StructDef,
@@ -688,7 +698,7 @@ export class QueryWriter extends SourceUtils {
             : fieldDef.aggregate
             ? "aggregate"
             : "group_by";
-        return { property, malloy: [field] };
+        return { property, malloy: [this.maybeQuoteIdentifier(field)] };
       } else if (isFilteredAliasedName(field)) {
         const fieldDef = this.getField(source, field.name);
         if (fieldDef.type === "struct") {
@@ -702,7 +712,11 @@ export class QueryWriter extends SourceUtils {
             : "group_by";
         const malloy: Fragment[] = [];
         const newName = field.as === undefined ? "" : `${field.as} is `;
-        malloy.push(`${newName}${field.name}`);
+        malloy.push(
+          `${this.maybeQuoteIdentifier(newName)}${this.maybeQuoteIdentifier(
+            field.name
+          )}`
+        );
         if (field.filterList && field.filterList.length > 0) {
           malloy.push(" {", INDENT, "where:");
           malloy.push(...this.getFiltersString(field.filterList || []));
@@ -711,7 +725,7 @@ export class QueryWriter extends SourceUtils {
         return { property, malloy };
       } else if (field.type === "turtle") {
         const malloy: Fragment[] = [];
-        malloy.push(`${field.as || field.name} is`);
+        malloy.push(`${this.maybeQuoteIdentifier(field.as || field.name)} is`);
         let stageSource = source;
         let head = true;
         for (const stage of field.pipeline) {
@@ -728,7 +742,9 @@ export class QueryWriter extends SourceUtils {
       } else {
         const property = field.aggregate ? "aggregate" : "group_by";
         const malloy: Fragment[] = [
-          `${field.as || field.name} is ${field.code}`,
+          `${this.maybeQuoteIdentifier(field.as || field.name)} is ${
+            field.code
+          }`,
         ];
         return { property, malloy };
       }
@@ -811,7 +827,9 @@ export class QueryWriter extends SourceUtils {
             } else {
               name = order.field;
             }
-            return `${name}${order.dir ? " " + order.dir : ""}`;
+            return `${
+              typeof name === "string" ? this.maybeQuoteIdentifier(name) : name
+            }${order.dir ? " " + order.dir : ""}`;
           })
           .join(", "),
         NEWLINE
@@ -827,10 +845,12 @@ export class QueryWriter extends SourceUtils {
       initParts.push("query:");
     }
     if (name !== undefined) {
-      initParts.push(`${name} is`);
+      initParts.push(`${this.maybeQuoteIdentifier(name)} is`);
     }
     if (!forSource) {
-      initParts.push(this.source.as || this.source.name);
+      initParts.push(
+        this.maybeQuoteIdentifier(this.source.as || this.source.name)
+      );
     }
     const malloy: Fragment[] = [initParts.join(" ")];
     let stageSource = this.source;

@@ -37,7 +37,7 @@ function createWindow() {
 
   const appURL = app.isPackaged
     ? url.format({
-        pathname: path.join(__dirname, "index.html"),
+        pathname: path.join(__dirname, "app", "index.html"),
         protocol: "file:",
         slashes: true,
       })
@@ -114,13 +114,13 @@ async function registerIPC(): Promise<void> {
 
   ipcMain.handle(
     "post:search",
-    async (_event, source, searchTerm, fieldPath) => {
-      return await searchIndex(source, searchTerm, fieldPath);
+    async (_event, source, analysisPath, searchTerm, fieldPath) => {
+      return await searchIndex(source, analysisPath, searchTerm, fieldPath);
     }
   );
 
-  ipcMain.handle("post:top_values", async (_event, source) => {
-    return await topValues(source);
+  ipcMain.handle("post:top_values", async (_event, source, analysisPath) => {
+    return await topValues(source, analysisPath);
   });
 
   ipcMain.handle("post:open_directory", async (_event) => {

@@ -186,7 +186,7 @@ export const App: React.FC = () => {
           </PrismContainer>
         </Scroll>
       )}
-      {error && <div>{error}</div>}
+      {error && <Error multiline={error.includes("\n")}>{error}</Error>}
       {warning && <Warning>{warning}</Warning>}
       {drillTooltipVisible && (
         <DrillTooltip ref={setTooltipRef} {...getTooltipProps()}>
@@ -292,6 +292,18 @@ const Warning = styled.div`
   color: var(--vscode-statusBarItem-warningForeground);
   background-color: var(--vscode-statusBarItem-warningBackground);
   padding: 5px;
+`;
+
+interface ErrorProps {
+  multiline: boolean;
+}
+
+const Error = styled.div<ErrorProps>`
+  background-color: var(--vscode-inputValidation-errorBackground);
+  padding: 5px;
+  white-space: ${(props) => (props.multiline ? "pre" : "normal")};
+  font-family: ${(props) => (props.multiline ? "monospace" : "inherit")};
+  font-size: var(--vscode-editor-font-size);
 `;
 
 const ResultControlsBar = styled.div`

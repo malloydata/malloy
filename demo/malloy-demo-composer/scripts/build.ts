@@ -19,6 +19,12 @@ import svgrPlugin from "esbuild-plugin-svgr";
 import * as path from "path";
 import fs from "fs";
 
+export const targetDuckDBMap: Record<string, string> = {
+  "linux-x64": "duckdb-v0.4.0-node-v93-linux-x64.node",
+  "darwin-x64": "duckdb-v0.4.0-node-v93-darwin-x64.node",
+  "darwin-arm64": "duckdb-v0.4.0-node-v93-darwin-arm64.node",
+};
+
 export const buildDirectory = "build/";
 export const appDirectory = "app/";
 
@@ -42,7 +48,10 @@ export const commonAppConfig = (development = false): BuildOptions => {
   };
 };
 
-const commonElectronConfig = (development = false): BuildOptions => {
+const commonElectronConfig = (
+  development = false,
+  target?: string
+): BuildOptions => {
   return {
     entryPoints: ["./src/electron/main.ts", "./src/electron/preload.ts"],
     outdir: path.join(buildDirectory),
@@ -50,8 +59,8 @@ const commonElectronConfig = (development = false): BuildOptions => {
     sourcemap: development ? "inline" : false,
     bundle: true,
     platform: "node",
-    external: ["electron"],
-    plugins: [makeDuckdbNoNodePreGypPlugin(undefined), ignorePgNativePlugin],
+    external: ["electron", "./duckdb-native.node"],
+    plugins: [makeDuckdbNoNodePreGypPlugin(target), ignorePgNativePlugin],
   };
 };
 
@@ -138,9 +147,9 @@ const ignorePgNativePlugin = {
   },
 };
 
-async function doBuild() {
+export async function doBuild(target?: string): Promise<void> {
   //const development = process.env.NODE_ENV == "development";
-  const development = true;
+  const development = target == undefined;
 
   fs.rmSync(buildDirectory, { recursive: true, force: true });
   fs.mkdirSync(buildDirectory, { recursive: true });
@@ -148,7 +157,30 @@ async function doBuild() {
   copyDir("public", path.join(buildDirectory, appDirectory));
 
   await build(commonAppConfig(development)).catch(errorHandler);
-  await build(commonElectronConfig(development)).catch(errorHandler);
+  await build(commonElectronConfig(development, target)).catch(errorHandler);
+
+  if (target) {
+    const duckDBBinaryName = targetDuckDBMap[target];
+    if (duckDBBinaryName === undefined) {
+      throw new Error(`No DuckDB binary for ${target} is available`);
+    }
+    fs.copyFileSync(
+      path.join(
+        "..",
+        "..",
+        "third_party",
+        "github.com",
+        "duckdb",
+        "duckdb",
+        duckDBBinaryName
+      ),
+      path.join(buildDirectory, "duckdb-native.node")
+    );
+  }
 }
 
-doBuild();
+const args = process.argv.slice(1);
+if (args[0].endsWith("build")) {
+  const target = args[1];
+  doBuild(target);
+}

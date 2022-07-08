@@ -51,3 +51,4 @@ gems/
 .tmp/
 logfile
 .s.PGSQL.5432.lock
+demo/malloy-demo-composer/env

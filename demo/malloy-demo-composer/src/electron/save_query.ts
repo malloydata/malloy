@@ -14,8 +14,15 @@
 import { QueryWriter } from "../core/query";
 import { Analysis } from "../types";
 import { promises as fs } from "fs";
-import { RUNTIME } from "./runtime";
-import { FieldDef, Field, TurtleDef, FieldTypeDef } from "@malloydata/malloy";
+import {
+  FieldDef,
+  Field,
+  TurtleDef,
+  FieldTypeDef,
+  Runtime,
+} from "@malloydata/malloy";
+import { CONNECTION_MANAGER } from "./connections";
+import { URL_READER } from "./urls";
 
 function codeBefore(
   code: string,
@@ -62,7 +69,11 @@ export async function saveField(
   name: string,
   analysis: Analysis
 ): Promise<Analysis> {
-  const model = await RUNTIME.getModel(analysis.malloy);
+  const connections = CONNECTION_MANAGER.getConnectionLookup(
+    new URL("file://" + analysis.fullPath)
+  );
+  const runtime = new Runtime(URL_READER, connections);
+  const model = await runtime.getModel(analysis.malloy);
   const source = model._modelDef.contents[analysis.sourceName];
   if (source.type !== "struct") {
     throw new Error("Wrong type for source.");
@@ -105,7 +116,7 @@ export async function saveField(
   if (analysis.fullPath) {
     await fs.writeFile(analysis.fullPath, newMalloy);
   }
-  const newModel = await RUNTIME.getModel(newMalloy);
+  const newModel = await runtime.getModel(newMalloy);
   return {
     ...analysis,
     malloy: newMalloy,

@@ -16,7 +16,6 @@ import * as vscode from "vscode";
 import {
   Explore,
   Runtime,
-  URL,
   JoinRelationship,
   Field,
   QueryField,
@@ -113,11 +112,14 @@ export class SchemaProvider
 async function getStructs(
   document: vscode.TextDocument
 ): Promise<Explore[] | undefined> {
-  const uri = URL.fromString("file://" + document.uri.fsPath);
+  const url = new URL("file://" + document.uri.fsPath);
   const files = new VSCodeURLReader();
   try {
-    const runtime = new Runtime(files, CONNECTION_MANAGER.connections);
-    const model = await runtime.getModel(uri);
+    const runtime = new Runtime(
+      files,
+      CONNECTION_MANAGER.getConnectionLookup(url)
+    );
+    const model = await runtime.getModel(url);
 
     return Object.values(model.explores).sort(exploresByName);
   } catch (error) {
