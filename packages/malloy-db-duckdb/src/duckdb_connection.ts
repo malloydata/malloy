@@ -131,12 +131,8 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
     const statements = sql.split("-- hack: split on this");
 
     while (statements.length > 1) {
-      try {
-        await this.runDuckDBQuery(statements[0]);
-        statements.unshift();
-      } catch (e) {
-        /* Do nothing */
-      }
+      await this.runDuckDBQuery(statements[0]);
+      statements.shift();
     }
 
     const retVal = await this.runDuckDBQuery(statements[0]);
