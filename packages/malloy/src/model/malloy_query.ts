@@ -101,13 +101,17 @@ class StageWriter {
     return this.getName(this.withs.length - 1);
   }
 
-  addUDF(stageWriter: StageWriter, dialect: Dialect): string {
+  addUDF(
+    stageWriter: StageWriter,
+    dialect: Dialect,
+    structDef: StructDef
+  ): string {
     // eslint-disable-next-line prefer-const
     let { sql, lastStageName } = stageWriter.combineStages(true);
     if (lastStageName === undefined) {
       throw new Error("Internal Error: no stage to combine");
     }
-    sql += dialect.sqlCreateFunctionCombineLastStage(lastStageName);
+    sql += dialect.sqlCreateFunctionCombineLastStage(lastStageName, structDef);
 
     const id = `${dialect.udfPrefix}${this.root().udfs.length}`;
     sql = dialect.sqlCreateFunction(id, sql);
@@ -2398,13 +2402,17 @@ class QueryQuery extends QueryField {
 
     // If the turtle is a pipeline, generate a UDF to compute it.
     const newStageWriter = new StageWriter(stageWriter);
-    const { hasPipeline } = this.generateTurtlePipelineSQL(
+    const { hasPipeline, structDef } = this.generateTurtlePipelineSQL(
       resultStruct,
       newStageWriter
     );
     let udfName;
     if (hasPipeline) {
-      udfName = stageWriter.addUDF(newStageWriter, this.parent.dialect);
+      udfName = stageWriter.addUDF(
+        newStageWriter,
+        this.parent.dialect,
+        structDef
+      );
     }
 
     // calculate the ordering.

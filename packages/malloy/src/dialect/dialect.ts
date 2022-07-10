@@ -19,7 +19,7 @@ import {
   DialectFragment,
   TimeValue,
 } from "..";
-import { Expr, Sampling, TypecastFragment } from "../model";
+import { Expr, Sampling, StructDef, TypecastFragment } from "../model";
 
 interface DialectField {
   type: string;
@@ -103,7 +103,10 @@ export abstract class Dialect {
 
   abstract sqlCreateFunction(id: string, funcText: string): string;
 
-  abstract sqlCreateFunctionCombineLastStage(lastStageName: string): string;
+  abstract sqlCreateFunctionCombineLastStage(
+    lastStageName: string,
+    structDef: StructDef
+  ): string;
   abstract sqlCreateTableAsSelect(tableName: string, sql: string): string;
 
   abstract sqlSelectAliasAsStruct(
