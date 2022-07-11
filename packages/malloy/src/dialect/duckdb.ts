@@ -201,13 +201,6 @@ export class DuckDBDialect extends Dialect {
     return `MAX(CASE WHEN group_set=0 THEN ${name}__0 END) as ${sqlName}`;
   }
 
-  // // we should remov this code when https://github.com/duckdb/duckdb/issues/3544 is fixed.
-  // sqlFinalStage(lastStageName: string, fields: string[]): string {
-  //   return `SELECT to_json(list(row(${fields.join(
-  //     ", "
-  //   )})))::VARCHAR as results FROM ${lastStageName} AS finalStage`;
-  // }
-
   sqlCoaleseMeasuresInline(
     groupSet: number,
     fieldList: DialectFieldList
@@ -279,9 +272,9 @@ export class DuckDBDialect extends Dialect {
     lastStageName: string,
     structDef: StructDef
   ): string {
-    return `SELECT ROW(${structDef.fields
+    return `SELECT LIST(ROW(${structDef.fields
       .map((fieldDef) => this.sqlMaybeQuoteIdentifier(getIdentifier(fieldDef)))
-      .join(",")}) FROM ${lastStageName}\n`;
+      .join(",")})) FROM ${lastStageName}\n`;
   }
 
   sqlSelectAliasAsStruct(alias: string, physicalFieldNames: string[]): string {
