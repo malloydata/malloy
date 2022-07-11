@@ -2746,7 +2746,9 @@ class DataTimestamp extends ScalarData<Date> {
 
   public get value(): Date {
     // TODO properly map the data from BQ/Postgres types
-    if (typeof this._value !== "string") {
+    if (this._value instanceof Date) {
+      return this._value;
+    } else if (typeof this._value !== "string") {
       return new Date((this._value as unknown as { value: string }).value);
     } else {
       return new Date(super.value);
@@ -2768,7 +2770,9 @@ class DataDate extends ScalarData<Date> {
 
   public get value(): Date {
     // TODO properly map the data from BQ/Postgres types
-    if (typeof this._value !== "string") {
+    if (this._value instanceof Date) {
+      return this._value;
+    } else if (typeof this._value !== "string") {
       return new Date((this._value as unknown as { value: string }).value);
     } else {
       return new Date(super.value);
