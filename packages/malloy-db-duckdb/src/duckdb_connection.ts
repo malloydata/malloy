@@ -54,7 +54,7 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
   ) {
     this.database = new Database(
       databasePath,
-      databasePath === ":memory:" ? OPEN_READWRITE : OPEN_READONLY,
+      OPEN_READWRITE, // databasePath === ":memory:" ? OPEN_READWRITE : OPEN_READONLY,
       (err) => {
         if (err) {
           return console.error(err);
