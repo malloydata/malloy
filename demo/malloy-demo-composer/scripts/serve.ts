@@ -50,7 +50,7 @@ async function doServe() {
             const url = new URL(req.url, `http://${req.headers.host}`);
             if (url.pathname.startsWith("/packages")) {
               res.writeHead(200, { "Content-Type": "text/html" });
-              res.end(fs.readFileSync(path.join('../..', url.pathname)));
+              res.end(fs.readFileSync(path.join("../..", url.pathname)));
               return;
             }
           }
