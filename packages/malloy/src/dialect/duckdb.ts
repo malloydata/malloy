@@ -167,7 +167,7 @@ export class DuckDBDialect extends Dialect {
   }
 
   sqlAnyValue(groupSet: number, fieldName: string): string {
-    return `MAX(${fieldName})`;
+    return `FIRST(${fieldName}) FILTER (WHERE ${fieldName} IS NOT NULL)`;
   }
 
   mapFields(fieldList: DialectFieldList): string {
@@ -198,7 +198,7 @@ export class DuckDBDialect extends Dialect {
   }
 
   sqlAnyValueLastTurtle(name: string, sqlName: string): string {
-    return `FIRST(CASE WHEN group_set=0 THEN ${name}__0 END) as ${sqlName}`;
+    return `MAX(CASE WHEN group_set=0 THEN ${name}__0 END) as ${sqlName}`;
   }
 
   // // we should remov this code when https://github.com/duckdb/duckdb/issues/3544 is fixed.
