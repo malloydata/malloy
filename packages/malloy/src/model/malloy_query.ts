@@ -2022,7 +2022,7 @@ class QueryQuery extends QueryField {
       }
     }
     if (o.length > 0) {
-      s = `ORDER BY ${o.join(",")}\n`;
+      s = this.parent.dialect.sqlOrderBy(o) + `\n`;
     }
     return s;
   }
@@ -2448,7 +2448,7 @@ class QueryQuery extends QueryField {
     }
 
     if (obSQL.length > 0) {
-      orderBy = ` ORDER BY ${obSQL.join(",")}`;
+      orderBy = " " + this.parent.dialect.sqlOrderBy(obSQL);
     }
 
     for (const [name, field] of resultStruct.allFields) {

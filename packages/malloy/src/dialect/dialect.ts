@@ -186,4 +186,8 @@ export abstract class Dialect {
     }
     return tableSQL;
   }
+
+  sqlOrderBy(orderTerms: string[]): string {
+    return `ORDER BY ${orderTerms.join(",")}`;
+  }
 }

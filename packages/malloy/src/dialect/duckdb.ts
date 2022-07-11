@@ -427,4 +427,8 @@ export class DuckDBDialect extends Dialect {
     }
     return tableSQL;
   }
+
+  sqlOrderBy(orderTerms: string[]): string {
+    return `ORDER BY ${orderTerms.map((t) => `${t} NULLS LAST`).join(",")}`;
+  }
 }
