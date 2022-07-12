@@ -385,6 +385,30 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.path(0, "fun", 0, "t1").value).toBe(52);
   });
 
+  it(`Multi value to udf group by - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      source: f is  table('malloytest.state_facts') {
+        query: fun is {
+          group_by: one is 1
+          aggregate: t is count()
+        }
+        -> {
+          group_by: t1 is t+1
+        }
+      }
+      query: f-> {
+        nest: fun
+      }
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    // console.log(result.data.toObject());
+    expect(result.data.path(0, "fun", 0, "t1").value).toBe(52);
+  });
+
   it(`sql_block - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
