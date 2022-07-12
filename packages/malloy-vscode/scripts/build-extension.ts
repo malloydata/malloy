@@ -16,7 +16,7 @@ import fs from "fs";
 import { build, Plugin } from "esbuild";
 import { nativeNodeModulesPlugin } from "../../../third_party/github.com/evanw/esbuild/native-modules-plugin";
 import * as path from "path";
-import { execSync } from "child_process";
+import { exec, execSync } from "child_process";
 import { noNodeModulesSourceMaps } from "../../../third_party/github.com/evanw/esbuild/no-node-modules-sourcemaps";
 import svgrPlugin from "esbuild-plugin-svgr";
 
@@ -43,9 +43,9 @@ export const targetKeytarMap: BinaryTargetMap = {
 };
 
 export const targetDuckDBMap: Partial<BinaryTargetMap> = {
-  "linux-x64": "duckdb-v0.4.0-node-v93-linux-x64.node",
-  "darwin-x64": "duckdb-v0.4.0-node-v93-darwin-x64.node",
   "darwin-arm64": "duckdb-v0.4.0-node-v93-darwin-arm64.node",
+  "darwin-x64": "duckdb-v0.4.0-node-v93-darwin-x64.node",
+  "linux-x64": "duckdb-v0.4.0-node-v93-linux-x64.node",
 };
 
 export const outDir = "dist/";
@@ -75,14 +75,14 @@ const keytarReplacerPlugin: Plugin = {
   },
 };
 
-function makeDuckdbNoNodePreGypPlugin(target: Target | undefined) {
+function makeDuckdbNoNodePreGypPlugin(target: Target | undefined): Plugin {
   const localPath = require.resolve("duckdb/lib/binding/duckdb.node");
   const isDuckDBAvailable =
     target === undefined || targetDuckDBMap[target] !== undefined;
   return {
     name: "duckdbNoNodePreGypPlugin",
-    setup(build: any) {
-      build.onResolve({ filter: /duckdb-binding\.js/ }, (args: any) => {
+    setup(build) {
+      build.onResolve({ filter: /duckdb-binding\.js/ }, (args) => {
         return {
           path: args.path,
           namespace: "duckdb-no-node-pre-gyp-plugin",
@@ -93,7 +93,7 @@ function makeDuckdbNoNodePreGypPlugin(target: Target | undefined) {
           filter: /duckdb-binding\.js/,
           namespace: "duckdb-no-node-pre-gyp-plugin",
         },
-        (_args: any) => {
+        (_args) => {
           return {
             contents: `
               var path = require("path");
@@ -113,7 +113,7 @@ function makeDuckdbNoNodePreGypPlugin(target: Target | undefined) {
           };
         }
       );
-      build.onResolve({ filter: /duckdb_availability/ }, (args: any) => {
+      build.onResolve({ filter: /duckdb_availability/ }, (args) => {
         return {
           path: args.path,
           namespace: "duckdb-no-node-pre-gyp-plugin",
@@ -124,7 +124,7 @@ function makeDuckdbNoNodePreGypPlugin(target: Target | undefined) {
           filter: /duckdb_availability/,
           namespace: "duckdb-no-node-pre-gyp-plugin",
         },
-        (args: any) => {
+        (_args) => {
           return {
             contents: `
               export const isDuckDBAvailable = ${isDuckDBAvailable};
@@ -134,7 +134,7 @@ function makeDuckdbNoNodePreGypPlugin(target: Target | undefined) {
         }
       );
       if (!isDuckDBAvailable) {
-        build.onResolve({ filter: /^duckdb$/ }, (args: any) => {
+        build.onResolve({ filter: /^duckdb$/ }, (args) => {
           return {
             path: args.path,
             namespace: "duckdb-no-node-pre-gyp-plugin",
@@ -142,7 +142,7 @@ function makeDuckdbNoNodePreGypPlugin(target: Target | undefined) {
         });
         build.onLoad(
           { filter: /^duckdb$/, namespace: "duckdb-no-node-pre-gyp-plugin" },
-          (args: any) => {
+          (_args) => {
             return {
               contents: `
               module.exports = {};
@@ -173,13 +173,22 @@ export async function doBuild(target?: Target): Promise<void> {
       "Third party notices are not produced during development builds to speed up the build."
     );
   } else {
-    const licenseFile = fs.createWriteStream(licenseFilePath);
-    licenseFile.on("open", () => {
-      execSync("yarn licenses generate-disclaimer --prod", {
-        stdio: ["ignore", licenseFile, licenseFile],
+    await new Promise((resolve, reject) => {
+      const licenseFile = fs.createWriteStream(licenseFilePath);
+      licenseFile.on("open", () => {
+        exec("yarn licenses generate-disclaimer --prod", (error, stdio) => {
+          if (error) {
+            return reject(error);
+          }
+          licenseFile.write(stdio);
+          licenseFile.close();
+          resolve(licenseFile);
+        });
+      });
+      licenseFile.on("error", (err) => {
+        reject(err);
       });
     });
-    licenseFile.close();
   }
 
   fs.writeFileSync(
