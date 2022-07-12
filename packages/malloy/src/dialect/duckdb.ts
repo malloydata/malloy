@@ -213,8 +213,7 @@ export class DuckDBDialect extends Dialect {
       .map((f) => `${f.sqlOutputName}: NULL`)
       .join(", ");
 
-    return `COALESCE(FIRST(CASE WHEN group_set=${groupSet} THEN {${fields}} END), {${nullValues}})`;
-    //return `{${fields}}`;
+    return `COALESCE(FIRST({${fields}}) FILTER(WHERE group_set=${groupSet}), {${nullValues}})`;
   }
 
   sqlUnnestAlias(

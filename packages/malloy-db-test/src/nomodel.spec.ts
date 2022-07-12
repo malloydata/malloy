@@ -339,27 +339,27 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.resultExplore.limit).toBe(3);
   });
 
-  // it(`single value to udf - ${databaseName}`, async () => {
-  //   const result = await runtime
-  //     .loadQuery(
-  //       `
-  //     source: f is  table('malloytest.state_facts') {
-  //       query: fun is {
-  //         aggregate: t is count()
-  //       }
-  //       -> {
-  //         project: t1 is t+1
-  //       }
-  //     }
-  //     query: f-> {
-  //       nest: fun
-  //     }
-  //     `
-  //     )
-  //     .run();
-  //   // console.log(result.sql);
-  //   expect(result.data.path(0, "fun", 0, "t1").value).toBe(52);
-  // });
+  it(`single value to udf - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      source: f is  table('malloytest.state_facts') {
+        query: fun is {
+          aggregate: t is count()
+        }
+        -> {
+          project: t1 is t+1
+        }
+      }
+      query: f-> {
+        nest: fun
+      }
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    expect(result.data.path(0, "fun", 0, "t1").value).toBe(52);
+  });
 
   it(`Multi value to udf - ${databaseName}`, async () => {
     const result = await runtime
@@ -381,6 +381,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     // console.log(result.sql);
+    // console.log(result.data.toObject());
     expect(result.data.path(0, "fun", 0, "t1").value).toBe(52);
   });
 
