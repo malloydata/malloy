@@ -1745,7 +1745,8 @@ class QueryQuery extends QueryField {
       if (fi instanceof FieldInstanceResult) {
         const { structDef } = this.generateTurtlePipelineSQL(
           fi,
-          new StageWriter(undefined)
+          new StageWriter(undefined),
+          "<nosource>"
         );
 
         // LTNOTE: This is probably broken now.  Need to look at the last stage
@@ -2400,21 +2401,6 @@ class QueryQuery extends QueryField {
     let orderBy = "";
     const limit: number | undefined = resultStruct.firstSegment.limit;
 
-    // If the turtle is a pipeline, generate a UDF to compute it.
-    const newStageWriter = new StageWriter(stageWriter);
-    const { hasPipeline, structDef } = this.generateTurtlePipelineSQL(
-      resultStruct,
-      newStageWriter
-    );
-    let udfName;
-    if (hasPipeline) {
-      udfName = stageWriter.addUDF(
-        newStageWriter,
-        this.parent.dialect,
-        structDef
-      );
-    }
-
     // calculate the ordering.
     const obSQL = [];
     let orderingField;
@@ -2510,13 +2496,49 @@ class QueryQuery extends QueryField {
         limit
       );
     }
-    return udfName ? `${udfName}(${ret})` : ret;
+
+    // If the turtle is a pipeline, generate a UDF to compute it.
+    const newStageWriter = new StageWriter(stageWriter);
+    const { hasPipeline, structDef } = this.generateTurtlePipelineSQL(
+      resultStruct,
+      newStageWriter,
+      ret
+    );
+
+    if (hasPipeline) {
+      if (this.parent.dialect.supportUnnestArrayAgg) {
+        const { sql, lastStageName } = newStageWriter.combineStages(true);
+        if (lastStageName === undefined) {
+          throw new Error("Internal Error: no stage to combine");
+        }
+        const fullSQL =
+          sql +
+          this.parent.dialect.sqlCreateFunctionCombineLastStage(
+            lastStageName,
+            structDef
+          );
+        ret = `(${fullSQL})`;
+      } else {
+        const udfName = stageWriter.addUDF(
+          newStageWriter,
+          this.parent.dialect,
+          structDef
+        );
+        ret = `${udfName}(${ret})`;
+      }
+    }
+
+    return ret;
     // return `${aggregateFunction}(CASE WHEN group_set=${
     //   resultStruct.groupSet
     // } THEN STRUCT(${fieldsSQL.join(",\n")}) END${tailSQL})`;
   }
 
-  generateTurtlePipelineSQL(fi: FieldInstanceResult, stageWriter: StageWriter) {
+  generateTurtlePipelineSQL(
+    fi: FieldInstanceResult,
+    stageWriter: StageWriter,
+    sourceSQLExpression: string
+  ) {
     let structDef = this.getResultStructDef(fi, false);
     const repeatedResultType = fi.getRepeatedResultType();
     const hasPipeline = fi.turtleDef.pipeline.length > 1;
@@ -2529,7 +2551,8 @@ class QueryQuery extends QueryField {
         pipeline,
       };
       structDef.name = this.parent.dialect.sqlUnnestPipelineHead(
-        repeatedResultType === "inline_all_numbers"
+        repeatedResultType === "inline_all_numbers",
+        sourceSQLExpression
       );
       structDef.structSource = { type: "sql", method: "nested" };
       const qs = new QueryStruct(structDef, {

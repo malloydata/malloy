@@ -49,6 +49,7 @@ export abstract class Dialect {
   abstract unnestWithNumbers: boolean;
   protected abstract functionInfo: Record<string, FunctionInfo>;
   abstract defaultSampling: Sampling;
+  abstract supportUnnestArrayAgg: boolean; // won't need UDFs for nested pipelines
 
   // return a quoted string for use as a table path.
   abstract quoteTablePath(tablePath: string): string;
@@ -99,7 +100,10 @@ export abstract class Dialect {
     isArray: boolean
   ): string;
 
-  abstract sqlUnnestPipelineHead(isSingleton: boolean): string;
+  abstract sqlUnnestPipelineHead(
+    isSingleton: boolean,
+    sourceSQLExpression: string
+  ): string;
 
   abstract sqlCreateFunction(id: string, funcText: string): string;
 

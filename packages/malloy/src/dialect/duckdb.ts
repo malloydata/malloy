@@ -150,6 +150,7 @@ export class DuckDBDialect extends Dialect {
   supportsSumDistinctFunction = true;
   unnestWithNumbers = true;
   defaultSampling = { rows: 50000 };
+  supportUnnestArrayAgg = true;
 
   functionInfo: Record<string, FunctionInfo> = {};
 
@@ -254,8 +255,11 @@ export class DuckDBDialect extends Dialect {
     }
   }
 
-  sqlUnnestPipelineHead(isSingleton: boolean): string {
-    let p = "_param";
+  sqlUnnestPipelineHead(
+    isSingleton: boolean,
+    sourceSQLExpression: string
+  ): string {
+    let p = sourceSQLExpression;
     if (isSingleton) {
       p = `[${p}]`;
     }
