@@ -82,8 +82,8 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
   // @bporterfield need help writing this. it needs to wait if a setup is in process.
   protected async setup(): Promise<void> {
     if (!this.isSetup) {
-      await this.runDuckDBQuery("INSTALL 'json'");
-      await this.runDuckDBQuery("LOAD 'json'");
+      // await this.runDuckDBQuery("INSTALL 'json'");
+      // await this.runDuckDBQuery("LOAD 'json'");
       //   await this.runDuckDBQuery("DROP MACRO sum_distinct");
       //   try {
       //     await this.runDuckDBQuery(
