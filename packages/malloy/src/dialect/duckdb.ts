@@ -15,16 +15,19 @@ import {
   DateUnit,
   Expr,
   ExtractUnit,
+  getIdentifier,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
   mkExpr,
   Sampling,
+  StructDef,
   TimeFieldType,
   TimestampUnit,
   TimeValue,
   TypecastFragment,
 } from "../model";
+import { indent } from "../model/utils";
 import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
@@ -147,6 +150,7 @@ export class DuckDBDialect extends Dialect {
   supportsSumDistinctFunction = true;
   unnestWithNumbers = true;
   defaultSampling = { rows: 50000 };
+  supportUnnestArrayAgg = true;
 
   functionInfo: Record<string, FunctionInfo> = {};
 
@@ -164,7 +168,7 @@ export class DuckDBDialect extends Dialect {
   }
 
   sqlAnyValue(groupSet: number, fieldName: string): string {
-    return `MAX(${fieldName})`;
+    return `FIRST(${fieldName}) FILTER (WHERE ${fieldName} IS NOT NULL)`;
   }
 
   mapFields(fieldList: DialectFieldList): string {
@@ -195,15 +199,8 @@ export class DuckDBDialect extends Dialect {
   }
 
   sqlAnyValueLastTurtle(name: string, sqlName: string): string {
-    return `(LIST(${name}__0) FILTER (WHERE group_set=0 AND ${name}__0 IS NOT NULL))[1] as ${sqlName}`;
+    return `MAX(CASE WHEN group_set=0 THEN ${name}__0 END) as ${sqlName}`;
   }
-
-  // // we should remov this code when https://github.com/duckdb/duckdb/issues/3544 is fixed.
-  // sqlFinalStage(lastStageName: string, fields: string[]): string {
-  //   return `SELECT to_json(list(row(${fields.join(
-  //     ", "
-  //   )})))::VARCHAR as results FROM ${lastStageName} AS finalStage`;
-  // }
 
   sqlCoaleseMeasuresInline(
     groupSet: number,
@@ -212,12 +209,11 @@ export class DuckDBDialect extends Dialect {
     const fields = fieldList
       .map((f) => `${f.sqlOutputName}: ${f.sqlExpression} `)
       .join(", ");
-    const _nullValues = fieldList
-      .map((f) => `NULL as ${f.sqlOutputName}`)
+    const nullValues = fieldList
+      .map((f) => `${f.sqlOutputName}: NULL`)
       .join(", ");
 
-    // return `COALESCE(ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}) END), STRUCT(${nullValues}))`;
-    return `{${fields}}`;
+    return `COALESCE(FIRST({${fields}}) FILTER(WHERE group_set=${groupSet}), {${nullValues}})`;
   }
 
   sqlUnnestAlias(
@@ -258,19 +254,30 @@ export class DuckDBDialect extends Dialect {
     }
   }
 
-  sqlUnnestPipelineHead(): string {
-    return "(SELECT UNNEST(_param) as base)";
+  sqlUnnestPipelineHead(
+    isSingleton: boolean,
+    sourceSQLExpression: string
+  ): string {
+    let p = sourceSQLExpression;
+    if (isSingleton) {
+      p = `[${p}]`;
+    }
+    return `(SELECT UNNEST(${p}) as base)`;
   }
 
-  sqlCreateFunction(_id: string, _funcText: string): string {
-    return "FORCE FAIL";
-    //return `DROP MACRO ${id}; \n${hackSplitComment}\n CREATE MACRO ${id}(_param) AS (\n${indent(
-    //   funcText
-    // )}\n);\n${hackSplitComment}\n`;
+  sqlCreateFunction(id: string, funcText: string): string {
+    return `DROP MACRO IF EXISTS ${id}; \n${hackSplitComment}\n CREATE MACRO ${id}(_param) AS (\n${indent(
+      funcText
+    )}\n);\n${hackSplitComment}\n`;
   }
 
-  sqlCreateFunctionCombineLastStage(lastStageName: string): string {
-    return `SELECT * FROM ${lastStageName}\n`;
+  sqlCreateFunctionCombineLastStage(
+    lastStageName: string,
+    structDef: StructDef
+  ): string {
+    return `SELECT LIST(ROW(${structDef.fields
+      .map((fieldDef) => this.sqlMaybeQuoteIdentifier(getIdentifier(fieldDef)))
+      .join(",")})) FROM ${lastStageName}\n`;
   }
 
   sqlSelectAliasAsStruct(alias: string, physicalFieldNames: string[]): string {
@@ -415,5 +422,9 @@ export class DuckDBDialect extends Dialect {
       }
     }
     return tableSQL;
+  }
+
+  sqlOrderBy(orderTerms: string[]): string {
+    return `ORDER BY ${orderTerms.map((t) => `${t} NULLS LAST`).join(",")}`;
   }
 }

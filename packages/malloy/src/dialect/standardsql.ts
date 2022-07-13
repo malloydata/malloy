@@ -57,6 +57,7 @@ export class StandardSQLDialect extends Dialect {
   supportsSumDistinctFunction = false;
   unnestWithNumbers = false;
   defaultSampling = { enable: false };
+  supportUnnestArrayAgg = false;
 
   functionInfo: Record<string, FunctionInfo> = {
     timestamp_seconds: { returnType: "timestamp" },

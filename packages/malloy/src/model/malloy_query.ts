@@ -101,13 +101,17 @@ class StageWriter {
     return this.getName(this.withs.length - 1);
   }
 
-  addUDF(stageWriter: StageWriter, dialect: Dialect): string {
+  addUDF(
+    stageWriter: StageWriter,
+    dialect: Dialect,
+    structDef: StructDef
+  ): string {
     // eslint-disable-next-line prefer-const
     let { sql, lastStageName } = stageWriter.combineStages(true);
     if (lastStageName === undefined) {
       throw new Error("Internal Error: no stage to combine");
     }
-    sql += dialect.sqlCreateFunctionCombineLastStage(lastStageName);
+    sql += dialect.sqlCreateFunctionCombineLastStage(lastStageName, structDef);
 
     const id = `${dialect.udfPrefix}${this.root().udfs.length}`;
     sql = dialect.sqlCreateFunction(id, sql);
@@ -1741,7 +1745,8 @@ class QueryQuery extends QueryField {
       if (fi instanceof FieldInstanceResult) {
         const { structDef } = this.generateTurtlePipelineSQL(
           fi,
-          new StageWriter(undefined)
+          new StageWriter(undefined),
+          "<nosource>"
         );
 
         // LTNOTE: This is probably broken now.  Need to look at the last stage
@@ -2018,7 +2023,7 @@ class QueryQuery extends QueryField {
       }
     }
     if (o.length > 0) {
-      s = `ORDER BY ${o.join(",")}\n`;
+      s = this.parent.dialect.sqlOrderBy(o) + `\n`;
     }
     return s;
   }
@@ -2396,17 +2401,6 @@ class QueryQuery extends QueryField {
     let orderBy = "";
     const limit: number | undefined = resultStruct.firstSegment.limit;
 
-    // If the turtle is a pipeline, generate a UDF to compute it.
-    const newStageWriter = new StageWriter(stageWriter);
-    const { hasPipeline } = this.generateTurtlePipelineSQL(
-      resultStruct,
-      newStageWriter
-    );
-    let udfName;
-    if (hasPipeline) {
-      udfName = stageWriter.addUDF(newStageWriter, this.parent.dialect);
-    }
-
     // calculate the ordering.
     const obSQL = [];
     let orderingField;
@@ -2440,7 +2434,7 @@ class QueryQuery extends QueryField {
     }
 
     if (obSQL.length > 0) {
-      orderBy = ` ORDER BY ${obSQL.join(",")}`;
+      orderBy = " " + this.parent.dialect.sqlOrderBy(obSQL);
     }
 
     for (const [name, field] of resultStruct.allFields) {
@@ -2502,13 +2496,49 @@ class QueryQuery extends QueryField {
         limit
       );
     }
-    return udfName ? `${udfName}(${ret})` : ret;
+
+    // If the turtle is a pipeline, generate a UDF to compute it.
+    const newStageWriter = new StageWriter(stageWriter);
+    const { hasPipeline, structDef } = this.generateTurtlePipelineSQL(
+      resultStruct,
+      newStageWriter,
+      ret
+    );
+
+    if (hasPipeline) {
+      if (this.parent.dialect.supportUnnestArrayAgg) {
+        const { sql, lastStageName } = newStageWriter.combineStages(true);
+        if (lastStageName === undefined) {
+          throw new Error("Internal Error: no stage to combine");
+        }
+        const fullSQL =
+          sql +
+          this.parent.dialect.sqlCreateFunctionCombineLastStage(
+            lastStageName,
+            structDef
+          );
+        ret = `(${fullSQL})`;
+      } else {
+        const udfName = stageWriter.addUDF(
+          newStageWriter,
+          this.parent.dialect,
+          structDef
+        );
+        ret = `${udfName}(${ret})`;
+      }
+    }
+
+    return ret;
     // return `${aggregateFunction}(CASE WHEN group_set=${
     //   resultStruct.groupSet
     // } THEN STRUCT(${fieldsSQL.join(",\n")}) END${tailSQL})`;
   }
 
-  generateTurtlePipelineSQL(fi: FieldInstanceResult, stageWriter: StageWriter) {
+  generateTurtlePipelineSQL(
+    fi: FieldInstanceResult,
+    stageWriter: StageWriter,
+    sourceSQLExpression: string
+  ) {
     let structDef = this.getResultStructDef(fi, false);
     const repeatedResultType = fi.getRepeatedResultType();
     const hasPipeline = fi.turtleDef.pipeline.length > 1;
@@ -2521,7 +2551,8 @@ class QueryQuery extends QueryField {
         pipeline,
       };
       structDef.name = this.parent.dialect.sqlUnnestPipelineHead(
-        repeatedResultType === "inline_all_numbers"
+        repeatedResultType === "inline_all_numbers",
+        sourceSQLExpression
       );
       structDef.structSource = { type: "sql", method: "nested" };
       const qs = new QueryStruct(structDef, {
