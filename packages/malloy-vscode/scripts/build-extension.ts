@@ -20,6 +20,9 @@ import { exec, execSync } from "child_process";
 import { noNodeModulesSourceMaps } from "../../../third_party/github.com/evanw/esbuild/no-node-modules-sourcemaps";
 import svgrPlugin from "esbuild-plugin-svgr";
 
+import duckdbPackage from "@malloydata/db-duckdb/package.json";
+const DUCKDB_VERSION = duckdbPackage.dependencies.duckdb;
+
 export type Target =
   | "linux-x64"
   | "linux-arm64"
@@ -43,9 +46,9 @@ export const targetKeytarMap: BinaryTargetMap = {
 };
 
 export const targetDuckDBMap: Partial<BinaryTargetMap> = {
-  "darwin-arm64": "duckdb-v0.4.1-dev454.0-node-v93-darwin-arm64.node",
-  "darwin-x64": "duckdb-v0.4.1-dev454.0-node-v93-darwin-x64.node",
-  "linux-x64": "duckdb-v0.4.1-dev454.0-node-v93-linux-x64.node",
+  "darwin-arm64": `duckdb-v${DUCKDB_VERSION}-node-v93-darwin-arm64.node`,
+  "darwin-x64": `duckdb-v${DUCKDB_VERSION}-node-v93-darwin-x64.node`,
+  "linux-x64": `duckdb-v${DUCKDB_VERSION}-node-v93-linux-x64.node`,
 };
 
 export const outDir = "dist/";

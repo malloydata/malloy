@@ -19,10 +19,13 @@ import svgrPlugin from "esbuild-plugin-svgr";
 import * as path from "path";
 import fs from "fs";
 
+import duckdbPackage from "@malloydata/db-duckdb/package.json";
+const DUCKDB_VERSION = duckdbPackage.dependencies.duckdb;
+
 export const targetDuckDBMap: Record<string, string> = {
-  "darwin-arm64": "duckdb-v0.4.1-dev454.0-node-v93-darwin-arm64.node",
-  "darwin-x64": "duckdb-v0.4.1-dev454.0-node-v93-darwin-x64.node",
-  "linux-x64": "duckdb-v0.4.1-dev454.0-node-v93-linux-x64.node",
+  "darwin-arm64": `duckdb-v${DUCKDB_VERSION}-node-v93-darwin-arm64.node`,
+  "darwin-x64": `duckdb-v${DUCKDB_VERSION}-node-v93-darwin-x64.node`,
+  "linux-x64": `duckdb-v${DUCKDB_VERSION}-node-v93-linux-x64.node`,
 };
 
 export const buildDirectory = "build/";
