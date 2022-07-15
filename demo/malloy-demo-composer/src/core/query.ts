@@ -711,12 +711,11 @@ export class QueryWriter extends SourceUtils {
             ? "aggregate"
             : "group_by";
         const malloy: Fragment[] = [];
-        const newName = field.as === undefined ? "" : `${field.as} is `;
-        malloy.push(
-          `${this.maybeQuoteIdentifier(newName)}${this.maybeQuoteIdentifier(
-            field.name
-          )}`
-        );
+        const newNameIs =
+          field.as === undefined
+            ? ""
+            : `${this.maybeQuoteIdentifier(field.as)} is `;
+        malloy.push(`${newNameIs}${this.maybeQuoteIdentifier(field.name)}`);
         if (field.filterList && field.filterList.length > 0) {
           malloy.push(" {", INDENT, "where:");
           malloy.push(...this.getFiltersString(field.filterList || []));
