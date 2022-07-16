@@ -151,6 +151,7 @@ export class DuckDBDialect extends Dialect {
   unnestWithNumbers = true;
   defaultSampling = { rows: 50000 };
   supportUnnestArrayAgg = true;
+  supportsCTEinCoorelatedSubQueries = true;
 
   functionInfo: Record<string, FunctionInfo> = {};
 
