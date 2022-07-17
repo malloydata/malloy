@@ -73,15 +73,23 @@ function generateSQLStringLiteral(sourceString: string): string {
   return `'${sourceString}'`;
 }
 
+// Storage for SQL code for multi stage turtle pipelines that don't support UNNEST(ARRAY_AGG)
+interface OutputPipelinedSQL {
+  sqlFieldName: string;
+  pipelineSQL: string;
+}
+
 class StageWriter {
   withs: string[] = [];
   udfs: string[] = [];
   pdts: string[] = [];
   stagePrefix = "__stage";
   parent: StageWriter | undefined;
+  useCTE: boolean;
 
-  constructor(parent: StageWriter | undefined) {
+  constructor(useCTE = true, parent: StageWriter | undefined) {
     this.parent = parent;
+    this.useCTE = useCTE;
   }
 
   getName(id: number) {
@@ -97,8 +105,13 @@ class StageWriter {
   }
 
   addStage(sql: string): string {
-    this.withs.push(sql);
-    return this.getName(this.withs.length - 1);
+    if (this.useCTE) {
+      this.withs.push(sql);
+      return this.getName(this.withs.length - 1);
+    } else {
+      this.withs[0] = sql;
+      return indent(`\n(${sql})\n`);
+    }
   }
 
   addUDF(
@@ -133,6 +146,9 @@ class StageWriter {
     sql: string;
     lastStageName: string | undefined;
   } {
+    if (!this.useCTE) {
+      return { sql: this.withs[0], lastStageName: this.withs[0] };
+    }
     let lastStageName = this.getName(0);
     let prefix = `WITH `;
     let w = "";
@@ -160,6 +176,23 @@ class StageWriter {
     const pdts = this.pdts.join(`\n`);
     const sql = this.combineStages(false).sql;
     return udfs + pdts + sql + this.withs[lastStageNum];
+  }
+
+  generateCoorelatedSubQuery(dialect: Dialect, structDef: StructDef): string {
+    if (!this.useCTE) {
+      return dialect.sqlCreateFunctionCombineLastStage(
+        `(${this.withs[0]})`,
+        structDef
+      );
+    } else {
+      return (
+        this.combineStages(true).sql +
+        dialect.sqlCreateFunctionCombineLastStage(
+          this.getName(this.withs.length - 1),
+          structDef
+        )
+      );
+    }
   }
 }
 
@@ -1204,7 +1237,7 @@ export class Segment {
     const queryQueryQuery = QueryQuery.makeQuery(
       turtleDef,
       qs,
-      new StageWriter(undefined) // stage write indicates we want to get a result.
+      new StageWriter(true, undefined) // stage write indicates we want to get a result.
     );
     return queryQueryQuery.getResultStructDef();
   }
@@ -1217,6 +1250,7 @@ type StageOutputContext = {
   dimensionIndexes: number[]; // which indexes are dimensions
   fieldIndex: number;
   groupsAggregated: StageGroupMaping[]; // which groups were aggregated
+  outputPipelinedSQL: OutputPipelinedSQL[]; // secondary stages for turtles.
 };
 
 /** Query builder object. */
@@ -1745,7 +1779,7 @@ class QueryQuery extends QueryField {
       if (fi instanceof FieldInstanceResult) {
         const { structDef } = this.generateTurtlePipelineSQL(
           fi,
-          new StageWriter(undefined),
+          new StageWriter(true, undefined),
           "<nosource>"
         );
 
@@ -2077,6 +2111,29 @@ class QueryQuery extends QueryField {
     return this.resultStage;
   }
 
+  // This probably should be generated in a dialect independat way.
+  //  but for now, it is just googleSQL.
+  generatePipelinedStages(
+    outputPipelinedSQL: OutputPipelinedSQL[],
+    lastStageName: string,
+    stageWriter: StageWriter
+  ): string {
+    if (outputPipelinedSQL.length === 0) {
+      return lastStageName;
+    }
+    const pipelinesSQL = outputPipelinedSQL
+      .map(
+        (o) =>
+          `${o.pipelineSQL} as ${o.sqlFieldName}
+      `
+      )
+      .join(",\n");
+    return stageWriter.addStage(
+      `SELECT * replace (${pipelinesSQL}) FROM ${lastStageName}
+      `
+    );
+  }
+
   generateStage0Fields(
     resultSet: FieldInstanceResult,
     output: StageOutputContext,
@@ -2107,7 +2164,12 @@ class QueryQuery extends QueryField {
         if (fi.firstSegment.type === "reduce") {
           this.generateStage0Fields(fi, output, stageWriter);
         } else if (fi.firstSegment.type === "project") {
-          const s = this.generateTurtleSQL(fi, stageWriter);
+          const s = this.generateTurtleSQL(
+            fi,
+            stageWriter,
+            outputName,
+            output.outputPipelinedSQL
+          );
           output.sql.push(`${s} as ${outputName}`);
           output.fieldIndex++;
         }
@@ -2234,6 +2296,7 @@ class QueryQuery extends QueryField {
       fieldIndex: 2,
       sql: ["group_set"],
       groupsAggregated: [],
+      outputPipelinedSQL: [],
     };
     this.generateStage0Fields(this.rootResult, f, stageWriter);
 
@@ -2252,6 +2315,13 @@ class QueryQuery extends QueryField {
 
     // generate stages for havings and limits
     this.resultStage = this.generateSQLHavingLimit(stageWriter, resultStage);
+
+    this.resultStage = this.generatePipelinedStages(
+      f.outputPipelinedSQL,
+      this.resultStage,
+      stageWriter
+    );
+
     return this.resultStage;
   }
 
@@ -2288,7 +2358,12 @@ class QueryQuery extends QueryField {
         if (fi.depth > depth) {
           // ignore it, we've already dealt with it.
         } else if (fi.depth === depth) {
-          const s = this.generateTurtleSQL(fi, stageWriter);
+          const s = this.generateTurtleSQL(
+            fi,
+            stageWriter,
+            sqlFieldName,
+            output.outputPipelinedSQL
+          );
           output.groupsAggregated.push({
             fromGroup: fi.groupSet,
             toGroup: resultSet.groupSet,
@@ -2321,6 +2396,7 @@ class QueryQuery extends QueryField {
       fieldIndex: 2,
       sql: ["group_set"],
       groupsAggregated: [],
+      outputPipelinedSQL: [],
     };
     this.generateDepthNFields(depth, this.rootResult, f, stageWriter);
     s += indent(f.sql.join(",\n")) + "\n";
@@ -2329,6 +2405,13 @@ class QueryQuery extends QueryField {
       s += `GROUP BY ${f.dimensionIndexes.join(",")}\n`;
     }
     this.resultStage = stageWriter.addStage(s);
+
+    this.resultStage = this.generatePipelinedStages(
+      f.outputPipelinedSQL,
+      this.resultStage,
+      stageWriter
+    );
+
     return this.resultStage;
   }
 
@@ -2339,6 +2422,7 @@ class QueryQuery extends QueryField {
     let s = "SELECT\n";
     const fieldsSQL = [];
     let fieldIndex = 1;
+    const outputPipelinedSQL: OutputPipelinedSQL[] = [];
     const dimensionIndexes = [];
     for (const [name, fi] of this.rootResult.allFields) {
       const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
@@ -2360,7 +2444,12 @@ class QueryQuery extends QueryField {
       } else if (fi instanceof FieldInstanceResult) {
         if (fi.firstSegment.type === "reduce") {
           fieldsSQL.push(
-            `${this.generateTurtleSQL(fi, stageWriter)} as ${sqlName}`
+            `${this.generateTurtleSQL(
+              fi,
+              stageWriter,
+              sqlName,
+              outputPipelinedSQL
+            )} as ${sqlName}`
           );
           fieldIndex++;
         } else if (fi.firstSegment.type === "project") {
@@ -2389,12 +2478,20 @@ class QueryQuery extends QueryField {
     }
 
     this.resultStage = stageWriter.addStage(s);
+    this.resultStage = this.generatePipelinedStages(
+      outputPipelinedSQL,
+      this.resultStage,
+      stageWriter
+    );
+
     return this.resultStage;
   }
 
   generateTurtleSQL(
     resultStruct: FieldInstanceResult,
-    stageWriter: StageWriter
+    stageWriter: StageWriter,
+    sqlFieldName: string,
+    outputPipelinedSQL: OutputPipelinedSQL[]
   ): string {
     // let fieldsSQL: string[] = [];
     const dialectFieldList: DialectFieldList = [];
@@ -2498,33 +2595,30 @@ class QueryQuery extends QueryField {
     }
 
     // If the turtle is a pipeline, generate a UDF to compute it.
-    const newStageWriter = new StageWriter(stageWriter);
-    const { hasPipeline, structDef } = this.generateTurtlePipelineSQL(
+    const newStageWriter = new StageWriter(
+      this.parent.dialect.supportsCTEinCoorelatedSubQueries,
+      stageWriter
+    );
+    const { structDef, pipeOut } = this.generateTurtlePipelineSQL(
       resultStruct,
       newStageWriter,
-      ret
+      this.parent.dialect.supportUnnestArrayAgg ? ret : sqlFieldName
     );
 
-    if (hasPipeline) {
+    // if there was a pipeline.
+    if (pipeOut !== undefined) {
+      const sql = newStageWriter.generateCoorelatedSubQuery(
+        this.parent.dialect,
+        structDef
+      );
+
       if (this.parent.dialect.supportUnnestArrayAgg) {
-        const { sql, lastStageName } = newStageWriter.combineStages(true);
-        if (lastStageName === undefined) {
-          throw new Error("Internal Error: no stage to combine");
-        }
-        const fullSQL =
-          sql +
-          this.parent.dialect.sqlCreateFunctionCombineLastStage(
-            lastStageName,
-            structDef
-          );
-        ret = `(${fullSQL})`;
+        ret = `(${sql})`;
       } else {
-        const udfName = stageWriter.addUDF(
-          newStageWriter,
-          this.parent.dialect,
-          structDef
-        );
-        ret = `${udfName}(${ret})`;
+        outputPipelinedSQL.push({
+          sqlFieldName,
+          pipelineSQL: `(${sql})`,
+        });
       }
     }
 
@@ -2542,6 +2636,7 @@ class QueryQuery extends QueryField {
     let structDef = this.getResultStructDef(fi, false);
     const repeatedResultType = fi.getRepeatedResultType();
     const hasPipeline = fi.turtleDef.pipeline.length > 1;
+    let pipeOut;
     if (hasPipeline) {
       const pipeline: PipeSegment[] = [...fi.turtleDef.pipeline];
       pipeline.shift();
@@ -2559,11 +2654,14 @@ class QueryQuery extends QueryField {
         model: this.parent.getModel(),
       });
       const q = QueryQuery.makeQuery(newTurtle, qs, stageWriter);
-      const { outputStruct } = q.generateSQLFromPipeline(stageWriter);
+      pipeOut = q.generateSQLFromPipeline(stageWriter);
       // console.log(stageWriter.generateSQLStages());
-      structDef = outputStruct;
+      structDef = pipeOut.outputStruct;
     }
-    return { structDef, hasPipeline };
+    return {
+      structDef,
+      pipeOut,
+    };
   }
 
   generateComplexSQL(stageWriter: StageWriter): string {
@@ -2605,9 +2703,13 @@ class QueryQuery extends QueryField {
     if (this.fieldDef.pipeline.length > 1) {
       // console.log(pretty(outputStruct));
       const pipeline = [...this.fieldDef.pipeline];
+      let structDef: StructDef = {
+        ...outputStruct,
+        structSource: { type: "sql", method: "lastStage" },
+      };
       pipeline.shift();
       for (const transform of pipeline) {
-        const s = new QueryStruct(outputStruct, {
+        const s = new QueryStruct(structDef, {
           model: this.parent.getModel(),
         });
         const q = QueryQuery.makeQuery(
@@ -2618,6 +2720,10 @@ class QueryQuery extends QueryField {
         q.prepare(stageWriter);
         lastStageName = q.generateSQL(stageWriter);
         outputStruct = q.getResultStructDef();
+        structDef = {
+          ...outputStruct,
+          structSource: { type: "sql", method: "lastStage" },
+        };
       }
     }
     return { lastStageName, outputStruct };
@@ -3162,7 +3268,10 @@ class QueryStruct extends QueryNode {
         return this.dialect.quoteTablePath(tablePath);
       }
       case "sql":
-        if (this.fieldDef.structSource.method === "nested") {
+        if (
+          this.fieldDef.structSource.method === "nested" ||
+          this.fieldDef.structSource.method === "lastStage"
+        ) {
           return this.fieldDef.name;
         } else if (this.fieldDef.structSource.method === "subquery") {
           return `(${this.fieldDef.structSource.sqlBlock.select})`;
@@ -3182,7 +3291,7 @@ class QueryStruct extends QueryNode {
         // this is a hack for now.  Need some way to denote this table
         //  should be cached.
         if (name.includes("cache")) {
-          const dtStageWriter = new StageWriter(stageWriter);
+          const dtStageWriter = new StageWriter(true, stageWriter);
           this.model.loadQuery(this.fieldDef.structSource.query, dtStageWriter);
           return dtStageWriter.addPDT(name, this.dialect);
         } else {
@@ -3442,7 +3551,7 @@ export class QueryModel {
     const malloy = "";
 
     if (!stageWriter) {
-      stageWriter = new StageWriter(undefined);
+      stageWriter = new StageWriter(true, undefined);
     }
 
     const turtleDef: TurtleDefPlus = {
