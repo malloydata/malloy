@@ -2703,9 +2703,13 @@ class QueryQuery extends QueryField {
     if (this.fieldDef.pipeline.length > 1) {
       // console.log(pretty(outputStruct));
       const pipeline = [...this.fieldDef.pipeline];
+      const structDef: StructDef = {
+        ...outputStruct,
+        structSource: { type: "sql", method: "nested" },
+      };
       pipeline.shift();
       for (const transform of pipeline) {
-        const s = new QueryStruct(outputStruct, {
+        const s = new QueryStruct(structDef, {
           model: this.parent.getModel(),
         });
         const q = QueryQuery.makeQuery(
