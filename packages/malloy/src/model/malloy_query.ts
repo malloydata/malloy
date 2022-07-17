@@ -177,6 +177,23 @@ class StageWriter {
     const sql = this.combineStages(false).sql;
     return udfs + pdts + sql + this.withs[lastStageNum];
   }
+
+  generateCoorelatedSubQuery(dialect: Dialect, structDef: StructDef): string {
+    if (!this.useCTE) {
+      return dialect.sqlCreateFunctionCombineLastStage(
+        `(${this.withs[0]})`,
+        structDef
+      );
+    } else {
+      return (
+        this.combineStages(true).sql +
+        dialect.sqlCreateFunctionCombineLastStage(
+          this.getName(this.withs.length - 1),
+          structDef
+        )
+      );
+    }
+  }
 }
 
 type QuerySomething = QueryField | QueryStruct | QueryTurtle;
@@ -2588,17 +2605,12 @@ class QueryQuery extends QueryField {
       this.parent.dialect.supportUnnestArrayAgg ? ret : sqlFieldName
     );
 
+    // if there was a pipeline.
     if (pipeOut !== undefined) {
-      newStageWriter.addStage(
-        this.parent.dialect.sqlCreateFunctionCombineLastStage(
-          pipeOut.lastStageName,
-          structDef
-        )
+      const sql = newStageWriter.generateCoorelatedSubQuery(
+        this.parent.dialect,
+        structDef
       );
-      const { sql, lastStageName } = newStageWriter.combineStages(true);
-      if (lastStageName === undefined) {
-        throw new Error("Internal Error: no stage to combine");
-      }
 
       if (this.parent.dialect.supportUnnestArrayAgg) {
         ret = `(${sql})`;
