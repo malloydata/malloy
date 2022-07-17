@@ -2703,7 +2703,7 @@ class QueryQuery extends QueryField {
     if (this.fieldDef.pipeline.length > 1) {
       // console.log(pretty(outputStruct));
       const pipeline = [...this.fieldDef.pipeline];
-      const structDef: StructDef = {
+      let structDef: StructDef = {
         ...outputStruct,
         structSource: { type: "sql", method: "lastStage" },
       };
@@ -2720,6 +2720,10 @@ class QueryQuery extends QueryField {
         q.prepare(stageWriter);
         lastStageName = q.generateSQL(stageWriter);
         outputStruct = q.getResultStructDef();
+        structDef = {
+          ...outputStruct,
+          structSource: { type: "sql", method: "lastStage" },
+        };
       }
     }
     return { lastStageName, outputStruct };
