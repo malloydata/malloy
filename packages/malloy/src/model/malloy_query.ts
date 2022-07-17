@@ -2705,7 +2705,7 @@ class QueryQuery extends QueryField {
       const pipeline = [...this.fieldDef.pipeline];
       const structDef: StructDef = {
         ...outputStruct,
-        structSource: { type: "sql", method: "nested" },
+        structSource: { type: "sql", method: "lastStage" },
       };
       pipeline.shift();
       for (const transform of pipeline) {
@@ -3264,7 +3264,10 @@ class QueryStruct extends QueryNode {
         return this.dialect.quoteTablePath(tablePath);
       }
       case "sql":
-        if (this.fieldDef.structSource.method === "nested") {
+        if (
+          this.fieldDef.structSource.method === "nested" ||
+          this.fieldDef.structSource.method === "lastStage"
+        ) {
           return this.fieldDef.name;
         } else if (this.fieldDef.structSource.method === "subquery") {
           return `(${this.fieldDef.structSource.sqlBlock.select})`;

@@ -595,7 +595,7 @@ export type StructSource =
   | { type: "nested" }
   | { type: "inline" }
   | { type: "query"; query: Query }
-  | { type: "sql"; method: "nested" }
+  | { type: "sql"; method: "nested" | "lastStage" }
   | SubquerySource;
 
 // Inline and nested tables, cannot have a StructRelationship
