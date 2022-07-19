@@ -289,5 +289,28 @@ describe("join expression tests", () => {
       // console.log(result.data.toObject());
       expect(result.data.rowCount).toBeGreaterThan(4);
     });
+
+    it(`join issue440 - ${database}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
+        source: aircraft_models is table('malloy-data.malloytest.aircraft_models')
+
+        source: aircraft is table('malloy-data.malloytest.aircraft')
+
+        source: flights is table('malloy-data.malloytest.flights'){
+          join_one: aircraft on aircraft.tail_num = tail_num
+          join_one: aircraft_models on aircraft_models.aircraft_model_code = aircraft.aircraft_model_code
+        }
+
+        query: flights-> {
+          group_by: testingtwo is aircraft_models.model
+        }
+      `
+        )
+        .run();
+      // console.log(result.data.toObject());
+      expect(result.data.rowCount).toBeGreaterThan(4);
+    });
   });
 });
