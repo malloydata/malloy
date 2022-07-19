@@ -57,6 +57,8 @@ export class StandardSQLDialect extends Dialect {
   supportsSumDistinctFunction = false;
   unnestWithNumbers = false;
   defaultSampling = { enable: false };
+  supportUnnestArrayAgg = false;
+  supportsCTEinCoorelatedSubQueries = false;
 
   functionInfo: Record<string, FunctionInfo> = {
     timestamp_seconds: { returnType: "timestamp" },
@@ -165,8 +167,11 @@ export class StandardSQLDialect extends Dialect {
     return `${alias}.${fieldName}`;
   }
 
-  sqlUnnestPipelineHead(isSingleton: boolean): string {
-    let p = "__param";
+  sqlUnnestPipelineHead(
+    isSingleton: boolean,
+    sourceSQLExpression: string
+  ): string {
+    let p = sourceSQLExpression;
     if (isSingleton) {
       p = `[${p}]`;
     }

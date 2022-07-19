@@ -1057,6 +1057,14 @@
   dependencies:
     moment "*"
 
+"@types/node-fetch@^2.6.2":
+  version "2.6.2"
+  resolved "https://registry.yarnpkg.com/@types/node-fetch/-/node-fetch-2.6.2.tgz#d1a9c5fd049d9415dce61571557104dec3ec81da"
+  integrity sha512-DHqhlq5jeESLy19TYhLakJ07kNumXWjcDdxXsLUMJZ6ue8VZJj4kLPQVE/2mdHh3xZziNF1xppu5lwmS53HR+A==
+  dependencies:
+    "@types/node" "*"
+    form-data "^3.0.0"
+
 "@types/node@*", "@types/node@^16.11.26":
   version "16.11.35"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-16.11.35.tgz#6642bdce5b5cee23314b91a7c069981c6bd68791"
@@ -1145,6 +1153,13 @@
     "@types/hoist-non-react-statics" "*"
     "@types/react" "*"
     csstype "^3.0.2"
+
+"@types/tar-stream@^2.2.2":
+  version "2.2.2"
+  resolved "https://registry.yarnpkg.com/@types/tar-stream/-/tar-stream-2.2.2.tgz#be9d0be9404166e4b114151f93e8442e6ab6fb1d"
+  integrity sha512-1AX+Yt3icFuU6kxwmPakaiGrJUwG44MpuiqPg4dSolRFk6jmvs4b3IbUol9wKDLIgU76gevn3EwE8y/DkSJCZQ==
+  dependencies:
+    "@types/node" "*"
 
 "@types/tough-cookie@*":
   version "4.0.1"
@@ -3068,10 +3083,10 @@ domutils@^2.5.2, domutils@^2.6.0, domutils@^2.7.0:
     domelementtype "^2.2.0"
     domhandler "^4.2.0"
 
-duckdb@^0.4.0:
-  version "0.4.0"
-  resolved "https://registry.yarnpkg.com/duckdb/-/duckdb-0.4.0.tgz#0058e81da77460e5ca06cea841b0c690531b2609"
-  integrity sha512-xSi5ZMm+OVegutwn4IQxP7zui/lV4r4S8y6+abkcLIiA6b7WWV97UrEYLdN5lxg67nS9aZ+YDfNm3hCgnpruqw==
+duckdb@0.4.1-dev454.0:
+  version "0.4.1-dev454.0"
+  resolved "https://registry.yarnpkg.com/duckdb/-/duckdb-0.4.1-dev454.0.tgz#4f1248dccfaafccf47e15c8f85a7f3c1809c20b1"
+  integrity sha512-RSNeL+sIXVx9w8ZG2QXh3k943FV0FygZ3dr1YDh5yFnq4KOs5i8yaBWIUIsGDvo+cl3eB/R4uODyOqV63OUnIw==
   dependencies:
     "@mapbox/node-pre-gyp" "^1.0.0"
     node-addon-api "*"

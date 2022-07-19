@@ -66,6 +66,8 @@ export class PostgresDialect extends Dialect {
   supportsSumDistinctFunction = false;
   unnestWithNumbers = false;
   defaultSampling = { rows: 50000 };
+  supportUnnestArrayAgg = true;
+  supportsCTEinCoorelatedSubQueries = true;
 
   functionInfo: Record<string, FunctionInfo> = {};
 
@@ -220,11 +222,14 @@ export class PostgresDialect extends Dialect {
     }
   }
 
-  sqlUnnestPipelineHead(isSingleton: boolean): string {
+  sqlUnnestPipelineHead(
+    isSingleton: boolean,
+    sourceSQLExpression: string
+  ): string {
     if (isSingleton) {
-      return "UNNEST(ARRAY((SELECT $1)))";
+      return `UNNEST(ARRAY((SELECT ${sourceSQLExpression})))`;
     } else {
-      return "JSONB_ARRAY_ELEMENTS($1)";
+      return `JSONB_ARRAY_ELEMENTS(${sourceSQLExpression})`;
     }
   }
 

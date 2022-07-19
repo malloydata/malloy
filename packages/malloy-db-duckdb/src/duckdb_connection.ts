@@ -54,7 +54,7 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
   ) {
     this.database = new Database(
       databasePath,
-      databasePath === ":memory:" ? OPEN_READWRITE : OPEN_READONLY,
+      OPEN_READWRITE, // databasePath === ":memory:" ? OPEN_READWRITE : OPEN_READONLY,
       (err) => {
         if (err) {
           return console.error(err);
@@ -82,8 +82,8 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
   // @bporterfield need help writing this. it needs to wait if a setup is in process.
   protected async setup(): Promise<void> {
     if (!this.isSetup) {
-      await this.runDuckDBQuery("INSTALL 'json'");
-      await this.runDuckDBQuery("LOAD 'json'");
+      // await this.runDuckDBQuery("INSTALL 'json'");
+      // await this.runDuckDBQuery("LOAD 'json'");
       //   await this.runDuckDBQuery("DROP MACRO sum_distinct");
       //   try {
       //     await this.runDuckDBQuery(
@@ -131,12 +131,8 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
     const statements = sql.split("-- hack: split on this");
 
     while (statements.length > 1) {
-      try {
-        await this.runDuckDBQuery(statements[0]);
-        statements.unshift();
-      } catch (e) {
-        /* Do nothing */
-      }
+      await this.runDuckDBQuery(statements[0]);
+      statements.shift();
     }
 
     const retVal = await this.runDuckDBQuery(statements[0]);
