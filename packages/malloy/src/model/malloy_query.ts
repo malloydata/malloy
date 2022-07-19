@@ -1015,6 +1015,12 @@ class FieldInstanceResult implements FieldInstance {
     joinStack: string[]
   ): void {
     const name = qs.getIdentifier();
+
+    // we're already chasing the dependancy for this join.
+    if (joinStack.indexOf(name) !== -1) {
+      return;
+    }
+
     let join;
     if ((join = this.root().joins.get(name))) {
       join.mayNeedUniqueKey ||= mayNeedUniqueKey;
