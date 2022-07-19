@@ -15,7 +15,7 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 import * as malloy from "@malloydata/malloy";
-import { duckdbBug3721, RuntimeList } from "./runtimes";
+import { RuntimeList } from "./runtimes";
 import "./is-sql-eq";
 import { mkSqlEqWith } from "./sql-eq";
 
@@ -108,24 +108,21 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
 
   // Model based version of sums.
-  (duckdbBug3721 && databaseName === "duckdb" ? it.skip : it)(
-    `model: expression fixups. - ${databaseName}`,
-    async () => {
-      const result = await expressionModel
-        .loadQuery(
-          `
+  it(`model: expression fixups. - ${databaseName}`, async () => {
+    const result = await expressionModel
+      .loadQuery(
+        `
             query: aircraft->{
               aggregate:
                 aircraft_models.total_seats
                 aircraft_models.boeing_seats
             }
           `
-        )
-        .run();
-      expect(result.data.path(0, "total_seats").value).toBe(18294);
-      expect(result.data.path(0, "boeing_seats").value).toBe(6244);
-    }
-  );
+      )
+      .run();
+    expect(result.data.path(0, "total_seats").value).toBe(18294);
+    expect(result.data.path(0, "boeing_seats").value).toBe(6244);
+  });
 
   // turtle expressions
   it(`model: turtle - ${databaseName}`, async () => {

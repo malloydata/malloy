@@ -78,7 +78,7 @@ declare global {
       toBeErrorless(): R;
       toTranslate(): R;
       toReturnType(tp: string): R;
-      compileToFailWith(expectedError: string): R;
+      compileToFailWith(...expectedErrors: string[]): R;
     }
   }
 }
@@ -170,9 +170,16 @@ expect.extend({
       message: () => "",
     };
   },
-  compileToFailWith: function (s: MarkedSource | string, msg: string) {
+  compileToFailWith: function (s: MarkedSource | string, ...msgs: string[]) {
     const src = typeof s == "string" ? s : s.code;
-    const emsg = `Compile Error expectation not met\nExpected error: '${msg}'\nSource:\n${src}`;
+    let emsg = "Compile Error expectation not met\nExpected error";
+    const qmsgs = msgs.map((s) => `error '${s}'`);
+    if (msgs.length == 1) {
+      emsg += ` ${qmsgs[0]}`;
+    } else {
+      emsg += `s [\n${qmsgs.join("\n")}\n]`;
+    }
+    emsg += `\nSource:\n${src}`;
     const m = new BetaModel(src);
     const t = m.translate();
     if (t.translated) {
@@ -187,28 +194,47 @@ expect.extend({
           emsg,
       };
     } else {
+      const explain: string[] = [];
       const errList = m.errors().errors;
-      const firstError = errList[0];
-      if (firstError.message != msg) {
-        return {
-          pass: false,
-          message: () => `Received errror: ${firstError.message}\n${emsg}`,
-        };
-      }
-      if (typeof s != "string" && s.locations[0]) {
-        const have = firstError.at?.range;
-        const want = s.locations[0].range;
-        if (!this.equals(have, want)) {
-          return {
-            pass: false,
-            message: () =>
-              `Expected location: ${inspect(want)}\n` +
-              `Received location: ${inspect(have)}\n${emsg}`,
-          };
+      let i;
+      for (i = 0; i < msgs.length && errList[i]; i += 1) {
+        const msg = msgs[i];
+        const err = errList[i];
+        if (msg != err.message) {
+          explain.push(`Expected: ${msg}\nGot: ${err.message}`);
+        } else {
+          if (typeof s != "string" && s.locations[i]) {
+            const have = err.at?.range;
+            const want = s.locations[i].range;
+            if (!this.equals(have, want)) {
+              explain.push(
+                `Expected '${msg}' at location: ${inspect(want)}\n` +
+                  `Actual location: ${inspect(have)}`
+              );
+            }
+          }
         }
       }
+      if (i != msgs.length) {
+        explain.push(...msgs.slice(i).map((m) => `Missing: ${m}`));
+      }
+      if (i != errList.length) {
+        explain.push(
+          ...errList.slice(i).map((m) => `Unexpected Error: ${m.message}`)
+        );
+      }
+      if (explain.length == 0) {
+        return {
+          pass: true,
+          message: () => `All expected errors found: ${pretty(msgs)}`,
+        };
+      }
+      return {
+        pass: false,
+        message: () =>
+          `Compiler did not generated expected errors\n${explain.join("\n")}`,
+      };
     }
-    return { pass: true, message: () => `Found expected error '${msg}` };
   },
 });
 
@@ -947,6 +973,69 @@ describe("expressions", () => {
           else 'a lot'
       `)
     );
+    test("n-ary without else", () => {
+      expect(markSource`
+        explore: na is a + { dimension: d is
+          pick 7 when true and true
+        }
+      `).compileToFailWith(
+        "pick incomplete, missing 'else'",
+        "Cannot define 'd', value has unknown type"
+      );
+    });
+    test("n-ary with mismatch when clauses", () => {
+      expect(markSource`
+        explore: na is a + { dimension: d is
+          pick 7 when true and true
+          pick '7' when true or true
+          else 7
+        }
+      `).compileToFailWith(
+        "pick type 'string', expected 'number'",
+        "Cannot define 'd', value has unknown type"
+      );
+    });
+    test("n-ary with mismatched else clause", () => {
+      expect(markSource`
+        explore: na is a + { dimension: d is
+          pick 7 when true and true
+          else '7'
+        }
+      `).compileToFailWith(
+        "else type 'string', expected 'number'",
+        "Cannot define 'd', value has unknown type"
+      );
+    });
+    test("applied else mismatch", () => {
+      expect(markSource`
+        explore: na is a + { dimension: d is
+          7 ? pick 7 when 7 else 'not seven'
+        }
+      `).compileToFailWith(
+        "else type 'string', expected 'number'",
+        "Cannot define 'd', value has unknown type"
+      );
+    });
+    test("applied default mismatch", () => {
+      expect(markSource`
+        explore: na is a + { dimension: d is
+          7 ? pick 'seven' when 7
+        }
+      `).compileToFailWith(
+        "pick default type 'number', expected 'string'",
+        "Cannot define 'd', value has unknown type"
+      );
+    });
+    test("applied when mismatch", () => {
+      expect(markSource`
+        explore: na is a + { dimension: d is
+          7 ? pick 'seven' when 7 pick 6 when 6
+        }
+      `).compileToFailWith(
+        "pick type 'number', expected 'string'",
+        "Cannot define 'd', value has unknown type"
+      );
+    });
   });
 });
 
@@ -1125,7 +1214,6 @@ describe("error handling", () => {
   test("query on source with errors", () => {
     expect(markSource`
         explore: na is a { join_one: ${"n"} on astr }
-        // query: na -> { project: * }
       `).compileToFailWith("Undefined source 'n'");
   });
 

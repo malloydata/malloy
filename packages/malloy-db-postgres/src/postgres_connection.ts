@@ -55,6 +55,7 @@ const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   "timestamp with time zone": "timestamp",
   timestamp: "timestamp",
   '"char"': "string",
+  character: "string",
   smallint: "number",
   xid: "string",
   real: "number",

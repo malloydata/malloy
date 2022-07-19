@@ -19,7 +19,7 @@ import {
   DialectFragment,
   TimeValue,
 } from "..";
-import { Expr, Sampling, TypecastFragment } from "../model";
+import { Expr, Sampling, StructDef, TypecastFragment } from "../model";
 
 interface DialectField {
   type: string;
@@ -49,6 +49,8 @@ export abstract class Dialect {
   abstract unnestWithNumbers: boolean;
   protected abstract functionInfo: Record<string, FunctionInfo>;
   abstract defaultSampling: Sampling;
+  abstract supportUnnestArrayAgg: boolean; // won't need UDFs for nested pipelines
+  abstract supportsCTEinCoorelatedSubQueries: boolean;
 
   // return a quoted string for use as a table path.
   abstract quoteTablePath(tablePath: string): string;
@@ -99,11 +101,17 @@ export abstract class Dialect {
     isArray: boolean
   ): string;
 
-  abstract sqlUnnestPipelineHead(isSingleton: boolean): string;
+  abstract sqlUnnestPipelineHead(
+    isSingleton: boolean,
+    sourceSQLExpression: string
+  ): string;
 
   abstract sqlCreateFunction(id: string, funcText: string): string;
 
-  abstract sqlCreateFunctionCombineLastStage(lastStageName: string): string;
+  abstract sqlCreateFunctionCombineLastStage(
+    lastStageName: string,
+    structDef: StructDef
+  ): string;
   abstract sqlCreateTableAsSelect(tableName: string, sql: string): string;
 
   abstract sqlSelectAliasAsStruct(
@@ -182,5 +190,9 @@ export abstract class Dialect {
       throw new Error(`Sampling is not supported on dialect ${this.name}.`);
     }
     return tableSQL;
+  }
+
+  sqlOrderBy(orderTerms: string[]): string {
+    return `ORDER BY ${orderTerms.join(",")}`;
   }
 }
