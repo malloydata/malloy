@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest --config=../../jest.config.js",
-    "build-parser": "(cd src/lang/grammar ; sh build-parser.sh)",
+    "build-parser": "cd src/lang/grammar && cross-os build-parser",
     "testLang": "yarn test --testPathPattern=packages/malloy/src/lang",
     "clean": "rm -rf src/lang/lib",
     "build": "yarn build-parser && yarn tsc --build",
@@ -25,5 +25,12 @@
     "@types/luxon": "^1.26.4",
     "antlr4ts-cli": "^0.5.0-alpha.4",
     "path": "^0.12.7"
+  },
+  "cross-os": {
+    "build-parser": {
+      "darwin": "sh build-parser.sh",
+      "linux": "sh build-parser.sh",
+      "win32": "build-parser.cmd"
+    }
   }
 }

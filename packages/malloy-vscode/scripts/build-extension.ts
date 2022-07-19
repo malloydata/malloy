@@ -30,8 +30,8 @@ export type Target =
   | "alpine-x64"
   | "alpine-arm64"
   | "darwin-x64"
-  | "darwin-arm64";
-// | "win32-x64";
+  | "darwin-arm64"
+  | "win32-x64";
 
 export type BinaryTargetMap = { [target in Target]: string };
 
@@ -43,12 +43,14 @@ export const targetKeytarMap: BinaryTargetMap = {
   "alpine-arm64": "keytar-v7.7.0-napi-v3-linuxmusl-arm64.node",
   "darwin-x64": "keytar-v7.7.0-napi-v3-darwin-x64.node",
   "darwin-arm64": "keytar-v7.7.0-napi-v3-darwin-arm64.node",
+  "win32-x64": "keytar-v7.7.0-napi-v3-win32-x64.node",
 };
 
 export const targetDuckDBMap: Partial<BinaryTargetMap> = {
   "darwin-arm64": `duckdb-v${DUCKDB_VERSION}-node-v93-darwin-arm64.node`,
   "darwin-x64": `duckdb-v${DUCKDB_VERSION}-node-v93-darwin-x64.node`,
   "linux-x64": `duckdb-v${DUCKDB_VERSION}-node-v93-linux-x64.node`,
+  "win32-x64": "duckdb-v${DUCKDB_VERSION}-node-v93-win32-x64.node",
 };
 
 export const outDir = "dist/";
