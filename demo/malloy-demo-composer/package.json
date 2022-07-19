@@ -45,7 +45,9 @@
     "electron-packager": "^15.5.1",
     "esbuild": "^0.14.13",
     "esbuild-plugin-svgr": "^1.0.1",
-    "wait-on": "^6.0.1",
+    "wait-on": "^6.0.1"
+  },
+  "optionalDependencies": {
     "electron-installer-debian": "^3.1.0"
   }
 }
