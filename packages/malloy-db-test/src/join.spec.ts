@@ -294,11 +294,11 @@ describe("join expression tests", () => {
       const result = await runtime
         .loadQuery(
           `
-        source: aircraft_models is table('malloy-data.malloytest.aircraft_models')
+        source: aircraft_models is table('malloytest.aircraft_models')
 
-        source: aircraft is table('malloy-data.malloytest.aircraft')
+        source: aircraft is table('malloytest.aircraft')
 
-        source: flights is table('malloy-data.malloytest.flights'){
+        source: flights is table('malloytest.flights'){
           join_one: aircraft on aircraft.tail_num = tail_num
           join_one: aircraft_models on aircraft_models.aircraft_model_code = aircraft.aircraft_model_code
         }
