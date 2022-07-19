@@ -70,6 +70,66 @@ Currently, the Malloy extension works on Mac and Linux machines.
 
 4. **Write some Malloy!**: Start with the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html). It may be helpful to check out one of the walkthroughs under Documentation below, or try some of the BigQuery [sample models](https://github.com/looker-open-source/malloy/tree/main/samples) on public datasets available on the repo before getting started.
 
+## Quickstart Tips
+
+Get up and running quickly with these steps.  Install the VS Code extension if you have not yet done so.  
+
+Malloy models in the documentation reference source data that lives in public BigQuery tables; so, if you have a Google Cloud account (or wish to make one), connecting the extension to **BigQuery** via your Google Cloud account is the fastest way to try out Malloy.  Otherwise, the sample Malloy models can be easily modified to work with a **Postgres** instance (see steps below).
+
+### BigQuery
+1. [Create](https://cloud.google.com) a Google Cloud account if you don't have one already
+2. Associate the [gcloud CLI](https://cloud.google.com/sdk/gcloud) with your account and configure gcloud to connect to Google Cloud services via a project.  The `project_id` value to enter in the CLI is found on the Google Cloud dashboard (in the screenshot below, the `project_id` would be "my-malloy-test-project")
+
+![google_cloud_project_id](https://user-images.githubusercontent.com/25882507/179831184-6206fff3-5f24-4a94-97c6-026502cf6df6.png)
+
+```bash
+gcloud auth login --update-adc
+gcloud config set project <project_id>
+```
+
+3. Connect to BigQuery in the extension.  You can leave optional fields blank, as the extension will connect using the gcloud project configuration
+
+![bigquery-connection-example](https://user-images.githubusercontent.com/25882507/179831243-a25631dc-83ed-4164-a3f8-066e5192cfab.png)
+
+4. Copy any of the Malloy [sample models](https://github.com/looker-open-source/malloy/blob/docs-release/samples/faa/flights.malloy) from the [documentation](https://looker-open-source.github.io/malloy/documentation/examples/faa.html) and save the file locally, ensuring the filetype is `.malloy` to enable Malloy extension features.  There are multiple sample models that all use data from public BigQuery tables, so everything should run without issue
+5. Run the models as shown in the walkthrough video
+
+### PostgreSQL
+You can also run the Malloy sample models locally in Postgres once you load the database with the appropriate datasets.  These steps setup a database with the NTSB Flight dataset and respective sample models.  These steps use Docker for convenience, but the instructions can be modified to run a Postgres instance directly.
+
+1. From the `malloy/` root directory of the repository, unzip the SQL script that will load the NTSB Flight dataset
+
+```bash
+gunzip test/data/postgres/malloytest-postgres.sql.gz
+```
+
+2. Start a Docker container running Postgres
+
+```bash
+docker run --name malloy-postgres -e POSTGRES_PASSWORD=password -d -p 5432:5432 postgres
+```
+
+3. Copy the SQL data file into the container
+
+```bash
+docker cp test/data/postgres/malloytest-postgres.sql malloy-postgres:/malloytest-postgres.sql
+```
+4. Run the file in the container
+
+```bash
+docker exec -it malloy-postgres psql -U postgres -f malloytest-postgres.sql
+```
+5. Connect to Postgres in the extension
+
+![postgres-connection-example](https://user-images.githubusercontent.com/25882507/179831294-b6a69ef6-f454-48a7-8b93-aec2bff0ff3f.png)
+
+6. Copy the NTSB Malloy [sample models](https://github.com/looker-open-source/malloy/blob/docs-release/samples/faa/flights.malloy) from the [documentation](https://looker-open-source.github.io/malloy/documentation/examples/faa.html) and save the file locally, ensuring the filetype is `.malloy` to enable Malloy extension features.  Since only the NTSB data was loaded, only these NTSB models will run against the database
+7. The sample models reference public BigQuery tables using the standard _project_name.dataset_name.table_name_ BigQuery format, so all source data references prefixed with `malloy-data.faa.` must be changed to `malloytest.` to conform to Malloy's Postgres _schema_name.table_name_ format (the database name is not required).  Simply find and replace in VS Code or run `sed -i -e 's/malloy-data.faa./malloytest./g' path/to/<your_file.malloy>`
+
+![source_table_reference](https://user-images.githubusercontent.com/25882507/179834102-eef4aee4-973a-4259-bfe4-1487179012b3.png)
+
+8. Run the models as shown in the walkthrough video
+
 # Join the Community
 
 - Join the [**Malloy Slack Community!**](https://join.slack.com/t/malloy-community/shared_invite/zt-upi18gic-W2saeFu~VfaVM1~HIerJ7w) Use this community to ask questions, meet other Malloy users, and share ideas with one another.
