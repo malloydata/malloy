@@ -539,6 +539,9 @@ class QueryField extends QueryNode {
             `Internal Error: Unknown aggregate function ${expr.function}`
           );
         }
+        if (!resultSet.root().isSimpleQuery) {
+          s = this.caseGroup([resultSet.groupSet], s);
+        }
       } else if (isApplyFragment(expr)) {
         const applyVal = this.generateExpressionFromExpr(
           resultSet,
@@ -1083,6 +1086,7 @@ class FieldInstanceResult implements FieldInstance {
 class FieldInstanceResultRoot extends FieldInstanceResult {
   joins = new Map<string, JoinInstance>();
   havings = new AndChain();
+  isSimpleQuery = true;
   constructor(turtleDef: TurtleDef) {
     super(turtleDef, undefined);
   }
@@ -2160,8 +2164,8 @@ class QueryQuery extends QueryField {
             output.sql.push(`${exp} as ${outputName}`);
             output.dimensionIndexes.push(output.fieldIndex++);
           } else if (isAggregateField(fi.f)) {
-            let exp = fi.f.generateExpression(resultSet);
-            exp = this.caseGroup([resultSet.groupSet], exp);
+            const exp = fi.f.generateExpression(resultSet);
+            // exp = this.caseGroup([resultSet.groupSet], exp);
             output.sql.push(`${exp} as ${outputName}`);
             output.fieldIndex++;
           }
@@ -2689,7 +2693,8 @@ class QueryQuery extends QueryField {
     const r = this.rootResult.computeGroups(0, 0);
     this.maxDepth = r.maxDepth;
     this.maxGroupSet = r.nextGroupSetNumber - 1;
-    if (this.maxDepth === 0 && !r.isComplex) {
+    this.rootResult.isSimpleQuery = this.maxDepth === 0 && !r.isComplex;
+    if (this.rootResult.isSimpleQuery) {
       return this.generateSimpleSQL(stageWriter);
     } else {
       return this.generateComplexSQL(stageWriter);
