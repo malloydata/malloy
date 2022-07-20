@@ -43,5 +43,6 @@ Add the relevant database connection information. Once you click save, the passw
 DuckDB is available without needing to explicitly configure a connection. It works with local parquet or csv files, which can be referenced in the source. This example has the CSV in the same directory as the .malloy model file:
 ```
 source: baby_names is table('duckdb:babynames.csv')
-
 ```
+
+There are a number of examples on public data using DuckDB available [here](https://github.com/lloydtabb/malloy_examples).
