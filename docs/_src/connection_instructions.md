@@ -1,7 +1,10 @@
 # Connecting a Database in the VSCode Extension
 _These instructions assume you have already installed the [Malloy extension](https://marketplace.visualstudio.com/items?itemName=malloydata.malloy-vscode) in VSCode._
 
-Currently, BigQuery, PostgreSQL _(in progress)_, and DuckDB are supported. _Note that DuckDB is natively supported, allowing you to skip these initial steps._
+Currently, BigQuery, PostgreSQL _(in progress)_, and DuckDB are supported. 
+
+## Adding the Connection in VS Code
+_Note:  DuckDB is natively supported, allowing you to skip these initial steps._
 
 1. Click on the Malloy icon on the left side of VS Code. This opens the Malloy view - a view that allows you to view schemas as you work with Malloy models and edit database connections.
 
@@ -40,7 +43,7 @@ Add the relevant database connection information. Once you click save, the passw
 
 ## DuckDB
 
-DuckDB is available without needing to explicitly configure a connection. It works with local parquet or csv files, which can be referenced in the source. This example has the CSV in the same directory as the .malloy model file:
+DuckDB is available without needing to explicitly configure a connection. It works with local parquet or csv files, which can be referenced in a source. This example has the CSV in the same directory as the .malloy model file:
 ```
 source: baby_names is table('duckdb:babynames.csv')
 ```
