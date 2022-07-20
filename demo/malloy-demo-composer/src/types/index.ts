@@ -28,6 +28,7 @@ export interface Directory {
   path: string;
   fullPath: string;
   contents: (Model | Directory | Analysis)[];
+  readme?: string;
 }
 
 export interface Model {

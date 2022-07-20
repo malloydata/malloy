@@ -12,7 +12,7 @@
  */
 
 import * as explore from "../types";
-import { promises as fs } from "fs";
+import { existsSync, promises as fs } from "fs";
 import * as path from "path";
 import { URLReader, Runtime } from "@malloydata/malloy";
 import { CONNECTION_MANAGER } from "./connections";
@@ -139,6 +139,8 @@ export async function readMalloyDirectory(
           directory.contents.push(await getAnalysis(fullChildPath));
         } else if (childPath.endsWith(".malloy")) {
           directory.contents.push(await getModel(fullChildPath));
+        } else if (childPath.toLowerCase() === "readme.md") {
+          directory.readme = await fs.readFile(fullChildPath, "utf8");
         }
       } catch (error) {
         // eslint-disable-next-line no-console

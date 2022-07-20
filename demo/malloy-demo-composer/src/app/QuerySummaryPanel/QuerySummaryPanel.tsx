@@ -11,13 +11,11 @@
  * GNU General Public License for more details.
  */
 
-import { FilterExpression } from "@malloydata/malloy";
 import { ReactElement, useRef } from "react";
 import { useState } from "react";
 import {
   QuerySummary,
   QuerySummaryItem,
-  RendererName,
   StagePath,
   stagePathPush,
   StageSummary,
@@ -33,12 +31,7 @@ import { ListNest } from "../ListNest";
 import { NestQueryActionMenu } from "../NestQueryActionMenu";
 import styled from "styled-components";
 import { FilterActionMenu } from "../FilterActionMenu";
-import {
-  FieldDef,
-  QueryFieldDef,
-  SearchValueMapResult,
-  StructDef,
-} from "@malloydata/malloy";
+import { SearchValueMapResult, StructDef } from "@malloydata/malloy";
 import { OrderByActionMenu } from "../OrderByActionMenu";
 import { EmptyMessage } from "../CommonElements";
 import { useEffect } from "react";
@@ -51,89 +44,16 @@ import { notUndefined, scalarTypeOfField } from "../utils";
 import { useClickOutside } from "../hooks";
 import { HoverToPopover } from "../HoverToPopover";
 import { FieldDetailPanel } from "../FieldDetailPanel";
+import { QueryModifiers } from "../hooks/use_query_builder";
 
 interface QuerySummaryPanelProps {
   source: StructDef;
   querySummary: QuerySummary;
-  removeField: (stagePath: StagePath, fieldIndex: number) => void;
-  removeFilter: (
-    stagePath: StagePath,
-    filterIndex: number,
-    fieldIndex?: number
-  ) => void;
-  removeLimit: (stagePath: StagePath) => void;
-  removeOrderBy: (stagePath: StagePath, orderByIndex: number) => void;
-  renameField: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    newName: string
-  ) => void;
-  addFilterToField: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    filter: FilterExpression,
-    as?: string
-  ) => void;
-  editLimit: (stagePath: StagePath, limit: number) => void;
-  toggleField: (stagePath: StagePath, fieldPath: string) => void;
-  addFilter: (stagePath: StagePath, filter: FilterExpression) => void;
-  addLimit: (stagePath: StagePath, limit: number) => void;
-  addOrderBy: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    direction?: "asc" | "desc"
-  ) => void;
-  addNewNestedQuery: (stagePath: StagePath, name: string) => void;
-  editFilter: (
-    stagePath: StagePath,
-    fieldIndex: number | undefined,
-    filterIndex: number,
-    filter: FilterExpression
-  ) => void;
   stagePath: StagePath | undefined;
-  addNewDimension: (stagePath: StagePath, dimension: QueryFieldDef) => void;
-  addNewMeasure: (stagePath: StagePath, measure: QueryFieldDef) => void;
-  replaceWithDefinition: (stagePath: StagePath, fieldIndex: number) => void;
-  setDataStyle: (name: string, renderer: RendererName | undefined) => void;
-  editDimension: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    dimension: QueryFieldDef
-  ) => void;
-  editMeasure: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    measure: QueryFieldDef
-  ) => void;
-  editOrderBy: (
-    stagePath: StagePath,
-    orderByIndex: number,
-    direction: "asc" | "desc" | undefined
-  ) => void;
-  addStage: (stagePath: StagePath, fieldIndex: number) => void;
-  removeStage: (stagePath: StagePath) => void;
-  updateFieldOrder: (stagePath: StagePath, ordering: number[]) => void;
-  saveDimension: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    name: string,
-    definition: FieldDef
-  ) => void;
-  saveMeasure: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    name: string,
-    definition: FieldDef
-  ) => void;
-  saveNestQuery: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    name: string,
-    definition: FieldDef
-  ) => void;
   topValues: SearchValueMapResult[] | undefined;
   queryName: string;
   analysisPath: string;
+  queryModifiers: QueryModifiers;
 }
 
 export const QuerySummaryPanel: React.FC<QuerySummaryPanelProps> = ({
@@ -142,7 +62,7 @@ export const QuerySummaryPanel: React.FC<QuerySummaryPanelProps> = ({
   queryName,
   topValues,
   analysisPath,
-  ...query
+  queryModifiers,
 }) => {
   if (
     querySummary.stages[0].items.length === 0 &&
@@ -173,23 +93,23 @@ export const QuerySummaryPanel: React.FC<QuerySummaryPanelProps> = ({
                   <StageActionMenu
                     analysisPath={analysisPath}
                     source={stage.inputSource}
-                    toggleField={query.toggleField}
-                    addFilter={query.addFilter}
-                    addLimit={query.addLimit}
-                    addOrderBy={query.addOrderBy}
-                    addNewNestedQuery={query.addNewNestedQuery}
+                    toggleField={queryModifiers.toggleField}
+                    addFilter={queryModifiers.addFilter}
+                    addLimit={queryModifiers.addLimit}
+                    addOrderBy={queryModifiers.addOrderBy}
+                    addNewNestedQuery={queryModifiers.addNewNestedQuery}
                     stagePath={nestStagePath}
-                    remove={() => query.removeStage(nestStagePath)}
+                    remove={() => queryModifiers.removeStage(nestStagePath)}
                     orderByFields={stage.orderByFields}
-                    addNewDimension={query.addNewDimension}
-                    addNewMeasure={query.addNewMeasure}
+                    addNewDimension={queryModifiers.addNewDimension}
+                    addNewMeasure={queryModifiers.addNewMeasure}
                     closeMenu={closeMenu}
                     isLastStage={stageIndex === querySummary.stages.length - 1}
                     setDataStyle={(renderer) =>
-                      query.setDataStyle(queryName, renderer)
+                      queryModifiers.setDataStyle(queryName, renderer)
                     }
                     stageSummary={stage.items}
-                    updateFieldOrder={query.updateFieldOrder}
+                    updateFieldOrder={queryModifiers.updateFieldOrder}
                     topValues={topValues}
                   />
                 )}
@@ -202,7 +122,9 @@ export const QuerySummaryPanel: React.FC<QuerySummaryPanelProps> = ({
                         width="20px"
                         height="20px"
                         className="close"
-                        onClick={() => query.removeStage(nestStagePath)}
+                        onClick={() =>
+                          queryModifiers.removeStage(nestStagePath)
+                        }
                       />
                     </BackPart>
                   </StageButton>
@@ -212,7 +134,7 @@ export const QuerySummaryPanel: React.FC<QuerySummaryPanelProps> = ({
             <StageSummaryUI
               analysisPath={analysisPath}
               stage={stage}
-              {...query}
+              queryModifiers={queryModifiers}
               stagePath={nestStagePath}
               key={"stage/" + stageIndex}
               source={stage.inputSource}
@@ -230,90 +152,18 @@ interface SummaryStageProps {
   stagePath: StagePath;
   source: StructDef;
   analysisPath: string;
-  removeField: (stagePath: StagePath, fieldIndex: number) => void;
-  removeFilter: (
-    stagePath: StagePath,
-    filterIndex: number,
-    fieldIndex?: number
-  ) => void;
-  removeLimit: (stagePath: StagePath) => void;
-  removeOrderBy: (stagePath: StagePath, orderByIndex: number) => void;
-  renameField: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    newName: string
-  ) => void;
-  addFilterToField: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    filter: FilterExpression,
-    as?: string
-  ) => void;
-  editLimit: (stagePath: StagePath, limit: number) => void;
-  toggleField: (stagePath: StagePath, fieldPath: string) => void;
-  addFilter: (stagePath: StagePath, filter: FilterExpression) => void;
-  addLimit: (stagePath: StagePath, limit: number) => void;
-  addOrderBy: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    direction?: "asc" | "desc"
-  ) => void;
-  addNewNestedQuery: (stagePath: StagePath, name: string) => void;
-  editFilter: (
-    stagePath: StagePath,
-    fieldIndex: number | undefined,
-    filterIndex: number,
-    filter: FilterExpression
-  ) => void;
-  addNewDimension: (stagePath: StagePath, dimension: QueryFieldDef) => void;
-  addNewMeasure: (stagePath: StagePath, measure: QueryFieldDef) => void;
-  replaceWithDefinition: (stagePath: StagePath, fieldIndex: number) => void;
-  setDataStyle: (name: string, renderer: RendererName | undefined) => void;
-  addStage: (stagePath: StagePath, fieldIndex: number) => void;
-  editDimension: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    dimension: QueryFieldDef
-  ) => void;
-  editMeasure: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    measure: QueryFieldDef
-  ) => void;
-  editOrderBy: (
-    stagePath: StagePath,
-    orderByIndex: number,
-    direction: "asc" | "desc" | undefined
-  ) => void;
-  removeStage: (stagePath: StagePath) => void;
-  updateFieldOrder: (stagePath: StagePath, ordering: number[]) => void;
-  saveDimension: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    name: string,
-    definition: FieldDef
-  ) => void;
-  saveMeasure: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    name: string,
-    definition: FieldDef
-  ) => void;
-  saveNestQuery: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    name: string,
-    definition: FieldDef
-  ) => void;
   topValues: SearchValueMapResult[] | undefined;
   fieldIndex?: number | undefined;
+  queryModifiers: QueryModifiers;
 }
 
 const StageSummaryUI: React.FC<SummaryStageProps> = ({
   stage,
   topValues,
   analysisPath,
-  ...summaryProps
+  queryModifiers,
+  source,
+  stagePath,
 }) => {
   const [selectedFieldIndex, setSelectedFieldIndex] = useState<number>();
 
@@ -343,7 +193,7 @@ const StageSummaryUI: React.FC<SummaryStageProps> = ({
         const tempItem = newList[currentIndex];
         newList[currentIndex] = newList[otherIndex];
         newList[otherIndex] = tempItem;
-        summaryProps.updateFieldOrder(summaryProps.stagePath, newList);
+        queryModifiers.updateFieldOrder(stagePath, newList);
         setSelectedFieldIndex(otherIndex);
       }
     };
@@ -365,7 +215,9 @@ const StageSummaryUI: React.FC<SummaryStageProps> = ({
           }
           deselect={() => setSelectedFieldIndex(undefined)}
           topValues={topValues}
-          {...summaryProps}
+          queryModifiers={queryModifiers}
+          source={source}
+          stagePath={stagePath}
         />
       ))}
     </FieldListDiv>
@@ -425,88 +277,14 @@ interface SummaryItemProps {
   item: QuerySummaryItem;
   analysisPath: string;
   source: StructDef;
-  removeField: (stagePath: StagePath, fieldIndex: number) => void;
-  removeFilter: (
-    stagePath: StagePath,
-    filterIndex: number,
-    fieldIndex?: number
-  ) => void;
-  removeLimit: (stagePath: StagePath) => void;
-  removeOrderBy: (stagePath: StagePath, orderByIndex: number) => void;
-  renameField: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    newName: string
-  ) => void;
-  addFilterToField: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    filter: FilterExpression,
-    as?: string
-  ) => void;
-  editLimit: (stagePath: StagePath, limit: number) => void;
-  toggleField: (stagePath: StagePath, fieldPath: string) => void;
-  addFilter: (stagePath: StagePath, filter: FilterExpression) => void;
-  addLimit: (stagePath: StagePath, limit: number) => void;
-  addOrderBy: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    direction?: "asc" | "desc"
-  ) => void;
-  addNewNestedQuery: (stagePath: StagePath, name: string) => void;
-  editFilter: (
-    stagePath: StagePath,
-    fieldIndex: number | undefined,
-    filterIndex: number,
-    filter: FilterExpression
-  ) => void;
   stagePath: StagePath;
-  addNewDimension: (stagePath: StagePath, dimension: QueryFieldDef) => void;
-  addNewMeasure: (stagePath: StagePath, measure: QueryFieldDef) => void;
-  replaceWithDefinition: (stagePath: StagePath, fieldIndex: number) => void;
-  setDataStyle: (name: string, renderer: RendererName | undefined) => void;
-  addStage: (stagePath: StagePath, fieldIndex: number) => void;
-  removeStage: (stagePath: StagePath) => void;
-  updateFieldOrder: (stagePath: StagePath, ordering: number[]) => void;
   stageSummary: QuerySummaryItem[];
   beginReorderingField: (fieldIndex: number) => void;
-  editDimension: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    dimension: QueryFieldDef
-  ) => void;
-  editOrderBy: (
-    stagePath: StagePath,
-    orderByIndex: number,
-    direction: "asc" | "desc" | undefined
-  ) => void;
-  editMeasure: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    measure: QueryFieldDef
-  ) => void;
-  saveDimension: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    name: string,
-    definition: FieldDef
-  ) => void;
-  saveMeasure: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    name: string,
-    definition: FieldDef
-  ) => void;
-  saveNestQuery: (
-    stagePath: StagePath,
-    fieldIndex: number,
-    name: string,
-    definition: FieldDef
-  ) => void;
   fieldIndex?: number | undefined;
   isSelected: boolean;
   deselect: () => void;
   topValues: SearchValueMapResult[] | undefined;
+  queryModifiers: QueryModifiers;
 }
 
 const SummaryItem: React.FC<SummaryItemProps> = ({
@@ -520,7 +298,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
   deselect,
   topValues,
   analysisPath,
-  ...query
+  queryModifiers,
 }) => {
   const ref = useRef<HTMLDivElement>(null);
   const children: {
@@ -552,18 +330,22 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                   analysisPath={analysisPath}
                   source={source}
                   removeField={() =>
-                    query.removeField(stagePath, item.fieldIndex)
+                    queryModifiers.removeField(stagePath, item.fieldIndex)
                   }
                   rename={(newName) => {
-                    query.renameField(stagePath, item.fieldIndex, newName);
+                    queryModifiers.renameField(
+                      stagePath,
+                      item.fieldIndex,
+                      newName
+                    );
                   }}
                   closeMenu={closeMenu}
                   setDataStyle={(renderer) =>
-                    query.setDataStyle(item.name, renderer)
+                    queryModifiers.setDataStyle(item.name, renderer)
                   }
                   stagePath={stagePath}
                   stageSummary={stageSummary}
-                  updateFieldOrder={query.updateFieldOrder}
+                  updateFieldOrder={queryModifiers.updateFieldOrder}
                   fieldIndex={item.fieldIndex}
                   beginReorderingField={() => {
                     beginReorderingField(item.fieldIndex);
@@ -579,10 +361,10 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                   definition={
                     item.type === "field_definition" ? item.source : undefined
                   }
-                  addFilter={query.addFilter}
+                  addFilter={queryModifiers.addFilter}
                   saveDimension={() => {
                     item.saveDefinition &&
-                      query.saveDimension(
+                      queryModifiers.saveDimension(
                         stagePath,
                         item.fieldIndex,
                         item.name,
@@ -590,9 +372,13 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                       );
                   }}
                   editDimension={(fieldIndex, dimension) =>
-                    query.editDimension(stagePath, fieldIndex, dimension)
+                    queryModifiers.editDimension(
+                      stagePath,
+                      fieldIndex,
+                      dimension
+                    )
                   }
-                  addOrderBy={query.addOrderBy}
+                  addOrderBy={queryModifiers.addOrderBy}
                   orderByField={{
                     name: item.name,
                     fieldIndex: item.fieldIndex,
@@ -610,10 +396,10 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                   stagePath={stagePath}
                   source={source}
                   removeField={() =>
-                    query.removeField(stagePath, item.fieldIndex)
+                    queryModifiers.removeField(stagePath, item.fieldIndex)
                   }
                   addFilter={(filter, as) =>
-                    query.addFilterToField(
+                    queryModifiers.addFilterToField(
                       stagePath,
                       item.fieldIndex,
                       filter,
@@ -621,11 +407,15 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                     )
                   }
                   rename={(newName) => {
-                    query.renameField(stagePath, item.fieldIndex, newName);
+                    queryModifiers.renameField(
+                      stagePath,
+                      item.fieldIndex,
+                      newName
+                    );
                   }}
                   closeMenu={closeMenu}
                   setDataStyle={(renderer) =>
-                    query.setDataStyle(item.name, renderer)
+                    queryModifiers.setDataStyle(item.name, renderer)
                   }
                   isRenamed={isRenamed}
                   beginReorderingField={() => {
@@ -640,11 +430,11 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                   }
                   canSave={item.saveDefinition !== undefined}
                   editMeasure={(fieldIndex, dimension) =>
-                    query.editMeasure(stagePath, fieldIndex, dimension)
+                    queryModifiers.editMeasure(stagePath, fieldIndex, dimension)
                   }
                   saveMeasure={() => {
                     item.saveDefinition &&
-                      query.saveMeasure(
+                      queryModifiers.saveMeasure(
                         stagePath,
                         item.fieldIndex,
                         item.name,
@@ -652,7 +442,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                       );
                   }}
                   topValues={topValues}
-                  addOrderBy={query.addOrderBy}
+                  addOrderBy={queryModifiers.addOrderBy}
                   orderByField={{
                     name: item.name,
                     fieldIndex: item.fieldIndex,
@@ -665,23 +455,34 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                 <SavedQueryActionMenu
                   source={source}
                   removeField={() =>
-                    query.removeField(stagePath, item.fieldIndex)
+                    queryModifiers.removeField(stagePath, item.fieldIndex)
                   }
                   addFilter={(filter) =>
-                    query.addFilterToField(stagePath, item.fieldIndex, filter)
+                    queryModifiers.addFilterToField(
+                      stagePath,
+                      item.fieldIndex,
+                      filter
+                    )
                   }
                   renameField={(newName) => {
-                    query.renameField(stagePath, item.fieldIndex, newName);
+                    queryModifiers.renameField(
+                      stagePath,
+                      item.fieldIndex,
+                      newName
+                    );
                   }}
                   addLimit={() => {
                     /* unused, unimplemented */
                   }}
                   replaceWithDefinition={() =>
-                    query.replaceWithDefinition(stagePath, item.fieldIndex)
+                    queryModifiers.replaceWithDefinition(
+                      stagePath,
+                      item.fieldIndex
+                    )
                   }
                   closeMenu={closeMenu}
                   setDataStyle={(renderer) =>
-                    query.setDataStyle(item.name, renderer)
+                    queryModifiers.setDataStyle(item.name, renderer)
                   }
                   beginReorderingField={() => {
                     beginReorderingField(item.fieldIndex);
@@ -696,10 +497,10 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                 source={source}
                 filterSource={item.filterSource}
                 removeFilter={() =>
-                  query.removeFilter(stagePath, item.filterIndex)
+                  queryModifiers.removeFilter(stagePath, item.filterIndex)
                 }
                 editFilter={(filter) =>
-                  query.editFilter(
+                  queryModifiers.editFilter(
                     stagePath,
                     fieldIndex,
                     item.filterIndex,
@@ -712,8 +513,10 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
           } else if (item.type === "limit") {
             return (
               <LimitActionMenu
-                removeLimit={() => query.removeLimit(stagePath)}
-                editLimit={(limit) => query.editLimit(stagePath, limit)}
+                removeLimit={() => queryModifiers.removeLimit(stagePath)}
+                editLimit={(limit) =>
+                  queryModifiers.editLimit(stagePath, limit)
+                }
                 closeMenu={closeMenu}
                 limit={item.limit}
               />
@@ -722,14 +525,18 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
             return (
               <OrderByActionMenu
                 removeOrderBy={() =>
-                  query.removeOrderBy(stagePath, item.orderByIndex)
+                  queryModifiers.removeOrderBy(stagePath, item.orderByIndex)
                 }
                 closeMenu={closeMenu}
                 orderByField={item.byField}
                 orderByIndex={item.orderByIndex}
                 existingDirection={item.direction}
                 editOrderBy={(direction) =>
-                  query.editOrderBy(stagePath, item.orderByIndex, direction)
+                  queryModifiers.editOrderBy(
+                    stagePath,
+                    item.orderByIndex,
+                    direction
+                  )
                 }
               />
             );
@@ -738,7 +545,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
               <DataStyleActionMenu
                 onComplete={closeMenu}
                 setDataStyle={(renderer) =>
-                  query.setDataStyle(item.styleKey, renderer)
+                  queryModifiers.setDataStyle(item.styleKey, renderer)
                 }
                 allowedRenderers={item.allowedRenderers}
               />
@@ -752,31 +559,39 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
               <NestQueryActionMenu
                 analysisPath={analysisPath}
                 source={source}
-                toggleField={query.toggleField}
-                addFilter={query.addFilter}
-                addLimit={query.addLimit}
-                addOrderBy={query.addOrderBy}
-                addNewNestedQuery={query.addNewNestedQuery}
+                toggleField={queryModifiers.toggleField}
+                addFilter={queryModifiers.addFilter}
+                addLimit={queryModifiers.addLimit}
+                addOrderBy={queryModifiers.addOrderBy}
+                addNewNestedQuery={queryModifiers.addNewNestedQuery}
                 stagePath={nestStagePath}
-                remove={() => query.removeField(stagePath, item.fieldIndex)}
+                remove={() =>
+                  queryModifiers.removeField(stagePath, item.fieldIndex)
+                }
                 orderByFields={item.stages[0].orderByFields}
-                addNewDimension={query.addNewDimension}
-                addNewMeasure={query.addNewMeasure}
+                addNewDimension={queryModifiers.addNewDimension}
+                addNewMeasure={queryModifiers.addNewMeasure}
                 closeMenu={closeMenu}
                 setDataStyle={(renderer) =>
-                  query.setDataStyle(item.name, renderer)
+                  queryModifiers.setDataStyle(item.name, renderer)
                 }
-                addStage={() => query.addStage(stagePath, item.fieldIndex)}
+                addStage={() =>
+                  queryModifiers.addStage(stagePath, item.fieldIndex)
+                }
                 stageSummary={item.stages[0].items}
-                updateFieldOrder={query.updateFieldOrder}
+                updateFieldOrder={queryModifiers.updateFieldOrder}
                 topValues={topValues}
                 rename={(newName) => {
-                  query.renameField(stagePath, item.fieldIndex, newName);
+                  queryModifiers.renameField(
+                    stagePath,
+                    item.fieldIndex,
+                    newName
+                  );
                 }}
                 canSave={item.saveDefinition !== undefined}
                 saveQuery={() => {
                   item.saveDefinition &&
-                    query.saveNestQuery(
+                    queryModifiers.saveNestQuery(
                       stagePath,
                       item.fieldIndex,
                       item.name,
@@ -792,7 +607,9 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
           } else if (item.type === "error_field") {
             return (
               <ErrorFieldActionMenu
-                remove={() => query.removeField(stagePath, item.fieldIndex)}
+                remove={() =>
+                  queryModifiers.removeField(stagePath, item.fieldIndex)
+                }
                 closeMenu={closeMenu}
               />
             );
@@ -812,7 +629,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                   unsaved={!isSaved}
                   canRemove={true}
                   onRemove={() => {
-                    query.removeField(stagePath, item.fieldIndex);
+                    queryModifiers.removeField(stagePath, item.fieldIndex);
                     closeMenu();
                   }}
                   color="dimension"
@@ -827,7 +644,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                   canRemove={true}
                   unsaved={!isSaved}
                   onRemove={() => {
-                    query.removeField(stagePath, item.fieldIndex);
+                    queryModifiers.removeField(stagePath, item.fieldIndex);
                     closeMenu();
                   }}
                   color="measure"
@@ -841,7 +658,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                   name={item.name}
                   canRemove={true}
                   onRemove={() => {
-                    query.removeField(stagePath, item.fieldIndex);
+                    queryModifiers.removeField(stagePath, item.fieldIndex);
                     closeMenu();
                   }}
                   color="query"
@@ -880,7 +697,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                     name={item.filterSource}
                     canRemove={true}
                     onRemove={() => {
-                      query.removeFilter(
+                      queryModifiers.removeFilter(
                         stagePath,
                         item.filterIndex,
                         fieldIndex
@@ -908,7 +725,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                 name={`limit: ${item.limit}`}
                 canRemove={true}
                 onRemove={() => {
-                  query.removeLimit(stagePath);
+                  queryModifiers.removeLimit(stagePath);
                   closeMenu();
                 }}
                 color="other"
@@ -922,7 +739,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                 name={`${item.byField.name} ${item.direction || ""}`}
                 canRemove={true}
                 onRemove={() => {
-                  query.removeOrderBy(stagePath, item.orderByIndex);
+                  queryModifiers.removeOrderBy(stagePath, item.orderByIndex);
                   closeMenu();
                 }}
                 color="other"
@@ -937,7 +754,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                 color="other"
                 canRemove={item.canRemove}
                 onRemove={() => {
-                  query.setDataStyle(item.styleKey, undefined);
+                  queryModifiers.setDataStyle(item.styleKey, undefined);
                   closeMenu();
                 }}
                 active={isOpen || isSelected}
@@ -951,7 +768,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                 unsaved={true}
                 canRemove={true}
                 onRemove={() => {
-                  query.removeField(stagePath, item.fieldIndex);
+                  queryModifiers.removeField(stagePath, item.fieldIndex);
                   closeMenu();
                 }}
                 color="query"
@@ -966,7 +783,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                 unsaved={false}
                 canRemove={true}
                 onRemove={() => {
-                  query.removeField(stagePath, item.fieldIndex);
+                  queryModifiers.removeField(stagePath, item.fieldIndex);
                   closeMenu();
                 }}
                 color="error"
@@ -993,23 +810,23 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                     <StageActionMenu
                       analysisPath={analysisPath}
                       source={stage.inputSource}
-                      toggleField={query.toggleField}
-                      addFilter={query.addFilter}
-                      addLimit={query.addLimit}
-                      addOrderBy={query.addOrderBy}
-                      addNewNestedQuery={query.addNewNestedQuery}
+                      toggleField={queryModifiers.toggleField}
+                      addFilter={queryModifiers.addFilter}
+                      addLimit={queryModifiers.addLimit}
+                      addOrderBy={queryModifiers.addOrderBy}
+                      addNewNestedQuery={queryModifiers.addNewNestedQuery}
                       stagePath={nestStagePath}
-                      remove={() => query.removeStage(nestStagePath)}
+                      remove={() => queryModifiers.removeStage(nestStagePath)}
                       orderByFields={stage.orderByFields}
-                      addNewDimension={query.addNewDimension}
-                      addNewMeasure={query.addNewMeasure}
+                      addNewDimension={queryModifiers.addNewDimension}
+                      addNewMeasure={queryModifiers.addNewMeasure}
                       closeMenu={closeMenu}
                       setDataStyle={(renderer) =>
-                        query.setDataStyle(item.name, renderer)
+                        queryModifiers.setDataStyle(item.name, renderer)
                       }
                       isLastStage={stageIndex === item.stages.length - 1}
                       stageSummary={stage.items}
-                      updateFieldOrder={query.updateFieldOrder}
+                      updateFieldOrder={queryModifiers.updateFieldOrder}
                       topValues={topValues}
                     />
                   )}
@@ -1022,7 +839,9 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                           width="20px"
                           height="20px"
                           className="close"
-                          onClick={() => query.removeStage(nestStagePath)}
+                          onClick={() =>
+                            queryModifiers.removeStage(nestStagePath)
+                          }
                         />
                       </BackPart>
                     </StageButton>
@@ -1035,7 +854,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                 stagePath={nestStagePath}
                 source={source}
                 topValues={topValues}
-                {...query}
+                queryModifiers={queryModifiers}
               />
               {/* <FieldListDiv>
           { stage.items.map((item, index) => {
@@ -1074,7 +893,7 @@ const SummaryItem: React.FC<SummaryItemProps> = ({
                     // Only used for filters, reordering not needed
                   }}
                   topValues={topValues}
-                  {...query}
+                  queryModifiers={queryModifiers}
                 />
               );
             })}

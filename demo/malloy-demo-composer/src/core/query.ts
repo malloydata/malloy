@@ -245,6 +245,7 @@ export class QueryBuilder extends SourceUtils {
 
   loadQuery(queryPath: string): void {
     const definition = this.getField(this.source, queryPath);
+    console.log(definition);
     if (definition.type !== "turtle") {
       throw new Error("Path does not refer to query.");
     }

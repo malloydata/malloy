@@ -16,7 +16,7 @@ _GitHub mutes videos by default, so make sure to unmute._
 
 https://user-images.githubusercontent.com/7178946/154564840-41299974-58ce-41d1-ab08-98f2be6f9157.mov
 
-In addition, we've built an example of an application built on top of the language, the [Composer Demo](https://github.com/looker-open-source/malloy/tree/main/demo/malloy-demo-composer). Learn to use it [here](https://docs.google.com/presentation/d/18KUl_rrz2K-hbsiKJYS3rtTcYxZMXKklyPllLmTtIYY/edit#slide=id.g1269816dcbe_0_140), and check out the demo. 
+In addition, we've built an example of an application built on top of the language, the [Composer Demo](https://github.com/looker-open-source/malloy/tree/main/demo/malloy-demo-composer). Learn to use it [here](https://docs.google.com/presentation/d/18KUl_rrz2K-hbsiKJYS3rtTcYxZMXKklyPllLmTtIYY/edit#slide=id.g1269816dcbe_0_140), and check out the demo.
 
 https://user-images.githubusercontent.com/7178946/170374545-412cf60b-8649-48a3-acb6-9908e102af7c.mov
 
