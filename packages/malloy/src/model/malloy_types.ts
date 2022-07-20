@@ -151,6 +151,7 @@ export interface FilterFragment {
   filterList: FilterExpression[];
   e: Expr;
 }
+
 export function isFilterFragment(f: Fragment): f is FilterFragment {
   return (f as FilterFragment)?.type === "filterExpression";
 }
@@ -170,6 +171,15 @@ export function isAggregateFragment(f: Fragment): f is AggregateFragment {
 }
 export function isAsymmetricFragment(f: Fragment): f is AggregateFragment {
   return isAggregateFragment(f) && ["sum", "avg", "count"].includes(f.function);
+}
+
+export interface TotalFragment {
+  type: "total";
+  e: Expr;
+}
+
+export function isTotalFragment(f: Fragment): f is TotalFragment {
+  return (f as TotalFragment)?.type === "total";
 }
 
 export interface FieldFragment {
@@ -266,6 +276,7 @@ export type Fragment =
   | ParameterFragment
   | FilterFragment
   | AggregateFragment
+  | TotalFragment
   | DialectFragment;
 
 export type Expr = Fragment[];

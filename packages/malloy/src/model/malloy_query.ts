@@ -58,6 +58,8 @@ import {
   isDialectFragment,
   getPhysicalFields,
   isIndexSegment,
+  TotalFragment,
+  isTotalFragment,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -209,11 +211,13 @@ type QuerySomething = QueryField | QueryStruct | QueryTurtle;
 class GenerateState {
   whereSQL?: string;
   applyValue?: string;
+  inTotal = false;
 
   withWhere(s?: string): GenerateState {
     const newState = new GenerateState();
     newState.whereSQL = s;
     newState.applyValue = this.applyValue;
+    newState.inTotal = this.inTotal;
     return newState;
   }
 
@@ -221,6 +225,15 @@ class GenerateState {
     const newState = new GenerateState();
     newState.whereSQL = this.whereSQL;
     newState.applyValue = s;
+    newState.inTotal = this.inTotal;
+    return newState;
+  }
+
+  withTotal(): GenerateState {
+    const newState = new GenerateState();
+    newState.whereSQL = this.whereSQL;
+    newState.applyValue = this.applyValue;
+    newState.inTotal = true;
     return newState;
   }
 }
@@ -379,6 +392,41 @@ class QueryField extends QueryNode {
     return dim;
   }
 
+  generateTotalFragment(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    expr: TotalFragment,
+    state: GenerateState
+  ): string {
+    if (state.inTotal) {
+      throw new Error(`Already in a TOTAL.  Cannot nest totals.`);
+    }
+
+    const s = this.generateExpressionFromExpr(
+      resultSet,
+      context,
+      expr.e,
+      state.withTotal()
+    );
+
+    let p = resultSet.parent;
+    let fields: FieldInstanceField[] = [];
+    while (p !== undefined) {
+      fields = fields.concat(
+        p.fields(
+          (field) =>
+            isScalarField(field.f) && field.fieldUsage.type === "result"
+        )
+      );
+      p = p.parent;
+    }
+
+    return `MAX(${s}) OVER (PARTITION BY ${fields
+      .map((f) => f.getSQL())
+      .concat("group_set")
+      .join(", ")})`;
+  }
+
   generateDistinctKeyIfNecessary(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
@@ -525,6 +573,8 @@ class QueryField extends QueryNode {
         s += this.generateParameterFragment(resultSet, context, expr, state);
       } else if (isFilterFragment(expr)) {
         s += this.generateFilterFragment(resultSet, context, expr, state);
+      } else if (isTotalFragment(expr)) {
+        s += this.generateTotalFragment(resultSet, context, expr, state);
       } else if (isAggregateFragment(expr)) {
         if (expr.function === "sum") {
           s += this.generateSumFragment(resultSet, context, expr, state);
@@ -540,7 +590,11 @@ class QueryField extends QueryNode {
           );
         }
         if (!resultSet.root().isSimpleQuery) {
-          s = this.caseGroup([resultSet.groupSet], s);
+          let groupSet = resultSet.groupSet;
+          if (state.inTotal) {
+            groupSet = resultSet.parentGroupSet();
+          }
+          s = this.caseGroup([groupSet], s);
         }
       } else if (isApplyFragment(expr)) {
         const applyVal = this.generateExpressionFromExpr(
@@ -788,6 +842,7 @@ class FieldInstanceField implements FieldInstance {
   fieldUsage: FieldUsage;
   groupSet = 0;
   parent: FieldInstanceResult;
+  sql: string | undefined;
   constructor(
     f: QueryField,
     fieldUsage: FieldUsage,
@@ -803,6 +858,22 @@ class FieldInstanceField implements FieldInstance {
 
   root(): FieldInstanceResultRoot {
     return this.parent.root();
+  }
+
+  getSQL() {
+    if (this.sql) {
+      return this.sql;
+    }
+    this.sql = "recursion problem";
+    let exp = this.f.generateExpression(this.parent);
+    if (isScalarField(this.f)) {
+      exp = this.f.caseGroup(
+        this.parent.groupSet > 0 ? this.parent.childGroups : [],
+        exp
+      );
+    }
+    this.sql = exp;
+    return this.sql;
   }
 }
 
@@ -847,6 +918,14 @@ class FieldInstanceResult implements FieldInstance {
       }
     }
     this.add(as, new FieldInstanceField(field, usage, this));
+  }
+
+  parentGroupSet(): number {
+    if (this.parent) {
+      return this.parent.groupSet;
+    } else {
+      return -1;
+    }
   }
 
   add(name: string, f: FieldInstance) {
@@ -2155,18 +2234,11 @@ class QueryQuery extends QueryField {
       );
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === "result") {
+          const exp = fi.getSQL();
+          output.sql.push(`${exp} as ${outputName}`);
           if (isScalarField(fi.f)) {
-            let exp = fi.f.generateExpression(resultSet);
-            exp = this.caseGroup(
-              resultSet.groupSet > 0 ? resultSet.childGroups : [],
-              exp
-            );
-            output.sql.push(`${exp} as ${outputName}`);
             output.dimensionIndexes.push(output.fieldIndex++);
           } else if (isAggregateField(fi.f)) {
-            const exp = fi.f.generateExpression(resultSet);
-            // exp = this.caseGroup([resultSet.groupSet], exp);
-            output.sql.push(`${exp} as ${outputName}`);
             output.fieldIndex++;
           }
         }
