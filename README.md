@@ -74,7 +74,7 @@ Currently, the Malloy extension works on Mac and Linux machines.
 
 Get up and running quickly with these steps.  Install the VS Code extension if you have not yet done so.  
 
-Malloy models in the documentation reference source data that lives in public BigQuery tables; so, if you have a Google Cloud account (or wish to make one), connecting the extension to **BigQuery** via your Google Cloud account is the fastest way to try out Malloy.  Otherwise, the sample Malloy models can be easily modified to work with a **Postgres** instance (see steps below).
+Malloy models in the documentation reference source data that lives in public BigQuery tables; so, if you have a Google Cloud account (or wish to make one), connecting the extension to **BigQuery** via your Google Cloud account is the fastest way to try out Malloy.  Otherwise, the sample Malloy models can be easily modified to work with a **Postgres** instance (see steps below).  **DuckDB** is also supported and is another great way to test out the language quickly!
 
 ### BigQuery
 1. [Create](https://cloud.google.com) a Google Cloud account if you don't have one already
@@ -129,6 +129,60 @@ docker exec -it malloy-postgres psql -U postgres -f malloytest-postgres.sql
 ![source_table_reference](https://user-images.githubusercontent.com/25882507/179834102-eef4aee4-973a-4259-bfe4-1487179012b3.png)
 
 8. Run the models as shown in the walkthrough video
+
+### DuckDB
+Malloy natively supports DuckDB, allowing you to run Malloy models against DuckDB tables created from flat files (e.g. CSV, Parquet).  You can get started quickly by modifying two source definitions (below) from the [Wordle Solver](https://looker-open-source.github.io/malloy/documentation/examples/wordle/wordle.html) example in the documentation.  The below statements redefine the `words` and `numbers` sources using DuckDB instead of BigQuery.
+
+1. Instead of loading the word list from BigQuery, import the local word file directly into DuckDB
+
+```malloy
+// INSTEAD OF THIS
+// source: words is table('malloy-data.malloytest.words_bigger')
+
+// USE THIS
+sql: words_sql is  || 
+  SELECT * FROM read_csv_auto(
+    '/usr/share/dict/words',
+    ALL_VARCHAR=1 
+  )
+  ;;
+  on "duckdb"
+  
+source: words is from_sql(words_sql) {
+  dimension: word is column0
+  query: five_letter_words is {
+    where: length(word) = 5
+    project: word
+  }
+}
+```
+
+2. Instead of loading the numbers table from BigQuery, generate the same table using SQL
+
+```malloy
+// INSTEAD OF THIS
+// source: numbers is table('malloy-data.malloytest.numbers') {
+//   where: num <= 5
+// }
+
+// USE THIS
+sql: nums_sql is  || 
+  WITH recursive nums AS
+   (SELECT 1 AS num
+    UNION ALL
+    SELECT num + 1 AS num
+    FROM nums
+    WHERE nums.num < 5)
+  SELECT *
+  FROM nums
+  ;;
+  on "duckdb"
+  
+source: numbers is from_sql(nums_sql) {}
+```
+
+3. The rest of the example code will run as expected
+
 
 # Join the Community
 
