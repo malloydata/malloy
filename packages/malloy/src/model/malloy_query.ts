@@ -58,6 +58,8 @@ import {
   isDialectFragment,
   getPhysicalFields,
   isIndexSegment,
+  TotalFragment,
+  isTotalFragment,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -209,11 +211,13 @@ type QuerySomething = QueryField | QueryStruct | QueryTurtle;
 class GenerateState {
   whereSQL?: string;
   applyValue?: string;
+  inTotal = false;
 
   withWhere(s?: string): GenerateState {
     const newState = new GenerateState();
     newState.whereSQL = s;
     newState.applyValue = this.applyValue;
+    newState.inTotal = this.inTotal;
     return newState;
   }
 
@@ -221,6 +225,15 @@ class GenerateState {
     const newState = new GenerateState();
     newState.whereSQL = this.whereSQL;
     newState.applyValue = s;
+    newState.inTotal = this.inTotal;
+    return newState;
+  }
+
+  withTotal(): GenerateState {
+    const newState = new GenerateState();
+    newState.whereSQL = this.whereSQL;
+    newState.applyValue = this.applyValue;
+    newState.inTotal = true;
     return newState;
   }
 }
@@ -379,6 +392,42 @@ class QueryField extends QueryNode {
     return dim;
   }
 
+  generateTotalFragment(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    expr: TotalFragment,
+    state: GenerateState
+  ): string {
+    if (state.inTotal) {
+      throw new Error(`Already in a TOTAL.  Cannot nest totals.`);
+    }
+
+    const s = this.generateExpressionFromExpr(
+      resultSet,
+      context,
+      expr.e,
+      state.withTotal()
+    );
+
+    let p = resultSet.parent;
+    let fields: FieldInstanceField[] = [];
+    while (p !== undefined) {
+      fields = fields.concat(
+        p.fields(
+          (field) =>
+            isScalarField(field.f) && field.fieldUsage.type === "result"
+        )
+      );
+      p = p.parent;
+    }
+
+    let partitionBy = "";
+    if (resultSet.parent !== undefined) {
+      partitionBy = `PARTITION BY ${fields.map((f) => f.getSQL()).join(", ")}`;
+    }
+    return `MAX(${s}) OVER (${partitionBy})`;
+  }
+
   generateDistinctKeyIfNecessary(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
@@ -407,15 +456,17 @@ class QueryField extends QueryNode {
       context,
       expr.structPath
     );
+    let ret;
     if (distinctKeySQL) {
       if (this.parent.dialect.supportsSumDistinctFunction) {
-        return this.parent.dialect.sqlSumDistinct(distinctKeySQL, dimSQL);
+        ret = this.parent.dialect.sqlSumDistinct(distinctKeySQL, dimSQL);
       } else {
-        return sqlSumDistinct(this.parent.dialect, dimSQL, distinctKeySQL);
+        ret = sqlSumDistinct(this.parent.dialect, dimSQL, distinctKeySQL);
       }
     } else {
-      return `SUM(${dimSQL})`;
+      ret = `SUM(${dimSQL})`;
     }
+    return `COALESCE(${ret},0)`;
   }
 
   generateSymmetricFragment(
@@ -525,19 +576,31 @@ class QueryField extends QueryNode {
         s += this.generateParameterFragment(resultSet, context, expr, state);
       } else if (isFilterFragment(expr)) {
         s += this.generateFilterFragment(resultSet, context, expr, state);
+      } else if (isTotalFragment(expr)) {
+        s += this.generateTotalFragment(resultSet, context, expr, state);
       } else if (isAggregateFragment(expr)) {
+        let agg;
         if (expr.function === "sum") {
-          s += this.generateSumFragment(resultSet, context, expr, state);
+          agg = this.generateSumFragment(resultSet, context, expr, state);
         } else if (expr.function === "avg") {
-          s += this.generateAvgFragment(resultSet, context, expr, state);
+          agg = this.generateAvgFragment(resultSet, context, expr, state);
         } else if (expr.function === "count") {
-          s += this.generateCountFragment(resultSet, context, expr, state);
+          agg = this.generateCountFragment(resultSet, context, expr, state);
         } else if (["count_distinct", "min", "max"].includes(expr.function)) {
-          s += this.generateSymmetricFragment(resultSet, context, expr, state);
+          agg = this.generateSymmetricFragment(resultSet, context, expr, state);
         } else {
           throw new Error(
             `Internal Error: Unknown aggregate function ${expr.function}`
           );
+        }
+        if (resultSet.root().isComplexQuery) {
+          let groupSet = resultSet.groupSet;
+          if (state.inTotal) {
+            groupSet = resultSet.parentGroupSet();
+          }
+          s += this.caseGroup([groupSet], agg);
+        } else {
+          s += agg;
         }
       } else if (isApplyFragment(expr)) {
         const applyVal = this.generateExpressionFromExpr(
@@ -801,6 +864,17 @@ class FieldInstanceField implements FieldInstance {
   root(): FieldInstanceResultRoot {
     return this.parent.root();
   }
+
+  getSQL() {
+    let exp = this.f.generateExpression(this.parent);
+    if (isScalarField(this.f)) {
+      exp = this.f.caseGroup(
+        this.parent.groupSet > 0 ? this.parent.childGroups : [],
+        exp
+      );
+    }
+    return exp;
+  }
 }
 
 type RepeatedResultType = "nested" | "inline_all_numbers" | "inline";
@@ -844,6 +918,14 @@ class FieldInstanceResult implements FieldInstance {
       }
     }
     this.add(as, new FieldInstanceField(field, usage, this));
+  }
+
+  parentGroupSet(): number {
+    if (this.parent) {
+      return this.parent.groupSet;
+    } else {
+      return 0;
+    }
   }
 
   add(name: string, f: FieldInstance) {
@@ -1083,6 +1165,8 @@ class FieldInstanceResult implements FieldInstance {
 class FieldInstanceResultRoot extends FieldInstanceResult {
   joins = new Map<string, JoinInstance>();
   havings = new AndChain();
+  isComplexQuery = false;
+  usesTotal = false;
   constructor(turtleDef: TurtleDef) {
     super(turtleDef, undefined);
   }
@@ -1520,7 +1604,11 @@ class QueryQuery extends QueryField {
     joinStack: string[]
   ): void {
     for (const expr of e) {
-      if (isFieldFragment(expr)) {
+      if (isTotalFragment(expr)) {
+        resultStruct.root().isComplexQuery = true;
+        resultStruct.root().usesTotal = true;
+        this.addDependantExpr(resultStruct, context, expr.e, joinStack);
+      } else if (isFieldFragment(expr)) {
         const field = context.getDimensionOrMeasureByName(expr.path);
         if (hasExpression(field.fieldDef)) {
           this.addDependantExpr(
@@ -2151,18 +2239,11 @@ class QueryQuery extends QueryField {
       );
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === "result") {
+          const exp = fi.getSQL();
+          output.sql.push(`${exp} as ${outputName}`);
           if (isScalarField(fi.f)) {
-            let exp = fi.f.generateExpression(resultSet);
-            exp = this.caseGroup(
-              resultSet.groupSet > 0 ? resultSet.childGroups : [],
-              exp
-            );
-            output.sql.push(`${exp} as ${outputName}`);
             output.dimensionIndexes.push(output.fieldIndex++);
           } else if (isAggregateField(fi.f)) {
-            let exp = fi.f.generateExpression(resultSet);
-            exp = this.caseGroup([resultSet.groupSet], exp);
-            output.sql.push(`${exp} as ${outputName}`);
             output.fieldIndex++;
           }
         }
@@ -2436,13 +2517,18 @@ class QueryQuery extends QueryField {
         if (fi.fieldUsage.type === "result") {
           if (isScalarField(fi.f)) {
             fieldsSQL.push(
-              this.parent.dialect.sqlMaybeQuoteIdentifier(`${name}__0`) +
-                ` as ${sqlName}`
+              this.parent.dialect.sqlMaybeQuoteIdentifier(
+                `${name}__${this.rootResult.groupSet}`
+              ) + ` as ${sqlName}`
             );
             dimensionIndexes.push(fieldIndex++);
           } else if (isAggregateField(fi.f)) {
             fieldsSQL.push(
-              this.parent.dialect.sqlAnyValueLastTurtle(name, sqlName)
+              this.parent.dialect.sqlAnyValueLastTurtle(
+                name,
+                this.rootResult.groupSet,
+                sqlName
+              )
             );
             fieldIndex++;
           }
@@ -2460,7 +2546,11 @@ class QueryQuery extends QueryField {
           fieldIndex++;
         } else if (fi.firstSegment.type === "project") {
           fieldsSQL.push(
-            this.parent.dialect.sqlAnyValueLastTurtle(name, sqlName)
+            this.parent.dialect.sqlAnyValueLastTurtle(
+              name,
+              this.rootResult.groupSet,
+              sqlName
+            )
           );
           fieldIndex++;
         }
@@ -2689,10 +2779,20 @@ class QueryQuery extends QueryField {
     const r = this.rootResult.computeGroups(0, 0);
     this.maxDepth = r.maxDepth;
     this.maxGroupSet = r.nextGroupSetNumber - 1;
-    if (this.maxDepth === 0 && !r.isComplex) {
-      return this.generateSimpleSQL(stageWriter);
-    } else {
+
+    // if this is a 1 grouping set query with a total, make it 2 groups
+    if (this.maxGroupSet === 0 && this.rootResult.usesTotal) {
+      this.rootResult.groupSet = 1;
+      this.rootResult.childGroups = [1];
+      this.maxGroupSet = 1;
+      this.maxDepth = 1;
+      this.rootResult.isComplexQuery = true;
+    }
+    this.rootResult.isComplexQuery ||= this.maxDepth > 0 || r.isComplex;
+    if (this.rootResult.isComplexQuery) {
       return this.generateComplexSQL(stageWriter);
+    } else {
+      return this.generateSimpleSQL(stageWriter);
     }
   }
 
