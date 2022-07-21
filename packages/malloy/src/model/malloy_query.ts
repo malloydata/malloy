@@ -2787,8 +2787,9 @@ class QueryQuery extends QueryField {
       this.rootResult.childGroups = [1];
       this.maxGroupSet = 1;
       this.maxDepth = 1;
+      this.rootResult.isComplexQuery = true;
     }
-    this.rootResult.isComplexQuery ||= this.maxDepth === 0 && !r.isComplex;
+    this.rootResult.isComplexQuery ||= this.maxDepth > 0 || r.isComplex;
     if (this.rootResult.isComplexQuery) {
       return this.generateComplexSQL(stageWriter);
     } else {
