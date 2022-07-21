@@ -579,14 +579,15 @@ class QueryField extends QueryNode {
       } else if (isTotalFragment(expr)) {
         s += this.generateTotalFragment(resultSet, context, expr, state);
       } else if (isAggregateFragment(expr)) {
+        let agg;
         if (expr.function === "sum") {
-          s += this.generateSumFragment(resultSet, context, expr, state);
+          agg = this.generateSumFragment(resultSet, context, expr, state);
         } else if (expr.function === "avg") {
-          s += this.generateAvgFragment(resultSet, context, expr, state);
+          agg = this.generateAvgFragment(resultSet, context, expr, state);
         } else if (expr.function === "count") {
-          s += this.generateCountFragment(resultSet, context, expr, state);
+          agg = this.generateCountFragment(resultSet, context, expr, state);
         } else if (["count_distinct", "min", "max"].includes(expr.function)) {
-          s += this.generateSymmetricFragment(resultSet, context, expr, state);
+          agg = this.generateSymmetricFragment(resultSet, context, expr, state);
         } else {
           throw new Error(
             `Internal Error: Unknown aggregate function ${expr.function}`
@@ -597,7 +598,9 @@ class QueryField extends QueryNode {
           if (state.inTotal) {
             groupSet = resultSet.parentGroupSet();
           }
-          s = this.caseGroup([groupSet], s);
+          s += this.caseGroup([groupSet], agg);
+        } else {
+          s += agg;
         }
       } else if (isApplyFragment(expr)) {
         const applyVal = this.generateExpressionFromExpr(
