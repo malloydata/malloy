@@ -99,8 +99,12 @@ export class StandardSQLDialect extends Dialect {
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}))`;
   }
 
-  sqlAnyValueLastTurtle(name: string, sqlName: string): string {
-    return `ANY_VALUE(CASE WHEN group_set=0 THEN ${name}__0 END) as ${sqlName}`;
+  sqlAnyValueLastTurtle(
+    name: string,
+    groupSet: number,
+    sqlName: string
+  ): string {
+    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN ${name}__${groupSet} END) as ${sqlName}`;
   }
 
   sqlCoaleseMeasuresInline(

@@ -120,8 +120,12 @@ export class PostgresDialect extends Dialect {
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}))`;
   }
 
-  sqlAnyValueLastTurtle(name: string, sqlName: string): string {
-    return `(ARRAY_AGG(${name}__0) FILTER (WHERE group_set=0 AND ${name}__0 IS NOT NULL))[1] as ${sqlName}`;
+  sqlAnyValueLastTurtle(
+    name: string,
+    groupSet: number,
+    sqlName: string
+  ): string {
+    return `(ARRAY_AGG(${name}__${groupSet}) FILTER (WHERE group_set=${groupSet} AND ${name}__${groupSet} IS NOT NULL))[1] as ${sqlName}`;
   }
 
   sqlCoaleseMeasuresInline(

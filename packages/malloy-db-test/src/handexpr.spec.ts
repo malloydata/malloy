@@ -360,6 +360,35 @@ it(`hand turtle2 - ${databaseName}`, async () => {
   // expect(result.data.value[0].total_seats).toBe(452415);
 });
 
+it(`hand total - ${databaseName}`, async () => {
+  const sql = await compileHandQueryToSQL(handModel, {
+    structRef: "aircraft",
+    pipeline: [
+      {
+        type: "reduce",
+        fields: [
+          "state",
+          "aircraft_count",
+          {
+            name: "total_aircraft",
+            type: "number",
+            aggregate: true,
+            e: [
+              {
+                type: "total",
+                e: [{ type: "field", path: "aircraft_count" }],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+  await validateCompilation(databaseName, sql);
+  console.log(sql);
+  // expect(result.data.value[0].total_seats).toBe(452415);
+});
+
 it(`hand turtle3 - ${databaseName}`, async () => {
   const sql = await compileHandQueryToSQL(handModel, {
     structRef: "aircraft",

@@ -421,10 +421,11 @@ class QueryField extends QueryNode {
       p = p.parent;
     }
 
-    return `MAX(${s}) OVER (PARTITION BY ${fields
-      .map((f) => f.getSQL())
-      .concat("group_set")
-      .join(", ")})`;
+    let partitionBy = "";
+    if (resultSet.parent !== undefined) {
+      partitionBy = `PARTITION BY ${fields.map((f) => f.getSQL()).join(", ")}`;
+    }
+    return `MAX(${s}) OVER (${partitionBy})`;
   }
 
   generateDistinctKeyIfNecessary(
@@ -589,7 +590,7 @@ class QueryField extends QueryNode {
             `Internal Error: Unknown aggregate function ${expr.function}`
           );
         }
-        if (!resultSet.root().isSimpleQuery) {
+        if (resultSet.root().isComplexQuery) {
           let groupSet = resultSet.groupSet;
           if (state.inTotal) {
             groupSet = resultSet.parentGroupSet();
@@ -861,9 +862,9 @@ class FieldInstanceField implements FieldInstance {
   }
 
   getSQL() {
-    if (this.sql) {
-      return this.sql;
-    }
+    // if (this.sql) {
+    //   return this.sql;
+    // }
     this.sql = "recursion problem";
     let exp = this.f.generateExpression(this.parent);
     if (isScalarField(this.f)) {
@@ -924,7 +925,7 @@ class FieldInstanceResult implements FieldInstance {
     if (this.parent) {
       return this.parent.groupSet;
     } else {
-      return -1;
+      return 0;
     }
   }
 
@@ -1165,7 +1166,8 @@ class FieldInstanceResult implements FieldInstance {
 class FieldInstanceResultRoot extends FieldInstanceResult {
   joins = new Map<string, JoinInstance>();
   havings = new AndChain();
-  isSimpleQuery = true;
+  isComplexQuery = false;
+  usesTotal = false;
   constructor(turtleDef: TurtleDef) {
     super(turtleDef, undefined);
   }
@@ -1603,7 +1605,11 @@ class QueryQuery extends QueryField {
     joinStack: string[]
   ): void {
     for (const expr of e) {
-      if (isFieldFragment(expr)) {
+      if (isTotalFragment(expr)) {
+        resultStruct.root().isComplexQuery = true;
+        resultStruct.root().usesTotal = true;
+        this.addDependantExpr(resultStruct, context, expr.e, joinStack);
+      } else if (isFieldFragment(expr)) {
         const field = context.getDimensionOrMeasureByName(expr.path);
         if (hasExpression(field.fieldDef)) {
           this.addDependantExpr(
@@ -2512,13 +2518,18 @@ class QueryQuery extends QueryField {
         if (fi.fieldUsage.type === "result") {
           if (isScalarField(fi.f)) {
             fieldsSQL.push(
-              this.parent.dialect.sqlMaybeQuoteIdentifier(`${name}__0`) +
-                ` as ${sqlName}`
+              this.parent.dialect.sqlMaybeQuoteIdentifier(
+                `${name}__${this.rootResult.groupSet}`
+              ) + ` as ${sqlName}`
             );
             dimensionIndexes.push(fieldIndex++);
           } else if (isAggregateField(fi.f)) {
             fieldsSQL.push(
-              this.parent.dialect.sqlAnyValueLastTurtle(name, sqlName)
+              this.parent.dialect.sqlAnyValueLastTurtle(
+                name,
+                this.rootResult.groupSet,
+                sqlName
+              )
             );
             fieldIndex++;
           }
@@ -2536,7 +2547,11 @@ class QueryQuery extends QueryField {
           fieldIndex++;
         } else if (fi.firstSegment.type === "project") {
           fieldsSQL.push(
-            this.parent.dialect.sqlAnyValueLastTurtle(name, sqlName)
+            this.parent.dialect.sqlAnyValueLastTurtle(
+              name,
+              this.rootResult.groupSet,
+              sqlName
+            )
           );
           fieldIndex++;
         }
@@ -2765,11 +2780,19 @@ class QueryQuery extends QueryField {
     const r = this.rootResult.computeGroups(0, 0);
     this.maxDepth = r.maxDepth;
     this.maxGroupSet = r.nextGroupSetNumber - 1;
-    this.rootResult.isSimpleQuery = this.maxDepth === 0 && !r.isComplex;
-    if (this.rootResult.isSimpleQuery) {
-      return this.generateSimpleSQL(stageWriter);
-    } else {
+
+    // if this is a 1 grouping set query with a total, make it 2 groups
+    if (this.maxGroupSet === 0 && this.rootResult.usesTotal) {
+      this.rootResult.groupSet = 1;
+      this.rootResult.childGroups = [1];
+      this.maxGroupSet = 1;
+      this.maxDepth = 1;
+    }
+    this.rootResult.isComplexQuery ||= this.maxDepth === 0 && !r.isComplex;
+    if (this.rootResult.isComplexQuery) {
       return this.generateComplexSQL(stageWriter);
+    } else {
+      return this.generateSimpleSQL(stageWriter);
     }
   }
 
