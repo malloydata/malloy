@@ -900,6 +900,10 @@ export class MalloyToAST
     return new ast.ExprCountDistinct(this.getFieldExpr(pcx.fieldExpr()));
   }
 
+  visitExprUngroup(pcx: parse.ExprUngroupContext): ast.ExprUngroup {
+    return new ast.ExprUngroup(this.getFieldExpr(pcx.fieldExpr()));
+  }
+
   visitExprAggregate(pcx: parse.ExprAggregateContext): ast.ExpressionDef {
     const pathCx = pcx.fieldPath();
     const path = pathCx ? this.visitFieldPath(pathCx) : undefined;

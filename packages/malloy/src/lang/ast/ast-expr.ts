@@ -27,6 +27,7 @@ import {
   isConditionParameter,
   StructDef,
   TimeFieldType,
+  TotalFragment,
 } from "../../model/malloy_types";
 import { DefSpace, FieldSpace, LookupResult } from "../field-space";
 import {
@@ -735,6 +736,37 @@ export class ExprSum extends ExprAsymmetric {
   constructor(expr: ExpressionDef | undefined, source?: FieldReference) {
     super("sum", expr, source);
     this.has({ source });
+  }
+}
+
+export class ExprUngroup extends ExpressionDef {
+  legalChildTypes = [FT.numberT, FT.stringT, FT.dateT, FT.timestampT];
+  elementType = "ungroup";
+  expr: ExpressionDef;
+  constructor(expr: ExpressionDef) {
+    super();
+    this.expr = expr;
+    this.has({ expr });
+  }
+
+  returns(_forExpression: ExprValue): FieldValueType {
+    return "number";
+  }
+
+  getExpression(fs: FieldSpace): ExprValue {
+    const exprVal = this.expr?.getExpression(fs);
+    if (this.typeCheck(this.expr, { ...exprVal, aggregate: false })) {
+      const f: TotalFragment = {
+        type: "total",
+        e: exprVal.value,
+      };
+      return {
+        dataType: this.returns(exprVal),
+        aggregate: true,
+        value: [f],
+      };
+    }
+    return errorFor("aggregate type check");
   }
 }
 
