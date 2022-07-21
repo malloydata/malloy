@@ -385,7 +385,7 @@ it(`hand total - ${databaseName}`, async () => {
     ],
   });
   await validateCompilation(databaseName, sql);
-  console.log(sql);
+  // console.log(sql);
   // expect(result.data.value[0].total_seats).toBe(452415);
 });
 

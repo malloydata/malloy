@@ -199,7 +199,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.value).toHaveLength(3);
     expect(result.data.value).toContainEqual({ c: 1845, state: "TX" });
     expect(result.data.value).toContainEqual({ c: 500, state: "LA" });
-    expect(result.data.value).toContainEqual({ c: null, state: null });
+    expect(result.data.value).toContainEqual({ c: 0, state: null });
   });
 
   it(`join_many cross from  - ${databaseName}`, async () => {
