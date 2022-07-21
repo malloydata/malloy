@@ -50,6 +50,7 @@ const malloyPackages = [
   "@malloydata/db-bigquery",
   "@malloydata/db-postgres",
   "@malloydata/db-duckdb",
+  "malloy-composer-demo",
 ];
 
 // licenses that we would need to mirror source for, if we included (we don't today)
@@ -177,7 +178,7 @@ const getLicenses = async () => {
 
               try {
                 // stop GH/etc from limiting us
-                await new Promise((resolve) => setTimeout(resolve, 400));
+                await new Promise((resolve) => setTimeout(resolve, 700));
 
                 const license = await axios.head(licenseLink);
                 if (license) {
