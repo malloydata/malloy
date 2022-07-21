@@ -456,15 +456,17 @@ class QueryField extends QueryNode {
       context,
       expr.structPath
     );
+    let ret;
     if (distinctKeySQL) {
       if (this.parent.dialect.supportsSumDistinctFunction) {
-        return this.parent.dialect.sqlSumDistinct(distinctKeySQL, dimSQL);
+        ret = this.parent.dialect.sqlSumDistinct(distinctKeySQL, dimSQL);
       } else {
-        return sqlSumDistinct(this.parent.dialect, dimSQL, distinctKeySQL);
+        ret = sqlSumDistinct(this.parent.dialect, dimSQL, distinctKeySQL);
       }
     } else {
-      return `SUM(${dimSQL})`;
+      ret = `SUM(${dimSQL})`;
     }
+    return `COALESCE(${ret},0)`;
   }
 
   generateSymmetricFragment(
