@@ -12,6 +12,7 @@
  */
 
 import * as path from "path";
+import { fileURLToPath } from "node:url";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { PostgresConnection } from "@malloydata/db-postgres";
 import { DuckDBConnection } from "@malloydata/db-duckdb";
@@ -165,7 +166,7 @@ export class ConnectionManager {
   }
 
   public getConnectionLookup(url: URL): LookupConnection<Connection> {
-    const workingDirectory = path.dirname(url.pathname);
+    const workingDirectory = path.dirname(fileURLToPath(url));
     if (!this.connectionLookups[workingDirectory]) {
       this.connectionLookups[workingDirectory] = new DynamicConnectionLookup(
         this.connectionCache,
