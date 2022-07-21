@@ -12,7 +12,7 @@
  */
 
 import { FieldDef } from "@malloydata/malloy";
-import { app, BrowserWindow, ipcMain } from "electron";
+import { shell, app, BrowserWindow, ipcMain } from "electron";
 import * as path from "path";
 import url from "url";
 import { getAnalysis, readMalloyDirectory } from "./directory";
@@ -125,5 +125,9 @@ async function registerIPC(): Promise<void> {
 
   ipcMain.handle("post:open_directory", async (_event) => {
     return await getOpenDirectory();
+  });
+
+  ipcMain.handle("post:open_link", async (_event, url) => {
+    shell.openExternal(url);
   });
 }

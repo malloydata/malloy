@@ -11,7 +11,13 @@
  * GNU General Public License for more details.
  */
 
+import { useEffect, useState } from "react";
+import styled from "styled-components";
 import { Markdown, parseMarkdown } from "../../core/markdown";
+import { COLORS } from "../colors";
+import { openInBrowser } from "../data";
+import { DOMElement } from "../DOMElement";
+import { highlightPre } from "../utils";
 
 interface MarkdownDocumentProps {
   content: string;
@@ -27,7 +33,6 @@ export const MarkdownDocument: React.FC<MarkdownDocumentProps> = ({
   loadQueryLink,
 }) => {
   const markdown = parseMarkdown(content);
-  console.log(markdown, loadQueryLink);
 
   return <MarkdownNode node={markdown} loadQueryLink={loadQueryLink} />;
 };
@@ -45,21 +50,21 @@ export const MarkdownNode: React.FC<{
   );
   switch (node.type) {
     case "root":
-      return children(node);
+      return <MarkdownDocumentRoot>{children(node)}</MarkdownDocumentRoot>;
     case "heading":
       switch (node.depth) {
         case 1:
-          return <h1>{children(node)}</h1>;
+          return <MarkdownHeading1>{children(node)}</MarkdownHeading1>;
         case 2:
-          return <h2>{children(node)}</h2>;
+          return <MarkdownHeading2>{children(node)}</MarkdownHeading2>;
         case 3:
-          return <h3>{children(node)}</h3>;
+          return <MarkdownHeading3>{children(node)}</MarkdownHeading3>;
         case 4:
-          return <h4>{children(node)}</h4>;
+          return <MarkdownHeading4>{children(node)}</MarkdownHeading4>;
         case 5:
-          return <h5>{children(node)}</h5>;
+          return <MarkdownHeading5>{children(node)}</MarkdownHeading5>;
         case 6:
-          return <h6>{children(node)}</h6>;
+          return <MarkdownHeading6>{children(node)}</MarkdownHeading6>;
       }
       return <div />;
     case "text":
@@ -70,10 +75,10 @@ export const MarkdownNode: React.FC<{
       return <p>{children(node)}</p>;
     case "link":
       return (
-        <a href={node.url}>
+        <MarkdownLink href={node.url} onClick={() => openInBrowser(node.url)}>
           {children(node)}
           {node.title}
-        </a>
+        </MarkdownLink>
       );
     case "emphasis":
       return <i>{children(node)}</i>;
@@ -82,7 +87,7 @@ export const MarkdownNode: React.FC<{
     case "break":
       return <br />;
     case "code":
-      return <pre>{node.value}</pre>;
+      return <MarkdownCodeBlock code={node.value} language={node.lang} />;
     case "delete":
       return <del>{children(node)}</del>;
     case "html":
@@ -150,3 +155,38 @@ export const MarkdownNodes: React.FC<{
     </>
   );
 };
+
+interface MarkdownCodeBlockProps {
+  code: string;
+  language: string;
+}
+
+const MarkdownCodeBlock: React.FC<MarkdownCodeBlockProps> = ({
+  code,
+  language,
+}) => {
+  const [pre, setPre] = useState<HTMLElement>();
+
+  useEffect(() => {
+    highlightPre(code, language).then(setPre);
+  }, [code, language]);
+
+  return pre ? <DOMElement element={pre} /> : <pre>{code}</pre>;
+};
+
+const MarkdownHeading1 = styled.h1``;
+const MarkdownHeading2 = styled.h2``;
+const MarkdownHeading3 = styled.h3``;
+const MarkdownHeading4 = styled.h4``;
+const MarkdownHeading5 = styled.h5``;
+const MarkdownHeading6 = styled.h6``;
+
+const MarkdownDocumentRoot = styled.div`
+  padding: 0 10px 10px 10px;
+  width: 100%;
+  font-family: Google Sans;
+`;
+
+const MarkdownLink = styled.a`
+  color: ${COLORS.dimension.fillStrong};
+`;

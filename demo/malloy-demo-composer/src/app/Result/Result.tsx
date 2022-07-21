@@ -21,6 +21,7 @@ import { usePrevious } from "../hooks";
 import { downloadFile, highlightPre, notUndefined } from "../utils";
 import { compileFilter } from "../../core/compile";
 import { DownloadMenu } from "../DownloadMenu";
+import { DOMElement } from "../DOMElement";
 
 interface ResultProps {
   source: malloy.StructDef;
@@ -162,20 +163,6 @@ export const Result: React.FC<ResultProps> = ({
       </ContentDiv>
     </OuterDiv>
   );
-};
-
-const DOMElement: React.FC<{ element: HTMLElement }> = ({ element }) => {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const parent = ref.current;
-    if (parent) {
-      parent.innerHTML = "";
-      parent.appendChild(element);
-    }
-  }, [element]);
-
-  return <div ref={ref}></div>;
 };
 
 const ResultWrapper = styled.div`

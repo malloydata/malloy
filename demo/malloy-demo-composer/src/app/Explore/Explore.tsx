@@ -82,6 +82,7 @@ export const Explore: React.FC = () => {
       return;
     }
 
+    // TODO also ensure that the source is the same... kinda tricky
     if (model.fullPath === analysis?.modelFullPath) {
       queryModifiers.clearQuery();
       queryModifiers.loadQuery(queryName);
@@ -162,12 +163,10 @@ export const Explore: React.FC = () => {
           )}
           {section === "about" && directory?.readme && (
             <ScrollContent>
-              <div>
-                <MarkdownDocument
-                  content={directory?.readme}
-                  loadQueryLink={loadQueryLink}
-                />
-              </div>
+              <MarkdownDocument
+                content={directory?.readme}
+                loadQueryLink={loadQueryLink}
+              />
             </ScrollContent>
           )}
         </Content>

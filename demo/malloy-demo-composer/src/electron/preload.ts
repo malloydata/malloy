@@ -45,4 +45,5 @@ contextBridge.exposeInMainWorld("malloy", {
   topValues: (source: StructDef, analysisPath: string) =>
     ipcRenderer.invoke("post:top_values", source, analysisPath),
   openDirectory: () => ipcRenderer.invoke("post:open_directory"),
+  openLink: (url: string) => ipcRenderer.invoke("post:open_link", url),
 });
