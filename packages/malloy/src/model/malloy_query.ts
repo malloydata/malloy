@@ -843,7 +843,6 @@ class FieldInstanceField implements FieldInstance {
   fieldUsage: FieldUsage;
   groupSet = 0;
   parent: FieldInstanceResult;
-  sql: string | undefined;
   constructor(
     f: QueryField,
     fieldUsage: FieldUsage,
@@ -862,10 +861,6 @@ class FieldInstanceField implements FieldInstance {
   }
 
   getSQL() {
-    // if (this.sql) {
-    //   return this.sql;
-    // }
-    this.sql = "recursion problem";
     let exp = this.f.generateExpression(this.parent);
     if (isScalarField(this.f)) {
       exp = this.f.caseGroup(
@@ -873,8 +868,7 @@ class FieldInstanceField implements FieldInstance {
         exp
       );
     }
-    this.sql = exp;
-    return this.sql;
+    return exp;
   }
 }
 
