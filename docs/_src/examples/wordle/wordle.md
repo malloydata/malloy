@@ -5,7 +5,7 @@
 ## Step 1 - Raw Materials
 The first thing we need is a word list.  It turns out that on most unix systems there is a word list that can be
 found at `/usr/share/dict/words`.  The file has a single word per line, so we've just uploaded the entire files (as a CSV)
-into BigQuery.
+into BigQuery. If you'd like to use DuckDB (which is natively supported) instead, follow [these steps](wordle_duckdb.md).
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
