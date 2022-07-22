@@ -3,10 +3,12 @@
   "references": [
     { "path": "packages/malloy" },
     { "path": "packages/malloy-db-bigquery" },
+    { "path": "packages/malloy-db-duckdb" },
     { "path": "packages/malloy-db-postgres" },
     { "path": "packages/malloy-db-test" },
     { "path": "packages/malloy-render" },
-    { "path": "packages/malloy-vscode" }
+    { "path": "packages/malloy-vscode" },
+    { "path": "demo/malloy-demo-composer" }
   ],
   "files": [],
   "exclude": ["**/node_modules"],

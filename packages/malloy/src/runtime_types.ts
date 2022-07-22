@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -11,35 +11,8 @@
  * GNU General Public License for more details.
  */
 
-import { MalloyQueryData, SQLBlock, StructDef } from "./model";
-
-/**
- * A URL.
- */
-export class URL {
-  private _url: string;
-
-  constructor(stringURL: string) {
-    this._url = stringURL;
-  }
-
-  /**
-   * @returns The string form of this URL.
-   */
-  public toString(): string {
-    return this._url;
-  }
-
-  /**
-   * Construct a URL from string.
-   *
-   * @param stringURL The string form of the URL.
-   * @returns A URL.
-   */
-  public static fromString(stringURL: string): URL {
-    return new URL(stringURL);
-  }
-}
+import { RunSQLOptions } from "./malloy";
+import { MalloyQueryData, QueryDataRow, SQLBlock, StructDef } from "./model";
 
 /**
  * The contents of a Malloy query document.
@@ -120,20 +93,18 @@ export interface Connection extends InfoConnection {
    * @returns The rows of data resulting from running the given SQL query
    * and the total number of rows available.
    */
-  runSQL(
-    sql: string,
-    options?: { rowLimit?: number }
-  ): Promise<MalloyQueryData>;
-
-  runSQLBlockAndFetchResultSchema(
-    sqlBlock: SQLBlock,
-    options?: { rowLimit?: number }
-  ): Promise<{ data: MalloyQueryData; schema: StructDef }>;
+  runSQL(sql: string, options?: RunSQLOptions): Promise<MalloyQueryData>;
 
   // TODO feature-sql-block Comment
   isPool(): this is PooledConnection;
 
   canPersist(): this is PersistSQLResults;
+
+  canFetchSchemaAndRunSimultaneously(): this is FetchSchemaAndRunSimultaneously;
+
+  canStream(): this is StreamingConnection;
+
+  canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously;
 }
 
 // TODO feature-sql-block Comment
@@ -151,6 +122,32 @@ export interface PooledConnection extends Connection {
 
 export interface PersistSQLResults extends Connection {
   manifestTemporaryTable(sqlCommand: string): Promise<string>;
+}
+
+export interface FetchSchemaAndRunSimultaneously extends Connection {
+  runSQLBlockAndFetchResultSchema(
+    sqlBlock: SQLBlock,
+    options?: { rowLimit?: number }
+  ): Promise<{ data: MalloyQueryData; schema: StructDef }>;
+}
+
+export interface StreamingConnection extends Connection {
+  runSQLStream(
+    sqlCommand: string,
+    options?: { rowLimit?: number }
+  ): AsyncIterableIterator<QueryDataRow>;
+}
+
+export interface FetchSchemaAndRunStreamSimultaneously
+  extends StreamingConnection,
+    FetchSchemaAndRunSimultaneously {
+  runSQLBlockStreamAndFetchResultSchema(
+    sqlCommand: string,
+    options?: { rowLimit?: number }
+  ): Promise<{
+    stream: AsyncIterableIterator<QueryDataRow>;
+    schema: StructDef;
+  }>;
 }
 
 /**

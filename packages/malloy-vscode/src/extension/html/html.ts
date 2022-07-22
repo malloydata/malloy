@@ -44,7 +44,7 @@ export function loadingIndicator(text = "Loading"): string {
 
 			.label {
 				margin-bottom: 10px;
-				color: #505050;
+				color: var(--malloy-title-color, #505050);
 				font-size: 15px;
 			}
 		</style>

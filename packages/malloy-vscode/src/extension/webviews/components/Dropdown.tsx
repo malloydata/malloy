@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -11,14 +11,15 @@
  * GNU General Public License for more details.
  */
 
-import React, { useEffect, useRef, useState } from "react";
-import { VSCodeDropdown, VSCodeOption } from "./fast";
+import React, { useEffect, useRef } from "react";
+import { VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react";
 
 interface DropdownProps {
   value: string;
   setValue: (value: string) => void;
   id?: string;
   options: { value: string; label: string }[];
+  style?: React.CSSProperties;
 }
 
 export const Dropdown: React.FC<DropdownProps> = ({
@@ -26,6 +27,7 @@ export const Dropdown: React.FC<DropdownProps> = ({
   setValue,
   id,
   options,
+  style,
 }) => {
   const onChange = (event: any) => {
     setValue(event.target.value);
@@ -41,7 +43,13 @@ export const Dropdown: React.FC<DropdownProps> = ({
   });
 
   return (
-    <VSCodeDropdown value={value} onChange={onChange} id={id} ref={theElement}>
+    <VSCodeDropdown
+      value={value}
+      onChange={onChange}
+      id={id}
+      ref={theElement}
+      style={style}
+    >
       {options.map((option, index) => (
         <VSCodeOption
           key={index}

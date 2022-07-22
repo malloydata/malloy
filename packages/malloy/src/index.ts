@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -13,6 +13,7 @@
 
 // TODO tighten up exports
 export type {
+  QueryDataRow,
   // Currently needed only by tests
   ModelDef,
   Fragment,
@@ -34,6 +35,18 @@ export type {
   // Needed for drills in render
   FilterExpression,
   SQLBlock,
+  // Used in Composer Demo
+  FieldDef,
+  PipeSegment,
+  QueryFieldDef,
+  TurtleDef,
+  SearchValueMapResult,
+  SearchIndexResult,
+} from "./model";
+export {
+  // Used in Composer Demo
+  Segment,
+  isFilteredAliasedName,
 } from "./model";
 export {
   // Neede for VSCode extension
@@ -59,6 +72,9 @@ export {
   Result,
   parseTableURL,
   QueryMaterializer,
+  CSVWriter,
+  JSONWriter,
+  DataWriter,
 } from "./malloy";
 export type {
   Explore,
@@ -80,6 +96,7 @@ export type {
   PreparedResultMaterializer,
   SQLBlockMaterializer,
   ExploreMaterializer,
+  WriteStream,
 } from "./malloy";
 export type {
   URLReader,
@@ -92,6 +109,7 @@ export type {
   ModelURL,
   PooledConnection,
   TestableConnection,
+  PersistSQLResults,
 } from "./runtime_types";
-export { URL } from "./runtime_types";
 export type { Loggable } from "./malloy";
+export { toAsyncGenerator } from "./connection_utils";

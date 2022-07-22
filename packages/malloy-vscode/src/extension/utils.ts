@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { URLReader, URL } from "@malloydata/malloy";
+import { URLReader } from "@malloydata/malloy";
 import * as vscode from "vscode";
 
 export async function fetchFile(uri: string): Promise<string> {

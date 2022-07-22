@@ -12,7 +12,7 @@
  */
 
 import { TextDocuments } from "vscode-languageserver/node";
-import { Model, Runtime, URL } from "@malloydata/malloy";
+import { Model, Runtime } from "@malloydata/malloy";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import * as fs from "fs";
 import { CONNECTION_MANAGER } from "./connections";
@@ -21,14 +21,14 @@ const TRANSLATE_CACHE = new Map<string, { model: Model; version: number }>();
 
 async function getDocumentText(
   documents: TextDocuments<TextDocument>,
-  uri: string
+  uri: URL
 ): Promise<string> {
-  const cached = documents.get(uri);
+  const cached = documents.get(uri.toString());
   if (cached) {
     return cached.getText();
   } else {
     // TODO catch a file read error
-    return fs.readFileSync(uri.replace(/^file:\/\//, ""), "utf8");
+    return fs.readFileSync(uri.pathname, "utf8");
   }
 }
 
@@ -37,7 +37,7 @@ export async function translateWithCache(
   documents: TextDocuments<TextDocument>
 ): Promise<Model> {
   const currentVersion = document.version;
-  const uri = document.uri.toString();
+  const uri = document.uri;
 
   const entry = TRANSLATE_CACHE.get(uri);
   if (entry && entry.version === currentVersion) {
@@ -45,9 +45,12 @@ export async function translateWithCache(
   }
 
   const files = {
-    readURL: (url: URL) => getDocumentText(documents, url.toString()),
+    readURL: (url: URL) => getDocumentText(documents, url),
   };
-  const runtime = new Runtime(files, CONNECTION_MANAGER.connections);
+  const runtime = new Runtime(
+    files,
+    CONNECTION_MANAGER.getConnectionLookup(new URL(document.uri))
+  );
 
   const model = await runtime.getModel(new URL(uri));
   TRANSLATE_CACHE.set(uri, { version: currentVersion, model });

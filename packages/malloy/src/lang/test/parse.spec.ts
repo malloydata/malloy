@@ -78,7 +78,7 @@ declare global {
       toBeErrorless(): R;
       toTranslate(): R;
       toReturnType(tp: string): R;
-      compileToFailWith(expectedError: string): R;
+      compileToFailWith(...expectedErrors: string[]): R;
     }
   }
 }
@@ -170,36 +170,71 @@ expect.extend({
       message: () => "",
     };
   },
-  compileToFailWith: function (s: MarkedSource | string, msg: string) {
+  compileToFailWith: function (s: MarkedSource | string, ...msgs: string[]) {
     const src = typeof s == "string" ? s : s.code;
-    const emsg = `Compile Error expectation not met\nExpected error: '${msg}'\nSource:\n${src}`;
+    let emsg = "Compile Error expectation not met\nExpected error";
+    const qmsgs = msgs.map((s) => `error '${s}'`);
+    if (msgs.length == 1) {
+      emsg += ` ${qmsgs[0]}`;
+    } else {
+      emsg += `s [\n${qmsgs.join("\n")}\n]`;
+    }
+    emsg += `\nSource:\n${src}`;
     const m = new BetaModel(src);
     const t = m.translate();
     if (t.translated) {
       return { pass: false, message: () => emsg };
+    } else if (t.errors == undefined) {
+      return {
+        pass: false,
+        message: () =>
+          `TEST ERROR, not all objects resolved in source\n` +
+          pretty(t) +
+          "\n" +
+          emsg,
+      };
     } else {
+      const explain: string[] = [];
       const errList = m.errors().errors;
-      const firstError = errList[0];
-      if (firstError.message != msg) {
-        return {
-          pass: false,
-          message: () => `Received errror: ${firstError.message}\n${emsg}`,
-        };
-      }
-      if (typeof s != "string") {
-        const have = errList[0].at?.range;
-        const want = s.locations[0].range;
-        if (!this.equals(have, want)) {
-          return {
-            pass: false,
-            message: () =>
-              `Expected location: ${inspect(want)}\n` +
-              `Received location: ${inspect(have)}\n${emsg}`,
-          };
+      let i;
+      for (i = 0; i < msgs.length && errList[i]; i += 1) {
+        const msg = msgs[i];
+        const err = errList[i];
+        if (msg != err.message) {
+          explain.push(`Expected: ${msg}\nGot: ${err.message}`);
+        } else {
+          if (typeof s != "string" && s.locations[i]) {
+            const have = err.at?.range;
+            const want = s.locations[i].range;
+            if (!this.equals(have, want)) {
+              explain.push(
+                `Expected '${msg}' at location: ${inspect(want)}\n` +
+                  `Actual location: ${inspect(have)}`
+              );
+            }
+          }
         }
       }
+      if (i != msgs.length) {
+        explain.push(...msgs.slice(i).map((m) => `Missing: ${m}`));
+      }
+      if (i != errList.length) {
+        explain.push(
+          ...errList.slice(i).map((m) => `Unexpected Error: ${m.message}`)
+        );
+      }
+      if (explain.length == 0) {
+        return {
+          pass: true,
+          message: () => `All expected errors found: ${pretty(msgs)}`,
+        };
+      }
+      return {
+        pass: false,
+        message: () =>
+          `Compiler did not generated expected errors\n${explain.join("\n")}`,
+      };
     }
-    return { pass: true, message: () => `Found expected error '${msg}` };
   },
 });
 
@@ -297,6 +332,20 @@ describe("model statements", () => {
       "refine explore",
       modelOK(`explore: aa is a { dimension: a is astr }`)
     );
+    test("source refinement preserves original", () => {
+      const x = new BetaModel("source: na is a + { dimension: one is 1 }");
+      expect(x).toTranslate();
+      const t = x.translate().translated;
+      expect(t).toBeDefined();
+      if (t) {
+        const a = t.modelDef.contents.a;
+        if (a.type == "struct") {
+          const aFields = a.fields.map((f) => f.as || f.name);
+          expect(aFields).toContain("astr");
+          expect(aFields).not.toContain("one");
+        }
+      }
+    });
   });
   describe("query:", () => {
     test(
@@ -371,6 +420,41 @@ describe("model statements", () => {
         query: -> a_by_str { aggregate: str_count is count() }
       `)
     );
+    test("query refinement preserves original", () => {
+      const x = new BetaModel(`
+        query: q is a -> { aggregate: acount is count() }
+        query: nq is -> q + { group_by: astr }
+      `);
+      expect(x).toTranslate();
+      const t = x.translate().translated;
+      expect(t).toBeDefined();
+      if (t) {
+        const q = t.modelDef.contents.q;
+        expect(q).toBeDefined();
+        expect(q?.type).toBe("query");
+        if (q && q.type == "query") {
+          const qFields = q.pipeline[0].fields;
+          expect(qFields.length).toBe(1);
+        }
+      }
+    });
+    test("query composition preserves original", () => {
+      const x = new BetaModel(`
+        query: q is ab -> { aggregate: acount }
+        query: nq is -> q -> { project: * }
+      `);
+      expect(x).toTranslate();
+      const t = x.translate().translated;
+      expect(t).toBeDefined();
+      if (t) {
+        const q = t.modelDef.contents.q;
+        expect(q).toBeDefined();
+        expect(q?.type).toBe("query");
+        if (q && q.type == "query") {
+          expect(q.pipeline.length).toBe(1);
+        }
+      }
+    });
   });
   describe("import:", () => {
     test("simple import", () => {
@@ -585,6 +669,10 @@ describe("qops", () => {
   test("index multiple", modelOK("query:a->{index: astr,af}"));
   test("index star", modelOK("query:a->{index: *}"));
   test("index by", modelOK("query:a->{index: * by ai}"));
+  test("index sampled", modelOK("query:a->{index: *; sample: true}"));
+  test("index unsampled", modelOK("query:a->{index: *; sample: false}"));
+  test("index sample-percent", modelOK("query:a->{index: *; sample: 27%}"));
+  test("index sample-rows", modelOK("query:a->{index: *; sample: 100000}"));
   test("top N", modelOK("query: a->{ top: 5; group_by: astr }"));
   test("top N by field", modelOK("query: a->{top: 5 by af; group_by: astr}"));
   test(
@@ -885,6 +973,69 @@ describe("expressions", () => {
           else 'a lot'
       `)
     );
+    test("n-ary without else", () => {
+      expect(markSource`
+        explore: na is a + { dimension: d is
+          pick 7 when true and true
+        }
+      `).compileToFailWith(
+        "pick incomplete, missing 'else'",
+        "Cannot define 'd', value has unknown type"
+      );
+    });
+    test("n-ary with mismatch when clauses", () => {
+      expect(markSource`
+        explore: na is a + { dimension: d is
+          pick 7 when true and true
+          pick '7' when true or true
+          else 7
+        }
+      `).compileToFailWith(
+        "pick type 'string', expected 'number'",
+        "Cannot define 'd', value has unknown type"
+      );
+    });
+    test("n-ary with mismatched else clause", () => {
+      expect(markSource`
+        explore: na is a + { dimension: d is
+          pick 7 when true and true
+          else '7'
+        }
+      `).compileToFailWith(
+        "else type 'string', expected 'number'",
+        "Cannot define 'd', value has unknown type"
+      );
+    });
+    test("applied else mismatch", () => {
+      expect(markSource`
+        explore: na is a + { dimension: d is
+          7 ? pick 7 when 7 else 'not seven'
+        }
+      `).compileToFailWith(
+        "else type 'string', expected 'number'",
+        "Cannot define 'd', value has unknown type"
+      );
+    });
+    test("applied default mismatch", () => {
+      expect(markSource`
+        explore: na is a + { dimension: d is
+          7 ? pick 'seven' when 7
+        }
+      `).compileToFailWith(
+        "pick default type 'number', expected 'string'",
+        "Cannot define 'd', value has unknown type"
+      );
+    });
+    test("applied when mismatch", () => {
+      expect(markSource`
+        explore: na is a + { dimension: d is
+          7 ? pick 'seven' when 7 pick 6 when 6
+        }
+      `).compileToFailWith(
+        "pick type 'number', expected 'string'",
+        "Cannot define 'd', value has unknown type"
+      );
+    });
   });
 });
 
@@ -907,6 +1058,38 @@ describe("sql backdoor", () => {
     "single sql statement",
     modelOK("sql: users is || SELECT * FROM USERS;;")
   );
+  test("connection shows up in model", () => {
+    const model = new BetaModel(`
+      sql: users IS || SELECT * FROM aTable ;; on "someConnection";
+      source: malloyUsers is from_sql(users) { primary_key: ai }
+    `);
+    const needReq = model.translate();
+    expect(model).toBeErrorless();
+    const needs = needReq?.sqlStructs;
+    expect(needs).toBeDefined();
+    if (needs) {
+      expect(needs.length).toBe(1);
+      const sql = makeSQLBlock({
+        select: " SELECT * FROM aTable ",
+        connection: "someConnection",
+      });
+      expect(needs[0]).toMatchObject(sql);
+      const refKey = needs[0].name;
+      expect(refKey).toBeDefined();
+      if (refKey) {
+        model.update({ sqlStructs: { [refKey]: makeSchemaResponse(sql) } });
+        expect(model).toTranslate();
+      }
+      const modelDef = model.translate().translated?.modelDef;
+      expect(modelDef).toBeDefined();
+      const users = modelDef?.contents.malloyUsers;
+      expect(users).toBeDefined();
+      expect(users).toHaveProperty(
+        "structSource.sqlBlock.connection",
+        "someConnection"
+      );
+    }
+  });
   test("explore from sql", () => {
     const model = new BetaModel(`
       sql: users IS || SELECT * FROM aTable ;;
@@ -957,6 +1140,16 @@ describe("sql backdoor", () => {
 });
 
 describe("error handling", () => {
+  test("redefine source", () => {
+    expect(markSource`
+      source: airports is table('malloytest.airports') + {
+        primary_key: code
+      }
+      source: airports is table('malloytest.airports') + {
+        primary_key: code
+      }
+    `).compileToFailWith("Cannot redefine 'airports'");
+  });
   test("query from undefined source", () => {
     expect(markSource`query: ${"x"}->{ project: y }`).compileToFailWith(
       "Undefined source 'x'"
@@ -1021,7 +1214,6 @@ describe("error handling", () => {
   test("query on source with errors", () => {
     expect(markSource`
         explore: na is a { join_one: ${"n"} on astr }
-        // query: na -> { project: * }
       `).compileToFailWith("Undefined source 'n'");
   });
 

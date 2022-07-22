@@ -20,7 +20,6 @@
 import { DataStyles, HTMLView } from "@malloydata/render";
 import {
   Runtime,
-  URL,
   URLReader,
   QueryMaterializer,
   SQLBlockMaterializer,

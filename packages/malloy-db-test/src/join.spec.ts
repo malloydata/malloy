@@ -42,6 +42,7 @@ const joinModelText = `
 const runtimes = new RuntimeList([
   "bigquery", //
   "postgres", //
+  "duckdb", //
 ]);
 
 afterAll(async () => {
@@ -283,6 +284,29 @@ describe("join expression tests", () => {
           aggregate: flight_count is count()
         }
         `
+        )
+        .run();
+      // console.log(result.data.toObject());
+      expect(result.data.rowCount).toBeGreaterThan(4);
+    });
+
+    it(`join issue440 - ${database}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
+        source: aircraft_models is table('malloytest.aircraft_models')
+
+        source: aircraft is table('malloytest.aircraft')
+
+        source: flights is table('malloytest.flights'){
+          join_one: aircraft on aircraft.tail_num = tail_num
+          join_one: aircraft_models on aircraft_models.aircraft_model_code = aircraft.aircraft_model_code
+        }
+
+        query: flights-> {
+          group_by: testingtwo is aircraft_models.model
+        }
+      `
         )
         .run();
       // console.log(result.data.toObject());

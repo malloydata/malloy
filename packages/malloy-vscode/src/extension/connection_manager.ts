@@ -22,12 +22,14 @@ export class VSCodeConnectionManager extends ConnectionManager {
   }
 
   static getConnectionsConfig(): ConnectionConfig[] {
-    return vscode.workspace
-      .getConfiguration("malloy")
-      .get("connections") as ConnectionConfig[];
+    return this.filterUnavailableConnectionBackends(
+      vscode.workspace
+        .getConfiguration("malloy")
+        .get("connections") as ConnectionConfig[]
+    );
   }
 
-  onConfigurationUpdated(): Promise<void> {
+  async onConfigurationUpdated(): Promise<void> {
     return this.setConnectionsConfig(
       VSCodeConnectionManager.getConnectionsConfig()
     );

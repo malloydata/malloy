@@ -3,7 +3,7 @@
   "publisher": "malloydata",
   "displayName": "Malloy",
   "description": "Malloy is an experimental language for describing data relationships and transformations",
-  "version": "0.0.8",
+  "version": "0.0.10",
   "engines": {
     "vscode": "^1.63.0"
   },
@@ -205,6 +205,11 @@
           "description": "Maximum number of top-level rows to fetch when running queries.",
           "default": 50
         },
+        "malloy.downloadsPath": {
+          "type": "string",
+          "description": "Path to directory to save downloaded results",
+          "default": "~/Downloads"
+        },
         "malloy.connections": {
           "type": "array",
           "items": {
@@ -315,11 +320,11 @@
   "dependencies": {
     "@malloydata/db-bigquery": "*",
     "@malloydata/db-postgres": "*",
+    "@malloydata/db-duckdb": "*",
     "@malloydata/malloy": "*",
     "@malloydata/render": "*",
-    "@microsoft/fast-react-wrapper": "^0.1.21",
     "@observablehq/plot": "^0.1.0",
-    "@vscode/webview-ui-toolkit": "^0.8.5",
+    "@vscode/webview-ui-toolkit": "^1.0.0",
     "keytar": "7.7.0",
     "react": "^17.0.2",
     "react-is": "^16.8.0",
@@ -336,7 +341,6 @@
     "@types/glob": "^7.1.3",
     "@types/jsdom": "^16.2.11",
     "@types/mocha": "^8.2.2",
-    "@types/node": "^12.19.8",
     "@types/prismjs": "^1.26.0",
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",
@@ -348,12 +352,13 @@
     "esbuild": "^0.14.13",
     "glob": "^7.1.7",
     "mocha": "^9.0.0",
-    "prismjs": "^1.26.0",
+    "prismjs": "^1.28.0",
     "react-dom": "^17.0.2",
     "semver": "^7.3.5",
     "uuid": "^8.3.2",
     "vsce": "^2.6.3",
     "vscode-test": "^1.5.2",
-    "vscode-webview": "^1.0.1-beta.1"
+    "vscode-webview": "^1.0.1-beta.1",
+    "esbuild-plugin-svgr": "^1.0.1"
   }
 }

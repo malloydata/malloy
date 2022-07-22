@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -30,8 +30,7 @@ export const ResultKindToggle: React.FC<ResultKindToggleProps> = ({
   setKind,
 }) => {
   return (
-    <ResultControlsBar>
-      <ResultLabel>QUERY RESULTS</ResultLabel>
+    <div>
       <ResultControls>
         <ResultControl
           data-selected={kind === ResultKind.HTML}
@@ -52,23 +51,9 @@ export const ResultKindToggle: React.FC<ResultKindToggleProps> = ({
           SQL
         </ResultControl>
       </ResultControls>
-    </ResultControlsBar>
+    </div>
   );
 };
-
-const ResultControlsBar = styled.div`
-  display: flex;
-  border-bottom: 1px solid #efefef;
-  justify-content: space-between;
-  align-items: center;
-  color: #b1b1b1;
-`;
-
-const ResultLabel = styled.span`
-  font-weight: 500;
-  font-size: 12px;
-  padding: 0 10px;
-`;
 
 const ResultControls = styled.div`
   display: flex;

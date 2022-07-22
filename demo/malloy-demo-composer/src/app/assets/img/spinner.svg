@@ -1,0 +1,43 @@
+<svg
+  width="25px"
+  height="25px"
+  viewBox="0 0 15 15"
+  version="1.1"
+  xmlns="http://www.w3.org/2000/svg"
+  xmlnsXlink="http://www.w3.org/1999/xlink"
+>
+  <title>malloy-icon-status-progress</title>
+  <defs>
+    <circle id="path-1" cx="7.5" cy="7.5" r="7.5"></circle>
+    <mask
+      id="mask-2"
+      maskContentUnits="userSpaceOnUse"
+      maskUnits="objectBoundingBox"
+      x="0"
+      y="0"
+      width="15"
+      height="15"
+      fill="white"
+    >
+      <use xlinkHref="#path-1"></use>
+    </mask>
+  </defs>
+  <g
+    id="malloy-icon-status-progress"
+    stroke="none"
+    strokeWidth="1"
+    fill="none"
+    fillRule="evenodd"
+    strokeDasharray="16"
+  >
+    <use
+      id="Oval-Copy-3"
+      stroke="#4285F4"
+      class="primarystroke"
+      mask="url(#mask-2)"
+      strokeWidth="3"
+      transform="translate(7.500000, 7.500000) rotate(-240.000000) translate(-7.500000, -7.500000) "
+      xlinkHref="#path-1"
+    ></use>
+  </g>
+</svg>

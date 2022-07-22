@@ -958,6 +958,7 @@ export type QueryProperty =
   | Limit
   | Filter
   | Index
+  | SampleProperty
   | Joins
   | DeclareFields
   | ProjectStatement
@@ -974,6 +975,7 @@ export function isQueryProperty(q: MalloyElement): q is QueryProperty {
     q instanceof Limit ||
     q instanceof Filter ||
     q instanceof Index ||
+    q instanceof SampleProperty ||
     q instanceof Joins ||
     q instanceof DeclareFields ||
     q instanceof ProjectStatement ||
@@ -1377,6 +1379,7 @@ class IndexExecutor implements QueryExecutor {
   filters: model.FilterExpression[] = [];
   limit?: Limit;
   indexOn?: FieldName;
+  sample?: model.Sampling;
 
   constructor(baseFS: FieldSpace) {
     this.inputFS = baseFS;
@@ -1399,6 +1402,8 @@ class IndexExecutor implements QueryExecutor {
         }
         this.indexOn = qp.weightBy;
       }
+    } else if (qp instanceof SampleProperty) {
+      this.sample = qp.sampling();
     } else {
       qp.log("Not legal in an index query operation");
     }
@@ -1428,6 +1433,13 @@ class IndexExecutor implements QueryExecutor {
 
     if (this.indexOn) {
       indexSegment.weightMeasure = this.indexOn.refString;
+    }
+
+    if (from?.sample) {
+      indexSegment.sample = from.sample;
+    }
+    if (this.sample) {
+      indexSegment.sample = this.sample;
     }
 
     return indexSegment;
@@ -1741,14 +1753,21 @@ abstract class PipelineDesc extends MalloyElement {
   protected appendOps(
     modelPipe: model.PipeSegment[],
     existingEndSpace: FieldSpace
-  ): model.StructDef {
+  ) {
     let nextFS = existingEndSpace;
+    let returnPipe: model.PipeSegment[] | undefined;
     for (const qop of this.qops) {
       const next = qop.getOp(nextFS);
-      modelPipe.push(next.segment);
+      if (returnPipe == undefined) {
+        returnPipe = [...modelPipe];
+      }
+      returnPipe.push(next.segment);
       nextFS = next.outputSpace();
     }
-    return nextFS.structDef();
+    return {
+      opList: returnPipe || modelPipe,
+      structDef: nextFS.structDef(),
+    };
   }
 
   protected refinePipeline(
@@ -1840,19 +1859,21 @@ export class ExistingQuery extends PipelineDesc {
     this.has({ queryHead });
     const exploreStruct = queryHead.structDef();
     const exploreFS = new DynamicSpace(exploreStruct);
-    const resultPipe = this.refinePipeline(exploreFS, seedQuery);
-    const walkStruct = this.getOutputStruct(exploreStruct, resultPipe.pipeline);
-    const outputStruct = this.appendOps(
-      resultPipe.pipeline,
+    const sourcePipe = this.refinePipeline(exploreFS, seedQuery);
+    const walkStruct = this.getOutputStruct(exploreStruct, sourcePipe.pipeline);
+    const appended = this.appendOps(
+      sourcePipe.pipeline,
       new DynamicSpace(walkStruct)
     );
+
     const query: model.Query = {
-      ...resultPipe,
       type: "query",
+      ...sourcePipe,
+      ...appended.opList,
       structRef: queryHead.structRef(),
       location: this.location,
     };
-    return { outputStruct, query };
+    return { outputStruct: appended.structDef, query };
   }
 
   query(): model.Query {
@@ -1918,8 +1939,9 @@ export class FullQuery extends TurtleHeadedPipe {
       const pipeStruct = this.getOutputStruct(structDef, refined);
       pipeFs = new DynamicSpace(pipeStruct);
     }
-    const outputStruct = this.appendOps(destQuery.pipeline, pipeFs);
-    return { outputStruct, query: destQuery };
+    const appended = this.appendOps(destQuery.pipeline, pipeFs);
+    destQuery.pipeline = appended.opList;
+    return { outputStruct: appended.structDef, query: destQuery };
   }
 
   query(): model.Query {
@@ -1965,7 +1987,8 @@ export class TurtleDecl extends TurtleHeadedPipe {
       }
       appendInput = new DynamicSpace(endStruct);
     }
-    this.appendOps(modelPipe.pipeline, appendInput);
+    const appended = this.appendOps(modelPipe.pipeline, appendInput);
+    modelPipe.pipeline = appended.opList;
     return modelPipe;
   }
 
@@ -2275,5 +2298,15 @@ export class SQLStatement extends MalloyElement implements DocStatement {
     if (!doc.defineSQL(this.sqlBlock(), this.is)) {
       this.log(`${this.is} already defined`);
     }
+  }
+}
+
+export class SampleProperty extends MalloyElement {
+  elementType = "sampleProperty";
+  constructor(readonly sample: model.Sampling) {
+    super();
+  }
+  sampling(): model.Sampling {
+    return this.sample;
   }
 }

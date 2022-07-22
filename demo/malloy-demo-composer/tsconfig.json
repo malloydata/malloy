@@ -1,0 +1,27 @@
+{
+  "extends": "../../tsconfig.packages.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "outDir": "out",
+    "rootDir": "src",
+    "noEmit": true
+  },
+  "include": ["src"],
+  "references": [
+    {
+      "path": "../../packages/malloy"
+    },
+    {
+      "path": "../../packages/malloy-db-bigquery"
+    },
+    {
+      "path": "../../packages/malloy-db-duckdb"
+    },
+    {
+      "path": "../../packages/malloy-db-postgres"
+    },
+    {
+      "path": "../../packages/malloy-render"
+    }
+  ]
+}

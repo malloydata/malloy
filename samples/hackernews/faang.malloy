@@ -24,7 +24,7 @@ source: faang_analysis is stories {
     where: faang = 'Google', score >= threshold
   }
 
-  query: faang_stories is stories {
+  query: faang_stories is recent_stories {
     where: faang != 'OTHER', score >= threshold
   }
 
@@ -45,5 +45,5 @@ source: faang_analysis is stories {
     nest: google is top_sites { where: faang = 'Google' }
   }
 
-  query: poster_dashboard2 is poster_dashboard { where: faang != 'OTHER' }
+  query: faang_poster_dashboard is poster_dashboard { where: faang != 'OTHER' }
 }

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="110px" height="110px" viewBox="0 0 110 110" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>viz_scatter</title>
+    <g id="viz_scatter" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <path d="M29.1340462,83.93 C36.5885775,83.93 42.6340462,77.8857969 42.6340462,70.43 C42.6340462,62.9742031 36.5885775,56.93 29.1340462,56.93 C21.679515,56.93 15.6340462,62.9742031 15.6340462,70.43 C15.6340462,77.8857969 21.679515,83.93 29.1340462,83.93 Z" id="Path-Copy-3" stroke="#9aa0a6" class="primarystroke" stroke-width="7" fill-rule="nonzero"></path>
+        <path d="M68.2840462,92.63 C73.6709212,92.63 78.0340462,88.264925 78.0340462,82.88 C78.0340462,77.495075 73.6709212,73.13 68.2840462,73.13 C62.8971712,73.13 58.5340462,77.495075 58.5340462,82.88 C58.5340462,88.264925 62.8971712,92.63 68.2840462,92.63 Z" id="Path-Copy-2" stroke="#9aa0a6" class="primarystroke" stroke-width="7" fill-rule="nonzero" transform="translate(68.284046, 82.880000) rotate(-360.000000) translate(-68.284046, -82.880000) "></path>
+        <path d="M67.8242963,57.43 C78.8701296,57.43 87.8242963,48.4758333 87.8242963,37.43 C87.8242963,26.3842917 78.8701296,17.43 67.8242963,17.43 C56.7784629,17.43 47.8242963,26.3842917 47.8242963,37.43 C47.8242963,48.4758333 56.7784629,57.43 67.8242963,57.43 Z" id="Path-Copy" stroke="#9aa0a6" class="primarystroke" stroke-width="7" fill-rule="nonzero"></path>
+    </g>
+</svg>

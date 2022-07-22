@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -11,6 +11,13 @@
  * GNU General Public License for more details.
  */
 
+// LTNOTE: we need this extension to be installed to correctly index
+//  postgres data...  We should probably do this on connection creation...
+//
+//     create extension if not exists tsm_system_rows
+//
+
+import * as crypto from "crypto";
 import {
   StructDef,
   MalloyQueryData,
@@ -21,9 +28,17 @@ import {
   parseTableURL,
   SQLBlock,
   Connection,
+  QueryDataRow,
 } from "@malloydata/malloy";
-import { PersistSQLResults } from "@malloydata/malloy/src/runtime_types";
-import { Client, Pool } from "pg";
+import {
+  FetchSchemaAndRunSimultaneously,
+  FetchSchemaAndRunStreamSimultaneously,
+  PersistSQLResults,
+  StreamingConnection,
+} from "@malloydata/malloy/src/runtime_types";
+import { Client, Pool, PoolClient } from "pg";
+import QueryStream from "pg-query-stream";
+import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
 
 const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   "character varying": "string",
@@ -40,6 +55,7 @@ const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   "timestamp with time zone": "timestamp",
   timestamp: "timestamp",
   '"char"': "string",
+  character: "string",
   smallint: "number",
   xid: "string",
   real: "number",
@@ -75,7 +91,9 @@ type PostgresConnectionConfigurationReader =
 const DEFAULT_PAGE_SIZE = 1000;
 const SCHEMA_PAGE_SIZE = 1000;
 
-export class PostgresConnection implements Connection {
+export class PostgresConnection
+  implements Connection, StreamingConnection, PersistSQLResults
+{
   private schemaCache = new Map<
     string,
     | { schema: StructDef; error?: undefined }
@@ -125,7 +143,20 @@ export class PostgresConnection implements Connection {
   }
 
   public canPersist(): this is PersistSQLResults {
+    return true;
+  }
+
+  public canFetchSchemaAndRunSimultaneously(): this is FetchSchemaAndRunSimultaneously {
+    // TODO feature-sql-block Implement FetchSchemaAndRunSimultaneously
     return false;
+  }
+
+  public canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously {
+    return false;
+  }
+
+  public canStream(): this is StreamingConnection {
+    return true;
   }
 
   public async fetchSchemaForTables(missing: string[]): Promise<{
@@ -185,16 +216,15 @@ export class PostgresConnection implements Connection {
     return { schemas, errors };
   }
 
-  public async runSQLBlockAndFetchResultSchema(
-    // TODO feature-sql-block Implement an actual version of this that does these simultaneously
-    sqlBlock: SQLBlock,
-    options?: { rowLimit?: number | undefined }
-  ): Promise<{ data: MalloyQueryData; schema: StructDef }> {
-    const data = await this.runSQL(sqlBlock.select, options);
-    const schema = (await this.fetchSchemaForSQLBlocks([sqlBlock])).schemas[
-      sqlBlock.name
-    ];
-    return { data, schema };
+  protected async getClient(): Promise<Client> {
+    const config = await this.readConfig();
+    return new Client({
+      user: config.username,
+      password: config.password,
+      database: config.databaseName,
+      port: config.port,
+      host: config.host,
+    });
   }
 
   protected async runPostgresQuery(
@@ -203,18 +233,11 @@ export class PostgresConnection implements Connection {
     _rowIndex: number,
     deJSON: boolean
   ): Promise<MalloyQueryData> {
-    const config = await this.readConfig();
-    const client = new Client({
-      user: config.username,
-      password: config.password,
-      database: config.databaseName,
-      port: config.port,
-      host: config.host,
-    });
+    const client = await this.getClient();
     await client.connect();
 
     let result = await client.query(sqlCommand);
-    if (result instanceof Array) {
+    if (Array.isArray(result)) {
       result = result.pop();
     }
     if (deJSON) {
@@ -315,7 +338,7 @@ export class PostgresConnection implements Connection {
     const { tablePath: tableName } = parseTableURL(tableURL);
     const [schema, table] = tableName.split(".");
     if (table === undefined) {
-      throw new Error("Default schema not supported Yet in Postgres");
+      throw new Error("Default schema not yet supported in Postgres");
     }
     const infoQuery = `
       SELECT column_name, c.data_type, e.data_type as element_type
@@ -346,18 +369,48 @@ export class PostgresConnection implements Connection {
   }
 
   public async runSQL(
-    sqlCommand: string,
-    { rowLimit }: { rowLimit?: number } = {},
+    sql: string,
+    { rowLimit }: RunSQLOptions = {},
     rowIndex = 0
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
 
     return await this.runPostgresQuery(
-      sqlCommand,
+      sql,
       rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
       true
     );
+  }
+
+  public async *runSQLStream(
+    sqlCommand: string,
+    options?: { rowLimit?: number }
+  ): AsyncIterableIterator<QueryDataRow> {
+    const query = new QueryStream(sqlCommand);
+    const client = await this.getClient();
+    client.connect();
+    const rowStream = client.query(query);
+    let index = 0;
+    for await (const row of rowStream) {
+      yield row.row as QueryDataRow;
+      index += 1;
+      if (options?.rowLimit !== undefined && index >= options.rowLimit) {
+        query.destroy();
+        break;
+      }
+    }
+    await client.end();
+  }
+
+  public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
+    const hash = crypto.createHash("md5").update(sqlCommand).digest("hex");
+    const tableName = `tt${hash}`;
+
+    const cmd = `CREATE TEMPORARY TABLE IF NOT EXISTS ${tableName} AS (${sqlCommand});`;
+    // console.log(cmd);
+    await this.runPostgresQuery(cmd, 1000, 0, false);
+    return tableName;
   }
 }
 
@@ -387,7 +440,8 @@ export class PooledPostgresConnection
     deJSON: boolean
   ): Promise<MalloyQueryData> {
     let result = await this.pool.query(sqlCommand);
-    if (result instanceof Array) {
+
+    if (Array.isArray(result)) {
       result = result.pop();
     }
     if (deJSON) {
@@ -396,5 +450,40 @@ export class PooledPostgresConnection
       }
     }
     return { rows: result.rows as QueryData, totalRows: result.rows.length };
+  }
+
+  private async getClientFromPool(): Promise<[PoolClient, () => void]> {
+    return await new Promise((resolve, reject) =>
+      this.pool.connect((error, client: PoolClient, releaseClient) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve([client, releaseClient]);
+        }
+      })
+    );
+  }
+
+  public async *runSQLStream(
+    sqlCommand: string,
+    options?: { rowLimit?: number }
+  ): AsyncIterableIterator<QueryDataRow> {
+    const query = new QueryStream(sqlCommand);
+    let index = 0;
+    // This is a strange hack... `this.pool.query(query)` seems to return the wrong
+    // type. Because `query` is a `QueryStream`, the result is supposed to be a
+    // `QueryStream` as well, but it's not. So instead, we get a client and call
+    // `client.query(query)`, which does what it's supposed to.
+    const [client, releaseClient] = await this.getClientFromPool();
+    const resultStream: QueryStream = client.query(query);
+    for await (const row of resultStream) {
+      yield row.row as QueryDataRow;
+      index += 1;
+      if (options?.rowLimit !== undefined && index >= options.rowLimit) {
+        query.destroy();
+        break;
+      }
+    }
+    releaseClient();
   }
 }

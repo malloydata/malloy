@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -12,17 +12,16 @@
  */
 
 /* eslint-disable no-console */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { build } from "esbuild";
+import fs from "fs";
+import { build, Plugin } from "esbuild";
 import { nativeNodeModulesPlugin } from "../../../third_party/github.com/evanw/esbuild/native-modules-plugin";
 import * as path from "path";
-import { execSync } from "child_process";
+import { exec, execSync } from "child_process";
 import { noNodeModulesSourceMaps } from "../../../third_party/github.com/evanw/esbuild/no-node-modules-sourcemaps";
+import svgrPlugin from "esbuild-plugin-svgr";
 
-// importing this in normal fashion seems to import an older API?!
-// for ex, when imported, "Property 'rmSync' does not exist on type 'typeof import("fs")'"
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const fs = require("fs");
+import duckdbPackage from "@malloydata/db-duckdb/package.json";
+const DUCKDB_VERSION = duckdbPackage.dependencies.duckdb;
 
 export type Target =
   | "linux-x64"
@@ -31,11 +30,12 @@ export type Target =
   | "alpine-x64"
   | "alpine-arm64"
   | "darwin-x64"
-  | "darwin-arm64";
+  | "darwin-arm64"
+  | "win32-x64";
 
-export type TargetKeytarMap = { [target in Target]: string };
+export type BinaryTargetMap = { [target in Target]: string };
 
-export const targetKeytarMap: TargetKeytarMap = {
+export const targetKeytarMap: BinaryTargetMap = {
   "linux-x64": "keytar-v7.7.0-napi-v3-linux-x64.node",
   "linux-arm64": "keytar-v7.7.0-napi-v3-linux-arm64.node",
   "linux-armhf": "keytar-v7.7.0-napi-v3-linux-ia32.node",
@@ -43,16 +43,24 @@ export const targetKeytarMap: TargetKeytarMap = {
   "alpine-arm64": "keytar-v7.7.0-napi-v3-linuxmusl-arm64.node",
   "darwin-x64": "keytar-v7.7.0-napi-v3-darwin-x64.node",
   "darwin-arm64": "keytar-v7.7.0-napi-v3-darwin-arm64.node",
+  "win32-x64": "keytar-v7.7.0-napi-v3-win32-x64.node",
+};
+
+export const targetDuckDBMap: Partial<BinaryTargetMap> = {
+  "darwin-arm64": `duckdb-v${DUCKDB_VERSION}-node-v93-darwin-arm64.node`,
+  "darwin-x64": `duckdb-v${DUCKDB_VERSION}-node-v93-darwin-x64.node`,
+  "linux-x64": `duckdb-v${DUCKDB_VERSION}-node-v93-linux-x64.node`,
+  "win32-x64": `duckdb-v${DUCKDB_VERSION}-node-v93-win32-x64.node`,
 };
 
 export const outDir = "dist/";
 
 // This plugin replaces keytar's attempt to load the keytar.node native binary (built in node_modules
 // on npm install) with a require function to load a .node file from the filesystem
-const keytarReplacerPlugin = {
+const keytarReplacerPlugin: Plugin = {
   name: "keytarReplacer",
-  setup(build: any) {
-    build.onResolve({ filter: /build\/Release\/keytar.node/ }, (args: any) => {
+  setup(build) {
+    build.onResolve({ filter: /build\/Release\/keytar.node/ }, (args) => {
       return {
         path: args.path,
         namespace: "keytar-replacer",
@@ -60,7 +68,7 @@ const keytarReplacerPlugin = {
     });
     build.onLoad(
       { filter: /build\/Release\/keytar.node/, namespace: "keytar-replacer" },
-      (_args: any) => {
+      (_args) => {
         return {
           contents: `
             try { module.exports = require('./keytar-native.node')}
@@ -72,6 +80,87 @@ const keytarReplacerPlugin = {
   },
 };
 
+function makeDuckdbNoNodePreGypPlugin(target: Target | undefined): Plugin {
+  const localPath = require.resolve("duckdb/lib/binding/duckdb.node");
+  const isDuckDBAvailable =
+    target === undefined || targetDuckDBMap[target] !== undefined;
+  return {
+    name: "duckdbNoNodePreGypPlugin",
+    setup(build) {
+      build.onResolve({ filter: /duckdb-binding\.js/ }, (args) => {
+        return {
+          path: args.path,
+          namespace: "duckdb-no-node-pre-gyp-plugin",
+        };
+      });
+      build.onLoad(
+        {
+          filter: /duckdb-binding\.js/,
+          namespace: "duckdb-no-node-pre-gyp-plugin",
+        },
+        (_args) => {
+          return {
+            contents: `
+              var path = require("path");
+              var os = require("os");
+
+              var binding_path = ${
+                target
+                  ? `require.resolve("./duckdb-native.node")`
+                  : `"${localPath}"`
+              };
+
+              // dlopen is used because we need to specify the RTLD_GLOBAL flag to be able to resolve duckdb symbols
+              // on linux where RTLD_LOCAL is the default.
+              process.dlopen(module, binding_path, os.constants.dlopen.RTLD_NOW | os.constants.dlopen.RTLD_GLOBAL);
+            `,
+            resolveDir: ".",
+          };
+        }
+      );
+      build.onResolve({ filter: /duckdb_availability/ }, (args) => {
+        return {
+          path: args.path,
+          namespace: "duckdb-no-node-pre-gyp-plugin",
+        };
+      });
+      build.onLoad(
+        {
+          filter: /duckdb_availability/,
+          namespace: "duckdb-no-node-pre-gyp-plugin",
+        },
+        (_args) => {
+          return {
+            contents: `
+              export const isDuckDBAvailable = ${isDuckDBAvailable};
+            `,
+            resolveDir: ".",
+          };
+        }
+      );
+      if (!isDuckDBAvailable) {
+        build.onResolve({ filter: /^duckdb$/ }, (args) => {
+          return {
+            path: args.path,
+            namespace: "duckdb-no-node-pre-gyp-plugin",
+          };
+        });
+        build.onLoad(
+          { filter: /^duckdb$/, namespace: "duckdb-no-node-pre-gyp-plugin" },
+          (_args) => {
+            return {
+              contents: `
+              module.exports = {};
+            `,
+              resolveDir: ".",
+            };
+          }
+        );
+      }
+    },
+  };
+}
+
 // building without a target does a default build using whatever keytar native lib is in node_modules
 export async function doBuild(target?: Target): Promise<void> {
   const development = process.env.NODE_ENV == "development";
@@ -82,12 +171,30 @@ export async function doBuild(target?: Target): Promise<void> {
   fs.rmSync(outDir, { recursive: true, force: true });
   fs.mkdirSync(outDir, { recursive: true });
 
-  fs.writeFileSync(
-    path.join(outDir, "third_party_notices.txt"),
-    development
-      ? "Third party notices are not produced during development builds to speed up the build."
-      : execSync("yarn licenses generate-disclaimer --prod", { stdio: "pipe" })
-  );
+  const licenseFilePath = path.join(outDir, "third_party_notices.txt");
+  if (development) {
+    fs.writeFileSync(
+      licenseFilePath,
+      "Third party notices are not produced during development builds to speed up the build."
+    );
+  } else {
+    await new Promise((resolve, reject) => {
+      const licenseFile = fs.createWriteStream(licenseFilePath);
+      licenseFile.on("open", () => {
+        exec("yarn licenses generate-disclaimer --prod", (error, stdio) => {
+          if (error) {
+            return reject(error);
+          }
+          licenseFile.write(stdio);
+          licenseFile.close();
+          resolve(licenseFile);
+        });
+      });
+      licenseFile.on("error", (err) => {
+        reject(err);
+      });
+    });
+  }
 
   fs.writeFileSync(
     path.join(outDir, "build-sha"),
@@ -114,15 +221,33 @@ export async function doBuild(target?: Target): Promise<void> {
       ),
       path.join(outDir, "keytar-native.node")
     );
+    const duckDBBinaryName = targetDuckDBMap[target];
+    const isDuckDBAvailable = duckDBBinaryName !== undefined;
+    if (isDuckDBAvailable) {
+      fs.copyFileSync(
+        path.join(
+          "..",
+          "..",
+          "third_party",
+          "github.com",
+          "duckdb",
+          "duckdb",
+          duckDBBinaryName
+        ),
+        path.join(outDir, "duckdb-native.node")
+      );
+    }
   }
-
+  const duckDBPlugin = makeDuckdbNoNodePreGypPlugin(target);
+  const extensionPlugins = [duckDBPlugin];
   // if we're building with a target, replace keytar imports using plugin that imports
   // binary builds of keytar. if we're building for dev, use a .node plugin to
   // ensure ketyar's node_modules .node file is in the build
-  // NOTE: adding any additional npm packages that create native libs will require a different strategy
-  const extensionPlugins = target
-    ? [keytarReplacerPlugin]
-    : [nativeNodeModulesPlugin];
+  if (target) {
+    extensionPlugins.push(keytarReplacerPlugin);
+  } else {
+    extensionPlugins.push(nativeNodeModulesPlugin);
+  }
   if (development) extensionPlugins.push(noNodeModulesSourceMaps);
 
   // build the extension and server
@@ -134,7 +259,12 @@ export async function doBuild(target?: Target): Promise<void> {
     sourcemap: development,
     outdir: outDir,
     platform: "node",
-    external: ["vscode", "pg-native", "./keytar-native.node"],
+    external: [
+      "vscode",
+      "pg-native",
+      "./keytar-native.node",
+      "./duckdb-native.node",
+    ],
     loader: { [".png"]: "file", [".svg"]: "file" },
     plugins: extensionPlugins,
     watch: development
@@ -147,6 +277,17 @@ export async function doBuild(target?: Target): Promise<void> {
       : false,
   });
 
+  const webviewPlugins = [
+    svgrPlugin({
+      typescript: true,
+    }),
+    duckDBPlugin,
+  ];
+
+  if (development) {
+    webviewPlugins.push(noNodeModulesSourceMaps);
+  }
+
   // build the webviews
   await build({
     entryPoints: [
@@ -157,14 +298,14 @@ export async function doBuild(target?: Target): Promise<void> {
     entryNames: "[dir]",
     bundle: true,
     minify: !development,
-    sourcemap: development,
+    sourcemap: development ? "inline" : false,
     outdir: outDir,
     platform: "browser",
     loader: { [".svg"]: "file" },
     define: {
       "process.env.NODE_DEBUG": "false", // TODO this is a hack because some package we include assumed process.env exists :(
     },
-    plugins: development ? [noNodeModulesSourceMaps] : [],
+    plugins: webviewPlugins,
     watch: development
       ? {
           onRebuild(error, result) {

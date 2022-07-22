@@ -117,9 +117,12 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
         const drillIcon = createDrillIcon(this.document);
         drillElement.appendChild(drillIcon);
         drillElement.style.cssText = `padding: 8px; vertical-align: top; width: 25px; cursor: pointer; position: absolute; top: 5px; right: 5px;`;
-        drillElement.onclick = () =>
-          this.options.onDrill &&
-          this.options.onDrill(getDrillQuery(row), drillIcon);
+        drillElement.onclick = () => {
+          if (this.options.onDrill) {
+            const { drillQuery, drillFilters } = getDrillQuery(row);
+            this.options.onDrill(drillQuery, drillIcon, drillFilters);
+          }
+        };
         rowElement.appendChild(drillElement);
       }
       const dashboardOuter = this.document.createElement("div");
@@ -152,8 +155,8 @@ const DASHBOARD_OUTER = `
 `;
 
 const NESTING_DIV = `
-  background-color: #f7f7f7;
-  border: 1px solid #e9e9e9;
+  background-color: var(--malloy-tile-background-color, #f7f7f7);
+  border: 1px solid var(--malloy-border-color, #e9e9e9);
 `;
 
 const NEST_INDICATOR = `
@@ -179,21 +182,21 @@ const MEASURE_BOXES = `
 `;
 
 const DIMENSION_BOX = `
-  background-color: #f7f7f7;
-  border: 1px solid #e9e9e9;
+  background-color: var(--malloy-tile-background-color, #f7f7f7);
+  border: 1px solid var(--malloy-border-color, #e9e9e9);
   margin: 6px;
   border-radius: 5px;
   padding: 10px;
-  box-shadow: 0 1px 5px 0 #f3f3f3;
+  box-shadow: 0 1px 5px 0 var(--malloy-border-color, #f3f3f3);
 `;
 
 const MEASURE_BOX = `
   margin: 6px;
   border-radius: 5px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--malloy-border-color, #e9e9e9);
   padding: 10px;
   flex: 1 0 auto;
-  box-shadow: 0 1px 5px 0 #f3f3f3;
+  box-shadow: 0 1px 5px 0 var(--malloy-tile-background-color, #f3f3f3);
   max-width: calc(100% - 11px);
   display: flex;
   flex-direction: column;
@@ -203,16 +206,16 @@ const MEASURE_BOX = `
 const DIMENSION_TITLE = `
   font-size: 12px;
   font-weight: 500;
-  color: #505050;
+  color: var(--malloy-title-color, #505050);
   margin-bottom: 5px;
-  font-family: Roboto;
+  font-family: var(--malloy-font-family, "Roboto");
 `;
 
 const TITLE = `
   font-size: 11px;
-  font-family: Roboto;
+  font-family: var(--malloy-font-family, "Roboto");
   font-weight: 500;
-  color: #505050;
+  color: #var(--malloy-title-color, #505050);
 `;
 
 const SINGLE_VALUE = `

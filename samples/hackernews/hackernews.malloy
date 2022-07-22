@@ -6,6 +6,20 @@ source: stories is table('bigquery-public-data.hacker_news.full') {
     post_type is `type`
 
   dimension:
+    post_time is timestamp_seconds(`time`)
+    site is regexp_extract(
+      regexp_extract(url, '^http://([^\\/]*)\\/'),
+      '([^\\.]+\\.[^\\.]+(?:\\.[A-Za-z][A-Za-z])?)$'
+    )
+
+  dimension: score_class is ifnull(score, 0) ?
+      pick 'blah' when < 5
+      pick 'hmmm' when < 10
+      pick 'oooh' when < 100
+      else 'wow'
+
+
+  dimension:
     threshold is 10
     is_good is score >= threshold
 
@@ -13,19 +27,7 @@ source: stories is table('bigquery-public-data.hacker_news.full') {
     post_count is count()
     good_post_count is post_count { where: is_good }
     percent_good is floor(good_post_count / post_count * 100)
-
-  dimension:
-    post_time is timestamp_seconds(`time`)
-    site is regexp_extract(
-      regexp_extract(url, '^http://([^\\/]*)\\/'),
-      '([^\\.]+\\.[^\\.]+(?:\\.[A-Za-z][A-Za-z])?)$'
-    )
-
-    score_class is ifnull(score, 0) ?
-      pick 'blah' when < 5
-      pick 'hmmm' when < 10
-      pick 'oooh' when < 100
-      else 'wow'
+    first_post_date is min(post_time).day
 
   query: by_date is {
     group_by: posted_month is post_time.month
@@ -57,22 +59,28 @@ source: stories is table('bigquery-public-data.hacker_news.full') {
     aggregate: post_count
   }
 
-  query: top_poster is {
-    top: 10
-    where: poster != null
-    group_by: poster
+  query: by_score_class is {
+    group_by: score_class
     aggregate: post_count
   }
 
+  query: top_posters is {
+    top: 10
+    where: poster != null
+    group_by: poster
+    aggregate: good_post_count, post_count
+  }
+
   query: top_sites is {
-    top: 20
+    top: 10
     where: site != null
     group_by: site
     aggregate: post_count
   }
 
-  query: stories is {
+  query: recent_stories is {
     top: 100
+    where: post_type = 'story'
     order_by: post_time desc
     group_by:
       post_time
@@ -90,31 +98,26 @@ source: stories is table('bigquery-public-data.hacker_news.full') {
       group_by: post_type
     }
     nest:
-      top_poster
+      top_posters
       top_sites
-      stories
+      recent_stories {limit: 20}
   }
 
-  query: poster_dashboard is {
-    top: 20
-    where:  poster != null, post_type = 'story'
-    group_by: poster
+  query: poster_dashboard is top_posters {        -- reuses and refines the top_posters query
+    where: post_type = 'story'
     aggregate:
-      post_count
       percent_good
+      first_post_date
     nest:
       posts_over_time
       percent_good_over_time
-    aggregate: first_post is min(post_time)
-    nest: by_sites is {
-      top: 10
-      group_by: site
-      aggregate: post_count, percent_good
-    }
-    nest: best_stories is {
+      by_score_class
+      top_sites
+    nest: best_stories is recent_stories {               -- reuses and refines the stories query
       top: 10
       order_by: score desc
-      group_by: post_time, title, score, site
     }
   }
 }
+
+query: data_stories is stories -> term_dashboard {where: title ~ '%Data%' | '% data%'}

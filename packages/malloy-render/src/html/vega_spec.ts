@@ -23,27 +23,49 @@ type DataContainer = Array<unknown> | Record<string, unknown>;
 export const DEFAULT_SPEC: Partial<lite.TopLevelSpec> = {
   $schema: "https://vega.github.io/schema/vega-lite/v5.json",
   config: {
+    params: [
+      {
+        name: "defaultFont",
+        value: "var(--malloy-font-family, 'Roboto')",
+      },
+      { name: "titleColor", value: "var(--malloy-title-color, #505050)" },
+      { name: "labelColor", value: "var(--malloy-label-color, #505050)" },
+    ],
+    background: undefined,
+    color: { expr: "titleColor" },
     header: {
-      labelFont: "Roboto",
-      titleFont: "Roboto",
+      labelFont: { expr: "defaultFont" },
+      titleFont: { expr: "defaultFont" },
       titleFontWeight: 500,
     },
-    text: { font: "Roboto" },
-    mark: { font: "Roboto" },
-    title: { font: "Roboto", subtitleFont: "Roboto", fontWeight: 500 },
+    text: {
+      font: { expr: "defaultFont" },
+      color: { expr: "labelColor" },
+    },
+    mark: {
+      font: { expr: "defaultFont" },
+      color: { expr: "labelColor" },
+    },
+    title: {
+      font: { expr: "defaultFont" },
+      subtitleFont: { expr: "defaultFont" },
+      fontWeight: 500,
+    },
     axis: {
-      labelFont: "Roboto",
-      titleFont: "Roboto",
+      labelColor: { expr: "labelColor" },
+      labelFont: { expr: "defaultFont" },
+      titleFont: { expr: "defaultFont" },
       titleFontWeight: 500,
-      titleColor: "#505050",
+      titleColor: { expr: "titleColor" },
       titleFontSize: 12,
     },
     legend: {
       titleFontWeight: 500,
-      titleColor: "#505050",
+      titleColor: { expr: "titleColor" },
       titleFontSize: 12,
-      labelFont: "Roboto",
-      titleFont: "Roboto",
+      labelColor: { expr: "labelColor" },
+      labelFont: { expr: "defaultFont" },
+      titleFont: { expr: "defaultFont" },
     },
   },
 };
@@ -78,7 +100,7 @@ const sizeLarge = {
 const bar_SM: lite.TopLevelSpec = {
   ...DEFAULT_SPEC,
   encoding: {
-    y: { field: "#{1}", type: "nominal", axis: null },
+    y: { field: "#{1}", type: "nominal", axis: null, sort: null },
   },
   layer: [
     {
@@ -87,6 +109,7 @@ const bar_SM: lite.TopLevelSpec = {
         x: {
           field: "#{2}",
           type: "quantitative",
+          sort: null,
         },
         color: { value: "#4285F4" },
       },
@@ -105,8 +128,8 @@ const bar_SM_large: lite.TopLevelSpec = {
   mark: "bar",
   data: [],
   encoding: {
-    x: { field: "#{1}", type: "nominal" },
-    y: { field: "#{2}", type: "quantitative" },
+    x: { field: "#{1}", type: "nominal", sort: null },
+    y: { field: "#{2}", type: "quantitative", sort: null },
     color: { value: "#4285F4" },
   },
 };
@@ -175,8 +198,8 @@ const bar_NM: lite.TopLevelSpec = {
   mark: "bar",
   data: [],
   encoding: {
-    x: { field: "#{1}", type: "nominal" },
-    y: { field: "#{2}", type: "quantitative" },
+    x: { field: "#{1}", type: "nominal", sort: null },
+    y: { field: "#{2}", type: "quantitative", sort: null },
     color: { value: "#4285F4" },
   },
 };
@@ -242,7 +265,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
     spec: {
       description: "A simple bar chart with embedded data.",
       encoding: {
-        y: { field: "#{1}", type: "nominal", axis: null },
+        y: { field: "#{1}", type: "nominal", axis: null, sort: null },
       },
       layer: [
         {
@@ -253,6 +276,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
             x: {
               field: { repeat: "repeat" },
               type: "quantitative",
+              sort: null,
             },
             color: {
               field: "#{2}",
@@ -279,10 +303,12 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
       y: {
         field: "#{1}",
         type: "ordinal",
+        sort: null,
       },
       x: {
         field: "#{2}",
         type: "ordinal",
+        sort: null,
       },
       size: {
         field: "#{3}",
@@ -300,10 +326,12 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
       y: {
         field: "#{1}",
         type: "ordinal",
+        sort: null,
       },
       x: {
         field: "#{2}",
         type: "ordinal",
+        sort: null,
       },
       color: {
         field: "#{3}",
@@ -321,10 +349,12 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
       y: {
         field: "#{1}",
         type: "nominal",
+        sort: null,
       },
       x: {
         field: "#{2}",
         type: "ordinal",
+        sort: null,
       },
       color: {
         field: "#{3}",
@@ -343,12 +373,14 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
         field: "#{2}",
         type: "temporal",
         axis: { grid: false },
+        sort: null,
       },
       y: {
         field: "#{3}",
         type: "quantitative",
         axis: { grid: false },
         title: null,
+        sort: null,
       },
       color: {
         field: "#{1}",
@@ -372,12 +404,14 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
         field: "#{3}",
         type: "temporal",
         axis: { grid: false },
+        sort: null,
       },
       y: {
         field: "#{4}",
         type: "quantitative",
         axis: { grid: false },
         title: null,
+        sort: null,
       },
       color: {
         field: "#{1}",
@@ -398,7 +432,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
 };
 
 export function isDataContainer(a: unknown): a is DataContainer {
-  return a instanceof Array || a instanceof Object;
+  return Array.isArray(a) || (a !== null && typeof a === "object");
 }
 
 export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
@@ -448,17 +482,17 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
   }
 
   translateFields(node: DataContainer, explore: Explore): void {
-    if (node instanceof Array) {
+    if (Array.isArray(node)) {
       for (const e of node) {
         if (isDataContainer(e)) {
           this.translateFields(e, explore);
         }
       }
-    } else if (node instanceof Object) {
+    } else if (node && typeof node === "object") {
       for (const [key, value] of Object.entries(node)) {
         if (key === "field" && typeof value === "string") {
           node[key] = this.translateField(explore, value);
-        } else if (key === "repeat" && value instanceof Array) {
+        } else if (key === "repeat" && Array.isArray(value)) {
           for (const k of value.keys()) {
             const fieldName = value[k];
             if (typeof fieldName === "string") {

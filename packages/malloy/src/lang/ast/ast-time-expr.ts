@@ -32,9 +32,10 @@ import {
   ExprValue,
   errorFor,
   isGranularResult,
+  TimeResult,
   GranularResult,
-  granularity,
   FT,
+  timeResult,
   compressExpr,
   FieldValueType,
   MalloyElement,
@@ -295,10 +296,9 @@ export class GranularLiteral extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const dataType = this.timeType || "date";
-    const value: GranularResult = {
+    const value: TimeResult = {
       dataType,
       aggregate: false,
-      timeframe: this.units,
       value: [fs.getDialect().sqlLiteralTime(this.moment, dataType, "UTC")],
     };
     // Literals with date resolution can be used as timestamps or dates,
@@ -309,6 +309,12 @@ export class GranularLiteral extends ExpressionDef {
     // if clause is redundant (see "parse" above, but I'm paranoid)
     if (dataType == "date" && isDateUnit(this.units)) {
       value.alsoTimestamp = true;
+    }
+    if (this.units != "second") {
+      return {
+        ...value,
+        timeframe: this.units,
+      };
     }
     return value;
   }
@@ -337,11 +343,12 @@ export class ExprDuration extends ExpressionDef {
         this.log(`Duration units needs number not '${num.dataType}`);
         return errorFor("illegal unit expression");
       }
-      let resultGranularity = this.timeframe;
-      if (isGranularResult(lhs)) {
-        if (granularity(lhs.timeframe) < granularity(resultGranularity)) {
-          resultGranularity = lhs.timeframe;
-        }
+      let resultGranularity: TimestampUnit | undefined;
+      // Only allow the output of this to be granular if the
+      // granularities match, this is still an area where
+      // more thought is required.
+      if (isGranularResult(lhs) && lhs.timeframe == this.timeframe) {
+        resultGranularity = lhs.timeframe;
       }
       if (lhs.dataType === "timestamp") {
         const result = timeOffset(
@@ -351,20 +358,23 @@ export class ExprDuration extends ExpressionDef {
           num.value,
           this.timeframe
         );
-        const timePlus: GranularResult = {
-          dataType: "timestamp",
-          aggregate: lhs.aggregate || num.aggregate,
-          timeframe: resultGranularity,
-          value: result,
-        };
-        return timePlus;
+        return timeResult(
+          {
+            dataType: "timestamp",
+            aggregate: lhs.aggregate || num.aggregate,
+            value: result,
+          },
+          resultGranularity
+        );
       }
-      return {
-        dataType: "date",
-        aggregate: lhs.aggregate || num.aggregate,
-        timeframe: resultGranularity,
-        value: timeOffset("date", lhs.value, op, num.value, this.timeframe),
-      };
+      return timeResult(
+        {
+          dataType: "date",
+          aggregate: lhs.aggregate || num.aggregate,
+          value: timeOffset("date", lhs.value, op, num.value, this.timeframe),
+        },
+        resultGranularity
+      );
     }
     return super.apply(fs, op, left);
   }
