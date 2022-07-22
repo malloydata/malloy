@@ -423,7 +423,10 @@ class QueryField extends QueryNode {
 
     let partitionBy = "";
     if (resultSet.parent !== undefined) {
-      partitionBy = `PARTITION BY ${fields.map((f) => f.getSQL()).join(", ")}`;
+      const fieldsString = fields.map((f) => f.getSQL()).join(", ");
+      if (fieldsString.length > 0) {
+        partitionBy = `PARTITION BY ${fieldsString}`;
+      }
     }
     return `MAX(${s}) OVER (${partitionBy})`;
   }
