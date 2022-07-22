@@ -29,7 +29,7 @@ async function packageDemo(
 ) {
   doBuild(`${platform}-${architecture}`);
 
-  // include third_party_licenses.txt
+  // third_party_licenses.txt
   const licenseFilePath = path.join(outDir, thirdPartyNotices);
   await new Promise((resolve, reject) => {
     const licenseFile = fs.createWriteStream(licenseFilePath);
