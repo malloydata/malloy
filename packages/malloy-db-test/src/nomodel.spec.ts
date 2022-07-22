@@ -339,6 +339,78 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.resultExplore.limit).toBe(3);
   });
 
+  it(`ungroup top level - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: s is table('malloytest.state_facts') + {
+          measure: total_births is births.sum()
+          measure: births_per_100k is floor(total_births/ ungroup(total_births) * 100000)
+        }
+
+        query:s-> {
+          group_by: state
+          aggregate: births_per_100k
+        }
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    expect(result.data.path(0, "births_per_100k").value).toBe(9742);
+  });
+
+  it(`ungroup nested with no grouping above - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: s is table('malloytest.state_facts') + {
+          measure: total_births is births.sum()
+          measure: births_per_100k is floor(total_births/ ungroup(total_births) * 100000)
+        }
+
+        query: s-> {
+          aggregate: total_births
+          nest: by_name is {
+            group_by: popular_name
+            aggregate: births_per_100k
+          }
+        }
+
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    expect(result.data.path(0, "by_name", 0, "births_per_100k").value).toBe(
+      66703
+    );
+  });
+
+  it(`ungroup nested  - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: s is table('malloytest.state_facts') + {
+          measure: total_births is births.sum()
+          measure: births_per_100k is floor(total_births/ ungroup(total_births) * 100000)
+        }
+
+        query:s ->  {
+          group_by: popular_name
+          nest: by_state is {
+            group_by: state
+            aggregate: births_per_100k
+          }
+        }
+
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    expect(result.data.path(0, "by_state", 0, "births_per_100k").value).toBe(
+      36593
+    );
+  });
+
   it(`single value to udf - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
