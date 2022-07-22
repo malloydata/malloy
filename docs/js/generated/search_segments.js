@@ -3,13 +3,19 @@ window.SEARCH_SEGMENTS = [
     "titles": [
       "Connecting a Database in the VSCode Extension"
     ],
+    "paragraphs": [],
+    "path": "/connection_instructions.md"
+  },
+  {
+    "titles": [
+      "Connecting a Database in the VSCode Extension",
+      "Adding the Connection in VS Code"
+    ],
     "paragraphs": [
-      "Currently, BigQuery and PostgreSQL are supported.",
       "Click on the Malloy icon on the left side of VS Code. This opens the Malloy view - a view that allows you to view schemas as you work with Malloy models and edit database connections.",
       "In the \"CONNECTIONS\" panel, select \"Edit Connections\". This opens the connection manager page.",
       "Click \"Add Connection\" and fill out the relevant details. See below for database-specific instructions.",
-      "Press \"Test\" on the connection to confirm that you have successfully connected to the database",
-      "Hit \"Save,\" then dive into writing Malloy!"
+      "Press \"Test\" on the connection to confirm that you have successfully connected to the database"
     ],
     "path": "/connection_instructions.md"
   },
@@ -29,7 +35,9 @@ window.SEARCH_SEGMENTS = [
       "BigQuery",
       "Option 1: OAuth"
     ],
-    "paragraphs": [],
+    "paragraphs": [
+      "When creating the connection in the VS Code Plugin, you can leave the optional fields blank as it will connect using your gcloud project configuration."
+    ],
     "path": "/connection_instructions.md"
   },
   {
@@ -39,8 +47,21 @@ window.SEARCH_SEGMENTS = [
       "Option 2: Service Account"
     ],
     "paragraphs": [
-      "Add the relevant database connection information. Once you click save, the password (if you have entered one) will be stored in your system keychain.",
-      "To access BigQuery with the Malloy Plugin, you will need to have BigQuery credentials available, and the <a href=\"https://cloud.google.com/sdk/gcloud\">gcloud CLI</a> installed. Once it's installed, open a terminal and type the following:",
+      "Add the relevant database connection information. Once you click save, the password (if you have entered one) will be stored in your system keychain."
+    ],
+    "path": "/connection_instructions.md"
+  },
+  {
+    "titles": [
+      "Connecting a Database in the VSCode Extension",
+      "DuckDB"
+    ],
+    "paragraphs": [
+      "DuckDB is available without needing to explicitly configure a connection. It works with local parquet or csv files, which can be referenced in a source. This example has the CSV in the same directory as the .malloy model file: <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">source</span><span style=\"color: #000000\">: </span><span style=\"color: #001080\">baby_names</span><span style=\"color: #000000\"> </span><span style=\"color: #AF00DB\">is</span><span style=\"color: #000000\"> </span><span style=\"color: #795E26\">table</span><span style=\"color: #000000\">(</span><span style=\"color: #A31515\">&#39;duckdb:babynames.csv&#39;</span><span style=\"color: #000000\">)</span></span></code>",
+      "Currently, BigQuery, PostgreSQL <em>(in progress)</em>, and DuckDB are supported.  These instructions assume you have already installed the <a href=\"https://marketplace.visualstudio.com/items?itemName=malloydata.malloy-vscode\">Malloy extension</a> in VSCode.",
+      "<em>Note:  DuckDB is natively supported, allowing you to skip these initial steps.</em>",
+      "Hit \"Save,\" then dive into writing Malloy! We recommend starting with one of our Samples, which can be found <a href=\"https://github.com/looker-open-source/malloy/tree/main/samples\">here</a> or downloaded from the VS Code Plugin",
+      "To access BigQuery with the Malloy Plugin, you will need to have a <a href=\"https://cloud.google.com/\">Google Cloud Account</a>, access to BigQuery, and the <a href=\"https://cloud.google.com/sdk/gcloud\">gcloud CLI</a> installed. Once the gcloud CLI is installed, open a terminal and type the following:",
       "Add the relevant account information to the new connection, and include the path to the <a href=\"https://cloud.google.com/iam/docs/creating-managing-service-account-keys\">service account key</a>."
     ],
     "path": "/connection_instructions.md"
@@ -52,7 +73,7 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "<em>(Development in progress, date/time support is currently incomplete)</em>",
-      "<em>These instructions assume you have already installed the <a href=\"https://marketplace.visualstudio.com/items?itemName=malloydata.malloy-vscode\">Malloy extension</a> in VSCode.</em>",
+      "There are a number of examples on public data using DuckDB available <a href=\"https://github.com/lloydtabb/malloy_examples\">here</a>.",
       "<em>Replace <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">{</span><span style=\"color: #001080\">my_project_id</span><span style=\"color: #000000\">}</span></span></code> with the <strong>ID</strong> of the BigQuery project you want to use & bill to. If you're not sure what this ID is, open Cloud Console, and click on the dropdown at the top (just to the right of the \"Google Cloud Platform\" text) to view projects you have access to. If you don't already have a project, <a href=\"https://cloud.google.com/resource-manager/docs/creating-managing-projects\">create one</a>.</em>"
     ],
     "path": "/connection_instructions.md"
@@ -471,7 +492,7 @@ window.SEARCH_SEGMENTS = [
       "Grouping a query"
     ],
     "paragraphs": [
-      "malloy compiles to SQL.  The SQL query for the above command is."
+      "Malloy compiles to SQL.  The SQL query for the above command is."
     ],
     "path": "/examples/names.md"
   },
@@ -508,7 +529,7 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "Calculate the births per 100K for a name in general and a name within a state. Compute and sort by a ratio to figure out relative popularity.",
-      "In SQL there are basically two kinds of <code>SELECT</code> commands: <code>SELECT ... GROUP BY</code> and <code>SELECT</code> without a grouping.\nIn malloy, these are two different commands.  The command in malloy for <code>SELECT ... GROUP BY</code> is <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span></span></code>.  Since <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #267F99\">number</span></span></code>\nand <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #0000FF\">year</span></span></code> are reserved words, we have to quote the names with back-tics.",
+      "In SQL there are basically two kinds of <code>SELECT</code> commands: <code>SELECT ... GROUP BY</code> and <code>SELECT</code> without a grouping.\nIn Malloy, these are two different commands.  The command in Malloy for <code>SELECT ... GROUP BY</code> is <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #AF00DB\">group_by</span></span></code>.  Since <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #267F99\">number</span></span></code>\nand <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #0000FF\">year</span></span></code> are reserved words, we have to quote the names with back-tics.",
       "The command above says query the table <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #A31515\">&#39;bigquery-public-data.usa_names.usa_1910_2013&#39;</span></span></code> and <em>project</em> (show)\nall the columns for the first 10 rows.",
       "<em>You can find the complete source code for this model <a href=\"https://github.com/looker-open-source/malloy/blob/docs-release/samples/names/names.malloy\">here</a>.</em>"
     ],
@@ -573,8 +594,8 @@ window.SEARCH_SEGMENTS = [
     ],
     "paragraphs": [
       "Find words that do NOT contain S,L,O,P, or E",
-      "The first thing we need is a word list.  It turns out that on most unix systems there is a word list that can be\nfound at <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">/</span><span style=\"color: #001080\">usr</span><span style=\"color: #000000\">/</span><span style=\"color: #001080\">share</span><span style=\"color: #000000\">/</span><span style=\"color: #001080\">dict</span><span style=\"color: #000000\">/</span><span style=\"color: #001080\">words</span></span></code>.  The file has a single word per line, so we've just uploaded the entire files (as a CSV)\ninto BigQuery.",
-      "<a href=\"https://www.powerlanguage.co.uk/wordle/\">Wordle</a> is an interesting, challenging and fun word game.  If you aren't familiar with it, I suggest that you play it before reading this article"
+      "<a href=\"https://www.powerlanguage.co.uk/wordle/\">Wordle</a> is an interesting, challenging and fun word game.  If you aren't familiar with it, I suggest that you play it before reading this article",
+      "The first thing we need is a word list.  It turns out that on most unix systems there is a word list that can be\nfound at <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">/</span><span style=\"color: #001080\">usr</span><span style=\"color: #000000\">/</span><span style=\"color: #001080\">share</span><span style=\"color: #000000\">/</span><span style=\"color: #001080\">dict</span><span style=\"color: #000000\">/</span><span style=\"color: #001080\">words</span></span></code>.  The file has a single word per line, so we've just uploaded the entire files (as a CSV)\ninto BigQuery. If you'd like to use DuckDB (which is natively supported) instead, follow <a href=\"wordle_duckdb.html\">these steps</a>."
     ],
     "path": "/examples/wordle/wordle.md"
   },
@@ -1086,6 +1107,18 @@ window.SEARCH_SEGMENTS = [
       "<strong><a href=\"wordle219.html\">Wordle 219</a></strong>: <em>Jan 24</em> - Solved in 3.5"
     ],
     "path": "/examples/wordle/wordle5.md"
+  },
+  {
+    "titles": [
+      "Using DuckDB for Wordle Solver"
+    ],
+    "paragraphs": [
+      "Malloy natively supports DuckDB, allowing you to run Malloy models against DuckDB tables created from flat files (e.g. CSV, Parquet).\nYou can get started quickly by modifying two source definitions (below) from the Wordle Solver example in the documentation.\nThe below statements redefine the words and numbers sources using DuckDB instead of BigQuery.",
+      "Instead of loading the word list from BigQuery, import the local word file directly into DuckDB:",
+      "Instead of loading the numbers table from BigQuery, generate the same table using SQL:",
+      "The rest of the example code will run as expected"
+    ],
+    "path": "/examples/wordle/wordle_duckdb.md"
   },
   {
     "titles": [
@@ -2030,7 +2063,7 @@ window.SEARCH_SEGMENTS = [
       "The output from one stage of a query can be passed into another stage using <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">-&gt;</span></span></code>. For example, we'll start with this query which outputs, for California and New York, the total number of airports, as well as the number of airports in each county.",
       "In this example, the <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">aircraft</span></span></code> source is joined to <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">flights</span></span></code>, and aircraft_models is joined via aircraft. These examples explicitly name both keys--this same syntax can be used to write more complex joins.",
       "Malloy code can include both line and block comments. Line comments, which begin with <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #008000\">--</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #008000\">//</span></span></code>,\nmay appear anywhere within a line, and cause all subsequent characters on that line to be ignored.\nBlock comments, which are enclosed between <code>/*</code> and <code>*/</code>, cause all enclosed characters to be ignored\nand may span multiple lines.",
-      "This guide introduces the basics of querying and modeling with Malloy. Malloy has a rendering system that can render <a href=\"../visualizations/dashboards.html\">results as tables, charts or dashboards</a>, but fundamentally the Malloy just returns data. Buttons on the top right of any \"Query Result\" box allow you to toggle between rendered results (HTML), raw data (JSON), and the SQL generated by the malloy model.",
+      "This guide introduces the basics of querying and modeling with Malloy. Malloy has a rendering system that can render <a href=\"../visualizations/dashboards.html\">results as tables, charts or dashboards</a>, but fundamentally the Malloy just returns data. Buttons on the top right of any \"Query Result\" box allow you to toggle between rendered results (HTML), raw data (JSON), and the SQL generated by the Malloy model.",
       "Queries are of the form: <em>source</em> <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">-&gt;</span></span></code> <em>operation</em>",
       "In Malloy, the source of a query is either a raw table, a <a href=\"source.html\">modeled source</a>, or another query.",
       "In this example, the <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #795E26\">table</span><span style=\"color: #000000\">()</span></span></code> function provides the query <em>source</em> from a table (or view) in the database.\nThe query <em>operation</em> is explicit about which fields are grouped, aggregated or projected.",
@@ -2308,7 +2341,7 @@ window.SEARCH_SEGMENTS = [
       "By way of example, if the value of <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">time</span></span></code> is <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #098658\">@2021-08-06 00:36</span></span></code>, then the below truncations will produce the results on the right:",
       "A truncation made this way (unlike a truncation make in SQL with\n<code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">TIMESTAMP_TRUNC</span><span style=\"color: #000000\">()</span></span></code>) can also function as a range. The range begins\nat the moment of truncation and the duration is the timeframe unit\nused to specify the truncation, so for example <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">time</span><span style=\"color: #000000\">.</span><span style=\"color: #0000FF\">year</span></span></code>\nwould be a range covering the entire year which contains <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">time</span></span></code>.",
       "The \"Result\" column uses a value of <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #098658\">@2021-08-06 00:55:05</span></span></code> for <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">expr</span></span></code>.",
-      "Time literals are specified in malloy with the <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #098658\">@</span></span></code> character. A literal\nspecified this way has an implied duration which means a literal\ncan act like a range.",
+      "Time literals are specified in Malloy with the <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #098658\">@</span></span></code> character. A literal\nspecified this way has an implied duration which means a literal\ncan act like a range.",
       "For example the year <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #098658\">@2003</span></span></code> can be used with <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">event_time</span><span style=\"color: #000000\">: </span><span style=\"color: #098658\">@2003</span></span></code> to test if the\nevent happened in the year 2003.",
       "Partial comparisons, or \"partials\" are written with a binary comparison operator followed by a value, e.g. <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">&gt; </span><span style=\"color: #098658\">42</span></span></code> or <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">!= </span><span style=\"color: #0000FF\">null</span></span></code>. These can be thought of as conditions-as-values, or as functions that return a boolean.",
       "Conditions can be logically combined with the two alternation operators, <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">&amp;</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #000000\">|</span></span></code>. These are different from <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #0000FF\">and</span></span></code> and <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #0000FF\">or</span></span></code> in that they operate on conditions which return boolean values, rather than boolean values directly.",
@@ -3055,31 +3088,6 @@ window.SEARCH_SEGMENTS = [
       "Basic structure of a Malloy Query:",
       "This maps to the below SQL query structure:"
     ],
-    "path": "/language/sql_generation.md"
-  },
-  {
-    "titles": [
-      "SQL to Malloy"
-    ],
-    "paragraphs": [],
-    "path": "/language/sql_generation.md"
-  },
-  {
-    "titles": [
-      "SQL to Malloy",
-      "Components of a Query"
-    ],
-    "paragraphs": [],
-    "path": "/language/sql_generation.md"
-  },
-  {
-    "titles": [
-      "How Malloy Generates SQL"
-    ],
-    "paragraphs": [
-      "Basic structure of a Malloy Query:",
-      "This maps to the below SQL query structure:"
-    ],
     "path": "/language/sql_to_malloy.md"
   },
   {
@@ -3327,7 +3335,7 @@ window.SEARCH_SEGMENTS = [
       "By way of example, if the value of <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">expr</span></span></code> is <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #098658\">@2021-08-06 00:36</span></span></code>, then the below truncations will produce the results on the right:",
       "A truncation made this way (unlike a truncation make in SQL with\n<code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">TIMESTAMP_TRUNC</span><span style=\"color: #000000\">()</span></span></code>) can also function as a range. The range begins\nat the moment of truncation and the duration is the timeframe unit\nused to specify the truncation, so for example <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">eventDate</span><span style=\"color: #000000\">.</span><span style=\"color: #0000FF\">year</span></span></code>\nwould be a range covering the entire year which contains <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">eventDate</span></span></code>",
       "The \"Result\" column uses a value of <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #098658\">2021</span><span style=\"color: #000000\">-08-06 00:</span><span style=\"color: #098658\">55</span><span style=\"color: #000000\">:05</span></span></code> for <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">expr</span></span></code>.",
-      "Time literals are specified in malloy with the <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #098658\">@</span></span></code> character. A literal\nspecified this way has an implied duration which means a literal\ncan act like a range.",
+      "Time literals are specified in Malloy with the <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #098658\">@</span></span></code> character. A literal\nspecified this way has an implied duration which means a literal\ncan act like a range.",
       "For example the year <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #098658\">@2003</span></span></code> can be used with <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">eventTime</span><span style=\"color: #000000\"> : </span><span style=\"color: #098658\">@2003</span></span></code> to test if the\nevent happened in the year 2003.",
       "<code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #0000FF\">second</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #0000FF\">minute</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #0000FF\">hour</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #0000FF\">week</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #0000FF\">month</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #0000FF\">quarter</span></span></code>, <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #0000FF\">year</span></span></code>",
       "<em>expr</em> <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #0000FF\">to</span></span></code> <em>expr</em> ( <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #098658\">@2001 to</span><span style=\"color: #000000\"> </span><span style=\"color: #098658\">@2003</span></span></code>)",

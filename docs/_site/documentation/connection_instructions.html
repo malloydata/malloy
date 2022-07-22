@@ -389,8 +389,14 @@
           Connecting a Database in the VSCode Extension
         </a>
       </h1>
-    <p><em>These instructions assume you have already installed the <a href="https://marketplace.visualstudio.com/items?itemName=malloydata.malloy-vscode">Malloy extension</a> in VSCode.</em></p>
-<p>Currently, BigQuery and PostgreSQL are supported.</p>
+    <p>Currently, BigQuery, PostgreSQL <em>(in progress)</em>, and DuckDB are supported.  These instructions assume you have already installed the <a href="https://marketplace.visualstudio.com/items?itemName=malloydata.malloy-vscode">Malloy extension</a> in VSCode.</p>
+
+      <h2>
+        <a id="adding-the-connection-in-vs-code" class="header-link anchor" href="#adding-the-connection-in-vs-code">
+          Adding the Connection in VS Code
+        </a>
+      </h2>
+    <p><em>Note:  DuckDB is natively supported, allowing you to skip these initial steps.</em></p>
 <ol>
 <li><p>Click on the Malloy icon on the left side of VS Code. This opens the Malloy view - a view that allows you to view schemas as you work with Malloy models and edit database connections.</p>
 </li>
@@ -400,9 +406,9 @@
 </li>
 <li><p>Press "Test" on the connection to confirm that you have successfully connected to the database</p>
 </li>
-<li><p>Hit "Save," then dive into writing Malloy!</p>
+<li><p>Hit "Save," then dive into writing Malloy! We recommend starting with one of our Samples, which can be found <a href="https://github.com/looker-open-source/malloy/tree/main/samples">here</a> or downloaded from the VS Code Plugin</p>
 </li></ol>
-
+<img width="393" alt="Screen Shot 2022-07-20 at 4 40 21 PM" src="https://user-images.githubusercontent.com/7178946/180100697-1cd6d1bc-4ee3-40c8-a8af-9e95eded3a6c.png">
       <h2>
         <a id="bigquery" class="header-link anchor" href="#bigquery">
           BigQuery
@@ -415,10 +421,11 @@
           Option 1: OAuth
         </a>
       </h3>
-    <p>To access BigQuery with the Malloy Plugin, you will need to have BigQuery credentials available, and the <a href="https://cloud.google.com/sdk/gcloud">gcloud CLI</a> installed. Once it's installed, open a terminal and type the following:</p>
-<pre class="language-txt" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">gcloud auth login --update-adc
-gcloud config set project {my_project_id} --installation
-</span></span></pre><p><em>Replace <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">{</span><span style="color: #001080">my_project_id</span><span style="color: #000000">}</span></span></code> with the <strong>ID</strong> of the BigQuery project you want to use & bill to. If you're not sure what this ID is, open Cloud Console, and click on the dropdown at the top (just to the right of the "Google Cloud Platform" text) to view projects you have access to. If you don't already have a project, <a href="https://cloud.google.com/resource-manager/docs/creating-managing-projects">create one</a>.</em></p>
+    <p>To access BigQuery with the Malloy Plugin, you will need to have a <a href="https://cloud.google.com/">Google Cloud Account</a>, access to BigQuery, and the <a href="https://cloud.google.com/sdk/gcloud">gcloud CLI</a> installed. Once the gcloud CLI is installed, open a terminal and type the following:</p>
+<pre class="language-txt" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">gcloud auth login --update-adc</span></span>
+<span class="line"><span style="color: #000000">gcloud config set project {my_project_id} --installation</span></span>
+<span class="line"><span style="color: #000000"></span></span></pre><p><em>Replace <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">{</span><span style="color: #001080">my_project_id</span><span style="color: #000000">}</span></span></code> with the <strong>ID</strong> of the BigQuery project you want to use & bill to. If you're not sure what this ID is, open Cloud Console, and click on the dropdown at the top (just to the right of the "Google Cloud Platform" text) to view projects you have access to. If you don't already have a project, <a href="https://cloud.google.com/resource-manager/docs/creating-managing-projects">create one</a>.</em></p>
+<p>When creating the connection in the VS Code Plugin, you can leave the optional fields blank as it will connect using your gcloud project configuration.</p>
 
       <h3>
         <a id="option-2-service-account" class="header-link anchor" href="#option-2-service-account">
@@ -434,6 +441,14 @@ gcloud config set project {my_project_id} --installation
       </h2>
     <p><em>(Development in progress, date/time support is currently incomplete)</em></p>
 <p>Add the relevant database connection information. Once you click save, the password (if you have entered one) will be stored in your system keychain.</p>
+
+      <h2>
+        <a id="duckdb" class="header-link anchor" href="#duckdb">
+          DuckDB
+        </a>
+      </h2>
+    <p>DuckDB is available without needing to explicitly configure a connection. It works with local parquet or csv files, which can be referenced in a source. This example has the CSV in the same directory as the .malloy model file: <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">baby_names</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">table</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;duckdb:babynames.csv&#39;</span><span style="color: #000000">)</span></span></code></p>
+<p>There are a number of examples on public data using DuckDB available <a href="https://github.com/lloydtabb/malloy_examples">here</a>.</p>
 </div>
           </div>
         </div>

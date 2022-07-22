@@ -478,6 +478,12 @@ the same syntax users are familiar with. However, Malloy also introduces several
 </tr>
 
 <tr>
+<td><a href="#interval-extraction">Interval extraction</a><br/>Extract the interval between two times</td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">days</span><span style="color: #000000">(</span><span style="color: #001080">created_at</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">shipped_at</span><span style="color: #000000">)</span></span></code></td>
+</tr>
+
+<tr>
 <td><a href="time-ranges.html#literals">Time literals</a></td>
 
 <td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #098658">@2003-04-19</span></span></code><br/><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #098658">@2020-Q4</span></span></code><br/><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #098658">@2021-10-24 10:00:00</span></span></code></td>
@@ -529,7 +535,7 @@ the same syntax users are familiar with. However, Malloy also introduces several
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">county</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>ANCHORAGE</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>FAIRBANKS</span></td></tr><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>JUNEAU</span></td></tr></tbody></table>
+        <table style="vertical-align: top; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; text-align: left;">county</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top;"><span>ANCHORAGE</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>FAIRBANKS</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>JUNEAU</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
@@ -579,7 +585,7 @@ the same syntax users are familiar with. However, Malloy also introduces several
 <span class="line"><span style="color: #000000">)</span></span>
 <span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
 <span class="line"><span style="color: #000000">   by_county_0.county </span><span style="color: #0000FF">as</span><span style="color: #000000"> county</span></span>
-<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`__stage1`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> base</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> __stage1 </span><span style="color: #0000FF">as</span><span style="color: #000000"> base</span></span>
 <span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> UNNEST(base.by_county) </span><span style="color: #0000FF">as</span><span style="color: #000000"> by_county_0</span></span>
 <span class="line"><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">3</span></span>
 <span class="line"></span></pre></pre>
@@ -654,7 +660,7 @@ typecast to work around the errors in typing.</p>
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">distance_​2003</th><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: right;">ca_​flights</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,615,025,467</span></td><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea; text-align: right;"><span>4,501,447</span></td></tr></tbody></table>
+        <table style="vertical-align: top; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; text-align: right;">distance_​2003</th><th style="padding: 8px; text-align: right;">ca_​flights</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; text-align: right;"><span>4,615,025,467</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>4,501,447</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
@@ -670,7 +676,7 @@ typecast to work around the errors in typing.</p>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
         <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
-<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">SUM</span><span style="color: #000000">(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> (flights.dep_time&gt;=</span><span style="color: #0000FF">TIMESTAMP</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;2003-01-01&#39;</span><span style="color: #000000">, </span><span style="color: #A31515">&#39;UTC&#39;</span><span style="color: #000000">))</span><span style="color: #0000FF">and</span><span style="color: #000000">(flights.dep_time&lt;</span><span style="color: #0000FF">TIMESTAMP</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;2004-01-01&#39;</span><span style="color: #000000">, </span><span style="color: #A31515">&#39;UTC&#39;</span><span style="color: #000000">)) </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> flights.distance </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> distance_2003,</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COALESCE</span><span style="color: #000000">(</span><span style="color: #795E26">SUM</span><span style="color: #000000">(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> (flights.dep_time&gt;=</span><span style="color: #0000FF">TIMESTAMP</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;2003-01-01&#39;</span><span style="color: #000000">, </span><span style="color: #A31515">&#39;UTC&#39;</span><span style="color: #000000">))</span><span style="color: #0000FF">and</span><span style="color: #000000">(flights.dep_time&lt;</span><span style="color: #0000FF">TIMESTAMP</span><span style="color: #000000">(</span><span style="color: #A31515">&#39;2004-01-01&#39;</span><span style="color: #000000">, </span><span style="color: #A31515">&#39;UTC&#39;</span><span style="color: #000000">)) </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> flights.distance </span><span style="color: #0000FF">END</span><span style="color: #000000">),</span><span style="color: #098658">0</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> distance_2003,</span></span>
 <span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> origin_0.state=</span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> ca_flights</span></span>
 <span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
 <span class="line"><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.airports`</span><span style="color: #000000"> </span><span style="color: #0000FF">AS</span><span style="color: #000000"> origin_0</span></span>
@@ -699,7 +705,7 @@ typecast to work around the errors in typing.</p>
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="border: 1px solid #eaeaea; vertical-align: top; border-bottom: 1px solid #eaeaea; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; color: rgb(80, 80, 80); border-bottom: 1px solid #eaeaea; text-align: left;">distance_​summary</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top; border-bottom: 1px solid #eaeaea;"><span>27540298839 miles</span></td></tr></tbody></table>
+        <table style="vertical-align: top; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; text-align: left;">distance_​summary</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top;"><span>27540298839 miles</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
@@ -714,7 +720,7 @@ typecast to work around the errors in typing.</p>
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
         <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
-<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">concat</span><span style="color: #000000">(SAFE_CAST((</span><span style="color: #795E26">SUM</span><span style="color: #000000">(flights.distance))  </span><span style="color: #0000FF">AS</span><span style="color: #000000"> string),</span><span style="color: #A31515">&#39; miles&#39;</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> distance_summary</span></span>
+<span class="line"><span style="color: #000000">   </span><span style="color: #795E26">concat</span><span style="color: #000000">(SAFE_CAST((</span><span style="color: #795E26">COALESCE</span><span style="color: #000000">(</span><span style="color: #795E26">SUM</span><span style="color: #000000">(flights.distance),</span><span style="color: #098658">0</span><span style="color: #000000">))  </span><span style="color: #0000FF">AS</span><span style="color: #000000"> string),</span><span style="color: #A31515">&#39; miles&#39;</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> distance_summary</span></span>
 <span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.flights`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> flights</span></span>
 <span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
 <span class="line"></span></pre></pre>
@@ -977,7 +983,7 @@ one of the below extraction functions. This is Malloy's take on SQL's <code>DATE
           Time Literals
         </a>
       </h3>
-    <!-- * `@2003-04-19` --><!-- * `@2020-Q4` --><!-- * `@2021-10-24 10:00:00` --><!-- * `now` --><p>Time literals are specified in malloy with the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #098658">@</span></span></code> character. A literal
+    <!-- * `@2003-04-19` --><!-- * `@2020-Q4` --><!-- * `@2021-10-24 10:00:00` --><!-- * `now` --><p>Time literals are specified in Malloy with the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #098658">@</span></span></code> character. A literal
 specified this way has an implied duration which means a literal
 can act like a range.</p>
 <p>For example the year <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #098658">@2003</span></span></code> can be used with <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">event_time</span><span style="color: #000000">: </span><span style="color: #098658">@2003</span></span></code> to test if the
