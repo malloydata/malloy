@@ -378,7 +378,7 @@ fieldExpr
   | OPAREN partialAllowedFieldExpr CPAREN                  # exprExpr
   | (id | timeframe) OPAREN ( argumentList? ) CPAREN       # exprFunc
   | pickStatement                                          # exprPick
-  | UNGROUP OPAREN fieldExpr CPAREN                        # exprUngroup
+  | UNGROUPED OPAREN fieldExpr CPAREN                      # exprUngrouped
   ;
 
 partialAllowedFieldExpr
@@ -544,7 +544,7 @@ WEEK: W E E K S?;
 WHEN: W H E N ;
 WITH: W I T H ;
 YEAR: Y E A R S?;
-UNGROUP: U N G R O U P;
+UNGROUPED: U N G R O U P E D;
 
 STRING_ESCAPE
   : '\\' '\''

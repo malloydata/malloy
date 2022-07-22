@@ -739,14 +739,11 @@ export class ExprSum extends ExprAsymmetric {
   }
 }
 
-export class ExprUngroup extends ExpressionDef {
+export class ExprUngrouped extends ExpressionDef {
   legalChildTypes = [FT.numberT, FT.stringT, FT.dateT, FT.timestampT];
-  elementType = "ungroup";
-  expr: ExpressionDef;
-  constructor(expr: ExpressionDef) {
-    super();
-    this.expr = expr;
-    this.has({ expr });
+  elementType = "ungrouped";
+  constructor(readonly expr: ExpressionDef) {
+    super({ expr });
   }
 
   returns(_forExpression: ExprValue): FieldValueType {
