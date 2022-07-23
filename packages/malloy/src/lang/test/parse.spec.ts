@@ -1236,6 +1236,13 @@ describe("error handling", () => {
       `
     ).compileToFailWith("'meaning_of_life' is not defined");
   });
+  test("detect output collision on join references", () => {
+    expect(`
+      query: ab -> {
+        group_by: astr, b.astr
+      }
+    `).compileToFailWith("Output already has a field named 'astr'");
+  });
 });
 
 function getSelectOneStruct(sqlBlock: SQLBlock): StructDef {

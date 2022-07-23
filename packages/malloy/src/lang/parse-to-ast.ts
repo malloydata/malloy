@@ -21,6 +21,7 @@ import { MessageLogger } from "./parse-log";
 import { MalloyParseRoot } from "./parse-malloy";
 import { Interval as StreamInterval } from "antlr4ts/misc/Interval";
 import { LogSeverity } from "./parse-log";
+import _ from "lodash";
 
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
@@ -904,8 +905,9 @@ export class MalloyToAST
   }
 
   visitExprUngrouped(pcx: parse.ExprUngroupedContext): ast.ExprUngrouped {
+    const flist = pcx.fieldName().map((fcx) => this.getFieldName(fcx));
     return this.astAt(
-      new ast.ExprUngrouped(this.getFieldExpr(pcx.fieldExpr())),
+      new ast.ExprUngrouped(this.getFieldExpr(pcx.fieldExpr()), flist),
       pcx
     );
   }

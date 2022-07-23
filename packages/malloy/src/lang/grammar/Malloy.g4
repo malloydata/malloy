@@ -378,7 +378,7 @@ fieldExpr
   | OPAREN partialAllowedFieldExpr CPAREN                  # exprExpr
   | (id | timeframe) OPAREN ( argumentList? ) CPAREN       # exprFunc
   | pickStatement                                          # exprPick
-  | UNGROUPED OPAREN fieldExpr CPAREN                      # exprUngrouped
+  | UNGROUPED OPAREN fieldExpr (COMMA fieldName)* CPAREN   # exprUngrouped
   ;
 
 partialAllowedFieldExpr

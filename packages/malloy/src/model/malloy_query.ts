@@ -58,7 +58,7 @@ import {
   isDialectFragment,
   getPhysicalFields,
   isIndexSegment,
-  TotalFragment,
+  UngroupedFragment,
   isTotalFragment,
 } from "./malloy_types";
 
@@ -395,7 +395,7 @@ class QueryField extends QueryNode {
   generateTotalFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    expr: TotalFragment,
+    expr: UngroupedFragment,
     state: GenerateState
   ): string {
     if (state.inTotal) {
