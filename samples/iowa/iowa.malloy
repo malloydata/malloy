@@ -30,7 +30,7 @@ source: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
     total_bottles is bottles_sold.sum()
     line_item_count is count()
     avg_price_per_100ml is price_per_100ml.avg()
-    percent_of_sales is total_sale_dollars / ungroup(total_sale_dollars) * 100
+    percent_of_sales is total_sale_dollars / ungrouped(total_sale_dollars) * 100
 
   // queries
   query: by_month is {
