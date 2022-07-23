@@ -21,7 +21,6 @@ import { MessageLogger } from "./parse-log";
 import { MalloyParseRoot } from "./parse-malloy";
 import { Interval as StreamInterval } from "antlr4ts/misc/Interval";
 import { LogSeverity } from "./parse-log";
-import _ from "lodash";
 
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
