@@ -339,13 +339,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.resultExplore.limit).toBe(3);
   });
 
-  it(`ungroup top level - ${databaseName}`, async () => {
+  it(`ungrouped top level - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
-          measure: births_per_100k is floor(total_births/ ungroup(total_births) * 100000)
+          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
         }
 
         query:s-> {
@@ -355,17 +355,17 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    console.log(result.sql);
+    // console.log(result.sql);
     expect(result.data.path(0, "births_per_100k").value).toBe(9742);
   });
 
-  it(`ungroup nested with no grouping above - ${databaseName}`, async () => {
+  it(`ungrouped nested with no grouping above - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
-          measure: births_per_100k is floor(total_births/ ungroup(total_births) * 100000)
+          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
         }
 
         query: s-> {
@@ -385,13 +385,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     );
   });
 
-  it(`ungroup nested  - ${databaseName}`, async () => {
+  it(`ungrouped nested  - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
-          measure: births_per_100k is floor(total_births/ ungroup(total_births) * 100000)
+          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
         }
 
         query:s ->  {
@@ -411,13 +411,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     );
   });
 
-  it(`ungroup nested expression  - ${databaseName}`, async () => {
+  it(`ungrouped nested expression  - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
-          measure: births_per_100k is floor(total_births/ ungroup(total_births) * 100000)
+          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
         }
 
         query:s ->  {
@@ -431,19 +431,19 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    console.log(result.sql);
+    // console.log(result.sql);
     expect(result.data.path(0, "by_state", 0, "births_per_100k").value).toBe(
       36593
     );
   });
 
-  it(`ungroup nested group by float  - ${databaseName}`, async () => {
+  it(`ungrouped nested group by float  - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
-          measure: ug is ungroup(total_births)
+          measure: ug is ungrouped(total_births)
         }
 
         query:s ->  {
@@ -457,7 +457,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    console.log(result.sql);
+    // console.log(result.sql);
     // console.log(JSON.stringify(result.data.toObject(), null, 2));
     expect(result.data.path(0, "by_state", 0, "ug").value).toBe(62742230);
   });
