@@ -740,7 +740,7 @@ export class ExprSum extends ExprAsymmetric {
 }
 
 export class ExprUngrouped extends ExpressionDef {
-  legalChildTypes = [FT.numberT, FT.stringT, FT.dateT, FT.timestampT];
+  legalChildTypes = FT.anyAtomicT;
   elementType = "ungrouped";
   constructor(readonly expr: ExpressionDef, readonly fields: FieldName[]) {
     super({ expr, fields });
@@ -751,7 +751,11 @@ export class ExprUngrouped extends ExpressionDef {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    const exprVal = this.expr?.getExpression(fs);
+    const exprVal = this.expr.getExpression(fs);
+    if (!exprVal.aggregate) {
+      this.expr.log("ungrouped expression must be an aggregate");
+      return errorFor("ungrouped scalar");
+    }
     if (this.typeCheck(this.expr, { ...exprVal, aggregate: false })) {
       const f: UngroupedFragment = {
         type: "ungrouped",
@@ -768,7 +772,7 @@ export class ExprUngrouped extends ExpressionDef {
         value: [f],
       };
     }
-    return errorFor("aggregate type check");
+    return errorFor("ungrouped type check");
   }
 }
 
@@ -846,7 +850,7 @@ export class ExprCase extends ExpressionDef {
 
 export class ExprFilter extends ExpressionDef {
   elementType = "filtered expression";
-  legalChildTypes = [FT.stringT, FT.numberT, FT.dateT, FT.timestampT];
+  legalChildTypes = FT.anyAtomicT;
   constructor(readonly expr: ExpressionDef, readonly filter: Filter) {
     super({ expr, filter });
   }
