@@ -375,7 +375,7 @@ it(`hand total - ${databaseName}`, async () => {
             aggregate: true,
             e: [
               {
-                type: "total",
+                type: "ungrouped",
                 e: [{ type: "field", path: "aircraft_count" }],
               },
             ],
@@ -428,7 +428,7 @@ it(`hand turtle total - ${databaseName}`, async () => {
                     aggregate: true,
                     e: [
                       {
-                        type: "total",
+                        type: "ungrouped",
                         e: [{ type: "field", path: "aircraft_count" }],
                       },
                     ],

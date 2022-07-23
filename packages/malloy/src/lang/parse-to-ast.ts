@@ -904,8 +904,9 @@ export class MalloyToAST
   }
 
   visitExprUngrouped(pcx: parse.ExprUngroupedContext): ast.ExprUngrouped {
+    const flist = pcx.fieldName().map((fcx) => this.getFieldName(fcx));
     return this.astAt(
-      new ast.ExprUngrouped(this.getFieldExpr(pcx.fieldExpr())),
+      new ast.ExprUngrouped(this.getFieldExpr(pcx.fieldExpr()), flist),
       pcx
     );
   }
