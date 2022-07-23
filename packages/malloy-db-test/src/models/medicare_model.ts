@@ -49,7 +49,7 @@ export const medicareModel: StructDef = {
       type: "number",
       name: "provider_count",
       aggregate: true,
-      e: ["COUNT(DISTINCT ", { type: "field", path: "provider_id" }, ")"],
+      e: ["COUNT(DISTINCT ", { type: "fieldPath", path: ["provider_id"] }, ")"],
     },
     {
       type: "number",
@@ -59,7 +59,7 @@ export const medicareModel: StructDef = {
         {
           type: "aggregate",
           function: "sum",
-          e: [{ type: "field", path: "discharges" }],
+          e: [{ type: "fieldPath", path: ["discharges"] }],
         },
       ],
     },

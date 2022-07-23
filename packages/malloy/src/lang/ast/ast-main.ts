@@ -873,7 +873,10 @@ export class KeyJoin extends Join {
           inStruct.structRelationship = {
             type: "one",
             onExpression: [
-              { type: "field", path: `${this.name}.${inStruct.primaryKey}` },
+              {
+                type: "fieldPath",
+                path: [`${this.name}.${inStruct.primaryKey}`],
+              },
               "=",
               ...exprX.value,
             ],
@@ -1130,23 +1133,36 @@ export class FieldReference extends ListOf<FieldName> {
     super("fieldReference", names);
   }
 
-  get refString(): string {
-    return this.list.map((n) => n.refString).join(".");
+  getPath(): string[] {
+    return this.list.map((n) => n.refString);
   }
 
-  get outputName(): string {
-    const last = this.list[this.list.length - 1];
-    return last.refString;
+  // for printing, doesn't quote so not for passing to anything
+  toString(): string {
+    return this.getPath().join(".");
   }
 
-  get sourceString(): string | undefined {
-    if (this.list.length > 1) {
-      return this.list
-        .slice(0, -1)
-        .map((n) => n.refString)
-        .join(".");
-    }
-    return undefined;
+  // get refString(): string {
+  //   return this.list.map((n) => n.refString).join(".");
+  // }
+
+  // get outputName(): string {
+  //   const last = this.list[this.list.length - 1];
+  //   return last.refString;
+  // }
+
+  // get sourceString(): string | undefined {
+  //   if (this.list.length > 1) {
+  //     return this.list
+  //       .slice(0, -1)
+  //       .map((n) => n.refString)
+  //       .join(".");
+  //   }
+  //   return undefined;
+  // }
+
+  get fieldPath(): model.FieldFragment {
+    return { type: "fieldPath", path: this.getPath() };
   }
 
   get nameString(): string {
@@ -1158,6 +1174,11 @@ export class FieldReference extends ListOf<FieldName> {
   }
 }
 
+export class FieldNameList extends ListOf<FieldName> {
+  constructor(members: FieldName[]) {
+    super("fieldNameList", members);
+  }
+}
 export type FieldReferenceElement = FieldReference | WildcardFieldReference;
 
 export class FieldReferences extends ListOf<FieldReferenceElement> {
@@ -1185,7 +1206,7 @@ export class FieldListEdit extends MalloyElement {
   elementType = "fieldListEdit";
   constructor(
     readonly edit: "accept" | "except",
-    readonly refs: FieldReferences
+    readonly refs: FieldNameList
   ) {
     super({ refs });
   }
@@ -1644,9 +1665,10 @@ export class WildcardFieldReference extends MalloyElement {
     throw this.internalError("fielddef request from wildcard reference");
   }
 
+  // TODO return a FieldReference
   get refString(): string {
     return this.joinPath
-      ? `${this.joinPath.refString}.${this.star}`
+      ? `${this.joinPath.toString()}.${this.star}`
       : this.star;
   }
 }

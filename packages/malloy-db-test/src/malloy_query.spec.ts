@@ -200,7 +200,7 @@ describe("expression tests", () => {
                     {
                       type: "aggregate",
                       function: "sum",
-                      e: [{ type: "field", path: "distance" }],
+                      e: [{ type: "fieldPath", path: ["distance"] }],
                     },
                   ],
                 },
@@ -265,7 +265,7 @@ describe("expression tests", () => {
                 {
                   type: "aggregate",
                   function: "sum",
-                  e: [{ type: "field", path: "distance" }],
+                  e: [{ type: "fieldPath", path: ["distance"] }],
                 },
               ],
             },
@@ -287,7 +287,7 @@ describe("expression tests", () => {
             {
               type: "string",
               name: "carrier",
-              e: ["UPPER(", { type: "field", path: "carriers.nickname" }, ")"],
+              e: ["UPPER(", { type: "fieldPath", path: ["carriers.nickname"] }, ")"],
             },
             "flight_count",
           ],
@@ -312,7 +312,7 @@ describe("expression tests", () => {
                 {
                   type: "aggregate",
                   function: "sum",
-                  e: [{ type: "field", path: "distance" }],
+                  e: [{ type: "fieldPath", path: ["distance"] }],
                 },
               ],
             },
@@ -344,7 +344,7 @@ describe("expression tests", () => {
                     {
                       type: "aggregate",
                       function: "sum",
-                      e: [{ type: "field", path: "distance" }],
+                      e: [{ type: "fieldPath", path: ["distance"] }],
                     },
                   ],
                 },
@@ -378,7 +378,7 @@ describe("expression tests", () => {
                     {
                       type: "aggregate",
                       function: "sum",
-                      e: [{ type: "field", path: "distance" }],
+                      e: [{ type: "fieldPath", path: ["distance"] }],
                     },
                   ],
                 },

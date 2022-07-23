@@ -254,12 +254,7 @@ export class DynamicSpace extends StaticSpace {
   ): DynamicSpace {
     const edited = new DynamicSpace(from);
     if (choose) {
-      const names = choose.refs.list.filter((f) => f instanceof FieldName);
-      for (const s of choose.refs.list.filter(
-        (f) => f instanceof WildcardFieldReference
-      )) {
-        s.log("Wildcards not allowed in accept/except");
-      }
+      const names = choose.refs.list;
       const oldMap = edited.entries();
       edited.dropEntries();
       for (const [symbol, value] of oldMap) {
@@ -441,7 +436,7 @@ export abstract class QueryOperationSpace extends DynamicSpace {
   }
 
   addReference(ref: FieldReference): void {
-    const refName = ref.outputName;
+    const refName = ref.nameString;
     if (this.entry(refName)) {
       ref.log(`Output already has a field named '${refName}'`);
     } else {
@@ -599,7 +594,8 @@ export class IndexFieldSpace extends QueryOperationSpace {
 
   addReference(ref: FieldReference): void {
     if (ref.getField(this.inputFS()).found) {
-      this.fieldList.add(ref.refString);
+      // TODO add FieldReferences
+      this.fieldList.add(ref.toString());
     }
   }
 

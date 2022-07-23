@@ -220,89 +220,91 @@ export class QueryFieldStruct extends QueryField {
   }
 }
 
-/**
- * FilteredAliasedName
- */
-export class FANSPaceField extends SpaceField {
-  as?: string;
-  filterList?: model.FilterExpression[];
-  constructor(
-    readonly ref: FieldReference,
-    readonly inSpace: FieldSpace,
-    refInit?: Partial<model.FilteredAliasedName>
-  ) {
-    super();
-    Object.assign(this, refInit);
-  }
+// TODO delete instead of uncomment
+// /**
+//  * FilteredAliasedName
+//  */
+// export class FANSPaceField extends SpaceField {
+//   as?: string;
+//   filterList?: model.FilterExpression[];
+//   constructor(
+//     readonly ref: FieldReference,
+//     readonly inSpace: FieldSpace,
+//     refInit?: Partial<model.FilteredAliasedName>
+//   ) {
+//     super();
+//     Object.assign(this, refInit);
+//   }
 
-  name(): string {
-    return this.as || this.ref.refString;
-  }
+//   name(): string {
+//     const oldName = this.ref.list[this.ref.list.length-1];
+//     return this.as || oldName.refString;
+//   }
 
-  private filtersPresent() {
-    return this.filterList && this.filterList.length > 0;
-  }
+//   private filtersPresent() {
+//     return this.filterList && this.filterList.length > 0;
+//   }
 
-  fieldDef(): model.FieldDef | undefined {
-    if (this.as === undefined) {
-      return undefined;
-    }
-    const fromField = this.ref.getField(this.inSpace).found;
-    if (fromField === undefined) {
-      // TODO should errror
-      return undefined;
-    }
-    const fieldTypeInfo = fromField.type();
-    const fieldType = fieldTypeInfo.type;
-    // TODO starting to feel like this should be a method call on a spaceentry
-    if (model.isAtomicFieldType(fieldType)) {
-      if (fromField instanceof SpaceParam) {
-        return {
-          type: fieldType,
-          name: this.as,
-          e: [{ type: "parameter", path: this.ref.refString }],
-          aggregate: false,
-        };
-      }
-      let fieldExpr: model.Expr = [{ type: "field", path: this.ref.refString }];
-      if (this.filtersPresent() && this.filterList) {
-        const newfieldExpr: model.Expr = [
-          {
-            type: "filterExpression",
-            filterList: this.filterList,
-            e: fieldExpr,
-          },
-        ];
-        fieldExpr = newfieldExpr;
-      }
-      return {
-        type: fieldType,
-        name: this.as,
-        e: fieldExpr,
-        aggregate: fieldTypeInfo.aggregate,
-      };
-    }
-    return undefined;
-  }
-
-  getQueryFieldDef(_fs: FieldSpace): model.QueryFieldDef {
-    // TODO if this reference is to a field which does not exist
-    // it needs to be an error SOMEWHERE
-    const n: model.FilteredAliasedName = { name: this.ref.refString };
-    if (this.filtersPresent()) {
-      n.filterList = this.filterList;
-    }
-    if (this.as) {
-      n.as = this.as;
-    }
-    return n.as || n.filterList ? n : this.ref.refString;
-  }
-
-  type(): FieldType {
-    const field = this.ref.getField(this.inSpace).found;
-    return field?.type() || { type: "unknown" };
-  }
-}
+//   fieldDef(): model.FieldDef | undefined {
+//     if (this.as === undefined) {
+//       return undefined;
+//     }
+//     const fromField = this.ref.getField(this.inSpace).found;
+//     if (fromField === undefined) {
+//       // TODO should errror
+//       return undefined;
+//     }
+//     const fieldTypeInfo = fromField.type();
+//     const fieldType = fieldTypeInfo.type;
+//     // TODO starting to feel like this should be a method call on a spaceentry
+//     if (model.isAtomicFieldType(fieldType)) {
+//       if (fromField instanceof SpaceParam) {
+//         return {
+//           type: fieldType,
+//           name: this.as,
+//           e: [ fromField.parameterExpression()
+//           aggregate: false,
+//         };
+//       }
+//       let fieldExpr: model.Expr = [{ type: "field", path: this.ref.refString }];
+//       if (this.filtersPresent() && this.filterList) {
+//         const newfieldExpr: model.Expr = [
+//           {
+//             type: "filterExpression",
+//             filterList: this.filterList,
+//             e: fieldExpr,
+//           },
+//         ];
+//         fieldExpr = newfieldExpr;
+//       }
+//       return {
+//         type: fieldType,
+//         name: this.as,
+//         e: fieldExpr,
+//         aggregate: fieldTypeInfo.aggregate,
+//       };
+//     }
+//     return undefined;
+//   }
+//
+//   getQueryFieldDef(_fs: FieldSpace): model.QueryFieldDef {
+//     // TODO if this reference is to a field which does not exist
+//     // it needs to be an error SOMEWHERE
+//     const n: model.FilteredAliasedName = { name: this.ref.refString };
+//     if (this.filtersPresent()) {
+//       n.filterList = this.filterList;
+//     }
+//     if (this.as) {
+//       n.as = this.as;
+//     }
+//     return n.as || n.filterList ? n : this.ref.refString;
+//   }
+//
+//   type(): FieldType {
+//     const field = this.ref.getField(this.inSpace).found;
+//     return field?.type() || { type: "unknown" };
+//   }
+// }
 
 export class ReferenceField extends SpaceField {
   constructor(readonly fieldRef: FieldReference) {
@@ -315,7 +317,8 @@ export class ReferenceField extends SpaceField {
     if (check.error) {
       this.fieldRef.log(check.error);
     }
-    return this.fieldRef.refString;
+    // TODO return a FieldReference
+    return this.fieldRef.toString();
   }
 
   type(): FieldType {

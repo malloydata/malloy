@@ -503,11 +503,9 @@ export class MalloyToAST
     return this.astAt(node, pcx);
   }
 
-  visitFieldNameList(pcx: parse.FieldNameListContext): ast.FieldReferences {
-    const members = pcx
-      .fieldName()
-      .map((cx) => new ast.FieldReference([this.getFieldName(cx)]));
-    return new ast.FieldReferences(members);
+  visitFieldNameList(pcx: parse.FieldNameListContext): ast.FieldNameList {
+    const members = pcx.fieldName().map((cx) => this.getFieldName(cx));
+    return new ast.FieldNameList(members);
   }
 
   visitDefExploreEditField(

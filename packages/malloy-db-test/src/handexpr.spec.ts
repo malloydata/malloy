@@ -29,9 +29,9 @@ function withJoin(leftKey: string, rightKey: string): StructRelationship {
   return {
     type: "one",
     onExpression: [
-      { type: "field", path: `${leftKey}` },
+      { type: "fieldPath", path: [leftKey] },
       "=",
-      { type: "field", path: `${rightKey}` },
+      { type: "fieldPath", path: [rightKey] },
     ],
   };
 }
@@ -99,7 +99,7 @@ export const modelHandBase: StructDef = {
         {
           type: "aggregate",
           function: "sum",
-          e: [{ type: "field", path: "seats" }],
+          e: [{ type: "fieldPath", path: ["seats"] }],
         },
       ],
       aggregate: true,
@@ -115,7 +115,7 @@ export const modelHandBase: StructDef = {
             {
               type: "aggregate",
               function: "sum",
-              e: [{ type: "field", path: "seats" }],
+              e: [{ type: "fieldPath", path: ["seats"] }],
             },
           ],
           filterList: [
@@ -124,8 +124,8 @@ export const modelHandBase: StructDef = {
               code: "manufacturer='BOEING'",
               expression: [
                 {
-                  type: "field",
-                  path: "manufacturer",
+                  type: "fieldPath",
+                  path: ["manufacturer"],
                 },
                 "='BOEING'",
               ],
@@ -141,9 +141,9 @@ export const modelHandBase: StructDef = {
       type: "number",
       e: [
         "(",
-        { type: "field", path: "boeing_seats" },
+        { type: "fieldPath", path: ["boeing_seats"] },
         "/",
-        { type: "field", path: "total_seats" },
+        { type: "fieldPath", path: ["total_seats"] },
         ")*100",
       ],
       aggregate: true,
@@ -153,7 +153,7 @@ export const modelHandBase: StructDef = {
       name: "percent_boeing_floor",
       type: "number",
       aggregate: true,
-      e: ["FLOOR(", { type: "field", path: "percent_boeing" }, ")"],
+      e: ["FLOOR(", { type: "fieldPath", path: ["percent_boeing"] }, ")"],
       numberType: "float",
     },
   ],
@@ -264,7 +264,7 @@ it(`hand query hand model - ${databaseName}`, async () => {
           //   e: [
           //     {
           //       type: "filterExpression",
-          //  fieldDef    e: [{ type: "field", path: "aircraft_models.total_seats" }],
+          //  fieldDef    e: [{ type: "fieldPath", path: ["aircraft_models.total_seats"] }],
           //     },
           //   ],
           // },
@@ -376,7 +376,7 @@ it(`hand total - ${databaseName}`, async () => {
             e: [
               {
                 type: "ungrouped",
-                e: [{ type: "field", path: "aircraft_count" }],
+                e: [{ type: "fieldPath", path: ["aircraft_count"] }],
               },
             ],
           },
@@ -429,7 +429,7 @@ it(`hand turtle total - ${databaseName}`, async () => {
                     e: [
                       {
                         type: "ungrouped",
-                        e: [{ type: "field", path: "aircraft_count" }],
+                        e: [{ type: "fieldPath", path: ["aircraft_count"] }],
                       },
                     ],
                   },
@@ -487,7 +487,7 @@ it(`hand: turtle is pipeline - ${databaseName}`, async () => {
                         {
                           type: "aggregate",
                           function: "sum",
-                          e: [{ type: "field", path: "aircraft_count" }],
+                          e: [{ type: "fieldPath", path: ["aircraft_count"] }],
                         },
                       ],
                       aggregate: true,
@@ -630,9 +630,9 @@ export const joinModelAircraftHandStructDef: StructDef = {
       structRelationship: {
         type: "many",
         onExpression: [
-          { type: "field", path: "aircraft_model_code" },
+          { type: "fieldPath", path: ["aircraft_model_code"] },
           "=",
-          { type: "field", path: "aircraft.aircraft_model_code" },
+          { type: "fieldPath", path: ["aircraft.aircraft_model_code"] },
         ],
       },
     },
@@ -646,7 +646,7 @@ export const modelB: StructDef = {
   ...modelHandBase,
   filterList: [
     {
-      expression: [{ type: "field", path: "manufacturer" }, " LIKE 'B%'"],
+      expression: [{ type: "fieldPath", path: ["manufacturer"] }, " LIKE 'B%'"],
       code: "manufacturer ~ 'B%'",
     },
   ],
@@ -663,9 +663,9 @@ export const modelAircraftHandStructDef: StructDef = {
       structRelationship: {
         type: "one",
         onExpression: [
-          { type: "field", path: "aircraft_model_code" },
+          { type: "fieldPath", path: ["aircraft_model_code"] },
           "=",
-          { type: "field", path: "aircraft.aircraft_model_code" },
+          { type: "fieldPath", path: ["aircraft.aircraft_model_code"] },
         ],
       },
     },

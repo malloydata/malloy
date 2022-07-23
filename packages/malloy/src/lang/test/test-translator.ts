@@ -200,9 +200,9 @@ export class TestTranslator extends MalloyTranslator {
             structRelationship: {
               type: "one",
               onExpression: [
-                { type: "field", path: "astr" },
+                { type: "fieldPath", path: ["astr"] },
                 "=",
-                { type: "field", path: "b.astr" },
+                { type: "fieldPath", path: ["b.astr"] },
               ],
             },
           },

@@ -425,19 +425,27 @@ export class ExprIdReference extends ExpressionDef {
     this.has({ fieldPath: fieldReference });
   }
 
-  get refString(): string {
-    return this.fieldReference.refString;
-  }
+  // get refString(): string {
+  //   return this.fieldReference.refString;
+  // }
 
   getExpression(fs: FieldSpace): ExprValue {
     const def = this.fieldReference.getField(fs);
     if (def.found) {
       // TODO if type is a query or a struct this should fail nicely
       const typeMixin = def.found.type();
-      const dataType = typeMixin.type;
-      const aggregate = !!typeMixin.aggregate;
-      const value = [{ type: def.found.refType, path: this.refString }];
-      return { dataType, aggregate, value };
+      const ret: ExprValue = {
+        dataType: typeMixin.type,
+        aggregate: !!typeMixin.aggregate,
+        value: [],
+      };
+      if (def.found.refType == "field") {
+        ret.value = [this.fieldReference.fieldPath];
+        return ret;
+      } else {
+        // ret.value = [{ type: "parameter", path: this.fieldReference.refString }];
+        throw this.internalError("parameters unsupported");
+      }
     }
     this.log(def.error);
     return errorFor(def.error);
@@ -448,18 +456,19 @@ export class ExprIdReference extends ExpressionDef {
     if (entry instanceof SpaceParam) {
       const cParam = entry.parameter();
       if (isConditionParameter(cParam)) {
-        const lval = expr.getExpression(fs);
-        return {
-          dataType: "boolean",
-          aggregate: lval.aggregate,
-          value: [
-            {
-              type: "apply",
-              value: lval.value,
-              to: [{ type: "parameter", path: this.refString }],
-            },
-          ],
-        };
+        throw this.internalError("parameters are not supported");
+        // const lval = expr.getExpression(fs);
+        // return {
+        //   dataType: "boolean",
+        //   aggregate: lval.aggregate,
+        //   value: [
+        //     {
+        //       type: "apply",
+        //       value: lval.value,
+        //       to: [{ type: "parameter", path: this.refString }],
+        //     },
+        //   ],
+        // };
       }
     }
     return super.apply(fs, op, expr);
@@ -593,7 +602,6 @@ abstract class ExprAggregateFunction extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     let exprVal = this.expr?.getExpression(fs);
-    let structPath = this.source?.refString;
     if (this.source) {
       const sourceFoot = this.source.getField(fs).found;
       if (sourceFoot) {
@@ -602,20 +610,18 @@ abstract class ExprAggregateFunction extends ExpressionDef {
           exprVal = {
             dataType: footType.type,
             aggregate: !!footType.aggregate,
-            value: [{ type: "field", path: this.source.refString }],
+            value: [this.source.fieldPath],
           };
-          structPath = this.source.sourceString;
         } else {
           if (!(sourceFoot instanceof StructSpaceField)) {
-            this.log(`Aggregate source cannot be a ${footType.type}`);
+            this.source.log(`Aggregate source cannot be a ${footType.type}`);
             return errorFor(`Aggregate source cannot be a ${footType.type}`);
           }
         }
       } else {
-        this.log(`Reference to undefined value ${this.source.refString}`);
-        return errorFor(
-          `Reference to undefined value ${this.source.refString}`
-        );
+        const undef = `Reference to undefined value ${this.source.toString()}`;
+        this.source.log(undef);
+        return errorFor(undef);
       }
     }
     if (exprVal === undefined) {
@@ -628,8 +634,8 @@ abstract class ExprAggregateFunction extends ExpressionDef {
         function: this.func,
         e: exprVal.value,
       };
-      if (structPath) {
-        f.structPath = structPath;
+      if (this.source) {
+        f.structPath = this.source.getPath();
       }
       return {
         dataType: this.returns(exprVal),
@@ -715,7 +721,7 @@ export class ExprCount extends ExprAggregateFunction {
       e: [],
     };
     if (this.source) {
-      ret.structPath = this.source.refString;
+      ret.structPath = this.source.getPath();
     }
     return {
       dataType: "number",

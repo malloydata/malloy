@@ -397,7 +397,7 @@ know about the need for parameters ...
             name: "ratio",
             type: "number",
             e: [
-                { type: "field", path: "thingNumber" },
+                { type: "fieldPath", path: ["thingNumber"] },
                 "/",
                 { type: "parameter", path: "reqVal" },
             ]

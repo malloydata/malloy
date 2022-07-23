@@ -20,9 +20,9 @@ function withJoin(leftKey: string, rightKey: string): StructRelationship {
   return {
     type: "one",
     onExpression: [
-      { type: "field", path: `${leftKey}` },
+      { type: "fieldPath", path: [leftKey] },
       "=",
-      { type: "field", path: `${rightKey}` },
+      { type: "fieldPath", path: [rightKey] },
     ],
   };
 }
@@ -67,7 +67,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
         {
           type: "aggregate",
           function: "sum",
-          e: [{ type: "field", path: "distance" }],
+          e: [{ type: "fieldPath", path: ["distance"] }],
         },
       ],
     },
@@ -82,9 +82,9 @@ export const FLIGHTS_EXPLORE: StructDef = {
       structRelationship: {
         type: "one",
         onExpression: [
-          { type: "field", path: "carrier" },
+          { type: "fieldPath", path: ["carrier"] },
           "=",
-          { type: "field", path: "carriers.code" },
+          { type: "fieldPath", path: ["carriers.code"] },
         ],
       },
       primaryKey: "code",
@@ -144,7 +144,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
             {
               type: "aggregate",
               function: "sum",
-              e: [{ type: "field", path: "aircraft_models.engines" }],
+              e: [{ type: "fieldPath", path: ["aircraft_models.engines"] }],
             },
           ],
         },
@@ -189,7 +189,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
                 {
                   type: "aggregate",
                   function: "sum",
-                  e: [{ type: "field", path: "seats" }],
+                  e: [{ type: "fieldPath", path: ["seats"] }],
                 },
               ],
             },
@@ -350,7 +350,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
                 {
                   type: "aggregate",
                   function: "sum",
-                  e: [{ type: "field", path: "distance" }],
+                  e: [{ type: "fieldPath", path: ["distance"] }],
                 },
               ],
             },

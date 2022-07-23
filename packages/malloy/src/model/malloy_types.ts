@@ -164,7 +164,7 @@ export interface AggregateFragment {
   type: "aggregate";
   function: string;
   e: Expr;
-  structPath?: string;
+  structPath?: string[];
 }
 export function isAggregateFragment(f: Fragment): f is AggregateFragment {
   return (f as AggregateFragment)?.type === "aggregate";
@@ -184,11 +184,11 @@ export function isTotalFragment(f: Fragment): f is UngroupedFragment {
 }
 
 export interface FieldFragment {
-  type: "field";
-  path: string;
+  type: "fieldPath";
+  path: string[];
 }
 export function isFieldFragment(f: Fragment): f is FieldFragment {
-  return (f as FieldFragment)?.type === "field";
+  return (f as FieldFragment)?.type === "fieldPath";
 }
 
 export interface ParameterFragment {

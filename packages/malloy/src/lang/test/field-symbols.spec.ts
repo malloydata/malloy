@@ -135,9 +135,9 @@ describe("structdef comprehension", () => {
       structRelationship: {
         type: "one",
         onExpression: [
-          { type: "field", path: "aKey" },
+          { type: "fieldPath", path: ["aKey"] },
           "=",
-          { type: "field", path: "t.a" },
+          { type: "fieldPath", path: ["t.a"] },
         ],
       },
       structSource: { type: "table" },
