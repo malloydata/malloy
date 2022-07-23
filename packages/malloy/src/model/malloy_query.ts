@@ -423,7 +423,7 @@ class QueryField extends QueryNode {
 
     let partitionBy = "";
     if (resultSet.parent !== undefined) {
-      const fieldsString = fields.map((f) => f.getSQL()).join(", ");
+      const fieldsString = fields.map((f) => f.getPartitionSQL()).join(", ");
       if (fieldsString.length > 0) {
         partitionBy = `PARTITION BY ${fieldsString}`;
       }
@@ -692,6 +692,10 @@ class QueryAtomicField extends QueryField {
   getFilterList(): FilterExpression[] {
     return [];
   }
+
+  hasExpression(): boolean {
+    return hasExpression(this.fieldDef);
+  }
 }
 
 // class QueryMeasure extends QueryField {}
@@ -851,6 +855,7 @@ class FieldInstanceField implements FieldInstance {
   fieldUsage: FieldUsage;
   groupSet = 0;
   parent: FieldInstanceResult;
+  partitionSQL: string | undefined; // the name of the field when used as a partition.
   constructor(
     f: QueryField,
     fieldUsage: FieldUsage,
@@ -877,6 +882,14 @@ class FieldInstanceField implements FieldInstance {
       );
     }
     return exp;
+  }
+
+  getPartitionSQL() {
+    if (this.partitionSQL === undefined) {
+      return this.getSQL();
+    } else {
+      return this.partitionSQL;
+    }
   }
 }
 
@@ -1340,6 +1353,7 @@ type StageGroupMaping = { fromGroup: number; toGroup: number };
 
 type StageOutputContext = {
   sql: string[]; // sql expressions
+  lateralJoinSQLExpressions: string[];
   dimensionIndexes: number[]; // which indexes are dimensions
   fieldIndex: number;
   groupsAggregated: StageGroupMaping[]; // which groups were aggregated
@@ -2243,10 +2257,41 @@ class QueryQuery extends QueryField {
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === "result") {
           const exp = fi.getSQL();
-          output.sql.push(`${exp} as ${outputName}`);
           if (isScalarField(fi.f)) {
+            if (
+              this.parent.dialect.name === "standardsql" &&
+              this.rootResult.usesTotal
+            ) {
+              // BigQuery can't partition aggregate function except when the field has no
+              //  expression.  Additionally it can't partition by floats.  We stuff expressions
+              //  and numbers as strings into a lateral join when the query has ungrouped expressions
+              if (fi.f.fieldDef.type === "number") {
+                // make an extra dimension as a string
+                output.sql.push(`${exp} as ${outputName}`);
+                const outputFieldName = `__lateral_join_bag.${outputName}_string`;
+                output.sql.push(outputFieldName);
+                output.dimensionIndexes.push(output.fieldIndex++);
+                output.lateralJoinSQLExpressions.push(
+                  `CAST(${exp} as STRING) as ${outputName}_string`
+                );
+                fi.partitionSQL = outputFieldName;
+              } else if (fi.f.hasExpression()) {
+                const outputFieldName = `__lateral_join_bag.${outputName}`;
+                fi.partitionSQL = outputFieldName;
+                output.lateralJoinSQLExpressions.push(
+                  `${exp} as ${outputName}`
+                );
+                output.sql.push(outputFieldName);
+              } else {
+                output.sql.push(`${exp} as ${outputName}`);
+              }
+            } else {
+              // just treat it like a regular field.
+              output.sql.push(`${exp} as ${outputName}`);
+            }
             output.dimensionIndexes.push(output.fieldIndex++);
           } else if (isAggregateField(fi.f)) {
+            output.sql.push(`${exp} as ${outputName}`);
             output.fieldIndex++;
           }
         }
@@ -2385,6 +2430,7 @@ class QueryQuery extends QueryField {
       dimensionIndexes: [1],
       fieldIndex: 2,
       sql: ["group_set"],
+      lateralJoinSQLExpressions: [],
       groupsAggregated: [],
       outputPipelinedSQL: [],
     };
@@ -2398,6 +2444,14 @@ class QueryQuery extends QueryField {
     from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + "\n";
 
     s += indent(f.sql.join(",\n")) + "\n";
+
+    // this should only happen on standard SQL,  BigQuery can't partition by expressions and
+    //  aggregates.
+    if (f.lateralJoinSQLExpressions.length > 0) {
+      from += `LEFT JOIN UNNEST([STRUCT(${f.lateralJoinSQLExpressions.join(
+        ",\n"
+      )})]) as __lateral_join_bag\n`;
+    }
     s += from + wheres + groupBy + this.rootResult.havings.sql("having");
 
     // generate the stage
@@ -2485,6 +2539,7 @@ class QueryQuery extends QueryField {
       dimensionIndexes: [1],
       fieldIndex: 2,
       sql: ["group_set"],
+      lateralJoinSQLExpressions: [],
       groupsAggregated: [],
       outputPipelinedSQL: [],
     };
