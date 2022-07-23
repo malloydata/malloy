@@ -339,6 +339,129 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.resultExplore.limit).toBe(3);
   });
 
+  it(`ungrouped top level - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: s is table('malloytest.state_facts') + {
+          measure: total_births is births.sum()
+          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
+        }
+
+        query:s-> {
+          group_by: state
+          aggregate: births_per_100k
+        }
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    expect(result.data.path(0, "births_per_100k").value).toBe(9742);
+  });
+
+  it(`ungrouped nested with no grouping above - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: s is table('malloytest.state_facts') + {
+          measure: total_births is births.sum()
+          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
+        }
+
+        query: s-> {
+          aggregate: total_births
+          nest: by_name is {
+            group_by: popular_name
+            aggregate: births_per_100k
+          }
+        }
+
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    expect(result.data.path(0, "by_name", 0, "births_per_100k").value).toBe(
+      66703
+    );
+  });
+
+  it(`ungrouped nested  - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: s is table('malloytest.state_facts') + {
+          measure: total_births is births.sum()
+          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
+        }
+
+        query:s ->  {
+          group_by: popular_name
+          nest: by_state is {
+            group_by: state
+            aggregate: births_per_100k
+          }
+        }
+
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    expect(result.data.path(0, "by_state", 0, "births_per_100k").value).toBe(
+      36593
+    );
+  });
+
+  it(`ungrouped nested expression  - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: s is table('malloytest.state_facts') + {
+          measure: total_births is births.sum()
+          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
+        }
+
+        query:s ->  {
+          group_by: upper_name is upper(popular_name)
+          nest: by_state is {
+            group_by: state
+            aggregate: births_per_100k
+          }
+        }
+
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    expect(result.data.path(0, "by_state", 0, "births_per_100k").value).toBe(
+      36593
+    );
+  });
+
+  it(`ungrouped nested group by float  - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: s is table('malloytest.state_facts') + {
+          measure: total_births is births.sum()
+          measure: ug is ungrouped(total_births)
+        }
+
+        query:s ->  {
+          group_by: f is floor(airport_count/300.0)
+          nest: by_state is {
+            group_by: state
+            aggregate: ug
+          }
+        }
+
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    // console.log(JSON.stringify(result.data.toObject(), null, 2));
+    expect(result.data.path(0, "by_state", 0, "ug").value).toBe(62742230);
+  });
+
   it(`single value to udf - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(

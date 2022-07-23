@@ -30,6 +30,7 @@ source: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
     total_bottles is bottles_sold.sum()
     line_item_count is count()
     avg_price_per_100ml is price_per_100ml.avg()
+    percent_of_sales is total_sale_dollars / ungrouped(total_sale_dollars) * 100
 
   // queries
   query: by_month is {
@@ -47,6 +48,7 @@ source: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
     aggregate:
       total_bottles
       avg_price_per_100ml
+      percent_of_sales
   }
 
   query: most_expensive_products is {
@@ -97,20 +99,20 @@ source: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
       total_sale_dollars
       total_bottles
     nest:
-      by_month
-      by_class
-      by_vendor_bar_chart
+      // by_month
+      // by_class
+      // by_vendor_bar_chart
       top_sellers_by_revenue
-      most_expensive_products
-      by_vendor_dashboard is {
-        top: 10
-        group_by: vendor_name
-        aggregate: total_sale_dollars
-        nest:
-          by_month,
-          top_sellers_by_revenue,
-          most_expensive_products
-      }
+  //     most_expensive_products
+  //     by_vendor_dashboard is {
+  //       top: 10
+  //       group_by: vendor_name
+  //       aggregate: total_sale_dollars
+  //       nest:
+  //         by_month,
+  //         top_sellers_by_revenue,
+  //         most_expensive_products
+  //    }
   }
 }
 
