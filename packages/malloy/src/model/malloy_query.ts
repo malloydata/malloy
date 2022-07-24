@@ -895,6 +895,11 @@ class FieldInstanceField implements FieldInstance {
 
 type RepeatedResultType = "nested" | "inline_all_numbers" | "inline";
 
+class Ungrouping {
+  groupSet: number | undefined;
+  fieldNames: string[] = [];
+}
+
 class FieldInstanceResult implements FieldInstance {
   type: FieldInstanceType = "query";
   allFields = new Map<string, FieldInstance>();
@@ -906,6 +911,7 @@ class FieldInstanceResult implements FieldInstance {
   firstSegment: PipeSegment;
   hasHaving = false;
   // query: QueryQuery;
+  ungroupings: Ungrouping[] = [];
 
   constructor(turtleDef: TurtleDef, parent: FieldInstanceResult | undefined) {
     this.parent = parent;
