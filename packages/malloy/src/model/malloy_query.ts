@@ -2282,15 +2282,13 @@ class QueryQuery extends QueryField {
                   `CAST(${exp} as STRING) as ${outputName}_string`
                 );
                 fi.partitionSQL = outputFieldName;
-              } else if (fi.f.hasExpression()) {
+              } else {
                 const outputFieldName = `__lateral_join_bag.${outputName}`;
                 fi.partitionSQL = outputFieldName;
                 output.lateralJoinSQLExpressions.push(
                   `${exp} as ${outputName}`
                 );
                 output.sql.push(outputFieldName);
-              } else {
-                output.sql.push(`${exp} as ${outputName}`);
               }
             } else {
               // just treat it like a regular field.
