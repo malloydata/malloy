@@ -157,6 +157,8 @@ async function registerIPC(): Promise<void> {
                 },
               });
 
+              thirdPartyWindow.setMenu(null);
+
               thirdPartyWindow.loadURL(
                 url.format({
                   pathname: app.isPackaged

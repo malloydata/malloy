@@ -25,7 +25,7 @@ const thirdPartyNotices = "third_party_notices.txt";
 async function packageDemo(
   platform: string,
   architecture: string,
-  noCodeSigning = false
+  signAndNotarize = true
 ) {
   doBuild(`${platform}-${architecture}`);
 
@@ -49,7 +49,7 @@ async function packageDemo(
   });
 
   const extraOptions: Partial<packager.Options> = {};
-  if (!noCodeSigning) {
+  if (signAndNotarize) {
     if (platform === "darwin") {
       const appleId = process.env.NOTARIZER_APPLE_ID;
       const appleIdPassword = process.env.NOTARIZER_APPLE_ID_PASSWORD;
@@ -106,12 +106,17 @@ async function packageDemo(
 (async () => {
   const platform = process.argv[2];
   const architecture = process.argv[3];
-  const noCodeSigning = process.argv[4];
+  const signAndNotarize = process.argv[4];
 
   if (platform === undefined || architecture === undefined) {
     throw new Error("Specify platform and architecture.");
   }
-  await packageDemo(platform, architecture, noCodeSigning == "true");
+
+  await packageDemo(
+    platform,
+    architecture,
+    signAndNotarize == "false" ? false : true
+  );
 })()
   .then(() => {
     console.log("Demo application built successfully");
