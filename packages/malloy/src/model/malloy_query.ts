@@ -907,6 +907,8 @@ class FieldInstanceResult implements FieldInstance {
   hasHaving = false;
   // query: QueryQuery;
 
+  resultUsesUngrouped = false;
+
   constructor(turtleDef: TurtleDef, parent: FieldInstanceResult | undefined) {
     this.parent = parent;
     this.turtleDef = turtleDef;
@@ -987,6 +989,10 @@ class FieldInstanceResult implements FieldInstance {
     children: number[];
     isComplex: boolean;
   } {
+    // if the root node uses a total, start at 1.
+    if (nextGroupSetNumber === 0 && this.resultUsesUngrouped) {
+      nextGroupSetNumber++;
+    }
     this.groupSet = nextGroupSetNumber++;
     this.depth = depth;
     let maxDepth = depth;
@@ -1182,7 +1188,7 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
   joins = new Map<string, JoinInstance>();
   havings = new AndChain();
   isComplexQuery = false;
-  usesTotal = false;
+  queryUsesUngrouped = false;
   constructor(turtleDef: TurtleDef) {
     super(turtleDef, undefined);
   }
@@ -1622,8 +1628,9 @@ class QueryQuery extends QueryField {
   ): void {
     for (const expr of e) {
       if (isTotalFragment(expr)) {
+        resultStruct.resultUsesUngrouped = true;
         resultStruct.root().isComplexQuery = true;
-        resultStruct.root().usesTotal = true;
+        resultStruct.root().queryUsesUngrouped = true;
         this.addDependantExpr(resultStruct, context, expr.e, joinStack);
       } else if (isFieldFragment(expr)) {
         const field = context.getDimensionOrMeasureByName(expr.path);
@@ -2260,7 +2267,7 @@ class QueryQuery extends QueryField {
           if (isScalarField(fi.f)) {
             if (
               this.parent.dialect.name === "standardsql" &&
-              this.rootResult.usesTotal
+              this.rootResult.queryUsesUngrouped
             ) {
               // BigQuery can't partition aggregate function except when the field has no
               //  expression.  Additionally it can't partition by floats.  We stuff expressions
@@ -2838,14 +2845,6 @@ class QueryQuery extends QueryField {
     this.maxDepth = r.maxDepth;
     this.maxGroupSet = r.nextGroupSetNumber - 1;
 
-    // if this is a 1 grouping set query with a total, make it 2 groups
-    if (this.maxGroupSet === 0 && this.rootResult.usesTotal) {
-      this.rootResult.groupSet = 1;
-      this.rootResult.childGroups = [1];
-      this.maxGroupSet = 1;
-      this.maxDepth = 1;
-      this.rootResult.isComplexQuery = true;
-    }
     this.rootResult.isComplexQuery ||= this.maxDepth > 0 || r.isComplex;
     if (this.rootResult.isComplexQuery) {
       return this.generateComplexSQL(stageWriter);
