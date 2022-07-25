@@ -12,7 +12,7 @@
  */
 
 import { FieldDef } from "@malloydata/malloy";
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, Menu, shell } from "electron";
 import * as path from "path";
 import url from "url";
 import { getAnalysis, readMalloyDirectory } from "./directory";
@@ -126,4 +126,71 @@ async function registerIPC(): Promise<void> {
   ipcMain.handle("post:open_directory", async (_event) => {
     return await getOpenDirectory();
   });
+
+  // Native application menu
+  const template: (Electron.MenuItem | Electron.MenuItemConstructorOptions)[] =
+    [
+      { role: "appMenu" },
+      { role: "fileMenu" },
+      { role: "editMenu" },
+      {
+        label: "View",
+        submenu: [
+          { role: "reload" },
+          { role: "forceReload" },
+          { role: "toggleDevTools" },
+          { type: "separator" },
+          { role: "resetZoom" },
+          { role: "zoomIn" },
+          { role: "zoomOut" },
+          { type: "separator" },
+          { role: "togglefullscreen" },
+          { type: "separator" },
+          {
+            label: "View Open Source Licenses",
+            click: async () => {
+              const thirdPartyWindow = new BrowserWindow({
+                width: 400,
+                height: 600,
+                webPreferences: {
+                  javascript: false,
+                },
+              });
+
+              thirdPartyWindow.setMenu(null);
+
+              thirdPartyWindow.loadURL(
+                url.format({
+                  pathname: app.isPackaged
+                    ? path.join(
+                        process.resourcesPath,
+                        "third_party_notices.txt"
+                      )
+                    : path.join(__dirname, "app", "not_packaged.html"),
+                  protocol: "file",
+                  slashes: true,
+                })
+              );
+            },
+          },
+        ],
+      },
+      { role: "windowMenu" },
+      {
+        label: "Help",
+        submenu: [
+          {
+            label: "Open Malloy Documentation",
+            click: async () => {
+              await shell.openExternal(
+                "https://looker-open-source.github.io/malloy/documentation/index.html"
+              );
+            },
+          },
+        ],
+      },
+    ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
 }
