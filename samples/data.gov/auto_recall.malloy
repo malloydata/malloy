@@ -1,0 +1,48 @@
+// Autombile Recalls
+//
+// Data Source data.gov 
+//    https://catalog.data.gov/tr/dataset/recalls-data
+//
+// Raw Data
+//  https://data.transportation.gov/api/views/6axg-epim/rows.csv
+
+
+source: auto_recalls is table('duckdb:auto_recalls.csv') {
+  declare:
+    recall_count is count()
+
+  query: by_manufacturer is {
+    group_by: `Manufacturer`
+    aggregate: recall_count
+  }
+
+  query: by_type is {
+    group_by: `Recall Type`
+    aggregate: recall_count
+  }
+
+  query: by_year is {
+    group_by: recall_year is `Report Received Date`.year
+    aggregate: recall_count
+  }
+
+  query: `By_Action` is {
+    group_by: `Corrective Action`
+    aggregate: recall_count
+  }
+
+  query: detail is {
+    project: 
+      `NHTSA ID`, 
+      `Report Received Date`
+      Manufacturer,
+      Subject, 
+      `Recall Type`
+      `Recall Description`
+  }
+
+  query: `dashboard` is by_manufacturer + {
+    nest: by_year + {limit: 10}
+    nest: by_type
+  }
+}

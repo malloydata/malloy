@@ -1,0 +1,45 @@
+// Data for this model is pretty large and not downlaoded by default.
+// To fetch data for this model run the following command:
+//
+//    make data/sf_311_cases.csv
+//
+
+sql: sf_311_cases_read is  || 
+  SELECT * 
+  FROM read_csv_auto(
+    'data/sf_311_cases.csv'
+    -- ,ALL_VARCHAR=1 
+  )
+  ;;
+  on "duckdb"
+
+source: sf_311_cases is from_sql(sf_311_cases_read){
+
+  rename: old_closed is Closed
+  dimension: Closed is cast(strptime(old_closed, '%-m/%-d/%Y %I:%M:%S %p') as timestamp)
+
+  measure: total_cases is count()
+
+  // dimension: hours_open is hours(Opened to Closed)
+  // measure: average_hours_open is hours_open.avg()
+
+  query: cases_by_category is {
+    group_by: Category 
+    aggregate: total_cases
+  }
+
+  query: cases_by_neighborhood is {
+    group_by: Neighborhood 
+    aggregate: total_cases
+  }
+
+  query: top_categories_by_neighborhood is cases_by_neighborhood {
+    nest: cases_by_category {top: 10}
+  }
+
+  query: cases_by_day_of_week is {
+    group_by: opened_day_of_week is day_of_week(Opened)
+    aggregate: total_cases
+    order_by: opened_day_of_week
+  }
+}

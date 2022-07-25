@@ -1,0 +1,18 @@
+// Need some way pass along the current directory to duckdb.
+//  Currently the duckdb node interface doesn't support it.
+//
+//  bug: https://github.com/looker-open-source/malloy/issues/555
+
+
+source: people_table is table('duckdb:data/names.parquet') {
+}
+
+source: principals_table is table('duckdb:data/principals.parquet') {
+}
+
+source: titles_table is table('duckdb:data/titles.parquet') {
+}
+
+// source: people_table is table('duckdb:names.parquet') {}
+// source: principals_table is table('duckdb:principals.parquet') {}
+// source: titles_table is table('duckdb:titles.parquet') {}

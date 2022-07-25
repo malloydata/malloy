@@ -1,0 +1,31 @@
+// CT Lien Filings
+//
+// Data Source data.gov 
+//    https://catalog.data.gov/fi/dataset/uniform-commercial-code-ucc-lien-filings-rev3-2020
+//
+// Raw Data
+//  https://data.ct.gov/api/views/xfev-8smz/rows.csv
+
+sql: liens_sql is  || 
+  SELECT * FROM read_csv_auto(
+      'data/lien_filings.csv',
+      ALL_VARCHAR=1 
+      )
+  ;;
+  on "duckdb"
+
+// source: auto_recalls is table('duckdb:/usr/local/google/home/ltabb/s/malloy_examples/data.gov/lien_filings.csv') {
+source: liens is from_sql(liens_sql) {
+  measure: total_leins is count()
+
+  query: by_city is {
+    group_by: `Debtor City`
+    aggregate: total_leins
+  }
+
+  query: by_lien_type is {
+    group_by: `Lien Type`
+    aggregate: total_leins
+  }
+
+}

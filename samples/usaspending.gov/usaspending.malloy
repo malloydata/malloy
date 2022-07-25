@@ -1,0 +1,19 @@
+sql: usa_spending_sql is ||
+  SELECT * FROM 'data/FY2022_All_Contracts_Full_20220608_*.parquet'
+;; on "duckdb"
+
+source: usa_spending is from_sql(usa_spending_sql) {
+  measure: award_count is count()
+  measure: total_award is current_total_value_of_award.sum()
+
+  query: by_agency is {
+    group_by: funding_agency_name
+    aggregate: award_count, total_award
+    nest: sub_agency is {
+      group_by: funding_sub_agency_name
+      aggregate: award_count, total_award
+    }
+  }
+
+
+}
