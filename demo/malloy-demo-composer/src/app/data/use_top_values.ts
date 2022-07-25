@@ -30,10 +30,14 @@ async function fetchTopValues(
     return undefined;
   }
   const source = analysis && analysis.modelDef.contents[analysis.sourceName];
-  return await window.malloy.topValues(
+  const res = await window.malloy.topValues(
     source,
     analysis.fullPath || analysis.modelFullPath
   );
+  if (res instanceof Error) {
+    throw res;
+  }
+  return res;
 }
 
 export function useTopValues(

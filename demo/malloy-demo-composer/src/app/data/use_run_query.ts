@@ -21,8 +21,11 @@ async function runQuery(query: string, queryName: string, analysis?: Analysis) {
   }
   const res = await window.malloy.runQuery(query, queryName, {
     ...analysis,
-    modelDef: {},
+    modelDef: {} as unknown as malloy.ModelDef,
   });
+  if (res instanceof Error) {
+    throw res;
+  }
   return malloy.Result.fromJSON(res);
 }
 
@@ -36,11 +39,12 @@ interface UseRunQueryResult {
 export function useRunQuery(
   query: string,
   queryName: string,
+  onError: (error: Error) => void,
   analysis?: Analysis
 ): UseRunQueryResult {
   const { data, mutateAsync, isLoading, reset } = useMutation(
     () => runQuery(query, queryName, analysis),
-    {}
+    { onError }
   );
 
   const runQueryRet = () => {
