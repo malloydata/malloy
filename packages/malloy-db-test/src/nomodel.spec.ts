@@ -359,6 +359,30 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.path(0, "births_per_100k").value).toBe(9742);
   });
 
+  it(`ungrouped top level with nested  - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: s is table('malloytest.state_facts') + {
+          measure: total_births is births.sum()
+          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
+        }
+
+        query:s-> {
+          group_by: state
+          aggregate: births_per_100k
+          nest: by_name is {
+            group_by: popular_name
+            aggregate: total_births
+          }
+        }
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    expect(result.data.path(0, "births_per_100k").value).toBe(9742);
+  });
+
   it(`ungrouped nested with no grouping above - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
