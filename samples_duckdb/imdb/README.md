@@ -1,8 +1,8 @@
 # About the IMDb Dataset
 
-IMDb makes data available for download via [their website](https://www.imdb.com/interfaces/). These are available as TSV files, so we'll transform them into parquet format and access them with DuckDB.  
+IMDb makes data available for download via [their website](https://www.imdb.com/interfaces/). We provide a makefile to help download and prepare the data for use with the provided Malloy models. These are available as TSV files, so we'll transform them into parquet format and access them with DuckDB.
 
-One metric used repeatedly in this model is `ratings.numVotes`, the number of votes the title has received. Where `ratings.averageRating` of course indicates how much people _liked_ a movie, `numVotes` is a better proxy for overall popularity of a title. 
+One metric used repeatedly in this model is `ratings.numVotes`, the number of votes the title has received. Where `ratings.averageRating` of course indicates how much people _liked_ a movie, `numVotes` is a better proxy for overall popularity of a title.
 
 ## Required Tools
   * [Malloy VS Code Extension](https://marketplace.visualstudio.com/items?itemName=malloydata.malloy-vscode)
@@ -45,7 +45,7 @@ The `movies` source filters only to films with > 10,000 ratings.
 
 **Principals**
 
-A mapping table between people and titles, principals shows the principal cast/crew for titles 
+A mapping table between people and titles, principals shows the principal cast/crew for titles
 
 | tconst    | ordering | nconst    | category        | job                     |   |
 |-----------|---------:|-----------|-----------------|-------------------------|:-:|
@@ -54,7 +54,7 @@ A mapping table between people and titles, principals shows the principal cast/c
 | tt0000001 |        3 | nm0374658 | cinematographer | director of photography |   |
 | tt0000002 |        1 | nm0721526 | director        | \N                      |   |
 | tt0000002 |        2 | nm1335271 | composer        | \N                      |   |
- 
+
 
 ## Queries in `imdb.malloy`
 
@@ -78,7 +78,6 @@ A mapping table between people and titles, principals shows the principal cast/c
 
 **movie_filters.malloy**: a set of queries intended to filter other queries (see **movie_dashboard.malloy**)--each produces the unique identifiers (`tconst`) of movies to be used in the filter.
 
-**movie_dashboard.malloy**: the `movies_plus` source adds an image and url link to the base model, then defines a `titles_dashboard` query which can be filtered as desired. For example, `spielberg_dashboard` uses a filtered query from `movie_filters.malloy` to pull back information on all Spielberg movies. 
+**movie_dashboard.malloy**: the `movies_plus` source adds an image and url link to the base model, then defines a `titles_dashboard` query which can be filtered as desired. For example, `spielberg_dashboard` uses a filtered query from `movie_filters.malloy` to pull back information on all Spielberg movies.
 
-**movie_complex.malloy**: an aptly named collection of more complex queries building on definitions in the above files. 
-
+**movie_complex.malloy**: an aptly named collection of more complex queries building on definitions in the above files.
