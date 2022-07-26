@@ -80,11 +80,14 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
     return true;
   }
 
-  // @bporterfield need help writing this. it needs to wait if a setup is in process.
   protected async setup(): Promise<void> {
     if (!this.isSetup) {
+      // TODO: This is where we will load extensions once we figure
+      // out how to better support them.
       // await this.runDuckDBQuery("INSTALL 'json'");
       // await this.runDuckDBQuery("LOAD 'json'");
+      // await this.runDuckDBQuery("INSTALL 'httpfs'");
+      // await this.runDuckDBQuery("LOAD 'httpfs'");
       //   await this.runDuckDBQuery("DROP MACRO sum_distinct");
       //   try {
       //     await this.runDuckDBQuery(
@@ -226,7 +229,7 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
       if (columnMatch && columnMatch.groups) {
         ret[columnMatch.groups["name"]] = columnMatch.groups["type"];
       } else {
-        throw `Badly form Structure definition ${s}`;
+        throw new Error(`Badly form Structure definition ${s}`);
       }
     }
     return ret;
