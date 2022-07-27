@@ -211,13 +211,13 @@ type QuerySomething = QueryField | QueryStruct | QueryTurtle;
 class GenerateState {
   whereSQL?: string;
   applyValue?: string;
-  inTotal = false;
+  totalGroupSet = -1;
 
   withWhere(s?: string): GenerateState {
     const newState = new GenerateState();
     newState.whereSQL = s;
     newState.applyValue = this.applyValue;
-    newState.inTotal = this.inTotal;
+    newState.totalGroupSet = this.totalGroupSet;
     return newState;
   }
 
@@ -225,15 +225,15 @@ class GenerateState {
     const newState = new GenerateState();
     newState.whereSQL = this.whereSQL;
     newState.applyValue = s;
-    newState.inTotal = this.inTotal;
+    newState.totalGroupSet = this.totalGroupSet;
     return newState;
   }
 
-  withTotal(): GenerateState {
+  withTotal(groupSet: number): GenerateState {
     const newState = new GenerateState();
     newState.whereSQL = this.whereSQL;
     newState.applyValue = this.applyValue;
-    newState.inTotal = true;
+    newState.totalGroupSet = groupSet;
     return newState;
   }
 }
@@ -398,35 +398,37 @@ class QueryField extends QueryNode {
     expr: UngroupedFragment,
     state: GenerateState
   ): string {
-    if (state.inTotal) {
-      throw new Error(`Already in a TOTAL.  Cannot nest totals.`);
+    if (state.totalGroupSet !== -1) {
+      throw new Error(`Already in ALL.  Cannot nest within an all calcuation.`);
+    }
+
+    let totalGroupSet;
+    let ungroupSet: UngroupSet | undefined;
+
+    if (expr.fields && expr.fields.length > 0) {
+      const key = expr.fields.sort().join("|");
+      ungroupSet = resultSet.ungroupedSets.get(key);
+      if (ungroupSet === undefined) {
+        throw new Error(`Internal Error, cannot find groupset with key ${key}`);
+      }
+      totalGroupSet = ungroupSet.groupSet;
+    } else {
+      totalGroupSet = resultSet.parent ? resultSet.parent.groupSet : 0;
     }
 
     const s = this.generateExpressionFromExpr(
       resultSet,
       context,
       expr.e,
-      state.withTotal()
+      state.withTotal(totalGroupSet)
     );
 
-    let p = resultSet.parent;
-    let fields: FieldInstanceField[] = [];
-    while (p !== undefined) {
-      fields = fields.concat(
-        p.fields(
-          (field) =>
-            isScalarField(field.f) && field.fieldUsage.type === "result"
-        )
-      );
-      p = p.parent;
-    }
+    const fields = resultSet.getUngroupPartitions(ungroupSet);
 
     let partitionBy = "";
-    if (resultSet.parent !== undefined) {
-      const fieldsString = fields.map((f) => f.getPartitionSQL()).join(", ");
-      if (fieldsString.length > 0) {
-        partitionBy = `PARTITION BY ${fieldsString}`;
-      }
+    const fieldsString = fields.map((f) => f.getPartitionSQL()).join(", ");
+    if (fieldsString.length > 0) {
+      partitionBy = `PARTITION BY ${fieldsString}`;
     }
     return `MAX(${s}) OVER (${partitionBy})`;
   }
@@ -598,8 +600,8 @@ class QueryField extends QueryNode {
         }
         if (resultSet.root().isComplexQuery) {
           let groupSet = resultSet.groupSet;
-          if (state.inTotal) {
-            groupSet = resultSet.parentGroupSet();
+          if (state.totalGroupSet !== -1) {
+            groupSet = state.totalGroupSet;
           }
           s += this.caseGroup([groupSet], agg);
         } else {
@@ -844,7 +846,7 @@ type FieldInstanceType = "field" | "query";
 
 interface FieldInstance {
   type: FieldInstanceType;
-  groupSet: number;
+  // groupSet: number;
   root(): FieldInstanceResultRoot;
 }
 
@@ -853,7 +855,7 @@ class FieldInstanceField implements FieldInstance {
   f: QueryField;
   // the output index of this field (1 based)
   fieldUsage: FieldUsage;
-  groupSet = 0;
+  additionalGroupSets: number[] = [];
   parent: FieldInstanceResult;
   partitionSQL: string | undefined; // the name of the field when used as a partition.
   constructor(
@@ -864,9 +866,6 @@ class FieldInstanceField implements FieldInstance {
     this.f = f;
     this.fieldUsage = fieldUsage;
     this.parent = parent;
-    if (parent) {
-      this.groupSet = parent.groupSet;
-    }
   }
 
   root(): FieldInstanceResultRoot {
@@ -877,7 +876,8 @@ class FieldInstanceField implements FieldInstance {
     let exp = this.f.generateExpression(this.parent);
     if (isScalarField(this.f)) {
       exp = this.f.caseGroup(
-        this.parent.groupSet > 0 ? this.parent.childGroups : [],
+        this.parent.childGroups.concat(this.additionalGroupSets),
+        // this.parent.groupSet > 0 ? this.parent.childGroups : [],
         exp
       );
     }
@@ -895,6 +895,8 @@ class FieldInstanceField implements FieldInstance {
 
 type RepeatedResultType = "nested" | "inline_all_numbers" | "inline";
 
+type UngroupSet = { fields: string[]; groupSet: number };
+
 class FieldInstanceResult implements FieldInstance {
   type: FieldInstanceType = "query";
   allFields = new Map<string, FieldInstance>();
@@ -905,6 +907,7 @@ class FieldInstanceResult implements FieldInstance {
   turtleDef: TurtleDef;
   firstSegment: PipeSegment;
   hasHaving = false;
+  ungroupedSets = new Map<string, UngroupSet>();
   // query: QueryQuery;
 
   resultUsesUngrouped = false;
@@ -993,6 +996,12 @@ class FieldInstanceResult implements FieldInstance {
     if (nextGroupSetNumber === 0 && this.resultUsesUngrouped) {
       nextGroupSetNumber++;
     }
+
+    // make a groupset for each unique ungrouping expression
+    for (const [_key, grouping] of this.ungroupedSets) {
+      grouping.groupSet = nextGroupSetNumber++;
+    }
+
     this.groupSet = nextGroupSetNumber++;
     this.depth = depth;
     let maxDepth = depth;
@@ -1010,8 +1019,6 @@ class FieldInstanceResult implements FieldInstance {
             maxDepth = r.maxDepth;
           }
         }
-      } else {
-        fi.groupSet = this.groupSet;
       }
     }
     this.childGroups = children;
@@ -1180,6 +1187,40 @@ class FieldInstanceResult implements FieldInstance {
       return this.parent.root();
     }
     throw new Error(`Internal Error, Null parent FieldInstanceResult`);
+  }
+
+  getUngroupPartitions(
+    ungroupSet: UngroupSet | undefined
+  ): FieldInstanceField[] {
+    let ret: FieldInstanceField[] = [];
+
+    if (ungroupSet !== undefined) {
+      ret = this.fields(
+        (fi) =>
+          isScalarField(fi.f) &&
+          fi.fieldUsage.type === "result" &&
+          ungroupSet.fields.indexOf(fi.f.getIdentifier()) !== -1
+      );
+    }
+    let p = this.parent;
+    while (p !== undefined) {
+      ret = ret.concat(
+        p.fields((fi) => isScalarField(fi.f) && fi.fieldUsage.type === "result")
+      );
+      p = p.parent;
+    }
+    return ret;
+  }
+
+  assignFieldsToGroups() {
+    for (const [_key, grouping] of this.ungroupedSets) {
+      for (const fieldInstance of this.getUngroupPartitions(grouping)) {
+        fieldInstance.additionalGroupSets.push(grouping.groupSet);
+      }
+    }
+    for (const child of this.structs()) {
+      child.assignFieldsToGroups();
+    }
   }
 }
 
@@ -1631,6 +1672,16 @@ class QueryQuery extends QueryField {
         resultStruct.resultUsesUngrouped = true;
         resultStruct.root().isComplexQuery = true;
         resultStruct.root().queryUsesUngrouped = true;
+        if (expr.fields && expr.fields.length > 0) {
+          const key = expr.fields.sort().join("|");
+          if (resultStruct.ungroupedSets.get(key) === undefined) {
+            resultStruct.ungroupedSets.set(key, {
+              fields: expr.fields,
+              groupSet: -1,
+            });
+          }
+        }
+
         this.addDependantExpr(resultStruct, context, expr.e, joinStack);
       } else if (isFieldFragment(expr)) {
         const field = context.getDimensionOrMeasureByName(expr.path);
@@ -2842,6 +2893,8 @@ class QueryQuery extends QueryField {
     const r = this.rootResult.computeGroups(0, 0);
     this.maxDepth = r.maxDepth;
     this.maxGroupSet = r.nextGroupSetNumber - 1;
+
+    this.rootResult.assignFieldsToGroups();
 
     this.rootResult.isComplexQuery ||= this.maxDepth > 0 || r.isComplex;
     if (this.rootResult.isComplexQuery) {

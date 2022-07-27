@@ -353,6 +353,10 @@ timeframe
   : SECOND | MINUTE | HOUR | DAY | WEEK | MONTH | QUARTER | YEAR
   ;
 
+ungrouped
+  : UNGROUPED | ALL
+  ;
+
 fieldExpr
   : fieldPath                                              # exprFieldPath
   | fieldExpr OCURLY filteredBy CCURLY                     # exprFilter
@@ -378,7 +382,7 @@ fieldExpr
   | OPAREN partialAllowedFieldExpr CPAREN                  # exprExpr
   | (id | timeframe) OPAREN ( argumentList? ) CPAREN       # exprFunc
   | pickStatement                                          # exprPick
-  | UNGROUPED OPAREN fieldExpr (COMMA fieldName)* CPAREN   # exprUngrouped
+  | ungrouped OPAREN fieldExpr (COMMA fieldName)* CPAREN   # exprUngrouped
   ;
 
 partialAllowedFieldExpr
@@ -491,6 +495,7 @@ TOP: T O P SPACE_CHAR* ':';
 WHERE: W H E R E SPACE_CHAR* ':';
 
 // bare keywords
+ALL: A L L;
 AND: A N D ;
 AS: A S ;
 ASC: A S C ;
