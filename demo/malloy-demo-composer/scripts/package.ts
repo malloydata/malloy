@@ -31,6 +31,7 @@ async function packageDemo(
 
   // third_party_licenses.txt
   const licenseFilePath = path.join(outDir, thirdPartyNotices);
+  fs.mkdirSync(outDir, { recursive: true });
   await new Promise((resolve, reject) => {
     const licenseFile = fs.createWriteStream(licenseFilePath);
     licenseFile.on("open", () => {
