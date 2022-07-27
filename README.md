@@ -31,7 +31,13 @@ Highlighted Documentation:
 - [Flights Example Analysis](https://looker-open-source.github.io/malloy/documentation/examples/faa.html) - examples built on the NTSB flights public dataset
 - [Modeling Walkthrough](https://looker-open-source.github.io/malloy/documentation/examples/iowa/iowa.html) - introduction to modeling via the Iowa liquor sales public data set
 
+## Contributing
 
+If you would like to [work on Malloy](CONTRIBUTING.md), take a look at the instructions for [developing Malloy](developing.md) and [developing documentation](documentation.md).
+
+To report security issues please see our [security policy](https://github.com/looker-open-source/malloy/security/policy).
+
+Malloy is not an officially supported Google product.
 
 ## Syntax Example
 Here is a simple example of a Malloy query:
@@ -61,10 +67,4 @@ ORDER BY flight_count desc         -- malloy automatically orders by the first a
 Learn more about the syntax and language features of Malloy in the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html).
 
 
-# Contributing
 
-If you would like to [work on Malloy](CONTRIBUTING.md), take a look at the instructions for [developing Malloy](developing.md) and [developing documentation](documentation.md).
-
-To report security issues please see our [security policy](https://github.com/looker-open-source/malloy/security/policy).
-
-Malloy is not an officially supported Google product.
