@@ -52,5 +52,3 @@ gems/
 logfile
 .s.PGSQL.5432.lock
 demo/malloy-demo-composer/env
-
-samples_duckdb/imdb/data/*
