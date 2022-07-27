@@ -12,7 +12,7 @@ Currently, the Malloy extension works on Mac, Linux, and Windows machines.
 
 3. **Download the [names example](https://github.com/looker-open-source/malloy/tree/main/samples_duckdb/names_duckdb)** (model + data). Open the model then click the "Run" code lens above any query to run it in VS Code.
 
-4. **Write some Malloy!** Play with an additional example ([DuckDB](https://github.com/looker-open-source/malloy/tree/add_malloy_examples/samples_duckdb) |  [BigQuery](https://looker-open-source.github.io/malloy/documentation/samples.html)), [use a CSV or parquet](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html#duckdb), or connect [database](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html).
+4. **Write some Malloy!** Play with an additional example ([DuckDB](https://github.com/looker-open-source/malloy/tree/add_malloy_examples/samples_duckdb) |  [BigQuery](https://looker-open-source.github.io/malloy/documentation/samples.html)), [use a CSV or parquet](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html#duckdb), and/or connect a [database](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html).
 
 
 ## Join the Community
