@@ -20,8 +20,8 @@ import { RuntimeList } from "./runtimes";
 
 const runtimes = new RuntimeList([
   "bigquery", //
-  // "postgres", //
-  // "duckdb", //
+  "postgres", //
+  "duckdb", //
 ]);
 
 const splitFunction: Record<string, string> = {
