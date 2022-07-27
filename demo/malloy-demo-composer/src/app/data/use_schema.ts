@@ -29,7 +29,7 @@ async function fetchSchema(
   if (analysis === undefined) {
     return undefined;
   }
-  const params: Record<string, string> = {
+  const params: Partial<explore.Analysis> = {
     malloy: analysis.malloy,
     modelFullPath: analysis.modelFullPath,
     sourceName: analysis.sourceName,
@@ -40,7 +40,11 @@ async function fetchSchema(
   if (analysis.path) {
     params.path = analysis.path;
   }
-  const schema = await window.malloy.schema(params);
+  const res = await window.malloy.schema(params as explore.Analysis);
+  if (res instanceof Error) {
+    throw res;
+  }
+  const schema = res;
   analysis.modelDef = schema.modelDef;
   analysis.malloy = schema.malloy;
   setAnalysis(analysis);
