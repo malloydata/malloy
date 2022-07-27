@@ -85,7 +85,7 @@ if (!version)
     "No version passed to publish script. Call it with a semver version or pass 'pre-release'."
   );
 
-console.log(`Starting publish for ${version} extensions`);
+console.log(`Starting ${version} publish for extensions`);
 
 doPublish(version)
   .then(() => {
