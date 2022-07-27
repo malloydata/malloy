@@ -1,6 +1,6 @@
 # Meet Malloy
 
-Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy is currently available on BigQuery and Postgres. About Malloy:
+Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy currently connects to BigQuery and Postgres, and natively supports DuckDB. About Malloy:
 
 - Queries compile to SQL, optimized for your database
 - Computations are modular, composable, reusable, and extendable in ways that are consistent with modern programming paradigms
@@ -16,7 +16,7 @@ _GitHub mutes videos by default, so make sure to unmute._
 
 https://user-images.githubusercontent.com/7178946/154564840-41299974-58ce-41d1-ab08-98f2be6f9157.mov
 
-In addition, we've built an example of an application built on top of the language, the [Composer Demo](https://github.com/looker-open-source/malloy/tree/main/demo/malloy-demo-composer). Learn to use it [here](https://docs.google.com/presentation/d/18KUl_rrz2K-hbsiKJYS3rtTcYxZMXKklyPllLmTtIYY/edit#slide=id.g1269816dcbe_0_140), and check out the demo. 
+In addition, we've built an example of an application built on top of the language, the [Composer Demo](https://github.com/looker-open-source/malloy/tree/main/demo/malloy-demo-composer). Learn to use it [here](https://docs.google.com/presentation/d/18KUl_rrz2K-hbsiKJYS3rtTcYxZMXKklyPllLmTtIYY/edit#slide=id.g1269816dcbe_0_140), and check out the demo.
 
 https://user-images.githubusercontent.com/7178946/170374545-412cf60b-8649-48a3-acb6-9908e102af7c.mov
 
@@ -49,14 +49,6 @@ ORDER BY flight_count desc         -- malloy automatically orders by the first a
 
 Learn more about the syntax and language features of Malloy in the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html).
 
-# Get Started
-This walkthrough covers installing the extension, [connecting a database](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html), and the basics of using Malloy in VS Code.
-
-_GitHub mutes videos by default, so make sure to unmute._
-
-https://user-images.githubusercontent.com/7178946/151630430-308e651d-814c-4c18-8522-d2d0edb25ece.mp4
-
-
 
 # Installing the Extension
 
@@ -66,9 +58,17 @@ Currently, the Malloy extension works on Mac, Linux, and Windows machines.
 
 2. **Add the Malloy extension from the Visual Studio Code Marketplace**: Open VS Code and click the Extensions button on the far left (it looks like 4 blocks with one flying away). This will open the Extension Marketplace. Search for "Malloy" and, once found, click "Install"
 
-3. **Connect to your database**: Directions [here](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html).
+3. **Connect a database** [Optional]: Directions [here](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html).
 
-4. **Write some Malloy!**: Start with the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html). It may be helpful to check out one of the walkthroughs under Documentation below, or try some of the BigQuery [sample models](https://github.com/looker-open-source/malloy/tree/main/samples) on public datasets available on the repo before getting started.
+4. **Write some Malloy!**: Start with the [Quickstart](https://looker-open-source.github.io/malloy/documentation/language/basic.html), then play with an example model for [DuckDB](https://github.com/looker-open-source/malloy/tree/add_malloy_examples/samples_duckdb) (natively supported) or [BigQuery](https://github.com/looker-open-source/malloy/tree/main/samples).
+
+
+This walkthrough covers installing the extension, [connecting a database](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html), and the basics of using Malloy in VS Code:
+
+_GitHub mutes videos by default, so make sure to unmute._
+
+https://user-images.githubusercontent.com/7178946/151630430-308e651d-814c-4c18-8522-d2d0edb25ece.mp4
+
 
 # Join the Community
 

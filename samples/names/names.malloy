@@ -1,30 +1,28 @@
 --! styles names.styles.json
 
-query: namesQuery is table('bigquery-public-data.usa_names.usa_1910_current') -> {
-  group_by:
-    decade is floor(`year` / 10) * 10,
-    state,
-    baby_gender is gender ? pick 'Male' when = 'M' else 'Female',
-    gender
-  aggregate: cohort_population is `number`.sum()
-  nest: by_name is { group_by: name; aggregate: population is `number`.sum() }
-}
+source: names is table('bigquery-public-data.usa_names.usa_1910_current') {
 
-source: names is from(-> namesQuery) {
-  dimension: name is concat(by_name.name, '') // !?BUG !?
+  dimension: decade is floor(`year` / 10) * 10
 
   measure:
-    births_per_100k is floor(by_name.population.sum() / cohort_population.sum() * 100000),
-    total_cohort_population is cohort_population.sum(),
-    total_population is by_name.population.sum()
-  dimension: name is concat(by_name.name, '') // bug
+    total_population is `number`.sum()
+    births_per_100k is floor(total_population / ungrouped(total_population) * 100000)
 
-  query: state_map is { group_by: state; aggregate: births_per_100k }
+  query: by_name is {
+    group_by: name
+    aggregate: total_population, births_per_100k
+  }
+
+  query: state_map is {
+    group_by: state
+    aggregate: births_per_100k
+  }
 
   query: decade_graph is {
     group_by: decade
     aggregate: births_per_100k
-    group_by: baby_gender
+    group_by: gender
+    order_by: decade asc
   }
 
   query: name_dashboard is {
@@ -35,14 +33,14 @@ source: names is from(-> namesQuery) {
   }
 
   query: location_iconic_names is {
-    group_by: name, baby_gender
+    group_by: name, gender
     aggregate: births_per_100k
     nest: by_state is { group_by: state; aggregate: births_per_100k }
   } -> {
     where: births_per_100k > 50
     group_by: by_state.state
     nest: by_gender is {
-      group_by: baby_gender
+      group_by: gender
       nest: iconic_name_list is {
         top: 15; order_by: 2 desc
         group_by: name
@@ -52,7 +50,7 @@ source: names is from(-> namesQuery) {
   }
 
   query: time_iconic_names is {
-    group_by: name, baby_gender
+    group_by: name, gender
     aggregate: births_per_100k
     nest: by_decade is {
       group_by: decade
@@ -62,7 +60,7 @@ source: names is from(-> namesQuery) {
     where: births_per_100k > 50
     group_by: by_decade.decade
     nest: by_gender is {
-      group_by: baby_gender
+      group_by: gender
       nest: iconic_name_list is {
         top: 50; order_by: 2 desc
         group_by: name
