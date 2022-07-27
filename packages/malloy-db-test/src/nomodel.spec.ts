@@ -20,8 +20,8 @@ import { RuntimeList } from "./runtimes";
 
 const runtimes = new RuntimeList([
   "bigquery", //
-  "postgres", //
-  "duckdb", //
+  // "postgres", //
+  // "duckdb", //
 ]);
 
 const splitFunction: Record<string, string> = {
@@ -484,6 +484,63 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     // console.log(result.sql);
     // console.log(JSON.stringify(result.data.toObject(), null, 2));
     expect(result.data.path(0, "by_state", 0, "ug").value).toBe(62742230);
+  });
+
+  it(`all with parameters - basic  - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: s is table('malloytest.state_facts') + {
+          measure: total_births is births.sum()
+        }
+
+        query: s -> {
+          group_by: popular_name, state
+          aggregate:
+            total_births
+            all_births is all(total_births)
+            all_name is all(total_births, popular_name)
+        }
+
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    // console.log(JSON.stringify(result.data.toObject(), null, 2));
+    expect(result.data.path(0, "all_births").value).toBe(295727065);
+    expect(result.data.path(0, "all_name").value).toBe(197260594);
+  });
+
+  it(`all with parameters - nest  - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: s is table('malloytest.state_facts') + {
+          measure: total_births is births.sum()
+          dimension: abc is floor(airport_count/300)
+        }
+
+        query: s -> {
+          group_by: abc
+          aggregate: total_births
+          nest: by_stuff is {
+            group_by: popular_name, state
+            aggregate:
+              total_births
+              all_births is all(total_births)
+              all_name is all(total_births, popular_name)
+          }
+        }
+
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    // console.log(JSON.stringify(result.data.toObject(), null, 2));
+    expect(result.data.path(0, "by_stuff", 0, "all_births").value).toBe(
+      119809719
+    );
+    expect(result.data.path(0, "by_stuff", 0, "all_name").value).toBe(61091215);
   });
 
   it(`single value to udf - ${databaseName}`, async () => {
