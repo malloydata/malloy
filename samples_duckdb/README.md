@@ -1,6 +1,6 @@
 # DuckDB Example Models
 
-These models are built to work with DuckDB, which is natively supported and does not require explicitly configuration of a connection.
+These models are built to work with DuckDB, which is natively supported and does not require explicit configuration of a connection.
 
 ## [Names](https://github.com/looker-open-source/malloy/tree/add_malloy_examples/samples_duckdb/names_duckdb) _(ready to use)_
 This dataset a lightly transformed version of the U.S. Social Security Administration [Names Dataset](https://catalog.data.gov/dataset/baby-names-from-social-security-card-applications-national-data). A parquet file with the data is provided on the repo.
