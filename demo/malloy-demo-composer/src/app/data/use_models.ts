@@ -17,7 +17,11 @@ import * as explore from "../../types";
 export const KEY = "models";
 
 async function fetchModels(): Promise<explore.Model[]> {
-  return await window.malloy.models();
+  const res = await window.malloy.models();
+  if (res instanceof Error) {
+    throw res;
+  }
+  return res;
 }
 
 export function useModels(): explore.Model[] | undefined {

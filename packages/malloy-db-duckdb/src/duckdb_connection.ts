@@ -37,7 +37,8 @@ const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   VARCHAR: "string",
   DATE: "date",
   TIMESTAMP: "timestamp",
-  "DECIMAL(38,9)": "number",
+  TIME: "string",
+  DECIMAL: "number",
   BOOLEAN: "boolean",
   INTEGER: "number",
 };
@@ -79,11 +80,14 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
     return true;
   }
 
-  // @bporterfield need help writing this. it needs to wait if a setup is in process.
   protected async setup(): Promise<void> {
     if (!this.isSetup) {
+      // TODO: This is where we will load extensions once we figure
+      // out how to better support them.
       // await this.runDuckDBQuery("INSTALL 'json'");
       // await this.runDuckDBQuery("LOAD 'json'");
+      // await this.runDuckDBQuery("INSTALL 'httpfs'");
+      // await this.runDuckDBQuery("LOAD 'httpfs'");
       //   await this.runDuckDBQuery("DROP MACRO sum_distinct");
       //   try {
       //     await this.runDuckDBQuery(
@@ -177,16 +181,55 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
     return structDef;
   }
 
+  /**
+   * Split's a structs columns declaration into individual columns
+   * to be fed back into fillStructDefFromTypeMap(). Handles commas
+   * within nested STRUCT() declarations.
+   *
+   * (https://github.com/looker-open-source/malloy/issues/635)
+   *
+   * @param s struct's column declaration
+   * @returns Array of column type declarations
+   */
+  private splitColumns(s: string) {
+    const columns = [];
+    let parens = 0;
+    let column = "";
+    let eatSpaces = true;
+    for (let idx = 0; idx < s.length; idx++) {
+      const c = s.charAt(idx);
+      if (eatSpaces && c === " ") {
+        // Eat space
+      } else {
+        eatSpaces = false;
+        if (!parens && c === ",") {
+          columns.push(column);
+          column = "";
+          eatSpaces = true;
+        } else {
+          column += c;
+        }
+        if (c === "(") {
+          parens += 1;
+        } else if (c === ")") {
+          parens -= 1;
+        }
+      }
+    }
+    columns.push(column);
+    return columns;
+  }
+
   private stringToTypeMap(s: string): { [name: string]: string } {
     const ret: { [name: string]: string } = {};
-    const columns = s.split(", ");
+    const columns = this.splitColumns(s);
     for (const c of columns) {
       //const [name, type] = c.split(" ", 1);
       const columnMatch = c.match(/^(?<name>[^\s]+) (?<type>.*)$/);
       if (columnMatch && columnMatch.groups) {
         ret[columnMatch.groups["name"]] = columnMatch.groups["type"];
       } else {
-        throw `Badly form Structure definition ${s}`;
+        throw new Error(`Badly form Structure definition ${s}`);
       }
     }
     return ret;
@@ -198,6 +241,8 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
   ) {
     for (const name in typeMap) {
       let duckDBType = typeMap[name];
+      // Remove DECIMAL(x,y) precision to simplify lookup
+      duckDBType = duckDBType.replace(/^DECIMAL\(\d+,\d+\)/g, "DECIMAL");
       let malloyType = duckDBToMalloyTypes[duckDBType];
       const arrayMatch = duckDBType.match(/(?<duckDBType>.*)\[\]$/);
       if (arrayMatch && arrayMatch.groups) {
