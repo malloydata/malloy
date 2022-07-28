@@ -122,6 +122,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.value[0].avg_year).toBe(1969);
     expect(result.data.value[0].avg_seats).toBe(7);
   });
+
   it(`join_many condition no primary key - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
@@ -301,6 +302,28 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.resultExplore.limit).toBe(3);
   });
 
+  // it(`number as null- ${databaseName}`, async () => {
+  //   // a cross join produces a Many to Many result.
+  //   // symmetric aggregate are needed on both sides of the join
+  //   // Check the row count and that sums on each side work properly.
+  //   const result = await runtime
+  //     .loadQuery(
+  //       `
+  //       source: s is table('malloytest.state_facts') + {
+  //       }
+  //       query: s-> {
+  //         group_by: state
+  //         nest: ugly is {
+  //           group_by: popular_name
+  //           aggregate: foo is NULLIF(sum(airport_count)*0,0)+1
+  //         }
+  //       }
+  //     `
+  //     )
+  //     .run();
+  //   expect(result.data.path(0, "ugly", 0, "foo").value).toBe(null);
+  // });
+
   it(`limit - not provided - ${databaseName}`, async () => {
     // a cross join produces a Many to Many result.
     // symmetric aggregate are needed on both sides of the join
@@ -375,12 +398,33 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             group_by: popular_name
             aggregate: total_births
           }
+          limit: 1000
         }
       `
       )
       .run();
     // console.log(result.sql);
     expect(result.data.path(0, "births_per_100k").value).toBe(9742);
+  });
+
+  it(`ungrouped - eliminate rows  - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: s is table('malloytest.state_facts') + {
+          measure: m is all(births.sum())
+          where: state='CA' | 'NY'
+        }
+
+        query:s-> {
+          group_by: state
+          aggregate: m
+        }
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    expect(result.data.toObject().length).toBe(2);
   });
 
   it(`ungrouped nested with no grouping above - ${databaseName}`, async () => {
