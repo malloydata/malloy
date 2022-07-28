@@ -403,9 +403,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    console.log(result.sql);
+    // console.log(result.sql);
     expect(result.data.path(0, "births_per_100k").value).toBe(9742);
-    expect(result.data.toObject().length).toBe(51);
   });
 
   it(`ungrouped - eliminate rows  - ${databaseName}`, async () => {
@@ -424,7 +423,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    console.log(result.sql);
+    // console.log(result.sql);
     expect(result.data.toObject().length).toBe(2);
   });
 
