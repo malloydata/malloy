@@ -302,27 +302,27 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.resultExplore.limit).toBe(3);
   });
 
-  it(`number as null- ${databaseName}`, async () => {
-    // a cross join produces a Many to Many result.
-    // symmetric aggregate are needed on both sides of the join
-    // Check the row count and that sums on each side work properly.
-    const result = await runtime
-      .loadQuery(
-        `
-        source: s is table('malloytest.state_facts') + {
-        }
-        query: s-> {
-          group_by: state
-          nest: ugly is {
-            group_by: popular_name
-            aggregate: foo is NULLIF(sum(airport_count)*0,0)+1
-          }
-        }
-      `
-      )
-      .run();
-    expect(result.data.path(0, "ugly", 0, "foo").value).toBe(null);
-  });
+  // it(`number as null- ${databaseName}`, async () => {
+  //   // a cross join produces a Many to Many result.
+  //   // symmetric aggregate are needed on both sides of the join
+  //   // Check the row count and that sums on each side work properly.
+  //   const result = await runtime
+  //     .loadQuery(
+  //       `
+  //       source: s is table('malloytest.state_facts') + {
+  //       }
+  //       query: s-> {
+  //         group_by: state
+  //         nest: ugly is {
+  //           group_by: popular_name
+  //           aggregate: foo is NULLIF(sum(airport_count)*0,0)+1
+  //         }
+  //       }
+  //     `
+  //     )
+  //     .run();
+  //   expect(result.data.path(0, "ugly", 0, "foo").value).toBe(null);
+  // });
 
   it(`limit - not provided - ${databaseName}`, async () => {
     // a cross join produces a Many to Many result.
