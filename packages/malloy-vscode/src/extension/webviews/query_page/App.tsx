@@ -301,7 +301,7 @@ interface ErrorProps {
 const Error = styled.div<ErrorProps>`
   background-color: var(--vscode-inputValidation-errorBackground);
   padding: 5px;
-  white-space: ${(props) => (props.multiline ? "pre-wrap" : "normal")};
+  white-space: ${(props) => (props.multiline ? "pre" : "normal")};
   font-family: ${(props) => (props.multiline ? "monospace" : "inherit")};
   font-size: var(--vscode-editor-font-size);
 `;

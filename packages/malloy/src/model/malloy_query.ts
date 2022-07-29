@@ -2419,15 +2419,11 @@ class QueryQuery extends QueryField {
         const fir = field as FieldInstanceResult;
         const turtleWhere = this.generateSQLFilters(fir, "where");
         if (turtleWhere.present()) {
-          if (fir.childGroups.length) {
-            const groupSets = fir.childGroups.join(",");
-            wheres.add(
-              `(group_set NOT IN (${groupSets})` +
-                ` OR (group_set IN (${groupSets}) AND ${turtleWhere.sql()}))`
-            );
-          } else {
-            wheres.add(turtleWhere.sql());
-          }
+          const groupSets = fir.childGroups.join(",");
+          wheres.add(
+            `(group_set NOT IN (${groupSets})` +
+              ` OR (group_set IN (${groupSets}) AND ${turtleWhere.sql()}))`
+          );
         }
         wheres.addChain(this.generateSQLWhereChildren(fir));
       }
