@@ -453,6 +453,61 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     );
   });
 
+  it(`ungrouped - partial grouping - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: airports is table('malloytest.airports') {
+          measure: c is count()
+        }
+ 
+        // use this to check results
+        //
+        // query: t1 is airports -> {
+        //   where: state = 'TX' | 'NY'
+        //   group_by:
+        //     faa_region
+        //     state
+        //     fac_type
+        //   aggregate:
+        //     c
+        //     all_ is all(c)
+        //     all_state is all(c, state, faa_region)
+        //     all_fac_type is all(c, fac_type)
+        // }
+
+        query: airports -> {
+          where: state = 'TX' | 'NY'
+          group_by:
+            faa_region
+            state
+          aggregate:
+            c
+            all_ is all(c)
+            all_state is all(c, state)
+            all_region is all(c, faa_region)
+            airport_count is c {? fac_type = 'AIRPORT'}
+          nest: fac_type is {
+            group_by: fac_type
+            aggregate:
+              c
+              all_ is all(c)
+              all_state is all(c,state)
+              all_state_region is all(c,state,faa_region)
+          }
+        }
+
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    expect(result.data.path(0, "fac_type", 0, "all_").value).toBe(1845);
+    expect(result.data.path(0, "fac_type", 0, "all_state").value).toBe(1389);
+    expect(result.data.path(0, "fac_type", 0, "all_state_region").value).toBe(
+      1782
+    );
+  });
+
   it(`ungrouped nested  - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
