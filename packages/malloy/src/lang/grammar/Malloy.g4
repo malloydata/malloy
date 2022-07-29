@@ -354,7 +354,7 @@ timeframe
   ;
 
 ungrouped
-  : UNGROUPED | ALL
+  : UNGROUPED | ALL | EXCLUDE
   ;
 
 fieldExpr
@@ -512,6 +512,7 @@ DESC: D E S C ;
 DISTINCT: D I S T I N C T ;
 ELSE: E L S E ;
 END: E N D ;
+EXCLUDE: E X C L U D E;
 FALSE: F A L S E;
 FOR: F O R;
 FROM: F R O M ;

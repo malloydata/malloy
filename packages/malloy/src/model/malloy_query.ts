@@ -1196,18 +1196,33 @@ class FieldInstanceResult implements FieldInstance {
   ): FieldInstanceField[] {
     let ret: FieldInstanceField[] = [];
 
-    if (ungroupSet !== undefined) {
-      ret = this.fields(
-        (fi) =>
-          isScalarField(fi.f) &&
-          fi.fieldUsage.type === "result" &&
-          ungroupSet.fields.indexOf(fi.f.getIdentifier()) !== -1
-      );
+    // if (ungroupSet !== undefined) {
+    //   ret = this.fields(
+    //     (fi) =>
+    //       isScalarField(fi.f) &&
+    //       fi.fieldUsage.type === "result" &&
+    //       ungroupSet.fields.indexOf(fi.f.getIdentifier()) !== -1
+    //   );
+    // }
+    let p: FieldInstanceResult | undefined = this as FieldInstanceResult;
+    let escapeFields: string[] = [];
+    // all defaults to all fields at the current level.
+    if (ungroupSet === undefined) {
+      // escape all dimensions at the
+      escapeFields = this.fields(
+        (fi) => isScalarField(fi.f) && fi.fieldUsage.type === "result"
+      ).map((fi) => fi.f.getIdentifier());
+    } else {
+      escapeFields = ungroupSet.fields;
     }
-    let p = this.parent;
     while (p !== undefined) {
       ret = ret.concat(
-        p.fields((fi) => isScalarField(fi.f) && fi.fieldUsage.type === "result")
+        p.fields(
+          (fi) =>
+            isScalarField(fi.f) &&
+            fi.fieldUsage.type === "result" &&
+            escapeFields.indexOf(fi.f.getIdentifier()) === -1
+        )
       );
       p = p.parent;
     }

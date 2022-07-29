@@ -54,6 +54,24 @@ source: flights is table('malloy-data.faa.flights') {
     aggregate: destination_count is destination.count()
   }
 
+  query: carrier_overview is {
+    group_by: carrier_name is carriers.nickname
+    aggregate: 
+      flight_count
+      percent_of_this_carriers_flights_to_all_flights
+        is flight_count/all(flight_count)*100
+    nest: top_destinations is {
+      group_by: destination.code, destination.full_name
+      aggregate:
+        flight_count
+        percentage_of_this_carriers_flights_to_this_destination 
+          is flight_count/all(flight_count)*100
+        percentage_of_all_flights_on_all_carriers_to_this_destination 
+          is flight_count/exclude(flight_count, carrier_name)*100
+      limit: 3
+    }
+  }
+
   // shows year over year growth (line chart)
   query: year_over_year is {
     group_by: dep_month is month(dep_time)
