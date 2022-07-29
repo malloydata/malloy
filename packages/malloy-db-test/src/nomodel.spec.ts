@@ -460,23 +460,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         source: airports is table('malloytest.airports') {
           measure: c is count()
         }
- 
-        // use this to check results
-        //
-        // query: t1 is airports -> {
-        //   where: state = 'TX' | 'NY'
-        //   group_by:
-        //     faa_region
-        //     state
-        //     fac_type
-        //   aggregate:
-        //     c
-        //     all_ is all(c)
-        //     all_state is all(c, state, faa_region)
-        //     all_fac_type is all(c, fac_type)
-        // }
 
-        query: airports -> {
+
+         query: airports -> {
           where: state = 'TX' | 'NY'
           group_by:
             faa_region
@@ -484,8 +470,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           aggregate:
             c
             all_ is all(c)
-            all_state is all(c, state)
-            all_region is all(c, faa_region)
             airport_count is c {? fac_type = 'AIRPORT'}
           nest: fac_type is {
             group_by: fac_type
@@ -493,7 +477,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
               c
               all_ is all(c)
               all_state is all(c,state)
-              all_state_region is all(c,state,faa_region)
+              all_state_region is exclude(c,fac_type)
+              all_of_this_type is exclude(c, state, faa_region)
+              all_top is exclude(c, state, faa_region, fac_type)
           }
         }
 
@@ -504,8 +490,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.path(0, "fac_type", 0, "all_").value).toBe(1845);
     expect(result.data.path(0, "fac_type", 0, "all_state").value).toBe(1389);
     expect(result.data.path(0, "fac_type", 0, "all_state_region").value).toBe(
+      1845
+    );
+    expect(result.data.path(0, "fac_type", 0, "all_of_this_type").value).toBe(
       1782
     );
+    expect(result.data.path(0, "fac_type", 0, "all_top").value).toBe(2421);
   });
 
   it(`ungrouped nested  - ${databaseName}`, async () => {
@@ -598,7 +588,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           aggregate:
             total_births
             all_births is all(total_births)
-            all_name is all(total_births, popular_name)
+            all_name is exclude(total_births, state)
         }
 
       `
@@ -627,7 +617,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             aggregate:
               total_births
               all_births is all(total_births)
-              all_name is all(total_births, popular_name)
+              all_name is exclude(total_births, state)
           }
         }
 

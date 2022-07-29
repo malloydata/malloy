@@ -67,7 +67,7 @@ source: flights is table('malloy-data.faa.flights') {
         percentage_of_this_carriers_flights_to_this_destination 
           is flight_count/all(flight_count)*100
         percentage_of_all_flights_on_all_carriers_to_this_destination 
-          is flight_count/all(flight_count, carrier_name)*100
+          is flight_count/exclude(flight_count, carrier_name)*100
       limit: 3
     }
   }
