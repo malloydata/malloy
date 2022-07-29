@@ -944,4 +944,23 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(d[0]["by_state"]).not.toBe(null);
     expect(d[0]["by_state1"]).not.toBe(null);
   });
+
+  it.only(`number as null- ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: s is table('malloytest.state_facts') + {
+        }
+        query: s-> {
+          group_by: state
+          nest: ugly is {
+            group_by: popular_name
+            aggregate: foo is NULLIF(sum(airport_count)*0,0)+1
+          }
+        }
+      `
+      )
+      .run();
+    expect(result.data.path(0, "ugly", 0, "foo").value).toBe(null);
+  });
 });
