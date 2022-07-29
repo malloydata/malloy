@@ -51,7 +51,7 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
   constructor(
     public readonly name: string,
     databasePath = "test/data/duckdb/duckdb_test.db",
-    workingDirectory = "/"
+    private workingDirectory = "/"
   ) {
     this.database = new Database(
       databasePath,
@@ -63,9 +63,6 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
       }
     );
     this.connection = this.database.connect();
-    if (workingDirectory) {
-      this.runDuckDBQuery(`SET FILE_SEARCH_PATH='${workingDirectory}'`);
-    }
   }
 
   get dialectName(): string {
@@ -82,6 +79,9 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
 
   protected async setup(): Promise<void> {
     if (!this.isSetup) {
+      if (this.workingDirectory) {
+        this.runDuckDBQuery(`SET FILE_SEARCH_PATH='${this.workingDirectory}'`);
+      }
       // TODO: This is where we will load extensions once we figure
       // out how to better support them.
       // await this.runDuckDBQuery("INSTALL 'json'");
@@ -118,7 +118,8 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
     });
   }
 
-  public async runRawSQL(sql: string): Promise<unknown> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public async runRawSQL(sql: string): Promise<any> {
     await this.setup();
     return this.runDuckDBQuery(sql);
   }
@@ -135,11 +136,11 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
     const statements = sql.split("-- hack: split on this");
 
     while (statements.length > 1) {
-      await this.runDuckDBQuery(statements[0]);
+      await this.runRawSQL(statements[0]);
       statements.shift();
     }
 
-    const retVal = await this.runDuckDBQuery(statements[0]);
+    const retVal = await this.runRawSQL(statements[0]);
     let result = retVal.rows;
     if (result.length > rowLimit) {
       result = result.slice(0, rowLimit);
@@ -297,7 +298,7 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
   ): Promise<void> {
     const typeMap: { [key: string]: string } = {};
 
-    const result = await this.runDuckDBQuery(infoQuery);
+    const result = await this.runRawSQL(infoQuery);
     for (const row of result.rows) {
       typeMap[row["column_name"] as string] = row["column_type"] as string;
     }
