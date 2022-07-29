@@ -90,8 +90,7 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
       : { value: "circle" };
 
     return {
-      width: 250,
-      height: 200,
+      ...this.getSize(),
       data: {
         values: this.mapData(data),
       },
