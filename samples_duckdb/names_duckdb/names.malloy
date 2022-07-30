@@ -1,4 +1,7 @@
-source: names_table is table('duckdb:data/usa_names.parquet') {
+//
+// Basic names analysis.
+
+source: names is table('duckdb:data/usa_names.parquet') {
   measure: population is `number`.sum()
   dimension: decade is floor(`year`/10)*10
 
@@ -29,19 +32,6 @@ source: names_table is table('duckdb:data/usa_names.parquet') {
     aggregate: population
     order_by: 1 asc
   }
-
-  query: name_as_pct_of_pop is {
-    aggregate: population
-    nest: by_name
-  }
-  -> {
-    project: 
-      by_name.*,
-      percentage_of_population is by_name.population / population * 100 
-    order_by: 3 desc
-    limit: 10
-  }
-
   query: male_names is by_name {? gender = 'M'}
   query: female_names is by_name {? gender = 'F'}
 
@@ -55,12 +45,11 @@ source: names_table is table('duckdb:data/usa_names.parquet') {
     nest: 
       by_decade
       by_state
-      by_gender
     limit: 10
   }
 }
 
-query: j_names is names_table -> name_dashboard {? name ~ r'J'}
+query: j_names is names -> name_dashboard {? name ~ r'J'}
 
 
 

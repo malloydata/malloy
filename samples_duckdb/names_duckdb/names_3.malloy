@@ -1,0 +1,56 @@
+import "names.malloy"
+
+source: name_dashboard is names + {
+  measure:
+    births_per_100k is population/all(population)* 100000
+	
+  query: name_basic_dashboard is {
+    group_by: name
+    aggregate: population
+    nest: 
+      by_decade
+      by_state
+    limit: 10
+  }
+
+  // abstract: this query needs to be in a dimensionalized by name at some level
+  query: state_popularity_shape_map is {
+    group_by: state
+    aggregate:
+      births_per_100k is 
+        population / 
+        exclude(population,name) * 10000
+  }
+
+
+  // running this query directly will CRASH vscode, use a filtered query below
+  //  BUG: https://github.com/looker-open-source/malloy/issues/670
+  query: name_dashboard_rendered is {
+    group_by: name
+    aggregate: 
+      population
+    order_by: name
+    nest: state_popularity_shape_map 
+    nest: by_decade_line_chart is by_decade
+    limit: 10
+  }
+
+  query: malloy_team is 
+    name_dashboard_rendered {? name = 'Lloyd' | 'Benjamin' | 'Michael' | 'Anika' |
+      'Christopher' | 'Todd' | 'Ed' | 'Aden' | 'Ronaldo'}
+
+
+  query: malloy_team_decades_dashboard is {
+    where: name =  'Anika' | 'Aden' | 'Ronaldo'
+    group_by: name
+    nest: by_decade is {
+      group_by: decade
+      aggregate: 
+        population
+      order_by: decade
+      nest: state_popularity_shape_map
+    }
+  }
+
+
+}
