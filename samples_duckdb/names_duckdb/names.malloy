@@ -42,7 +42,7 @@ source: names is table('duckdb:data/usa_names.parquet') {
   }
 
   query: name_dashboard is by_name {
-    nest: 
+    nest:
       by_decade
       by_state
     limit: 10
@@ -50,6 +50,3 @@ source: names is table('duckdb:data/usa_names.parquet') {
 }
 
 query: j_names is names -> name_dashboard {? name ~ r'J'}
-
-
-
