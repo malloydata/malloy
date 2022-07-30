@@ -54,16 +54,21 @@ source: flights is table('malloy-data.faa.flights') {
     aggregate: destination_count is destination.count()
   }
 
+  declare: non_state_flights is exclude(flight_count, state)
+    non_ca_flights is flight_count {? origin.state != 'CA'}
   query: carrier_overview is {
+    where: origin.state='CA'
     group_by: carrier_name is carriers.nickname
     aggregate: 
       flight_count
       percent_of_this_carriers_flights_to_all_flights
         is flight_count/all(flight_count)*100
     nest: top_destinations is {
+      where: aircraft.aircraft_models.manufacturer = 'BOEING'
       group_by: destination.code, destination.full_name
       aggregate:
         flight_count
+        flights_to_dest is exclude(flight_count, carrier_name)*100
         percentage_of_this_carriers_flights_to_this_destination 
           is flight_count/all(flight_count)*100
         percentage_of_all_flights_on_all_carriers_to_this_destination 
