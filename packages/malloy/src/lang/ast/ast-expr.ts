@@ -27,6 +27,7 @@ import {
   isConditionParameter,
   StructDef,
   TimeFieldType,
+  UngroupedFragment,
 } from "../../model/malloy_types";
 import { DefSpace, FieldSpace, LookupResult } from "../field-space";
 import {
@@ -45,7 +46,7 @@ import {
 import { applyBinary, nullsafeNot } from "./apply-expr";
 import { SpaceParam, StructSpaceField } from "../space-field";
 import { Dialect } from "../../dialect";
-import { FieldReference } from "./ast-main";
+import { FieldName, FieldReference } from "./ast-main";
 import { castTo } from "./time-utils";
 
 /**
@@ -738,6 +739,43 @@ export class ExprSum extends ExprAsymmetric {
   }
 }
 
+export class ExprUngrouped extends ExpressionDef {
+  legalChildTypes = FT.anyAtomicT;
+  elementType = "ungrouped";
+  constructor(readonly expr: ExpressionDef, readonly fields: FieldName[]) {
+    super({ expr, fields });
+  }
+
+  returns(_forExpression: ExprValue): FieldValueType {
+    return "number";
+  }
+
+  getExpression(fs: FieldSpace): ExprValue {
+    const exprVal = this.expr.getExpression(fs);
+    if (!exprVal.aggregate) {
+      this.expr.log("ungrouped expression must be an aggregate");
+      return errorFor("ungrouped scalar");
+    }
+    if (this.typeCheck(this.expr, { ...exprVal, aggregate: false })) {
+      const f: UngroupedFragment = {
+        type: "ungrouped",
+        e: exprVal.value,
+      };
+      // TODO query the output field space to error check
+      // ( not possible because "fs" is the input field space )
+      if (this.fields.length > 0) {
+        f.fields = this.fields.map((f) => f.refString);
+      }
+      return {
+        dataType: this.returns(exprVal),
+        aggregate: true,
+        value: [f],
+      };
+    }
+    return errorFor("ungrouped type check");
+  }
+}
+
 export class WhenClause extends ExpressionDef {
   elementType = "when clause";
   constructor(
@@ -812,7 +850,7 @@ export class ExprCase extends ExpressionDef {
 
 export class ExprFilter extends ExpressionDef {
   elementType = "filtered expression";
-  legalChildTypes = [FT.stringT, FT.numberT, FT.dateT, FT.timestampT];
+  legalChildTypes = FT.anyAtomicT;
   constructor(readonly expr: ExpressionDef, readonly filter: Filter) {
     super({ expr, filter });
   }

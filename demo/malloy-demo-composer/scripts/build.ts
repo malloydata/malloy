@@ -12,9 +12,8 @@
  */
 
 /* eslint-disable no-console */
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { build, BuildOptions } from "esbuild";
+import { build, BuildOptions, Plugin } from "esbuild";
 import svgrPlugin from "esbuild-plugin-svgr";
 import * as path from "path";
 import fs from "fs";
@@ -81,17 +80,17 @@ function copyDir(src: string, dest: string) {
   }
 }
 
-const errorHandler = (e: any) => {
+const errorHandler = (e: unknown) => {
   console.log(e);
   process.exit(1);
 };
 
-function makeDuckdbNoNodePreGypPlugin(target: string | undefined) {
+function makeDuckdbNoNodePreGypPlugin(target: string | undefined): Plugin {
   const localPath = require.resolve("duckdb/lib/binding/duckdb.node");
   return {
     name: "duckdbNoNodePreGypPlugin",
-    setup(build: any) {
-      build.onResolve({ filter: /duckdb-binding\.js/ }, (args: any) => {
+    setup(build) {
+      build.onResolve({ filter: /duckdb-binding\.js/ }, (args) => {
         return {
           path: args.path,
           namespace: "duckdb-no-node-pre-gyp-plugin",
@@ -102,7 +101,7 @@ function makeDuckdbNoNodePreGypPlugin(target: string | undefined) {
           filter: /duckdb-binding\.js/,
           namespace: "duckdb-no-node-pre-gyp-plugin",
         },
-        (_args: any) => {
+        (_args) => {
           return {
             contents: `
               var path = require("path");
@@ -126,10 +125,10 @@ function makeDuckdbNoNodePreGypPlugin(target: string | undefined) {
   };
 }
 
-const ignorePgNativePlugin = {
+const ignorePgNativePlugin: Plugin = {
   name: "ignorePgNativePlugin",
-  setup(build: any) {
-    build.onResolve({ filter: /pg-native/ }, (args: any) => {
+  setup(build) {
+    build.onResolve({ filter: /pg-native/ }, (args) => {
       return {
         path: args.path,
         namespace: "ignore-pg-native-plugin",
@@ -140,7 +139,7 @@ const ignorePgNativePlugin = {
         filter: /pg-native/,
         namespace: "ignore-pg-native-plugin",
       },
-      (_args: any) => {
+      (_args) => {
         return {
           contents: ``,
           resolveDir: ".",

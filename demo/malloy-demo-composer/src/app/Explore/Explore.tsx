@@ -21,6 +21,7 @@ import { useRunQuery } from "../data/use_run_query";
 import { Result } from "../Result";
 import { TopQueryActionMenu } from "../TopQueryActionMenu";
 import { Button, EmptyMessage, PanelTitle } from "../CommonElements";
+import { ErrorMessage } from "../ErrorMessage";
 import { Popover } from "../Popover";
 import { QuerySummaryPanel } from "../QuerySummaryPanel";
 import { MalloyLogo } from "../MalloyLogo";
@@ -58,12 +59,13 @@ export const Explore: React.FC = () => {
   const [queryMalloy, setQueryMalloy] = useState<string>("");
   const [querySummary, setQuerySummary] = useState<QuerySummary>();
   const [queryName, setQueryName] = useState("");
+  const [error, setError] = useState<Error>();
   const {
     result,
     runQuery: runQueryRaw,
     isRunning,
     clearResult,
-  } = useRunQuery(queryMalloy, queryName, analysis);
+  } = useRunQuery(queryMalloy, queryName, setError, analysis);
   const { saveField } = useSaveField(openDirectory, analysis, (newAnalysis) => {
     setAnalysis(newAnalysis);
     withAnalysisSource(newAnalysis, (source) => {
@@ -528,6 +530,7 @@ export const Explore: React.FC = () => {
                 onDrill={onDrill}
               />
             )}
+            <ErrorMessage error={error} />
           </ScrollContent>
         </Content>
       </Body>

@@ -136,7 +136,7 @@ export class DynamicConnectionLookup implements LookupConnection<Connection> {
           { useCache: true, ...this.options }
         );
       } else {
-        throw `No connection found with name ${connectionName}`;
+        throw new Error(`No connection found with name ${connectionName}`);
       }
     }
     return this.connections[connectionKey];

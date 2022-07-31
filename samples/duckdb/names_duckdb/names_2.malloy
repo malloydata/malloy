@@ -1,0 +1,39 @@
+  // the most iconic names in each state.
+  //  popularity is computed by taking a ratio of how prevelent the
+  //  name is in a given state and dividing it by its over all popularity
+  //  in the data set
+
+import "names.malloy"
+
+source: names_iconic is names + {
+  
+  // the 'exclude' function computes the aggregate calculation
+  //  but computes it as if the list of dimensions were not used
+  //  in the query
+  measure: 
+    total_name_populution is exclude(population, state)
+    state_population is exclude(population, name)
+    per_100k_in_state is population/state_population*100
+    per_100k_with_name is exclude(population,state)/exclude(population,name,state)*100
+    popularity is per_100k_in_state/per_100k_with_name
+
+
+  query: iconic_names is {
+    group_by: state
+    // if a field ends with the name 'list', it is displayed a a list of values
+    nest: iconic_names_list is {
+      group_by: name
+      aggregate: popularity
+      // total_name_populution
+      // state_population
+      limit: 20
+      having: population > 1000
+    }
+    limit: 50
+  }
+
+  query: iconic_female is iconic_names {? gender='F'}
+  query: iconic_male is iconic_names {? gender='F'}
+  query: iconic_recent is iconic_names {? decade=1990}
+
+}

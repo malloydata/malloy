@@ -1,0 +1,5 @@
+source: airports_base is table('duckdb:data/airports.parquet')
+source: carriers_base is table('duckdb:data/carriers.parquet')
+source: aircraft_base is table('duckdb:data/aircraft.parquet')
+source: aircraft_models_base is table('duckdb:data/aircraft_models.parquet')
+source: flights_base is table('duckdb:data/flights.parquet')
