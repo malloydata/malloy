@@ -16,7 +16,7 @@ import path from "path";
 import { Runtime } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 
-const SAMPLE_PROJECT_ROOT = path.join(__dirname, "../../../samples");
+const SAMPLE_PROJECT_ROOT = path.join(__dirname, "../../../samples/bigquery");
 
 describe(`compiling server models`, () => {
   let modelsFound = false;
