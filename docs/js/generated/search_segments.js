@@ -1216,7 +1216,28 @@ window.SEARCH_SEGMENTS = [
       "Metadata, Visualization and Drilling"
     ],
     "paragraphs": [
-      "Compiling a Malloy query returns metadata about the structure of the results. When combined with the query results, Malloy's rendering library can give a very\nrich user experience, rendering dashboards, visualizations.  Through this metadata\nthe visualization library can rewrite queries to drill through to data detail.",
+      "Compiling a Malloy query returns metadata about the structure of the results. When combined with the query results, Malloy's rendering library can give a very\nrich user experience, rendering dashboards, visualizations.  Through this metadata\nthe visualization library can rewrite queries to drill through to data detail."
+    ],
+    "path": "/features.md"
+  },
+  {
+    "titles": [
+      "Why do we need another data language?"
+    ],
+    "paragraphs": [
+      "SQL is complete but ugly: everything is expressible, but nothing is reusable; simple ideas are complex to express; the language is verbose and lacks smart defaults. Malloy is immediately understandable by SQL users, and far easier to use and learn.",
+      "Key features and advantages:",
+      "Query and model in the same language - everything is reusable and extensible.",
+      "Malloy reads the schema so you don’t need to model everything. Malloy allows creation of re-usable metrics and logic, but there’s no need for boilerplate code that doesn’t add anything new.",
+      "Pipelining: output one query into the next easily for powerful advanced analysis.",
+      "Aggregating Subqueries let you build nested data sets to delve deeper into data quickly, and return complicated networks of data from single queries (like GraphQL).",
+      "Queries do more: Power an entire dashboard with a single query. Nested queries are batched together, scanning the data only once.",
+      "Indexes for unified suggest/search: Malloy automatically builds search indexes, making it easier to understand a dataset and filter values.",
+      "Built to optimize the database: make the most of BigQuery, utilizing BI engine, caching, reading/writing nested datasets extremely fast, and more.",
+      "Malloy models are purely about data; visualization and “styles” configurations live separately, keeping the model clean and easy to read.",
+      "Aggregates are safe and accurate: Malloy generates distinct keys when they’re needed to ensure it never fans out your data.",
+      "Nested tables are made approachable: you don’t have to model or flatten them; specify a query path and Malloy handles the rest.",
+      "Compiler-based error checking: Malloy understands sql expressions so the compiler catches errors as you write, before the query is run.",
       "The first step in working with data, often is isolating the data you are interested in.\nMalloy introduces <a href=\"language/filters.html\">simplified filtering</a> for all types and allows these filters to be\napplied.  <a href=\"language/time-ranges.html\">Time calculations</a> are powerful and understandable.",
       "Queries can be introduced into a Malloy model and accessed by name.  One benefit is that the\nqueries are always accurate.  Think of a Malloy model as a data function library.\nQueries can also be used to create <a href=\"nesting.html\">nested subtables</a> in other queries."
     ],

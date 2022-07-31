@@ -2611,7 +2611,9 @@ footer: /generated/footers/examples/wordle/wordle1a.html
 <span class="line"><span style="color: #000000">, __stage1 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
 <span class="line"><span style="color: #000000">    group_set,</span></span>
-<span class="line"><span style="color: #000000">    base.word </span><span style="color: #0000FF">as</span><span style="color: #000000"> word__0,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #098658">0</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      base.word</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> word__0,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
 <span class="line"><span style="color: #000000">      substr(base.word,numbers_0.num,</span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
 <span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> letter__1,</span></span>

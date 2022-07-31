@@ -179,7 +179,9 @@ the same syntax users are familiar with. However, Malloy also introduces several
         <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
 <span class="line"><span style="color: #000000">    group_set,</span></span>
-<span class="line"><span style="color: #000000">    origin_0.state </span><span style="color: #0000FF">as</span><span style="color: #000000"> state__0,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #098658">0</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      origin_0.state</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> state__0,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
 <span class="line"><span style="color: #000000">      origin_0.county</span></span>
 <span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> county__1,</span></span>
