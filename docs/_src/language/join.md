@@ -176,6 +176,7 @@ Inner join are essentially left joins with an additional condition that the pare
 
 ```malloy
 source: users is table('malloy-data.ecomm.users') {
-  join_many: orders is table('malloy-data.ecomm.order_items') on id = orders.user_id and orders.user_id != null
+  join_many: orders is table('malloy-data.ecomm.order_items') on id = orders.user_id
+  where: orders.user_id != null
 }
 ```
