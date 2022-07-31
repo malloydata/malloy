@@ -8,7 +8,7 @@ Currently, the Malloy extension works on Mac, Linux, and Windows machines.
 
 1. **Download Visual Studio Code**: Download [Visual Studio Code](https://code.visualstudio.com/)
 
-2. **Add the Malloy extension from the Visual Studio Code Marketplace**: Open VS Code and click the Extensions button on the far left (it looks like 4 blocks with one flying away). This will open the Extension Marketplace. Search for "Malloy" and, once found, click "Install"
+2. **Add the Malloy (pre-release) extension from the Visual Studio Code Marketplace**: Open VS Code and click the Extensions button on the far left (it looks like 4 blocks with one flying away). This will open the Extension Marketplace. Search for "Malloy" and, once found, click "Install"
 
 3. **Download the [Sample Models](https://looker-open-source.github.io/malloy/aux/generated/samples.zip)** (models + data), navigate to the duckdb directory and open any of the example `.malloy` model files. Click the "Run" code lens above any query to run it in VS Code.  Duckdb is built into the malloy Extension.
 
