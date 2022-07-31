@@ -8,9 +8,9 @@ Currently, the Malloy extension works on Mac, Linux, and Windows machines.
 
 1. **Download Visual Studio Code**: Download [Visual Studio Code](https://code.visualstudio.com/)
 
-2. **Add the Malloy extension from the Visual Studio Code Marketplace**: Open VS Code and click the Extensions button on the far left (it looks like 4 blocks with one flying away). This will open the Extension Marketplace. Search for "Malloy" and, once found, click "Install"
+2. **Add the Malloy (pre-release) extension from the Visual Studio Code Marketplace**: Open VS Code and click the Extensions button on the far left (it looks like 4 blocks with one flying away). This will open the Extension Marketplace. Search for "Malloy" and, once found, click "Install"
 
-3. **Download the [names example](https://github.com/looker-open-source/malloy/tree/main/samples_duckdb/names_duckdb)** (model + data). Open the model then click the "Run" code lens above any query to run it in VS Code.
+3. **Download the [Sample Models](https://looker-open-source.github.io/malloy/aux/generated/samples.zip)** (models + data), navigate to the duckdb directory and open any of the example `.malloy` model files. Click the "Run" code lens above any query to run it in VS Code.  Duckdb is built into the malloy Extension.
 
 4. **Write some Malloy!** Play with an additional example ([DuckDB](https://github.com/looker-open-source/malloy/tree/add_malloy_examples/samples_duckdb) |  [BigQuery](https://looker-open-source.github.io/malloy/documentation/samples.html)), [use a CSV or parquet](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html#duckdb), and/or connect a [database](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html).
 
@@ -22,14 +22,14 @@ Currently, the Malloy extension works on Mac, Linux, and Windows machines.
 
 ## Resources
 
-[YouTube](https://www.youtube.com/channel/UCfN2td1dzf-fKmVtaDjacsg) - Watch demos / walkthroughs of Malloy
+Documentation:
 
-Highlighted Documentation:
-
-- [Basics](https://looker-open-source.github.io/malloy/documentation/language/basic.html) - A quick introduction to the language
+- [Malloy Language](https://looker-open-source.github.io/malloy/documentation/language/basic.html) - A quick introduction to the language
 - [eCommerce Example Analysis](https://looker-open-source.github.io/malloy/documentation/examples/ecommerce.html) - a walkthrough of the basics on an ecommerce dataset
 - [Flights Example Analysis](https://looker-open-source.github.io/malloy/documentation/examples/faa.html) - examples built on the NTSB flights public dataset
 - [Modeling Walkthrough](https://looker-open-source.github.io/malloy/documentation/examples/iowa/iowa.html) - introduction to modeling via the Iowa liquor sales public data set
+
+[YouTube](https://www.youtube.com/channel/UCfN2td1dzf-fKmVtaDjacsg) - Watch demos / walkthroughs of Malloy
 
 ## Contributing
 
