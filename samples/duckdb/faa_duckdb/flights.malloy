@@ -63,5 +63,6 @@ source: flights is flights_base + {
     group_by: dep_month is dep_time.month
     aggregate: flight_count
   }
+  
 }
 
