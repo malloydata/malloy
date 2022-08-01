@@ -23,14 +23,14 @@ export function getColorScale(
   }
   switch (type) {
     case "ordinal":
-      return { range: ["#12B5CB", "#1A73E8"] };
+      return { range: ["#C2D5EE", "#1A73E8"] };
     case "temporal":
     case "quantitative":
       return isRectMark
         ? hasOverlappingText
           ? { range: ["#6BA4EE", "#EEA361"] }
           : { range: ["#1A73E8", "#E8710A"] }
-        : { range: ["#1A73E8", "#12B5CB"] };
+        : { range: ["#C2D5EE", "#1A73E8"] };
     case "nominal":
       return hasOverlappingText
         ? {
