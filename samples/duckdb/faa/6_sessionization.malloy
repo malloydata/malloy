@@ -1,4 +1,4 @@
-import "flights.malloy"
+import "1_flights.malloy"
 
 // Sessionization - 
 //  This is a subset of the data.
