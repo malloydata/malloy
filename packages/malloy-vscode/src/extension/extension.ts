@@ -30,7 +30,6 @@ import {
   runNamedSQLBlock,
   runQueryCommand,
   runQueryFileCommand,
-  runQueryWithEdit,
   runUnnamedSQLBlock,
   showLicensesCommand,
 } from "./commands";
@@ -55,11 +54,6 @@ export function activate(context: vscode.ExtensionContext): void {
   // Run query
   context.subscriptions.push(
     vscode.commands.registerCommand("malloy.runQuery", runQueryCommand)
-  );
-
-  // Run query with filters
-  context.subscriptions.push(
-    vscode.commands.registerCommand("malloy.runQueryWithEdit", runQueryWithEdit)
   );
 
   // Run named query
