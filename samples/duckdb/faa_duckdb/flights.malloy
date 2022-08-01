@@ -28,7 +28,7 @@ source: airports is airports_base + {
 source: flights is flights_base + {
   primary_key: id2
 
-  // rename some fiels as from their physical names
+  // rename some fields as from their physical names
   rename: origin_code is origin
   rename: destination_code is destination
 
