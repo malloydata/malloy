@@ -226,7 +226,17 @@ export class FieldDeclaration extends MalloyElement {
   }
 
   queryFieldDef(exprFS: FieldSpace, exprName: string): FieldTypeDef {
-    const exprValue = this.expr.getExpression(exprFS);
+    let exprValue;
+
+    try {
+      exprValue = this.expr.getExpression(exprFS);
+    } catch (error) {
+      this.log(`Cannot define '${exprName}', ${error.message}`);
+      return {
+        name: `error_defining_${exprName}`,
+        type: "string",
+      };
+    }
     const compressValue = compressExpr(exprValue.value);
     const retType = exprValue.dataType;
     if (isAtomicFieldType(retType)) {

@@ -360,7 +360,7 @@ export class DynamicSpace extends StaticSpace {
       for (const [fieldName, field] of reorderFields) {
         if (field instanceof JoinSpaceField) {
           const joinStruct = field.join.structDef();
-          if (!ErrorFactory.isErrorStructdef(joinStruct)) {
+          if (!ErrorFactory.isErrorStructDef(joinStruct)) {
             this.final.fields.push(joinStruct);
             fixupJoins.push([field.join, joinStruct]);
           }
@@ -369,7 +369,7 @@ export class DynamicSpace extends StaticSpace {
           if (fieldDef) {
             this.final.fields.push(fieldDef);
           } else {
-            throw new Error(`'${fieldName}' doesnt' have a FieldDef`);
+            throw new Error(`'${fieldName}' doesn't have a FieldDef`);
           }
         }
       }
