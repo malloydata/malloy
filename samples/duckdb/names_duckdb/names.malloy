@@ -1,10 +1,24 @@
 //
 // Basic names analysis.
+//
+//  Table has 5 columns name, state, year, gender and number (population)
+//
+//  number of people in that state, year, gender born with that name
 
+//
+// Malloy language Documentation
+//  see: https://looker-open-source.github.io/malloy/documentation/
+//  
+
+// source, see: https://looker-open-source.github.io/malloy/documentation/language/source.html
 source: names is table('duckdb:data/usa_names.parquet') {
+
+ 
   measure: population is `number`.sum()
   dimension: decade is floor(`year`/10)*10
 
+
+  // query, see: https://looker-open-source.github.io/malloy/documentation/language/query.html
   query: by_name is {
     group_by: name
     aggregate: population
@@ -32,6 +46,8 @@ source: names is table('duckdb:data/usa_names.parquet') {
     aggregate: population
     order_by: 1 asc
   }
+
+  // filters, see: https://looker-open-source.github.io/malloy/documentation/language/filters.html
   query: male_names is by_name {? gender = 'M'}
   query: female_names is by_name {? gender = 'F'}
 
@@ -49,4 +65,6 @@ source: names is table('duckdb:data/usa_names.parquet') {
   }
 }
 
+// named querys
+//  see: https://looker-open-source.github.io/malloy/documentation/language/query.html
 query: j_names is names -> name_dashboard {? name ~ r'J'}
