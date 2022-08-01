@@ -10,9 +10,13 @@ Currently, the Malloy extension works on Mac, Linux, and Windows machines.
 
 2. **Add the Malloy (pre-release) extension from the Visual Studio Code Marketplace**: Open VS Code and click the Extensions button on the far left (it looks like 4 blocks with one flying away). This will open the Extension Marketplace. Search for "Malloy" and, once found, click "Install"
 
-3. **Download the [Sample Models](https://looker-open-source.github.io/malloy/aux/generated/samples.zip)** (models + data), navigate to the duckdb directory and open any of the example `.malloy` model files. Click the "Run" code lens above any query to run it in VS Code.  Duckdb is built into the malloy Extension.
+3. **Download and unzip the [Sample Models](https://looker-open-source.github.io/malloy/aux/generated/samples.zip)** (models + data). 
 
-4. **Write some Malloy!** Play with an additional example ([DuckDB](https://github.com/looker-open-source/malloy/tree/add_malloy_examples/samples_duckdb) |  [BigQuery](https://looker-open-source.github.io/malloy/documentation/samples.html)), [use a CSV or parquet](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html#duckdb), and/or connect a [database](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html).
+4. **Open the samples folder in VS Code**. In VS Code, go to File > Open Folder... and select samples/duckdb. DuckDB is built into the extension you're ready to run these.
+
+5. **Start with the FAA data**. This is a sub-sample of the NTSB Flights dataset. Click the "Run" code lens above any query to run it in VS Code. 
+
+From here, you may want to play with an additional sample ([DuckDB](https://github.com/looker-open-source/malloy/tree/add_malloy_examples/samples_duckdb) |  [BigQuery](https://looker-open-source.github.io/malloy/documentation/samples.html)), [use a CSV or parquet](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html#duckdb), and/or connect your own [database](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html).
 
 
 ## Join the Community
