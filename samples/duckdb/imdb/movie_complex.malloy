@@ -1,3 +1,5 @@
+// IMPORTANT: Before using this model, you will need to download and process the data. Please see README.MD for instructions.
+
 import "imdb.malloy"
 import "movie_filters.malloy"
 import "movie_dashboard.malloy"
