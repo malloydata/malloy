@@ -1,16 +1,14 @@
 // IMPORTANT: Before using this model, you will need to download and process the data. Please see README.MD for instructions.
 
-import "imdb_duckdb.malloy"
-
-source: people is people_table {
+source: people is table('duckdb:data/names.parquet') {
   primary_key: nconst
 }
 
-source: principals is principals_table {
+source: principals is table('duckdb:data/principals.parquet') {
   join_one: people is people on nconst = people.nconst
 }
 
-source: movies is titles_table + {
+source: movies is table('duckdb:data/titles.parquet') + {
   join_many: principals on tconst = principals.tconst
   where: ratings.numVotes > 10000
   primary_key: tconst

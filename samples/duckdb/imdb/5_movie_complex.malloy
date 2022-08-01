@@ -1,8 +1,8 @@
 // IMPORTANT: Before using this model, you will need to download and process the data. Please see README.MD for instructions.
 
-import "imdb.malloy"
-import "movie_filters.malloy"
-import "movie_dashboard.malloy"
+import "1_imdb.malloy"
+import "3_movie_filters.malloy"
+import "4_movie_dashboard.malloy"
 
 // The movie filter filters the movie we are interested in
 // The imdb dashboard shows the people involved and the title detail
