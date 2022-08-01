@@ -1,5 +1,6 @@
--- --! styles airports.styles.json
-
+//
+// source: 
+//  see: https://looker-open-source.github.io/malloy/documentation/language/source.html
 source: airports is table('duckdb:data/airports.parquet') {
   primary_key: code
 
