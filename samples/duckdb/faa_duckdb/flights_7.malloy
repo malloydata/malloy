@@ -1,6 +1,17 @@
 import "flights.malloy"
 
+// Dashboard
+//  Runs as a single query, nesting all the results
+//  View the results as JSON to see the data returned.
+//  
+//  The last part of the name controls the rendering.
 
+// see:
+// dashboards: 
+//  https://looker-open-source.github.io/malloy/documentation/visualizations/dashboards.html
+// nesting:
+//  https://looker-open-source.github.io/malloy/documentation/language/nesting.html
+//
 
 source: flights_dashboarding is flights {
  

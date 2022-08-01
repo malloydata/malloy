@@ -14,9 +14,12 @@ source: flights_carrier is flights {
   }
 
   // show it as a line chart
+  //  see: https://looker-open-source.github.io/malloy/documentation/visualizations/charts_line_chart.html
   query: carriers_over_time_line_chart is carriers_over_time
 
 
+  // nesting result
+  //  see: https://looker-open-source.github.io/malloy/documentation/language/nesting.html
   query: by_destination is {
     group_by: destination.name
     aggregate: flight_count
@@ -31,7 +34,8 @@ source: flights_carrier is flights {
     limit: 50
   }
 
-  // compare timeframes
+  // compare timeframes using filtered measures:
+  //  
   query: by_destination_growth_rate is {
     declare: 
       flight2004 is flight_count {? dep_time: @2004}  // can use relative declarations
