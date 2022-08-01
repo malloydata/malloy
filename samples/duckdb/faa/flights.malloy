@@ -1,47 +1,59 @@
+//
+// Flights example model.  Joins multipe tables into a 'source'
+//
+//  Malloy Language Documentation, 
+//    see: https://looker-open-source.github.io/malloy/documentation/index.html
 
-import "flights_base_duckdb.malloy"
-// import "flights_base_bigquery.malloy"
 
-source: carriers is carriers_base + {
+// source: 
+//  see: https://looker-open-source.github.io/malloy/documentation/language/source.html
+source: carriers is table('duckdb:data/carriers.parquet')+ {
   primary_key: code
   measure: carrier_count is count()
 }
 
-source: aircraft_models is aircraft_models_base + {
+source: aircraft_models is table('duckdb:data/aircraft_models.parquet') + {
   primary_key: aircraft_model_code
   measure: aircraft_model_count is count()
 }
 
-source: aircraft is aircraft_base + {
+source: aircraft is table('duckdb:data/aircraft.parquet') + {
   primary_key: tail_num
   measure: aircraft_count is count()
+  // join, see: https://looker-open-source.github.io/malloy/documentation/language/join.html
   join_one: aircraft_models with aircraft_model_code
 }
 
-source: airports is airports_base + {
+source: airports is table('duckdb:data/airports.parquet') + {
   primary_key: code
   measure: airport_count is count()
   dimension: name is concat(code, ' - ', full_name)
 }
 
-source: flights is flights_base + {
+source: flights is table('duckdb:data/flights.parquet') + {
   primary_key: id2
+
+  // rename some fields as from their physical names
   rename: origin_code is origin
   rename: destination_code is destination
+
+  // join all the data sources
+  //  see: https://looker-open-source.github.io/malloy/documentation/language/join.html
 
   join_one: carriers with carrier
   join_one: origin is airports with origin_code
   join_one: destination is airports with destination_code
   join_one: aircraft with tail_num
-  // join_one: aircraft_facts with tail_num
 
+
+  // declare some resusable aggregate calculations
+  //  see: https://looker-open-source.github.io/malloy/documentation/language/aggregates.html
   measure:
     flight_count is count()
     total_distance is sum(distance)
-    // seats_for_sale is sum(aircraft.aircraft_models.seats)
-    // seats_owned is aircraft.sum(aircraft.aircraft_models.seats)
 
-  // shows carriers and number of destinations (bar chart)
+  // declare some queries:
+  // see: https://looker-open-source.github.io/malloy/documentation/language/query.html
   query: by_carrier is {
     group_by: carriers.nickname
     aggregate: 

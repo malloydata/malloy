@@ -5,6 +5,9 @@ import "flights.malloy"
 
 source: flights_aircraft is flights {
   measure:
+    // aggregates can be computed at any level of the graph
+    //  see: https://looker-open-source.github.io/malloy/documentation/patterns/foreign_sums.html
+
     total_distance is sum(distance)
     seats_for_sale is sum(aircraft.aircraft_models.seats)
     seats_owned is aircraft.sum(aircraft.aircraft_models.seats)
