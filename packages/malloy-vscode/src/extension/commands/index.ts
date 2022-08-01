@@ -13,7 +13,6 @@
 
 export { runQueryFileCommand } from "./run_query_file";
 export { runQueryCommand } from "./run_query";
-export { runQueryWithEdit } from "./run_turtle_with_filters";
 export { copyFieldPathCommand } from "./copy_field_path";
 export { runNamedQuery } from "./run_named_query";
 export { showLicensesCommand } from "./show_licenses";

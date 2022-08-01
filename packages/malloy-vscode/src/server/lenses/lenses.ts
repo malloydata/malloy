@@ -67,14 +67,6 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
       lenses.push({
         range: symbol.range.toJSON(),
         command: {
-          title: "Query",
-          command: "malloy.runQueryWithEdit",
-          arguments: [exploreName, ""],
-        },
-      });
-      lenses.push({
-        range: symbol.range.toJSON(),
-        command: {
           title: "Preview",
           command: "malloy.runQuery",
           arguments: [
