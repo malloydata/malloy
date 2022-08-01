@@ -1,10 +1,15 @@
--- --! styles airports.styles.json
-
-source: airports is table('malloy-data.faa.airports') {
+//
+// source: 
+//  see: https://looker-open-source.github.io/malloy/documentation/language/source.html
+source: airports is table('duckdb:data/airports.parquet') {
   primary_key: code
 
+  // aggregate calculation
+  //  see: https://looker-open-source.github.io/malloy/documentation/language/aggregates.html
   measure: airport_count is count()
 
+  // scalar calculations 
+  //  see: https://looker-open-source.github.io/malloy/documentation/language/expressions.html#pick-expressions
   dimension: name is concat(code, ' - ', full_name)
   dimension: faa_region_name is faa_region ?
     pick 'Southwest' when 'ASW'
@@ -40,6 +45,10 @@ source: airports is table('malloy-data.faa.airports') {
     group_by: name is concat(state, '-', full_name)
   }
 
+  // nesting queries
+  //  see: https://looker-open-source.github.io/malloy/documentation/language/nesting.html
+  // shape_map
+  //  see: https://looker-open-source.github.io/malloy/documentation/visualizations/shape_maps.html
   query: airports_by_region_dashboard is by_region {
     where: faa_region != null
     nest:
