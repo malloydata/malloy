@@ -41,7 +41,7 @@ source: flights is flights_base + {
   join_one: aircraft with tail_num
 
 
-  // declare some resuable aggregate calculations
+  // declare some resusable aggregate calculations
   //  see: https://looker-open-source.github.io/malloy/documentation/language/aggregates.html
   measure:
     flight_count is count()
