@@ -16,7 +16,8 @@ Currently, the Malloy extension works on Mac, Linux, and Windows machines.
 
 5. **Start with Airports in the FAA data**. This is a sub-sample of the NTSB Flights dataset. Click the "Run" code lens above any query to run it in VS Code. 
 
-![NjMzMTUxNzc2OTg3NTQ1NnxlYWFmYTI3NS0wZA](https://user-images.githubusercontent.com/1093458/182382114-dba0140c-86fa-443c-a11c-cd0119837481.gif)
+![run button](https://user-images.githubusercontent.com/1093458/182428060-d7a7520f-e801-4fb5-8df5-5a46d6df2fe2.gif)
+
 
 
 
