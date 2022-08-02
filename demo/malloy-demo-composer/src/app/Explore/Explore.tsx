@@ -72,7 +72,6 @@ export const Explore: React.FC = () => {
       if (segment === ".") {
         continue;
       } else if (current?.type !== "directory") {
-        // TODO some kind of helpful error?
         return;
       } else {
         current = current.contents.find((item) => item.path === segment);
@@ -87,30 +86,23 @@ export const Explore: React.FC = () => {
       return;
     }
 
-    // TODO also ensure that the source is the same... kinda tricky
-    if (model.fullPath === analysis?.modelFullPath) {
-      queryModifiers.clearQuery();
-      queryModifiers.loadQuery(queryName);
+    const newSourceName = sourceName + "_analysis";
+    const code = `import "file://${model.fullPath}"\n\n explore: ${newSourceName} is ${source.name} {}`;
+    compileModel(model.modelDef, code).then((modelDef) => {
+      const analysis: Analysis = {
+        type: "analysis",
+        malloy: code,
+        path: undefined,
+        fullPath: undefined,
+        modelFullPath: model.fullPath,
+        sourceName: newSourceName,
+        modelDef,
+        id: `${model.fullPath}/${source.name}`,
+        dataStyles: model.dataStyles,
+      };
+      queryModifiers.loadQueryInNewAnalysis(analysis, queryName);
       setSection("query");
-    } else {
-      const newSourceName = sourceName + "_analysis";
-      const code = `import "file://${model.fullPath}"\n\n explore: ${newSourceName} is ${source.name} {}`;
-      compileModel(model.modelDef, code).then((modelDef) => {
-        const analysis: Analysis = {
-          type: "analysis",
-          malloy: code,
-          path: undefined,
-          fullPath: undefined,
-          modelFullPath: model.fullPath,
-          sourceName: newSourceName,
-          modelDef,
-          id: `${model.fullPath}/${source.name}`,
-          dataStyles: model.dataStyles,
-        };
-        queryModifiers.loadQueryInNewAnalysis(analysis, queryName);
-        setSection("query");
-      });
-    }
+    });
   };
 
   const selectAnalysis = (analysis: Analysis) => {
