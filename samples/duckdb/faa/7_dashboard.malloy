@@ -1,4 +1,4 @@
-import "flights.malloy"
+import "1_flights.malloy"
 
 // Dashboard
 //  Runs as a single query, nesting all the results

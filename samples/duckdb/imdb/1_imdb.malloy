@@ -1,14 +1,17 @@
-import "imdb_duckdb.malloy"
+// IMPORTANT: Before using this model, you will need to download and process the data. Please see README.MD for instructions.
 
-source: people is people_table {
+source: people is table('duckdb:data/names.parquet') {
+// cast, crew, everyone involved in movies
   primary_key: nconst
 }
 
-source: principals is principals_table {
+source: principals is table('duckdb:data/principals.parquet') {
+// a mapping table that links people to movies, along with their job on that movie.
   join_one: people is people on nconst = people.nconst
 }
 
-source: movies is titles_table + {
+source: movies is table('duckdb:data/titles.parquet') + {
+// all the movies
   join_many: principals on tconst = principals.tconst
   where: ratings.numVotes > 10000
   primary_key: tconst

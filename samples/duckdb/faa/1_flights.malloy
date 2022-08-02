@@ -1,3 +1,4 @@
+import "1_airports.malloy"
 //
 // Flights example model.  Joins multipe tables into a 'source'
 //
@@ -7,7 +8,7 @@
 
 // source: 
 //  see: https://looker-open-source.github.io/malloy/documentation/language/source.html
-source: carriers is table('duckdb:data/carriers.parquet')+ {
+source: carriers is table('duckdb:data/carriers.parquet') + {
   primary_key: code
   measure: carrier_count is count()
 }
@@ -24,11 +25,6 @@ source: aircraft is table('duckdb:data/aircraft.parquet') + {
   join_one: aircraft_models with aircraft_model_code
 }
 
-source: airports is table('duckdb:data/airports.parquet') + {
-  primary_key: code
-  measure: airport_count is count()
-  dimension: name is concat(code, ' - ', full_name)
-}
 
 source: flights is table('duckdb:data/flights.parquet') + {
   primary_key: id2
