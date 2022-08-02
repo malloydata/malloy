@@ -11,4 +11,5 @@
  * GNU General Public License for more details.
  */
 
-export { ChannelIcon, ChannelIconName } from "./ChannelIcon";
+export { ChannelIcon } from "./ChannelIcon";
+export type { ChannelIconName } from "./ChannelIcon";

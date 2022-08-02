@@ -1,5 +1,4 @@
 import {
-  FilterExpression,
   SearchValueMapResult,
   StructDef,
   Result as MalloyResult,
@@ -7,14 +6,9 @@ import {
 import { DataStyles } from "@malloydata/render";
 import { useState } from "react";
 import styled from "styled-components";
-import { Analysis, QuerySummary, StagePath } from "../../types";
+import { Analysis, QuerySummary } from "../../types";
 import { ActionIcon } from "../ActionIcon";
-import {
-  EmptyMessage,
-  PanelTitle,
-  PageContent,
-  PageHeader,
-} from "../CommonElements";
+import { EmptyMessage, PageContent, PageHeader } from "../CommonElements";
 import { QueryModifiers } from "../hooks/use_query_builder";
 import { Popover } from "../Popover";
 import { QuerySummaryPanel } from "../QuerySummaryPanel";
@@ -58,7 +52,7 @@ export const ExploreQueryEditor: React.FC<ExploreQueryEditorProps> = ({
             color={analysis ? "dimension" : "other"}
           />
           <Popover open={insertOpen} setOpen={setInsertOpen}>
-            {analysis && (
+            {analysis && source && (
               <TopQueryActionMenu
                 analysisPath={analysis.fullPath || analysis.modelFullPath}
                 source={source}
@@ -141,19 +135,6 @@ const QueryBar = styled(PageContent)`
 
 const QueryBarInner = styled.div`
   padding: 10px;
-`;
-
-const Content = styled.div`
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: row;
-  height: 100%;
-  overflow: hidden;
-`;
-
-const ScrollContent = styled(Content)`
-  overflow-y: auto;
 `;
 
 const SidebarHeader = styled(PageHeader)`

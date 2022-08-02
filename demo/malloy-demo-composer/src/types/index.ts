@@ -53,15 +53,6 @@ export interface Analysis {
   dataStyles: DataStyles;
 }
 
-export interface ProjectInfo {
-  name: string;
-  displayName: string;
-  version: string;
-  description: string;
-  iconName: string;
-  fullPath: string;
-}
-
 export type AnalysableReference =
   | { type: "source"; modelFullPath: string; sourceName: string }
   | { type: "analysis"; analysisFullPath: string };

@@ -237,7 +237,7 @@ const MarkdownLink = styled.a`
 const MarkdownParagraph = styled.p`
   font-size: 14px;
   margin-block-start: 8px;
-  color: #4B4C50;
+  color: #4b4c50;
 `;
 
 const MarkdownPreWrapper = styled.div`

@@ -12,16 +12,23 @@
  */
 import styled from "styled-components";
 import { COLORS } from "../colors";
-import { ChannelIcon } from "../ChannelIcon";
+import { ChannelIcon, ChannelIconName } from "../ChannelIcon";
 
-export const ChannelButton: React.FC<{ icon: ChannelIconName, text: string, onClick: () => void, selected: boolean }> = ({ icon, text, onClick, selected }) => {
-  return <StyledButton onClick={onClick} selected={selected}>
-    <ChannelIcon name={icon} />
-    {text}
-  </StyledButton>
+export const ChannelButton: React.FC<{
+  icon: ChannelIconName;
+  text: string;
+  onClick: () => void;
+  selected: boolean;
+}> = ({ icon, text, onClick, selected }) => {
+  return (
+    <StyledButton onClick={onClick} selected={selected}>
+      <ChannelIcon name={icon} />
+      {text}
+    </StyledButton>
+  );
 };
 
-const StyledButton = styled.button<{selected: boolean}>`
+const StyledButton = styled.button<{ selected: boolean }>`
   outline: none;
   border: none;
   color: ${COLORS.dimension.fillStrong};
@@ -45,7 +52,9 @@ const StyledButton = styled.button<{selected: boolean}>`
     fill: ${COLORS.other.fillStrong};
   }
 
-  ${({ selected }) => selected && `
+  ${({ selected }) =>
+    selected &&
+    `
     color: ${COLORS.dimension.fillStrong};
 
     &:hover {

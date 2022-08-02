@@ -25,9 +25,9 @@ import { DOMElement } from "../DOMElement";
 import { PageContent, PageHeader } from "../CommonElements";
 
 interface ResultProps {
-  source: malloy.StructDef;
+  source: malloy.StructDef | undefined;
   result?: malloy.Result;
-  analysis: Analysis;
+  analysis: Analysis | undefined;
   dataStyles: render.DataStyles;
   malloy: string;
   onDrill: (filters: malloy.FilterExpression[]) => void;
@@ -71,6 +71,9 @@ export const Result: React.FC<ResultProps> = ({
       return;
     }
     setTimeout(async () => {
+      if (analysis === undefined || source === undefined) {
+        return;
+      }
       setRendering(true);
       highlightPre(result.sql, "sql").then(setSQL);
       // eslint-disable-next-line no-console
@@ -139,9 +142,7 @@ export const Result: React.FC<ResultProps> = ({
         />
       </ResultHeader>
       <ContentDiv>
-        {isRunning && view !== "malloy" && (
-          <LoadingSpinner text="Running" />
-        )}
+        {isRunning && view !== "malloy" && <LoadingSpinner text="Running" />}
         {view === "html" && (
           <>
             {result !== undefined && rendering && (

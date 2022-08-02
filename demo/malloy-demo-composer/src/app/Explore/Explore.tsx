@@ -27,8 +27,6 @@ import { useQueryBuilder } from "../hooks";
 import { ExploreQueryEditor } from "../ExploreQueryEditor";
 import { MarkdownDocument } from "../MarkdownDocument";
 import { compileModel } from "../../core/compile";
-import { ExploreSamplesPage } from "../ExploreSamplesPage";
-import { useSampleProjects } from "../data";
 import { COLORS } from "../colors";
 
 const KEY_MAP = {
@@ -59,7 +57,6 @@ export const Explore: React.FC = () => {
   });
   const topValues = useTopValues(analysis);
   const [section, setSection] = useState("query");
-  const sampleProjects = useSampleProjects();
 
   const loadQueryLink = (
     modelPath: string,
@@ -163,14 +160,7 @@ export const Explore: React.FC = () => {
                 selected={section === "about"}
               ></ChannelButton>
             </ChannelTop>
-            <ChannelBottom>
-              <ChannelButton
-                onClick={() => setSection("samples")}
-                text="Samples"
-                icon="samples"
-                selected={section === "samples"}
-              ></ChannelButton>
-            </ChannelBottom>
+            <ChannelBottom></ChannelBottom>
           </Channel>
           <Page>
             {section === "query" && (
@@ -197,13 +187,6 @@ export const Explore: React.FC = () => {
                     }
                     loadQueryLink={loadQueryLink}
                   />
-                </ScrollContent>
-              </PageContent>
-            )}
-            {section === "samples" && (
-              <PageContent>
-                <ScrollContent>
-                  <ExploreSamplesPage sampleProjects={sampleProjects} />
                 </ScrollContent>
               </PageContent>
             )}
