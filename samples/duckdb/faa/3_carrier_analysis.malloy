@@ -11,7 +11,7 @@
 // import existing source 'flights' from flights.malloy
 //  see: https://looker-open-source.github.io/malloy/documentation/language/imports.html
 //
-import "1_flights.malloy"
+import "2_flights.malloy"
 
 
 // source 'flights_carrier' refines source 'flights' 
