@@ -1,10 +1,10 @@
-import "2_flights.malloy"
-
 // Routes analysis
 //  Where do carriers fly?
 
 // flight_count - imported from flights.malloy
 //    https://looker-open-source.github.io/malloy/documentation/language/aggregates.html
+
+import "2_flights.malloy"
 source: flights_carrier is flights {
 
   query: top_routes_map is {
