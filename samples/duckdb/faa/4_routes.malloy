@@ -1,4 +1,4 @@
-import "1_flights.malloy"
+import "2_flights.malloy"
 
 // Routes analysis
 //  Where do carriers fly?

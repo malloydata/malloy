@@ -1,4 +1,4 @@
-import "1_flights.malloy"
+import "2_flights.malloy"
 
 // Aircraft analysis
 //  
