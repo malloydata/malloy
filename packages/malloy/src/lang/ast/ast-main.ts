@@ -42,25 +42,25 @@ import { castTo } from "./time-utils";
  ** here to help you.
  */
 
-const theErrorStuct: model.StructDef = {
+const theErrorStruct: model.StructDef = {
   type: "struct",
   name: "~malformed~",
   dialect: "~malformed~",
   structSource: { type: "table" },
   structRelationship: {
     type: "basetable",
-    connectionName: "//undefined_error_conection",
+    connectionName: "//undefined_error_connection",
   },
   fields: [],
 };
 
 export class ErrorFactory {
   static get structDef(): model.StructDef {
-    return { ...theErrorStuct };
+    return { ...theErrorStruct };
   }
 
-  static isErrorStructdef(s: model.StructDef): boolean {
-    return s.name.includes(theErrorStuct.name);
+  static isErrorStructDef(s: model.StructDef): boolean {
+    return s.name.includes(theErrorStruct.name);
   }
 
   static get query(): model.Query {
@@ -88,7 +88,7 @@ function opOutputStruct(
   inputStruct: model.StructDef,
   opDesc: model.PipeSegment
 ): model.StructDef {
-  const badModel = ErrorFactory.isErrorStructdef(inputStruct);
+  const badModel = ErrorFactory.isErrorStructDef(inputStruct);
   // Don't call into the model code with a broken model
   if (!badModel) {
     try {
@@ -478,7 +478,7 @@ export class DefineExplore extends MalloyElement implements DocStatement {
       this.log(`Cannot redefine '${this.name}'`);
     } else {
       const structDef = this.mallobj.withParameters(this.parameters);
-      if (ErrorFactory.isErrorStructdef(structDef)) {
+      if (ErrorFactory.isErrorStructDef(structDef)) {
         return;
       }
       doc.setEntry(this.name, {
@@ -711,7 +711,7 @@ export class NamedSource extends Mallobj {
       make any code I write which ignores the translation problem
       kind of meaningless.
 
-      Maybe the output of a tranlsation is something which describes
+      Maybe the output of a translation is something which describes
       all the missing data, and then there is a "link" step where you
       can do other translations and link them into a partial translation
       which might result in a full translation.
@@ -1912,7 +1912,7 @@ export class FullQuery extends TurtleHeadedPipe {
       : this.explore.structDef();
     let pipeFs = new DynamicSpace(structDef);
 
-    if (ErrorFactory.isErrorStructdef(structDef)) {
+    if (ErrorFactory.isErrorStructDef(structDef)) {
       return {
         outputStruct: structDef,
         query: {

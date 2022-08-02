@@ -12,6 +12,7 @@
  */
 
 import * as path from "path";
+import { fileURLToPath } from "node:url";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { PostgresConnection } from "@malloydata/db-postgres";
 import { DuckDBConnection } from "@malloydata/db-duckdb";
@@ -135,7 +136,7 @@ export class DynamicConnectionLookup implements LookupConnection<Connection> {
           { useCache: true, ...this.options }
         );
       } else {
-        throw `No connection found with name ${connectionName}`;
+        throw new Error(`No connection found with name ${connectionName}`);
       }
     }
     return this.connections[connectionKey];
@@ -165,7 +166,7 @@ export class ConnectionManager {
   }
 
   public getConnectionLookup(url: URL): LookupConnection<Connection> {
-    const workingDirectory = path.dirname(url.pathname);
+    const workingDirectory = path.dirname(fileURLToPath(url));
     if (!this.connectionLookups[workingDirectory]) {
       this.connectionLookups[workingDirectory] = new DynamicConnectionLookup(
         this.connectionCache,
@@ -193,15 +194,16 @@ export class ConnectionManager {
   }
 
   buildConfigMap(configs: ConnectionConfig[]): void {
-    if (configs.length === 0) {
-      configs = [
-        {
-          name: "bigquery",
-          backend: ConnectionBackend.BigQuery,
-          id: "bigquery-default",
-          isDefault: true,
-        },
-      ];
+    // Create a default bigquery connection if one isn't configured
+    if (
+      !configs.find((config) => config.backend === ConnectionBackend.BigQuery)
+    ) {
+      configs.push({
+        name: "bigquery",
+        backend: ConnectionBackend.BigQuery,
+        id: "bigquery-default",
+        isDefault: !configs.find((config) => config.isDefault),
+      });
     }
 
     // Create a default duckdb connection if one isn't configured

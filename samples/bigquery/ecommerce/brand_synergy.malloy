@@ -1,0 +1,43 @@
+import "ecommerce.malloy"
+
+// "People who buy x also buy y": finds brands that frequently co-occur in transaction history
+// can easily be adapted to item, category, etc
+// can also be adapted to look at co-occurence within an order instead of all a customer's history
+source: brand_synergy is from(
+  order_items -> {
+    group_by: user_id
+    nest: brand1 is { group_by: inventory_items.product.brand }
+    nest: brand2 is { group_by: inventory_items.product.brand }
+  } -> {
+    where: brand1.brand != brand2.brand
+    project: user_id
+    project: brand1 is brand1.brand
+    project: brand2 is brand2.brand
+  } -> {
+    group_by:
+      brand1
+      brand2
+    aggregate: occurances is count()
+  } -> {
+    group_by: brand is brand1
+    nest: synergies is {
+      top: 5
+      order_by: occurances desc
+      group_by:
+        brand is brand2
+        occurances
+    }
+  }
+)
+
+// order_items with brand_synergy as well as base definitions.
+source: order_items_w_brand_synergy is order_items {
+  join_one: brand_synergy on inventory_items.product_brand = brand_synergy.brand
+
+  query: brand_w_synergy_dashboard is brand_dashboard {
+    nest: synergistic_brands is {
+      group_by: brand_synergy.synergies.brand
+      aggregate: occurances is brand_synergy.synergies.occurances.sum()
+    }
+  }
+}

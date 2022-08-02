@@ -58,6 +58,8 @@ import {
   isDialectFragment,
   getPhysicalFields,
   isIndexSegment,
+  UngroupedFragment,
+  isTotalFragment,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -209,11 +211,13 @@ type QuerySomething = QueryField | QueryStruct | QueryTurtle;
 class GenerateState {
   whereSQL?: string;
   applyValue?: string;
+  totalGroupSet = -1;
 
   withWhere(s?: string): GenerateState {
     const newState = new GenerateState();
     newState.whereSQL = s;
     newState.applyValue = this.applyValue;
+    newState.totalGroupSet = this.totalGroupSet;
     return newState;
   }
 
@@ -221,6 +225,15 @@ class GenerateState {
     const newState = new GenerateState();
     newState.whereSQL = this.whereSQL;
     newState.applyValue = s;
+    newState.totalGroupSet = this.totalGroupSet;
+    return newState;
+  }
+
+  withTotal(groupSet: number): GenerateState {
+    const newState = new GenerateState();
+    newState.whereSQL = this.whereSQL;
+    newState.applyValue = this.applyValue;
+    newState.totalGroupSet = groupSet;
     return newState;
   }
 }
@@ -379,6 +392,47 @@ class QueryField extends QueryNode {
     return dim;
   }
 
+  generateTotalFragment(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    expr: UngroupedFragment,
+    state: GenerateState
+  ): string {
+    if (state.totalGroupSet !== -1) {
+      throw new Error(`Already in ALL.  Cannot nest within an all calcuation.`);
+    }
+
+    let totalGroupSet;
+    let ungroupSet: UngroupSet | undefined;
+
+    if (expr.fields && expr.fields.length > 0) {
+      const key = expr.fields.sort().join("|");
+      ungroupSet = resultSet.ungroupedSets.get(key);
+      if (ungroupSet === undefined) {
+        throw new Error(`Internal Error, cannot find groupset with key ${key}`);
+      }
+      totalGroupSet = ungroupSet.groupSet;
+    } else {
+      totalGroupSet = resultSet.parent ? resultSet.parent.groupSet : 0;
+    }
+
+    const s = this.generateExpressionFromExpr(
+      resultSet,
+      context,
+      expr.e,
+      state.withTotal(totalGroupSet)
+    );
+
+    const fields = resultSet.getUngroupPartitions(ungroupSet);
+
+    let partitionBy = "";
+    const fieldsString = fields.map((f) => f.getPartitionSQL()).join(", ");
+    if (fieldsString.length > 0) {
+      partitionBy = `PARTITION BY ${fieldsString}`;
+    }
+    return `MAX(${s}) OVER (${partitionBy})`;
+  }
+
   generateDistinctKeyIfNecessary(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
@@ -407,15 +461,17 @@ class QueryField extends QueryNode {
       context,
       expr.structPath
     );
+    let ret;
     if (distinctKeySQL) {
       if (this.parent.dialect.supportsSumDistinctFunction) {
-        return this.parent.dialect.sqlSumDistinct(distinctKeySQL, dimSQL);
+        ret = this.parent.dialect.sqlSumDistinct(distinctKeySQL, dimSQL);
       } else {
-        return sqlSumDistinct(this.parent.dialect, dimSQL, distinctKeySQL);
+        ret = sqlSumDistinct(this.parent.dialect, dimSQL, distinctKeySQL);
       }
     } else {
-      return `SUM(${dimSQL})`;
+      ret = `SUM(${dimSQL})`;
     }
+    return `COALESCE(${ret},0)`;
   }
 
   generateSymmetricFragment(
@@ -525,19 +581,31 @@ class QueryField extends QueryNode {
         s += this.generateParameterFragment(resultSet, context, expr, state);
       } else if (isFilterFragment(expr)) {
         s += this.generateFilterFragment(resultSet, context, expr, state);
+      } else if (isTotalFragment(expr)) {
+        s += this.generateTotalFragment(resultSet, context, expr, state);
       } else if (isAggregateFragment(expr)) {
+        let agg;
         if (expr.function === "sum") {
-          s += this.generateSumFragment(resultSet, context, expr, state);
+          agg = this.generateSumFragment(resultSet, context, expr, state);
         } else if (expr.function === "avg") {
-          s += this.generateAvgFragment(resultSet, context, expr, state);
+          agg = this.generateAvgFragment(resultSet, context, expr, state);
         } else if (expr.function === "count") {
-          s += this.generateCountFragment(resultSet, context, expr, state);
+          agg = this.generateCountFragment(resultSet, context, expr, state);
         } else if (["count_distinct", "min", "max"].includes(expr.function)) {
-          s += this.generateSymmetricFragment(resultSet, context, expr, state);
+          agg = this.generateSymmetricFragment(resultSet, context, expr, state);
         } else {
           throw new Error(
             `Internal Error: Unknown aggregate function ${expr.function}`
           );
+        }
+        if (resultSet.root().isComplexQuery) {
+          let groupSet = resultSet.groupSet;
+          if (state.totalGroupSet !== -1) {
+            groupSet = state.totalGroupSet;
+          }
+          s += this.caseGroup([groupSet], agg);
+        } else {
+          s += agg;
         }
       } else if (isApplyFragment(expr)) {
         const applyVal = this.generateExpressionFromExpr(
@@ -625,6 +693,10 @@ class QueryAtomicField extends QueryField {
 
   getFilterList(): FilterExpression[] {
     return [];
+  }
+
+  hasExpression(): boolean {
+    return hasExpression(this.fieldDef);
   }
 }
 
@@ -774,7 +846,7 @@ type FieldInstanceType = "field" | "query";
 
 interface FieldInstance {
   type: FieldInstanceType;
-  groupSet: number;
+  // groupSet: number;
   root(): FieldInstanceResultRoot;
 }
 
@@ -783,8 +855,9 @@ class FieldInstanceField implements FieldInstance {
   f: QueryField;
   // the output index of this field (1 based)
   fieldUsage: FieldUsage;
-  groupSet = 0;
+  additionalGroupSets: number[] = [];
   parent: FieldInstanceResult;
+  partitionSQL: string | undefined; // the name of the field when used as a partition.
   constructor(
     f: QueryField,
     fieldUsage: FieldUsage,
@@ -793,17 +866,36 @@ class FieldInstanceField implements FieldInstance {
     this.f = f;
     this.fieldUsage = fieldUsage;
     this.parent = parent;
-    if (parent) {
-      this.groupSet = parent.groupSet;
-    }
   }
 
   root(): FieldInstanceResultRoot {
     return this.parent.root();
   }
+
+  getSQL() {
+    let exp = this.f.generateExpression(this.parent);
+    if (isScalarField(this.f)) {
+      exp = this.f.caseGroup(
+        this.parent.childGroups.concat(this.additionalGroupSets),
+        // this.parent.groupSet > 0 ? this.parent.childGroups : [],
+        exp
+      );
+    }
+    return exp;
+  }
+
+  getPartitionSQL() {
+    if (this.partitionSQL === undefined) {
+      return this.getSQL();
+    } else {
+      return this.partitionSQL;
+    }
+  }
 }
 
 type RepeatedResultType = "nested" | "inline_all_numbers" | "inline";
+
+type UngroupSet = { fields: string[]; groupSet: number };
 
 class FieldInstanceResult implements FieldInstance {
   type: FieldInstanceType = "query";
@@ -815,7 +907,10 @@ class FieldInstanceResult implements FieldInstance {
   turtleDef: TurtleDef;
   firstSegment: PipeSegment;
   hasHaving = false;
+  ungroupedSets = new Map<string, UngroupSet>();
   // query: QueryQuery;
+
+  resultUsesUngrouped = false;
 
   constructor(turtleDef: TurtleDef, parent: FieldInstanceResult | undefined) {
     this.parent = parent;
@@ -844,6 +939,14 @@ class FieldInstanceResult implements FieldInstance {
       }
     }
     this.add(as, new FieldInstanceField(field, usage, this));
+  }
+
+  parentGroupSet(): number {
+    if (this.parent) {
+      return this.parent.groupSet;
+    } else {
+      return 0;
+    }
   }
 
   add(name: string, f: FieldInstance) {
@@ -889,6 +992,18 @@ class FieldInstanceResult implements FieldInstance {
     children: number[];
     isComplex: boolean;
   } {
+    // if the root node uses a total, start at 1.
+    if (nextGroupSetNumber === 0 && this.resultUsesUngrouped) {
+      this.root().computeOnlyGroups.push(nextGroupSetNumber++);
+    }
+
+    // make a groupset for each unique ungrouping expression
+    for (const [_key, grouping] of this.ungroupedSets) {
+      const groupSet = nextGroupSetNumber++;
+      grouping.groupSet = groupSet;
+      this.root().computeOnlyGroups.push(groupSet);
+    }
+
     this.groupSet = nextGroupSetNumber++;
     this.depth = depth;
     let maxDepth = depth;
@@ -906,8 +1021,6 @@ class FieldInstanceResult implements FieldInstance {
             maxDepth = r.maxDepth;
           }
         }
-      } else {
-        fi.groupSet = this.groupSet;
       }
     }
     this.childGroups = children;
@@ -1077,18 +1190,84 @@ class FieldInstanceResult implements FieldInstance {
     }
     throw new Error(`Internal Error, Null parent FieldInstanceResult`);
   }
+
+  getUngroupPartitions(
+    ungroupSet: UngroupSet | undefined
+  ): FieldInstanceField[] {
+    let ret: FieldInstanceField[] = [];
+
+    // if (ungroupSet !== undefined) {
+    //   ret = this.fields(
+    //     (fi) =>
+    //       isScalarField(fi.f) &&
+    //       fi.fieldUsage.type === "result" &&
+    //       ungroupSet.fields.indexOf(fi.f.getIdentifier()) !== -1
+    //   );
+    // }
+    let p: FieldInstanceResult | undefined = this as FieldInstanceResult;
+    let escapeFields: string[] = [];
+    // all defaults to all fields at the current level.
+    if (ungroupSet === undefined) {
+      // escape all dimensions at the
+      escapeFields = this.fields(
+        (fi) => isScalarField(fi.f) && fi.fieldUsage.type === "result"
+      ).map((fi) => fi.f.getIdentifier());
+    } else {
+      escapeFields = ungroupSet.fields;
+    }
+    while (p !== undefined) {
+      ret = ret.concat(
+        p.fields(
+          (fi) =>
+            isScalarField(fi.f) &&
+            fi.fieldUsage.type === "result" &&
+            escapeFields.indexOf(fi.f.getIdentifier()) === -1
+        )
+      );
+      p = p.parent;
+    }
+    return ret;
+  }
+
+  assignFieldsToGroups() {
+    for (const [_key, grouping] of this.ungroupedSets) {
+      for (const fieldInstance of this.getUngroupPartitions(grouping)) {
+        fieldInstance.additionalGroupSets.push(grouping.groupSet);
+      }
+    }
+    for (const child of this.structs()) {
+      child.assignFieldsToGroups();
+    }
+  }
 }
 
 /* Root Result as opposed to a turtled result */
 class FieldInstanceResultRoot extends FieldInstanceResult {
   joins = new Map<string, JoinInstance>();
   havings = new AndChain();
+  isComplexQuery = false;
+  queryUsesUngrouped = false;
+  computeOnlyGroups: number[] = [];
+  elimatedComputeGroups = false;
+
   constructor(turtleDef: TurtleDef) {
     super(turtleDef, undefined);
   }
 
   root(): FieldInstanceResultRoot {
     return this;
+  }
+
+  // in the stage immediately following stage0 we need to elimiate any of the
+  //  groups that were used in ungroup calculations.  We need to do this only
+  //  once and in the very next stage.
+  eliminateComputeGroupsSQL(): string {
+    if (this.elimatedComputeGroups || this.computeOnlyGroups.length == 0) {
+      return "";
+    } else {
+      this.elimatedComputeGroups = true;
+      return `group_set NOT IN (${this.computeOnlyGroups.join(",")})`;
+    }
   }
 
   // look at all the fields again in the structs in the query
@@ -1253,6 +1432,7 @@ type StageGroupMaping = { fromGroup: number; toGroup: number };
 
 type StageOutputContext = {
   sql: string[]; // sql expressions
+  lateralJoinSQLExpressions: string[];
   dimensionIndexes: number[]; // which indexes are dimensions
   fieldIndex: number;
   groupsAggregated: StageGroupMaping[]; // which groups were aggregated
@@ -1520,7 +1700,22 @@ class QueryQuery extends QueryField {
     joinStack: string[]
   ): void {
     for (const expr of e) {
-      if (isFieldFragment(expr)) {
+      if (isTotalFragment(expr)) {
+        resultStruct.resultUsesUngrouped = true;
+        resultStruct.root().isComplexQuery = true;
+        resultStruct.root().queryUsesUngrouped = true;
+        if (expr.fields && expr.fields.length > 0) {
+          const key = expr.fields.sort().join("|");
+          if (resultStruct.ungroupedSets.get(key) === undefined) {
+            resultStruct.ungroupedSets.set(key, {
+              fields: expr.fields,
+              groupSet: -1,
+            });
+          }
+        }
+
+        this.addDependantExpr(resultStruct, context, expr.e, joinStack);
+      } else if (isFieldFragment(expr)) {
         const field = context.getDimensionOrMeasureByName(expr.path);
         if (hasExpression(field.fieldDef)) {
           this.addDependantExpr(
@@ -2151,17 +2346,39 @@ class QueryQuery extends QueryField {
       );
       if (fi instanceof FieldInstanceField) {
         if (fi.fieldUsage.type === "result") {
+          const exp = fi.getSQL();
           if (isScalarField(fi.f)) {
-            let exp = fi.f.generateExpression(resultSet);
-            exp = this.caseGroup(
-              resultSet.groupSet > 0 ? resultSet.childGroups : [],
-              exp
-            );
-            output.sql.push(`${exp} as ${outputName}`);
+            if (
+              this.parent.dialect.name === "standardsql" &&
+              this.rootResult.queryUsesUngrouped
+            ) {
+              // BigQuery can't partition aggregate function except when the field has no
+              //  expression.  Additionally it can't partition by floats.  We stuff expressions
+              //  and numbers as strings into a lateral join when the query has ungrouped expressions
+              if (fi.f.fieldDef.type === "number") {
+                // make an extra dimension as a string
+                output.sql.push(`${exp} as ${outputName}`);
+                const outputFieldName = `__lateral_join_bag.${outputName}_string`;
+                output.sql.push(outputFieldName);
+                output.dimensionIndexes.push(output.fieldIndex++);
+                output.lateralJoinSQLExpressions.push(
+                  `CAST(${exp} as STRING) as ${outputName}_string`
+                );
+                fi.partitionSQL = outputFieldName;
+              } else {
+                const outputFieldName = `__lateral_join_bag.${outputName}`;
+                fi.partitionSQL = outputFieldName;
+                output.lateralJoinSQLExpressions.push(
+                  `${exp} as ${outputName}`
+                );
+                output.sql.push(outputFieldName);
+              }
+            } else {
+              // just treat it like a regular field.
+              output.sql.push(`${exp} as ${outputName}`);
+            }
             output.dimensionIndexes.push(output.fieldIndex++);
           } else if (isAggregateField(fi.f)) {
-            let exp = fi.f.generateExpression(resultSet);
-            exp = this.caseGroup([resultSet.groupSet], exp);
             output.sql.push(`${exp} as ${outputName}`);
             output.fieldIndex++;
           }
@@ -2301,6 +2518,7 @@ class QueryQuery extends QueryField {
       dimensionIndexes: [1],
       fieldIndex: 2,
       sql: ["group_set"],
+      lateralJoinSQLExpressions: [],
       groupsAggregated: [],
       outputPipelinedSQL: [],
     };
@@ -2314,6 +2532,14 @@ class QueryQuery extends QueryField {
     from += this.parent.dialect.sqlGroupSetTable(this.maxGroupSet) + "\n";
 
     s += indent(f.sql.join(",\n")) + "\n";
+
+    // this should only happen on standard SQL,  BigQuery can't partition by expressions and
+    //  aggregates.
+    if (f.lateralJoinSQLExpressions.length > 0) {
+      from += `LEFT JOIN UNNEST([STRUCT(${f.lateralJoinSQLExpressions.join(
+        ",\n"
+      )})]) as __lateral_join_bag\n`;
+    }
     s += from + wheres + groupBy + this.rootResult.havings.sql("having");
 
     // generate the stage
@@ -2401,15 +2627,21 @@ class QueryQuery extends QueryField {
       dimensionIndexes: [1],
       fieldIndex: 2,
       sql: ["group_set"],
+      lateralJoinSQLExpressions: [],
       groupsAggregated: [],
       outputPipelinedSQL: [],
     };
     this.generateDepthNFields(depth, this.rootResult, f, stageWriter);
     s += indent(f.sql.join(",\n")) + "\n";
     s += `FROM ${stageName}\n`;
+    const where = this.rootResult.eliminateComputeGroupsSQL();
+    if (where.length > 0) {
+      s += `WHERE ${where}\n`;
+    }
     if (f.dimensionIndexes.length > 0) {
       s += `GROUP BY ${f.dimensionIndexes.join(",")}\n`;
     }
+
     this.resultStage = stageWriter.addStage(s);
 
     this.resultStage = this.generatePipelinedStages(
@@ -2436,13 +2668,18 @@ class QueryQuery extends QueryField {
         if (fi.fieldUsage.type === "result") {
           if (isScalarField(fi.f)) {
             fieldsSQL.push(
-              this.parent.dialect.sqlMaybeQuoteIdentifier(`${name}__0`) +
-                ` as ${sqlName}`
+              this.parent.dialect.sqlMaybeQuoteIdentifier(
+                `${name}__${this.rootResult.groupSet}`
+              ) + ` as ${sqlName}`
             );
             dimensionIndexes.push(fieldIndex++);
           } else if (isAggregateField(fi.f)) {
             fieldsSQL.push(
-              this.parent.dialect.sqlAnyValueLastTurtle(name, sqlName)
+              this.parent.dialect.sqlAnyValueLastTurtle(
+                name,
+                this.rootResult.groupSet,
+                sqlName
+              )
             );
             fieldIndex++;
           }
@@ -2460,13 +2697,22 @@ class QueryQuery extends QueryField {
           fieldIndex++;
         } else if (fi.firstSegment.type === "project") {
           fieldsSQL.push(
-            this.parent.dialect.sqlAnyValueLastTurtle(name, sqlName)
+            this.parent.dialect.sqlAnyValueLastTurtle(
+              name,
+              this.rootResult.groupSet,
+              sqlName
+            )
           );
           fieldIndex++;
         }
       }
     }
     s += indent(fieldsSQL.join(",\n")) + `\nFROM ${stage0Name}\n`;
+
+    const where = this.rootResult.eliminateComputeGroupsSQL();
+    if (where.length > 0) {
+      s += `WHERE ${where}\n`;
+    }
 
     if (dimensionIndexes.length > 0) {
       s += `GROUP BY ${dimensionIndexes.join(",")}\n`;
@@ -2689,10 +2935,14 @@ class QueryQuery extends QueryField {
     const r = this.rootResult.computeGroups(0, 0);
     this.maxDepth = r.maxDepth;
     this.maxGroupSet = r.nextGroupSetNumber - 1;
-    if (this.maxDepth === 0 && !r.isComplex) {
-      return this.generateSimpleSQL(stageWriter);
-    } else {
+
+    this.rootResult.assignFieldsToGroups();
+
+    this.rootResult.isComplexQuery ||= this.maxDepth > 0 || r.isComplex;
+    if (this.rootResult.isComplexQuery) {
       return this.generateComplexSQL(stageWriter);
+    } else {
+      return this.generateSimpleSQL(stageWriter);
     }
   }
 

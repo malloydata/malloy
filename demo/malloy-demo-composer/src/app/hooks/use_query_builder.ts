@@ -38,6 +38,7 @@ interface UseQueryBuilderResult {
   querySummary: QuerySummary | undefined;
   result: MalloyResult | undefined;
   dataStyles: DataStyles;
+  error: Error | undefined;
 }
 
 interface UseQueryBuilderProps {
@@ -142,13 +143,14 @@ export function useQueryBuilder({
   const [queryMalloy, setQueryMalloy] = useState<string>("");
   const [querySummary, setQuerySummary] = useState<QuerySummary>();
   const [queryName, setQueryName] = useState("");
+  const [error, setError] = useState<Error>();
 
   const {
     result,
     runQuery: runQueryRaw,
     isRunning,
     clearResult,
-  } = useRunQuery(queryMalloy, queryName, analysis);
+  } = useRunQuery(queryMalloy, queryName, setError, analysis);
   const [dataStyles, setDataStyles] = useState<DataStyles>({});
 
   const { saveField } = useSaveField(openDirectory, analysis, (newAnalysis) => {
@@ -182,7 +184,6 @@ export function useQueryBuilder({
     clearQuery(newAnalysis);
     withAnalysisSource(newAnalysis, (source) => {
       queryBuilder.current?.updateSource(source);
-      console.log(source);
       queryBuilder.current?.loadQuery(queryName);
       writeQuery(dataStyles, newAnalysis);
     });
@@ -496,6 +497,7 @@ export function useQueryBuilder({
     querySummary,
     dataStyles,
     result,
+    error,
     queryModifiers: {
       addFilter,
       toggleField,

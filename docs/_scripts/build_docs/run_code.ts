@@ -33,7 +33,7 @@ import { log } from "./log";
 import { JSDOM } from "jsdom";
 import { highlight } from "./highlighter";
 
-const SAMPLES_PATH = path.join(__dirname, "../../../samples");
+const SAMPLES_PATH = path.join(__dirname, "../../../samples/bigquery");
 
 export const DEPENDENCIES = new Map<string, string[]>();
 

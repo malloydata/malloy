@@ -17,7 +17,7 @@ import { Analysis, Directory, Model } from "../../types";
 import { useDirectory } from "../data/use_directory";
 import { Button, PageContent } from "../CommonElements";
 import { ChannelButton } from "../ChannelButton";
-import { MalloyLogo } from "../MalloyLogo";
+import { ErrorMessage } from "../ErrorMessage";
 import { ActionIcon } from "../ActionIcon";
 import { DirectoryPicker } from "../DirectoryPicker";
 import { HotKeys } from "react-hotkeys";
@@ -25,9 +25,10 @@ import { useTopValues } from "../data/use_top_values";
 import { useOpenDirectory } from "../data/use_open_directory";
 import { useQueryBuilder } from "../hooks";
 import { ExploreQueryEditor } from "../ExploreQueryEditor";
-import { MarkdownDocument } from "../MarkdownDocument";
 import { compileModel } from "../../core/compile";
 import { COLORS } from "../colors";
+import { MalloyLogo } from "../MalloyLogo";
+import { MarkdownDocument } from "../MarkdownDocument";
 
 const KEY_MAP = {
   REMOVE_FIELDS: "command+k",
@@ -50,11 +51,13 @@ export const Explore: React.FC = () => {
     querySummary,
     dataStyles,
     result,
+    error,
   } = useQueryBuilder({
     analysis,
     setAnalysis,
     openDirectory,
   });
+
   const topValues = useTopValues(analysis);
   const [section, setSection] = useState("query");
 
@@ -163,33 +166,36 @@ export const Explore: React.FC = () => {
             <ChannelBottom></ChannelBottom>
           </Channel>
           <Page>
-            {section === "query" && (
-              <ExploreQueryEditor
-                source={source}
-                analysis={analysis}
-                queryModifiers={queryModifiers}
-                topValues={topValues}
-                queryName={queryName}
-                querySummary={querySummary}
-                queryMalloy={queryMalloy}
-                dataStyles={dataStyles}
-                result={result}
-                isRunning={isRunning}
-              />
-            )}
-            {section === "about" && (
-              <PageContent>
-                <ScrollContent>
-                  <MarkdownDocument
-                    content={
-                      directory?.readme ||
-                      "# No Readme\nThis project has no readme"
-                    }
-                    loadQueryLink={loadQueryLink}
-                  />
-                </ScrollContent>
-              </PageContent>
-            )}
+            <PageContainer>
+              {section === "query" && (
+                <ExploreQueryEditor
+                  source={source}
+                  analysis={analysis}
+                  queryModifiers={queryModifiers}
+                  topValues={topValues}
+                  queryName={queryName}
+                  querySummary={querySummary}
+                  queryMalloy={queryMalloy}
+                  dataStyles={dataStyles}
+                  result={result}
+                  isRunning={isRunning}
+                />
+              )}
+              {section === "about" && (
+                <PageContent>
+                  <ScrollContent>
+                    <MarkdownDocument
+                      content={
+                        directory?.readme ||
+                        "# No Readme\nThis project has no readme"
+                      }
+                      loadQueryLink={loadQueryLink}
+                    />
+                  </ScrollContent>
+                </PageContent>
+              )}
+              <ErrorMessage error={error} />
+            </PageContainer>
           </Page>
           <RightChannel />
         </Content>
@@ -206,6 +212,13 @@ const Main = styled(HotKeys)`
   height: 100%;
   outline: none;
   background-color: ${COLORS.mainBackground};
+`;
+
+const PageContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 10px;
 `;
 
 const Body = styled.div`
@@ -253,7 +266,7 @@ const Header = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 5px 20px;
+  padding: 5px 10px 5px 20px;
   background-color: ${COLORS.mainBackground};
 `;
 

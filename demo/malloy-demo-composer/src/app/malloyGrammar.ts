@@ -52,7 +52,7 @@ export const MALLOY_GRAMMAR = {
         },
         {
           match:
-            "(?i)\\b(AVG|COUNT|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE|TABLE|FROM|FROM_SQL)(\\s*\\()",
+            "(?i)\\b(AVG|COUNT|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE|TABLE|FROM|FROM_SQL|UNGROUPED)(\\s*\\()",
           captures: {
             "1": { name: "entity.name.function" },
           },

@@ -226,15 +226,26 @@ export class Malloy {
             connectionName,
             connectionTableString,
           ] of tablesByConnection) {
-            const connection = await connections.lookupConnection(
-              connectionName
-            );
-            // TODO detect if the union of `Object.keys(tables)` and `Object.keys(errors)` is not the same
-            //      as `Object.keys(connectionTableString)`, i.e. that all tables are accounted for. Otherwise
-            //      the translator runs into an infinite loop fetching tables.
-            const { schemas: tables, errors } =
-              await connection.fetchSchemaForTables(connectionTableString);
-            translator.update({ tables, errors: { tables: errors } });
+            try {
+              const connection = await connections.lookupConnection(
+                connectionName
+              );
+              // TODO detect if the union of `Object.keys(tables)` and `Object.keys(errors)` is not the same
+              //      as `Object.keys(connectionTableString)`, i.e. that all tables are accounted for. Otherwise
+              //      the translator runs into an infinite loop fetching tables.
+              const { schemas: tables, errors } =
+                await connection.fetchSchemaForTables(connectionTableString);
+              translator.update({ tables, errors: { tables: errors } });
+            } catch (error) {
+              // There was an exception getting the connection, associate that error
+              // with all its tables
+              const tables = {};
+              const errors: { [name: string]: string } = {};
+              for (const table of connectionTableString) {
+                errors[table] = error.toString();
+              }
+              translator.update({ tables, errors: { tables: errors } });
+            }
           }
         }
         if (result.sqlStructs) {
@@ -262,18 +273,29 @@ export class Malloy {
             connectionName,
             connectionToSQLReferencesMap,
           ] of sqlRefsByConnection) {
-            const connection = await connections.lookupConnection(
-              connectionName
-            );
-            // TODO detect if the union of `Object.keys(sqlStructs)` and `Object.keys(errors)` is not the same
-            //      as `Object.keys(connectionToSQLReferencesMap)`, i.e. that all tables are accounted for. Otherwise
-            //      the translator runs into an infinite loop fetching SQL structs.
-            const { schemas: sqlStructs, errors } =
-              await connection.fetchSchemaForSQLBlocks(
-                connectionToSQLReferencesMap
+            try {
+              const connection = await connections.lookupConnection(
+                connectionName
               );
-            translator.update({ sqlStructs });
-            translator.update({ sqlStructs, errors: { sqlStructs: errors } });
+              // TODO detect if the union of `Object.keys(sqlStructs)` and `Object.keys(errors)` is not the same
+              //      as `Object.keys(connectionToSQLReferencesMap)`, i.e. that all tables are accounted for. Otherwise
+              //      the translator runs into an infinite loop fetching SQL structs.
+              const { schemas: sqlStructs, errors } =
+                await connection.fetchSchemaForSQLBlocks(
+                  connectionToSQLReferencesMap
+                );
+              translator.update({ sqlStructs });
+              translator.update({ sqlStructs, errors: { sqlStructs: errors } });
+            } catch (error) {
+              // There was an exception getting the connection, associate that error
+              // with all its schemas
+              const sqlStructs = {};
+              const errors: { [name: string]: string } = {};
+              for (const sqlRef of connectionToSQLReferencesMap) {
+                errors[sqlRef.name] = error.toString();
+              }
+              translator.update({ sqlStructs, errors: { sqlStructs: errors } });
+            }
           }
         }
       }

@@ -1,0 +1,59 @@
+//
+// source: 
+//  see: https://looker-open-source.github.io/malloy/documentation/language/source.html
+source: airports is table('duckdb:data/airports.parquet') {
+  primary_key: code
+
+  // aggregate calculation
+  //  see: https://looker-open-source.github.io/malloy/documentation/language/aggregates.html
+  measure: airport_count is count()
+
+  // scalar calculations 
+  //  see: https://looker-open-source.github.io/malloy/documentation/language/expressions.html#pick-expressions
+  dimension: name is concat(code, ' - ', full_name)
+  dimension: faa_region_name is faa_region ?
+    pick 'Southwest' when 'ASW'
+    pick 'Northwest Mountain' when 'ANM'
+    pick 'Eastern' when 'AEA'
+    pick 'Southern' when 'ASO'
+    pick 'Great Lakes' when 'AGL'
+    pick 'Central' when 'ACE'
+    pick 'New England' when 'ANE'
+    pick 'Western Pacific' when 'AWP'
+    pick 'Alaska' when 'AAL'
+
+  query: by_region is {
+    group_by: faa_region
+    group_by: faa_region_name
+    aggregate: airport_count
+  }
+  query: by_state is {
+    where: state != null
+    group_by: state
+    aggregate: airport_count
+  }
+
+  query: by_facility_type is {
+    group_by: fac_type
+    aggregate:
+      airport_count
+      avg_elevation is elevation.avg()
+  }
+
+  query: major_airports is {
+    where: major = 'Y'
+    group_by: name is concat(state, '-', full_name)
+  }
+
+  // nesting queries
+  //  see: https://looker-open-source.github.io/malloy/documentation/language/nesting.html
+  // shape_map
+  //  see: https://looker-open-source.github.io/malloy/documentation/visualizations/shape_maps.html
+  query: airports_by_region_dashboard is by_region {
+    where: faa_region != null
+    nest:
+      by_state_shape_map is by_state {}
+      by_facility_type
+      major_airports
+  }
+}

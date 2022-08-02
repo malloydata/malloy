@@ -1,0 +1,429 @@
+{
+  "by_carrier_simple_bar": {
+    "renderer": "vega",
+    "spec_name": "bar_SM"
+  },
+  "by_carrier_gradiant_bar": {
+    "renderer": "vega",
+    "spec_name": "bar_SMM"
+  },
+  "by_carrier_stacked_bar": {
+    "renderer": "vega",
+    "spec_name": "bar_SMS"
+  },
+  "by_carrier_repeated_bar": {
+    "renderer": "vega",
+    "spec_name": "bar_SSMMM"
+  },
+  "distance_by_hour_of_day_bubble": {
+    "renderer": "vega",
+    "spec_name": "bubble_NNM"
+  },
+  "distance_by_hour_of_day_heat_map": {
+    "renderer": "vega",
+    "spec_name": "heat_NNM"
+  },
+  "carrier_by_distance_heat_map": {
+    "renderer": "vega",
+    "spec_name": "heat_NNM"
+  },
+  "carrier_by_over_time_stacked_line": {
+    "renderer": "vega",
+    "spec_name": "stacked_line_STM"
+  },
+  "carrier_by_distance_over_time_grid_line": {
+    "renderer": "vega",
+    "spec_name": "grid_line_SSTM"
+  },
+  "dist_sb": {
+    "renderer": "vega",
+    "spec_name": "spark_bar_SM"
+  },
+  "time_spark_line": {
+    "renderer": "vega",
+    "spec_name": "spark_line_TM"
+  },
+  "spark_force_scale": {
+    "renderer":"vega",
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "height": 50,
+      "data": [],
+      "mark": "area",
+      "encoding": {
+        "x": {
+          "field": "#{1}",
+          "type": "temporal",
+          "axis": { "grid": false },
+          "scale" : {"domain":["2000-01-01","2007-01-01"]},
+          "title": null
+        },
+        "y": {
+          "field": "#{2}",
+          "type": "quantitative",
+          "axis": { "grid": false },
+          "title": null
+        }
+      }
+    }
+  },
+
+  "bar_SM": {
+    "renderer":"vega",
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "description": "A simple bar chart with embedded data.",
+
+      "encoding": {
+        "y": { "field": "#{1}", "type": "nominal", "axis": null }
+      },
+      "layer": [
+        {
+          "mark": { "type": "bar", "color": "#00ccff" },
+          "encoding": {
+            "x": {
+              "field": "#{2}",
+              "type": "quantitative"
+            }
+          }
+        },
+        {
+          "mark": { "type": "text", "align": "left", "x": 5 },
+          "encoding": {
+            "text": { "field": "#{1}" }
+          }
+        }
+      ]
+    }
+  },
+  "bar_SMM": {
+    "renderer":"vega",
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "description": "Barchart String and two numeric measures.",
+      "encoding": {
+        "y": { "field": "#{1}", "type": "nominal", "axis": null }
+      },
+      "layer": [
+        {
+          "mark": {
+            "type": "bar"
+          },
+          "encoding": {
+            "x": {
+              "field": "#{2}",
+              "type": "quantitative"
+            },
+            "color": {
+              "field": "#{3}",
+              "type": "quantitative",
+              "scale": { "range": ["#1A73E8", "#E52592"] }
+            }
+          }
+        },
+        {
+          "mark": { "type": "text", "align": "left", "x": 5 },
+          "encoding": {
+            "text": { "field": "#{1}" }
+          }
+        }
+      ]
+    }
+  },
+  "bar_SMS": {
+    "renderer":"vega",
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "description": "Barchart String Measure String.",
+      "encoding": {
+        "y": { "field": "#{1}", "type": "nominal", "axis": null }
+      },
+      "layer": [
+        {
+          "mark": {
+            "type": "bar"
+          },
+          "encoding": {
+            "x": {
+              "field": "#{2}",
+              "type": "quantitative"
+            },
+            "color": {
+              "field": "#{3}"
+            }
+          }
+        },
+        {
+          "mark": { "type": "text", "align": "left", "x": 5 },
+          "encoding": {
+            "text": { "field": "#{1}" }
+          }
+        }
+      ]
+    }
+  },
+  "bar_SSMMM": {
+    "renderer":"vega",
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "repeat": ["#{3}", "#{4}", "#{5}"],
+      "spec": {
+        "description": "A simple bar chart with embedded data.",
+        "encoding": {
+          "y": { "field": "#{1}", "type": "nominal", "axis": null }
+        },
+        "layer": [
+          {
+            "mark": {
+              "type": "bar"
+            },
+            "encoding": {
+              "x": {
+                "field": { "repeat": "repeat" },
+                "type": "quantitative"
+              },
+              "color": {
+                "field": "#{2}"
+              }
+            }
+          },
+          {
+            "mark": { "type": "text", "align": "left", "x": 5 },
+            "encoding": {
+              "text": { "field": "#{1}" }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "bubble_NNM": {
+    "renderer":"vega",
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "data": [],
+      "mark": "circle",
+      "width": 400,
+      "encoding": {
+        "y": {
+          "field": "#{1}",
+          "type": "ordinal"
+        },
+        "x": {
+          "field": "#{2}",
+          "type": "ordinal"
+        },
+        "size": {
+          "field": "#{3}",
+          "type": "quantitative"
+        }
+      }
+    }
+  },
+  "heat_NNM": {
+    "renderer":"vega",
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "data": [],
+      "mark": "bar",
+      "width": 400,
+      "encoding": {
+        "y": {
+          "field": "#{1}",
+          "type": "ordinal"
+        },
+        "x": {
+          "field": "#{2}",
+          "type": "ordinal"
+        },
+        "color": {
+          "field": "#{3}",
+          "type": "quantitative"
+        }
+      }
+    }
+  },
+  "heat_SNM": {
+    "renderer":"vega",
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "data": [],
+      "mark": "bar",
+      "width": 400,
+      "encoding": {
+        "y": {
+          "field": "#{1}",
+          "type": "nominal"
+        },
+        "x": {
+          "field": "#{2}",
+          "type": "ordinal"
+        },
+        "color": {
+          "field": "#{3}",
+          "type": "quantitative"
+        }
+      }
+    }
+  },
+  "stacked_line_STM": {
+    "renderer":"vega",
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "height": 50,
+      "data": [],
+      "mark": "area",
+      "encoding": {
+        "x": {
+          "field": "#{2}",
+          "type": "temporal",
+          "axis": { "grid": false }
+        },
+        "y": {
+          "field": "#{3}",
+          "type": "quantitative",
+          "axis": { "grid": false },
+          "title": null
+        },
+        "color": {
+          "field": "#{1}",
+          "type": "nominal",
+          "legend": null
+        },
+        "row": {
+          "field": "#{1}",
+          "type": "nominal"
+        }
+      }
+    }
+  },
+  "grid_line_SSTM": {
+    "renderer":"vega",
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "height": 50,
+      "data": [],
+      "mark": "area",
+      "encoding": {
+        "x": {
+          "field": "#{3}",
+          "type": "temporal",
+          "axis": { "grid": false }
+        },
+        "y": {
+          "field": "#{4}",
+          "type": "quantitative",
+          "axis": { "grid": false },
+          "title": null
+        },
+        "color": {
+          "field": "#{1}",
+          "type": "nominal",
+          "legend": null
+        },
+        "row": {
+          "field": "#{1}",
+          "type": "nominal"
+        },
+        "column": {
+          "field": "#{2}",
+          "type": "nominal"
+        }
+      }
+    }
+  },
+  "spark_bar_SM": {
+    "renderer":"vega",
+    "spec": {
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "description": "A simple bar chart with embedded data.",
+      "height":50,
+      "width": 50,
+
+      "encoding": {
+        "y": { "field": "#{1}", "type": "nominal", "axis": null, "title":null }
+      },
+      "layer": [
+        {
+          "mark": { "type": "bar", "color": "#00ccff" },
+          "encoding": {
+            "x": {
+              "field": "#{2}",
+              "type": "quantitative",
+              "axis": null, 
+              "title":null
+            }
+          }
+        },
+        {
+          "mark": { "type": "text", "align": "left", "x": 5 },
+          "encoding": {
+            "text": { "field": "#{1}" }
+          }
+        }
+      ]
+    }
+  },
+  "spark_line_TM": {
+    "renderer":"vega",
+    "spec": {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "height": 50,
+        "data": [],
+        "mark": "area",
+        "encoding": {
+        "x": {
+          "field": "#{1}",
+          "type": "temporal",
+          "axis": { "grid": false },
+          "title": null
+        },
+        "y": {
+          "field": "#{2}",
+          "type": "quantitative",
+          "axis": { "grid": false },
+          "title": null
+        }
+      }
+    }
+  },
+  "name_plot_SMM": {
+    "renderer": "vega",
+    "spec": {
+      "height": 300,
+      "width": 300,
+      "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+      "encoding": {
+        "x": {
+          "field": "#{2}",
+          "type": "quantitative",
+          "axis": {"labelAngle": 0}
+        },
+        "y": {"field": "#{3}", "type": "quantitative"}
+      },
+      "layer": [
+        {"mark": "point"},
+        {
+          "mark": {
+            "type": "text",
+            "dx": 7,
+            "align": "left"
+          },
+          "encoding": {"text": {"field": "#{1}"}}
+        }
+      ]
+    }
+  },
+  "text_plot_SSMM": {
+    "renderer": "vega",
+    "spec": {
+      "mark": "text",
+      "encoding": {
+        "x": {"field": "#{3}", "type": "quantitative"},
+        "y": {"field": "#{4}", "type": "quantitative"},
+        "color": {"field": "#{1}", "type": "nominal"},
+        "text": {"field": "#{2}", "type": "nominal"}
+      }
+    }
+  }
+}

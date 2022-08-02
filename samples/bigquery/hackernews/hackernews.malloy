@@ -1,0 +1,123 @@
+--! styles hackernews.styles.json
+
+source: stories is table('bigquery-public-data.hacker_news.full') {
+  rename:
+    poster is `by`
+    post_type is `type`
+
+  dimension:
+    post_time is timestamp_seconds(`time`)
+    site is regexp_extract(
+      regexp_extract(url, '^http://([^\\/]*)\\/'),
+      '([^\\.]+\\.[^\\.]+(?:\\.[A-Za-z][A-Za-z])?)$'
+    )
+
+  dimension: score_class is ifnull(score, 0) ?
+      pick 'blah' when < 5
+      pick 'hmmm' when < 10
+      pick 'oooh' when < 100
+      else 'wow'
+
+
+  dimension:
+    threshold is 10
+    is_good is score >= threshold
+
+  measure:
+    post_count is count()
+    good_post_count is post_count { where: is_good }
+    percent_good is floor(good_post_count / post_count * 100)
+    first_post_date is min(post_time).day
+
+  query: by_date is {
+    group_by: posted_month is post_time.month
+    aggregate: post_count
+  }
+
+  query: posts_over_time is {
+    group_by: posted_month is post_time.month
+    aggregate: post_count
+  }
+
+  query: percent_good_over_time is {
+    group_by: posted_year is post_time.year
+    aggregate: percent_good
+  }
+
+  query: stories_by_month is {
+    where: post_type = 'story'
+    nest: by_date
+  }
+
+  query: jobs_by_month is {
+    where: post_type = 'job'
+    nest: by_date
+  }
+
+  query: by_post_type is {
+    group_by: post_type
+    aggregate: post_count
+  }
+
+  query: by_score_class is {
+    group_by: score_class
+    aggregate: post_count
+  }
+
+  query: top_posters is {
+    top: 10
+    where: poster != null
+    group_by: poster
+    aggregate: good_post_count, post_count
+  }
+
+  query: top_sites is {
+    top: 10
+    where: site != null
+    group_by: site
+    aggregate: post_count
+  }
+
+  query: recent_stories is {
+    top: 100
+    where: post_type = 'story'
+    order_by: post_time desc
+    group_by:
+      post_time
+      poster
+      score
+      title
+      post_type
+      url
+  }
+
+  query: term_dashboard is {
+    nest: by_date_and_type_line_chart is {
+      group_by: posted_month is post_time.month
+      aggregate: post_count
+      group_by: post_type
+    }
+    nest:
+      top_posters
+      top_sites
+      recent_stories {limit: 20}
+  }
+
+  query: poster_dashboard is top_posters {        -- reuses and refines the top_posters query
+    where: post_type = 'story'
+    aggregate:
+      percent_good
+      first_post_date
+    nest:
+      posts_over_time
+      percent_good_over_time
+      by_score_class
+      top_sites
+    nest: best_stories is recent_stories {               -- reuses and refines the stories query
+      top: 10
+      order_by: score desc
+    }
+  }
+}
+
+query: data_stories is stories -> term_dashboard {where: title ~ '%Data%' | '% data%'}

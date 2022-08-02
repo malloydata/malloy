@@ -1,0 +1,35 @@
+--! styles election.styles.json
+
+source: stations is table('bigquery-public-data.fcc_political_ads.broadcast_tv_radio_station'){
+  primary_key: stationId
+  measure: station_count is count()
+
+  query: stations_by_service is {
+    group_by: service
+    aggregate: station_count
+  }
+
+  query: owner_dashboard is {
+    group_by: station_count
+    nest: stations_by_service
+    nest: stations_by_state is {
+      group_by: communityState
+      aggregate: station_count
+    }
+    nest: by_network is {
+      top: 10
+      group_by: networkAfil
+      aggregate: station_count
+    }
+  }
+}
+
+source: content is table('bigquery-public-data.fcc_political_ads.content_info'){
+  primary_key: rawFilePath
+  measure:
+    total_spend is grossSpend.sum()
+    filing_count is count()
+
+  query: search_index is {index: advertiser, candidate, infoSource, sourceId, agency }
+  query: detail is  {group_by: contentInfoId, advertiser, candidate, organization, grossSpend, infoSource, sourceId, agency; limit: 100 }
+}

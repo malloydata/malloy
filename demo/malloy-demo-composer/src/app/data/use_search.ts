@@ -24,12 +24,16 @@ async function search(
   if (source === undefined || analysisPath === undefined) {
     return undefined;
   }
-  return await window.malloy.search(
+  const res = await window.malloy.search(
     source,
     analysisPath,
     searchTerm,
     fieldPath
   );
+  if (res instanceof Error) {
+    throw res;
+  }
+  return res;
 }
 
 interface UseSearchResult {

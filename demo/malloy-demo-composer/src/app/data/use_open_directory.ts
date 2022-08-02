@@ -28,7 +28,11 @@ export function useOpenDirectory(): UseOpenDirectoryResult {
   );
 
   const beginOpenDirectory = async () => {
-    const openDirectory = await mutateAsync();
+    const res = await mutateAsync();
+    if (res instanceof Error) {
+      throw res;
+    }
+    const openDirectory = res;
     if (openDirectory != undefined) {
       setOpenDirectory(openDirectory);
     }

@@ -199,8 +199,12 @@ export class DuckDBDialect extends Dialect {
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN ROW(${fields}))`;
   }
 
-  sqlAnyValueLastTurtle(name: string, sqlName: string): string {
-    return `MAX(CASE WHEN group_set=0 THEN ${name}__0 END) as ${sqlName}`;
+  sqlAnyValueLastTurtle(
+    name: string,
+    groupSet: number,
+    sqlName: string
+  ): string {
+    return `MAX(CASE WHEN group_set=${groupSet} THEN ${name}__${groupSet} END) as ${sqlName}`;
   }
 
   sqlCoaleseMeasuresInline(
