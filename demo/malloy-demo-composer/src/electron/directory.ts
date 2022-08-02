@@ -12,7 +12,7 @@
  */
 
 import * as explore from "../types";
-import { existsSync, promises as fs } from "fs";
+import { promises as fs } from "fs";
 import * as path from "path";
 import { URLReader, Runtime } from "@malloydata/malloy";
 import { CONNECTION_MANAGER } from "./connections";
