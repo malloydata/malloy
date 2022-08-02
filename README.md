@@ -12,7 +12,7 @@ Currently, the Malloy extension works on Mac, Linux, and Windows machines.
 
 3. **Download and unzip the [Sample Models](https://looker-open-source.github.io/malloy/aux/generated/samples.zip)** (models + data). 
 
-4. **Open the samples folder in VS Code**. In VS Code, go to File > *Open Folder*... and select samples/duckdb. DuckDB is built into the extension you're ready to run these.
+4. **Open the samples folder in VS Code**. In VS Code, go to File > **Open Folder**... and select samples/duckdb. DuckDB is built into the extension you're ready to run these.
 
 5. **Start with the FAA data**. This is a sub-sample of the NTSB Flights dataset. Click the "Run" code lens above any query to run it in VS Code. 
 
