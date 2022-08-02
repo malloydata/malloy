@@ -14,7 +14,7 @@ Currently, the Malloy extension works on Mac, Linux, and Windows machines.
 
 4. **Open the samples folder in VS Code**. In VS Code, go to File > **Open Folder**... and select samples/duckdb. DuckDB is built into the extension you're ready to run these.
 
-5. **Start with the FAA data**. This is a sub-sample of the NTSB Flights dataset. Click the "Run" code lens above any query to run it in VS Code. 
+5. **Start with Airports in the FAA data**. This is a sub-sample of the NTSB Flights dataset. Click the "Run" code lens above any query to run it in VS Code. 
 
 ![NjMzMTUxNzc2OTg3NTQ1NnxlYWFmYTI3NS0wZA](https://user-images.githubusercontent.com/1093458/182382114-dba0140c-86fa-443c-a11c-cd0119837481.gif)
 
