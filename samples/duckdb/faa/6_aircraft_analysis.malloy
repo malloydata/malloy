@@ -1,8 +1,7 @@
-import "2_flights.malloy"
-
 // Aircraft analysis
 //  
 
+import "2_flights.malloy"
 source: flights_aircraft is flights {
   measure:
     // aggregates can be computed at any level of the graph

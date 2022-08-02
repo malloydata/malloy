@@ -13,7 +13,6 @@
 //
 import "2_flights.malloy"
 
-
 // source 'flights_carrier' refines source 'flights' 
 //  https://looker-open-source.github.io/malloy/documentation/language/source.html#source-refinement
 source: flights_carrier is flights + {
