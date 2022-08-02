@@ -16,6 +16,9 @@ Currently, the Malloy extension works on Mac, Linux, and Windows machines.
 
 5. **Start with the FAA data**. This is a sub-sample of the NTSB Flights dataset. Click the "Run" code lens above any query to run it in VS Code. 
 
+![NjMzMTUxNzc2OTg3NTQ1NnxlYWFmYTI3NS0wZA](https://user-images.githubusercontent.com/1093458/182382114-dba0140c-86fa-443c-a11c-cd0119837481.gif)
+
+
 From here, you may want to play with an additional sample ([DuckDB](https://github.com/looker-open-source/malloy/tree/add_malloy_examples/samples_duckdb) |  [BigQuery](https://looker-open-source.github.io/malloy/documentation/samples.html)), [use a CSV or parquet](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html#duckdb), and/or connect your own [database](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html).
 
 
