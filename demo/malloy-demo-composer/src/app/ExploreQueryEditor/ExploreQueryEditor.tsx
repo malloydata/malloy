@@ -9,7 +9,12 @@ import { useState } from "react";
 import styled from "styled-components";
 import { Analysis, QuerySummary, StagePath } from "../../types";
 import { ActionIcon } from "../ActionIcon";
-import { EmptyMessage, PanelTitle } from "../CommonElements";
+import {
+  EmptyMessage,
+  PanelTitle,
+  PageContent,
+  PageHeader,
+} from "../CommonElements";
 import { QueryModifiers } from "../hooks/use_query_builder";
 import { Popover } from "../Popover";
 import { QuerySummaryPanel } from "../QuerySummaryPanel";
@@ -44,40 +49,40 @@ export const ExploreQueryEditor: React.FC<ExploreQueryEditorProps> = ({
 }) => {
   const [insertOpen, setInsertOpen] = useState(false);
   return (
-    <>
+    <Outer>
       <SidebarOuter>
-        <PanelTitle>
-          Query
-          {source && analysis && (
-            <QueryButtons>
-              <ActionIcon
-                action="add"
-                onClick={() => setInsertOpen(true)}
-                color="dimension"
+        <SidebarHeader>
+          <ActionIcon
+            action="add"
+            onClick={() => analysis && setInsertOpen(true)}
+            color={analysis ? "dimension" : "other"}
+          />
+          <Popover open={insertOpen} setOpen={setInsertOpen}>
+            {analysis && (
+              <TopQueryActionMenu
+                analysisPath={analysis.fullPath || analysis.modelFullPath}
+                source={source}
+                queryModifiers={queryModifiers}
+                stagePath={{ stageIndex: 0 }}
+                orderByFields={querySummary?.stages[0].orderByFields || []}
+                closeMenu={() => setInsertOpen(false)}
+                queryName={queryName}
+                stageSummary={querySummary?.stages[0].items || []}
+                isOnlyStage={querySummary?.stages.length === 1}
+                topValues={topValues}
               />
-              <Popover open={insertOpen} setOpen={setInsertOpen}>
-                <TopQueryActionMenu
-                  analysisPath={analysis.fullPath || analysis.modelFullPath}
-                  source={source}
-                  queryModifiers={queryModifiers}
-                  stagePath={{ stageIndex: 0 }}
-                  orderByFields={querySummary?.stages[0].orderByFields || []}
-                  closeMenu={() => setInsertOpen(false)}
-                  queryName={queryName}
-                  stageSummary={querySummary?.stages[0].items || []}
-                  isOnlyStage={querySummary?.stages.length === 1}
-                  topValues={topValues}
-                />
-              </Popover>
-              <SaveQueryButton saveQuery={queryModifiers.saveCurrentQuery} />
-              <ActionIcon
-                action="remove"
-                onClick={() => queryModifiers.clearQuery()}
-                color="dimension"
-              />
-            </QueryButtons>
-          )}
-        </PanelTitle>
+            )}
+          </Popover>
+          <SaveQueryButton
+            saveQuery={queryModifiers.saveCurrentQuery}
+            disabled={!analysis}
+          />
+          <ActionIcon
+            action="remove"
+            onClick={() => queryModifiers.clearQuery()}
+            color={analysis ? "dimension" : "other"}
+          />
+        </SidebarHeader>
         <QueryBar>
           <QueryBarInner>
             {source && querySummary && analysis && (
@@ -97,32 +102,38 @@ export const ExploreQueryEditor: React.FC<ExploreQueryEditorProps> = ({
           </QueryBarInner>
         </QueryBar>
       </SidebarOuter>
-      <ScrollContent>
-        {analysis && source && (result || isRunning) && (
-          <Result
-            source={source}
-            result={result}
-            analysis={analysis}
-            dataStyles={dataStyles}
-            malloy={queryMalloy}
-            onDrill={queryModifiers.onDrill}
-          />
-        )}
-      </ScrollContent>
-    </>
+      <Result
+        source={source}
+        result={result}
+        analysis={analysis}
+        dataStyles={dataStyles}
+        malloy={queryMalloy}
+        onDrill={queryModifiers.onDrill}
+        isRunning={isRunning}
+      />
+    </Outer>
   );
 };
+
+const Outer = styled.div`
+  overflow: hidden;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  gap: 10px;
+`;
 
 const SidebarOuter = styled.div`
   width: 300px;
   min-width: 300px;
-  border-right: 1px solid #efefef;
   height: 100%;
   display: flex;
   flex-direction: column;
 `;
 
-const QueryBar = styled.div`
+const QueryBar = styled(PageContent)`
   display: flex;
   overflow-y: auto;
   flex-direction: column;
@@ -130,11 +141,6 @@ const QueryBar = styled.div`
 
 const QueryBarInner = styled.div`
   padding: 10px;
-`;
-
-const QueryButtons = styled.div`
-  display: flex;
-  gap: 5px;
 `;
 
 const Content = styled.div`
@@ -148,4 +154,11 @@ const Content = styled.div`
 
 const ScrollContent = styled(Content)`
   overflow-y: auto;
+`;
+
+const SidebarHeader = styled(PageHeader)`
+  gap: 10px;
+  justify-content: space-around;
+  align-items: center;
+  gap: 5px;
 `;

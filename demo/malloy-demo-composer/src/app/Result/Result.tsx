@@ -22,6 +22,7 @@ import { downloadFile, highlightPre, notUndefined } from "../utils";
 import { compileFilter } from "../../core/compile";
 import { DownloadMenu } from "../DownloadMenu";
 import { DOMElement } from "../DOMElement";
+import { PageContent, PageHeader } from "../CommonElements";
 
 interface ResultProps {
   source: malloy.StructDef;
@@ -30,6 +31,7 @@ interface ResultProps {
   dataStyles: render.DataStyles;
   malloy: string;
   onDrill: (filters: malloy.FilterExpression[]) => void;
+  isRunning: boolean;
 }
 
 export const Result: React.FC<ResultProps> = ({
@@ -39,6 +41,7 @@ export const Result: React.FC<ResultProps> = ({
   dataStyles,
   malloy,
   onDrill,
+  isRunning,
 }) => {
   const [html, setHTML] = useState<HTMLElement>();
   const [highlightedMalloy, setHighlightedMalloy] = useState<HTMLElement>();
@@ -111,7 +114,7 @@ export const Result: React.FC<ResultProps> = ({
 
   return (
     <OuterDiv>
-      <Header>
+      <ResultHeader>
         <ViewTab onClick={() => setView("malloy")} selected={view === "malloy"}>
           Malloy
         </ViewTab>
@@ -134,9 +137,9 @@ export const Result: React.FC<ResultProps> = ({
             )
           }
         />
-      </Header>
+      </ResultHeader>
       <ContentDiv>
-        {result === undefined && view !== "malloy" && (
+        {isRunning && view !== "malloy" && (
           <LoadingSpinner text="Running" />
         )}
         {view === "html" && (
@@ -177,21 +180,16 @@ const OuterDiv = styled.div`
   overflow: hidden;
 `;
 
-const ContentDiv = styled.div`
+const ContentDiv = styled(PageContent)`
   padding: 20px;
   overflow: auto;
-  height: 100%;
 `;
 
-const Header = styled.div`
-  border-bottom: 1px solid #efefef;
-  display: flex;
-  flex-direction: row;
+const ResultHeader = styled(PageHeader)`
   gap: 10px;
   justify-content: flex-end;
   padding: 0px 20px;
-  min-height: 35px;
-  max-height: 35px;
+  flex-direction: row;
 `;
 
 const ViewTab = styled.div<{
@@ -209,7 +207,6 @@ const ViewTab = styled.div<{
 `;
 
 const PreWrapper = styled.div`
-  border: 1px solid #efefef;
   padding: 0 15px;
   overflow: hidden;
   font-family: "Roboto Mono";

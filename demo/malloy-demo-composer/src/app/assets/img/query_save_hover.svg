@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg width="110px" height="110px" viewBox="0 0 110 110" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<svg width="112px" height="112px" viewBox="0 0 112 112" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
     <title>query_save_hover</title>
     <g id="query_save_hover" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
-        <circle id="Oval" class="hoverfill" fill="transparent" cx="55" cy="55" r="55"></circle>
-        <polygon id="Star-Copy" class="primarystroke" stroke="#4285F4" stroke-width="7" stroke-linejoin="round" points="55 72.0346903 32.0763752 86.5516628 38.7990468 60.2640088 17.9087959 42.9483372 44.9872603 41.2186461 55 16 65.0127397 41.2186461 92.0912041 42.9483372 71.2009532 60.2640088 77.9236248 86.5516628"></polygon>
+        <circle id="Oval-Copy-2" class="hoverfill" fill="#EAF2FF" cx="56" cy="56" r="55.5"></circle>
+        <path d="M55.9991771,28.3532333 L55.9991771,34.8532333 L32.864,34.8532333 L32.864,80.1272333 L53.9292984,65.9165518 L74.994,80.1272333 L74.9931771,54.8692333 L81.4941771,54.8692333 L81.4944197,92.3532333 L53.9292984,73.7573595 L26.3641771,92.3532333 L26.3641771,28.3532333 L55.9991771,28.3532333 Z" id="Combined-Shape-Copy" class="primaryfill"  fill="#4285F4" fill-rule="nonzero"></path>
+        <rect id="Rectangle-Copy-2"  class="primaryfill" fill="#4285F4" x="75.006375" y="19.6467667" width="6.48804474" height="24"></rect>
+        <rect id="Rectangle-Copy-3" class="primaryfill" fill="#4285F4" transform="translate(78.250397, 31.646767) rotate(-270.000000) translate(-78.250397, -31.646767) " x="75.006375" y="19.6467667" width="6.48804474" height="24"></rect>
     </g>
 </svg>

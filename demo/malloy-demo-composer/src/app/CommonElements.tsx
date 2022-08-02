@@ -240,3 +240,25 @@ export const FormItem = styled.div`
   flex-direction: column;
   gap: 10px;
 `;
+
+export const PageHeader = styled.div`
+  overflow: hidden;
+  width: 100%;
+  height: 40px;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  background-color: ${COLORS.mainBackground};
+  flex-shrink: 0;
+`;
+
+export const PageContent = styled.div`
+  overflow: hidden;
+  background-color: white;
+  border-radius: 5px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+`;

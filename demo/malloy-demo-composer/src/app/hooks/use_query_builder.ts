@@ -182,7 +182,7 @@ export function useQueryBuilder({
     clearQuery(newAnalysis);
     withAnalysisSource(newAnalysis, (source) => {
       queryBuilder.current?.updateSource(source);
-      console.log("fooooo");
+      console.log(source);
       queryBuilder.current?.loadQuery(queryName);
       writeQuery(dataStyles, newAnalysis);
     });
@@ -194,8 +194,6 @@ export function useQueryBuilder({
     }
     const query = queryBuilder.current.getQuery();
     setQueryName(query.name);
-    // eslint-disable-next-line no-console
-    console.log(query);
     if (!newAnalysis) {
       return;
     }

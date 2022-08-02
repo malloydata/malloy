@@ -1,3 +1,5 @@
+import { ProjectInfo } from "../types";
+
 export interface MalloyElectronAPI {
   analyses: (thePath?: string) => Promise<explore.Directory>;
   analysis: (path: string) => Promise<explore.Directory>;
@@ -27,6 +29,7 @@ export interface MalloyElectronAPI {
   topValues: (source: StructDef, analysisPath: string) => Promise<SearchValueMapResult[] | undefined>;
   openDirectory: () => Promise<string | undefined>;
   openLink: (url: string) => void;
+  sampleProjects: () => Promise<ProjectInfo[]>;
 }
 
 declare global {

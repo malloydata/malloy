@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -11,14 +11,19 @@
  * GNU General Public License for more details.
  */
 
-import logoSrc from "../assets/img/logo.png";
+import { useQuery } from "react-query";
+import { ProjectInfo } from "../../types";
 
-export const MalloyLogo: React.FC = () => {
-  return (
-    <img
-      src={logoSrc}
-      alt="Malloy"
-      style={{ height: "30px", marginRight: "12px" }}
-    />
+export const KEY = `sample_projects`;
+
+export function useSampleProjects(): ProjectInfo[] | undefined {
+  const { data: sampleProjects } = useQuery(
+    KEY,
+    () => window.malloy.sampleProjects(),
+    {
+      refetchOnWindowFocus: false,
+    }
   );
-};
+
+  return sampleProjects;
+}

@@ -72,7 +72,7 @@ export const MarkdownNode: React.FC<{
     case "strong":
       return <b>{children(node)}</b>;
     case "paragraph":
-      return <p>{children(node)}</p>;
+      return <MarkdownParagraph>{children(node)}</MarkdownParagraph>;
     case "link":
       return (
         <MarkdownLink href={node.url} onClick={() => openInBrowser(node.url)}>
@@ -114,7 +114,8 @@ export const MarkdownNode: React.FC<{
       switch (node.name) {
         case "malloy-query":
           return (
-            <button
+            <MarkdownLink
+              href="#"
               onClick={() => {
                 loadQueryLink(
                   node.attributes?.model || "",
@@ -123,8 +124,8 @@ export const MarkdownNode: React.FC<{
                 );
               }}
             >
-              Load Query
-            </button>
+              <code>{node.attributes?.query}</code>
+            </MarkdownLink>
           );
         default:
           return <></>;
@@ -171,22 +172,80 @@ const MarkdownCodeBlock: React.FC<MarkdownCodeBlockProps> = ({
     highlightPre(code, language).then(setPre);
   }, [code, language]);
 
-  return pre ? <DOMElement element={pre} /> : <pre>{code}</pre>;
+  return pre ? (
+    <MarkdownPreWrapper>
+      <DOMElement element={pre} />
+    </MarkdownPreWrapper>
+  ) : (
+    <pre>{code}</pre>
+  );
 };
 
-const MarkdownHeading1 = styled.h1``;
-const MarkdownHeading2 = styled.h2``;
-const MarkdownHeading3 = styled.h3``;
-const MarkdownHeading4 = styled.h4``;
-const MarkdownHeading5 = styled.h5``;
-const MarkdownHeading6 = styled.h6``;
+const MarkdownHeading1 = styled.h1`
+  font-size: 21px;
+  font-weight: 500;
+  margin-block-end: 8px;
+  margin-block-start: 16px;
+`;
+
+const MarkdownHeading2 = styled.h2`
+  font-size: 19px;
+  font-weight: 500;
+  margin-block-end: 8px;
+  margin-block-start: 16px;
+`;
+
+const MarkdownHeading3 = styled.h3`
+  font-size: 17px;
+  font-weight: 500;
+  margin-block-end: 8px;
+  margin-block-start: 16px;
+`;
+
+const MarkdownHeading4 = styled.h4`
+  font-size: 15px;
+  font-weight: 500;
+  margin-block-end: 8px;
+  margin-block-start: 16px;
+`;
+
+const MarkdownHeading5 = styled.h5`
+  font-size: 14px;
+  font-weight: 500;
+  margin-block-end: 8px;
+  margin-block-start: 16px;
+`;
+
+const MarkdownHeading6 = styled.h6`
+  font-size: 14px;
+  font-weight: 500;
+  margin-block-end: 8px;
+  margin-block-start: 16px;
+`;
 
 const MarkdownDocumentRoot = styled.div`
-  padding: 0 10px 10px 10px;
+  padding: 10px 30px 30px 30px;
   width: 100%;
   font-family: Google Sans;
+  max-width: 900px;
 `;
 
 const MarkdownLink = styled.a`
   color: ${COLORS.dimension.fillStrong};
+`;
+
+const MarkdownParagraph = styled.p`
+  font-size: 14px;
+  margin-block-start: 8px;
+  color: #4B4C50;
+`;
+
+const MarkdownPreWrapper = styled.div`
+  pre {
+    font-size: 14px;
+    border: 1px solid #efefef;
+    border-radius: 5px;
+    padding: 10px;
+    background-color: #fbfbfb;
+  }
 `;

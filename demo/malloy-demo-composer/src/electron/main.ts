@@ -24,6 +24,7 @@ import { searchIndex } from "./search";
 import { topValues } from "./top_values";
 import { Analysis } from "../types";
 import { getOpenDirectory } from "./file_system";
+import { getSampleProjects } from "./sample_projects";
 
 function createWindow() {
   const mainWindow = new BrowserWindow({
@@ -129,5 +130,9 @@ async function registerIPC(): Promise<void> {
 
   ipcMain.handle("post:open_link", async (_event, url) => {
     shell.openExternal(url);
+  });
+
+  ipcMain.handle("get:sample_projects", async (_event) => {
+    return await getSampleProjects();
   });
 }

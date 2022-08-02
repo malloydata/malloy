@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -11,14 +11,4 @@
  * GNU General Public License for more details.
  */
 
-import logoSrc from "../assets/img/logo.png";
-
-export const MalloyLogo: React.FC = () => {
-  return (
-    <img
-      src={logoSrc}
-      alt="Malloy"
-      style={{ height: "30px", marginRight: "12px" }}
-    />
-  );
-};
+export { ChannelButton } from "./ChannelButton";

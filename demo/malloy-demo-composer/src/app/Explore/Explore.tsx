@@ -15,7 +15,8 @@ import { useState } from "react";
 import styled from "styled-components";
 import { Analysis, Directory, Model } from "../../types";
 import { useDirectory } from "../data/use_directory";
-import { Button } from "../CommonElements";
+import { Button, PageContent } from "../CommonElements";
+import { ChannelButton } from "../ChannelButton";
 import { MalloyLogo } from "../MalloyLogo";
 import { ActionIcon } from "../ActionIcon";
 import { DirectoryPicker } from "../DirectoryPicker";
@@ -26,6 +27,9 @@ import { useQueryBuilder } from "../hooks";
 import { ExploreQueryEditor } from "../ExploreQueryEditor";
 import { MarkdownDocument } from "../MarkdownDocument";
 import { compileModel } from "../../core/compile";
+import { ExploreSamplesPage } from "../ExploreSamplesPage";
+import { useSampleProjects } from "../data";
+import { COLORS } from "../colors";
 
 const KEY_MAP = {
   REMOVE_FIELDS: "command+k",
@@ -55,6 +59,7 @@ export const Explore: React.FC = () => {
   });
   const topValues = useTopValues(analysis);
   const [section, setSection] = useState("query");
+  const sampleProjects = useSampleProjects();
 
   const loadQueryLink = (
     modelPath: string,
@@ -123,15 +128,15 @@ export const Explore: React.FC = () => {
       <Header>
         <HeaderLeft>
           <MalloyLogo />
-          <DirectoryPicker
-            directory={directory}
-            analysis={analysis}
-            selectAnalysis={selectAnalysis}
-          />
           <ActionIcon
             action="open-directory"
             onClick={beginOpenDirectory}
             color="dimension"
+          />
+          <DirectoryPicker
+            directory={directory}
+            analysis={analysis}
+            selectAnalysis={selectAnalysis}
           />
         </HeaderLeft>
         {!isRunning && <Button onClick={() => runQuery()}>Run</Button>}
@@ -143,34 +148,70 @@ export const Explore: React.FC = () => {
       </Header>
       <Body>
         <Content>
-          <SideSidebar>
-            <button onClick={() => setSection("query")}>Query</button>
-            <button onClick={() => setSection("about")}>About</button>
-          </SideSidebar>
-          {section === "query" && (
-            <ExploreQueryEditor
-              source={source}
-              analysis={analysis}
-              queryModifiers={queryModifiers}
-              topValues={topValues}
-              queryName={queryName}
-              querySummary={querySummary}
-              queryMalloy={queryMalloy}
-              dataStyles={dataStyles}
-              result={result}
-              isRunning={isRunning}
-            />
-          )}
-          {section === "about" && directory?.readme && (
-            <ScrollContent>
-              <MarkdownDocument
-                content={directory?.readme}
-                loadQueryLink={loadQueryLink}
+          <Channel>
+            <ChannelTop>
+              <ChannelButton
+                onClick={() => setSection("query")}
+                text="Query"
+                icon="query"
+                selected={section === "query"}
+              ></ChannelButton>
+              <ChannelButton
+                onClick={() => setSection("about")}
+                text="About"
+                icon="about"
+                selected={section === "about"}
+              ></ChannelButton>
+            </ChannelTop>
+            <ChannelBottom>
+              <ChannelButton
+                onClick={() => setSection("samples")}
+                text="Samples"
+                icon="samples"
+                selected={section === "samples"}
+              ></ChannelButton>
+            </ChannelBottom>
+          </Channel>
+          <Page>
+            {section === "query" && (
+              <ExploreQueryEditor
+                source={source}
+                analysis={analysis}
+                queryModifiers={queryModifiers}
+                topValues={topValues}
+                queryName={queryName}
+                querySummary={querySummary}
+                queryMalloy={queryMalloy}
+                dataStyles={dataStyles}
+                result={result}
+                isRunning={isRunning}
               />
-            </ScrollContent>
-          )}
+            )}
+            {section === "about" && (
+              <PageContent>
+                <ScrollContent>
+                  <MarkdownDocument
+                    content={
+                      directory?.readme ||
+                      "# No Readme\nThis project has no readme"
+                    }
+                    loadQueryLink={loadQueryLink}
+                  />
+                </ScrollContent>
+              </PageContent>
+            )}
+            {section === "samples" && (
+              <PageContent>
+                <ScrollContent>
+                  <ExploreSamplesPage sampleProjects={sampleProjects} />
+                </ScrollContent>
+              </PageContent>
+            )}
+          </Page>
+          <RightChannel />
         </Content>
       </Body>
+      <BottomChannel />
     </Main>
   );
 };
@@ -181,6 +222,7 @@ const Main = styled(HotKeys)`
   width: 100%;
   height: 100%;
   outline: none;
+  background-color: ${COLORS.mainBackground};
 `;
 
 const Body = styled.div`
@@ -197,25 +239,39 @@ const Content = styled.div`
   flex-direction: row;
   height: 100%;
   overflow: hidden;
+  background-color: ${COLORS.mainBackground};
 `;
 
-const SideSidebar = styled.div`
+const Channel = styled.div`
   width: 70px;
   min-width: 70px;
-  border-right: 1px solid #efefef;
   height: 100%;
   display: flex;
   flex-direction: column;
+  background-color: ${COLORS.mainBackground};
+  justify-content: space-between;
+`;
+
+const ChannelTop = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+`;
+
+const ChannelBottom = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
 `;
 
 const Header = styled.div`
   height: 40px;
-  border-bottom: 1px solid #efefef;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 5px 20px;
+  background-color: ${COLORS.mainBackground};
 `;
 
 const HeaderLeft = styled.div`
@@ -226,4 +282,25 @@ const HeaderLeft = styled.div`
 
 const ScrollContent = styled(Content)`
   overflow-y: auto;
+  background-color: unset;
+`;
+
+const Page = styled(Content)``;
+
+const RightChannel = styled.div`
+  width: 10px;
+  min-width: 10px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: ${COLORS.mainBackground};
+`;
+
+const BottomChannel = styled.div`
+  width: 100%;
+  min-height: 10px;
+  height: 10px;
+  display: flex;
+  flex-direction: column;
+  background-color: ${COLORS.mainBackground};
 `;

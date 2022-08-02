@@ -17,3 +17,4 @@ export { useDirectory } from "./use_directory";
 export { useSearch } from "./use_search";
 export { useWatchAnalysis } from "./use_watch_analysis";
 export { openInBrowser } from "./open_in_browser";
+export { useSampleProjects } from "./use_sample_projects";
