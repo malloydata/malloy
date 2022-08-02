@@ -11,7 +11,7 @@
 // import existing source 'flights' from flights.malloy
 //  see: https://looker-open-source.github.io/malloy/documentation/language/imports.html
 //
-import "flights.malloy"
+import "1_flights.malloy"
 
 
 // source 'flights_carrier' refines source 'flights' 
@@ -37,7 +37,7 @@ source: flights_carrier is flights + {
       group_by: destination.code, destination.full_name
       aggregate:
         flight_count
-        flights_to_dest is exclude(flight_count, carrier_name)*100
+        flights_to_dest is exclude(flight_count, carrier_name)
         percentage_of_this_carriers_flights_to_this_destination
           is flight_count/all(flight_count)*100
         percentage_of_all_flights_on_all_carriers_to_this_destination
