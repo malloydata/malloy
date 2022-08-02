@@ -1,22 +1,23 @@
 # About the IMDb Dataset
 
-IMDb makes data available for download via [their website](https://www.imdb.com/interfaces/). We provide a makefile to help download and prepare the data for use with the provided Malloy models. These are available as TSV files, so we'll transform them into parquet format and access them with DuckDB.
+IMDb makes data available for download via [their website](https://www.imdb.com/interfaces/). 
 
-One metric used repeatedly in this model is `ratings.numVotes`, the number of votes the title has received. Where `ratings.averageRating` of course indicates how much people _liked_ a movie, `numVotes` is a better proxy for overall popularity of a title.
+## Getting the Data and Making it Usable
+
+We provide a *makefile* to help download and prepare the data for use with the provided Malloy models. The IMDB Data is available as TSV files.  For efficiency of querying, we will transform data into parquet format with DuckDB.
 
 ## Required Tools
-  * [Malloy VS Code Extension](https://marketplace.visualstudio.com/items?itemName=malloydata.malloy-vscode)
+Please install the tools below.
+
   * [wget](https://www.gnu.org/software/wget/) or [curl](https://curl.se/download.html) - to fetch the data from the server
-  * [duckdb ](https://duckdb.org/docs/installation/index) CLI - to convert the data to parquet files. _Note: Don't use the Homebrew build as it does not have the parquet extension built in._
+  * [duckdb CLI](https://duckdb.org/docs/installation/index) to convert the data to parquet files.  _Note: Don't use the Homebrew build as it does not have the parquet extension built in._
 
 ## Setup
-1. Run `make` to download and prepare the data.
-2. Open VSCode, search the Extensions Marketplace for 'Malloy', and install the Malloy Extension.
-3. Open any of the Malloy files and hit 'run' above any of the queries.
+  Run `make` to download and prepare the data.
+
 
 ## Model Notes
 The `movies` source filters only to films with > 10,000 ratings.
-
 
 ## Preview
 

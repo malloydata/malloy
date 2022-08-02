@@ -1,4 +1,5 @@
-// IMPORTANT: Before using this model, you will need to download and process the data. Please see README.MD for instructions.
+// IMPORTANT: Before using this model, you will need to download and process the data. 
+//  Please see README.MD for instructions.
 
 import "1_imdb.malloy"
 import "3_movie_filters.malloy"
