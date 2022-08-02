@@ -1,4 +1,3 @@
-import "1_flights.malloy"
 
 // Sessionization - 
 //  This is a subset of the data.
@@ -12,6 +11,7 @@ import "1_flights.malloy"
 //  see: https://looker-open-source.github.io/malloy/documentation/patterns/foreign_sums.html
 //  
 
+import "2_flights.malloy"
 source: flights_sessions is flights {
  
   query: sessionize is {

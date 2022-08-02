@@ -1,4 +1,3 @@
-import "1_airports.malloy"
 //
 // Flights example model.  Joins multipe tables into a 'source'
 //
@@ -11,6 +10,13 @@ import "1_airports.malloy"
 source: carriers is table('duckdb:data/carriers.parquet') + {
   primary_key: code
   measure: carrier_count is count()
+}
+
+source: airports is table('duckdb:data/airports.parquet') + {
+  primary_key: code
+  measure: airport_count is count()
+  dimension: name is concat(code, '-', full_name )
+
 }
 
 source: aircraft_models is table('duckdb:data/aircraft_models.parquet') + {

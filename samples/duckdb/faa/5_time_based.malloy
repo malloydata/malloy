@@ -1,8 +1,7 @@
-import "1_flights.malloy"
-
 // Time based Analysis
 //  
 
+import "2_flights.malloy"
 source: flights_carrier is flights {
 
   // make some data
