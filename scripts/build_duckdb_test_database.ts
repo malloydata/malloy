@@ -13,7 +13,11 @@
 
 /* eslint-disable no-console */
 
-import duckdb from "duckdb";
+// duckdb node bindings do not come with Typescript types, require is required
+// https://github.com/duckdb/duckdb/tree/master/tools/nodejs
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const duckdb = require("duckdb");
+
 import fs from "fs";
 
 const cwd = "./test/data/duckdb/";
