@@ -138,8 +138,7 @@ const QueryBarInner = styled.div`
 `;
 
 const SidebarHeader = styled(PageHeader)`
-  gap: 10px;
-  justify-content: space-around;
+  gap: 20px;
+  justify-content: center;
   align-items: center;
-  gap: 5px;
 `;

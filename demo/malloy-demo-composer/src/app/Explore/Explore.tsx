@@ -110,7 +110,11 @@ export const Explore: React.FC = () => {
 
   useEffect(() => {
     if (directory) {
-      setSection("about");
+      if (directory.readme) {
+        setSection("about");
+      }
+      setAnalysis(undefined);
+      clearQuery();
     }
   }, [directory]);
 
@@ -164,6 +168,7 @@ export const Explore: React.FC = () => {
                 text="About"
                 icon="about"
                 selected={section === "about"}
+                disabled={directory?.readme == undefined}
               ></ChannelButton>
             </ChannelTop>
             <ChannelBottom></ChannelBottom>
@@ -186,15 +191,13 @@ export const Explore: React.FC = () => {
               )}
               {section === "about" && (
                 <PageContent>
-                  <ScrollContent>
-                    <MarkdownDocument
-                      content={
-                        directory?.readme ||
-                        "# No Readme\nThis project has no readme"
-                      }
-                      loadQueryLink={loadQueryLink}
-                    />
-                  </ScrollContent>
+                  <MarkdownDocument
+                    content={
+                      directory?.readme ||
+                      "# No Readme\nThis project has no readme"
+                    }
+                    loadQueryLink={loadQueryLink}
+                  />
                 </PageContent>
               )}
               <ErrorMessage error={error} />

@@ -1,6 +1,6 @@
 # About the IMDb Dataset
 
-IMDb makes data available for download via [their website](https://www.imdb.com/interfaces/). 
+IMDb makes data available for download via [their website](https://www.imdb.com/interfaces/).
 
 ## Getting the Data and Making it Usable
 
@@ -59,19 +59,26 @@ A mapping table between people and titles, principals shows the principal cast/c
 
 ## Queries in `imdb.malloy`
 
-**by_title** - title, start year, and number of ratings received, ordered by number of ratings.
+### :malloy-query{ model="./1_imdb.malloy" query="by_title" source="movies" }
+Title, start year, and number of ratings received, ordered by number of ratings.
 
-**by_year** - the number of titles produced per year
+### :malloy-query{ model="./1_imdb.malloy" query="by_year" source="movies" }
+The number of titles produced per year
 
-**by_name** - for each person, the overall number of ratings on titles they were in, and the count of titles.
+### :malloy-query{ model="./1_imdb.malloy" query="by_name" source="movies" }
+For each person, the overall number of ratings on titles they were in, and the count of titles.
 
-**by_job_category** - job category by number of titles
+### :malloy-query{ model="./1_imdb.malloy" query="by_job_category" source="movies" }
+Job category by number of titles
 
-**by_genre** - for each genre, the count of titles, and percent of all titles that are this genre. Note that a film may have multiple genres.
+### :malloy-query{ model="./1_imdb.malloy" query="by_genre" source="movies" }
+For each genre, the count of titles, and percent of all titles that are this genre. Note that a film may have multiple genres.
 
-**by_character** - number of titles for each character name
+### :malloy-query{ model="./1_imdb.malloy" query="by_character" source="movies" }
+Number of titles for each character name
 
-**by_year_and_genre** - for each year, the number of titles plus `by_genre` nested to show the breakdown by genre.
+### :malloy-query{ model="./1_imdb.malloy" query="by_year_and_genre" source="movies" }
+For each year, the number of titles plus :malloy-query{ model="./1_imdb.malloy" query="by_genre" source="movies" } nested to show the breakdown by genre.
 
 ## About Additional Analyses
 

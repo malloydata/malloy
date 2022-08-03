@@ -50,7 +50,11 @@ export const MarkdownNode: React.FC<{
   );
   switch (node.type) {
     case "root":
-      return <MarkdownDocumentRoot>{children(node)}</MarkdownDocumentRoot>;
+      return <MarkdownDocumentRoot>
+        <MarkdownDocumentRootInner>
+          {children(node)}
+        </MarkdownDocumentRootInner>
+      </MarkdownDocumentRoot>;
     case "heading":
       switch (node.depth) {
         case 1:
@@ -103,11 +107,11 @@ export const MarkdownNode: React.FC<{
     case "list":
       return <ul>{children(node)}</ul>;
     case "table":
-      return <table>{children(node)}</table>;
+      return <MarkdownTable><tbody>{children(node)}</tbody></MarkdownTable>;
     case "tableRow":
       return <tr>{children(node)}</tr>;
     case "tableCell":
-      return <td>{children(node)}</td>;
+      return <MarkdownTableCell>{children(node)}</MarkdownTableCell>;
     case "thematicBreak":
       return <hr />;
     case "textDirective":
@@ -181,6 +185,20 @@ const MarkdownCodeBlock: React.FC<MarkdownCodeBlockProps> = ({
   );
 };
 
+const MarkdownTable = styled.table`
+  border: 1px solid #eaeaea;
+  vertical-align: top;
+  border-bottom: 1px solid #eaeaea;
+  border-collapse: collapse;
+  width: 100%;
+`;
+
+const MarkdownTableCell = styled.td`
+  padding: 8px;
+  vertical-align: top;
+  border-bottom: 1px solid #eaeaea;
+`;
+
 const MarkdownHeading1 = styled.h1`
   font-size: 21px;
   font-weight: 500;
@@ -227,8 +245,12 @@ const MarkdownDocumentRoot = styled.div`
   padding: 10px 30px 30px 30px;
   width: 100%;
   font-family: Google Sans;
-  max-width: 900px;
+  overflow-y: auto;
 `;
+
+const MarkdownDocumentRootInner = styled.div`
+  max-width: 900px;
+`
 
 const MarkdownLink = styled.a`
   color: ${COLORS.dimension.fillStrong};

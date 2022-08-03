@@ -19,16 +19,17 @@ export const ChannelButton: React.FC<{
   text: string;
   onClick: () => void;
   selected: boolean;
-}> = ({ icon, text, onClick, selected }) => {
+  disabled?: boolean;
+}> = ({ icon, text, onClick, selected, disabled = false }) => {
   return (
-    <StyledButton onClick={onClick} selected={selected}>
+    <StyledButton onClick={onClick} selected={selected} disabled={disabled}>
       <ChannelIcon name={icon} />
       {text}
     </StyledButton>
   );
 };
 
-const StyledButton = styled.button<{ selected: boolean }>`
+const StyledButton = styled.button<{ selected: boolean, disabled: boolean }>`
   outline: none;
   border: none;
   color: ${COLORS.dimension.fillStrong};
@@ -38,31 +39,40 @@ const StyledButton = styled.button<{ selected: boolean }>`
   gap: 8px;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
   padding: 10px;
   font-weight: 600;
 
-  color: ${COLORS.other.fillStrong};
+  ${({ selected, disabled }) =>
+    (!disabled ? `
+      cursor: pointer;
 
-  &:hover {
-    background-color: ${COLORS.other.fillLight};
+      &:hover {
+        background-color: ${COLORS.other.fillLight};
+      }
+
+      .primary-fill {
+        fill: ${COLORS.other.fillStrong};
+      }
+
+      color: ${COLORS.other.fillStrong};
+    ` : `
+      .primary-fill {
+        fill: ${COLORS.other.fillMedium};
+      }
+
+      color: ${COLORS.other.fillMedium};
+    `) +
+    (selected ?
+      `
+      color: ${COLORS.dimension.fillStrong};
+
+      &:hover {
+        background-color: ${COLORS.dimension.fillLight};
+      }
+
+      .primary-fill {
+        fill: ${COLORS.dimension.fillStrong};
+      }
+      ` : "")
   }
-
-  .primary-fill {
-    fill: ${COLORS.other.fillStrong};
-  }
-
-  ${({ selected }) =>
-    selected &&
-    `
-    color: ${COLORS.dimension.fillStrong};
-
-    &:hover {
-      background-color: ${COLORS.dimension.fillLight};
-    }
-
-    .primary-fill {
-      fill: ${COLORS.dimension.fillStrong};
-    }
-  `}
 `;

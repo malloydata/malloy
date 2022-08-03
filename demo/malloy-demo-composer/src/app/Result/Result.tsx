@@ -184,6 +184,7 @@ const OuterDiv = styled.div`
 const ContentDiv = styled(PageContent)`
   padding: 20px;
   overflow: auto;
+  width: auto;
 `;
 
 const ResultHeader = styled(PageHeader)`
