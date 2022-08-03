@@ -13,7 +13,7 @@
 
 /* eslint-disable no-console */
 
-import * as duckdb from "duckdb";
+import duckdb from "duckdb";
 import fs from "fs";
 
 const cwd = "./test/data/duckdb/";
