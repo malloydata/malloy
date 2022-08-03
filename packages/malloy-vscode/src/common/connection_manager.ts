@@ -56,6 +56,7 @@ const getConnectionForConfig = async (
           defaultProject: connectionConfig.projectName,
           serviceAccountKeyPath: connectionConfig.serviceAccountKeyPath,
           location: connectionConfig.location,
+          maximumBytesBilled: connectionConfig.maximumBytesBilled,
         }
       );
       if (useCache) {
