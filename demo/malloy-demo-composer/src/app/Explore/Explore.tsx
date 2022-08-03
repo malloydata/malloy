@@ -68,7 +68,9 @@ export const Explore: React.FC = () => {
     queryName: string
   ) => {
     let current: Directory | Model | Analysis | undefined = directory;
-    // TODO I don't really know how to do this in the browser, so this is maybe wrong
+    // Note, this only works for relative paths like ./dir/model.malloy
+    // and cannot go up the directory hierarchy. Therefore, it will only load
+    // models in the same directory.
     for (const segment of modelPath.split("/")) {
       if (segment === ".") {
         continue;
