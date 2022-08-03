@@ -1865,11 +1865,10 @@ export class ExistingQuery extends PipelineDesc {
       sourcePipe.pipeline,
       new DynamicSpace(walkStruct)
     );
-
+    const destPipe = { ...sourcePipe, pipeline: appended.opList };
     const query: model.Query = {
       type: "query",
-      ...sourcePipe,
-      ...appended.opList,
+      ...destPipe,
       structRef: queryHead.structRef(),
       location: this.location,
     };
