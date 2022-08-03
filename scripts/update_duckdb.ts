@@ -5,7 +5,8 @@ import * as zlib from "zlib";
 import fetch from "node-fetch";
 import tar from "tar-stream";
 
-import duckdbPackage from "@malloydata/db-duckdb/package.json";
+const json = fs.readFileSync("packages/malloy-db-duckdb/package.json", "utf-8");
+const duckdbPackage = JSON.parse(json);
 
 const DUCKDB_VERSION = duckdbPackage.dependencies.duckdb;
 
