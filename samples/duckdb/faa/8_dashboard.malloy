@@ -1,5 +1,3 @@
-import "1_flights.malloy"
-
 // Dashboard
 //  Runs as a single query, nesting all the results
 //  View the results as JSON to see the data returned.
@@ -13,6 +11,7 @@ import "1_flights.malloy"
 //  https://looker-open-source.github.io/malloy/documentation/language/nesting.html
 //
 
+import "2_flights.malloy"
 source: flights_dashboarding is flights {
  
   query: carrier_dashboard is { //# dashboard
@@ -21,13 +20,14 @@ source: flights_dashboarding is flights {
     nest: by_manufacturer is {
       group_by: aircraft.aircraft_models.manufacturer
       aggregate: flight_count, aircraft.aircraft_count
+      limit: 3
     }
     nest: by_month_line_chart is {         //# line_chart
       group_by: dep_month is dep_time.month
       aggregate: flight_count
     }
     nest: hubs is {
-      top: 10
+      top: 5
       where: destination.airport_count > 1
       group_by: hub is origin.name
       aggregate: destination_count is destination.airport_count
