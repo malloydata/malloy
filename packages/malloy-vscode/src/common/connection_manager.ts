@@ -56,6 +56,7 @@ const getConnectionForConfig = async (
           defaultProject: connectionConfig.projectName,
           serviceAccountKeyPath: connectionConfig.serviceAccountKeyPath,
           location: connectionConfig.location,
+          maximumBytesBilled: connectionConfig.maximumBytesBilled,
         }
       );
       if (useCache) {
@@ -194,15 +195,16 @@ export class ConnectionManager {
   }
 
   buildConfigMap(configs: ConnectionConfig[]): void {
-    if (configs.length === 0) {
-      configs = [
-        {
-          name: "bigquery",
-          backend: ConnectionBackend.BigQuery,
-          id: "bigquery-default",
-          isDefault: true,
-        },
-      ];
+    // Create a default bigquery connection if one isn't configured
+    if (
+      !configs.find((config) => config.backend === ConnectionBackend.BigQuery)
+    ) {
+      configs.push({
+        name: "bigquery",
+        backend: ConnectionBackend.BigQuery,
+        id: "bigquery-default",
+        isDefault: !configs.find((config) => config.isDefault),
+      });
     }
 
     // Create a default duckdb connection if one isn't configured

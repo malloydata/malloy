@@ -1,0 +1,31 @@
+// Routes analysis
+//  Where do carriers fly?
+
+// flight_count - imported from flights.malloy
+//    https://looker-open-source.github.io/malloy/documentation/language/aggregates.html
+
+import "2_flights.malloy"
+source: flights_carrier is flights {
+
+  query: top_routes_map is {
+    group_by:
+      origin.latitude
+      origin.longitude
+      latitude2 is destination.latitude
+      longitude2 is destination.longitude
+    aggregate: flight_count
+    limit: 100
+  }
+
+  // Nests results
+  //  see: https://looker-open-source.github.io/malloy/documentation/language/nesting.html
+  //
+  // Segment Map
+  //  see: https://looker-open-source.github.io/malloy/documentation/visualizations/segment_maps.html
+  query: carrier_routes is {
+    group_by: carriers.nickname
+    aggregate: flight_count
+    nest: top_routes_segment_map is top_routes_map
+  }
+
+}

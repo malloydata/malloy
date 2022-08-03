@@ -1,0 +1,23 @@
+{
+  "by_category": {
+    "renderer": "bar_chart"
+  },  
+  "by_class": {
+    "renderer": "bar_chart"
+  },
+  "by_sku": {
+    "renderer": "bar_chart"
+  },
+  "by_month": {
+    "renderer": "line_chart"
+  },
+  "by_vendor": {
+    "renderer": "dashboard"
+  },
+  "vendor_dashboard": {
+    "renderer": "dashboard"
+  },
+  "total_purchased": {
+    "renderer": "currency"
+  }
+}

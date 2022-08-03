@@ -1,0 +1,11 @@
+{
+  "by_hour_of_day" : {
+    "renderer" : "bar_chart"
+  },
+  "by_device" : {
+    "renderer" : "bar_chart"
+  },
+  "by_category" : {
+    "renderer" : "bar_chart"
+  }
+}

@@ -1,0 +1,37 @@
+//
+//  Basic Example
+//
+//  Documentation: Malloy by Example
+//    https://looker-open-source.github.io/malloy/documentation/index.html
+//
+//  
+
+source: airports is table('duckdb:data/airports.parquet') {
+  measure: airport_count is count()
+
+  query: by_state is {
+    where: state != null
+    group_by: state
+    aggregate: airport_count
+  }
+
+  query: by_facility_type is {
+    group_by: fac_type
+    aggregate:
+      airport_count
+      avg_elevation is elevation.avg()
+  }
+
+  // RUN THIS :) !!
+  query: airports_by_region_dashboard is {
+    group_by: faa_region
+    aggregate: airport_count
+    nest:
+      by_state_shape_map is by_state 
+      by_facility_type
+  }
+
+  query: select_star is {
+    project: *
+  }
+}

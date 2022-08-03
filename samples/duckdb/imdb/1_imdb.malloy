@@ -1,0 +1,78 @@
+// IMPORTANT: Before using this model, you will need to download and process the data. 
+//  Please see README.MD for instructions.
+
+source: people is table('duckdb:data/names.parquet') {
+// cast, crew, everyone involved in movies
+  primary_key: nconst
+}
+
+source: principals is table('duckdb:data/principals.parquet') {
+// a mapping table that links people to movies, along with their job on that movie.
+  join_one: people is people on nconst = people.nconst
+}
+
+source: movies is table('duckdb:data/titles.parquet') + {
+// all the movies
+  join_many: principals on tconst = principals.tconst
+  where: ratings.numVotes > 10000
+  primary_key: tconst
+
+  declare:
+    title_count is count(distinct tconst)
+    row_count is count()
+    total_ratings is sum(ratings.numVotes/1000.0)
+
+  query: by_title is {
+    group_by: primaryTitle, startYear, ratings.numVotes
+    order_by: 3 desc
+  }
+  query: by_year is {
+    group_by: startYear
+    aggregate: title_count
+    order_by: startYear desc
+  }
+
+  query: by_name is {
+    group_by:
+      principals.people.primaryName, principals.nconst
+    aggregate:
+      total_ratings
+      title_count
+  }
+  query: by_job_category is {
+    group_by: job_category is principals.category
+    aggregate: title_count
+  }
+
+  query: by_genre is {
+    aggregate: title_count
+    nest: b is {
+      group_by: genres.value
+      aggregate: title_count, total_ratings
+    }
+  }
+  -> {
+    group_by: b.value, b.title_count, percent_of_title_count is b.title_count/title_count * 100.0
+    order_by: 3 desc
+  }
+
+  query: by_character is {
+    group_by: principals.characters.value
+    aggregate: title_count
+  }
+
+  query: by_year_and_genre is by_year + {
+    nest: by_genre
+  }
+
+  query: search_index is {
+    //index: * by total_ratings
+    index: 
+      genres.value, 
+      principals.people.primaryName, 
+      primaryTitle,
+      characters.value 
+      by total_ratings
+    where: ratings.numVotes > 100000
+  }
+}

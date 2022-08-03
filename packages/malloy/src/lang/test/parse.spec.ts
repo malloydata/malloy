@@ -16,6 +16,7 @@ import { TranslateResponse } from "..";
 import {
   DocumentLocation,
   DocumentPosition,
+  Query,
   SQLBlock,
   StructDef,
 } from "../../model";
@@ -67,6 +68,28 @@ class BetaModel extends Testable {
 
   unresolved(): DataRequestResponse {
     return this.importsAndTablesStep.step(this);
+  }
+
+  getSourceDef(srcName: string): StructDef | undefined {
+    const t = this.translate().translated;
+    if (t) {
+      const s = t.modelDef.contents[srcName];
+      if (s.type == "struct") {
+        return s;
+      }
+    }
+    return undefined;
+  }
+
+  getQuery(queryName: string): Query | undefined {
+    const t = this.translate().translated;
+    if (t) {
+      const s = t.modelDef.contents[queryName];
+      if (s.type == "query") {
+        return s;
+      }
+    }
+    return undefined;
   }
 }
 
@@ -154,16 +177,12 @@ expect.extend({
     const exprModel = new BetaModel(
       `explore: x is a { dimension: d is ${functionCall} }`
     );
-    const tx = exprModel.translate();
     expect(exprModel).toTranslate();
-    const model = tx.translated?.modelDef;
-    if (model) {
-      const x = model.contents.x;
-      expect(x).toBeDefined();
-      if (x?.type == "struct") {
-        const d = x.fields.find((f) => f.name === "d");
-        expect(d?.type).toBe(returnType);
-      }
+    const x = exprModel.getSourceDef("x");
+    expect(x).toBeDefined();
+    if (x) {
+      const d = x.fields.find((f) => f.name === "d");
+      expect(d?.type).toBe(returnType);
     }
     return {
       pass: true,
@@ -335,15 +354,11 @@ describe("model statements", () => {
     test("source refinement preserves original", () => {
       const x = new BetaModel("source: na is a + { dimension: one is 1 }");
       expect(x).toTranslate();
-      const t = x.translate().translated;
-      expect(t).toBeDefined();
-      if (t) {
-        const a = t.modelDef.contents.a;
-        if (a.type == "struct") {
-          const aFields = a.fields.map((f) => f.as || f.name);
-          expect(aFields).toContain("astr");
-          expect(aFields).not.toContain("one");
-        }
+      const a = x.getSourceDef("a");
+      if (a) {
+        const aFields = a.fields.map((f) => f.as || f.name);
+        expect(aFields).toContain("astr");
+        expect(aFields).not.toContain("one");
       }
     });
   });
@@ -426,16 +441,11 @@ describe("model statements", () => {
         query: nq is -> q + { group_by: astr }
       `);
       expect(x).toTranslate();
-      const t = x.translate().translated;
-      expect(t).toBeDefined();
-      if (t) {
-        const q = t.modelDef.contents.q;
-        expect(q).toBeDefined();
-        expect(q?.type).toBe("query");
-        if (q && q.type == "query") {
-          const qFields = q.pipeline[0].fields;
-          expect(qFields.length).toBe(1);
-        }
+      const q = x.getQuery("q");
+      expect(q).toBeDefined();
+      if (q) {
+        const qFields = q.pipeline[0].fields;
+        expect(qFields.length).toBe(1);
       }
     });
     test("query composition preserves original", () => {
@@ -444,15 +454,10 @@ describe("model statements", () => {
         query: nq is -> q -> { project: * }
       `);
       expect(x).toTranslate();
-      const t = x.translate().translated;
-      expect(t).toBeDefined();
-      if (t) {
-        const q = t.modelDef.contents.q;
-        expect(q).toBeDefined();
-        expect(q?.type).toBe("query");
-        if (q && q.type == "query") {
-          expect(q.pipeline.length).toBe(1);
-        }
+      const q = x.getQuery("q");
+      expect(q).toBeDefined();
+      if (q) {
+        expect(q.pipeline.length).toBe(1);
       }
     });
   });
@@ -597,9 +602,24 @@ describe("explore properties", () => {
   });
   test("primary_key", modelOK("explore: c is a { primary_key: ai }"));
   test("rename", modelOK("explore: c is a { rename: nn is ai }"));
-  test("accept single", modelOK("explore: c is a { accept: astr }"));
+  test("accept single", () => {
+    const onlyAstr = new BetaModel("explore: c is a { accept: astr }");
+    expect(onlyAstr).toTranslate();
+    const c = onlyAstr.getSourceDef("c");
+    if (c) {
+      expect(c.fields.length).toBe(1);
+    }
+  });
   test("accept multi", modelOK("explore: c is a { accept: astr, af }"));
-  test("except single", modelOK("explore: c is a { except: astr }"));
+  test("except single", () => {
+    const noAstr = new BetaModel("explore: c is a { except: astr }");
+    expect(noAstr).toTranslate();
+    const c = noAstr.getSourceDef("c");
+    if (c) {
+      const foundAstr = c.fields.find((f) => f.name == "astr");
+      expect(foundAstr).toBeUndefined();
+    }
+  });
   test("except multi", modelOK("explore: c is a { except: astr, af }"));
   test(
     "explore-query",
@@ -713,8 +733,7 @@ describe("qops", () => {
   test(`filters preserve source formatting in code:`, () => {
     const model = new BetaModel(`source: notb is a + { where: astr  !=  'b' }`);
     expect(model).toTranslate();
-    const t = model.translate();
-    const notb = t.translated?.modelDef.contents.notb;
+    const notb = model.getSourceDef("notb");
     expect(notb).toBeDefined();
     if (notb) {
       const f = notb.filterList;
@@ -729,11 +748,9 @@ describe("qops", () => {
       `source: notb is a + { dimension: d is 1 +   2 }`
     );
     expect(model).toTranslate();
-    const t = model.translate();
-    const notb = t.translated?.modelDef.contents.notb;
+    const notb = model.getSourceDef("notb");
     expect(notb).toBeDefined();
-    expect(notb?.type).toBe("struct");
-    if (notb?.type === "struct") {
+    if (notb) {
       const d = notb.fields.find((f) => f.as || f.name === "d");
       expect(d).toBeDefined();
       expect(d?.type).toBe("number");
@@ -1080,9 +1097,7 @@ describe("sql backdoor", () => {
         model.update({ sqlStructs: { [refKey]: makeSchemaResponse(sql) } });
         expect(model).toTranslate();
       }
-      const modelDef = model.translate().translated?.modelDef;
-      expect(modelDef).toBeDefined();
-      const users = modelDef?.contents.malloyUsers;
+      const users = model.getSourceDef("malloyUsers");
       expect(users).toBeDefined();
       expect(users).toHaveProperty(
         "structSource.sqlBlock.connection",
@@ -2160,6 +2175,20 @@ describe("pipeline comprehension", () => {
       query: aqf is aq -> { project: * }
     `)
   );
+  test("new query appends to existing query", () => {
+    const src = `
+      query: s1 is table('malloytest.flights') -> {
+        group_by: origin, destination
+      }
+      query: s2 is ->s1 ->{
+        group_by: destination
+      }
+    `;
+    const m = new BetaModel(src);
+    expect(m).toTranslate();
+    const s2 = m.getQuery("s2");
+    expect(s2?.pipeline.length).toBe(2);
+  });
 });
 
 describe("standard sql function return types", () => {

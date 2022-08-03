@@ -122,6 +122,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.value[0].avg_year).toBe(1969);
     expect(result.data.value[0].avg_seats).toBe(7);
   });
+
   it(`join_many condition no primary key - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
@@ -301,6 +302,28 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.resultExplore.limit).toBe(3);
   });
 
+  // it(`number as null- ${databaseName}`, async () => {
+  //   // a cross join produces a Many to Many result.
+  //   // symmetric aggregate are needed on both sides of the join
+  //   // Check the row count and that sums on each side work properly.
+  //   const result = await runtime
+  //     .loadQuery(
+  //       `
+  //       source: s is table('malloytest.state_facts') + {
+  //       }
+  //       query: s-> {
+  //         group_by: state
+  //         nest: ugly is {
+  //           group_by: popular_name
+  //           aggregate: foo is NULLIF(sum(airport_count)*0,0)+1
+  //         }
+  //       }
+  //     `
+  //     )
+  //     .run();
+  //   expect(result.data.path(0, "ugly", 0, "foo").value).toBe(null);
+  // });
+
   it(`limit - not provided - ${databaseName}`, async () => {
     // a cross join produces a Many to Many result.
     // symmetric aggregate are needed on both sides of the join
@@ -375,12 +398,33 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             group_by: popular_name
             aggregate: total_births
           }
+          limit: 1000
         }
       `
       )
       .run();
     // console.log(result.sql);
     expect(result.data.path(0, "births_per_100k").value).toBe(9742);
+  });
+
+  it(`ungrouped - eliminate rows  - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: s is table('malloytest.state_facts') + {
+          measure: m is all(births.sum())
+          where: state='CA' | 'NY'
+        }
+
+        query:s-> {
+          group_by: state
+          aggregate: m
+        }
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    expect(result.data.toObject().length).toBe(2);
   });
 
   it(`ungrouped nested with no grouping above - ${databaseName}`, async () => {
@@ -407,6 +451,51 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.path(0, "by_name", 0, "births_per_100k").value).toBe(
       66703
     );
+  });
+
+  it(`ungrouped - partial grouping - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: airports is table('malloytest.airports') {
+          measure: c is count()
+        }
+
+
+         query: airports -> {
+          where: state = 'TX' | 'NY'
+          group_by:
+            faa_region
+            state
+          aggregate:
+            c
+            all_ is all(c)
+            airport_count is c {? fac_type = 'AIRPORT'}
+          nest: fac_type is {
+            group_by: fac_type
+            aggregate:
+              c
+              all_ is all(c)
+              all_state is all(c,state)
+              all_state_region is exclude(c,fac_type)
+              all_of_this_type is exclude(c, state, faa_region)
+              all_top is exclude(c, state, faa_region, fac_type)
+          }
+        }
+
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    expect(result.data.path(0, "fac_type", 0, "all_").value).toBe(1845);
+    expect(result.data.path(0, "fac_type", 0, "all_state").value).toBe(1389);
+    expect(result.data.path(0, "fac_type", 0, "all_state_region").value).toBe(
+      1845
+    );
+    expect(result.data.path(0, "fac_type", 0, "all_of_this_type").value).toBe(
+      1782
+    );
+    expect(result.data.path(0, "fac_type", 0, "all_top").value).toBe(2421);
   });
 
   it(`ungrouped nested  - ${databaseName}`, async () => {
@@ -499,7 +588,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           aggregate:
             total_births
             all_births is all(total_births)
-            all_name is all(total_births, popular_name)
+            all_name is exclude(total_births, state)
         }
 
       `
@@ -528,7 +617,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             aggregate:
               total_births
               all_births is all(total_births)
-              all_name is all(total_births, popular_name)
+              all_name is exclude(total_births, state)
           }
         }
 
@@ -854,5 +943,24 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const d: any = result.data.toObject();
     expect(d[0]["by_state"]).not.toBe(null);
     expect(d[0]["by_state1"]).not.toBe(null);
+  });
+
+  it.only(`number as null- ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: s is table('malloytest.state_facts') + {
+        }
+        query: s-> {
+          group_by: state
+          nest: ugly is {
+            group_by: popular_name
+            aggregate: foo is NULLIF(sum(airport_count)*0,0)+1
+          }
+        }
+      `
+      )
+      .run();
+    expect(result.data.path(0, "ugly", 0, "foo").value).toBe(null);
   });
 });

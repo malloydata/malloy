@@ -994,12 +994,14 @@ class FieldInstanceResult implements FieldInstance {
   } {
     // if the root node uses a total, start at 1.
     if (nextGroupSetNumber === 0 && this.resultUsesUngrouped) {
-      nextGroupSetNumber++;
+      this.root().computeOnlyGroups.push(nextGroupSetNumber++);
     }
 
     // make a groupset for each unique ungrouping expression
     for (const [_key, grouping] of this.ungroupedSets) {
-      grouping.groupSet = nextGroupSetNumber++;
+      const groupSet = nextGroupSetNumber++;
+      grouping.groupSet = groupSet;
+      this.root().computeOnlyGroups.push(groupSet);
     }
 
     this.groupSet = nextGroupSetNumber++;
@@ -1194,18 +1196,33 @@ class FieldInstanceResult implements FieldInstance {
   ): FieldInstanceField[] {
     let ret: FieldInstanceField[] = [];
 
-    if (ungroupSet !== undefined) {
-      ret = this.fields(
-        (fi) =>
-          isScalarField(fi.f) &&
-          fi.fieldUsage.type === "result" &&
-          ungroupSet.fields.indexOf(fi.f.getIdentifier()) !== -1
-      );
+    // if (ungroupSet !== undefined) {
+    //   ret = this.fields(
+    //     (fi) =>
+    //       isScalarField(fi.f) &&
+    //       fi.fieldUsage.type === "result" &&
+    //       ungroupSet.fields.indexOf(fi.f.getIdentifier()) !== -1
+    //   );
+    // }
+    let p: FieldInstanceResult | undefined = this as FieldInstanceResult;
+    let escapeFields: string[] = [];
+    // all defaults to all fields at the current level.
+    if (ungroupSet === undefined) {
+      // escape all dimensions at the
+      escapeFields = this.fields(
+        (fi) => isScalarField(fi.f) && fi.fieldUsage.type === "result"
+      ).map((fi) => fi.f.getIdentifier());
+    } else {
+      escapeFields = ungroupSet.fields;
     }
-    let p = this.parent;
     while (p !== undefined) {
       ret = ret.concat(
-        p.fields((fi) => isScalarField(fi.f) && fi.fieldUsage.type === "result")
+        p.fields(
+          (fi) =>
+            isScalarField(fi.f) &&
+            fi.fieldUsage.type === "result" &&
+            escapeFields.indexOf(fi.f.getIdentifier()) === -1
+        )
       );
       p = p.parent;
     }
@@ -1230,12 +1247,27 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
   havings = new AndChain();
   isComplexQuery = false;
   queryUsesUngrouped = false;
+  computeOnlyGroups: number[] = [];
+  elimatedComputeGroups = false;
+
   constructor(turtleDef: TurtleDef) {
     super(turtleDef, undefined);
   }
 
   root(): FieldInstanceResultRoot {
     return this;
+  }
+
+  // in the stage immediately following stage0 we need to elimiate any of the
+  //  groups that were used in ungroup calculations.  We need to do this only
+  //  once and in the very next stage.
+  eliminateComputeGroupsSQL(): string {
+    if (this.elimatedComputeGroups || this.computeOnlyGroups.length == 0) {
+      return "";
+    } else {
+      this.elimatedComputeGroups = true;
+      return `group_set NOT IN (${this.computeOnlyGroups.join(",")})`;
+    }
   }
 
   // look at all the fields again in the structs in the query
@@ -2602,9 +2634,14 @@ class QueryQuery extends QueryField {
     this.generateDepthNFields(depth, this.rootResult, f, stageWriter);
     s += indent(f.sql.join(",\n")) + "\n";
     s += `FROM ${stageName}\n`;
+    const where = this.rootResult.eliminateComputeGroupsSQL();
+    if (where.length > 0) {
+      s += `WHERE ${where}\n`;
+    }
     if (f.dimensionIndexes.length > 0) {
       s += `GROUP BY ${f.dimensionIndexes.join(",")}\n`;
     }
+
     this.resultStage = stageWriter.addStage(s);
 
     this.resultStage = this.generatePipelinedStages(
@@ -2671,6 +2708,11 @@ class QueryQuery extends QueryField {
       }
     }
     s += indent(fieldsSQL.join(",\n")) + `\nFROM ${stage0Name}\n`;
+
+    const where = this.rootResult.eliminateComputeGroupsSQL();
+    if (where.length > 0) {
+      s += `WHERE ${where}\n`;
+    }
 
     if (dimensionIndexes.length > 0) {
       s += `GROUP BY ${dimensionIndexes.join(",")}\n`;

@@ -1,0 +1,32 @@
+{
+  "by_carrier": {
+    "renderer": "bar_chart"
+  },
+  "year_over_year": {
+    "renderer": "line_chart"
+  },
+  "by_month": {
+    "renderer": "line_chart"
+  },
+  "by_manufacturer": {
+    "renderer": "bar_chart"
+  },
+  "routes_map": {
+    "renderer": "segment_map"
+  },
+  "destinations_by_month": {
+    "renderer": "line_chart"
+  },
+  "delay_by_hour_of_day": {
+    "renderer" : "scatter_chart"
+  },
+  "seats_by_distance": {
+    "renderer": "scatter_chart"
+  },
+  "carriers_by_month" : {
+    "renderer": "line_chart"
+  },
+  "by_month_line_chart": {
+    "renderer": "spark_line"
+  }
+}

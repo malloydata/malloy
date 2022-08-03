@@ -254,12 +254,7 @@ export class DynamicSpace extends StaticSpace {
   ): DynamicSpace {
     const edited = new DynamicSpace(from);
     if (choose) {
-      const names = choose.refs.list.filter((f) => f instanceof FieldName);
-      for (const s of choose.refs.list.filter(
-        (f) => f instanceof WildcardFieldReference
-      )) {
-        s.log("Wildcards not allowed in accept/except");
-      }
+      const names = choose.refs.list;
       const oldMap = edited.entries();
       edited.dropEntries();
       for (const [symbol, value] of oldMap) {
@@ -360,7 +355,7 @@ export class DynamicSpace extends StaticSpace {
       for (const [fieldName, field] of reorderFields) {
         if (field instanceof JoinSpaceField) {
           const joinStruct = field.join.structDef();
-          if (!ErrorFactory.isErrorStructdef(joinStruct)) {
+          if (!ErrorFactory.isErrorStructDef(joinStruct)) {
             this.final.fields.push(joinStruct);
             fixupJoins.push([field.join, joinStruct]);
           }
@@ -369,7 +364,7 @@ export class DynamicSpace extends StaticSpace {
           if (fieldDef) {
             this.final.fields.push(fieldDef);
           } else {
-            throw new Error(`'${fieldName}' doesnt' have a FieldDef`);
+            throw new Error(`'${fieldName}' doesn't have a FieldDef`);
           }
         }
       }
