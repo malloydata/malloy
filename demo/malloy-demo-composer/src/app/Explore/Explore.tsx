@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styled from "styled-components";
 import { Analysis, Directory, Model } from "../../types";
 import { useDirectory } from "../data/use_directory";
@@ -37,7 +37,8 @@ const KEY_MAP = {
 
 export const Explore: React.FC = () => {
   const [analysis, setAnalysis] = useState<Analysis>();
-  const { openDirectory, beginOpenDirectory } = useOpenDirectory();
+  const { openDirectory, beginOpenDirectory, isOpeningDirectory } =
+    useOpenDirectory();
   const directory = useDirectory(openDirectory);
   const {
     queryMalloy,
@@ -105,6 +106,12 @@ export const Explore: React.FC = () => {
     });
   };
 
+  useEffect(() => {
+    if (directory) {
+      setSection("about");
+    }
+  }, [directory]);
+
   const selectAnalysis = (analysis: Analysis) => {
     setAnalysis(analysis);
     clearQuery(analysis);
@@ -122,7 +129,9 @@ export const Explore: React.FC = () => {
           <MalloyLogo />
           <ActionIcon
             action="open-directory"
-            onClick={beginOpenDirectory}
+            onClick={() => {
+              !isOpeningDirectory && beginOpenDirectory();
+            }}
             color="dimension"
           />
           <DirectoryPicker
