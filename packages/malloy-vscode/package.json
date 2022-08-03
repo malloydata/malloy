@@ -175,19 +175,22 @@
       }
     ],
     "views": {
-      "malloy": [
+      "explorer": [
         {
           "id": "malloyHelp",
           "name": "Help",
-          "type": "webview"
+          "type": "webview",
+          "when": "resourceFilename =~ /malloy/"
         },
         {
           "id": "malloySchema",
-          "name": "Schema"
+          "name": "Schema",
+          "when": "resourceFilename =~ /malloy/"
         },
         {
           "id": "malloyConnections",
-          "name": "Connections"
+          "name": "Connections",
+          "when": "resourceFilename =~ /malloy/"
         }
       ]
     },
