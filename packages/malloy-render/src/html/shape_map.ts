@@ -65,14 +65,6 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
     throw new Error("Invalid field type for shape map.");
   }
 
-  getSize(): { height: number; width: number } {
-    if (this.size === "large") {
-      return { height: 350, width: 500 };
-    } else {
-      return { height: 200, width: 250 };
-    }
-  }
-
   getVegaLiteSpec(data: DataColumn): lite.TopLevelSpec {
     if (data.isNull()) {
       throw new Error("Expected struct value not to be null.");
