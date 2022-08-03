@@ -63,6 +63,7 @@ interface BigQueryConnectionConfiguration {
   defaultProject?: string;
   serviceAccountKeyPath?: string;
   location?: string;
+  maximumBytesBilled?: string;
 }
 
 interface SchemaInfo {
@@ -101,6 +102,11 @@ const maybeRewriteError = (e: Error | unknown): Error => {
     throw e;
   }
 };
+
+/**
+ * Default maximumBytesBilled value, 25GiB
+ */
+const MAXIMUM_BYTES_BILLED = String(25 * 1024 * 1024 * 1024);
 
 // manage access to BQ, control costs, enforce global data/API limits
 export class BigQueryConnection
@@ -691,7 +697,8 @@ export class BigQueryConnection
   private async createBigQueryJob(createQueryJobOptions?: Query): Promise<Job> {
     const [job] = await this.bigQuery.createQueryJob({
       location: this.location,
-      maximumBytesBilled: String(25 * 1024 * 1024 * 1024),
+      maximumBytesBilled:
+        this.config.maximumBytesBilled || MAXIMUM_BYTES_BILLED,
       ...createQueryJobOptions,
     });
     return job;
