@@ -170,6 +170,10 @@ async function registerIPC(): Promise<void> {
     }
   });
 
+  ipcMain.handle("post:open_link", async (_event, url) => {
+    shell.openExternal(url);
+  });
+
   // Native application menu
   const template: (Electron.MenuItem | Electron.MenuItemConstructorOptions)[] =
     [

@@ -13,3 +13,4 @@
 
 export { useClickOutside } from "./use_click_outside";
 export { usePrevious } from "./use_previous";
+export { useQueryBuilder } from "./use_query_builder";
