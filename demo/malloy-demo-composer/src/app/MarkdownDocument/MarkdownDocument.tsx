@@ -205,14 +205,15 @@ const MarkdownTable = styled.table<{
   }
 
   ${({ align }) =>
-    align.map((alignment, index) => {
-      return `
+    align
+      .map((alignment, index) => {
+        return `
         tr td:nth-child(${index + 1}) {
           text-align: ${alignment ?? "left"};
         }
       `;
-    }).join("\n")
-  }
+      })
+      .join("\n")}
 `;
 
 const MarkdownTableCell = styled.td`
