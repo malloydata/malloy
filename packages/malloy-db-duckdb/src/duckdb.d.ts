@@ -1,16 +1,16 @@
-
 declare module "duckdb" {
-  declare class Connection {
+  class Connection {
     constructor(db: Database, callback: () => void);
-    all(sql: string, callback: (error: Error, result: any) => void);
+    all(sql: string, callback: (error: Error, result: any) => void): void;
   }
 
-  declare class Database {
+  class Database {
     constructor(path: string);
     constructor();
     constructor(path: string, mode: Number, callback?: (err: Error) => void);
 
     connect(): Connection;
+    all(sql: string, callback: (error: Error, result: any) => void): void;
   }
 
   export const OPEN_READONLY: Number;
