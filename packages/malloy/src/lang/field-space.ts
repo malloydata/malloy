@@ -539,7 +539,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
         this.setEntry(qi.name, new QueryFieldAST(this.inputFS(), qi, qi.name));
       } else {
         // Compiler will error if we don't handle all cases
-        const _unhandledQUeryItem: never = qi;
+        const _unhandledQueryItem: never = qi;
       }
     }
   }

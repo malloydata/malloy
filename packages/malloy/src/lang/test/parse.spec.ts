@@ -1243,6 +1243,24 @@ describe("error handling", () => {
       }
     `).compileToFailWith("Output already has a field named 'astr'");
   });
+  test("lloyd thing", () => {
+    const src = `
+      source: s is table('malloytest.flights') + {
+        query: a is {
+          declare: total_distance is distance.sum()
+          group_by: origin
+          aggregate: total_distance
+        }
+
+        query: b is {
+          group_by: destination
+          nest: a
+        }
+      }
+    `;
+    const m = new BetaModel(src);
+    expect(m).toCompile();
+  });
 });
 
 function getSelectOneStruct(sqlBlock: SQLBlock): StructDef {
