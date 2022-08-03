@@ -137,7 +137,7 @@ export interface ListItem {
 
 export interface Table {
   type: "table";
-  align: ("left" | "right" | null)[];
+  align: ("left" | "right" | "center" | null)[];
   children: Markdown[];
 }
 

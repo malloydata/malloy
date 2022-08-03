@@ -110,7 +110,7 @@ export const MarkdownNode: React.FC<{
       return <ul>{children(node)}</ul>;
     case "table":
       return (
-        <MarkdownTable>
+        <MarkdownTable align={node.align}>
           <tbody>{children(node)}</tbody>
         </MarkdownTable>
       );
@@ -191,12 +191,28 @@ const MarkdownCodeBlock: React.FC<MarkdownCodeBlockProps> = ({
   );
 };
 
-const MarkdownTable = styled.table`
+const MarkdownTable = styled.table<{
+  align: ("left" | "right" | "center" | null)[];
+}>`
   border: 1px solid #eaeaea;
   vertical-align: top;
   border-bottom: 1px solid #eaeaea;
   border-collapse: collapse;
   width: 100%;
+
+  tr:first-child {
+    font-weight: 500;
+  }
+
+  ${({ align }) =>
+    align.map((alignment, index) => {
+      return `
+        tr td:nth-child(${index + 1}) {
+          text-align: ${alignment ?? "left"};
+        }
+      `;
+    }).join("\n")
+  }
 `;
 
 const MarkdownTableCell = styled.td`
