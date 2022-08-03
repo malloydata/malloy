@@ -254,12 +254,7 @@ export class DynamicSpace extends StaticSpace {
   ): DynamicSpace {
     const edited = new DynamicSpace(from);
     if (choose) {
-      const names = choose.refs.list.filter((f) => f instanceof FieldName);
-      for (const s of choose.refs.list.filter(
-        (f) => f instanceof WildcardFieldReference
-      )) {
-        s.log("Wildcards not allowed in accept/except");
-      }
+      const names = choose.refs.list;
       const oldMap = edited.entries();
       edited.dropEntries();
       for (const [symbol, value] of oldMap) {

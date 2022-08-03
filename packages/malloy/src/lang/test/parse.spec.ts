@@ -172,18 +172,20 @@ expect.extend({
   },
   compileToFailWith: function (s: MarkedSource | string, ...msgs: string[]) {
     const src = typeof s == "string" ? s : s.code;
-    let emsg = "Compile Error expectation not met\nExpected error";
-    const qmsgs = msgs.map((s) => `error '${s}'`);
+    let emsg = "Expected: ";
     if (msgs.length == 1) {
-      emsg += ` ${qmsgs[0]}`;
+      emsg += msgs[0];
     } else {
-      emsg += `s [\n${qmsgs.join("\n")}\n]`;
+      emsg += `[\n    ${msgs.join("\n    ")}]\n]`;
     }
     emsg += `\nSource:\n${src}`;
     const m = new BetaModel(src);
     const t = m.translate();
     if (t.translated) {
-      return { pass: false, message: () => emsg };
+      return {
+        pass: false,
+        message: () => `No errors in model\n${emsg}`,
+      };
     } else if (t.errors == undefined) {
       return {
         pass: false,
@@ -597,9 +599,34 @@ describe("explore properties", () => {
   });
   test("primary_key", modelOK("explore: c is a { primary_key: ai }"));
   test("rename", modelOK("explore: c is a { rename: nn is ai }"));
-  test("accept single", modelOK("explore: c is a { accept: astr }"));
+  test("accept single", () => {
+    const onlyAstr = new BetaModel("explore: c is a { accept: astr }");
+    expect(onlyAstr).toCompile();
+    const m = onlyAstr.translate()?.translated?.modelDef;
+    expect(m).toBeDefined();
+    if (m) {
+      const c = m.contents.c;
+      expect(c.type).toBe("struct");
+      if (c.type == "struct") {
+        expect(c.fields.length).toBe(1);
+      }
+    }
+  });
   test("accept multi", modelOK("explore: c is a { accept: astr, af }"));
-  test("except single", modelOK("explore: c is a { except: astr }"));
+  test("except single", () => {
+    const noAstr = new BetaModel("explore: c is a { except: astr }");
+    expect(noAstr).toCompile();
+    const m = noAstr.translate()?.translated?.modelDef;
+    expect(m).toBeDefined();
+    if (m) {
+      const c = m.contents.c;
+      expect(c.type).toBe("struct");
+      if (c.type == "struct") {
+        const foundAstr = c.fields.find((f) => f.name == "astr");
+        expect(foundAstr).toBeUndefined();
+      }
+    }
+  });
   test("except multi", modelOK("explore: c is a { except: astr, af }"));
   test(
     "explore-query",
