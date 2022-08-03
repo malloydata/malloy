@@ -29,7 +29,7 @@ export const ChannelButton: React.FC<{
   );
 };
 
-const StyledButton = styled.button<{ selected: boolean, disabled: boolean }>`
+const StyledButton = styled.button<{ selected: boolean; disabled: boolean }>`
   outline: none;
   border: none;
   color: ${COLORS.dimension.fillStrong};
@@ -43,7 +43,8 @@ const StyledButton = styled.button<{ selected: boolean, disabled: boolean }>`
   font-weight: 600;
 
   ${({ selected, disabled }) =>
-    (!disabled ? `
+    (!disabled
+      ? `
       cursor: pointer;
 
       &:hover {
@@ -55,15 +56,16 @@ const StyledButton = styled.button<{ selected: boolean, disabled: boolean }>`
       }
 
       color: ${COLORS.other.fillStrong};
-    ` : `
+    `
+      : `
       .primary-fill {
         fill: ${COLORS.other.fillMedium};
       }
 
       color: ${COLORS.other.fillMedium};
     `) +
-    (selected ?
-      `
+    (selected
+      ? `
       color: ${COLORS.dimension.fillStrong};
 
       &:hover {
@@ -73,6 +75,6 @@ const StyledButton = styled.button<{ selected: boolean, disabled: boolean }>`
       .primary-fill {
         fill: ${COLORS.dimension.fillStrong};
       }
-      ` : "")
-  }
+      `
+      : "")}
 `;

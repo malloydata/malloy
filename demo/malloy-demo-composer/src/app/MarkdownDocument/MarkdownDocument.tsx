@@ -50,11 +50,13 @@ export const MarkdownNode: React.FC<{
   );
   switch (node.type) {
     case "root":
-      return <MarkdownDocumentRoot>
-        <MarkdownDocumentRootInner>
-          {children(node)}
-        </MarkdownDocumentRootInner>
-      </MarkdownDocumentRoot>;
+      return (
+        <MarkdownDocumentRoot>
+          <MarkdownDocumentRootInner>
+            {children(node)}
+          </MarkdownDocumentRootInner>
+        </MarkdownDocumentRoot>
+      );
     case "heading":
       switch (node.depth) {
         case 1:
@@ -107,7 +109,11 @@ export const MarkdownNode: React.FC<{
     case "list":
       return <ul>{children(node)}</ul>;
     case "table":
-      return <MarkdownTable><tbody>{children(node)}</tbody></MarkdownTable>;
+      return (
+        <MarkdownTable>
+          <tbody>{children(node)}</tbody>
+        </MarkdownTable>
+      );
     case "tableRow":
       return <tr>{children(node)}</tr>;
     case "tableCell":
@@ -250,7 +256,7 @@ const MarkdownDocumentRoot = styled.div`
 
 const MarkdownDocumentRootInner = styled.div`
   max-width: 900px;
-`
+`;
 
 const MarkdownLink = styled.a`
   color: ${COLORS.dimension.fillStrong};
