@@ -12,10 +12,5 @@
   ],
   "files": [],
   "include": [],
-  "exclude": ["**/node_modules"],
-  "compilerOptions": {
-    "downlevelIteration": true,
-    "module": "es2022",
-    "moduleResolution": "node"
-  }
+  "exclude": ["**/node_modules"]
 }

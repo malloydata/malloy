@@ -3,7 +3,6 @@
   "version": "0.0.1",
   "license": "GPL-2.0",
   "name": "malloy",
-  "type": "module",
   "workspaces": {
     "packages": [
       "packages/*",
@@ -31,10 +30,10 @@
     "vscode-build-extension-dev": "yarn workspace malloy-vscode build-extension-dev",
     "vscode-publish-extensions": "yarn workspace malloy-vscode publish-extensions",
     "vscode-build-composer-dev": "yarn workspace malloy-composer-demo build",
-    "third-party-licenses": "ts-node --esm scripts/third_party_licenses",
-    "malloyc": "ts-node --esm scripts/malloy-to-json",
-    "build-duckdb-db": "ts-node --esm scripts/build_duckdb_test_database",
-    "update-duckdb": "ts-node --esm scripts/update_duckdb"
+    "third-party-licenses": "ts-node scripts/third_party_licenses",
+    "malloyc": "ts-node scripts/malloy-to-json",
+    "build-duckdb-db": "ts-node scripts/build_duckdb_test_database",
+    "update-duckdb": "ts-node scripts/update_duckdb"
   },
   "devDependencies": {
     "@jest/globals": "^26.6.2",
