@@ -1,6 +1,6 @@
 # About the IMDb Dataset
 
-IMDb makes data available for download via [their website](https://www.imdb.com/interfaces/). 
+IMDb makes data available for download via [their website](https://www.imdb.com/interfaces/).
 
 ## Getting the Data and Making it Usable
 
@@ -18,6 +18,33 @@ Please install the tools below.
 
 ## Model Notes
 The `movies` source filters only to films with > 10,000 ratings.
+
+## Queries in `imdb.malloy`
+
+**by_title** - title, start year, and number of ratings received, ordered by number of ratings.
+
+**by_year** - the number of titles produced per year
+
+**by_name** - for each person, the overall number of ratings on titles they were in, and the count of titles.
+
+**by_job_category** - job category by number of titles
+
+**by_genre** - for each genre, the count of titles, and percent of all titles that are this genre. Note that a film may have multiple genres.
+
+**by_character** - number of titles for each character name
+
+**by_year_and_genre** - for each year, the number of titles plus `by_genre` nested to show the breakdown by genre.
+
+## About Additional Analyses
+
+**movie_queries**: a collection of interested queries against the base `imdb.malloy` model.
+
+**movie_filters**: a set of queries intended to filter other queries (see **movie_dashboard**)--each produces the unique identifiers (`tconst`) of movies to be used in the filter.
+
+**movie_dashboard**: the `movies_plus` source adds an image and url link to the base model, then defines a `titles_dashboard` query which can be filtered as desired. For example, `spielberg_dashboard` uses a filtered query from `movie_filters.malloy` to pull back information on all Spielberg movies.
+
+**movie_complex**: an aptly named collection of more complex queries building on definitions in the above files.
+
 
 ## Preview
 
@@ -55,30 +82,3 @@ A mapping table between people and titles, principals shows the principal cast/c
 | tt0000001 |        3 | nm0374658 | cinematographer | director of photography |   |
 | tt0000002 |        1 | nm0721526 | director        | \N                      |   |
 | tt0000002 |        2 | nm1335271 | composer        | \N                      |   |
-
-
-## Queries in `imdb.malloy`
-
-**by_title** - title, start year, and number of ratings received, ordered by number of ratings.
-
-**by_year** - the number of titles produced per year
-
-**by_name** - for each person, the overall number of ratings on titles they were in, and the count of titles.
-
-**by_job_category** - job category by number of titles
-
-**by_genre** - for each genre, the count of titles, and percent of all titles that are this genre. Note that a film may have multiple genres.
-
-**by_character** - number of titles for each character name
-
-**by_year_and_genre** - for each year, the number of titles plus `by_genre` nested to show the breakdown by genre.
-
-## About Additional Analyses
-
-**movie_queries.malloy**: a collection of interested queries against the base `imdb.malloy` model.
-
-**movie_filters.malloy**: a set of queries intended to filter other queries (see **movie_dashboard.malloy**)--each produces the unique identifiers (`tconst`) of movies to be used in the filter.
-
-**movie_dashboard.malloy**: the `movies_plus` source adds an image and url link to the base model, then defines a `titles_dashboard` query which can be filtered as desired. For example, `spielberg_dashboard` uses a filtered query from `movie_filters.malloy` to pull back information on all Spielberg movies.
-
-**movie_complex.malloy**: an aptly named collection of more complex queries building on definitions in the above files.

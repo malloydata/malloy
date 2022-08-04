@@ -21,7 +21,7 @@ import { ReactComponent as ActionItemRename } from "../assets/img/insert_icons/i
 import { ReactComponent as ActionIconEdit } from "../assets/img/insert_icons/item_edit.svg";
 import { ReactComponent as ActionItemRemove } from "../assets/img/query_clear_hover.svg";
 import { ReactComponent as ActionItemAdd } from "../assets/img/query_add_hover.svg";
-import { ReactComponent as ActionItemSave } from "../assets/img/save_icon.svg";
+import { ReactComponent as ActionItemSave } from "../assets/img/query_save_hover.svg";
 import { ReactComponent as ActionItemContainerClosed } from "../assets/img/chevrons/chevron_right.svg";
 import { ReactComponent as ActionItemContainerOpen } from "../assets/img/chevrons/chevron_down.svg";
 import { ReactComponent as ActionItemDuplicate } from "../assets/img/insert_icons/item_duplicate.svg";
@@ -31,7 +31,7 @@ import { ReactComponent as ActionIconPipeline } from "../assets/img/insert_icons
 import { ReactComponent as ActionIconLoad } from "../assets/img/type_icons/type-icon-projection.svg";
 import { ReactComponent as ActionIconMove } from "../assets/img/insert_icons/move_icon_outline.svg";
 import { ReactComponent as ActionIconSearch } from "../assets/img/insert_icons/search.svg";
-import { ReactComponent as ActionIconOpen } from "../assets/img/vis_icons/viz_list.svg";
+import { ReactComponent as ActionIconOpen } from "../assets/img/insert_icons/header_folder.svg";
 import { ReactComponent as AnalysisIcon } from "../assets/img/source.svg";
 import { ColorKey, COLORS } from "../colors";
 import styled from "styled-components";

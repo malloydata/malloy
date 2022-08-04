@@ -74,10 +74,10 @@ export const DirectoryPicker: React.FC<DirectoryPickerProps> = ({
 
   return (
     <>
-      <InputBox tabIndex={0} onClick={() => setOpen(true)} ref={ref}>
+      <InputBoxNoOutline tabIndex={0} onClick={() => setOpen(true)} ref={ref}>
         {label}
         <ChevronDown width="22px" height="22px" />
-      </InputBox>
+      </InputBoxNoOutline>
       <Popover
         open={open}
         setOpen={setOpen}
@@ -117,6 +117,16 @@ export const DirectoryPicker: React.FC<DirectoryPickerProps> = ({
     </>
   );
 };
+
+const InputBoxNoOutline = styled(InputBox)`
+  border: none;
+  &:hover {
+    border: none;
+  }
+  :focus {
+    border: none;
+  }
+`;
 
 const Wapper = styled.div`
   max-height: 400px;

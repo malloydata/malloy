@@ -28,10 +28,12 @@ import { BigQueryConnection } from "@malloydata/db-bigquery";
 import path from "path";
 import { promises as fs } from "fs";
 import { performance } from "perf_hooks";
-import { timeString } from "./utils";
-import { log } from "./log";
+import { timeString } from "./utils.js";
+import { log } from "./log.js";
 import { JSDOM } from "jsdom";
-import { highlight } from "./highlighter";
+import { highlight } from "./highlighter.js";
+
+const __dirname = path.resolve("./docs/_scripts/build_docs");
 
 const SAMPLES_PATH = path.join(__dirname, "../../../samples/bigquery");
 
