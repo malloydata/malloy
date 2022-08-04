@@ -28,7 +28,7 @@ import {
   FetchSchemaAndRunStreamSimultaneously,
   StreamingConnection,
 } from "@malloydata/malloy/src/runtime_types";
-import { Database, OPEN_READONLY, OPEN_READWRITE } from "duckdb";
+import { Database, OPEN_READONLY, Row, OPEN_READWRITE } from "duckdb";
 import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
 
 const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
@@ -102,11 +102,11 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
     this.isSetup = true;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected async runDuckDBQuery(sql: string): Promise<any> {
+  protected async runDuckDBQuery(
+    sql: string
+  ): Promise<{ rows: Row[]; totalRows: number }> {
     return new Promise((resolve, reject) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      this.connection.all(sql, (err: Error, result: any) => {
+      this.connection.all(sql, (err: Error, result: Row[]) => {
         if (err) {
           reject(err);
         } else
@@ -118,8 +118,9 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public async runRawSQL(sql: string): Promise<any> {
+  public async runRawSQL(
+    sql: string
+  ): Promise<{ rows: Row[]; totalRows: number }> {
     await this.setup();
     return this.runDuckDBQuery(sql);
   }
