@@ -3,7 +3,7 @@
   //  name is in a given state and dividing it by its over all popularity
   //  in the data set
 
-import "names.malloy"
+import "1_names.malloy"
 
 source: names_iconic is names + {
   

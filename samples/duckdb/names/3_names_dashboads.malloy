@@ -1,4 +1,4 @@
-import "names.malloy"
+import "1_names.malloy"
 
 // RUN: the malloy_team queries below.
 
