@@ -70,7 +70,6 @@ app.on("window-all-closed", () => {
   }
 });
 
-// No navigation anywhere!
 app.on("web-contents-created", (event, contents) => {
   contents.on("will-navigate", (event, _navigationUrl) => {
     event.preventDefault();
