@@ -74,6 +74,7 @@ app.on("window-all-closed", () => {
 app.on("web-contents-created", (event, contents) => {
   contents.on("will-navigate", (event, _navigationUrl) => {
     event.preventDefault();
+    shell.openExternal(_navigationUrl);
   });
 });
 
