@@ -21,31 +21,31 @@ This dataset a lightly transformed version of the U.S. Social Security Administr
 ## Queries
 
 
-### :malloy-query{ model="./names.malloy" query="by_name" source="names" }
+### `by_name`
 Top 10 names by population
 
-### :malloy-query{ model="./names.malloy" query="by_state" source="names" }
+### `by_state`
 Population by state
 
-### :malloy-query{ model="./names.malloy" query="by_gender" source="names" }
+### `by_gender`
 Population by gender
 
-### :malloy-query{ model="./names.malloy" query="by_year" source="names" }
+### `by_year`
 Population by year
 
-### :malloy-query{ model="./names.malloy" query="by_decade" source="names" }
+### `by_decade`
 Population by decade
 
 <!-- ### :malloy-query{ model="./names.malloy" query="name_as_pct_of_pop" source="names" }
 Name, population, and the percent each name makes up of the total population -->
 
-### :malloy-query{ model="./names.malloy" query="male_names" source="names" } / :malloy-query{ model="./names.malloy" query="female_names" source="names" }
+### `male_names` / `female_names`
 Top 10 names for M / F reported gender
 
 <!-- ### :malloy-query{ model="./names.malloy" query="top_names_by_state_by_gender" source="names" }
 Top 10 names in each state, for each gender -->
 
-### :malloy-query{ model="./names.malloy" query="name_dashboard" source="names" }
+### `name_dashboard`
 For the top 10 names, shows `by_decade`, `by_state`, and `by_gender`
 
 <!-- ### :malloy-query{ model="./names.malloy" query="j_names" source="names" }
