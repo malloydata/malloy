@@ -12,84 +12,38 @@
  */
 
 import { DataColumn, Field } from "@malloydata/malloy";
-import { AtomicFieldType } from "@malloydata/malloy";
-import {
-  BarChartRenderOptions,
-  ChartSize,
-  StyleDefaults,
-} from "../data_styles";
-import { createErrorElement } from "./utils";
-import { HTMLVegaSpecRenderer, vegaSpecs } from "./vega_spec";
+import { HTMLCartesianChartRenderer } from "./cartesian_chart";
 
-function isOrdninal(field: Field): boolean {
-  return (
-    field.isAtomicField() &&
-    (field.isString() ||
-      field.isDate() ||
-      field.isTimestamp() ||
-      field.isBoolean())
-  );
-}
-
-export class HTMLBarChartRenderer extends HTMLVegaSpecRenderer {
-  size: ChartSize;
-  constructor(
-    document: Document,
-    styleDefaults: StyleDefaults,
-    options: BarChartRenderOptions
-  ) {
-    super(document, styleDefaults, vegaSpecs["bar_SM"]);
-    this.size = options.size || this.styleDefaults.size || "medium";
+export class HTMLBarChartRenderer extends HTMLCartesianChartRenderer {
+  getMark(): "bar" {
+    return "bar";
   }
 
-  async render(table: DataColumn): Promise<HTMLElement> {
-    if (!table.isArray()) {
-      return createErrorElement(
-        this.document,
-        "Invalid type for bar chart renderer"
-      );
-    }
-    const fields = table.field.intrinsicFields;
-    if (fields.length < 2) {
-      return createErrorElement(
-        this.document,
-        "Need at least 2 fields for a bar chart."
-      );
-    }
-    let specName = "bar_";
-    if (isOrdninal(fields[0])) {
-      specName += "S";
-    } else if (
-      fields[0].isAtomicField() &&
-      fields[0].type === AtomicFieldType.Number
-    ) {
-      specName += "N";
-    } else {
-      return createErrorElement(
-        this.document,
-        "Invalid type for first field of a bar_chart"
-      );
-    }
-    specName += "M";
-    if (fields.length >= 3 && fields[2].isAtomicField()) {
-      const field = fields[2];
-      if (field.sourceWasMeasure() && field.isNumber()) {
-        specName += "M";
-      } else if (isOrdninal(field)) {
-        specName += "S";
+  getDataType(
+    field: Field
+  ): "temporal" | "ordinal" | "quantitative" | "nominal" {
+    if (field.isAtomicField()) {
+      if (field.isDate() || field.isTimestamp() || field.isString()) {
+        return "nominal";
+      } else if (field.isNumber()) {
+        return "quantitative";
       }
     }
-    let spec = vegaSpecs[`${specName}_${this.size}`];
-    if (spec === undefined) {
-      spec = vegaSpecs[specName];
+    throw new Error("Invalid field type for bar chart.");
+  }
+
+  getDataValue(data: DataColumn): Date | string | number | null {
+    if (data.isNull()) {
+      return null;
+    } else if (
+      data.isTimestamp() ||
+      data.isDate() ||
+      data.isNumber() ||
+      data.isString()
+    ) {
+      return data.value;
+    } else {
+      throw new Error("Invalid field type for bar chart.");
     }
-    if (spec === undefined) {
-      return createErrorElement(
-        this.document,
-        `Unknown vega spec '${specName}'`
-      );
-    }
-    this.spec = spec;
-    return super.render(table);
   }
 }

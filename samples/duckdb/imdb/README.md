@@ -1,6 +1,6 @@
 # About the IMDb Dataset
 
-IMDb makes data available for download via [their website](https://www.imdb.com/interfaces/). 
+IMDb makes data available for download via [their website](https://www.imdb.com/interfaces/).
 
 ## Getting the Data and Making it Usable
 

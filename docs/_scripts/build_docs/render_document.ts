@@ -11,13 +11,13 @@
  * GNU General Public License for more details.
  */
 
-import unified from "unified";
+import { unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
-import { Markdown } from "./markdown_types";
-import { runCode } from "./run_code";
-import { log } from "./log";
-import { highlight } from "./highlighter";
+import { Markdown } from "./markdown_types.js";
+import { runCode } from "./run_code.js";
+import { log } from "./log.js";
+import { highlight } from "./highlighter.js";
 
 /*
  * A Renderer is capable of converting a parsed `Markdown` document into HTML,

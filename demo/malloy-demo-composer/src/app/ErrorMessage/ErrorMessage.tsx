@@ -14,11 +14,12 @@
 import styled from "styled-components";
 
 const SimpleErrorMessage = styled.div`
-  width: 100%;
   padding: 5px;
   background-color: #fbb;
   font-family: "Google Sans", sans-serif;
   font-size: 12px;
+  color: #4b4c50;
+  border-radius: 5px;
 `;
 
 const MultiLineErrorMessage = styled(SimpleErrorMessage)`
