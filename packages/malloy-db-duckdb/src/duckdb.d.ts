@@ -56,12 +56,39 @@ declare module "duckdb" {
      * an array of results.
      *
      * @param sql SQL query to execute
+     * @param params Query parameters
      * @param callback Callback to receive results or error.
      */
     all(
       sql: string,
-      ...args: Scalar[],
+      ...params: Scalar[],
       callback?: (error: Error, result: Row[]) => void
+    ): Database;
+
+    /**
+     * Execute a query using the default connection and invoke a callback with
+     * an array of results.
+     *
+     * @param sql SQL query to execute
+     * @param callback Callback to receive results or error.
+     */
+    all(
+      sql: string,
+      callback?: (error: Error, result: Row[]) => void
+    ): Database;
+
+    /**
+     * Execute a query using the default connection and invoke a callback for
+     * each row.
+     *
+     * @param sql SQL query to execute
+     * @param params Query parameters
+     * @param callback Callback to receive row or error
+     */
+    each(
+      sql: string,
+      ...params: Scalar[],
+      callback?: (error: Error, result: Row) => void
     ): Database;
 
     /**
@@ -71,22 +98,19 @@ declare module "duckdb" {
      * @param sql SQL query to execute
      * @param callback Callback to receive row or error
      */
-    each(
-      sql: string,
-      ...args: Scalar[],
-      callback?: (error: Error, result: Row) => void
-    ): Database;
+    each(sql: string, callback?: (error: Error, result: Row) => void): Database;
 
     /**
      * Create a prepared query using the default connection.
      *
      * @param sql SQL query to prepare
+     * @param params Query parameters
      * @param callback Callback to receive error.
      *
      */
     prepare(
       sql: string,
-      ...args: Scalar[],
+      ...params: Scalar[],
       callback?: (error: Error) => void
     ): Statement;
 
@@ -95,11 +119,34 @@ declare module "duckdb" {
      * results.
      *
      * @param sql SQL query to execute
+     * @param params Query parameters
      * @param callback Callback to receive error
      */
     run(
       sql: string,
-      ...args: Scalar[],
+      ...params: Scalar[],
+      callback?: (error: Error) => void
+    ): Database;
+
+    /**
+     * Alias for {@link Database.exec()}. Execute a query without returning
+     * results.
+     *
+     * @param sql SQL query to execute
+     * @param callback Callback to receive error
+     */
+    run(sql: string, callback?: (error: Error) => void): Database;
+
+    /**
+     * Execute a query without returning results.
+     *
+     * @param sql SQL query to execute
+     * @param params Query parameters
+     * @param callback Callback to receive error
+     */
+    exec(
+      sql: string,
+      ...params: Scalar[],
       callback?: (error: Error) => void
     ): Database;
 
@@ -109,11 +156,7 @@ declare module "duckdb" {
      * @param sql SQL query to execute
      * @param callback Callback to receive error
      */
-    exec(
-      sql: string,
-      ...args: Scalar[],
-      callback?: (error: Error) => void
-    ): Database;
+    exec(sql: string, callback?: (error: Error) => void): Database;
 
     /**
      * Registers a user defined function for the default connection.
@@ -182,12 +225,37 @@ declare module "duckdb" {
      * Execute a SQL query and invoke a callback with an array of results.
      *
      * @param sql SQL query to execute
+     * @param params SQL parameters
      * @param callback Callback to receive results or error.
      */
     all(
       sql: string,
-      ...args: Scalar[],
+      ...params: Scalar[],
       callback?: (error: Error, result: Row[]) => void
+    ): Statement;
+
+    /**
+     * Execute a SQL query and invoke a callback with an array of results.
+     *
+     * @param sql SQL query to execute
+     * @param callback Callback to receive results or error.
+     */
+    all(
+      sql: string,
+      callback?: (error: Error, result: Row[]) => void
+    ): Statement;
+
+    /**
+     * Execute a SQL query and invoke a callback for each row.
+     *
+     * @param sql SQL query to execute
+     * @param params Query parameters
+     * @param callback Callback to receive row or error.
+     */
+    each(
+      sql: string,
+      ...params: Scalar[],
+      callback?: (error: Error, result: Row) => void
     ): Statement;
 
     /**
@@ -198,7 +266,6 @@ declare module "duckdb" {
      */
     each(
       sql: string,
-      ...args: Scalar[],
       callback?: (error: Error, result: Row) => void
     ): Statement;
 
@@ -209,9 +276,18 @@ declare module "duckdb" {
      * @param callback Callback to receive error.
      *
      */
-    prepare(
+    prepare(sql: string, callback?: (error: Error) => void): Statement;
+
+    /**
+     * Execute a SQL query without returning results.
+     *
+     * @param sql SQL query to execute
+     * @param params Query parameters
+     * @param callback Callback to receive error.
+     */
+    run(
       sql: string,
-      ...args: Scalar[],
+      ...params: Scalar[],
       callback?: (error: Error) => void
     ): Statement;
 
@@ -221,16 +297,14 @@ declare module "duckdb" {
      * @param sql SQL query to execute
      * @param callback Callback to receive error.
      */
-    run(
-      sql: string,
-      ...args: Scalar[],
-      callback?: (error: Error) => void
-    ): Statement;
+    run(sql: string, callback?: (error: Error) => void): Statement;
 
     /**
      * Execute a query and return an iterable result set.
+     * @param sql SQL query to execute
+     * @param params Query parameters
      */
-    stream(sql: string, ...args: Scalar[]): Iterable<Promise<Row>>;
+    stream(sql: string, ...params: Scalar[]): Iterable<Promise<Row>>;
 
     /**
      * Registers a user defined function.
@@ -277,45 +351,47 @@ declare module "duckdb" {
      * Execute a SQL query and return all results as an array to the
      * provided callback.
      *
-     * @param args Values with which to execute.
+     * @param params Values with which to execute.
      * @param callback Callback to receive results or error.
      */
     all(
-      ...args: Scalar[],
+      ...params: Scalar[],
       callback?: (error: Error, result: Row[]) => void
     ): Statement;
 
     /**
      * Execute a SQL query and invoke a callback for each row.
      *
-     * @param args Values with which to execute.
+     * @param params Values with which to execute.
      * @param callback Callback to receive row or error.
      */
     each(
-      ...args: Scalar[],
+      ...params: Scalar[],
       callback?: (error: Error, result: Row) => void
     ): Statement;
 
     /**
      * Execute a SQL query without returning results.
      *
-     * @param args Values with which to execute.
+     * @param params Values with which to execute.
      * @param callback Callback to receive error.
      */
-    run(...args: Scalar[], callback?: (error: Error) => void): Statement;
+    run(...params: Scalar[], callback?: (error: Error) => void): Statement;
 
     /**
      * Execute a query without returning results.
      *
-     * @param args Values with which to execute.
+     * @param params Values with which to execute.
      * @param callback Callback to receive error.
      */
-    exec(...args: Scalar[], callback?: (error: Error) => void): Statement;
+    exec(...params: Scalar[], callback?: (error: Error) => void): Statement;
 
     /**
      * Execute a query and return an iterable result set.
+
+    * @param params Values with which to execute.
      */
-    stream(...args: Scalar[]): Iterable<Promise<Row>>;
+    stream(...params: Scalar[]): Iterable<Promise<Row>>;
 
     /**
      * Release prepared SQL query after use.
