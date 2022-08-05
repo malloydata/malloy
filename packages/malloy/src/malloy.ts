@@ -52,6 +52,7 @@ import {
   URLReader,
   Connection,
 } from "./runtime_types";
+import { fileURLToPath } from "url";
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -88,8 +89,8 @@ export class Malloy {
     if (url === undefined) {
       url = new URL("internal://internal.malloy");
     }
-    const translator = new MalloyTranslator(url.toString(), {
-      urls: { [url.toString()]: source },
+    const translator = new MalloyTranslator(fileURLToPath(url), {
+      urls: { [fileURLToPath(url)]: source },
     });
     return new Parse(translator);
   }
@@ -1073,7 +1074,7 @@ export class InMemoryURLReader implements URLReader {
   }
 
   public async readURL(url: URL): Promise<string> {
-    const file = this.files.get(url.toString());
+    const file = this.files.get(fileURLToPath(url));
     if (file !== undefined) {
       return Promise.resolve(file);
     } else {
