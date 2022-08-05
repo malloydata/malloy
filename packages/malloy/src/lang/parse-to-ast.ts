@@ -903,10 +903,15 @@ export class MalloyToAST
     );
   }
 
-  visitExprUngrouped(pcx: parse.ExprUngroupedContext): ast.ExprUngrouped {
+  visitExprUngroup(pcx: parse.ExprUngroupContext): ast.ExprUngroup {
     const flist = pcx.fieldName().map((fcx) => this.getFieldName(fcx));
+    const kw = this.getIdText(pcx.ungroup()).toLocaleLowerCase();
     return this.astAt(
-      new ast.ExprUngrouped(this.getFieldExpr(pcx.fieldExpr()), flist),
+      new ast.ExprUngroup(
+        kw == "all" ? kw : "exclude",
+        this.getFieldExpr(pcx.fieldExpr()),
+        flist
+      ),
       pcx
     );
   }

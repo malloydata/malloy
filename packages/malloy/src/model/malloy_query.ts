@@ -58,8 +58,8 @@ import {
   isDialectFragment,
   getPhysicalFields,
   isIndexSegment,
-  UngroupedFragment,
-  isTotalFragment,
+  UngroupFragment,
+  isUngroupFragment,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -395,7 +395,7 @@ class QueryField extends QueryNode {
   generateTotalFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    expr: UngroupedFragment,
+    expr: UngroupFragment,
     state: GenerateState
   ): string {
     if (state.totalGroupSet !== -1) {
@@ -581,7 +581,7 @@ class QueryField extends QueryNode {
         s += this.generateParameterFragment(resultSet, context, expr, state);
       } else if (isFilterFragment(expr)) {
         s += this.generateFilterFragment(resultSet, context, expr, state);
-      } else if (isTotalFragment(expr)) {
+      } else if (isUngroupFragment(expr)) {
         s += this.generateTotalFragment(resultSet, context, expr, state);
       } else if (isAggregateFragment(expr)) {
         let agg;
@@ -1700,7 +1700,7 @@ class QueryQuery extends QueryField {
     joinStack: string[]
   ): void {
     for (const expr of e) {
-      if (isTotalFragment(expr)) {
+      if (isUngroupFragment(expr)) {
         resultStruct.resultUsesUngrouped = true;
         resultStruct.root().isComplexQuery = true;
         resultStruct.root().queryUsesUngrouped = true;
