@@ -184,6 +184,17 @@ export function runMalloyQuery(
           { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
           { enableScripts: true, retainContextWhenHidden: true }
         );
+
+        panel.onDidChangeViewState(
+          (e: vscode.WebviewPanelOnDidChangeViewStateEvent) => {
+            vscode.commands.executeCommand(
+              "setContext",
+              "malloy.webviewPanelFocused",
+              e.webviewPanel.active
+            );
+          }
+        );
+
         current = {
           panel,
           messages: new WebviewMessageManager(panel),

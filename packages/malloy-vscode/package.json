@@ -51,15 +51,6 @@
     "url": "https://github.com/looker-open-source/malloy"
   },
   "contributes": {
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "malloy",
-          "title": "Malloy",
-          "icon": "img/logo.png"
-        }
-      ]
-    },
     "commands": [
       {
         "command": "malloy.showLicenses",
@@ -180,17 +171,17 @@
           "id": "malloyHelp",
           "name": "Help",
           "type": "webview",
-          "when": "resourceFilename =~ /malloy/"
+          "when": "malloy.webviewPanelFocused == true || resourceFilename =~ /\\.malloy$/"
         },
         {
           "id": "malloySchema",
           "name": "Schema",
-          "when": "resourceFilename =~ /malloy/"
+          "when": "malloy.webviewPanelFocused == true || resourceFilename =~ /\\.malloy$/"
         },
         {
           "id": "malloyConnections",
           "name": "Connections",
-          "when": "resourceFilename =~ /malloy/"
+          "when": "malloy.webviewPanelFocused == true || resourceFilename =~ /\\.malloy$/"
         }
       ]
     },
