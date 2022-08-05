@@ -195,6 +195,11 @@ declare module "duckdb" {
     run(sql: string, callback: (error: Error) => void): Statement;
 
     /**
+     * Execute a query and return an iterable result set.
+     */
+    stream(...args: Scalar[]): Iterable<Promise<Row>>;
+
+    /**
      * Registers a user defined function.
      *
      * @param name UDF name
