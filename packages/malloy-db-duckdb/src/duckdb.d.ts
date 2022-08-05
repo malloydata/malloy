@@ -58,7 +58,11 @@ declare module "duckdb" {
      * @param sql SQL query to execute
      * @param callback Callback to receive results or error.
      */
-    all(sql: string, callback: (error: Error, result: Row[]) => void): Database;
+    all(
+      sql: string,
+      ...args: Scalar[],
+      callback?: (error: Error, result: Row[]) => void
+    ): Database;
 
     /**
      * Execute a query using the default connection and invoke a callback for
@@ -67,7 +71,11 @@ declare module "duckdb" {
      * @param sql SQL query to execute
      * @param callback Callback to receive row or error
      */
-    each(sql: string, callback: (error: Error, result: Row) => void): Database;
+    each(
+      sql: string,
+      ...args: Scalar[],
+      callback?: (error: Error, result: Row) => void
+    ): Database;
 
     /**
      * Create a prepared query using the default connection.
@@ -76,7 +84,11 @@ declare module "duckdb" {
      * @param callback Callback to receive error.
      *
      */
-    prepare(sql: string, callback: (error: Error) => void): Statement;
+    prepare(
+      sql: string,
+      ...args: Scalar[],
+      callback?: (error: Error) => void
+    ): Statement;
 
     /**
      * Alias for {@link Database.exec()}. Execute a query without returning
@@ -85,7 +97,11 @@ declare module "duckdb" {
      * @param sql SQL query to execute
      * @param callback Callback to receive error
      */
-    run(sql: string, callback: (error: Error) => void): Database;
+    run(
+      sql: string,
+      ...args: Scalar[],
+      callback?: (error: Error) => void
+    ): Database;
 
     /**
      * Execute a query without returning results.
@@ -93,7 +109,11 @@ declare module "duckdb" {
      * @param sql SQL query to execute
      * @param callback Callback to receive error
      */
-    exec(sql: string, callback: (error: Error) => void): Database;
+    exec(
+      sql: string,
+      ...args: Scalar[],
+      callback?: (error: Error) => void
+    ): Database;
 
     /**
      * Registers a user defined function for the default connection.
@@ -107,7 +127,7 @@ declare module "duckdb" {
       name: string,
       returnType: string,
       udf: (...args: unknown[]) => Scalar,
-      callback: (error: Error) => void
+      callback?: (error: Error) => void
     ): Database;
 
     /**
@@ -116,7 +136,7 @@ declare module "duckdb" {
      * @param name UDF name
      * @param callback Callback to receive error
      */
-    unregister(name: string, callback: (error: Error) => void): Database;
+    unregister(name: string, callback?: (error: Error) => void): Database;
 
     /**
      * Creates a new database connection. Shorthand for
@@ -137,13 +157,13 @@ declare module "duckdb" {
      * Serialize
      */
 
-    serialize(callback: () => void): Database;
+    serialize(callback?: () => void): Database;
 
     /**
      * Parallelize
      */
 
-    parallelize(callback: () => void): Database;
+    parallelize(callback?: () => void): Database;
   }
 
   /**
@@ -156,7 +176,7 @@ declare module "duckdb" {
      * @param db Database to create connection with.
      * @param callback
      */
-    constructor(db: Database, callback: () => void);
+    constructor(db: Database, callback?: () => void);
 
     /**
      * Execute a SQL query and invoke a callback with an array of results.
@@ -166,7 +186,8 @@ declare module "duckdb" {
      */
     all(
       sql: string,
-      callback: (error: Error, result: Row[]) => void
+      ...args: Scalar[],
+      callback?: (error: Error, result: Row[]) => void
     ): Statement;
 
     /**
@@ -175,7 +196,11 @@ declare module "duckdb" {
      * @param sql SQL query to execute
      * @param callback Callback to receive row or error.
      */
-    each(sql: string, callback: (error: Error, result: Row) => void): Statement;
+    each(
+      sql: string,
+      ...args: Scalar[],
+      callback?: (error: Error, result: Row) => void
+    ): Statement;
 
     /**
      * Create a prepared query.
@@ -184,7 +209,11 @@ declare module "duckdb" {
      * @param callback Callback to receive error.
      *
      */
-    prepare(sql: string, callback: (error: Error) => void): Statement;
+    prepare(
+      sql: string,
+      ...args: Scalar[],
+      callback?: (error: Error) => void
+    ): Statement;
 
     /**
      * Execute a SQL query without returning results.
@@ -192,12 +221,16 @@ declare module "duckdb" {
      * @param sql SQL query to execute
      * @param callback Callback to receive error.
      */
-    run(sql: string, callback: (error: Error) => void): Statement;
+    run(
+      sql: string,
+      ...args: Scalar[],
+      callback?: (error: Error) => void
+    ): Statement;
 
     /**
      * Execute a query and return an iterable result set.
      */
-    stream(...args: Scalar[]): Iterable<Promise<Row>>;
+    stream(sql: string, ...args: Scalar[]): Iterable<Promise<Row>>;
 
     /**
      * Registers a user defined function.
@@ -211,7 +244,7 @@ declare module "duckdb" {
       name: string,
       returnType: string,
       udf: (...args: unknown[]) => Scalar,
-      callback: (error: Error) => void
+      callback?: (error: Error) => void
     ): Database;
 
     /**
@@ -220,7 +253,7 @@ declare module "duckdb" {
      * @param name UDF name
      * @param callback Callback to receive error
      */
-    unregister(name: string, callback: (error: Error) => void): Database;
+    unregister(name: string, callback?: (error: Error) => void): Database;
 
     /**
      * Interrupt (currently not implemented)
@@ -249,7 +282,7 @@ declare module "duckdb" {
      */
     all(
       ...args: Scalar[],
-      callback: (error: Error, result: Row[]) => void
+      callback?: (error: Error, result: Row[]) => void
     ): Statement;
 
     /**
@@ -260,7 +293,7 @@ declare module "duckdb" {
      */
     each(
       ...args: Scalar[],
-      callback: (error: Error, result: Row) => void
+      callback?: (error: Error, result: Row) => void
     ): Statement;
 
     /**
@@ -269,7 +302,7 @@ declare module "duckdb" {
      * @param args Values with which to execute.
      * @param callback Callback to receive error.
      */
-    run(...args: Scalar[], callback: (error: Error) => void): Statement;
+    run(...args: Scalar[], callback?: (error: Error) => void): Statement;
 
     /**
      * Execute a query without returning results.
@@ -277,7 +310,7 @@ declare module "duckdb" {
      * @param args Values with which to execute.
      * @param callback Callback to receive error.
      */
-    exec(...args: Scalar[], callback: (error: Error) => void): Statement;
+    exec(...args: Scalar[], callback?: (error: Error) => void): Statement;
 
     /**
      * Execute a query and return an iterable result set.
