@@ -11,17 +11,18 @@
  * GNU General Public License for more details.
  */
 
-import { unified } from "unified";
+import { Plugin, Transformer, unified } from "unified";
 import remarkParse from "remark-parse";
 import remarkGfm from "remark-gfm";
-import remarkDirective from "remark-directive";
+import { commentMarker, Marker, Node } from "mdast-comment-marker";
 
 export function parseMarkdown(text: string): Markdown {
-  return unified()
+  const processor = unified()
     .use(remarkParse)
-    .use(remarkDirective)
     .use(remarkGfm)
-    .parse(text) as unknown as Markdown;
+    .use(applyMalloyQueryLinkCommentsPlugin);
+  const tree = processor.parse(text);
+  return processor.runSync(tree);
 }
 
 export type Markdown =
@@ -45,9 +46,7 @@ export type Markdown =
   | Image
   | Delete
   | ThematicBreak
-  | TextDirective
-  | LeafDirective
-  | ContainerDirective;
+  | MalloyQueryLink;
 
 export interface Root {
   type: "root";
@@ -160,26 +159,51 @@ export interface ThematicBreak {
   type: "thematicBreak";
 }
 
-export interface TextDirective {
-  type: "textDirective";
-  name: string;
-  label?: string;
-  attributes?: Record<string, string>;
-  content?: Markdown[];
+export interface MalloyQueryLink {
+  type: "malloyQueryLink";
+  model: string;
+  query: string;
+  source: string;
+  value: string;
 }
 
-export interface LeafDirective {
-  type: "leafDirective";
-  name: string;
-  label?: string;
-  attributes?: Record<string, string>;
-  content?: Markdown[];
-}
-
-export interface ContainerDirective {
-  type: "containerDirective";
-  name: string;
-  label?: string;
-  attributes?: Record<string, string>;
-  content?: Markdown[];
-}
+const applyMalloyQueryLinkCommentsPlugin: Plugin<[], Node, Markdown> = () => {
+  let linkMarker: Marker | undefined = undefined;
+  function transformer(tree: Node) {
+    function doThing(node: Node): Markdown {
+      const markdownNode = node as Markdown;
+      if (markdownNode.type === "html") {
+        const marker = commentMarker(markdownNode);
+        if (marker) {
+          linkMarker = marker;
+        }
+        return markdownNode;
+      } else if ("children" in markdownNode) {
+        return {
+          ...markdownNode,
+          children: markdownNode.children.map((child) =>
+            doThing(child as Node)
+          ),
+        };
+      } else if (markdownNode.type === "inlineCode") {
+        const marker = linkMarker;
+        if (marker) {
+          linkMarker = undefined;
+          return {
+            model: marker.parameters?.model?.toString() || "",
+            query: marker.parameters?.query?.toString() || "",
+            source: marker.parameters?.source?.toString() || "",
+            value: markdownNode.value,
+            type: "malloyQueryLink",
+          };
+        } else {
+          return markdownNode;
+        }
+      } else {
+        return markdownNode;
+      }
+    }
+    return doThing(tree);
+  }
+  return transformer as Transformer<Node, Root>;
+};
