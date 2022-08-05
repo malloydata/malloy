@@ -368,7 +368,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
-          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
+          measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
         }
 
         query:s-> {
@@ -388,7 +388,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
-          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
+          measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
         }
 
         query:s-> {
@@ -433,7 +433,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
-          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
+          measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
         }
 
         query: s-> {
@@ -504,7 +504,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
-          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
+          measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
         }
 
         query:s ->  {
@@ -530,7 +530,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
-          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
+          measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
         }
 
         query:s ->  {
@@ -556,7 +556,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
-          measure: ug is ungrouped(total_births)
+          measure: ug is all(total_births)
         }
 
         query:s ->  {
