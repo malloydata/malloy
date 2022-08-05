@@ -1258,8 +1258,8 @@ describe("error handling", () => {
       }
     `).compileToFailWith("Output already has a field named 'astr'");
   });
-  test("lloyd thing", () => {
-    const src = `
+  test("nesting a query with declarations", () => {
+    const nestedDeclModel = new BetaModel(`
       source: s is table('malloytest.flights') + {
         query: a is {
           declare: total_distance is distance.sum()
@@ -1272,9 +1272,8 @@ describe("error handling", () => {
           nest: a
         }
       }
-    `;
-    const m = new BetaModel(src);
-    expect(m).toParse();
+    `);
+    expect(nestedDeclModel).toParse();
   });
 });
 
