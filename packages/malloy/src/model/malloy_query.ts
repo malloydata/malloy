@@ -58,8 +58,8 @@ import {
   isDialectFragment,
   getPhysicalFields,
   isIndexSegment,
-  UngroupedFragment,
-  isTotalFragment,
+  UngroupFragment,
+  isUngroupFragment,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -392,10 +392,10 @@ class QueryField extends QueryNode {
     return dim;
   }
 
-  generateTotalFragment(
+  generateUngroupedFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    expr: UngroupedFragment,
+    expr: UngroupFragment,
     state: GenerateState
   ): string {
     if (state.totalGroupSet !== -1) {
@@ -406,7 +406,7 @@ class QueryField extends QueryNode {
     let ungroupSet: UngroupSet | undefined;
 
     if (expr.fields && expr.fields.length > 0) {
-      const key = expr.fields.sort().join("|");
+      const key = expr.fields.sort().join("|") + expr.type;
       ungroupSet = resultSet.ungroupedSets.get(key);
       if (ungroupSet === undefined) {
         throw new Error(`Internal Error, cannot find groupset with key ${key}`);
@@ -581,8 +581,8 @@ class QueryField extends QueryNode {
         s += this.generateParameterFragment(resultSet, context, expr, state);
       } else if (isFilterFragment(expr)) {
         s += this.generateFilterFragment(resultSet, context, expr, state);
-      } else if (isTotalFragment(expr)) {
-        s += this.generateTotalFragment(resultSet, context, expr, state);
+      } else if (isUngroupFragment(expr)) {
+        s += this.generateUngroupedFragment(resultSet, context, expr, state);
       } else if (isAggregateFragment(expr)) {
         let agg;
         if (expr.function === "sum") {
@@ -895,7 +895,11 @@ class FieldInstanceField implements FieldInstance {
 
 type RepeatedResultType = "nested" | "inline_all_numbers" | "inline";
 
-type UngroupSet = { fields: string[]; groupSet: number };
+type UngroupSet = {
+  type: "all" | "exclude";
+  fields: string[];
+  groupSet: number;
+};
 
 class FieldInstanceResult implements FieldInstance {
   type: FieldInstanceType = "query";
@@ -1196,36 +1200,55 @@ class FieldInstanceResult implements FieldInstance {
   ): FieldInstanceField[] {
     let ret: FieldInstanceField[] = [];
 
-    // if (ungroupSet !== undefined) {
-    //   ret = this.fields(
-    //     (fi) =>
-    //       isScalarField(fi.f) &&
-    //       fi.fieldUsage.type === "result" &&
-    //       ungroupSet.fields.indexOf(fi.f.getIdentifier()) !== -1
-    //   );
-    // }
     let p: FieldInstanceResult | undefined = this as FieldInstanceResult;
-    let escapeFields: string[] = [];
+    let excludeFields: string[] = [];
+    let inScopeFieldNames: string[] = [];
     // all defaults to all fields at the current level.
-    if (ungroupSet === undefined) {
-      // escape all dimensions at the
-      escapeFields = this.fields(
-        (fi) => isScalarField(fi.f) && fi.fieldUsage.type === "result"
+    if (ungroupSet === undefined || ungroupSet.type === "all") {
+      // fields specified an an all, convert it to an exclude set.
+      const allFields = ungroupSet?.fields || [];
+      // convert an All into the equivalent exclude
+      excludeFields = this.fields(
+        (fi) =>
+          isScalarField(fi.f) &&
+          fi.fieldUsage.type === "result" &&
+          allFields.indexOf(fi.f.getIdentifier()) === -1
       ).map((fi) => fi.f.getIdentifier());
     } else {
-      escapeFields = ungroupSet.fields;
+      excludeFields = ungroupSet.fields;
     }
+    let firstScope = true;
     while (p !== undefined) {
+      // get a list of valid fieldnames for the current scope.
+      if (firstScope || ungroupSet?.type === "exclude") {
+        inScopeFieldNames = inScopeFieldNames.concat(
+          p
+            .fields(
+              (fi) => isScalarField(fi.f) && fi.fieldUsage.type === "result"
+            )
+            .map((fi) => fi.f.getIdentifier())
+        );
+      }
       ret = ret.concat(
         p.fields(
           (fi) =>
             isScalarField(fi.f) &&
             fi.fieldUsage.type === "result" &&
-            escapeFields.indexOf(fi.f.getIdentifier()) === -1
+            excludeFields.indexOf(fi.f.getIdentifier()) === -1
         )
       );
       p = p.parent;
+      firstScope = false;
     }
+    // verify that all names specified are available in the current scope.
+    for (const fieldName of ungroupSet?.fields || []) {
+      if (inScopeFieldNames.indexOf(fieldName) === -1) {
+        throw new Error(
+          `${ungroupSet?.type}(): unknown field name "${fieldName}" or name not in scope.`
+        );
+      }
+    }
+
     return ret;
   }
 
@@ -1700,14 +1723,15 @@ class QueryQuery extends QueryField {
     joinStack: string[]
   ): void {
     for (const expr of e) {
-      if (isTotalFragment(expr)) {
+      if (isUngroupFragment(expr)) {
         resultStruct.resultUsesUngrouped = true;
         resultStruct.root().isComplexQuery = true;
         resultStruct.root().queryUsesUngrouped = true;
         if (expr.fields && expr.fields.length > 0) {
-          const key = expr.fields.sort().join("|");
+          const key = expr.fields.sort().join("|") + expr.type;
           if (resultStruct.ungroupedSets.get(key) === undefined) {
             resultStruct.ungroupedSets.set(key, {
+              type: expr.type,
               fields: expr.fields,
               groupSet: -1,
             });
