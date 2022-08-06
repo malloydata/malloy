@@ -498,6 +498,47 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.path(0, "fac_type", 0, "all_top").value).toBe(2421);
   });
 
+  it(`ungrouped - all nested - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: airports is table('malloytest.airports') {
+          measure: c is count()
+        }
+
+
+         query: airports -> {
+          where: state = 'TX' | 'NY'
+          group_by:
+            state
+          aggregate:
+            c
+            all_ is all(c)
+            airport_count is c {? fac_type = 'AIRPORT'}
+          nest: fac_type is {
+            group_by: fac_type, major
+            aggregate:
+              c
+              all_ is all(c)
+              all_state is all(c,state)   // someday this should produce an error
+                                          //  not in scope
+              all_major is all(c,major)
+          }
+        }
+
+
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    expect(result.data.path(0, "fac_type", 0, "all_").value).toBe(1845);
+    expect(result.data.path(0, "fac_type", 0, "all_major").value).toBe(1819);
+
+    // this one is actually an error, but should show this value for now.
+    //  state isn't in scope and should be ignored.
+    expect(result.data.path(0, "fac_type", 0, "all_state").value).toBe(1845);
+  });
+
   it(`ungrouped nested  - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(

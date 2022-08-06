@@ -392,7 +392,7 @@ class QueryField extends QueryNode {
     return dim;
   }
 
-  generateTotalFragment(
+  generateUngroupedFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
     expr: UngroupFragment,
@@ -406,7 +406,7 @@ class QueryField extends QueryNode {
     let ungroupSet: UngroupSet | undefined;
 
     if (expr.fields && expr.fields.length > 0) {
-      const key = expr.fields.sort().join("|");
+      const key = expr.fields.sort().join("|") + expr.type;
       ungroupSet = resultSet.ungroupedSets.get(key);
       if (ungroupSet === undefined) {
         throw new Error(`Internal Error, cannot find groupset with key ${key}`);
@@ -582,7 +582,7 @@ class QueryField extends QueryNode {
       } else if (isFilterFragment(expr)) {
         s += this.generateFilterFragment(resultSet, context, expr, state);
       } else if (isUngroupFragment(expr)) {
-        s += this.generateTotalFragment(resultSet, context, expr, state);
+        s += this.generateUngroupedFragment(resultSet, context, expr, state);
       } else if (isAggregateFragment(expr)) {
         let agg;
         if (expr.function === "sum") {
@@ -895,7 +895,11 @@ class FieldInstanceField implements FieldInstance {
 
 type RepeatedResultType = "nested" | "inline_all_numbers" | "inline";
 
-type UngroupSet = { fields: string[]; groupSet: number };
+type UngroupSet = {
+  type: "all" | "exclude";
+  fields: string[];
+  groupSet: number;
+};
 
 class FieldInstanceResult implements FieldInstance {
   type: FieldInstanceType = "query";
@@ -1207,10 +1211,14 @@ class FieldInstanceResult implements FieldInstance {
     let p: FieldInstanceResult | undefined = this as FieldInstanceResult;
     let escapeFields: string[] = [];
     // all defaults to all fields at the current level.
-    if (ungroupSet === undefined) {
+    if (ungroupSet === undefined || ungroupSet.type === "all") {
+      const okFields = ungroupSet?.fields || [];
       // escape all dimensions at the
       escapeFields = this.fields(
-        (fi) => isScalarField(fi.f) && fi.fieldUsage.type === "result"
+        (fi) =>
+          isScalarField(fi.f) &&
+          fi.fieldUsage.type === "result" &&
+          okFields.indexOf(fi.f.getIdentifier()) === -1
       ).map((fi) => fi.f.getIdentifier());
     } else {
       escapeFields = ungroupSet.fields;
@@ -1705,9 +1713,10 @@ class QueryQuery extends QueryField {
         resultStruct.root().isComplexQuery = true;
         resultStruct.root().queryUsesUngrouped = true;
         if (expr.fields && expr.fields.length > 0) {
-          const key = expr.fields.sort().join("|");
+          const key = expr.fields.sort().join("|") + expr.type;
           if (resultStruct.ungroupedSets.get(key) === undefined) {
             resultStruct.ungroupedSets.set(key, {
+              type: expr.type,
               fields: expr.fields,
               groupSet: -1,
             });
