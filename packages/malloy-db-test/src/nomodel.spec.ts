@@ -520,8 +520,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             aggregate:
               c
               all_ is all(c)
-              all_state is all(c,state)   // someday this should produce an error
-                                          //  not in scope
               all_major is all(c,major)
           }
         }
@@ -533,10 +531,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     // console.log(result.sql);
     expect(result.data.path(0, "fac_type", 0, "all_").value).toBe(1845);
     expect(result.data.path(0, "fac_type", 0, "all_major").value).toBe(1819);
-
-    // this one is actually an error, but should show this value for now.
-    //  state isn't in scope and should be ignored.
-    expect(result.data.path(0, "fac_type", 0, "all_state").value).toBe(1845);
   });
 
   it(`ungrouped nested  - ${databaseName}`, async () => {

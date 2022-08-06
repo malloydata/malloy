@@ -1200,40 +1200,55 @@ class FieldInstanceResult implements FieldInstance {
   ): FieldInstanceField[] {
     let ret: FieldInstanceField[] = [];
 
-    // if (ungroupSet !== undefined) {
-    //   ret = this.fields(
-    //     (fi) =>
-    //       isScalarField(fi.f) &&
-    //       fi.fieldUsage.type === "result" &&
-    //       ungroupSet.fields.indexOf(fi.f.getIdentifier()) !== -1
-    //   );
-    // }
     let p: FieldInstanceResult | undefined = this as FieldInstanceResult;
-    let escapeFields: string[] = [];
+    let excludeFields: string[] = [];
+    let inScopeFieldNames: string[] = [];
     // all defaults to all fields at the current level.
     if (ungroupSet === undefined || ungroupSet.type === "all") {
-      const okFields = ungroupSet?.fields || [];
-      // escape all dimensions at the
-      escapeFields = this.fields(
+      // fields specified an an all, convert it to an exclude set.
+      const allFields = ungroupSet?.fields || [];
+      // convert an All into the equivalent exclude
+      excludeFields = this.fields(
         (fi) =>
           isScalarField(fi.f) &&
           fi.fieldUsage.type === "result" &&
-          okFields.indexOf(fi.f.getIdentifier()) === -1
+          allFields.indexOf(fi.f.getIdentifier()) === -1
       ).map((fi) => fi.f.getIdentifier());
     } else {
-      escapeFields = ungroupSet.fields;
+      excludeFields = ungroupSet.fields;
     }
+    let firstScope = true;
     while (p !== undefined) {
+      // get a list of valid fieldnames for the current scope.
+      if (firstScope || ungroupSet?.type === "exclude") {
+        inScopeFieldNames = inScopeFieldNames.concat(
+          p
+            .fields(
+              (fi) => isScalarField(fi.f) && fi.fieldUsage.type === "result"
+            )
+            .map((fi) => fi.f.getIdentifier())
+        );
+      }
       ret = ret.concat(
         p.fields(
           (fi) =>
             isScalarField(fi.f) &&
             fi.fieldUsage.type === "result" &&
-            escapeFields.indexOf(fi.f.getIdentifier()) === -1
+            excludeFields.indexOf(fi.f.getIdentifier()) === -1
         )
       );
       p = p.parent;
+      firstScope = false;
     }
+    // verify that all names specified are available in the current scope.
+    for (const fieldName of ungroupSet?.fields || []) {
+      if (inScopeFieldNames.indexOf(fieldName) === -1) {
+        throw new Error(
+          `${ungroupSet?.type}(): unknown field name "${fieldName}" or name not in scope.`
+        );
+      }
+    }
+
     return ret;
   }
 
