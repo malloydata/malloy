@@ -95,7 +95,7 @@ function opOutputStruct(
       return ModelQuerySegment.nextStructDef(inputStruct, opDesc);
     } catch (e) {
       logTo.log(
-        `INTERNAL ERROR model/Segment.nextStructDef: ${e.message}\n` +
+        `EXCEPTION requesting output SourceDef from model/Segment.nextStructDef: ${e.message}\n` +
           `QUERY: ${inspect(opDesc, { breakLength: 72, depth: Infinity })}`
       );
     }

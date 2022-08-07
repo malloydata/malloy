@@ -97,7 +97,7 @@ declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {
     interface Matchers<R> {
-      toCompile(): R;
+      toParse(): R;
       toBeErrorless(): R;
       toTranslate(): R;
       toReturnType(tp: string): R;
@@ -157,7 +157,7 @@ function checkForNeededs(trans: Testable) {
 }
 
 expect.extend({
-  toCompile: function (x: Testable) {
+  toParse: function (x: Testable) {
     x.compile();
     return checkForErrors(x);
   },
@@ -287,7 +287,7 @@ type TestFunc = () => undefined;
 
 function exprOK(s: string): TestFunc {
   return () => {
-    expect(new BetaExpression(s)).toCompile();
+    expect(new BetaExpression(s)).toParse();
     return undefined;
   };
 }
@@ -1221,7 +1221,7 @@ describe("error handling", () => {
   );
   // test("queries with anonymous expressions", () => {
   //   const m = new BetaModel("query: a->{\n group_by: a+1\n}");
-  //   expect(m).not.toCompile();
+  //   expect(m).not.toParse();
   //   const errList = m.errors().errors;
   //   const firstError = errList[0];
   //   expect(firstError.message).toBe("Expressions in queries must have names");
@@ -1258,6 +1258,23 @@ describe("error handling", () => {
       }
     `).compileToFailWith("Output already has a field named 'astr'");
   });
+  test("nesting a query with declarations", () => {
+    const nestedDeclModel = new BetaModel(`
+      source: s is table('malloytest.flights') + {
+        query: a is {
+          declare: total_distance is distance.sum()
+          group_by: origin
+          aggregate: total_distance
+        }
+
+        query: b is {
+          group_by: destination
+          nest: a
+        }
+      }
+    `);
+    expect(nestedDeclModel).toParse();
+  });
 });
 
 function getSelectOneStruct(sqlBlock: SQLBlock): StructDef {
@@ -1279,7 +1296,7 @@ describe("source locations", () => {
   test("renamed explore location", () => {
     const source = markSource`explore: ${"na is a"}`;
     const m = new BetaModel(source.code);
-    expect(m).toCompile();
+    expect(m).toParse();
     expect(getExplore(m.modelDef, "na").location).toMatchObject(
       source.locations[0]
     );
@@ -1288,7 +1305,7 @@ describe("source locations", () => {
   test("refined explore location", () => {
     const source = markSource`explore: ${"na is a {}"}`;
     const m = new BetaModel(source.code);
-    expect(m).toCompile();
+    expect(m).toParse();
     expect(getExplore(m.modelDef, "na").location).toMatchObject(
       source.locations[0]
     );
@@ -1487,7 +1504,7 @@ describe("source locations", () => {
     // There is exactly one token in this file ..
     const sqlSource = "|| // line 0\n//line 1\n// line 2;;";
     const m = new BetaModel(sqlSource);
-    expect(m).not.toCompile();
+    expect(m).not.toParse();
     const errList = m.errors().errors;
     expect(errList[0].at?.range.end).toEqual({ line: 2, character: 11 });
   });
@@ -2042,7 +2059,7 @@ describe("translation need error locations", () => {
     m.update({
       errors: { urls: { [(result.urls || [])[0]]: "Bad file!" } },
     });
-    expect(m).not.toCompile();
+    expect(m).not.toParse();
     const errList = m.errors().errors;
     expect(errList[0].at).toEqual(source.locations[0]);
     return undefined;
@@ -2060,7 +2077,7 @@ describe("translation need error locations", () => {
         sqlStructs: { [(result.sqlStructs || [])[0].name]: "Bad SQL!" },
       },
     });
-    expect(m).not.toCompile();
+    expect(m).not.toParse();
     const errList = m.errors().errors;
     expect(errList[0].at).toEqual(source.locations[0]);
     return undefined;
@@ -2077,7 +2094,7 @@ describe("translation need error locations", () => {
         tables: { [(result.tables || [])[0]]: "Bad table!" },
       },
     });
-    expect(m).not.toCompile();
+    expect(m).not.toParse();
     const errList = m.errors().errors;
     expect(errList[0].at).toEqual(source.locations[0]);
     return undefined;
