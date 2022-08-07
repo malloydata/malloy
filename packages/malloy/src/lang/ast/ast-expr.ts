@@ -151,6 +151,9 @@ class ConstantFieldSpace implements FieldSpace {
       found: undefined,
     };
   }
+  contains(_name: string): boolean {
+    return false;
+  }
   getDialect(): Dialect {
     // well dialects totally make this wrong and broken and stupid and useless
     // but since this is only used for parameters which are also wrong and

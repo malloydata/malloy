@@ -81,6 +81,10 @@ export class ErrorFactory {
   static get indexSegment(): model.IndexSegment {
     return { type: "index", fields: [] };
   }
+
+  static get turtleDef(): model.TurtleDef {
+    return { type: "turtle", name: "turtleDefError", pipeline: [] };
+  }
 }
 
 function opOutputStruct(
@@ -1992,6 +1996,10 @@ export class TurtleDecl extends TurtleHeadedPipe {
   }
 
   getFieldDef(inputFS: FieldSpace): model.TurtleDef {
+    if (inputFS.contains(this.name)) {
+      this.log(`Cannot redefine '${this.name}'`);
+      return ErrorFactory.turtleDef;
+    }
     const pipe = this.getPipeline(inputFS);
     return {
       type: "turtle",

@@ -73,6 +73,7 @@ export interface FieldSpace {
   structDef(): model.StructDef;
   emptyStructDef(): model.StructDef;
   lookup(symbol: FieldName[]): LookupResult;
+  contains(name: string): boolean;
   getDialect(): Dialect;
 }
 
@@ -186,6 +187,10 @@ export class StaticSpace implements FieldSpace {
       };
     }
     return { found, error: undefined };
+  }
+
+  contains(name: string): boolean {
+    return this.map[name] != undefined;
   }
 }
 
@@ -638,6 +643,9 @@ export class DefSpace implements FieldSpace {
       };
     }
     return this.realFS.lookup(symbol);
+  }
+  contains(name: string): boolean {
+    return this.realFS.contains(name);
   }
   getDialect(): Dialect {
     return this.realFS.getDialect();

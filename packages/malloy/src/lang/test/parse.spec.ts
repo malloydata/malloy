@@ -1155,6 +1155,13 @@ describe("sql backdoor", () => {
 });
 
 describe("error handling", () => {
+  test("field and query with same name does not overflow", () => {
+    expect(`
+      source: flights is table('malloytest.flights') {
+        query: carrier is { group_by: carrier }
+      }
+    `).compileToFailWith("Cannot redefine 'carrier'");
+  });
   test("redefine source", () => {
     expect(markSource`
       source: airports is table('malloytest.airports') + {
