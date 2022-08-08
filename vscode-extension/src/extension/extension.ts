@@ -129,6 +129,22 @@ export function activate(context: vscode.ExtensionContext): void {
   const provider = new HelpViewProvider(context.extensionUri);
 
   context.subscriptions.push(
+    vscode.window.onDidChangeTextEditorSelection(
+      (e: vscode.TextEditorSelectionChangeEvent) => {
+        const document = e.textEditor.document;
+        if (document.languageId == "malloy") {
+          const wordRange = document.getWordRangeAtPosition(
+            e.selections[0].start
+          );
+
+          const possibleKeyword = document.getText(wordRange);
+          provider.showHelpFor(possibleKeyword);
+        }
+      }
+    )
+  );
+
+  context.subscriptions.push(
     vscode.window.registerWebviewViewProvider("malloyHelp", provider)
   );
 
