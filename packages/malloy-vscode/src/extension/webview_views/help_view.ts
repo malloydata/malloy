@@ -57,4 +57,8 @@ export class HelpViewProvider implements vscode.WebviewViewProvider {
       }
     });
   }
+
+  public showHelpFor(keyword: string): void {
+    console.log(keyword);
+  }
 }
