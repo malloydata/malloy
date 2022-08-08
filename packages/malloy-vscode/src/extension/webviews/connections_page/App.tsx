@@ -19,7 +19,7 @@ import {
   ConnectionMessageTest,
   ConnectionTestStatus,
   ConnectionServiceAccountKeyRequestStatus,
-} from "../../webview_message_manager";
+} from "../../message_types";
 import { useConnectionsVSCodeContext } from "./connections_vscode_context";
 import { ConnectionEditorList } from "./ConnectionEditorList";
 import { Spinner } from "../components";

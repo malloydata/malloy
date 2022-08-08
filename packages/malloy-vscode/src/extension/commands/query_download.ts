@@ -18,7 +18,7 @@ import {
   Result,
   SQLBlockMaterializer,
 } from "@malloydata/malloy";
-import { QueryDownloadOptions } from "../webview_message_manager";
+import { QueryDownloadOptions } from "../message_types";
 
 import * as vscode from "vscode";
 import * as os from "os";

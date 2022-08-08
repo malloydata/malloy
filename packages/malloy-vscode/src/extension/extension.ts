@@ -194,9 +194,19 @@ export function getWorker(): child_process.ChildProcess {
 function setupWorker(context: vscode.ExtensionContext): void {
   const workerModule = context.asAbsolutePath("dist/worker.js");
 
-  worker = child_process
-    .fork(workerModule)
-    .on("error", console.log)
-    .on("message", console.log)
-    .on("exit", console.log);
+  const startWorker = () => {
+    worker = child_process
+      .fork(workerModule)
+      .on("error", console.log)
+      .on("message", console.log)
+      .on("exit", (status) => {
+        // TODO: communicate with panels running queries
+        console.error(`Worker exited with ${status}`);
+        console.info(`Restarting in 5 seconds`);
+        // Maybe exponential backoff? Not sure what our failure
+        // modes are going to be
+        setTimeout(startWorker, 5000);
+      });
+  };
+  startWorker();
 }

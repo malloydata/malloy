@@ -11,16 +11,33 @@ import { log } from "./logger";
 import { WorkerQuerySpec } from "./types";
 
 import { CONNECTION_MANAGER } from "../server/connections";
-import { QueryMessageType, QueryRunStatus } from "../extension/message_types";
+import {
+  QueryMessageType,
+  QueryPanelMessage,
+  QueryRunStatus,
+  WorkerQueryPanelMessage,
+} from "../extension/message_types";
 
-const canceled = false;
+interface QueryEntry {
+  panelId: string;
+  canceled: boolean;
+}
+
+const runningQueries: Record<string, QueryEntry> = {};
+
+const sendMessage = (message: QueryPanelMessage, panelId: string) => {
+  const msg: WorkerQueryPanelMessage = {
+    panelId,
+    message,
+  };
+  log(`Sending: ${JSON.stringify(msg)}`);
+  process.send?.(msg);
+};
 
 export const run_query = async (
   query: WorkerQuerySpec,
   panelId: string
 ): Promise<void> => {
-  let runnable: QueryMaterializer | SQLBlockMaterializer;
-  let styles: DataStyles = {};
   const reader = new WorkerURLReader();
   const files = new HackyDataStylesAccumulator(reader);
   const url = new URL(panelId);
@@ -31,6 +48,17 @@ export const run_query = async (
       CONNECTION_MANAGER.getConnectionLookup(url)
     );
 
+    runningQueries[panelId] = { panelId, canceled: false };
+    sendMessage(
+      {
+        type: QueryMessageType.QueryStatus,
+        status: QueryRunStatus.Compiling,
+      },
+      panelId
+    );
+
+    let runnable: QueryMaterializer | SQLBlockMaterializer;
+    let styles: DataStyles = {};
     const queryFileURL = new URL("file://" + query.file);
     if (query.type === "string") {
       runnable = runtime.loadModel(queryFileURL).loadQuery(query.text);
@@ -60,35 +88,55 @@ export const run_query = async (
       const sql = await runnable.getSQL();
       styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
 
-      if (canceled) return;
+      if (runningQueries[panelId].canceled) return;
       log(sql);
     } catch (error) {
-      process.send?.({
-        type: QueryMessageType.QueryStatus,
-        status: QueryRunStatus.Error,
-        error: error.message || "Something went wrong",
-      });
+      sendMessage(
+        {
+          type: QueryMessageType.QueryStatus,
+          status: QueryRunStatus.Error,
+          error: error.message || "Something went wrong",
+        },
+        panelId
+      );
       return;
     }
 
-    process.send?.({
-      type: QueryMessageType.QueryStatus,
-      status: QueryRunStatus.Running,
-    });
+    sendMessage(
+      {
+        type: QueryMessageType.QueryStatus,
+        status: QueryRunStatus.Running,
+      },
+      panelId
+    );
     const queryResult = await runnable.run({ rowLimit });
-    if (canceled) return;
+    if (runningQueries[panelId].canceled) return;
 
-    process.send?.({
-      type: QueryMessageType.QueryStatus,
-      status: QueryRunStatus.Done,
-      result: queryResult.toJSON(),
-      styles,
-    });
+    sendMessage(
+      {
+        type: QueryMessageType.QueryStatus,
+        status: QueryRunStatus.Done,
+        result: queryResult.toJSON(),
+        styles,
+      },
+      panelId
+    );
+    delete runningQueries[panelId];
   } catch (error) {
-    process.send?.({
-      type: QueryMessageType.QueryStatus,
-      status: QueryRunStatus.Error,
-      error: error.message,
-    });
+    sendMessage(
+      {
+        type: QueryMessageType.QueryStatus,
+        status: QueryRunStatus.Error,
+        error: error.message,
+      },
+      panelId
+    );
+    delete runningQueries[panelId];
+  }
+};
+
+export const cancel_query = (panelId: string): void => {
+  if (runningQueries[panelId]) {
+    runningQueries[panelId].canceled = true;
   }
 };
