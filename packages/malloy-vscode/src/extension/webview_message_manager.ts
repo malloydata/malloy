@@ -15,6 +15,7 @@ import { ResultJSON } from "@malloydata/malloy";
 import { DataStyles } from "@malloydata/render";
 import { WebviewPanel, WebviewView } from "vscode";
 import { ConnectionConfig } from "../common";
+import { QueryMessageType, QueryRunStatus } from "./message_types";
 
 export class WebviewMessageManager<T> {
   constructor(private panel: WebviewPanel | WebviewView) {
@@ -78,19 +79,6 @@ export class WebviewMessageManager<T> {
   private get canSendMessages() {
     return this.panelCanReceiveMessages && this.clientCanReceiveMessages;
   }
-}
-
-export enum QueryRunStatus {
-  Compiling = "compiling",
-  Running = "running",
-  Error = "error",
-  Done = "done",
-}
-
-export enum QueryMessageType {
-  QueryStatus = "query-status",
-  AppReady = "app-ready",
-  StartDownload = "start-download",
 }
 
 interface QueryMessageStatusCompiling {

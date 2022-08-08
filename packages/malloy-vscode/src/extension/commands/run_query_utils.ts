@@ -20,17 +20,20 @@ import {
   URLReader,
   QueryMaterializer,
   SQLBlockMaterializer,
+  Result,
 } from "@malloydata/malloy";
 import { DataStyles } from "@malloydata/render";
 import turtleIcon from "../../media/turtle.svg";
 import { fetchFile, VSCodeURLReader } from "../utils";
 import { getWebviewHtml } from "../webviews";
+import { QueryMessageType, QueryRunStatus } from "../message_types";
 import {
-  QueryMessageType,
-  QueryRunStatus,
+  QueryPanelMessage,
   WebviewMessageManager,
 } from "../webview_message_manager";
 import { queryDownload } from "./query_download";
+import { workerData } from "worker_threads";
+import { getWorker } from "../extension";
 
 const malloyLog = vscode.window.createOutputChannel("Malloy");
 
@@ -132,6 +135,147 @@ class HackyDataStylesAccumulator implements URLReader {
 }
 
 export function runMalloyQuery(
+  query: QuerySpec,
+  panelId: string,
+  name: string
+): void {
+  vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: `Malloy Query (${name})`,
+      cancellable: true,
+    },
+    (progress, token) => {
+      const cancel = () => {
+        worker.send?.({
+          type: "cancel",
+          panelId,
+        });
+        if (current) {
+          const actuallyCurrent = MALLOY_EXTENSION_STATE.getRunState(
+            current.panelId
+          );
+          if (actuallyCurrent === current) {
+            current.panel.dispose();
+            MALLOY_EXTENSION_STATE.setRunState(current.panelId, undefined);
+            token.isCancellationRequested = true;
+          }
+        }
+      };
+
+      token.onCancellationRequested(cancel);
+
+      const previous = MALLOY_EXTENSION_STATE.getRunState(panelId);
+
+      let current: RunState;
+      if (previous) {
+        current = {
+          cancel,
+          panelId,
+          panel: previous.panel,
+          messages: previous.messages,
+          document: previous.document,
+        };
+        MALLOY_EXTENSION_STATE.setRunState(panelId, current);
+        previous.cancel();
+        if (!previous.panel.visible) {
+          previous.panel.reveal(vscode.ViewColumn.Beside, true);
+        }
+      } else {
+        const panel = vscode.window.createWebviewPanel(
+          "malloyQuery",
+          name,
+          { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
+          { enableScripts: true, retainContextWhenHidden: true }
+        );
+        current = {
+          panel,
+          messages: new WebviewMessageManager(panel),
+          panelId,
+          cancel,
+          document: query.file,
+        };
+        current.panel.iconPath = vscode.Uri.parse(
+          path.join(__filename, "..", turtleIcon)
+        );
+        MALLOY_EXTENSION_STATE.setRunState(panelId, current);
+      }
+
+      const onDiskPath = vscode.Uri.file(
+        path.join(__filename, "..", "query_page.js")
+      );
+
+      const entrySrc = current.panel.webview.asWebviewUri(onDiskPath);
+
+      current.panel.webview.html = getWebviewHtml(
+        entrySrc.toString(),
+        current.panel.webview
+      );
+
+      current.panel.onDidDispose(() => {
+        current.cancel();
+      });
+
+      MALLOY_EXTENSION_STATE.setActiveWebviewPanelId(current.panelId);
+      current.panel.onDidChangeViewState((event) => {
+        if (event.webviewPanel.active) {
+          MALLOY_EXTENSION_STATE.setActiveWebviewPanelId(current.panelId);
+          vscode.commands.executeCommand("malloy.refreshSchema");
+        }
+      });
+
+      const { file, ...params } = query;
+      const fsPath = file.uri.fsPath;
+      const worker = getWorker();
+      worker.send?.({
+        type: "run",
+        query: {
+          file: fsPath,
+          ...params,
+        },
+        panelId,
+      });
+
+      return new Promise((resolve) => {
+        worker.on("message", (msg: QueryPanelMessage) => {
+          current.messages.postMessage({
+            ...msg,
+          });
+          switch (msg.type) {
+            case QueryMessageType.QueryStatus:
+              switch (msg.status) {
+                case QueryRunStatus.Compiling:
+                  {
+                    progress.report({ increment: 20, message: "Compiling" });
+                  }
+                  break;
+                case QueryRunStatus.Running:
+                  {
+                    progress.report({ increment: 40, message: "Running" });
+                  }
+                  break;
+                case QueryRunStatus.Done:
+                  {
+                    current.result = Result.fromJSON(msg.result);
+                    progress.report({ increment: 100, message: "Rendering" });
+                    resolve(undefined);
+                  }
+                  break;
+                case QueryRunStatus.Error:
+                  {
+                    progress.report({ increment: 40, message: "Running" });
+                    resolve(undefined);
+                  }
+                  break;
+              }
+          }
+        });
+      });
+    }
+  );
+}
+
+export function runMalloyQueryOld(
   query: QuerySpec,
   panelId: string,
   name: string
