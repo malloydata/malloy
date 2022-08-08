@@ -19,7 +19,7 @@ import {
   getVSCodeAPI,
   ConnectionsVSCodeContext,
 } from "./connections_vscode_context";
-import { ConnectionPanelMessage } from "../../webview_message_manager";
+import { ConnectionPanelMessage } from "../../message_types";
 
 (() => {
   const vscode = getVSCodeAPI<void, ConnectionPanelMessage>();

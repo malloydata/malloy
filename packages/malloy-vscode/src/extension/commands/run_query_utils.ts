@@ -26,13 +26,13 @@ import { DataStyles } from "@malloydata/render";
 import turtleIcon from "../../media/turtle.svg";
 import { fetchFile, VSCodeURLReader } from "../utils";
 import { getWebviewHtml } from "../webviews";
-import { QueryMessageType, QueryRunStatus } from "../message_types";
 import {
-  QueryPanelMessage,
-  WebviewMessageManager,
-} from "../webview_message_manager";
+  QueryMessageType,
+  QueryRunStatus,
+  WorkerQueryPanelMessage,
+} from "../message_types";
+import { WebviewMessageManager } from "../webview_message_manager";
 import { queryDownload } from "./query_download";
-import { workerData } from "worker_threads";
 import { getWorker } from "../extension";
 
 const malloyLog = vscode.window.createOutputChannel("Malloy");
@@ -237,13 +237,21 @@ export function runMalloyQuery(
       });
 
       return new Promise((resolve) => {
-        worker.on("message", (msg: QueryPanelMessage) => {
+        worker.on("message", (msg: WorkerQueryPanelMessage) => {
+          const { message, panelId: id } = msg;
+          if (id !== panelId) {
+            return;
+          }
           current.messages.postMessage({
-            ...msg,
+            ...message,
           });
-          switch (msg.type) {
+          const allBegin = performance.now();
+          const compileBegin = allBegin;
+          let runBegin;
+
+          switch (message.type) {
             case QueryMessageType.QueryStatus:
-              switch (msg.status) {
+              switch (message.status) {
                 case QueryRunStatus.Compiling:
                   {
                     progress.report({ increment: 20, message: "Compiling" });
@@ -251,13 +259,23 @@ export function runMalloyQuery(
                   break;
                 case QueryRunStatus.Running:
                   {
+                    const compileEnd = performance.now();
+                    runBegin = compileEnd;
+                    logTime("Compile", compileBegin, compileEnd);
+
                     progress.report({ increment: 40, message: "Running" });
                   }
                   break;
                 case QueryRunStatus.Done:
                   {
-                    current.result = Result.fromJSON(msg.result);
+                    const runEnd = performance.now();
+                    if (runBegin != null) {
+                      logTime("Run", runBegin, runEnd);
+                    }
+                    current.result = Result.fromJSON(message.result);
                     progress.report({ increment: 100, message: "Rendering" });
+                    const allEnd = performance.now();
+                    logTime("Total", allBegin, allEnd);
                     resolve(undefined);
                   }
                   break;

@@ -1,6 +1,6 @@
 import { CONNECTION_MANAGER } from "../server/connections";
 import { log } from "./logger";
-import { run_query } from "./run_query";
+import { cancel_query, run_query } from "./run_query";
 import { Message } from "./types";
 
 let exitFlag = false;
@@ -14,6 +14,9 @@ Object.values(CONNECTION_MANAGER.configs).forEach((connection) => {
 
 process.on("message", (message: Message) => {
   switch (message.type) {
+    case "cancel":
+      cancel_query(message.panelId);
+      break;
     case "exit":
       exitFlag = true;
       break;

@@ -13,7 +13,7 @@
 
 import React, { useState } from "react";
 import styled from "styled-components";
-import { QueryDownloadOptions } from "../../webview_message_manager";
+import { QueryDownloadOptions } from "../../message_types";
 import { Dropdown, TextField, VSCodeButton } from "../components";
 
 interface DownloadFormProps {

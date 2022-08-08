@@ -45,4 +45,9 @@ export interface MessageRun {
   panelId: string;
 }
 
-export type Message = MessageExit | MessageRun;
+export interface MessageCancel {
+  type: "cancel";
+  panelId: string;
+}
+
+export type Message = MessageCancel | MessageExit | MessageRun;

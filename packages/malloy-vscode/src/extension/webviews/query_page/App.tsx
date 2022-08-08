@@ -15,8 +15,11 @@ import { Result } from "@malloydata/malloy";
 import { HTMLView } from "@malloydata/render";
 import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
-import { QueryMessageType, QueryRunStatus } from "../../message_types";
-import { QueryPanelMessage } from "../../webview_message_manager";
+import {
+  QueryMessageType,
+  QueryPanelMessage,
+  QueryRunStatus,
+} from "../../message_types";
 import { Spinner } from "../components";
 import { ResultKind, ResultKindToggle } from "./ResultKindToggle";
 import Prism from "prismjs";

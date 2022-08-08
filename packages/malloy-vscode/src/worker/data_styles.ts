@@ -45,6 +45,10 @@ export async function dataStylesForFile(
   return styles;
 }
 
+// TODO Come up with a better way to handle data styles. Perhaps this is
+//      an in-language understanding of model "metadata". For now,
+//      we abuse the `URLReader` API to keep track of requested URLs
+//      and accumulate data styles for those files.
 export class HackyDataStylesAccumulator implements URLReader {
   private uriReader: URLReader;
   private dataStyles: DataStyles = {};
