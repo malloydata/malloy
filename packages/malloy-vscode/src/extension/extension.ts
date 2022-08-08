@@ -12,6 +12,7 @@
  */
 
 import * as vscode from "vscode";
+import * as child_process from "child_process";
 
 import {
   LanguageClient,
@@ -38,6 +39,8 @@ import { ConnectionsProvider } from "./tree_views/connections_view";
 import { HelpViewProvider } from "./webview_views/help_view";
 
 let client: LanguageClient;
+let worker: child_process.ChildProcess;
+
 export let extensionModeProduction: boolean;
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -142,6 +145,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   setupLanguageServer(context);
+  setupWorker(context);
 }
 
 export function deactivate(): Promise<void> | undefined {
@@ -181,4 +185,18 @@ function setupLanguageServer(context: vscode.ExtensionContext): void {
   );
 
   client.start();
+}
+
+export function getWorker(): child_process.ChildProcess {
+  return worker;
+}
+
+function setupWorker(context: vscode.ExtensionContext): void {
+  const workerModule = context.asAbsolutePath("dist/worker.js");
+
+  worker = child_process
+    .fork(workerModule)
+    .on("error", console.log)
+    .on("message", console.log)
+    .on("exit", console.log);
 }
