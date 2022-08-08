@@ -169,18 +169,18 @@
       "explorer": [
         {
           "id": "malloyHelp",
-          "name": "Help",
+          "name": "Malloy Help",
           "type": "webview",
           "when": "malloy.webviewPanelFocused == true || resourceFilename =~ /\\.malloy$/"
         },
         {
           "id": "malloySchema",
-          "name": "Schema",
+          "name": "Malloy Schema",
           "when": "malloy.webviewPanelFocused == true || resourceFilename =~ /\\.malloy$/"
         },
         {
           "id": "malloyConnections",
-          "name": "Connections",
+          "name": "Malloy Connections",
           "when": "malloy.webviewPanelFocused == true || resourceFilename =~ /\\.malloy$/"
         }
       ]
