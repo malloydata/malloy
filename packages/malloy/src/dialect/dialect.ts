@@ -48,7 +48,6 @@ export abstract class Dialect {
   abstract supportsSumDistinctFunction: boolean;
   abstract unnestWithNumbers: boolean;
   protected abstract functionInfo: Record<string, FunctionInfo>;
-  abstract defaultSampling: Sampling;
   abstract supportUnnestArrayAgg: boolean; // won't need UDFs for nested pipelines
   abstract supportsCTEinCoorelatedSubQueries: boolean;
 

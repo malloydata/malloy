@@ -21,7 +21,6 @@ import {
   TimeValue,
   TypecastFragment,
   isDateUnit,
-  isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
   Sampling,
@@ -56,7 +55,6 @@ export class StandardSQLDialect extends Dialect {
   divisionIsInteger = false;
   supportsSumDistinctFunction = false;
   unnestWithNumbers = false;
-  defaultSampling = { enable: false };
   supportUnnestArrayAgg = false;
   supportsCTEinCoorelatedSubQueries = false;
 
@@ -413,16 +411,15 @@ ${indent(sql)}
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
     if (sample !== undefined) {
-      if (isSamplingEnable(sample) && sample.enable) {
-        sample = this.defaultSampling;
-      }
+      let percent = "0.0000000000000000001";
       if (isSamplingRows(sample)) {
         throw new Error(
           `StandardSQL doesn't support sampling by rows only percent`
         );
       } else if (isSamplingPercent(sample)) {
-        return `(SELECT * FROM ${tableSQL}  TABLESAMPLE SYSTEM (${sample.percent} PERCENT))`;
+        percent = sample.percent.toString();
       }
+      return `(SELECT * FROM ${tableSQL}  TABLESAMPLE SYSTEM (${percent} PERCENT))`;
     }
     return tableSQL;
   }

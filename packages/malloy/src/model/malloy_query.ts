@@ -3927,7 +3927,7 @@ export class QueryModel {
           {
             type: "index",
             fields: ["*"],
-            sample: struct.dialect.defaultSampling,
+            sample: { enable: true },
           },
         ],
       };
