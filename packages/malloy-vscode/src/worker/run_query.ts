@@ -1,22 +1,19 @@
-import {
-  QueryMaterializer,
-  Runtime,
-  SQLBlockMaterializer,
-} from "@malloydata/malloy";
+import { QueryMaterializer, Runtime } from "@malloydata/malloy";
 import { DataStyles } from "@malloydata/render";
 
 import { HackyDataStylesAccumulator } from "./data_styles";
 import { WorkerURLReader } from "./files";
 import { log } from "./logger";
-import { WorkerQuerySpec } from "./types";
+import { MessageCancel, MessageRun } from "./types";
 
 import { CONNECTION_MANAGER } from "../server/connections";
 import {
   QueryMessageType,
   QueryPanelMessage,
   QueryRunStatus,
-  WorkerQueryPanelMessage,
 } from "../extension/message_types";
+import { WorkerQueryPanelMessage } from "./types";
+import { createRunnable } from "./utils";
 
 interface QueryEntry {
   panelId: string;
@@ -27,6 +24,7 @@ const runningQueries: Record<string, QueryEntry> = {};
 
 const sendMessage = (message: QueryPanelMessage, panelId: string) => {
   const msg: WorkerQueryPanelMessage = {
+    type: "query_panel",
     panelId,
     message,
   };
@@ -34,10 +32,10 @@ const sendMessage = (message: QueryPanelMessage, panelId: string) => {
   process.send?.(msg);
 };
 
-export const run_query = async (
-  query: WorkerQuerySpec,
-  panelId: string
-): Promise<void> => {
+export const runQuery = async ({
+  query,
+  panelId,
+}: MessageRun): Promise<void> => {
   const reader = new WorkerURLReader();
   const files = new HackyDataStylesAccumulator(reader);
   const url = new URL(panelId);
@@ -57,26 +55,8 @@ export const run_query = async (
       panelId
     );
 
-    let runnable: QueryMaterializer | SQLBlockMaterializer;
     let styles: DataStyles = {};
-    const queryFileURL = new URL("file://" + query.file);
-    if (query.type === "string") {
-      runnable = runtime.loadModel(queryFileURL).loadQuery(query.text);
-    } else if (query.type === "named") {
-      runnable = runtime.loadQueryByName(queryFileURL, query.name);
-    } else if (query.type === "file") {
-      if (query.index === -1) {
-        runnable = runtime.loadQuery(queryFileURL);
-      } else {
-        runnable = runtime.loadQueryByIndex(queryFileURL, query.index);
-      }
-    } else if (query.type === "named_sql") {
-      runnable = runtime.loadSQLBlockByName(queryFileURL, query.name);
-    } else if (query.type === "unnamed_sql") {
-      runnable = runtime.loadSQLBlockByIndex(queryFileURL, query.index);
-    } else {
-      throw new Error("Internal Error: Unexpected query type");
-    }
+    const runnable = createRunnable(query, runtime);
 
     // Set the row limit to the limit provided in the final stage of the query, if present
     const rowLimit =
@@ -121,7 +101,6 @@ export const run_query = async (
       },
       panelId
     );
-    delete runningQueries[panelId];
   } catch (error) {
     sendMessage(
       {
@@ -131,11 +110,12 @@ export const run_query = async (
       },
       panelId
     );
+  } finally {
     delete runningQueries[panelId];
   }
 };
 
-export const cancel_query = (panelId: string): void => {
+export const cancelQuery = ({ panelId }: MessageCancel): void => {
   if (runningQueries[panelId]) {
     runningQueries[panelId].canceled = true;
   }

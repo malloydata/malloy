@@ -26,14 +26,11 @@ import { DataStyles } from "@malloydata/render";
 import turtleIcon from "../../media/turtle.svg";
 import { fetchFile, VSCodeURLReader } from "../utils";
 import { getWebviewHtml } from "../webviews";
-import {
-  QueryMessageType,
-  QueryRunStatus,
-  WorkerQueryPanelMessage,
-} from "../message_types";
+import { QueryMessageType, QueryRunStatus } from "../message_types";
 import { WebviewMessageManager } from "../webview_message_manager";
-import { queryDownload } from "./query_download";
+import { queryDownload, queryDownloadOld } from "./query_download";
 import { getWorker } from "../extension";
+import { WorkerMessage } from "../../worker/types";
 
 const malloyLog = vscode.window.createOutputChannel("Malloy");
 
@@ -100,7 +97,7 @@ interface UnnamedSQLQuerySpec {
   file: vscode.TextDocument;
 }
 
-type QuerySpec =
+export type QuerySpec =
   | NamedQuerySpec
   | QueryStringSpec
   | QueryFileSpec
@@ -234,10 +231,14 @@ export function runMalloyQuery(
           ...params,
         },
         panelId,
+        name,
       });
 
       return new Promise((resolve) => {
-        worker.on("message", (msg: WorkerQueryPanelMessage) => {
+        worker.on("message", (msg: WorkerMessage) => {
+          if (msg.type !== "query_panel") {
+            return;
+          }
           const { message, panelId: id } = msg;
           if (id !== panelId) {
             return;
@@ -272,11 +273,25 @@ export function runMalloyQuery(
                     if (runBegin != null) {
                       logTime("Run", runBegin, runEnd);
                     }
-                    current.result = Result.fromJSON(message.result);
+                    const { result } = message;
+                    const queryResult = Result.fromJSON(result);
+                    current.result = queryResult;
                     progress.report({ increment: 100, message: "Rendering" });
                     const allEnd = performance.now();
                     logTime("Total", allBegin, allEnd);
                     resolve(undefined);
+
+                    current.messages.onReceiveMessage((message) => {
+                      if (message.type === QueryMessageType.StartDownload) {
+                        queryDownload(
+                          query,
+                          message.downloadOptions,
+                          queryResult,
+                          panelId,
+                          name
+                        );
+                      }
+                    });
                   }
                   break;
                 case QueryRunStatus.Error:
@@ -460,7 +475,7 @@ export function runMalloyQueryOld(
 
           current.messages.onReceiveMessage((message) => {
             if (message.type === QueryMessageType.StartDownload) {
-              queryDownload(
+              queryDownloadOld(
                 runnable,
                 message.downloadOptions,
                 queryResult,
