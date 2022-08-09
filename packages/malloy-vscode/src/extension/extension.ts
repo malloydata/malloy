@@ -12,7 +12,6 @@
  */
 
 import * as vscode from "vscode";
-import * as child_process from "child_process";
 
 import {
   LanguageClient,
@@ -37,9 +36,11 @@ import {
 import { CONNECTION_MANAGER } from "./state";
 import { ConnectionsProvider } from "./tree_views/connections_view";
 import { HelpViewProvider } from "./webview_views/help_view";
+import { WorkerConnection } from "../worker/worker_connection";
+import { MalloyConfig } from "./types";
 
 let client: LanguageClient;
-let worker: child_process.ChildProcess;
+let worker: WorkerConnection;
 
 export let extensionModeProduction: boolean;
 
@@ -138,8 +139,15 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration(async (e) => {
       if (e.affectsConfiguration("malloy.connections")) {
+        const worker = getWorker();
         await CONNECTION_MANAGER.onConfigurationUpdated();
         connectionsTree.refresh();
+        worker.send({
+          type: "config",
+          config: vscode.workspace.getConfiguration(
+            "malloy"
+          ) as unknown as MalloyConfig,
+        });
       }
     })
   );
@@ -153,6 +161,9 @@ export function deactivate(): Promise<void> | undefined {
     // TODO can this just be put into a disposable, passed to `context.subscriptions.push`
     //      and disposed automatically?
     return client.stop();
+  }
+  if (worker) {
+    worker.send({ type: "exit" });
   }
 }
 
@@ -187,26 +198,10 @@ function setupLanguageServer(context: vscode.ExtensionContext): void {
   client.start();
 }
 
-export function getWorker(): child_process.ChildProcess {
+export function getWorker(): WorkerConnection {
   return worker;
 }
 
 function setupWorker(context: vscode.ExtensionContext): void {
-  const workerModule = context.asAbsolutePath("dist/worker.js");
-
-  const startWorker = () => {
-    worker = child_process
-      .fork(workerModule)
-      .on("error", console.log)
-      .on("message", console.log)
-      .on("exit", (status) => {
-        // TODO: communicate with panels running queries
-        console.error(`Worker exited with ${status}`);
-        console.info(`Restarting in 5 seconds`);
-        // Maybe exponential backoff? Not sure what our failure
-        // modes are going to be
-        setTimeout(startWorker, 5000);
-      });
-  };
-  startWorker();
+  worker = new WorkerConnection(context);
 }

@@ -1,31 +1,33 @@
-import { CONNECTION_MANAGER } from "../server/connections";
 import { log } from "./logger";
 import { cancelQuery, runQuery } from "./run_query";
 import { downloadQuery } from "./download_query";
 import { Message } from "./types";
-
-let exitFlag = false;
+import { refreshConfig } from "./refresh_config";
 
 log("Worker started");
 
 process.send?.({ type: "started" });
-Object.values(CONNECTION_MANAGER.configs).forEach((connection) => {
-  log(`Available: ${connection.name}`);
-});
+
+const heartBeat = setInterval(() => {
+  log("Heartbeat");
+}, 30 * 1000);
 
 process.on("message", (message: Message) => {
   switch (message.type) {
     case "cancel":
       cancelQuery(message);
       break;
-    case "exit":
-      exitFlag = true;
-      break;
-    case "run":
-      runQuery(message);
+    case "config":
+      refreshConfig(message);
       break;
     case "download":
       downloadQuery(message);
+      break;
+    case "exit":
+      clearInterval(heartBeat);
+      break;
+    case "run":
+      runQuery(message);
       break;
   }
   log(`Message: ${JSON.stringify(message)}`);
@@ -35,9 +37,6 @@ process.on("exit", () => {
   log("Worker exited");
 });
 
-const heartBeat = setInterval(() => {
-  log("Heartbeat");
-  if (exitFlag) {
-    clearInterval(heartBeat);
-  }
-}, 30 * 1000);
+process.on("SIGHUP", () => {
+  clearInterval(heartBeat);
+});

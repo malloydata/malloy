@@ -144,7 +144,7 @@ export function runMalloyQuery(
     },
     (progress, token) => {
       const cancel = () => {
-        worker.send?.({
+        worker.send({
           type: "cancel",
           panelId,
         });
@@ -224,7 +224,7 @@ export function runMalloyQuery(
       const { file, ...params } = query;
       const fsPath = file.uri.fsPath;
       const worker = getWorker();
-      worker.send?.({
+      worker.send({
         type: "run",
         query: {
           file: fsPath,
