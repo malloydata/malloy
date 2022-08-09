@@ -113,12 +113,19 @@ export async function queryDownload(
             filePath,
             downloadOptions
           );
-          worker.on("message", (msg: WorkerMessage) => {
-            if (msg.type !== "download") {
+          const listener = (msg: WorkerMessage) => {
+            if (msg.type === "dead") {
+              vscode.window.showErrorMessage(
+                `Malloy Download (${name}): Error\nWorker died`
+              );
+
+              worker.off("message", listener);
+              return;
+            } else if (msg.type !== "download") {
               return;
             }
-            const { name: id, error } = msg;
-            if (id !== name) {
+            const { name: msgName, error } = msg;
+            if (msgName !== name) {
               return;
             }
             if (error) {
@@ -130,7 +137,10 @@ export async function queryDownload(
                 `Malloy Download (${name}): Complete`
               );
             }
-          });
+            worker.off("message", listener);
+          };
+
+          worker.on("message", listener);
         }
       } catch (error) {
         vscode.window.showErrorMessage(
