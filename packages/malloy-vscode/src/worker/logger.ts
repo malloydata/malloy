@@ -1,7 +1,4 @@
-import * as fs from "fs";
-
-const logFile = fs.openSync("/tmp/worker.log", "w+");
-
+/* eslint-disable no-console */
 export const log = (msg: string): void => {
-  fs.writeFileSync(logFile, `${new Date().toLocaleString()}: ${msg}\n`);
+  console.info(msg);
 };

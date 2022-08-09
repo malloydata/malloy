@@ -2,6 +2,7 @@ import {
   QueryDownloadOptions,
   QueryPanelMessage,
 } from "../extension/message_types";
+import { MalloyConfig } from "../extension/types";
 
 interface NamedQuerySpec {
   type: "named";
@@ -60,6 +61,11 @@ export interface MessageCancel {
   panelId: string;
 }
 
+export interface MessageConfig {
+  type: "config";
+  config: MalloyConfig;
+}
+
 export interface MessageDownload {
   type: "download";
   query: WorkerQuerySpec;
@@ -71,6 +77,7 @@ export interface MessageDownload {
 
 export type Message =
   | MessageCancel
+  | MessageConfig
   | MessageExit
   | MessageRun
   | MessageDownload;
