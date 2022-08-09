@@ -11,13 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import {
-  CSVWriter,
-  JSONWriter,
-  QueryMaterializer,
-  Result,
-  SQLBlockMaterializer,
-} from "@malloydata/malloy";
+import { CSVWriter, JSONWriter, Result } from "@malloydata/malloy";
 import { QueryDownloadOptions } from "../message_types";
 import { getWorker } from "../extension";
 
@@ -142,72 +136,6 @@ export async function queryDownload(
 
           worker.on("message", listener);
         }
-      } catch (error) {
-        vscode.window.showErrorMessage(
-          `Malloy Download (${name}): Error\n${error.message}`
-        );
-      }
-    }
-  );
-}
-
-export async function queryDownloadOld(
-  query: SQLBlockMaterializer | QueryMaterializer,
-  downloadOptions: QueryDownloadOptions,
-  currentResults: Result,
-  name?: string
-): Promise<void> {
-  const rawDownloadPath = vscode.workspace
-    .getConfiguration("malloy")
-    .get("downloadsPath");
-  const relativeDownloadPath =
-    rawDownloadPath === undefined || typeof rawDownloadPath !== "string"
-      ? "~/Downloads"
-      : rawDownloadPath;
-  const downloadPath = relativeDownloadPath.startsWith(".")
-    ? path.resolve(relativeDownloadPath)
-    : relativeDownloadPath.startsWith("~")
-    ? relativeDownloadPath.replace(/^~/, os.homedir())
-    : relativeDownloadPath;
-  if (!fs.existsSync(downloadPath)) {
-    vscode.window.showErrorMessage(
-      `Download path ${downloadPath} does not exist.`
-    );
-    return;
-  }
-
-  const fileExtension = downloadOptions.format === "json" ? "json" : "csv";
-  const rawFilePath = path.join(downloadPath, `${name}.${fileExtension}`);
-  const filePath = dedupFileName(rawFilePath);
-  vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: `Malloy Download (${name})`,
-      cancellable: false,
-    },
-    async () => {
-      try {
-        const writeStream = fs.createWriteStream(filePath);
-        const writer =
-          downloadOptions.format === "json"
-            ? new JSONWriter(writeStream)
-            : new CSVWriter(writeStream);
-        let rowStream;
-        if (downloadOptions.amount === "current") {
-          rowStream = currentResults.data.inMemoryStream();
-        } else {
-          const rowLimit =
-            downloadOptions.amount === "all"
-              ? undefined
-              : downloadOptions.amount;
-          rowStream = query.runStream({
-            rowLimit,
-          });
-        }
-        await writer.process(rowStream);
-        vscode.window.showInformationMessage(
-          `Malloy Download (${name}): Complete`
-        );
       } catch (error) {
         vscode.window.showErrorMessage(
           `Malloy Download (${name}): Error\n${error.message}`
