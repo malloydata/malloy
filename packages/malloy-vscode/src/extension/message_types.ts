@@ -63,11 +63,6 @@ export type QueryPanelMessage =
   | QueryMessageAppReady
   | QueryMessageStartDownload;
 
-export interface WorkerQueryPanelMessage {
-  message: QueryPanelMessage;
-  panelId: string;
-}
-
 export enum ConnectionMessageType {
   SetConnections = "set-connections",
   AppReady = "app-ready",
