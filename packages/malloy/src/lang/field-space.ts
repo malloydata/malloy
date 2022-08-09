@@ -428,7 +428,7 @@ export abstract class QueryOperationSpace extends DynamicSpace {
       if (member instanceof FieldReference) {
         this.addReference(member);
       } else if (member instanceof WildcardFieldReference) {
-        this.setEntry(member.refString, new WildSpaceField(member.refString));
+        this.addWild(member);
       } else {
         this.addField(member);
       }
@@ -442,6 +442,10 @@ export abstract class QueryOperationSpace extends DynamicSpace {
     } else {
       this.setEntry(refName, new ReferenceField(ref));
     }
+  }
+
+  addWild(wild: WildcardFieldReference): void {
+    this.setEntry(wild.refString, new WildSpaceField(wild.refString));
   }
 
   log(s: string): void {
@@ -596,6 +600,10 @@ export class IndexFieldSpace extends QueryOperationSpace {
     if (ref.getField(this.inputFS()).found) {
       this.fieldList.add(ref.refString);
     }
+  }
+
+  addWild(wild: WildcardFieldReference): void {
+    this.fieldList.add(wild.refString);
   }
 
   getPipeSegment(refineIndex?: model.PipeSegment): model.IndexSegment {
