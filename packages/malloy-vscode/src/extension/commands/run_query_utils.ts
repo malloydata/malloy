@@ -235,12 +235,21 @@ export function runMalloyQuery(
       });
 
       return new Promise((resolve) => {
-        worker.on("message", (msg: WorkerMessage) => {
-          if (msg.type !== "query_panel") {
+        const listener = (msg: WorkerMessage) => {
+          if (msg.type === "dead") {
+            current.messages.postMessage({
+              type: QueryMessageType.QueryStatus,
+              status: QueryRunStatus.Error,
+              error: "Worker died",
+            });
+            worker.off("message", listener);
+            resolve(undefined);
+            return;
+          } else if (msg.type !== "query_panel") {
             return;
           }
-          const { message, panelId: id } = msg;
-          if (id !== panelId) {
+          const { message, panelId: msgPanelId } = msg;
+          if (msgPanelId !== panelId) {
             return;
           }
           current.messages.postMessage({
@@ -279,7 +288,6 @@ export function runMalloyQuery(
                     progress.report({ increment: 100, message: "Rendering" });
                     const allEnd = performance.now();
                     logTime("Total", allBegin, allEnd);
-                    resolve(undefined);
 
                     current.messages.onReceiveMessage((message) => {
                       if (message.type === QueryMessageType.StartDownload) {
@@ -292,17 +300,22 @@ export function runMalloyQuery(
                         );
                       }
                     });
+
+                    worker.off("message", listener);
+                    resolve(undefined);
                   }
                   break;
                 case QueryRunStatus.Error:
                   {
-                    progress.report({ increment: 40, message: "Running" });
+                    worker.off("message", listener);
                     resolve(undefined);
                   }
                   break;
               }
           }
-        });
+        };
+
+        worker.on("message", listener);
       });
     }
   );

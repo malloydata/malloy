@@ -21,6 +21,7 @@ export class WorkerConnection {
             // Maybe exponential backoff? Not sure what our failure
             // modes are going to be
             setTimeout(startWorker, 5000);
+            this.notifyListeners({ type: "dead" });
           }
         });
     };
@@ -31,8 +32,16 @@ export class WorkerConnection {
     this.worker.send?.(message);
   }
 
+  notifyListeners(message: WorkerMessage): void {
+    this.worker.emit("message", message);
+  }
+
   on(event: string, listener: (message: WorkerMessage) => void): void {
     this.worker.on(event, listener);
+  }
+
+  off(event: string, listener: (message: WorkerMessage) => void): void {
+    this.worker.off(event, listener);
   }
 
   stop(): void {
