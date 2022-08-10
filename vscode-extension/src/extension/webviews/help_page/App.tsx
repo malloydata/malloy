@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import styled from "styled-components";
 
 import { HelpMessageType } from "../../webview_message_manager";
@@ -22,9 +22,14 @@ export const App: React.FC = () => {
   const [searchText, setSearchText] = useState("");
   const vscode = useHelpVSCodeContext();
 
-  const openEditConnections = () => {
-    vscode.postMessage({ type: HelpMessageType.EditConnections });
-  };
+  useEffect(() => {
+    const listener = (event: any) => {
+      const message = event.data;
+      console.log("WTF");
+    };
+    window.addEventListener("message", listener);
+    return () => window.removeEventListener("message", listener);
+  });
 
   return (
     <ViewDiv>
