@@ -27,7 +27,6 @@ const sendMessage = (name: string, error?: string) => {
     name,
     error,
   };
-  log(`Sending: ${JSON.stringify(msg)}`);
   process.send?.(msg);
 };
 

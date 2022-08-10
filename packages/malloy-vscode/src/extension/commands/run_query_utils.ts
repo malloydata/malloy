@@ -175,6 +175,9 @@ export function runMalloyQuery(
         panelId,
         name,
       });
+      const allBegin = performance.now();
+      const compileBegin = allBegin;
+      let runBegin: number;
 
       return new Promise((resolve) => {
         const listener = (msg: WorkerMessage) => {
@@ -197,9 +200,6 @@ export function runMalloyQuery(
           current.messages.postMessage({
             ...message,
           });
-          const allBegin = performance.now();
-          const compileBegin = allBegin;
-          let runBegin;
 
           switch (message.type) {
             case QueryMessageType.QueryStatus:

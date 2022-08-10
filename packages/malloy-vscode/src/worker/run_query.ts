@@ -28,7 +28,6 @@ const sendMessage = (message: QueryPanelMessage, panelId: string) => {
     panelId,
     message,
   };
-  log(`Sending: ${JSON.stringify(msg)}`);
   process.send?.(msg);
 };
 
