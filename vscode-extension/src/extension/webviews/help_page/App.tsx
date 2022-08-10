@@ -30,7 +30,7 @@ export const App: React.FC = () => {
   useEffect(() => {
     const listener = (event: any) => {
       const message = event.data;
-      console.log("WTF");
+      console.log("Message received", message);
     };
     window.addEventListener("message", listener);
     return () => window.removeEventListener("message", listener);
