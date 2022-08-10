@@ -13,6 +13,7 @@
 
 import { URLReader } from "@malloydata/malloy";
 import * as vscode from "vscode";
+import { fileURLToPath } from "url";
 
 export async function fetchFile(uri: string): Promise<string> {
   return (
@@ -22,6 +23,6 @@ export async function fetchFile(uri: string): Promise<string> {
 
 export class VSCodeURLReader implements URLReader {
   async readURL(url: URL): Promise<string> {
-    return fetchFile(url.toString());
+    return fetchFile(fileURLToPath(url));
   }
 }
