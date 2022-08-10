@@ -21,6 +21,11 @@ export const App: React.FC = () => {
   const [searchText, setSearchText] = useState("");
   const vscode = useHelpVSCodeContext();
 
+  // TODO crs this might only be necessary because the MessageManager makes it necessary
+  useEffect(() => {
+    vscode.postMessage({ type: HelpMessageType.AppReady });
+  });
+
   useEffect(() => {
     const listener = (event: any) => {
       const message = event.data;
