@@ -1190,6 +1190,13 @@ describe("sql backdoor", () => {
 });
 
 describe("error handling", () => {
+  test("field and query with same name does not overflow", () => {
+    expect(`
+      source: flights is table('malloytest.flights') {
+        query: carrier is { group_by: carrier }
+      }
+    `).compileToFailWith("Cannot redefine 'carrier'");
+  });
   test("redefine source", () => {
     expect(markSource`
       source: airports is table('malloytest.airports') + {
@@ -1230,8 +1237,8 @@ describe("error handling", () => {
   test(
     "reference to field in its definition",
     badModel(
-      `explore: na is a { dimension: astr is UPPER(astr) } `,
-      "Circular reference to 'astr' in definition"
+      `explore: na is a { dimension: ustr is UPPER(ustr) } `,
+      "Circular reference to 'ustr' in definition"
     )
   );
   test("empty model", modelOK(""));
