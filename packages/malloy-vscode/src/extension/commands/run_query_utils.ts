@@ -213,6 +213,7 @@ export function runMalloyQuery(
                   {
                     const compileEnd = performance.now();
                     runBegin = compileEnd;
+                    malloyLog.appendLine(message.sql);
                     logTime("Compile", compileBegin, compileEnd);
 
                     progress.report({ increment: 40, message: "Running" });

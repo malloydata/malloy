@@ -36,6 +36,7 @@ interface QueryMessageStatusCompiling {
 interface QueryMessageStatusRunning {
   type: QueryMessageType.QueryStatus;
   status: QueryRunStatus.Running;
+  sql: string;
 }
 
 interface QueryMessageStatusError {

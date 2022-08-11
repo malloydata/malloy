@@ -68,6 +68,7 @@ export const runQuery = async ({
     );
 
     let styles: DataStyles = {};
+    let sql;
     const runnable = createRunnable(query, runtime);
 
     // Set the row limit to the limit provided in the final stage of the query, if present
@@ -77,7 +78,7 @@ export const runQuery = async ({
         : undefined;
 
     try {
-      const sql = await runnable.getSQL();
+      sql = await runnable.getSQL();
       styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
 
       if (runningQueries[panelId].canceled) return;
@@ -98,6 +99,7 @@ export const runQuery = async ({
       {
         type: QueryMessageType.QueryStatus,
         status: QueryRunStatus.Running,
+        sql,
       },
       panelId
     );
