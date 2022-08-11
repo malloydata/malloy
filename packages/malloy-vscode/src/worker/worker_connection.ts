@@ -2,6 +2,7 @@
 import * as child_process from "child_process";
 import * as vscode from "vscode";
 import { Message, WorkerMessage } from "./types";
+const workerLog = vscode.window.createOutputChannel("Malloy Worker");
 
 export class WorkerConnection {
   worker!: child_process.ChildProcess;
@@ -22,6 +23,11 @@ export class WorkerConnection {
             // modes are going to be
             setTimeout(startWorker, 5000);
             this.notifyListeners({ type: "dead" });
+          }
+        })
+        .on("message", (message: WorkerMessage) => {
+          if (message.type === "log") {
+            workerLog.appendLine(`worker: ${message.message}`);
           }
         });
     };

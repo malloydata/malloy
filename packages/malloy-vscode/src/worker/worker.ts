@@ -10,7 +10,7 @@ process.send?.({ type: "started" });
 
 const heartBeat = setInterval(() => {
   log("Heartbeat");
-}, 30 * 1000);
+}, 60 * 1000);
 
 process.on("message", (message: Message) => {
   switch (message.type) {
@@ -30,7 +30,6 @@ process.on("message", (message: Message) => {
       runQuery(message);
       break;
   }
-  log(`Message: ${JSON.stringify(message)}`);
 });
 
 process.on("exit", () => {

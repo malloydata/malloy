@@ -116,6 +116,17 @@ export function runMalloyQuery(
           { viewColumn: vscode.ViewColumn.Beside, preserveFocus: true },
           { enableScripts: true, retainContextWhenHidden: true }
         );
+
+        panel.onDidChangeViewState(
+          (e: vscode.WebviewPanelOnDidChangeViewStateEvent) => {
+            vscode.commands.executeCommand(
+              "setContext",
+              "malloy.webviewPanelFocused",
+              e.webviewPanel.active
+            );
+          }
+        );
+
         current = {
           panel,
           messages: new WebviewMessageManager(panel),
@@ -164,6 +175,9 @@ export function runMalloyQuery(
         panelId,
         name,
       });
+      const allBegin = performance.now();
+      const compileBegin = allBegin;
+      let runBegin: number;
 
       return new Promise((resolve) => {
         const listener = (msg: WorkerMessage) => {
@@ -186,9 +200,6 @@ export function runMalloyQuery(
           current.messages.postMessage({
             ...message,
           });
-          const allBegin = performance.now();
-          const compileBegin = allBegin;
-          let runBegin;
 
           switch (message.type) {
             case QueryMessageType.QueryStatus:
