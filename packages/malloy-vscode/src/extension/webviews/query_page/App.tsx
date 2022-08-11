@@ -19,7 +19,7 @@ import {
   QueryMessageType,
   QueryPanelMessage,
   QueryRunStatus,
-} from "../../webview_message_manager";
+} from "../../message_types";
 import { Spinner } from "../components";
 import { ResultKind, ResultKindToggle } from "./ResultKindToggle";
 import Prism from "prismjs";

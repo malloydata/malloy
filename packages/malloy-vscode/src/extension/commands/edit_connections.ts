@@ -19,8 +19,8 @@ import {
   ConnectionPanelMessage,
   ConnectionServiceAccountKeyRequestStatus,
   ConnectionTestStatus,
-  WebviewMessageManager,
-} from "../webview_message_manager";
+} from "../message_types";
+import { WebviewMessageManager } from "../webview_message_manager";
 import { CONNECTION_MANAGER } from "../state";
 import { ConnectionBackend, ConnectionConfig } from "../../common";
 import { getDefaultIndex } from "../../common/connection_manager_types";

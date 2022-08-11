@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -12,16 +12,14 @@
  */
 
 import { URLReader } from "@malloydata/malloy";
-import * as vscode from "vscode";
+import * as fs from "fs/promises";
 import { fileURLToPath } from "url";
 
 export async function fetchFile(uri: string): Promise<string> {
-  return (
-    await vscode.workspace.openTextDocument(uri.replace(/^file:\/\//, ""))
-  ).getText();
+  return await fs.readFile(uri.replace(/^file:\/\//, ""), "utf-8");
 }
 
-export class VSCodeURLReader implements URLReader {
+export class WorkerURLReader implements URLReader {
   async readURL(url: URL): Promise<string> {
     return fetchFile(fileURLToPath(url));
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -11,12 +11,9 @@
  * GNU General Public License for more details.
  */
 
-import { HelpPanelMessage } from "../../message_types";
-import { makeVSCodeContext } from "../vscode_context";
-import { makeUseVSCodeContext } from "../vscode_context";
+import { MessageConfig } from "./types";
+import { CONNECTION_MANAGER } from "../server/connections";
 
-export const HelpVSCodeContext = makeVSCodeContext<void, HelpPanelMessage>();
-
-export const useHelpVSCodeContext = makeUseVSCodeContext(HelpVSCodeContext);
-
-export { getVSCodeAPI } from "../vscode_context";
+export const refreshConfig = ({ config }: MessageConfig): void => {
+  CONNECTION_MANAGER.setConnectionsConfig(config.connections);
+};

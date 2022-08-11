@@ -13,7 +13,7 @@
 
 import React, { useState } from "react";
 import styled from "styled-components";
-import { QueryDownloadOptions } from "../../webview_message_manager";
+import { QueryDownloadOptions } from "../../message_types";
 import { Popover } from "../components/Popover";
 import { DownloadForm } from "./DownloadForm";
 import DownloadIcon from "../assets/download_hover.svg";
