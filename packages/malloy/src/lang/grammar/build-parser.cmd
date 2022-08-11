@@ -21,8 +21,10 @@ SET lib=../lib/Malloy
 SET digest=%lib%/Malloy.md5
 SET target=%lib%/MalloyParser.ts
 
-FOR /F "tokens=* USEBACKQ" %%V IN (`md5sum Malloy.g4`) DO ( SET newmd5=%%V )
-SET newmd5=%newmd5:~1,32%
+SET index=1
+FOR /F "delims=" %%A IN ('certutil -hashfile Malloy.g4 MD5') DO (
+  CALL :parsemd5 %%A
+)
 
 SET oldmd5=Hash Not Found
 IF EXIST %digest% FOR /F "tokens=* USEBACKQ" %%V IN ("%digest%") DO ( SET oldmd5=%%V )
@@ -33,3 +35,10 @@ IF "%newmd5%" == "%oldmd5%" (
 ) ELSE (
   antlr4ts -visitor -Xexact-output-dir -o %lib% Malloy.g4 && echo %newmd5% > %digest%
 )
+
+:parsemd5
+IF /I %index% EQU 2 (
+  SET newmd5=%1
+)
+SET /a "index+=1"
+GOTO :EOF
