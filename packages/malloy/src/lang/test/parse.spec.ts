@@ -81,10 +81,13 @@ class BetaModel extends Testable {
     return undefined;
   }
 
-  getQuery(queryName: string): Query | undefined {
+  getQuery(queryName: string | number): Query | undefined {
     const t = this.translate().translated;
     if (t) {
-      const s = t.modelDef.contents[queryName];
+      const s =
+        typeof queryName == "string"
+          ? t.modelDef.contents[queryName]
+          : t.queryList[queryName];
       if (s.type == "query") {
         return s;
       }
@@ -686,12 +689,44 @@ describe("qops", () => {
   test("index path", modelOK("query:ab->{index: ab.astr}"));
   test("index unique on path", modelOK("query:ab->{index: b.astr, ab.astr}"));
   test("index join.*", modelOK("query:ab->{index: ab.*}"));
-  test("index multiple", modelOK("query:a->{index: astr,af}"));
-  test("index star", modelOK("query:a->{index: *}"));
+  test("index multiple", () => {
+    const model = new BetaModel("query:a->{index: af, astr}");
+    expect(model).toTranslate();
+    const q = model.getQuery(0);
+    expect(q).toBeDefined();
+    if (q) {
+      const index = q.pipeline[0];
+      expect(index.type).toBe("index");
+      expect(index.fields).toEqual(["af", "astr"]);
+    }
+  });
+  test("index star", () => {
+    const model = new BetaModel("query:a->{index: *, astr}");
+    expect(model).toTranslate();
+    const q = model.getQuery(0);
+    expect(q).toBeDefined();
+    if (q) {
+      const index = q.pipeline[0];
+      expect(index.type).toBe("index");
+      expect(index.fields).toEqual(["*", "astr"]);
+    }
+  });
   test("index by", modelOK("query:a->{index: * by ai}"));
   test("index sampled", modelOK("query:a->{index: *; sample: true}"));
   test("index unsampled", modelOK("query:a->{index: *; sample: false}"));
-  test("index sample-percent", modelOK("query:a->{index: *; sample: 27%}"));
+  test("index sample-percent", () => {
+    const model = new BetaModel("query:a->{index: *; sample: 42%}");
+    expect(model).toTranslate();
+    const q = model.getQuery(0);
+    expect(q).toBeDefined();
+    if (q) {
+      const index = q.pipeline[0];
+      expect(index.type).toBe("index");
+      if (index.type == "index") {
+        expect(index.sample).toEqual({ percent: 42 });
+      }
+    }
+  });
   test("index sample-rows", modelOK("query:a->{index: *; sample: 100000}"));
   test("top N", modelOK("query: a->{ top: 5; group_by: astr }"));
   test("top N by field", modelOK("query: a->{top: 5 by af; group_by: astr}"));
@@ -1155,6 +1190,13 @@ describe("sql backdoor", () => {
 });
 
 describe("error handling", () => {
+  test("field and query with same name does not overflow", () => {
+    expect(`
+      source: flights is table('malloytest.flights') {
+        query: carrier is { group_by: carrier }
+      }
+    `).compileToFailWith("Cannot redefine 'carrier'");
+  });
   test("redefine source", () => {
     expect(markSource`
       source: airports is table('malloytest.airports') + {
@@ -1195,8 +1237,8 @@ describe("error handling", () => {
   test(
     "reference to field in its definition",
     badModel(
-      `explore: na is a { dimension: astr is UPPER(astr) } `,
-      "Circular reference to 'astr' in definition"
+      `explore: na is a { dimension: ustr is UPPER(ustr) } `,
+      "Circular reference to 'ustr' in definition"
     )
   );
   test("empty model", modelOK(""));

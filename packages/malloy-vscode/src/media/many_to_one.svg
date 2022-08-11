@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg width="25px" height="25px" viewBox="0 0 25 25" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-    <title>join_icon_many_to_one</title>
-    <g id="join_icon_many_to_one" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
-        <polygon id="Path-Copy-14" fill="#4284F3" fill-rule="nonzero" transform="translate(10.382256, 12.736227) scale(-1, 1) rotate(180.000000) translate(-10.382256, -12.736227) " points="6.80570594 7.41828749 7.48860316 6.68777302 13.9588058 12.7362273 7.48860316 18.7846815 6.80570594 18.0541671 12.494 12.736"></polygon>
-        <rect id="Rectangle-Copy-90" fill="#4284F3" x="4" y="4" width="4" height="4"></rect>
-        <rect id="Rectangle-Copy-89" fill="#4284F3" x="4" y="10.7362273" width="4" height="4"></rect>
-        <rect id="Rectangle-Copy-85" fill="#4284F3" x="17.5186005" y="10.7362273" width="4" height="4"></rect>
-        <rect id="Rectangle-Copy-84" fill="#4284F3" x="4" y="17.5750258" width="4" height="4"></rect>
-        <polygon id="Line-3-Copy-67" fill="#4284F3" fill-rule="nonzero" points="18.9954453 12.2362273 18.9954453 13.2362273 5.99544525 13.2362273 5.99544525 12.2362273"></polygon>
+    <title>join_icon_one_to_many</title>
+    <g id="join_icon_one_to_many" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <g id="Group" transform="translate(12.759300, 12.500000) rotate(-180.000000) translate(-12.759300, -12.500000) translate(4.000000, 3.712487)" fill="#4284F3">
+            <polygon id="Path-Copy-15" fill-rule="nonzero" transform="translate(6.382256, 8.736227) scale(-1, 1) rotate(180.000000) translate(-6.382256, -8.736227) " points="2.80570594 3.41828749 3.48860316 2.68777302 9.95880577 8.73622728 3.48860316 14.7846815 2.80570594 14.0541671 8.494 8.736"></polygon>
+            <rect id="Rectangle-Copy-91" transform="translate(2.000000, 2.000000) scale(-1, 1) translate(-2.000000, -2.000000) " x="0" y="0" width="4" height="4"></rect>
+            <rect id="Rectangle-Copy-92" transform="translate(2.000000, 8.736227) scale(-1, 1) translate(-2.000000, -8.736227) " x="0" y="6.73622728" width="4" height="4"></rect>
+            <rect id="Rectangle-Copy-86" transform="translate(15.518600, 8.736227) scale(-1, 1) translate(-15.518600, -8.736227) " x="13.5186005" y="6.73622728" width="4" height="4"></rect>
+            <rect id="Rectangle-Copy-87" transform="translate(2.000000, 15.575026) scale(-1, 1) translate(-2.000000, -15.575026) " x="0" y="13.5750258" width="4" height="4"></rect>
+            <polygon id="Line-3-Copy-68" fill-rule="nonzero" transform="translate(8.495445, 8.736227) scale(-1, 1) translate(-8.495445, -8.736227) " points="14.9954453 8.23622728 14.9954453 9.23622728 1.99544525 9.23622728 1.99544525 8.23622728"></polygon>
+        </g>
     </g>
 </svg>

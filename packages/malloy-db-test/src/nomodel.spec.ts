@@ -368,7 +368,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
-          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
+          measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
         }
 
         query:s-> {
@@ -388,7 +388,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
-          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
+          measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
         }
 
         query:s-> {
@@ -433,7 +433,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
-          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
+          measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
         }
 
         query: s-> {
@@ -498,13 +498,48 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.path(0, "fac_type", 0, "all_top").value).toBe(2421);
   });
 
+  it(`ungrouped - all nested - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        source: airports is table('malloytest.airports') {
+          measure: c is count()
+        }
+
+
+         query: airports -> {
+          where: state = 'TX' | 'NY'
+          group_by:
+            state
+          aggregate:
+            c
+            all_ is all(c)
+            airport_count is c {? fac_type = 'AIRPORT'}
+          nest: fac_type is {
+            group_by: fac_type, major
+            aggregate:
+              c
+              all_ is all(c)
+              all_major is all(c,major)
+          }
+        }
+
+
+      `
+      )
+      .run();
+    // console.log(result.sql);
+    expect(result.data.path(0, "fac_type", 0, "all_").value).toBe(1845);
+    expect(result.data.path(0, "fac_type", 0, "all_major").value).toBe(1819);
+  });
+
   it(`ungrouped nested  - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
-          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
+          measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
         }
 
         query:s ->  {
@@ -530,7 +565,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
-          measure: births_per_100k is floor(total_births/ ungrouped(total_births) * 100000)
+          measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
         }
 
         query:s ->  {
@@ -556,7 +591,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
-          measure: ug is ungrouped(total_births)
+          measure: ug is all(total_births)
         }
 
         query:s ->  {

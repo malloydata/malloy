@@ -282,6 +282,14 @@ export class DynamicSpace extends StaticSpace {
     return this;
   }
 
+  newEntry(name: string, astEl: MalloyElement, entry: SpaceEntry): void {
+    if (this.entry(name)) {
+      astEl.log(`Cannot redefine '${name}'`);
+      return;
+    }
+    this.setEntry(name, entry);
+  }
+
   addField(...defs: ExploreField[]): void {
     for (const def of defs) {
       // TODO express the "three fields kinds" in a typesafe way
@@ -290,11 +298,11 @@ export class DynamicSpace extends StaticSpace {
       const elseType = def.elementType;
       if (def instanceof FieldDeclaration) {
         const exprField = new ExpressionFieldFromAst(this, def);
-        this.setEntry(exprField.name, exprField);
+        this.newEntry(exprField.name, def, exprField);
         // querry (turtle) fields
       } else if (def instanceof TurtleDecl) {
         const name = def.name;
-        this.setEntry(name, new QueryFieldAST(this, def, name));
+        this.newEntry(name, def, new QueryFieldAST(this, def, name));
       } else if (def instanceof RenameField) {
         if (def.oldName.refString === def.newName) {
           def.log("Can't rename field to itself");
@@ -315,7 +323,7 @@ export class DynamicSpace extends StaticSpace {
           def.log(`Can't rename '${def.oldName}', no such field`);
         }
       } else if (def instanceof Join) {
-        this.setEntry(def.name.refString, new JoinSpaceField(this, def));
+        this.newEntry(def.name.refString, def, new JoinSpaceField(this, def));
       } else {
         elseLog(
           `Internal error: Expected expression, query, or rename, got '${elseType}'`
@@ -428,7 +436,7 @@ export abstract class QueryOperationSpace extends DynamicSpace {
       if (member instanceof FieldReference) {
         this.addReference(member);
       } else if (member instanceof WildcardFieldReference) {
-        this.setEntry(member.refString, new WildSpaceField(member.refString));
+        this.addWild(member);
       } else {
         this.addField(member);
       }
@@ -442,6 +450,10 @@ export abstract class QueryOperationSpace extends DynamicSpace {
     } else {
       this.setEntry(refName, new ReferenceField(ref));
     }
+  }
+
+  addWild(wild: WildcardFieldReference): void {
+    this.setEntry(wild.refString, new WildSpaceField(wild.refString));
   }
 
   log(s: string): void {
@@ -534,7 +546,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
         this.setEntry(qi.name, new QueryFieldAST(this.inputFS(), qi, qi.name));
       } else {
         // Compiler will error if we don't handle all cases
-        const _unhandledQUeryItem: never = qi;
+        const _itemNotHandled: never = qi;
       }
     }
   }
@@ -596,6 +608,10 @@ export class IndexFieldSpace extends QueryOperationSpace {
     if (ref.getField(this.inputFS()).found) {
       this.fieldList.add(ref.refString);
     }
+  }
+
+  addWild(wild: WildcardFieldReference): void {
+    this.fieldList.add(wild.refString);
   }
 
   getPipeSegment(refineIndex?: model.PipeSegment): model.IndexSegment {
