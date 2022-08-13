@@ -15,7 +15,6 @@ import * as fs from "fs";
 
 import { CSVWriter, JSONWriter, Runtime } from "@malloydata/malloy";
 
-import { log } from "./logger";
 import { MessageDownload, WorkerDownloadMessage } from "./types";
 import { createRunnable } from "./utils";
 import { WorkerURLReader } from "./files";

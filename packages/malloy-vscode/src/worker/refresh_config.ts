@@ -14,6 +14,12 @@
 import { MessageConfig } from "./types";
 import { CONNECTION_MANAGER } from "../server/connections";
 
+const DEFAULT_ROW_LIMIT = 50;
+
 export const refreshConfig = ({ config }: MessageConfig): void => {
-  CONNECTION_MANAGER.setConnectionsConfig(config.connections);
+  const { rowLimit: rowLimitRaw, connections } = config;
+
+  CONNECTION_MANAGER.setConnectionsConfig(connections);
+  const rowLimit = rowLimitRaw || DEFAULT_ROW_LIMIT;
+  CONNECTION_MANAGER.setCurrentRowLimit(+rowLimit);
 };
