@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -11,12 +11,16 @@
  * GNU General Public License for more details.
  */
 
-import { HelpPanelMessage } from "../../message_types";
-import { makeVSCodeContext } from "../vscode_context";
-import { makeUseVSCodeContext } from "../vscode_context";
+import { URLReader } from "@malloydata/malloy";
+import * as fs from "fs/promises";
+import { fileURLToPath } from "url";
 
-export const HelpVSCodeContext = makeVSCodeContext<void, HelpPanelMessage>();
+export async function fetchFile(uri: string): Promise<string> {
+  return await fs.readFile(uri.replace(/^file:\/\//, ""), "utf-8");
+}
 
-export const useHelpVSCodeContext = makeUseVSCodeContext(HelpVSCodeContext);
-
-export { getVSCodeAPI } from "../vscode_context";
+export class WorkerURLReader implements URLReader {
+  async readURL(url: URL): Promise<string> {
+    return fetchFile(fileURLToPath(url));
+  }
+}

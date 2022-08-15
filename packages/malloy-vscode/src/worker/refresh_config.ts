@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -11,17 +11,15 @@
  * GNU General Public License for more details.
  */
 
-import { ConnectionPanelMessage } from "../../message_types";
-import { makeVSCodeContext } from "../vscode_context";
-import { makeUseVSCodeContext } from "../vscode_context";
+import { MessageConfig } from "./types";
+import { CONNECTION_MANAGER } from "../server/connections";
 
-export const ConnectionsVSCodeContext = makeVSCodeContext<
-  void,
-  ConnectionPanelMessage
->();
+const DEFAULT_ROW_LIMIT = 50;
 
-export const useConnectionsVSCodeContext = makeUseVSCodeContext(
-  ConnectionsVSCodeContext
-);
+export const refreshConfig = ({ config }: MessageConfig): void => {
+  const { rowLimit: rowLimitRaw, connections } = config;
 
-export { getVSCodeAPI } from "../vscode_context";
+  CONNECTION_MANAGER.setConnectionsConfig(connections);
+  const rowLimit = rowLimitRaw || DEFAULT_ROW_LIMIT;
+  CONNECTION_MANAGER.setCurrentRowLimit(+rowLimit);
+};

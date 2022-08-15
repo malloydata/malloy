@@ -19,7 +19,7 @@ import {
   ConnectionConfig,
   getDefaultIndex,
 } from "../../../../common/connection_manager_types";
-import { ConnectionMessageTest } from "../../../webview_message_manager";
+import { ConnectionMessageTest } from "../../../message_types";
 import { VSCodeButton } from "../../components";
 import { ButtonGroup } from "../ButtonGroup";
 import { ConnectionEditor } from "../ConnectionEditor";
