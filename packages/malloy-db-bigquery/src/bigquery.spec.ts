@@ -3,7 +3,7 @@ import { BigQueryConnection } from "./bigquery_connection";
 import { BigQuery as BigQuerySDK, TableMetadata } from "@google-cloud/bigquery";
 import * as util from "util";
 import * as fs from "fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath } from "url";
 
 describe("db:BigQuery", () => {
   let bq: BigQueryConnection;
