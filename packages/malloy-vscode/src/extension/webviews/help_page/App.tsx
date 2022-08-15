@@ -18,7 +18,7 @@ import { VSCodeButton } from "@vscode/webview-ui-toolkit/react";
 import { useHelpVSCodeContext } from "./help_vscode_context";
 
 export const App: React.FC = () => {
-  const [searchText, setSearchText] = useState("");
+  const [helpKeyword, setHelpKeyword] = useState("");
   const vscode = useHelpVSCodeContext();
 
   // TODO crs this might only be necessary because the MessageManager makes it necessary
@@ -29,7 +29,7 @@ export const App: React.FC = () => {
   useEffect(() => {
     const listener = (event: any) => {
       const message = event.data;
-      console.log("Message received", message);
+      setHelpKeyword(message.keyword);
     };
     window.addEventListener("message", listener);
     return () => window.removeEventListener("message", listener);
@@ -37,6 +37,7 @@ export const App: React.FC = () => {
 
   return (
     <ViewDiv>
+      {helpKeyword}
       <ButtonLink href="https://looker-open-source.github.io/malloy/">
         View Documentation
       </ButtonLink>
