@@ -79,6 +79,13 @@ export interface MessageConfig {
   config: MalloyConfig;
 }
 
+export interface MessageRead {
+  type: "read";
+  id: string;
+  file: string;
+  data: string;
+}
+
 export interface MessageDownload {
   type: "download";
   query: WorkerQuerySpec;
@@ -92,6 +99,7 @@ export type Message =
   | MessageCancel
   | MessageConfig
   | MessageExit
+  | MessageRead
   | MessageRun
   | MessageDownload;
 
@@ -124,9 +132,16 @@ export interface WorkerStartMessage {
   type: "start";
 }
 
+export interface WorkerReadMessage {
+  type: "read";
+  id: string;
+  file: string;
+}
+
 export type WorkerMessage =
   | WorkerDeadMessage
   | WorkerDownloadMessage
   | WorkerLogMessage
   | WorkerQueryPanelMessage
+  | WorkerReadMessage
   | WorkerStartMessage;
