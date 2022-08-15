@@ -357,7 +357,9 @@ class ImportsAndTablesStep implements TranslationStep {
         for (const relativeRef in parseRefs.urls) {
           const firstRef = parseRefs.urls[relativeRef];
           try {
-            const ref = new URL(relativeRef, that.sourceURL).toString();
+            const ref = decodeURI(
+              new URL(relativeRef, that.sourceURL).toString()
+            );
             that.addChild(ref);
             that.root.importZone.reference(ref, {
               url: that.sourceURL,
@@ -761,7 +763,7 @@ export abstract class MalloyTranslation {
 
   getChildExports(importURL: string): NamedStructDefs {
     const exports: NamedStructDefs = {};
-    const childURL = new URL(importURL, this.sourceURL).toString();
+    const childURL = decodeURI(new URL(importURL, this.sourceURL).toString());
     const child = this.childTranslators.get(childURL);
     if (child) {
       const did = child.translate();

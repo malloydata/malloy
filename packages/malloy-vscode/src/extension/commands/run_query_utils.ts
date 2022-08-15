@@ -12,6 +12,7 @@
  */
 
 import * as path from "path";
+import { fileURLToPath } from "url";
 import { performance } from "perf_hooks";
 import * as vscode from "vscode";
 import { CONNECTION_MANAGER, MALLOY_EXTENSION_STATE, RunState } from "../state";
@@ -120,7 +121,10 @@ class HackyDataStylesAccumulator implements URLReader {
     const contents = await this.uriReader.readURL(uri);
     this.dataStyles = {
       ...this.dataStyles,
-      ...(await dataStylesForFile(uri.toString(), contents)),
+      ...(await dataStylesForFile(
+        uri.protocol == "file:" ? fileURLToPath(uri) : uri.toString(),
+        contents
+      )),
     };
 
     return contents;

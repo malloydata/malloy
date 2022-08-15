@@ -52,7 +52,6 @@ import {
   URLReader,
   Connection,
 } from "./runtime_types";
-import { fileURLToPath } from "url";
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -89,8 +88,8 @@ export class Malloy {
     if (url === undefined) {
       url = new URL("internal://internal.malloy");
     }
-    const translator = new MalloyTranslator(fileURLToPath(url), {
-      urls: { [fileURLToPath(url)]: source },
+    const translator = new MalloyTranslator(url.toString(), {
+      urls: { [url.toString()]: source },
     });
     return new Parse(translator);
   }
@@ -308,15 +307,18 @@ export class Malloy {
     sqlBlock: SQLBlock,
     options?: RunSQLOptions
   ) {
+    console.log(`MADEN; runSQLBlockAndFetchResultSchema 1`);
     if (connection.canFetchSchemaAndRunSimultaneously()) {
       return connection.runSQLBlockAndFetchResultSchema(sqlBlock, options);
     }
+    console.log(`MADEN; runSQLBlockAndFetchResultSchema 2`);
     const [schema, data] = await Promise.all([
       connection
         .fetchSchemaForSQLBlocks([sqlBlock])
         .then((result) => result.schemas[sqlBlock.name]),
       connection.runSQL(sqlBlock.select),
     ]);
+    console.log(`MADEN; runSQLBlockAndFetchResultSchema 3`);
     return { schema, data };
   }
 
@@ -370,11 +372,14 @@ export class Malloy {
     connections?: LookupConnection<Connection>;
     options?: RunSQLOptions;
   }): Promise<Result> {
+    const pre = Math.random().toString(16).slice(2);
+    console.log(`MADEN; ${pre} Malloy.run start`);
     if (sqlBlock === undefined && preparedResult === undefined) {
       throw new Error(
         "Internal error: sqlBlock or preparedResult must be provided."
       );
     }
+    console.log(`MADEN; ${pre} Malloy.run 1`);
     const connectionName =
       sqlBlock?.connection || preparedResult?.connectionName;
     if (connection === undefined) {
@@ -385,7 +390,9 @@ export class Malloy {
       }
       connection = await connections.lookupConnection(connectionName);
     }
+    console.log(`MADEN; ${pre} Malloy.run 2`);
     if (sqlBlock !== undefined) {
+      console.log(`MADEN; ${pre} Malloy.run 3`);
       const { schema, data } = await this.runSQLBlockAndFetchResultSchema(
         connection,
         sqlBlock,
@@ -396,6 +403,7 @@ export class Malloy {
           "Expected schema's structRelationship type to be 'basetable'."
         );
       }
+      console.log(`MADEN; ${pre} Malloy.run 4`);
       return new Result(
         {
           structs: [schema],
@@ -417,6 +425,7 @@ export class Malloy {
         }
       );
     } else if (preparedResult !== undefined) {
+      console.log(`MADEN; ${pre} Malloy.run 5`);
       const result = await connection.runSQL(preparedResult.sql, options);
       return new Result(
         {
@@ -1074,7 +1083,7 @@ export class InMemoryURLReader implements URLReader {
   }
 
   public async readURL(url: URL): Promise<string> {
-    const file = this.files.get(fileURLToPath(url));
+    const file = this.files.get(url.toString());
     if (file !== undefined) {
       return Promise.resolve(file);
     } else {
@@ -2340,8 +2349,12 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    */
   async run(options?: RunSQLOptions): Promise<Result> {
     const connections = this.runtime.connections;
+    console.log(`MADEN; pre getPreparedResult`)
     const preparedResult = await this.getPreparedResult();
-    return Malloy.run({ connections, preparedResult, options });
+    console.log(`MADEN; pre Malloy.run`);
+    let blah = Malloy.run({ connections, preparedResult, options });
+    console.log(`MADEN; Malloy.run end`);
+    return blah;
   }
 
   async *runStream(options?: {
