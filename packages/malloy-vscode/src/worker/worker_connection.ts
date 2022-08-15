@@ -77,7 +77,11 @@ export class WorkerConnection {
 
   async readFile(message: WorkerReadMessage): Promise<void> {
     const { id, file } = message;
-    const data = await fetchFile(file);
-    this.send?.({ type: "read", id, file, data });
+    try {
+      const data = await fetchFile(file);
+      this.send?.({ type: "read", id, file, data });
+    } catch (error) {
+      this.send?.({ type: "read", id, file, error: error.message });
+    }
   }
 }

@@ -83,7 +83,8 @@ export interface MessageRead {
   type: "read";
   id: string;
   file: string;
-  data: string;
+  data?: string;
+  error?: string;
 }
 
 export interface MessageDownload {

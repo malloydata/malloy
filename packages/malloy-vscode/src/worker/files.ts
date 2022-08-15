@@ -27,14 +27,18 @@ let idx = 1;
  * @returns File contents
  */
 export async function fetchFile(file: string): Promise<string> {
-  return new Promise((resolve) => {
-    // This could probably use some error handling (timeout?).
+  return new Promise((resolve, reject) => {
+    // This could probably use some more error handling (timeout?).
     // For now just be relentlessly optimistic because there's
     // a tight coupling with the worker controller.
     const id = `${file}-${idx++}`;
     const callback = (message: Message) => {
       if (message.type === "read" && message.id === id) {
-        resolve(message.data);
+        if (message.data != null) {
+          resolve(message.data);
+        } else if (message.error != null) {
+          reject(new Error(message.error));
+        }
         process.off("message", callback);
       }
     };
