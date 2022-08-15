@@ -13,7 +13,7 @@
 
 import { Result } from "@malloydata/malloy";
 import { HTMLView } from "@malloydata/render";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import {
   QueryMessageType,
@@ -48,6 +48,8 @@ export const App: React.FC = () => {
   const [warning, setWarning] = useState<string | undefined>(undefined);
   const [resultKind, setResultKind] = useState<ResultKind>(ResultKind.HTML);
   const [drillTooltipVisible, setDrillTooltipVisible] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [observer, setObserver] = useState<MutationObserver>();
   const drillTooltipId = useRef(0);
   const { setTooltipRef, setTriggerRef, getTooltipProps } = usePopperTooltip({
     visible: drillTooltipVisible,
@@ -59,6 +61,28 @@ export const App: React.FC = () => {
   useEffect(() => {
     vscode.postMessage({ type: "app-ready" } as QueryPanelMessage);
   }, []);
+
+  const themeCallback = useCallback(() => {
+    const themeKind = document.body.dataset.vscodeThemeKind;
+    setDarkMode(themeKind === "vscode-dark");
+  }, []);
+
+  useEffect(() => {
+    const obs = new MutationObserver(themeCallback);
+    setObserver(obs);
+  }, [themeCallback, setObserver]);
+
+  useEffect(() => {
+    if (!observer) return;
+    observer.observe(document.body, {
+      attributeFilter: ["data-vscode-theme-kind"],
+    });
+    return () => {
+      if (observer) {
+        observer.disconnect();
+      }
+    };
+  }, [observer, document.body]);
 
   useEffect(() => {
     const listener = (event: MessageEvent<QueryPanelMessage>) => {
@@ -173,12 +197,14 @@ export const App: React.FC = () => {
       )}
       {!error && resultKind === ResultKind.JSON && (
         <Scroll>
-          <PrismContainer style={{ margin: "10px" }}>{json}</PrismContainer>
+          <PrismContainer darkMode={darkMode} style={{ margin: "10px" }}>
+            {json}
+          </PrismContainer>
         </Scroll>
       )}
       {!error && resultKind === ResultKind.SQL && (
         <Scroll>
-          <PrismContainer style={{ margin: "10px" }}>
+          <PrismContainer darkMode={darkMode} style={{ margin: "10px" }}>
             <div
               dangerouslySetInnerHTML={{ __html: sql }}
               style={{ margin: "10px" }}
@@ -215,54 +241,58 @@ const Scroll = styled.div`
   overflow: auto;
 `;
 
-const PrismContainer = styled.pre`
+interface PrismContainerProps {
+  darkMode: boolean;
+}
+
+const PrismContainer = styled.pre<PrismContainerProps>`
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
   font-size: 14px;
-  color: #333388;
+  color: ${(props) => (props.darkMode ? "#9cdcfe" : "#333388")};
 
   span.token.keyword {
-    color: #af00db;
+    color: ${(props) => (props.darkMode ? "#c586c0" : "#af00db")};
   }
 
   span.token.comment {
-    color: #4f984f;
+    color: ${(props) => (props.darkMode ? "#6a9955" : "#4f984f")};
   }
 
   span.token.function,
   span.token.function_keyword {
-    color: #795e26;
+    color: ${(props) => (props.darkMode ? "#ce9178" : "#795e26")};
   }
 
   span.token.string {
-    color: #ca4c4c;
+    color: ${(props) => (props.darkMode ? "#d16969" : "#ca4c4c")};
   }
 
   span.token.regular_expression {
-    color: #88194d;
+    color: ${(props) => (props.darkMode ? "#f03e91" : "#88194d")};
   }
 
   span.token.operator,
   span.token.punctuation {
-    color: #505050;
+    color: ${(props) => (props.darkMode ? "#dadada" : "#505050")};
   }
 
   span.token.number {
-    color: #09866a;
+    color: ${(props) => (props.darkMode ? "#4ec9b0" : "#09866a")};
   }
 
   span.token.type,
   span.token.timeframe {
-    color: #0070c1;
+    color: ${(props) => (props.darkMode ? "#569cd6 " : "#0070c1")};
   }
 
   span.token.date {
-    color: #09866a;
-    /* color: #8730b3; */
+    color: ${(props) => (props.darkMode ? "#4ec9b0" : "#09866a")};
+    /* color: ${(props) => (props.darkMode ? "#8730b3" : "#8730b3")};; */
   }
 
   span.token.property {
-    color: #b98f13;
+    color: ${(props) => (props.darkMode ? "#dcdcaa" : "#b98f13")};
   }
 `;
 
