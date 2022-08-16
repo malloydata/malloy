@@ -83,8 +83,16 @@ div.sidebar {
   overflow-y: auto;
 }
 
+.sidebar-section .sidebar-section .sidebar-section-item-group {
+ margin-left: 4px;
+}
+
+.sidebar-section .sidebar-section .sidebar-section-title {
+  margin-left: 4px;
+}
+
 div.sidebar div.sidebar-item a {
-  padding: 2px 8px;
+  padding: 2px 6px;
   margin: 2px 0;
   height: 26px;
   border-radius: 50px;
@@ -123,7 +131,7 @@ div.sidebar-section-title {
   font-weight: 500;
   font-size: 14px;
   display: flex;
-  padding: 3px 12px;
+  padding: 3px 10px;
   color: #48494c;
   cursor: pointer;
   justify-content: space-between;

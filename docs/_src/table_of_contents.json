@@ -160,12 +160,21 @@
       "title": "Examples",
       "items": [
         {
-          "title": "eCommerce Analysis",
-          "link": "/examples/ecommerce.md"
+          "title": "NTSB Flight Database",
+          "items": [
+            {
+              "title": "Connect with BigQuery",
+              "link": "/examples/faa/bigquery.md"
+            },
+            {
+              "title": "Connect with Postgres",
+              "link": "/examples/faa/postgres.md"
+            }
+          ]
         },
         {
-          "title": "NTSB Flight Database",
-          "link": "/examples/faa.md"
+          "title": "eCommerce Analysis",
+          "link": "/examples/ecommerce.md"
         },
         {
           "title": "The Name Game",
