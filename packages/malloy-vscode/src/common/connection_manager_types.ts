@@ -26,6 +26,7 @@ export interface BigQueryConnectionConfig {
   projectName?: string;
   location?: string;
   maximumBytesBilled?: string;
+  timeoutMs?: string;
 }
 
 export interface PostgresConnectionConfig {

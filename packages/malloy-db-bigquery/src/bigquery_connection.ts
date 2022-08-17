@@ -64,6 +64,7 @@ interface BigQueryConnectionConfiguration {
   serviceAccountKeyPath?: string;
   location?: string;
   maximumBytesBilled?: string;
+  timeoutMs?: string;
 }
 
 interface SchemaInfo {
@@ -107,6 +108,11 @@ const maybeRewriteError = (e: Error | unknown): Error => {
  * Default maximumBytesBilled value, 25GiB
  */
 const MAXIMUM_BYTES_BILLED = String(25 * 1024 * 1024 * 1024);
+
+/**
+ * Default timeoutMs value, 10 Mins
+ */
+const TIMEOUT_MS = String(1000 * 60 * 10);
 
 // manage access to BQ, control costs, enforce global data/API limits
 export class BigQueryConnection
@@ -699,6 +705,8 @@ export class BigQueryConnection
       location: this.location,
       maximumBytesBilled:
         this.config.maximumBytesBilled || MAXIMUM_BYTES_BILLED,
+      jobTimeoutMs:  
+        Number(this.config.timeoutMs || TIMEOUT_MS),
       ...createQueryJobOptions,
     });
     return job;
