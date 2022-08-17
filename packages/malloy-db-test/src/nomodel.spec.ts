@@ -980,7 +980,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(d[0]["by_state1"]).not.toBe(null);
   });
 
-  it.only(`number as null- ${databaseName}`, async () => {
+  it(`number as null- ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `

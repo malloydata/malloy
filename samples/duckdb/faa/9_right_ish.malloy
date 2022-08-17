@@ -1,0 +1,12 @@
+import "2_flights.malloy"
+
+query: flights->{
+  group_by: origin.state
+  aggregate: flight_count
+  nest: by_carrier {
+    group_by: carrier, destination
+    aggregate: flight_count, all_flights is all(flight_count)
+    
+  }
+  having: all(flight_count) > 100
+}
