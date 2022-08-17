@@ -37,6 +37,8 @@ async function track(event: GATrackingEvent) {
 
   telemetryLog.appendLine(`Logging telemetry event: ${JSON.stringify(event)}.`);
 
+
+  console.log(MALLOY_EXTENSION_STATE.getClientId());
   try {
     process.env.NODE_DEBUG = "http";
     await fetch(
@@ -64,6 +66,13 @@ export function trackQueryRun({ dialect }: { dialect: string }): Promise<void> {
 export function trackModelLoad(): Promise<void> {
   return track({
     name: "model_load",
+    params: {},
+  });
+}
+
+export function trackModelSave(): Promise<void> {
+  return track({
+    name: "model_save",
     params: {},
   });
 }

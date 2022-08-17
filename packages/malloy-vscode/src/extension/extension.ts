@@ -37,7 +37,7 @@ import { CONNECTION_MANAGER, MALLOY_EXTENSION_STATE } from "./state";
 import { ConnectionsProvider } from "./tree_views/connections_view";
 import { HelpViewProvider } from "./webview_views/help_view";
 import { getNewClientId } from "./utils";
-import { trackModelLoad } from "./telemetry";
+import { trackModelLoad, trackModelSave } from "./telemetry";
 
 let client: LanguageClient;
 export let extensionModeProduction: boolean;
@@ -104,12 +104,6 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument(() => {
-      vscode.commands.executeCommand("malloy.refreshSchema");
-    })
-  );
-
-  context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor(() =>
       vscode.commands.executeCommand("malloy.refreshSchema")
     )
@@ -155,6 +149,15 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.onDidOpenTextDocument(async (e) => {
       if (e.languageId === "malloy") {
         trackModelLoad();
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument(async (e) => {
+      vscode.commands.executeCommand("malloy.refreshSchema");
+      if (e.languageId === "malloy") {
+        trackModelSave();
       }
     })
   );
