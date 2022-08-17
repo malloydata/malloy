@@ -29,9 +29,8 @@ export interface GATrackingEvent {
   params: Record<string, string>;
 }
 
-// TODO get these from somewhere
-const MEASUREMENT_ID = "";
-const API_SECRET = "";
+const MEASUREMENT_ID = process.env.GA_MEASUREMENT_ID;
+const API_SECRET = process.env.GA_API_SECRET;
 
 async function track(event: GATrackingEvent) {
   if (!isTelemetryEnabled()) return;

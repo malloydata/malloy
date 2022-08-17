@@ -41,6 +41,15 @@ _OR_
 
 2. Open the `malloy-vscode` package root directory in VSCode, right click on `dist/malloy-vscode-x.x.x.vsix` and select "Install Extension VSIX".
 
+### Development
+
+For telemetry to work in development, you need to have the `GA_MEASUREMENT_ID` and `GA_API_SECRET` environment variables set to appropriate values. In order for these to be populated when using the "Run Malloy Extension" VSCode launch configuration, they need to be in a `.env` file at the top level of the repo, like so:
+
+```
+GA_MEASUREMENT_ID='<id goes here>'
+GA_API_SECRET='<secret goes here>'
+```
+
 # Malloy and Extension Development
 
 1. Open the `malloy` directory in VSCode (where ever you cloned)

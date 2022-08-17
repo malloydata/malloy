@@ -30,7 +30,8 @@
       "preLaunchTask": "build-extension-task",
       "sourceMaps": true,
       "console": "integratedTerminal",
-      "runtimeArgs": ["--preserve-symlinks"]
+      "runtimeArgs": ["--preserve-symlinks"],
+      "envFile": "${workspaceFolder}/.env"
     },
     {
       "type": "node",
