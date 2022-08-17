@@ -686,7 +686,6 @@ export class BigQueryConnection
       for (let retries = 0; retries < 3; retries++) {
         try {
           return await job.getQueryResults({
-            timeoutMs: 1000 * 60 * 10,
             ...getQueryResultsOptions,
           });
         } catch (fetchError) {
@@ -705,7 +704,7 @@ export class BigQueryConnection
       location: this.location,
       maximumBytesBilled:
         this.config.maximumBytesBilled || MAXIMUM_BYTES_BILLED,
-      jobTimeoutMs:  
+      jobTimeoutMs:
         Number(this.config.timeoutMs) || TIMEOUT_MS,
       ...createQueryJobOptions,
     });
