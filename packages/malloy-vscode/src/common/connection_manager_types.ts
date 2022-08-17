@@ -25,6 +25,7 @@ export interface BigQueryConnectionConfig {
   serviceAccountKeyPath?: string;
   projectName?: string;
   location?: string;
+  maximumBytesBilled?: string;
 }
 
 export interface PostgresConnectionConfig {

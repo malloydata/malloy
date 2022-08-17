@@ -56,4 +56,5 @@ export const COLORS = {
     fillMedium: "#d4d6d8",
     fillLight: "#f7f8f8",
   },
+  mainBackground: "rgb(247, 249, 252)",
 };

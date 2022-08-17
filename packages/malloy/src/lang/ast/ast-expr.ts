@@ -27,7 +27,7 @@ import {
   isConditionParameter,
   StructDef,
   TimeFieldType,
-  UngroupedFragment,
+  UngroupFragment,
 } from "../../model/malloy_types";
 import { DefSpace, FieldSpace, LookupResult } from "../field-space";
 import {
@@ -749,10 +749,14 @@ export class ExprSum extends ExprAsymmetric {
   }
 }
 
-export class ExprUngrouped extends ExpressionDef {
+export class ExprUngroup extends ExpressionDef {
   legalChildTypes = FT.anyAtomicT;
-  elementType = "ungrouped";
-  constructor(readonly expr: ExpressionDef, readonly fields: FieldName[]) {
+  elementType = "ungroup";
+  constructor(
+    readonly control: "all" | "exclude",
+    readonly expr: ExpressionDef,
+    readonly fields: FieldName[]
+  ) {
     super({ expr, fields });
   }
 
@@ -763,14 +767,11 @@ export class ExprUngrouped extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const exprVal = this.expr.getExpression(fs);
     if (!exprVal.aggregate) {
-      this.expr.log("ungrouped expression must be an aggregate");
+      this.expr.log(`${this.control}() expression must be an aggregate`);
       return errorFor("ungrouped scalar");
     }
     if (this.typeCheck(this.expr, { ...exprVal, aggregate: false })) {
-      const f: UngroupedFragment = {
-        type: "ungrouped",
-        e: exprVal.value,
-      };
+      const f: UngroupFragment = { type: this.control, e: exprVal.value };
       // TODO query the output field space to error check
       // ( not possible because "fs" is the input field space )
       if (this.fields.length > 0) {
@@ -782,6 +783,7 @@ export class ExprUngrouped extends ExpressionDef {
         value: [f],
       };
     }
+    this.log(`${this.control}() incompatible type`);
     return errorFor("ungrouped type check");
   }
 }

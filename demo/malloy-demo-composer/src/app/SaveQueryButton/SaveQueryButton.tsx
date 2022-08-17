@@ -16,11 +16,13 @@ import { ActionIcon } from "../ActionIcon";
 import { useSaveQueryPopover } from "../SaveQueryPopover";
 
 interface SaveQueryButtonProps {
+  disabled: boolean;
   saveQuery: (name: string) => void;
 }
 
 export const SaveQueryButton: React.FC<SaveQueryButtonProps> = ({
   saveQuery,
+  disabled,
 }) => {
   const { saveQueryPopover, openSaveQueryPopover } = useSaveQueryPopover({
     saveQuery,
@@ -29,8 +31,8 @@ export const SaveQueryButton: React.FC<SaveQueryButtonProps> = ({
     <>
       <ActionIcon
         action="save"
-        onClick={openSaveQueryPopover}
-        color="dimension"
+        onClick={() => !disabled && openSaveQueryPopover()}
+        color={!disabled ? "dimension" : "other"}
       />
       {saveQueryPopover}
     </>

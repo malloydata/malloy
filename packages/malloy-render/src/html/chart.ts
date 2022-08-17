@@ -43,6 +43,14 @@ export abstract class HTMLChartRenderer implements Renderer {
     return mappedRows;
   }
 
+  getSize(): { height: number; width: number } {
+    if (this.size === "large") {
+      return { height: 350, width: 500 };
+    } else {
+      return { height: 175, width: 250 };
+    }
+  }
+
   constructor(
     protected readonly document: Document,
     protected styleDefaults: StyleDefaults,

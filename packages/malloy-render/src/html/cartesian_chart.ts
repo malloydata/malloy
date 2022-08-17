@@ -20,14 +20,6 @@ import { DEFAULT_SPEC } from "./vega_spec";
 export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
   abstract getMark(): "bar" | "line" | "point";
 
-  getSize(): { height: number; width: number } {
-    if (this.size === "large") {
-      return { height: 350, width: 500 };
-    } else {
-      return { height: 100, width: 150 };
-    }
-  }
-
   getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
     const fields = data.field.intrinsicFields;
     const xField = fields[0];

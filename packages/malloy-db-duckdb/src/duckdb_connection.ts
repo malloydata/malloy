@@ -22,13 +22,14 @@ import {
   PooledConnection,
   SQLBlock,
   StructDef,
+  QueryDataRow,
 } from "@malloydata/malloy";
 import {
   FetchSchemaAndRunSimultaneously,
   FetchSchemaAndRunStreamSimultaneously,
   StreamingConnection,
 } from "@malloydata/malloy/src/runtime_types";
-import { Database, OPEN_READONLY, OPEN_READWRITE } from "duckdb";
+import { Database, OPEN_READONLY, Row, OPEN_READWRITE } from "duckdb";
 import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
 
 const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
@@ -43,7 +44,9 @@ const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   INTEGER: "number",
 };
 
-export class DuckDBConnection implements Connection, PersistSQLResults {
+export class DuckDBConnection
+  implements Connection, PersistSQLResults, StreamingConnection
+{
   protected connection;
   protected database;
   protected isSetup = false;
@@ -102,11 +105,11 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
     this.isSetup = true;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  protected async runDuckDBQuery(sql: string): Promise<any> {
+  protected async runDuckDBQuery(
+    sql: string
+  ): Promise<{ rows: Row[]; totalRows: number }> {
     return new Promise((resolve, reject) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      this.connection.all(sql, (err: Error, result: any) => {
+      this.connection.all(sql, (err: Error, result: Row[]) => {
         if (err) {
           reject(err);
         } else
@@ -118,8 +121,9 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  public async runRawSQL(sql: string): Promise<any> {
+  public async runRawSQL(
+    sql: string
+  ): Promise<{ rows: Row[]; totalRows: number }> {
     await this.setup();
     return this.runDuckDBQuery(sql);
   }
@@ -128,9 +132,6 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
     sql: string,
     options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
-    // console.log(sql);
-    await this.setup();
-
     const rowLimit = options.rowLimit ?? 10;
 
     const statements = sql.split("-- hack: split on this");
@@ -146,6 +147,23 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
       result = result.slice(0, rowLimit);
     }
     return { rows: result, totalRows: result.length };
+  }
+
+  public async *runSQLStream(
+    sql: string,
+    _options: RunSQLOptions = {}
+  ): AsyncIterableIterator<QueryDataRow> {
+    await this.setup();
+    const statements = sql.split("-- hack: split on this");
+
+    while (statements.length > 1) {
+      await this.runDuckDBQuery(statements[0]);
+      statements.shift();
+    }
+
+    for await (const row of this.connection.stream(statements[0])) {
+      yield row;
+    }
   }
 
   public async runSQLBlockAndFetchResultSchema(
@@ -376,7 +394,7 @@ export class DuckDBConnection implements Connection, PersistSQLResults {
   }
 
   canStream(): this is StreamingConnection {
-    return false;
+    return true;
   }
 
   canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously {

@@ -91,6 +91,20 @@ export const BigQueryConnectionEditor: React.FC<BigQueryConnectionEditorProps> =
               </VSCodeButton>
             </td>
           </tr>
+          <tr>
+            <LabelCell>
+              <Label>Maximum Bytes Billed:</Label>
+            </LabelCell>
+            <td>
+              <TextField
+                value={config.maximumBytesBilled || ""}
+                setValue={(maximumBytesBilled) => {
+                  setConfig({ ...config, maximumBytesBilled });
+                }}
+                placeholder="Optional"
+              />
+            </td>
+          </tr>
         </tbody>
       </table>
     );

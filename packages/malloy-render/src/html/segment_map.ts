@@ -63,8 +63,7 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
         : undefined;
 
     return {
-      width: 250,
-      height: 200,
+      ...this.getSize(),
       data: {
         values: this.mapData(data),
       },

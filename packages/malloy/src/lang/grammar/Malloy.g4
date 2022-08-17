@@ -353,8 +353,8 @@ timeframe
   : SECOND | MINUTE | HOUR | DAY | WEEK | MONTH | QUARTER | YEAR
   ;
 
-ungrouped
-  : UNGROUPED | ALL | EXCLUDE
+ungroup
+  : ALL | EXCLUDE
   ;
 
 fieldExpr
@@ -382,7 +382,7 @@ fieldExpr
   | OPAREN partialAllowedFieldExpr CPAREN                  # exprExpr
   | (id | timeframe) OPAREN ( argumentList? ) CPAREN       # exprFunc
   | pickStatement                                          # exprPick
-  | ungrouped OPAREN fieldExpr (COMMA fieldName)* CPAREN   # exprUngrouped
+  | ungroup OPAREN fieldExpr (COMMA fieldName)* CPAREN     # exprUngroup
   ;
 
 partialAllowedFieldExpr

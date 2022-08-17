@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="100px" height="100px" viewBox="0 0 100 100" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>channel_samples</title>
+    <g id="channel_samples" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" class="hover-fill">
+        <g id="Group" transform="translate(5.000000, 5.000000)" fill="#4285F4" class="primary-fill">
+            <path d="M20.25,6.75 L83.25,6.75 L83.25,70.875 L20.25,70.875 L20.25,6.75 Z M20.25,0 C18.45,0 16.875,0.675 15.525,2.025 C14.175,3.375 13.5,4.95 13.5,6.75 L13.5,69.75 C13.5,71.55 14.175,73.125 15.525,74.475 C16.875,75.825 18.45,76.5 20.25,76.5 L83.25,76.5 C85.05,76.5 86.625,75.825 87.975,74.475 C89.325,73.125 90,71.55 90,69.75 L90,6.75 C90,4.95 89.325,3.375 87.975,2.025 C86.625,0.675 85.05,0 83.25,0 L20.25,0 Z M6.75,90 C4.95,90 3.375,89.325 2.025,87.975 C0.675,86.625 0,85.05 0,83.25 L0,13.5 L6.75,13.5 L6.75,83.25 L76.5,83.25 L76.5,90 L6.75,90 Z" id="Shape" fill-rule="nonzero"></path>
+            <rect id="Rectangle" x="30.1571655" y="21.9026527" width="42.7656174" height="6.46202087"></rect>
+            <rect id="Rectangle-Copy" x="30.1571655" y="36.2815933" width="42.7656174" height="6.46202087"></rect>
+            <rect id="Rectangle-Copy-2" x="30.1571655" y="50.2489586" width="22.6109238" height="6.46202087"></rect>
+        </g>
+    </g>
+</svg>
