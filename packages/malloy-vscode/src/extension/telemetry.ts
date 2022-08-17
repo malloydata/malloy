@@ -36,7 +36,7 @@ const API_SECRET = "";
 async function track(event: GATrackingEvent) {
   if (!isTelemetryEnabled()) return;
 
-  telemetryLog.appendLine(`Logging telemetry event: ${event}.`);
+  telemetryLog.appendLine(`Logging telemetry event: ${JSON.stringify(event)}.`);
 
   try {
     await fetch(
@@ -54,9 +54,18 @@ async function track(event: GATrackingEvent) {
   }
 }
 
-export function trackQueryRun(): Promise<void> {
+export function trackQueryRun({ dialect }: { dialect: string }): Promise<void> {
   return track({
     name: "query_run",
+    params: {
+      dialect,
+    },
+  });
+}
+
+export function trackModelLoad(): Promise<void> {
+  return track({
+    name: "model_load",
     params: {},
   });
 }

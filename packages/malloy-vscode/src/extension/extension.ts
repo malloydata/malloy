@@ -37,6 +37,7 @@ import { CONNECTION_MANAGER, MALLOY_EXTENSION_STATE } from "./state";
 import { ConnectionsProvider } from "./tree_views/connections_view";
 import { HelpViewProvider } from "./webview_views/help_view";
 import { getNewClientId } from "./utils";
+import { trackModelLoad } from "./telemetry";
 
 let client: LanguageClient;
 export let extensionModeProduction: boolean;
@@ -149,6 +150,14 @@ export function activate(context: vscode.ExtensionContext): void {
     context.globalState.update("malloy_client_id", clientId);
   }
   MALLOY_EXTENSION_STATE.setClientId(clientId);
+
+  context.subscriptions.push(
+    vscode.workspace.onDidOpenTextDocument(async (e) => {
+      if (e.languageId === "malloy") {
+        trackModelLoad();
+      }
+    })
+  );
 
   setupLanguageServer(context);
 }

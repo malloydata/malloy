@@ -231,7 +231,6 @@ export function runMalloyQuery(
       );
 
       return (async () => {
-        trackQueryRun();
         try {
           malloyLog.appendLine("");
           const allBegin = performance.now();
@@ -263,6 +262,13 @@ export function runMalloyQuery(
           } else {
             throw new Error("Internal Error: Unexpected query type");
           }
+
+          const dialect =
+            (runnable instanceof QueryMaterializer
+              ? (await runnable.getPreparedQuery()).dialect
+              : undefined) || "unknown";
+
+          trackQueryRun({ dialect });
 
           // Set the row limit to the limit provided in the final stage of the query, if present
           const rowLimit =
