@@ -37,7 +37,6 @@ async function track(event: GATrackingEvent) {
 
   telemetryLog.appendLine(`Logging telemetry event: ${JSON.stringify(event)}.`);
 
-
   console.log(MALLOY_EXTENSION_STATE.getClientId());
   try {
     process.env.NODE_DEBUG = "http";
