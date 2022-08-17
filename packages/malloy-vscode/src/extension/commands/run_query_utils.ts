@@ -231,6 +231,7 @@ export function runMalloyQuery(
       );
 
       return (async () => {
+        trackQueryRun();
         try {
           malloyLog.appendLine("");
           const allBegin = performance.now();

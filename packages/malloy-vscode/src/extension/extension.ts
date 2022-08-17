@@ -33,9 +33,10 @@ import {
   runUnnamedSQLBlock,
   showLicensesCommand,
 } from "./commands";
-import { CONNECTION_MANAGER } from "./state";
+import { CONNECTION_MANAGER, MALLOY_EXTENSION_STATE } from "./state";
 import { ConnectionsProvider } from "./tree_views/connections_view";
 import { HelpViewProvider } from "./webview_views/help_view";
+import { getNewClientId } from "./utils";
 
 let client: LanguageClient;
 export let extensionModeProduction: boolean;
@@ -140,6 +141,14 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     })
   );
+
+  let clientId: string | undefined =
+    context.globalState.get("malloy_client_id");
+  if (clientId === undefined) {
+    clientId = getNewClientId();
+    context.globalState.update("malloy_client_id", clientId);
+  }
+  MALLOY_EXTENSION_STATE.setClientId(clientId);
 
   setupLanguageServer(context);
 }

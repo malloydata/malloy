@@ -32,6 +32,7 @@ export interface RunState {
 
 class MalloyExtensionState {
   private activeWebviewPanelId: string | undefined;
+  private clientId: string | undefined;
 
   setActiveWebviewPanelId(panelId: string) {
     this.activeWebviewPanelId = panelId;
@@ -58,6 +59,17 @@ class MalloyExtensionState {
 
   getRunState(panelId: string) {
     return this.runStates.get(panelId);
+  }
+
+  setClientId(clientId: string): void {
+    this.clientId = clientId;
+  }
+
+  getClientId(): string {
+    if (this.clientId === undefined) {
+      throw new Error("Client ID has not been set");
+    }
+    return this.clientId;
   }
 }
 

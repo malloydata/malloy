@@ -13,6 +13,7 @@
 
 import { URLReader } from "@malloydata/malloy";
 import * as vscode from "vscode";
+import { randomInt } from "crypto";
 
 export async function fetchFile(uri: string): Promise<string> {
   return (
@@ -24,4 +25,17 @@ export class VSCodeURLReader implements URLReader {
   async readURL(url: URL): Promise<string> {
     return fetchFile(url.toString());
   }
+}
+
+const CLIENT_ID_CHARACTERS =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+
+function randomClientIdCharacter() {
+  return CLIENT_ID_CHARACTERS.charAt(
+    Math.floor(randomInt(0, CLIENT_ID_CHARACTERS.length))
+  );
+}
+
+export function getNewClientId(): string {
+  return Array.from({ length: 32 }, randomClientIdCharacter).join("");
 }

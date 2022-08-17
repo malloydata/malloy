@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -11,8 +11,9 @@
  * GNU General Public License for more details.
  */
 
-import fetch from "node-fetch";
 import * as vscode from "vscode";
+import { MALLOY_EXTENSION_STATE } from "./state";
+import fetch from "node-fetch";
 
 const telemetryLog = vscode.window.createOutputChannel("Malloy Telemetry");
 
@@ -23,50 +24,39 @@ function isTelemetryEnabled() {
   return vsCodeValue && configValue;
 }
 
-// TODO
-const GA_TRACKING_ID = "";
+export interface GATrackingEvent {
+  name: string;
+  params: Record<string, string>;
+}
 
-async function trackEvent({
-  category,
-  action,
-  label,
-  value,
-}: {
-  category: string;
-  action: string;
-  label?: string | undefined;
-  value?: number | undefined;
-}): Promise<void> {
+// TODO get these from somewhere
+const MEASUREMENT_ID = "";
+const API_SECRET = "";
+
+async function track(event: GATrackingEvent) {
   if (!isTelemetryEnabled()) return;
 
-  const params = new URLSearchParams();
-  params.append("v", "1");
-  params.append("tid", GA_TRACKING_ID);
-  params.append("cid", "555"); // TODO
-  params.append("t", "event");
-  params.append("ec", category);
-  params.append("ea", action);
-  if (label !== undefined) {
-    params.append("el", label);
-  }
-  if (value !== undefined) {
-    params.append("ev", value.toString());
-  }
-
-  telemetryLog.appendLine(
-    `Logging telemetry event. Category: ${category}, action: ${action}, label: ${label}, value: ${value}.`
-  );
+  telemetryLog.appendLine(`Logging telemetry event: ${event}.`);
 
   try {
-    await fetch("http://www.google-analytics.com/debug/collect", {
-      method: "POST",
-      body: params,
-    });
+    await fetch(
+      `https://www.google-analytics.com/mp/collect?measurement_id=${MEASUREMENT_ID}&api_secret=${API_SECRET}`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          client_id: MALLOY_EXTENSION_STATE.getClientId(),
+          events: [event],
+        }),
+      }
+    );
   } catch (error) {
     telemetryLog.appendLine(`Logging telemetry event failed: ${error}`);
   }
 }
 
 export function trackQueryRun(): Promise<void> {
-  return trackEvent({ category: "query", action: "run" });
+  return track({
+    name: "query_run",
+    params: {},
+  });
 }
