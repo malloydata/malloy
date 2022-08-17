@@ -112,7 +112,7 @@ const MAXIMUM_BYTES_BILLED = String(25 * 1024 * 1024 * 1024);
 /**
  * Default timeoutMs value, 10 Mins
  */
-const TIMEOUT_MS = String(1000 * 60 * 10);
+const TIMEOUT_MS = 1000 * 60 * 10;
 
 // manage access to BQ, control costs, enforce global data/API limits
 export class BigQueryConnection
@@ -706,7 +706,7 @@ export class BigQueryConnection
       maximumBytesBilled:
         this.config.maximumBytesBilled || MAXIMUM_BYTES_BILLED,
       jobTimeoutMs:  
-        Number(this.config.timeoutMs || TIMEOUT_MS),
+        Number(this.config.timeoutMs) || TIMEOUT_MS,
       ...createQueryJobOptions,
     });
     return job;
