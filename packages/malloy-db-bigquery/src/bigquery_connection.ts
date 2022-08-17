@@ -704,8 +704,7 @@ export class BigQueryConnection
       location: this.location,
       maximumBytesBilled:
         this.config.maximumBytesBilled || MAXIMUM_BYTES_BILLED,
-      jobTimeoutMs:
-        Number(this.config.timeoutMs) || TIMEOUT_MS,
+      jobTimeoutMs: Number(this.config.timeoutMs) || TIMEOUT_MS,
       ...createQueryJobOptions,
     });
     return job;
