@@ -194,6 +194,9 @@ export function passForHighlights(
       case MalloyParser.RENAME:
         register(token, HighlightType.Property.Rename, true);
         break;
+      case MalloyParser.SOURCE:
+        register(token, HighlightType.Property.Source, true);
+        break;
       case MalloyParser.TOP:
         register(token, HighlightType.Property.Top, true);
         break;

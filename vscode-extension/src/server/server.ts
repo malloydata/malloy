@@ -20,6 +20,8 @@ import {
   InitializeResult,
   SemanticTokensBuilder,
   CompletionItem,
+  HoverParams,
+  Hover,
 } from "vscode-languageserver/node";
 
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -36,6 +38,7 @@ import {
   getCompletionItems,
   resolveCompletionItem,
 } from "./completions/completions";
+import { getHover } from "./hover/hover";
 import { getMalloyDefinitionReference } from "./definitions/definitions";
 
 const connection = createConnection(ProposedFeatures.all);
@@ -64,6 +67,7 @@ connection.onInitialize((params: InitializeParams) => {
           tokenModifiers: TOKEN_MODIFIERS,
         },
       },
+      hoverProvider: true,
     },
   };
 
@@ -140,6 +144,12 @@ connection.onCompletion((params): CompletionItem[] => {
 // the completion list.
 connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
   return resolveCompletionItem(item);
+});
+
+connection.onHover((params: HoverParams): Hover | null => {
+  const document = documents.get(params.textDocument.uri);
+
+  return document ? getHover(document, params) : null;
 });
 
 documents.listen(connection);

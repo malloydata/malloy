@@ -13,13 +13,15 @@
 
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
+import Markdown from "markdown-to-jsx";
 
-import { HelpMessageType } from "../../webview_message_manager";
+import { HelpMessageType } from "../../message_types";
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react";
 import { useHelpVSCodeContext } from "./help_vscode_context";
+import { HIGHLIGHT_DOCS } from "../../../server/completions/completion_docs";
 
 export const App: React.FC = () => {
-  const [helpKeyword, setHelpKeyword] = useState("");
+  const [help, setHelp] = useState("");
   const vscode = useHelpVSCodeContext();
 
   // TODO crs this might only be necessary because the MessageManager makes it necessary
@@ -28,9 +30,13 @@ export const App: React.FC = () => {
   });
 
   useEffect(() => {
-    const listener = (event: any) => {
-      const message = event.data;
-      setHelpKeyword(message.keyword);
+    const listener = (event: MessageEvent) => {
+      const { keyword } = event.data;
+      if (HIGHLIGHT_DOCS[keyword]) {
+        setHelp(HIGHLIGHT_DOCS[keyword]);
+      } else {
+        setHelp("");
+      }
     };
     window.addEventListener("message", listener);
     return () => window.removeEventListener("message", listener);
@@ -38,7 +44,6 @@ export const App: React.FC = () => {
 
   return (
     <ViewDiv>
-      {helpKeyword}
       <ButtonLink href="https://looker-open-source.github.io/malloy/">
         View Documentation
       </ButtonLink>
@@ -48,6 +53,11 @@ export const App: React.FC = () => {
       <ButtonLink href="https://looker-open-source.github.io/malloy/aux/generated/samples.zip">
         Download Sample Models
       </ButtonLink>
+      <Help>
+        <h3>Quick Help</h3>
+        {help && <Markdown>{help}</Markdown>}
+        {!help && <span>Select a keyword for quick help.</span>}
+      </Help>
     </ViewDiv>
   );
 };
@@ -79,5 +89,12 @@ const ViewDiv = styled.div`
   padding: 1em 20px 1em;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 20px;
+`;
+
+const Help = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 `;

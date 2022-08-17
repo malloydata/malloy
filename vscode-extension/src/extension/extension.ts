@@ -19,6 +19,7 @@ import {
   ServerOptions,
   TransportKind,
 } from "vscode-languageclient/node";
+import { DocumentHighlight, Malloy } from "@malloydata/malloy";
 import {
   runTurtleFromSchemaCommand,
   SchemaProvider,
@@ -133,12 +134,15 @@ export function activate(context: vscode.ExtensionContext): void {
       (e: vscode.TextEditorSelectionChangeEvent) => {
         const document = e.textEditor.document;
         if (document.languageId == "malloy") {
-          const wordRange = document.getWordRangeAtPosition(
+          const parse = Malloy.parse({ source: document.getText() });
+          const highlight = highlightForPosition(
+            parse.highlights,
             e.selections[0].start
           );
 
-          const possibleKeyword = document.getText(wordRange);
-          provider.showHelpFor(possibleKeyword);
+          if (highlight) {
+            provider.showHelpFor(highlight.type);
+          }
         }
       }
     )
@@ -242,3 +246,18 @@ export function getWorker(): WorkerConnection {
 function setupWorker(context: vscode.ExtensionContext): void {
   worker = new WorkerConnection(context);
 }
+
+const highlightForPosition = (
+  highlights: DocumentHighlight[],
+  { character, line }: vscode.Position
+) => {
+  return highlights.find((highlight) => {
+    const { start, end } = highlight.range;
+    const afterStart =
+      line > start.line ||
+      (line === start.line && character >= start.character);
+    const beforeEnd =
+      line < end.line || (line === end.line && character <= end.character);
+    return afterStart && beforeEnd;
+  });
+};

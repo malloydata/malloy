@@ -11,6 +11,8 @@
  * GNU General Public License for more details.
  */
 
+import { HighlightType } from "@malloydata/malloy";
+
 const DOCS_ROOT = "https://looker-open-source.github.io/malloy/documentation";
 
 const MODEL_EXPLORE_DOC = `Use \`explore\` to name, describe, and augment a data source.
@@ -32,7 +34,7 @@ source: flights is table('malloy-data.faa.flights') {
 }
 \`\`\`
 
-View [the full documentation](${DOCS_ROOT}/language/explore.html).
+View [the full documentation](${DOCS_ROOT}/language/source.html).
 `;
 
 const MODEL_QUERY_DOC = `Use \`query\` to define a top-level query which can be run within this document.
@@ -340,4 +342,32 @@ export const COMPLETION_DOCS: {
     accept: EXPLORE_ACCEPT_DOC,
     except: EXPLORE_EXCEPT_DOC,
   },
+};
+
+export const HIGHLIGHT_DOCS: {
+  [type: string]: string;
+} = {
+  [HighlightType.Property.Accept]: EXPLORE_ACCEPT_DOC,
+  [HighlightType.Property.Aggregate]: QUERY_AGGREGATE_DOC,
+  [HighlightType.Property.Dimension]: EXPLORE_DIMENSION_DOC,
+  [HighlightType.Property.Except]: EXPLORE_EXCEPT_DOC,
+  [HighlightType.Property.Explore]: MODEL_EXPLORE_DOC,
+  [HighlightType.Property.GroupBy]: QUERY_GROUP_BY_DOC,
+  [HighlightType.Property.Having]: QUERY_HAVING_DOC,
+  [HighlightType.Property.Index]: QUERY_INDEX_DOC,
+  [HighlightType.Property.JoinOne]: EXPLORE_JOIN_ONE_DOC,
+  [HighlightType.Property.JoinMany]: EXPLORE_JOIN_MANY_DOC,
+  [HighlightType.Property.JoinCross]: EXPLORE_JOIN_CROSS_DOC,
+  [HighlightType.Property.Limit]: QUERY_LIMIT_DOC,
+  [HighlightType.Property.Measure]: EXPLORE_MEASURE_DOC,
+  [HighlightType.Property.Nest]: QUERY_NEST_DOC,
+  [HighlightType.Property.OrderBy]: QUERY_ORDER_BY_DOC,
+  [HighlightType.Property.PrimaryKey]: EXPLORE_PRIMARY_KEY_DOC,
+  [HighlightType.Property.Project]: QUERY_PROJECT_DOC,
+  [HighlightType.Property.Query]: MODEL_QUERY_DOC,
+  [HighlightType.Property.Rename]: EXPLORE_RENAME_DOC,
+  [HighlightType.Property.Source]: MODEL_SOURCE_DOC,
+  [HighlightType.Property.Top]: QUERY_TOP_DOC,
+  [HighlightType.Property.Where]: QUERY_WHERE_DOC,
+  [HighlightType.Property.SQL]: MODEL_SQL_DOC,
 };
