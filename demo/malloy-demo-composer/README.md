@@ -8,15 +8,14 @@ _GitHub mutes videos by default, so make sure to unmute._
 
 https://user-images.githubusercontent.com/7178946/170373869-3cf43dd2-25c4-4ed0-b038-450c33903ad5.mov
 
-
 ## Running the Composer
 
 ### Install Malloy
 
 If you haven't already done so, you'll need to start by [Building the Malloy repo](https://github.com/looker-open-source/malloy/blob/main/developing.md). Install the dependencies in that link, then in the top-level `malloy/` directory, run:
 
-1. `yarn install` to install dependencies
-2. `yarn build` to build all the libraries Malloy needs
+1. `npm install` to install dependencies
+2. `npm run build` to build all the libraries Malloy needs
 
 Make sure you have a [database connected](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html), and you'll also likely want to set up the [VS Code Extension](https://github.com/looker-open-source/malloy#installing-the-extension) to view and edit Malloy files.
 
@@ -24,8 +23,8 @@ Make sure you have a [database connected](https://looker-open-source.github.io/m
 
 In the `malloy/demo/malloy-demo-composer` directory, run:
 
-1. `yarn build` (you need to do this in addition to the above build in the top-level directory)
-2. `yarn start`
+1. `npm run build` (you need to do this in addition to the above build in the top-level directory)
+2. `npm run start`
 
 This will start a desktop application. You should see any sources defined in `.malloy` files you place in a the Malloy models directory (by default, this is the samples directory but can be configured, as described below) listed in the "Select analysis..." menu at the top left. If you don't already have Malloy models built you'd like to work with, try making a copy of one of the [samples](https://github.com/looker-open-source/malloy/tree/main/samples); these are all built on public BigQuery datasets!
 
@@ -71,20 +70,22 @@ For example, a `composer_config.json` with the following content would configure
 
 ### Packaging Notes
 
-* Download XCode
-* Join developer program
-* Download Developer ID — G2 (from https://www.apple.com/certificateauthority/)
-* Make a cert signing request
-* Get a certificate from Apple (using cert signing request) — Make sure it’s a "Developer ID Application”
-* Create an `env` file:
+- Download XCode
+- Join developer program
+- Download Developer ID — G2 (from https://www.apple.com/certificateauthority/)
+- Make a cert signing request
+- Get a certificate from Apple (using cert signing request) — Make sure it’s a "Developer ID Application”
+- Create an `env` file:
+
 ```
 export NOTARIZER_APPLE_ID=<your apple ID>
 export NOTARIZER_APPLE_ID_PASSWORD=<your apple id app password>
 export SIGNER_IDENTITY=<name of signing certificate>
 ```
-* `source env`
-* `yarn package` might take ~10m to run while Apple notarizes the build
-* If you see the following (but the command keeps running), just wait it out.
+
+- `source env`
+- `npm run package` might take ~10m to run while Apple notarizes the build
+- If you see the following (but the command keeps running), just wait it out.
 
 ```
 WARNING: Code sign failed; please retry manually. Error: Command failed: spctl --assess --type execute --verbose --ignore-cache --no-cache /var/folders/6q/dq6hklkn309f1_7737gmbvvw00r7jt/T/electron-packager/darwin-x64/malloy-composer-demo-darwin-x64/malloy-composer-demo.app
@@ -95,6 +96,7 @@ source=Unnotarized Developer ID
 ### Debugging
 
 ## Using VSCode
-* From VSCode Run & Debug Panel Select "Launch Composer" from the dropdown, then "Start Debugging" using the Run button or `F5`
-* Then select "Launch Composer" from the dropdown, then "Start Debugging" using the Run button or `F5`
-* To connect to the render process select "Attach to Composer Render Process"
+
+- From VSCode Run & Debug Panel Select "Launch Composer" from the dropdown, then "Start Debugging" using the Run button or `F5`
+- Then select "Launch Composer" from the dropdown, then "Start Debugging" using the Run button or `F5`
+- To connect to the render process select "Attach to Composer Render Process"

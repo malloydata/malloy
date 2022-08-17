@@ -1,19 +1,19 @@
 ## Building Malloy
 
-Building the Malloy repo requires [node.js](https://nodejs.org/en/download/), [yarn](https://classic.yarnpkg.com/en/docs/install/), and a [Java Runtime Environment](https://www.oracle.com/java/technologies/javase-jre8-downloads.html) (JRE 1.6 or higher, 1.8 recommended) installed on your system in order to build the Malloy project.
+Building the Malloy repo requires [node.js](https://nodejs.org/en/download/) and a [Java Runtime Environment](https://www.oracle.com/java/technologies/javase-jre8-downloads.html) (JRE 1.6 or higher, 1.8 recommended) installed on your system in order to build the Malloy project.
 
 Alternatively, you can use [nix](https://nixos.org/) to install these dependencies. To use nix, install it with `curl -L https://nixos.org/nix/install | sh` and then run `nix-shell` from the `malloy/` directory. Nix is what _CI_ uses to run builds.
 
 The following will install dependencies for the entire set of packages and compile both the Malloy language and the VSCode extension.
 
 ```bash
-yarn install
-yarn package-extension
+npm install
+npm run package-extension
 ```
 
-Use the [VS Code ESLint extension](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) for code formatting, or run `yarn lint --fix`.
+Use the [VS Code ESLint extension](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) for code formatting, or run `npm run lint --fix`.
 
-The tests can be run via the [VS Code Jest Runner extension](https://marketplace.visualstudio.com/items?itemName=firsttris.vscode-jest-runner). Alternatively, use `yarn test`, or a specific file, like `yarn test packages/malloy-db-test/src/nomodel.spec.ts`.
+The tests can be run via the [VS Code Jest Runner extension](https://marketplace.visualstudio.com/items?itemName=firsttris.vscode-jest-runner). Alternatively, use `npm run test`, or a specific file, like `npm run test packages/malloy-db-test/src/nomodel.spec.ts`.
 
 Some of the Postgres tests depend on static tables (i.e. `packages/malloy-db-test/src/nomodel.spec.ts`). To set up the database locally for these tests, you can `gunzip` the `test/sql/malloytest-postgres.sql.gz` file and run its SQL with a command such as `psql -f test/sql/malloytest-postgres.sql`.
 
@@ -30,7 +30,7 @@ The Malloy VSCode extension's source is in the `malloy-vscode` directory.
 To build and install the current version of the extension, first ensure that you've followed the steps to install the dependencies for the Malloy Repo. **Note: You will need to re-run the below any time you pull in new changes.** Then run:
 
 ```bash
-yarn package-extension
+npm run package-extension
 ```
 
 Next, in VSCode _EITHER_:

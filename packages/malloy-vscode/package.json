@@ -8,7 +8,7 @@
     "vscode": "^1.63.0"
   },
   "scripts": {
-    "build": "tsc --build && yarn build-extension",
+    "build": "tsc --build && npm run build-extension",
     "test": "jest --config=../../jest.config.js",
     "build-extension": "ts-node scripts/build-extension build",
     "build-extension-dev": "NODE_ENV=development ts-node scripts/build-extension build",

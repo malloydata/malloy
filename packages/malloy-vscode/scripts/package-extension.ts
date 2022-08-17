@@ -56,7 +56,7 @@ export async function doPackage(
     await createVSIX({
       githubBranch: "main",
       preRelease,
-      useYarn: true,
+      useYarn: false,
       target,
       packagePath,
     });

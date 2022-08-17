@@ -14,7 +14,7 @@
 
 # Silly little hack to make it only run ANTLR when the grammar actually changes
 # BUG: If you go in $lib and delete a file which isn't MalloyParser.ts
-# this hack will fail. yarn clean will fix things though.
+# this hack will fail. `npm run clean`` will fix things though.
 
 set -e
 lib="../lib/Malloy"
