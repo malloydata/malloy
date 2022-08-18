@@ -15,7 +15,9 @@
 /* eslint-disable no-console */
 
 /*
- * This script produces a CSV useful for evaluating licenses for third-party software incuded in a binary.
+ * This script produces a CSV useful for evaluating licenses for third-party software incuded in a binary, and
+ * is a bit more complex than it might need to be because we need to satisfy lawyers with direct links to license information for packages
+ * (not just links to the module on npmjs.com)
  * It requires one argument, the filename of the CSV. It outputs a CSV with columns described in `outputRow` interface
  */
 
