@@ -18,6 +18,25 @@
 
 // collect transitive dependencies
 
-// TODO dedup transitive dependencies?
 // TODO handle workspaces node_modules and dependencies? can't just use the node_modules folder
 // as that won't contain sub-dependencies
+
+import fs from "fs";
+
+export function readPackageJson(path: string): any {
+  try {
+    const fileBuffer = fs.readFileSync(path, "utf8");
+    return JSON.parse(fileBuffer);
+  } catch (error) {
+    console.error("Could not read package.json", error);
+    throw error;
+  }
+}
+
+export function getDependencies(rootPackageJson: string): string[] {
+  const rootPackage = readPackageJson(rootPackageJson);
+  // eslint-disable-next-line no-prototype-builtins
+  return rootPackage.hasOwnProperty("dependencies")
+    ? Object.keys(rootPackage.dependencies)
+    : [];
+}

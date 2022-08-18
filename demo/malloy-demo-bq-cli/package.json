@@ -13,7 +13,7 @@
     "test": "jest",
     "install-local": "npm run build && npm i -g",
     "local": "npm run install-local && malloy-demo-bq-cli",
-    "build": "npm run tsc --build",
+    "build": "tsc --build",
     "run": "ts-node src/entry.ts"
   },
   "dependencies": {
