@@ -108,7 +108,7 @@ export const App: React.FC = () => {
               );
               const rendered = await new HTMLView(document).render(data, {
                 dataStyles: message.styles,
-                isDrillingEnabled: true,
+                isDrillingEnabled: false,
                 onDrill: (drillQuery, target) => {
                   navigator.clipboard.writeText(drillQuery);
                   setTriggerRef(target);
