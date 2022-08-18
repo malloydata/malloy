@@ -17,7 +17,7 @@ import ReactDOM from "react-dom";
 import React from "react";
 import { App } from "./App";
 import { getVSCodeAPI, HelpVSCodeContext } from "./help_vscode_context";
-import { HelpPanelMessage } from "../../webview_message_manager";
+import { HelpPanelMessage } from "../../message_types";
 
 (() => {
   const vscode = getVSCodeAPI<void, HelpPanelMessage>();

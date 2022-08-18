@@ -70,10 +70,10 @@ app.on("window-all-closed", () => {
   }
 });
 
-// No navigation anywhere!
 app.on("web-contents-created", (event, contents) => {
   contents.on("will-navigate", (event, _navigationUrl) => {
     event.preventDefault();
+    shell.openExternal(_navigationUrl);
   });
 });
 
@@ -168,6 +168,10 @@ async function registerIPC(): Promise<void> {
     } catch (error) {
       return error;
     }
+  });
+
+  ipcMain.handle("post:open_link", async (_event, url) => {
+    shell.openExternal(url);
   });
 
   // Native application menu

@@ -1865,11 +1865,10 @@ export class ExistingQuery extends PipelineDesc {
       sourcePipe.pipeline,
       new DynamicSpace(walkStruct)
     );
-
+    const destPipe = { ...sourcePipe, pipeline: appended.opList };
     const query: model.Query = {
       type: "query",
-      ...sourcePipe,
-      ...appended.opList,
+      ...destPipe,
       structRef: queryHead.structRef(),
       location: this.location,
     };
@@ -2178,7 +2177,7 @@ export class ImportStatement extends MalloyElement implements DocStatement {
   constructor(readonly url: string, baseURL: string) {
     super();
     try {
-      this.fullURL = new URL(url, baseURL).toString();
+      this.fullURL = decodeURI(new URL(url, baseURL).toString());
     } catch (e) {
       this.log("Invalid URI in import statement");
     }

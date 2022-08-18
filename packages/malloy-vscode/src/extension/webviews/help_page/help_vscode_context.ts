@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { HelpPanelMessage } from "../../webview_message_manager";
+import { HelpPanelMessage } from "../../message_types";
 import { makeVSCodeContext } from "../vscode_context";
 import { makeUseVSCodeContext } from "../vscode_context";
 

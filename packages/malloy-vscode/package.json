@@ -3,7 +3,7 @@
   "publisher": "malloydata",
   "displayName": "Malloy",
   "description": "Malloy is an experimental language for describing data relationships and transformations",
-  "version": "0.0.10",
+  "version": "0.2.0",
   "engines": {
     "vscode": "^1.63.0"
   },
@@ -51,15 +51,6 @@
     "url": "https://github.com/looker-open-source/malloy"
   },
   "contributes": {
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "malloy",
-          "title": "Malloy",
-          "icon": "img/logo.png"
-        }
-      ]
-    },
     "commands": [
       {
         "command": "malloy.showLicenses",
@@ -175,19 +166,22 @@
       }
     ],
     "views": {
-      "malloy": [
+      "explorer": [
         {
           "id": "malloyHelp",
-          "name": "Help",
-          "type": "webview"
+          "name": "Malloy Help",
+          "type": "webview",
+          "when": "malloy.webviewPanelFocused == true || resourceFilename =~ /\\.malloy$/"
         },
         {
           "id": "malloySchema",
-          "name": "Schema"
+          "name": "Malloy Schema",
+          "when": "malloy.webviewPanelFocused == true || resourceFilename =~ /\\.malloy$/"
         },
         {
           "id": "malloyConnections",
-          "name": "Connections"
+          "name": "Malloy Connections",
+          "when": "malloy.webviewPanelFocused == true || resourceFilename =~ /\\.malloy$/"
         }
       ]
     },

@@ -6,7 +6,7 @@ source: names is table('bigquery-public-data.usa_names.usa_1910_current') {
 
   measure:
     total_population is `number`.sum()
-    births_per_100k is floor(total_population / ungrouped(total_population) * 100000)
+    births_per_100k is floor(total_population / all(total_population) * 100000)
 
   query: by_name is {
     group_by: name

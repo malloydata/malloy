@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2022 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -11,25 +11,15 @@
  * GNU General Public License for more details.
  */
 
-import {
-  OrderByField,
-  StagePath,
-  RendererName,
-  QuerySummaryItem,
-} from "../../types";
+import { OrderByField, StagePath, QuerySummaryItem } from "../../types";
 import { AggregateContextBar } from "../AggregateContextBar";
 import { GroupByContextBar } from "../GroupByContextBar";
 import { NestContextBar } from "../NestContextBar";
 import { FilterContextBar } from "../FilterContextBar";
 import { AddLimit } from "../AddLimit";
 import { OrderByContextBar } from "../OrderByContextBar";
-import { FilterExpression } from "@malloydata/malloy";
 import { ActionMenu } from "../ActionMenu";
-import {
-  QueryFieldDef,
-  SearchValueMapResult,
-  StructDef,
-} from "@malloydata/malloy";
+import { SearchValueMapResult, StructDef } from "@malloydata/malloy";
 import { DataStyleContextBar } from "../DataStyleContextBar";
 import { LoadQueryContextBar } from "../LoadQueryContextBar";
 import {
@@ -38,63 +28,37 @@ import {
   pathParent,
   termsForField,
 } from "../utils";
+import { QueryModifiers } from "../hooks/use_query_builder";
 
 interface TopQueryActionMenuProps {
   source: StructDef;
-  toggleField: (stagePath: StagePath, fieldPath: string) => void;
-  addFilter: (
-    stagePath: StagePath,
-    filter: FilterExpression,
-    as?: string
-  ) => void;
-  addLimit: (stagePath: StagePath, limit: number) => void;
-  addOrderBy: (
-    stagePath: StagePath,
-    byFieldIndex: number,
-    direction?: "asc" | "desc"
-  ) => void;
-  addNewNestedQuery: (stagePath: StagePath, name: string) => void;
-  addNewDimension: (stagePath: StagePath, dimension: QueryFieldDef) => void;
-  addNewMeasure: (stagePath: StagePath, measure: QueryFieldDef) => void;
   stagePath: StagePath;
   orderByFields: OrderByField[];
   closeMenu: () => void;
-  setDataStyle: (name: string, renderer: RendererName) => void;
-  addStage: (stagePath: StagePath | undefined, fieldIndex?: number) => void;
-  loadQuery: (queryPath: string) => void;
-  updateFieldOrder: (stagePath: StagePath, newOrdering: number[]) => void;
   topValues: SearchValueMapResult[] | undefined;
   stageSummary: QuerySummaryItem[];
   queryName: string;
   isOnlyStage: boolean;
   analysisPath: string;
+  queryModifiers: QueryModifiers;
 }
 
 export const TopQueryActionMenu: React.FC<TopQueryActionMenuProps> = ({
   source,
-  toggleField,
-  addFilter,
-  addLimit,
-  addOrderBy,
-  addNewNestedQuery,
   stagePath,
   orderByFields,
-  addNewDimension,
-  addNewMeasure,
   closeMenu,
   queryName,
-  setDataStyle,
-  loadQuery,
-  addStage,
   topValues,
   analysisPath,
+  queryModifiers,
 }) => {
   return (
     <ActionMenu
       topValues={topValues}
       valueSearchSource={source}
       valueSearchAnalysisPath={analysisPath}
-      addFilter={(filter) => addFilter(stagePath, filter)}
+      addFilter={(filter) => queryModifiers.addFilter(stagePath, filter)}
       closeMenu={closeMenu}
       actions={[
         {
@@ -108,8 +72,12 @@ export const TopQueryActionMenu: React.FC<TopQueryActionMenuProps> = ({
             <GroupByContextBar
               topValues={topValues}
               source={source}
-              addNewDimension={(dim) => addNewDimension(stagePath, dim)}
-              selectField={(fieldPath) => toggleField(stagePath, fieldPath)}
+              addNewDimension={(dim) =>
+                queryModifiers.addNewDimension(stagePath, dim)
+              }
+              selectField={(fieldPath) =>
+                queryModifiers.toggleField(stagePath, fieldPath)
+              }
               onComplete={onComplete}
             />
           ),
@@ -124,8 +92,12 @@ export const TopQueryActionMenu: React.FC<TopQueryActionMenuProps> = ({
           Component: ({ onComplete }) => (
             <AggregateContextBar
               source={source}
-              selectField={(fieldPath) => toggleField(stagePath, fieldPath)}
-              addNewMeasure={(def) => addNewMeasure(stagePath, def)}
+              selectField={(fieldPath) =>
+                queryModifiers.toggleField(stagePath, fieldPath)
+              }
+              addNewMeasure={(def) =>
+                queryModifiers.addNewMeasure(stagePath, def)
+              }
               onComplete={onComplete}
             />
           ),
@@ -140,8 +112,12 @@ export const TopQueryActionMenu: React.FC<TopQueryActionMenuProps> = ({
           Component: ({ onComplete }) => (
             <NestContextBar
               source={source}
-              selectField={(fieldPath) => toggleField(stagePath, fieldPath)}
-              selectNewNest={(name) => addNewNestedQuery(stagePath, name)}
+              selectField={(fieldPath) =>
+                queryModifiers.toggleField(stagePath, fieldPath)
+              }
+              selectNewNest={(name) =>
+                queryModifiers.addNewNestedQuery(stagePath, name)
+              }
               onComplete={onComplete}
             />
           ),
@@ -157,7 +133,9 @@ export const TopQueryActionMenu: React.FC<TopQueryActionMenuProps> = ({
             <FilterContextBar
               topValues={topValues}
               source={source}
-              addFilter={(filter, as) => addFilter(stagePath, filter, as)}
+              addFilter={(filter, as) =>
+                queryModifiers.addFilter(stagePath, filter, as)
+              }
               onComplete={onComplete}
               needsRename={false}
               analysisPath={analysisPath}
@@ -173,7 +151,7 @@ export const TopQueryActionMenu: React.FC<TopQueryActionMenuProps> = ({
           closeOnComplete: true,
           Component: ({ onComplete }) => (
             <AddLimit
-              addLimit={(limit) => addLimit(stagePath, limit)}
+              addLimit={(limit) => queryModifiers.addLimit(stagePath, limit)}
               onComplete={onComplete}
             />
           ),
@@ -188,7 +166,7 @@ export const TopQueryActionMenu: React.FC<TopQueryActionMenuProps> = ({
           Component: ({ onComplete }) => (
             <OrderByContextBar
               addOrderBy={(byField, direction) =>
-                addOrderBy(stagePath, byField, direction)
+                queryModifiers.addOrderBy(stagePath, byField, direction)
               }
               orderByFields={orderByFields}
               onComplete={onComplete}
@@ -204,7 +182,9 @@ export const TopQueryActionMenu: React.FC<TopQueryActionMenuProps> = ({
           closeOnComplete: true,
           Component: ({ onComplete }) => (
             <DataStyleContextBar
-              setDataStyle={(renderer) => setDataStyle(queryName, renderer)}
+              setDataStyle={(renderer) =>
+                queryModifiers.setDataStyle(queryName, renderer)
+              }
               onComplete={onComplete}
               allowedRenderers={[
                 "table",
@@ -229,7 +209,7 @@ export const TopQueryActionMenu: React.FC<TopQueryActionMenuProps> = ({
           label: "Add Stage",
           iconName: "stage",
           iconColor: "other",
-          onClick: () => addStage(undefined),
+          onClick: () => queryModifiers.addStage(undefined),
         },
         {
           kind: "sub_menu",
@@ -241,7 +221,7 @@ export const TopQueryActionMenu: React.FC<TopQueryActionMenuProps> = ({
           Component: ({ onComplete }) => (
             <LoadQueryContextBar
               source={source}
-              selectField={loadQuery}
+              selectField={queryModifiers.loadQuery}
               onComplete={onComplete}
             />
           ),
@@ -252,7 +232,7 @@ export const TopQueryActionMenu: React.FC<TopQueryActionMenuProps> = ({
         terms: termsForField(field, path),
         detail: pathParent(path),
         key: path,
-        select: () => toggleField(stagePath, path),
+        select: () => queryModifiers.toggleField(stagePath, path),
       }))}
     />
   );

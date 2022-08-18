@@ -233,7 +233,7 @@ export function makeRenderer(
         field.type === AtomicFieldType.Boolean)
     ) {
       return new HTMLBooleanRenderer(document);
-    } else if (renderDef.renderer === "link") {
+    } else if (renderDef.renderer === "link" || field.name.endsWith("_url")) {
       return new HTMLLinkRenderer(document);
     } else if (renderDef.renderer === "list" || field.name.endsWith("_list")) {
       return ContainerRenderer.make(

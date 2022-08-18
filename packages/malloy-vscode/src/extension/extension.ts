@@ -36,10 +36,14 @@ import {
 import { CONNECTION_MANAGER, MALLOY_EXTENSION_STATE } from "./state";
 import { ConnectionsProvider } from "./tree_views/connections_view";
 import { HelpViewProvider } from "./webview_views/help_view";
+import { WorkerConnection } from "../worker/worker_connection";
+import { MalloyConfig } from "./types";
 import { getNewClientId } from "./utils";
 import { trackModelLoad, trackModelSave } from "./telemetry";
 
 let client: LanguageClient;
+let worker: WorkerConnection;
+
 export let extensionModeProduction: boolean;
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -131,8 +135,15 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration(async (e) => {
       if (e.affectsConfiguration("malloy.connections")) {
+        const worker = getWorker();
         await CONNECTION_MANAGER.onConfigurationUpdated();
         connectionsTree.refresh();
+        worker.send({
+          type: "config",
+          config: vscode.workspace.getConfiguration(
+            "malloy"
+          ) as unknown as MalloyConfig,
+        });
       }
     })
   );
@@ -163,6 +174,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   setupLanguageServer(context);
+  setupWorker(context);
 }
 
 export function deactivate(): Promise<void> | undefined {
@@ -170,6 +182,9 @@ export function deactivate(): Promise<void> | undefined {
     // TODO can this just be put into a disposable, passed to `context.subscriptions.push`
     //      and disposed automatically?
     return client.stop();
+  }
+  if (worker) {
+    worker.send({ type: "exit" });
   }
 }
 
@@ -202,4 +217,12 @@ function setupLanguageServer(context: vscode.ExtensionContext): void {
   );
 
   client.start();
+}
+
+export function getWorker(): WorkerConnection {
+  return worker;
+}
+
+function setupWorker(context: vscode.ExtensionContext): void {
+  worker = new WorkerConnection(context);
 }

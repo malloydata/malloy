@@ -15,18 +15,20 @@ import path from "path";
 import fs from "fs";
 import archiver from "archiver";
 import { performance } from "perf_hooks";
-import { renderDoc } from "./render_document";
-import { renderFooter, renderSidebar, Section } from "./page";
+import { renderDoc } from "./render_document.js";
+import { renderFooter, renderSidebar, Section } from "./page.js";
 import {
   isMarkdown,
   readDirRecursive,
   timeString,
   watchDebounced,
   watchDebouncedRecursive,
-} from "./utils";
-import { DEPENDENCIES } from "./run_code";
-import { log } from "./log";
+} from "./utils.js";
+import { DEPENDENCIES } from "./run_code.js";
+import { log } from "./log.js";
 import { exit } from "process";
+
+const __dirname = path.resolve("./docs/_scripts/build_docs");
 
 const DOCS_ROOT_PATH = path.join(__dirname, "../../_src");
 const OUT_PATH = path.join(__dirname, "../../_includes/generated");

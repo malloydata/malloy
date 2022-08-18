@@ -148,6 +148,7 @@ export class ConnectionManager {
   private connectionLookups: Record<string, DynamicConnectionLookup> = {};
   configs: Record<string | symbol, ConnectionConfig> = {};
   connectionCache: Record<string | symbol, TestableConnection> = {};
+  currentRowLimit = 50;
 
   constructor(configs: ConnectionConfig[]) {
     this.buildConfigMap(configs);
@@ -181,8 +182,12 @@ export class ConnectionManager {
     return this.connectionLookups[workingDirectory];
   }
 
+  public setCurrentRowLimit(rowLimit: number): void {
+    this.currentRowLimit = rowLimit;
+  }
+
   public getCurrentRowLimit(): number | undefined {
-    return undefined;
+    return this.currentRowLimit;
   }
 
   protected static filterUnavailableConnectionBackends(

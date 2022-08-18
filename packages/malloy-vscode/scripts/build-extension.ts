@@ -262,7 +262,11 @@ export async function doBuild(target?: Target): Promise<void> {
 
   // build the extension and server
   await build({
-    entryPoints: ["./src/extension/extension.ts", "./src/server/server.ts"],
+    entryPoints: [
+      "./src/extension/extension.ts",
+      "./src/server/server.ts",
+      "./src/worker/worker.ts",
+    ],
     entryNames: "[name]",
     bundle: true,
     minify: !development,

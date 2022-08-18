@@ -173,14 +173,15 @@ export function isAsymmetricFragment(f: Fragment): f is AggregateFragment {
   return isAggregateFragment(f) && ["sum", "avg", "count"].includes(f.function);
 }
 
-export interface UngroupedFragment {
-  type: "ungrouped";
+export interface UngroupFragment {
+  type: "all" | "exclude";
   e: Expr;
   fields?: string[];
 }
 
-export function isTotalFragment(f: Fragment): f is UngroupedFragment {
-  return (f as UngroupedFragment)?.type === "ungrouped";
+export function isUngroupFragment(f: Fragment): f is UngroupFragment {
+  const ftype = (f as UngroupFragment)?.type;
+  return ftype == "all" || ftype == "exclude";
 }
 
 export interface FieldFragment {
@@ -277,7 +278,7 @@ export type Fragment =
   | ParameterFragment
   | FilterFragment
   | AggregateFragment
-  | UngroupedFragment
+  | UngroupFragment
   | DialectFragment;
 
 export type Expr = Fragment[];
