@@ -767,11 +767,7 @@ export abstract class MalloyTranslation {
     const child = this.childTranslators.get(childURL);
     if (child) {
       const did = child.translate();
-      if (!did.translated) {
-        this.root.logger.log({
-          message: `INTERNAL ERROR: Load failure on import of ${importURL}`,
-        });
-      } else {
+      if (did.translated) {
         for (const fromChild of child.modelDef.exports) {
           const modelEntry = child.modelDef.contents[fromChild];
           if (modelEntry.type === "struct") {
@@ -779,6 +775,7 @@ export abstract class MalloyTranslation {
           }
         }
       }
+      // else nothing, assuming there are already errors in the log
     }
     return exports;
   }
