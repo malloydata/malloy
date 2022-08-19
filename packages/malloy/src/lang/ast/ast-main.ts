@@ -2193,7 +2193,7 @@ export class ImportStatement extends MalloyElement implements DocStatement {
   constructor(readonly url: string, baseURL: string) {
     super();
     try {
-      this.fullURL = new URL(url, baseURL).toString();
+      this.fullURL = decodeURI(new URL(url, baseURL).toString());
     } catch (e) {
       this.log("Invalid URI in import statement");
     }

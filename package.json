@@ -9,27 +9,24 @@
       "demo/*"
     ]
   },
-  "engines": {
-    "yarn": "^1.22.0"
-  },
   "files": [
     "samples"
   ],
   "scripts": {
-    "clean": "yarn workspace @malloydata/malloy clean && yarn tsc --build --clean",
-    "build": "yarn workspace @malloydata/malloy build-parser && yarn tsc --build",
-    "package-extension": "yarn build && yarn workspace malloy-vscode package-extension",
-    "lint": "yarn eslint '**/*.ts{,x}'",
-    "test": "yarn jest --runInBand",
+    "clean": "npm run -w @malloydata/malloy clean && tsc --build --clean",
+    "build": "npm run -w @malloydata/malloy build-parser && tsc --build",
+    "package-extension": "npm run build && npm run -w malloy-vscode package-extension",
+    "lint": "eslint '**/*.ts{,x}'",
+    "test": "jest --runInBand",
     "docs-clean": "rm -rf docs/.jekyll-cache/ && rm -rf docs/_includes/generated/ && rm -rf docs/documentation && rm -rf js/generated/",
-    "docs-prebuild": "yarn build && yarn docs-clean",
-    "docs-build": "yarn docs-prebuild && ts-node --project tsconfig.docs.json --esm ./docs/_scripts/build_docs/index.ts && cd docs && bundle exec jekyll build",
+    "docs-prebuild": "npm run build && npm run docs-clean",
+    "docs-build": "npm run docs-prebuild && ts-node --project tsconfig.docs.json --esm ./docs/_scripts/build_docs/index.ts && cd docs && bundle exec jekyll build",
     "docs-preprocess": "ts-node --esm --project tsconfig.docs.json docs/_scripts/build_docs/index.ts --watch",
-    "docs-postprocess": "yarn wait-on ./docs/_includes/generated/toc.html && cd docs && bundle exec jekyll serve -l -o",
-    "docs-serve": "yarn docs-prebuild && yarn concurrently --kill-others 'yarn docs-preprocess' 'yarn docs-postprocess'",
-    "vscode-build-extension-dev": "yarn workspace malloy-vscode build-extension-dev",
-    "vscode-publish-extensions": "yarn workspace malloy-vscode publish-extensions",
-    "vscode-build-composer-dev": "yarn workspace malloy-composer-demo build",
+    "docs-postprocess": "wait-on ./docs/_includes/generated/toc.html && cd docs && bundle exec jekyll serve -l -o",
+    "docs-serve": "npm run docs-prebuild && concurrently --kill-others 'npm run docs-preprocess' 'npm run docs-postprocess'",
+    "vscode-build-extension-dev": "npm run -w malloy-vscode build-extension-dev",
+    "vscode-publish-extensions": "npm run -w malloy-vscode publish-extensions",
+    "vscode-build-composer-dev": "npm run -w malloy-composer-demo build",
     "third-party-licenses": "ts-node scripts/third_party_licenses",
     "malloyc": "ts-node scripts/malloy-to-json",
     "build-duckdb-db": "ts-node scripts/build_duckdb_test_database",

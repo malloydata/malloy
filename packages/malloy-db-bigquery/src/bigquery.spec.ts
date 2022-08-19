@@ -3,6 +3,7 @@ import { BigQueryConnection } from "./bigquery_connection";
 import { BigQuery as BigQuerySDK, TableMetadata } from "@google-cloud/bigquery";
 import * as util from "util";
 import * as fs from "fs";
+import { fileURLToPath } from "url";
 
 describe("db:BigQuery", () => {
   let bq: BigQueryConnection;
@@ -12,7 +13,7 @@ describe("db:BigQuery", () => {
     bq = new BigQueryConnection("test");
     const files = {
       readURL: async (url: URL) => {
-        const filePath = url.toString().replace(/^file:\/\//, "");
+        const filePath = fileURLToPath(url);
         return await util.promisify(fs.readFile)(filePath, "utf8");
       },
     };
