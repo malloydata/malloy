@@ -270,7 +270,8 @@ class BetaExpression extends Testable {
     if (exprAst instanceof ExpressionDef) {
       const aStruct = this.internalModel.contents.ab;
       if (aStruct.type === "struct") {
-        const exprDef = exprAst.getExpression(new StaticSpace(aStruct));
+        const tstFS = new StaticSpace(aStruct);
+        const exprDef = exprAst.getExpression({ in: tstFS, out: tstFS });
         if (inspectCompile) {
           console.log("EXPRESSION: ", pretty(exprDef));
         }
@@ -462,6 +463,18 @@ describe("model statements", () => {
       if (q) {
         expect(q.pipeline.length).toBe(1);
       }
+    });
+    test("all ungroup checks args", () => {
+      const badModel = new BetaModel(`
+        query: a -> {
+          group_by: astr
+          nest: by_int is {
+            group_by: ai
+            aggregate: bi_count is all(count(), ai)
+          }
+        }
+      `);
+      expect(badModel).compileToFailWith("an error");
     });
   });
   describe("import:", () => {

@@ -74,6 +74,7 @@ export interface FieldSpace {
   emptyStructDef(): model.StructDef;
   lookup(symbol: FieldName[]): LookupResult;
   getDialect(): Dialect;
+  outputFS?: FieldSpace;
 }
 
 /**
@@ -236,6 +237,7 @@ class SourceSpace {
 export class DynamicSpace extends StaticSpace {
   protected final: model.StructDef | undefined;
   protected source: SourceSpace;
+  outputFS?: QuerySpace;
   constructor(extending: SourceSpec) {
     const source = new SourceSpace(extending);
     super(cloneDeep(source.structDef));
@@ -308,7 +310,7 @@ export class DynamicSpace extends StaticSpace {
           def.log("Can't rename field to itself");
           continue;
         }
-        const oldValue = def.oldName.getField(this);
+        const oldValue = def.oldName.getField(fsPair(this));
         if (oldValue.found) {
           if (oldValue.found instanceof SpaceField) {
             this.setEntry(
@@ -381,7 +383,7 @@ export class DynamicSpace extends StaticSpace {
       }
       // If we have join expressions, we need to now go back and fill them in
       for (const [join, missingOn] of fixupJoins) {
-        join.fixupJoinOn(this, missingOn);
+        join.fixupJoinOn(fsPair(this), missingOn);
       }
     }
     return this.final;
@@ -407,14 +409,6 @@ export abstract class QueryOperationSpace extends DynamicSpace {
 
   inputFS(): FieldSpace {
     return this.queryInput.fieldSpace;
-  }
-
-  lookup(_fieldPath: FieldName[]): LookupResult {
-    throw new Error("INTERNAL ERRROR, SHOULD LOOKUP IN INPUT SPACE");
-    /*
-     * once HAVING works correctly this should lookup fields in the output space
-     * OR in the input space or somewthing like that
-     */
   }
 
   structDef(): model.StructDef {
@@ -484,6 +478,13 @@ export abstract class QuerySpace extends QueryOperationSpace {
       return this.extendedInput;
     }
     return this.queryInput.fieldSpace;
+  }
+
+  qfs(): FSPair {
+    return {
+      in: this.inputFS(),
+      out: this,
+    };
   }
 
   private extendInto(): DynamicSpace {
@@ -559,7 +560,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
     const fields: model.QueryFieldDef[] = [];
     for (const [name, field] of this.entries()) {
       if (field instanceof SpaceField) {
-        const fieldQueryDef = field.getQueryFieldDef(this.inputFS());
+        const fieldQueryDef = field.getQueryFieldDef(this.qfs());
         if (fieldQueryDef) {
           if (this.conContain(fieldQueryDef)) {
             fields.push(fieldQueryDef);
@@ -658,4 +659,16 @@ export class DefSpace implements FieldSpace {
   getDialect(): Dialect {
     return this.realFS.getDialect();
   }
+}
+
+export interface FSPair {
+  in: FieldSpace;
+  out: FieldSpace;
+}
+
+export function fsPair(inFS: FieldSpace, outFS?: FieldSpace): FSPair {
+  return {
+    in: inFS,
+    out: outFS || inFS,
+  };
 }
