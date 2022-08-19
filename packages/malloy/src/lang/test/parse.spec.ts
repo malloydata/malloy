@@ -1213,7 +1213,10 @@ describe("sql backdoor", () => {
       import "createModel.malloy"
       source: foo is malloyUsers
     `);
-    model.importZone.define("internal://test/createModel.malloy", createModel);
+    model.importZone.define(
+      "internal://test/langtests/createModel.malloy",
+      createModel
+    );
     const needReq = model.translate();
     expect(model).toBeErrorless();
     const needs = needReq?.sqlStructs;
