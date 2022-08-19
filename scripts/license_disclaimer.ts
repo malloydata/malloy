@@ -17,6 +17,8 @@ import fs from "fs";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable no-console */
+let filePath: string;
+const seen: { [id: string]: boolean } = {};
 
 /*
  * Required components:
@@ -25,17 +27,6 @@ import fs from "fs";
  * * The complete text of every unique license (at least once)
  * * The contents of any NOTICE file included with the component (if it includes one)
  */
-interface ModuleInfo {
-  name: string;
-  licenseType: string;
-  url?: string;
-  licenseText: string;
-  noticeText?: string;
-}
-
-let filePath: string;
-const seen: { [id: string]: boolean } = {};
-
 export function generateDisclaimer(
   packageJsonPath: string,
   nodeModulesPath: string,
@@ -56,8 +47,6 @@ function doDependencies(nodeModulesPath: string, packageJson: any): void {
   if (packageJson.hasOwnProperty("dependencies")) {
     const dependencies = packageJson.dependencies;
 
-    // TODO optional dependencies
-
     for (const dependency of Object.keys(dependencies)) {
       if (seen[dependency] == true || !(typeof dependency == "string")) {
         continue;
@@ -66,34 +55,61 @@ function doDependencies(nodeModulesPath: string, packageJson: any): void {
       const pkg = readPackageJson(
         path.join(nodeModulesPath, dependency, "package.json")
       );
-      const name = dependency;
-      const licenseType = pkg.license;
-      // TODO if this isn't set, do some work to find a license file
+
+      // look for notice & license text
+      let notice: string | undefined = undefined;
+      let license: string | undefined = undefined;
+      const packageFiles = fs.readdirSync(
+        path.join(nodeModulesPath, dependency)
+      );
+      packageFiles.find((fileName) => {
+        const base = fileName.split(".")[0].toLowerCase();
+
+        if (base == "notice" || base == "notices") {
+          notice = fs.readFileSync(
+            path.join(nodeModulesPath, dependency, fileName),
+            "utf-8"
+          );
+        }
+
+        if (base == "license" || base == "licenses") {
+          license = fs.readFileSync(
+            path.join(nodeModulesPath, dependency, fileName),
+            "utf-8"
+          );
+        }
+      });
+
+      if (license == undefined && pkg.license == undefined) {
+        throw new Error(
+          `${dependency}: license type undefined in package.json and license file cannot be found`
+        );
+      }
+
+      const licenseType = pkg.license ? pkg.license : "see license text below";
 
       const url = [
         pkg.homepage,
         pkg.repository?.url,
         pkg.repository?.baseUrl,
         pkg.repo,
+        `https://npmjs.com/package/${dependency}`,
       ].find((el) => el !== undefined);
 
-      const moduleInfo: ModuleInfo = {
-        name,
-        licenseType,
-        url,
-        licenseText: "",
-      };
+      fs.appendFileSync(
+        filePath,
+        `
+-------
+Package: ${dependency}
+Url: ${url}
+License(s): ${licenseType}
+${license ? "License Text:\n" + license + "\n" : ""}
+${notice ? "\nNotice:\n" + notice + "\n" : ""}
+        `
+      );
 
-      fs.appendFileSync(filePath, `${licenseType}\t${name}\n`);
-
-      seen[name] = true;
+      seen[dependency] = true;
       doDependencies(nodeModulesPath, pkg);
     }
   }
 }
-
-generateDisclaimer(
-  path.join(__dirname, "..", "packages", "malloy-vscode", "package.json"),
-  path.join(__dirname, "..", "node_modules"),
-  path.join(__dirname, "..", "test!")
-);
