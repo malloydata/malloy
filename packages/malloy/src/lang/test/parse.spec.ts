@@ -481,16 +481,15 @@ describe("model statements", () => {
       }
     });
     test("all ungroup checks args", () => {
-      const badModel = new BetaModel(`
-        query: a -> {
-          group_by: astr
-          nest: by_int is {
-            group_by: ai
-            aggregate: bi_count is all(count(), ai)
-          }
+      expect(`
+      query: a -> {
+        group_by: astr
+        nest: by_int is {
+          group_by: ai
+          aggregate: bi_count is all(count(), afloat)
         }
-      `);
-      expect(badModel).compileToFailWith("an error");
+      }
+    `).compileToFailWith("all() field 'afloat' must be in query output");
     });
   });
   describe("import:", () => {

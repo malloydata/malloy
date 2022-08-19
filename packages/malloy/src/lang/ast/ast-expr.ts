@@ -788,7 +788,7 @@ export class ExprUngroup extends ExpressionDef {
           dstFields.push(name);
         } else {
           mustBeInOutput.log(
-            `${this.control}: reference to field '${name}' which is not in the query output`
+            `${this.control}() field '${name}' must be in query output`
           );
         }
         if (dstFields.length > 0) {
