@@ -780,8 +780,6 @@ export class ExprUngroup extends ExpressionDef {
     const f: UngroupFragment = { type: this.control, e: exprVal.value };
     if (this.typeCheck(this.expr, { ...exprVal, aggregate: false })) {
       const dstFields: string[] = [];
-      // TODO query the output field space to error check
-      // ( not possible because "fs" is the input field space )
       for (const mustBeInOutput of this.fields) {
         const name = mustBeInOutput.refString;
         if (fs.out.lookup([mustBeInOutput]).found) {
