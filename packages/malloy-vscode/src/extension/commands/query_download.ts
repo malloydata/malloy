@@ -110,7 +110,11 @@ export async function queryDownload(
           const listener = (msg: WorkerMessage) => {
             if (msg.type === "dead") {
               vscode.window.showErrorMessage(
-                `Malloy Download (${name}): Error\nWorker died`
+                `Malloy Download (${name}): Error
+The worker process has died, and has been restarted.
+This is possibly the result of a database bug. \
+Please consider filing an issue with as much detail as possible at \
+https://github.com/looker-open-source/malloy/issues.`
               );
 
               worker.off("message", listener);

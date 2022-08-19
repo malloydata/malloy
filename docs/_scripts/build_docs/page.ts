@@ -15,7 +15,7 @@ import path from "path";
 
 export interface Section {
   title: string;
-  items: SectionItem[];
+  items: (Section | SectionItem)[];
 }
 
 export interface SectionItem {
@@ -26,7 +26,7 @@ export interface SectionItem {
 interface EnrichedSection {
   title: string;
   id: string;
-  items: EnrichedSectionItem[];
+  items: (EnrichedSection | EnrichedSectionItem)[];
 }
 
 interface EnrichedSectionItem {
@@ -36,52 +36,84 @@ interface EnrichedSectionItem {
   compareLink: string;
 }
 
+function isSectionItem(item: SectionItem | Section): item is SectionItem {
+  return (item as SectionItem).link !== undefined;
+}
+
 function enrichTableOfContents(sections: Section[]): EnrichedSection[] {
   return sections.map((section) => {
     return {
       id: section.title.toLowerCase().replace(" ", "_"),
       title: section.title,
       items: section.items.map((item) => {
-        const htmlLink = item.link.replace(/\.md$/, ".html");
-        const fullLink = path.join("/documentation", htmlLink);
-        const compareLink =
-          htmlLink === "/index.html" ? "/documentation/" : fullLink;
+        if (isSectionItem(item)) {
+          const htmlLink = item.link.replace(/\.md$/, ".html");
+          const fullLink = path.join("/documentation", htmlLink);
+          const compareLink =
+            htmlLink === "/index.html" ? "/documentation/" : fullLink;
 
-        return { title: item.title, link: item.link, fullLink, compareLink };
+          return { title: item.title, link: item.link, fullLink, compareLink };
+        } else {
+          return enrichTableOfContents([item])[0];
+        }
       }),
     };
   });
+}
+
+function extractItems(sections: (Section | SectionItem)[]): SectionItem[] {
+  const items = [];
+  const stack = [...sections].reverse();
+  while (stack.length) {
+    const section = stack.pop() as Section | SectionItem;
+    if (isSectionItem(section)) {
+      items.push(section);
+    } else {
+      stack.push(...[...section.items].reverse());
+    }
+  }
+  return items;
+}
+
+function renderSection(section: EnrichedSection | EnrichedSectionItem): string {
+  if (isSectionItem(section)) {
+    return `<div class='sidebar-item {% if page.url == "${section.compareLink}" %}active{% endif %}'>
+      <a href="{{ site.baseurl }}${section.fullLink}">
+        <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+        ${section.title}
+      </a>
+    </div>`;
+  } else {
+    return `<div class="sidebar-section">
+      <div id=${section.id}
+        class="sidebar-section-title {% unless ${extractItems(
+          section.items
+        ).map(
+          (item) => (item as EnrichedSectionItem).compareLink
+        )} contains page.url)} %}collapsed{% endunless %}"
+      >
+        ${section.title}
+        <img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
+        <img class="chevron-closed" src="{{ site.baseurl }}/img/section_close.svg" alt="section closed"/>
+      </div>
+      <div class="sidebar-section-item-group">
+        ${section.items
+          .map((item) => {
+            return renderSection(item);
+          })
+          .join("\n")}
+      </div>
+    </div>`;
+  }
 }
 
 export function renderSidebar(sections: Section[]): string {
   return `<div class="sidebar" id="sidebar">
     ${enrichTableOfContents(sections)
       .map((section) => {
-        return `<div>
-        <div id=${
-          section.id
-        } class="sidebar-section-title {% unless ${section.items.map(
-          (item) => item.compareLink
-        )} contains page.url)} %}collapsed{% endunless %}">${
-          section.title
-        }<img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
-        <img class="chevron-closed" src="{{ site.baseurl }}/img/section_close.svg" alt="section closed"/></div>
-          <div class="sidebar-section-item-group">
-          ${section.items
-            .map((item) => {
-              return `<div class='sidebar-item {% if page.url == "${item.compareLink}" %}active{% endif %}'>
-              <a href="{{ site.baseurl }}${item.fullLink}">
-                <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
-                ${item.title}
-              </a>
-            </div>`;
-            })
-            .join("\n")}
-          </div>
-      </div>`;
+        return renderSection(section);
       })
       .join("\n")}
-
   </div>`;
 }
 
@@ -90,7 +122,7 @@ export function renderFooter(
   rootPath: string,
   docPath: string
 ): string {
-  const items = sections.flatMap((section) => section.items);
+  const items = extractItems(sections);
   const thisIndex = items.findIndex(
     (item) => item.link.replace(/\.md$/, ".html") === docPath
   );

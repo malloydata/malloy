@@ -1,106 +1,77 @@
-# NTSB Flight Database examples
+# NTSB Flight Database Examples (PostgreSQL)
+_This page adapts the NTSB Flight Database examples [here](https://looker-open-source.github.io/malloy/documentation/examples/faa.html) to work with a Postgres instance rather than requiring BigQuery access.  Note that full support for Postgres is in progress and that date/time support is currently incomplete._
 
-_The follow examples all run against the model at the bottom of this page OR you can find the source code [here](https://github.com/looker-open-source/malloy/blob/docs-release/samples/faa/flights.malloy)._
+## PostgreSQL Setup
+Before you can run these NTSB sample models against a Postgres instance, you need to start up / connect to a database server instance and load it with the appropriate data.  These steps setup a database with the NTSB Flight dataset and respective sample models.  These steps use Docker for convenience, but the instructions can be modified to run a Postgres instance directly.
 
-## Airport Dashboard
-Where can you fly from SJC? For each destination; Which carriers?  How long have they been flying there?
-Are they on time?
+### Start a local Postgres instance
+Start a Docker container running Postgres
 
-```malloy
---! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto",  "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-query: flights -> airport_dashboard { where: origin.code ? 'SJC' }
+```bash
+docker run --name malloy-postgres -e POSTGRES_PASSWORD=password -d -p 5432:5432 postgres
 ```
 
+### Load the NTSB dataset into Postgres
+From the `malloy/` root directory of the repository, unzip the SQL script that will load the NTSB Flight dataset
 
-## Carrier Dashboard
-Tell me everything about a carrier.  How many destinations?, flights? hubs?
-What kind of planes to they use? How many flights over time?  What are
-the major hubs?  For each destination, How many flights? Where can you? Have they been
-flying there long?  Increasing or decreasing year by year?  Any seasonality?
-
-```malloy
---! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto",  "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-query: flights -> carrier_dashboard { where: carriers.nickname  ? 'Jetblue' }
+```bash
+gunzip test/data/postgres/malloytest-postgres.sql.gz
 ```
 
+Copy the SQL data file into the container
 
-## Kayak Example Query
-Suppose you wanted to build a website like Kayak.  Let's assume that the data we have is
-in the future instead of the past.  The query below will fetch all the data needed
-to render a Kayak page in a singe query.
-
-```malloy
---! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-query: flights -> kayak {
-  where:
-    origin.code = 'SJC',
-    destination.code = 'LAX'|'BUR',
-    dep_time = @2004-01-01
-}
+```bash
+docker cp test/data/postgres/malloytest-postgres.sql malloy-postgres:/malloytest-postgres.sql
 ```
 
-## Sessionizing Flight Data.
-You can think of flight data as event data.  The below is a classic map/reduce roll up of the flight data by carrier and day, plane and day, and individual events for each plane.
+Run the file in the container
 
-```malloy
-query: sessionize is {
-  group_by: flight_date is dep_time.day
-  group_by: carrier
-  aggregate: daily_flight_count is flight_count
-  nest: per_plane_data is {
-    top: 20
-    group_by: tail_num
-    aggregate: plane_flight_count is flight_count
-    nest: flight_legs is {
-      order_by: 2
-      group_by:
-        tail_num
-        dep_minute is dep_time.minute
-        origin_code
-        dest_code is destination_code
-        dep_delay
-        arr_delay
-      ]
-    }
-  }
-}
+```bash
+docker exec -it malloy-postgres psql -U postgres -f malloytest-postgres.sql
 ```
 
+## Connect to Postgres in the extension
+Use the connection settings shown below to connect the VS Code extension to your local Postgres instance.
+
+ ![postgres-connection-example](https://user-images.githubusercontent.com/25882507/179831294-b6a69ef6-f454-48a7-8b93-aec2bff0ff3f.png)
+
+## Modify the example Malloy models to work with Postgres
+
+The sample models from the NTSB Flight Dataset [here](https://looker-open-source.github.io/malloy/documentation/examples/faa.html#the-malloy-model) reference public BigQuery tables using the standard _project_name.dataset_name.table_name_ BigQuery format.  Therefore, all the data source references with this format need to be changed to the Postgres format.
+
+### Change data source references
+All source data references prefixed with `malloy-data.faa.` must be changed to `malloytest.` (since that is the Postgres schema we used above) to conform to Malloy's Postgres _schema_name.table_name_ format (the database name is not required).  Simply find and replace in VS Code or run `sed -i -e 's/malloy-data.faa./malloytest./g' path/to/<your_file.malloy>`
+
+![source_table_reference](https://user-images.githubusercontent.com/25882507/179834102-eef4aee4-973a-4259-bfe4-1487179012b3.png)
+
+## The Updated Malloy Model
+The follow example code will run against the local Postgres database.
 
 ```malloy
---! {"isRunnable": true, "source": "faa/flights.malloy", "runMode": "auto", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-query: flights { where: carrier ?'WN', dep_time ? @2002-03-03 } -> sessionize
-```
-
-## The Malloy Model
-
-All of the queries above are executed against the following model:
-
-```malloy
-source: airports is table('malloy-data.faa.airports') {
+source: airports is table('malloytest.airports') {
   primary_key: code
   dimension: name is concat(code, ' - ', full_name)
   measure: airport_count is count()
 }
 
-source: carriers is table('malloy-data.faa.carriers') {
+source: carriers is table('malloytest.carriers') {
   primary_key: code
   measure: carrier_count is count()
 }
 
-source: aircraft_models is table('malloy-data.faa.aircraft_models') {
+source: aircraft_models is table('malloytest.aircraft_models') {
   primary_key: aircraft_model_code
   measure: aircraft_model_count is count()
 }
 
-source: aircraft is table('malloy-data.faa.aircraft') {
+source: aircraft is table('malloytest.aircraft') {
   primary_key: tail_num
   measure: aircraft_count is count()
   join_one: aircraft_models with aircraft_model_code
 }
 
 source: aircraft_facts is from(
-  table('malloy-data.faa.flights') -> {
+  table('malloytest.flights') -> {
     group_by: tail_num
     aggregate:
       lifetime_flights is count()
@@ -111,7 +82,7 @@ source: aircraft_facts is from(
   dimension: lifetime_flights_bucketed is floor(lifetime_flights / 1000) * 1000
 }
 
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('malloytest.flights') {
   primary_key: id2
   rename: origin_code is origin
   rename: destination_code is destination
@@ -289,50 +260,6 @@ source: flights is table('malloy-data.faa.flights') {
           arr_delay
       }
     }
-  }
-
-  -- search_index is (index : [dep_time: @2004-01]
-  --   *, carriers.*,
-  --   origin.code, origin.state, origin.city, origin.full_name, origin.fac_type
-  --   destination.code, destination.state, destination.city, destination.full_name
-  --   aircraft.aircraft_model_code, aircraft.aircraft_models.manufacturer
-  --   aircraft.aircraft_models.model
-  --   on flight_count
-  -- )
-}
-```
-
-## Data Styles
-The data styles tell the Malloy renderer how to render different kinds of results.
-
-```json
-{
-  "by_carrier": {
-    "renderer": "bar_chart"
-  },
-  "year_over_year": {
-    "renderer": "line_chart"
-  },
-  "by_month": {
-    "renderer": "line_chart"
-  },
-  "by_manufacturer": {
-    "renderer": "bar_chart"
-  },
-  "routes_map": {
-    "renderer": "segment_map"
-  },
-  "destinations_by_month": {
-    "renderer": "line_chart"
-  },
-  "delay_by_hour_of_day": {
-    "renderer" : "scatter_chart"
-  },
-  "seats_by_distance": {
-    "renderer": "scatter_chart"
-  },
-  "carriers_by_month" : {
-    "renderer": "line_chart"
   }
 }
 ```

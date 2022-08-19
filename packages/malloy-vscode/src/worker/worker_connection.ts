@@ -14,8 +14,11 @@
 /* eslint-disable no-console */
 import * as child_process from "child_process";
 import * as vscode from "vscode";
-import { Message, WorkerMessage } from "./types";
+import { fetchFile } from "../extension/utils";
+import { Message, WorkerMessage, WorkerReadMessage } from "./types";
 const workerLog = vscode.window.createOutputChannel("Malloy Worker");
+
+const DEFAULT_RESTART_SECONDS = 1;
 
 export class WorkerConnection {
   worker!: child_process.ChildProcess;
@@ -29,18 +32,24 @@ export class WorkerConnection {
         .on("error", console.error)
         .on("exit", (status) => {
           if (status !== 0) {
-            // TODO: communicate with panels running queries
             console.error(`Worker exited with ${status}`);
-            console.info(`Restarting in 5 seconds`);
+            console.info(`Restarting in ${DEFAULT_RESTART_SECONDS} seconds`);
             // Maybe exponential backoff? Not sure what our failure
             // modes are going to be
-            setTimeout(startWorker, 5000);
+            setTimeout(startWorker, DEFAULT_RESTART_SECONDS * 1000);
             this.notifyListeners({ type: "dead" });
           }
         })
         .on("message", (message: WorkerMessage) => {
-          if (message.type === "log") {
-            workerLog.appendLine(`worker: ${message.message}`);
+          switch (message.type) {
+            case "log":
+              workerLog.appendLine(`worker: ${message.message}`);
+              break;
+            case "read": {
+              workerLog.appendLine(`worker: reading file ${message.file}`);
+              this.readFile(message);
+              break;
+            }
           }
         });
     };
@@ -65,5 +74,15 @@ export class WorkerConnection {
 
   stop(): void {
     this.worker.kill("SIGHUP");
+  }
+
+  async readFile(message: WorkerReadMessage): Promise<void> {
+    const { id, file } = message;
+    try {
+      const data = await fetchFile(file);
+      this.send?.({ type: "read", id, file, data });
+    } catch (error) {
+      this.send?.({ type: "read", id, file, error: error.message });
+    }
   }
 }

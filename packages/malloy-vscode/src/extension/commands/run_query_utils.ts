@@ -185,7 +185,10 @@ export function runMalloyQuery(
             current.messages.postMessage({
               type: QueryMessageType.QueryStatus,
               status: QueryRunStatus.Error,
-              error: "Worker died",
+              error: `The worker process has died, and has been restarted.
+This is possibly the result of a database bug. \
+Please consider filing an issue with as much detail as possible at \
+https://github.com/looker-open-source/malloy/issues.`,
             });
             worker.off("message", listener);
             resolve(undefined);
