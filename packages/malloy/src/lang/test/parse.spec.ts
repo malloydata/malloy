@@ -53,8 +53,8 @@ abstract class Testable extends TestTranslator {
 }
 
 class BetaModel extends Testable {
-  constructor(s: string) {
-    super(s);
+  constructor(readonly testSrc: string) {
+    super(testSrc);
   }
 
   compile(): void {
@@ -192,17 +192,33 @@ expect.extend({
       message: () => "",
     };
   },
-  compileToFailWith: function (s: MarkedSource | string, ...msgs: string[]) {
-    const src = typeof s == "string" ? s : s.code;
+  compileToFailWith: function (
+    s: MarkedSource | string | BetaModel,
+    ...msgs: string[]
+  ) {
     let emsg = "Compile Error expectation not met\nExpected error";
+    let mSrc: MarkedSource | undefined;
     const qmsgs = msgs.map((s) => `error '${s}'`);
     if (msgs.length == 1) {
       emsg += ` ${qmsgs[0]}`;
     } else {
       emsg += `s [\n${qmsgs.join("\n")}\n]`;
     }
+    let m: BetaModel;
+    let src: string;
+    if (s instanceof BetaModel) {
+      m = s;
+      src = m.testSrc;
+    } else {
+      if (typeof s == "string") {
+        src = s;
+      } else {
+        src = s.code;
+        mSrc = s;
+      }
+      m = new BetaModel(src);
+    }
     emsg += `\nSource:\n${src}`;
-    const m = new BetaModel(src);
     const t = m.translate();
     if (t.translated) {
       return { pass: false, message: () => emsg };
@@ -225,9 +241,9 @@ expect.extend({
         if (msg != err.message) {
           explain.push(`Expected: ${msg}\nGot: ${err.message}`);
         } else {
-          if (typeof s != "string" && s.locations[i]) {
+          if (mSrc?.locations[i]) {
             const have = err.at?.range;
-            const want = s.locations[i].range;
+            const want = mSrc.locations[i].range;
             if (!this.equals(have, want)) {
               explain.push(
                 `Expected '${msg}' at location: ${inspect(want)}\n` +
@@ -469,9 +485,9 @@ describe("model statements", () => {
       const docParse = new BetaModel(`import "child"`);
       const xr = docParse.unresolved();
       expect(docParse).toBeErrorless();
-      expect(xr).toEqual({ urls: ["internal://test/child"] });
+      expect(xr).toEqual({ urls: ["internal://test/langtests/child"] });
       docParse.update({
-        urls: { "internal://test/child": "explore: aa is a" },
+        urls: { "internal://test/langtests/child": "explore: aa is a" },
       });
       const yr = docParse.unresolved();
       expect(yr).toBeNull();
@@ -480,10 +496,10 @@ describe("model statements", () => {
       const docParse = new BetaModel(`import "child"`);
       const xr = docParse.unresolved();
       expect(docParse).toBeErrorless();
-      expect(xr).toEqual({ urls: ["internal://test/child"] });
+      expect(xr).toEqual({ urls: ["internal://test/langtests/child"] });
       const reportedError = "ENOWAY: No way to find your child";
       docParse.update({
-        errors: { urls: { "internal://test/child": reportedError } },
+        errors: { urls: { "internal://test/langtests/child": reportedError } },
       });
       docParse.translate();
       expect(docParse).not.toBeErrorless();
@@ -492,11 +508,38 @@ describe("model statements", () => {
     test("chained imports", () => {
       const docParse = new BetaModel(`import "child"`);
       docParse.update({
-        urls: { "internal://test/child": `import "grandChild"` },
+        urls: { "internal://test/langtests/child": `import "grandChild"` },
       });
       const xr = docParse.unresolved();
       expect(docParse).toBeErrorless();
-      expect(xr).toEqual({ urls: ["internal://test/grandChild"] });
+      expect(xr).toEqual({ urls: ["internal://test/langtests/grandChild"] });
+    });
+    test("relative imports", () => {
+      const docParse = new BetaModel(`import "../parent.malloy"`);
+      expect(docParse).toCompile();
+      const xr = docParse.unresolved();
+      expect(xr).toEqual({ urls: ["internal://test/parent.malloy"] });
+      docParse.update({
+        urls: {
+          "internal://test/parent.malloy": `source: aa is table('aTable')`,
+        },
+      });
+      expect(docParse).toTranslate();
+    });
+    test("relative imports with errors", () => {
+      const docParse = new BetaModel(`import "../parent.malloy"`);
+      expect(docParse).toCompile();
+      const xr = docParse.unresolved();
+      expect(xr).toEqual({ urls: ["internal://test/parent.malloy"] });
+      docParse.update({
+        urls: {
+          "internal://test/parent.malloy": `
+            source: aa is table('aTable') {
+              dimension: astr is 'not legal beause astr exists'
+            }`,
+        },
+      });
+      expect(docParse).compileToFailWith("Cannot redefine 'astr'");
     });
   });
 });

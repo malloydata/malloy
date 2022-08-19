@@ -169,7 +169,7 @@ class TestRoot extends MalloyElement implements NameSpace {
   }
 }
 
-const testURI = "internal://test/root";
+const testURI = "internal://test/langtests/root.malloy";
 export class TestTranslator extends MalloyTranslator {
   testRoot?: TestRoot;
   /*
@@ -232,7 +232,7 @@ export class TestTranslator extends MalloyTranslator {
   constructor(source: string, rootRule = "malloyDocument") {
     super(testURI);
     this.grammarRule = rootRule;
-    this.importZone.define("internal://test/root", source);
+    this.importZone.define(testURI, source);
     for (const tableName in mockSchema) {
       this.schemaZone.define(tableName, mockSchema[tableName]);
     }
@@ -354,7 +354,7 @@ export function markSource(
     };
     const bitLines = mark.split("\n");
     const location = {
-      url: "internal://test/root",
+      url: testURI,
       range: {
         start,
         end: {
