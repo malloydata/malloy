@@ -7,9 +7,9 @@
   "scripts": {
     "test": "jest --config=../../jest.config.js",
     "build-parser": "cd src/lang/grammar && cross-os build-parser",
-    "testLang": "yarn test --testPathPattern=packages/malloy/src/lang",
+    "testLang": "npm run test --testPathPattern=packages/malloy/src/lang",
     "clean": "rm -rf src/lang/lib",
-    "build": "yarn build-parser && yarn tsc --build",
+    "build": "npm run build-parser && tsc --build",
     "malloyc": "ts-node ../../scripts/malloy-to-json"
   },
   "dependencies": {

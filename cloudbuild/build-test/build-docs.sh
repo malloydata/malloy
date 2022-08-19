@@ -3,8 +3,8 @@ set -euxo pipefail
 
 nix-shell --pure --command "$(cat <<NIXCMD
   cd /workspace
-  yarn install --frozen-lockfile
+  npm ci
   bundle install
-  yarn docs-build
+  npm run docs-build
 NIXCMD
 )"

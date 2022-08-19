@@ -7,9 +7,9 @@ nix-shell --pure --command "$(cat <<NIXCMD
   git pull
   git checkout docs-release
   git merge -m"update docs" main
-  yarn install --frozen-lockfile
+  npm ci
   bundle install
-  yarn docs-build
+  npm run docs-build
   git status
   # add any new files -- how should we do this?
   #git add ..

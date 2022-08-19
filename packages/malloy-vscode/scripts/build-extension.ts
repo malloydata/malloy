@@ -16,11 +16,12 @@ import fs from "fs";
 import { build, Plugin } from "esbuild";
 import { nativeNodeModulesPlugin } from "../../../third_party/github.com/evanw/esbuild/native-modules-plugin";
 import * as path from "path";
-import { exec, execSync } from "child_process";
+import { execSync } from "child_process";
 import { noNodeModulesSourceMaps } from "../../../third_party/github.com/evanw/esbuild/no-node-modules-sourcemaps";
 import svgrPlugin from "esbuild-plugin-svgr";
 
 import duckdbPackage from "@malloydata/db-duckdb/package.json";
+import { generateDisclaimer } from "../../../scripts/license_disclaimer";
 const DUCKDB_VERSION = duckdbPackage.dependencies.duckdb;
 
 export type Target =
@@ -171,30 +172,21 @@ export async function doBuild(target?: Target): Promise<void> {
   fs.rmSync(outDir, { recursive: true, force: true });
   fs.mkdirSync(outDir, { recursive: true });
 
-  const licenseFilePath = path.join(outDir, "third_party_notices.txt");
-  if (development) {
-    fs.writeFileSync(
-      licenseFilePath,
-      "Third party notices are not produced during development builds to speed up the build."
-    );
-  } else {
-    await new Promise((resolve, reject) => {
-      const licenseFile = fs.createWriteStream(licenseFilePath);
-      licenseFile.on("open", () => {
-        exec("yarn licenses generate-disclaimer --prod", (error, stdio) => {
-          if (error) {
-            return reject(error);
-          }
-          licenseFile.write(stdio);
-          licenseFile.close();
-          resolve(licenseFile);
-        });
-      });
-      licenseFile.on("error", (err) => {
-        reject(err);
-      });
-    });
+  const fullLicenseFilePath = path.join(
+    __dirname,
+    "..",
+    outDir,
+    "third_party_notices.txt"
+  );
+
+  if (fs.existsSync(fullLicenseFilePath)) {
+    fs.rmSync(fullLicenseFilePath);
   }
+  generateDisclaimer(
+    path.join(__dirname, "..", "package.json"),
+    path.join(__dirname, "..", "..", "..", "node_modules"),
+    fullLicenseFilePath
+  );
 
   fs.writeFileSync(
     path.join(outDir, "build-sha"),
@@ -330,6 +322,7 @@ if (args[0] == "build") {
   doBuild(target)
     .then(() => {
       console.log("Extension built successfully");
+      process.exit(0);
     })
     .catch((error) => {
       console.error("Extension built with errors");
