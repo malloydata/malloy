@@ -13,14 +13,6 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable no-console */
-
-// collect dependencies
-
-// collect transitive dependencies
-
-// TODO handle workspaces node_modules and dependencies? can't just use the node_modules folder
-// as that won't contain sub-dependencies
-
 import fs from "fs";
 
 export function readPackageJson(path: string): any {
