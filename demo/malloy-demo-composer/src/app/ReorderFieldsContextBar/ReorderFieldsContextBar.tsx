@@ -31,104 +31,103 @@ interface ReorderFieldsContextBarProps {
   fieldIndex?: number;
 }
 
-export const ReorderFieldsContextBar: React.FC<
-  ReorderFieldsContextBarProps
-> = ({ updateFieldOrder, stageSummary, onComplete, fieldIndex }) => {
-  const [selectedField, setSelectedField] = useState<number | undefined>(
-    fieldIndex
-  );
+export const ReorderFieldsContextBar: React.FC<ReorderFieldsContextBarProps> =
+  ({ updateFieldOrder, stageSummary, onComplete, fieldIndex }) => {
+    const [selectedField, setSelectedField] = useState<number | undefined>(
+      fieldIndex
+    );
 
-  const originalOrdering = stageSummary
-    .map((item) => {
-      if (
-        item.type === "field" ||
-        item.type === "field_definition" ||
-        item.type === "nested_query_definition"
-      ) {
-        const kind =
-          item.type === "field" || item.type === "field_definition"
-            ? item.kind
-            : "query";
-        const action: ActionIconName =
-          kind === "dimension"
-            ? "group_by"
-            : kind === "measure"
-            ? "aggregate"
-            : "nest";
-        return {
-          fieldIndex: item.fieldIndex,
-          kind,
-          name: item.name,
-          action,
-        };
-      } else {
-        return undefined;
-      }
-    })
-    .filter(notUndefined);
+    const originalOrdering = stageSummary
+      .map((item) => {
+        if (
+          item.type === "field" ||
+          item.type === "field_definition" ||
+          item.type === "nested_query_definition"
+        ) {
+          const kind =
+            item.type === "field" || item.type === "field_definition"
+              ? item.kind
+              : "query";
+          const action: ActionIconName =
+            kind === "dimension"
+              ? "group_by"
+              : kind === "measure"
+              ? "aggregate"
+              : "nest";
+          return {
+            fieldIndex: item.fieldIndex,
+            kind,
+            name: item.name,
+            action,
+          };
+        } else {
+          return undefined;
+        }
+      })
+      .filter(notUndefined);
 
-  const [currentOrdering, setCurrentOrdering] = useState(originalOrdering);
+    const [currentOrdering, setCurrentOrdering] = useState(originalOrdering);
 
-  useEffect(() => {
-    const handle = (event: KeyboardEvent) => {
-      const currentIndex = currentOrdering.findIndex(
-        (item) => item.fieldIndex === selectedField
-      );
-      const moveOffset =
-        event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
-      const otherIndex = currentIndex + moveOffset;
-      if (
-        currentIndex > -1 &&
-        moveOffset !== 0 &&
-        otherIndex >= 0 &&
-        otherIndex < currentOrdering.length
-      ) {
-        const newList = [...currentOrdering];
-        const tempItem = newList[currentIndex];
-        newList[currentIndex] = newList[otherIndex];
-        newList[otherIndex] = tempItem;
-        setCurrentOrdering(newList);
-      }
-    };
-    window.addEventListener("keyup", handle);
-    return () => window.removeEventListener("keyup", handle);
-  });
-
-  return (
-    <ContextMenuMain>
-      <ContextMenuTitle>Reorder Fields</ContextMenuTitle>
-      {currentOrdering.map((item) => {
-        const active = selectedField === item.fieldIndex;
-        const disableHover = selectedField !== undefined;
-        return (
-          <FieldButton
-            key={item.fieldIndex}
-            icon={<ActionIcon action={item.action} />}
-            name={item.name}
-            color={item.kind}
-            onClick={() =>
-              setSelectedField(
-                fieldIndex || active ? undefined : item.fieldIndex
-              )
-            }
-            active={active}
-            disableHover={disableHover}
-          />
+    useEffect(() => {
+      const handle = (event: KeyboardEvent) => {
+        const currentIndex = currentOrdering.findIndex(
+          (item) => item.fieldIndex === selectedField
         );
-      })}
-      {currentOrdering.length === 0 && (
-        <EmptyMessage>Query has no fields.</EmptyMessage>
-      )}
-      <RightButtonRow>
-        <Button
-          onClick={() => {
-            updateFieldOrder(currentOrdering.map((item) => item.fieldIndex));
-            onComplete();
-          }}
-        >
-          Done
-        </Button>
-      </RightButtonRow>
-    </ContextMenuMain>
-  );
-};
+        const moveOffset =
+          event.key === "ArrowUp" ? -1 : event.key === "ArrowDown" ? 1 : 0;
+        const otherIndex = currentIndex + moveOffset;
+        if (
+          currentIndex > -1 &&
+          moveOffset !== 0 &&
+          otherIndex >= 0 &&
+          otherIndex < currentOrdering.length
+        ) {
+          const newList = [...currentOrdering];
+          const tempItem = newList[currentIndex];
+          newList[currentIndex] = newList[otherIndex];
+          newList[otherIndex] = tempItem;
+          setCurrentOrdering(newList);
+        }
+      };
+      window.addEventListener("keyup", handle);
+      return () => window.removeEventListener("keyup", handle);
+    });
+
+    return (
+      <ContextMenuMain>
+        <ContextMenuTitle>Reorder Fields</ContextMenuTitle>
+        {currentOrdering.map((item) => {
+          const active = selectedField === item.fieldIndex;
+          const disableHover = selectedField !== undefined;
+          return (
+            <FieldButton
+              key={item.fieldIndex}
+              icon={<ActionIcon action={item.action} />}
+              name={item.name}
+              color={item.kind}
+              onClick={() =>
+                setSelectedField(
+                  fieldIndex || active ? undefined : item.fieldIndex
+                )
+              }
+              active={active}
+              disableHover={disableHover}
+            />
+          );
+        })}
+        {currentOrdering.length === 0 && (
+          <EmptyMessage>Query has no fields.</EmptyMessage>
+        )}
+        <RightButtonRow>
+          <Button
+            onClick={() => {
+              updateFieldOrder(currentOrdering.map((item) => item.fieldIndex));
+              onComplete();
+            }}
+          >
+            Done
+          </Button>
+        </RightButtonRow>
+      </ContextMenuMain>
+    );
+  };
