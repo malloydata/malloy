@@ -503,18 +503,6 @@ describe("model statements", () => {
       }
     `).compileToFailWith("all() field 'afloat' must be in query output");
     });
-    // test("exclude ungroup", () => {
-    //   const okModel = new BetaModel(`
-    //     query: a -> {
-    //       group_by: astr
-    //       nest: by_int is {
-    //         group_by: ai
-    //         aggregate: the_count is exclude(count(), ai, astr)
-    //       }
-    //     }
-    //   `);
-    //   expect(okModel).toTranslate();
-    // });
   });
   describe("import:", () => {
     test("simple import", () => {

@@ -782,16 +782,20 @@ export class ExprUngroup extends ExpressionDef {
       const dstFields: string[] = [];
       for (const mustBeInOutput of this.fields) {
         const name = mustBeInOutput.refString;
-        if (fs.out.lookup([mustBeInOutput]).found) {
-          dstFields.push(name);
-        } else {
-          mustBeInOutput.log(
-            `${this.control}() field '${name}' must be in query output`
-          );
+        // Not checking "exclude" yet because I don't know how to
+        // walk up a chain of nested output spaces
+        if (this.control == "all") {
+          if (!fs.out.lookup([mustBeInOutput]).found) {
+            mustBeInOutput.log(
+              `${this.control}() field '${name}' must be in query output`
+            );
+            continue;
+          }
         }
-        if (dstFields.length > 0) {
-          f.fields = dstFields;
-        }
+        dstFields.push(name);
+      }
+      if (dstFields.length > 0) {
+        f.fields = dstFields;
       }
       return {
         dataType: this.returns(exprVal),
