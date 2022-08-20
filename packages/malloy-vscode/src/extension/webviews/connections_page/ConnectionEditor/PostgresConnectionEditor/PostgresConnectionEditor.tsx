@@ -24,179 +24,180 @@ interface PostgresConnectionEditorProps {
   setConfig: (config: PostgresConnectionConfig) => void;
 }
 
-export const PostgresConnectionEditor: React.FC<PostgresConnectionEditorProps> =
-  ({ config, setConfig }) => {
-    const [showPassword, setShowPassword] = useState(false);
-    return (
-      <table>
-        <tbody>
-          <tr>
-            <LabelCell>
-              <Label>Name:</Label>
-            </LabelCell>
-            <td>
-              <TextField
-                value={config.name}
-                setValue={(name) => {
-                  setConfig({ ...config, name });
-                }}
-              />
-            </td>
-          </tr>
-          <tr>
-            <LabelCell>
-              <Label>Host:</Label>
-            </LabelCell>
-            <td>
-              <TextField
-                value={config.host || ""}
-                setValue={(host) => {
-                  setConfig({ ...config, host });
-                }}
-              ></TextField>
-            </td>
-          </tr>
-          <tr>
-            <LabelCell>
-              <Label>Port:</Label>
-            </LabelCell>
-            <td>
-              <TextField
-                value={config.port ? config.port.toString() : ""}
-                setValue={(port) => {
-                  setConfig({ ...config, port: parseInt(port) });
-                }}
-              ></TextField>
-            </td>
-          </tr>
-          <tr>
-            <LabelCell>
-              <Label>Database Name:</Label>
-            </LabelCell>
-            <td>
-              <TextField
-                value={config.databaseName || ""}
-                setValue={(databaseName) => {
-                  setConfig({ ...config, databaseName });
-                }}
-              ></TextField>
-            </td>
-          </tr>
-          <tr>
-            <LabelCell>
-              <Label>Username:</Label>
-            </LabelCell>
-            <td>
-              <TextField
-                value={config.username || ""}
-                setValue={(username) => {
-                  setConfig({ ...config, username });
-                }}
-              />
-            </td>
-          </tr>
-          <tr>
-            <LabelCell>
-              <Label>Password:</Label>
-            </LabelCell>
-            <td>
-              {config.useKeychainPassword !== undefined && (
-                <div>
-                  <VSCodeRadio
-                    value="keychain"
-                    checked={config.useKeychainPassword}
-                    onChange={(event) => {
-                      if (event?.target && (event?.target as any).checked) {
-                        setConfig({
-                          ...config,
-                          password: undefined,
-                          useKeychainPassword: true,
-                        });
-                      }
-                    }}
-                  >
-                    Use existing value
-                  </VSCodeRadio>
-                </div>
-              )}
+export const PostgresConnectionEditor: React.FC<
+  PostgresConnectionEditorProps
+> = ({ config, setConfig }) => {
+  const [showPassword, setShowPassword] = useState(false);
+  return (
+    <table>
+      <tbody>
+        <tr>
+          <LabelCell>
+            <Label>Name:</Label>
+          </LabelCell>
+          <td>
+            <TextField
+              value={config.name}
+              setValue={(name) => {
+                setConfig({ ...config, name });
+              }}
+            />
+          </td>
+        </tr>
+        <tr>
+          <LabelCell>
+            <Label>Host:</Label>
+          </LabelCell>
+          <td>
+            <TextField
+              value={config.host || ""}
+              setValue={(host) => {
+                setConfig({ ...config, host });
+              }}
+            ></TextField>
+          </td>
+        </tr>
+        <tr>
+          <LabelCell>
+            <Label>Port:</Label>
+          </LabelCell>
+          <td>
+            <TextField
+              value={config.port ? config.port.toString() : ""}
+              setValue={(port) => {
+                setConfig({ ...config, port: parseInt(port) });
+              }}
+            ></TextField>
+          </td>
+        </tr>
+        <tr>
+          <LabelCell>
+            <Label>Database Name:</Label>
+          </LabelCell>
+          <td>
+            <TextField
+              value={config.databaseName || ""}
+              setValue={(databaseName) => {
+                setConfig({ ...config, databaseName });
+              }}
+            ></TextField>
+          </td>
+        </tr>
+        <tr>
+          <LabelCell>
+            <Label>Username:</Label>
+          </LabelCell>
+          <td>
+            <TextField
+              value={config.username || ""}
+              setValue={(username) => {
+                setConfig({ ...config, username });
+              }}
+            />
+          </td>
+        </tr>
+        <tr>
+          <LabelCell>
+            <Label>Password:</Label>
+          </LabelCell>
+          <td>
+            {config.useKeychainPassword !== undefined && (
               <div>
                 <VSCodeRadio
-                  value="none"
-                  key="none"
-                  checked={
-                    !config.useKeychainPassword && config.password === undefined
-                  }
+                  value="keychain"
+                  checked={config.useKeychainPassword}
                   onChange={(event) => {
                     if (event?.target && (event?.target as any).checked) {
                       setConfig({
                         ...config,
                         password: undefined,
-                        useKeychainPassword:
-                          config.useKeychainPassword === undefined
-                            ? undefined
-                            : false,
+                        useKeychainPassword: true,
                       });
                     }
                   }}
                 >
-                  No password
+                  Use existing value
                 </VSCodeRadio>
               </div>
-              <div>
-                <VSCodeRadio
-                  value="specified"
-                  key="specified"
-                  checked={config.password !== undefined}
-                  onChange={(event) => {
-                    if (event?.target && (event?.target as any).checked) {
-                      setConfig({
-                        ...config,
-                        password: "",
-                        useKeychainPassword:
-                          config.useKeychainPassword === undefined
-                            ? undefined
-                            : false,
-                      });
-                    }
-                  }}
-                >
-                  Enter a password
-                  {config.password !== undefined && ":"}
-                </VSCodeRadio>
-              </div>
-            </td>
-          </tr>
-          {config.password !== undefined && (
-            <tr>
-              <td></td>
-              <td>
-                <TextField
-                  value={config.password}
-                  setValue={(password) => {
+            )}
+            <div>
+              <VSCodeRadio
+                value="none"
+                key="none"
+                checked={
+                  !config.useKeychainPassword && config.password === undefined
+                }
+                onChange={(event) => {
+                  if (event?.target && (event?.target as any).checked) {
                     setConfig({
                       ...config,
-                      password,
+                      password: undefined,
+                      useKeychainPassword:
+                        config.useKeychainPassword === undefined
+                          ? undefined
+                          : false,
                     });
-                  }}
-                  type={
-                    showPassword ? TextFieldType.text : TextFieldType.password
                   }
-                  placeholder="Optional"
-                />
-              </td>
-              <td style={{ paddingLeft: "10px" }}>
-                <VSCodeCheckbox
-                  checked={showPassword}
-                  onChange={(event) => {
-                    setShowPassword((event.target as any).checked);
-                  }}
-                >
-                  Show Password
-                </VSCodeCheckbox>
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-    );
-  };
+                }}
+              >
+                No password
+              </VSCodeRadio>
+            </div>
+            <div>
+              <VSCodeRadio
+                value="specified"
+                key="specified"
+                checked={config.password !== undefined}
+                onChange={(event) => {
+                  if (event?.target && (event?.target as any).checked) {
+                    setConfig({
+                      ...config,
+                      password: "",
+                      useKeychainPassword:
+                        config.useKeychainPassword === undefined
+                          ? undefined
+                          : false,
+                    });
+                  }
+                }}
+              >
+                Enter a password
+                {config.password !== undefined && ":"}
+              </VSCodeRadio>
+            </div>
+          </td>
+        </tr>
+        {config.password !== undefined && (
+          <tr>
+            <td></td>
+            <td>
+              <TextField
+                value={config.password}
+                setValue={(password) => {
+                  setConfig({
+                    ...config,
+                    password,
+                  });
+                }}
+                type={
+                  showPassword ? TextFieldType.text : TextFieldType.password
+                }
+                placeholder="Optional"
+              />
+            </td>
+            <td style={{ paddingLeft: "10px" }}>
+              <VSCodeCheckbox
+                checked={showPassword}
+                onChange={(event) => {
+                  setShowPassword((event.target as any).checked);
+                }}
+              >
+                Show Password
+              </VSCodeCheckbox>
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  );
+};

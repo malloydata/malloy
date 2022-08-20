@@ -16,6 +16,7 @@ Make, and Bundler installed. See [here](https://jekyllrb.com/docs/installation/)
 for more info on Jekyll's requirements.
 
 To install Bundler, run
+
 ```
 gem install bundler
 ```
@@ -28,13 +29,13 @@ bundle install
 
 ### Compile
 
-To compile the documentation, run `yarn docs-build`. Your system must be
+To compile the documentation, run `npm run docs-build`. Your system must be
 authenticated to a BigQuery instance with access to all the public tables referenced in the
 `/samples` models.
 
 ### Develop
 
-For developing the documentation, run `yarn docs-serve` build the docs, watch for
+For developing the documentation, run `npm run docs-serve` build the docs, watch for
 file changes in any of the docs, static files, or sample models, and serve the result
 at [http://127.0.0.1:4000](http://127.0.0.1:4000). Jekyll hot-reloading is
 enabled, so pages should automatically refresh when changes are made. When initial
@@ -45,12 +46,12 @@ whether the code should be run, and how the query should be compiled or the resu
 formatted. This command string is JSON-formatted and must appear on the first
 line in a comment with an `!`, like: `--! { "isRunnable": true }`. For example,
 
-~~~
+````
 ```malloy
 --! {"isRunnable": true, "source": "faa/flights.malloy", "size": "large"}
 flights -> sessionize
 ```
-~~~
+````
 
 Currently, options include `isRunnable` (which must be `true` for the snippet
 to run), `project` (which refers to a directory in `/samples`), `model` (
@@ -61,9 +62,9 @@ directory), and `size` (which adjusts the maximum scroll size of the results).
 
 The following list describes style conventions used in the docs.
 
-* Use headers (`# Foo`, `## Bar`, etc.) to organize document structure, not for
+- Use headers (`# Foo`, `## Bar`, etc.) to organize document structure, not for
   emphasis. If you want to show emphasis, do it with `**bold**` or `_italics_`.
-* Code spans (`` `source flights` ``) are by default _Malloy_ syntax-highlighted. If
+- Code spans (`` `source flights` ``) are by default _Malloy_ syntax-highlighted. If
   you are writing a code span with code in any other language, use an HTML code tag,
   e.g. `<code>SELECT *</code>`
 
@@ -77,7 +78,7 @@ To deploy the docs, use the following steps:
 4. `git checkout docs-release`
 5. `git pull`
 6. `git merge main`
-7. `yarn docs-build`
+7. `npm run docs-build`
 8. `git add docs`
 9. `git commit`
 10. `git push`

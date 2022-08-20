@@ -26,11 +26,11 @@ export function pretty(thing: any): string {
 
 CLI TRANSLATION UTILITY
 
-Can be run with "yarn malloyc"
+Can be run with "npm run malloyc"
 
 CURRENTLY HAS TWO MODES
 
-1) yarn malloyc ( no arguments )
+1) npm run malloyc ( no arguments )
     Prompts for one line of input, parses that one
     line and dumps the translator output.
 
@@ -38,7 +38,7 @@ CURRENTLY HAS TWO MODES
     able to type two commands that operator on the same model,
     are not yet implemented.
 
-2) yarn malloyc file1 file2 ...
+2) npm run malloyc file1 file2 ...
     For each file parse and dump translator output
 
 */
