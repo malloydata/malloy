@@ -22,11 +22,6 @@ import { PooledPostgresConnection } from "@malloydata/db-postgres";
 import { DuckDBConnection } from "@malloydata/db-duckdb";
 import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
 
-// https://github.com/duckdb/duckdb/issues/3721
-//  computes symmetric aggregates incorrectly.  When we have a fix,
-//  set this to false to test and then remove.
-export const duckdbBug3721 = true;
-
 export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.
 
@@ -93,12 +88,6 @@ const allDatabases = ["postgres", "bigquery", "duckdb"];
 type RuntimeDatabaseNames = typeof allDatabases[number];
 
 export class RuntimeList {
-  bqConnection = new BigQueryTestConnection(
-    "bigquery",
-    {},
-    { defaultProject: "malloy-data" }
-  );
-
   runtimeMap = new Map<string, SingleConnectionRuntime>();
 
   constructor(databaseList: RuntimeDatabaseNames[] | undefined = undefined) {

@@ -18,14 +18,18 @@ import { fStringEq } from "./test_utils";
 import * as malloy from "@malloydata/malloy";
 
 import { Query } from "@malloydata/malloy";
-import { RuntimeList } from "./runtimes";
+import { BigQueryTestConnection, RuntimeList } from "./runtimes";
 
 const runtimeList = new RuntimeList(["bigquery"]);
 const runtime = runtimeList.runtimeMap.get("bigquery");
 if (runtime === undefined) {
   throw new Error("Couldn't build runtime");
 }
-const bq = runtimeList.bqConnection;
+const bq = new BigQueryTestConnection(
+  "bigquery",
+  {},
+  { defaultProject: "malloy-data" }
+);
 
 function compileQueryFromQueryDef(
   model: malloy.ModelMaterializer,
