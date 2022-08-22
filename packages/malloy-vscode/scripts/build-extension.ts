@@ -322,7 +322,6 @@ if (args[0] == "build") {
   doBuild(target)
     .then(() => {
       console.log("Extension built successfully");
-      process.exit(0);
     })
     .catch((error) => {
       console.error("Extension built with errors");
