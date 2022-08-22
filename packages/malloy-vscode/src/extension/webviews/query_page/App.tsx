@@ -28,6 +28,8 @@ import "prismjs/components/prism-sql";
 import { usePopperTooltip } from "react-popper-tooltip";
 import { useQueryVSCodeContext } from "./query_vscode_context";
 import { DownloadButton } from "./DownloadButton";
+import { CopyHTMLButton } from "./CopyHTMLButton";
+import { Scroll } from "./Scroll";
 
 enum Status {
   Ready = "ready",
@@ -191,6 +193,9 @@ export const App: React.FC = () => {
       {!error && resultKind === ResultKind.HTML && (
         <Scroll>
           <div style={{ margin: "10px" }}>
+            <CopyHTMLButton
+              onClick={() => navigator.clipboard.writeText(html.outerHTML)}
+            />
             <DOMElement element={html} />
           </div>
         </Scroll>
@@ -235,11 +240,6 @@ function getStatusLabel(status: Status) {
       return "Displaying";
   }
 }
-
-const Scroll = styled.div`
-  height: 100%;
-  overflow: auto;
-`;
 
 interface PrismContainerProps {
   darkMode: boolean;
