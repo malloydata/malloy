@@ -19,7 +19,6 @@ import {
   ServerOptions,
   TransportKind,
 } from "vscode-languageclient/node";
-import { DocumentHighlight, Malloy } from "@malloydata/malloy";
 import {
   runTurtleFromSchemaCommand,
   SchemaProvider,
@@ -36,7 +35,6 @@ import {
 } from "./commands";
 import { CONNECTION_MANAGER, MALLOY_EXTENSION_STATE } from "./state";
 import { ConnectionsProvider } from "./tree_views/connections_view";
-import { HelpViewProvider } from "./webview_views/help_view";
 import { WorkerConnection } from "../worker/worker_connection";
 import { MalloyConfig } from "./types";
 import { getNewClientId } from "./utils";
@@ -125,31 +123,6 @@ export function activate(context: vscode.ExtensionContext): void {
       "malloy.editConnections",
       editConnectionsCommand
     )
-  );
-
-  const provider = new HelpViewProvider(context.extensionUri);
-
-  context.subscriptions.push(
-    vscode.window.onDidChangeTextEditorSelection(
-      (e: vscode.TextEditorSelectionChangeEvent) => {
-        const document = e.textEditor.document;
-        if (document.languageId == "malloy") {
-          const parse = Malloy.parse({ source: document.getText() });
-          const highlight = highlightForPosition(
-            parse.highlights,
-            e.selections[0].start
-          );
-
-          if (highlight) {
-            provider.showHelpFor(highlight.type);
-          }
-        }
-      }
-    )
-  );
-
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider("malloyHelp", provider)
   );
 
   context.subscriptions.push(
@@ -246,18 +219,3 @@ export function getWorker(): WorkerConnection {
 function setupWorker(context: vscode.ExtensionContext): void {
   worker = new WorkerConnection(context);
 }
-
-const highlightForPosition = (
-  highlights: DocumentHighlight[],
-  { character, line }: vscode.Position
-) => {
-  return highlights.find((highlight) => {
-    const { start, end } = highlight.range;
-    const afterStart =
-      line > start.line ||
-      (line === start.line && character >= start.character);
-    const beforeEnd =
-      line < end.line || (line === end.line && character <= end.character);
-    return afterStart && beforeEnd;
-  });
-};

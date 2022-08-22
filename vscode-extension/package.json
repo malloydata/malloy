@@ -355,7 +355,6 @@
     "esbuild": "0.14.13",
     "esbuild-plugin-svgr": "^1.0.1",
     "glob": "^7.1.7",
-    "markdown-to-jsx": "^7.1.7",
     "mocha": "^9.0.0",
     "node-fetch": "^3.2.0",
     "prismjs": "^1.28.0",
