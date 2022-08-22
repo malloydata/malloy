@@ -36,3 +36,13 @@ export function fYearEq(field: string, year: number): FilterExpression {
     code: `${field}:@${year}`,
   };
 }
+
+export function dialectsFromEnvironmentsOr(
+  ...defaultDialects: string[]
+): string[] {
+  return process.env["DIALECTS"]
+    ? process.env["DIALECTS"].split(",")
+    : process.env["DIALECT"]
+    ? [process.env["DIALECT"]]
+    : defaultDialects;
+}
