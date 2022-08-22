@@ -16,7 +16,7 @@
     "clean": "npm run -w @malloydata/malloy clean && tsc --build --clean",
     "build": "npm run -w @malloydata/malloy build-parser && tsc --build",
     "package-extension": "npm run build && npm run -w malloy-vscode package-extension",
-    "lint": "eslint '**/*.ts{,x}'",
+    "lint": "eslint --quiet '**/*.ts{,x}'",
     "test": "jest --runInBand",
     "test-silent": "jest --runInBand --reporters jest-silent-reporter",
     "docs-clean": "rm -rf docs/.jekyll-cache/ && rm -rf docs/_includes/generated/ && rm -rf docs/documentation && rm -rf js/generated/",
