@@ -7,6 +7,6 @@ nix-shell --pure --command "$(cat <<NIXCMD
   export PGUSER=673673622326@cloudbuild
   cd /workspace
   npm ci
-  npm run lint && npm run build && npm run build-duckdb-db && npm run test
+  npm run lint && npm run build && npm run build-duckdb-db && npm run test-silent
 NIXCMD
 )"
