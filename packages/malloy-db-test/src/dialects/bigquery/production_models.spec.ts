@@ -17,7 +17,16 @@ import { Runtime } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { describeIfDatabaseAvailable } from "../../test_utils";
 
-const SAMPLE_PROJECT_ROOT = path.join(__dirname, "../../../samples/bigquery");
+const SAMPLE_PROJECT_ROOT = path.join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  "..",
+  "samples",
+  "bigquery"
+);
 
 const [describe] = describeIfDatabaseAvailable(["bigquery"]);
 
