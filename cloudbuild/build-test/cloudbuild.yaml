@@ -1,9 +1,9 @@
 steps:
- -  id: nix-quiet-install
+  - id: nix-quiet-install
     name: gcr.io/cloud-builders/docker
     args:
       - pull
-      - '-q'
+      - "-q"
       - nixos/nix
   - id: proxy-install
     name: "nixos/nix"
