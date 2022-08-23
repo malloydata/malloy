@@ -30,7 +30,7 @@ import styled from "styled-components";
 import { Scroll } from "./Scroll";
 
 interface CopyHTMLButtonProps {
-  onClick: () => void;
+  onClick: (event: MouseEvent) => void;
 }
 
 export const CopyHTMLButton: React.FC<CopyHTMLButtonProps> = ({ onClick }) => {
