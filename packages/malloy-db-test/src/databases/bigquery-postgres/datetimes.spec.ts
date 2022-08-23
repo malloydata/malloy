@@ -20,14 +20,7 @@ import { describeIfDatabaseAvailable, mkSqlEqWith } from "../../test_utils";
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
-const databases = [
-  "bigquery", //
-  "postgres", //
-];
-
-type DialectNames = typeof databases[number];
-
-const basicTypes: Record<DialectNames, string> = {
+const basicTypes: Record<string, string> = {
   bigquery: `
     SELECT * FROM UNNEST([STRUCT(
       CAST('2021-02-24' as DATE) as t_date,
@@ -40,7 +33,10 @@ const basicTypes: Record<DialectNames, string> = {
   `,
 };
 
-const [describe] = describeIfDatabaseAvailable(databases);
+const [describe, databases] = describeIfDatabaseAvailable([
+  "bigquery",
+  "postgres",
+]);
 
 describe("Datetimes", () => {
   const runtimes = new RuntimeList(databases);

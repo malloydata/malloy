@@ -42,18 +42,21 @@ export function fYearEq(field: string, year: number): FilterExpression {
   };
 }
 
-// accepts databases in env, either via comma-separated dialect list (DATABASES=) or a single
-// database (DATABASE=).
+// accepts databases in env, either via comma-separated dialect list (MALLOY_DATABASES=) or a single
+// database (MALLOY_DATABASE=). returns either databases defined in env or a default list that was passed.
 export function databasesFromEnvironmentOr(
   defaultDatabases: string[]
 ): string[] {
-  return process.env["DATABASES"]
-    ? process.env["DATABASES"].split(",")
-    : process.env["DATABASE"]
-    ? [process.env["DATABASE"]]
+  return process.env["MALLOY_DATABASES"]
+    ? process.env["MALLOY_DATABASES"].split(",")
+    : process.env["MALLOY_DATABASE"]
+    ? [process.env["MALLOY_DATABASE"]]
     : defaultDatabases;
 }
 
+// confirms that one or more of the databases being tested overlaps with the databases a test suite can accept.
+// if there is overlap, return a tuple of jest.describe and the dialects to be tested
+// if there is no overlap, return a tuple if jest.describe.skip and the dialects to be tested
 export function describeIfDatabaseAvailable(
   acceptableDatabases: string[]
 ): [jest.Describe, string[]] {
