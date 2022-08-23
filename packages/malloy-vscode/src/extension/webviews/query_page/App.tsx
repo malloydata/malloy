@@ -13,7 +13,13 @@
 
 import { Result } from "@malloydata/malloy";
 import { HTMLView } from "@malloydata/render";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  DOMElement,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import styled from "styled-components";
 import {
   QueryMessageType,
@@ -28,6 +34,8 @@ import "prismjs/components/prism-sql";
 import { usePopperTooltip } from "react-popper-tooltip";
 import { useQueryVSCodeContext } from "./query_vscode_context";
 import { DownloadButton } from "./DownloadButton";
+import { CopyHTMLButton } from "./CopyHTMLButton";
+import { Scroll } from "./Scroll";
 
 enum Status {
   Ready = "ready",
@@ -47,12 +55,12 @@ export const App: React.FC = () => {
   const [error, setError] = useState<string | undefined>(undefined);
   const [warning, setWarning] = useState<string | undefined>(undefined);
   const [resultKind, setResultKind] = useState<ResultKind>(ResultKind.HTML);
-  const [drillTooltipVisible, setDrillTooltipVisible] = useState(false);
+  const [tooltipVisible, setTooltipVisible] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [observer, setObserver] = useState<MutationObserver>();
-  const drillTooltipId = useRef(0);
+  const tooltipId = useRef(0);
   const { setTooltipRef, setTriggerRef, getTooltipProps } = usePopperTooltip({
-    visible: drillTooltipVisible,
+    visible: tooltipVisible,
     placement: "top",
   });
 
@@ -112,11 +120,11 @@ export const App: React.FC = () => {
                 onDrill: (drillQuery, target) => {
                   navigator.clipboard.writeText(drillQuery);
                   setTriggerRef(target);
-                  setDrillTooltipVisible(true);
-                  const currentDrillTooltipId = ++drillTooltipId.current;
+                  setTooltipVisible(true);
+                  const currentTooltipId = ++tooltipId.current;
                   setTimeout(() => {
-                    if (currentDrillTooltipId === drillTooltipId.current) {
-                      setDrillTooltipVisible(false);
+                    if (currentTooltipId === tooltipId.current) {
+                      setTooltipVisible(false);
                     }
                   }, 1000);
                 },
@@ -152,6 +160,21 @@ export const App: React.FC = () => {
     window.addEventListener("message", listener);
     return () => window.removeEventListener("message", listener);
   });
+
+  const copyHTMLTopClipboard = useCallback(
+    ({ target }: MouseEvent) => {
+      navigator.clipboard.writeText(getStyledHTML(html));
+      setTriggerRef(target as HTMLElement);
+      setTooltipVisible(true);
+      const currentTooltipId = ++tooltipId.current;
+      setTimeout(() => {
+        if (currentTooltipId === tooltipId.current) {
+          setTooltipVisible(false);
+        }
+      }, 1000);
+    },
+    [html]
+  );
 
   return (
     <div
@@ -191,6 +214,7 @@ export const App: React.FC = () => {
       {!error && resultKind === ResultKind.HTML && (
         <Scroll>
           <div style={{ margin: "10px" }}>
+            <CopyHTMLButton onClick={copyHTMLTopClipboard} />
             <DOMElement element={html} />
           </div>
         </Scroll>
@@ -214,10 +238,10 @@ export const App: React.FC = () => {
       )}
       {error && <Error multiline={error.includes("\n")}>{error}</Error>}
       {warning && <Warning>{warning}</Warning>}
-      {drillTooltipVisible && (
-        <DrillTooltip ref={setTooltipRef} {...getTooltipProps()}>
-          Drill copied!
-        </DrillTooltip>
+      {tooltipVisible && (
+        <Tooltip ref={setTooltipRef} {...getTooltipProps()}>
+          Copied!
+        </Tooltip>
       )}
     </div>
   );
@@ -236,10 +260,39 @@ function getStatusLabel(status: Status) {
   }
 }
 
-const Scroll = styled.div`
-  height: 100%;
-  overflow: auto;
+function getStyledHTML(html: HTMLElement): string {
+  const resolveStyles = getComputedStyle(html);
+  const styles = `<style>
+  :root {
+    --malloy-font-family: ${resolveStyles.getPropertyValue(
+      "--malloy-font-family"
+    )};
+    --malloy-title-color: ${resolveStyles.getPropertyValue(
+      "--malloy-title-color"
+    )};
+    --malloy-label-color: ${resolveStyles.getPropertyValue(
+      "--malloy-label-color"
+    )};
+    --malloy-border-color: ${resolveStyles.getPropertyValue(
+      "--malloy-border-color"
+    )};
+    --malloy-tile-background-color: ${resolveStyles.getPropertyValue(
+      "--malloy-tile-background-color"
+    )};
+  }
+  body {
+    color: ${resolveStyles.getPropertyValue("--foreground")};
+    background: ${resolveStyles.getPropertyValue("--background")};
+    font-family: var(--malloy-font-family);
+    font-size: 11px;
+  }
+  table {
+    font-size: 11px;
+  }
+</style>
 `;
+  return styles + html.outerHTML;
+}
 
 interface PrismContainerProps {
   darkMode: boolean;
@@ -310,7 +363,7 @@ const DOMElement: React.FC<{ element: HTMLElement }> = ({ element }) => {
   return <div ref={ref}></div>;
 };
 
-const DrillTooltip = styled.div`
+const Tooltip = styled.div`
   background-color: #505050;
   color: white;
   border-radius: 5px;
