@@ -13,13 +13,10 @@
  */
 
 import * as malloy from "@malloydata/malloy";
-import { RuntimeList } from "./runtimes";
+import { allDatabases, RuntimeList } from "../../runtimes";
+import { databasesFromEnvironmentOr } from "../../test_utils";
 
-const runtimes = new RuntimeList([
-  "bigquery", //
-  "postgres", //
-  "duckdb", //
-]);
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 afterAll(async () => {
   await runtimes.closeAll();

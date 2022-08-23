@@ -1,5 +1,5 @@
 import * as malloy from "@malloydata/malloy";
-import { RuntimeList } from "./runtimes";
+import { RuntimeList } from "../../runtimes";
 
 // Chris, please rework.
 it.skip("accessors are not too expensive", async () => {

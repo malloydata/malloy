@@ -84,7 +84,7 @@ export function rows(qr: Result): any[] {
   return qr.data.value;
 }
 
-const allDatabases = ["postgres", "bigquery", "duckdb"];
+export const allDatabases = ["postgres", "bigquery", "duckdb"];
 type RuntimeDatabaseNames = typeof allDatabases[number];
 
 export class RuntimeList {

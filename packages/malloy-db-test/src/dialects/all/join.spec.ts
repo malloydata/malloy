@@ -12,7 +12,8 @@
  */
 /* eslint-disable no-console */
 
-import { RuntimeList } from "./runtimes";
+import { allDatabases, RuntimeList } from "../../runtimes";
+import { databasesFromEnvironmentOr } from "../../test_utils";
 
 const joinModelText = `
   explore: aircraft_models is table('malloytest.aircraft_models') {
@@ -39,11 +40,7 @@ const joinModelText = `
   }
 `;
 
-const runtimes = new RuntimeList([
-  "bigquery", //
-  "postgres", //
-  "duckdb", //
-]);
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 afterAll(async () => {
   await runtimes.closeAll();

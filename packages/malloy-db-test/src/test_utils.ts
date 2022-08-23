@@ -11,7 +11,12 @@
  * GNU General Public License for more details.
  */
 
-import { FilterExpression, Fragment } from "@malloydata/malloy";
+import {
+  FilterExpression,
+  Fragment,
+  Result,
+  Runtime,
+} from "@malloydata/malloy";
 
 export function fStringEq(field: string, value: string): FilterExpression {
   return {
@@ -37,12 +42,74 @@ export function fYearEq(field: string, year: number): FilterExpression {
   };
 }
 
-export function dialectsFromEnvironmentsOr(
-  ...defaultDialects: string[]
+// accepts databases in env, either via comma-separated dialect list (DATABASES=) or a single
+// database (DATABASE=).
+export function databasesFromEnvironmentOr(
+  defaultDatabases: string[]
 ): string[] {
-  return process.env["DIALECTS"]
-    ? process.env["DIALECTS"].split(",")
-    : process.env["DIALECT"]
-    ? [process.env["DIALECT"]]
-    : defaultDialects;
+  return process.env["DATABASES"]
+    ? process.env["DATABASES"].split(",")
+    : process.env["DATABASE"]
+    ? [process.env["DATABASE"]]
+    : defaultDatabases;
+}
+
+export function describeIfDatabaseAvailable(
+  acceptableDatabases: string[]
+): [jest.Describe, string[]] {
+  const currentDatabases = databasesFromEnvironmentOr(acceptableDatabases);
+  const overlap = acceptableDatabases.filter((d) =>
+    currentDatabases.includes(d)
+  );
+
+  return overlap.length > 0 ? [describe, overlap] : [describe.skip, overlap];
+}
+
+interface InitValues {
+  sql?: string;
+  malloy?: string;
+}
+
+export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
+  // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
+  return async function (
+    expr: string,
+    result: string | boolean
+  ): Promise<Result> {
+    const qExpr = expr.replace(/'/g, "`");
+    const sqlV = initV?.sql || "SELECT 1 as one";
+    const malloyV = initV?.malloy || "";
+    const sourceDef = `
+      sql: sqlData is || ${sqlV} ;;
+      source: basicTypes is from_sql(sqlData) ${malloyV}
+    `;
+    let query: string;
+    if (typeof result == "boolean") {
+      const notEq = `concat('sqlEq failed', CHR(10), '    Expected: ${qExpr} to be ${result}')`;
+      const varName = result ? "expectTrue" : "expectFalse";
+      const whenPick = result
+        ? `'=' when ${varName}`
+        : `${notEq} when ${varName}`;
+      const elsePick = result ? notEq : "'='";
+      query = `${sourceDef}
+          query: basicTypes
+          -> { project: ${varName} is ${expr} }
+          -> {
+            project: calc is pick ${whenPick} else ${elsePick}
+          }`;
+    } else {
+      const qResult = result.replace(/'/g, "`");
+      query = `${sourceDef}
+          query: basicTypes
+          -> {
+            project: expect is ${result}
+            project: got is ${expr}
+          } -> {
+            project: calc is
+              pick '=' when expect = got
+              else concat('sqlEq failed', CHR(10), '    Expected: ${qExpr} == ${qResult}', CHR(10), '    Received: ', got::string)
+          }`;
+    }
+    return runtime.loadQuery(query).run();
+  };
 }
