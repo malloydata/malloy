@@ -23,103 +23,104 @@ interface BigQueryConnectionEditorProps {
   requestServiceAccountKeyPath: () => void;
 }
 
-export const BigQueryConnectionEditor: React.FC<BigQueryConnectionEditorProps> =
-  ({ config, setConfig, requestServiceAccountKeyPath }) => {
-    return (
-      <table>
-        <tbody>
-          <tr>
-            <LabelCell>
-              <Label>Name:</Label>
-            </LabelCell>
-            <td>
-              <TextField
-                value={config.name}
-                setValue={(name) => {
-                  setConfig({ ...config, name });
-                }}
-              />
-            </td>
-          </tr>
-          <tr>
-            <LabelCell>
-              <Label>Project Name:</Label>
-            </LabelCell>
-            <td>
-              <TextField
-                value={config.projectName || ""}
-                setValue={(projectName) => {
-                  setConfig({ ...config, projectName });
-                }}
-                placeholder="Optional"
-              />
-            </td>
-          </tr>
-          <tr>
-            <LabelCell>
-              <Label>Location:</Label>
-            </LabelCell>
-            <td>
-              <TextField
-                value={config.location || ""}
-                setValue={(location) => {
-                  setConfig({ ...config, location });
-                }}
-                placeholder="Optional (default US)"
-              />
-            </td>
-          </tr>
-          <tr>
-            <LabelCell>
-              <Label>Service Account Key File Path:</Label>
-            </LabelCell>
-            <td>
-              <TextField
-                value={config.serviceAccountKeyPath || ""}
-                setValue={(serviceAccountKeyPath) => {
-                  setConfig({ ...config, serviceAccountKeyPath });
-                }}
-                placeholder="Optional"
-              />
-            </td>
-            <td>
-              <VSCodeButton
-                onClick={requestServiceAccountKeyPath}
-                style={{ height: "25px" }}
-              >
-                Pick File
-              </VSCodeButton>
-            </td>
-          </tr>
-          <tr>
-            <LabelCell>
-              <Label>Maximum Bytes Billed:</Label>
-            </LabelCell>
-            <td>
-              <TextField
-                value={config.maximumBytesBilled || ""}
-                setValue={(maximumBytesBilled) => {
-                  setConfig({ ...config, maximumBytesBilled });
-                }}
-                placeholder="Optional"
-              />
-            </td>
-          </tr>
-          <tr>
-            <LabelCell>
-              <Label>Query Timeout Milliseconds:</Label>
-            </LabelCell>
-            <td>
-              <TextField
-                value={config.timeoutMs || ""}
-                setValue={(timeoutMs) => {
-                  setConfig({ ...config, timeoutMs });
-                }}
-                placeholder="Optional"
-              />
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    );
-  };
+export const BigQueryConnectionEditor: React.FC<
+  BigQueryConnectionEditorProps
+> = ({ config, setConfig, requestServiceAccountKeyPath }) => {
+  return (
+    <table>
+      <tbody>
+        <tr>
+          <LabelCell>
+            <Label>Name:</Label>
+          </LabelCell>
+          <td>
+            <TextField
+              value={config.name}
+              setValue={(name) => {
+                setConfig({ ...config, name });
+              }}
+            />
+          </td>
+        </tr>
+        <tr>
+          <LabelCell>
+            <Label>Project Name:</Label>
+          </LabelCell>
+          <td>
+            <TextField
+              value={config.projectName || ""}
+              setValue={(projectName) => {
+                setConfig({ ...config, projectName });
+              }}
+              placeholder="Optional"
+            />
+          </td>
+        </tr>
+        <tr>
+          <LabelCell>
+            <Label>Location:</Label>
+          </LabelCell>
+          <td>
+            <TextField
+              value={config.location || ""}
+              setValue={(location) => {
+                setConfig({ ...config, location });
+              }}
+              placeholder="Optional (default US)"
+            />
+          </td>
+        </tr>
+        <tr>
+          <LabelCell>
+            <Label>Service Account Key File Path:</Label>
+          </LabelCell>
+          <td>
+            <TextField
+              value={config.serviceAccountKeyPath || ""}
+              setValue={(serviceAccountKeyPath) => {
+                setConfig({ ...config, serviceAccountKeyPath });
+              }}
+              placeholder="Optional"
+            />
+          </td>
+          <td>
+            <VSCodeButton
+              onClick={requestServiceAccountKeyPath}
+              style={{ height: "25px" }}
+            >
+              Pick File
+            </VSCodeButton>
+          </td>
+        </tr>
+        <tr>
+          <LabelCell>
+            <Label>Maximum Bytes Billed:</Label>
+          </LabelCell>
+          <td>
+            <TextField
+              value={config.maximumBytesBilled || ""}
+              setValue={(maximumBytesBilled) => {
+                setConfig({ ...config, maximumBytesBilled });
+              }}
+              placeholder="Optional"
+            />
+          </td>
+        </tr>
+        <tr>
+          <LabelCell>
+            <Label>Query Timeout Milliseconds:</Label>
+          </LabelCell>
+          <td>
+            <TextField
+              value={config.timeoutMs || ""}
+              setValue={(timeoutMs) => {
+                setConfig({ ...config, timeoutMs });
+              }}
+              placeholder="Optional"
+            />
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  );
+};
