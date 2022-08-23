@@ -106,6 +106,20 @@ export const BigQueryConnectionEditor: React.FC<
             />
           </td>
         </tr>
+        <tr>
+          <LabelCell>
+            <Label>Query Timeout Milliseconds:</Label>
+          </LabelCell>
+          <td>
+            <TextField
+              value={config.timeoutMs || ""}
+              setValue={(timeoutMs) => {
+                setConfig({ ...config, timeoutMs });
+              }}
+              placeholder="Optional"
+            />
+          </td>
+        </tr>
       </tbody>
     </table>
   );
