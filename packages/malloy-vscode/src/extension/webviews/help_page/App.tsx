@@ -13,7 +13,7 @@
 
 import React, { useState } from "react";
 import styled from "styled-components";
-import { HelpMessageType } from "../../webview_message_manager";
+import { HelpMessageType } from "../../message_types";
 import {
   VSCodeButton,
   VSCodeTextField,
@@ -37,8 +37,8 @@ export const App: React.FC = () => {
       <Row>
         <VSCodeTextField
           value={searchText}
-          onChange={(event) => {
-            setSearchText((event.target as any).value);
+          onChange={({ target }) => {
+            setSearchText((target as HTMLInputElement).value);
           }}
           placeholder="Search Documentation"
           id="search-input"

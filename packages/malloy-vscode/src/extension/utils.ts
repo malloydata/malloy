@@ -11,17 +11,23 @@
  * GNU General Public License for more details.
  */
 
+import { fileURLToPath } from "node:url";
 import { URLReader } from "@malloydata/malloy";
 import * as vscode from "vscode";
 
-export async function fetchFile(uri: string): Promise<string> {
-  return (
-    await vscode.workspace.openTextDocument(uri.replace(/^file:\/\//, ""))
-  ).getText();
+export async function fetchFile(path: string): Promise<string> {
+  return (await vscode.workspace.openTextDocument(path)).getText();
 }
 
 export class VSCodeURLReader implements URLReader {
   async readURL(url: URL): Promise<string> {
-    return fetchFile(url.toString());
+    switch (url.protocol) {
+      case "file:":
+        return fetchFile(fileURLToPath(url));
+      default:
+        throw new Error(
+          `Protocol ${url.protocol} not implemented in VSCodeURLReader.`
+        );
+    }
   }
 }

@@ -13,13 +13,19 @@
 
 import { Result } from "@malloydata/malloy";
 import { HTMLView } from "@malloydata/render";
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  DOMElement,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import styled from "styled-components";
 import {
   QueryMessageType,
   QueryPanelMessage,
   QueryRunStatus,
-} from "../../webview_message_manager";
+} from "../../message_types";
 import { Spinner } from "../components";
 import { ResultKind, ResultKindToggle } from "./ResultKindToggle";
 import Prism from "prismjs";
@@ -28,6 +34,8 @@ import "prismjs/components/prism-sql";
 import { usePopperTooltip } from "react-popper-tooltip";
 import { useQueryVSCodeContext } from "./query_vscode_context";
 import { DownloadButton } from "./DownloadButton";
+import { CopyHTMLButton } from "./CopyHTMLButton";
+import { Scroll } from "./Scroll";
 
 enum Status {
   Ready = "ready",
@@ -47,10 +55,12 @@ export const App: React.FC = () => {
   const [error, setError] = useState<string | undefined>(undefined);
   const [warning, setWarning] = useState<string | undefined>(undefined);
   const [resultKind, setResultKind] = useState<ResultKind>(ResultKind.HTML);
-  const [drillTooltipVisible, setDrillTooltipVisible] = useState(false);
-  const drillTooltipId = useRef(0);
+  const [tooltipVisible, setTooltipVisible] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+  const [observer, setObserver] = useState<MutationObserver>();
+  const tooltipId = useRef(0);
   const { setTooltipRef, setTriggerRef, getTooltipProps } = usePopperTooltip({
-    visible: drillTooltipVisible,
+    visible: tooltipVisible,
     placement: "top",
   });
 
@@ -59,6 +69,28 @@ export const App: React.FC = () => {
   useEffect(() => {
     vscode.postMessage({ type: "app-ready" } as QueryPanelMessage);
   }, []);
+
+  const themeCallback = useCallback(() => {
+    const themeKind = document.body.dataset.vscodeThemeKind;
+    setDarkMode(themeKind === "vscode-dark");
+  }, []);
+
+  useEffect(() => {
+    const obs = new MutationObserver(themeCallback);
+    setObserver(obs);
+  }, [themeCallback, setObserver]);
+
+  useEffect(() => {
+    if (!observer) return;
+    observer.observe(document.body, {
+      attributeFilter: ["data-vscode-theme-kind"],
+    });
+    return () => {
+      if (observer) {
+        observer.disconnect();
+      }
+    };
+  }, [observer, document.body]);
 
   useEffect(() => {
     const listener = (event: MessageEvent<QueryPanelMessage>) => {
@@ -84,15 +116,15 @@ export const App: React.FC = () => {
               );
               const rendered = await new HTMLView(document).render(data, {
                 dataStyles: message.styles,
-                isDrillingEnabled: true,
+                isDrillingEnabled: false,
                 onDrill: (drillQuery, target) => {
                   navigator.clipboard.writeText(drillQuery);
                   setTriggerRef(target);
-                  setDrillTooltipVisible(true);
-                  const currentDrillTooltipId = ++drillTooltipId.current;
+                  setTooltipVisible(true);
+                  const currentTooltipId = ++tooltipId.current;
                   setTimeout(() => {
-                    if (currentDrillTooltipId === drillTooltipId.current) {
-                      setDrillTooltipVisible(false);
+                    if (currentTooltipId === tooltipId.current) {
+                      setTooltipVisible(false);
                     }
                   }, 1000);
                 },
@@ -128,6 +160,21 @@ export const App: React.FC = () => {
     window.addEventListener("message", listener);
     return () => window.removeEventListener("message", listener);
   });
+
+  const copyHTMLTopClipboard = useCallback(
+    ({ target }: MouseEvent) => {
+      navigator.clipboard.writeText(getStyledHTML(html));
+      setTriggerRef(target as HTMLElement);
+      setTooltipVisible(true);
+      const currentTooltipId = ++tooltipId.current;
+      setTimeout(() => {
+        if (currentTooltipId === tooltipId.current) {
+          setTooltipVisible(false);
+        }
+      }, 1000);
+    },
+    [html]
+  );
 
   return (
     <div
@@ -167,18 +214,21 @@ export const App: React.FC = () => {
       {!error && resultKind === ResultKind.HTML && (
         <Scroll>
           <div style={{ margin: "10px" }}>
+            <CopyHTMLButton onClick={copyHTMLTopClipboard} />
             <DOMElement element={html} />
           </div>
         </Scroll>
       )}
       {!error && resultKind === ResultKind.JSON && (
         <Scroll>
-          <PrismContainer style={{ margin: "10px" }}>{json}</PrismContainer>
+          <PrismContainer darkMode={darkMode} style={{ margin: "10px" }}>
+            {json}
+          </PrismContainer>
         </Scroll>
       )}
       {!error && resultKind === ResultKind.SQL && (
         <Scroll>
-          <PrismContainer style={{ margin: "10px" }}>
+          <PrismContainer darkMode={darkMode} style={{ margin: "10px" }}>
             <div
               dangerouslySetInnerHTML={{ __html: sql }}
               style={{ margin: "10px" }}
@@ -188,10 +238,10 @@ export const App: React.FC = () => {
       )}
       {error && <Error multiline={error.includes("\n")}>{error}</Error>}
       {warning && <Warning>{warning}</Warning>}
-      {drillTooltipVisible && (
-        <DrillTooltip ref={setTooltipRef} {...getTooltipProps()}>
-          Drill copied!
-        </DrillTooltip>
+      {tooltipVisible && (
+        <Tooltip ref={setTooltipRef} {...getTooltipProps()}>
+          Copied!
+        </Tooltip>
       )}
     </div>
   );
@@ -210,59 +260,92 @@ function getStatusLabel(status: Status) {
   }
 }
 
-const Scroll = styled.div`
-  height: 100%;
-  overflow: auto;
+function getStyledHTML(html: HTMLElement): string {
+  const resolveStyles = getComputedStyle(html);
+  const styles = `<style>
+  :root {
+    --malloy-font-family: ${resolveStyles.getPropertyValue(
+      "--malloy-font-family"
+    )};
+    --malloy-title-color: ${resolveStyles.getPropertyValue(
+      "--malloy-title-color"
+    )};
+    --malloy-label-color: ${resolveStyles.getPropertyValue(
+      "--malloy-label-color"
+    )};
+    --malloy-border-color: ${resolveStyles.getPropertyValue(
+      "--malloy-border-color"
+    )};
+    --malloy-tile-background-color: ${resolveStyles.getPropertyValue(
+      "--malloy-tile-background-color"
+    )};
+  }
+  body {
+    color: ${resolveStyles.getPropertyValue("--foreground")};
+    background: ${resolveStyles.getPropertyValue("--background")};
+    font-family: var(--malloy-font-family);
+    font-size: 11px;
+  }
+  table {
+    font-size: 11px;
+  }
+</style>
 `;
+  return styles + html.outerHTML;
+}
 
-const PrismContainer = styled.pre`
+interface PrismContainerProps {
+  darkMode: boolean;
+}
+
+const PrismContainer = styled.pre<PrismContainerProps>`
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
   font-size: 14px;
-  color: #333388;
+  color: ${(props) => (props.darkMode ? "#9cdcfe" : "#333388")};
 
   span.token.keyword {
-    color: #af00db;
+    color: ${(props) => (props.darkMode ? "#c586c0" : "#af00db")};
   }
 
   span.token.comment {
-    color: #4f984f;
+    color: ${(props) => (props.darkMode ? "#6a9955" : "#4f984f")};
   }
 
   span.token.function,
   span.token.function_keyword {
-    color: #795e26;
+    color: ${(props) => (props.darkMode ? "#ce9178" : "#795e26")};
   }
 
   span.token.string {
-    color: #ca4c4c;
+    color: ${(props) => (props.darkMode ? "#d16969" : "#ca4c4c")};
   }
 
   span.token.regular_expression {
-    color: #88194d;
+    color: ${(props) => (props.darkMode ? "#f03e91" : "#88194d")};
   }
 
   span.token.operator,
   span.token.punctuation {
-    color: #505050;
+    color: ${(props) => (props.darkMode ? "#dadada" : "#505050")};
   }
 
   span.token.number {
-    color: #09866a;
+    color: ${(props) => (props.darkMode ? "#4ec9b0" : "#09866a")};
   }
 
   span.token.type,
   span.token.timeframe {
-    color: #0070c1;
+    color: ${(props) => (props.darkMode ? "#569cd6 " : "#0070c1")};
   }
 
   span.token.date {
-    color: #09866a;
-    /* color: #8730b3; */
+    color: ${(props) => (props.darkMode ? "#4ec9b0" : "#09866a")};
+    /* color: ${(props) => (props.darkMode ? "#8730b3" : "#8730b3")};; */
   }
 
   span.token.property {
-    color: #b98f13;
+    color: ${(props) => (props.darkMode ? "#dcdcaa" : "#b98f13")};
   }
 `;
 
@@ -280,7 +363,7 @@ const DOMElement: React.FC<{ element: HTMLElement }> = ({ element }) => {
   return <div ref={ref}></div>;
 };
 
-const DrillTooltip = styled.div`
+const Tooltip = styled.div`
   background-color: #505050;
   color: white;
   border-radius: 5px;

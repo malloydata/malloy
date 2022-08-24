@@ -17,7 +17,7 @@ import {
   ConnectionBackend,
   ConnectionConfig,
 } from "../../../../common/connection_manager_types";
-import { ConnectionMessageTest } from "../../../webview_message_manager";
+import { ConnectionMessageTest } from "../../../message_types";
 import { Dropdown } from "../../components";
 import {
   VSCodeButton,

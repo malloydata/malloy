@@ -476,7 +476,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             aggregate:
               c
               all_ is all(c)
-              all_state is all(c,state)
               all_state_region is exclude(c,fac_type)
               all_of_this_type is exclude(c, state, faa_region)
               all_top is exclude(c, state, faa_region, fac_type)
@@ -488,7 +487,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
     // console.log(result.sql);
     expect(result.data.path(0, "fac_type", 0, "all_").value).toBe(1845);
-    expect(result.data.path(0, "fac_type", 0, "all_state").value).toBe(1389);
     expect(result.data.path(0, "fac_type", 0, "all_state_region").value).toBe(
       1845
     );
@@ -980,7 +978,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(d[0]["by_state1"]).not.toBe(null);
   });
 
-  it.only(`number as null- ${databaseName}`, async () => {
+  it(`number as null- ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `

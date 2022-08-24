@@ -42,6 +42,14 @@
     },
     {
       "type": "node",
+      "request": "attach",
+      "name": "Attach to VSCode Worker",
+      "port": 60010,
+      "restart": true,
+      "outFiles": ["${workspaceRoot}/packages/malloy-vscode/dist/worker.js"]
+    },
+    {
+      "type": "node",
       "request": "launch",
       "name": "Launch Composer Server",
       "runtimeExecutable": "${workspaceRoot}/node_modules/.bin/ts-node",

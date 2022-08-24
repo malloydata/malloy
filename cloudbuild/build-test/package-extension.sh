@@ -1,9 +1,9 @@
 #!/usr/bin/env sh
 set -euxo pipefail
 
-nix-shell --pure --command "$(cat <<NIXCMD
+nix-shell --quiet --pure --command "$(cat <<NIXCMD
   cd /workspace
-  yarn install --frozen-lockfile
-  yarn package-extension
+  npm ci --silent
+  npm run package-extension
 NIXCMD
 )"

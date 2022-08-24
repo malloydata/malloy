@@ -14,11 +14,8 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import { getWebviewHtml } from "../webviews";
-import {
-  HelpMessageType,
-  HelpPanelMessage,
-  WebviewMessageManager,
-} from "../webview_message_manager";
+import { HelpMessageType, HelpPanelMessage } from "../message_types";
+import { WebviewMessageManager } from "../webview_message_manager";
 
 export class HelpViewProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;

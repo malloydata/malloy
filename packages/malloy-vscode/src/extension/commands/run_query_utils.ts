@@ -14,59 +14,17 @@
 import * as path from "path";
 import { performance } from "perf_hooks";
 import * as vscode from "vscode";
-import { CONNECTION_MANAGER, MALLOY_EXTENSION_STATE, RunState } from "../state";
-import {
-  Runtime,
-  URLReader,
-  QueryMaterializer,
-  SQLBlockMaterializer,
-} from "@malloydata/malloy";
-import { DataStyles } from "@malloydata/render";
+import { MALLOY_EXTENSION_STATE, RunState } from "../state";
+import { Result } from "@malloydata/malloy";
 import turtleIcon from "../../media/turtle.svg";
-import { fetchFile, VSCodeURLReader } from "../utils";
 import { getWebviewHtml } from "../webviews";
-import {
-  QueryMessageType,
-  QueryRunStatus,
-  WebviewMessageManager,
-} from "../webview_message_manager";
+import { QueryMessageType, QueryRunStatus } from "../message_types";
+import { WebviewMessageManager } from "../webview_message_manager";
 import { queryDownload } from "./query_download";
+import { getWorker } from "../extension";
+import { WorkerMessage } from "../../worker/types";
 
 const malloyLog = vscode.window.createOutputChannel("Malloy");
-
-// TODO replace this with actual JSON metadata import functionality, when it exists
-export async function dataStylesForFile(
-  uri: string,
-  text: string
-): Promise<DataStyles> {
-  const PREFIX = "--! styles ";
-  let styles: DataStyles = {};
-  for (const line of text.split("\n")) {
-    if (line.startsWith(PREFIX)) {
-      const fileName = line.trimEnd().substring(PREFIX.length);
-      const stylesPath = path.join(
-        uri.replace(/^file:\/\//, ""),
-        "..",
-        fileName
-      );
-      // TODO instead of failing silently when the file does not exist, perform this after the WebView has been
-      //      created, so that the error can be shown there.
-      let stylesText;
-      try {
-        stylesText = await fetchFile(stylesPath);
-      } catch (error) {
-        malloyLog.appendLine(
-          `Error loading data style '${fileName}': ${error}`
-        );
-        stylesText = "{}";
-      }
-      styles = { ...styles, ...compileDataStyles(stylesText) };
-    }
-  }
-
-  return styles;
-}
-
 interface NamedQuerySpec {
   type: "named";
   name: string;
@@ -97,39 +55,12 @@ interface UnnamedSQLQuerySpec {
   file: vscode.TextDocument;
 }
 
-type QuerySpec =
+export type QuerySpec =
   | NamedQuerySpec
   | QueryStringSpec
   | QueryFileSpec
   | NamedSQLQuerySpec
   | UnnamedSQLQuerySpec;
-
-// TODO Come up with a better way to handle data styles. Perhaps this is
-//      an in-language understanding of model "metadata". For now,
-//      we abuse the `URLReader` API to keep track of requested URLs
-//      and accummulate data styles for those files.
-class HackyDataStylesAccumulator implements URLReader {
-  private uriReader: URLReader;
-  private dataStyles: DataStyles = {};
-
-  constructor(uriReader: URLReader) {
-    this.uriReader = uriReader;
-  }
-
-  async readURL(uri: URL): Promise<string> {
-    const contents = await this.uriReader.readURL(uri);
-    this.dataStyles = {
-      ...this.dataStyles,
-      ...(await dataStylesForFile(uri.toString(), contents)),
-    };
-
-    return contents;
-  }
-
-  getHackyAccumulatedDataStyles() {
-    return this.dataStyles;
-  }
-}
 
 export function runMalloyQuery(
   query: QuerySpec,
@@ -143,10 +74,11 @@ export function runMalloyQuery(
       cancellable: true,
     },
     (progress, token) => {
-      let canceled = false;
-
       const cancel = () => {
-        canceled = true;
+        worker.send({
+          type: "cancel",
+          panelId,
+        });
         if (current) {
           const actuallyCurrent = MALLOY_EXTENSION_STATE.getRunState(
             current.panelId
@@ -231,125 +163,108 @@ export function runMalloyQuery(
         }
       });
 
-      const vscodeFiles = new VSCodeURLReader();
-      const files = new HackyDataStylesAccumulator(vscodeFiles);
-      const url = new URL(panelId);
+      const { file, ...params } = query;
+      const fsPath = file.uri.fsPath;
+      const worker = getWorker();
+      worker.send({
+        type: "run",
+        query: {
+          file: fsPath,
+          ...params,
+        },
+        panelId,
+        name,
+      });
+      const allBegin = performance.now();
+      const compileBegin = allBegin;
+      let runBegin: number;
 
-      const runtime = new Runtime(
-        files,
-        CONNECTION_MANAGER.getConnectionLookup(url)
-      );
-
-      return (async () => {
-        try {
-          malloyLog.appendLine("");
-          const allBegin = performance.now();
-          const compileBegin = allBegin;
-
-          current.messages.postMessage({
-            type: QueryMessageType.QueryStatus,
-            status: QueryRunStatus.Compiling,
-          });
-          progress.report({ increment: 20, message: "Compiling" });
-
-          let runnable: QueryMaterializer | SQLBlockMaterializer;
-          let styles: DataStyles = {};
-          const queryFileURL = new URL("file://" + query.file.uri.fsPath);
-          if (query.type === "string") {
-            runnable = runtime.loadModel(queryFileURL).loadQuery(query.text);
-          } else if (query.type === "named") {
-            runnable = runtime.loadQueryByName(queryFileURL, query.name);
-          } else if (query.type === "file") {
-            if (query.index === -1) {
-              runnable = runtime.loadQuery(queryFileURL);
-            } else {
-              runnable = runtime.loadQueryByIndex(queryFileURL, query.index);
-            }
-          } else if (query.type === "named_sql") {
-            runnable = runtime.loadSQLBlockByName(queryFileURL, query.name);
-          } else if (query.type === "unnamed_sql") {
-            runnable = runtime.loadSQLBlockByIndex(queryFileURL, query.index);
-          } else {
-            throw new Error("Internal Error: Unexpected query type");
-          }
-
-          // Set the row limit to the limit provided in the final stage of the query, if present
-          const rowLimit =
-            runnable instanceof QueryMaterializer
-              ? (await runnable.getPreparedResult()).resultExplore.limit
-              : undefined;
-
-          try {
-            const sql = await runnable.getSQL();
-            styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
-
-            if (canceled) return;
-            malloyLog.appendLine(sql);
-          } catch (error) {
+      return new Promise((resolve) => {
+        const listener = (msg: WorkerMessage) => {
+          if (msg.type === "dead") {
             current.messages.postMessage({
               type: QueryMessageType.QueryStatus,
               status: QueryRunStatus.Error,
-              error: error.message || "Something went wrong",
+              error: `The worker process has died, and has been restarted.
+This is possibly the result of a database bug. \
+Please consider filing an issue with as much detail as possible at \
+https://github.com/looker-open-source/malloy/issues.`,
             });
+            worker.off("message", listener);
+            resolve(undefined);
+            return;
+          } else if (msg.type !== "query_panel") {
             return;
           }
-
-          const compileEnd = performance.now();
-          logTime("Compile", compileBegin, compileEnd);
-
-          const runBegin = compileEnd;
-
+          const { message, panelId: msgPanelId } = msg;
+          if (msgPanelId !== panelId) {
+            return;
+          }
           current.messages.postMessage({
-            type: QueryMessageType.QueryStatus,
-            status: QueryRunStatus.Running,
-          });
-          progress.report({ increment: 40, message: "Running" });
-          const queryResult = await runnable.run({ rowLimit });
-          if (canceled) return;
-
-          current.messages.onReceiveMessage((message) => {
-            if (message.type === QueryMessageType.StartDownload) {
-              queryDownload(
-                runnable,
-                message.downloadOptions,
-                queryResult,
-                name
-              );
-            }
+            ...message,
           });
 
-          const runEnd = performance.now();
-          logTime("Run", runBegin, runEnd);
+          switch (message.type) {
+            case QueryMessageType.QueryStatus:
+              switch (message.status) {
+                case QueryRunStatus.Compiling:
+                  {
+                    progress.report({ increment: 20, message: "Compiling" });
+                  }
+                  break;
+                case QueryRunStatus.Running:
+                  {
+                    const compileEnd = performance.now();
+                    runBegin = compileEnd;
+                    malloyLog.appendLine(message.sql);
+                    logTime("Compile", compileBegin, compileEnd);
 
-          current.messages.postMessage({
-            type: QueryMessageType.QueryStatus,
-            status: QueryRunStatus.Done,
-            result: queryResult.toJSON(),
-            styles,
-          });
-          current.result = queryResult;
-          progress.report({ increment: 100, message: "Rendering" });
+                    progress.report({ increment: 40, message: "Running" });
+                  }
+                  break;
+                case QueryRunStatus.Done:
+                  {
+                    const runEnd = performance.now();
+                    if (runBegin != null) {
+                      logTime("Run", runBegin, runEnd);
+                    }
+                    const { result } = message;
+                    const queryResult = Result.fromJSON(result);
+                    current.result = queryResult;
+                    progress.report({ increment: 100, message: "Rendering" });
+                    const allEnd = performance.now();
+                    logTime("Total", allBegin, allEnd);
 
-          const allEnd = performance.now();
-          logTime("Total", allBegin, allEnd);
-        } catch (error) {
-          current.messages.postMessage({
-            type: QueryMessageType.QueryStatus,
-            status: QueryRunStatus.Error,
-            error: error.message,
-          });
-        }
-      })();
+                    current.messages.onReceiveMessage((message) => {
+                      if (message.type === QueryMessageType.StartDownload) {
+                        queryDownload(
+                          query,
+                          message.downloadOptions,
+                          queryResult,
+                          panelId,
+                          name
+                        );
+                      }
+                    });
+
+                    worker.off("message", listener);
+                    resolve(undefined);
+                  }
+                  break;
+                case QueryRunStatus.Error:
+                  {
+                    worker.off("message", listener);
+                    resolve(undefined);
+                  }
+                  break;
+              }
+          }
+        };
+
+        worker.on("message", listener);
+      });
     }
   );
-}
-
-export function compileDataStyles(styles: string): DataStyles {
-  try {
-    return JSON.parse(styles) as DataStyles;
-  } catch (error) {
-    throw new Error(`Error compiling data styles: ${error.message}`);
-  }
 }
 
 function logTime(name: string, start: number, end: number) {
