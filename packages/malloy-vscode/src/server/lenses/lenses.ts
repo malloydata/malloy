@@ -70,7 +70,7 @@ export function getMalloyLenses(document: TextDocument): CodeLens[] {
           title: "Preview",
           command: "malloy.runQuery",
           arguments: [
-            `query: ${exploreName}->{ project: *; limit: 20 }`,
+            `query: ${exploreName}->{ project: *; sample: true; limit: 20 }`,
             `preview ${exploreName}`,
           ],
         },
