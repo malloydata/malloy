@@ -13,7 +13,11 @@
 
 import { ParserRuleContext } from "antlr4ts";
 import { AbstractParseTreeVisitor, ParseTree } from "antlr4ts/tree";
-import { MalloyParser } from "../lib/Malloy/MalloyParser";
+import {
+  ExplorePropertiesContext,
+  MalloyDocumentContext,
+  QueryPropertiesContext,
+} from "../lib/Malloy/MalloyParser";
 import { MalloyVisitor } from "../lib/Malloy/MalloyVisitor";
 
 export interface DocumentHelpContext {
@@ -21,15 +25,12 @@ export interface DocumentHelpContext {
   token: string | undefined;
 }
 
-export interface DocumentHelpWalk {
-  type: number;
-  token: string | undefined;
-}
-
 class HelpContextVisitor
-  extends AbstractParseTreeVisitor<DocumentHelpWalk[]>
-  implements MalloyVisitor<DocumentHelpWalk[]>
+  extends AbstractParseTreeVisitor<DocumentHelpContext | undefined>
+  implements MalloyVisitor<DocumentHelpContext | undefined>
 {
+  type = "";
+
   constructor(readonly position: { line: number; character: number }) {
     super();
   }
@@ -65,24 +66,22 @@ class HelpContextVisitor
     );
   }
 
-  defaultResult(): DocumentHelpWalk[] {
-    return [];
+  defaultResult(): DocumentHelpContext | undefined {
+    return undefined;
   }
 
   visitChildren(ctx: ParserRuleContext) {
     let result = this.defaultResult();
     if (this.inRange(this.rangeOf(ctx))) {
-      result = [
-        {
-          type: ctx.ruleIndex,
-          token: ctx.start.text,
-        },
-      ];
+      result = {
+        type: this.type,
+        token: ctx.start.text,
+      };
       const n = ctx.childCount;
       for (let i = 0; i < n; i++) {
         const c = ctx.getChild(i);
         const childResult = c.accept(this);
-        if (childResult.length) {
+        if (childResult) {
           result = this.aggregateResult(result, childResult);
         }
       }
@@ -90,11 +89,41 @@ class HelpContextVisitor
     return result;
   }
 
+  visitMalloyDocument(
+    ctx: MalloyDocumentContext
+  ): DocumentHelpContext | undefined {
+    if (this.inRange(this.rangeOf(ctx))) {
+      this.type = "model_property";
+      return this.visitChildren(ctx);
+    }
+    return this.defaultResult();
+  }
+
+  visitExploreProperties(
+    ctx: ExplorePropertiesContext
+  ): DocumentHelpContext | undefined {
+    if (this.inRange(this.rangeOf(ctx))) {
+      this.type = "explore_property";
+      return this.visitChildren(ctx);
+    }
+    return this.defaultResult();
+  }
+
+  visitQueryProperties(
+    ctx: QueryPropertiesContext
+  ): DocumentHelpContext | undefined {
+    if (this.inRange(this.rangeOf(ctx))) {
+      this.type = "query_property";
+      return this.visitChildren(ctx);
+    }
+    return this.defaultResult();
+  }
+
   protected aggregateResult(
-    aggregate: DocumentHelpWalk[],
-    nextResult: DocumentHelpWalk[]
-  ): DocumentHelpWalk[] {
-    return aggregate.concat(nextResult);
+    aggregate: DocumentHelpContext | undefined,
+    nextResult: DocumentHelpContext | undefined
+  ): DocumentHelpContext | undefined {
+    return nextResult;
   }
 }
 
@@ -103,22 +132,5 @@ export function walkForDocumentHelpContext(
   position: { line: number; character: number }
 ): DocumentHelpContext | undefined {
   const visitor = new HelpContextVisitor(position);
-  const context = visitor.visit(parseTree);
-
-  if (context.length) {
-    const token = context[context.length - 1].token;
-    let type = "model_property";
-    for (let idx = 0; idx < context.length - 1; idx++) {
-      if (context[idx].type === MalloyParser.RULE_exploreProperties) {
-        type = "explore_property";
-      } else if (context[idx].type === MalloyParser.RULE_queryProperties) {
-        type = "query_property";
-      }
-    }
-    return {
-      type,
-      token,
-    };
-  }
-  return undefined;
+  return visitor.visit(parseTree);
 }
