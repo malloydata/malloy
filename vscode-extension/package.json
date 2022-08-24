@@ -1,5 +1,5 @@
 {
-  "name": "malloy-vscode",
+  "name": "vscode-extension",
   "publisher": "malloydata",
   "displayName": "Malloy",
   "description": "Malloy is an experimental language for describing data relationships and transformations",

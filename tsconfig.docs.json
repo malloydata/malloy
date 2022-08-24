@@ -8,7 +8,7 @@
     { "path": "packages/malloy-db-test" },
     { "path": "packages/malloy-render" }
   ],
-  "files": ["packages/malloy-vscode/malloy.tmGrammar.json"],
+  "files": ["./vscode-extension/malloy.tmGrammar.json"],
   "include": ["docs/**/*", "packages/**/*", "third_party/**/*"],
   "exclude": ["**/node_modules"],
   "compilerOptions": {
