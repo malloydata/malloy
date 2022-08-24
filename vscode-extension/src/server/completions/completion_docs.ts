@@ -331,30 +331,3 @@ export const COMPLETION_DOCS: {
     except: SOURCE_EXCEPT_DOC,
   },
 };
-
-export const HIGHLIGHT_DOCS: {
-  [type: string]: string;
-} = {
-  [HighlightType.Property.Accept]: SOURCE_ACCEPT_DOC,
-  [HighlightType.Property.Aggregate]: QUERY_AGGREGATE_DOC,
-  [HighlightType.Property.Dimension]: SOURCE_DIMENSION_DOC,
-  [HighlightType.Property.Except]: SOURCE_EXCEPT_DOC,
-  [HighlightType.Property.GroupBy]: QUERY_GROUP_BY_DOC,
-  [HighlightType.Property.Having]: QUERY_HAVING_DOC,
-  [HighlightType.Property.Index]: QUERY_INDEX_DOC,
-  [HighlightType.Property.JoinOne]: SOURCE_JOIN_ONE_DOC,
-  [HighlightType.Property.JoinMany]: SOURCE_JOIN_MANY_DOC,
-  [HighlightType.Property.JoinCross]: SOURCE_JOIN_CROSS_DOC,
-  [HighlightType.Property.Limit]: QUERY_LIMIT_DOC,
-  [HighlightType.Property.Measure]: SOURCE_MEASURE_DOC,
-  [HighlightType.Property.Nest]: QUERY_NEST_DOC,
-  [HighlightType.Property.OrderBy]: QUERY_ORDER_BY_DOC,
-  [HighlightType.Property.PrimaryKey]: SOURCE_PRIMARY_KEY_DOC,
-  [HighlightType.Property.Project]: QUERY_PROJECT_DOC,
-  [HighlightType.Property.Query]: MODEL_QUERY_DOC,
-  [HighlightType.Property.Rename]: SOURCE_RENAME_DOC,
-  [HighlightType.Property.Source]: MODEL_SOURCE_DOC,
-  [HighlightType.Property.Top]: QUERY_TOP_DOC,
-  [HighlightType.Property.Where]: QUERY_WHERE_DOC,
-  [HighlightType.Property.SQL]: MODEL_SQL_DOC,
-};
