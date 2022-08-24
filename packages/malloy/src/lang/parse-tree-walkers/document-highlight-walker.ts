@@ -82,7 +82,6 @@ export const HighlightType = {
     Aggregate: "property.aggregate",
     Dimension: "property.dimension",
     Except: "property.except",
-    Explore: "property.explore",
     Source: "property.source",
     GroupBy: "property.group_by",
     Having: "property.having",
@@ -148,9 +147,6 @@ export function passForHighlights(
         break;
       case MalloyParser.EXCEPT:
         register(token, HighlightType.Property.Except, true);
-        break;
-      case MalloyParser.EXPLORE:
-        register(token, HighlightType.Property.Explore, true);
         break;
       case MalloyParser.GROUP_BY:
         register(token, HighlightType.Property.GroupBy, true);
