@@ -2,7 +2,7 @@
 
 By default, tests run against BigQuery, Postgres, and DuckDB.
 
-Tests can also be run against a specific database, using the DATABASES environment variable, such as: `DATABASES=x,y npm run test`
+Tests can also be run against a specific database, using the MALLOY_DATABASE or MALLOY_DATABASES environment variable, such as: `MALLOY_DATABASES=bigquery,postgres npm run test`
 
 Setting up postgres:
 
