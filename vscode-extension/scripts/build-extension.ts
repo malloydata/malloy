@@ -14,14 +14,14 @@
 /* eslint-disable no-console */
 import fs from "fs";
 import { build, Plugin } from "esbuild";
-import { nativeNodeModulesPlugin } from "../../../third_party/github.com/evanw/esbuild/native-modules-plugin";
+import { nativeNodeModulesPlugin } from "../../third_party/github.com/evanw/esbuild/native-modules-plugin";
 import * as path from "path";
 import { execSync } from "child_process";
-import { noNodeModulesSourceMaps } from "../../../third_party/github.com/evanw/esbuild/no-node-modules-sourcemaps";
+import { noNodeModulesSourceMaps } from "../../third_party/github.com/evanw/esbuild/no-node-modules-sourcemaps";
 import svgrPlugin from "esbuild-plugin-svgr";
 
 import duckdbPackage from "@malloydata/db-duckdb/package.json";
-import { generateDisclaimer } from "../../../scripts/license_disclaimer";
+import { generateDisclaimer } from "../../scripts/license_disclaimer";
 const DUCKDB_VERSION = duckdbPackage.dependencies.duckdb;
 
 export type Target =
@@ -184,7 +184,7 @@ export async function doBuild(target?: Target): Promise<void> {
   }
   generateDisclaimer(
     path.join(__dirname, "..", "package.json"),
-    path.join(__dirname, "..", "..", "..", "node_modules"),
+    path.join(__dirname, "..", "..", "node_modules"),
     fullLicenseFilePath
   );
 
@@ -195,15 +195,14 @@ export async function doBuild(target?: Target): Promise<void> {
 
   // copy the README.md from the root to this package. vsce does not provide a way to specifiy a readme path in the "manifest",
   // the only option is to put a readme file at the root of the package :(
-  fs.copyFileSync(path.join("..", "..", "README.md"), "README.md");
+  fs.copyFileSync(path.join("..", "README.md"), "README.md");
 
   // same story as README, but this time it's CHANGELOG
-  fs.copyFileSync(path.join("..", "..", "CHANGELOG.md"), "CHANGELOG.md");
+  fs.copyFileSync(path.join("..", "CHANGELOG.md"), "CHANGELOG.md");
 
   if (target) {
     fs.copyFileSync(
       path.join(
-        "..",
         "..",
         "third_party",
         "github.com",
@@ -218,7 +217,6 @@ export async function doBuild(target?: Target): Promise<void> {
     if (isDuckDBAvailable) {
       fs.copyFileSync(
         path.join(
-          "..",
           "..",
           "third_party",
           "github.com",
