@@ -5,7 +5,6 @@
     { "path": "packages/malloy-db-bigquery" },
     { "path": "packages/malloy-db-duckdb" },
     { "path": "packages/malloy-db-postgres" },
-    { "path": "packages/malloy-db-test" },
     { "path": "packages/malloy-render" }
   ],
   "files": ["./vscode-extension/malloy.tmGrammar.json"],

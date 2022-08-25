@@ -1,5 +1,5 @@
 {
-  "name": "@malloydata/db-test",
+  "name": "test",
   "version": "0.0.1",
   "license": "GPL-2.0",
   "main": "dist/index.js",
@@ -9,7 +9,7 @@
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
     "build": "tsc --build",
-    "malloyc": "ts-node ../../scripts/malloy-to-json"
+    "malloyc": "ts-node ../scripts/malloy-to-json"
   },
   "dependencies": {
     "@malloydata/malloy": "*",
