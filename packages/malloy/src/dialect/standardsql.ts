@@ -161,6 +161,10 @@ export class StandardSQLDialect extends Dialect {
     return `GENERATE_UUID()`;
   }
 
+  sqlNow(): string {
+    return `CURRENT_TIMESTAMP()`;
+  }
+
   sqlFieldReference(
     alias: string,
     fieldName: string,

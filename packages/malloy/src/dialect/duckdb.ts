@@ -231,6 +231,10 @@ export class DuckDBDialect extends Dialect {
     return `GEN_RANDOM_UUID()`;
   }
 
+  sqlNow(): string {
+    return `CURRENT_TIMESTAMP`;
+  }
+
   sqlDateToString(sqlDateExp: string): string {
     return `(${sqlDateExp})::date::varchar`;
   }

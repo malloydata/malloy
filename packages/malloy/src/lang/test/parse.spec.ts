@@ -21,18 +21,18 @@ import {
   StructDef,
 } from "../../model";
 import { makeSQLBlock } from "../../model/sql_block";
-import { ExpressionDef } from "../ast";
+import { ExpressionDef, ExprValue } from "../ast";
 import { StaticSpace } from "../field-space";
 import { DataRequestResponse } from "../parse-malloy";
 import {
   TestTranslator,
   pretty,
-  aTableDef,
   getExplore,
   getField,
   getQueryField,
   getModelQuery,
   getJoinField,
+  makeMockSchema,
   markSource,
   MarkedSource,
 } from "./test-translator";
@@ -104,6 +104,7 @@ declare global {
       toBeErrorless(): R;
       toTranslate(): R;
       toReturnType(tp: string): R;
+      toCompileTo(compiledValue: ExprValue): R;
       compileToFailWith(...expectedErrors: string[]): R;
     }
   }
@@ -192,6 +193,10 @@ expect.extend({
       message: () => "",
     };
   },
+  toCompileTo: function (x: Testable, compiledValue: ExprValue) {
+    expect(x.compile()).toEqual(compiledValue);
+    return checkForErrors(x);
+  },
   compileToFailWith: function (
     s: MarkedSource | string | BetaModel,
     ...msgs: string[]
@@ -277,11 +282,11 @@ expect.extend({
 });
 
 class BetaExpression extends Testable {
-  constructor(src: string) {
-    super(src, "justExpr");
+  constructor(src: string, dialect = "standardsql") {
+    super(src, "justExpr", dialect);
   }
 
-  compile(): void {
+  compile(): ExprValue | undefined {
     const exprAst = this.ast();
     if (exprAst instanceof ExpressionDef) {
       const aStruct = this.internalModel.contents.ab;
@@ -290,6 +295,7 @@ class BetaExpression extends Testable {
         if (inspectCompile) {
           console.log("EXPRESSION: ", pretty(exprDef));
         }
+        return exprDef;
       } else {
         throw new Error("Can't get simple namespace for expression tests");
       }
@@ -315,6 +321,17 @@ function modelOK(s: string): TestFunc {
   return () => {
     const m = new BetaModel(s);
     expect(m).toTranslate();
+    return undefined;
+  };
+}
+
+function exprCompilesTo(
+  s: string,
+  t: ExprValue,
+  dialect = "standardsql"
+): TestFunc {
+  return () => {
+    expect(new BetaExpression(s, dialect)).toCompileTo(t);
     return undefined;
   };
 }
@@ -948,6 +965,30 @@ describe("expressions", () => {
     test("true", exprOK("true"));
     test("false", exprOK("false"));
     test("regex", exprOK("r'RegularExpression'"));
+    test(
+      "now",
+      exprCompilesTo(
+        "now",
+        {
+          dataType: "timestamp",
+          aggregate: false,
+          value: ["CURRENT_TIMESTAMP()"],
+        },
+        "standardsql"
+      )
+    );
+    test(
+      "now",
+      exprCompilesTo(
+        "now",
+        {
+          dataType: "timestamp",
+          aggregate: false,
+          value: ["CURRENT_TIMESTAMP"],
+        },
+        "duckdb"
+      )
+    );
   });
 
   describe("timeframes", () => {
@@ -1139,14 +1180,14 @@ describe("sql backdoor", () => {
     return {
       type: "struct",
       name: sql.name,
-      dialect: "standardsql'",
+      dialect: "standardsql",
       structSource: {
         type: "sql",
         method: "subquery",
         sqlBlock: { ...sql },
       },
       structRelationship: { type: "basetable", connectionName: "bigquery" },
-      fields: aTableDef.fields,
+      fields: makeMockSchema("standardsql").aTable.fields,
     };
   }
   test(

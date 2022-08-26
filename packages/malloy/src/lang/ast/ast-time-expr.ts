@@ -320,10 +320,19 @@ export class GranularLiteral extends ExpressionDef {
   }
 }
 
-export class ExprNow extends ExprTime {
-  elementType = "now";
+export class ExprNow extends ExpressionDef {
+  elementType = "timestamp";
+
   constructor() {
-    super("timestamp", mkExpr`CURRENT_TIMESTAMP()`, false);
+    super();
+  }
+
+  getExpression(fs: FieldSpace): ExprValue {
+    return {
+      dataType: "timestamp",
+      aggregate: false,
+      value: mkExpr`${fs.getDialect().sqlNow()}`,
+    };
   }
 }
 

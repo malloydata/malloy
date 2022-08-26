@@ -97,6 +97,8 @@ export abstract class Dialect {
 
   abstract sqlGenerateUUID(): string;
 
+  abstract sqlNow(): string;
+
   abstract sqlFieldReference(
     alias: string,
     fieldName: string,

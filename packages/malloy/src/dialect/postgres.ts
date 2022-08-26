@@ -201,6 +201,10 @@ export class PostgresDialect extends Dialect {
     return `GEN_RANDOM_UUID()`;
   }
 
+  sqlNow(): string {
+    return `CURRENT_TIMESTAMP()`;
+  }
+
   sqlFieldReference(
     alias: string,
     fieldName: string,
