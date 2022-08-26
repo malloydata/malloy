@@ -26,6 +26,7 @@ import {
   ConnectionBackend,
   ConnectionConfig,
 } from "./connection_manager_types";
+import { convertToBytes } from "./convert_to_bytes";
 import { getPassword } from "keytar";
 
 const DEFAULT_CONFIG = Symbol("default-config");
@@ -56,7 +57,9 @@ const getConnectionForConfig = async (
           defaultProject: connectionConfig.projectName,
           serviceAccountKeyPath: connectionConfig.serviceAccountKeyPath,
           location: connectionConfig.location,
-          maximumBytesBilled: connectionConfig.maximumBytesBilled,
+          maximumBytesBilled: convertToBytes(
+            connectionConfig.maximumBytesBilled || ""
+          ),
           timeoutMs: connectionConfig.timeoutMs,
         }
       );
