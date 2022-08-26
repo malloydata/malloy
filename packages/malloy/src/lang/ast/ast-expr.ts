@@ -29,7 +29,13 @@ import {
   TimeFieldType,
   UngroupFragment,
 } from "../../model/malloy_types";
-import { DefSpace, FSPair, FieldSpace, LookupResult } from "../field-space";
+import {
+  DefSpace,
+  FSPair,
+  FieldSpace,
+  LookupResult,
+  QuerySpace,
+} from "../field-space";
 import {
   Filter,
   MalloyElement,
@@ -156,6 +162,9 @@ class ConstantFieldSpace implements FieldSpace {
     // but since this is only used for parameters which are also wrong and
     // broken and stupid and useless, this will do for now
     throw new Error("I just put this line of code here to make things compile");
+  }
+  whenComplete(step: () => void): void {
+    step();
   }
 }
 
@@ -777,30 +786,27 @@ export class ExprUngroup extends ExpressionDef {
       this.expr.log(`${this.control}() expression must be an aggregate`);
       return errorFor("ungrouped scalar");
     }
-    const f: UngroupFragment = { type: this.control, e: exprVal.value };
+    const ungroup: UngroupFragment = { type: this.control, e: exprVal.value };
     if (this.typeCheck(this.expr, { ...exprVal, aggregate: false })) {
       const dstFields: string[] = [];
       for (const mustBeInOutput of this.fields) {
         const name = mustBeInOutput.refString;
-        // Not checking "exclude" yet because I don't know how to
-        // walk up a chain of nested output spaces
-        if (this.control == "all") {
-          if (!fs.out.lookup([mustBeInOutput]).found) {
-            mustBeInOutput.log(
-              `${this.control}() field '${name}' must be in query output`
-            );
-            continue;
-          }
+        const isExclude = this.control == "exclude";
+        const resultSpace = fs.out;
+        if (resultSpace instanceof QuerySpace) {
+          resultSpace.whenComplete(() => {
+            resultSpace.checkUngroup(mustBeInOutput, isExclude);
+          });
+          dstFields.push(name);
         }
-        dstFields.push(name);
       }
       if (dstFields.length > 0) {
-        f.fields = dstFields;
+        ungroup.fields = dstFields;
       }
       return {
         dataType: this.returns(exprVal),
         aggregate: true,
-        value: [f],
+        value: [ungroup],
       };
     }
     this.log(`${this.control}() incompatible type`);

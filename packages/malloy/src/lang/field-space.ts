@@ -75,6 +75,7 @@ export interface FieldSpace {
   lookup(symbol: FieldName[]): LookupResult;
   getDialect(): Dialect;
   outputFS?: FieldSpace;
+  whenComplete: (step: () => void) => void;
 }
 
 /**
@@ -88,6 +89,10 @@ export class StaticSpace implements FieldSpace {
 
   constructor(sourceStructDef: model.StructDef) {
     this.fromStruct = sourceStructDef;
+  }
+
+  whenComplete(step: () => void): void {
+    step();
   }
 
   getDialect(): Dialect {
@@ -238,6 +243,9 @@ export class DynamicSpace extends StaticSpace {
   protected final: model.StructDef | undefined;
   protected source: SourceSpace;
   outputFS?: QuerySpace;
+  completions: (() => void)[] = [];
+  private complete = false;
+
   constructor(extending: SourceSpec) {
     const source = new SourceSpace(extending);
     super(cloneDeep(source.structDef));
@@ -268,6 +276,22 @@ export class DynamicSpace extends StaticSpace {
       }
     }
     return edited;
+  }
+
+  whenComplete(finalizeStep: () => void): void {
+    if (this.complete) {
+      finalizeStep();
+    } else {
+      this.completions.push(finalizeStep);
+    }
+  }
+
+  isComplete(): void {
+    this.complete = true;
+    for (const step of this.completions) {
+      step();
+    }
+    this.completions = [];
   }
 
   protected setEntry(name: string, value: SpaceEntry): void {
@@ -386,6 +410,7 @@ export class DynamicSpace extends StaticSpace {
         join.fixupJoinOn(fsPair(this), missingOn);
       }
     }
+    this.isComplete();
     return this.final;
   }
 }
@@ -400,6 +425,7 @@ export abstract class QueryOperationSpace extends DynamicSpace {
   abstract segType: QuerySegType;
   astEl?: MalloyElement | undefined;
   readonly queryInput: SourceSpace;
+  nestParent?: QuerySpace;
 
   constructor(input: SourceSpec) {
     const inputSpace = new SourceSpace(input);
@@ -460,6 +486,7 @@ export abstract class QueryOperationSpace extends DynamicSpace {
 /**
  * Reduce and project queries use a "QuerySpace"
  */
+
 export abstract class QuerySpace extends QueryOperationSpace {
   extendedInput?: DynamicSpace;
   extendedFields: string[] = [];
@@ -485,6 +512,20 @@ export abstract class QuerySpace extends QueryOperationSpace {
       in: this.inputFS(),
       out: this,
     };
+  }
+
+  checkUngroup(fn: FieldName, isExclude: boolean): void {
+    if (this.lookup([fn]).error) {
+      if (isExclude && this.nestParent) {
+        const parent = this.nestParent;
+        parent.whenComplete(() => {
+          parent.checkUngroup(fn, isExclude);
+        });
+      } else {
+        const uName = isExclude ? "exclude()" : "all()";
+        fn.log(`${uName} '${fn.refString}' is missing from query output`);
+      }
+    }
   }
 
   private extendInto(): DynamicSpace {
@@ -544,7 +585,9 @@ export abstract class QuerySpace extends QueryOperationSpace {
       } else if (qi instanceof FieldDeclaration) {
         this.addField(qi);
       } else if (isNestedQuery(qi)) {
-        this.setEntry(qi.name, new QueryFieldAST(this.inputFS(), qi, qi.name));
+        const qf = new QueryFieldAST(this.inputFS(), qi, qi.name);
+        qf.nestParent = this;
+        this.setEntry(qi.name, qf);
       } else {
         // Compiler will error if we don't handle all cases
         const _itemNotHandled: never = qi;
@@ -552,7 +595,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
     }
   }
 
-  conContain(_qd: model.QueryFieldDef): boolean {
+  canContain(_qd: model.QueryFieldDef): boolean {
     return true;
   }
 
@@ -562,7 +605,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
       if (field instanceof SpaceField) {
         const fieldQueryDef = field.getQueryFieldDef(this.qfs());
         if (fieldQueryDef) {
-          if (this.conContain(fieldQueryDef)) {
+          if (this.canContain(fieldQueryDef)) {
             fields.push(fieldQueryDef);
           } else {
             this.log(`'${name}' not legal in ${this.segType}`);
@@ -572,6 +615,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
         }
       }
     }
+    this.isComplete();
     return fields;
   }
 }
@@ -583,7 +627,7 @@ export class ReduceFieldSpace extends QuerySpace {
 export class ProjectFieldSpace extends QuerySpace {
   segType: QuerySegType = "project";
 
-  conContain(qd: model.QueryFieldDef): boolean {
+  canContain(qd: model.QueryFieldDef): boolean {
     if (typeof qd !== "string") {
       if (model.isFilteredAliasedName(qd)) {
         return true;
@@ -623,6 +667,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
         }
       }
     }
+    this.isComplete();
     return {
       type: "index",
       fields: Array.from(this.fieldList.values()),
@@ -658,6 +703,9 @@ export class DefSpace implements FieldSpace {
   }
   getDialect(): Dialect {
     return this.realFS.getDialect();
+  }
+  whenComplete(step: () => void): void {
+    this.realFS.whenComplete(step);
   }
 }
 

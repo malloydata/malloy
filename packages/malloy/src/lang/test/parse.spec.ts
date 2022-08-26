@@ -501,7 +501,36 @@ describe("model statements", () => {
           aggregate: bi_count is all(count(), afloat)
         }
       }
-    `).compileToFailWith("all() field 'afloat' must be in query output");
+    `).compileToFailWith(`all() 'afloat' is missing from query output`);
+    });
+    test(
+      "exclude ungroup with args",
+      modelOK(`
+        query: a -> {
+          group_by: aa is 'a'
+          nest: by_b is {
+            group_by: bb is 'b'
+            nest: by_c is {
+              group_by: cc is 'c'
+              aggregate: bb_count is exclude(count(), aa, cc)
+            }
+          }
+        }
+      `)
+    );
+    test("exclude ungroup checks args", () => {
+      expect(`
+        query: a -> {
+          group_by: aa is 'a'
+          nest: by_b is {
+            group_by: bb is 'b'
+            nest: by_c is {
+              group_by: cc is 'c'
+              aggregate: bb_count is exclude(count(), aaa, cc)
+            }
+          }
+        }
+      `).compileToFailWith("exclude() 'aaa' is missing from query output");
     });
   });
   describe("import:", () => {

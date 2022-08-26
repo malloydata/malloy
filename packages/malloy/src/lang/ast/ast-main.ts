@@ -1542,8 +1542,11 @@ export class QOPDesc extends ListOf<QueryProperty> {
     }
   }
 
-  getOp(inputFS: FieldSpace): OpDesc {
+  getOp(inputFS: FieldSpace, forPipeline: PipelineDesc | null): OpDesc {
     const qex = this.getExecutor(inputFS);
+    if (forPipeline?.nestedInQuerySpace) {
+      qex.queryFS.nestParent = forPipeline.nestedInQuerySpace;
+    }
     qex.queryFS.astEl = this;
     for (const qp of this.list) {
       qex.execute(qp);
@@ -1755,6 +1758,7 @@ abstract class PipelineDesc extends MalloyElement {
   elementType = "pipelineDesc";
   protected headRefinement?: QOPDesc;
   protected qops: QOPDesc[] = [];
+  nestedInQuerySpace?: QuerySpace;
 
   refineHead(refinement: QOPDesc): void {
     this.headRefinement = refinement;
@@ -1773,7 +1777,8 @@ abstract class PipelineDesc extends MalloyElement {
     let nextFS = existingEndSpace;
     let returnPipe: model.PipeSegment[] | undefined;
     for (const qop of this.qops) {
-      const next = qop.getOp(nextFS);
+      const qopIsNested = modelPipe.length == 0;
+      const next = qop.getOp(nextFS, qopIsNested ? this : null);
       if (returnPipe == undefined) {
         returnPipe = [...modelPipe];
       }
@@ -1806,7 +1811,7 @@ abstract class PipelineDesc extends MalloyElement {
     if (firstSeg) {
       this.headRefinement.refineFrom(firstSeg);
     }
-    pipeline[0] = this.headRefinement.getOp(fs).segment;
+    pipeline[0] = this.headRefinement.getOp(fs, this).segment;
     return { pipeline };
   }
 
@@ -1986,7 +1991,7 @@ export class TurtleDecl extends TurtleHeadedPipe {
         }
       }
       if (reportWrongType) {
-        this.log(`Expected '${this.turtleName}' to be as query`);
+        this.log(`Expected '${this.turtleName}' to be a query`);
       }
     } else if (this.headRefinement) {
       throw this.internalError(
@@ -2007,7 +2012,14 @@ export class TurtleDecl extends TurtleHeadedPipe {
     return modelPipe;
   }
 
-  getFieldDef(fs: FSPair): model.TurtleDef {
+  getFieldDef(
+    inSpace: FieldSpace,
+    nestParent: QuerySpace | undefined
+  ): model.TurtleDef {
+    const fs = fsPair(inSpace);
+    if (nestParent) {
+      this.nestedInQuerySpace = nestParent;
+    }
     const pipe = this.getPipeline(fs);
     return {
       type: "turtle",

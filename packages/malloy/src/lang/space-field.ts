@@ -17,7 +17,7 @@ import {
   FSPair,
   DynamicSpace,
   StaticSpace,
-  fsPair,
+  QuerySpace,
 } from "./field-space";
 import {
   FieldValueType,
@@ -192,6 +192,7 @@ export abstract class QueryField extends SpaceField {
 
 export class QueryFieldAST extends QueryField {
   renameAs?: string;
+  nestParent?: QuerySpace;
   constructor(
     fs: FieldSpace,
     readonly turtle: TurtleDecl,
@@ -201,7 +202,7 @@ export class QueryFieldAST extends QueryField {
   }
 
   fieldDef(): model.TurtleDef {
-    const def = this.turtle.getFieldDef(fsPair(this.inSpace));
+    const def = this.turtle.getFieldDef(this.inSpace, this.nestParent);
     if (this.renameAs) {
       def.as = this.renameAs;
     }
