@@ -532,6 +532,27 @@ describe("model statements", () => {
         }
       `).compileToFailWith("exclude() 'aaa' is missing from query output");
     });
+    test(
+      "exclude problem revealed by production models",
+      modelOK(`
+        source: carriers is table('malloytest.carriers') {
+          primary_key: code
+        }
+        source: flights is table('malloytest.flights') {
+          primary_key: id2
+          join_one: carriers with carrier
+
+          query: carrier_overview is {
+            group_by: carrier_name is carriers.nickname
+            nest: top_destinations is {
+              group_by: destination
+              aggregate:
+                flights_to_dest is exclude(count(), carrier_name)*100
+            }
+          }
+        }
+      `)
+    );
   });
   describe("import:", () => {
     test("simple import", () => {
