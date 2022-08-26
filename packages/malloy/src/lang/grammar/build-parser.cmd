@@ -12,7 +12,7 @@
 
 @REM # Silly little hack to make it only run ANTLR when the grammar actually changes
 @REM # BUG: If you go in $lib and delete a file which isn't MalloyParser.ts
-@REM # this hack will fail. yarn clean will fix things though.
+@REM # this hack will fail. npm run clean will fix things though.
 
 @ECHO OFF
 SETLOCAL ENABLEDELAYEDEXPANSION

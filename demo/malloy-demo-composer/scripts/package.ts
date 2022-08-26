@@ -29,26 +29,6 @@ async function packageDemo(
 ) {
   doBuild(`${platform}-${architecture}`);
 
-  // third_party_licenses.txt
-  const licenseFilePath = path.join(outDir, thirdPartyNotices);
-  fs.mkdirSync(outDir, { recursive: true });
-  await new Promise((resolve, reject) => {
-    const licenseFile = fs.createWriteStream(licenseFilePath);
-    licenseFile.on("open", () => {
-      exec("yarn licenses generate-disclaimer --prod", (error, stdio) => {
-        if (error) {
-          return reject(error);
-        }
-        licenseFile.write(stdio);
-        licenseFile.close();
-        resolve(licenseFile);
-      });
-    });
-    licenseFile.on("error", (err) => {
-      reject(err);
-    });
-  });
-
   const extraOptions: Partial<packager.Options> = {};
   if (signAndNotarize) {
     if (platform === "darwin") {

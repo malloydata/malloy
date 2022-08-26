@@ -1,15 +1,15 @@
 #!/usr/bin/env sh
 set -euxo pipefail
 
-nix-shell --pure --command "$(cat <<NIXCMD
+nix-shell --quiet --pure --command "$(cat <<NIXCMD
   cd /workspace
   git checkout main
   git pull
   git checkout docs-release
   git merge -m"update docs" main
-  yarn install --frozen-lockfile
+  npm ci --silent
   bundle install
-  yarn docs-build
+  npm run docs-build
   git status
   # add any new files -- how should we do this?
   #git add ..
