@@ -123,16 +123,6 @@ const pgExtractionMap: Record<string, string> = {
   day_of_year: "doy",
 };
 
-const pgMakeIntervalMap: Record<string, string> = {
-  year: "years",
-  month: "months",
-  week: "weeks",
-  day: "days",
-  hour: "hours",
-  minute: "mins",
-  second: "secs",
-};
-
 const inSeconds: Record<string, number> = {
   second: 1,
   minute: 60,
@@ -365,7 +355,11 @@ export class DuckDBDialect extends Dialect {
       timeframe = "month";
       n = mkExpr`${n}*3`;
     }
-    const interval = mkExpr`make_interval(${pgMakeIntervalMap[timeframe]}=>${n})`;
+    if (timeframe == "week") {
+      timeframe = "day";
+      n = mkExpr`${n}*7`;
+    }
+    const interval = mkExpr`INTERVAL ${n} ${timeframe}`;
     return mkExpr`((${expr.value})${op}${interval})`;
   }
 
