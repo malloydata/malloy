@@ -21,6 +21,10 @@ Some of the Postgres tests depend on static tables (i.e. `packages/malloy-db-tes
 
 We provide a task in VS Code (.vscode/tasks.json) to watch the entire Malloy repo for typscript changes - this allows VS Code to output typescript errors even when files are closed. The default behavior is for errors to only appear in open files. If you want the watcher task to compile all files in the background, you can either run the task manually (Command Palette -> Tasks -> Run Task -> tsc-compile-watch). If you want to enable this task to always start when you open the project, run Command Palette -> Tasks: Manage Automatic Tasks in Folder -> Allow Automatic Tasks in folder.
 
+## Running Tests
+
+See `test/README.md` for infomration about running tests.
+
 ## Malloy VSCode Extension
 
 The Malloy VSCode extension's source is in the `malloy-vscode` directory.
@@ -41,9 +45,9 @@ _OR_
 
 2. Open the `malloy-vscode` package root directory in VSCode, right click on `dist/malloy-vscode-x.x.x.vsix` and select "Install Extension VSIX".
 
-# Malloy and Extension Development
+# Malloy and Extension Development / Debugging
 
-1. Open the `malloy` directory in VSCode (where ever you cloned)
+1. Open the top-level repository directory in VSCode
 2. Select the "Run and Debug" panel in the left bar.
 3. Click the green arrow "Run" button, with the "Run Extension" profile selected.
 
