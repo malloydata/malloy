@@ -74,7 +74,6 @@ export interface FieldSpace {
   emptyStructDef(): model.StructDef;
   lookup(symbol: FieldName[]): LookupResult;
   getDialect(): Dialect;
-  outputFS?: FieldSpace;
   whenComplete: (step: () => void) => void;
 }
 
@@ -169,7 +168,19 @@ export class StaticSpace implements FieldSpace {
       return { error: `'${head}' is not defined`, found };
     }
     if (found instanceof SpaceField) {
-      const definition = found.fieldDef();
+      let definition: model.FieldDef | undefined = undefined;
+      if (this instanceof QuerySpace) {
+        const qfd = found.getQueryFieldDef(this.qfs());
+        if (
+          qfd &&
+          typeof qfd != "string" &&
+          !model.isFilteredAliasedName(qfd)
+        ) {
+          definition = qfd;
+        }
+      } else {
+        definition = found.fieldDef();
+      }
       if (definition) {
         head.addReference({
           type:
