@@ -168,6 +168,20 @@ export class StaticSpace implements FieldSpace {
       return { error: `'${head}' is not defined`, found };
     }
     if (found instanceof SpaceField) {
+      /*
+       * In the cleanup phase of query space construction, it may check
+       * the output space for ungrouping variables. However if an
+       * ungrouping variable is a measure, the field expression value
+       * needed to get the definition needs to be computed in the
+       * input space of the query. There is a test which failed which
+       * caused this code to be here, but this is really a bandaid.
+       *
+       * Some re-work of how to get the definition of a SpaceField
+       * no matter what it is contained in needs to be thought out.
+       *
+       * ... or this check would look at the finalized output of
+       * the namespace and not re-compile ...
+       */
       let definition: model.FieldDef | undefined = undefined;
       if (this instanceof QuerySpace) {
         const qfd = found.getQueryFieldDef(this.qfs());
