@@ -12,7 +12,7 @@
  */
 
 import { isTimeFieldType, Expr, mkExpr } from "../../model/malloy_types";
-import { FieldSpace } from "../field-space";
+import { FSPair } from "../field-space";
 import {
   ExprDuration,
   ExprValue,
@@ -40,7 +40,7 @@ import {
  * @returns ExprValue of the expression
  */
 export function applyBinary(
-  fs: FieldSpace,
+  fs: FSPair,
   left: ExpressionDef,
   op: string,
   right: ExpressionDef
@@ -58,7 +58,7 @@ export function applyBinary(
     return numeric(fs, left, op, right);
   }
   if (oneOf(op, "/")) {
-    if (fs.getDialect().divisionIsInteger) {
+    if (fs.in.getDialect().divisionIsInteger) {
       return numeric(fs, left, "*1.0/", right);
     } else {
       return numeric(fs, left, op, right);
@@ -154,7 +154,7 @@ export function nullsafeNot(expr: Expr, op?: Equality): Expr {
 }
 
 function equality(
-  fs: FieldSpace,
+  fs: FSPair,
   left: ExpressionDef,
   op: Equality,
   right: ExpressionDef
@@ -205,7 +205,7 @@ function equality(
 }
 
 function compare(
-  fs: FieldSpace,
+  fs: FSPair,
   left: ExpressionDef,
   op: string,
   right: ExpressionDef
@@ -223,7 +223,7 @@ function compare(
 }
 
 function numeric(
-  fs: FieldSpace,
+  fs: FSPair,
   left: ExpressionDef,
   op: string,
   right: ExpressionDef
@@ -245,7 +245,7 @@ function numeric(
 }
 
 function delta(
-  fs: FieldSpace,
+  fs: FSPair,
   left: ExpressionDef,
   op: string,
   right: ExpressionDef

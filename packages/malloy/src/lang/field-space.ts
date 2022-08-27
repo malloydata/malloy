@@ -74,6 +74,7 @@ export interface FieldSpace {
   emptyStructDef(): model.StructDef;
   lookup(symbol: FieldName[]): LookupResult;
   getDialect(): Dialect;
+  whenComplete: (step: () => void) => void;
 }
 
 /**
@@ -87,6 +88,10 @@ export class StaticSpace implements FieldSpace {
 
   constructor(sourceStructDef: model.StructDef) {
     this.fromStruct = sourceStructDef;
+  }
+
+  whenComplete(step: () => void): void {
+    step();
   }
 
   getDialect(): Dialect {
@@ -163,7 +168,33 @@ export class StaticSpace implements FieldSpace {
       return { error: `'${head}' is not defined`, found };
     }
     if (found instanceof SpaceField) {
-      const definition = found.fieldDef();
+      /*
+       * In the cleanup phase of query space construction, it may check
+       * the output space for ungrouping variables. However if an
+       * ungrouping variable is a measure, the field expression value
+       * needed to get the definition needs to be computed in the
+       * input space of the query. There is a test which failed which
+       * caused this code to be here, but this is really a bandaid.
+       *
+       * Some re-work of how to get the definition of a SpaceField
+       * no matter what it is contained in needs to be thought out.
+       *
+       * ... or this check would look at the finalized output of
+       * the namespace and not re-compile ...
+       */
+      let definition: model.FieldDef | undefined = undefined;
+      if (this instanceof QuerySpace) {
+        const qfd = found.getQueryFieldDef(this.qfs());
+        if (
+          qfd &&
+          typeof qfd != "string" &&
+          !model.isFilteredAliasedName(qfd)
+        ) {
+          definition = qfd;
+        }
+      } else {
+        definition = found.fieldDef();
+      }
       if (definition) {
         head.addReference({
           type:
@@ -236,6 +267,10 @@ class SourceSpace {
 export class DynamicSpace extends StaticSpace {
   protected final: model.StructDef | undefined;
   protected source: SourceSpace;
+  outputFS?: QuerySpace;
+  completions: (() => void)[] = [];
+  private complete = false;
+
   constructor(extending: SourceSpec) {
     const source = new SourceSpace(extending);
     super(cloneDeep(source.structDef));
@@ -266,6 +301,22 @@ export class DynamicSpace extends StaticSpace {
       }
     }
     return edited;
+  }
+
+  whenComplete(finalizeStep: () => void): void {
+    if (this.complete) {
+      finalizeStep();
+    } else {
+      this.completions.push(finalizeStep);
+    }
+  }
+
+  isComplete(): void {
+    this.complete = true;
+    for (const step of this.completions) {
+      step();
+    }
+    this.completions = [];
   }
 
   protected setEntry(name: string, value: SpaceEntry): void {
@@ -308,7 +359,7 @@ export class DynamicSpace extends StaticSpace {
           def.log("Can't rename field to itself");
           continue;
         }
-        const oldValue = def.oldName.getField(this);
+        const oldValue = def.oldName.getField(fsPair(this));
         if (oldValue.found) {
           if (oldValue.found instanceof SpaceField) {
             this.setEntry(
@@ -381,9 +432,10 @@ export class DynamicSpace extends StaticSpace {
       }
       // If we have join expressions, we need to now go back and fill them in
       for (const [join, missingOn] of fixupJoins) {
-        join.fixupJoinOn(this, missingOn);
+        join.fixupJoinOn(fsPair(this), missingOn);
       }
     }
+    this.isComplete();
     return this.final;
   }
 }
@@ -398,6 +450,7 @@ export abstract class QueryOperationSpace extends DynamicSpace {
   abstract segType: QuerySegType;
   astEl?: MalloyElement | undefined;
   readonly queryInput: SourceSpace;
+  nestParent?: QuerySpace;
 
   constructor(input: SourceSpec) {
     const inputSpace = new SourceSpace(input);
@@ -407,14 +460,6 @@ export abstract class QueryOperationSpace extends DynamicSpace {
 
   inputFS(): FieldSpace {
     return this.queryInput.fieldSpace;
-  }
-
-  lookup(_fieldPath: FieldName[]): LookupResult {
-    throw new Error("INTERNAL ERRROR, SHOULD LOOKUP IN INPUT SPACE");
-    /*
-     * once HAVING works correctly this should lookup fields in the output space
-     * OR in the input space or somewthing like that
-     */
   }
 
   structDef(): model.StructDef {
@@ -466,6 +511,7 @@ export abstract class QueryOperationSpace extends DynamicSpace {
 /**
  * Reduce and project queries use a "QuerySpace"
  */
+
 export abstract class QuerySpace extends QueryOperationSpace {
   extendedInput?: DynamicSpace;
   extendedFields: string[] = [];
@@ -484,6 +530,27 @@ export abstract class QuerySpace extends QueryOperationSpace {
       return this.extendedInput;
     }
     return this.queryInput.fieldSpace;
+  }
+
+  qfs(): FSPair {
+    return {
+      in: this.inputFS(),
+      out: this,
+    };
+  }
+
+  checkUngroup(fn: FieldName, isExclude: boolean): void {
+    if (this.lookup([fn]).error) {
+      if (isExclude && this.nestParent) {
+        const parent = this.nestParent;
+        parent.whenComplete(() => {
+          parent.checkUngroup(fn, isExclude);
+        });
+      } else {
+        const uName = isExclude ? "exclude()" : "all()";
+        fn.log(`${uName} '${fn.refString}' is missing from query output`);
+      }
+    }
   }
 
   private extendInto(): DynamicSpace {
@@ -543,7 +610,9 @@ export abstract class QuerySpace extends QueryOperationSpace {
       } else if (qi instanceof FieldDeclaration) {
         this.addField(qi);
       } else if (isNestedQuery(qi)) {
-        this.setEntry(qi.name, new QueryFieldAST(this.inputFS(), qi, qi.name));
+        const qf = new QueryFieldAST(this.inputFS(), qi, qi.name);
+        qf.nestParent = this;
+        this.setEntry(qi.name, qf);
       } else {
         // Compiler will error if we don't handle all cases
         const _itemNotHandled: never = qi;
@@ -551,7 +620,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
     }
   }
 
-  conContain(_qd: model.QueryFieldDef): boolean {
+  canContain(_qd: model.QueryFieldDef): boolean {
     return true;
   }
 
@@ -559,9 +628,9 @@ export abstract class QuerySpace extends QueryOperationSpace {
     const fields: model.QueryFieldDef[] = [];
     for (const [name, field] of this.entries()) {
       if (field instanceof SpaceField) {
-        const fieldQueryDef = field.getQueryFieldDef(this.inputFS());
+        const fieldQueryDef = field.getQueryFieldDef(this.qfs());
         if (fieldQueryDef) {
-          if (this.conContain(fieldQueryDef)) {
+          if (this.canContain(fieldQueryDef)) {
             fields.push(fieldQueryDef);
           } else {
             this.log(`'${name}' not legal in ${this.segType}`);
@@ -571,6 +640,7 @@ export abstract class QuerySpace extends QueryOperationSpace {
         }
       }
     }
+    this.isComplete();
     return fields;
   }
 }
@@ -582,7 +652,7 @@ export class ReduceFieldSpace extends QuerySpace {
 export class ProjectFieldSpace extends QuerySpace {
   segType: QuerySegType = "project";
 
-  conContain(qd: model.QueryFieldDef): boolean {
+  canContain(qd: model.QueryFieldDef): boolean {
     if (typeof qd !== "string") {
       if (model.isFilteredAliasedName(qd)) {
         return true;
@@ -622,6 +692,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
         }
       }
     }
+    this.isComplete();
     return {
       type: "index",
       fields: Array.from(this.fieldList.values()),
@@ -658,4 +729,19 @@ export class DefSpace implements FieldSpace {
   getDialect(): Dialect {
     return this.realFS.getDialect();
   }
+  whenComplete(step: () => void): void {
+    this.realFS.whenComplete(step);
+  }
+}
+
+export interface FSPair {
+  in: FieldSpace;
+  out: FieldSpace;
+}
+
+export function fsPair(inFS: FieldSpace, outFS?: FieldSpace): FSPair {
+  return {
+    in: inFS,
+    out: outFS || inFS,
+  };
 }

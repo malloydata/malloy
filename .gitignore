@@ -58,3 +58,4 @@ gems/
 logfile
 .s.PGSQL.5432.lock
 demo/malloy-demo-composer/env
+test/data/duckdb/duckdb_test.db.wal
