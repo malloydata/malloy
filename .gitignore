@@ -11,7 +11,7 @@ packages/**/build
 packages/**/dist
 packages/**/node_modules
 packages/malloy/src/lang/lib
-packages/**/tsconfig.tsbuildinfo
+*.tsbuildinfo
 packages/**/package-lock.json
 packages/**/.eslintcache
 packages/malloy/src/lang/grammar/.antlr

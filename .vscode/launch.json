@@ -44,7 +44,7 @@
       "type": "node",
       "request": "attach",
       "name": "Attach to VSCode Worker",
-      "port": 60010,
+      "port": 6010,
       "restart": true,
       "outFiles": ["${workspaceRoot}/vscode-extension/dist/worker.js"]
     },
