@@ -201,10 +201,6 @@ export class PostgresDialect extends Dialect {
     return `GEN_RANDOM_UUID()`;
   }
 
-  sqlNow(): string {
-    return `CURRENT_TIMESTAMP()`;
-  }
-
   sqlFieldReference(
     alias: string,
     fieldName: string,
@@ -268,6 +264,10 @@ export class PostgresDialect extends Dialect {
   //  and have a reaper that read comments.
   sqlCreateTableAsSelect(_tableName: string, _sql: string): string {
     throw new Error("Not implemented Yet");
+  }
+
+  sqlNow(): Expr {
+    return mkExpr`CURRENT_TIMESTAMP`;
   }
 
   sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {

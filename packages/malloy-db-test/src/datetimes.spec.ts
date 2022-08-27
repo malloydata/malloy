@@ -201,6 +201,13 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       });
     });
 
+    describe(`now - ${databaseName}`, () => {
+      test(`generate the current timestamp - ${databaseName}`, async () => {
+        const eq = sqlEq("now + 30 days - 30 days", "now");
+        expect(await eq).isSqlEq();
+      });
+    });
+
     describe(`timestamp extraction - ${databaseName}`, () => {
       // 2021-02-24 03:05:06
       test(`extract second - ${databaseName}`, async () => {

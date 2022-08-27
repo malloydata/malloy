@@ -161,10 +161,6 @@ export class StandardSQLDialect extends Dialect {
     return `GENERATE_UUID()`;
   }
 
-  sqlNow(): string {
-    return `CURRENT_TIMESTAMP()`;
-  }
-
   sqlFieldReference(
     alias: string,
     fieldName: string,
@@ -313,6 +309,10 @@ ${indent(sql)}
     return this.keywords.indexOf(identifier.toUpperCase()) > 0
       ? "`" + identifier + "`"
       : identifier;
+  }
+
+  sqlNow(): Expr {
+    return mkExpr`CURRENT_TIMESTAMP()`;
   }
 
   sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {

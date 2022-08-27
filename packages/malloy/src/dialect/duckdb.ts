@@ -231,10 +231,6 @@ export class DuckDBDialect extends Dialect {
     return `GEN_RANDOM_UUID()`;
   }
 
-  sqlNow(): string {
-    return `CURRENT_TIMESTAMP`;
-  }
-
   sqlDateToString(sqlDateExp: string): string {
     return `(${sqlDateExp})::date::varchar`;
   }
@@ -331,6 +327,10 @@ export class DuckDBDialect extends Dialect {
       return mkExpr`${yearDiff} * 4 + ${qDiff}`;
     }
     throw new Error(`Unknown or unhandled postgres time unit: ${units}`);
+  }
+
+  sqlNow(): Expr {
+    return mkExpr`CURRENT_TIMESTAMP`;
   }
 
   sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {

@@ -323,15 +323,16 @@ export class GranularLiteral extends ExpressionDef {
 export class ExprNow extends ExpressionDef {
   elementType = "timestamp";
 
-  constructor() {
-    super();
-  }
-
-  getExpression(fs: FieldSpace): ExprValue {
+  getExpression(_fs: FieldSpace): ExprValue {
     return {
       dataType: "timestamp",
       aggregate: false,
-      value: mkExpr`${fs.getDialect().sqlNow()}`,
+      value: [
+        {
+          type: "dialect",
+          function: "now",
+        },
+      ],
     };
   }
 }
