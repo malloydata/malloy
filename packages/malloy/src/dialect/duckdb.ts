@@ -329,6 +329,10 @@ export class DuckDBDialect extends Dialect {
     throw new Error(`Unknown or unhandled postgres time unit: ${units}`);
   }
 
+  sqlNow(): Expr {
+    return mkExpr`CURRENT_TIMESTAMP`;
+  }
+
   sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {
     // adjusting for monday/sunday weeks
     const week = units == "week";

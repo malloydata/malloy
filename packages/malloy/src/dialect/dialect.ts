@@ -133,6 +133,7 @@ export abstract class Dialect {
   }
   abstract sqlMaybeQuoteIdentifier(identifier: string): string;
 
+  abstract sqlNow(): Expr;
   abstract sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr;
   abstract sqlExtract(sqlTime: TimeValue, units: ExtractUnit): Expr;
   abstract sqlMeasureTime(
@@ -170,6 +171,8 @@ export abstract class Dialect {
 
   dialectExpr(df: DialectFragment): Expr {
     switch (df.function) {
+      case "now":
+        return this.sqlNow();
       case "timeDiff":
         return this.sqlMeasureTime(df.left, df.right, df.units);
       case "delta":

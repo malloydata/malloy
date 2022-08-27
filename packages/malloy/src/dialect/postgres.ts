@@ -266,6 +266,10 @@ export class PostgresDialect extends Dialect {
     throw new Error("Not implemented Yet");
   }
 
+  sqlNow(): Expr {
+    return mkExpr`CURRENT_TIMESTAMP`;
+  }
+
   sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {
     // adjusting for monday/sunday weeks
     const week = units == "week";

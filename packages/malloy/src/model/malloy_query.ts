@@ -1771,6 +1771,8 @@ class QueryQuery extends QueryField {
       } else if (isDialectFragment(expr)) {
         const expressions: Expr[] = [];
         switch (expr.function) {
+          case "now":
+            break;
           case "timeDiff":
             expressions.push(expr.left.value, expr.right.value);
             break;
