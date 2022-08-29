@@ -1,0 +1,86 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ */
+
+import fs from "fs";
+import path from "path";
+import { build, BuildOptions, serve } from "esbuild";
+import { argv } from "process";
+
+const db = path.join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "samples",
+  "duckdb",
+  "names",
+  "data",
+  "usa_names.parquet"
+);
+const outDir = path.join(__dirname, "..", "www", "dist");
+fs.mkdirSync(outDir, { recursive: true });
+fs.copyFileSync(db, path.join(outDir, "usa_names.parquet"));
+
+let port: number | undefined;
+
+export async function doBuild(): Promise<void> {
+  const development = process.env.NODE_ENV == "development";
+
+  const options: BuildOptions = {
+    define: { "process.env.NODE_DEBUG": "false" },
+    entryPoints: ["./src/index.tsx"],
+    bundle: true,
+    minify: !development,
+    sourcemap: false,
+    outfile: "www/dist/bundle.js",
+    platform: "browser",
+    loader: { [".png"]: "file", [".svg"]: "file" },
+    watch:
+      development && !port
+        ? {
+            onRebuild(error, result) {
+              if (error) console.error("Extension server build failed:", error);
+              else console.log("Extension server build succeeded:", result);
+            },
+          }
+        : false,
+  };
+
+  if (port) {
+    console.log(`Listening on port ${port}`);
+    await serve({ port, servedir: "www" }, options);
+  } else {
+    await build(options);
+  }
+}
+
+if (argv.length > 2) {
+  try {
+    port = parseInt(argv[2]);
+  } catch {
+    console.error(`Invalid port ${port}`);
+    process.exit(1);
+  }
+}
+
+doBuild()
+  .then(() => {
+    console.log("Built successfully");
+  })
+  .catch((error) => {
+    console.error("Built with errors");
+    console.log(error);
+    if (!port) {
+      process.exit(1);
+    }
+  });

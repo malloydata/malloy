@@ -70,7 +70,6 @@
     "prettier": "^2.3.2",
     "remark-gfm": "^1.0.0",
     "remark-parse": "^10.0.1",
-    "shiki": "^0.10.0",
     "tar-stream": "^2.2.0",
     "ts-jest": "^26.4.4",
     "ts-node": "^10.9.1",
