@@ -24,8 +24,6 @@ import duckdbPackage from "@malloydata/db-duckdb/package.json";
 import { generateDisclaimer } from "../../scripts/license_disclaimer";
 const DUCKDB_VERSION = duckdbPackage.dependencies.duckdb;
 
-console.log(process.env);
-
 export type Target =
   | "linux-x64"
   | "linux-arm64"
