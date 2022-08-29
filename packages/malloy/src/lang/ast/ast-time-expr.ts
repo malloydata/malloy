@@ -320,7 +320,7 @@ export class GranularLiteral extends ExpressionDef {
 export class ExprNow extends ExpressionDef {
   elementType = "timestamp";
 
-  getExpression(_fs: FieldSpace): ExprValue {
+  getExpression(_fs: FSPair): ExprValue {
     return {
       dataType: "timestamp",
       aggregate: false,
