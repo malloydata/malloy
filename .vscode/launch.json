@@ -10,7 +10,7 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/packages/malloy-vscode"
+        "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension"
       ],
       "skipFiles": ["${workspaceFolder}/node_modules/**/*.js"],
       "preLaunchTask": "build-extension-task",
@@ -23,7 +23,7 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/packages/malloy-vscode"
+        "--extensionDevelopmentPath=${workspaceFolder}/vscode-extension"
       ],
       "debugWebviews": true,
       "skipFiles": ["${workspaceFolder}/node_modules/**/*.js"],
@@ -38,15 +38,15 @@
       "name": "Attach to VSCode Language Server",
       "port": 6009,
       "restart": true,
-      "outFiles": ["${workspaceRoot}/packages/malloy-vscode/dist/server.js"]
+      "outFiles": ["${workspaceRoot}/vscode-extension/dist/server.js"]
     },
     {
       "type": "node",
       "request": "attach",
       "name": "Attach to VSCode Worker",
-      "port": 60010,
+      "port": 6010,
       "restart": true,
-      "outFiles": ["${workspaceRoot}/packages/malloy-vscode/dist/worker.js"]
+      "outFiles": ["${workspaceRoot}/vscode-extension/dist/worker.js"]
     },
     {
       "type": "node",

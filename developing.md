@@ -21,9 +21,13 @@ Some of the Postgres tests depend on static tables (i.e. `packages/malloy-db-tes
 
 We provide a task in VS Code (.vscode/tasks.json) to watch the entire Malloy repo for typscript changes - this allows VS Code to output typescript errors even when files are closed. The default behavior is for errors to only appear in open files. If you want the watcher task to compile all files in the background, you can either run the task manually (Command Palette -> Tasks -> Run Task -> tsc-compile-watch). If you want to enable this task to always start when you open the project, run Command Palette -> Tasks: Manage Automatic Tasks in Folder -> Allow Automatic Tasks in folder.
 
+## Running Tests
+
+See `test/README.md` for infomration about running tests.
+
 ## Malloy VSCode Extension
 
-The Malloy VSCode extension's source is in the `malloy-vscode` directory.
+The Malloy VSCode extension's source is in the `vscode-extension` directory.
 
 ### Installation
 
@@ -35,15 +39,17 @@ npm run package-extension
 
 Next, in VSCode _EITHER_:
 
-1. Run the "Extensions: Install from VSIX" command (CTRL/CMD + SHIFT + P opens the command interface), then select `malloy/packages/malloy-vscode/dist/malloy-vscode-x.x.x.vsix`
+1. Run the "Extensions: Install from VSIX" command (CTRL/CMD + SHIFT + P opens the command interface), then select `vscode-extension/dist/malloy-vscode-x.x.x.vsix`
 
 _OR_
 
-2. Open the `malloy-vscode` package root directory in VSCode, right click on `dist/malloy-vscode-x.x.x.vsix` and select "Install Extension VSIX".
+2. Open the `vscode-extension` folder root directory in VSCode, right click on `dist/malloy-vscode-x.x.x.vsix` and select "Install Extension VSIX".
 
 # Malloy and Extension Development
 
-1. Open the `malloy` directory in VSCode (where ever you cloned)
+## Running and Debugging
+
+1. Open the top-level repository directory in VSCode
 2. Select the "Run and Debug" panel in the left bar.
 3. Click the green arrow "Run" button, with the "Run Extension" profile selected.
 
@@ -51,3 +57,12 @@ Optional: To additionally debug the language server, run the "Attach to Language
 launch profile from the "Run and Debug" panel.
 
 ![open_vsix3](https://user-images.githubusercontent.com/7178946/130678501-cd5cf79b-0d48-42a6-a4d5-602f1b0d563d.gif)
+
+## Telemetry
+
+For telemetry to work in development, you need to have the `GA_MEASUREMENT_ID` and `GA_API_SECRET` environment variables set to appropriate values. In order for these to be populated when using the "Run Malloy Extension" VSCode launch configuration, they need to be in a `.env` file at the top level of the repo, like so:
+
+```
+GA_MEASUREMENT_ID='<id goes here>'
+GA_API_SECRET='<secret goes here>'
+```

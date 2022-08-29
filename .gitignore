@@ -11,7 +11,7 @@ packages/**/build
 packages/**/dist
 packages/**/node_modules
 packages/malloy/src/lang/lib
-packages/**/tsconfig.tsbuildinfo
+*.tsbuildinfo
 packages/**/package-lock.json
 packages/**/.eslintcache
 packages/malloy/src/lang/grammar/.antlr
@@ -24,6 +24,12 @@ demo/**/.eslintcache
 /node_modules
 demo/malloy-demo-composer/composer_config.json
 demo/malloy-demo-composer/public/js
+vscode-extension/**/build
+vscode-extension/**/dist
+vscode-extension/**/node_modules
+vscode-extension/**/tsconfig.tsbuildinfo
+vscode-extension/**/package-lock.json
+vscode-extension/**/.eslintcache
 
 # misc
 .DS_Store
@@ -53,3 +59,5 @@ gems/
 logfile
 .s.PGSQL.5432.lock
 demo/malloy-demo-composer/env
+.env
+test/data/duckdb/duckdb_test.db.wal

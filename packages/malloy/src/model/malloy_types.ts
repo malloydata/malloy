@@ -221,6 +221,10 @@ interface DialectFragmentBase {
   function: string;
 }
 
+export interface NowFragment extends DialectFragmentBase {
+  function: "now";
+}
+
 export interface TimeDiffFragment extends DialectFragmentBase {
   function: "timeDiff";
   units: TimestampUnit;
@@ -263,6 +267,7 @@ export interface RegexpMatchFragment extends DialectFragmentBase {
 }
 
 export type DialectFragment =
+  | NowFragment
   | TimeDeltaFragment
   | TimeDiffFragment
   | TimeTruncFragment

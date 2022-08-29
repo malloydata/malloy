@@ -15,7 +15,7 @@ import * as shiki from "shiki";
 import * as fs from "fs";
 
 const json = fs.readFileSync(
-  "./packages/malloy-vscode/malloy.tmGrammar.json",
+  "./vscode-extension/malloy.tmGrammar.json",
   "utf-8"
 );
 const malloyTMGrammar = JSON.parse(json);

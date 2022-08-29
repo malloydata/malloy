@@ -721,6 +721,18 @@ export class PreparedQuery {
       this._modelDef
     );
   }
+
+  public get dialect(): string {
+    const sourceRef = this._query.structRef;
+    const source =
+      typeof sourceRef === "string"
+        ? this._modelDef.contents[sourceRef]
+        : sourceRef;
+    if (source.type !== "struct") {
+      throw new Error("Invalid source for query");
+    }
+    return source.dialect;
+  }
 }
 
 export function parseTableURL(tableURL: string): {

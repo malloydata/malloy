@@ -311,6 +311,10 @@ ${indent(sql)}
       : identifier;
   }
 
+  sqlNow(): Expr {
+    return mkExpr`CURRENT_TIMESTAMP()`;
+  }
+
   sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {
     if (sqlTime.valueType == "date") {
       if (isDateUnit(units)) {
