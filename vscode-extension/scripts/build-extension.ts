@@ -162,6 +162,16 @@ function makeDuckdbNoNodePreGypPlugin(target: Target | undefined): Plugin {
   };
 }
 
+const DEFINITIONS: Record<string, string> = {};
+
+const ENV_PASSTHROUGH = ["GA_API_SECRET", "GA_MEASUREMENT_ID"];
+
+for (const variable of ENV_PASSTHROUGH) {
+  DEFINITIONS[`process.env.${variable}`] = JSON.stringify(
+    process.env[variable]
+  );
+}
+
 // building without a target does a default build using whatever keytar native lib is in node_modules
 export async function doBuild(target?: Target): Promise<void> {
   const development = process.env.NODE_ENV == "development";
@@ -269,6 +279,7 @@ export async function doBuild(target?: Target): Promise<void> {
           },
         }
       : false,
+    define: DEFINITIONS,
   });
 
   const webviewPlugins = [

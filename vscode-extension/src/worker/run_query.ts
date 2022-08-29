@@ -77,6 +77,11 @@ export const runQuery = async ({
         ? (await runnable.getPreparedResult()).resultExplore.limit
         : undefined;
 
+    const dialect =
+      (runnable instanceof QueryMaterializer
+        ? (await runnable.getPreparedQuery()).dialect
+        : undefined) || "unknown";
+
     try {
       sql = await runnable.getSQL();
       styles = { ...styles, ...files.getHackyAccumulatedDataStyles() };
@@ -100,6 +105,7 @@ export const runQuery = async ({
         type: QueryMessageType.QueryStatus,
         status: QueryRunStatus.Running,
         sql,
+        dialect,
       },
       panelId
     );

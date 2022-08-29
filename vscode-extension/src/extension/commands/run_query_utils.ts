@@ -23,6 +23,7 @@ import { WebviewMessageManager } from "../webview_message_manager";
 import { queryDownload } from "./query_download";
 import { getWorker } from "../extension";
 import { WorkerMessage } from "../../worker/types";
+import { trackQueryRun } from "../telemetry";
 
 const malloyLog = vscode.window.createOutputChannel("Malloy");
 interface NamedQuerySpec {
@@ -218,6 +219,8 @@ https://github.com/looker-open-source/malloy/issues.`,
                     runBegin = compileEnd;
                     malloyLog.appendLine(message.sql);
                     logTime("Compile", compileBegin, compileEnd);
+
+                    trackQueryRun({ dialect: message.dialect });
 
                     progress.report({ increment: 40, message: "Running" });
                   }

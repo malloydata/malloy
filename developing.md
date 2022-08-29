@@ -45,7 +45,9 @@ _OR_
 
 2. Open the `vscode-extension` folder root directory in VSCode, right click on `dist/malloy-vscode-x.x.x.vsix` and select "Install Extension VSIX".
 
-# Malloy and Extension Development / Debugging
+# Malloy and Extension Development
+
+## Running and Debugging
 
 1. Open the top-level repository directory in VSCode
 2. Select the "Run and Debug" panel in the left bar.
@@ -55,3 +57,12 @@ Optional: To additionally debug the language server, run the "Attach to Language
 launch profile from the "Run and Debug" panel.
 
 ![open_vsix3](https://user-images.githubusercontent.com/7178946/130678501-cd5cf79b-0d48-42a6-a4d5-602f1b0d563d.gif)
+
+## Telemetry
+
+For telemetry to work in development, you need to have the `GA_MEASUREMENT_ID` and `GA_API_SECRET` environment variables set to appropriate values. In order for these to be populated when using the "Run Malloy Extension" VSCode launch configuration, they need to be in a `.env` file at the top level of the repo, like so:
+
+```
+GA_MEASUREMENT_ID='<id goes here>'
+GA_API_SECRET='<secret goes here>'
+```

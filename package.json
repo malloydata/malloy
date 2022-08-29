@@ -26,8 +26,8 @@
     "docs-preprocess": "ts-node --esm --project tsconfig.docs.json docs/_scripts/build_docs/index.ts --watch",
     "docs-postprocess": "wait-on ./docs/_includes/generated/toc.html && cd docs && bundle exec jekyll serve -l -o",
     "docs-serve": "npm run docs-prebuild && concurrently --kill-others 'npm run docs-preprocess' 'npm run docs-postprocess'",
-    "vscode-build-extension-dev": "npm run -w vscode-extension build-extension-dev",
-    "vscode-publish-extensions": "npm run -w vscode-extension publish-extensions",
+    "vscode-build-extension-dev": "npm exec -- dotenv -- npm run -w vscode-extension build-extension-dev",
+    "vscode-publish-extensions": "npm exec -- dotenv -- npm run -w vscode-extension publish-extensions",
     "vscode-build-composer-dev": "npm run -w malloy-composer-demo build",
     "third-party-licenses": "ts-node scripts/third_party_licenses",
     "malloyc": "ts-node scripts/malloy-to-json",
@@ -70,7 +70,8 @@
     "ts-node": "^10.9.1",
     "typescript": "4.7.4",
     "unified": "^10.1.2",
-    "wait-on": "^6.0.0"
+    "wait-on": "^6.0.0",
+    "dotenv-cli": "^6.0.0"
   },
   "resolutions": {
     "simple-get": "3.1.1",

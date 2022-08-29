@@ -37,6 +37,7 @@ interface QueryMessageStatusRunning {
   type: QueryMessageType.QueryStatus;
   status: QueryRunStatus.Running;
   sql: string;
+  dialect: string;
 }
 
 interface QueryMessageStatusError {

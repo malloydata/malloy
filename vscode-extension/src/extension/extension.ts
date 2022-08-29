@@ -33,11 +33,13 @@ import {
   runUnnamedSQLBlock,
   showLicensesCommand,
 } from "./commands";
-import { CONNECTION_MANAGER } from "./state";
+import { CONNECTION_MANAGER, MALLOY_EXTENSION_STATE } from "./state";
 import { ConnectionsProvider } from "./tree_views/connections_view";
 import { HelpViewProvider } from "./webview_views/help_view";
 import { WorkerConnection } from "../worker/worker_connection";
 import { MalloyConfig } from "./types";
+import { getNewClientId } from "./utils";
+import { trackModelLoad, trackModelSave } from "./telemetry";
 
 let client: LanguageClient;
 let worker: WorkerConnection;
@@ -106,12 +108,6 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   context.subscriptions.push(
-    vscode.workspace.onDidSaveTextDocument(() => {
-      vscode.commands.executeCommand("malloy.refreshSchema");
-    })
-  );
-
-  context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor(() =>
       vscode.commands.executeCommand("malloy.refreshSchema")
     )
@@ -148,6 +144,31 @@ export function activate(context: vscode.ExtensionContext): void {
             "malloy"
           ) as unknown as MalloyConfig,
         });
+      }
+    })
+  );
+
+  let clientId: string | undefined =
+    context.globalState.get("malloy_client_id");
+  if (clientId === undefined) {
+    clientId = getNewClientId();
+    context.globalState.update("malloy_client_id", clientId);
+  }
+  MALLOY_EXTENSION_STATE.setClientId(clientId);
+
+  context.subscriptions.push(
+    vscode.workspace.onDidOpenTextDocument(async (e) => {
+      if (e.languageId === "malloy") {
+        trackModelLoad();
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.onDidSaveTextDocument(async (e) => {
+      vscode.commands.executeCommand("malloy.refreshSchema");
+      if (e.languageId === "malloy") {
+        trackModelSave();
       }
     })
   );
