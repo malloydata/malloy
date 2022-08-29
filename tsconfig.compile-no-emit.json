@@ -7,7 +7,7 @@
     { "path": "packages/malloy-db-postgres" },
     { "path": "packages/malloy-db-test" },
     { "path": "packages/malloy-render" },
-    { "path": "packages/malloy-vscode" },
+    { "path": "./vscode-extension" },
     { "path": "demo/malloy-demo-composer" }
   ],
   "files": [],

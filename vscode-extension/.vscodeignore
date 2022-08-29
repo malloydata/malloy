@@ -1,0 +1,8 @@
+.vscode
+node_modules
+out/
+src/
+tsconfig.json
+tsconfig.tsbuildinfo
+esbuild.config.ts
+package.json.original

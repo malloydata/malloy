@@ -1179,20 +1179,13 @@
   "resolved" "https://registry.npmjs.org/@types/ms/-/ms-0.7.31.tgz"
   "version" "0.7.31"
 
-"@types/node-fetch@^2.6.2":
+"@types/node-fetch@^2.6.2", "@types/node-fetch@^3.0.3":
   "integrity" "sha512-DHqhlq5jeESLy19TYhLakJ07kNumXWjcDdxXsLUMJZ6ue8VZJj4kLPQVE/2mdHh3xZziNF1xppu5lwmS53HR+A=="
   "resolved" "https://registry.npmjs.org/@types/node-fetch/-/node-fetch-2.6.2.tgz"
   "version" "2.6.2"
   dependencies:
     "@types/node" "*"
     "form-data" "^3.0.0"
-
-"@types/node-fetch@^3.0.3":
-  "integrity" "sha512-HhggYPH5N+AQe/OmN6fmhKmRRt2XuNJow+R3pQwJxOOF9GuwM7O2mheyGeIrs5MOIeNjDEdgdoyHBOrFeJBR3g=="
-  "resolved" "https://registry.npmjs.org/@types/node-fetch/-/node-fetch-3.0.3.tgz"
-  "version" "3.0.3"
-  dependencies:
-    "node-fetch" "*"
 
 "@types/node@*", "@types/node@^16.11.26", "@types/node@^16.6.2":
   "integrity" "sha512-Z9r9UWlNeNkYnxybm+1fc0jxUNjZqRekTAr1pG0qdXe9apT9yCiqk1c4VvKQJsFpnchU4+fLl25MabSLA2wxIw=="
@@ -3506,7 +3499,7 @@
   dependencies:
     "@svgr/core" "^6.1.2"
 
-"esbuild@^0.14.13":
+"esbuild@^0.14.13", "esbuild@0.14.13":
   "integrity" "sha512-Cy9llcy8DvET5uznocPyqL3BFRrFXSVqbgpMJ9Wz8oVjZlh/zUSNbPRbov0VX7VxN2JH1Oa0uNxZ7eLRb62pJA=="
   "resolved" "https://registry.npmjs.org/esbuild/-/esbuild-0.14.54.tgz"
   "version" "0.14.54"
@@ -3532,30 +3525,6 @@
     "esbuild-windows-32" "0.14.54"
     "esbuild-windows-64" "0.14.54"
     "esbuild-windows-arm64" "0.14.54"
-
-"esbuild@0.14.13":
-  "integrity" "sha512-FIxvAdj3i2oHA6ex+E67bG7zlSTO+slt8kU2ogHDgGtrQLy2HNChv3PYjiFTYkt8hZbEAniZCXVeHn+FrHt7dA=="
-  "resolved" "https://registry.npmjs.org/esbuild/-/esbuild-0.14.13.tgz"
-  "version" "0.14.13"
-  optionalDependencies:
-    "esbuild-android-arm64" "0.14.13"
-    "esbuild-darwin-64" "0.14.13"
-    "esbuild-darwin-arm64" "0.14.13"
-    "esbuild-freebsd-64" "0.14.13"
-    "esbuild-freebsd-arm64" "0.14.13"
-    "esbuild-linux-32" "0.14.13"
-    "esbuild-linux-64" "0.14.13"
-    "esbuild-linux-arm" "0.14.13"
-    "esbuild-linux-arm64" "0.14.13"
-    "esbuild-linux-mips64le" "0.14.13"
-    "esbuild-linux-ppc64le" "0.14.13"
-    "esbuild-linux-s390x" "0.14.13"
-    "esbuild-netbsd-64" "0.14.13"
-    "esbuild-openbsd-64" "0.14.13"
-    "esbuild-sunos-64" "0.14.13"
-    "esbuild-windows-32" "0.14.13"
-    "esbuild-windows-64" "0.14.13"
-    "esbuild-windows-arm64" "0.14.13"
 
 "escalade@^3.1.1":
   "integrity" "sha512-k0er2gUkLf8O0zKJiAhmkTnJlTvINGv7ygDNPbeIsX/TJjGJZHuh9B2UxbsaEkmlEo9MfhrSzmhIlhRlI2GXnw=="
@@ -6151,29 +6120,6 @@
     "@malloydata/db-bigquery" "*"
     "@malloydata/malloy" "*"
 
-"malloy-vscode@file:/Users/crswenson/Documents/looker/malloy/packages/malloy-vscode":
-  "resolved" "file:packages/malloy-vscode"
-  "version" "0.2.0"
-  dependencies:
-    "@malloydata/db-bigquery" "*"
-    "@malloydata/db-duckdb" "*"
-    "@malloydata/db-postgres" "*"
-    "@malloydata/malloy" "*"
-    "@malloydata/render" "*"
-    "@observablehq/plot" "^0.1.0"
-    "@vscode/webview-ui-toolkit" "^1.0.0"
-    "keytar" "7.7.0"
-    "react" "^17.0.2"
-    "react-is" "^16.8.0"
-    "react-popper-tooltip" "^4.3.1"
-    "shiki" "^0.10.0"
-    "styled-components" "^5.3.3"
-    "vega" "5.21.0"
-    "vega-lite" "5.2.0"
-    "vscode-languageclient" "^7.0.0"
-    "vscode-languageserver" "^7.0.0"
-    "vscode-languageserver-textdocument" "^1.0.1"
-
 "map-cache@^0.2.2":
   "integrity" "sha512-8y/eV9QQZCiyn1SprXSrCmqJN0yNRATe+PO8ztwqrvrbdRLA3eYJF0yaR0YayLWkMbsQSKWS9N2gPcGEc4UsZg=="
   "resolved" "https://registry.npmjs.org/map-cache/-/map-cache-0.2.2.tgz"
@@ -6895,7 +6841,7 @@
   "resolved" "https://registry.npmjs.org/node-domexception/-/node-domexception-1.0.0.tgz"
   "version" "1.0.0"
 
-"node-fetch@*", "node-fetch@^3.2.0":
+"node-fetch@*":
   "integrity" "sha512-MhuzNwdURnZ1Cp4XTazr69K0BTizsBroX7Zx3UgDSVcZYKF/6p0CBe4EUb/hLqmzVhl0UpYfgRljQ4yxE+iCxA=="
   "resolved" "https://registry.npmjs.org/node-fetch/-/node-fetch-3.2.10.tgz"
   "version" "3.2.10"
@@ -6904,7 +6850,7 @@
     "fetch-blob" "^3.1.4"
     "formdata-polyfill" "^4.0.10"
 
-"node-fetch@^2.6.1", "node-fetch@^2.6.7":
+"node-fetch@^2.6.1", "node-fetch@^2.6.7", "node-fetch@^3.2.0":
   "integrity" "sha512-ZjMPFEfVx5j+y2yF35Kzx5sF7kDzxuDj6ziH4FFbOp87zKDZNx8yExJIb05OGF4Nlt9IHFIMBkRl41VdvcNdbQ=="
   "resolved" "https://registry.npmjs.org/node-fetch/-/node-fetch-2.6.7.tgz"
   "version" "2.6.7"
@@ -7738,20 +7684,15 @@
   "resolved" "https://registry.npmjs.org/react-is/-/react-is-16.13.1.tgz"
   "version" "16.13.1"
 
-"react-is@^16.8.0":
-  "integrity" "sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ=="
-  "resolved" "https://registry.npmjs.org/react-is/-/react-is-16.13.1.tgz"
-  "version" "16.13.1"
+"react-is@^16.8.0", "react-is@^18.0.0", "react-is@>= 16.8.0":
+  "integrity" "sha512-xWGDIW6x921xtzPkhiULtthJHoJvBbF3q26fzloPCK0hsvxtPVelvftw3zjbHWSkR2km9Z+4uxbDDK/6Zw9B8w=="
+  "resolved" "https://registry.npmjs.org/react-is/-/react-is-18.2.0.tgz"
+  "version" "18.2.0"
 
 "react-is@^17.0.1":
   "integrity" "sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w=="
   "resolved" "https://registry.npmjs.org/react-is/-/react-is-17.0.2.tgz"
   "version" "17.0.2"
-
-"react-is@^18.0.0", "react-is@>= 16.8.0":
-  "integrity" "sha512-xWGDIW6x921xtzPkhiULtthJHoJvBbF3q26fzloPCK0hsvxtPVelvftw3zjbHWSkR2km9Z+4uxbDDK/6Zw9B8w=="
-  "resolved" "https://registry.npmjs.org/react-is/-/react-is-18.2.0.tgz"
-  "version" "18.2.0"
 
 "react-popper-tooltip@^4.3.1":
   "integrity" "sha512-y48r0mpzysRTZAIh8m2kpZ8S1YPNqGtQPDrlXYSGvDS1c1GpG/NUXbsbIdfbhXfmSaRJuTcaT6N1q3CKuHRVbg=="
@@ -9770,6 +9711,29 @@
     "xml2js" "^0.4.23"
     "yauzl" "^2.3.1"
     "yazl" "^2.2.2"
+
+"vscode-extension@file:/Users/crswenson/Documents/looker/malloy/vscode-extension":
+  "resolved" "file:vscode-extension"
+  "version" "0.2.0"
+  dependencies:
+    "@malloydata/db-bigquery" "*"
+    "@malloydata/db-duckdb" "*"
+    "@malloydata/db-postgres" "*"
+    "@malloydata/malloy" "*"
+    "@malloydata/render" "*"
+    "@observablehq/plot" "^0.1.0"
+    "@vscode/webview-ui-toolkit" "^1.0.0"
+    "keytar" "7.7.0"
+    "react" "^17.0.2"
+    "react-is" "^16.8.0"
+    "react-popper-tooltip" "^4.3.1"
+    "shiki" "^0.10.0"
+    "styled-components" "^5.3.3"
+    "vega" "5.21.0"
+    "vega-lite" "5.2.0"
+    "vscode-languageclient" "^7.0.0"
+    "vscode-languageserver" "^7.0.0"
+    "vscode-languageserver-textdocument" "^1.0.1"
 
 "vscode-jsonrpc@6.0.0":
   "integrity" "sha512-wnJA4BnEjOSyFMvjZdpiOwhSq9uDoK8e/kpRJDTaMYzwlkrhG1fwDIZI94CLsLzlCK5cIbMMtFlJlfR57Lavmg=="
