@@ -7,7 +7,7 @@
   },
   "references": [
     {
-      "path": "../malloy"
+      "path": ["../malloy", "../malloy-db-duckdb"]
     }
   ]
 }
