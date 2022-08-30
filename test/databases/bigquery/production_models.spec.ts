@@ -22,8 +22,6 @@ const SAMPLE_PROJECT_ROOT = path.join(
   "..",
   "..",
   "..",
-  "..",
-  "..",
   "samples",
   "bigquery"
 );

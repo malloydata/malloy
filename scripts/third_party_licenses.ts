@@ -48,7 +48,7 @@ const malloyPackages = [
   "@malloydata/malloy",
   "@malloydata/render",
   "vscode-extension",
-  "@malloydata/db-test",
+  "test",
   "@malloydata/db-bigquery",
   "@malloydata/db-postgres",
   "@malloydata/db-duckdb",

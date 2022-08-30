@@ -7,7 +7,8 @@
     "packages": [
       "packages/*",
       "demo/*",
-      "vscode-extension"
+      "vscode-extension",
+      "test"
     ]
   },
   "files": [
@@ -54,6 +55,7 @@
     "concurrently": "^6.2.1",
     "cross-os": "^1.5.0",
     "csv-stringify": "^5.6.5",
+    "dotenv-cli": "^6.0.0",
     "eslint": "^7.28.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^3.4.0",
@@ -73,8 +75,7 @@
     "ts-node": "^10.9.1",
     "typescript": "4.7.4",
     "unified": "^10.1.2",
-    "wait-on": "^6.0.0",
-    "dotenv-cli": "^6.0.0"
+    "wait-on": "^6.0.0"
   },
   "resolutions": {
     "simple-get": "3.1.1",
