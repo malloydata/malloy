@@ -8,12 +8,12 @@
 //
 // Malloy language Documentation
 //  see: https://looker-open-source.github.io/malloy/documentation/
-//
+//  
 
 // source, see: https://looker-open-source.github.io/malloy/documentation/language/source.html
 source: names is table('duckdb:data/usa_names.parquet') {
 
-
+ 
   measure: population is `number`.sum()
   dimension: decade is floor(`year`/10)*10
 

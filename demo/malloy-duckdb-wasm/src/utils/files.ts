@@ -11,26 +11,16 @@
  * GNU General Public License for more details.
  */
 
-import React from "react";
-import styled from "styled-components";
+import { URLReader } from "@malloydata/malloy";
 
-export interface StatusProps {
-  status: string | undefined;
-}
-
-export const Status: React.FC<StatusProps> = ({ status }) => {
-  return (
-    <Fill>
-      <h1>{status}</h1>
-    </Fill>
-  );
+export const fetchFile = async (url: URL): Promise<string> => {
+  console.log("Reading", url);
+  const body = await fetch(url);
+  return body.text();
 };
 
-export const Fill = styled.div`
-  flex: auto;
-  height: 100%;
-  width: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;
+export class BrowserURLReader implements URLReader {
+  async readURL(url: URL): Promise<string> {
+    return fetchFile(url);
+  }
+}

@@ -11,26 +11,18 @@
  * GNU General Public License for more details.
  */
 
-import React from "react";
-import styled from "styled-components";
+import { LookupConnection, Connection } from "@malloydata/malloy";
+import { DuckDBWASMConnection } from "@malloydata/db-duckdb-wasm";
 
-export interface StatusProps {
-  status: string | undefined;
+export class DuckDBWasmLookup implements LookupConnection<Connection> {
+  connection: DuckDBWASMConnection;
+
+  constructor() {
+    this.connection = new DuckDBWASMConnection("duckdb");
+  }
+
+  async lookupConnection(_name: string): Promise<Connection> {
+    await this.connection.connecting;
+    return this.connection;
+  }
 }
-
-export const Status: React.FC<StatusProps> = ({ status }) => {
-  return (
-    <Fill>
-      <h1>{status}</h1>
-    </Fill>
-  );
-};
-
-export const Fill = styled.div`
-  flex: auto;
-  height: 100%;
-  width: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`;

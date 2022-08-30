@@ -13,28 +13,28 @@
 
 import React, { useEffect, useState } from "react";
 import styled from "styled-components";
-import { highlight } from "./highlighter";
+import { highlight } from "./utils/highlighter";
 
-export interface QueryProps {
-  query: string;
+export interface ModelProps {
+  model: string;
 }
 
-export const Query: React.FC<QueryProps> = ({ query }) => {
+export const Model: React.FC<ModelProps> = ({ model }) => {
   const [html, setHTML] = useState("");
 
   useEffect(() => {
     (async () => {
-      setHTML(await highlight(query, "malloy"));
+      setHTML(await highlight(model, "malloy"));
     })();
-  }, [query]);
+  }, [model]);
 
   return <Scroll dangerouslySetInnerHTML={{ __html: html }}></Scroll>;
 };
 
 export const Scroll = styled.div`
   flex: auto;
-  height: 94vh;
-  width: 45vw;
+  height: 100%;
+  width: 50%;
   overflow-y: scroll;
   border: 1px inset;
   padding: 5px;
