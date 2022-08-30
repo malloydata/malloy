@@ -1,6 +1,7 @@
 {
   "name": "malloy-demo-bq-cli",
-  "version": "0.0.1",
+  "version": "0.0.0",
+  "private": true,
   "license": "GPL-2.0",
   "main": "dist/entry.js",
   "bin": {

@@ -4,6 +4,7 @@
   "displayName": "Malloy",
   "description": "Malloy is an experimental language for describing data relationships and transformations",
   "version": "0.2.0",
+  "private": true,
   "engines": {
     "vscode": "^1.63.0"
   },
