@@ -13,7 +13,7 @@ availableSecrets:
   secretManager:
     - versionName: projects/malloy-303216/secrets/marketplace-prerelease-CI/versions/latest
       env: "VSCE_PAT"
-    - versionName: projects/malloy-303216/secrets/malloy-extension-CI-GA-API-SECRET/versions/latest
+    - versionName: projects/malloy-303216/secrets/vscode-extension-CI-GA-API-SECRET/versions/latest
       env: "GA_API_SECRET"
-    - versionName: projects/malloy-303216/secrets/malloy-extension-CI-GA-MEASUREMENT-ID/versions/latest
+    - versionName: projects/malloy-303216/secrets/vscode-extension-CI-GA-MEASUREMENT-ID/versions/latest
       env: "GA_MEASUREMENT_ID"
