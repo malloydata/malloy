@@ -7,6 +7,8 @@ steps:
       - "./cloudbuild/deploy/$TRIGGER_NAME.sh"
     timeout: "1600s"
     secretEnv: ["VSCE_PAT", "GA_API_SECRET", "GA_MEASUREMENT_ID"]
+options:
+  logging: CLOUD_LOGGING_ONLY
 timeout: "1600s"
 availableSecrets:
   secretManager:
