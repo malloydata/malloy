@@ -45,7 +45,7 @@
     "@types/styled-components": "^5.1.19",
     "concurrently": "^6.2.1",
     "electron-packager": "^15.5.1",
-    "esbuild": "^0.14.13",
+    "esbuild": "0.14.13",
     "esbuild-plugin-svgr": "^1.0.1",
     "wait-on": "^6.0.1"
   },
