@@ -8,8 +8,6 @@ steps:
     timeout: "1600s"
     secretEnv: ["VSCE_PAT", "GA_API_SECRET", "GA_MEASUREMENT_ID"]
 logsBucket: "gs://malloy-cloudbuild-logs"
-options:
-  logging: GCS_ONLY
 timeout: "1600s"
 availableSecrets:
   secretManager:
