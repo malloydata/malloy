@@ -35,7 +35,6 @@ import {
 } from "./commands";
 import { CONNECTION_MANAGER, MALLOY_EXTENSION_STATE } from "./state";
 import { ConnectionsProvider } from "./tree_views/connections_view";
-import { HelpViewProvider } from "./webview_views/help_view";
 import { WorkerConnection } from "../worker/worker_connection";
 import { MalloyConfig } from "./types";
 import { getNewClientId } from "./utils";
@@ -124,12 +123,6 @@ export function activate(context: vscode.ExtensionContext): void {
       "malloy.editConnections",
       editConnectionsCommand
     )
-  );
-
-  const provider = new HelpViewProvider(context.extensionUri);
-
-  context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider("malloyHelp", provider)
   );
 
   context.subscriptions.push(

@@ -298,7 +298,6 @@ export async function doBuild(target?: Target): Promise<void> {
     entryPoints: [
       "./src/extension/webviews/query_page/entry.ts",
       "./src/extension/webviews/connections_page/entry.ts",
-      "./src/extension/webviews/help_page/entry.ts",
     ],
     entryNames: "[dir]",
     bundle: true,
