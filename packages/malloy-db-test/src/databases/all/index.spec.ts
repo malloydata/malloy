@@ -14,15 +14,12 @@
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
-import { RuntimeList } from "./runtimes";
+import { allDatabases, RuntimeList } from "../../runtimes";
+import { databasesFromEnvironmentOr } from "../../test_utils";
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
-const runtimes = new RuntimeList([
-  "bigquery", //
-  "duckdb", //
-  "postgres",
-]);
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 afterAll(async () => {
   await runtimes.closeAll();

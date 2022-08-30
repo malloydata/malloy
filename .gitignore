@@ -38,6 +38,7 @@ vscode-extension/**/.eslintcache
 .env.test.local
 .env.production.local
 tsconfig.compile-no-emit.tsbuildinfo
+*.db.wal
 
 npm-debug.log*
 yarn-debug.log*

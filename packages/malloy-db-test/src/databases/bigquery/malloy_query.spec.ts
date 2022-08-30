@@ -12,20 +12,20 @@
  */
 
 import { test } from "@jest/globals";
-import { testModel } from "./models/faa_model";
-import { fStringEq } from "./test_utils";
+import { testModel } from "../../models/faa_model";
+import { describeIfDatabaseAvailable, fStringEq } from "../../test_utils";
 
 import * as malloy from "@malloydata/malloy";
 
 import { Query } from "@malloydata/malloy";
-import { RuntimeList } from "./runtimes";
+import { BigQueryTestConnection, RuntimeList } from "../../runtimes";
 
 const runtimeList = new RuntimeList(["bigquery"]);
 const runtime = runtimeList.runtimeMap.get("bigquery");
 if (runtime === undefined) {
   throw new Error("Couldn't build runtime");
 }
-const bq = runtimeList.bqConnection;
+const bq = runtime.connection as BigQueryTestConnection;
 
 function compileQueryFromQueryDef(
   model: malloy.ModelMaterializer,
@@ -52,7 +52,9 @@ async function bqCompile(sql: string): Promise<boolean> {
   return true;
 }
 
-describe("expression tests", () => {
+const [describe] = describeIfDatabaseAvailable(["bigquery"]);
+
+describe("BigQuery expression tests", () => {
   const faa = runtime._loadModelFromModelDef(testModel);
 
   it("simple_pipeline", async () => {

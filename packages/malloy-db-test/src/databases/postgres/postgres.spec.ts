@@ -12,32 +12,37 @@
  * GNU General Public License for more details.
  */
 
-import { RuntimeList } from "./runtimes";
+import { RuntimeList } from "../../runtimes";
+import { describeIfDatabaseAvailable } from "../../test_utils";
 
-const runtimeList = new RuntimeList(["postgres"]);
-const runtime = runtimeList.runtimeMap.get("postgres");
-if (runtime === undefined) {
-  throw new Error("Couldn't build runtime");
-}
+const [describe] = describeIfDatabaseAvailable(["postgres"]);
 
-// Idempotently create schema and tables with capital letters to use in tests.
-beforeAll(async () => {
-  await runtime.connection.runSQL('create schema if not exists "UpperSchema";');
-  await Promise.all([
-    runtime.connection.runSQL(
-      'create table if not exists "UpperSchema"."UpperSchemaUpperTable" as select 1 as one;'
-    ),
-    runtime.connection.runSQL(
-      'create table if not exists "UpperTablePublic" as select 1 as one;'
-    ),
-  ]);
-});
+describe("Postgres tests", () => {
+  const runtimeList = new RuntimeList(["postgres"]);
+  const runtime = runtimeList.runtimeMap.get("postgres");
+  if (runtime === undefined) {
+    throw new Error("Couldn't build runtime");
+  }
 
-afterAll(async () => {
-  await runtimeList.closeAll();
-});
+  // Idempotently create schema and tables with capital letters to use in tests.
+  beforeAll(async () => {
+    await runtime.connection.runSQL(
+      'create schema if not exists "UpperSchema";'
+    );
+    await Promise.all([
+      runtime.connection.runSQL(
+        'create table if not exists "UpperSchema"."UpperSchemaUpperTable" as select 1 as one;'
+      ),
+      runtime.connection.runSQL(
+        'create table if not exists "UpperTablePublic" as select 1 as one;'
+      ),
+    ]);
+  });
 
-describe("postgres tests", () => {
+  afterAll(async () => {
+    await runtimeList.closeAll();
+  });
+
   it(`raw date tests`, async () => {
     const result = await runtime
       .loadQuery(

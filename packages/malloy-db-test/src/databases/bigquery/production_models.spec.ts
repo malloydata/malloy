@@ -15,10 +15,22 @@ import fs from "fs";
 import path from "path";
 import { Runtime } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
+import { describeIfDatabaseAvailable } from "../../test_utils";
 
-const SAMPLE_PROJECT_ROOT = path.join(__dirname, "../../../samples/bigquery");
+const SAMPLE_PROJECT_ROOT = path.join(
+  __dirname,
+  "..",
+  "..",
+  "..",
+  "..",
+  "..",
+  "samples",
+  "bigquery"
+);
 
-describe(`compiling server models`, () => {
+const [describe] = describeIfDatabaseAvailable(["bigquery"]);
+
+describe(`compiling BigQuery sample models`, () => {
   let modelsFound = false;
   for (const dir of fs.readdirSync(SAMPLE_PROJECT_ROOT)) {
     const projectPath = path.join(SAMPLE_PROJECT_ROOT, dir);

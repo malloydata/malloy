@@ -15,15 +15,11 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 import * as malloy from "@malloydata/malloy";
-import { RuntimeList } from "./runtimes";
-import "./is-sql-eq";
-import { mkSqlEqWith } from "./sql-eq";
+import { allDatabases, RuntimeList } from "../../runtimes";
+import "../../is-sql-eq";
+import { databasesFromEnvironmentOr, mkSqlEqWith } from "../../test_utils";
 
-const runtimes = new RuntimeList([
-  "bigquery", //
-  "postgres", //
-  "duckdb", //
-]);
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 const expressionModelText = `
 explore: aircraft_models is table('malloytest.aircraft_models'){
