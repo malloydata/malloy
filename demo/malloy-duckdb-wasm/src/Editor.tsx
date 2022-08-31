@@ -68,8 +68,7 @@ export const Editor: React.FC<EditorProps> = ({
 
 const Wrapper = styled.div`
   border: 1px inset;
+  flex: auto;
   position: relative;
   overflow: hidden;
-  height: 100%;
-  width: 100%;
 `;

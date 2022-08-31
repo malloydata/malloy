@@ -127,7 +127,7 @@ export class DuckDBWASMConnection extends DuckDBCommon {
     sql: string
   ): Promise<{ rows: QueryDataRow[]; totalRows: number }> {
     const table = await this.connection?.query(sql);
-    if (table?.numRows) {
+    if (table?.numRows != null) {
       const rows = unwrapTable(table);
       console.log(rows);
       return {

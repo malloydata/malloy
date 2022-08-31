@@ -13,48 +13,31 @@
 
 import React, { useCallback } from "react";
 import styled from "styled-components";
+import { Sample } from "./types";
 
-interface ModelControlsProps {
-  models: string[];
-  onSelectModel: (model: string) => void;
-}
-
-export const ModelControls: React.FC<ModelControlsProps> = ({
-  models,
-  onSelectModel,
-}) => {
-  const onModelChange = useCallback(
-    ({ target }) => {
-      onSelectModel(target.value);
-    },
-    [onSelectModel]
-  );
-
-  return (
-    <Bar>
-      <Label htmlFor="model-select">Model: </Label>
-      <Select id="model-select" onChange={onModelChange}>
-        {models.map((model) => (
-          <option key={model} value={model}>
-            {model}
-          </option>
-        ))}
-      </Select>
-    </Bar>
-  );
-};
-
-export interface QueryControlsParams {
+interface ControlsProps {
+  samples: Sample[];
+  onSelectSample: (sample: Sample) => void;
   onRun: () => void;
   onSelectQuery: (model: string) => void;
   queries: string[];
 }
 
-export const QueryControls: React.FC<QueryControlsParams> = ({
+export const Controls: React.FC<ControlsProps> = ({
+  samples,
+  onSelectSample,
   queries,
   onRun,
   onSelectQuery,
 }) => {
+  const onSampleChange = useCallback(
+    ({ target }) => {
+      const sample = samples.find((sample) => sample.name == target.value);
+      onSelectSample(sample || samples[0]);
+    },
+    [onSelectSample, samples]
+  );
+
   const onQueryChange = useCallback(
     ({ target }) => {
       onSelectQuery(target.value);
@@ -64,6 +47,14 @@ export const QueryControls: React.FC<QueryControlsParams> = ({
 
   return (
     <Bar>
+      <Label htmlFor="model-select">Data Set: </Label>
+      <Select id="model-select" onChange={onSampleChange}>
+        {samples.map((sample) => (
+          <option key={sample.name} value={sample.name}>
+            {sample.name}
+          </option>
+        ))}
+      </Select>
       <Label htmlFor="query-select">Query: </Label>
       <Select id="query-select" onChange={onQueryChange}>
         {queries.map((query) => (
@@ -91,7 +82,7 @@ const Label = styled.label`
 
 const Select = styled.select`
   padding: 4px;
-  width: 400px;
+  width: 15%;
 `;
 
 const Button = styled.button`

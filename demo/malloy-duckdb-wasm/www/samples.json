@@ -1,0 +1,16 @@
+[
+  {
+    "name": "Airports",
+    "dataPath": "data/airports.parquet",
+    "dataUrl": "dist/airports.parquet",
+    "modelPath": "./airports.malloy",
+    "queryPath": "./airports-queries.malloy"
+  },
+  {
+    "name": "Names",
+    "dataPath": "data/usa_names.parquet",
+    "dataUrl": "dist/usa_names.parquet",
+    "modelPath": "./names.malloy",
+    "queryPath": "./names-queries.malloy"
+  }
+]

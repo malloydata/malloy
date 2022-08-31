@@ -18,7 +18,7 @@ export interface RenderProps {
   rendered: HTMLElement | undefined;
 }
 
-export const Render: React.FC<RenderProps> = ({ rendered }) => {
+export const Results: React.FC<RenderProps> = ({ rendered }) => {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -29,15 +29,31 @@ export const Render: React.FC<RenderProps> = ({ rendered }) => {
     }
   }, [rendered]);
 
-  return <Scroll ref={ref}></Scroll>;
+  return (
+    <Wrapper>
+      <Title>Results:</Title>
+      <Render ref={ref}></Render>
+    </Wrapper>
+  );
 };
 
-export const Scroll = styled.div`
+const Wrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  margin: 5px;
+  height: calc(100% - 10px);
+`;
+
+const Title = styled.div`
+  font-size: 14px;
+  font-weight: bold;
+  padding: 5px;
+`;
+
+const Render = styled.div`
   flex: auto;
   width: 100%;
-  height: calc(100% - 5px);
   overflow-y: scroll;
   border: 1px inset;
-  margin: 5px;
   background: #ffffff;
 `;

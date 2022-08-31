@@ -1,0 +1,5 @@
+import "./airports.malloy"
+
+query: heliports is airports -> airports_by_region_dashboard {
+  ? fac_type = 'HELIPORT'
+}

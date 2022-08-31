@@ -16,28 +16,15 @@ import styled from "styled-components";
 import { Malloy, Runtime } from "@malloydata/malloy";
 import { HTMLView } from "@malloydata/render";
 import { DuckDBWASMConnection } from "@malloydata/db-duckdb-wasm";
-import { ModelControls, QueryControls } from "./Controls";
+import { Controls } from "./Controls";
 import { Query } from "./Query";
-import { Render } from "./Render";
+import { Results } from "./Results";
 import { Model } from "./Model";
 import { Status } from "./Status";
 import { BrowserURLReader } from "./utils/files";
 import { DuckDBWasmLookup } from "./utils/connections";
 import { HackyDataStylesAccumulator } from "./utils/data_styles";
-
-const DATA_PATH = "data/usa_names.parquet";
-const DATA_URL = new URL("./dist/usa_names.parquet", window.location.href);
-
-const MODELS = [
-  "1_names.malloy",
-  "2_iconic_names.malloy",
-  "3_names_dashboards.malloy",
-];
-
-const QUERY = `import "./1_names.malloy"
-
-query: j_names is names -> name_dashboard {? name ~ r'J'}
-`;
+import { Sample } from "./types";
 
 const baseReader = new BrowserURLReader();
 const lookup = new DuckDBWasmLookup();
@@ -45,48 +32,84 @@ const reader = new HackyDataStylesAccumulator(baseReader);
 const runtime = new Runtime(reader, lookup);
 
 export const App: React.FC = () => {
-  const [malloyModel, setMalloyModel] = useState("");
+  const [loadedModel, setLoadedModel] = useState("");
+  const [loadedQuery, setLoadedQuery] = useState("");
+
   const [status, setStatus] = useState("");
   const [query, setQuery] = useState("j_names");
   const [queries, setQueries] = useState<string[]>([]);
-  const [editedQuery, setEditedQuery] = useState(QUERY);
+  const [editedQuery, setEditedQuery] = useState("");
   const [rendered, setRendered] = useState<HTMLElement>();
-  const [model, setModel] = useState(MODELS[0]);
   const [error, setError] = useState("");
+  const [samples, setSamples] = useState<Sample[]>([]);
+  const [sample, setSample] = useState<Sample>();
 
-  useEffect(() => {
-    setStatus("Loading Model");
-    (async () => {
-      await lookup.lookupConnection("duckdb");
-      const queries = [];
-      const modelUrl = new URL(model, window.location.href);
-      const malloyModel = await reader.readURL(modelUrl);
-      const symbols = Malloy.parse({
-        source: malloyModel,
-      }).symbols;
-      for (const symbol of symbols) {
-        if (symbol.type === "query") {
-          queries.push(symbol.name);
-        }
-      }
-      setMalloyModel(malloyModel);
-      setQueries(queries);
-      setQuery(queries[0]);
-      setStatus("Ready");
-    })();
-  }, [model]);
-
+  // Initial load
   useEffect(() => {
     setStatus("Loading DuckDB");
     (async () => {
-      const nameUrl = DATA_URL;
-      const connection = (await lookup.lookupConnection(
-        "duckdb"
-      )) as DuckDBWASMConnection;
-      connection.database?.registerFileURL(DATA_PATH, nameUrl.toString());
+      const samplesResponse = await fetch("./samples.json");
+      const samples = await samplesResponse.json();
+      setSamples(samples);
+      setSample(samples[0]);
     })();
   }, []);
 
+  // Sample load
+  useEffect(() => {
+    setStatus("Loading Sample");
+    (async () => {
+      // Ensure duckdb is loaded
+      const connection = (await lookup.lookupConnection(
+        "duckdb"
+      )) as DuckDBWASMConnection;
+      if (sample) {
+        const queries = [];
+        // Read model file
+        const modelUrl = new URL(sample.modelPath, window.location.href);
+        const malloyModel = await reader.readURL(modelUrl);
+
+        const queryUrl = new URL(sample.queryPath, window.location.href);
+        const queryData = await reader.readURL(queryUrl);
+        setLoadedQuery(queryData);
+        setEditedQuery(queryData);
+
+        const symbols = Malloy.parse({
+          source: queryData,
+        }).symbols;
+        for (const symbol of symbols) {
+          if (symbol.type === "query") {
+            queries.push(symbol.name);
+          }
+        }
+        setLoadedModel(malloyModel);
+        setQueries(queries);
+        setQuery(queries[0]);
+
+        connection.database?.registerFileURL(
+          sample.dataPath,
+          new URL(sample.dataUrl, window.location.href).toString()
+        );
+      }
+      setStatus("Ready");
+    })();
+  }, [sample]);
+
+  useEffect(() => {
+    const queries = [];
+    const symbols = Malloy.parse({
+      source: editedQuery,
+    }).symbols;
+    for (const symbol of symbols) {
+      if (symbol.type === "query") {
+        queries.push(symbol.name);
+      }
+    }
+    setQueries(queries);
+    setQuery(queries[0]);
+  }, [editedQuery]);
+
+  // Run query
   const onRun = useCallback(async () => {
     setStatus("Loading Model");
     setRendered(undefined);
@@ -94,25 +117,13 @@ export const App: React.FC = () => {
     try {
       //const modelUrl = new URL(model, window.location.href);
       // const runnable = runtime.loadModel(modelUrl).loadQueryByName(query);
-      const queries = [];
-      const symbols = Malloy.parse({
-        source: editedQuery,
-      }).symbols;
-      for (const symbol of symbols) {
-        if (symbol.type === "query") {
-          queries.push(symbol.name);
-        }
-      }
-      if (!queries.length) {
-        throw new Error("Please define a query");
-      }
       baseReader.setContents(window.location.href, editedQuery);
       const runnable = runtime
         .loadModel(new URL(window.location.href))
-        .loadQueryByName(queries[0]);
+        .loadQueryByName(query);
       setStatus("Loading Data");
       const rowLimit = (await runnable.getPreparedResult()).resultExplore.limit;
-      setStatus(`Running query ${queries[0]}`);
+      setStatus(`Running query ${query}`);
       const result = await runnable.run({ rowLimit });
       setStatus("Rendering");
       const rendered = await new HTMLView(document).render(result.data, {
@@ -124,7 +135,7 @@ export const App: React.FC = () => {
       setStatus("Error");
       setError(error.message);
     }
-  }, [model, editedQuery]);
+  }, [editedQuery, query]);
 
   return (
     <React.StrictMode>
@@ -132,20 +143,25 @@ export const App: React.FC = () => {
         <Logo src="logo.png" />
         Malloy DuckDB WASM Query Demo
       </h1>
-      <ModelControls models={MODELS} onSelectModel={setModel} />
+      <Controls
+        samples={samples}
+        onSelectSample={setSample}
+        onSelectQuery={setQuery}
+        queries={queries}
+        onRun={onRun}
+      />
       <View>
         <Left>
-          <Model model={malloyModel} />
-          <QueryControls
-            onSelectQuery={setQuery}
-            queries={queries}
-            onRun={onRun}
+          <Query
+            queryPath={sample?.queryPath}
+            query={loadedQuery}
+            onChange={setEditedQuery}
           />
-          <Query query={QUERY} onChange={setEditedQuery} />
+          <Model modelPath={sample?.modelPath} model={loadedModel} />
         </Left>
         <Right>
           {rendered ? (
-            <Render rendered={rendered} />
+            <Results rendered={rendered} />
           ) : (
             <Status status={status} />
           )}
@@ -168,6 +184,8 @@ const Left = styled.div`
   height: 100%;
   width: 50%;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 `;
 
 const Right = styled.div`

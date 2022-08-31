@@ -17,18 +17,28 @@ import { Editor } from "./Editor";
 
 export interface ModelProps {
   model: string;
+  modelPath?: string;
 }
 
-export const Model: React.FC<ModelProps> = ({ model }) => {
+export const Model: React.FC<ModelProps> = ({ model, modelPath }) => {
   return (
     <Wrapper>
+      <Title>Model File: {modelPath}</Title>
       <Editor value={model} readOnly={true} />
     </Wrapper>
   );
 };
 
+const Title = styled.div`
+  font-size: 14px;
+  font-weight: bold;
+  padding: 5px;
+`;
+
 const Wrapper = styled.div`
+  display: flex;
   flex: auto;
+  flex-direction: column;
   height: 60%;
   width: 100%;
   margin: 5px;

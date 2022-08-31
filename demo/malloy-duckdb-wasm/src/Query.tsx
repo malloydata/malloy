@@ -16,20 +16,30 @@ import styled from "styled-components";
 import { Editor } from "./Editor";
 
 export interface QueryProps {
+  queryPath?: string;
   query: string;
   onChange: (query: string) => void;
 }
 
-export const Query: React.FC<QueryProps> = ({ onChange, query }) => {
+export const Query: React.FC<QueryProps> = ({ onChange, query, queryPath }) => {
   return (
     <Wrapper>
+      <Title>Query File: {queryPath}</Title>
       <Editor value={query} onChange={onChange} />
     </Wrapper>
   );
 };
 
+const Title = styled.div`
+  font-size: 14px;
+  font-weight: bold;
+  padding: 5px;
+`;
+
 const Wrapper = styled.div`
+  display: flex;
   flex: auto;
+  flex-direction: column;
   height: 40%;
   width: 100%;
   margin: 5px;

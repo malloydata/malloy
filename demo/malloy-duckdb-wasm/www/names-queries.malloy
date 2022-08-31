@@ -1,0 +1,5 @@
+import "./names.malloy"
+
+// named querys
+//  see: https://looker-open-source.github.io/malloy/documentation/language/query.html
+query: j_names is names -> name_dashboard {? name ~ r'J'}
