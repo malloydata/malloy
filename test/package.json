@@ -1,5 +1,6 @@
 {
   "name": "test",
+  "private": true,
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",

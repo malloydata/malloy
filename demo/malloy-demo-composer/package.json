@@ -1,7 +1,7 @@
 {
   "name": "malloy-composer-demo",
   "description": "Run/Explore/Build Malloy Data Models",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "private": true,
   "main": "./build/main.js",
   "author": "Malloy",
