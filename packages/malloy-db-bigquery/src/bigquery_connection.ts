@@ -252,6 +252,9 @@ export class BigQueryConnection
         : "0");
 
       if (jobResult[2]?.schema === undefined) {
+        // temporary hack
+        console.error(jobResult);
+
         throw new Error("Schema not present");
       }
 
