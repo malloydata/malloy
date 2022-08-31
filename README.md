@@ -1,6 +1,6 @@
 # Malloy
-Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy currently connects to BigQuery and Postgres, and natively supports DuckDB. We've built a Visual Studio Code extension to facilitate building Malloy data models, querying and transforming data, and creating simple visualizations and dashboards.
 
+Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy currently connects to BigQuery and Postgres, and natively supports DuckDB. We've built a Visual Studio Code extension to facilitate building Malloy data models, querying and transforming data, and creating simple visualizations and dashboards.
 
 ## Try the Malloy VSCode Extension
 
@@ -16,13 +16,12 @@ Currently, the Malloy extension works on Mac, Linux, and Windows machines.
 
 5. **Start with `1_airports.malloy` in the FAA dataset**. This is a sub-sample of the NTSB Flights dataset. In the editor pane, above `source: airports`, click the word "Preview" to run a `SELECT *`, and click the word "Run" above any query object to run it (see gif below for example).
 
-
 ![show_run](https://user-images.githubusercontent.com/1093458/182458787-ca228186-c954-4a07-b298-f92dbf91e48d.gif)
 
 To get to know the Malloy language, follow [Malloy by Example](https://looker-open-source.github.io/malloy/documentation/) and/or continue through the numbered models in the FAA directory.
 
 Note: The Malloy VSCode Extension tracks a small amount of anonymous usage data. You can opt out in the extension settings.
- [Learn more](https://policies.google.com/technologies/cookies).
+[Learn more](https://policies.google.com/technologies/cookies).
 
 ## Join the Community
 
@@ -48,6 +47,7 @@ To report security issues please see our [security policy](https://github.com/lo
 Malloy is not an officially supported Google product.
 
 ## Syntax Example
+
 Here is a simple example of a Malloy query:
 
 ```malloy
@@ -61,6 +61,7 @@ query: table('malloy-data.faa.flights') -> {
 ```
 
 In SQL this would be expressed:
+
 ```sql
 SELECT
    carrier,
