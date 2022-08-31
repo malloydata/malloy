@@ -13,25 +13,24 @@
 
 import React from "react";
 import styled from "styled-components";
+import { Editor } from "./Editor";
 
-export interface StatusProps {
-  status: string | undefined;
+export interface QueryProps {
+  query: string;
+  onChange: (query: string) => void;
 }
 
-export const Status: React.FC<StatusProps> = ({ status }) => {
+export const Query: React.FC<QueryProps> = ({ onChange, query }) => {
   return (
-    <Fill>
-      <h1>{status}</h1>
-    </Fill>
+    <Wrapper>
+      <Editor value={query} onChange={onChange} />
+    </Wrapper>
   );
 };
 
-export const Fill = styled.div`
+const Wrapper = styled.div`
   flex: auto;
-  height: 100%;
+  height: 40%;
   width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   margin: 5px;
 `;

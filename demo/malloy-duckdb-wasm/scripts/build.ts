@@ -38,13 +38,18 @@ export async function doBuild(): Promise<void> {
 
   const options: BuildOptions = {
     define: { "process.env.NODE_DEBUG": "false" },
-    entryPoints: ["./src/index.tsx"],
+    entryPoints: {
+      main: "./src/index.tsx",
+      "editor.worker": "monaco-editor/esm/vs/editor/editor.worker.js",
+      "ts.worker": "monaco-editor/esm/vs/language/typescript/ts.worker",
+    },
+    entryNames: "[name].bundle",
     bundle: true,
     minify: !development,
     sourcemap: false,
-    outfile: "www/dist/bundle.js",
+    outdir: "www/dist/",
     platform: "browser",
-    loader: { [".png"]: "file", [".svg"]: "file" },
+    loader: { [".png"]: "file", [".svg"]: "file", [".ttf"]: "file" },
     watch:
       development && !port
         ? {

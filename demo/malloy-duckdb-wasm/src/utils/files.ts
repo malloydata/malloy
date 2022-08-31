@@ -20,7 +20,18 @@ export const fetchFile = async (url: URL): Promise<string> => {
 };
 
 export class BrowserURLReader implements URLReader {
+  private contents: Record<string, string> = {};
+
+  setContents(url: string, value: string): void {
+    this.contents[url] = value;
+  }
+
   async readURL(url: URL): Promise<string> {
-    return fetchFile(url);
+    const key = url.toString();
+    if (key in this.contents) {
+      return this.contents[key];
+    } else {
+      return fetchFile(url);
+    }
   }
 }

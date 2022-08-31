@@ -14,45 +14,56 @@
 import React, { useCallback } from "react";
 import styled from "styled-components";
 
-interface ControlsProps {
-  files: string[];
-  onRun: () => void;
-  onSelectFile: (file: string) => void;
-  onSelectQuery: (file: string) => void;
-  queries: string[];
+interface ModelControlsProps {
+  models: string[];
+  onSelectModel: (model: string) => void;
 }
 
-export const Controls: React.FC<ControlsProps> = ({
-  files,
-  queries,
-  onRun,
-  onSelectFile,
-  onSelectQuery,
+export const ModelControls: React.FC<ModelControlsProps> = ({
+  models,
+  onSelectModel,
 }) => {
-  const onFileChange = useCallback(
+  const onModelChange = useCallback(
     ({ target }) => {
-      onSelectFile(target.value);
+      onSelectModel(target.value);
     },
-    [onSelectFile]
-  );
-
-  const onQueryChange = useCallback(
-    ({ target }) => {
-      onSelectQuery(target.value);
-    },
-    [onSelectFile]
+    [onSelectModel]
   );
 
   return (
     <Bar>
-      <Label htmlFor="file-select">File: </Label>
-      <Select id="file-select" onChange={onFileChange}>
-        {files.map((file) => (
-          <option key={file} value={file}>
-            {file}
+      <Label htmlFor="model-select">Model: </Label>
+      <Select id="model-select" onChange={onModelChange}>
+        {models.map((model) => (
+          <option key={model} value={model}>
+            {model}
           </option>
         ))}
       </Select>
+    </Bar>
+  );
+};
+
+export interface QueryControlsParams {
+  onRun: () => void;
+  onSelectQuery: (model: string) => void;
+  queries: string[];
+}
+
+export const QueryControls: React.FC<QueryControlsParams> = ({
+  queries,
+  onRun,
+  onSelectQuery,
+}) => {
+  const onQueryChange = useCallback(
+    ({ target }) => {
+      onSelectQuery(target.value);
+    },
+    [onSelectQuery]
+  );
+
+  return (
+    <Bar>
       <Label htmlFor="query-select">Query: </Label>
       <Select id="query-select" onChange={onQueryChange}>
         {queries.map((query) => (
@@ -61,7 +72,7 @@ export const Controls: React.FC<ControlsProps> = ({
           </option>
         ))}
       </Select>
-      <Button onClick={onRun}>Run</Button>
+      <Run onClick={onRun}>Run</Run>
     </Bar>
   );
 };
@@ -80,10 +91,14 @@ const Label = styled.label`
 
 const Select = styled.select`
   padding: 4px;
-  width: 200px;
+  width: 400px;
 `;
 
 const Button = styled.button`
   margin-left: 5px;
   width: 50px;
+`;
+
+const Run = styled(Button)`
+  float: right;
 `;

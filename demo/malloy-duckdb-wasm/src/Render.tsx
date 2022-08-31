@@ -34,8 +34,10 @@ export const Render: React.FC<RenderProps> = ({ rendered }) => {
 
 export const Scroll = styled.div`
   flex: auto;
-  width: 50%;
-  height: 100%;
+  width: 100%;
+  height: calc(100% - 5px);
   overflow-y: scroll;
   border: 1px inset;
+  margin: 5px;
+  background: #ffffff;
 `;

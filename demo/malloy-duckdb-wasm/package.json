@@ -16,6 +16,7 @@
     "@malloydata/db-duckdb-wasm": "*",
     "@malloydata/malloy": "*",
     "apache-arrow": "^8.0.0",
+    "monaco-editor": "^0.34.0",
     "react": "^17.0.2",
     "shiki": "^0.10.1",
     "styled-component": "^2.8.0"

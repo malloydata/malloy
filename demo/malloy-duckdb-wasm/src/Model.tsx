@@ -11,31 +11,25 @@
  * GNU General Public License for more details.
  */
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import styled from "styled-components";
-import { highlight } from "./utils/highlighter";
+import { Editor } from "./Editor";
 
 export interface ModelProps {
   model: string;
 }
 
 export const Model: React.FC<ModelProps> = ({ model }) => {
-  const [html, setHTML] = useState("");
-
-  useEffect(() => {
-    (async () => {
-      setHTML(await highlight(model, "malloy"));
-    })();
-  }, [model]);
-
-  return <Scroll dangerouslySetInnerHTML={{ __html: html }}></Scroll>;
+  return (
+    <Wrapper>
+      <Editor value={model} readOnly={true} />
+    </Wrapper>
+  );
 };
 
-export const Scroll = styled.div`
+const Wrapper = styled.div`
   flex: auto;
-  height: 100%;
-  width: 50%;
-  overflow-y: scroll;
-  border: 1px inset;
-  padding: 5px;
+  height: 60%;
+  width: 100%;
+  margin: 5px;
 `;
