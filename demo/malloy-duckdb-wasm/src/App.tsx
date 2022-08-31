@@ -13,18 +13,19 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
-import { Malloy, Runtime } from "@malloydata/malloy";
+import { Field, Malloy, Model, Runtime } from "@malloydata/malloy";
 import { HTMLView } from "@malloydata/render";
 import { DuckDBWASMConnection } from "@malloydata/db-duckdb-wasm";
 import { Controls } from "./Controls";
 import { Query } from "./Query";
 import { Results } from "./Results";
-import { Model } from "./Model";
+import { ModelView } from "./ModelView";
 import { Status } from "./Status";
 import { BrowserURLReader } from "./utils/files";
 import { DuckDBWasmLookup } from "./utils/connections";
 import { HackyDataStylesAccumulator } from "./utils/data_styles";
 import { Sample } from "./types";
+import { SchemaView } from "./SchemaView";
 
 const baseReader = new BrowserURLReader();
 const lookup = new DuckDBWasmLookup();
@@ -43,6 +44,7 @@ export const App: React.FC = () => {
   const [error, setError] = useState("");
   const [samples, setSamples] = useState<Sample[]>([]);
   const [sample, setSample] = useState<Sample>();
+  const [model, setModel] = useState<Model>();
 
   // Initial load
   useEffect(() => {
@@ -90,6 +92,9 @@ export const App: React.FC = () => {
           sample.dataPath,
           new URL(sample.dataUrl, window.location.href).toString()
         );
+
+        const model = await runtime.getModel(modelUrl);
+        setModel(model);
       }
       setStatus("Ready");
     })();
@@ -109,14 +114,44 @@ export const App: React.FC = () => {
     setQuery(queries[0]);
   }, [editedQuery]);
 
+  // Run turtle
+  const onFieldClick = useCallback(
+    async (field: Field) => {
+      if (sample && field.isQueryField()) {
+        setStatus("Loading Model");
+        setRendered(undefined);
+        setError("");
+        try {
+          // Assuming simple one level path
+          const query = `query: ${field.parentExplore.name} -> ${field.name}`;
+          const modelUrl = new URL(sample.modelPath, window.location.href);
+          const runnable = runtime.loadModel(modelUrl).loadQuery(query);
+          setStatus("Loading Data");
+          const rowLimit = (await runnable.getPreparedResult()).resultExplore
+            .limit;
+          setStatus(`Running query ${query}`);
+          const result = await runnable.run({ rowLimit });
+          setStatus("Rendering");
+          const rendered = await new HTMLView(document).render(result.data, {
+            dataStyles: reader.getHackyAccumulatedDataStyles(),
+          });
+          setStatus("Done");
+          setRendered(rendered);
+        } catch (error) {
+          setStatus("Error");
+          setError(error.message);
+        }
+      }
+    },
+    [sample]
+  );
+
   // Run query
   const onRun = useCallback(async () => {
     setStatus("Loading Model");
     setRendered(undefined);
     setError("");
     try {
-      //const modelUrl = new URL(model, window.location.href);
-      // const runnable = runtime.loadModel(modelUrl).loadQueryByName(query);
       baseReader.setContents(window.location.href, editedQuery);
       const runnable = runtime
         .loadModel(new URL(window.location.href))
@@ -151,13 +186,14 @@ export const App: React.FC = () => {
         onRun={onRun}
       />
       <View>
+        <SchemaView model={model} onFieldClick={onFieldClick} />
         <Left>
           <Query
             queryPath={sample?.queryPath}
             query={loadedQuery}
             onChange={setEditedQuery}
           />
-          <Model modelPath={sample?.modelPath} model={loadedModel} />
+          <ModelView modelPath={sample?.modelPath} model={loadedModel} />
         </Left>
         <Right>
           {rendered ? (
@@ -182,7 +218,7 @@ const Logo = styled.img`
 const Left = styled.div`
   flex: auto;
   height: 100%;
-  width: 50%;
+  width: 40%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -191,7 +227,7 @@ const Left = styled.div`
 const Right = styled.div`
   flex: auto;
   height: 100%;
-  width: 50%;
+  width: 40%;
   overflow: hidden;
   display: flex;
   flex-direction: column;

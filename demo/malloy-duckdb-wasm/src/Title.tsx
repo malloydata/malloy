@@ -11,10 +11,10 @@
  * GNU General Public License for more details.
  */
 
-export interface Sample {
-  name: string;
-  dataPath: string;
-  dataUrl: string;
-  modelPath: string;
-  queryPath: string;
-}
+import styled from "styled-components";
+
+export const Title = styled.div`
+  font-size: 14px;
+  font-weight: bold;
+  padding: 5px;
+`;

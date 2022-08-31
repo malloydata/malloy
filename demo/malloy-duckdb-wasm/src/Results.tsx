@@ -13,6 +13,7 @@
 
 import React, { useEffect, useRef } from "react";
 import styled from "styled-components";
+import { Title } from "./Title";
 
 export interface RenderProps {
   rendered: HTMLElement | undefined;
@@ -42,12 +43,6 @@ const Wrapper = styled.div`
   flex-direction: column;
   margin: 5px;
   height: calc(100% - 10px);
-`;
-
-const Title = styled.div`
-  font-size: 14px;
-  font-weight: bold;
-  padding: 5px;
 `;
 
 const Render = styled.div`

@@ -14,13 +14,14 @@
 import React from "react";
 import styled from "styled-components";
 import { Editor } from "./Editor";
+import { Title } from "./Title";
 
-export interface ModelProps {
+export interface ModelViewProps {
   model: string;
   modelPath?: string;
 }
 
-export const Model: React.FC<ModelProps> = ({ model, modelPath }) => {
+export const ModelView: React.FC<ModelViewProps> = ({ model, modelPath }) => {
   return (
     <Wrapper>
       <Title>Model File: {modelPath}</Title>
@@ -28,12 +29,6 @@ export const Model: React.FC<ModelProps> = ({ model, modelPath }) => {
     </Wrapper>
   );
 };
-
-const Title = styled.div`
-  font-size: 14px;
-  font-weight: bold;
-  padding: 5px;
-`;
 
 const Wrapper = styled.div`
   display: flex;

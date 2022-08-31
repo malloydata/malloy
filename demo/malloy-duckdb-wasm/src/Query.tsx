@@ -14,6 +14,7 @@
 import React from "react";
 import styled from "styled-components";
 import { Editor } from "./Editor";
+import { Title } from "./Title";
 
 export interface QueryProps {
   queryPath?: string;
@@ -29,12 +30,6 @@ export const Query: React.FC<QueryProps> = ({ onChange, query, queryPath }) => {
     </Wrapper>
   );
 };
-
-const Title = styled.div`
-  font-size: 14px;
-  font-weight: bold;
-  padding: 5px;
-`;
 
 const Wrapper = styled.div`
   display: flex;
