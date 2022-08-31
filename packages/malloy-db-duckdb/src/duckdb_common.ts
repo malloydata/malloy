@@ -340,7 +340,7 @@ export abstract class DuckDBCommon
   protected abstract createHash(sqlCommand: string): Promise<string>;
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
-    const hash = this.createHash(sqlCommand);
+    const hash = await this.createHash(sqlCommand);
     const tableName = `tt${hash}`;
 
     const cmd = `CREATE TEMPORARY TABLE IF NOT EXISTS ${tableName} AS (${sqlCommand});`;
