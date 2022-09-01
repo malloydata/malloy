@@ -13,10 +13,10 @@
 /* eslint-disable no-console */
 
 import * as semver from "semver";
-import { value readFileSync } from "fs";
-import { value publishVSIX } from "vsce";
-import { value Target, value targetKeytarMap } from "./build-extension";
-import { value doPackage } from "./package-extension";
+import { readFileSync } from "fs";
+import { publishVSIX } from "vsce";
+import { Target, targetKeytarMap } from "./build-extension";
+import { doPackage } from "./package-extension";
 
 /**
  * @returns Array of version bits. [major, minor, patch]
