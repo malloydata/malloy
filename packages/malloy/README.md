@@ -9,7 +9,7 @@ This package facilitates building the Malloy language - or the usage of data mod
 ## Show me an example!
 
 ```
-import { Runtime } from "@malloy/malloy";
+import { Runtime } from "@malloydata/malloy";
 import { DuckDBConnection } from "@malloydata/db-duckdb";
 
 const connection = new DuckDBConnection("duckdb-example");
