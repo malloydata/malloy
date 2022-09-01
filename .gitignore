@@ -30,6 +30,7 @@ vscode-extension/**/node_modules
 vscode-extension/**/tsconfig.tsbuildinfo
 vscode-extension/**/package-lock.json
 vscode-extension/**/.eslintcache
+test/dist
 
 # misc
 .DS_Store

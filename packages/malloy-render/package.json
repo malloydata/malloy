@@ -11,7 +11,7 @@
     "build": "tsc --build"
   },
   "dependencies": {
-    "@malloydata/malloy": "*",
+    "@malloydata/malloy": "^0.0.1",
     "us-atlas": "^3.0.0"
   }
 }
