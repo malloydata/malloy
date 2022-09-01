@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "license": "GPL-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -11,7 +11,7 @@
     "build": "tsc --build"
   },
   "dependencies": {
-    "@malloydata/malloy": "*",
+    "@malloydata/malloy": "^0.0.1",
     "us-atlas": "^3.0.0"
   }
 }
