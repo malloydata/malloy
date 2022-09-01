@@ -241,7 +241,7 @@ export class BigQueryConnection
         startIndex: rowIndex.toString(),
       };
 
-      const jobResult = await this.runBigQueryJob(
+      const jobResult = await this.createBigQueryJobAndGetResults(
         sqlCommand,
         undefined,
         queryResultsOptions
@@ -365,7 +365,7 @@ export class BigQueryConnection
   }
 
   public async executeSQLRaw(sqlCommand: string): Promise<QueryData> {
-    const result = await this.runBigQueryJob(sqlCommand);
+    const result = await this.createBigQueryJobAndGetResults(sqlCommand);
     return result[0];
   }
 
@@ -409,6 +409,7 @@ export class BigQueryConnection
         // wait for job to complete, because we need the table name
         // TODO just because a job is "DONE" doesn't mean it ended correctly, should probably also confirm
         // status is successful & that table was created
+        // TODO this needs better error handling and a timeout so that issues dont result in infinite looping
         while (metaData.status.state !== "DONE") {
           await new Promise((resolve) => setTimeout(resolve, 1000));
           [metaData] = await job.getMetadata();
@@ -665,7 +666,7 @@ export class BigQueryConnection
     return { schemas, errors };
   }
 
-  private async runBigQueryJob(
+  private async createBigQueryJobAndGetResults(
     sqlCommand: string,
     createQueryJobOptions?: Query,
     getQueryResultsOptions?: QueryResultsOptions
