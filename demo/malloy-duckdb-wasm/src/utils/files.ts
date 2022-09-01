@@ -14,7 +14,6 @@
 import { URLReader } from "@malloydata/malloy";
 
 export const fetchFile = async (url: URL): Promise<string> => {
-  console.log("Reading", url);
   const body = await fetch(url);
   return body.text();
 };
