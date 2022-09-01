@@ -129,7 +129,7 @@ export class DuckDBWASMConnection extends DuckDBCommon {
     const table = await this.connection?.query(sql);
     if (table?.numRows != null) {
       const rows = unwrapTable(table);
-      console.log(rows);
+      // console.log(rows);
       return {
         // Normalize the data from its default proxied form
         rows,

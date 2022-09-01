@@ -180,6 +180,7 @@ const Explores = styled.div`
 
 const List = styled.ul`
   padding-inline-start: 15px;
+  line-height: 22px;
 `;
 
 interface ListItemProps {
