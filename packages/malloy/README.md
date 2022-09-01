@@ -10,9 +10,9 @@ This package facilitates building the Malloy language - or the usage of data mod
 
 ```
 import { Runtime } from "@malloy/malloy";
-import { BigQueryConnection } from "@malloydata/db-bigquery";
+import { BigQueryConnection } from "@malloydata/db-duckdb";
 
-const connection = new BigQueryConnection("bigquery");
+const connection = new DuckDBConnection("duckdb-example");
 const runtime = new Runtime(files, connection);
 
 runtime.loadModel("source: flights is table('duckdb:data/flights.parquet')")
@@ -22,11 +22,11 @@ runner.run() // <- executes query, returns JSON of results
 
 ```
 
-Note: These APIs are still in beta and subject to change!
+Note: These APIs are still in beta and subject to change.
 
 ## What's actually going on here?
 
-The `@malloydata/malloy` is basically a compiler that takes a few things as input - 1. Some text that defines a Malloy data model 2. Some text that defines a Malloy query and 3. Some schema information about the table(s) the query might run against. The compiler works by attempting to compile the data model, and stopping compilation when it needs to ask for things it requires to continue compilation.
+The `@malloydata/malloy` is basically a compiler that takes a few things as input - 1. Some text that defines a Malloy data model 2. Some text that defines a Malloy query and 3. Some schema information about the table(s) the query might run against. The compiler works by attempting to compile the data model, and stopping compilation when it needs to ask for things it requires to continue compilation. This "loop" is then re-initiated when you provide the compiler with the additional information, until a point when the compiler has all the information it needs to compile a Malloy query based on a data model.
 
 In practice, much of this loop is handled by various database plugins:
 
@@ -36,4 +36,4 @@ In practice, much of this loop is handled by various database plugins:
 
 ## Do you have any examples?
 
-You can find a simple example of writing a CLI for executing Malloy queries [here](https://github.com/looker-open-source/malloy/tree/main/demo/malloy-demo-bq-cli)
+You can find a (very) simple example of writing a CLI for executing Malloy queries [here](https://github.com/looker-open-source/malloy/tree/main/demo/malloy-demo-bq-cli)
