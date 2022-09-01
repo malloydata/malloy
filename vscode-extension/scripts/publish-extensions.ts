@@ -71,7 +71,7 @@ async function doPublish(version: string) {
 
     await publishVSIX(packagePath, {
       githubBranch: "main",
-      preRelease,
+      preRelease: preRelease,
       useYarn: false,
       pat: process.env.VSCE_PAT,
     });
