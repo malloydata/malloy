@@ -670,8 +670,9 @@ export class BigQueryConnection
     sqlCommand: string,
     createQueryJobOptions?: Query,
     getQueryResultsOptions?: QueryResultsOptions
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ): Promise<PagedResponse<any, Query, bigquery.IGetQueryResultsResponse>> {
+  ): Promise<
+    PagedResponse<RowMetadata, Query, bigquery.IGetQueryResultsResponse>
+  > {
     try {
       const job = await this.createBigQueryJob({
         query: sqlCommand,
