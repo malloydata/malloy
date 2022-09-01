@@ -251,6 +251,7 @@ export class BigQueryConnection
         ? jobResult[2].totalRows
         : "0");
 
+      // TODO need to probably surface the cause of the schema not present error
       if (jobResult[2]?.schema === undefined) {
         throw new Error("Schema not present");
       }
@@ -666,6 +667,9 @@ export class BigQueryConnection
     return { schemas, errors };
   }
 
+  // TODO this needs to extend the wait for results using a timeout set by the user,
+  // and probably needs to loop to check for results - BQ docs now say that after ~2min of waiting,
+  // no matter what you set for timeoutMs, they will probably just return.
   private async createBigQueryJobAndGetResults(
     sqlCommand: string,
     createQueryJobOptions?: Query,
@@ -679,6 +683,7 @@ export class BigQueryConnection
         ...createQueryJobOptions,
       });
 
+      // TODO we should check if this is still required?
       // We do a simple retry-loop here, as a temporary fix for a transient
       // error in which sometimes requesting results from a job yields an
       // access denied error. It seems that in these cases, simply trying again
@@ -688,6 +693,7 @@ export class BigQueryConnection
       for (let retries = 0; retries < 3; retries++) {
         try {
           return await job.getQueryResults({
+            timeoutMs: 1000 * 60 * 2, // TODO - this requires some rethinking, and is a hack to resolve some issues. talk to @bporterfield
             ...getQueryResultsOptions,
           });
         } catch (fetchError) {
