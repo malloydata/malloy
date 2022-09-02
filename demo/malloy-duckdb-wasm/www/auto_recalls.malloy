@@ -3,6 +3,10 @@ source: recalls is table('duckdb:data/auto_recalls.csv') {
     recall_count is count()
     percent_of_recalls is recall_count/all(recall_count)*100
 
+    recall_url is concat(
+      'https:/‌/‌www.nhtsa.gov/‌recalls?ntsaid=',
+      `NHTSA ID`
+    )
   query: by_manufacturer is {
     group_by: `Manufacturer`
     aggregate:
@@ -24,22 +28,19 @@ source: recalls is table('duckdb:data/auto_recalls.csv') {
     order_by: recall_year
   }
 
+  query: recent_recalls is {
+    group_by:
+      recall_date is `Report Received Date`::string
+      `NHTSA ID`
+      recall_url
+      Manufacturer
+      Subject
+    order_by: 1 desc
+    limit: 10
+  }
   query: recall_dashboard is by_manufacturer + {
     nest: by_year_line_chart is by_year + {group_by: `Recall Type`}
     nest: by_type
-    nest: recent_recalls is detail +{
-      order_by: `Report Received Date` desc
-      limit: 10
-    }
-  }
-
-  query: detail is {
-    group_by:
-      `NHTSA ID`,
-      `Report Received Date`
-      Manufacturer,
-      Subject,
-      `Recall Type`
-      `Recall Description`
+    nest: recent_recalls
   }
 }
