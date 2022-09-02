@@ -287,7 +287,7 @@ class BetaExpression extends Testable {
       const aStruct = this.internalModel.contents.ab;
       if (aStruct.type === "struct") {
         const tstFS = new StaticSpace(aStruct);
-        const exprDef = exprAst.getExpression({ in: tstFS, out: tstFS });
+        const exprDef = exprAst.getExpression(tstFS);
         if (inspectCompile) {
           console.log("EXPRESSION: ", pretty(exprDef));
         }

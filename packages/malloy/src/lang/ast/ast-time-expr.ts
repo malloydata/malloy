@@ -23,7 +23,7 @@ import {
   TimeFieldType,
   mkExpr,
 } from "../../model/malloy_types";
-import { FSPair } from "../field-space";
+import { FieldSpace } from "../field-space";
 import {
   ExpressionDef,
   BinaryBoolean,
@@ -80,7 +80,7 @@ export class ExprGranularTime extends ExpressionDef {
     return true;
   }
 
-  getExpression(fs: FSPair): ExprValue {
+  getExpression(fs: FieldSpace): ExprValue {
     const timeframe = this.units;
     const exprVal = this.expr.getExpression(fs);
     if (isTimeFieldType(exprVal.dataType)) {
@@ -105,7 +105,7 @@ export class ExprGranularTime extends ExpressionDef {
     return errorFor(`granularity typecheck`);
   }
 
-  apply(fs: FSPair, op: string, left: ExpressionDef): ExprValue {
+  apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
     const rangeType = this.getExpression(fs).dataType;
     const _valueType = left.getExpression(fs).dataType;
     const granularityType = isDateUnit(this.units) ? "date" : "timestamp";
@@ -133,7 +133,7 @@ export class ExprGranularTime extends ExpressionDef {
   }
 
   protected timestampRange(
-    fs: FSPair,
+    fs: FieldSpace,
     op: string,
     expr: ExpressionDef
   ): ExprValue {
@@ -148,7 +148,11 @@ export class ExprGranularTime extends ExpressionDef {
     return range.apply(fs, op, expr);
   }
 
-  protected dateRange(fs: FSPair, op: string, expr: ExpressionDef): ExprValue {
+  protected dateRange(
+    fs: FieldSpace,
+    op: string,
+    expr: ExpressionDef
+  ): ExprValue {
     const begin = this.getExpression(fs);
     const beginTime = new ExprTime("date", begin.value, begin.aggregate);
     const endAt = timeOffset("date", begin.value, "+", ["1"], this.units);
@@ -267,7 +271,7 @@ export class GranularLiteral extends ExpressionDef {
     return undefined;
   }
 
-  apply(fs: FSPair, op: string, left: ExpressionDef): ExprValue {
+  apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
     const lhs = left.getExpression(fs);
 
     if (isTimeFieldType(lhs.dataType)) {
@@ -275,7 +279,7 @@ export class GranularLiteral extends ExpressionDef {
       if (lhs.dataType === "date" && !this.timeType) {
         rangeType = "date";
       }
-      const dialect = fs.in.getDialect();
+      const dialect = fs.getDialect();
       const range = new Range(
         new ExprTime(
           rangeType,
@@ -291,12 +295,12 @@ export class GranularLiteral extends ExpressionDef {
     return super.apply(fs, op, left);
   }
 
-  getExpression(fs: FSPair): ExprValue {
+  getExpression(fs: FieldSpace): ExprValue {
     const dataType = this.timeType || "date";
     const value: TimeResult = {
       dataType,
       aggregate: false,
-      value: [fs.in.getDialect().sqlLiteralTime(this.moment, dataType, "UTC")],
+      value: [fs.getDialect().sqlLiteralTime(this.moment, dataType, "UTC")],
     };
     // Literals with date resolution can be used as timestamps or dates,
     // this is the third attempt to make that work. It still feels like
@@ -320,7 +324,7 @@ export class GranularLiteral extends ExpressionDef {
 export class ExprNow extends ExpressionDef {
   elementType = "timestamp";
 
-  getExpression(_fs: FSPair): ExprValue {
+  getExpression(_fs: FieldSpace): ExprValue {
     return {
       dataType: "timestamp",
       aggregate: false,
@@ -341,7 +345,7 @@ export class ExprDuration extends ExpressionDef {
     super({ n });
   }
 
-  apply(fs: FSPair, op: string, left: ExpressionDef): ExprValue {
+  apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
     const lhs = left.getExpression(fs);
     this.typeCheck(this, lhs);
     if (isTimeFieldType(lhs.dataType) && (op === "+" || op === "-")) {
@@ -386,7 +390,7 @@ export class ExprDuration extends ExpressionDef {
     return super.apply(fs, op, left);
   }
 
-  getExpression(_fs: FSPair): ExprValue {
+  getExpression(_fs: FieldSpace): ExprValue {
     return {
       dataType: "duration",
       aggregate: false,
@@ -402,7 +406,7 @@ export class ExprCompare extends BinaryBoolean<Comparison> {
     this.legalChildTypes = compareTypes[op];
   }
 
-  getExpression(fs: FSPair): ExprValue {
+  getExpression(fs: FieldSpace): ExprValue {
     if (!this.right.granular()) {
       const rhs = this.right.requestExpression(fs);
       if (rhs && isGranularResult(rhs)) {
@@ -443,15 +447,15 @@ export class PartialCompare extends ExpressionDef {
     return this.right.granular();
   }
 
-  apply(fs: FSPair, op: string, expr: ExpressionDef): ExprValue {
+  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
     return this.right.apply(fs, this.op, expr);
   }
 
-  requestExpression(_fs: FSPair): ExprValue | undefined {
+  requestExpression(_fs: FieldSpace): ExprValue | undefined {
     return undefined;
   }
 
-  getExpression(_fs: FSPair): ExprValue {
+  getExpression(_fs: FieldSpace): ExprValue {
     this.log(`Partial comparison does not have a value`);
     return errorFor("no value for partial compare");
   }
@@ -472,7 +476,7 @@ export class ForRange extends ExpressionDef {
     super({ from, duration, timeframe });
   }
 
-  apply(fs: FSPair, op: string, expr: ExpressionDef): ExprValue {
+  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
     const startV = this.from.getExpression(fs);
     const checkV = expr.getExpression(fs);
     if (!this.typeCheck(expr, checkV)) {
@@ -525,11 +529,11 @@ export class ForRange extends ExpressionDef {
     return new Range(rangeStart, rangeEnd).apply(fs, op, applyTo);
   }
 
-  requestExpression(_fs: FSPair): ExprValue | undefined {
+  requestExpression(_fs: FieldSpace): ExprValue | undefined {
     return undefined;
   }
 
-  getExpression(_fs: FSPair): ExprValue {
+  getExpression(_fs: FieldSpace): ExprValue {
     this.log("A Range is not a value");
     return errorFor("range has no value");
   }
@@ -562,7 +566,7 @@ export class ExprTimeExtract extends ExpressionDef {
     super({ args });
   }
 
-  getExpression(fs: FSPair): ExprValue {
+  getExpression(fs: FieldSpace): ExprValue {
     const extractTo = ExprTimeExtract.extractor(this.extractText);
     if (extractTo) {
       if (this.args.length !== 1) {
@@ -630,7 +634,7 @@ export class ExprFunc extends ExpressionDef {
     super({ args });
   }
 
-  getExpression(fs: FSPair): ExprValue {
+  getExpression(fs: FieldSpace): ExprValue {
     let anyAggregate = false;
     let collectType: FieldValueType | undefined;
     const funcCall: Fragment[] = [`${this.name}(`];
@@ -648,7 +652,7 @@ export class ExprFunc extends ExpressionDef {
     }
     funcCall.push(")");
 
-    const funcInfo = fs.in.getDialect().getFunctionInfo(this.name);
+    const funcInfo = fs.getDialect().getFunctionInfo(this.name);
     const dataType = funcInfo?.returnType ?? collectType ?? "number";
     return {
       dataType: dataType,
