@@ -19,6 +19,7 @@ import {
   LogMessage,
   MalloyTranslator,
 } from "./lang";
+import { DocumentHelpContext } from "./lang/parse-tree-walkers/document-help-context-walker";
 import {
   CompiledQuery,
   FieldBooleanDef,
@@ -796,6 +797,13 @@ export class Parse {
     return (this.translator.completions(position).completions || []).map(
       (completion) => new DocumentCompletion(completion)
     );
+  }
+
+  public helpContext(position: {
+    line: number;
+    character: number;
+  }): DocumentHelpContext | undefined {
+    return this.translator.helpContext(position).helpContext;
   }
 }
 

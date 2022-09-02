@@ -79,14 +79,16 @@ class DocumentCompletionWalker implements MalloyListener {
     start: { line: number; character: number };
     end: { line: number; character: number };
   }): boolean {
-    return (
-      range.start.line <= this.position.line &&
-      range.end.line >= this.position.line &&
-      (this.position.line !== range.start.line ||
-        this.position.character >= range.start.character) &&
-      (this.position.line !== range.end.line ||
-        this.position.character <= range.end.character)
-    );
+    const { start, end } = range;
+    const afterStart =
+      this.position.line > start.line ||
+      (this.position.line === start.line &&
+        this.position.character >= start.character);
+    const beforeEnd =
+      this.position.line < end.line ||
+      (this.position.line === end.line &&
+        this.position.character <= end.character);
+    return afterStart && beforeEnd;
   }
 
   enterExploreProperties(ctx: parser.ExplorePropertiesContext) {

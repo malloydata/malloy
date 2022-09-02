@@ -62,6 +62,7 @@ async function doPublish(version: string) {
   console.log(
     `Publishing ${version} extensions with version code: ${versionCode}`
   );
+  console.log(`Pre-release: ${preRelease}`);
   for (const target in targetKeytarMap) {
     const packagePath = await doPackage(
       target as Target,
@@ -71,7 +72,7 @@ async function doPublish(version: string) {
 
     await publishVSIX(packagePath, {
       githubBranch: "main",
-      preRelease,
+      preRelease: preRelease,
       useYarn: false,
       pat: process.env.VSCE_PAT,
     });

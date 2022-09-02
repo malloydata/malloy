@@ -52,6 +52,10 @@ import {
   DocumentCompletion,
   walkForDocumentCompletions,
 } from "./parse-tree-walkers/document-completion-walker";
+import {
+  DocumentHelpContext,
+  walkForDocumentHelpContext,
+} from "./parse-tree-walkers/document-help-context-walker";
 import { ReferenceList } from "./reference-list";
 
 class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
@@ -150,6 +154,11 @@ interface Completions extends NeededData, ErrorResponse, FinalResponse {
   completions: DocumentCompletion[];
 }
 type CompletionsResponse = Partial<Completions>;
+
+interface HelpContext extends NeededData, ErrorResponse, FinalResponse {
+  helpContext: DocumentHelpContext | undefined;
+}
+type HelpContextResponse = Partial<HelpContext>;
 
 interface TranslatedResponseData
   extends NeededData,
@@ -595,6 +604,36 @@ class CompletionsStep implements TranslationStep {
   }
 }
 
+class HelpContextStep implements TranslationStep {
+  constructor(readonly parseStep: ParseStep) {}
+
+  step(
+    that: MalloyTranslation,
+    position?: { line: number; character: number }
+  ): HelpContextResponse {
+    const tryParse = this.parseStep.step(that);
+    if (!tryParse.parse) {
+      return tryParse;
+    } else {
+      let helpContext: DocumentHelpContext | undefined;
+      if (position !== undefined) {
+        try {
+          helpContext = walkForDocumentHelpContext(
+            tryParse.parse.root,
+            position
+          );
+        } catch {
+          /* Do nothing */
+        }
+      }
+      return {
+        ...tryParse,
+        helpContext,
+      };
+    }
+  }
+}
+
 class TranslateStep implements TranslationStep {
   response?: TranslateResponse;
   constructor(readonly astStep: ASTStep) {}
@@ -657,6 +696,7 @@ export abstract class MalloyTranslation {
   readonly astStep: ASTStep;
   readonly metadataStep: MetadataStep;
   readonly completionsStep: CompletionsStep;
+  readonly helpContextStep: HelpContextStep;
   readonly translateStep: TranslateStep;
 
   readonly references: ReferenceList;
@@ -681,6 +721,7 @@ export abstract class MalloyTranslation {
     this.parseStep = new ParseStep();
     this.metadataStep = new MetadataStep(this.parseStep);
     this.completionsStep = new CompletionsStep(this.parseStep);
+    this.helpContextStep = new HelpContextStep(this.parseStep);
     this.importsAndTablesStep = new ImportsAndTablesStep(this.parseStep);
     this.astStep = new ASTStep(this.importsAndTablesStep);
     this.translateStep = new TranslateStep(this.astStep);
@@ -801,6 +842,13 @@ export abstract class MalloyTranslation {
     character: number;
   }): CompletionsResponse {
     return this.completionsStep.step(this, position);
+  }
+
+  helpContext(position: {
+    line: number;
+    character: number;
+  }): HelpContextResponse {
+    return this.helpContextStep.step(this, position);
   }
 
   defaultLocation(): DocumentLocation {

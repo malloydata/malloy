@@ -1,0 +1,22 @@
+{
+  "extends": "../tsconfig.packages.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "composite": true
+  },
+  "references": [
+    {
+      "path": "../packages/malloy"
+    },
+    {
+      "path": "../packages/malloy-db-bigquery"
+    },
+    {
+      "path": "../packages/malloy-db-postgres"
+    },
+    {
+      "path": "../packages/malloy-db-duckdb"
+    }
+  ]
+}
