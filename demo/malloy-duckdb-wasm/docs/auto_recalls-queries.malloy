@@ -1,21 +1,25 @@
 import "./auto_recalls.malloy"
 
-// -- Recent Honda Recalls
-query: recent_recalls is recalls-> recent_recalls {
+// --
+// Name: Recent Honda Recalls
+query: recalls-> recent_recalls {
   where: Manufacturer ~ r'Honda'
 }
 
-// -- Brake Recall Dashboard
-query: brakes_dashboard is recalls-> recall_dashboard {
+// --
+// Name: Brake Recall Dashboard
+query: recalls-> recall_dashboard {
   where:`Recall Description` ~r'brake'
 }
 
-// -- Overall Recall Dashboard
-query: over_dashboard is recalls->recall_dashboard
+// --
+// Name: Overall Recall Dashboard
+query: recalls->recall_dashboard
 
 
-// -- Manufactuurer year
-query: gm_ford_chrysler_line_chart is recalls-> {
+// --
+// Name: Manufacturer year
+query: recalls-> {
   where: Manufacturer ~ r'General Motors|Ford Motor|Chry.*US'
   group_by: recall_year is year(`Report Received Date`)
   aggregate:
@@ -25,14 +29,16 @@ query: gm_ford_chrysler_line_chart is recalls-> {
   limit: 3000
 }
 
-// -- By Component
-query: by_component is recalls-> {
+// --
+// Name: By Component
+query: recalls-> {
   group_by: Component
   aggregate: recall_count, percent_of_recalls
 }
 
-// -- Component Dashboard
-query: component_dashboard is recalls-> {
+// --
+// Name: Component Dashboard
+query: recalls-> {
   group_by: Component
   aggregate: recall_count, percent_of_recalls
   nest: by_year_line_chart is by_year

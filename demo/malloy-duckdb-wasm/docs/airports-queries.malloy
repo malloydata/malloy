@@ -4,8 +4,9 @@ query: select_start is airports -> {
   project: *
 }
 
-// -- Region Dashboard
-query: region_dashboard is airports -> {
+// --
+// Name: Region Dashboard
+query: airports -> {
   group_by: faa_region
   aggregate: airport_count
   nest:
@@ -13,28 +14,31 @@ query: region_dashboard is airports -> {
     by_facility_type
 }
 
-// -- By District
-query: by_district is airports-> {
+// --
+// Name: By District
+query: airports-> {
   group_by: faa_dist
   aggregate: airport_count, percent_of_all_airports
 }
 
-// --  New York City District Airports
-query: new_york_airports is airports -> {
+// --
+// Name: New York City District Airports
+query: airports -> {
   where: faa_dist = 'NYC'
   project: *
 }
 
-// -- 
-query: most_heliports is airports -> {
+// --
+// Name: Most Heliports
+query: airports -> {
   group_by: state, county
   aggregate: airport_count, heliport_count
   order_by: heliport_count desc
 }
 
 // --
-
-query: by_district_top_county is airports-> {
+// Name: By District Top county
+query: airports-> {
   group_by: faa_dist
   aggregate: airport_count, percent_of_all_airports
   nest: by_county is {
