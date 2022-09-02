@@ -12,5 +12,12 @@
     "dataUrl": "dist/usa_names.parquet",
     "modelPath": "./names.malloy",
     "queryPath": "./names-queries.malloy"
+  },
+  {
+    "name": "Auto Recalls",
+    "dataPath": "data/auto_recalls.csv",
+    "dataUrl": "dist/auto_recalls.csv",
+    "modelPath": "./auto_recalls.malloy",
+    "queryPath": "./auto_recalls-queries.malloy"
   }
 ]

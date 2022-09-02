@@ -1,0 +1,45 @@
+source: recalls is table('duckdb:data/auto_recalls.csv') {
+  declare:
+    recall_count is count()
+    percent_of_recalls is recall_count/all(recall_count)*100
+
+  query: by_manufacturer is {
+    group_by: `Manufacturer`
+    aggregate: 
+      recall_count
+      percent_of_recalls
+  }
+
+  query: by_type is {
+    group_by: `Recall Type`
+    aggregate: 
+      recall_count
+      percent_of_recalls
+  }
+
+  query: by_year is {
+    group_by: recall_year is `Report Received Date`.year
+    aggregate: 
+      recall_count
+    order_by: recall_year
+  }
+
+  query: recall_dashboard is by_manufacturer + {
+    nest: by_year_line_chart is by_year + {group_by: `Recall Type`}   
+    nest: by_type
+    nest: recent_recalls is detail +{
+      order_by: `Report Received Date` desc
+      limit: 10
+    }
+  }
+
+  query: detail is {
+    group_by: 
+      `NHTSA ID`, 
+      `Report Received Date`
+      Manufacturer,
+      Subject, 
+      `Recall Type`
+      `Recall Description`
+  }
+}

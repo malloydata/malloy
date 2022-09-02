@@ -1,0 +1,20 @@
+import "./auto_recalls.malloy"
+
+// -- Overall Recall Dashboard
+query: over_dashboard is recalls->recall_dashboard
+
+// -- Brake Recall Dashboard
+query: brakes_dashboard is recalls-> recall_dashboard {
+  where:`Recall Description` ~r'brake'
+}
+
+// -- Manufactuurer year
+query: gm_ford_chrysler_line_chart is recalls-> {
+  where: Manufacturer ~ r'General|Ford|Chry'
+  group_by: recall_year is `Report Received Date`.year
+  aggregate: 
+    recall_count
+  group_by: Manufacturer
+  order_by: recall_year
+  limit: 3000
+}
