@@ -15,15 +15,13 @@ import * as model from "../../model/malloy_types";
 import { Segment as ModelQuerySegment } from "../../model/malloy_query";
 import {
   FieldSpace,
-  FSPair,
   ReduceFieldSpace,
   ProjectFieldSpace,
   DynamicSpace,
   QuerySpace,
   IndexFieldSpace,
   LookupResult,
-  QueryOperationSpace,
-  fsPair,
+  ResultSpace,
 } from "../field-space";
 import { MessageLogger } from "../parse-log";
 import { MalloyTranslation } from "../parse-malloy";
@@ -569,7 +567,7 @@ export class RefinedExplore extends Mallobj {
       fs.addParameters(pList);
     }
     if (primaryKey) {
-      const keyDef = primaryKey.field.getField({ in: fs, out: fs });
+      const keyDef = primaryKey.field.getField(fs);
       if (keyDef.error) {
         primaryKey.log(keyDef.error);
       }
@@ -580,7 +578,7 @@ export class RefinedExplore extends Mallobj {
     let moreFilters = false;
     for (const filter of filters) {
       for (const el of filter.list) {
-        const fc = el.filterExpression({ in: fs, out: fs });
+        const fc = el.filterExpression(fs);
         if (fc.aggregate) {
           el.log("Can't use aggregate computations in top level filters");
         } else {
@@ -831,7 +829,7 @@ export class QuerySource extends Mallobj {
 export abstract class Join extends MalloyElement {
   abstract name: ModelEntryReference;
   abstract structDef(): model.StructDef;
-  abstract fixupJoinOn(outer: FSPair, inStruct: model.StructDef): void;
+  abstract fixupJoinOn(outer: FieldSpace, inStruct: model.StructDef): void;
 }
 
 export class KeyJoin extends Join {
@@ -864,7 +862,7 @@ export class KeyJoin extends Join {
     return joinStruct;
   }
 
-  fixupJoinOn(outer: FSPair, inStruct: model.StructDef): void {
+  fixupJoinOn(outer: FieldSpace, inStruct: model.StructDef): void {
     const exprX = this.keyExpr.getExpression(outer);
     if (inStruct.primaryKey) {
       const pkey = inStruct.fields.find(
@@ -914,7 +912,7 @@ export class ExpressionJoin extends Join {
   }
 
   fixupJoinOn(
-    outer: FSPair,
+    outer: FieldSpace,
     inStruct: model.StructDef
   ): model.Expr | undefined {
     if (this.expr == undefined) {
@@ -1019,7 +1017,7 @@ export class FilterElement extends MalloyElement {
     super({ expr });
   }
 
-  filterExpression(fs: FSPair): model.FilterExpression {
+  filterExpression(fs: FieldSpace): model.FilterExpression {
     const exprVal = this.expr.getExpression(fs);
     if (exprVal.dataType !== "boolean") {
       this.expr.log("Filter expression must have boolean value");
@@ -1050,7 +1048,7 @@ export class Filter extends ListOf<FilterElement> {
     this.elementType = isHaving ? "having" : "where";
   }
 
-  getFilterList(fs: FSPair): model.FilterExpression[] {
+  getFilterList(fs: FieldSpace): model.FilterExpression[] {
     const checked: model.FilterExpression[] = [];
     for (const oneElement of this.list) {
       const fExpr = oneElement.filterExpression(fs);
@@ -1120,8 +1118,8 @@ export class FieldName extends MalloyElement {
     return this.refString;
   }
 
-  getField(fs: FSPair): LookupResult {
-    return fs.in.lookup([this]);
+  getField(fs: FieldSpace): LookupResult {
+    return fs.lookup([this]);
   }
 }
 
@@ -1221,30 +1219,28 @@ export class Aggregate extends ListOf<QueryItem> {
   }
 }
 
-interface QueryExecutor {
+interface Executor {
+  inputFS: QuerySpace;
+  resultFS: ResultSpace;
   execute(qp: QueryProperty): void;
   finalize(refineFrom: model.PipeSegment | undefined): model.PipeSegment;
-  queryFS: QueryOperationSpace;
 }
 
-class ReduceExecutor implements QueryExecutor {
-  inputFS: FieldSpace;
-  queryFS: QuerySpace;
+class ReduceExecutor implements Executor {
+  inputFS: QuerySpace;
+  resultFS: ResultSpace;
   filters: model.FilterExpression[] = [];
   order?: Top | Ordering;
   limit?: number;
   refinedInputFS?: DynamicSpace;
 
-  constructor(baseFS: FieldSpace, out?: QuerySpace) {
-    this.inputFS = baseFS;
-    this.queryFS = out || new ReduceFieldSpace(baseFS);
+  constructor(baseFS: FieldSpace) {
+    this.resultFS = this.getResultSpace(baseFS);
+    this.inputFS = this.resultFS.exprSpace;
   }
 
-  private get qfs(): FSPair {
-    return {
-      in: this.queryFS.inputFS(),
-      out: this.queryFS,
-    };
+  getResultSpace(fs: FieldSpace): ResultSpace {
+    return new ReduceFieldSpace(fs);
   }
 
   execute(qp: QueryProperty): void {
@@ -1253,11 +1249,11 @@ class ReduceExecutor implements QueryExecutor {
       qp instanceof Aggregate ||
       qp instanceof Nests
     ) {
-      this.queryFS.addQueryItems(...qp.list);
+      this.resultFS.addQueryItems(...qp.list);
     } else if (isNestedQuery(qp)) {
-      this.queryFS.addQueryItems(qp);
+      this.resultFS.addQueryItems(qp);
     } else if (qp instanceof Filter) {
-      this.filters.push(...qp.getFilterList(this.qfs));
+      this.filters.push(...qp.getFilterList(this.inputFS));
     } else if (qp instanceof Top) {
       if (this.limit) {
         qp.log("Query operation already limited");
@@ -1285,7 +1281,7 @@ class ReduceExecutor implements QueryExecutor {
       }
     } else if (qp instanceof Joins || qp instanceof DeclareFields) {
       for (const qel of qp.list) {
-        this.queryFS.extendSource(qel);
+        this.inputFS.extendSource(qel);
       }
     }
   }
@@ -1312,13 +1308,13 @@ class ReduceExecutor implements QueryExecutor {
     }
 
     if (this.order instanceof Top) {
-      const topBy = this.order.getBy(this.qfs);
+      const topBy = this.order.getBy(this.inputFS);
       if (topBy) {
         to.by = topBy;
       }
     }
     if (this.order instanceof Ordering) {
-      to.orderBy = this.order.getOrderBy(this.qfs);
+      to.orderBy = this.order.getOrderBy(this.inputFS);
     }
 
     const oldFilters = from?.filterList || [];
@@ -1335,11 +1331,11 @@ class ReduceExecutor implements QueryExecutor {
       if (model.isReduceSegment(fromSeg)) {
         from = fromSeg;
       } else {
-        this.queryFS.log(`Can't refine reduce with ${fromSeg.type}`);
+        this.inputFS.result.log(`Can't refine reduce with ${fromSeg.type}`);
         return ErrorFactory.reduceSegment;
       }
     }
-    const reduceSegment = this.queryFS.getPipeSegment(from);
+    const reduceSegment = this.resultFS.getQuerySegment(from);
     this.refineFrom(from, reduceSegment);
 
     return reduceSegment;
@@ -1347,13 +1343,12 @@ class ReduceExecutor implements QueryExecutor {
 }
 
 class ProjectExecutor extends ReduceExecutor {
-  constructor(baseFS: FieldSpace) {
-    super(baseFS, new ProjectFieldSpace(baseFS));
+  getResultSpace(fs: FieldSpace): ProjectFieldSpace {
+    return new ProjectFieldSpace(fs);
   }
-
   execute(qp: QueryProperty): void {
     if (qp instanceof ProjectStatement) {
-      this.queryFS.addMembers(qp.list);
+      this.resultFS.addMembers(qp.list);
     } else if (
       (qp instanceof Filter && qp.elementType === "having") ||
       qp instanceof Measures ||
@@ -1371,47 +1366,40 @@ class ProjectExecutor extends ReduceExecutor {
       if (model.isProjectSegment(fromSeg)) {
         from = fromSeg;
       } else {
-        this.queryFS.log(`Can't refine project with ${fromSeg.type}`);
+        this.resultFS.log(`Can't refine project with ${fromSeg.type}`);
         return ErrorFactory.projectSegment;
       }
     }
-    const projectSegment = this.queryFS.getPipeSegment(from);
+    const projectSegment = this.resultFS.getQuerySegment(from);
     this.refineFrom(from, projectSegment);
 
     return projectSegment;
   }
 }
 
-class IndexExecutor implements QueryExecutor {
-  inputFS: FieldSpace;
-  queryFS: IndexFieldSpace;
+class IndexExecutor implements Executor {
   filters: model.FilterExpression[] = [];
   limit?: Limit;
   indexOn?: FieldName;
   sample?: model.Sampling;
+  resultFS: IndexFieldSpace;
+  inputFS: QuerySpace;
 
-  constructor(baseFS: FieldSpace) {
-    this.inputFS = baseFS;
-    this.queryFS = new IndexFieldSpace(baseFS);
-  }
-
-  private get qfs(): FSPair {
-    return {
-      in: this.queryFS.inputFS(),
-      out: this.queryFS,
-    };
+  constructor(inputFS: FieldSpace) {
+    this.resultFS = new IndexFieldSpace(inputFS);
+    this.inputFS = this.resultFS.exprSpace;
   }
 
   execute(qp: QueryProperty): void {
     if (qp instanceof Filter) {
-      this.filters.push(...qp.getFilterList(this.qfs));
+      this.filters.push(...qp.getFilterList(this.inputFS));
     } else if (qp instanceof Limit) {
       if (this.limit) {
         this.limit.log("Ignored, too many limit: statements");
       }
       this.limit = qp;
     } else if (qp instanceof Index) {
-      this.queryFS.addMembers(qp.fields.list);
+      this.resultFS.addMembers(qp.fields.list);
       if (qp.weightBy) {
         if (this.indexOn) {
           this.indexOn.log("Ignoring previous BY");
@@ -1427,11 +1415,11 @@ class IndexExecutor implements QueryExecutor {
 
   finalize(from: model.PipeSegment | undefined): model.PipeSegment {
     if (from && from.type !== "index") {
-      this.queryFS.log(`Can't refine index with ${from.type}`);
+      this.resultFS.log(`Can't refine index with ${from.type}`);
       return ErrorFactory.indexSegment;
     }
 
-    const indexSegment = this.queryFS.getPipeSegment(from);
+    const indexSegment = this.resultFS.getPipeSegment(from);
 
     const oldFilters = from?.filterList || [];
     if (this.filters.length > 0 && !oldFilters) {
@@ -1530,7 +1518,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
     this.refineThis = existing;
   }
 
-  private getExecutor(baseFS: FieldSpace): QueryExecutor {
+  private getExecutor(baseFS: FieldSpace): Executor {
     switch (this.computeType()) {
       case "aggregate":
       case "grouping":
@@ -1545,9 +1533,9 @@ export class QOPDesc extends ListOf<QueryProperty> {
   getOp(inputFS: FieldSpace, forPipeline: PipelineDesc | null): OpDesc {
     const qex = this.getExecutor(inputFS);
     if (forPipeline?.nestedInQuerySpace) {
-      qex.queryFS.nestParent = forPipeline.nestedInQuerySpace;
+      qex.inputFS.nestParent = forPipeline.nestedInQuerySpace;
     }
-    qex.queryFS.astEl = this;
+    qex.resultFS.astEl = this;
     for (const qp of this.list) {
       qex.execute(qp);
     }
@@ -1686,7 +1674,7 @@ export class OrderBy extends MalloyElement {
     return typeof this.field === "number" ? this.field : this.field.refString;
   }
 
-  getOrderBy(_fs: FSPair): model.OrderBy {
+  getOrderBy(_fs: FieldSpace): model.OrderBy {
     // TODO jump-to-definition `fs` cannot currently `lookup` fields in the output space
     // if (this.field instanceof FieldName) {
     //   const entry = this.field.getField(_fs);
@@ -1707,7 +1695,7 @@ export class Ordering extends ListOf<OrderBy> {
     super("ordering", list);
   }
 
-  getOrderBy(fs: FSPair): model.OrderBy[] {
+  getOrderBy(fs: FieldSpace): model.OrderBy[] {
     return this.list.map((el) => el.getOrderBy(fs));
   }
 }
@@ -1942,7 +1930,7 @@ export class FullQuery extends TurtleHeadedPipe {
       };
     }
     if (this.turtleName) {
-      const { error } = this.turtleName.getField(fsPair(pipeFs));
+      const { error } = this.turtleName.getField(pipeFs);
       if (error) this.log(error);
       const name = this.turtleName.refString;
       const { pipeline, location } = this.expandTurtle(name, structDef);
@@ -1974,7 +1962,7 @@ export class TurtleDecl extends TurtleHeadedPipe {
     super();
   }
 
-  getPipeline(fs: FSPair): model.Pipeline {
+  getPipeline(fs: FieldSpace): model.Pipeline {
     const modelPipe: model.Pipeline = { pipeline: [] };
     if (this.turtleName) {
       const headEnt = this.turtleName.getField(fs);
@@ -1985,7 +1973,7 @@ export class TurtleDecl extends TurtleHeadedPipe {
       } else if (headEnt.found instanceof QueryField) {
         const headDef = headEnt.found.getQueryFieldDef(fs);
         if (isTurtle(headDef)) {
-          const newPipe = this.refinePipeline(fs.in, headDef);
+          const newPipe = this.refinePipeline(fs, headDef);
           modelPipe.pipeline = [...newPipe.pipeline];
           reportWrongType = false;
         }
@@ -1999,7 +1987,7 @@ export class TurtleDecl extends TurtleHeadedPipe {
       );
     }
 
-    let appendInput = fs.in;
+    let appendInput = fs;
     if (modelPipe.pipeline.length > 0) {
       let endStruct = appendInput.structDef();
       for (const existingSeg of modelPipe.pipeline) {
@@ -2013,10 +2001,9 @@ export class TurtleDecl extends TurtleHeadedPipe {
   }
 
   getFieldDef(
-    inSpace: FieldSpace,
+    fs: FieldSpace,
     nestParent: QuerySpace | undefined
   ): model.TurtleDef {
-    const fs = fsPair(inSpace);
     if (nestParent) {
       this.nestedInQuerySpace = nestParent;
     }
@@ -2129,7 +2116,7 @@ export class Top extends MalloyElement {
     this.has({ by });
   }
 
-  getBy(fs: FSPair): model.By | undefined {
+  getBy(fs: FieldSpace): model.By | undefined {
     if (this.by) {
       if (this.by instanceof FieldName) {
         // TODO jump-to-definition `fs` cannot currently `lookup` fields in the output space

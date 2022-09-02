@@ -14,7 +14,6 @@
 import * as model from "../model/malloy_types";
 import {
   FieldSpace,
-  FSPair,
   DynamicSpace,
   StaticSpace,
   QuerySpace,
@@ -85,7 +84,7 @@ export abstract class SpaceField extends SpaceEntry {
     return ref;
   }
 
-  getQueryFieldDef(_fs: FSPair): model.QueryFieldDef | undefined {
+  getQueryFieldDef(_fs: FieldSpace): model.QueryFieldDef | undefined {
     return undefined;
   }
 
@@ -129,7 +128,7 @@ export class WildSpaceField extends SpaceField {
     throw new Error("should never ask a wild field for its type");
   }
 
-  getQueryFieldDef(_fs: FSPair): model.QueryFieldDef {
+  getQueryFieldDef(_fs: FieldSpace): model.QueryFieldDef {
     return this.wildText;
   }
 }
@@ -181,9 +180,8 @@ export abstract class QueryField extends SpaceField {
     super();
   }
 
-  getQueryFieldDef(_fs: FSPair): model.QueryFieldDef | undefined {
-    return this.fieldDef();
-  }
+  abstract getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef | undefined;
+  abstract fieldDef(): model.FieldDef;
 
   type(): FieldType {
     return { type: "turtle" };
@@ -199,6 +197,14 @@ export class QueryFieldAST extends QueryField {
     protected name: string
   ) {
     super(fs);
+  }
+
+  getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef {
+    const def = this.turtle.getFieldDef(fs, this.nestParent);
+    if (this.renameAs) {
+      def.as = this.renameAs;
+    }
+    return def;
   }
 
   fieldDef(): model.TurtleDef {
@@ -224,6 +230,10 @@ export class QueryFieldStruct extends QueryField {
 
   fieldDef(): model.TurtleDef {
     return this.turtleDef;
+  }
+
+  getQueryFieldDef(_fs: FieldSpace): model.QueryFieldDef | undefined {
+    return this.fieldDef();
   }
 }
 
@@ -292,7 +302,7 @@ export class FANSPaceField extends SpaceField {
     return undefined;
   }
 
-  getQueryFieldDef(_fs: FSPair): model.QueryFieldDef {
+  getQueryFieldDef(_fs: FieldSpace): model.QueryFieldDef {
     // TODO if this reference is to a field which does not exist
     // it needs to be an error SOMEWHERE
     const n: model.FilteredAliasedName = { name: this.ref.refString };
@@ -316,9 +326,9 @@ export class ReferenceField extends SpaceField {
     super();
   }
 
-  getQueryFieldDef(fs: FSPair): model.QueryFieldDef | undefined {
+  getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef | undefined {
     // Lookup string and generate error if it isn't defined.
-    const check = this.fieldRef.getField(fs.in);
+    const check = this.fieldRef.getField(fs);
     if (check.error) {
       this.fieldRef.log(check.error);
     }
@@ -351,7 +361,7 @@ export class ExpressionFieldFromAst extends SpaceField {
     return def;
   }
 
-  getQueryFieldDef(fs: FSPair): model.QueryFieldDef {
+  getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef {
     const def = this.exprDef.queryFieldDef(fs, this.name);
     this.defType = this.fieldTypeFromFieldDef(def);
     return def;
