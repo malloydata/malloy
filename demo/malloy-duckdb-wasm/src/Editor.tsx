@@ -47,9 +47,13 @@ export const Editor: React.FC<EditorProps> = ({
     if (divRef.current) {
       editor = monaco.editor.create(divRef.current, {
         automaticLayout: true,
+        fontSize: 11,
         value,
         language,
         readOnly,
+        minimap: {
+          enabled: false
+        }
       });
       if (onChange) {
         editor.getModel()?.onDidChangeContent(() => {

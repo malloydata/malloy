@@ -23,7 +23,7 @@ export interface SampleQueries {
 
 const IMPORT_RE = /^import "([^"]+)"$/gm;
 const SPLIT_RE = /^\/\/\s*--.*$/gm;
-const QUERY_NAME_RE = /^query: (\S+) is/m;
+const QUERY_NAME_RE = /^\/\/\s*Name:\s*(.*)$/im;
 
 export const loadSampleQueries = async (url: URL): Promise<SampleQueries> => {
   const sampleRequest = await fetch(url);

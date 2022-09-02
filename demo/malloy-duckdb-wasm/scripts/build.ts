@@ -18,7 +18,7 @@ import { build, BuildOptions, serve } from "esbuild";
 import { argv } from "process";
 
 const samplePath = path.join(__dirname, "..", "..", "..", "samples", "duckdb");
-const outDir = path.join(__dirname, "..", "www", "dist");
+const outDir = path.join(__dirname, "..", "docs", "dist");
 fs.mkdirSync(outDir, { recursive: true });
 
 const namesDb = path.join(samplePath, "names", "data", "usa_names.parquet");
@@ -44,7 +44,7 @@ export async function doBuild(): Promise<void> {
     bundle: true,
     minify: !development,
     sourcemap: false,
-    outdir: "www/dist/",
+    outdir: "docs/dist/",
     platform: "browser",
     loader: { [".png"]: "file", [".svg"]: "file", [".ttf"]: "file" },
     watch:
@@ -60,7 +60,7 @@ export async function doBuild(): Promise<void> {
 
   if (port) {
     console.log(`Listening on port ${port}`);
-    await serve({ port, servedir: "www" }, options);
+    await serve({ port, servedir: "docs" }, options);
   } else {
     await build(options);
   }

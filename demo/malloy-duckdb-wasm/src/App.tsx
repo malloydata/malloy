@@ -28,6 +28,8 @@ import { Sample } from "./types";
 import { SchemaView } from "./SchemaView";
 import { loadSampleQueries, SampleQuery } from "./utils/query";
 
+const DOCS_LINK = "https://looker-open-source.github.io/malloy/documentation/"
+
 const baseReader = new BrowserURLReader();
 const lookup = new DuckDBWasmLookup();
 const reader = new HackyDataStylesAccumulator(baseReader);
@@ -90,8 +92,8 @@ export const App: React.FC = () => {
         setImportFile(sampleQueries.importFile);
         setQueries(sampleQueries.queries);
         setQuery(sampleQueries.queries[0]);
-        setLoadedQuery(sampleQueries.queries[0].query);
-        setEditedQuery(sampleQueries.queries[0].query);
+        setLoadedQuery(sampleQueries.queries[0]?.query || '');
+        setEditedQuery(sampleQueries.queries[0]?.query || '');
 
         connection.database?.registerFileURL(
           sample.dataPath,
@@ -147,21 +149,19 @@ export const App: React.FC = () => {
 
   // Run query
   const onRun = useCallback(async () => {
-    if (!samples || !query) {
+    if (!sample) {
       return;
     }
     setStatus("Loading Model");
     setRendered(undefined);
     setError("");
     try {
-      const malloy = `import "${importFile}"\n${editedQuery}`;
-      baseReader.setContents(window.location.href, malloy);
       const runnable = runtime
-        .loadModel(new URL(window.location.href))
-        .loadQueryByName(query.name);
+        .loadModel(new URL(sample.modelPath, window.location.href))
+        .loadQuery(editedQuery);
       setStatus("Loading Data");
       const rowLimit = (await runnable.getPreparedResult()).resultExplore.limit;
-      setStatus(`Running query ${query.name}`);
+      setStatus(`Running query`);
       const result = await runnable.run({ rowLimit });
       setStatus("Rendering");
       const rendered = await new HTMLView(document).render(result.data, {
@@ -173,14 +173,17 @@ export const App: React.FC = () => {
       setStatus("Error");
       setError(error.message);
     }
-  }, [editedQuery, query]);
+  }, [editedQuery, sample, query]);
 
   return (
     <React.StrictMode>
+      <Header>
       <h1>
         <Logo src="logo.png" />
         Malloy DuckDB WASM Query Demo
       </h1>
+      <DocsLink href={DOCS_LINK} target="_blank">Malloy Documentation</DocsLink>
+      </Header>
       <Controls
         samples={samples}
         onSelectSample={setSample}
@@ -199,12 +202,12 @@ export const App: React.FC = () => {
           <ModelView modelPath={sample?.modelPath} model={loadedModel} />
         </Left>
         <Right>
+          {error ? <ErrorMessage>{error}</ErrorMessage> : null}
           {rendered ? (
             <Results rendered={rendered} />
           ) : (
             <Status status={status} />
           )}
-          {error ? <ErrorMessage>{error}</ErrorMessage> : null}
         </Right>
       </View>
     </React.StrictMode>
@@ -252,3 +255,15 @@ const View = styled.div`
   flex-direction: row;
   height: 90vh;
 `;
+
+const Header = styled.div`
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+`
+
+const DocsLink = styled.a`
+  float: right;
+  color: #000000;
+  font-size: 14px;
+`

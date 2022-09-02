@@ -16,7 +16,7 @@ import * as monaco from "monaco-editor";
 export const getMonacoGrammar = (): monaco.languages.IMonarchLanguage => {
   return {
     // Set defaultToken to invalid to see what you do not tokenize yet
-    defaultToken: "invalid",
+    // defaultToken: "invalid",
 
     keywords: [
       "accept",
@@ -144,7 +144,7 @@ export const getMonacoGrammar = (): monaco.languages.IMonarchLanguage => {
       root: [
         // identifiers and keywords
         [
-          /[a-z_$][\w$]*/,
+          /[A-Za-z_$][\w$]*/,
           {
             cases: {
               "@typeKeywords": "keyword",
@@ -167,15 +167,12 @@ export const getMonacoGrammar = (): monaco.languages.IMonarchLanguage => {
         [/\d+/, "number"],
 
         // strings
-        [/"([^"\\]|\\.)*$/, "string.invalid"], // non-teminated string
-        [/'([^'\\]|\\.)*$/, "string.invalid"], // non-teminated string
+        [/"([^"\\]|\\.)*$/, "string.invalid"], // non-terminated string
+        [/'([^'\\]|\\.)*$/, "string.invalid"], // non-terminated string
+        // [/`([^`\\]|\\.)*$/, "string.invalid"], // non-terminated string
         [/"/, "string", "@string_double"],
         [/'/, "string", "@string_single"],
-
-        // characters
-        [/'[^\\']'/, "string"],
-        [/(')(@escapes)(')/, ["string", "string.escape", "string"]],
-        [/'/, "string.invalid"],
+        // [/`/, "identifier", "@identifier_quoted"],
       ],
 
       comment: [
@@ -198,6 +195,11 @@ export const getMonacoGrammar = (): monaco.languages.IMonarchLanguage => {
         [/\\./, "string.escape.invalid"],
         [/'/, "string", "@pop"],
       ],
+
+      // identifier_quoted: [
+      //   [/[^\\`]+/, "identifier"],
+      //   [/`/, "identifier", "@pop"],
+      // ],
 
       whitespace: [
         [/[ \t\r\n]+/, "white"],
