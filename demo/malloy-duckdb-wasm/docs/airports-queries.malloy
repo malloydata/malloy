@@ -38,9 +38,9 @@ query: airports->{
   group_by: state
   aggregate:
     airport_count is count(*)
-    heliport_count is count(*) {where: fac_type='HELIPORT'}
     avg_elevation is elevation.avg()
     percentage_of_all_airports_in_usa is count(*)/all(count(*))*100
+  order_by: avg_elevation desc
 }
 
 // --
@@ -53,9 +53,21 @@ query: airports->{
   group_by: state
   aggregate:
     airport_count
-    heliport_count
     avg_elevation
     percentage_of_all_airports_in_usa is percent_of_all_airports
+  order_by: avg_elevation desc
+}
+
+// --
+// Name: Filtered aggregate expressions
+query: airports->{
+  group_by:
+    state
+  aggregate:
+    airport_count
+    gliderport_count is airport_count {where: fac_type = 'GLIDERPORT'}
+    avg_heliport_elevation is elevation.avg() {where: fac_type = 'HELIPORT'}
+    percent_major is airport_count {? major = 'Y'}/airport_count * 100
 }
 
 // --
@@ -84,6 +96,40 @@ query: airports->{
 }
 
 // --
+// Name: Refinements (Inheritence) of queries
+// Modeled queries can be changed and expanded.  In this case
+//  we expand the reult limit to 50 and add a couple of measures
+
+query: airports->by_state + {
+  limit: 50
+  aggregate:
+    avg_elevation
+    heliport_count
+}
+
+// --
+// Name: Named nested queries and refinements
+// We can simply nest one query in another by refining it.
+
+query: airports-> by_state + {
+  nest: by_facility_type
+}
+
+// --
+// Name: Rendering results
+// Changing the name of a query can change how it is rendered.
+query: airports-> by_state + {
+  nest: fac_type_bar_chart is by_facility_type
+}
+
+// --
+// Name: Filtering nested Queries
+// You can apply filters to nested queries
+query: airports-> by_state + {
+  nest: fac_type_bar_chart is by_facility_type + {? fac_type = 'AIRPORT' | 'HELIPORT'}
+}
+
+// --
 // Name: Region Dashboard
 // You can nest things by name.  The name of the column
 //  determines how it is rendered (in this case, shape_map)
@@ -93,34 +139,55 @@ query: airports -> {
   aggregate: airport_count
   nest:
     by_state_shape_map is by_state
-    by_facility_type
+    fac_type_bar_chart is by_facility_type
 }
 
 // --
-// Name: By District
+// Name: Ungrouped Calculations
+// Aggregate can escape the current grouping in a query using the 'all'
+//  function.  A takes an aggregate calculation (modelled or expplicit)
+//  and runs without dimensional grouping.
+
 query: airports-> {
-  group_by: faa_dist
-  aggregate: airport_count, percent_of_all_airports
+  group_by:
+    fac_type
+    state
+  aggregate:
+    airport_count
+    overall_totall is all(airport_count)
+    all_in_state is all(airport_count, state)
+    all_of_fac_type is all(airport_count, fac_type)
+    percent_in_state is airport_count/all(airport_count,state)*100
+  order_by: state, fac_type
+  limit: 100
 }
 
-
-
 // --
-// Name: Most Heliports
-query: airports -> {
-  group_by: state, county
-  aggregate: airport_count, heliport_count
-  order_by: heliport_count desc
-}
-
-// --
-// Name: By District Top county
+// Name: Pipelines Step 1
+// Let's start with this query
 query: airports-> {
-  group_by: faa_dist
-  aggregate: airport_count, percent_of_all_airports
+  group_by: state
   nest: by_county is {
-    group_by: state, county
-    aggregate: airport_count, percent_of_all_airports
-    limit: 3
+    group_by: county
+    aggregate: airport_count // order_by this descending by default
+    limit: 2
   }
 }
+
+// --
+// Name: Pipelines Step 2
+// Find the top two counties in each state.
+//  See the previous query to run the first part
+query: airports-> {
+  group_by: state
+  nest: by_county is {
+    group_by: county
+    aggregate: airport_count // order_by this descending by default
+    limit: 2
+  }
+}
+-> {
+  project: state, by_county.county, by_county.airport_count
+  order_by: state, county
+}
+
