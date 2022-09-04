@@ -2,31 +2,34 @@ import "./auto_recalls.malloy"
 
 // --
 // Name: Recent Honda Recalls
-query: recalls-> recent_recalls {
+query: recalls {
   where: Manufacturer ~ r'Honda'
-}
-
-// --
-// Name: Brake Recall Dashboard
-query: recalls-> recall_dashboard {
-  where:`Recall Description` ~r'brake'
-}
+} -> recent_recalls
 
 // --
 // Name: Overall Recall Dashboard
 query: recalls->recall_dashboard
 
+// --
+// Name: Brake Recall Dashboard
+query: recalls {
+  where:`Recall Description` ~r'brake'
+} -> recall_dashboard
+
 
 // --
 // Name: Manufacturer year
+// If a query name ends in _line_chart is is rendered as one
+
 query: recalls-> {
   where: Manufacturer ~ r'General Motors|Ford Motor|Chry.*US'
-  group_by: recall_year is year(`Report Received Date`)
-  aggregate:
-    recall_count
-  group_by: Manufacturer
-  order_by: recall_year
-  limit: 3000
+  nest: _line_chart is {
+    group_by: recall_year is year(`Report Received Date`)
+    aggregate:
+      recall_count
+    group_by: Manufacturer
+    order_by: recall_year
+  }
 }
 
 // --

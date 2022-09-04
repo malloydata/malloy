@@ -1,5 +1,5 @@
 // Auto Recalls: CSV example
-source: recalls is table('duckdb:data/auto_recalls.csv') {
+source: recalls is table('duckdb:auto_recalls.csv') {
   declare:
     recall_count is count()
     percent_of_recalls is recall_count/all(recall_count)*100

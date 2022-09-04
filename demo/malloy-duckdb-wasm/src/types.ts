@@ -13,8 +13,7 @@
 
 export interface Sample {
   name: string;
-  dataPath: string;
-  dataUrl: string;
+  dataTables: string[];
   modelPath: string;
   queryPath: string;
 }

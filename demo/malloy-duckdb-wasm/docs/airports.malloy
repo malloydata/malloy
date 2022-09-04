@@ -1,6 +1,6 @@
 
-source: airports is table('duckdb:data/airports.parquet') {
-  measure: 
+source: airports is table('duckdb:airports.parquet') {
+  measure:
     airport_count is count()
     percent_of_all_airports is airport_count/all(airport_count)*100
     avg_elevation is elevation.avg()

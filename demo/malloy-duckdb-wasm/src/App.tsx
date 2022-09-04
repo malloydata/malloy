@@ -28,7 +28,7 @@ import { Sample } from "./types";
 import { SchemaView } from "./SchemaView";
 import { loadSampleQueries, SampleQuery } from "./utils/query";
 
-const DOCS_LINK = "https://looker-open-source.github.io/malloy/documentation/"
+const DOCS_LINK = "https://looker-open-source.github.io/malloy/documentation/";
 
 const baseReader = new BrowserURLReader();
 const lookup = new DuckDBWasmLookup();
@@ -92,13 +92,15 @@ export const App: React.FC = () => {
         setImportFile(sampleQueries.importFile);
         setQueries(sampleQueries.queries);
         setQuery(sampleQueries.queries[0]);
-        setLoadedQuery(sampleQueries.queries[0]?.query || '');
-        setEditedQuery(sampleQueries.queries[0]?.query || '');
+        setLoadedQuery(sampleQueries.queries[0]?.query || "");
+        setEditedQuery(sampleQueries.queries[0]?.query || "");
 
-        connection.database?.registerFileURL(
-          sample.dataPath,
-          new URL(sample.dataUrl, window.location.href).toString()
-        );
+        for (const tableName of sample.dataTables) {
+          connection.database?.registerFileURL(
+            tableName,
+            new URL(tableName, window.location.href).toString()
+          );
+        }
 
         const model = await runtime.getModel(modelUrl);
         setModel(model);
@@ -178,11 +180,13 @@ export const App: React.FC = () => {
   return (
     <React.StrictMode>
       <Header>
-      <h1>
-        <Logo src="logo.png" />
-        Malloy DuckDB WASM Query Demo
-      </h1>
-      <DocsLink href={DOCS_LINK} target="_blank">Malloy Documentation</DocsLink>
+        <h1>
+          <Logo src="logo.png" />
+          Malloy DuckDB WASM Query Demo
+        </h1>
+        <DocsLink href={DOCS_LINK} target="_blank">
+          Malloy Documentation
+        </DocsLink>
       </Header>
       <Controls
         samples={samples}
@@ -260,10 +264,10 @@ const Header = styled.div`
   width: 100%;
   display: flex;
   justify-content: space-between;
-`
+`;
 
 const DocsLink = styled.a`
   float: right;
   color: #000000;
   font-size: 14px;
-`
+`;

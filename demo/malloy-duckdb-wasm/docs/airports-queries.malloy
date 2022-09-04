@@ -1,11 +1,93 @@
 import "./airports.malloy"
 
-query: select_start is airports -> {
+// --
+// Name: Show all Data
+// The Equivqalent of a SELECT * in SQL.
+
+query: airports -> {
   project: *
 }
 
 // --
+// Name: Filtering Data
+//  New York City District Airports
+
+query: airports -> {
+  where: faa_dist = 'NYC'
+  project: *
+}
+
+// --
+// Name: Named query
+// Runs the query declared in the model below
+
+query: airports->by_state
+
+// --
+// Name: Named query with a filter applied to the source
+// Filters query to major airports
+
+query: airports {where: major='Y'}->by_state
+
+// --
+// Name: Aggregates: Simple Query with Aggregates
+
+// Calculations can be written into the query
+
+query: airports->{
+  group_by: state
+  aggregate:
+    airport_count is count(*)
+    heliport_count is count(*) {where: fac_type='HELIPORT'}
+    avg_elevation is elevation.avg()
+    percentage_of_all_airports_in_usa is count(*)/all(count(*))*100
+}
+
+// --
+// Name: Modeled Query Aggregates (measures)
+
+// Calculations can come from the model.  In this case all the
+//  calculations are from the model below.
+
+query: airports->{
+  group_by: state
+  aggregate:
+    airport_count
+    heliport_count
+    avg_elevation
+    percentage_of_all_airports_in_usa is percent_of_all_airports
+}
+
+// --
+// Name: Nesting results
+// Queries can be nested in one another.  The outer query essentially
+//  becomes the filter for the nested query.
+
+query: airports->{
+  group_by: faa_region
+  aggregate:
+    airport_count
+    heliport_count
+  nest: by_state is {
+    group_by: state
+    aggregate: airport_count
+  }
+  nest: top_counties is {
+      group_by: state, county
+      aggregate:airport_count
+      limit: 5
+  }
+  nest: by_fac_type is {
+    group_by: fac_type
+    aggregate: airport_count
+  }
+}
+
+// --
 // Name: Region Dashboard
+// You can nest things by name.  The name of the column
+//  determines how it is rendered (in this case, shape_map)
+
 query: airports -> {
   group_by: faa_region
   aggregate: airport_count
@@ -21,12 +103,7 @@ query: airports-> {
   aggregate: airport_count, percent_of_all_airports
 }
 
-// --
-// Name: New York City District Airports
-query: airports -> {
-  where: faa_dist = 'NYC'
-  project: *
-}
+
 
 // --
 // Name: Most Heliports

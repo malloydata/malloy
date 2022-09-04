@@ -36,10 +36,16 @@ export const loadSampleQueries = async (url: URL): Promise<SampleQueries> => {
   const queryStrings = sampleData.replace(IMPORT_RE, "").trim().split(SPLIT_RE);
 
   const queries: SampleQuery[] = [];
+  let i = 1;
   for (const queryString of queryStrings) {
-    const name = queryString.match(QUERY_NAME_RE)?.[1];
+    let name = queryString.match(QUERY_NAME_RE)?.[1];
     if (name) {
-      const query = queryString.trim();
+      name = `${i++} - ${name}`;
+      // remove the first line
+      let query = queryString.trim();
+      let q = query.split("\n");
+      q.splice(0, 1);
+      query = q.join("\n");
       queries.push({ name, query });
     }
   }
