@@ -18,18 +18,22 @@ import { SampleQuery } from "./utils/query";
 
 interface ControlsProps {
   samples: Sample[];
+  selectedSample: Sample | undefined;
   onSelectSample: (sample: Sample) => void;
   onRun: () => void;
   onSelectQuery: (sampleQuery: SampleQuery) => void;
   queries: SampleQuery[];
+  selectedQuery: SampleQuery | undefined;
 }
 
 export const Controls: React.FC<ControlsProps> = ({
   samples,
   onSelectSample,
+  selectedSample,
   queries,
   onRun,
   onSelectQuery,
+  selectedQuery,
 }) => {
   const onSampleChange = useCallback(
     ({ target }) => {
@@ -51,7 +55,11 @@ export const Controls: React.FC<ControlsProps> = ({
     <Bar>
       <SampleSection>
         <Label htmlFor="model-select">Data Set: </Label>
-        <Select id="model-select" onChange={onSampleChange}>
+        <Select
+          id="model-select"
+          onChange={onSampleChange}
+          value={selectedSample?.name}
+        >
           {samples.map((sample) => (
             <option key={sample.name} value={sample.name}>
               {sample.name}
@@ -61,7 +69,11 @@ export const Controls: React.FC<ControlsProps> = ({
       </SampleSection>
       <QuerySection>
         <Label htmlFor="query-select">Query: </Label>
-        <Select id="query-select" onChange={onQueryChange}>
+        <Select
+          id="query-select"
+          onChange={onQueryChange}
+          value={selectedQuery?.name}
+        >
           {queries.map((query) => (
             <option key={query.name} value={query.name}>
               {query.name}

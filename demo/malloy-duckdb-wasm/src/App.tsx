@@ -55,7 +55,6 @@ export const App: React.FC = () => {
   const [samples, setSamples] = useState<Sample[]>([]);
   const [sample, setSample] = useState<Sample>();
   const [model, setModel] = useState<Model>();
-  const useQuery = () => new URLSearchParams(location.search);
 
   // Select query UI
   const [query, setQuery] = useState<SampleQuery>();
@@ -65,20 +64,28 @@ export const App: React.FC = () => {
   const [_importFile, setImportFile] = useState("");
   const [editedQuery, setEditedQuery] = useState("");
 
+  const [search, setSearch] = useState(window.location.search);
+
+  const updateSearchParam = (name: string, value: string) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set(name, value);
+    history.replaceState("", "", url);
+    setSearch(url.search);
+  };
+
   // Initial load
   useEffect(() => {
-    const params = useQuery();
     setStatus("Loading DuckDB");
     (async () => {
       const samplesResponse = await fetch("./samples.json");
       const samples = await samplesResponse.json();
       setSamples(samples);
+      const params = new URLSearchParams(search);
       const modelName = params.get("m");
-      // const queryName = searchParams.get("q");
       let sample = samples[0];
       if (modelName) {
         for (const s of samples) {
-          if (sample.name === modelName) {
+          if (s.name === modelName) {
             sample = s;
           }
         }
@@ -107,11 +114,22 @@ export const App: React.FC = () => {
         const queryUrl = new URL(sample.queryPath, window.location.href);
         const sampleQueries = await loadSampleQueries(queryUrl);
 
+        let sampleQuery = sampleQueries.queries[0];
+        const params = new URLSearchParams(search);
+        const queryName = params.get("q");
+        if (queryName) {
+          for (const q of sampleQueries.queries) {
+            if (q.name === queryName) {
+              sampleQuery = q;
+            }
+          }
+        }
+        const queryText = params.get("t") || sampleQuery?.query || "";
         setImportFile(sampleQueries.importFile);
         setQueries(sampleQueries.queries);
-        setQuery(sampleQueries.queries[0]);
-        setLoadedQuery(sampleQueries.queries[0]?.query || "");
-        setEditedQuery(sampleQueries.queries[0]?.query || "");
+        setQuery(sampleQuery);
+        setLoadedQuery(queryText);
+        setEditedQuery(queryText);
 
         for (const tableName of sample.dataTables) {
           connection.database?.registerFileURL(
@@ -122,6 +140,8 @@ export const App: React.FC = () => {
 
         const model = await runtime.getModel(modelUrl);
         setModel(model);
+        updateSearchParam("m", sample.name);
+        setSample(sample);
       }
       setStatus("Ready");
     })();
@@ -130,9 +150,11 @@ export const App: React.FC = () => {
   // Sample Query load
   useEffect(() => {
     if (query) {
-      setLoadedQuery(query.query);
-      setEditedQuery(query.query);
-      history.pushState("", "", `?m=${sample?.name}&q=${query.name}`);
+      const params = new URLSearchParams(search);
+      const queryText = params.get("t") || query?.query || "";
+      setLoadedQuery(queryText);
+      setEditedQuery(queryText);
+      updateSearchParam("q", query.name);
     }
   }, [query]);
 
@@ -182,6 +204,7 @@ export const App: React.FC = () => {
         .loadModel(new URL(sample.modelPath, window.location.href))
         .loadQuery(editedQuery);
       setStatus("Loading Data");
+      updateSearchParam("t", editedQuery);
       const rowLimit = (await runnable.getPreparedResult()).resultExplore.limit;
       setStatus(`Running query`);
       const result = await runnable.run({ rowLimit });
@@ -197,6 +220,16 @@ export const App: React.FC = () => {
       setError(error.message);
     }
   }, [editedQuery, sample, query]);
+
+  const onSelectSample = useCallback((sample: Sample) => {
+    setSample(sample);
+    updateSearchParam("t", "");
+  }, []);
+
+  const onSelectQuery = useCallback((query: SampleQuery) => {
+    setQuery(query);
+    updateSearchParam("t", "");
+  }, []);
 
   return (
     <React.StrictMode>
@@ -225,9 +258,11 @@ export const App: React.FC = () => {
       </Header>
       <Controls
         samples={samples}
-        onSelectSample={setSample}
-        onSelectQuery={setQuery}
+        selectedSample={sample}
+        onSelectSample={onSelectSample}
+        onSelectQuery={onSelectQuery}
         queries={queries}
+        selectedQuery={query}
         onRun={onRun}
       />
       <View>
