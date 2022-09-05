@@ -17,7 +17,10 @@ import styled from "styled-components";
 import { getMonacoGrammar } from "./utils/monaco";
 
 self.MonacoEnvironment = {
-  getWorkerUrl: function (_moduleId: string, _label: string) {
+  getWorkerUrl: function (_moduleId: string, label: string) {
+    if (label === "json") {
+      return "./dist/json.worker.bundle.js";
+    }
     return "./dist/editor.worker.bundle.js";
   },
 };

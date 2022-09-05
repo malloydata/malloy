@@ -13,7 +13,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
-import { Field, Model, Runtime } from "@malloydata/malloy";
+import { Field, Model, Result, Runtime } from "@malloydata/malloy";
 import { HTMLView } from "@malloydata/render";
 import { DuckDBWASMConnection } from "@malloydata/db-duckdb-wasm";
 import { Controls } from "./Controls";
@@ -48,6 +48,7 @@ export const App: React.FC = () => {
   // Result state
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [result, setResult] = useState<Result>();
   const [rendered, setRendered] = useState<HTMLElement>();
 
   // Select sample UI
@@ -152,6 +153,7 @@ export const App: React.FC = () => {
             .limit;
           setStatus(`Running query ${query}`);
           const result = await runnable.run({ rowLimit });
+          setResult(result);
           setStatus("Rendering");
           const rendered = await new HTMLView(document).render(result.data, {
             dataStyles: reader.getHackyAccumulatedDataStyles(),
@@ -183,6 +185,7 @@ export const App: React.FC = () => {
       const rowLimit = (await runnable.getPreparedResult()).resultExplore.limit;
       setStatus(`Running query`);
       const result = await runnable.run({ rowLimit });
+      setResult(result);
       setStatus("Rendering");
       const rendered = await new HTMLView(document).render(result.data, {
         dataStyles: reader.getHackyAccumulatedDataStyles(),
@@ -240,7 +243,15 @@ export const App: React.FC = () => {
         <Right>
           {error ? <ErrorMessage>{error}</ErrorMessage> : null}
           {rendered ? (
-            <Results rendered={rendered} />
+            <Results
+              rendered={rendered}
+              sql={result?.sql}
+              json={
+                result
+                  ? JSON.stringify(result._queryResult.result, null, 2)
+                  : undefined
+              }
+            />
           ) : (
             <Status status={status} />
           )}

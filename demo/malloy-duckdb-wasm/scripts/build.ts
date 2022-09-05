@@ -38,7 +38,7 @@ export async function doBuild(): Promise<void> {
     entryPoints: {
       main: "./src/index.tsx",
       "editor.worker": "monaco-editor/esm/vs/editor/editor.worker.js",
-      "ts.worker": "monaco-editor/esm/vs/language/typescript/ts.worker",
+      "json.worker": "monaco-editor/esm/vs/language/json/json.worker",
     },
     entryNames: "[name].bundle",
     bundle: true,
