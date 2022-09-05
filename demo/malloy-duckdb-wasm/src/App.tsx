@@ -54,6 +54,7 @@ export const App: React.FC = () => {
   const [samples, setSamples] = useState<Sample[]>([]);
   const [sample, setSample] = useState<Sample>();
   const [model, setModel] = useState<Model>();
+  const useQuery = () => new URLSearchParams(location.search);
 
   // Select query UI
   const [query, setQuery] = useState<SampleQuery>();
@@ -65,7 +66,6 @@ export const App: React.FC = () => {
 
   // Initial load
   useEffect(() => {
-    const useQuery = () => new URLSearchParams(location.search);
     const params = useQuery();
     setStatus("Loading DuckDB");
     (async () => {

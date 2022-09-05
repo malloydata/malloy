@@ -52,8 +52,8 @@ export const Editor: React.FC<EditorProps> = ({
         language,
         readOnly,
         minimap: {
-          enabled: false
-        }
+          enabled: false,
+        },
       });
       if (onChange) {
         editor.getModel()?.onDidChangeContent(() => {

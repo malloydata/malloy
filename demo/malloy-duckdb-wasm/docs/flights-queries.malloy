@@ -13,21 +13,79 @@ query: flights -> {
 }
 
 // --
-// Name: Running named query
+// Name: Named query
 query: flights -> by_carrier
 
 // --
-// Name: SFO carriers
+// Name: Named query with filter: SFO carriers
 query: flights {
   where: orig.code = 'SFO'
 } -> by_carrier
 
 // --
-// Name: By Origin
+// Name: Named Query: By Origin
 query: flights -> by_origin
 
 // --
-// Name: Southwest by Origin
-query: flights {
-  where: carriers.nickname = 'Southwest'
-} -> by_origin
+// Name: Named Query: By Origin with Top 3 Carrier Nested
+query: flights-> by_origin + {
+  nest: by_carrier +  {limit: 3}
+  limit: 30
+}
+
+// --
+// Name: Named Query: By Carrier with Top 3 Origins Nested
+query: flights-> by_carrier + {
+  nest: by_origin +  {limit: 3}
+  limit: 30
+}
+
+// --
+// Name: Simple Barchart: Carriers by Flights
+query: flights->  {
+  nest: by_carrier_bar_chart is {
+    group_by: carriers.nickname
+    aggregate: flight_count
+  }
+}
+
+// --
+// Name: Barchart with two measures: Carriers by Flights
+query: flights->  {
+  group_by: orig.faa_region
+  aggregate: flight_count
+  nest: by_carrier_bar_chart is {
+    group_by: carriers.nickname
+    aggregate:
+      flight_count
+      dest_count
+  }
+}
+
+// --
+// Name: Barchart with two dimensions: Carriers by Flights and Distance
+query: flights->  {
+  nest: by_carrier_bar_chart is {
+    group_by: carriers.nickname
+    aggregate: flight_count
+    group_by: flight_length is  distance:
+      pick 'short' when <  200
+      pick 'medium' when < 800
+      pick 'regional' when < 1500
+      else 'long'
+  }
+}
+
+
+// --
+// Name: Shape Map: Carriers Origin by State
+query: flights->  {
+  group_by: carriers.nickname
+  aggregate: flight_count
+  nest: by_state_shape_map is {
+    group_by: orig.state
+    aggregate:
+      flight_count
+      dest_count
+  }
+}
