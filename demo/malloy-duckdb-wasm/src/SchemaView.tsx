@@ -36,6 +36,7 @@ export const SchemaView: React.FC<SchemaViewProps> = ({
                   key={explore.name}
                   explore={explore}
                   onFieldClick={onFieldClick}
+                  depth={0}
                 />
               ))
             : "Loading..."}
@@ -47,11 +48,16 @@ export const SchemaView: React.FC<SchemaViewProps> = ({
 
 interface ExploreItemProps {
   explore: Explore;
+  depth: number;
   onFieldClick: (field: Field) => void;
 }
 
-const ExploreItem: React.FC<ExploreItemProps> = ({ explore, onFieldClick }) => {
-  const [open, setOpen] = useState(true);
+const ExploreItem: React.FC<ExploreItemProps> = ({
+  depth,
+  explore,
+  onFieldClick,
+}) => {
+  const [open, setOpen] = useState(depth === 0);
   const toggle = useCallback(() => setOpen((current) => !current), []);
   const fields = explore.allFields.sort(byKindThenName);
 
@@ -63,7 +69,12 @@ const ExploreItem: React.FC<ExploreItemProps> = ({ explore, onFieldClick }) => {
       {open ? (
         <List>
           {fields.map((field) => (
-            <FieldItem key={field.name} field={field} onClick={onFieldClick} />
+            <FieldItem
+              key={field.name}
+              field={field}
+              onClick={onFieldClick}
+              depth={depth + 1}
+            />
           ))}
         </List>
       ) : null}
@@ -72,22 +83,29 @@ const ExploreItem: React.FC<ExploreItemProps> = ({ explore, onFieldClick }) => {
 };
 
 interface FieldItemProps {
+  depth: number;
   field: Field;
   onClick: (field: Field) => void;
 }
 
-const FieldItem: React.FC<FieldItemProps> = ({ field, onClick }) => {
+const FieldItem: React.FC<FieldItemProps> = ({ depth, field, onClick }) => {
   const isAggregate = field.isAtomicField() && field.isAggregate();
   const type = field.isAtomicField() ? field.type.toString() : "query";
 
-  return (
-    <ListItem
-      icon={getIconPath(type, isAggregate)}
-      onClick={() => onClick(field)}
-    >
-      {field.name}
-    </ListItem>
-  );
+  if (field.isExploreField()) {
+    return (
+      <ExploreItem explore={field} onFieldClick={onClick} depth={depth + 1} />
+    );
+  } else {
+    return (
+      <ListItem
+        icon={getIconPath(type, isAggregate)}
+        onClick={() => onClick(field)}
+      >
+        {field.name}
+      </ListItem>
+    );
+  }
 };
 
 function getIconPath(fieldType: string, isAggregate: boolean) {
