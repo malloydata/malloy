@@ -1,0 +1,33 @@
+import "./flights.malloy"
+
+// --
+// Name: Carrier Table
+query: carriers -> {
+  project: *
+}
+
+// --
+// Name: Flights Table
+query: flights -> {
+  project: *
+}
+
+// --
+// Name: Running named query
+query: flights -> by_carrier
+
+// --
+// Name: SFO carriers
+query: flights {
+  where: orig.code = 'SFO'
+} -> by_carrier
+
+// --
+// Name: By Origin
+query: flights -> by_origin
+
+// --
+// Name: Southwest by Origin
+query: flights {
+  where: carriers.nickname = 'Southwest'
+} -> by_origin

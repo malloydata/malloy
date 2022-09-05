@@ -191,3 +191,28 @@ query: airports-> {
   order_by: state, county
 }
 
+// --
+// Name: Refining a source (Inheriting from)
+// Create a new source from airports.
+//  add a filter so the source only contain major airports
+//  the '+' means add parameters
+//
+source: major_airports is airports + {
+  where: major = 'Y'
+  measure:
+    count_with_control_tower is airport_count {? cntl_twr = 'Y'}
+}
+
+// Look at major airports by district and state
+query: major_airports-> {
+  group_by: faa_dist
+  aggregate: airport_count, count_with_control_tower
+  nest: by_state is {
+    group_by: state
+    aggregate: airport_count, count_with_control_tower
+    nest: by_airport is {
+      group_by: code, city, elevation, cntl_twr
+    }
+  }
+  order_by: 1
+}

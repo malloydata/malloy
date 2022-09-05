@@ -65,12 +65,24 @@ export const App: React.FC = () => {
 
   // Initial load
   useEffect(() => {
+    const useQuery = () => new URLSearchParams(location.search);
+    const params = useQuery();
     setStatus("Loading DuckDB");
     (async () => {
       const samplesResponse = await fetch("./samples.json");
       const samples = await samplesResponse.json();
       setSamples(samples);
-      setSample(samples[0]);
+      const modelName = params.get("m");
+      // const queryName = searchParams.get("q");
+      let sample = samples[0];
+      if (modelName) {
+        for (const s of samples) {
+          if (sample.name === modelName) {
+            sample = s;
+          }
+        }
+      }
+      setSample(sample);
     })();
   }, []);
 
@@ -119,6 +131,7 @@ export const App: React.FC = () => {
     if (query) {
       setLoadedQuery(query.query);
       setEditedQuery(query.query);
+      history.pushState("", "", `?m=${sample?.name}&q=${query.name}`);
     }
   }, [query]);
 

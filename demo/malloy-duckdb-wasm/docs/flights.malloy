@@ -1,0 +1,37 @@
+source: carriers is table('duckdb:carriers.parquet'){
+  measure: carrier_count is count()
+}
+
+source: airports is table('duckdb:airports.parquet'){
+  measure: airport_count is count()
+}
+
+source: flights is table('duckdb:flights.parquet') {
+  join_one: carriers on carrier=carriers.code
+  join_one: dest is airports on destination=dest.code
+  join_one: orig is airports on origin=orig.code
+
+  measure:
+    flight_count is count()
+    total_distance is distance.sum()
+    aircraft_count is count(distinct tail_num)
+    dest_count is dest.airport_count
+    carrier_count is count(distinct carrier)
+
+  query: by_carrier is {
+    group_by: carriers.nickname
+    aggregate:
+      flight_count
+      total_distance
+      aircraft_count
+      dest_count
+  }
+
+  query: by_origin is {
+    group_by: orig.code, orig.city
+    aggregate:
+      flight_count
+      dest_count
+      carrier_count
+  }
+}
