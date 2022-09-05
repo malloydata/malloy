@@ -29,6 +29,11 @@ import { SchemaView } from "./SchemaView";
 import { loadSampleQueries, SampleQuery } from "./utils/query";
 
 const DOCS_LINK = "https://looker-open-source.github.io/malloy/documentation/";
+const REPO_LINK = "https://github.com/looker-open-source/malloy/";
+const SLACK_LINK =
+  "https://join.slack.com/t/malloy-community/shared_invite/zt-upi18gic-W2saeFu~VfaVM1~HIerJ7w";
+const VSCODE_INSTALL_LINK =
+  "https://github.com/looker-open-source/malloy/blob/main/README.md";
 
 const baseReader = new BrowserURLReader();
 const lookup = new DuckDBWasmLookup();
@@ -55,7 +60,7 @@ export const App: React.FC = () => {
   const [queries, setQueries] = useState<SampleQuery[]>([]);
 
   // Runnable query data
-  const [importFile, setImportFile] = useState("");
+  const [_importFile, setImportFile] = useState("");
   const [editedQuery, setEditedQuery] = useState("");
 
   // Initial load
@@ -182,10 +187,24 @@ export const App: React.FC = () => {
       <Header>
         <h1>
           <Logo src="logo.png" />
-          Malloy DuckDB WASM Query Demo
+          Malloy Fiddle
         </h1>
-        <DocsLink href={DOCS_LINK} target="_blank">
-          Malloy Documentation
+        <DocsLink>
+          <a href={DOCS_LINK} target="_blank">
+            Malloy Documentation
+          </a>
+          <br />
+          <a href={REPO_LINK} target="_blank">
+            Malloy Repository on Github
+          </a>
+          <br />
+          <a href={VSCODE_INSTALL_LINK} target="_blank">
+            Malloy VSCode Installation
+          </a>
+          <br />
+          <a href={SLACK_LINK} target="_blank">
+            Join the Malloy Slack Community
+          </a>
         </DocsLink>
       </Header>
       <Controls
@@ -266,7 +285,7 @@ const Header = styled.div`
   justify-content: space-between;
 `;
 
-const DocsLink = styled.a`
+const DocsLink = styled.div`
   float: right;
   color: #000000;
   font-size: 14px;

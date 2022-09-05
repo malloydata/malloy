@@ -43,7 +43,7 @@ export const loadSampleQueries = async (url: URL): Promise<SampleQueries> => {
       name = `${i++} - ${name}`;
       // remove the first line
       let query = queryString.trim();
-      let q = query.split("\n");
+      const q = query.split("\n");
       q.splice(0, 1);
       query = q.join("\n");
       queries.push({ name, query });

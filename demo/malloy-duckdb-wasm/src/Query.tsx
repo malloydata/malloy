@@ -22,10 +22,12 @@ export interface QueryProps {
   onChange: (query: string) => void;
 }
 
-export const Query: React.FC<QueryProps> = ({ onChange, query, queryPath }) => {
+export const Query: React.FC<QueryProps> = ({ onChange, query }) => {
   return (
     <Wrapper>
-      <Title>Query File: {queryPath}</Title>
+      <Title>
+        Query: <i>Fiddle (edit) this</i>
+      </Title>
       <Editor value={query} onChange={onChange} />
     </Wrapper>
   );
