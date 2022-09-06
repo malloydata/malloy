@@ -12,7 +12,7 @@
  */
 
 import { LookupConnection, Connection } from "@malloydata/malloy";
-import { DuckDBWASMConnection } from "@malloydata/db-duckdb-wasm";
+import { DuckDBWASMConnection } from "@malloydata/db-duckdb/src/duckdb_wasm_connection";
 
 export class DuckDBWasmLookup implements LookupConnection<Connection> {
   connection: DuckDBWASMConnection;
