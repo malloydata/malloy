@@ -18,6 +18,12 @@ source: flights is table('duckdb:flights.parquet') {
     dest_count is dest.airport_count
     carrier_count is count(distinct carrier)
 
+  dimension: flight_length is  distance:
+      pick 'short' when <  200
+      pick 'medium' when < 800
+      pick 'regional' when < 1500
+      else 'long'
+
   query: by_carrier is {
     group_by: carriers.nickname
     aggregate:

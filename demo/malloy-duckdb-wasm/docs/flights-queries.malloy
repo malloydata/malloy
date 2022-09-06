@@ -68,12 +68,63 @@ query: flights->  {
   nest: by_carrier_bar_chart is {
     group_by: carriers.nickname
     aggregate: flight_count
-    group_by: flight_length is  distance:
-      pick 'short' when <  200
-      pick 'medium' when < 800
-      pick 'regional' when < 1500
-      else 'long'
+    group_by: flight_length
   }
+}
+
+// --
+// Name: Line Chart Simple: flights by month
+query: flights->  {
+  group_by: carriers.nickname
+  nest: by_month_line_chart is {
+    group_by: dep_qtr is dep_time.quarter
+    aggregate: flight_count
+  }
+}
+
+// --
+// Name: Line Chart with two dimension: Flights by Month and Length
+query: flights->  {
+  group_by: carriers.nickname
+  nest: by_month_line_chart is {
+    group_by: dep_qtr is dep_time.quarter
+    aggregate: flight_count
+    group_by: flight_length
+  }
+}
+
+// --
+// Name: Line Chart with two dimension: Flights by Month and Length
+query: flights->  {
+  group_by: carriers.nickname
+  nest: by_month_line_chart is {
+    group_by: dep_qtr is dep_time.quarter
+    aggregate: flight_count
+    group_by: flight_length
+  }
+}
+
+// --
+// Name: Lists: Origins and the list of carriers
+query: flights->  {
+  group_by: orig.code, orig.city
+  nest: carrier_list is {
+    group_by: carriers.nickname
+    aggregate: flight_count
+  }
+  limit: 300
+}
+
+// --
+// Name: List Detail: Origins and the list of carriers
+// shows the count for each member of the list
+query: flights->  {
+  group_by: orig.code, orig.city
+  nest: carrier_list_detail is {
+    group_by: carriers.nickname
+    aggregate: flight_count
+  }
+  limit: 300
 }
 
 
