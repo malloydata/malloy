@@ -30,6 +30,8 @@ const unwrapArrow = (value: unknown): any => {
     return value;
   } else if (value instanceof Vector) {
     return [...value].map(unwrapArrow);
+  } else if (value instanceof Date) {
+    return value;
   } else if (typeof value === "bigint") {
     return Number(value);
   } else if (typeof value === "object") {
