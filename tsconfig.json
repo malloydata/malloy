@@ -4,7 +4,6 @@
     { "path": "packages/malloy" },
     { "path": "packages/malloy-db-bigquery" },
     { "path": "packages/malloy-db-duckdb" },
-    { "path": "packages/malloy-db-duckdb-wasm" },
     { "path": "packages/malloy-db-postgres" },
     { "path": "test" },
     { "path": "packages/malloy-render" },
