@@ -13,7 +13,6 @@ query: airports -> {
 
 // --
 // Name: Show Auto Recall Table
-// I think this is broken because we don't handle dates correcty yet in WASM.
 query: recalls -> {
   project: *
 }

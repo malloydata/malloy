@@ -61,8 +61,8 @@ export const App: React.FC = () => {
   const [queries, setQueries] = useState<SampleQuery[]>([]);
 
   // Runnable query data
-  const [_importFile, setImportFile] = useState("");
   const [editedQuery, setEditedQuery] = useState("");
+  const [autoRun, setAutoRun] = useState(false);
 
   const [search, setSearch] = useState(window.location.search);
 
@@ -125,7 +125,6 @@ export const App: React.FC = () => {
           }
         }
         const queryText = params.get("t") || sampleQuery?.query || "";
-        setImportFile(sampleQueries.importFile);
         setQueries(sampleQueries.queries);
         setQuery(sampleQuery);
         setLoadedQuery(queryText);
@@ -155,6 +154,7 @@ export const App: React.FC = () => {
       setLoadedQuery(queryText);
       setEditedQuery(queryText);
       updateSearchParam("q", query.name);
+      setAutoRun(true);
     }
   }, [query]);
 
@@ -220,6 +220,13 @@ export const App: React.FC = () => {
       setError(error.message);
     }
   }, [editedQuery, sample, query]);
+
+  useEffect(() => {
+    if (autoRun) {
+      onRun();
+      setAutoRun(false);
+    }
+  }, [autoRun, onRun]);
 
   const onSelectSample = useCallback((sample: Sample) => {
     setSample(sample);

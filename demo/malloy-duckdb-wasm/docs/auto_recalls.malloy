@@ -5,7 +5,7 @@ source: recalls is table('duckdb:auto_recalls.csv') {
     percent_of_recalls is recall_count/all(recall_count)*100
 
     recall_url is concat(
-      'https:/‌/‌www.nhtsa.gov/‌recalls?ntsaid=',
+      'https://www.nhtsa.gov/recalls?ntsaid=',
       `NHTSA ID`
     )
   query: by_manufacturer is {
