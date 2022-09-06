@@ -15,7 +15,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import styled from "styled-components";
 import { Field, Model, Result, Runtime } from "@malloydata/malloy";
 import { HTMLView } from "@malloydata/render";
-import { DuckDBWASMConnection } from "@malloydata/db-duckdb-wasm";
+import { DuckDBWASMConnection } from "@malloydata/db-duckdb";
 import { Controls } from "./Controls";
 import { Query } from "./Query";
 import { Results } from "./Results";

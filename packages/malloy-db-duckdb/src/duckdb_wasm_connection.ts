@@ -13,8 +13,8 @@
 import { QueryDataRow } from "@malloydata/malloy";
 import * as duckdb from "@duckdb/duckdb-wasm";
 import { StructRow, Table, Vector } from "apache-arrow";
-import { DuckDBCommon } from "@malloydata/db-duckdb/src/duckdb_common";
 import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
+import { DuckDBCommon } from "./duckdb_common";
 
 /**
  * Arrow's toJSON() doesn't really do what I'd expect, since

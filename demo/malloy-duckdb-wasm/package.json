@@ -13,7 +13,7 @@
   "license": "UNLICENSED",
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.16.0",
-    "@malloydata/db-duckdb-wasm": "*",
+    "@malloydata/db-duckdb": "*",
     "@malloydata/malloy": "*",
     "apache-arrow": "^8.0.0",
     "monaco-editor": "^0.34.0",

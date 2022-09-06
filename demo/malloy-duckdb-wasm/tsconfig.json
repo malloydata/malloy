@@ -11,7 +11,7 @@
       "path": "../../packages/malloy"
     },
     {
-      "path": "../../packages/malloy-db-duckdb-wasm"
+      "path": "../../packages/malloy-db-duckdb"
     }
   ]
 }
