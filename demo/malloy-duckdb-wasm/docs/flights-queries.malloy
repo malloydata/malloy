@@ -89,3 +89,52 @@ query: flights->  {
       dest_count
   }
 }
+
+// --
+// Name: Top N of a Single Dimension
+// It is often interesting to pull the topN of a
+//  particular dimension.  Using pipelines
+//  we can run two queries simultaneously and
+//  join the results.
+
+source: my_flights is flights + {
+  query: top_carrier_line_chart is {
+      nest: c is {
+        group_by: qtr is dep_time.quarter
+        aggregate: flight_count
+        group_by: carriers.nickname
+      }
+      nest: top_carriers is {
+          group_by: carriers.nickname
+          aggregate: flight_count
+          top: 5
+      }
+  }
+  -> {
+    project: c.*
+    where: c.nickname = top_carriers.nickname
+  }
+
+  query: origin_top_carriers is {
+    group_by: origin, orig.city
+    aggregate: flight_count
+    nest: top_carrier_line_chart
+  }
+}
+query: my_flights->origin_top_carriers
+
+
+// --
+// Name: Using one query as a filter for another
+// Filter by carriers that fly to SFO.
+query: sfo_carriers is flights-> {
+  where: orig.code = 'SFO'
+  group_by: carrier
+}
+
+query: flights -> {
+  join_one: sfo is from(->sfo_carriers) on carrier = sfo.carrier
+  where: sfo.carrier != null
+  group_by: carriers.name
+  aggregate: flight_count, origin_count is orig.airport_count
+}

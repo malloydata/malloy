@@ -143,6 +143,51 @@ query: airports -> {
 }
 
 // --
+// Name: Mapping Data - Strings
+// We often want Map values to other value.  Malloy's 'pick' statement
+//  is powerful and readable.  You only have to mention the source once
+query: airports -> {
+  group_by: faa_region_name is faa_region ?
+    pick 'Southwest' when 'ASW'
+    pick 'Northwest Mountain' when 'ANM'
+    pick 'Eastern' when 'AEA'
+    pick 'Southern' when 'ASO'
+    pick 'Great Lakes' when 'AGL'
+    pick 'Central' when 'ACE'
+    pick 'New England' when 'ANE'
+    pick 'Western Pacific' when 'AWP'
+    pick 'Alaska' when 'AAL'
+  aggregate: airport_count
+  nest: by_state
+  order_by: 1
+}
+
+// --
+// Name: Mapping Data - Multiple Values
+//  We can map multiple values to a single value
+query: airports -> {
+  group_by: east_west is faa_region ?
+    pick 'West' when 'ASW' | 'ANM' | 'AWP' | 'AAL'
+    pick 'Central' when 'AGL' | 'ACE' | 'ANM'
+    pick 'Eastern' when 'AEA' |'ASO' |'ANE'
+  aggregate: airport_count
+  nest: by_state
+  order_by: 1
+}
+
+// --
+// Name: Mapping Data - numbers
+// We can map numeric ranges to strings.
+query: airports -> {
+  group_by: elevation_string is elevation ?
+    pick 'low' when < 300
+    pick 'medium' when < 900
+    else 'high'
+  aggregate: airport_count
+}
+
+
+// --
 // Name: Ungrouped Calculations
 // Aggregate can escape the current grouping in a query using the 'all'
 //  function.  A takes an aggregate calculation (modelled or expplicit)
@@ -201,11 +246,21 @@ source: major_airports is airports + {
   where: major = 'Y'
   measure:
     count_with_control_tower is airport_count {? cntl_twr = 'Y'}
+  dimension: faa_region_name is faa_region ?
+    pick 'Southwest' when 'ASW'
+    pick 'Northwest Mountain' when 'ANM'
+    pick 'Eastern' when 'AEA'
+    pick 'Southern' when 'ASO'
+    pick 'Great Lakes' when 'AGL'
+    pick 'Central' when 'ACE'
+    pick 'New England' when 'ANE'
+    pick 'Western Pacific' when 'AWP'
+    pick 'Alaska' when 'AAL'
 }
 
 // Look at major airports by district and state
 query: major_airports-> {
-  group_by: faa_dist
+  group_by: faa_region_name
   aggregate: airport_count, count_with_control_tower
   nest: by_state is {
     group_by: state
