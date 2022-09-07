@@ -12,6 +12,7 @@
     "malloyc": "ts-node ../../scripts/malloy-to-json"
   },
   "dependencies": {
-    "duckdb": "0.4.1-dev1094.0"
+    "duckdb": "0.4.1-dev1094.0",
+    "@duckdb/duckdb-wasm": "^1.16.0"
   }
 }
