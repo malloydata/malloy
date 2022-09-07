@@ -17,16 +17,8 @@ import path from "path";
 import { build, BuildOptions, serve } from "esbuild";
 import { argv } from "process";
 
-const samplePath = path.join(__dirname, "..", "..", "..", "samples", "duckdb");
 const outDir = path.join(__dirname, "..", "docs", "dist");
 fs.mkdirSync(outDir, { recursive: true });
-
-const namesDb = path.join(samplePath, "names", "data", "usa_names.parquet");
-fs.copyFileSync(namesDb, path.join(outDir, "usa_names.parquet"));
-const airportsDb = path.join(samplePath, "faa", "data", "airports.parquet");
-fs.copyFileSync(airportsDb, path.join(outDir, "airports.parquet"));
-const autoRecallDb = path.join(samplePath, "auto_recalls", "auto_recalls.csv");
-fs.copyFileSync(autoRecallDb, path.join(outDir, "auto_recalls.csv"));
 
 let port: number | undefined;
 
