@@ -27,7 +27,8 @@ export const Query: React.FC<QueryProps> = ({ onChange, query }) => {
   return (
     <Wrapper>
       <Title>
-        Query <Info title="Using the semantic model" />
+        Query Editor
+        <Info title="Using the semantic model" />
       </Title>
       <Editor value={query} onChange={onChange} />
     </Wrapper>

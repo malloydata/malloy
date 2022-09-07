@@ -36,7 +36,7 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
 
   return (
     <ModelSection>
-      <Label htmlFor="model-select">Data Set: </Label>
+      <Label htmlFor="model-select">Dataset: </Label>
       <Select
         id="model-select"
         onChange={onSampleChange}
