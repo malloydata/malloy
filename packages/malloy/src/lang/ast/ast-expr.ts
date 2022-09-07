@@ -45,7 +45,6 @@ import {
 } from "./index";
 import { applyBinary, nullsafeNot } from "./apply-expr";
 import { SpaceParam, StructSpaceField } from "../space-field";
-import { Dialect } from "../../dialect";
 import { FieldName, FieldReference } from "./ast-main";
 import { castTo } from "./time-utils";
 
@@ -151,11 +150,8 @@ class ConstantFieldSpace implements FieldSpace {
       found: undefined,
     };
   }
-  getDialect(): Dialect {
-    // well dialects totally make this wrong and broken and stupid and useless
-    // but since this is only used for parameters which are also wrong and
-    // broken and stupid and useless, this will do for now
-    throw new Error("I just put this line of code here to make things compile");
+  dialectObj(): undefined {
+    return undefined;
   }
   whenComplete(step: () => void): void {
     step();

@@ -646,8 +646,11 @@ export class ExprFunc extends ExpressionDef {
     }
     funcCall.push(")");
 
-    const funcInfo = fs.getDialect().getFunctionInfo(this.name);
-    const dataType = funcInfo?.returnType ?? collectType ?? "number";
+    const dialect = fs.dialectObj();
+    const dataType =
+      dialect?.getFunctionInfo(this.name)?.returnType ??
+      collectType ??
+      "number";
     return {
       dataType: dataType,
       aggregate: anyAggregate,
