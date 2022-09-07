@@ -2,6 +2,7 @@
 docs/_includes/generated/
 docs/_site/
 docs/documentation/
+docs/fiddle/
 docs/.jekyll-cache/
 docs/js/generated/
 docs/aux/generated/

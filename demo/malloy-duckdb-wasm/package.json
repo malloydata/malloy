@@ -10,7 +10,7 @@
     "build": "ts-node scripts/build"
   },
   "author": "Malloy",
-  "license": "UNLICENSED",
+  "license": "GPL-2.0",
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.16.0",
     "@malloydata/db-duckdb": "*",
@@ -18,10 +18,10 @@
     "apache-arrow": "^8.0.0",
     "monaco-editor": "^0.34.0",
     "react": "^17.0.2",
-    "shiki": "^0.10.1",
     "styled-component": "^2.8.0"
   },
   "devDependencies": {
-    "@types/express": "^4.17.13"
+    "@types/express": "^4.17.13",
+    "esbuild": "0.14.13"
   }
 }

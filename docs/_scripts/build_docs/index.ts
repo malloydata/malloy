@@ -12,7 +12,7 @@
  */
 
 import path from "path";
-import fs from "fs";
+import fs from "fs-extra";
 import archiver from "archiver";
 import { performance } from "perf_hooks";
 import { renderDoc } from "./render_document.js";
@@ -38,6 +38,12 @@ const CONTENTS_PATH = path.join(DOCS_ROOT_PATH, "table_of_contents.json");
 const SAMPLES_PATH = path.join(__dirname, "../../../samples/bigquery");
 const SAMPLES_ROOT_PATH = path.join(__dirname, "../../../samples");
 const AUX_OUT_PATH = path.join(__dirname, "../../aux/generated");
+
+const FIDDLE_IN_PATH = path.join(
+  __dirname,
+  "../../../demo/malloy-duckdb-wasm/docs"
+);
+const FIDDLE_OUT_PATH = path.join(__dirname, "../../fiddle");
 
 const WATCH_ENABLED = process.argv.includes("--watch");
 
@@ -153,7 +159,13 @@ async function outputSamplesZips(): Promise<void> {
   ]);
 }
 
+async function copyFiddle(): Promise<void> {
+  await fs.rm(FIDDLE_OUT_PATH, { recursive: true, force: true });
+  await fs.copy(FIDDLE_IN_PATH, FIDDLE_OUT_PATH);
+}
+
 (async () => {
+  await copyFiddle();
   await outputSamplesZips();
   const allFiles = readDirRecursive(DOCS_ROOT_PATH);
   const allDocs = allFiles.filter(isMarkdown);
