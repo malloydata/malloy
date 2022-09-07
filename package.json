@@ -26,7 +26,7 @@
     "test-silent": "jest --runInBand --reporters jest-silent-reporter",
     "docs-clean": "rm -rf docs/.jekyll-cache/ && rm -rf docs/_includes/generated/ && rm -rf docs/documentation && rm -rf js/generated/",
     "docs-prebuild": "npm run build && npm run docs-clean",
-    "docs-build": "npm run docs-prebuild && ts-node --project tsconfig.docs.json --esm ./docs/_scripts/build_docs/index.ts && cd docs && bundle exec jekyll build",
+    "docs-build": "npm run docs-prebuild && npm run build-fiddle && ts-node --project tsconfig.docs.json --esm ./docs/_scripts/build_docs/index.ts && cd docs && bundle exec jekyll build",
     "docs-preprocess": "ts-node --esm --project tsconfig.docs.json docs/_scripts/build_docs/index.ts --watch",
     "docs-postprocess": "wait-on ./docs/_includes/generated/toc.html && cd docs && bundle exec jekyll serve -l -o",
     "docs-serve": "npm run docs-prebuild && concurrently --kill-others 'npm run docs-preprocess' 'npm run docs-postprocess'",
@@ -36,7 +36,8 @@
     "third-party-licenses": "ts-node scripts/third_party_licenses",
     "malloyc": "ts-node scripts/malloy-to-json",
     "build-duckdb-db": "ts-node scripts/build_duckdb_test_database",
-    "update-duckdb": "ts-node scripts/update_duckdb"
+    "update-duckdb": "ts-node scripts/update_duckdb",
+    "build-fiddle": "cd demo/malloy-duckdb-wasm && npm run build"
   },
   "devDependencies": {
     "@jest/globals": "^26.6.2",
@@ -59,6 +60,7 @@
     "eslint": "^7.28.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-prettier": "^3.4.0",
+    "fs-extra": "^10.1.0",
     "jest": "^26.6.0",
     "jest-diff": "^27.0.6",
     "jest-expect-message": "^1.0.2",
