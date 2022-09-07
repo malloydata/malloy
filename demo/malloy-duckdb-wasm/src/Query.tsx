@@ -15,6 +15,7 @@ import React from "react";
 import styled from "styled-components";
 import { Editor } from "./Editor";
 import { Title } from "./Title";
+import { Info } from "./Info";
 
 export interface QueryProps {
   queryPath?: string;
@@ -25,7 +26,9 @@ export interface QueryProps {
 export const Query: React.FC<QueryProps> = ({ onChange, query }) => {
   return (
     <Wrapper>
-      <Title>Query</Title>
+      <Title>
+        Query <Info title="Using the semantic model" />
+      </Title>
       <Editor value={query} onChange={onChange} />
     </Wrapper>
   );

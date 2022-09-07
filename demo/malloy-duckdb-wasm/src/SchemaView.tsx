@@ -35,7 +35,7 @@ export const SchemaView: React.FC<SchemaViewProps> = ({
   return (
     <Wrapper>
       <Title>
-        Schema <Info title="Data Sources, Columns, Aggregate Calculations" />
+        Schema <Info title="Data sources, columns, aggregate calculations" />
       </Title>
       <Explores>
         <List>
@@ -271,12 +271,12 @@ const Explores = styled.div`
 `;
 
 const List = styled.ul`
-  padding-inline-start: 15px;
+  padding-inline-start: 18px;
   line-height: 22px;
 `;
 
 const ListItem = styled.li`
-  font-size: 14px;
+  font-size: 13px;
   list-style-type: none;
   list-style-image: none;
 `;
@@ -285,10 +285,14 @@ const LabelWithIcon = styled.div`
   display: flex;
   flex-direction: row;
   align-items: center;
+  font-family: "Roboto Mono";
 `;
 
 const Icon = styled.img`
   padding-right: 5px;
+  padding-left: 5px;
+  width: 16px;
+  height: 16px;
 `;
 
 interface ToggleItemProps {
@@ -296,7 +300,7 @@ interface ToggleItemProps {
 }
 
 const ToggleItem = styled.li<ToggleItemProps>`
-  font-size: 14px;
+  font-size: 13px;
   list-style-image: ${({ open }) => {
     return open
       ? "url(./media/chevron_down.svg)"

@@ -19,10 +19,12 @@ export interface InfoProps {
 }
 
 export const Info: React.FC<InfoProps> = ({ title }) => {
-  return <Padding title={title}>&#9432;</Padding>;
+  return <Padding title={title} src="media/info.svg" />;
 };
 
-const Padding = styled.span`
-  padding-left: 5px;
+const Padding = styled.img`
+  padding-left: 8px;
   cursor: pointer;
+  width: 12px;
+  height: 12px;
 `;

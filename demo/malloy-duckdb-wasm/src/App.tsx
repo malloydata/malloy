@@ -325,7 +325,7 @@ const Logo = styled.img`
 const Left = styled.div`
   flex: auto;
   height: 100%;
-  width: calc(40% - 128px);
+  width: calc(45% - 128px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -334,7 +334,7 @@ const Left = styled.div`
 const Right = styled.div`
   flex: auto;
   height: 100%;
-  width: calc(60% - 128px);
+  width: calc(55% - 128px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
