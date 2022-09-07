@@ -1773,6 +1773,12 @@ class QueryQuery extends QueryField {
         switch (expr.function) {
           case "now":
             break;
+          case "div":
+            expressions.push(expr.denominator);
+            expressions.push(expr.numerator);
+            break;
+          case "timeLiteral":
+            break;
           case "timeDiff":
             expressions.push(expr.left.value, expr.right.value);
             break;

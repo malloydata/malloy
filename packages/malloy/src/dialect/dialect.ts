@@ -19,7 +19,7 @@ import {
   DialectFragment,
   TimeValue,
 } from "..";
-import { Expr, Sampling, StructDef, TypecastFragment } from "../model";
+import { Expr, mkExpr, Sampling, StructDef, TypecastFragment } from "../model";
 
 interface DialectField {
   type: string;
@@ -185,6 +185,14 @@ export abstract class Dialect {
         return this.sqlCast(df);
       case "regexpMatch":
         return this.sqlRegexpMatch(df.expr, df.regexp);
+      case "div": {
+        if (this.divisionIsInteger) {
+          return mkExpr`${df.numerator}*1.0/${df.denominator}`;
+        }
+        return mkExpr`${df.numerator}/${df.denominator}`;
+      }
+      case "timeLiteral":
+        return [this.sqlLiteralTime(df.literal, df.literalType, df.timezone)];
     }
   }
 

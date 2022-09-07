@@ -266,7 +266,22 @@ export interface RegexpMatchFragment extends DialectFragmentBase {
   regexp: string;
 }
 
+export interface DivFragment extends DialectFragmentBase {
+  function: "div";
+  numerator: Expr;
+  denominator: Expr;
+}
+
+export interface TimeLiteralFragment extends DialectFragmentBase {
+  function: "timeLiteral";
+  literal: string;
+  literalType: TimeFieldType;
+  timezone: string;
+}
+
 export type DialectFragment =
+  | DivFragment
+  | TimeLiteralFragment
   | NowFragment
   | TimeDeltaFragment
   | TimeDiffFragment

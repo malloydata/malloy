@@ -629,6 +629,9 @@ WHITE_SPACE: SPACE_CHAR -> skip ;
 
 SQL_STRING: '||' .*? ';;';
 
+fragment LANG_OPEN: '{' '{';
+fragment LANG_CLOSE: '}' '}';
+
 // Matching any of these is a parse error
 UNWATED_CHARS_TRAILING_NUMBERS: DIGIT+ ID_CHAR+ (ID_CHAR | DIGIT)*;
 UNEXPECTED_CHAR: .;
