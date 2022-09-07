@@ -27,7 +27,7 @@ export const SchemaView: React.FC<SchemaViewProps> = ({
 }) => {
   return (
     <Wrapper>
-      <Title>Schema:</Title>
+      <Title>Schema</Title>
       <Explores>
         <List>
           {model
@@ -63,9 +63,11 @@ const ExploreItem: React.FC<ExploreItemProps> = ({
 
   return (
     <>
-      <ListItem icon="./media/struct.svg" onClick={toggle}>
-        {explore.name}
-      </ListItem>
+      <ToggleItem open={open} onClick={toggle}>
+        <LabelWithIcon>
+          <Icon src="./media/struct.svg" /> {explore.name}
+        </LabelWithIcon>
+      </ToggleItem>
       {open ? (
         <List>
           {fields.map((field) => (
@@ -98,11 +100,10 @@ const FieldItem: React.FC<FieldItemProps> = ({ depth, field, onClick }) => {
     );
   } else {
     return (
-      <ListItem
-        icon={getIconPath(type, isAggregate)}
-        onClick={() => onClick(field)}
-      >
-        {field.name}
+      <ListItem onClick={() => onClick(field)}>
+        <LabelWithIcon>
+          <Icon src={getIconPath(type, isAggregate)} /> {field.name}
+        </LabelWithIcon>
       </ListItem>
     );
   }
@@ -185,14 +186,13 @@ const Wrapper = styled.div`
   flex-direction: column;
   margin: 5px;
   height: calc(100% - 10px);
-  width: 20%;
+  width: 256px;
 `;
 
 const Explores = styled.div`
-  background: #ffffff;
-  border: 1px inset;
+  background: #f0f4fd;
   height: 100%;
-  overflow-y: scroll;
+  overflow-y: auto;
   padding-left: 10px;
 `;
 
@@ -201,11 +201,31 @@ const List = styled.ul`
   line-height: 22px;
 `;
 
-interface ListItemProps {
-  icon: string;
+const ListItem = styled.li`
+  font-size: 14px;
+  list-style-type: none;
+  list-style-image: none;
+`;
+
+const LabelWithIcon = styled.div`
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+`;
+
+const Icon = styled.img`
+  padding-right: 5px;
+`;
+
+interface ToggleItemProps {
+  open: boolean;
 }
 
-const ListItem = styled.li<ListItemProps>`
+const ToggleItem = styled.li<ToggleItemProps>`
   font-size: 14px;
-  list-style-image: url(${(props) => props.icon});
+  list-style-image: ${({ open }) => {
+    return open
+      ? "url(./media/section_open.svg)"
+      : "url(./media/section_close.svg)";
+  }};
 `;

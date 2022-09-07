@@ -36,6 +36,5 @@ export const Scroll = styled.div`
   flex: auto;
   width: 45vw;
   height: 94vh;
-  overflow-y: scroll;
-  border: 1px inset;
+  overflow-y: auto;
 `;

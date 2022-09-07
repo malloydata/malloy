@@ -37,7 +37,7 @@ export const Results: React.FC<RenderProps> = ({ json, sql, rendered }) => {
   return (
     <Wrapper>
       <Top>
-        <Title>Results:</Title>
+        <Title>Results</Title>
         <Tabs>
           <Tab selected={tab === "HTML"} onClick={() => setTab("HTML")}>
             HTML
@@ -50,7 +50,10 @@ export const Results: React.FC<RenderProps> = ({ json, sql, rendered }) => {
           </Tab>
         </Tabs>
       </Top>
-      <Render ref={ref} style={{ display: tab === "HTML" ? "flex" : "none" }} />
+      <Render
+        ref={ref}
+        style={{ display: tab === "HTML" ? "block" : "none" }}
+      />
       <JSON style={{ display: tab === "JSON" ? "flex" : "none" }}>
         <Editor value={json || ""} language="json" readOnly={true} />
       </JSON>
@@ -64,7 +67,7 @@ export const Results: React.FC<RenderProps> = ({ json, sql, rendered }) => {
 const Wrapper = styled.div`
   display: flex;
   flex-direction: column;
-  margin: 5px;
+  margin: 5px 5px 5px 10px;
   height: calc(100% - 10px);
 `;
 
@@ -72,7 +75,6 @@ const Render = styled.div`
   flex: auto;
   width: 100%;
   overflow-y: scroll;
-  border: 1px inset;
   background: #ffffff;
 `;
 
@@ -81,18 +83,16 @@ interface TabProps {
 }
 
 const Tab = styled.div<TabProps>`
-  border-top: 1px outset #888888;
-  border-left: 1px outset #888888;
-  border-right: 1px outset #888888;
   padding: 5px;
   margin-left: 3px;
-  color: ${({ selected }) => (selected ? "#0000ee" : "inherit")};
+  color: ${({ selected }) => (selected ? "#188ff9" : "inherit")};
+  cursor: pointer;
 `;
 
 const Tabs = styled.div`
   display: flex;
   justify-content: flex-end;
-  border-bottom: 1px solid var(--malloy-border-color);
+  font-size: 13px;
 `;
 
 const JSON = styled.div`

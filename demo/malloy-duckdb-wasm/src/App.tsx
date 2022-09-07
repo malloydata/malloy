@@ -12,13 +12,13 @@
  */
 
 import React, { useCallback, useEffect, useState } from "react";
-import styled from "styled-components";
+import styled, { createGlobalStyle } from "styled-components";
 import { Field, Model, Result, Runtime } from "@malloydata/malloy";
 import { HTMLView } from "@malloydata/render";
 import { DuckDBWASMConnection } from "@malloydata/db-duckdb/src/duckdb_wasm_connection";
-import { Controls } from "./Controls";
 import { Query } from "./Query";
 import { Results } from "./Results";
+import { ModelSelect } from "./ModelSelect";
 import { ModelView } from "./ModelView";
 import { Status } from "./Status";
 import { BrowserURLReader } from "./utils/files";
@@ -27,6 +27,8 @@ import { HackyDataStylesAccumulator } from "./utils/data_styles";
 import { Sample } from "./types";
 import { SchemaView } from "./SchemaView";
 import { loadSampleQueries, SampleQuery } from "./utils/query";
+import { QuerySelect } from "./QuerySelect";
+import { Run } from "./Run";
 
 const DOCS_LINK = "https://looker-open-source.github.io/malloy/documentation/";
 const REPO_LINK = "https://github.com/looker-open-source/malloy/";
@@ -240,41 +242,28 @@ export const App: React.FC = () => {
 
   return (
     <React.StrictMode>
+      <GlobalStyle />
       <Header>
-        <h1>
+        <TitleSection>
           <Logo src="logo.png" />
-          Malloy Fiddle
-        </h1>
-        <DocsLink>
-          <a href={DOCS_LINK} target="_blank">
-            Malloy Documentation
-          </a>
-          <br />
-          <a href={REPO_LINK} target="_blank">
-            Malloy Repository on Github
-          </a>
-          <br />
-          <a href={VSCODE_INSTALL_LINK} target="_blank">
-            Malloy VSCode Installation
-          </a>
-          <br />
-          <a href={SLACK_LINK} target="_blank">
-            Join the Malloy Slack Community
-          </a>
-        </DocsLink>
+          <Title htmlFor="model-select">Malloy Fiddle</Title>
+          <Divider />
+          <ModelSelect
+            samples={samples}
+            selectedSample={sample}
+            onSelectSample={onSelectSample}
+          />
+        </TitleSection>
+        <Run onRun={onRun} />
       </Header>
-      <Controls
-        samples={samples}
-        selectedSample={sample}
-        onSelectSample={onSelectSample}
-        onSelectQuery={onSelectQuery}
-        queries={queries}
-        selectedQuery={query}
-        onRun={onRun}
-      />
       <View>
         <SchemaView model={model} onFieldClick={onFieldClick} />
         <Left>
+          <QuerySelect
+            onSelectQuery={onSelectQuery}
+            selectedQuery={query}
+            queries={queries}
+          />
           <Query
             queryPath={sample?.queryPath}
             query={loadedQuery}
@@ -299,21 +288,40 @@ export const App: React.FC = () => {
           )}
         </Right>
       </View>
+      <Footer>
+        <DocsLink>
+          Learn More:
+          <a href={DOCS_LINK} target="_blank">
+            Docs
+          </a>
+          <br />
+          <a href={REPO_LINK} target="_blank">
+            Github
+          </a>
+          <br />
+          <a href={VSCODE_INSTALL_LINK} target="_blank">
+            VSCode
+          </a>
+          <br />
+          <a href={SLACK_LINK} target="_blank">
+            Slack
+          </a>
+        </DocsLink>
+      </Footer>
     </React.StrictMode>
   );
 };
 
 const Logo = styled.img`
-  width: 24px;
-  position: relative;
-  padding-right: 5px;
-  top: 5px;
+  height: 25px;
+  width: 25px;
+  padding: 10px;
 `;
 
 const Left = styled.div`
   flex: auto;
   height: 100%;
-  width: 40%;
+  width: calc(50% - 128px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -322,7 +330,7 @@ const Left = styled.div`
 const Right = styled.div`
   flex: auto;
   height: 100%;
-  width: 40%;
+  width: calc(50% - 128px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -342,7 +350,7 @@ const ErrorMessage = styled.div`
 const View = styled.div`
   display: flex;
   flex-direction: row;
-  height: 90vh;
+  height: calc(100vh - 100px);
 `;
 
 const Header = styled.div`
@@ -351,8 +359,54 @@ const Header = styled.div`
   justify-content: space-between;
 `;
 
+const Footer = styled.div`
+  width: 100%;
+  display: flex;
+  justify-content: center;
+`;
+
 const DocsLink = styled.div`
-  float: right;
+  display: flex;
+  flex-direction: row;
   color: #000000;
   font-size: 14px;
+  padding: 10px 0;
+  a {
+    padding: 0 10px;
+    text-decoration: none;
+  }
+`;
+
+const Title = styled.label`
+  font-size: 18px;
+  padding: 5px;
+  line-height: 36px;
+`;
+
+const TitleSection = styled.div`
+  display: flex;
+  flex-direction: row;
+`;
+
+const Divider = styled.div`
+  display: inline-block;
+  height: 25px;
+  margin: 10px;
+  border-left: 1px solid #a7aab3;
+`;
+
+const GlobalStyle = createGlobalStyle`
+  body {
+    color: #616161;
+    background: rgba(105, 145, 214, 0.05);
+    font-family: var(--malloy-font-family);
+    font-size: 11px;
+    overflow: hidden;
+  }
+  table {
+    font-size: 11px;
+  }
+  a {
+    color: #188ff9;
+  }
 `;

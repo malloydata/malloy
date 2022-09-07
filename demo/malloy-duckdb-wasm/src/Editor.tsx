@@ -51,6 +51,7 @@ export const Editor: React.FC<EditorProps> = ({
       editor = monaco.editor.create(divRef.current, {
         automaticLayout: true,
         fontSize: 11,
+        fontFamily: "Roboto Mono",
         value,
         language,
         readOnly,
@@ -74,7 +75,6 @@ export const Editor: React.FC<EditorProps> = ({
 };
 
 const Wrapper = styled.div`
-  border: 1px inset;
   flex: auto;
   position: relative;
   overflow: hidden;

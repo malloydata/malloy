@@ -13,33 +13,21 @@
 
 import React from "react";
 import styled from "styled-components";
-import { Editor } from "./Editor";
-import { Title } from "./Title";
 
-export interface ModelViewProps {
-  model: string;
-  modelPath?: string;
+interface RunProps {
+  onRun: () => void;
 }
 
-export const ModelView: React.FC<ModelViewProps> = ({ model }) => {
-  return (
-    <Wrapper>
-      <Title>Model</Title>
-      <Editor value={model} readOnly={true} />
-    </Wrapper>
-  );
+export const Run: React.FC<RunProps> = ({ onRun }) => {
+  return <Button onClick={onRun}>Run</Button>;
 };
 
-const Wrapper = styled.div`
-  display: flex;
-  flex: auto;
-  flex-direction: column;
-  height: 60%;
-  width: 100%;
-  margin: 5px;
-
-  .monaco-editor-background,
-  .monaco-editor .margin {
-    background-color: #f0f4fd;
-  }
+const Button = styled.button`
+  margin-left: 5px;
+  border: 0;
+  background: #4285f4;
+  color: #ffffff;
+  height: 30px;
+  width: 80px;
+  border-radius: 3px;
 `;

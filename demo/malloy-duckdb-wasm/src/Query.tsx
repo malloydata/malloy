@@ -25,9 +25,6 @@ export interface QueryProps {
 export const Query: React.FC<QueryProps> = ({ onChange, query }) => {
   return (
     <Wrapper>
-      <Title>
-        Query: <i>Fiddle (edit) this</i>
-      </Title>
       <Editor value={query} onChange={onChange} />
     </Wrapper>
   );
