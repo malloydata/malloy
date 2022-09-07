@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="16px" height="16px" viewBox="0 0 16 16" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>malloy-icon-field-info</title>
+    <g id="malloy-icon-field-info" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <circle id="Oval" stroke="#4285F4" cx="8" cy="8.0015734" r="6.65099589"></circle>
+        <text id="i" font-family="TimesNewRomanPS-BoldItalicMT, Times New Roman" font-size="12" font-style="italic" font-weight="bold" fill="#4285F4">
+            <tspan x="6.2022124" y="11.8474307">i</tspan>
+        </text>
+    </g>
+</svg>
