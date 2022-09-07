@@ -13,7 +13,7 @@
 /* eslint-disable no-console */
 
 import { allDatabases, RuntimeList } from "../../runtimes";
-import { databasesFromEnvironmentOr } from "../../test_utils";
+import { databasesFromEnvironmentOr } from "../../util";
 
 const joinModelText = `
   explore: aircraft_models is table('malloytest.aircraft_models') {

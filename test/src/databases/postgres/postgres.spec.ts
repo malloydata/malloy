@@ -13,7 +13,7 @@
  */
 
 import { RuntimeList } from "../../runtimes";
-import { describeIfDatabaseAvailable } from "../../test_utils";
+import { describeIfDatabaseAvailable } from "../../util";
 
 const [describe] = describeIfDatabaseAvailable(["postgres"]);
 

@@ -15,7 +15,7 @@ import fs from "fs";
 import path from "path";
 import { Runtime } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
-import { describeIfDatabaseAvailable } from "../../test_utils";
+import { describeIfDatabaseAvailable } from "../../util";
 
 const SAMPLE_PROJECT_ROOT = path.join(
   __dirname,

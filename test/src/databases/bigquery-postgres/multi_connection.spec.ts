@@ -17,7 +17,7 @@
 import * as malloy from "@malloydata/malloy";
 import { EmptyURLReader } from "@malloydata/malloy";
 import { BigQueryTestConnection, PostgresTestConnection } from "../../runtimes";
-import { describeIfDatabaseAvailable } from "../../test_utils";
+import { describeIfDatabaseAvailable } from "../../util";
 
 const res = describeIfDatabaseAvailable(["bigquery", "postgres"]);
 let [describe] = res;

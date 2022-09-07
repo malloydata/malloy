@@ -14,7 +14,7 @@
 
 import * as malloy from "@malloydata/malloy";
 import { allDatabases, RuntimeList } from "../../runtimes";
-import { databasesFromEnvironmentOr } from "../../test_utils";
+import { databasesFromEnvironmentOr } from "../../util";
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 

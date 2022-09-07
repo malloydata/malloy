@@ -17,7 +17,7 @@ import {
   describeIfDatabaseAvailable,
   fStringEq,
   fStringLike,
-} from "../../test_utils";
+} from "../../util";
 
 import * as malloy from "@malloydata/malloy";
 import { RuntimeList } from "../../runtimes";

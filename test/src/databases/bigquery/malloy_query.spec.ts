@@ -13,7 +13,7 @@
 
 import { test } from "@jest/globals";
 import { testModel } from "../../models/faa_model";
-import { describeIfDatabaseAvailable, fStringEq } from "../../test_utils";
+import { describeIfDatabaseAvailable, fStringEq } from "../../util";
 
 import * as malloy from "@malloydata/malloy";
 

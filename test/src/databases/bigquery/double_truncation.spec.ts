@@ -12,7 +12,7 @@
  */
 
 import { RuntimeList } from "../../runtimes";
-import { describeIfDatabaseAvailable } from "../../test_utils";
+import { describeIfDatabaseAvailable } from "../../util";
 
 const [describe, databases] = describeIfDatabaseAvailable(["bigquery"]);
 describe("BigQuery double truncation", () => {

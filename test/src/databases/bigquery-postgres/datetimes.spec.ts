@@ -14,9 +14,9 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 /* eslint-disable no-console */
 
-import "../../is-sql-eq";
+import "../../util/is-sql-eq";
 import { RuntimeList } from "../../runtimes";
-import { describeIfDatabaseAvailable, mkSqlEqWith } from "../../test_utils";
+import { describeIfDatabaseAvailable, mkSqlEqWith } from "../../util";
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
