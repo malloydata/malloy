@@ -19,7 +19,17 @@ import {
   DialectFragment,
   TimeValue,
 } from "..";
-import { Expr, mkExpr, Sampling, StructDef, TypecastFragment } from "../model";
+// Can't get these from "../model" because model includes this file
+// and that can create a circular reference problem. This is a patch
+// and really indicates a problem in the relationship between
+// dialect and model, it's going to come up again some time.
+import {
+  mkExpr,
+  Expr,
+  Sampling,
+  StructDef,
+  TypecastFragment,
+} from "../model/malloy_types";
 
 interface DialectField {
   type: string;
