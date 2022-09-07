@@ -11,7 +11,12 @@
  * GNU General Public License for more details.
  */
 
-import { isTimeFieldType, Expr, mkExpr } from "../../model/malloy_types";
+import {
+  isTimeFieldType,
+  Expr,
+  mkExpr,
+  DivFragment,
+} from "../../model/malloy_types";
 import { FieldSpace } from "../field-space";
 import {
   ExprDuration,
@@ -58,11 +63,27 @@ export function applyBinary(
     return numeric(fs, left, op, right);
   }
   if (oneOf(op, "/")) {
-    if (fs.getDialect().divisionIsInteger) {
-      return numeric(fs, left, "*1.0/", right);
+    const num = left.getExpression(fs);
+    const denom = right.getExpression(fs);
+
+    if (num.dataType != "number") {
+      left.log("Numerator for division mus tbe a number");
+    } else if (denom.dataType != "number") {
+      right.log("Denominator for division mus tbe a number");
     } else {
-      return numeric(fs, left, op, right);
+      const div: DivFragment = {
+        type: "dialect",
+        function: "div",
+        numerator: num.value,
+        denominator: denom.value,
+      };
+      return {
+        dataType: "number",
+        aggregate: num.aggregate || denom.aggregate,
+        value: [div],
+      };
     }
+    return errorFor("divide type mismatch");
   }
   left.log(`Canot use ${op} operator here`);
   return errorFor("applybinary bad operator");

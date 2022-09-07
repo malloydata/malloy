@@ -21,6 +21,9 @@ Currently, the Malloy extension works on Mac, Linux, and Windows machines.
 
 To get to know the Malloy language, follow [Malloy by Example](https://looker-open-source.github.io/malloy/documentation/) and/or continue through the numbered models in the FAA directory.
 
+Note: The Malloy VSCode Extension tracks a small amount of anonymous usage data. You can opt out in the extension settings.
+ [Learn more](https://policies.google.com/technologies/cookies).
+
 ## Join the Community
 
 - Join our [**Malloy Slack Community!**](https://join.slack.com/t/malloy-community/shared_invite/zt-upi18gic-W2saeFu~VfaVM1~HIerJ7w) Use this community to ask questions, meet other Malloy users, and share ideas with one another.

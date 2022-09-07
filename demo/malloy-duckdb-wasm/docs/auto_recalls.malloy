@@ -1,0 +1,47 @@
+// Auto Recalls: CSV example
+source: recalls is table('duckdb:auto_recalls.csv') {
+  declare:
+    recall_count is count()
+    percent_of_recalls is recall_count/all(recall_count)*100
+
+    recall_url is concat(
+      'https://www.nhtsa.gov/recalls?ntsaid=',
+      `NHTSA ID`
+    )
+  query: by_manufacturer is {
+    group_by: `Manufacturer`
+    aggregate:
+      recall_count
+      percent_of_recalls
+  }
+
+  query: by_type is {
+    group_by: `Recall Type`
+    aggregate:
+      recall_count
+      percent_of_recalls
+  }
+
+  query: by_year is {
+    group_by: recall_year is year(`Report Received Date`)
+    aggregate:
+      recall_count
+    order_by: recall_year
+  }
+
+  query: recent_recalls is {
+    group_by:
+      recall_date is `Report Received Date`::string
+      `NHTSA ID`
+      recall_url
+      Manufacturer
+      Subject
+    order_by: 1 desc
+    limit: 10
+  }
+  query: recall_dashboard is by_manufacturer + {
+    nest: by_year_line_chart is by_year + {group_by: `Recall Type`}
+    nest: by_type
+    nest: recent_recalls
+  }
+}

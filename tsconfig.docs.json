@@ -5,10 +5,10 @@
     { "path": "packages/malloy-db-bigquery" },
     { "path": "packages/malloy-db-duckdb" },
     { "path": "packages/malloy-db-postgres" },
-    { "path": "packages/malloy-db-test" },
+    { "path": "test" },
     { "path": "packages/malloy-render" }
   ],
-  "files": ["packages/malloy-vscode/malloy.tmGrammar.json"],
+  "files": ["./vscode-extension/malloy.tmGrammar.json"],
   "include": ["docs/**/*", "packages/**/*", "third_party/**/*"],
   "exclude": ["**/node_modules"],
   "compilerOptions": {

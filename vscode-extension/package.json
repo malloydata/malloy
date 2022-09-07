@@ -1,0 +1,369 @@
+{
+  "name": "malloy-vscode",
+  "publisher": "malloydata",
+  "displayName": "Malloy",
+  "description": "Malloy is an experimental language for describing data relationships and transformations",
+  "version": "0.2.0",
+  "private": true,
+  "engines": {
+    "vscode": "^1.63.0"
+  },
+  "scripts": {
+    "build": "tsc --build && npm run build-extension",
+    "test": "jest --config=../jest.config.js",
+    "build-extension": "ts-node scripts/build-extension build",
+    "build-extension-dev": "NODE_ENV=development ts-node scripts/build-extension build",
+    "package-extension": "ts-node scripts/package-extension package",
+    "publish-extensions": "ts-node scripts/publish-extensions"
+  },
+  "icon": "img/logo.png",
+  "license": "GPL-2.0",
+  "categories": [
+    "Programming Languages",
+    "Data Science",
+    "Visualization",
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:malloy.showLicenses",
+    "onCommand:malloy.runQueryFile",
+    "onCommand:malloy.runQuery",
+    "onCommand:malloy.runNamedQuery",
+    "onCommand:malloy.runTurtleFromSchema",
+    "onCommand:malloy.runTurtleWithFilters",
+    "onCommand:malloy.copyFieldPath",
+    "onCommand:malloy.refreshSchema",
+    "onCommand:malloy.editConnections",
+    "onLanguage:malloy",
+    "workspaceContains:**/.malloy",
+    "onView:malloyConnections",
+    "onView:malloySchema",
+    "onWebviewPanel:malloyQuery",
+    "onWebviewPanel:malloyConnections"
+  ],
+  "main": "./dist/extension",
+  "configurationDefaults": {
+    "[malloy]": {
+      "editor.semanticHighlighting.enabled": true
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/looker-open-source/malloy"
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "malloy.showLicenses",
+        "title": "Show Licenses",
+        "category": "Malloy"
+      },
+      {
+        "command": "malloy.runQueryFile",
+        "title": "Run Query File",
+        "category": "Malloy"
+      },
+      {
+        "command": "malloy.runQuery",
+        "title": "Run Query",
+        "category": "Malloy",
+        "enablement": "false"
+      },
+      {
+        "command": "malloy.runNamedQuery",
+        "title": "Run Named Query",
+        "category": "Malloy",
+        "enablement": "false"
+      },
+      {
+        "command": "malloy.runTurtleFromSchema",
+        "title": "Run Query From Schema",
+        "category": "Malloy",
+        "icon": {
+          "light": "img/play.svg",
+          "dark": "img/play.svg"
+        },
+        "enablement": "view == malloySchema && viewItem == query"
+      },
+      {
+        "command": "malloy.runTurtleWithFilters",
+        "title": "Run Query With Filters",
+        "category": "Malloy",
+        "enablement": "false"
+      },
+      {
+        "command": "malloy.copyFieldPath",
+        "title": "Copy Field Path",
+        "category": "Malloy",
+        "enablement": "false"
+      },
+      {
+        "command": "malloy.refreshSchema",
+        "title": "Refresh Schema",
+        "category": "Malloy",
+        "icon": {
+          "light": "img/refresh.svg",
+          "dark": "img/refresh.svg"
+        }
+      },
+      {
+        "command": "malloy.editConnections",
+        "title": "Edit Connections",
+        "category": "Malloy"
+      },
+      {
+        "command": "malloy.runNamedSQLBlock",
+        "title": "Run Named SQL Block",
+        "category": "Malloy",
+        "enablement": "false"
+      },
+      {
+        "command": "malloy.runUnnamedSQLBlock",
+        "title": "Run Unnamed SQL Block",
+        "category": "Malloy",
+        "enablement": "false"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "malloy.refreshSchema",
+          "when": "view == malloySchema",
+          "group": "navigation"
+        },
+        {
+          "command": "malloy.editConnections",
+          "when": "view == malloyConnections",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "malloy.runTurtleFromSchema",
+          "when": "view == malloySchema && viewItem == query",
+          "group": "inline"
+        }
+      ]
+    },
+    "languages": [
+      {
+        "id": "malloy",
+        "extensions": [
+          ".malloy"
+        ],
+        "aliases": [
+          "Malloy",
+          "malloy"
+        ],
+        "filenames": [],
+        "configuration": "language.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "malloy",
+        "scopeName": "source.malloy",
+        "path": "./malloy.tmGrammar.json"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "malloyHelp",
+          "name": "Malloy Help",
+          "type": "webview",
+          "when": "malloy.webviewPanelFocused == true || resourceFilename =~ /\\.malloy$/"
+        },
+        {
+          "id": "malloySchema",
+          "name": "Malloy Schema",
+          "when": "malloy.webviewPanelFocused == true || resourceFilename =~ /\\.malloy$/"
+        },
+        {
+          "id": "malloyConnections",
+          "name": "Malloy Connections",
+          "when": "malloy.webviewPanelFocused == true || resourceFilename =~ /\\.malloy$/"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "malloyConnections",
+        "contents": "No configured connections.\n[Edit Connections](command:malloy.editConnections)"
+      }
+    ],
+    "configuration": {
+      "title": "Malloy",
+      "properties": {
+        "malloy.rowLimit": {
+          "type": "number",
+          "description": "Maximum number of top-level rows to fetch when running queries.",
+          "default": 50
+        },
+        "malloy.downloadsPath": {
+          "type": "string",
+          "description": "Path to directory to save downloaded results",
+          "default": "~/Downloads"
+        },
+        "malloy.telemetry": {
+          "type": "boolean",
+          "description": "Whether telemetry is enabled for the Malloy extension. Used in conjunction with the `telemetry.telemetryLevel` setting and the --disable-telemetry CLI flag.",
+          "default": true
+        },
+        "malloy.connections": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "backend": {
+                    "type": "string",
+                    "const": "postgres"
+                  },
+                  "host": {
+                    "type": "string"
+                  },
+                  "port": {
+                    "type": "number"
+                  },
+                  "username": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "isDefault": {
+                    "type": "boolean"
+                  },
+                  "databaseName": {
+                    "type": "string"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "backend": {
+                    "type": "string",
+                    "const": "bigquery"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "isDefault": {
+                    "type": "boolean"
+                  },
+                  "projectName": {
+                    "type": "string"
+                  },
+                  "location": {
+                    "type": "string"
+                  },
+                  "serviceAccountKeyPath": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          },
+          "description": "Connections for Malloy to use to access data when compiling and querying."
+        }
+      }
+    },
+    "walkthroughs": [
+      {
+        "id": "malloy-quickstart",
+        "title": "Quick Start",
+        "description": "Quickly get up to speed with Malloy.",
+        "steps": [
+          {
+            "id": "configure-connections",
+            "title": "Connect a Database",
+            "description": " \n[Edit Connections](command:malloy.editConnections)",
+            "media": {
+              "markdown": "media/connections.md"
+            },
+            "completionEvents": [
+              "onSettingChanged:malloy.connections"
+            ]
+          },
+          {
+            "id": "download-samples",
+            "title": "Download Sample Models",
+            "description": " \n[Download All Sample Models](https://looker-open-source.github.io/malloy/aux/generated/samples.zip)",
+            "media": {
+              "markdown": "media/sample-models.md"
+            }
+          },
+          {
+            "id": "check-out-samples",
+            "title": "Explore Malloy Documentation",
+            "description": "Malloy documentation is super cool!\n[Visit Documentation](https://looker-open-source.github.io/malloy/documentation/language/basic.html)",
+            "media": {
+              "markdown": "media/docs.md"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "dependencies": {
+    "@malloydata/db-bigquery": "*",
+    "@malloydata/db-duckdb": "*",
+    "@malloydata/db-postgres": "*",
+    "@malloydata/malloy": "*",
+    "@malloydata/render": "*",
+    "@observablehq/plot": "^0.1.0",
+    "@vscode/webview-ui-toolkit": "^1.0.0",
+    "keytar": "7.7.0",
+    "react": "^17.0.2",
+    "react-is": "^16.8.0",
+    "react-popper-tooltip": "^4.3.1",
+    "shiki": "^0.10.0",
+    "styled-components": "^5.3.3",
+    "vega": "5.21.0",
+    "vega-lite": "5.2.0",
+    "vscode-languageclient": "^7.0.0",
+    "vscode-languageserver": "^7.0.0",
+    "vscode-languageserver-textdocument": "^1.0.1"
+  },
+  "dependenciesComments": {
+    "esbuild": "READ THIS! esbuild is pinned to 0.14.13 because some version after that introduces 'use strict' to bundled js files. Consider this before upgrading"
+  },
+  "devDependencies": {
+    "@types/glob": "^7.1.3",
+    "@types/jsdom": "^16.2.11",
+    "@types/mocha": "^8.2.2",
+    "@types/node-fetch": "^3.0.3",
+    "@types/prismjs": "^1.26.0",
+    "@types/react": "^17.0.38",
+    "@types/react-dom": "^17.0.11",
+    "@types/semver": "^7.3.9",
+    "@types/styled-components": "^5.1.19",
+    "@types/uuid": "^8.3.4",
+    "@types/vscode": "1.56.0",
+    "@types/vscode-webview": "^1.57.0",
+    "esbuild": "0.14.13",
+    "esbuild-plugin-svgr": "^1.0.1",
+    "glob": "^7.1.7",
+    "mocha": "^9.0.0",
+    "node-fetch": "^3.2.0",
+    "prismjs": "^1.28.0",
+    "react-dom": "^17.0.2",
+    "semver": "^7.3.5",
+    "uuid": "^8.3.2",
+    "vsce": "^2.6.3",
+    "vscode-test": "^1.5.2",
+    "vscode-webview": "^1.0.1-beta.1"
+  }
+}
