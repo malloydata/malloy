@@ -50,7 +50,7 @@ export const Editor: React.FC<EditorProps> = ({
     if (divRef.current) {
       editor = monaco.editor.create(divRef.current, {
         automaticLayout: true,
-        fontSize: 11,
+        fontSize: 13,
         fontFamily: "Roboto Mono",
         value,
         language,

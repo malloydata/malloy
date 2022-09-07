@@ -206,7 +206,9 @@ export const App: React.FC = () => {
         .loadModel(new URL(sample.modelPath, window.location.href))
         .loadQuery(editedQuery);
       setStatus("Loading Data");
-      updateSearchParam("t", editedQuery);
+      if (editedQuery !== loadedQuery) {
+        updateSearchParam("t", editedQuery);
+      }
       const rowLimit = (await runnable.getPreparedResult()).resultExplore.limit;
       setStatus(`Running query`);
       const result = await runnable.run({ rowLimit });
@@ -219,6 +221,7 @@ export const App: React.FC = () => {
       setRendered(rendered);
     } catch (error) {
       setStatus("Error");
+      setResult(undefined);
       setError(error.message);
     }
   }, [editedQuery, sample, query]);
@@ -253,17 +256,17 @@ export const App: React.FC = () => {
             selectedSample={sample}
             onSelectSample={onSelectSample}
           />
+          <QuerySelect
+            onSelectQuery={onSelectQuery}
+            selectedQuery={query}
+            queries={queries}
+          />
         </TitleSection>
         <Run onRun={onRun} />
       </Header>
       <View>
         <SchemaView model={model} onFieldClick={onFieldClick} />
         <Left>
-          <QuerySelect
-            onSelectQuery={onSelectQuery}
-            selectedQuery={query}
-            queries={queries}
-          />
           <Query
             queryPath={sample?.queryPath}
             query={loadedQuery}
@@ -272,9 +275,9 @@ export const App: React.FC = () => {
           <ModelView modelPath={sample?.modelPath} model={loadedModel} />
         </Left>
         <Right>
-          {error ? <ErrorMessage>{error}</ErrorMessage> : null}
-          {rendered ? (
+          {rendered || error ? (
             <Results
+              error={error}
               rendered={rendered}
               sql={result?.sql}
               json={
@@ -289,24 +292,25 @@ export const App: React.FC = () => {
         </Right>
       </View>
       <Footer>
-        <DocsLink>
-          Learn More:
-          <a href={DOCS_LINK} target="_blank">
+        <DocsLinks>
+          Learn More!
+          <DocsLink href={DOCS_LINK} target="_blank">
+            <img src="media/more_info_docs.svg" />
             Docs
-          </a>
-          <br />
-          <a href={REPO_LINK} target="_blank">
+          </DocsLink>
+          <DocsLink href={REPO_LINK} target="_blank">
+            <img src="media/more_info_github.svg" />
             Github
-          </a>
-          <br />
-          <a href={VSCODE_INSTALL_LINK} target="_blank">
+          </DocsLink>
+          <DocsLink href={VSCODE_INSTALL_LINK} target="_blank">
+            <img src="media/more_info_vsc.svg" />
             VSCode
-          </a>
-          <br />
-          <a href={SLACK_LINK} target="_blank">
+          </DocsLink>
+          <DocsLink href={SLACK_LINK} target="_blank">
+            <img src="media/more_info_slack.svg" />
             Slack
-          </a>
-        </DocsLink>
+          </DocsLink>
+        </DocsLinks>
       </Footer>
     </React.StrictMode>
   );
@@ -321,7 +325,7 @@ const Logo = styled.img`
 const Left = styled.div`
   flex: auto;
   height: 100%;
-  width: calc(50% - 128px);
+  width: calc(40% - 128px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -330,21 +334,10 @@ const Left = styled.div`
 const Right = styled.div`
   flex: auto;
   height: 100%;
-  width: calc(50% - 128px);
+  width: calc(60% - 128px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-`;
-
-const ErrorMessage = styled.div`
-  margin-left: 5px;
-  padding: 5px;
-  background-color: #fbb;
-  font-size: 12px;
-  color: #4b4c50;
-  border-radius: 5px;
-  white-space: pre-wrap;
-  font-family: "Roboto Mono", monospace;
 `;
 
 const View = styled.div`
@@ -365,15 +358,30 @@ const Footer = styled.div`
   justify-content: center;
 `;
 
-const DocsLink = styled.div`
+const DocsLinks = styled.div`
   display: flex;
   flex-direction: row;
   color: #000000;
   font-size: 14px;
   padding: 10px 0;
-  a {
-    padding: 0 10px;
-    text-decoration: none;
+  align-items: center;
+  img {
+    width: 20px;
+    height: 20px;
+    margin-right: 5px;
+  }
+`;
+
+const DocsLink = styled.a`
+  display: flex;
+  flex-direction: row;
+  font-size: 14px;
+  align-items: center;
+  padding: 0 10px;
+  text-decoration: none;
+  img {
+    width: 20px;
+    height: 20px;
   }
 `;
 
@@ -397,11 +405,12 @@ const Divider = styled.div`
 
 const GlobalStyle = createGlobalStyle`
   body {
-    color: #616161;
-    background: rgba(105, 145, 214, 0.05);
+    color: #595959;
+    background: #f7f9fb;
     font-family: var(--malloy-font-family);
     font-size: 11px;
     overflow: hidden;
+    margin: 15px 20px;
   }
   table {
     font-size: 11px;

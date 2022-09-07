@@ -24,7 +24,7 @@ export interface ModelViewProps {
 export const ModelView: React.FC<ModelViewProps> = ({ model }) => {
   return (
     <Wrapper>
-      <Title>Model</Title>
+      <Title>Semantic Model</Title>
       <Editor value={model} readOnly={true} />
     </Wrapper>
   );
