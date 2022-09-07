@@ -13,7 +13,7 @@
 
 import { ModelDef, StructDef } from "@malloydata/malloy";
 import { medicareModel, medicareStateFacts } from "./medicare_model";
-import { fStringEq, fYearEq } from "../test_utils";
+import { fStringEq, fYearEq } from "../util";
 import { StructRelationship } from "@malloydata/malloy/src/model";
 
 function withJoin(leftKey: string, rightKey: string): StructRelationship {

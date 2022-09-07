@@ -13,7 +13,7 @@
 
 import { CSVWriter, JSONWriter, WriteStream } from "@malloydata/malloy";
 import { RuntimeList } from "../../runtimes";
-import { describeIfDatabaseAvailable } from "../../test_utils";
+import { describeIfDatabaseAvailable } from "../../util";
 
 class StringAccumulator implements WriteStream {
   public accumulatedValue = "";

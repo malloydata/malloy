@@ -43,6 +43,7 @@ import {
   timeOffset,
   resolution,
   castDateToTimestamp,
+  timeLiteral,
 } from "./index";
 
 export class Timeframe extends MalloyElement {
@@ -279,28 +280,21 @@ export class GranularLiteral extends ExpressionDef {
       if (lhs.dataType === "date" && !this.timeType) {
         rangeType = "date";
       }
-      const dialect = fs.getDialect();
       const range = new Range(
-        new ExprTime(
-          rangeType,
-          dialect.sqlLiteralTime(this.moment, rangeType, "UTC")
-        ),
-        new ExprTime(
-          rangeType,
-          dialect.sqlLiteralTime(this.until, rangeType, "UTC")
-        )
+        new ExprTime(rangeType, timeLiteral(this.moment, rangeType, "UTC")),
+        new ExprTime(rangeType, timeLiteral(this.until, rangeType, "UTC"))
       );
       return range.apply(fs, op, left);
     }
     return super.apply(fs, op, left);
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  getExpression(_fs: FieldSpace): ExprValue {
     const dataType = this.timeType || "date";
     const value: TimeResult = {
       dataType,
       aggregate: false,
-      value: [fs.getDialect().sqlLiteralTime(this.moment, dataType, "UTC")],
+      value: timeLiteral(this.moment, dataType, "UTC"),
     };
     // Literals with date resolution can be used as timestamps or dates,
     // this is the third attempt to make that work. It still feels like
@@ -652,8 +646,11 @@ export class ExprFunc extends ExpressionDef {
     }
     funcCall.push(")");
 
-    const funcInfo = fs.getDialect().getFunctionInfo(this.name);
-    const dataType = funcInfo?.returnType ?? collectType ?? "number";
+    const dialect = fs.dialectObj();
+    const dataType =
+      dialect?.getFunctionInfo(this.name)?.returnType ??
+      collectType ??
+      "number";
     return {
       dataType: dataType,
       aggregate: anyAggregate,

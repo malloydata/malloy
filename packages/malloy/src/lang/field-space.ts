@@ -73,7 +73,7 @@ export interface FieldSpace {
   structDef(): model.StructDef;
   emptyStructDef(): model.StructDef;
   lookup(symbol: FieldName[]): LookupResult;
-  getDialect(): Dialect;
+  dialectObj(): Dialect | undefined;
   whenComplete: (step: () => void) => void;
 }
 
@@ -94,8 +94,12 @@ export class StaticSpace implements FieldSpace {
     step();
   }
 
-  getDialect(): Dialect {
-    return getDialect(this.fromStruct.dialect);
+  dialectObj(): Dialect | undefined {
+    try {
+      return getDialect(this.fromStruct.dialect);
+    } catch {
+      return undefined;
+    }
   }
 
   fromFieldDef(from: model.FieldDef): SpaceField {
@@ -694,8 +698,8 @@ export class DefSpace implements FieldSpace {
     }
     return this.realFS.lookup(symbol);
   }
-  getDialect(): Dialect {
-    return this.realFS.getDialect();
+  dialectObj(): Dialect | undefined {
+    return this.realFS.dialectObj();
   }
   whenComplete(step: () => void): void {
     this.realFS.whenComplete(step);

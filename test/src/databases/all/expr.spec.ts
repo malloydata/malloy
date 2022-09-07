@@ -16,8 +16,8 @@
 
 import * as malloy from "@malloydata/malloy";
 import { allDatabases, RuntimeList } from "../../runtimes";
-import "../../is-sql-eq";
-import { databasesFromEnvironmentOr, mkSqlEqWith } from "../../test_utils";
+import "../../util/is-sql-eq";
+import { databasesFromEnvironmentOr, mkSqlEqWith } from "../../util";
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
