@@ -7,7 +7,7 @@
     "start": "NODE_ENV=development npm run build 8888",
     "watch": "NODE_ENV=development npm run build",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "ts-node scripts/build"
+    "build": "dotenv ts-node scripts/build"
   },
   "author": "Malloy",
   "license": "GPL-2.0",
