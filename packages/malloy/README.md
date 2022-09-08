@@ -9,17 +9,16 @@ This package facilitates building the Malloy language - or the usage of data mod
 ## Show me an example!
 
 ```
-import { Runtime } from "@malloydata/malloy";
-import { DuckDBConnection } from "@malloydata/db-duckdb";
+const malloy = require("@malloydata/malloy")
+const bigquery = require("@malloydata/db-bigquery")
 
-const connection = new DuckDBConnection("duckdb-example");
-const runtime = new Runtime(files, connection);
-
-runtime.loadModel("source: flights is table('duckdb:data/flights.parquet')")
-
-const runner = runtime.loadQuery("query: flights->{group_by: flight_num}")
-runner.run() // <- executes query, returns JSON of results
-
+const connection = new bigquery.BigQueryConnection("bigquery");
+const runtime = new malloy.SingleConnectionRuntime(connection);
+const model = runtime.loadModel("source: airports is table('malloytest.airports')")
+const runner = model.loadQuery("query: airports->{aggregate: airport_count is count()}")
+runner.run().then((result) => {
+    console.log(result.data.value) // [ { airport_count: 19793 } ]
+})
 ```
 
 Note: These APIs are still in beta and subject to change.
