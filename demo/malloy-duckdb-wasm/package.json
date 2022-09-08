@@ -12,10 +12,9 @@
   "author": "Malloy",
   "license": "GPL-2.0",
   "dependencies": {
-    "@duckdb/duckdb-wasm": "^1.16.0",
     "@malloydata/db-duckdb": "*",
     "@malloydata/malloy": "*",
-    "apache-arrow": "^8.0.0",
+    "apache-arrow": "^9.0.0",
     "monaco-editor": "^0.34.0",
     "react": "^17.0.2",
     "styled-component": "^2.8.0"
