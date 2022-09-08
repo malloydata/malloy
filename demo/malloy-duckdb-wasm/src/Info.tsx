@@ -14,20 +14,17 @@
 import React from "react";
 import styled from "styled-components";
 
-interface RunProps {
-  onRun: () => void;
+export interface InfoProps {
+  title: string;
 }
 
-export const Run: React.FC<RunProps> = ({ onRun }) => {
-  return <Button onClick={onRun}>Run</Button>;
+export const Info: React.FC<InfoProps> = ({ title }) => {
+  return <Padding title={title} src="media/info.svg" />;
 };
 
-const Button = styled.button`
-  margin-left: 5px;
-  border: 0;
-  background: #0b57d0;
-  color: #ffffff;
-  height: 30px;
-  width: 80px;
-  border-radius: 3px;
+const Padding = styled.img`
+  padding-left: 8px;
+  cursor: pointer;
+  width: 12px;
+  height: 12px;
 `;

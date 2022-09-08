@@ -13,7 +13,14 @@
 
 import React, { useCallback, useState } from "react";
 import styled from "styled-components";
-import { Explore, Field, Model } from "@malloydata/malloy";
+import {
+  Explore,
+  ExploreField,
+  Field,
+  JoinRelationship,
+  Model,
+} from "@malloydata/malloy";
+import { Info } from "./Info";
 import { Title } from "./Title";
 
 export interface SchemaViewProps {
@@ -27,19 +34,23 @@ export const SchemaView: React.FC<SchemaViewProps> = ({
 }) => {
   return (
     <Wrapper>
-      <Title>Schema</Title>
+      <Title>
+        Schema <Info title="Data sources, columns, aggregate calculations" />
+      </Title>
       <Explores>
         <List>
-          {model
-            ? model.explores.map((explore) => (
-                <ExploreItem
-                  key={explore.name}
-                  explore={explore}
-                  onFieldClick={onFieldClick}
-                  depth={0}
-                />
-              ))
-            : "Loading..."}
+          {model ? (
+            model.explores.map((explore) => (
+              <ExploreItem
+                key={explore.name}
+                explore={explore}
+                onFieldClick={onFieldClick}
+                depth={0}
+              />
+            ))
+          ) : (
+            <Loading>Loading...</Loading>
+          )}
         </List>
       </Explores>
     </Wrapper>
@@ -47,7 +58,7 @@ export const SchemaView: React.FC<SchemaViewProps> = ({
 };
 
 interface ExploreItemProps {
-  explore: Explore;
+  explore: Explore | ExploreField;
   depth: number;
   onFieldClick: (field: Field) => void;
 }
@@ -84,6 +95,61 @@ const ExploreItem: React.FC<ExploreItemProps> = ({
   );
 };
 
+interface ExploreFieldItemProps {
+  field: ExploreField;
+  depth: number;
+  onFieldClick: (field: Field) => void;
+}
+
+const ExploreFieldItem: React.FC<ExploreFieldItemProps> = ({
+  depth,
+  field,
+  onFieldClick,
+}) => {
+  const [open, setOpen] = useState(depth === 0);
+  const toggle = useCallback(() => setOpen((current) => !current), []);
+  const fields = field.allFields.sort(byKindThenName);
+
+  let subtype;
+  if (field.hasParentExplore()) {
+    const relationship = field.joinRelationship;
+    subtype =
+      relationship === JoinRelationship.ManyToOne
+        ? "many_to_one"
+        : relationship === JoinRelationship.OneToMany
+        ? "one_to_many"
+        : JoinRelationship.OneToOne
+        ? "one_to_one"
+        : "base";
+  } else {
+    subtype = "base";
+  }
+
+  const icon = getIconPath(`struct_${subtype}`, false);
+
+  return (
+    <>
+      <ToggleItem open={open} onClick={toggle}>
+        <LabelWithIcon>
+          <Icon src={icon} /> {field.name}
+        </LabelWithIcon>
+      </ToggleItem>
+      {open ? (
+        <List>
+          {fields.map((field) => (
+            <FieldItem
+              key={field.name}
+              field={field}
+              onClick={onFieldClick}
+              depth={depth + 1}
+            />
+          ))}
+        </List>
+      ) : null}
+    </>
+  );
+};
+
 interface FieldItemProps {
   depth: number;
   field: Field;
@@ -96,7 +162,11 @@ const FieldItem: React.FC<FieldItemProps> = ({ depth, field, onClick }) => {
 
   if (field.isExploreField()) {
     return (
-      <ExploreItem explore={field} onFieldClick={onClick} depth={depth + 1} />
+      <ExploreFieldItem
+        field={field}
+        onFieldClick={onClick}
+        depth={depth + 1}
+      />
     );
   } else {
     return (
@@ -181,6 +251,10 @@ function kindOrd(field: Field) {
   return 1;
 }
 
+const Loading = styled.div`
+  font-size: 14px;
+`;
+
 const Wrapper = styled.div`
   display: flex;
   flex-direction: column;
@@ -190,19 +264,19 @@ const Wrapper = styled.div`
 `;
 
 const Explores = styled.div`
-  background: #f0f4fd;
+  background: #f0f4fc;
   height: 100%;
   overflow-y: auto;
   padding-left: 10px;
 `;
 
 const List = styled.ul`
-  padding-inline-start: 15px;
+  padding-inline-start: 18px;
   line-height: 22px;
 `;
 
 const ListItem = styled.li`
-  font-size: 14px;
+  font-size: 13px;
   list-style-type: none;
   list-style-image: none;
 `;
@@ -211,10 +285,14 @@ const LabelWithIcon = styled.div`
   display: flex;
   flex-direction: row;
   align-items: center;
+  font-family: "Roboto Mono";
 `;
 
 const Icon = styled.img`
   padding-right: 5px;
+  padding-left: 5px;
+  width: 16px;
+  height: 16px;
 `;
 
 interface ToggleItemProps {
@@ -222,10 +300,10 @@ interface ToggleItemProps {
 }
 
 const ToggleItem = styled.li<ToggleItemProps>`
-  font-size: 14px;
+  font-size: 13px;
   list-style-image: ${({ open }) => {
     return open
-      ? "url(./media/section_open.svg)"
-      : "url(./media/section_close.svg)";
+      ? "url(./media/chevron_down.svg)"
+      : "url(./media/chevron_right.svg)";
   }};
 `;

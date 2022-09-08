@@ -35,25 +35,39 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
   );
 
   return (
-    <Select
-      id="model-select"
-      onChange={onSampleChange}
-      value={selectedSample?.name}
-    >
-      {samples.map((sample) => (
-        <option key={sample.name} value={sample.name}>
-          {sample.name}
-        </option>
-      ))}
-    </Select>
+    <ModelSection>
+      <Label htmlFor="model-select">Dataset: </Label>
+      <Select
+        id="model-select"
+        onChange={onSampleChange}
+        value={selectedSample?.name}
+      >
+        {samples.map((sample) => (
+          <option key={sample.name} value={sample.name}>
+            {sample.name}
+          </option>
+        ))}
+      </Select>
+    </ModelSection>
   );
 };
 
 const Select = styled.select`
+  padding-left: 5px;
   background: none;
   border: 0;
   color: #188ff9;
   flex: auto;
-  font-size: 18px;
-  padding: 4px;
+`;
+
+const Label = styled.label`
+  font-size: 14px;
+`;
+
+const ModelSection = styled.div`
+  display: flex;
+  align-items: center;
+  ${Label} {
+    padding-left: 10px;
+  }
 `;
