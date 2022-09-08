@@ -28,6 +28,7 @@ baseurl: "/malloy" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
 twitter_username: jekyllrb
 github_username:  jekyll
+ga_site_id: TEST_SITE_ID
 
 # Build settings
 theme: minima
