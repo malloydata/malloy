@@ -13,6 +13,6 @@
   },
   "dependencies": {
     "duckdb": "0.4.1-dev1094.0",
-    "@duckdb/duckdb-wasm": "^1.16.0"
+    "@duckdb/duckdb-wasm": "^1.16.1"
   }
 }
