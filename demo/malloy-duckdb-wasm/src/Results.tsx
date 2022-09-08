@@ -17,12 +17,18 @@ import { Editor } from "./Editor";
 import { Title } from "./Title";
 
 export interface RenderProps {
+  error: string | undefined;
   rendered: HTMLElement | undefined;
   sql: string | undefined;
   json: string | undefined;
 }
 
-export const Results: React.FC<RenderProps> = ({ json, sql, rendered }) => {
+export const Results: React.FC<RenderProps> = ({
+  error,
+  json,
+  sql,
+  rendered,
+}) => {
   const ref = useRef<HTMLDivElement>(null);
   const [tab, setTab] = useState("HTML");
 
@@ -33,6 +39,12 @@ export const Results: React.FC<RenderProps> = ({ json, sql, rendered }) => {
       parent.appendChild(rendered);
     }
   }, [rendered]);
+
+  useEffect(() => {
+    if (error) {
+      setTab("HTML");
+    }
+  }, [error]);
 
   return (
     <Wrapper>
@@ -52,8 +64,13 @@ export const Results: React.FC<RenderProps> = ({ json, sql, rendered }) => {
       </Top>
       <Render
         ref={ref}
-        style={{ display: tab === "HTML" ? "block" : "none" }}
+        style={{ display: tab === "HTML" && !error ? "block" : "none" }}
       />
+      <ErrorMessage
+        style={{ display: tab === "HTML" && error ? "block" : "none" }}
+      >
+        {error}
+      </ErrorMessage>
       <JSON style={{ display: tab === "JSON" ? "flex" : "none" }}>
         <Editor value={json || ""} language="json" readOnly={true} />
       </JSON>
@@ -71,6 +88,16 @@ const Wrapper = styled.div`
   height: calc(100% - 10px);
 `;
 
+const ErrorMessage = styled.div`
+  padding: 5px;
+  background-color: #ffffff;
+  font-size: 11px;
+  color: #ff0000;
+  white-space: pre-wrap;
+  font-family: "Roboto Mono", monospace;
+  height: 100%;
+`;
+
 const Render = styled.div`
   flex: auto;
   width: 100%;
@@ -84,7 +111,7 @@ interface TabProps {
 
 const Tab = styled.div<TabProps>`
   padding: 5px;
-  margin-left: 3px;
+  margin-left: 15px;
   color: ${({ selected }) => (selected ? "#188ff9" : "inherit")};
   cursor: pointer;
 `;

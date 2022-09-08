@@ -36,7 +36,7 @@ export const QuerySelect: React.FC<QuerySelectProps> = ({
 
   return (
     <QuerySection>
-      <Label htmlFor="query-select">Query</Label>
+      <Label htmlFor="query-select">Queries: </Label>
       <Select
         id="query-select"
         onChange={onQueryChange}
@@ -53,7 +53,6 @@ export const QuerySelect: React.FC<QuerySelectProps> = ({
 };
 
 const Select = styled.select`
-  padding-top: 5px;
   padding-left: 5px;
   background: none;
   border: 0;
@@ -63,14 +62,12 @@ const Select = styled.select`
 
 const Label = styled.label`
   font-size: 14px;
-  padding-top: 5px;
 `;
 
 const QuerySection = styled.div`
-  width: 40%;
   display: flex;
-  padding-top: 5px;
+  align-items: center;
   ${Label} {
-    padding-left: 10px;
+    padding-left: 20px;
   }
 `;
