@@ -1,4 +1,4 @@
-// IMPORTANT: Before using this model, you will need to download and process the data.
+// IMPORTANT: Before using this model, you will need to download and process the data. 
 //  Please see README.MD for instructions.
 
 import "1_imdb.malloy"
@@ -8,18 +8,18 @@ import "3_movie_filters.malloy"
 //  queries produces a list of movie ids.
 
 source: movies_plus is movies + {
-  declare:
+  declare: 
     movie_image is concat('https://artifacts.flyxit.com/flyx-artifacts/',tconst,'.jpg')
     movie_url is concat('https://www.imdb.com/title/',tconst)
 
   // Pull back interesting informaiton for a given title.
   query: titles_dashboard is {
-    group_by:
+    group_by: 
       movie_image
       production_year is startYear
       primaryTitle
       runtimeMinutes
-      movie_url
+      movie_url 
     nest:
       genre_list is by_genre
       by_cast is by_job_category {
@@ -31,17 +31,19 @@ source: movies_plus is movies + {
 }
 
 // Start Trek Movies
-query: star_trek_dashboard is movies_plus -> titles_dashboard + {
+query: star_trek_dashboard is movies_plus -> titles_dashboard + { 
   where: primaryTitle ~ r'Star Trek' and startYear < 2020
 }
 
 // PROBLEM: filtering on Steven Spielberg removes all the other people
-query: spielberg_broken_dashboard is movies_plus -> titles_dashboard + {
-  where: principals.people.primaryName ~ r'Steven Spielberg'
+query: spielberg_broken_dashboard is movies_plus -> titles_dashboard + { 
+  where: principals.people.primaryName ~ r'Steven Spielberg' 
 }
 
-query: spielberg_dashboard is movies_plus + {
+query: spielberg_dashboard is movies_plus + { 
   join_one: x is from(movie_filters->spielberg) with tconst
   where: x.tconst != null
 }
 -> titles_dashboard
+
+

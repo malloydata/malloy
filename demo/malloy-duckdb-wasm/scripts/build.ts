@@ -26,9 +26,7 @@ export async function doBuild(): Promise<void> {
   const development = process.env.NODE_ENV == "development";
 
   const options: BuildOptions = {
-    define: {
-      "process.env.NODE_DEBUG": "false",
-    },
+    define: { "process.env.NODE_DEBUG": "false" },
     entryPoints: {
       main: "./src/index.tsx",
       "editor.worker": "monaco-editor/esm/vs/editor/editor.worker.js",
