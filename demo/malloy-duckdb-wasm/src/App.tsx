@@ -29,6 +29,7 @@ import { SchemaView } from "./SchemaView";
 import { loadSampleQueries, SampleQuery } from "./utils/query";
 import { QuerySelect } from "./QuerySelect";
 import { Run } from "./Run";
+import { Analytics } from "./Analytics";
 
 const DOCS_LINK = "https://looker-open-source.github.io/malloy/documentation/";
 const REPO_LINK = "https://github.com/looker-open-source/malloy/";
@@ -311,6 +312,7 @@ export const App: React.FC = () => {
             Slack
           </DocsLink>
         </DocsLinks>
+        <Analytics />
       </Footer>
     </React.StrictMode>
   );
