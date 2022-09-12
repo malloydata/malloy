@@ -24,12 +24,10 @@ let port: number | undefined;
 
 export async function doBuild(): Promise<void> {
   const development = process.env.NODE_ENV == "development";
-  const siteId = process.env.GA_SITE_ID || "";
 
   const options: BuildOptions = {
     define: {
       "process.env.NODE_DEBUG": "false",
-      GA_SITE_ID: `"${siteId}"`,
     },
     entryPoints: {
       main: "./src/index.tsx",
