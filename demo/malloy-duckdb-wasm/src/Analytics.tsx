@@ -69,17 +69,21 @@ const Banner = styled.div`
   bottom: 0;
   height: 60px;
   width: 80%;
-  background: black;
+  max-width: 1000px;
+  background: #2655c9;
   color: white;
   padding: 0 20px;
-  border-radius: 3px 3px 0 0;
 
   button {
     border: 0;
-    background: #0b57d0;
-    color: #ffffff;
+    background: white;
+    color: #2655c9;
     height: 30px;
     width: 120px;
     border-radius: 3px;
+  }
+
+  a {
+    color: white;
   }
 `;
