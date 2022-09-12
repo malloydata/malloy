@@ -58,6 +58,12 @@ export const Editor: React.FC<EditorProps> = ({
         minimap: {
           enabled: false,
         },
+        scrollBeyondLastLine: false,
+        padding: {
+          top: 13,
+          bottom: 13,
+        },
+        overviewRulerLanes: 0,
       });
       if (onChange) {
         editor.getModel()?.onDidChangeContent(() => {
@@ -78,4 +84,12 @@ const Wrapper = styled.div`
   flex: auto;
   position: relative;
   overflow: hidden;
+
+  .monaco-scrollable-element > .scrollbar > .slider {
+    background: rgba(100, 100, 100, 0.2);
+  }
+
+  .monaco-scrollable-element > .scrollbar > .slider:hover {
+    background: rgba(100, 100, 100, 0.4);
+  }
 `;
