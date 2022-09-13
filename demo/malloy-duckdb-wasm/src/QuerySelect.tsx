@@ -53,6 +53,7 @@ export const QuerySelect: React.FC<QuerySelectProps> = ({
 };
 
 const Select = styled.select`
+  appearance: none;
   padding-left: 5px;
   background: none;
   border: 0;

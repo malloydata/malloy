@@ -53,6 +53,7 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
 };
 
 const Select = styled.select`
+  appearance: none;
   padding-left: 5px;
   background: none;
   border: 0;
