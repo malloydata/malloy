@@ -47,7 +47,7 @@ This document is intended to serve as a reference for those who already know SQL
 | SQL | Malloy | Description / Docs |
 |---|---|---|
 | <pre><code>userName AS user_name</code><code>malloy-data.ecomm.users AS users</code></pre>  | <pre> `user_name is userName  ` `users is malloy-data.ecomm.users `</pre> | **AS**: Names come before definitions in Malloy. |
-| <pre><code>SELECT id FROM order_items</code></pre>   | <pre> `query: order_items -> {project: id}`</pre> | **SELECT / FROM**: [Malloy by Example](https://looker-open-source.github.io/malloy/documentation/index.html) |
+| <pre><code>SELECT id FROM order_items</code></pre>   | <pre> `query: order_items -> {project: id}`</pre> | **SELECT / FROM**: [Malloy by Example](https://looker-open-source.github.io/malloy/documentation/malloy_by_example.html) |
 | <pre><code>LEFT JOIN users</code><code> ON users.id = order_items.user_id </pre></code> | <pre> `join_one: users on users.id = order_items.user_id`</pre> | **JOIN**: [Documentation](https://looker-open-source.github.io/malloy/documentation/language/join.html) covers more join types and complex relationships. [Example](https://looker-open-source.github.io/malloy/documentation/language/sql_to_malloy.html#more-complex-example) |
 | <pre><code> SELECT </code> <code>  status</code> <code>  , COUNT(*) AS items_count</code> <code>FROM order_items </code> <code>GROUP BY 1</code> </code></pre>  | <pre> `query: order_items -> {` `  group_by: status` `  aggregate: items_count is count()` `}`</pre> | **GROUP BY**: Any field included in Malloy’s group_by selection will be included in both the generated <code>SELECT</code> and <code>GROUP BY</code>. |
 | <pre><code>WHERE status = 'Complete'</code></pre>  | <pre> `where: status = 'Complete'`</pre> | **WHERE** |
