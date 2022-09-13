@@ -1,24 +1,31 @@
 ---
 ---
+
 html {
   height: 100%;
   -webkit-font-smoothing: antialiased;
 }
 
 @font-face {
-  font-family: 'Google Sans';
+  font-family: "Google Sans";
   font-style: normal;
   font-weight: 400;
-  src: url({{ '/fonts/google-sans-regular-400.woff2' | relative_url }}) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url({{"/fonts/google-sans-regular-400.woff2"|relative_url}})
+    format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
 }
 
 @font-face {
-  font-family: 'Google Sans';
+  font-family: "Google Sans";
   font-style: normal;
   font-weight: 500;
-  src: url({{ '/fonts/google-sans-regular-500.woff2' | relative_url }}) format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  src: url({{"/fonts/google-sans-regular-500.woff2"|relative_url}})
+    format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
 }
 
 div.top {
@@ -58,7 +65,7 @@ a.button {
   border-radius: 5px;
   background-color: #4285f4;
   color: white;
-  border:1px solid #176af0;
+  border: 1px solid #176af0;
   padding: 5px 10px;
 }
 
@@ -84,7 +91,7 @@ div.sidebar {
 }
 
 .sidebar-section .sidebar-section .sidebar-section-item-group {
- margin-left: 4px;
+  margin-left: 4px;
 }
 
 .sidebar-section .sidebar-section .sidebar-section-title {
@@ -200,7 +207,8 @@ div.document {
 }
 
 div.document code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
   background-color: white;
   border: 1px solid #eaeaea;
   padding: 2px 5px;
@@ -218,7 +226,12 @@ a {
   text-decoration: none;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-family: "Google Sans", Arial, Helvetica, sans-serif;
   margin-bottom: 8px;
   color: #202124;
@@ -241,7 +254,10 @@ h2 {
   border-bottom: 1px solid #4285f4;
 }
 
-h3, h4, h5, h6 {
+h3,
+h4,
+h5,
+h6 {
   font-weight: 500;
   margin-top: 20px;
   font-size: 16px;
@@ -268,11 +284,13 @@ div.document table th {
   font-size: 14px;
 }
 
-table td, table th {
+table td,
+table th {
   border: 1px solid #efefef;
 }
 
-table tr td, table tr th {
+table tr td,
+table tr th {
   border-right: 0;
   padding: 8px;
 }
@@ -307,7 +325,8 @@ div.document pre {
   border-radius: 5px;
   overflow-y: visible;
   padding: 10px;
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
   font-size: 14px;
   overflow-x: auto;
   color: #333388;
@@ -316,7 +335,7 @@ div.document pre {
 }
 
 div.document span.token.keyword {
-  color: #AF00DB;
+  color: #af00db;
 }
 
 div.document span.token.comment {
@@ -325,7 +344,7 @@ div.document span.token.comment {
 
 div.document span.token.function,
 div.document span.token.function_keyword {
-  color: #795E26;
+  color: #795e26;
 }
 
 div.document span.token.string {
@@ -347,7 +366,7 @@ div.document span.token.number {
 
 div.document span.token.type,
 div.document span.token.timeframe {
-  color: #0070C1;
+  color: #0070c1;
 }
 
 div.document span.token.date {
@@ -630,4 +649,49 @@ a.button-link {
   display: flex;
   align-items: center;
   gap: 5px;
+}
+
+div#banner_wrapper {
+  display: flex;
+  position: fixed;
+  width: 100%;
+  bottom: 0;
+  justify-content: center;
+  pointer-events: none;
+}
+
+div#banner {
+  pointer-events: initial;
+  display: flex;
+  flex-direction: row;
+  font-family: "Google Sans", Arial, Helvetica, sans-serif;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 16px;
+  height: 60px;
+  width: 80%;
+  max-width: 1000px;
+  background: #2655c9;
+  color: white;
+  padding: 0 20px;
+  justify-self: center;
+}
+
+div#banner.hidden {
+  display: none;
+}
+
+div#banner button {
+  border: 0;
+  background: white;
+  color: #2655c9;
+  height: 30px;
+  width: 120px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+div#banner a {
+  color: white;
+  text-decoration: underline;
 }
