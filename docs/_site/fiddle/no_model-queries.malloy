@@ -1,0 +1,18 @@
+import "no_model.malloy"
+
+// --
+// Name: Show Words Table
+query: words -> {
+  project: *
+}
+// --
+// Name: Show Airports Table
+query: airports -> {
+  project: *
+}
+
+// --
+// Name: Show Auto Recall Table
+query: recalls -> {
+  project: *
+}

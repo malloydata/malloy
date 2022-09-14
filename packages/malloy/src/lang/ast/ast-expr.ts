@@ -27,8 +27,9 @@ import {
   isConditionParameter,
   StructDef,
   TimeFieldType,
+  UngroupFragment,
 } from "../../model/malloy_types";
-import { DefSpace, FieldSpace, LookupResult } from "../field-space";
+import { DefSpace, FieldSpace, LookupResult, QuerySpace } from "../field-space";
 import {
   Filter,
   MalloyElement,
@@ -44,8 +45,7 @@ import {
 } from "./index";
 import { applyBinary, nullsafeNot } from "./apply-expr";
 import { SpaceParam, StructSpaceField } from "../space-field";
-import { Dialect } from "../../dialect";
-import { FieldReference } from "./ast-main";
+import { FieldName, FieldReference } from "./ast-main";
 import { castTo } from "./time-utils";
 
 /**
@@ -66,7 +66,7 @@ export abstract class ExpressionDef extends MalloyElement {
    * the translation code a chance to convert to match your expectations
    * @param space Namespace for looking up field references
    */
-  abstract getExpression(space: FieldSpace, toTypes?: FragType[]): ExprValue;
+  abstract getExpression(fs: FieldSpace): ExprValue;
   legalChildTypes = FT.anyAtomicT;
 
   /**
@@ -150,11 +150,11 @@ class ConstantFieldSpace implements FieldSpace {
       found: undefined,
     };
   }
-  getDialect(): Dialect {
-    // well dialects totally make this wrong and broken and stupid and useless
-    // but since this is only used for parameters which are also wrong and
-    // broken and stupid and useless, this will do for now
-    throw new Error("I just put this line of code here to make things compile");
+  dialectObj(): undefined {
+    return undefined;
+  }
+  whenComplete(step: () => void): void {
+    step();
   }
 }
 
@@ -169,7 +169,7 @@ export class ConstantSubExpression extends ExpressionDef {
     return this.constantValue();
   }
 
-  private get constantFs(): ConstantFieldSpace {
+  private get constantFs(): FieldSpace {
     if (!this.cfs) {
       this.cfs = new ConstantFieldSpace();
     }
@@ -225,7 +225,17 @@ export class FieldDeclaration extends MalloyElement {
   }
 
   queryFieldDef(exprFS: FieldSpace, exprName: string): FieldTypeDef {
-    const exprValue = this.expr.getExpression(exprFS);
+    let exprValue;
+
+    try {
+      exprValue = this.expr.getExpression(exprFS);
+    } catch (error) {
+      this.log(`Cannot define '${exprName}', ${error.message}`);
+      return {
+        name: `error_defining_${exprName}`,
+        type: "string",
+      };
+    }
     const compressValue = compressExpr(exprValue.value);
     const retType = exprValue.dataType;
     if (isAtomicFieldType(retType)) {
@@ -361,8 +371,8 @@ export class ExprNot extends Unary {
     super(expr);
   }
 
-  getExpression(space: FieldSpace): ExprValue {
-    const notThis = this.expr.getExpression(space);
+  getExpression(fs: FieldSpace): ExprValue {
+    const notThis = this.expr.getExpression(fs);
     if (this.typeCheck(this.expr, notThis)) {
       return {
         ...notThis,
@@ -398,9 +408,9 @@ export abstract class BinaryBoolean<
     super({ left, right });
   }
 
-  getExpression(space: FieldSpace): ExprValue {
-    const left = this.left.getExpression(space);
-    const right = this.right.getExpression(space);
+  getExpression(fs: FieldSpace): ExprValue {
+    const left = this.left.getExpression(fs);
+    const right = this.right.getExpression(fs);
     if (this.typeCheck(this.left, left) && this.typeCheck(this.right, right)) {
       return {
         dataType: "boolean",
@@ -738,6 +748,62 @@ export class ExprSum extends ExprAsymmetric {
   }
 }
 
+export class ExprUngroup extends ExpressionDef {
+  legalChildTypes = FT.anyAtomicT;
+  elementType = "ungroup";
+  constructor(
+    readonly control: "all" | "exclude",
+    readonly expr: ExpressionDef,
+    readonly fields: FieldName[]
+  ) {
+    super({ expr, fields });
+  }
+
+  returns(_forExpression: ExprValue): FieldValueType {
+    return "number";
+  }
+
+  getExpression(fs: FieldSpace): ExprValue {
+    const exprVal = this.expr.getExpression(fs);
+    if (!exprVal.aggregate) {
+      this.expr.log(`${this.control}() expression must be an aggregate`);
+      return errorFor("ungrouped scalar");
+    }
+    const ungroup: UngroupFragment = { type: this.control, e: exprVal.value };
+    if (this.typeCheck(this.expr, { ...exprVal, aggregate: false })) {
+      if (this.fields.length > 0) {
+        let qs = fs;
+        if (fs instanceof DefSpace) {
+          qs = fs.realFS;
+        }
+        if (!(qs instanceof QuerySpace)) {
+          this.log(
+            `${this.control}() must be in a query -- weird internal error`
+          );
+          return errorFor("ungroup query check");
+        }
+        const output = qs.result;
+        const dstFields: string[] = [];
+        const isExclude = this.control == "exclude";
+        for (const mustBeInOutput of this.fields) {
+          output.whenComplete(() => {
+            output.checkUngroup(mustBeInOutput, isExclude);
+          });
+          dstFields.push(mustBeInOutput.refString);
+        }
+        ungroup.fields = dstFields;
+      }
+      return {
+        dataType: this.returns(exprVal),
+        aggregate: true,
+        value: [ungroup],
+      };
+    }
+    this.log(`${this.control}() incompatible type`);
+    return errorFor("ungrouped type check");
+  }
+}
+
 export class WhenClause extends ExpressionDef {
   elementType = "when clause";
   constructor(
@@ -812,7 +878,7 @@ export class ExprCase extends ExpressionDef {
 
 export class ExprFilter extends ExpressionDef {
   elementType = "filtered expression";
-  legalChildTypes = [FT.stringT, FT.numberT, FT.dateT, FT.timestampT];
+  legalChildTypes = FT.anyAtomicT;
   constructor(readonly expr: ExpressionDef, readonly filter: Filter) {
     super({ expr, filter });
   }

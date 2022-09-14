@@ -1,13 +1,13 @@
 {
   "name": "malloy-composer-demo",
   "description": "Run/Explore/Build Malloy Data Models",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "private": true,
   "main": "./build/main.js",
   "author": "Malloy",
   "license": "GPL-2.0",
   "scripts": {
-    "start": "yarn build && concurrently --kill-others \"yarn start-app\" \"wait-on tcp:3000 && sleep 1 && yarn electron .\"",
+    "start": "npm run build && concurrently --kill-others \"npm run start-app\" \"wait-on tcp:3000 && sleep 1 && electron .\"",
     "start-app": "ts-node scripts/serve",
     "build": "ts-node scripts/build",
     "package": "ts-node scripts/package",
@@ -15,7 +15,6 @@
     "package-linux": "ts-node scripts/package linux x64",
     "debian": "electron-installer-debian --src dist//malloy-composer-demo-linux-x64/ --dest dist/installers/ --arch amd64",
     "clean": "rm -rf ./node_modules"
-
   },
   "dependencies": {
     "@malloydata/db-bigquery": "*",
@@ -31,10 +30,13 @@
     "react-hotkeys": "^2.0.0",
     "react-popper": "^2.2.5",
     "react-query": "^3.34.16",
+    "remark-directive": "^2.0.1",
     "shiki": "^0.10.1",
     "styled-components": "^5.3.3",
     "url": "^0.11.0",
-    "web-vitals": "^2.1.0"
+    "web-vitals": "^2.1.0",
+    "remark-parse": "^10.0.1",
+    "unified": "^10.1.2"
   },
   "devDependencies": {
     "@types/moment": "^2.13.0",
@@ -43,7 +45,7 @@
     "@types/styled-components": "^5.1.19",
     "concurrently": "^6.2.1",
     "electron-packager": "^15.5.1",
-    "esbuild": "^0.14.13",
+    "esbuild": "0.14.13",
     "esbuild-plugin-svgr": "^1.0.1",
     "wait-on": "^6.0.1"
   },

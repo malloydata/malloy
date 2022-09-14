@@ -12,47 +12,60 @@
  */
 
 /* eslint-disable no-console */
-
+import fs from "fs";
 import packager from "electron-packager";
 import { exit } from "process";
 import { doBuild } from "./build";
+import * as path from "path";
+import { exec } from "child_process";
 
-async function packageDemo(platform: string, architecture: string) {
+const outDir = "./dist";
+const thirdPartyNotices = "third_party_notices.txt";
+
+async function packageDemo(
+  platform: string,
+  architecture: string,
+  signAndNotarize = true
+) {
   doBuild(`${platform}-${architecture}`);
+
   const extraOptions: Partial<packager.Options> = {};
-  if (platform === "darwin") {
-    const appleId = process.env.NOTARIZER_APPLE_ID;
-    const appleIdPassword = process.env.NOTARIZER_APPLE_ID_PASSWORD;
-    const signerIdentity = process.env.SIGNER_IDENTITY;
-    const shouldSignAndNotarize = false;
-    if (
-      appleId === undefined ||
-      appleIdPassword === undefined ||
-      signerIdentity == undefined
-    ) {
-      console.log(
-        "Specify NOTARIZER_APPLE_ID, NOTARIZER_APPLE_ID_PASSWORD, and SIGNER_IDENTITY in environment."
-      );
-      exit(1);
+  if (signAndNotarize) {
+    if (platform === "darwin") {
+      const appleId = process.env.NOTARIZER_APPLE_ID;
+      const appleIdPassword = process.env.NOTARIZER_APPLE_ID_PASSWORD;
+      const signerIdentity = process.env.SIGNER_IDENTITY;
+      const shouldSignAndNotarize = false;
+      if (
+        appleId === undefined ||
+        appleIdPassword === undefined ||
+        signerIdentity == undefined
+      ) {
+        console.log(
+          "Specify NOTARIZER_APPLE_ID, NOTARIZER_APPLE_ID_PASSWORD, and SIGNER_IDENTITY in environment."
+        );
+        exit(1);
+      }
+      extraOptions.osxSign = shouldSignAndNotarize
+        ? {
+            identity: signerIdentity,
+            hardenedRuntime: true,
+            entitlements: "entitlements.plist",
+            "entitlements-inherit": "entitlements.plist",
+          }
+        : undefined;
+      extraOptions.osxNotarize = shouldSignAndNotarize
+        ? {
+            appleId,
+            appleIdPassword,
+          }
+        : undefined;
     }
-    extraOptions.osxSign = shouldSignAndNotarize
-      ? {
-          identity: signerIdentity,
-          hardenedRuntime: true,
-          entitlements: "entitlements.plist",
-          "entitlements-inherit": "entitlements.plist",
-        }
-      : undefined;
-    extraOptions.osxNotarize = shouldSignAndNotarize
-      ? {
-          appleId,
-          appleIdPassword,
-        }
-      : undefined;
   }
+
   const appPaths = await packager({
     dir: ".",
-    out: "./dist",
+    out: outDir,
     overwrite: true,
     icon: "./public/icon.icns",
 
@@ -65,7 +78,7 @@ async function packageDemo(platform: string, architecture: string) {
     ],
     platform,
     arch: architecture,
-    extraResource: ["../../samples/"],
+    extraResource: ["../../samples/", path.join(outDir, thirdPartyNotices)],
     ...extraOptions,
   });
   console.log(`Electron app bundles created:\n${appPaths.join("\n")}`);
@@ -74,10 +87,17 @@ async function packageDemo(platform: string, architecture: string) {
 (async () => {
   const platform = process.argv[2];
   const architecture = process.argv[3];
+  const signAndNotarize = process.argv[4];
+
   if (platform === undefined || architecture === undefined) {
     throw new Error("Specify platform and architecture.");
   }
-  await packageDemo(platform, architecture);
+
+  await packageDemo(
+    platform,
+    architecture,
+    signAndNotarize == "false" ? false : true
+  );
 })()
   .then(() => {
     console.log("Demo application built successfully");

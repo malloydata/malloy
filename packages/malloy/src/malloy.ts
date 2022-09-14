@@ -19,6 +19,7 @@ import {
   LogMessage,
   MalloyTranslator,
 } from "./lang";
+import { DocumentHelpContext } from "./lang/parse-tree-walkers/document-help-context-walker";
 import {
   CompiledQuery,
   FieldBooleanDef,
@@ -226,15 +227,26 @@ export class Malloy {
             connectionName,
             connectionTableString,
           ] of tablesByConnection) {
-            const connection = await connections.lookupConnection(
-              connectionName
-            );
-            // TODO detect if the union of `Object.keys(tables)` and `Object.keys(errors)` is not the same
-            //      as `Object.keys(connectionTableString)`, i.e. that all tables are accounted for. Otherwise
-            //      the translator runs into an infinite loop fetching tables.
-            const { schemas: tables, errors } =
-              await connection.fetchSchemaForTables(connectionTableString);
-            translator.update({ tables, errors: { tables: errors } });
+            try {
+              const connection = await connections.lookupConnection(
+                connectionName
+              );
+              // TODO detect if the union of `Object.keys(tables)` and `Object.keys(errors)` is not the same
+              //      as `Object.keys(connectionTableString)`, i.e. that all tables are accounted for. Otherwise
+              //      the translator runs into an infinite loop fetching tables.
+              const { schemas: tables, errors } =
+                await connection.fetchSchemaForTables(connectionTableString);
+              translator.update({ tables, errors: { tables: errors } });
+            } catch (error) {
+              // There was an exception getting the connection, associate that error
+              // with all its tables
+              const tables = {};
+              const errors: { [name: string]: string } = {};
+              for (const table of connectionTableString) {
+                errors[table] = error.toString();
+              }
+              translator.update({ tables, errors: { tables: errors } });
+            }
           }
         }
         if (result.sqlStructs) {
@@ -262,18 +274,29 @@ export class Malloy {
             connectionName,
             connectionToSQLReferencesMap,
           ] of sqlRefsByConnection) {
-            const connection = await connections.lookupConnection(
-              connectionName
-            );
-            // TODO detect if the union of `Object.keys(sqlStructs)` and `Object.keys(errors)` is not the same
-            //      as `Object.keys(connectionToSQLReferencesMap)`, i.e. that all tables are accounted for. Otherwise
-            //      the translator runs into an infinite loop fetching SQL structs.
-            const { schemas: sqlStructs, errors } =
-              await connection.fetchSchemaForSQLBlocks(
-                connectionToSQLReferencesMap
+            try {
+              const connection = await connections.lookupConnection(
+                connectionName
               );
-            translator.update({ sqlStructs });
-            translator.update({ sqlStructs, errors: { sqlStructs: errors } });
+              // TODO detect if the union of `Object.keys(sqlStructs)` and `Object.keys(errors)` is not the same
+              //      as `Object.keys(connectionToSQLReferencesMap)`, i.e. that all tables are accounted for. Otherwise
+              //      the translator runs into an infinite loop fetching SQL structs.
+              const { schemas: sqlStructs, errors } =
+                await connection.fetchSchemaForSQLBlocks(
+                  connectionToSQLReferencesMap
+                );
+              translator.update({ sqlStructs });
+              translator.update({ sqlStructs, errors: { sqlStructs: errors } });
+            } catch (error) {
+              // There was an exception getting the connection, associate that error
+              // with all its schemas
+              const sqlStructs = {};
+              const errors: { [name: string]: string } = {};
+              for (const sqlRef of connectionToSQLReferencesMap) {
+                errors[sqlRef.name] = error.toString();
+              }
+              translator.update({ sqlStructs, errors: { sqlStructs: errors } });
+            }
           }
         }
       }
@@ -699,6 +722,18 @@ export class PreparedQuery {
       this._modelDef
     );
   }
+
+  public get dialect(): string {
+    const sourceRef = this._query.structRef;
+    const source =
+      typeof sourceRef === "string"
+        ? this._modelDef.contents[sourceRef]
+        : sourceRef;
+    if (source.type !== "struct") {
+      throw new Error("Invalid source for query");
+    }
+    return source.dialect;
+  }
 }
 
 export function parseTableURL(tableURL: string): {
@@ -762,6 +797,13 @@ export class Parse {
     return (this.translator.completions(position).completions || []).map(
       (completion) => new DocumentCompletion(completion)
     );
+  }
+
+  public helpContext(position: {
+    line: number;
+    character: number;
+  }): DocumentHelpContext | undefined {
+    return this.translator.helpContext(position).helpContext;
   }
 }
 

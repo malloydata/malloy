@@ -139,6 +139,8 @@ export async function readMalloyDirectory(
           directory.contents.push(await getAnalysis(fullChildPath));
         } else if (childPath.endsWith(".malloy")) {
           directory.contents.push(await getModel(fullChildPath));
+        } else if (childPath.toLowerCase() === "readme.md") {
+          directory.readme = await fs.readFile(fullChildPath, "utf8");
         }
       } catch (error) {
         // eslint-disable-next-line no-console

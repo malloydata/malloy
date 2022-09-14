@@ -1,0 +1,43 @@
+// IMPORTANT: Before using this model, you will need to download and process the data. 
+//  Please see README.MD for instructions.
+
+import "1_imdb.malloy"
+
+// Queries can be used to filter other queries.  Each of these
+//  queries produces a list of movie ids.
+source: movie_filters is movies + {
+  query: spielberg is {
+    where: principals.people.primaryName ~ r'Steven Spielberg'
+    group_by: tconst
+  }
+
+  // hanks movies
+  query: tomhanks is {
+    where: principals.people.primaryName  ~ r'Tom Hanks'
+    group_by: tconst
+  }
+
+  // batman movies
+  query: batman is  {
+    where: principals.characters.value ~ r'Batman'
+    group_by: tconst
+  }
+
+  // superman movies
+  query: superman is {
+    where: principals.characters.value ~ r'Superman'
+    group_by: tconst
+  }
+
+  // depalma movies
+  query: depalma is  {
+    where: principals.category = 'director' 
+      and principals.people.primaryName ~ r'Brian De Palma'
+    group_by: tconst
+  }
+
+  query: horror is {
+    where: genres.value = 'Horror'
+    group_by: tconst
+  }
+}

@@ -32,7 +32,10 @@ export class HTMLLinkRenderer implements Renderer {
 
     const element = document.createElement("a");
     element.href = data.value;
-    element.appendChild(this.document.createTextNode(data.value));
+    element.target = "_blank";
+    element.appendChild(
+      this.document.createTextNode(data.value.replace(/\//g, "/\u200C"))
+    );
     return element;
   }
 }

@@ -21,14 +21,17 @@ import { usePrevious } from "../hooks";
 import { downloadFile, highlightPre, notUndefined } from "../utils";
 import { compileFilter } from "../../core/compile";
 import { DownloadMenu } from "../DownloadMenu";
+import { DOMElement } from "../DOMElement";
+import { PageContent, PageHeader } from "../CommonElements";
 
 interface ResultProps {
-  source: malloy.StructDef;
+  source: malloy.StructDef | undefined;
   result?: malloy.Result;
-  analysis: Analysis;
+  analysis: Analysis | undefined;
   dataStyles: render.DataStyles;
   malloy: string;
   onDrill: (filters: malloy.FilterExpression[]) => void;
+  isRunning: boolean;
 }
 
 export const Result: React.FC<ResultProps> = ({
@@ -38,6 +41,7 @@ export const Result: React.FC<ResultProps> = ({
   dataStyles,
   malloy,
   onDrill,
+  isRunning,
 }) => {
   const [html, setHTML] = useState<HTMLElement>();
   const [highlightedMalloy, setHighlightedMalloy] = useState<HTMLElement>();
@@ -67,6 +71,9 @@ export const Result: React.FC<ResultProps> = ({
       return;
     }
     setTimeout(async () => {
+      if (analysis === undefined || source === undefined) {
+        return;
+      }
       setRendering(true);
       highlightPre(result.sql, "sql").then(setSQL);
       // eslint-disable-next-line no-console
@@ -110,7 +117,7 @@ export const Result: React.FC<ResultProps> = ({
 
   return (
     <OuterDiv>
-      <Header>
+      <ResultHeader>
         <ViewTab onClick={() => setView("malloy")} selected={view === "malloy"}>
           Malloy
         </ViewTab>
@@ -133,11 +140,9 @@ export const Result: React.FC<ResultProps> = ({
             )
           }
         />
-      </Header>
+      </ResultHeader>
       <ContentDiv>
-        {result === undefined && view !== "malloy" && (
-          <LoadingSpinner text="Running" />
-        )}
+        {isRunning && view !== "malloy" && <LoadingSpinner text="Running" />}
         {view === "html" && (
           <>
             {result !== undefined && rendering && (
@@ -164,20 +169,6 @@ export const Result: React.FC<ResultProps> = ({
   );
 };
 
-const DOMElement: React.FC<{ element: HTMLElement }> = ({ element }) => {
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const parent = ref.current;
-    if (parent) {
-      parent.innerHTML = "";
-      parent.appendChild(element);
-    }
-  }, [element]);
-
-  return <div ref={ref}></div>;
-};
-
 const ResultWrapper = styled.div`
   font-size: 14px;
   font-family: "Roboto Mono";
@@ -190,21 +181,17 @@ const OuterDiv = styled.div`
   overflow: hidden;
 `;
 
-const ContentDiv = styled.div`
+const ContentDiv = styled(PageContent)`
   padding: 20px;
   overflow: auto;
-  height: 100%;
+  width: auto;
 `;
 
-const Header = styled.div`
-  border-bottom: 1px solid #efefef;
-  display: flex;
-  flex-direction: row;
+const ResultHeader = styled(PageHeader)`
   gap: 10px;
   justify-content: flex-end;
   padding: 0px 20px;
-  min-height: 35px;
-  max-height: 35px;
+  flex-direction: row;
 `;
 
 const ViewTab = styled.div<{
@@ -222,7 +209,6 @@ const ViewTab = styled.div<{
 `;
 
 const PreWrapper = styled.div`
-  border: 1px solid #efefef;
   padding: 0 15px;
   overflow: hidden;
   font-family: "Roboto Mono";

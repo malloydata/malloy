@@ -12,29 +12,38 @@
  */
 
 import path from "path";
-import fs from "fs";
+import fs from "fs-extra";
 import archiver from "archiver";
 import { performance } from "perf_hooks";
-import { renderDoc } from "./render_document";
-import { renderFooter, renderSidebar, Section } from "./page";
+import { renderDoc } from "./render_document.js";
+import { renderFooter, renderSidebar, Section } from "./page.js";
 import {
   isMarkdown,
   readDirRecursive,
   timeString,
   watchDebounced,
   watchDebouncedRecursive,
-} from "./utils";
-import { DEPENDENCIES } from "./run_code";
-import { log } from "./log";
+} from "./utils.js";
+import { DEPENDENCIES } from "./run_code.js";
+import { log } from "./log.js";
 import { exit } from "process";
+
+const __dirname = path.resolve("./docs/_scripts/build_docs");
 
 const DOCS_ROOT_PATH = path.join(__dirname, "../../_src");
 const OUT_PATH = path.join(__dirname, "../../_includes/generated");
 const JS_OUT_PATH = path.join(__dirname, "../../js/generated");
 const OUT_PATH2 = path.join(__dirname, "../../documentation/");
 const CONTENTS_PATH = path.join(DOCS_ROOT_PATH, "table_of_contents.json");
-const SAMPLES_PATH = path.join(__dirname, "../../../samples");
+const SAMPLES_PATH = path.join(__dirname, "../../../samples/bigquery");
+const SAMPLES_ROOT_PATH = path.join(__dirname, "../../../samples");
 const AUX_OUT_PATH = path.join(__dirname, "../../aux/generated");
+
+const FIDDLE_IN_PATH = path.join(
+  __dirname,
+  "../../../demo/malloy-duckdb-wasm/docs"
+);
+const FIDDLE_OUT_PATH = path.join(__dirname, "../../fiddle");
 
 const WATCH_ENABLED = process.argv.includes("--watch");
 
@@ -129,7 +138,7 @@ function outputSamplesZip(relativePath: string, name: string): Promise<void> {
         reject(error);
       });
       archive.pipe(output);
-      archive.directory(path.join(SAMPLES_PATH, relativePath), false);
+      archive.directory(path.join(SAMPLES_ROOT_PATH, relativePath), false);
       archive.finalize();
     } catch (error) {
       log(error);
@@ -150,7 +159,13 @@ async function outputSamplesZips(): Promise<void> {
   ]);
 }
 
+async function copyFiddle(): Promise<void> {
+  await fs.rm(FIDDLE_OUT_PATH, { recursive: true, force: true });
+  await fs.copy(FIDDLE_IN_PATH, FIDDLE_OUT_PATH);
+}
+
 (async () => {
+  await copyFiddle();
   await outputSamplesZips();
   const allFiles = readDirRecursive(DOCS_ROOT_PATH);
   const allDocs = allFiles.filter(isMarkdown);

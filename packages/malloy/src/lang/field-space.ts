@@ -73,7 +73,8 @@ export interface FieldSpace {
   structDef(): model.StructDef;
   emptyStructDef(): model.StructDef;
   lookup(symbol: FieldName[]): LookupResult;
-  getDialect(): Dialect;
+  dialectObj(): Dialect | undefined;
+  whenComplete: (step: () => void) => void;
 }
 
 /**
@@ -89,8 +90,16 @@ export class StaticSpace implements FieldSpace {
     this.fromStruct = sourceStructDef;
   }
 
-  getDialect(): Dialect {
-    return getDialect(this.fromStruct.dialect);
+  whenComplete(step: () => void): void {
+    step();
+  }
+
+  dialectObj(): Dialect | undefined {
+    try {
+      return getDialect(this.fromStruct.dialect);
+    } catch {
+      return undefined;
+    }
   }
 
   fromFieldDef(from: model.FieldDef): SpaceField {
@@ -163,6 +172,22 @@ export class StaticSpace implements FieldSpace {
       return { error: `'${head}' is not defined`, found };
     }
     if (found instanceof SpaceField) {
+      /*
+       * TODO cache defs, post the addReference call to whenComplete
+       *
+       * In the cleanup phase of query space construction, it may check
+       * the output space for ungrouping variables. However if an
+       * ungrouping variable is a measure, the field expression value
+       * needed to get the definition needs to be computed in the
+       * input space of the query. There is a test which failed which
+       * caused this code to be here, but this is really a bandaid.
+       *
+       * Some re-work of how to get the definition of a SpaceField
+       * no matter what it is contained in needs to be thought out.
+       *
+       * ... or this check would look at the finalized output of
+       * the namespace and not re-compile ...
+       */
       const definition = found.fieldDef();
       if (definition) {
         head.addReference({
@@ -236,6 +261,10 @@ class SourceSpace {
 export class DynamicSpace extends StaticSpace {
   protected final: model.StructDef | undefined;
   protected source: SourceSpace;
+  outputFS?: QuerySpace;
+  completions: (() => void)[] = [];
+  private complete = false;
+
   constructor(extending: SourceSpec) {
     const source = new SourceSpace(extending);
     super(cloneDeep(source.structDef));
@@ -254,12 +283,7 @@ export class DynamicSpace extends StaticSpace {
   ): DynamicSpace {
     const edited = new DynamicSpace(from);
     if (choose) {
-      const names = choose.refs.list.filter((f) => f instanceof FieldName);
-      for (const s of choose.refs.list.filter(
-        (f) => f instanceof WildcardFieldReference
-      )) {
-        s.log("Wildcards not allowed in accept/except");
-      }
+      const names = choose.refs.list;
       const oldMap = edited.entries();
       edited.dropEntries();
       for (const [symbol, value] of oldMap) {
@@ -271,6 +295,22 @@ export class DynamicSpace extends StaticSpace {
       }
     }
     return edited;
+  }
+
+  whenComplete(finalizeStep: () => void): void {
+    if (this.complete) {
+      finalizeStep();
+    } else {
+      this.completions.push(finalizeStep);
+    }
+  }
+
+  isComplete(): void {
+    this.complete = true;
+    for (const step of this.completions) {
+      step();
+    }
+    this.completions = [];
   }
 
   protected setEntry(name: string, value: SpaceEntry): void {
@@ -287,6 +327,14 @@ export class DynamicSpace extends StaticSpace {
     return this;
   }
 
+  newEntry(name: string, astEl: MalloyElement, entry: SpaceEntry): void {
+    if (this.entry(name)) {
+      astEl.log(`Cannot redefine '${name}'`);
+      return;
+    }
+    this.setEntry(name, entry);
+  }
+
   addField(...defs: ExploreField[]): void {
     for (const def of defs) {
       // TODO express the "three fields kinds" in a typesafe way
@@ -295,11 +343,11 @@ export class DynamicSpace extends StaticSpace {
       const elseType = def.elementType;
       if (def instanceof FieldDeclaration) {
         const exprField = new ExpressionFieldFromAst(this, def);
-        this.setEntry(exprField.name, exprField);
+        this.newEntry(exprField.name, def, exprField);
         // querry (turtle) fields
       } else if (def instanceof TurtleDecl) {
         const name = def.name;
-        this.setEntry(name, new QueryFieldAST(this, def, name));
+        this.newEntry(name, def, new QueryFieldAST(this, def, name));
       } else if (def instanceof RenameField) {
         if (def.oldName.refString === def.newName) {
           def.log("Can't rename field to itself");
@@ -320,7 +368,7 @@ export class DynamicSpace extends StaticSpace {
           def.log(`Can't rename '${def.oldName}', no such field`);
         }
       } else if (def instanceof Join) {
-        this.setEntry(def.name.refString, new JoinSpaceField(this, def));
+        this.newEntry(def.name.refString, def, new JoinSpaceField(this, def));
       } else {
         elseLog(
           `Internal error: Expected expression, query, or rename, got '${elseType}'`
@@ -360,7 +408,7 @@ export class DynamicSpace extends StaticSpace {
       for (const [fieldName, field] of reorderFields) {
         if (field instanceof JoinSpaceField) {
           const joinStruct = field.join.structDef();
-          if (!ErrorFactory.isErrorStructdef(joinStruct)) {
+          if (!ErrorFactory.isErrorStructDef(joinStruct)) {
             this.final.fields.push(joinStruct);
             fixupJoins.push([field.join, joinStruct]);
           }
@@ -369,7 +417,7 @@ export class DynamicSpace extends StaticSpace {
           if (fieldDef) {
             this.final.fields.push(fieldDef);
           } else {
-            throw new Error(`'${fieldName}' doesnt' have a FieldDef`);
+            throw new Error(`'${fieldName}' doesn't have a FieldDef`);
           }
         }
       }
@@ -381,59 +429,59 @@ export class DynamicSpace extends StaticSpace {
         join.fixupJoinOn(this, missingOn);
       }
     }
+    this.isComplete();
     return this.final;
   }
 }
 
-type QuerySegType = "reduce" | "project" | "index";
-
 /**
  * A namespace for Query operations. The have an input and an
- * output set of fields.
+ * output set of fields. The InputSpace is the QueryOperationSpace
+ * which is where all expressions are evaluated, and the output
+ * space is ResultSpace.
+ *
  */
-export abstract class QueryOperationSpace extends DynamicSpace {
-  abstract segType: QuerySegType;
-  astEl?: MalloyElement | undefined;
-  readonly queryInput: SourceSpace;
 
-  constructor(input: SourceSpec) {
+export class QuerySpace extends DynamicSpace {
+  nestParent?: QuerySpace;
+  extendList: string[] = [];
+
+  constructor(input: SourceSpec, readonly result: ResultSpace) {
     const inputSpace = new SourceSpace(input);
-    super({ ...inputSpace.structDef, fields: [] });
-    this.queryInput = inputSpace;
+    super(inputSpace.structDef);
   }
 
-  inputFS(): FieldSpace {
-    return this.queryInput.fieldSpace;
+  extendSource(extendField: Join | FieldDeclaration): void {
+    this.addField(extendField);
+    if (extendField instanceof Join) {
+      this.extendList.push(extendField.name.refString);
+    } else {
+      this.extendList.push(extendField.defineName);
+    }
+  }
+}
+
+export abstract class ResultSpace extends DynamicSpace {
+  readonly exprSpace: QuerySpace;
+  astEl?: MalloyElement | undefined;
+  abstract readonly segmentType: "reduce" | "project" | "index";
+  constructor(readonly queryInputSpace: FieldSpace) {
+    super(queryInputSpace.emptyStructDef());
+    this.exprSpace = new QuerySpace(queryInputSpace, this);
   }
 
-  lookup(_fieldPath: FieldName[]): LookupResult {
-    throw new Error("INTERNAL ERRROR, SHOULD LOOKUP IN INPUT SPACE");
-    /*
-     * once HAVING works correctly this should lookup fields in the output space
-     * OR in the input space or somewthing like that
-     */
+  log(s: string): void {
+    if (this.astEl) {
+      this.astEl.log(s);
+    }
   }
-
-  structDef(): model.StructDef {
-    // Actually since we have the input structdef and the fields, this feels
-    // like it could return the output structdef of the query op ... except
-    // the pipeline code merges refinements in before asking for the output
-    // struct, and that would require a call back here somehow to get the
-    // pre-refinement fields ... I think possibly this is always a
-    // runtime error
-    throw new Error("StructDef requested from QueryOperationSpace");
-  }
-
-  abstract getPipeSegment(
-    refineFrom: model.PipeSegment | undefined
-  ): model.PipeSegment;
 
   addMembers(members: FieldCollectionMember[]): void {
     for (const member of members) {
       if (member instanceof FieldReference) {
         this.addReference(member);
       } else if (member instanceof WildcardFieldReference) {
-        this.setEntry(member.refString, new WildSpaceField(member.refString));
+        this.addWild(member);
       } else {
         this.addField(member);
       }
@@ -449,84 +497,28 @@ export abstract class QueryOperationSpace extends DynamicSpace {
     }
   }
 
-  log(s: string): void {
-    if (this.astEl) {
-      this.astEl.log(s);
-    }
-  }
-}
-
-/**
- * Reduce and project queries use a "QuerySpace"
- */
-export abstract class QuerySpace extends QueryOperationSpace {
-  extendedInput?: DynamicSpace;
-  extendedFields: string[] = [];
-
-  extendSource(extendField: Join | FieldDeclaration): void {
-    this.extendedFields.push(
-      extendField instanceof Join
-        ? extendField.name.refString
-        : extendField.defineName
-    );
-    this.extendInto().addField(extendField);
+  addWild(wild: WildcardFieldReference): void {
+    this.setEntry(wild.refString, new WildSpaceField(wild.refString));
   }
 
-  inputFS(): FieldSpace {
-    if (this.extendedInput) {
-      return this.extendedInput;
-    }
-    return this.queryInput.fieldSpace;
-  }
-
-  private extendInto(): DynamicSpace {
-    if (!this.extendedInput) {
-      this.extendedInput = new DynamicSpace(this.queryInput.sourceSpec);
-    }
-    return this.extendedInput;
-  }
-
-  getPipeSegment(
-    refineFrom: model.QuerySegment | undefined
-  ): model.QuerySegment {
-    const reduceOrProject = this.segType;
-    if (reduceOrProject === "index") {
-      throw new Error("IndexSegment getPipeSegment should not call super");
-    }
-
-    if (refineFrom?.extendSource) {
-      for (const xField of refineFrom.extendSource) {
-        this.extendInto().addFieldDef(xField);
+  /**
+   * Check for the definition of an ungrouping reference in the result space,
+   * or in the case of an exclude reference, if this query is nested
+   * in another query, in the result space of a query that this query
+   * is nested inside of.
+   */
+  checkUngroup(fn: FieldName, isExclude: boolean): void {
+    if (!this.entry(fn.refString)) {
+      if (isExclude && this.exprSpace.nestParent) {
+        const parent = this.exprSpace.nestParent;
+        parent.whenComplete(() => {
+          parent.result.checkUngroup(fn, isExclude);
+        });
+      } else {
+        const uName = isExclude ? "exclude()" : "all()";
+        fn.log(`${uName} '${fn.refString}' is missing from query output`);
       }
     }
-    const segment: model.QuerySegment = {
-      type: reduceOrProject,
-      fields: this.queryFieldDefs(),
-    };
-
-    segment.fields = mergeFields(refineFrom?.fields, segment.fields);
-
-    if (refineFrom?.extendSource) {
-      segment.extendSource = refineFrom.extendSource;
-    }
-    if (this.extendedInput) {
-      const newExtends: model.FieldDef[] = [];
-      // have to get the whole structdef because we need all the join
-      // resolution to happen and that only happens at the completion
-      // of the structdef generation.
-      const extendedStruct = this.extendedInput.structDef();
-
-      for (const extendName of this.extendedFields) {
-        const extendEnt = extendedStruct.fields.find(
-          (f) => nameOf(f) == extendName
-        );
-        if (extendEnt) {
-          newExtends.push(extendEnt);
-        }
-      }
-      segment.extendSource = mergeFields(segment.extendSource, newExtends);
-    }
-    return segment;
   }
 
   addQueryItems(...qiList: QueryItem[]): void {
@@ -536,15 +528,17 @@ export abstract class QuerySpace extends QueryOperationSpace {
       } else if (qi instanceof FieldDeclaration) {
         this.addField(qi);
       } else if (isNestedQuery(qi)) {
-        this.setEntry(qi.name, new QueryFieldAST(this.inputFS(), qi, qi.name));
+        const qf = new QueryFieldAST(this, qi, qi.name);
+        qf.nestParent = this.exprSpace;
+        this.setEntry(qi.name, qf);
       } else {
         // Compiler will error if we don't handle all cases
-        const _unhandledQUeryItem: never = qi;
+        const _itemNotHandled: never = qi;
       }
     }
   }
 
-  conContain(_qd: model.QueryFieldDef): boolean {
+  canContain(_qd: model.QueryFieldDef): boolean {
     return true;
   }
 
@@ -552,30 +546,85 @@ export abstract class QuerySpace extends QueryOperationSpace {
     const fields: model.QueryFieldDef[] = [];
     for (const [name, field] of this.entries()) {
       if (field instanceof SpaceField) {
-        const fieldQueryDef = field.getQueryFieldDef(this.inputFS());
+        const fieldQueryDef = field.getQueryFieldDef(this.exprSpace);
         if (fieldQueryDef) {
-          if (this.conContain(fieldQueryDef)) {
+          if (this.canContain(fieldQueryDef)) {
             fields.push(fieldQueryDef);
           } else {
-            this.log(`'${name}' not legal in ${this.segType}`);
+            this.log(`'${name}' not legal in ${this.segmentType}`);
           }
         } else {
           throw new Error(`'${name}' does not have a QueryFieldDef`);
         }
       }
     }
+    this.isComplete();
     return fields;
+  }
+
+  getQuerySegment(rf: model.QuerySegment | undefined): model.QuerySegment {
+    const p = this.getPipeSegment(rf);
+    if (model.isQuerySegment(p)) {
+      return p;
+    }
+    throw new Error("TODO NOT POSSIBLE");
+  }
+
+  getPipeSegment(
+    refineFrom: model.QuerySegment | undefined
+  ): model.PipeSegment {
+    if (this.segmentType == "index") {
+      // TODO ... should make this go away
+      throw new Error("INDEX FIELD PIPE SEGMENT MIS HANDLED");
+    }
+
+    if (refineFrom?.extendSource) {
+      for (const xField of refineFrom.extendSource) {
+        this.exprSpace.addFieldDef(xField);
+      }
+    }
+
+    const segment: model.QuerySegment = {
+      type: this.segmentType,
+      fields: this.queryFieldDefs(),
+    };
+
+    segment.fields = mergeFields(refineFrom?.fields, segment.fields);
+
+    if (refineFrom?.extendSource) {
+      segment.extendSource = refineFrom.extendSource;
+    }
+    if (this.exprSpace.extendList.length > 0) {
+      const newExtends: model.FieldDef[] = [];
+      const extendedStruct = this.exprSpace.structDef();
+
+      for (const extendName of this.exprSpace.extendList) {
+        const extendEnt = extendedStruct.fields.find(
+          (f) => nameOf(f) == extendName
+        );
+        if (extendEnt) {
+          newExtends.push(extendEnt);
+        }
+      }
+      segment.extendSource = mergeFields(segment.extendSource, newExtends);
+    }
+    this.isComplete();
+    return segment;
   }
 }
 
-export class ReduceFieldSpace extends QuerySpace {
-  segType: QuerySegType = "reduce";
+/**
+ * Reduce and project queries use a "QuerySpace"
+ */
+
+export class ReduceFieldSpace extends ResultSpace {
+  readonly segmentType = "reduce";
 }
 
-export class ProjectFieldSpace extends QuerySpace {
-  segType: QuerySegType = "project";
+export class ProjectFieldSpace extends ResultSpace {
+  readonly segmentType = "project";
 
-  conContain(qd: model.QueryFieldDef): boolean {
+  canContain(qd: model.QueryFieldDef): boolean {
     if (typeof qd !== "string") {
       if (model.isFilteredAliasedName(qd)) {
         return true;
@@ -593,14 +642,18 @@ export class ProjectFieldSpace extends QuerySpace {
   }
 }
 
-export class IndexFieldSpace extends QueryOperationSpace {
-  segType: QuerySegType = "index";
+export class IndexFieldSpace extends ResultSpace {
+  readonly segmentType = "index";
   fieldList = new Set<string>();
 
   addReference(ref: FieldReference): void {
-    if (ref.getField(this.inputFS()).found) {
+    if (ref.getField(this.exprSpace).found) {
       this.fieldList.add(ref.refString);
     }
+  }
+
+  addWild(wild: WildcardFieldReference): void {
+    this.fieldList.add(wild.refString);
   }
 
   getPipeSegment(refineIndex?: model.PipeSegment): model.IndexSegment {
@@ -611,6 +664,7 @@ export class IndexFieldSpace extends QueryOperationSpace {
         }
       }
     }
+    this.isComplete();
     return {
       type: "index",
       fields: Array.from(this.fieldList.values()),
@@ -644,7 +698,10 @@ export class DefSpace implements FieldSpace {
     }
     return this.realFS.lookup(symbol);
   }
-  getDialect(): Dialect {
-    return this.realFS.getDialect();
+  dialectObj(): Dialect | undefined {
+    return this.realFS.dialectObj();
+  }
+  whenComplete(step: () => void): void {
+    this.realFS.whenComplete(step);
   }
 }

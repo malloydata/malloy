@@ -12,7 +12,13 @@
  */
 
 import * as shiki from "shiki";
-import malloyTMGrammar from "../../../packages/malloy-vscode/malloy.tmGrammar.json";
+import * as fs from "fs";
+
+const json = fs.readFileSync(
+  "./vscode-extension/malloy.tmGrammar.json",
+  "utf-8"
+);
+const malloyTMGrammar = JSON.parse(json);
 
 const HIGHLIGHTER = shiki.getHighlighter({
   theme: "light-plus",

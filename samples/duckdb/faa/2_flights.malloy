@@ -1,0 +1,82 @@
+//
+// Flights example model.  Joins multipe tables into a 'source'
+//
+//  Malloy Language Documentation, 
+//    see: https://looker-open-source.github.io/malloy/documentation/index.html
+
+
+// source: 
+//  see: https://looker-open-source.github.io/malloy/documentation/language/source.html
+source: carriers is table('duckdb:data/carriers.parquet') + {
+  primary_key: code
+  measure: carrier_count is count()
+}
+
+source: airports is table('duckdb:data/airports.parquet') + {
+  primary_key: code
+  measure: airport_count is count()
+  dimension: name is concat(code, '-', full_name )
+
+}
+
+source: aircraft_models is table('duckdb:data/aircraft_models.parquet') + {
+  primary_key: aircraft_model_code
+  measure: aircraft_model_count is count()
+}
+
+source: aircraft is table('duckdb:data/aircraft.parquet') + {
+  primary_key: tail_num
+  measure: aircraft_count is count()
+  // join, see: https://looker-open-source.github.io/malloy/documentation/language/join.html
+  join_one: aircraft_models with aircraft_model_code
+}
+
+
+source: flights is table('duckdb:data/flights.parquet') + {
+  primary_key: id2
+
+  // rename some fields as from their physical names
+  rename: origin_code is origin
+  rename: destination_code is destination
+
+  // join all the data sources
+  //  see: https://looker-open-source.github.io/malloy/documentation/language/join.html
+
+  join_one: carriers with carrier
+  join_one: origin is airports with origin_code
+  join_one: destination is airports with destination_code
+  join_one: aircraft with tail_num
+
+
+  // declare some resusable aggregate calculations
+  //  see: https://looker-open-source.github.io/malloy/documentation/language/aggregates.html
+  measure:
+    flight_count is count()
+    total_distance is sum(distance)
+
+  // declare some queries:
+  // see: https://looker-open-source.github.io/malloy/documentation/language/query.html
+  query: by_carrier is {
+    group_by: carriers.nickname
+    aggregate: 
+      flight_count
+      destination_count is destination.count()
+      percentage_of_flights is flight_count/all(flight_count) *100
+  }
+
+  query: by_origin is {
+    group_by: origin.name
+    aggregate: 
+      flight_count
+      destination_count is destination.count()
+      carriers.carrier_count
+      percentage_of_flights is flight_count/all(flight_count) *100
+  }
+
+  query: by_month is {
+    group_by: dep_month is dep_time.month
+    aggregate: flight_count
+  }
+  
+}
+

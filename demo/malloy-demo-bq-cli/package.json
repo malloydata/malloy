@@ -1,6 +1,7 @@
 {
   "name": "malloy-demo-bq-cli",
-  "version": "0.0.1",
+  "version": "0.0.0",
+  "private": true,
   "license": "GPL-2.0",
   "main": "dist/entry.js",
   "bin": {
@@ -11,9 +12,9 @@
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest",
-    "install-local": "yarn build && npm i -g",
-    "local": "yarn install-local && malloy-demo-bq-cli",
-    "build": "yarn tsc --build",
+    "install-local": "npm run build && npm i -g",
+    "local": "npm run install-local && malloy-demo-bq-cli",
+    "build": "tsc --build",
     "run": "ts-node src/entry.ts"
   },
   "dependencies": {

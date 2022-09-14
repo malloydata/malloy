@@ -266,6 +266,10 @@ export class PostgresDialect extends Dialect {
     throw new Error("Not implemented Yet");
   }
 
+  sqlNow(): Expr {
+    return mkExpr`CURRENT_TIMESTAMP`;
+  }
+
   sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {
     // adjusting for monday/sunday weeks
     const week = units == "week";
@@ -373,5 +377,9 @@ export class PostgresDialect extends Dialect {
       }
     }
     return tableSQL;
+  }
+
+  sqlOrderBy(orderTerms: string[]): string {
+    return `ORDER BY ${orderTerms.map((t) => `${t} NULLS LAST`).join(",")}`;
   }
 }

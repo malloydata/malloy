@@ -897,7 +897,23 @@ export class MalloyToAST
   visitExprCountDisinct(
     pcx: parse.ExprCountDisinctContext
   ): ast.ExprCountDistinct {
-    return new ast.ExprCountDistinct(this.getFieldExpr(pcx.fieldExpr()));
+    return this.astAt(
+      new ast.ExprCountDistinct(this.getFieldExpr(pcx.fieldExpr())),
+      pcx
+    );
+  }
+
+  visitExprUngroup(pcx: parse.ExprUngroupContext): ast.ExprUngroup {
+    const flist = pcx.fieldName().map((fcx) => this.getFieldName(fcx));
+    const kw = this.getIdText(pcx.ungroup()).toLocaleLowerCase();
+    return this.astAt(
+      new ast.ExprUngroup(
+        kw == "all" ? kw : "exclude",
+        this.getFieldExpr(pcx.fieldExpr()),
+        flist
+      ),
+      pcx
+    );
   }
 
   visitExprAggregate(pcx: parse.ExprAggregateContext): ast.ExpressionDef {

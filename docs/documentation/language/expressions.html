@@ -57,6 +57,12 @@ the same syntax users are familiar with. However, Malloy also introduces several
 </tr>
 
 <tr>
+<td><a href="#ungrouped-aggregates">Aggregation Control</a></td>
+
+<td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">all</span><span style="color: #000000">(</span><span style="color: #795E26">sum</span><span style="color: #000000">(</span><span style="color: #001080">distance</span><span style="color: #000000">))</span></span></code> <br/> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">all</span><span style="color: #000000">(</span><span style="color: #001080">aircraft</span><span style="color: #000000">.</span><span style="color: #795E26">count</span><span style="color: #000000">(), </span><span style="color: #001080">destination_code</span><span style="color: #000000">)</span></span></code> <br/> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">exclude</span><span style="color: #000000">(</span><span style="color: #001080">aircraft_models</span><span style="color: #000000">.</span><span style="color: #001080">seats</span><span style="color: #000000">.</span><span style="color: #795E26">avg</span><span style="color: #000000">(), </span><span style="color: #001080">carrier</span><span style="color: #000000">.</span><span style="color: #001080">nickname</span><span style="color: #000000">)</span></span></code></td>
+</tr>
+
+<tr>
 <td><a href="#filtered-expressions">Filtered expressions</a></td>
 
 <td><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">age</span><span style="color: #000000">) : [</span><span style="color: #001080">state</span><span style="color: #000000">: </span><span style="color: #A31515">&#39;CA&#39;</span><span style="color: #000000">]</span></span></code><br/><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">flight_count</span><span style="color: #000000"> : [</span><span style="color: #001080">origin</span><span style="color: #000000">.</span><span style="color: #001080">county</span><span style="color: #000000"> != </span><span style="color: #0000FF">null</span><span style="color: #000000">]</span></span></code></td>
@@ -179,7 +185,9 @@ the same syntax users are familiar with. However, Malloy also introduces several
         <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
 <span class="line"><span style="color: #000000">    group_set,</span></span>
-<span class="line"><span style="color: #000000">    origin_0.state </span><span style="color: #0000FF">as</span><span style="color: #000000"> state__0,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #098658">0</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      origin_0.state</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> state__0,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
 <span class="line"><span style="color: #000000">      origin_0.county</span></span>
 <span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> county__1,</span></span>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Malloy Fiddle</title>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <style>
+      @font-face {
+        font-family: "Google Sans";
+        font-style: normal;
+        src: url("fonts/GoogleSans[GRAD,opsz,wght]") format("ttf");
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+          U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193,
+          U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+
+      @font-face {
+        font-family: "Roboto Mono";
+        font-style: normal;
+        font-weight: 400;
+        src: url("fonts/RobotoMono-VariableFont_wght.woff2") format("woff2");
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+          U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193,
+          U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+
+      @font-face {
+        font-family: "Roboto Mono";
+        font-style: italic;
+        src: url("fonts/RobotoMono-Italic-VariableFont_wght.woff2")
+          format("woff2");
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+          U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193,
+          U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+
+      :root {
+        --malloy-font-family: "Google Sans", -apple-system, BlinkMacSystemFont,
+          sans-serif;
+        --malloy-title-color: #333333;
+        --malloy-label-color: #333333;
+        --malloy-border-color: #e7e7e7;
+        --malloy-tile-background-color: #f3f3f3;
+      }
+    </style>
+    <link rel="stylesheet" href="./dist/main.bundle.css" />
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="./dist/main.bundle.js"></script>
+  </body>
+</html>

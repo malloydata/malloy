@@ -8,10 +8,11 @@
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
-    "build": "yarn tsc --build",
+    "build": "tsc --build",
     "malloyc": "ts-node ../../scripts/malloy-to-json"
   },
   "dependencies": {
-    "duckdb": "0.4.1-dev454.0"
+    "duckdb": "0.4.1-dev1094.0",
+    "@duckdb/duckdb-wasm": "^1.16.0"
   }
 }

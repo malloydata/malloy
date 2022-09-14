@@ -1,0 +1,50 @@
+---
+layout: documentation
+title: Malloy Documentation
+footer: /generated/footers/language/ungrouped-aggregates.html
+---
+
+<div class="document">
+      <h1>
+        <a id="ungrouping-aggregate-sub-expressions" class="header-link anchor" href="#ungrouping-aggregate-sub-expressions">
+          Ungrouping Aggregate Sub-expressions
+        </a>
+      </h1>
+    <p>In a query which is grouped my multiple dimensions, it is often useful to be
+able to perform an aggregate calculation on sub-groups.</p>
+
+      <h3>
+        <a id="-strong-all-aggregateexpression-strong-" class="header-link anchor" href="#-strong-all-aggregateexpression-strong-">
+          <strong>all(aggregateExpression)</strong>
+        </a>
+      </h3>
+    <p>This will perform the aggregate computation ignoring the grouping in the
+current_query.</p>
+<pre class="language-txt" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">...</span></span>
+<span class="line"><span style="color: #000000">   aggregate: pct_of_all is count() / all(count())*100.0</span></span>
+<span class="line"><span style="color: #000000"></span></span></pre>
+      <h3>
+        <a id="-strong-all-aggregateexpression-groupingdimension-strong-" class="header-link anchor" href="#-strong-all-aggregateexpression-groupingdimension-strong-">
+          <strong>all(aggregateExpression, groupingDimension, ...)</strong>
+        </a>
+      </h3>
+    <p>This will retain grouping by the named dimensions, but still group by the un-named dimensions.</p>
+<pre class="language-txt" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">...</span></span>
+<span class="line"><span style="color: #000000">  group_by: name, state</span></span>
+<span class="line"><span style="color: #000000">  aggregate: count_in_state is all(count(), state)</span></span>
+<span class="line"><span style="color: #000000"></span></span></pre><p>Grouping imensions named in <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">all</span><span style="color: #000000">()</span></span></code> must be names selected as grouping dimensions in the current query.</p>
+
+      <h3>
+        <a id="-strong-exclude-aggregateexpression-groupingdimension-strong-" class="header-link anchor" href="#-strong-exclude-aggregateexpression-groupingdimension-strong-">
+          <strong>exclude(aggregateExpression, groupingDimension)</strong>
+        </a>
+      </h3>
+    <p>Similar to <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">al</span><span style="color: #000000">()</span></span></code> this allows you to control which grouping dimensions are
+used to compute <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">aggregateExpression</span></span></code>. In this case, this list is dimenions
+which should NOT be used, for example the previous code fragment could
+also have ben written ...</p>
+<pre class="language-txt" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">...</span></span>
+<span class="line"><span style="color: #000000">  group_by: name, state</span></span>
+<span class="line"><span style="color: #000000">  aggregate: count_in_state is exclude(count(), name)</span></span>
+<span class="line"><span style="color: #000000"></span></span></pre><p>The main difference is that in a nested query, it is legal to name a grouping dimension from a outer query which contains the inner query.</p>
+</div>

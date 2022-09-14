@@ -105,71 +105,155 @@ window.SEARCH_SEGMENTS = [
   },
   {
     "titles": [
-      "NTSB Flight Database examples"
+      "NTSB Flight Database Examples"
     ],
     "paragraphs": [],
-    "path": "/examples/faa.md"
+    "path": "/examples/faa/bigquery.md"
   },
   {
     "titles": [
-      "NTSB Flight Database examples",
+      "NTSB Flight Database Examples",
       "Airport Dashboard"
     ],
     "paragraphs": [
       "Where can you fly from SJC? For each destination; Which carriers?  How long have they been flying there?\nAre they on time?"
     ],
-    "path": "/examples/faa.md"
+    "path": "/examples/faa/bigquery.md"
   },
   {
     "titles": [
-      "NTSB Flight Database examples",
+      "NTSB Flight Database Examples",
       "Carrier Dashboard"
     ],
     "paragraphs": [
       "Tell me everything about a carrier.  How many destinations?, flights? hubs?\nWhat kind of planes to they use? How many flights over time?  What are\nthe major hubs?  For each destination, How many flights? Where can you? Have they been\nflying there long?  Increasing or decreasing year by year?  Any seasonality?"
     ],
-    "path": "/examples/faa.md"
+    "path": "/examples/faa/bigquery.md"
   },
   {
     "titles": [
-      "NTSB Flight Database examples",
+      "NTSB Flight Database Examples",
       "Kayak Example Query"
     ],
     "paragraphs": [
       "Suppose you wanted to build a website like Kayak.  Let's assume that the data we have is\nin the future instead of the past.  The query below will fetch all the data needed\nto render a Kayak page in a singe query."
     ],
-    "path": "/examples/faa.md"
+    "path": "/examples/faa/bigquery.md"
   },
   {
     "titles": [
-      "NTSB Flight Database examples",
+      "NTSB Flight Database Examples",
       "Sessionizing Flight Data."
     ],
     "paragraphs": [
       "You can think of flight data as event data.  The below is a classic map/reduce roll up of the flight data by carrier and day, plane and day, and individual events for each plane."
     ],
-    "path": "/examples/faa.md"
+    "path": "/examples/faa/bigquery.md"
   },
   {
     "titles": [
-      "NTSB Flight Database examples",
+      "NTSB Flight Database Examples",
       "The Malloy Model"
     ],
     "paragraphs": [
       "All of the queries above are executed against the following model:"
     ],
-    "path": "/examples/faa.md"
+    "path": "/examples/faa/bigquery.md"
   },
   {
     "titles": [
-      "NTSB Flight Database examples",
+      "NTSB Flight Database Examples",
       "Data Styles"
     ],
     "paragraphs": [
       "The data styles tell the Malloy renderer how to render different kinds of results.",
       "<em>The follow examples all run against the model at the bottom of this page OR you can find the source code <a href=\"https://github.com/looker-open-source/malloy/blob/docs-release/samples/faa/flights.malloy\">here</a>.</em>"
     ],
-    "path": "/examples/faa.md"
+    "path": "/examples/faa/bigquery.md"
+  },
+  {
+    "titles": [
+      "NTSB Flight Database Examples (PostgreSQL)"
+    ],
+    "paragraphs": [],
+    "path": "/examples/faa/postgres.md"
+  },
+  {
+    "titles": [
+      "NTSB Flight Database Examples (PostgreSQL)",
+      "PostgreSQL Setup"
+    ],
+    "paragraphs": [
+      "Before you can run these NTSB sample models against a Postgres instance, you need to start up / connect to a database server instance and load it with the appropriate data.  These steps setup a database with the NTSB Flight dataset and respective sample models.  These steps use Docker for convenience, but the instructions can be modified to run a Postgres instance directly."
+    ],
+    "path": "/examples/faa/postgres.md"
+  },
+  {
+    "titles": [
+      "NTSB Flight Database Examples (PostgreSQL)",
+      "PostgreSQL Setup",
+      "Start a local Postgres instance"
+    ],
+    "paragraphs": [
+      "Start a Docker container running Postgres"
+    ],
+    "path": "/examples/faa/postgres.md"
+  },
+  {
+    "titles": [
+      "NTSB Flight Database Examples (PostgreSQL)",
+      "PostgreSQL Setup",
+      "Load the NTSB dataset into Postgres"
+    ],
+    "paragraphs": [
+      "Copy the SQL data file into the container",
+      "Run the file in the container"
+    ],
+    "path": "/examples/faa/postgres.md"
+  },
+  {
+    "titles": [
+      "NTSB Flight Database Examples (PostgreSQL)",
+      "Connect to Postgres in the extension"
+    ],
+    "paragraphs": [
+      "Use the connection settings shown below to connect the VS Code extension to your local Postgres instance.",
+      "<img src=\"https://user-images.githubusercontent.com/25882507/179831294-b6a69ef6-f454-48a7-8b93-aec2bff0ff3f.png\" alt=\"postgres-connection-example\"/>"
+    ],
+    "path": "/examples/faa/postgres.md"
+  },
+  {
+    "titles": [
+      "NTSB Flight Database Examples (PostgreSQL)",
+      "Modify the example Malloy models to work with Postgres"
+    ],
+    "paragraphs": [],
+    "path": "/examples/faa/postgres.md"
+  },
+  {
+    "titles": [
+      "NTSB Flight Database Examples (PostgreSQL)",
+      "Modify the example Malloy models to work with Postgres",
+      "Change data source references"
+    ],
+    "paragraphs": [
+      "<img src=\"https://user-images.githubusercontent.com/25882507/179834102-eef4aee4-973a-4259-bfe4-1487179012b3.png\" alt=\"source_table_reference\"/>"
+    ],
+    "path": "/examples/faa/postgres.md"
+  },
+  {
+    "titles": [
+      "NTSB Flight Database Examples (PostgreSQL)",
+      "The Updated Malloy Model"
+    ],
+    "paragraphs": [
+      "The follow example code will run against the local Postgres database.",
+      "From the <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">malloy</span><span style=\"color: #000000\">/</span></span></code> root directory of the repository, unzip the SQL script that will load the NTSB Flight dataset",
+      "The sample models from the NTSB Flight Dataset <a href=\"https://looker-open-source.github.io/malloy/documentation/examples/faa.html#the-malloy-model\">here</a> reference public BigQuery tables using the standard <em>project_name.dataset_name.table_name</em> BigQuery format.  Therefore, all the data source references with this format need to be changed to the Postgres format.",
+      "All source data references prefixed with <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">malloy</span><span style=\"color: #000000\">-</span><span style=\"color: #001080\">data</span><span style=\"color: #000000\">.</span><span style=\"color: #001080\">faa</span><span style=\"color: #000000\">.</span></span></code> must be changed to <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">malloytest</span><span style=\"color: #000000\">.</span></span></code> (since that is the Postgres schema we used above) to conform to Malloy's Postgres <em>schema_name.table_name</em> format (the database name is not required).  Simply find and replace in VS Code or run <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">sed</span><span style=\"color: #000000\"> -</span><span style=\"color: #001080\">i</span><span style=\"color: #000000\"> -</span><span style=\"color: #001080\">e</span><span style=\"color: #000000\"> </span><span style=\"color: #A31515\">&#39;s/malloy-data.faa./malloytest./g&#39;</span><span style=\"color: #000000\"> </span><span style=\"color: #001080\">path</span><span style=\"color: #000000\">/</span><span style=\"color: #0000FF\">to</span><span style=\"color: #000000\">/&lt;</span><span style=\"color: #001080\">your_file</span><span style=\"color: #000000\">.</span><span style=\"color: #001080\">malloy</span><span style=\"color: #000000\">&gt;</span></span></code>",
+      "<em>This page adapts the NTSB Flight Database examples <a href=\"https://looker-open-source.github.io/malloy/documentation/examples/faa.html\">here</a> to work with a Postgres instance rather than requiring BigQuery access.  Note that full support for Postgres is in progress and that date/time support is currently incomplete.</em>"
+    ],
+    "path": "/examples/faa/postgres.md"
   },
   {
     "titles": [
@@ -1216,7 +1300,28 @@ window.SEARCH_SEGMENTS = [
       "Metadata, Visualization and Drilling"
     ],
     "paragraphs": [
-      "Compiling a Malloy query returns metadata about the structure of the results. When combined with the query results, Malloy's rendering library can give a very\nrich user experience, rendering dashboards, visualizations.  Through this metadata\nthe visualization library can rewrite queries to drill through to data detail.",
+      "Compiling a Malloy query returns metadata about the structure of the results. When combined with the query results, Malloy's rendering library can give a very\nrich user experience, rendering dashboards, visualizations.  Through this metadata\nthe visualization library can rewrite queries to drill through to data detail."
+    ],
+    "path": "/features.md"
+  },
+  {
+    "titles": [
+      "Why do we need another data language?"
+    ],
+    "paragraphs": [
+      "SQL is complete but ugly: everything is expressible, but nothing is reusable; simple ideas are complex to express; the language is verbose and lacks smart defaults. Malloy is immediately understandable by SQL users, and far easier to use and learn.",
+      "Key features and advantages:",
+      "Query and model in the same language - everything is reusable and extensible.",
+      "Malloy reads the schema so you don’t need to model everything. Malloy allows creation of re-usable metrics and logic, but there’s no need for boilerplate code that doesn’t add anything new.",
+      "Pipelining: output one query into the next easily for powerful advanced analysis.",
+      "Aggregating Subqueries let you build nested data sets to delve deeper into data quickly, and return complicated networks of data from single queries (like GraphQL).",
+      "Queries do more: Power an entire dashboard with a single query. Nested queries are batched together, scanning the data only once.",
+      "Indexes for unified suggest/search: Malloy automatically builds search indexes, making it easier to understand a dataset and filter values.",
+      "Built to optimize the database: make the most of BigQuery, utilizing BI engine, caching, reading/writing nested datasets extremely fast, and more.",
+      "Malloy models are purely about data; visualization and “styles” configurations live separately, keeping the model clean and easy to read.",
+      "Aggregates are safe and accurate: Malloy generates distinct keys when they’re needed to ensure it never fans out your data.",
+      "Nested tables are made approachable: you don’t have to model or flatten them; specify a query path and Malloy handles the rest.",
+      "Compiler-based error checking: Malloy understands sql expressions so the compiler catches errors as you write, before the query is run.",
       "The first step in working with data, often is isolating the data you are interested in.\nMalloy introduces <a href=\"language/filters.html\">simplified filtering</a> for all types and allows these filters to be\napplied.  <a href=\"language/time-ranges.html\">Time calculations</a> are powerful and understandable.",
       "Queries can be introduced into a Malloy model and accessed by name.  One benefit is that the\nqueries are always accurate.  Think of a Malloy model as a data function library.\nQueries can also be used to create <a href=\"nesting.html\">nested subtables</a> in other queries."
     ],
@@ -3481,6 +3586,44 @@ window.SEARCH_SEGMENTS = [
       "Alternations and partials may be used in conjunction with the <a href=\"apply.html\">apply operator</a> to test whether a value meets the given condition."
     ],
     "path": "/language/types.md"
+  },
+  {
+    "titles": [
+      "Ungrouping Aggregate Sub-expressions"
+    ],
+    "paragraphs": [
+      "In a query which is grouped my multiple dimensions, it is often useful to be\nable to perform an aggregate calculation on sub-groups.",
+      "This will perform the aggregate computation ignoring the grouping in the\ncurrent_query.",
+      "This will retain grouping by the named dimensions, but still group by the un-named dimensions.",
+      "The main difference is that in a nested query, it is legal to name a grouping dimension from a outer query which contains the inner query.",
+      "Grouping imensions named in <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #795E26\">all</span><span style=\"color: #000000\">()</span></span></code> must be names selected as grouping dimensions in the current query.",
+      "Similar to <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #795E26\">al</span><span style=\"color: #000000\">()</span></span></code> this allows you to control which grouping dimensions are\nused to compute <code class=\"language-malloy\" style=\"background-color: #FBFBFB\"><span class=\"line\"><span style=\"color: #001080\">aggregateExpression</span></span></code>. In this case, this list is dimenions\nwhich should NOT be used, for example the previous code fragment could\nalso have ben written ..."
+    ],
+    "path": "/language/ungrouped-aggregates.md"
+  },
+  {
+    "titles": [
+      "Ungrouping Aggregate Sub-expressions",
+      "<strong>all(aggregateExpression)</strong>"
+    ],
+    "paragraphs": [],
+    "path": "/language/ungrouped-aggregates.md"
+  },
+  {
+    "titles": [
+      "Ungrouping Aggregate Sub-expressions",
+      "<strong>all(aggregateExpression, groupingDimension, ...)</strong>"
+    ],
+    "paragraphs": [],
+    "path": "/language/ungrouped-aggregates.md"
+  },
+  {
+    "titles": [
+      "Ungrouping Aggregate Sub-expressions",
+      "<strong>exclude(aggregateExpression, groupingDimension)</strong>"
+    ],
+    "paragraphs": [],
+    "path": "/language/ungrouped-aggregates.md"
   },
   {
     "titles": [

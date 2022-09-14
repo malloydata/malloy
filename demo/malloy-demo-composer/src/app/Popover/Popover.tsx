@@ -27,6 +27,7 @@ interface PopoverProps {
   zIndex?: number;
   xOffset?: number;
   yOffset?: number;
+  disabled?: boolean;
 }
 
 export const PopoverBox = styled.div<{
@@ -59,6 +60,7 @@ export const Popover: React.FC<PopoverProps> = ({
   zIndex = 10,
   xOffset = 0,
   yOffset = 10,
+  disabled = false,
 }) => {
   const triggerRef = useRef<HTMLDivElement>(null);
   const [tooltipRef, setTooltipRef] = useState<HTMLElement | null>(null);
@@ -97,7 +99,7 @@ export const Popover: React.FC<PopoverProps> = ({
 
   return (
     <Wrapper ref={triggerRef}>
-      {open && (
+      {open && !disabled && (
         <PopoverBox
           width={width}
           ref={setTooltipRef}
