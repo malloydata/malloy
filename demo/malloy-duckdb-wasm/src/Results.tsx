@@ -100,9 +100,10 @@ const ErrorMessage = styled.div`
 
 const Render = styled.div`
   flex: auto;
-  width: 100%;
+  width: calc(100% - 10px);
   overflow-y: scroll;
   background: #ffffff;
+  padding: 13px;
 `;
 
 interface TabProps {

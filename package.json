@@ -67,7 +67,6 @@
     "jest-silent-reporter": "^0.5.0",
     "jsdom": "^19.0.0",
     "lerna": "^5.4.3",
-    "md5": "^2.3.0",
     "node-fetch": "^2.6.1",
     "prettier": "^2.3.2",
     "remark-gfm": "^1.0.0",

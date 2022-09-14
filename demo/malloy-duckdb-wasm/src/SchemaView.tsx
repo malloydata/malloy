@@ -13,13 +13,7 @@
 
 import React, { useCallback, useState } from "react";
 import styled from "styled-components";
-import {
-  Explore,
-  ExploreField,
-  Field,
-  JoinRelationship,
-  Model,
-} from "@malloydata/malloy";
+import { Explore, ExploreField, Field, Model } from "@malloydata/malloy";
 import { Info } from "./Info";
 import { Title } from "./Title";
 
@@ -75,9 +69,7 @@ const ExploreItem: React.FC<ExploreItemProps> = ({
   return (
     <>
       <ToggleItem open={open} onClick={toggle}>
-        <LabelWithIcon>
-          <Icon src="./media/struct.svg" /> {explore.name}
-        </LabelWithIcon>
+        <ListText>{explore.name}</ListText>
       </ToggleItem>
       {open ? (
         <List>
@@ -110,29 +102,10 @@ const ExploreFieldItem: React.FC<ExploreFieldItemProps> = ({
   const toggle = useCallback(() => setOpen((current) => !current), []);
   const fields = field.allFields.sort(byKindThenName);
 
-  let subtype;
-  if (field.hasParentExplore()) {
-    const relationship = field.joinRelationship;
-    subtype =
-      relationship === JoinRelationship.ManyToOne
-        ? "many_to_one"
-        : relationship === JoinRelationship.OneToMany
-        ? "one_to_many"
-        : JoinRelationship.OneToOne
-        ? "one_to_one"
-        : "base";
-  } else {
-    subtype = "base";
-  }
-
-  const icon = getIconPath(`struct_${subtype}`, false);
-
   return (
     <>
       <ToggleItem open={open} onClick={toggle}>
-        <LabelWithIcon>
-          <Icon src={icon} /> {field.name}
-        </LabelWithIcon>
+        <ListText>{field.name}</ListText>
       </ToggleItem>
       {open ? (
         <List>
@@ -170,10 +143,11 @@ const FieldItem: React.FC<FieldItemProps> = ({ depth, field, onClick }) => {
     );
   } else {
     return (
-      <ListItem onClick={() => onClick(field)}>
-        <LabelWithIcon>
-          <Icon src={getIconPath(type, isAggregate)} /> {field.name}
-        </LabelWithIcon>
+      <ListItem
+        icon={getIconPath(type, isAggregate)}
+        onClick={() => onClick(field)}
+      >
+        <ListText>{field.name}</ListText>
       </ListItem>
     );
   }
@@ -275,24 +249,19 @@ const List = styled.ul`
   line-height: 22px;
 `;
 
-const ListItem = styled.li`
+interface ListItemProps {
+  icon: string;
+}
+
+const ListItem = styled.li<ListItemProps>`
   font-size: 13px;
-  list-style-type: none;
-  list-style-image: none;
+  list-style-image: url(${({ icon }) => icon});
 `;
 
-const LabelWithIcon = styled.div`
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  font-family: "Roboto Mono";
-`;
-
-const Icon = styled.img`
-  padding-right: 5px;
-  padding-left: 5px;
-  width: 16px;
-  height: 16px;
+const ListText = styled.span`
+  position: relative;
+  display: inline-block;
+  bottom: 4px;
 `;
 
 interface ToggleItemProps {
@@ -300,6 +269,7 @@ interface ToggleItemProps {
 }
 
 const ToggleItem = styled.li<ToggleItemProps>`
+  cursor: pointer;
   font-size: 13px;
   list-style-image: ${({ open }) => {
     return open

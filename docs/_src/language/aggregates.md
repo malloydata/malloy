@@ -70,6 +70,25 @@ query: flights -> {
 }
 ```
 
+## Ungrouped Aggregates
+
+In a query which is grouped by multiple dimensions, it is often useful to be able to perform an aggregate calculation on sub-groups to determine subtotals. The `all()` and `exclude` functions in Malloy allow control over grouping and ungrouping, making this simple:
+
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy"}
+query: airports -> {
+  group_by: state, faa_region
+  aggregate:
+    count_airports is count()
+    overall_airports is all(count())
+    percent_of_total is count() / all(count())*100.0
+    airports_in_region is all(count(), faa_region)
+    percent_in_region is count() / all(count(), faa_region)*100.0
+}
+```
+
+Read more about Ungrouped Aggregates [here](ungrouped-aggregates.md).
+
 ## Aggregate Locality
 
 In SQL, some kinds of aggregations are difficult to express because locality of aggregation is restricted to the top level of a query. Malloy

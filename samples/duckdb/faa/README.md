@@ -4,7 +4,7 @@ The NTSB FAA Dataset includes information about flights, airports, carriers, and
 
 ## Overview of models
 
-This set of models is a great place to get introduced to Malloy for the first time. You can use this model to follow along with the [Malloy by Example document](https://looker-open-source.github.io/malloy/documentation/#malloy-by-example).
+This set of models is a great place to get introduced to Malloy for the first time. You can use this model to follow along with the [Malloy by Example document](https://looker-open-source.github.io/malloy/documentation/malloy-by-example.html).
 
 **`1_airports`** - the simplest model, using only the airports table. Start here to get familiar with core concepts in Malloy.
 
@@ -16,9 +16,9 @@ This set of models is a great place to get introduced to Malloy for the first ti
 
 **`5_time_based`** - time series analysis of flight data. Demonstrates ease of transforming and filtering with time.
 
-**`6_aircraft_analysis`** - looks at the aircraft used by carriers. Demonstrates simplification of working with aggregates in Malloy. 
+**`6_aircraft_analysis`** - looks at the aircraft used by carriers. Demonstrates simplification of working with aggregates in Malloy.
 
-**`7_sessionization`** - defines daily sessions for airplanes by tail number, then shows flight stats for each leg. 
+**`7_sessionization`** - defines daily sessions for airplanes by tail number, then shows flight stats for each leg.
 
 **`8_dashboard`** - puts together top level metrics and a number of nested queries to provide a dense view of flight data. The dashboard works well filtered to specific carriers (examples at the bottom).
 
@@ -73,4 +73,3 @@ This set of models is a great place to get introduced to Malloy for the first ti
 | 0563788             | STOKES                | JS    |                2 |                       0 |                    1 |       1 |       0 |     0 |      0 |    60 |   |
 | 05637F7             | KAMIN DENNIS ROBERT   | OZ    |                2 |                       0 |                    1 |       1 |       0 |     0 |      0 |     0 |   |
 | 0610003             | MLB                   | 002   |                4 |                       1 |                    1 |       2 |       1 |     0 |      0 |     0 |   |
-

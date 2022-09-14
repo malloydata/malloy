@@ -12,7 +12,7 @@
     "malloyc": "ts-node ../../scripts/malloy-to-json"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.1",
+    "@malloydata/malloy": "*",
     "@types/pg": "^8.6.1",
     "pg": "^8.7.1",
     "pg-query-stream": "4.2.3"
