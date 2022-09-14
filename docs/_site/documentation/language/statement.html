@@ -1,22 +1,36 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <title>Malloy Documentation</title>
-    <link rel="stylesheet" href="/malloy/css/document.css">
-    <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico"/>
+    <link rel="stylesheet" href="/malloy/css/document.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico" />
+    <script
+  async
+  src="https://www.googletagmanager.com/gtag/js?id=G-0M10W7C20Y"
+></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() {
+    dataLayer.push(arguments);
+  }
+  gtag("js", new Date());
+
+  gtag("config", "G-0M10W7C20Y");
+</script>
+
   </head>
   <body>
     <div class="top">
       <div class="header">
         <div class="header-banner">
-          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          <img src="/malloy/img/logo.png" alt="malloy logo" />
           Malloy
           <span class="subtitle">Documentation</span>
         </div>
         <form onSubmit="() => alert('submit')" action="/malloy/search">
           <div class="search-input-outer">
-            <img src="/malloy/img/search.svg" alt="search"/>
+            <img src="/malloy/img/search.svg" alt="search" />
             <input placeholder="Search" id="search-input" name="query" />
           </div>
           <input type="submit" style="display: none" />
@@ -36,13 +50,19 @@
         <div class='sidebar-item '>
       <a href="/malloy/documentation/index.html">
         <img src="/malloy/img/article_icon.svg" alt="document"/>
+        About Malloy
+      </a>
+    </div>
+<div class='sidebar-item '>
+      <a href="/malloy/documentation/malloy_by_example.html">
+        <img src="/malloy/img/article_icon.svg" alt="document"/>
         Malloy By Example
       </a>
     </div>
 <div class='sidebar-item '>
       <a href="/malloy/documentation/language/basic.html">
         <img src="/malloy/img/article_icon.svg" alt="document"/>
-        Malloy Quickstart
+        Quickstart
       </a>
     </div>
 <div class='sidebar-item '>
@@ -293,7 +313,7 @@
         <div class='sidebar-item '>
       <a href="/malloy/documentation/examples/faa/bigquery.html">
         <img src="/malloy/img/article_icon.svg" alt="document"/>
-        Connect with BigQuery
+        FAA Dashboards
       </a>
     </div>
 <div class='sidebar-item '>
@@ -422,19 +442,16 @@
         <script src="/malloy/js/sidebar_state.js"></script>
         <div class="content">
           <div class="footer">
-            
-            <div class="linear-navigation">
+             <div class="linear-navigation">
     <div class="item">
       <a href="sql_to_malloy.html"><img src="/malloy/img/previous.svg" alt="previous"/>SQL to Malloy</a>
     </div>
     <div class="item">
       <a href="source.html">Sources<img src="/malloy/img/next.svg" alt="next"/></a>
     </div>
-  </div>
-            
+  </div> 
           </div>
-          <div class="document-outer">
-            <div class="document">
+          <div class="document-outer"><div class="document">
       <h1>
         <a id="models" class="header-link anchor" href="#models">
           Models
@@ -670,17 +687,17 @@
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DFW&quot;</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1812062</span><span style="color: #000000">,</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">490.64446861037715</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">490.6444686103772</span></span>
 <span class="line"><span style="color: #000000">  },</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;LAX&quot;</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1300241</span><span style="color: #000000">,</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">631.2922437299273</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">631.2922437299272</span></span>
 <span class="line"><span style="color: #000000">  },</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;PHX&quot;</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1059054</span><span style="color: #000000">,</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">554.5763958814941</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">554.576395881494</span></span>
 <span class="line"><span style="color: #000000">  }</span></span>
 <span class="line"><span style="color: #000000">]</span></span></pre></pre>
       </div>
@@ -724,7 +741,7 @@
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ORD&quot;</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2036343</span><span style="color: #000000">,</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">480.73230519172006</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">480.7323051917195</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;top_carriers&quot;</span><span style="color: #000000">: [</span></span>
 <span class="line"><span style="color: #000000">      {</span></span>
 <span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;UA&quot;</span><span style="color: #000000">,</span></span>
@@ -739,7 +756,7 @@
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ATL&quot;</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1963535</span><span style="color: #000000">,</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">403.98744415851587</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">403.98744415851604</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;top_carriers&quot;</span><span style="color: #000000">: [</span></span>
 <span class="line"><span style="color: #000000">      {</span></span>
 <span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DL&quot;</span><span style="color: #000000">,</span></span>
@@ -754,7 +771,7 @@
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DFW&quot;</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1812062</span><span style="color: #000000">,</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">490.64446861037754</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">490.64446861037766</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;top_carriers&quot;</span><span style="color: #000000">: [</span></span>
 <span class="line"><span style="color: #000000">      {</span></span>
 <span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AA&quot;</span><span style="color: #000000">,</span></span>
@@ -769,7 +786,7 @@
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;LAX&quot;</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1300241</span><span style="color: #000000">,</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">631.2922437299293</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">631.2922437299295</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;top_carriers&quot;</span><span style="color: #000000">: [</span></span>
 <span class="line"><span style="color: #000000">      {</span></span>
 <span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;UA&quot;</span><span style="color: #000000">,</span></span>
@@ -784,7 +801,7 @@
 <span class="line"><span style="color: #000000">  {</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;destination&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;PHX&quot;</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;flight_count&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1059054</span><span style="color: #000000">,</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">554.5763958814894</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;average_distance_in_km&quot;</span><span style="color: #000000">: </span><span style="color: #098658">554.5763958814897</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;top_carriers&quot;</span><span style="color: #000000">: [</span></span>
 <span class="line"><span style="color: #000000">      {</span></span>
 <span class="line"><span style="color: #000000">        </span><span style="color: #0451A5">&quot;carrier&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;HP&quot;</span><span style="color: #000000">,</span></span>
@@ -838,11 +855,27 @@
       </div>
     </div>
   </div><p>See <a href="query.html">here</a> for more information on queries.</p>
-</div>
-          </div>
+</div></div>
         </div>
         <script src="/malloy/js/view_toggles.js"></script>
       </div>
     </div>
+    <div id="banner_wrapper">
+  <div id="banner">
+    <div>
+      This site uses cookies from Google to deliver its services and to analyze
+      traffic.
+      <a
+        href="https://policies.google.com/technologies/cookies"
+        target="_blank"
+      >
+        Learn more
+      </a>
+    </div>
+    <button id="banner_button">I Understand</button>
+  </div>
+</div>
+
+    <script src="/malloy/js/banner.js"></script>
   </body>
 </html>

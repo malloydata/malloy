@@ -1,22 +1,36 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <title>Malloy Search Results</title>
-    <link rel="stylesheet" href="/malloy/css/document.css">
-    <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico"/>
+    <link rel="stylesheet" href="/malloy/css/document.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico" />
+    <script
+  async
+  src="https://www.googletagmanager.com/gtag/js?id=G-0M10W7C20Y"
+></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() {
+    dataLayer.push(arguments);
+  }
+  gtag("js", new Date());
+
+  gtag("config", "G-0M10W7C20Y");
+</script>
+
   </head>
   <body>
     <div class="top">
       <div class="header">
         <div class="header-banner">
-          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          <img src="/malloy/img/logo.png" alt="malloy logo" />
           Malloy
           <span class="subtitle">Documentation</span>
         </div>
         <form onSubmit="() => alert('submit')" action="/malloy/search">
           <div class="search-input-outer">
-            <img src="/malloy/img/search.svg" alt="search"/>
+            <img src="/malloy/img/search.svg" alt="search" />
             <input placeholder="Search" id="search-input" name="query" />
           </div>
           <input type="submit" style="display: none" />
@@ -36,13 +50,19 @@
         <div class='sidebar-item '>
       <a href="/malloy/documentation/index.html">
         <img src="/malloy/img/article_icon.svg" alt="document"/>
+        About Malloy
+      </a>
+    </div>
+<div class='sidebar-item '>
+      <a href="/malloy/documentation/malloy_by_example.html">
+        <img src="/malloy/img/article_icon.svg" alt="document"/>
         Malloy By Example
       </a>
     </div>
 <div class='sidebar-item '>
       <a href="/malloy/documentation/language/basic.html">
         <img src="/malloy/img/article_icon.svg" alt="document"/>
-        Malloy Quickstart
+        Quickstart
       </a>
     </div>
 <div class='sidebar-item '>
@@ -293,7 +313,7 @@
         <div class='sidebar-item '>
       <a href="/malloy/documentation/examples/faa/bigquery.html">
         <img src="/malloy/img/article_icon.svg" alt="document"/>
-        Connect with BigQuery
+        FAA Dashboards
       </a>
     </div>
 <div class='sidebar-item '>
@@ -424,19 +444,34 @@
           <div class="footer">
             
           </div>
-          <div class="document-outer">
-            <div class="document">
+          <div class="document-outer"><div class="document">
   <h1>Search Results</h1>
   <div id="search-results">
     Loading...
   </div>
   <script src="/malloy/js/generated/search_segments.js"></script>
   <script src="/malloy/js/search.js"></script>
-</div>
-          </div>
+</div></div>
         </div>
         <script src="/malloy/js/view_toggles.js"></script>
       </div>
     </div>
+    <div id="banner_wrapper">
+  <div id="banner">
+    <div>
+      This site uses cookies from Google to deliver its services and to analyze
+      traffic.
+      <a
+        href="https://policies.google.com/technologies/cookies"
+        target="_blank"
+      >
+        Learn more
+      </a>
+    </div>
+    <button id="banner_button">I Understand</button>
+  </div>
+</div>
+
+    <script src="/malloy/js/banner.js"></script>
   </body>
 </html>

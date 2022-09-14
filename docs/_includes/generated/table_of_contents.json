@@ -4,11 +4,15 @@
       "title": "Getting Started",
       "items": [
         {
-          "title": "Malloy By Example",
+          "title": "About Malloy",
           "link": "/index.md"
         },
         {
-          "title": "Malloy Quickstart",
+          "title": "Malloy By Example",
+          "link": "/malloy_by_example.md"
+        },
+        {
+          "title": "Quickstart",
           "link": "/language/basic.md"
         },
         {
@@ -163,7 +167,7 @@
           "title": "NTSB Flight Database",
           "items": [
             {
-              "title": "Connect with BigQuery",
+              "title": "FAA Dashboards",
               "link": "/examples/faa/bigquery.md"
             },
             {

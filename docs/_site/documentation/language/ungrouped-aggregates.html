@@ -1,22 +1,36 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
+    <meta charset="utf-8" />
     <title>Malloy Documentation</title>
-    <link rel="stylesheet" href="/malloy/css/document.css">
-    <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico"/>
+    <link rel="stylesheet" href="/malloy/css/document.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="/img/favicon.ico" />
+    <script
+  async
+  src="https://www.googletagmanager.com/gtag/js?id=G-0M10W7C20Y"
+></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag() {
+    dataLayer.push(arguments);
+  }
+  gtag("js", new Date());
+
+  gtag("config", "G-0M10W7C20Y");
+</script>
+
   </head>
   <body>
     <div class="top">
       <div class="header">
         <div class="header-banner">
-          <img src="/malloy/img/logo.png" alt="malloy logo"/>
+          <img src="/malloy/img/logo.png" alt="malloy logo" />
           Malloy
           <span class="subtitle">Documentation</span>
         </div>
         <form onSubmit="() => alert('submit')" action="/malloy/search">
           <div class="search-input-outer">
-            <img src="/malloy/img/search.svg" alt="search"/>
+            <img src="/malloy/img/search.svg" alt="search" />
             <input placeholder="Search" id="search-input" name="query" />
           </div>
           <input type="submit" style="display: none" />
@@ -36,13 +50,19 @@
         <div class='sidebar-item '>
       <a href="/malloy/documentation/index.html">
         <img src="/malloy/img/article_icon.svg" alt="document"/>
+        About Malloy
+      </a>
+    </div>
+<div class='sidebar-item '>
+      <a href="/malloy/documentation/malloy_by_example.html">
+        <img src="/malloy/img/article_icon.svg" alt="document"/>
         Malloy By Example
       </a>
     </div>
 <div class='sidebar-item '>
       <a href="/malloy/documentation/language/basic.html">
         <img src="/malloy/img/article_icon.svg" alt="document"/>
-        Malloy Quickstart
+        Quickstart
       </a>
     </div>
 <div class='sidebar-item '>
@@ -293,7 +313,7 @@
         <div class='sidebar-item '>
       <a href="/malloy/documentation/examples/faa/bigquery.html">
         <img src="/malloy/img/article_icon.svg" alt="document"/>
-        Connect with BigQuery
+        FAA Dashboards
       </a>
     </div>
 <div class='sidebar-item '>
@@ -422,66 +442,330 @@
         <script src="/malloy/js/sidebar_state.js"></script>
         <div class="content">
           <div class="footer">
-            
-            <div class="linear-navigation">
+             <div class="linear-navigation">
     <div class="item">
       
     </div>
     <div class="item">
-      <a href="../index.html">Malloy By Example<img src="/malloy/img/next.svg" alt="next"/></a>
+      <a href="../index.html">About Malloy<img src="/malloy/img/next.svg" alt="next"/></a>
     </div>
-  </div>
-            
+  </div> 
           </div>
-          <div class="document-outer">
-            <div class="document">
+          <div class="document-outer"><div class="document">
       <h1>
-        <a id="ungrouping-aggregate-sub-expressions" class="header-link anchor" href="#ungrouping-aggregate-sub-expressions">
-          Ungrouping Aggregate Sub-expressions
+        <a id="ungrouped-aggregates" class="header-link anchor" href="#ungrouped-aggregates">
+          Ungrouped Aggregates
         </a>
       </h1>
-    <p>In a query which is grouped my multiple dimensions, it is often useful to be
-able to perform an aggregate calculation on sub-groups.</p>
+    <p>In a query which is grouped by multiple dimensions, it is often useful to be able to perform an aggregate calculation on sub-groups.</p>
 
       <h3>
         <a id="-strong-all-aggregateexpression-strong-" class="header-link anchor" href="#-strong-all-aggregateexpression-strong-">
           <strong>all(aggregateExpression)</strong>
         </a>
       </h3>
-    <p>This will perform the aggregate computation ignoring the grouping in the
-current_query.</p>
-<pre class="language-txt" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">...</span></span>
-<span class="line"><span style="color: #000000">   aggregate: pct_of_all is count() / all(count())*100.0</span></span>
-<span class="line"><span style="color: #000000"></span></span></pre>
+    <p>The <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">all</span><span style="color: #000000">()</span></span></code> function will perform the specified aggregate computation, ignoring the grouping in the
+current_query to provide an overall value.</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">airports</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">faa_region</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">: </span><span style="color: #001080">percent_of_total</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">() / </span><span style="color: #795E26">all</span><span style="color: #000000">(</span><span style="color: #795E26">count</span><span style="color: #000000">())*</span><span style="color: #098658">100.0</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="vertical-align: top; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; text-align: left;">faa_​region</th><th style="padding: 8px; text-align: right;">percent_​of_​total</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top;"><span>AGL</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>22.417</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>ASW</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>16.511</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>ASO</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>14.773</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>AEA</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>13.065</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>ANM</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>10.62</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;faa_region&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AGL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;percent_of_total&quot;</span><span style="color: #000000">: </span><span style="color: #098658">22.41701611680897</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;faa_region&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ASW&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;percent_of_total&quot;</span><span style="color: #000000">: </span><span style="color: #098658">16.51088768756631</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;faa_region&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ASO&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;percent_of_total&quot;</span><span style="color: #000000">: </span><span style="color: #098658">14.772899509927754</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;faa_region&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AEA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;percent_of_total&quot;</span><span style="color: #000000">: </span><span style="color: #098658">13.065225079573587</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;faa_region&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ANM&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;percent_of_total&quot;</span><span style="color: #000000">: </span><span style="color: #098658">10.619916131965846</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">    group_set,</span></span>
+<span class="line"><span style="color: #000000">    __lateral_join_bag.faa_region__1,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000">/</span><span style="color: #795E26">MAX</span><span style="color: #000000">(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">0</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">OVER</span><span style="color: #000000"> ()*</span><span style="color: #098658">100</span><span style="color: #000000">.</span><span style="color: #098658">0</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> percent_of_total__1</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.airports`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> airports</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">CROSS</span><span style="color: #000000"> </span><span style="color: #0000FF">JOIN</span><span style="color: #000000"> (</span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span><span style="color: #795E26">row_number</span><span style="color: #000000">() </span><span style="color: #0000FF">OVER</span><span style="color: #000000">() -</span><span style="color: #098658">1</span><span style="color: #000000">  group_set </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> UNNEST(GENERATE_ARRAY(</span><span style="color: #098658">0</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">)))</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> UNNEST([STRUCT(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">    airports.faa_region</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> faa_region__1)]) </span><span style="color: #0000FF">as</span><span style="color: #000000"> __lateral_join_bag</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">2</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">  faa_region__1 </span><span style="color: #0000FF">as</span><span style="color: #000000"> faa_region,</span></span>
+<span class="line"><span style="color: #000000">  ANY_VALUE(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> percent_of_total__1 </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> percent_of_total</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> __stage0</span></span>
+<span class="line"><span style="color: #0000FF">WHERE</span><span style="color: #000000"> group_set </span><span style="color: #0000FF">NOT</span><span style="color: #000000"> </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #098658">0</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div>
       <h3>
         <a id="-strong-all-aggregateexpression-groupingdimension-strong-" class="header-link anchor" href="#-strong-all-aggregateexpression-groupingdimension-strong-">
           <strong>all(aggregateExpression, groupingDimension, ...)</strong>
         </a>
       </h3>
-    <p>This will retain grouping by the named dimensions, but still group by the un-named dimensions.</p>
-<pre class="language-txt" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">...</span></span>
-<span class="line"><span style="color: #000000">  group_by: name, state</span></span>
-<span class="line"><span style="color: #000000">  aggregate: count_in_state is all(count(), state)</span></span>
-<span class="line"><span style="color: #000000"></span></span></pre><p>Grouping imensions named in <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">all</span><span style="color: #000000">()</span></span></code> must be names selected as grouping dimensions in the current query.</p>
+    <p>When the optional grouping dimension argument is provided, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">all</span><span style="color: #000000">()</span></span></code> will preserve grouping by the named dimensions (<code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">faa_region</span></span></code>), but will not group by un-named dimensions (<code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">state</span></span></code>).</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">airports</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">faa_region</span><span style="color: #000000">, </span><span style="color: #001080">state</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">:</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">airports_in_state</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">airports_in_region</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">all</span><span style="color: #000000">(</span><span style="color: #795E26">count</span><span style="color: #000000">(), </span><span style="color: #001080">faa_region</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">order_by</span><span style="color: #000000">: </span><span style="color: #001080">airports_in_state</span><span style="color: #000000"> </span><span style="color: #AF00DB">desc</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="vertical-align: top; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; text-align: left;">faa_​region</th><th style="padding: 8px; text-align: left;">state</th><th style="padding: 8px; text-align: right;">airports_​in_​state</th><th style="padding: 8px; text-align: right;">airports_​in_​region</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top;"><span>ASW</span></td><td style="padding: 8px; vertical-align: top;"><span>TX</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>1,845</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>3,268</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>AWP</span></td><td style="padding: 8px; vertical-align: top;"><span>CA</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>984</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>1,503</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>AGL</span></td><td style="padding: 8px; vertical-align: top;"><span>IL</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>890</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>4,437</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>ASO</span></td><td style="padding: 8px; vertical-align: top;"><span>FL</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>856</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>2,924</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>AEA</span></td><td style="padding: 8px; vertical-align: top;"><span>PA</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>804</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>2,586</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;faa_region&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ASW&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;TX&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;airports_in_state&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1845</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;airports_in_region&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3268</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;faa_region&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AWP&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;CA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;airports_in_state&quot;</span><span style="color: #000000">: </span><span style="color: #098658">984</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;airports_in_region&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1503</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;faa_region&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AGL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;IL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;airports_in_state&quot;</span><span style="color: #000000">: </span><span style="color: #098658">890</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;airports_in_region&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4437</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;faa_region&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ASO&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;FL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;airports_in_state&quot;</span><span style="color: #000000">: </span><span style="color: #098658">856</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;airports_in_region&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2924</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;faa_region&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AEA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;state&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;PA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;airports_in_state&quot;</span><span style="color: #000000">: </span><span style="color: #098658">804</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;airports_in_region&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2586</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">    group_set,</span></span>
+<span class="line"><span style="color: #000000">    __lateral_join_bag.faa_region__2,</span></span>
+<span class="line"><span style="color: #000000">    __lateral_join_bag.state__2,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> airports_in_state__2,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #795E26">MAX</span><span style="color: #000000">(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">OVER</span><span style="color: #000000"> (</span><span style="color: #0000FF">PARTITION</span><span style="color: #000000"> </span><span style="color: #0000FF">BY</span><span style="color: #000000"> __lateral_join_bag.faa_region__2) </span><span style="color: #0000FF">as</span><span style="color: #000000"> airports_in_region__2</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.airports`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> airports</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">CROSS</span><span style="color: #000000"> </span><span style="color: #0000FF">JOIN</span><span style="color: #000000"> (</span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span><span style="color: #795E26">row_number</span><span style="color: #000000">() </span><span style="color: #0000FF">OVER</span><span style="color: #000000">() -</span><span style="color: #098658">1</span><span style="color: #000000">  group_set </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> UNNEST(GENERATE_ARRAY(</span><span style="color: #098658">0</span><span style="color: #000000">,</span><span style="color: #098658">2</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">)))</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> UNNEST([STRUCT(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #098658">2</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">    airports.faa_region</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> faa_region__2,</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">    airports.state</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> state__2)]) </span><span style="color: #0000FF">as</span><span style="color: #000000"> __lateral_join_bag</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">2</span><span style="color: #000000">,</span><span style="color: #098658">3</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">  faa_region__2 </span><span style="color: #0000FF">as</span><span style="color: #000000"> faa_region,</span></span>
+<span class="line"><span style="color: #000000">  state__2 </span><span style="color: #0000FF">as</span><span style="color: #000000"> </span><span style="color: #0000FF">state</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">  ANY_VALUE(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> airports_in_state__2 </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> airports_in_state,</span></span>
+<span class="line"><span style="color: #000000">  ANY_VALUE(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> airports_in_region__2 </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> airports_in_region</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> __stage0</span></span>
+<span class="line"><span style="color: #0000FF">WHERE</span><span style="color: #000000"> group_set </span><span style="color: #0000FF">NOT</span><span style="color: #000000"> </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #098658">0</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">2</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">3</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div><p>Dimensions named in <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">all</span><span style="color: #000000">()</span></span></code> must be included in a <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">group_by</span></span></code> in the current query.</p>
 
       <h3>
         <a id="-strong-exclude-aggregateexpression-groupingdimension-strong-" class="header-link anchor" href="#-strong-exclude-aggregateexpression-groupingdimension-strong-">
           <strong>exclude(aggregateExpression, groupingDimension)</strong>
         </a>
       </h3>
-    <p>Similar to <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">al</span><span style="color: #000000">()</span></span></code> this allows you to control which grouping dimensions are
-used to compute <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">aggregateExpression</span></span></code>. In this case, this list is dimenions
-which should NOT be used, for example the previous code fragment could
-also have ben written ...</p>
-<pre class="language-txt" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">...</span></span>
-<span class="line"><span style="color: #000000">  group_by: name, state</span></span>
-<span class="line"><span style="color: #000000">  aggregate: count_in_state is exclude(count(), name)</span></span>
-<span class="line"><span style="color: #000000"></span></span></pre><p>The main difference is that in a nested query, it is legal to name a grouping dimension from a outer query which contains the inner query.</p>
-</div>
-          </div>
+    <p>Similar to <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">al</span><span style="color: #000000">()</span></span></code>,  <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">exclude</span><span style="color: #000000">()</span></span></code> allows you to control which grouping dimensions are
+used to compute <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">aggregateExpression</span></span></code>. In this case, dimensions which should NOT be used are listed. For example, these two aggregates will do the exact same thing:</p>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">airports</span><span style="color: #000000"> -&gt; {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">group_by</span><span style="color: #000000">: </span><span style="color: #001080">faa_region</span><span style="color: #000000">, </span><span style="color: #001080">fac_type</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">:</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">count_airports</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">count_in_region_exclude</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">exclude</span><span style="color: #000000">(</span><span style="color: #795E26">count</span><span style="color: #000000">(), </span><span style="color: #001080">fac_type</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #001080">count_in_region_all</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">all</span><span style="color: #000000">(</span><span style="color: #795E26">count</span><span style="color: #000000">(), </span><span style="color: #001080">faa_region</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer small">
+    <div class="result-controls-bar">
+      <span class="result-label">QUERY RESULTS</span>
+      <div class="result-controls">
+        <button class="result-control" selected data-result-kind="html">HTML</button>
+        <button class="result-control"  data-result-kind="json">JSON</button>
+        <button class="result-control"  data-result-kind="sql">SQL</button>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="html" selected>
+      <div class="result-inner">
+        <table style="vertical-align: top; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; text-align: left;">faa_​region</th><th style="padding: 8px; text-align: left;">fac_​type</th><th style="padding: 8px; text-align: right;">count_​airports</th><th style="padding: 8px; text-align: right;">count_​in_​region_​exclude</th><th style="padding: 8px; text-align: right;">count_​in_​region_​all</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top;"><span>AGL</span></td><td style="padding: 8px; vertical-align: top;"><span>AIRPORT</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>3,443</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>4,437</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>4,437</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>ASW</span></td><td style="padding: 8px; vertical-align: top;"><span>AIRPORT</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>2,341</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>3,268</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>3,268</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>ASO</span></td><td style="padding: 8px; vertical-align: top;"><span>AIRPORT</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>2,038</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>2,924</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>2,924</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>AEA</span></td><td style="padding: 8px; vertical-align: top;"><span>AIRPORT</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>1,525</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>2,586</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>2,586</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>ANM</span></td><td style="padding: 8px; vertical-align: top;"><span>AIRPORT</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>1,524</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>2,102</span></td><td style="padding: 8px; vertical-align: top; text-align: right;"><span>2,102</span></td></tr></tbody></table>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="json" >
+      <div class="result-inner">
+        <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;faa_region&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AGL&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;fac_type&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AIRPORT&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;count_airports&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3443</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;count_in_region_exclude&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4437</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;count_in_region_all&quot;</span><span style="color: #000000">: </span><span style="color: #098658">4437</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;faa_region&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ASW&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;fac_type&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AIRPORT&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;count_airports&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2341</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;count_in_region_exclude&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3268</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;count_in_region_all&quot;</span><span style="color: #000000">: </span><span style="color: #098658">3268</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;faa_region&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ASO&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;fac_type&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AIRPORT&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;count_airports&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2038</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;count_in_region_exclude&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2924</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;count_in_region_all&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2924</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;faa_region&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AEA&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;fac_type&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AIRPORT&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;count_airports&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1525</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;count_in_region_exclude&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2586</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;count_in_region_all&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2586</span></span>
+<span class="line"><span style="color: #000000">  },</span></span>
+<span class="line"><span style="color: #000000">  {</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;faa_region&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ANM&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;fac_type&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;AIRPORT&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;count_airports&quot;</span><span style="color: #000000">: </span><span style="color: #098658">1524</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;count_in_region_exclude&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2102</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;count_in_region_all&quot;</span><span style="color: #000000">: </span><span style="color: #098658">2102</span></span>
+<span class="line"><span style="color: #000000">  }</span></span>
+<span class="line"><span style="color: #000000">]</span></span></pre></pre>
+      </div>
+    </div>
+    <div class="result-middle" data-result-kind="sql" >
+      <div class="result-inner">
+        <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">WITH</span><span style="color: #000000"> __stage0 </span><span style="color: #0000FF">AS</span><span style="color: #000000"> (</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">    group_set,</span></span>
+<span class="line"><span style="color: #000000">    __lateral_join_bag.faa_region__3,</span></span>
+<span class="line"><span style="color: #000000">    __lateral_join_bag.fac_type__3,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">3</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> count_airports__3,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #795E26">MAX</span><span style="color: #000000">(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">OVER</span><span style="color: #000000"> (</span><span style="color: #0000FF">PARTITION</span><span style="color: #000000"> </span><span style="color: #0000FF">BY</span><span style="color: #000000"> __lateral_join_bag.faa_region__3) </span><span style="color: #0000FF">as</span><span style="color: #000000"> count_in_region_exclude__3,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #795E26">MAX</span><span style="color: #000000">(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">2</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #000000">      </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">OVER</span><span style="color: #000000"> (</span><span style="color: #0000FF">PARTITION</span><span style="color: #000000"> </span><span style="color: #0000FF">BY</span><span style="color: #000000"> __lateral_join_bag.faa_region__3) </span><span style="color: #0000FF">as</span><span style="color: #000000"> count_in_region_all__3</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> </span><span style="color: #A31515">`malloy-data.faa.airports`</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> airports</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">CROSS</span><span style="color: #000000"> </span><span style="color: #0000FF">JOIN</span><span style="color: #000000"> (</span><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span><span style="color: #795E26">row_number</span><span style="color: #000000">() </span><span style="color: #0000FF">OVER</span><span style="color: #000000">() -</span><span style="color: #098658">1</span><span style="color: #000000">  group_set </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> UNNEST(GENERATE_ARRAY(</span><span style="color: #098658">0</span><span style="color: #000000">,</span><span style="color: #098658">3</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">)))</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">LEFT JOIN</span><span style="color: #000000"> UNNEST([STRUCT(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #098658">3</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">2</span><span style="color: #000000">) </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">    airports.faa_region</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> faa_region__3,</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">3</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span></span>
+<span class="line"><span style="color: #000000">    airports.fac_type</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">END</span><span style="color: #000000"> </span><span style="color: #0000FF">as</span><span style="color: #000000"> fac_type__3)]) </span><span style="color: #0000FF">as</span><span style="color: #000000"> __lateral_join_bag</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">2</span><span style="color: #000000">,</span><span style="color: #098658">3</span></span>
+<span class="line"><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">  faa_region__3 </span><span style="color: #0000FF">as</span><span style="color: #000000"> faa_region,</span></span>
+<span class="line"><span style="color: #000000">  fac_type__3 </span><span style="color: #0000FF">as</span><span style="color: #000000"> fac_type,</span></span>
+<span class="line"><span style="color: #000000">  ANY_VALUE(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">3</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> count_airports__3 </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> count_airports,</span></span>
+<span class="line"><span style="color: #000000">  ANY_VALUE(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">3</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> count_in_region_exclude__3 </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> count_in_region_exclude,</span></span>
+<span class="line"><span style="color: #000000">  ANY_VALUE(</span><span style="color: #0000FF">CASE</span><span style="color: #000000"> </span><span style="color: #0000FF">WHEN</span><span style="color: #000000"> group_set=</span><span style="color: #098658">3</span><span style="color: #000000"> </span><span style="color: #0000FF">THEN</span><span style="color: #000000"> count_in_region_all__3 </span><span style="color: #0000FF">END</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> count_in_region_all</span></span>
+<span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> __stage0</span></span>
+<span class="line"><span style="color: #0000FF">WHERE</span><span style="color: #000000"> group_set </span><span style="color: #0000FF">NOT</span><span style="color: #000000"> </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #098658">0</span><span style="color: #000000">,</span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">2</span><span style="color: #000000">)</span></span>
+<span class="line"><span style="color: #0000FF">GROUP BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000">,</span><span style="color: #098658">2</span></span>
+<span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">3</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
+<span class="line"></span></pre></pre>
+      </div>
+    </div>
+  </div><p>The main difference is that in a nested query, it is legal to name a grouping dimension from an outer query which contains the inner query.</p>
+</div></div>
         </div>
         <script src="/malloy/js/view_toggles.js"></script>
       </div>
     </div>
+    <div id="banner_wrapper">
+  <div id="banner">
+    <div>
+      This site uses cookies from Google to deliver its services and to analyze
+      traffic.
+      <a
+        href="https://policies.google.com/technologies/cookies"
+        target="_blank"
+      >
+        Learn more
+      </a>
+    </div>
+    <button id="banner_button">I Understand</button>
+  </div>
+</div>
+
+    <script src="/malloy/js/banner.js"></script>
   </body>
 </html>

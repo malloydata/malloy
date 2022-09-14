@@ -1,7 +1,7 @@
 <div class="sidebar" id="sidebar">
     <div class="sidebar-section">
       <div id=getting_started
-        class="sidebar-section-title {% unless /documentation/,/documentation/language/basic.html,/documentation/features.html,/documentation/samples.html,/documentation/connection_instructions.html,/documentation/tao.html contains page.url)} %}collapsed{% endunless %}"
+        class="sidebar-section-title {% unless /documentation/,/documentation/malloy_by_example.html,/documentation/language/basic.html,/documentation/features.html,/documentation/samples.html,/documentation/connection_instructions.html,/documentation/tao.html contains page.url)} %}collapsed{% endunless %}"
       >
         Getting Started
         <img class="chevron-open" src="{{ site.baseurl }}/img/section_open.svg" alt="section open"/>
@@ -11,13 +11,19 @@
         <div class='sidebar-item {% if page.url == "/documentation/" %}active{% endif %}'>
       <a href="{{ site.baseurl }}/documentation/index.html">
         <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
+        About Malloy
+      </a>
+    </div>
+<div class='sidebar-item {% if page.url == "/documentation/malloy_by_example.html" %}active{% endif %}'>
+      <a href="{{ site.baseurl }}/documentation/malloy_by_example.html">
+        <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
         Malloy By Example
       </a>
     </div>
 <div class='sidebar-item {% if page.url == "/documentation/language/basic.html" %}active{% endif %}'>
       <a href="{{ site.baseurl }}/documentation/language/basic.html">
         <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
-        Malloy Quickstart
+        Quickstart
       </a>
     </div>
 <div class='sidebar-item {% if page.url == "/documentation/features.html" %}active{% endif %}'>
@@ -268,7 +274,7 @@
         <div class='sidebar-item {% if page.url == "/documentation/examples/faa/bigquery.html" %}active{% endif %}'>
       <a href="{{ site.baseurl }}/documentation/examples/faa/bigquery.html">
         <img src="{{ site.baseurl }}/img/article_icon.svg" alt="document"/>
-        Connect with BigQuery
+        FAA Dashboards
       </a>
     </div>
 <div class='sidebar-item {% if page.url == "/documentation/examples/faa/postgres.html" %}active{% endif %}'>
