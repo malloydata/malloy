@@ -11,7 +11,7 @@ the same syntax users are familiar with. However, Malloy also introduces several
 | [Boolean operators](#boolean-operators)<br/>Logically combine booleans | `height > 10 and height < 100`<br/>`is_cancelled or is_delayed`</br>`not is_commercial_flight` |
 | [SQL functions](#sql-functions) | `floor(10.35)`<br/>`concat(first_name, ' ', last_name)`<br/>`sqrt(x)` |
 | [Aggregation](#aggregation) | `sum(distance)` <br/> `aircraft.count()` <br/> `aircraft_models.seats.avg()` |
-| [Aggregation Control](#ungrouped-aggregates) | `all(sum(distance))` <br/> `all(aircraft.count(), destination_code)` <br/> `exclude(aircraft_models.seats.avg(), carrier.nickname)` |
+| [Aggregation Control / Subtotals](ungrouped-aggregates.md) | `all(sum(distance))` <br/> `all(aircraft.count(), destination_code)` <br/> `exclude(aircraft_models.seats.avg(), carrier.nickname)` |
 | [Filtered expressions](#filtered-expressions) | `avg(age) : [state: 'CA']`<br/>`flight_count : [origin.county != null]` |
 | [Safe type cast](#safe-type-cast) | `total_distance::string`<br/>`some_date::timestamp` |
 | [Pick expressions](#pick-expressions)<br/>Malloy's take on <code>CASE</code> statements  | `pick 'S' when size < 3 else 'L'`<br/>`kind: pick 'other' when null` |
