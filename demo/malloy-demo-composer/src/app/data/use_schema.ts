@@ -13,6 +13,7 @@
 
 import { useQuery } from "react-query";
 import * as explore from "../../types";
+import { isElectron } from "../utils";
 
 export function KEY(analysis?: explore.Analysis): string {
   return analysis
@@ -29,7 +30,30 @@ async function fetchSchema(
   if (analysis === undefined) {
     return undefined;
   }
-  const params: Partial<explore.Analysis> = {
+  if (isElectron()) {
+    const params: Partial<explore.Analysis> = {
+      malloy: analysis.malloy,
+      modelFullPath: analysis.modelFullPath,
+      sourceName: analysis.sourceName,
+    };
+    if (analysis.fullPath) {
+      params.fullPath = analysis.fullPath;
+    }
+    if (analysis.path) {
+      params.path = analysis.path;
+    }
+    const res = await window.malloy.schema(params as explore.Analysis);
+    if (res instanceof Error) {
+      throw res;
+    }
+    const schema = res;
+    analysis.modelDef = schema.modelDef;
+    analysis.malloy = schema.malloy;
+    setAnalysis(analysis);
+    return schema.schema as explore.Schema;
+  }
+
+  const params: Record<string, string> = {
     malloy: analysis.malloy,
     modelFullPath: analysis.modelFullPath,
     sourceName: analysis.sourceName,
@@ -40,15 +64,13 @@ async function fetchSchema(
   if (analysis.path) {
     params.path = analysis.path;
   }
-  const res = await window.malloy.schema(params as explore.Analysis);
-  if (res instanceof Error) {
-    throw res;
-  }
-  const schema = res;
-  analysis.modelDef = schema.modelDef;
-  analysis.malloy = schema.malloy;
+  const raw = await(
+    await fetch("api/schema?" + new URLSearchParams(params))
+  ).json();
+  analysis.modelDef = raw.modelDef;
+  analysis.malloy = raw.malloy;
   setAnalysis(analysis);
-  return schema.schema as explore.Schema;
+  return raw.schema as explore.Schema;
 }
 
 export function useSchema(

@@ -14,6 +14,7 @@
 import { SearchValueMapResult } from "@malloydata/malloy";
 import { useQuery } from "react-query";
 import { Analysis } from "../../types";
+import { isElectron } from "../utils";
 
 export function KEY(analysis?: Analysis): string {
   return analysis
@@ -30,14 +31,29 @@ async function fetchTopValues(
     return undefined;
   }
   const source = analysis && analysis.modelDef.contents[analysis.sourceName];
-  const res = await window.malloy.topValues(
-    source,
-    analysis.fullPath || analysis.modelFullPath
-  );
-  if (res instanceof Error) {
-    throw res;
+  if (isElectron()) {
+    const res = await window.malloy.topValues(
+      source,
+      analysis.fullPath || analysis.modelFullPath
+    );
+    if (res instanceof Error) {
+      throw res;
+    }
+    return res;
   }
-  return res;
+  const raw = await (
+    await fetch("api/top_values", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        source,
+        analysisPath: analysis.fullPath || analysis.modelFullPath,
+      }),
+    })
+  ).json();
+  return raw.result as SearchValueMapResult[];
 }
 
 export function useTopValues(

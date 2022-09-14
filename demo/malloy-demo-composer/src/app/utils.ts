@@ -26,6 +26,13 @@ export function snakeToTitle(snake: string): string {
     .join(" ");
 }
 
+export function isElectron() {
+  const userAgent = navigator.userAgent.toLowerCase();
+  const isElectron = userAgent.indexOf(" electron/") != -1;
+  console.log(`isElectron: ${isElectron}`);
+  return isElectron;
+}
+
 const HIGHLIGHTER = shiki.getHighlighter({
   theme: "light-plus",
   langs: [
