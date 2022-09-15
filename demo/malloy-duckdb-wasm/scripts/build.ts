@@ -38,7 +38,7 @@ export async function doBuild(): Promise<void> {
     sourcemap: false,
     outdir: "docs/dist/",
     platform: "browser",
-    loader: { [".png"]: "file", [".svg"]: "file", [".ttf"]: "file" },
+    loader: { [".ttf"]: "dataurl", [".svg"]: "dataurl" },
     watch:
       development && !port
         ? {

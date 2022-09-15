@@ -16,12 +16,25 @@ import * as monaco from "monaco-editor";
 import styled from "styled-components";
 import { getMonacoGrammar } from "./utils/monaco";
 
+declare global {
+  interface Window {
+    malloyHost: string | undefined;
+  }
+}
+
 self.MonacoEnvironment = {
   getWorkerUrl: function (_moduleId: string, label: string) {
+    const base = window.malloyHost || "./dist";
+    let path = `${base}/editor.worker.bundle.js`;
     if (label === "json") {
-      return "./dist/json.worker.bundle.js";
+      path = `${base}/json.worker.bundle.js`;
     }
-    return "./dist/editor.worker.bundle.js";
+    const url = new URL(path, window.location.href);
+    return URL.createObjectURL(
+      new Blob([`importScripts("${url}");`], {
+        type: "text/javascript",
+      })
+    );
   },
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2021 Google LLC
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -11,20 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import React from "react";
-import styled from "styled-components";
-import info from "./media/info.svg";
-export interface InfoProps {
-  title: string;
+declare module "*.png" {
+  const content: string;
+  export default content;
 }
-
-export const Info: React.FC<InfoProps> = ({ title }) => {
-  return <Padding title={title} src={info} />;
-};
-
-const Padding = styled.img`
-  padding-left: 8px;
-  cursor: pointer;
-  width: 12px;
-  height: 12px;
-`;
