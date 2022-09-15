@@ -2,9 +2,13 @@
 Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy currently connects to BigQuery and Postgres, and natively supports DuckDB. We've built a Visual Studio Code extension to facilitate building Malloy data models, querying and transforming data, and creating simple visualizations and dashboards.
 
 
-## Try the Malloy VSCode Extension
+## Try Malloy
 
-Currently, the Malloy extension works on Mac, Linux, and Windows machines.
+The easiest way to try the Malloy language is the [Malloy Fiddle](https://looker-open-source.github.io/malloy/fiddle/index.html?q=12+-+Line+Chart+with+two+dimension%3A+Flights+by+Month+and+Length&m=Flights&t=) site. Here you can toggle between saved queries and edit them or write your own against the provided data and models. 
+
+### Install the Visual Studio Code Extension
+
+To write your own Malloy models, use the VS Code Extension, currently available for Mac, Linux, and Windows machines. 
 
 1. **Download Visual Studio Code**: Download [Visual Studio Code](https://code.visualstudio.com/)
 
