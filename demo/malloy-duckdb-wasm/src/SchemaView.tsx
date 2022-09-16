@@ -17,6 +17,20 @@ import { Explore, ExploreField, Field, Model } from "@malloydata/malloy";
 import { Info } from "./Info";
 import { Title } from "./Title";
 
+import numberAggregateIcon from "./media/number-aggregate.svg";
+import numberIcon from "./media/number.svg";
+import stringIcon from "./media/string.svg";
+import timeIcon from "./media/time.svg";
+import structIcon from "./media/struct.svg";
+import oneToManyIcon from "./media/one_to_many.svg";
+import oneToOneIcon from "./media/one_to_one.svg";
+import manyToOneIcon from "./media/many_to_one.svg";
+import booleanIcon from "./media/boolean.svg";
+import turtleIcon from "./media/turtle.svg";
+
+import chevronDown from "./media/chevron_down.svg";
+import chevronRight from "./media/chevron_right.svg";
+
 export interface SchemaViewProps {
   model: Model | undefined;
   onFieldClick: (field: Field) => void;
@@ -144,7 +158,7 @@ const FieldItem: React.FC<FieldItemProps> = ({ depth, field, onClick }) => {
   } else {
     return (
       <ListItem
-        icon={getIconPath(type, isAggregate)}
+        icon={getIconUrl(type, isAggregate)}
         onClick={() => onClick(field)}
       >
         <ListText>{field.name}</ListText>
@@ -153,46 +167,46 @@ const FieldItem: React.FC<FieldItemProps> = ({ depth, field, onClick }) => {
   }
 };
 
-function getIconPath(fieldType: string, isAggregate: boolean) {
-  let imageFileName;
+function getIconUrl(fieldType: string, isAggregate: boolean) {
+  let imageUrl;
   if (isAggregate) {
-    imageFileName = "number-aggregate";
+    imageUrl = numberAggregateIcon;
   } else {
     switch (fieldType) {
       case "number":
-        imageFileName = "number";
+        imageUrl = numberIcon;
         break;
       case "string":
-        imageFileName = "string";
+        imageUrl = stringIcon;
         break;
       case "date":
       case "timestamp":
-        imageFileName = "time";
+        imageUrl = timeIcon;
         break;
       case "struct_base":
-        imageFileName = "struct";
+        imageUrl = structIcon;
         break;
       case "struct_one_to_many":
-        imageFileName = "one_to_many";
+        imageUrl = oneToManyIcon;
         break;
       case "struct_one_to_one":
-        imageFileName = "one_to_one";
+        imageUrl = oneToOneIcon;
         break;
       case "struct_many_to_one":
-        imageFileName = "many_to_one";
+        imageUrl = manyToOneIcon;
         break;
       case "boolean":
-        imageFileName = "boolean";
+        imageUrl = booleanIcon;
         break;
       case "query":
-        imageFileName = "turtle";
+        imageUrl = turtleIcon;
         break;
       default:
-        imageFileName = "unknown";
+        imageUrl = "";
     }
   }
 
-  return `./media/${imageFileName}.svg`;
+  return imageUrl;
 }
 
 function byKindThenName(field1: Field, field2: Field) {
@@ -272,8 +286,6 @@ const ToggleItem = styled.li<ToggleItemProps>`
   cursor: pointer;
   font-size: 13px;
   list-style-image: ${({ open }) => {
-    return open
-      ? "url(./media/chevron_down.svg)"
-      : "url(./media/chevron_right.svg)";
+    return open ? `url(${chevronDown})` : `url(${chevronRight})`;
   }};
 `;

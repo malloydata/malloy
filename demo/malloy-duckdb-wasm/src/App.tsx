@@ -31,6 +31,13 @@ import { QuerySelect } from "./QuerySelect";
 import { Run } from "./Run";
 import { Analytics } from "./Analytics";
 
+import logo from "./media/logo.svg";
+
+import moreInfoDocs from "./media/more_info_docs.svg";
+import moreInfoGithub from "./media/more_info_github.svg";
+import moreInfoSlack from "./media/more_info_slack.svg";
+import moreInfoVSCode from "./media/more_info_vsc.svg";
+
 const DOCS_LINK = "https://looker-open-source.github.io/malloy/documentation/";
 const REPO_LINK = "https://github.com/looker-open-source/malloy/";
 const SLACK_LINK =
@@ -249,7 +256,7 @@ export const App: React.FC = () => {
       <GlobalStyle />
       <Header>
         <TitleSection>
-          <Logo src="logo.png" />
+          <Logo src={logo} />
           <Title htmlFor="model-select">Malloy Fiddle</Title>
           <Divider />
           <ModelSelect
@@ -296,19 +303,19 @@ export const App: React.FC = () => {
         <DocsLinks>
           Learn More!
           <DocsLink href={DOCS_LINK} target="_blank">
-            <img src="media/more_info_docs.svg" />
+            <img src={moreInfoDocs} />
             Docs
           </DocsLink>
           <DocsLink href={REPO_LINK} target="_blank">
-            <img src="media/more_info_github.svg" />
+            <img src={moreInfoGithub} />
             Github
           </DocsLink>
           <DocsLink href={VSCODE_INSTALL_LINK} target="_blank">
-            <img src="media/more_info_vsc.svg" />
+            <img src={moreInfoVSCode} />
             VSCode
           </DocsLink>
           <DocsLink href={SLACK_LINK} target="_blank">
-            <img src="media/more_info_slack.svg" />
+            <img src={moreInfoSlack} />
             Slack
           </DocsLink>
         </DocsLinks>
