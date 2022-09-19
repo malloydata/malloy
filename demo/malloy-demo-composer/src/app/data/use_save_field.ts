@@ -37,7 +37,7 @@ async function saveField(
     return res;
   }
 
-  const raw = await(
+  const raw = await (
     await fetch("api/save_field", {
       method: "POST",
       headers: {
