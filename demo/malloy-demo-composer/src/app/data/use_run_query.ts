@@ -31,7 +31,7 @@ async function runQuery(query: string, queryName: string, analysis?: Analysis) {
     return malloy.Result.fromJSON(res);
   }
 
-  const raw = await(
+  const raw = await (
     await fetch("api/run_query", {
       method: "POST",
       headers: {

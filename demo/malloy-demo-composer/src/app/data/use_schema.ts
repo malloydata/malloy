@@ -64,7 +64,7 @@ async function fetchSchema(
   if (analysis.path) {
     params.path = analysis.path;
   }
-  const raw = await(
+  const raw = await (
     await fetch("api/schema?" + new URLSearchParams(params))
   ).json();
   analysis.modelDef = raw.modelDef;

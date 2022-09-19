@@ -19,11 +19,13 @@ import * as path from "path";
 const app = express();
 
 const DEV = process.env.DEV === "1";
+const PORT = (process.env.PORT || 4000) as number;
+const HOST = process.env.HOST || "localhost";
 
 const allowedOrigins = [];
 
 if (DEV) {
-  allowedOrigins.push("http://localhost:3000");
+  allowedOrigins.push(`http://${HOST}:${PORT}`);
 }
 
 app.use(cors({ origin: allowedOrigins }));
@@ -41,33 +43,7 @@ app.use("/static", express.static(path.join(BUILD_ROOT, "/app")));
 
 app.use("/fonts", express.static(path.join(BUILD_ROOT, "/app/fonts")));
 
-// app.use("/", async (req: express.Request, res: express.Response) => {
-//   const indexFile = await fs.readFile(
-//     path.join(BUILD_ROOT, "/app/index.html"),
-//     "utf8"
-//   );
-
-//   console.log(JSON.stringify(req.path, null, 2));
-
-//   const nonce = (req as never as { nonce: string }).nonce;
-
-//   console.log(JSON.stringify(nonce));
-
-//   // TODO crs move these hacks into a webpack configuration...
-//   const modifiedIndex = indexFile
-//     // ... webpack should provide a nonce template string, which we fill in
-//     .replace(/<script/g, `<script nonce="${nonce}"`)
-//     // ... webpack should have a static root set so that these are not relative
-//     .replace(/href="\.\/static\//g, 'href="/static/')
-//     .replace(/src="\.\/static\//g, 'src="/static/');
-
-//   res.send(modifiedIndex);
-// });
-
 app.use("/", express.static(path.join(BUILD_ROOT, "/app")));
-
-const PORT = 4000;
-const HOST = "localhost";
 
 app.listen(PORT, HOST, () => {
   // eslint-disable-next-line no-console

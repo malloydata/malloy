@@ -31,7 +31,7 @@ async function refetchAnalysis(
   const params = new URLSearchParams({
     path: analysis.fullPath,
   });
-  const raw = await(await fetch(`api/analysis?${params}`)).json();
+  const raw = await (await fetch(`api/analysis?${params}`)).json();
   return raw.analysis as explore.Analysis;
 }
 

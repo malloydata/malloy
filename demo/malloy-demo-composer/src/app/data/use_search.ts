@@ -38,7 +38,7 @@ async function search(
     return res;
   }
 
-  const raw = await(
+  const raw = await (
     await fetch("api/search", {
       method: "POST",
       headers: {

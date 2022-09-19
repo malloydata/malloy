@@ -26,7 +26,7 @@ async function fetchModels(): Promise<explore.Model[]> {
     return res;
   }
 
-  const raw = await(await fetch("api/models")).json();
+  const raw = await (await fetch("api/models")).json();
   return raw.models as explore.Model[];
 }
 
