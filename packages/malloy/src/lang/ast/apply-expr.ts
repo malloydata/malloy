@@ -67,9 +67,9 @@ export function applyBinary(
     const denom = right.getExpression(fs);
 
     if (num.dataType != "number") {
-      left.log("Numerator for division mus tbe a number");
+      left.log("Numerator for division must be a number");
     } else if (denom.dataType != "number") {
-      right.log("Denominator for division mus tbe a number");
+      right.log("Denominator for division must be a number");
     } else {
       const div: DivFragment = {
         type: "dialect",
