@@ -1420,6 +1420,24 @@ describe("error handling", () => {
       }
     `).compileToFailWith("Output already has a field named 'astr'");
   });
+  test(
+    "rejoin a query is renamed",
+    modelOK(`
+      source: querySrc is from(
+        table('malloytest.flights')->{
+          group_by: origin
+          nest: nested is { group_by: destination }
+        }
+      )
+
+    source: refineQuerySrc is querySrc {
+      join_one: rejoin is querySrc on 7=8
+      query: broken is {
+        group_by: rejoin.nested.destination
+      }
+    }
+    `)
+  );
 });
 
 function getSelectOneStruct(sqlBlock: SQLBlock): StructDef {
