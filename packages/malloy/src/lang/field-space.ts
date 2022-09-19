@@ -222,10 +222,10 @@ function isFieldSpace(x: SourceSpec): x is FieldSpace {
 /**
  * Based on how things are constructed, the starting field space
  * can either be another field space or an existing structdef.
- * Using a SourceSpace allows a class to accept either one
+ * Using a SpaceSeed allows a class to accept either one
  * and use either version at some future time.
  */
-class SourceSpace {
+class SpaceSeed {
   private spaceSpec: SourceSpec;
   private asFS?: StaticSpace;
   private asStruct?: model.StructDef;
@@ -260,13 +260,13 @@ class SourceSpace {
  */
 export class DynamicSpace extends StaticSpace {
   protected final: model.StructDef | undefined;
-  protected source: SourceSpace;
+  protected source: SpaceSeed;
   outputFS?: QuerySpace;
   completions: (() => void)[] = [];
   private complete = false;
 
   constructor(extending: SourceSpec) {
-    const source = new SourceSpace(extending);
+    const source = new SpaceSeed(extending);
     super(cloneDeep(source.structDef));
     this.final = undefined;
     this.source = source;
@@ -435,11 +435,13 @@ export class DynamicSpace extends StaticSpace {
 }
 
 /**
- * A namespace for Query operations. The have an input and an
- * output set of fields. The InputSpace is the QueryOperationSpace
- * which is where all expressions are evaluated, and the output
- * space is ResultSpace.
+ * Unlike a source, which is a refinement of a namespace, a query
+ * is creating a new unrelated namespace. The query starts with a
+ * source, which it might modify. This set of fields used to resolve
+ * expressions in the query is called the "input space". There is a
+ * specialized QuerySpace for each type of query operation.
  *
+ * The query output is managed by an instance of ResultSpace.
  */
 
 export class QuerySpace extends DynamicSpace {
@@ -447,7 +449,7 @@ export class QuerySpace extends DynamicSpace {
   extendList: string[] = [];
 
   constructor(input: SourceSpec, readonly result: ResultSpace) {
-    const inputSpace = new SourceSpace(input);
+    const inputSpace = new SpaceSeed(input);
     super(inputSpace.structDef);
   }
 
