@@ -37,20 +37,21 @@ async function saveField(
     return res;
   }
 
-  const raw = await (
-    await fetch("api/run_query", {
+  const raw = await(
+    await fetch("api/save_field", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        query,
-        queryName,
+        type,
+        field,
+        name,
         analysis: { ...analysis, modelDef: {} },
       }),
     })
   ).json();
-  return Result.fromJSON(raw.result) as Result;
+  return raw.analysis as Analysis;
 }
 
 interface UseSaveFieldResult {
