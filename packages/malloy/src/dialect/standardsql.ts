@@ -62,6 +62,7 @@ export class StandardSQLDialect extends Dialect {
 
   functionInfo: Record<string, FunctionInfo> = {
     timestamp_seconds: { returnType: "timestamp" },
+    concat: { returnType: "string" },
   };
 
   quoteTablePath(tablePath: string): string {
