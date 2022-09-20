@@ -12,7 +12,7 @@ program
 
 program.parse();
 
-let composerProcess = exec("node ./dist/server/server.js", {
+const composerProcess = exec("node ./dist/server/server.js", {
   env: {
     ...process.env,
     PORT: `${program.opts().port}`,
