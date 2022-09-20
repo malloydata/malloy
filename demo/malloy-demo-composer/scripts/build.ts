@@ -29,7 +29,6 @@ export const targetDuckDBMap: Record<string, string> = {
 
 export const buildDirectory = "build/";
 export const appDirectory = "app/";
-export const serverDiretory = "server/";
 
 export const commonAppConfig = (development = false): BuildOptions => {
   return {
@@ -48,26 +47,6 @@ export const commonAppConfig = (development = false): BuildOptions => {
       "process.env.NODE_DEBUG": "false", // TODO this is a hack because some package we include assumed process.env exists :(
     },
     inject: ["./react-shim.js"], // This shim elimanites needing to have "require React from 'react'" in every file
-  };
-};
-
-export const commonServerConfig = (development = false): BuildOptions => {
-  return {
-    entryPoints: ["./src/server/server.ts"],
-    outfile: path.join(serverDiretory, appDirectory, "app.js"),
-    minify: !development,
-    sourcemap: development,
-    bundle: true,
-    platform: "node",
-    // loader: {
-    //   ".js": "jsx",
-    //   ".png": "file",
-    // },
-    // plugins: [svgrPlugin({ exportType: "named" })],
-    // define: {
-    //   "process.env.NODE_DEBUG": "false", // TODO this is a hack because some package we include assumed process.env exists :(
-    // },
-    // inject: ["./react-shim.js"], // This shim elimanites needing to have "require React from 'react'" in every file
   };
 };
 
@@ -181,7 +160,6 @@ export async function doBuild(target?: string): Promise<void> {
 
   await build(commonAppConfig(development)).catch(errorHandler);
   await build(commonElectronConfig(development, target)).catch(errorHandler);
-  // await build(commonServerConfig(development)).catch(errorHandler);
 
   if (target) {
     const duckDBBinaryName = targetDuckDBMap[target];
