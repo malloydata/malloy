@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="25px" height="25px" viewBox="0 0 25 25" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <title>join_icon_many_to_one</title>
+    <g id="join_icon_many_to_one" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
+        <polygon id="Path-Copy-14" fill="#4284F3" fill-rule="nonzero" transform="translate(10.382256, 12.736227) scale(-1, 1) rotate(180.000000) translate(-10.382256, -12.736227) " points="6.80570594 7.41828749 7.48860316 6.68777302 13.9588058 12.7362273 7.48860316 18.7846815 6.80570594 18.0541671 12.494 12.736"></polygon>
+        <rect id="Rectangle-Copy-90" fill="#4284F3" x="4" y="4" width="4" height="4"></rect>
+        <rect id="Rectangle-Copy-89" fill="#4284F3" x="4" y="10.7362273" width="4" height="4"></rect>
+        <rect id="Rectangle-Copy-85" fill="#4284F3" x="17.5186005" y="10.7362273" width="4" height="4"></rect>
+        <rect id="Rectangle-Copy-84" fill="#4284F3" x="4" y="17.5750258" width="4" height="4"></rect>
+        <polygon id="Line-3-Copy-67" fill="#4284F3" fill-rule="nonzero" points="18.9954453 12.2362273 18.9954453 13.2362273 5.99544525 13.2362273 5.99544525 12.2362273"></polygon>
+    </g>
+</svg>

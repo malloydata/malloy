@@ -14,6 +14,11 @@
 import React, { useCallback, useState } from "react";
 import styled from "styled-components";
 
+declare global {
+  interface Window {
+    dataLayer: unknown[] | undefined;
+  }
+}
 export const Analytics: React.FC = () => {
   let cookieClicked = false;
   try {
@@ -31,6 +36,10 @@ export const Analytics: React.FC = () => {
     }
     setShowBanner(false);
   }, []);
+
+  if (!window.dataLayer) {
+    return null;
+  }
 
   return (
     <>

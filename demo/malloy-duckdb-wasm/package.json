@@ -14,13 +14,15 @@
   "dependencies": {
     "@malloydata/db-duckdb": "*",
     "@malloydata/malloy": "*",
+    "@malloydata/render": "*",
     "apache-arrow": "^9.0.0",
     "monaco-editor": "^0.34.0",
     "react": "^17.0.2",
-    "styled-component": "^2.8.0"
+    "styled-components": "^5.3.3"
   },
   "devDependencies": {
     "@types/express": "^4.17.13",
-    "esbuild": "0.14.13"
+    "esbuild": "0.14.13",
+    "esbuild-plugin-svgr": "^1.0.1"
   }
 }

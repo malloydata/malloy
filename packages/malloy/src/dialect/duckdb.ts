@@ -143,7 +143,9 @@ export class DuckDBDialect extends Dialect {
   supportUnnestArrayAgg = true;
   supportsCTEinCoorelatedSubQueries = true;
 
-  functionInfo: Record<string, FunctionInfo> = {};
+  functionInfo: Record<string, FunctionInfo> = {
+    concat: { returnType: "string" },
+  };
 
   // hack until they support temporary macros.
   get udfPrefix(): string {
@@ -299,8 +301,8 @@ export class DuckDBDialect extends Dialect {
     throw new Error("Not implemented Yet");
   }
 
-  getFunctionInfo(_functionName: string): FunctionInfo | undefined {
-    return undefined;
+  getFunctionInfo(functionName: string): FunctionInfo | undefined {
+    return this.functionInfo[functionName];
   }
 
   sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
