@@ -19,12 +19,16 @@ import { CONNECTION_MANAGER } from "./connections";
 import { URL_READER } from "./urls";
 import { getModel } from "./models";
 import { getConfig } from "./config";
+import { fileURLToPath } from "url";
 
 class FirstImportCapturingURLReader implements URLReader {
   private firstImport: string | undefined = undefined;
 
   readURL(url: URL) {
-    const path = url.toString().replace("file://", "");
+    let path = url.toString();
+    if (url.protocol == "file:") {
+      path = fileURLToPath(url);
+    }
     if (this.firstImport === undefined) {
       this.firstImport = path;
     }

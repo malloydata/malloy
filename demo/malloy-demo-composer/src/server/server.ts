@@ -18,13 +18,15 @@ import * as path from "path";
 
 const app = express();
 
-const DEV = process.env.DEV === "1";
+const DEV = process.env.DEV === "1" || true;
 const PORT = (process.env.PORT || 4000) as number;
 const HOST = process.env.HOST || "localhost";
 
 const allowedOrigins = [];
 
 if (DEV) {
+  // eslint-disable-next-line no-console
+  console.log("DEV Enabled");
   allowedOrigins.push(`http://${HOST}:${PORT}`);
 }
 
@@ -44,6 +46,13 @@ app.use("/static", express.static(path.join(BUILD_ROOT, "/app")));
 app.use("/fonts", express.static(path.join(BUILD_ROOT, "/app/fonts")));
 
 app.use("/", express.static(path.join(BUILD_ROOT, "/app")));
+
+if (DEV) {
+  app.use(
+    "/packages",
+    express.static(path.join(BUILD_ROOT, "../../../packages"))
+  );
+}
 
 app.listen(PORT, HOST, () => {
   // eslint-disable-next-line no-console

@@ -16,7 +16,7 @@
     "debian": "electron-installer-debian --src dist//malloy-composer-demo-linux-x64/ --dest dist/installers/ --arch amd64",
     "clean": "rm -rf ./node_modules",
     "server-build": "npm run build && npx tsc -p tsconfig.server.json",
-    "server-start": "npm run build-server && node ./dist/server/cli.js",
+    "server-start": "npm run server-build && node ./dist/server/cli.js",
     "server-package": "npm run server-build && npx pkg -c package.json dist/server/cli.js"
   },
   "dependencies": {
@@ -28,6 +28,7 @@
     "@popperjs/core": "^2.11.4",
     "cors": "^2.8.5",
     "electron": "^18.2.3",
+    "express": "^4.18.1",
     "moment-js": "^1.1.15",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
@@ -44,6 +45,7 @@
   },
   "devDependencies": {
     "@types/cors": "^2.8.12",
+    "@types/express": "^4.17.14",
     "@types/moment": "^2.13.0",
     "@types/react": "^17.0.38",
     "@types/react-dom": "^17.0.11",

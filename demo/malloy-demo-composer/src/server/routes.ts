@@ -12,7 +12,7 @@
  */
 
 import { FieldDef, StructDef } from "@malloydata/malloy";
-import express from "express";
+import * as express from "express";
 import { Analysis } from "../types";
 import { getAnalysis, readMalloyDirectory } from "./directory";
 import { wrapErrors } from "./errors";
