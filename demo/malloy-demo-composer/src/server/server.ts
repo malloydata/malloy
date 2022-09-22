@@ -18,7 +18,7 @@ import * as path from "path";
 
 const app = express();
 
-const DEV = process.env.DEV === "1" || true;
+const DEV = process.env.DEV === "1";
 const PORT = (process.env.PORT || 4000) as number;
 const HOST = process.env.HOST || "localhost";
 
