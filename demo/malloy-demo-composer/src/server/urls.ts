@@ -18,7 +18,7 @@ import { fileURLToPath } from "url";
 export const URL_READER: URLReader = {
   readURL: (url: URL) => {
     let path = url.toString();
-    if (url.protocol == "file:" ) {
+    if (url.protocol == "file:") {
       path = fileURLToPath(url);
     }
     return fs.readFile(path, "utf8");
