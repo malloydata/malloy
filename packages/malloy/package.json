@@ -10,7 +10,8 @@
     "testLang": "npm run test --testPathPattern=packages/malloy/src/lang",
     "clean": "rm -rf src/lang/lib",
     "build": "npm run build-parser && tsc --build",
-    "malloyc": "ts-node ../../scripts/malloy-to-json"
+    "malloyc": "ts-node ../../scripts/malloy-to-json",
+    "gen-protos": "sh ./scripts/gen-protos.sh"
   },
   "dependencies": {
     "antlr4ts": "^0.5.0-alpha.4",
@@ -22,9 +23,12 @@
     "url": "^0.11.0"
   },
   "devDependencies": {
+    "@grpc/grpc-js": "^1.7.1",
     "@types/lodash": "^4.14.165",
     "@types/luxon": "^1.26.4",
     "antlr4ts-cli": "^0.5.0-alpha.4",
+    "grpc_tools_node_protoc_ts": "^5.3.2",
+    "grpc-tools": "^1.11.2",
     "path": "^0.12.7"
   },
   "cross-os": {

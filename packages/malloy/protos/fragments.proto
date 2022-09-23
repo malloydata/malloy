@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+import "atomic_field.proto";
+import "dialect.proto";
+import "time.proto";
+import "time_stamp.proto";
+
+message Fragment {
+  Fragment.Type type = 1;
+
+  enum Type {
+    UNKNOWN = 0;
+    APPLY = 1;
+    APPLY_VALUE = 2;
+    FIELD = 3;
+    PARAMETER = 4;
+    FILTER = 5;
+    AGGREGATE = 6;
+    ALL = 7;
+    EXCLUDE = 8;
+    DIV = 9;
+    TIME_LITERAL = 10;
+    NOW = 11;
+    TIME_DELTA = 12;
+    TIME_DIFF = 13;
+    TIME_TRUNC = 14;
+    TYPECAST = 15;
+    TIME_EXTRACT = 16;
+    REGEXP_MATCH = 17;
+  }
+
+  repeated Fragment value = 2;
+  repeated Fragment to = 3;
+  string path = 4;
+  string function = 5;
+  repeated Fragment e = 6;  // e is a bad name...
+  string structPath = 7;
+  repeated string fields = 8;
+
+  Dialect.Function dialect_function = 9;
+
+
+  // TODO add FILTER
+
+  repeated Fragment numerator = 10;
+  repeated Fragment denominator = 11;
+
+  string literal = 12;
+  Time.FieldType literalType = 13;
+  string timezone = 14;
+
+  TimeValue base = 15;
+  Time.Operator op = 16;
+  repeated Fragment delta = 17;
+  TimeStamp.Unit units = 18;
+  TimeValue left = 19;
+  TimeValue right = 20;
+  TimeValue time_expr = 21; // Conflicting Types with same name
+  bool safe = 22;
+  repeated Fragment typecast_expr = 23; // Conflicting Types with same name
+  AtomicField.Type dstType = 24;
+  AtomicField.Type srcType = 25;
+  string regexp = 26;
+  repeated Fragment regex_expr = 27; // Conflicting Types with same name
+
+  message TimeValue {
+    string type = 1;
+    Time.FieldType valueType = 2;
+    repeated Fragment value = 3;
+  }
+
+  message FilterExpression {
+    repeated Fragment expression = 1;
+    string code = 2;
+    optional bool aggregate = 3;
+  }
+}

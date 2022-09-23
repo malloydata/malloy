@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+message Time {
+  enum Operator {
+    ADD = 0;
+    SUB = 1;
+  }
+
+ enum FieldType {
+    DATE = 0;
+    TIMESTAMP = 1;
+  }
+}

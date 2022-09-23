@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+message TimeStamp {
+  enum Unit {
+    DAY = 0;
+    WEEK = 1;
+    MONTH = 2;
+    QUARTER = 3;
+    YEAR = 4;
+    HOUR = 5;
+    MINUTE = 6;
+    SECOND = 7;
+  }
+}

@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+message AtomicField {
+  enum Type {
+    STRING = 0;
+    NUMBER = 1;
+    DATE = 2;
+    TIMESTAMP = 3;
+    BOOLEAN = 4;
+  }
+}
