@@ -18,27 +18,29 @@
 SETLOCAL ENABLEDELAYEDEXPANSION
 
 SET lib=../lib/Malloy
-SET digest=%lib%/Malloy.md5
-SET target=%lib%/MalloyParser.ts
+@REM SET digest=%lib%/Malloy.md5
 
-SET index=1
-FOR /F "delims=" %%A IN ('certutil -hashfile Malloy.g4 MD5') DO (
-  CALL :parsemd5 %%A
-)
+@REM SET index=1
+@REM FOR /F "delims=" %%A IN ('certutil -hashfile Malloy.g4 MD5') DO (
+@REM   CALL :parsemd5 %%A
+@REM )
 
-SET oldmd5=Hash Not Found
-IF EXIST %digest% FOR /F "tokens=* USEBACKQ" %%V IN ("%digest%") DO ( SET oldmd5=%%V )
-SET oldmd5=%oldmd5:~0,32%
+@REM SET oldmd5=Hash Not Found
+@REM IF EXIST %digest% FOR /F "tokens=* USEBACKQ" %%V IN ("%digest%") DO ( SET oldmd5=%%V )
+@REM SET oldmd5=%oldmd5:~0,32%
 
-IF "%newmd5%" == "%oldmd5%" (
-  @ECHO ANTLR parser %target% is up too date
-) ELSE (
-  antlr4ts -visitor -Xexact-output-dir -o %lib% Malloy.g4 && echo %newmd5% > %digest%
-)
+@ECHO ALWAYS REBUILD PARSER BECAUSE MTOY DOESN'T HAVE A WINDOWS MACHINE
+@ECHO AND EVEN IF HE DID, HE DOESN'T HAVE SKILL IN WRITING CMD SCRIPTS
+@REM IF "%newmd5%" != "%oldmd5%" (
+  antlr4ts -Xexact-output-dir -o %lib% MalloyLexer.g4
+  antlr4ts -visitor -listener -Xexact-output-dir -o %lib% MalloyParser.g4
+@REM echo %newmd5% > %digest%
+@REM )
+@ECHO Antlr generated parser in %lib% is up to date
 
-:parsemd5
-IF /I %index% EQU 2 (
-  SET newmd5=%1
-)
-SET /a "index+=1"
+@REM :parsemd5
+@REM IF /I %index% EQU 2 (
+@REM   SET newmd5=%1
+@REM )
+@REM SET /a "index+=1"
 GOTO :EOF

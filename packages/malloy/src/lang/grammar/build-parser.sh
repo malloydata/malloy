@@ -22,9 +22,9 @@ digest=$lib/Malloy.md5
 target=$lib/MalloyParser.ts
 
 if command -v md5sum > /dev/null; then
-  newmd5=`md5sum Malloy.g4`
+  newmd5=`md5sum MalloyParser.g4 MalloyLexer.g4`
 elif command -v md5 > /dev/null; then
-  newmd5=`md5 Malloy.g4`
+  newmd5=`md5 MalloyParser.g4 MalloyLexer.g4`
 else
   echo "build_parser: MD5 checksum program not found, assuming rebuild"
   newmd5=`date`
@@ -39,7 +39,8 @@ if [ ! -r $target ]; then
 fi
 
 if [ "$oldmd5" != "$newmd5" ]; then
-  antlr4ts -visitor -o $lib Malloy.g4 && echo "$newmd5" > $digest
-else
-  echo "ANTLR parser $target is up to date"
+  antlr4ts -o $lib MalloyLexer.g4
+  antlr4ts -visitor -listener -o $lib MalloyParser.g4
+  echo "$newmd5" > $digest
 fi
+echo "Antlr generated Malloy parser in $lib is up to date"
