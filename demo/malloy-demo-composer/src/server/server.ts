@@ -39,7 +39,7 @@ routes(router);
 
 app.use("/api", router);
 
-const BUILD_ROOT = path.join(__dirname, "../../build");
+const BUILD_ROOT = path.join(__dirname, "../build");
 
 app.use("/static", express.static(path.join(BUILD_ROOT, "/app")));
 

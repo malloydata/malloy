@@ -22,7 +22,7 @@ interface ComposerConfig {
 
 export async function getConfig(): Promise<ComposerConfig> {
   let config = {
-    modelsPath: path.join(__dirname, "../../../../samples"),
+    modelsPath: path.resolve(process.cwd(), process.env.MODELS || ""),
   };
   const configFilePath = path.resolve("./composer_config.json");
   if (existsSync(configFilePath)) {
@@ -41,6 +41,5 @@ export async function getConfig(): Promise<ComposerConfig> {
   }
 
   config.modelsPath = path.resolve(config.modelsPath);
-
   return config;
 }

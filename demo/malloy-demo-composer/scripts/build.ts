@@ -50,6 +50,22 @@ export const commonAppConfig = (development = false): BuildOptions => {
   };
 };
 
+export const commonServerConfig = (
+  development = false,
+  target?: string
+): BuildOptions => {
+  return {
+    entryPoints: ["./src/server/cli.ts", "./src/server/server.js"],
+    outdir: "dist/",
+    minify: !development,
+    sourcemap: development ? "inline" : false,
+    bundle: true,
+    platform: "node",
+    external: ["./duckdb-native.node"],
+    plugins: [makeDuckdbNoNodePreGypPlugin(target), ignorePgNativePlugin],
+  };
+};
+
 const commonElectronConfig = (
   development = false,
   target?: string
@@ -160,6 +176,7 @@ export async function doBuild(target?: string): Promise<void> {
 
   await build(commonAppConfig(development)).catch(errorHandler);
   await build(commonElectronConfig(development, target)).catch(errorHandler);
+  await build(commonServerConfig(development, target)).catch(errorHandler);
 
   if (target) {
     const duckDBBinaryName = targetDuckDBMap[target];

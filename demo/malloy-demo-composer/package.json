@@ -17,7 +17,7 @@
     "clean": "rm -rf ./node_modules",
     "server-build": "npm run build && npx tsc -p tsconfig.server.json",
     "server-start": "npm run server-build && node ./dist/server/cli.js",
-    "server-package": "npm run server-build && npx pkg -c package.json dist/server/cli.js"
+    "server-package": "ts-node scripts/package-server"
   },
   "dependencies": {
     "@malloydata/db-bigquery": "*",
@@ -29,6 +29,7 @@
     "cors": "^2.8.5",
     "electron": "^18.2.3",
     "express": "^4.18.1",
+    "into-stream": "^6.0.0",
     "moment-js": "^1.1.15",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
@@ -63,18 +64,12 @@
   },
   "pkg": {
     "scripts": [
-      "dist/server/cli.js"
+      "dist/cli.js"
     ],
     "assets": [
       "dist/**/*",
       "build/**/*"
     ],
-    "targets": [
-      "node16-linux-x64",
-      "node16-macos-x64",
-      "node16-macos-arm64"
-    ],
-    "outputPath": "pkg",
     "compress": "GZip"
   }
 }
