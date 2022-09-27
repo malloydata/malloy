@@ -11,6 +11,10 @@
  * GNU General Public License for more details.
  */
 
+// Runs antlr to generate the compiler from the compiler description,
+// it also notices (using an md5 checksum) if the compiler description
+// has changed, so it can skip running antlr when there are no changes.
+
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-var-requires */
 const { readFileSync, writeFileSync, existsSync, rmSync } = require("fs");
@@ -21,48 +25,36 @@ const { execSync } = require("child_process");
 const langSrc = path.dirname(__dirname);
 process.chdir(path.join(langSrc, "grammar"));
 const libDir = path.join(langSrc, "lib", "Malloy");
-
 const digestSrcFiles = [__filename, "MalloyLexer.g4", "MalloyParser.g4"];
 const parserDstFiles = ["MalloyLexer.ts", "MalloyParser.ts"];
 const digestFile = path.join(libDir, "Malloy.md5");
 
-function newDigest() {
-  const parserSrc = digestSrcFiles
-    .map((fn) => readFileSync(fn, "utf-8"))
-    .join("");
-  return md5(parserSrc);
-}
-
 function oldDigest() {
-  if (existsSync(digestFile)) {
-    return readFileSync(digestFile, "utf-8");
-  }
-  return "__DIGEST_FILE_NOT_FOUND__";
+  return existsSync(digestFile)
+    ? readFileSync(digestFile, "utf-8")
+    : "__DIGEST_FILE_NOT_FOUND__";
 }
 
 function run(cmd) {
-  let cleanRun = true;
   try {
     console.log(`>> ${cmd}`);
     console.log(execSync(cmd).toString());
   } catch (runError) {
-    cleanRun = false;
+    return false;
   }
-  return cleanRun;
+  return true;
 }
 
 let rebuild = false;
 
 for (const fn of parserDstFiles) {
-  if (!existsSync(path.join(libDir, fn))) {
-    rebuild = true;
-  }
+  rebuild ||= !existsSync(path.join(libDir, fn));
 }
 
-const parserDigest = newDigest();
-if (parserDigest != oldDigest()) {
-  rebuild = true;
-}
+const parserDigest = md5(
+  digestSrcFiles.map((fn) => readFileSync(fn, "utf-8")).join("")
+);
+rebuild ||= parserDigest != oldDigest();
 
 if (rebuild) {
   const antlr = `antlr4ts -Xexact-output-dir -o ../lib/Malloy`;
