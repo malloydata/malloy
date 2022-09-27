@@ -12,21 +12,23 @@
  */
 
 /* eslint-disable no-console */
-import { readFileSync, writeFileSync, existsSync } from "fs";
-import md5 from "md5";
-import * as path from "path";
-import * as child_process from "child_process";
+/* eslint-disable @typescript-eslint/no-var-requires */
+const { readFileSync, writeFileSync, existsSync, rmSync } = require("fs");
+const md5 = require("md5");
+const path = require("path");
+const { execSync } = require("child_process");
 
-const parserSrcFiles = ["MalloyLexer.g4", "MalloyParser.g4"];
+const langSrc = path.dirname(__dirname);
+process.chdir(path.join(langSrc, "grammar"));
+const libDir = path.join(langSrc, "lib", "Malloy");
+
+const digestSrcFiles = [__filename, "MalloyLexer.g4", "MalloyParser.g4"];
 const parserDstFiles = ["MalloyLexer.ts", "MalloyParser.ts"];
-const libDir = path.join(path.basename(__dirname), "lib");
 const digestFile = path.join(libDir, "Malloy.md5");
 
 function newDigest() {
-  const parserSrc = parserSrcFiles
-    .map((fn) => {
-      readFileSync(fn, "utf-8");
-    })
+  const parserSrc = digestSrcFiles
+    .map((fn) => readFileSync(fn, "utf-8"))
     .join("");
   return md5(parserSrc);
 }
@@ -40,19 +42,12 @@ function oldDigest() {
 
 function run(cmd) {
   let cleanRun = true;
-  child_process.exec(cmd, (error, stdout, stderr) => {
-    console.log(`Running ${cmd}`);
-    if (stdout) {
-      console.log(stdout);
-    }
-    if (stderr) {
-      console.error(stderr);
-    }
-    if (error) {
-      console.error("ERROR:", error.message);
-      cleanRun = false;
-    }
-  });
+  try {
+    console.log(`>> ${cmd}`);
+    console.log(execSync(cmd).toString());
+  } catch (runError) {
+    cleanRun = false;
+  }
   return cleanRun;
 }
 
@@ -60,6 +55,7 @@ let rebuild = false;
 
 for (const fn of parserDstFiles) {
   if (!existsSync(path.join(libDir, fn))) {
+    console.log("missing dest file ", fn);
     rebuild = true;
   }
 }
@@ -69,17 +65,17 @@ if (parserDigest != oldDigest()) {
   rebuild = true;
 }
 
-let parserOK = true;
 if (rebuild) {
-  parserOK = false;
+  const antlr = `antlr4ts -Xexact-output-dir -o ../lib/Malloy`;
   if (
-    run(`antlr4ts -o ${libDir} MalloyLexer.g4`) &&
-    run(`antlr4ts -visitor -listener -o ${libDir} MalloyParser.g4`)
+    run(`${antlr} MalloyLexer.g4`) &&
+    run(`${antlr} -visitor MalloyParser.g4`)
   ) {
     writeFileSync(digestFile, parserDigest);
-    parserOK = true;
+    console.log(`Antlr generated Malloy parser -- Created`);
+  } else {
+    rmSync(digestFile);
   }
-}
-if (parserOK) {
-  console.log(`Antlr generated Malloy parser in ${libDir} is up to date`);
+} else {
+  console.log(`Antlr generated Malloy parser -- Already exists`);
 }

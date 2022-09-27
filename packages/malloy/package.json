@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest --config=../../jest.config.js",
-    "build-parser": "cd src/lang/grammar && cross-os build-parser",
+    "build-parser": "node src/lang/grammar/build_parser.js",
     "testLang": "npm run test --testPathPattern=packages/malloy/src/lang",
     "clean": "rm -rf src/lang/lib",
     "build": "npm run build-parser && tsc --build",
