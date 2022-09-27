@@ -55,7 +55,6 @@ let rebuild = false;
 
 for (const fn of parserDstFiles) {
   if (!existsSync(path.join(libDir, fn))) {
-    console.log("missing dest file ", fn);
     rebuild = true;
   }
 }
