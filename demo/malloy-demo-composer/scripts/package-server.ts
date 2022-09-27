@@ -44,10 +44,6 @@ async function packageServer(
     console.log(`Signing not yet implemented`);
   }
 
-  for (const key of duckDbTargetMap.keys()) {
-    console.log(key);
-  }
-
   if (!duckDbTargetMap.has(target)) {
     throw `No DuckDb defined for target: ${target}`;
   }
