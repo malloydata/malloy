@@ -26,12 +26,5 @@
     "@types/luxon": "^1.26.4",
     "antlr4ts-cli": "^0.5.0-alpha.4",
     "path": "^0.12.7"
-  },
-  "cross-os": {
-    "build-parser": {
-      "darwin": "sh build-parser.sh",
-      "linux": "sh build-parser.sh",
-      "win32": "build-parser.cmd"
-    }
   }
 }
