@@ -23,11 +23,10 @@ const path = require("path");
 const { execSync } = require("child_process");
 
 const langSrc = path.dirname(__dirname);
-process.chdir(path.join(langSrc, "grammar"));
 const libDir = path.join(langSrc, "lib", "Malloy");
-const digestSrcFiles = [__filename, "MalloyLexer.g4", "MalloyParser.g4"];
-const parserDstFiles = ["MalloyLexer.ts", "MalloyParser.ts"];
 const digestFile = path.join(libDir, "Malloy.md5");
+const digestSrcFiles = [__filename, "MalloyLexer.g4", "MalloyParser.g4"];
+const compilerSrcs = ["MalloyLexer.ts", "MalloyParser.ts"];
 
 function oldDigest() {
   return existsSync(digestFile)
@@ -45,16 +44,15 @@ function run(cmd) {
   return true;
 }
 
-let rebuild = false;
-
-for (const fn of parserDstFiles) {
-  rebuild ||= !existsSync(path.join(libDir, fn));
-}
-
-const parserDigest = md5(
+process.chdir(path.join(langSrc, "grammar"));
+const versionDigest = md5(
   digestSrcFiles.map((fn) => readFileSync(fn, "utf-8")).join("")
 );
-rebuild ||= parserDigest != oldDigest();
+let rebuild = versionDigest != oldDigest();
+
+for (const fn of compilerSrcs) {
+  rebuild ||= !existsSync(path.join(libDir, fn));
+}
 
 if (rebuild) {
   const antlr = `antlr4ts -Xexact-output-dir -o ../lib/Malloy`;
@@ -62,7 +60,7 @@ if (rebuild) {
     run(`${antlr} MalloyLexer.g4`) &&
     run(`${antlr} -visitor MalloyParser.g4`)
   ) {
-    writeFileSync(digestFile, parserDigest);
+    writeFileSync(digestFile, versionDigest);
     console.log(`Antlr generated Malloy parser -- Created`);
   } else {
     rmSync(digestFile);
