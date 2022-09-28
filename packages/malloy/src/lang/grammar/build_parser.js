@@ -11,9 +11,9 @@
  * GNU General Public License for more details.
  */
 
-// Runs antlr to generate the compiler from the compiler description,
-// it also notices (using an md5 checksum) if the compiler description
-// has changed, so it can skip running antlr when there are no changes.
+// Runs antlr to generate the compiler from the compiler spec.
+// It also notices (using an md5 checksum) if the compiler spec
+// has changed, to avoid re-running antlr when there are no changes.
 
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-var-requires */
