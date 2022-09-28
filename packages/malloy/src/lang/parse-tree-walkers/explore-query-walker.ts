@@ -14,7 +14,7 @@
 import { CommonTokenStream } from "antlr4ts";
 import { ParseTree } from "antlr4ts/tree";
 import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
-import { MalloyListener } from "../lib/Malloy/MalloyListener";
+import { MalloyParserListener } from "../lib/Malloy/MalloyParserListener";
 // import {
 //   ExploreContext,
 //   FilterElementContext,
@@ -46,7 +46,7 @@ export interface ExploreClauseRef {
   range: SimpleRange;
 }
 
-export class ExploreQueryWalker implements MalloyListener {
+export class ExploreQueryWalker implements MalloyParserListener {
   tokens: CommonTokenStream;
   exploreClauseRefs: ExploreClauseRef[];
   currentExploreClauseRef: ExploreClauseRef | undefined;
@@ -155,7 +155,7 @@ export function exploreQueryWalkerBuilder(
   parseTree: ParseTree
 ): ExploreQueryWalker {
   const finder = new ExploreQueryWalker(tokens);
-  const listener: MalloyListener = finder;
+  const listener: MalloyParserListener = finder;
   ParseTreeWalker.DEFAULT.walk(listener, parseTree);
   return finder;
 }

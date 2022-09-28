@@ -14,7 +14,7 @@
 import { CommonTokenStream, ParserRuleContext } from "antlr4ts";
 import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import { ParseTree } from "antlr4ts/tree";
-import { MalloyListener } from "../lib/Malloy/MalloyListener";
+import { MalloyParserListener } from "../lib/Malloy/MalloyParserListener";
 import * as parser from "../lib/Malloy/MalloyParser";
 
 export interface DocumentCompletion {
@@ -51,7 +51,7 @@ const QUERY_PROPERTIES = [
 
 const MODEL_PROPERTIES = ["source", "explore", "query", "sql"];
 
-class DocumentCompletionWalker implements MalloyListener {
+class DocumentCompletionWalker implements MalloyParserListener {
   constructor(
     readonly tokens: CommonTokenStream,
     readonly completions: DocumentCompletion[],
@@ -155,7 +155,7 @@ export function walkForDocumentCompletions(
   position: { line: number; character: number }
 ): DocumentCompletion[] {
   const finder = new DocumentCompletionWalker(tokens, [], position);
-  const listener: MalloyListener = finder;
+  const listener: MalloyParserListener = finder;
   ParseTreeWalker.DEFAULT.walk(listener, parseTree);
   return finder.completions;
 }
