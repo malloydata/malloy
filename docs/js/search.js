@@ -32,8 +32,8 @@ function search(segments, query) {
       let found = false;
       let paragraphScore = 0;
       for (term of terms) {
-        if (textContent(paragraph).toLowerCase().includes(term)) {
-          paragraphScore += 1;
+        if (textContent(paragraph.text).toLowerCase().includes(term)) {
+          paragraphScore += paragraph.type === "p" ? 10 : 1;
           found = true;
         }
       }
@@ -42,7 +42,7 @@ function search(segments, query) {
         lastMatched = true;
       } else {
         if (lastMatched) {
-          matchingParagraphs.push("...");
+          matchingParagraphs.push({ type: "p", text: "..." });
         }
         lastMatched = false;
       }
@@ -50,7 +50,7 @@ function search(segments, query) {
     });
 
     if (segment.titles.some((title) => terms.some((term) => title.toLowerCase().includes(term)))) {
-      score += 10;
+      score += 100;
     }
     if (!lastMatched) {
       matchingParagraphs.pop();
@@ -81,6 +81,55 @@ function highlight(paragraphElement, query) {
     paragraphElement.appendChild(node);
   }
   return paragraphElement;
+}
+
+const LINES_AROUND_TO_INCLUDE = 2;
+
+function collapseCode(paragraphElement, query) {
+  const terms = getTerms(query);
+  const termRegexes = terms.map((term) => new RegExp(term, "gi"));
+  const includeLines = {};
+  const lines = paragraphElement.querySelectorAll("span.line");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineMatchesQuery = termRegexes.some((regex) =>
+      line.textContent.match(regex)
+    );
+    if (lineMatchesQuery) {
+      for (
+        let j = i - LINES_AROUND_TO_INCLUDE;
+        j <= i + LINES_AROUND_TO_INCLUDE;
+        j++
+      ) {
+        includeLines[j] = true;
+      }
+    }
+  }
+  const newLines = [];
+  let needsElipsis = false;
+  let leadingSpace = "";
+  for (let i = 0; i < lines.length; i++) {
+    if (includeLines[i]) {
+      const line = lines[i];
+      leadingSpace = line.textContent.match(/^\s*/)[0];
+      if (needsElipsis) {
+        newLines.push(document.createTextNode(leadingSpace + "..."));
+      }
+      newLines.push(line);
+      needsElipsis = false;
+    } else {
+      needsElipsis = true;
+    }
+  }
+  if (needsElipsis) {
+    newLines.push(document.createTextNode(leadingSpace + "..."));
+  }
+  const preElement = paragraphElement.querySelector("pre");
+  preElement.innerHTML = "";
+  for (const line of newLines) {
+    preElement.appendChild(line);
+    preElement.appendChild(document.createTextNode("\n"));
+  }
 }
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -114,7 +163,10 @@ for (const result of results) {
     const previewElement = document.createElement("div");
     for (const paragraph of result.segment.paragraphs) {
       const pElement = document.createElement("p");
-      pElement.innerHTML = paragraph;
+      pElement.innerHTML = paragraph.text;
+      if (paragraph.type === "code") {
+        collapseCode(pElement, query);
+      }
       highlight(pElement, query);
       previewElement.appendChild(pElement);
     }
