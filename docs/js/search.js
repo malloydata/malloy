@@ -12,13 +12,16 @@
  */
 
 function textContent(html) {
-  const dummyElement = document.createElement('div')
+  const dummyElement = document.createElement("div");
   dummyElement.innerHTML = html;
   return dummyElement.textContent;
 }
 
 function getTerms(query) {
-  return query.toLowerCase().split(/\s/).filter((term) => term.length > 0);
+  return query
+    .toLowerCase()
+    .split(/\s/)
+    .filter((term) => term.length > 0);
 }
 
 function search(segments, query) {
@@ -28,10 +31,10 @@ function search(segments, query) {
     let score = 0;
     const matchingParagraphs = [];
     let lastMatched = false;
-    segment.paragraphs.forEach((paragraph, index) => {
+    segment.paragraphs.forEach((paragraph) => {
       let found = false;
       let paragraphScore = 0;
-      for (term of terms) {
+      for (const term of terms) {
         if (textContent(paragraph.text).toLowerCase().includes(term)) {
           paragraphScore += paragraph.type === "p" ? 10 : 1;
           found = true;
@@ -49,15 +52,28 @@ function search(segments, query) {
       score = Math.max(score, paragraphScore);
     });
 
-    if (segment.titles.some((title) => terms.some((term) => title.toLowerCase().includes(term)))) {
+    if (
+      segment.titles.some((title) =>
+        terms.some((term) => title.toLowerCase().includes(term))
+      )
+    ) {
       score += 100;
     }
     if (!lastMatched) {
       matchingParagraphs.pop();
     }
-    scoredSegments.push({ score, segment: { path: segment.path, titles: segment.titles, paragraphs: matchingParagraphs } });
+    scoredSegments.push({
+      score,
+      segment: {
+        path: segment.path,
+        titles: segment.titles,
+        paragraphs: matchingParagraphs,
+      },
+    });
   }
-  return scoredSegments.filter(({ score }) => score > 0).sort(({ score: score1 }, { score: score2 }) => score2 - score1);
+  return scoredSegments
+    .filter(({ score }) => score > 0)
+    .sort(({ score: score1 }, { score: score2 }) => score2 - score1);
 }
 
 function highlight(paragraphElement, query) {
@@ -67,8 +83,11 @@ function highlight(paragraphElement, query) {
     if (node.nodeType === Node.TEXT_NODE) {
       const newNode = document.createElement("span");
       let content = node.textContent;
-      for (term of terms) {
-        content = content.replace(new RegExp(term, "gi"), (m) => `<mark class="search-highlight">${m}</mark>`);
+      for (const term of terms) {
+        content = content.replace(
+          new RegExp(term, "gi"),
+          (m) => `<mark class="search-highlight">${m}</mark>`
+        );
       }
       newNode.innerHTML = content;
       newNodes.push(...newNode.childNodes);
@@ -133,7 +152,7 @@ function collapseCode(paragraphElement, query) {
 }
 
 const urlParams = new URLSearchParams(window.location.search);
-const query = urlParams.get('query');
+const query = urlParams.get("query");
 
 const results = search(window.SEARCH_SEGMENTS, query);
 
@@ -148,7 +167,10 @@ for (const result of results) {
       const linkElement = document.createElement("a");
       const anchor = title.toLowerCase().replace(/[^\w]+/g, "-");
       linkElement.innerHTML = title;
-      linkElement.href = result.segment.path.replace(".md", ".html").replace(/^\//, "documentation/") + (index > 0 ? "#" + anchor : "");
+      linkElement.href =
+        result.segment.path
+          .replace(".md", ".html")
+          .replace(/^\//, "documentation/") + (index > 0 ? "#" + anchor : "");
       highlight(linkElement, query);
       headingElement.appendChild(linkElement);
       if (index != result.segment.titles.length - 1) {
