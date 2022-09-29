@@ -27,11 +27,15 @@ const SAMPLE_PROJECT_ROOT = path.join(
   "samples"
 );
 
-const [describe] = describeIfDatabaseAvailable(["bigquery", "duckdb"]);
+const sampleDatabases = ["bigquery", "duckdb"];
+
+const [describe, databases] = describeIfDatabaseAvailable(sampleDatabases);
 
 describe(`compiling sample models`, () => {
   let modelsFound = false;
-  const dirsToSearch = [SAMPLE_PROJECT_ROOT];
+  const dirsToSearch = databases.map((database) =>
+    path.join(SAMPLE_PROJECT_ROOT, database)
+  );
   while (dirsToSearch.length > 0) {
     const dir = dirsToSearch.pop();
     if (dir === undefined) {
@@ -69,4 +73,18 @@ describe(`compiling sample models`, () => {
     }
   }
   expect(modelsFound).toBeTruthy();
+});
+
+// This test will fail if there's anything else in the top level samples
+// directory, e.g. if we add another DB and forget to update this test
+// file. If you needed to add some other file for some reason, update this
+// test to account for the change. But if you did forget to update this test
+// for your new-dialect samples, then update the tests above to include it.
+test("no untested samples", () => {
+  for (const child of fs.readdirSync(SAMPLE_PROJECT_ROOT)) {
+    const childPath = path.join(SAMPLE_PROJECT_ROOT, child);
+    if (fs.statSync(childPath).isDirectory()) {
+      expect(sampleDatabases.includes(child)).toBeTruthy();
+    }
+  }
 });
