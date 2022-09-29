@@ -176,6 +176,22 @@ query: flights -> {
 View [the full documentation](${DOCS_ROOT}/language/nesting.html).
 `;
 
+const QUERY_DECLARE_DOC = `Use \`declare\` to introduce new reusable dimensions and measures within a query.
+
+\`\`\`malloy
+query: flights -> {
+  declare: flight_count is count()
+  aggregate: flight_count
+  nest: by_carrier is {
+    group_by: carrier
+    aggregate: flight_count
+  }
+}
+\`\`\`
+
+Note: \`declare\` is an experimental feature.
+`;
+
 const SOURCE_DIMENSION_DOC = `Use \`dimension\` to define a non-aggregate calculation.
 
 \`\`\`malloy
@@ -295,6 +311,19 @@ source: airports is table('malloy-data.faa.airports') {
 View [the full documentation](${DOCS_ROOT}/language/explore.html#limiting-access-to-fields).
 `;
 
+const SOURCE_DECLARE_DOC = `Use \`declare\` to declare either dimensions or measures.
+
+\`\`\`malloy
+source: flights is table('malloy-data.faa.flights') {
+  declare:
+    flight_count is count()
+    distance_km is distance * 1.609
+}
+\`\`\`
+
+Note: \`declare\` is an experimental feature.
+`;
+
 export const COMPLETION_DOCS: {
   [kind: string]: { [property: string]: string };
 } = {
@@ -314,6 +343,7 @@ export const COMPLETION_DOCS: {
     where: QUERY_WHERE_DOC,
     having: QUERY_HAVING_DOC,
     nest: QUERY_NEST_DOC,
+    declare: QUERY_DECLARE_DOC,
   },
   explore_property: {
     dimension: SOURCE_DIMENSION_DOC,
@@ -327,5 +357,6 @@ export const COMPLETION_DOCS: {
     rename: SOURCE_RENAME_DOC,
     accept: SOURCE_ACCEPT_DOC,
     except: SOURCE_EXCEPT_DOC,
+    declare: SOURCE_DECLARE_DOC,
   },
 };
