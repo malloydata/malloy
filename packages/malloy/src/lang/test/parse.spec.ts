@@ -53,8 +53,8 @@ abstract class Testable extends TestTranslator {
 }
 
 class BetaModel extends Testable {
-  constructor(s: string) {
-    super(s);
+  constructor(readonly testSrc: string) {
+    super(testSrc);
   }
 
   compile(): void {
@@ -81,10 +81,13 @@ class BetaModel extends Testable {
     return undefined;
   }
 
-  getQuery(queryName: string): Query | undefined {
+  getQuery(queryName: string | number): Query | undefined {
     const t = this.translate().translated;
     if (t) {
-      const s = t.modelDef.contents[queryName];
+      const s =
+        typeof queryName == "string"
+          ? t.modelDef.contents[queryName]
+          : t.queryList[queryName];
       if (s.type == "query") {
         return s;
       }
@@ -189,17 +192,33 @@ expect.extend({
       message: () => "",
     };
   },
-  compileToFailWith: function (s: MarkedSource | string, ...msgs: string[]) {
-    const src = typeof s == "string" ? s : s.code;
+  compileToFailWith: function (
+    s: MarkedSource | string | BetaModel,
+    ...msgs: string[]
+  ) {
     let emsg = "Compile Error expectation not met\nExpected error";
+    let mSrc: MarkedSource | undefined;
     const qmsgs = msgs.map((s) => `error '${s}'`);
     if (msgs.length == 1) {
       emsg += ` ${qmsgs[0]}`;
     } else {
       emsg += `s [\n${qmsgs.join("\n")}\n]`;
     }
+    let m: BetaModel;
+    let src: string;
+    if (s instanceof BetaModel) {
+      m = s;
+      src = m.testSrc;
+    } else {
+      if (typeof s == "string") {
+        src = s;
+      } else {
+        src = s.code;
+        mSrc = s;
+      }
+      m = new BetaModel(src);
+    }
     emsg += `\nSource:\n${src}`;
-    const m = new BetaModel(src);
     const t = m.translate();
     if (t.translated) {
       return { pass: false, message: () => emsg };
@@ -222,9 +241,9 @@ expect.extend({
         if (msg != err.message) {
           explain.push(`Expected: ${msg}\nGot: ${err.message}`);
         } else {
-          if (typeof s != "string" && s.locations[i]) {
+          if (mSrc?.locations[i]) {
             const have = err.at?.range;
-            const want = s.locations[i].range;
+            const want = mSrc.locations[i].range;
             if (!this.equals(have, want)) {
               explain.push(
                 `Expected '${msg}' at location: ${inspect(want)}\n` +
@@ -267,7 +286,8 @@ class BetaExpression extends Testable {
     if (exprAst instanceof ExpressionDef) {
       const aStruct = this.internalModel.contents.ab;
       if (aStruct.type === "struct") {
-        const exprDef = exprAst.getExpression(new StaticSpace(aStruct));
+        const tstFS = new StaticSpace(aStruct);
+        const exprDef = exprAst.getExpression(tstFS);
         if (inspectCompile) {
           console.log("EXPRESSION: ", pretty(exprDef));
         }
@@ -460,15 +480,88 @@ describe("model statements", () => {
         expect(q.pipeline.length).toBe(1);
       }
     });
+    test(
+      "all ungroup with args",
+      modelOK(`
+        query: a -> {
+          group_by: astr
+          nest: by_int is {
+            group_by: ai
+            aggregate: bi_count is all(count(), ai)
+          }
+        }
+      `)
+    );
+    test("all ungroup checks args", () => {
+      expect(`
+      query: a -> {
+        group_by: astr
+        nest: by_int is {
+          group_by: ai
+          aggregate: bi_count is all(count(), afloat)
+        }
+      }
+    `).compileToFailWith(`all() 'afloat' is missing from query output`);
+    });
+    test(
+      "exclude ungroup with args",
+      modelOK(`
+        query: a -> {
+          group_by: aa is 'a'
+          nest: by_b is {
+            group_by: bb is 'b'
+            nest: by_c is {
+              group_by: cc is 'c'
+              aggregate: bb_count is exclude(count(), aa, cc)
+            }
+          }
+        }
+      `)
+    );
+    test("exclude ungroup checks args", () => {
+      expect(`
+        query: a -> {
+          group_by: aa is 'a'
+          nest: by_b is {
+            group_by: bb is 'b'
+            nest: by_c is {
+              group_by: cc is 'c'
+              aggregate: bb_count is exclude(count(), aaa, cc)
+            }
+          }
+        }
+      `).compileToFailWith("exclude() 'aaa' is missing from query output");
+    });
+    test(
+      "exclude problem revealed by production models",
+      modelOK(`
+        source: carriers is table('malloytest.carriers') {
+          primary_key: code
+        }
+        source: flights is table('malloytest.flights') {
+          primary_key: id2
+          join_one: carriers with carrier
+
+          query: carrier_overview is {
+            group_by: carrier_name is carriers.nickname
+            nest: top_destinations is {
+              group_by: destination
+              aggregate:
+                flights_to_dest is exclude(count(), carrier_name)*100
+            }
+          }
+        }
+      `)
+    );
   });
   describe("import:", () => {
     test("simple import", () => {
       const docParse = new BetaModel(`import "child"`);
       const xr = docParse.unresolved();
       expect(docParse).toBeErrorless();
-      expect(xr).toEqual({ urls: ["internal://test/child"] });
+      expect(xr).toEqual({ urls: ["internal://test/langtests/child"] });
       docParse.update({
-        urls: { "internal://test/child": "explore: aa is a" },
+        urls: { "internal://test/langtests/child": "explore: aa is a" },
       });
       const yr = docParse.unresolved();
       expect(yr).toBeNull();
@@ -477,10 +570,10 @@ describe("model statements", () => {
       const docParse = new BetaModel(`import "child"`);
       const xr = docParse.unresolved();
       expect(docParse).toBeErrorless();
-      expect(xr).toEqual({ urls: ["internal://test/child"] });
+      expect(xr).toEqual({ urls: ["internal://test/langtests/child"] });
       const reportedError = "ENOWAY: No way to find your child";
       docParse.update({
-        errors: { urls: { "internal://test/child": reportedError } },
+        errors: { urls: { "internal://test/langtests/child": reportedError } },
       });
       docParse.translate();
       expect(docParse).not.toBeErrorless();
@@ -489,11 +582,38 @@ describe("model statements", () => {
     test("chained imports", () => {
       const docParse = new BetaModel(`import "child"`);
       docParse.update({
-        urls: { "internal://test/child": `import "grandChild"` },
+        urls: { "internal://test/langtests/child": `import "grandChild"` },
       });
       const xr = docParse.unresolved();
       expect(docParse).toBeErrorless();
-      expect(xr).toEqual({ urls: ["internal://test/grandChild"] });
+      expect(xr).toEqual({ urls: ["internal://test/langtests/grandChild"] });
+    });
+    test("relative imports", () => {
+      const docParse = new BetaModel(`import "../parent.malloy"`);
+      expect(docParse).toCompile();
+      const xr = docParse.unresolved();
+      expect(xr).toEqual({ urls: ["internal://test/parent.malloy"] });
+      docParse.update({
+        urls: {
+          "internal://test/parent.malloy": `source: aa is table('aTable')`,
+        },
+      });
+      expect(docParse).toTranslate();
+    });
+    test("relative imports with errors", () => {
+      const docParse = new BetaModel(`import "../parent.malloy"`);
+      expect(docParse).toCompile();
+      const xr = docParse.unresolved();
+      expect(xr).toEqual({ urls: ["internal://test/parent.malloy"] });
+      docParse.update({
+        urls: {
+          "internal://test/parent.malloy": `
+            source: aa is table('aTable') {
+              dimension: astr is 'not legal beause astr exists'
+            }`,
+        },
+      });
+      expect(docParse).compileToFailWith("Cannot redefine 'astr'");
     });
   });
 });
@@ -686,12 +806,44 @@ describe("qops", () => {
   test("index path", modelOK("query:ab->{index: ab.astr}"));
   test("index unique on path", modelOK("query:ab->{index: b.astr, ab.astr}"));
   test("index join.*", modelOK("query:ab->{index: ab.*}"));
-  test("index multiple", modelOK("query:a->{index: astr,af}"));
-  test("index star", modelOK("query:a->{index: *}"));
+  test("index multiple", () => {
+    const model = new BetaModel("query:a->{index: af, astr}");
+    expect(model).toTranslate();
+    const q = model.getQuery(0);
+    expect(q).toBeDefined();
+    if (q) {
+      const index = q.pipeline[0];
+      expect(index.type).toBe("index");
+      expect(index.fields).toEqual(["af", "astr"]);
+    }
+  });
+  test("index star", () => {
+    const model = new BetaModel("query:a->{index: *, astr}");
+    expect(model).toTranslate();
+    const q = model.getQuery(0);
+    expect(q).toBeDefined();
+    if (q) {
+      const index = q.pipeline[0];
+      expect(index.type).toBe("index");
+      expect(index.fields).toEqual(["*", "astr"]);
+    }
+  });
   test("index by", modelOK("query:a->{index: * by ai}"));
   test("index sampled", modelOK("query:a->{index: *; sample: true}"));
   test("index unsampled", modelOK("query:a->{index: *; sample: false}"));
-  test("index sample-percent", modelOK("query:a->{index: *; sample: 27%}"));
+  test("index sample-percent", () => {
+    const model = new BetaModel("query:a->{index: *; sample: 42%}");
+    expect(model).toTranslate();
+    const q = model.getQuery(0);
+    expect(q).toBeDefined();
+    if (q) {
+      const index = q.pipeline[0];
+      expect(index.type).toBe("index");
+      if (index.type == "index") {
+        expect(index.sample).toEqual({ percent: 42 });
+      }
+    }
+  });
   test("index sample-rows", modelOK("query:a->{index: *; sample: 100000}"));
   test("top N", modelOK("query: a->{ top: 5; group_by: astr }"));
   test("top N by field", modelOK("query: a->{top: 5 by af; group_by: astr}"));
@@ -1135,7 +1287,10 @@ describe("sql backdoor", () => {
       import "createModel.malloy"
       source: foo is malloyUsers
     `);
-    model.importZone.define("internal://test/createModel.malloy", createModel);
+    model.importZone.define(
+      "internal://test/langtests/createModel.malloy",
+      createModel
+    );
     const needReq = model.translate();
     expect(model).toBeErrorless();
     const needs = needReq?.sqlStructs;
@@ -1155,6 +1310,13 @@ describe("sql backdoor", () => {
 });
 
 describe("error handling", () => {
+  test("field and query with same name does not overflow", () => {
+    expect(`
+      source: flights is table('malloytest.flights') {
+        query: carrier is { group_by: carrier }
+      }
+    `).compileToFailWith("Cannot redefine 'carrier'");
+  });
   test("redefine source", () => {
     expect(markSource`
       source: airports is table('malloytest.airports') + {
@@ -1195,8 +1357,8 @@ describe("error handling", () => {
   test(
     "reference to field in its definition",
     badModel(
-      `explore: na is a { dimension: astr is UPPER(astr) } `,
-      "Circular reference to 'astr' in definition"
+      `explore: na is a { dimension: ustr is UPPER(ustr) } `,
+      "Circular reference to 'ustr' in definition"
     )
   );
   test("empty model", modelOK(""));
@@ -1258,6 +1420,24 @@ describe("error handling", () => {
       }
     `).compileToFailWith("Output already has a field named 'astr'");
   });
+  test(
+    "rejoin a query is renamed",
+    modelOK(`
+      source: querySrc is from(
+        table('malloytest.flights')->{
+          group_by: origin
+          nest: nested is { group_by: destination }
+        }
+      )
+
+    source: refineQuerySrc is querySrc {
+      join_one: rejoin is querySrc on 7=8
+      query: broken is {
+        group_by: rejoin.nested.destination
+      }
+    }
+    `)
+  );
 });
 
 function getSelectOneStruct(sqlBlock: SQLBlock): StructDef {

@@ -3,6 +3,15 @@ _Breaking changes indicated with *_
 
 We will use this space to highlight major and/or breaking changes to Malloy.
 
+## v0.2.x
+
+### VS Code helper view windows relocated
+
+To improve discoverability and reduce extra clicking around in VS Code, we've relocated the Help, Connections, and Schema View Windows into the Explorer View. They will only appear when a `.malloy` file is opened. 
+
+<img width="1365" alt="Screen Shot 2022-08-08 at 11 32 26 AM" src="https://user-images.githubusercontent.com/7178946/183488595-0c88591d-a162-4272-a937-e15261bf50c5.png">
+
+
 ## v0.0.10
 
 ### The apply operator is now ? and not :

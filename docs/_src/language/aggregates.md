@@ -70,6 +70,25 @@ query: flights -> {
 }
 ```
 
+## Ungrouped Aggregates
+
+In a query which is grouped by multiple dimensions, it is often useful to be able to perform an aggregate calculation on sub-groups to determine subtotals. The `all()` and `exclude` functions in Malloy allow control over grouping and ungrouping, making this simple:
+
+```malloy
+--! {"isRunnable": true, "runMode": "auto", "source": "faa/airports.malloy"}
+query: airports -> {
+  group_by: state, faa_region
+  aggregate:
+    count_airports is count()
+    overall_airports is all(count())
+    percent_of_total is count() / all(count())*100.0
+    airports_in_region is all(count(), faa_region)
+    percent_in_region is count() / all(count(), faa_region)*100.0
+}
+```
+
+Read more about Ungrouped Aggregates [here](ungrouped-aggregates.md).
+
 ## Aggregate Locality
 
 In SQL, some kinds of aggregations are difficult to express because locality of aggregation is restricted to the top level of a query. Malloy
@@ -193,151 +212,3 @@ query: aircraft -> {
     avg_on_field is aircraft_models.seats.avg()
 }
 ```
-
-
-
-
-
-<!--
-In SQL, it is easy to make mistakes when computing sums and averages,
-particularly when joins are involved. An approach known as _symmetric aggregates_ solves one such common mistake by making the behavior of
-aggregate functions consistent regardless of the structure of the query.
-
-### The Problem
-
-Consider a simple SQL query with an aggregate, like the following query,
-which gives the average age of all users.
-
-```sql
-SELECT AVG(age)
-FROM users
-```
-
-```malloy
---! {"isRunnable": true, "runMode": "auto", "source": "ecommerce/ecommerce.malloy"}
-explore users
-| reduce average_age is avg(age)
-```
-
-If we instead calculate the average age of users in a query against the
-order items table joining in the users table, we get a different answer.
-
-```sql
-SELECT AVG(users.age)
-FROM order_items
-JOIN users ON order_items.user_id = users.id
-```
-
-```malloy
---! {"isRunnable": true, "runMode": "auto", "source": "ecommerce/ecommerce.malloy"}
-explore order_items
-| reduce users is avg(users.age)
-```
-
-The reason for this is that we're actually _not_ computing the average user age at all. To explain this, we'll look at a sample of the users table:
-
-```sql
-SELECT id, age
-FROM users
-LIMIT 5
-ORDER BY id ASC
-```
-
-```malloy
---! {"isRunnable": true, "runMode": "auto", "source": "ecommerce/ecommerce.malloy", "pageSize": 20}
-explore users
-| project top 20 order by id
-  id
-  age
-```
-
-And we'll compare this to the composite table that is generated when you join `users` onto `order_items`.
-
-```sql
-SELECT order_items.id as order_item_id, users.id as user_id, age
-FROM order_items
-JOIN users ON order_items.user_id = users.id
-```
-
-```malloy
---! {"isRunnable": true, "runMode": "auto", "source": "ecommerce/ecommerce.malloy", "pageSize": 20}
-explore order_items
-| project top 20 order by order_items_id asc
-  order_items_id is id
-  user_id is users.id
-  users.age
-```
-
-Here we can see that some `user_id`s appear more than once, and others not at all; so when we compute the average age over this table, we end up with the
-average user age _weighted by number of items purchased_.
-
-### The Solution
-
-In SQL, a query containing a join first computes a composite table, then performs aggregations on it. In Malloy, the two steps can be logically combined so that aggregates are computed based on the primary key of the table that is joined in.
-
-```malloy
---! {"isRunnable": true, "runMode": "auto", "source": "ecommerce/ecommerce.malloy"}
-query: order_items->{
-  aggregate:
-    symmetric_avg is users.age.avg()
-    asymmetric_avg is avg(users.age)
-}
-```
-
-
-In SQL, when computing an aggregate such as a sum or an average, it is important
-to do so against the base table in the <code>FROM</code> statement,
-rather than against a combination table resulting from a join. Failing to do
-so
-
-
-In SQL, when you compute a sum or an average, you have to be computing it against the base table in the FROM statement.
-
-`orders` -- only `orders.sum()` or or `avg(orders.whatever)`. If you try to compute an aggregate in something else, it's going to be wrong.
-
-This makes it really easy to make mistakes. You can write a query, then add a join, and suddenly your query no longer works.
-
-Simple example:
-
-```sql
-SELECT AVG(age) FROM users
-```
-
-44.3964
-
-Add a JOIN
-
-```sql
-SELECT AVG(age) FROM users
-JOIN orders on orders.user_id = users.id
-```
-
-45.4151
-
-```sql
-SELECT
-  users.id AS user_id
-  , users.age AS age
-  -- , orders.id AS order_id
-FROM users
--- LEFT JOIN orders ON orders.user_id = users.id
-ORDER BY users.id
-LIMIT 10
-```
-
-```sql
-SELECT
-  users.id AS user_id
-  , users.age AS age
-  , orders.id AS order_id
-FROM users
-LEFT JOIN orders ON orders.user_id = users.id
-ORDER BY users.id
-LIMIT 10
-```
-
-When orders is joined in, SQL makes a new table that is the combination table of users and orders, so each user is repeated by the number of times they made an order. Therefore, the average age is weighted by their number of orders.
-
-In SQL, first you do the relations to build a joined table, then you do the aggregations. In Looker, the two steps are logically combined, so we aggregate as we join. The aggregates are computed based on the primary key of the table that you're joining into.
-
-This radically simplifies the way that you write queries. -->

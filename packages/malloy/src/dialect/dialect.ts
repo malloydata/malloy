@@ -19,7 +19,17 @@ import {
   DialectFragment,
   TimeValue,
 } from "..";
-import { Expr, Sampling, StructDef, TypecastFragment } from "../model";
+// Can't get these from "../model" because model includes this file
+// and that can create a circular reference problem. This is a patch
+// and really indicates a problem in the relationship between
+// dialect and model, it's going to come up again some time.
+import {
+  mkExpr,
+  Expr,
+  Sampling,
+  StructDef,
+  TypecastFragment,
+} from "../model/malloy_types";
 
 interface DialectField {
   type: string;
@@ -133,6 +143,7 @@ export abstract class Dialect {
   }
   abstract sqlMaybeQuoteIdentifier(identifier: string): string;
 
+  abstract sqlNow(): Expr;
   abstract sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr;
   abstract sqlExtract(sqlTime: TimeValue, units: ExtractUnit): Expr;
   abstract sqlMeasureTime(
@@ -170,6 +181,8 @@ export abstract class Dialect {
 
   dialectExpr(df: DialectFragment): Expr {
     switch (df.function) {
+      case "now":
+        return this.sqlNow();
       case "timeDiff":
         return this.sqlMeasureTime(df.left, df.right, df.units);
       case "delta":
@@ -182,6 +195,14 @@ export abstract class Dialect {
         return this.sqlCast(df);
       case "regexpMatch":
         return this.sqlRegexpMatch(df.expr, df.regexp);
+      case "div": {
+        if (this.divisionIsInteger) {
+          return mkExpr`${df.numerator}*1.0/${df.denominator}`;
+        }
+        return mkExpr`${df.numerator}/${df.denominator}`;
+      }
+      case "timeLiteral":
+        return [this.sqlLiteralTime(df.literal, df.literalType, df.timezone)];
     }
   }
 

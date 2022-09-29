@@ -14,7 +14,7 @@
 import { CommonTokenStream, ParserRuleContext } from "antlr4ts";
 import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import { ParseTree } from "antlr4ts/tree";
-import { MalloyListener } from "../lib/Malloy/MalloyListener";
+import { MalloyParserListener } from "../lib/Malloy/MalloyParserListener";
 import * as parser from "../lib/Malloy/MalloyParser";
 
 export interface DocumentCompletion {
@@ -51,7 +51,7 @@ const QUERY_PROPERTIES = [
 
 const MODEL_PROPERTIES = ["source", "explore", "query", "sql"];
 
-class DocumentCompletionWalker implements MalloyListener {
+class DocumentCompletionWalker implements MalloyParserListener {
   constructor(
     readonly tokens: CommonTokenStream,
     readonly completions: DocumentCompletion[],
@@ -79,14 +79,16 @@ class DocumentCompletionWalker implements MalloyListener {
     start: { line: number; character: number };
     end: { line: number; character: number };
   }): boolean {
-    return (
-      range.start.line <= this.position.line &&
-      range.end.line >= this.position.line &&
-      (this.position.line !== range.start.line ||
-        this.position.character >= range.start.character) &&
-      (this.position.line !== range.end.line ||
-        this.position.character <= range.end.character)
-    );
+    const { start, end } = range;
+    const afterStart =
+      this.position.line > start.line ||
+      (this.position.line === start.line &&
+        this.position.character >= start.character);
+    const beforeEnd =
+      this.position.line < end.line ||
+      (this.position.line === end.line &&
+        this.position.character <= end.character);
+    return afterStart && beforeEnd;
   }
 
   enterExploreProperties(ctx: parser.ExplorePropertiesContext) {
@@ -153,7 +155,7 @@ export function walkForDocumentCompletions(
   position: { line: number; character: number }
 ): DocumentCompletion[] {
   const finder = new DocumentCompletionWalker(tokens, [], position);
-  const listener: MalloyListener = finder;
+  const listener: MalloyParserListener = finder;
   ParseTreeWalker.DEFAULT.walk(listener, parseTree);
   return finder.completions;
 }

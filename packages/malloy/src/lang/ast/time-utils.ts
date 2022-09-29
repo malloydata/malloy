@@ -17,6 +17,7 @@ import {
   TimeFieldType,
   TypecastFragment,
   AtomicFieldType,
+  TimeLiteralFragment,
 } from "../../model/malloy_types";
 import { GranularResult, TimeResult } from "./ast-types";
 
@@ -98,4 +99,19 @@ export function timeResult(
     return { ...t, timeframe: tt };
   }
   return t;
+}
+
+export function timeLiteral(
+  literalStr: string,
+  timeType: TimeFieldType,
+  tz: string
+): Expr {
+  const fragment: TimeLiteralFragment = {
+    type: "dialect",
+    function: "timeLiteral",
+    literal: literalStr,
+    literalType: timeType,
+    timezone: tz,
+  };
+  return [fragment];
 }

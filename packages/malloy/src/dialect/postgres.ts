@@ -69,7 +69,9 @@ export class PostgresDialect extends Dialect {
   supportUnnestArrayAgg = true;
   supportsCTEinCoorelatedSubQueries = true;
 
-  functionInfo: Record<string, FunctionInfo> = {};
+  functionInfo: Record<string, FunctionInfo> = {
+    concat: { returnType: "string" },
+  };
 
   quoteTablePath(tablePath: string): string {
     return tablePath
@@ -266,6 +268,10 @@ export class PostgresDialect extends Dialect {
     throw new Error("Not implemented Yet");
   }
 
+  sqlNow(): Expr {
+    return mkExpr`CURRENT_TIMESTAMP`;
+  }
+
   sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {
     // adjusting for monday/sunday weeks
     const week = units == "week";
@@ -321,8 +327,8 @@ export class PostgresDialect extends Dialect {
     }
   }
 
-  getFunctionInfo(_functionName: string): FunctionInfo | undefined {
-    return undefined;
+  getFunctionInfo(functionName: string): FunctionInfo | undefined {
+    return this.functionInfo[functionName];
   }
 
   sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {

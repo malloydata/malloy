@@ -15,7 +15,9 @@
 /* eslint-disable no-console */
 
 /*
- * This script produces a CSV useful for evaluating licenses for third-party software incuded in a binary.
+ * This script produces a CSV useful for evaluating licenses for third-party software incuded in a binary, and
+ * is a bit more complex than it might need to be because we need to satisfy lawyers with direct links to license files for packages
+ * (not just links to the module on npmjs.com)
  * It requires one argument, the filename of the CSV. It outputs a CSV with columns described in `outputRow` interface
  */
 
@@ -45,8 +47,8 @@ axios.defaults.httpsAgent = new https.Agent({ keepAlive: true });
 const malloyPackages = [
   "@malloydata/malloy",
   "@malloydata/render",
-  "malloy-vscode",
-  "@malloydata/db-test",
+  "vscode-extension",
+  "test",
   "@malloydata/db-bigquery",
   "@malloydata/db-postgres",
   "@malloydata/db-duckdb",
@@ -204,7 +206,7 @@ const getLicenses = async () => {
       }
     }
 
-    row.copyrightIncluded = "true"; // we include copyright via yarn licenses generate-disclaimer
+    row.copyrightIncluded = "true";
 
     // if we happened to add a lib with a mirror-required license, mark a TODO
     if (sourceMirrorLicenses.includes(row.licenseName as string)) {

@@ -14,7 +14,7 @@
 import { CommonTokenStream, ParserRuleContext } from "antlr4ts";
 import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import { ParseTree } from "antlr4ts/tree";
-import { MalloyListener } from "../lib/Malloy/MalloyListener";
+import { MalloyParserListener } from "../lib/Malloy/MalloyParserListener";
 import * as parser from "../lib/Malloy/MalloyParser";
 import { MalloyParser } from "../lib/Malloy/MalloyParser";
 import { Token } from "antlr4ts/Token";
@@ -82,7 +82,6 @@ export const HighlightType = {
     Aggregate: "property.aggregate",
     Dimension: "property.dimension",
     Except: "property.except",
-    Explore: "property.explore",
     Source: "property.source",
     GroupBy: "property.group_by",
     Having: "property.having",
@@ -149,9 +148,6 @@ export function passForHighlights(
       case MalloyParser.EXCEPT:
         register(token, HighlightType.Property.Except, true);
         break;
-      case MalloyParser.EXPLORE:
-        register(token, HighlightType.Property.Explore, true);
-        break;
       case MalloyParser.GROUP_BY:
         register(token, HighlightType.Property.GroupBy, true);
         break;
@@ -193,6 +189,9 @@ export function passForHighlights(
         break;
       case MalloyParser.RENAME:
         register(token, HighlightType.Property.Rename, true);
+        break;
+      case MalloyParser.SOURCE:
+        register(token, HighlightType.Property.Source, true);
         break;
       case MalloyParser.TOP:
         register(token, HighlightType.Property.Top, true);
@@ -331,7 +330,7 @@ export function passForHighlights(
   return highlights;
 }
 
-class DocumentHighlightWalker implements MalloyListener {
+class DocumentHighlightWalker implements MalloyParserListener {
   constructor(
     readonly tokens: CommonTokenStream,
     readonly highlights: DocumentHighlight[]
@@ -370,7 +369,7 @@ export function walkForDocumentHighlights(
   parseTree: ParseTree
 ): DocumentHighlight[] {
   const finder = new DocumentHighlightWalker(tokens, []);
-  const listener: MalloyListener = finder;
+  const listener: MalloyParserListener = finder;
   ParseTreeWalker.DEFAULT.walk(listener, parseTree);
   return finder.highlights;
 }

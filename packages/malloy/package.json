@@ -1,15 +1,15 @@
 {
   "name": "@malloydata/malloy",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "GPL-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest --config=../../jest.config.js",
-    "build-parser": "cd src/lang/grammar && cross-os build-parser",
-    "testLang": "yarn test --testPathPattern=packages/malloy/src/lang",
+    "build-parser": "node src/lang/grammar/build_parser.js",
+    "testLang": "npm run test --testPathPattern=packages/malloy/src/lang",
     "clean": "rm -rf src/lang/lib",
-    "build": "yarn build-parser && yarn tsc --build",
+    "build": "npm run build-parser && tsc --build",
     "malloyc": "ts-node ../../scripts/malloy-to-json"
   },
   "dependencies": {
@@ -18,6 +18,7 @@
     "blueimp-md5": "^2.19.0",
     "lodash": "^4.17.20",
     "luxon": "^1.26.0",
+    "md5": "^2.3.0",
     "url": "^0.11.0"
   },
   "devDependencies": {
@@ -25,12 +26,5 @@
     "@types/luxon": "^1.26.4",
     "antlr4ts-cli": "^0.5.0-alpha.4",
     "path": "^0.12.7"
-  },
-  "cross-os": {
-    "build-parser": {
-      "darwin": "sh build-parser.sh",
-      "linux": "sh build-parser.sh",
-      "win32": "build-parser.cmd"
-    }
   }
 }

@@ -8,13 +8,13 @@
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
-    "build": "yarn tsc --build",
+    "build": "tsc --build",
     "malloyc": "ts-node ../../scripts/malloy-to-json"
   },
   "dependencies": {
     "@google-cloud/bigquery": "^5.5.0",
     "@google-cloud/common": "^3.6.0",
-    "gaxios": "^4.2.0",
-    "@malloydata/malloy": "*"
+    "@malloydata/malloy": "*",
+    "gaxios": "^4.2.0"
   }
 }

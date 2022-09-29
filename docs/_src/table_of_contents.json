@@ -4,11 +4,15 @@
       "title": "Getting Started",
       "items": [
         {
-          "title": "Malloy By Example",
+          "title": "About Malloy",
           "link": "/index.md"
         },
         {
-          "title": "Malloy Quickstart",
+          "title": "Malloy By Example",
+          "link": "/malloy_by_example.md"
+        },
+        {
+          "title": "Quickstart",
           "link": "/language/basic.md"
         },
         {
@@ -160,12 +164,21 @@
       "title": "Examples",
       "items": [
         {
-          "title": "eCommerce Analysis",
-          "link": "/examples/ecommerce.md"
+          "title": "NTSB Flight Database",
+          "items": [
+            {
+              "title": "FAA Dashboards",
+              "link": "/examples/faa/bigquery.md"
+            },
+            {
+              "title": "Connect with Postgres",
+              "link": "/examples/faa/postgres.md"
+            }
+          ]
         },
         {
-          "title": "NTSB Flight Database",
-          "link": "/examples/faa.md"
+          "title": "eCommerce Analysis",
+          "link": "/examples/ecommerce.md"
         },
         {
           "title": "The Name Game",

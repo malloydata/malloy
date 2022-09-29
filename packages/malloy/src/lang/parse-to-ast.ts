@@ -14,7 +14,7 @@
 import { ParserRuleContext } from "antlr4ts";
 import type { ParseTree } from "antlr4ts/tree";
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
-import { MalloyVisitor } from "./lib/Malloy/MalloyVisitor";
+import { MalloyParserVisitor } from "./lib/Malloy/MalloyParserVisitor";
 import * as parse from "./lib/Malloy/MalloyParser";
 import * as ast from "./ast";
 import { MessageLogger } from "./parse-log";
@@ -28,7 +28,7 @@ import { LogSeverity } from "./parse-log";
  */
 export class MalloyToAST
   extends AbstractParseTreeVisitor<ast.MalloyElement>
-  implements MalloyVisitor<ast.MalloyElement>
+  implements MalloyParserVisitor<ast.MalloyElement>
 {
   constructor(readonly parse: MalloyParseRoot, readonly msgLog: MessageLogger) {
     super();
@@ -903,10 +903,15 @@ export class MalloyToAST
     );
   }
 
-  visitExprUngrouped(pcx: parse.ExprUngroupedContext): ast.ExprUngrouped {
+  visitExprUngroup(pcx: parse.ExprUngroupContext): ast.ExprUngroup {
     const flist = pcx.fieldName().map((fcx) => this.getFieldName(fcx));
+    const kw = this.getIdText(pcx.ungroup()).toLocaleLowerCase();
     return this.astAt(
-      new ast.ExprUngrouped(this.getFieldExpr(pcx.fieldExpr()), flist),
+      new ast.ExprUngroup(
+        kw == "all" ? kw : "exclude",
+        this.getFieldExpr(pcx.fieldExpr()),
+        flist
+      ),
       pcx
     );
   }
@@ -1130,7 +1135,7 @@ export class MalloyToAST
   }
 
   visitSQLStatementDef(pcx: parse.SqlStatementDefContext): ast.SQLStatement {
-    const commands = pcx.sqlBlock().text;
+    const commands = pcx.SQL_STRING().text;
     const sqlStmt = new ast.SQLStatement({
       select: commands.slice(2, commands.length - 2),
       connection: this.optionalText(pcx.connectionName()),

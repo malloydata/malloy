@@ -43,6 +43,7 @@ import {
   timeOffset,
   resolution,
   castDateToTimestamp,
+  timeLiteral,
 } from "./index";
 
 export class Timeframe extends MalloyElement {
@@ -280,26 +281,20 @@ export class GranularLiteral extends ExpressionDef {
         rangeType = "date";
       }
       const range = new Range(
-        new ExprTime(
-          rangeType,
-          fs.getDialect().sqlLiteralTime(this.moment, rangeType, "UTC")
-        ),
-        new ExprTime(
-          rangeType,
-          fs.getDialect().sqlLiteralTime(this.until, rangeType, "UTC")
-        )
+        new ExprTime(rangeType, timeLiteral(this.moment, rangeType, "UTC")),
+        new ExprTime(rangeType, timeLiteral(this.until, rangeType, "UTC"))
       );
       return range.apply(fs, op, left);
     }
     return super.apply(fs, op, left);
   }
 
-  getExpression(fs: FieldSpace): ExprValue {
+  getExpression(_fs: FieldSpace): ExprValue {
     const dataType = this.timeType || "date";
     const value: TimeResult = {
       dataType,
       aggregate: false,
-      value: [fs.getDialect().sqlLiteralTime(this.moment, dataType, "UTC")],
+      value: timeLiteral(this.moment, dataType, "UTC"),
     };
     // Literals with date resolution can be used as timestamps or dates,
     // this is the third attempt to make that work. It still feels like
@@ -320,10 +315,20 @@ export class GranularLiteral extends ExpressionDef {
   }
 }
 
-export class ExprNow extends ExprTime {
-  elementType = "now";
-  constructor() {
-    super("timestamp", mkExpr`CURRENT_TIMESTAMP()`, false);
+export class ExprNow extends ExpressionDef {
+  elementType = "timestamp";
+
+  getExpression(_fs: FieldSpace): ExprValue {
+    return {
+      dataType: "timestamp",
+      aggregate: false,
+      value: [
+        {
+          type: "dialect",
+          function: "now",
+        },
+      ],
+    };
   }
 }
 
@@ -641,8 +646,11 @@ export class ExprFunc extends ExpressionDef {
     }
     funcCall.push(")");
 
-    const funcInfo = fs.getDialect().getFunctionInfo(this.name);
-    const dataType = funcInfo?.returnType ?? collectType ?? "number";
+    const dialect = fs.dialectObj();
+    const dataType =
+      dialect?.getFunctionInfo(this.name)?.returnType ??
+      collectType ??
+      "number";
     return {
       dataType: dataType,
       aggregate: anyAggregate,

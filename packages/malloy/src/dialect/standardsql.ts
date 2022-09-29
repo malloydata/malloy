@@ -62,6 +62,7 @@ export class StandardSQLDialect extends Dialect {
 
   functionInfo: Record<string, FunctionInfo> = {
     timestamp_seconds: { returnType: "timestamp" },
+    concat: { returnType: "string" },
   };
 
   quoteTablePath(tablePath: string): string {
@@ -309,6 +310,10 @@ ${indent(sql)}
     return this.keywords.indexOf(identifier.toUpperCase()) > 0
       ? "`" + identifier + "`"
       : identifier;
+  }
+
+  sqlNow(): Expr {
+    return mkExpr`CURRENT_TIMESTAMP()`;
   }
 
   sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {

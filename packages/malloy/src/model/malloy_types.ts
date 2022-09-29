@@ -173,14 +173,15 @@ export function isAsymmetricFragment(f: Fragment): f is AggregateFragment {
   return isAggregateFragment(f) && ["sum", "avg", "count"].includes(f.function);
 }
 
-export interface UngroupedFragment {
-  type: "ungrouped";
+export interface UngroupFragment {
+  type: "all" | "exclude";
   e: Expr;
   fields?: string[];
 }
 
-export function isTotalFragment(f: Fragment): f is UngroupedFragment {
-  return (f as UngroupedFragment)?.type === "ungrouped";
+export function isUngroupFragment(f: Fragment): f is UngroupFragment {
+  const ftype = (f as UngroupFragment)?.type;
+  return ftype == "all" || ftype == "exclude";
 }
 
 export interface FieldFragment {
@@ -218,6 +219,10 @@ export function isApplyFragment(f: Fragment): f is ApplyFragment {
 interface DialectFragmentBase {
   type: "dialect";
   function: string;
+}
+
+export interface NowFragment extends DialectFragmentBase {
+  function: "now";
 }
 
 export interface TimeDiffFragment extends DialectFragmentBase {
@@ -261,7 +266,23 @@ export interface RegexpMatchFragment extends DialectFragmentBase {
   regexp: string;
 }
 
+export interface DivFragment extends DialectFragmentBase {
+  function: "div";
+  numerator: Expr;
+  denominator: Expr;
+}
+
+export interface TimeLiteralFragment extends DialectFragmentBase {
+  function: "timeLiteral";
+  literal: string;
+  literalType: TimeFieldType;
+  timezone: string;
+}
+
 export type DialectFragment =
+  | DivFragment
+  | TimeLiteralFragment
+  | NowFragment
   | TimeDeltaFragment
   | TimeDiffFragment
   | TimeTruncFragment
@@ -277,7 +298,7 @@ export type Fragment =
   | ParameterFragment
   | FilterFragment
   | AggregateFragment
-  | UngroupedFragment
+  | UngroupFragment
   | DialectFragment;
 
 export type Expr = Fragment[];

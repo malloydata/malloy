@@ -17,6 +17,7 @@ import archiver from "archiver";
 import { performance } from "perf_hooks";
 import { renderDoc } from "./render_document.js";
 import { renderFooter, renderSidebar, Section } from "./page.js";
+import { copyFiddle } from "./fiddle.js";
 import {
   isMarkdown,
   readDirRecursive,
@@ -154,6 +155,7 @@ async function outputSamplesZips(): Promise<void> {
 }
 
 (async () => {
+  await copyFiddle();
   await outputSamplesZips();
   const allFiles = readDirRecursive(DOCS_ROOT_PATH);
   const allDocs = allFiles.filter(isMarkdown);

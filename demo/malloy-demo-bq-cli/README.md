@@ -7,11 +7,11 @@ configuration.
 
 # Building
 
-To build this library, run `yarn workspace malloy-demo-bq-cli build`.
+To build this library, run `npm -w malloy-demo-bq-cli build`.
 
 # Installation
 
-To install this CLI onto your machine, run `yarn workspace malloy-demo-bq-cli install-local`.
+To install this CLI onto your machine, run `npm -w malloy-demo-bq-cli install-local`.
 
 # Usage
 

@@ -1,13 +1,13 @@
 {
   "name": "malloy-composer-demo",
   "description": "Run/Explore/Build Malloy Data Models",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "private": true,
   "main": "./build/main.js",
   "author": "Malloy",
   "license": "GPL-2.0",
   "scripts": {
-    "start": "yarn build && concurrently --kill-others \"yarn start-app\" \"wait-on tcp:3000 && sleep 1 && yarn electron .\"",
+    "start": "npm run build && concurrently --kill-others \"npm run start-app\" \"wait-on tcp:3000 && sleep 1 && electron .\"",
     "start-app": "ts-node scripts/serve",
     "build": "ts-node scripts/build",
     "package": "ts-node scripts/package",
@@ -45,7 +45,7 @@
     "@types/styled-components": "^5.1.19",
     "concurrently": "^6.2.1",
     "electron-packager": "^15.5.1",
-    "esbuild": "^0.14.13",
+    "esbuild": "0.14.13",
     "esbuild-plugin-svgr": "^1.0.1",
     "wait-on": "^6.0.1"
   },

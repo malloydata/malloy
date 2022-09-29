@@ -19,6 +19,7 @@ import {
   LogMessage,
   MalloyTranslator,
 } from "./lang";
+import { DocumentHelpContext } from "./lang/parse-tree-walkers/document-help-context-walker";
 import {
   CompiledQuery,
   FieldBooleanDef,
@@ -721,6 +722,18 @@ export class PreparedQuery {
       this._modelDef
     );
   }
+
+  public get dialect(): string {
+    const sourceRef = this._query.structRef;
+    const source =
+      typeof sourceRef === "string"
+        ? this._modelDef.contents[sourceRef]
+        : sourceRef;
+    if (source.type !== "struct") {
+      throw new Error("Invalid source for query");
+    }
+    return source.dialect;
+  }
 }
 
 export function parseTableURL(tableURL: string): {
@@ -784,6 +797,13 @@ export class Parse {
     return (this.translator.completions(position).completions || []).map(
       (completion) => new DocumentCompletion(completion)
     );
+  }
+
+  public helpContext(position: {
+    line: number;
+    character: number;
+  }): DocumentHelpContext | undefined {
+    return this.translator.helpContext(position).helpContext;
   }
 }
 
@@ -2770,6 +2790,8 @@ class DataTimestamp extends ScalarData<Date> {
     // TODO properly map the data from BQ/Postgres types
     if (this._value instanceof Date) {
       return this._value;
+    } else if (typeof this._value === "number") {
+      return new Date(super.value);
     } else if (typeof this._value !== "string") {
       return new Date((this._value as unknown as { value: string }).value);
     } else {

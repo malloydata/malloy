@@ -12,7 +12,12 @@
  */
 
 import * as model from "../model/malloy_types";
-import { FieldSpace, DynamicSpace, StaticSpace } from "./field-space";
+import {
+  FieldSpace,
+  DynamicSpace,
+  StaticSpace,
+  QuerySpace,
+} from "./field-space";
 import {
   FieldValueType,
   FieldDeclaration,
@@ -175,9 +180,8 @@ export abstract class QueryField extends SpaceField {
     super();
   }
 
-  getQueryFieldDef(_fs: FieldSpace): model.QueryFieldDef | undefined {
-    return this.fieldDef();
-  }
+  abstract getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef | undefined;
+  abstract fieldDef(): model.FieldDef;
 
   type(): FieldType {
     return { type: "turtle" };
@@ -186,6 +190,7 @@ export abstract class QueryField extends SpaceField {
 
 export class QueryFieldAST extends QueryField {
   renameAs?: string;
+  nestParent?: QuerySpace;
   constructor(
     fs: FieldSpace,
     readonly turtle: TurtleDecl,
@@ -194,8 +199,16 @@ export class QueryFieldAST extends QueryField {
     super(fs);
   }
 
+  getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef {
+    const def = this.turtle.getFieldDef(fs, this.nestParent);
+    if (this.renameAs) {
+      def.as = this.renameAs;
+    }
+    return def;
+  }
+
   fieldDef(): model.TurtleDef {
-    const def = this.turtle.getFieldDef(this.inSpace);
+    const def = this.turtle.getFieldDef(this.inSpace, this.nestParent);
     if (this.renameAs) {
       def.as = this.renameAs;
     }
@@ -217,6 +230,10 @@ export class QueryFieldStruct extends QueryField {
 
   fieldDef(): model.TurtleDef {
     return this.turtleDef;
+  }
+
+  getQueryFieldDef(_fs: FieldSpace): model.QueryFieldDef | undefined {
+    return this.fieldDef();
   }
 }
 
@@ -344,8 +361,8 @@ export class ExpressionFieldFromAst extends SpaceField {
     return def;
   }
 
-  getQueryFieldDef(queryInputFS: FieldSpace): model.QueryFieldDef {
-    const def = this.exprDef.queryFieldDef(queryInputFS, this.name);
+  getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef {
+    const def = this.exprDef.queryFieldDef(fs, this.name);
     this.defType = this.fieldTypeFromFieldDef(def);
     return def;
   }
