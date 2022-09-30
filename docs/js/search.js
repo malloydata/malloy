@@ -36,7 +36,7 @@ function search(segments, query) {
       let paragraphScore = 0;
       for (const term of terms) {
         if (textContent(paragraph.text).toLowerCase().includes(term)) {
-          paragraphScore += paragraph.type === "p" ? 10 : 1;
+          paragraphScore += 10;
           found = true;
         }
       }
