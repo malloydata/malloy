@@ -34,6 +34,7 @@ const EXPLORE_PROPERTIES = [
   "accept",
   "except",
   "query",
+  "declare",
 ];
 
 const QUERY_PROPERTIES = [
@@ -47,6 +48,7 @@ const QUERY_PROPERTIES = [
   "where",
   "having",
   "nest",
+  "declare",
 ];
 
 const MODEL_PROPERTIES = ["source", "explore", "query", "sql"];
