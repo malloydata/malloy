@@ -29,8 +29,13 @@ class Renderer {
   private models: Map<string, string>;
   private _errors: { snippet: string; error: string }[] = [];
   private readonly titleStack: { level: number; title: string }[] = [];
-  public readonly searchSegments: { titles: string[]; paragraphs: string[] }[] =
-    [];
+  public readonly searchSegments: {
+    titles: string[];
+    paragraphs: (
+      | { type: "p"; text: string }
+      | { type: "code"; text: string }
+    )[];
+  }[] = [];
 
   constructor(path: string) {
     this.path = path;
@@ -51,6 +56,7 @@ class Renderer {
     let hidden = false;
 
     let result = "";
+    let highlightedCode;
     if (lang === "malloy") {
       if (code.startsWith("--!")) {
         try {
@@ -81,13 +87,18 @@ class Renderer {
         }
       }
 
-      const codeBlock = await highlight(showCode, lang);
-      return `${hidden ? "" : codeBlock}${result}`;
+      highlightedCode = await highlight(showCode, lang);
+    } else {
+      showCode = showCode.replace(/\n$/, "") + "\n";
+      highlightedCode = await highlight(showCode, lang);
     }
 
-    showCode = showCode.replace(/\n$/, "") + "\n";
+    const segment = this.searchSegments[this.searchSegments.length - 1];
+    if (segment) {
+      segment.paragraphs.push({ type: "code", text: highlightedCode });
+    }
 
-    return await highlight(showCode, lang);
+    return `${hidden ? "" : highlightedCode}${result}`;
   }
 
   protected async blockquote(content: Markdown[]) {
@@ -163,7 +174,7 @@ class Renderer {
     const text = await this.children(content);
     const segment = this.searchSegments[this.searchSegments.length - 1];
     if (segment) {
-      segment.paragraphs.push(text);
+      segment.paragraphs.push({ type: "p", text });
     }
     return "<p>" + text + "</p>\n";
   }
@@ -361,7 +372,13 @@ export async function renderDoc(
 ): Promise<{
   renderedDocument: string;
   errors: { snippet: string; error: string }[];
-  searchSegments: { titles: string[]; paragraphs: string[] }[];
+  searchSegments: {
+    titles: string[];
+    paragraphs: (
+      | { type: "p"; text: string }
+      | { type: "code"; text: string }
+    )[];
+  }[];
 }> {
   const ast = unified().use(remarkParse).use(remarkGfm).parse(text);
   const renderer = new Renderer(path);

@@ -44,7 +44,14 @@ const WATCH_ENABLED = process.argv.includes("--watch");
 
 async function compileDoc(file: string): Promise<{
   errors: { path: string; snippet: string; error: string }[];
-  searchSegments: { path: string; titles: string[]; paragraphs: string[] }[];
+  searchSegments: {
+    path: string;
+    titles: string[];
+    paragraphs: (
+      | { type: "p"; text: string }
+      | { type: "code"; text: string }
+    )[];
+  }[];
 }> {
   const startTime = performance.now();
   const shortPath = file.substring(DOCS_ROOT_PATH.length);
@@ -106,7 +113,14 @@ function rebuildSidebarAndFooters() {
 }
 
 function outputSearchSegmentsFile(
-  searchSegments: { path: string; titles: string[]; paragraphs: string[] }[]
+  searchSegments: {
+    path: string;
+    titles: string[];
+    paragraphs: (
+      | { type: "p"; text: string }
+      | { type: "code"; text: string }
+    )[];
+  }[]
 ) {
   const file = `window.SEARCH_SEGMENTS = ${JSON.stringify(
     searchSegments,
