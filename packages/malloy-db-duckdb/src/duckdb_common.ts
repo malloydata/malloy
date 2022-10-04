@@ -291,14 +291,11 @@ export abstract class DuckDBCommon
 
   private async getTableSchema(tableURL: string): Promise<StructDef> {
     const { tablePath } = parseTableURI(tableURL);
-    const quotedTablePath = tablePath.match(/\//)
-      ? `'${tablePath}'`
-      : tablePath;
     const structDef: StructDef = {
       type: "struct",
       name: tablePath,
       dialect: "duckdb",
-      structSource: { type: "table", tablePath: quotedTablePath },
+      structSource: { type: "table", tablePath },
       structRelationship: {
         type: "basetable",
         connectionName: this.name,
@@ -306,6 +303,9 @@ export abstract class DuckDBCommon
       fields: [],
     };
 
+    const quotedTablePath = tablePath.match(/\//)
+      ? `'${tablePath}'`
+      : tablePath;
     const infoQuery = `DESCRIBE SELECT * FROM ${quotedTablePath}`;
     await this.schemaFromQuery(infoQuery, structDef);
     return structDef;
