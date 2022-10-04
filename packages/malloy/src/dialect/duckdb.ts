@@ -127,8 +127,6 @@ const inSeconds: Record<string, number> = {
   second: 1,
   minute: 60,
   hour: 3600,
-  day: 86400,
-  week: 604800,
 };
 
 export class DuckDBDialect extends Dialect {
@@ -314,21 +312,20 @@ export class DuckDBDialect extends Dialect {
       const duration = mkExpr`(${rVal} - ${lVal})`;
       return units == "second"
         ? duration
-        : mkExpr`TRUNC(${duration}/${inSeconds[units].toString()})`;
+        : mkExpr`FLOOR(${duration}/${inSeconds[units].toString()})`;
     }
-    const yearDiff = mkExpr`TRUNC(EXTRACT(YEAR FROM ${rVal}) - EXTRACT(YEAR FROM ${lVal}))`;
-    if (units == "year") {
-      return yearDiff;
+    if (from.valueType != "date") {
+      lVal = mkExpr`CAST((${lVal}) AS DATE)`;
     }
-    if (units == "month") {
-      const monthDiff = mkExpr`TRUNC(EXTRACT(MONTH FROM ${rVal}) - EXTRACT(MONTH FROM ${lVal}))`;
-      return mkExpr`${yearDiff} * 12 + ${monthDiff}`;
+    if (to.valueType != "date") {
+      rVal = mkExpr`CAST((${rVal}) AS DATE)`;
     }
-    if (units == "quarter") {
-      const qDiff = mkExpr`TRUNC(EXTRACT(QUARTER FROM ${rVal}) - EXTRACT(QUARTER FROM ${lVal}))`;
-      return mkExpr`${yearDiff} * 4 + ${qDiff}`;
+    if (units == "week") {
+      // DuckDB's weeks start on Monday, but Malloy's weeks start on Sunday
+      lVal = mkExpr`(${lVal} + INTERVAL 1 DAY)`;
+      rVal = mkExpr`(${rVal} + INTERVAL 1 DAY)`;
     }
-    throw new Error(`Unknown or unhandled postgres time unit: ${units}`);
+    return mkExpr`DATE_DIFF('${units}', ${lVal}, ${rVal})`;
   }
 
   sqlNow(): Expr {
@@ -339,10 +336,10 @@ export class DuckDBDialect extends Dialect {
     // adjusting for monday/sunday weeks
     const week = units == "week";
     const truncThis = week
-      ? mkExpr`${sqlTime.value}+interval'1'day`
+      ? mkExpr`${sqlTime.value} + INTERVAL 1 DAY`
       : sqlTime.value;
     const trunced = mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
-    return week ? mkExpr`(${trunced}-interval'1'day)` : trunced;
+    return week ? mkExpr`(${trunced} - INTERVAL 1 DAY)` : trunced;
   }
 
   sqlExtract(from: TimeValue, units: ExtractUnit): Expr {
@@ -365,8 +362,8 @@ export class DuckDBDialect extends Dialect {
       timeframe = "day";
       n = mkExpr`${n}*7`;
     }
-    const interval = mkExpr`INTERVAL ${n} ${timeframe}`;
-    return mkExpr`((${expr.value})${op}${interval})`;
+    const interval = mkExpr`INTERVAL (${n}) ${timeframe}`;
+    return mkExpr`((${expr.value})) ${op} ${interval}`;
   }
 
   sqlCast(cast: TypecastFragment): Expr {
@@ -387,7 +384,7 @@ export class DuckDBDialect extends Dialect {
     _timezone: string
   ): string {
     if (type == "date") {
-      return `DATE('${timeString}')`;
+      return `DATE '${timeString}'`;
     } else if (type == "timestamp") {
       return `TIMESTAMP '${timeString}'`;
     } else {
