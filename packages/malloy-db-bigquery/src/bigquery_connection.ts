@@ -36,7 +36,7 @@ import {
   QueryDataRow,
   toAsyncGenerator,
 } from "@malloydata/malloy";
-import { parseTableURL } from "@malloydata/malloy";
+import { parseTableURI } from "@malloydata/malloy";
 import { PooledConnection } from "@malloydata/malloy";
 import {
   FetchSchemaAndRunSimultaneously,
@@ -327,7 +327,7 @@ export class BigQueryConnection
   }
 
   public async getTableFieldSchema(tableURL: string): Promise<SchemaInfo> {
-    const { tablePath: tableName } = parseTableURL(tableURL);
+    const { tablePath: tableName } = parseTableURI(tableURL);
     const segments = tableName.split(".");
 
     // paths can have two or three segments
@@ -532,7 +532,7 @@ export class BigQueryConnection
   }
 
   private tableURLtoTablePath(tableURL: string): string {
-    const { tablePath } = parseTableURL(tableURL);
+    const { tablePath } = parseTableURI(tableURL);
     if (tablePath.split(".").length === 2) {
       return `${this.defaultProject}.${tablePath}`;
     } else {

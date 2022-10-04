@@ -80,18 +80,7 @@ class SourceUtils {
     stage: PipeSegment,
     source: StructDef
   ): StructDef {
-    try {
-      return QuerySegment.nextStructDef(source, stage);
-    } catch (error) {
-      return {
-        name: "pipe_stage",
-        type: "struct",
-        fields: [],
-        structSource: { type: "table" },
-        structRelationship: { type: "basetable", connectionName: "foo" },
-        dialect: source.dialect,
-      };
-    }
+    return QuerySegment.nextStructDef(source, stage);
   }
 }
 

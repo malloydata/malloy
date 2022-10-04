@@ -70,7 +70,7 @@ export {
   DateTimeframe,
   TimestampTimeframe,
   Result,
-  parseTableURL,
+  parseTableURI,
   QueryMaterializer,
   CSVWriter,
   JSONWriter,
