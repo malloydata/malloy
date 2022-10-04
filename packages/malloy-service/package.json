@@ -1,0 +1,20 @@
+{
+  "name": "@malloydata/malloy-service",
+  "version": "0.0.1",
+  "license": "GPL-2.0",
+  "scripts": {
+    "build": "npm run protos-gen && tsc --build",
+    "start": "npm run build && node ./dist/server.js",
+    "protos-gen": "mkdir -p dist && npm run protos-gen-js && npm run protos-gen-ts",
+    "protos-gen-js": "npx grpc_tools_node_protoc --js_out=import_style=commonjs,binary:dist --grpc_out=grpc_js:dist -I protos protos/**/**/*.proto",
+    "protos-gen-ts": "npx grpc_tools_node_protoc --plugin=protoc-gen-ts=$(which protoc-gen-ts) --ts_out=src -I protos protos/**/**/*.proto"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.7.1",
+    "@malloydata/malloy": "*"
+  },
+  "devDependencies": {
+    "grpc_tools_node_protoc_ts": "^5.3.2",
+    "grpc-tools": "^1.11.2"
+  }
+}

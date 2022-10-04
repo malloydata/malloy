@@ -584,11 +584,13 @@ export class Model {
    */
   public getPreparedQueryByName(queryName: string): PreparedQuery {
     const query = this.modelDef.contents[queryName];
-    if (query.type === "query") {
+    if (query && query.type === "query") {
       return new PreparedQuery(query, this.modelDef, queryName);
     }
 
-    throw new Error("Given query name does not refer to a named query.");
+    throw new Error(
+      `Given query name (${queryName}) does not refer to a named query.`
+    );
   }
 
   /**

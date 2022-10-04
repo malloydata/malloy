@@ -8,7 +8,8 @@
     { "path": "test" },
     { "path": "packages/malloy-render" },
     { "path": "./vscode-extension" },
-    { "path": "demo/malloy-demo-composer" }
+    { "path": "demo/malloy-demo-composer" },
+    { "path": "packages/malloy-service" }
   ],
   "files": [],
   "include": [],

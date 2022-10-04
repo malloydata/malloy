@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package malloy.services.v1;
+
+service Compiler {
+    rpc Compile (CompileRequest) returns (CompileResponse) {}
+}
+
+message CompileRequest {
+  CompileDocument document = 1;
+  repeated CompileDocument references = 2;
+  string schema = 3;
+  string query = 4;
+}
+
+message CompileResponse {
+  string model = 1;
+  string sql = 2;
+}
+
+message CompileDocument {
+  string url = 1;
+  string content = 2;
+}

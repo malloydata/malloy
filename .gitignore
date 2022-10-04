@@ -33,6 +33,9 @@ vscode-extension/**/tsconfig.tsbuildinfo
 vscode-extension/**/package-lock.json
 vscode-extension/**/.eslintcache
 test/dist
+*_pb.js
+*_pb.d.ts
+__pycache__
 
 # misc
 .DS_Store
