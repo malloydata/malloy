@@ -354,22 +354,16 @@ export class DuckDBDialect extends Dialect {
     n: Expr,
     timeframe: DateUnit
   ): Expr {
-    let repeat = 1;
     if (timeframe == "quarter") {
       timeframe = "month";
-      repeat = 3;
+      n = mkExpr`${n}*3`;
     }
     if (timeframe == "week") {
       timeframe = "day";
-      repeat = 7;
+      n = mkExpr`${n}*7`;
     }
-    const interval = mkExpr`INTERVAL ${n} ${timeframe}`;
-    const opInterval = mkExpr`${op} ${interval}`;
-    const repeatedOpInterval = Array.from(
-      { length: opInterval.length * repeat },
-      (_, i) => opInterval[i % opInterval.length]
-    );
-    return mkExpr`((${expr.value}))${repeatedOpInterval}`;
+    const interval = mkExpr`INTERVAL (${n}) ${timeframe}`;
+    return mkExpr`((${expr.value})) ${op} ${interval}`;
   }
 
   sqlCast(cast: TypecastFragment): Expr {
