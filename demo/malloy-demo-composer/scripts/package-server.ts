@@ -45,7 +45,7 @@ async function packageServer(
   }
 
   if (!duckDbTargetMap.has(target)) {
-    throw `No DuckDb defined for target: ${target}`;
+    throw new Error(`No DuckDb defined for target: ${target}`);
   }
 
   fs.copyFileSync(
