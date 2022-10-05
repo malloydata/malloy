@@ -2206,7 +2206,11 @@ export class ImportStatement extends MalloyElement implements DocStatement {
     } else if (this.fullURL) {
       const src = trans.root.importZone.getEntry(this.fullURL);
       if (src.status === "present") {
-        const importStructs = trans.getChildExports(this.fullURL);
+        const { exports: importStructs, childHasErrors } =
+          trans.getChildExports(this.fullURL);
+        if (childHasErrors) {
+          this.log(`Imported file has errors`);
+        }
         for (const importing in importStructs) {
           doc.setEntry(importing, {
             entry: importStructs[importing],
