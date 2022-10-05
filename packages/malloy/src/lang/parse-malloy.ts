@@ -802,10 +802,7 @@ export abstract class MalloyTranslation {
     return lovely;
   }
 
-  getChildExports(importURL: string): {
-    exports: NamedStructDefs;
-    childHasErrors: boolean;
-  } {
+  getChildExports(importURL: string): NamedStructDefs {
     const exports: NamedStructDefs = {};
     const childURL = decodeURI(new URL(importURL, this.sourceURL).toString());
     const child = this.childTranslators.get(childURL);
@@ -818,12 +815,10 @@ export abstract class MalloyTranslation {
             exports[fromChild] = modelEntry;
           }
         }
-      } else {
-        return { exports: {}, childHasErrors: true };
       }
       // else nothing, assuming there are already errors in the log
     }
-    return { exports, childHasErrors: false };
+    return exports;
   }
 
   private finalAnswer?: TranslateResponse;
