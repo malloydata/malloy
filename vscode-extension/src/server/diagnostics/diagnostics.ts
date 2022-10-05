@@ -28,8 +28,12 @@ const DEFAULT_RANGE = {
 export async function getMalloyDiagnostics(
   documents: TextDocuments<TextDocument>,
   document: TextDocument
-): Promise<Diagnostic[]> {
-  const diagnostics: Diagnostic[] = [];
+): Promise<{ [uri: string]: Diagnostic[] }> {
+  const byURI: { [uri: string]: Diagnostic[] } = {
+    // Important that the requested document starts out as empty array,
+    // so that we clear old diagnostics
+    [document.uri]: [],
+  };
   let errors: LogMessage[] = [];
   try {
     await translateWithCache(document, documents);
@@ -38,7 +42,7 @@ export async function getMalloyDiagnostics(
       errors = error.log;
     } else {
       // TODO this kind of error should cease to exist. All errors should have source info.
-      diagnostics.push({
+      byURI[document.uri].push({
         severity: DiagnosticSeverity.Error,
         range: DEFAULT_RANGE,
         message: error.message,
@@ -55,15 +59,19 @@ export async function getMalloyDiagnostics(
         ? DiagnosticSeverity.Information
         : DiagnosticSeverity.Error;
 
-    if (!err.at || err.at.url === document.uri) {
-      diagnostics.push({
-        severity: sev,
-        range: err.at?.range || DEFAULT_RANGE,
-        message: err.message,
-        source: "malloy",
-      });
+    const uri = err.at ? err.at.url : document.uri;
+
+    if (byURI[uri] === undefined) {
+      byURI[uri] = [];
     }
+
+    byURI[uri].push({
+      severity: sev,
+      range: err.at?.range || DEFAULT_RANGE,
+      message: err.message,
+      source: "malloy",
+    });
   }
 
-  return diagnostics;
+  return byURI;
 }
