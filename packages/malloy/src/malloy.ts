@@ -207,13 +207,19 @@ export class Malloy {
         }
         if (result.tables) {
           // collect tables by connection name since there may be multiple connections
-          const tablesByConnection: Map<
-            string | undefined,
-            Array<string>
-          > = new Map();
+          const tablesByConnection: Map<string, Array<string>> = new Map();
+          let anyMalformedTableStrings = false;
+          const errors: { [name: string]: string } = {};
           for (const connectionTableString of result.tables) {
-            const { connectionName } = parseTableURI(connectionTableString);
-
+            let connectionName;
+            try {
+              const parsed = parseTableURI(connectionTableString);
+              connectionName = parsed.connectionName;
+            } catch (error) {
+              errors[connectionTableString] = error.toString();
+              anyMalformedTableStrings = true;
+              continue;
+            }
             let connectionToTablesMap = tablesByConnection.get(connectionName);
             if (!connectionToTablesMap) {
               connectionToTablesMap = [connectionTableString];
@@ -222,30 +228,34 @@ export class Malloy {
             }
             tablesByConnection.set(connectionName, connectionToTablesMap);
           }
-          // iterate over connections, fetching schema for all missing tables
-          for (const [
-            connectionName,
-            connectionTableString,
-          ] of tablesByConnection) {
-            try {
-              const connection = await connections.lookupConnection(
-                connectionName
-              );
-              // TODO detect if the union of `Object.keys(tables)` and `Object.keys(errors)` is not the same
-              //      as `Object.keys(connectionTableString)`, i.e. that all tables are accounted for. Otherwise
-              //      the translator runs into an infinite loop fetching tables.
-              const { schemas: tables, errors } =
-                await connection.fetchSchemaForTables(connectionTableString);
-              translator.update({ tables, errors: { tables: errors } });
-            } catch (error) {
-              // There was an exception getting the connection, associate that error
-              // with all its tables
-              const tables = {};
-              const errors: { [name: string]: string } = {};
-              for (const table of connectionTableString) {
-                errors[table] = error.toString();
+          if (anyMalformedTableStrings) {
+            translator.update({ tables: {}, errors: { tables: errors } });
+          } else {
+            // iterate over connections, fetching schema for all missing tables
+            for (const [
+              connectionName,
+              connectionTableString,
+            ] of tablesByConnection) {
+              try {
+                const connection = await connections.lookupConnection(
+                  connectionName
+                );
+                // TODO detect if the union of `Object.keys(tables)` and `Object.keys(errors)` is not the same
+                //      as `Object.keys(connectionTableString)`, i.e. that all tables are accounted for. Otherwise
+                //      the translator runs into an infinite loop fetching tables.
+                const { schemas: tables, errors } =
+                  await connection.fetchSchemaForTables(connectionTableString);
+                translator.update({ tables, errors: { tables: errors } });
+              } catch (error) {
+                // There was an exception getting the connection, associate that error
+                // with all its tables
+                const tables = {};
+                const errors: { [name: string]: string } = {};
+                for (const table of connectionTableString) {
+                  errors[table] = error.toString();
+                }
+                translator.update({ tables, errors: { tables: errors } });
               }
-              translator.update({ tables, errors: { tables: errors } });
             }
           }
         }
@@ -257,9 +267,6 @@ export class Malloy {
           > = new Map();
           for (const missingSQLSchemaRef of result.sqlStructs) {
             const connectionName = missingSQLSchemaRef.connection;
-            // if (connectionName === undefined) {
-            //   throw new Error("Oops have not made it required here yet...");
-            // }
 
             let connectionToSQLReferencesMap =
               sqlRefsByConnection.get(connectionName);
@@ -740,15 +747,17 @@ export class PreparedQuery {
 }
 
 export function parseTableURI(tableURI: string): {
-  connectionName?: string;
+  connectionName: string;
   tablePath: string;
 } {
-  const [firstPart, secondPart] = tableURI.split(":");
-  if (secondPart) {
-    return { connectionName: firstPart, tablePath: secondPart };
-  } else {
-    return { tablePath: firstPart };
+  const colonLocation = tableURI.indexOf(":");
+  if (colonLocation === -1) {
+    throw new Error("Table URIs must specify a connection name.");
   }
+  return {
+    connectionName: tableURI.substring(0, colonLocation),
+    tablePath: tableURI.substring(colonLocation + 1),
+  };
 }
 
 /**
