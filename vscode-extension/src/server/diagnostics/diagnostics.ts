@@ -55,12 +55,14 @@ export async function getMalloyDiagnostics(
         ? DiagnosticSeverity.Information
         : DiagnosticSeverity.Error;
 
-    diagnostics.push({
-      severity: sev,
-      range: err.at?.range || DEFAULT_RANGE,
-      message: err.message,
-      source: "malloy",
-    });
+    if (!err.at || err.at.url === document.uri) {
+      diagnostics.push({
+        severity: sev,
+        range: err.at?.range || DEFAULT_RANGE,
+        message: err.message,
+        source: "malloy",
+      });
+    }
   }
 
   return diagnostics;
