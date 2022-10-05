@@ -261,12 +261,13 @@ export class Malloy {
         }
         if (result.sqlStructs) {
           // collect sql refs by connection name since there may be multiple connections
-          const sqlRefsByConnection: Map<
-            string | undefined,
-            Array<SQLBlock>
-          > = new Map();
+          const sqlRefsByConnection: Map<string, Array<SQLBlock>> = new Map();
           for (const missingSQLSchemaRef of result.sqlStructs) {
             const connectionName = missingSQLSchemaRef.connection;
+            if (connectionName === undefined) {
+              // TODO
+              throw new Error("Oops have not made it required here yet...");
+            }
 
             let connectionToSQLReferencesMap =
               sqlRefsByConnection.get(connectionName);

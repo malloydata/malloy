@@ -1,7 +1,6 @@
 --! styles flights.styles.json
 
 import "airports.malloy"
-
 source: carriers is table('malloy-data.faa.carriers') {
   primary_key: code
   measure: carrier_count is count()

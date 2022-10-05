@@ -1,5 +1,4 @@
 -- --! styles airports.styles.json
-
 source: airports is table('malloy-data.faa.airports') {
   primary_key: code
 

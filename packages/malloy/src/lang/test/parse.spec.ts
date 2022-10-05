@@ -1438,6 +1438,40 @@ describe("error handling", () => {
     }
     `)
   );
+  test("explore from imported sql-based-source", () => {
+    const iModel = `
+      source: badSchema is table('bad.schema')
+    `;
+    const model = new BetaModel(`
+      import "iModel.malloy"
+      source: foo is malloyUsers
+    `);
+    model.importZone.define("internal://test/langtests/iModel.malloy", iModel);
+    const needReq = model.translate();
+    expect(model).toBeErrorless();
+    const needs = needReq?.tables;
+    expect(needs).toBeDefined();
+    if (needs) {
+      expect(needs.length).toBe(1);
+      expect(needs[0]).toBe("bad.schema");
+      model.update({
+        tables: {},
+        errors: { tables: { "bad.schema": "Oh no! Anyway..." } },
+      });
+      model.translate();
+      expect(model).not.toBeErrorless();
+      expect(model.errors()).toMatchObject({
+        errors: [
+          {
+            at: {
+              url: "internal://test/langtests/iModel.malloy",
+            },
+            message: "Schema error 'bad.schema': Oh no! Anyway...",
+          },
+        ],
+      });
+    }
+  });
 });
 
 function getSelectOneStruct(sqlBlock: SQLBlock): StructDef {
