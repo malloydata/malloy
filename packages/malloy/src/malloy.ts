@@ -264,10 +264,6 @@ export class Malloy {
           const sqlRefsByConnection: Map<string, Array<SQLBlock>> = new Map();
           for (const missingSQLSchemaRef of result.sqlStructs) {
             const connectionName = missingSQLSchemaRef.connection;
-            if (connectionName === undefined) {
-              // TODO
-              throw new Error("Oops have not made it required here yet...");
-            }
 
             let connectionToSQLReferencesMap =
               sqlRefsByConnection.get(connectionName);
@@ -388,6 +384,11 @@ export class Malloy {
     }
     const connectionName =
       sqlBlock?.connection || preparedResult?.connectionName;
+    if (connectionName === undefined) {
+      throw new Error(
+        "Programmer error: connectionName should not be undefined"
+      );
+    }
     if (connection === undefined) {
       if (connections === undefined) {
         throw new Error(
@@ -494,6 +495,11 @@ export class Malloy {
     }
     const connectionName =
       sqlBlock?.connection || preparedResult?.connectionName;
+    if (connectionName === undefined) {
+      throw new Error(
+        "Programmer error: connectionName should not be undefined."
+      );
+    }
     if (connection === undefined) {
       if (connections === undefined) {
         throw new Error(
@@ -1120,13 +1126,8 @@ export class InMemoryURLReader implements URLReader {
  */
 export class FixedConnectionMap implements LookupConnection<Connection> {
   private connections: Map<string, Connection>;
-  private defaultConnectionName?: string;
-  constructor(
-    connections: Map<string, Connection>,
-    defaultConnectionName?: string
-  ) {
+  constructor(connections: Map<string, Connection>) {
     this.connections = connections;
-    this.defaultConnectionName = defaultConnectionName;
   }
 
   /**
@@ -1136,15 +1137,7 @@ export class FixedConnectionMap implements LookupConnection<Connection> {
    * @returns A `Connection`
    * @throws An `Error` if no connection with the given name exists.
    */
-  public async getConnection(connectionName?: string): Promise<Connection> {
-    if (connectionName === undefined) {
-      if (this.defaultConnectionName !== undefined) {
-        connectionName = this.defaultConnectionName;
-      } else {
-        throw new Error("No default connection.");
-      }
-    }
-
+  public async getConnection(connectionName: string): Promise<Connection> {
     const connection = this.connections.get(connectionName);
     if (connection !== undefined) {
       return Promise.resolve(connection);
@@ -1153,7 +1146,7 @@ export class FixedConnectionMap implements LookupConnection<Connection> {
     }
   }
 
-  public async lookupConnection(connectionName?: string): Promise<Connection> {
+  public async lookupConnection(connectionName: string): Promise<Connection> {
     return this.getConnection(connectionName);
   }
 

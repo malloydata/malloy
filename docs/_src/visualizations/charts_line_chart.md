@@ -9,7 +9,7 @@ Data Style is <code>'line_chart'</code>
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "size": "medium", "dataStyles": {"departures_by_month":{"renderer":"line_chart","size":"large"}}}
-query: table('malloy-data.faa.flights') -> {
+query: table('bigquery:malloy-data.faa.flights') -> {
   nest: departures_by_month is {
     group_by: departure_month is dep_time.month
     aggregate: flight_count is count()
@@ -19,7 +19,7 @@ query: table('malloy-data.faa.flights') -> {
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "size": "medium", "dataStyles": {"carriers_by_month":{"renderer":"line_chart","size":"large"}}}
-query: table('malloy-data.faa.flights') -> {
+query: table('bigquery:malloy-data.faa.flights') -> {
   nest: carriers_by_month is {
     group_by: departure_month is dep_time.month
     aggregate: flight_count is count()

@@ -29,7 +29,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   it(`basic index  - ${databaseName}`, async () => {
     const model = await runtime.loadModel(
       `
-        source: airports is table('malloytest.airports') {
+        source: airports is table('test:malloytest.airports') {
         }
     `
     );
@@ -59,7 +59,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   it(`index value map  - ${databaseName}`, async () => {
     const model = await runtime.loadModel(
       `
-        source: airports is table('malloytest.airports') {
+        source: airports is table('test:malloytest.airports') {
         }
     `
     );
@@ -80,7 +80,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        source: t is table('malloytest.state_facts') {
+        source: t is table('test:malloytest.state_facts') {
           dimension: one is 'one'
         }
 
@@ -101,7 +101,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       const result = await runtime
         .loadQuery(
           `
-        source: t is table('malloytest.state_facts') {
+        source: t is table('test:malloytest.state_facts') {
           dimension: one is 'one'
         }
 
@@ -119,7 +119,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        source: t is table('malloytest.flights') {
+        source: t is table('test:malloytest.flights') {
           dimension: one is 'one'
         }
 

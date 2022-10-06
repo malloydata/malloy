@@ -16,7 +16,7 @@ A source can be created from a SQL table or view from a connected database.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e1.malloy"}
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   measure: flight_count is count()
 }
 ```
@@ -46,7 +46,7 @@ the base source with modifications only relevant in that specific context.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e1.malloy"}
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   measure: flight_count is count()
 }
 
@@ -79,7 +79,7 @@ be defined inline or referenced by name.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e2.malloy"}
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   measure: flight_count is count()
 }
 
@@ -106,7 +106,7 @@ query: carrier_facts -> {
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e3.malloy"}
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   measure: flight_count is count()
   query: by_carrier is {
     group_by: carrier
@@ -163,7 +163,7 @@ When a source is defined, filters which apply to any query against the new sourc
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e4.malloy"}
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   measure: flight_count is count()
 }
 
@@ -183,7 +183,7 @@ To be used in joins to other sources, a source must
 have a primary key specified.
 
 ```malloy
-source: carriers is table('malloy-data.faa.carriers') {
+source: carriers is table('bigquery:malloy-data.faa.carriers') {
   primary_key: code
 }
 ```
@@ -194,11 +194,11 @@ When sources are joined as part of their definition, queries can reference field
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e5.malloy"}
-source: carriers is table('malloy-data.faa.carriers') {
+source: carriers is table('bigquery:malloy-data.faa.carriers') {
   primary_key: code
 }
 
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   join_one: carriers with carrier
   measure: flight_count is count()
 }
@@ -223,7 +223,7 @@ part of the source, allowing for them to be used in any
 query against the source.
 
 ```malloy
-source: airports is table('malloy-data.faa.airports') {
+source: airports is table('bigquery:malloy-data.faa.airports') {
   // A dimension
   dimension: has_control_tower is cntl_twr = 'Y'
 
@@ -243,7 +243,7 @@ source: airports is table('malloy-data.faa.airports') {
 Fields from a source may be renamed in the context of the
 new source. This is useful when the original name is not descriptive, or has a different meaning in the new context.
 ```malloy
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   rename: facility_type is fac_type
   rename: origin_code is origin
 
@@ -258,7 +258,7 @@ The list of fields available in a source  can be limited. This can be done eithe
 **Accepting fields**
 
 ```malloy
-source: airports is table('malloy-data.faa.airports') {
+source: airports is table('bigquery:malloy-data.faa.airports') {
   accept: [ id, name, code, city, state, elevation ]
 }
 ```
@@ -266,7 +266,7 @@ source: airports is table('malloy-data.faa.airports') {
 **Excepting fields**
 
 ```malloy
-source: airports is table('malloy-data.faa.airports') {
+source: airports is table('bigquery:malloy-data.faa.airports') {
   except: [ c_ldg_rts, aero_cht, cntl_twr ]
 }
 ```

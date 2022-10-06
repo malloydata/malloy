@@ -349,17 +349,17 @@ function badModel(s: MarkedSource | string, msg: string): TestFunc {
 
 describe("model statements", () => {
   describe("explore:", () => {
-    test("explore table", modelOK(`explore: testA is table('aTable')`));
+    test("explore table", modelOK(`explore: testA is table('test:aTable')`));
     test(
       "explore shorcut fitlered table",
       modelOK(`
-        explore: testA is table('aTable') {? astr ~ 'a%' }
+        explore: testA is table('test:aTable') {? astr ~ 'a%' }
       `)
     );
     test(
       "explore fitlered table",
       modelOK(`
-        explore: testA is table('aTable') { where: astr ~ 'a%' }
+        explore: testA is table('test:aTable') { where: astr ~ 'a%' }
       `)
     );
     test("explore explore", modelOK(`explore: testA is a`));
@@ -385,11 +385,11 @@ describe("model statements", () => {
   describe("query:", () => {
     test(
       "anonymous query",
-      modelOK("query: table('aTable') -> { group_by: astr }")
+      modelOK("query: table('test:aTable') -> { group_by: astr }")
     );
     test(
       "query",
-      modelOK("query: name is table('aTable') -> { group_by: astr }")
+      modelOK("query: name is table('test:aTable') -> { group_by: astr }")
     );
     test(
       "query from query",
@@ -535,10 +535,10 @@ describe("model statements", () => {
     test(
       "exclude problem revealed by production models",
       modelOK(`
-        source: carriers is table('malloytest.carriers') {
+        source: carriers is table('test:malloytest.carriers') {
           primary_key: code
         }
-        source: flights is table('malloytest.flights') {
+        source: flights is table('test:malloytest.flights') {
           primary_key: id2
           join_one: carriers with carrier
 
@@ -595,7 +595,7 @@ describe("model statements", () => {
       expect(xr).toEqual({ urls: ["internal://test/parent.malloy"] });
       docParse.update({
         urls: {
-          "internal://test/parent.malloy": `source: aa is table('aTable')`,
+          "internal://test/parent.malloy": `source: aa is table('test:aTable')`,
         },
       });
       expect(docParse).toTranslate();
@@ -608,7 +608,7 @@ describe("model statements", () => {
       docParse.update({
         urls: {
           "internal://test/parent.malloy": `
-            source: aa is table('aTable') {
+            source: aa is table('test:aTable') {
               dimension: astr is 'not legal beause astr exists'
             }`,
         },
@@ -666,9 +666,9 @@ describe("explore properties", () => {
   test(
     "where clause can use the join namespace in source refined query",
     modelOK(`
-    source: flights is table('malloytest.flights') + {
+    source: flights is table('test:malloytest.flights') + {
       query: boo is {
-        join_one: carriers is table('malloytest.carriers') on carrier = carriers.code
+        join_one: carriers is table('test:malloytest.carriers') on carrier = carriers.code
         where: carriers.code = 'WN' | 'AA'
         group_by: carriers.nickname
         aggregate: flight_count is count()
@@ -712,7 +712,7 @@ describe("explore properties", () => {
       expect(
         markSource`
           source: nb is b {
-            join_one: ${"bb is table('aTable') with astr"}
+            join_one: ${"bb is table('test:aTable') with astr"}
           }
         `
       ).compileToFailWith(
@@ -1225,7 +1225,7 @@ describe("sql backdoor", () => {
   }
   test(
     "single sql statement",
-    modelOK("sql: users is || SELECT * FROM USERS;;")
+    modelOK(`sql: users is || SELECT * FROM USERS;; on "test"`)
   );
   test("connection shows up in model", () => {
     const model = new BetaModel(`
@@ -1259,7 +1259,7 @@ describe("sql backdoor", () => {
   });
   test("explore from sql", () => {
     const model = new BetaModel(`
-      sql: users IS || SELECT * FROM aTable ;;
+      sql: users IS || SELECT * FROM aTable ;; on "test"
       source: malloyUsers is from_sql(users) { primary_key: ai }
     `);
     const needReq = model.translate();
@@ -1268,7 +1268,10 @@ describe("sql backdoor", () => {
     expect(needs).toBeDefined();
     if (needs) {
       expect(needs.length).toBe(1);
-      const sql = makeSQLBlock({ select: " SELECT * FROM aTable " });
+      const sql = makeSQLBlock({
+        select: " SELECT * FROM aTable ",
+        connection: "test",
+      });
       expect(needs[0]).toMatchObject(sql);
       const refKey = needs[0].name;
       expect(refKey).toBeDefined();
@@ -1280,7 +1283,7 @@ describe("sql backdoor", () => {
   });
   test("explore from imported sql-based-source", () => {
     const createModel = `
-      sql: users IS || SELECT * FROM aTable ;;
+      sql: users IS || SELECT * FROM aTable ;; on "test"
       source: malloyUsers is from_sql(users) { primary_key: ai }
     `;
     const model = new BetaModel(`
@@ -1297,7 +1300,10 @@ describe("sql backdoor", () => {
     expect(needs).toBeDefined();
     if (needs) {
       expect(needs.length).toBe(1);
-      const sql = makeSQLBlock({ select: " SELECT * FROM aTable " });
+      const sql = makeSQLBlock({
+        select: " SELECT * FROM aTable ",
+        connection: "test",
+      });
       expect(needs[0]).toMatchObject(sql);
       const refKey = needs[0].name;
       expect(refKey).toBeDefined();
@@ -1312,17 +1318,17 @@ describe("sql backdoor", () => {
 describe("error handling", () => {
   test("field and query with same name does not overflow", () => {
     expect(`
-      source: flights is table('malloytest.flights') {
+      source: flights is table('test:malloytest.flights') {
         query: carrier is { group_by: carrier }
       }
     `).compileToFailWith("Cannot redefine 'carrier'");
   });
   test("redefine source", () => {
     expect(markSource`
-      source: airports is table('malloytest.airports') + {
+      source: airports is table('test:malloytest.airports') + {
         primary_key: code
       }
-      source: airports is table('malloytest.airports') + {
+      source: airports is table('test:malloytest.airports') + {
         primary_key: code
       }
     `).compileToFailWith("Cannot redefine 'airports'");
@@ -1424,7 +1430,7 @@ describe("error handling", () => {
     "rejoin a query is renamed",
     modelOK(`
       source: querySrc is from(
-        table('malloytest.flights')->{
+        table('test:malloytest.flights')->{
           group_by: origin
           nest: nested is { group_by: destination }
         }
@@ -1438,40 +1444,6 @@ describe("error handling", () => {
     }
     `)
   );
-  test("explore from imported sql-based-source", () => {
-    const iModel = `
-      source: badSchema is table('bad.schema')
-    `;
-    const model = new BetaModel(`
-      import "iModel.malloy"
-      source: foo is malloyUsers
-    `);
-    model.importZone.define("internal://test/langtests/iModel.malloy", iModel);
-    const needReq = model.translate();
-    expect(model).toBeErrorless();
-    const needs = needReq?.tables;
-    expect(needs).toBeDefined();
-    if (needs) {
-      expect(needs.length).toBe(1);
-      expect(needs[0]).toBe("bad.schema");
-      model.update({
-        tables: {},
-        errors: { tables: { "bad.schema": "Oh no! Anyway..." } },
-      });
-      model.translate();
-      expect(model).not.toBeErrorless();
-      expect(model.errors()).toMatchObject({
-        errors: [
-          {
-            at: {
-              url: "internal://test/langtests/iModel.malloy",
-            },
-            message: "Schema error 'bad.schema': Oh no! Anyway...",
-          },
-        ],
-      });
-    }
-  });
 });
 
 function getSelectOneStruct(sqlBlock: SQLBlock): StructDef {
@@ -1569,7 +1541,7 @@ describe("source locations", () => {
   });
 
   test("location of field inherited from table", () => {
-    const source = markSource`explore: na is ${"table('aTable')"}`;
+    const source = markSource`explore: na is ${"table('test:aTable')"}`;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, "na");
@@ -1579,7 +1551,7 @@ describe("source locations", () => {
 
   test("location of field inherited from sql block", () => {
     const source = markSource`
-      sql: ${"s is || SELECT 1 as one ;;"}
+      sql: ${`s is || SELECT 1 as one ;; on "test"`}
 
       explore: na is from_sql(s)
     `;
@@ -1600,7 +1572,7 @@ describe("source locations", () => {
   test("location of fields inherited from a query", () => {
     const source = markSource`
       explore: na is from(
-        ${"table('aTable')"} -> {
+        ${"table('test:aTable')"} -> {
           group_by:
             abool
             ${"y is 1"}
@@ -1634,7 +1606,7 @@ describe("source locations", () => {
   });
 
   test("location of named SQL block", () => {
-    const source = markSource`sql: ${"s is || SELECT 1 as one ;;"}`;
+    const source = markSource`sql: ${`s is || SELECT 1 as one ;; on "test"`}`;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
     const s = m.sqlBlocks[0];
@@ -1801,7 +1773,7 @@ describe("source references", () => {
 
   test("reference to sql block", () => {
     const source = markSource`
-      sql: ${"s is || SELECT 1 as one ;;"}
+      sql: ${`s is || SELECT 1 as one ;; on "test"`}
       explore: na is from_sql(${"s"})
     `;
     const m = new BetaModel(source.code);
@@ -1876,7 +1848,7 @@ describe("source references", () => {
 
   test("reference to field in expression", () => {
     const source = markSource`
-      explore: na is ${"table('aTable')"}
+      explore: na is ${"table('test:aTable')"}
       query: na -> { project: bbool is not ${"abool"} }
     `;
     const m = new BetaModel(source.code);
@@ -1913,7 +1885,7 @@ describe("source references", () => {
   test("reference to joined field in expression", () => {
     const source = markSource`
       explore: na is a {
-        join_one: self is ${"table('aTable')"}
+        join_one: self is ${"table('test:aTable')"}
           on astr = self.astr
       }
       query: na -> { project: bstr is self.${"astr"} }
@@ -1951,7 +1923,7 @@ describe("source references", () => {
 
   test("reference to field not in expression (group by)", () => {
     const source = markSource`
-      query: ${"table('aTable')"} -> { group_by: ${"abool"} }
+      query: ${"table('test:aTable')"} -> { group_by: ${"abool"} }
     `;
     const m = new BetaModel(source.code);
     expect(m).toTranslate();
@@ -1967,7 +1939,7 @@ describe("source references", () => {
 
   test("reference to field not in expression (project)", () => {
     const source = markSource`
-      explore: na is ${"table('aTable')"}
+      explore: na is ${"table('test:aTable')"}
       query: na -> { project: ${"abool"} }
     `;
     const m = new BetaModel(source.code);
@@ -1984,7 +1956,7 @@ describe("source references", () => {
 
   test.skip("reference to field in order by", () => {
     const source = markSource`
-      query: ${"table('aTable')"} -> {
+      query: ${"table('test:aTable')"} -> {
         group_by: abool
         order_by: ${"abool"}
       }
@@ -2060,7 +2032,7 @@ describe("source references", () => {
 
   test.skip("reference to field in top", () => {
     const source = markSource`
-      query: ${"table('aTable')"} -> {
+      query: ${"table('test:aTable')"} -> {
         group_by: abool
         top: 10 by ${"abool"}
       }
@@ -2098,7 +2070,7 @@ describe("source references", () => {
 
   test("reference to field in filter", () => {
     const source = markSource`
-      query: ${"table('aTable')"} -> {
+      query: ${"table('test:aTable')"} -> {
         group_by: abool
         where: ${"abool"}
       }
@@ -2117,7 +2089,7 @@ describe("source references", () => {
 
   test("reference to field in aggregate source", () => {
     const source = markSource`
-      explore: na is ${"table('aTable')"}
+      explore: na is ${"table('test:aTable')"}
       query: na -> { aggregate: ai_sum is ${"ai"}.sum() }
     `;
     const m = new BetaModel(source.code);
@@ -2195,7 +2167,7 @@ describe("source references", () => {
 
   test("reference to field in aggregate (in expr)", () => {
     const source = markSource`
-      explore: na is ${"table('aTable')"}
+      explore: na is ${"table('test:aTable')"}
       query: na -> { aggregate: ai_sum is sum(${"ai"}) }
     `;
     const m = new BetaModel(source.code);
@@ -2212,7 +2184,7 @@ describe("source references", () => {
 
   test("reference to field in rename", () => {
     const source = markSource`
-      explore: na is ${"table('aTable')"} {
+      explore: na is ${"table('test:aTable')"} {
         rename: bbool is ${"abool"}
       }
     `;
@@ -2231,7 +2203,7 @@ describe("source references", () => {
   test("reference to field in join with", () => {
     const source = markSource`
       explore: exp1 is a { primary_key: astr }
-      explore: exp2 is ${"table('aTable')"} {
+      explore: exp2 is ${"table('test:aTable')"} {
         join_one: exp1 with ${"astr"}
       }
     `;
@@ -2264,7 +2236,7 @@ describe("translation need error locations", () => {
 
   test("sql struct error location", () => {
     const source = markSource`
-      sql: bad_sql is || BAD SQL ;;
+      sql: bad_sql is || BAD SQL ;; on "test"
       query: ${"from_sql(bad_sql)"} -> { project: * }
     `;
     const m = new BetaModel(source.code);
@@ -2282,7 +2254,7 @@ describe("translation need error locations", () => {
 
   test("table struct error location", () => {
     const source = markSource`
-      explore: bad_explore is ${"table('malloy-data.bad.table')"}
+      explore: bad_explore is ${"table('test:malloy-data.bad.table')"}
     `;
     const m = new BetaModel(source.code);
     const result = m.translate();
@@ -2342,7 +2314,7 @@ describe("pipeline comprehension", () => {
   test(
     "new query can refine and append to exisiting query",
     modelOK(`
-      explore: aq is table('aTable') {
+      explore: aq is table('test:aTable') {
         query: by_region is { group_by: astr }
         query: by_region2 is by_region {
           nest: dateNest is { group_by: ad }
@@ -2373,7 +2345,7 @@ describe("pipeline comprehension", () => {
   );
   test("new query appends to existing query", () => {
     const src = `
-      query: s1 is table('malloytest.flights') -> {
+      query: s1 is table('test:malloytest.flights') -> {
         group_by: origin, destination
       }
       query: s2 is ->s1 ->{

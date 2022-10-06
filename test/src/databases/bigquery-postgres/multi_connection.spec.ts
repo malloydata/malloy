@@ -45,8 +45,7 @@ describe("Multi-connection", () => {
         bigquery: bqConnection,
         postgres: postgresConnection,
       })
-    ),
-    "bigquery"
+    )
   );
 
   const runtime = new malloy.Runtime(files, connectionMap);
@@ -56,11 +55,7 @@ describe("Multi-connection", () => {
   });
 
   const expressionModelText = `
-explore: default_aircraft is table('malloytest.aircraft'){
-  measure: aircraft_count is count(DISTINCT tail_num)
-}
-
-explore: bigquery_state_facts is table('malloytest.state_facts'){
+explore: bigquery_state_facts is table('bigquery:malloytest.state_facts'){
   measure: state_count is count(DISTINCT state)+2
 }
 
@@ -70,20 +65,6 @@ explore: postgres_aircraft is table('postgres:malloytest.aircraft'){
 `;
 
   const expressionModel = runtime.loadModel(expressionModelText);
-
-  it(`default query`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
-      query: default_aircraft-> {
-        aggregate: aircraft_count
-      }
-    `
-      )
-      .run();
-    // console.log(result.sql);
-    expect(result.data.path(0, "aircraft_count").value).toBe(3599);
-  });
 
   it(`bigquery query`, async () => {
     const result = await expressionModel

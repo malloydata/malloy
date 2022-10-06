@@ -1,6 +1,6 @@
 --! styles iowa.styles.json
 
-source: iowa is table('malloy-data.iowa_liquor_sales.sales_deduped'){
+source: iowa is table('bigquery:malloy-data.iowa_liquor_sales.sales_deduped'){
 
   // dimensions
   dimension:

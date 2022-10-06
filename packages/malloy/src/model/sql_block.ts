@@ -19,6 +19,7 @@ import md5 from "md5";
  */
 export interface SQLBlockRequest extends Partial<SQLBlock> {
   select: string;
+  connection: string;
 }
 
 /**
@@ -27,17 +28,15 @@ export interface SQLBlockRequest extends Partial<SQLBlock> {
 export function makeSQLBlock(from: SQLBlockRequest): SQLBlock {
   const theBlock: SQLBlock = {
     type: "sqlBlock",
-    name: `md5:/${from.connection || "$default"}//${md5(from.select)}`,
+    name: `md5:/${from.connection}//${md5(from.select)}`,
     select: from.select,
+    connection: from.connection,
   };
   if (from.before) {
     theBlock.before = from.before;
   }
   if (from.after) {
     theBlock.after = from.after;
-  }
-  if (from.connection) {
-    theBlock.connection = from.connection;
   }
   return theBlock;
 }

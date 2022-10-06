@@ -501,7 +501,7 @@ describe("BigQuery expression tests", () => {
     const result = await runQuery(
       faa,
       `
-      query: table('malloytest.airports')->{
+      query: table('test:malloytest.airports')->{
         where: faa_region ? ~'A%'
         order_by: 1
         group_by: faa_region
@@ -663,7 +663,7 @@ describe("BigQuery expression tests", () => {
 });
 
 const airportModelText = `
-explore: airports is table('malloy-data.malloytest.airports'){
+explore: airports is table('bigquery:malloy-data.malloytest.airports'){
   primary_key: code
   measure: airport_count is count(*)
 
@@ -813,7 +813,7 @@ describe("airport_tests", () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.airports')->{
+      query: table('test:malloytest.airports')->{
         aggregate: airport_count is count()
         nest: pipe_turtle is {
           group_by:
@@ -914,7 +914,7 @@ describe("sql injection tests", () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.state_facts')->{ group_by: test is 'foo\\''
+      query: table('test:malloytest.state_facts')->{ group_by: test is 'foo\\''
       }
     `
     );
@@ -925,7 +925,7 @@ describe("sql injection tests", () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo\\'' } }
+      query: table('test:malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo\\'' } }
     `
     );
     expect(result.data.value[0].test).toBe(0);
@@ -935,7 +935,7 @@ describe("sql injection tests", () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.state_facts')->{ group_by: test is 'foo\\\\\\''
+      query: table('test:malloytest.state_facts')->{ group_by: test is 'foo\\\\\\''
       }
     `
     );
@@ -946,7 +946,7 @@ describe("sql injection tests", () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo\\\\\\'' }}
+      query: table('test:malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo\\\\\\'' }}
     `
     );
     expect(result.data.value[0].test).toBe(0);
@@ -956,7 +956,7 @@ describe("sql injection tests", () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.state_facts')->{ group_by: test is 'foo \\\\'--'
+      query: table('test:malloytest.state_facts')->{ group_by: test is 'foo \\\\'--'
       }
     `
     );
@@ -969,7 +969,7 @@ describe("sql injection tests", () => {
       await runQuery(
         model,
         `
-        query: table('malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo \\\\' THEN 0 else 1 END) as test--'
+        query: table('test:malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo \\\\' THEN 0 else 1 END) as test--'
         }}      `
       );
     } catch (e) {

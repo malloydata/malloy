@@ -42,7 +42,7 @@ describe("Streaming tests", () => {
   runtimes.runtimeMap.forEach((runtime, databaseName) => {
     it(`basic stream test  - ${databaseName}`, async () => {
       const stream = runtime
-        .loadModel(`source: airports is table('malloytest.airports') {}`)
+        .loadModel(`source: airports is table('test:malloytest.airports') {}`)
         .loadQuery("query: airports -> { project: code }")
         .runStream({ rowLimit: 10 });
       const rows = [];
@@ -55,7 +55,7 @@ describe("Streaming tests", () => {
 
     it(`stream to JSON - ${databaseName}`, async () => {
       const stream = runtime
-        .loadModel(`source: airports is table('malloytest.airports') {}`)
+        .loadModel(`source: airports is table('test:malloytest.airports') {}`)
         .loadQuery("query: airports -> { project: code }")
         .runStream({ rowLimit: 1 });
       const accummulator = new StringAccumulator();
@@ -73,7 +73,7 @@ describe("Streaming tests", () => {
 
     it(`stream to CSV - ${databaseName}`, async () => {
       const stream = runtime
-        .loadModel(`source: airports is table('malloytest.airports') {}`)
+        .loadModel(`source: airports is table('test:malloytest.airports') {}`)
         .loadQuery("query: airports -> { project: code }")
         .runStream({ rowLimit: 1 });
       const accummulator = new StringAccumulator();

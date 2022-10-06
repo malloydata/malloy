@@ -1,7 +1,7 @@
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w2.malloy", "isHidden":true}
 // Make a table of 5 letter words
-source: words is table('malloy-data.malloytest.words') {
+source: words is table('bigquery:malloy-data.malloytest.words') {
   query: five_letter_words is {
     where: length(word) = 5 and word ~ r'^[a-z]{5}$'
     project: word is upper(word)
@@ -9,7 +9,7 @@ source: words is table('malloy-data.malloytest.words') {
 }
 
 // Cross join numbers
-source: numbers is table('malloy-data.malloytest.numbers') {
+source: numbers is table('bigquery:malloy-data.malloytest.numbers') {
   where: num <= 5
 }
 
@@ -120,7 +120,7 @@ It doesn't really feel like we can give ourselves this one with equal scores on 
 ### Code For Wordlebot:
 
 ```malloy
-source: words is table('malloy-data.malloytest.words') {
+source: words is table('bigquery:malloy-data.malloytest.words') {
   query: five_letter_words is {
     where: length(word) = 5 and word ~ r'^[a-z]{5}$'
     project: word is upper(word)
@@ -128,7 +128,7 @@ source: words is table('malloy-data.malloytest.words') {
 }
 
 // Cross join numbers
-source: numbers is table('malloy-data.malloytest.numbers') {
+source: numbers is table('bigquery:malloy-data.malloytest.numbers') {
   where: num <= 5
 }
 

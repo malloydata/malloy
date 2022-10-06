@@ -14,10 +14,10 @@ import { InMemoryURLReader } from "@malloydata/malloy";
 import { run, pathToURL } from "./index";
 
 const unModeledQuery =
-  "query: table('malloy-data.malloytest.flights')->{aggregate: flight_count is count()}";
+  "query: table('bigquery:malloy-data.malloytest.flights')->{aggregate: flight_count is count()}";
 const modeledQuery = "query: flights->{ aggregate: flight_count}";
 const model =
-  "explore: flights is table('malloy-data.malloytest.flights'){measure: flight_count is count()}";
+  "explore: flights is table('bigquery:malloy-data.malloytest.flights'){measure: flight_count is count()}";
 
 const modelPath = "/flights.malloy";
 const modeledQueryPath = "/modeled_query.malloy";

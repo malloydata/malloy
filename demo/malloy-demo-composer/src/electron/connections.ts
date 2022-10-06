@@ -39,8 +39,7 @@ class ConnectionManager {
             "duckdb",
             new DuckDBConnection("duckdb", ":memory:", workingDirectory),
           ],
-        ]),
-        "bigquery"
+        ])
       );
       this.connectionLookups.set(workingDirectory, connectionLookup);
     }

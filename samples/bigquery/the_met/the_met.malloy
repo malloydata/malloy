@@ -1,10 +1,10 @@
 --! styles the_met.styles.json
 
-source: met_objects is table('bigquery-public-data.the_met.objects') {
+source: met_objects is table('bigquery:bigquery-public-data.the_met.objects') {
   // eliminate some bad data
   where: object_begin_date < 2031 & > -8000
 
-  join_one: images is table('bigquery-public-data.the_met.images') { primary_key: object_id } with object_id
+  join_one: images is table('bigquery:bigquery-public-data.the_met.images') { primary_key: object_id } with object_id
 
   measure:
     object_count is count()

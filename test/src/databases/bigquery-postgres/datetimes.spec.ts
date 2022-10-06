@@ -500,7 +500,7 @@ describe("Datetimes", () => {
             `
         sql: one is ||
           ${basicTypes[databaseName]}
-        ;;
+        ;; on "test"
 
         source: main is from_sql(one) {
           join_one: joined is from_sql(one) on t_date = joined.t_date

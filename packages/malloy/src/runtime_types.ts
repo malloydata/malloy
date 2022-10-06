@@ -158,5 +158,5 @@ export interface LookupConnection<T extends InfoConnection> {
    * @param connectionName The name of the connection for which a `Connection` is required.
    * @returns A promise to a `Connection` for the connection named `connectionName`.
    */
-  lookupConnection(connectionName?: string): Promise<T>;
+  lookupConnection(connectionName: string): Promise<T>;
 }

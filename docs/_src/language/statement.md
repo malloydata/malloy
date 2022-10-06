@@ -9,7 +9,7 @@ A Malloy model file can contain several _sources_, which can be thought of as a 
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e.malloy"}
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   dimension: distance_km is distance / 1.609344
 
   measure: flight_count is count()

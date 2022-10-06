@@ -11,7 +11,7 @@ Fields defined in sources are reusable. A field is a `dimension`, `measure` or `
 **In a source**
 
 ```malloy
-source: users is table('malloy-data.ecomm.users') {
+source: users is table('bigquery:malloy-data.ecomm.users') {
   dimension: age_in_dog_years is age * 7
 }
 ```
@@ -60,7 +60,7 @@ Dimensions are defined using expressions that contain no
 aggregate functions.
 
 ```malloy
-expore: users is table('malloy-data.ecomm.users') {
+expore: users is table('bigquery:malloy-data.ecomm.users') {
   dimension: full_name is concat(first_name, ' ', last_name)
 }
 ```
@@ -104,7 +104,7 @@ query: flights -> {
 Queries represent a pipelined data transformation including a source and one or more transformation stages. When queries are defined as part of a source or query stage, their source is implicit.
 
 ```malloy
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   query: by_carrier is {
     group_by: carrier
     aggregate: flight_count is count()
@@ -115,7 +115,7 @@ source: flights is table('malloy-data.faa.flights') {
 A named query's pipeline can always begin with another named query.
 
 ```malloy
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   ...
   query: top_carriers is by_carrier -> {
     project: carrier

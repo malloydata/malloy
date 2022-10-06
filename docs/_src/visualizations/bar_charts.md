@@ -9,7 +9,7 @@ shows the number of flights made per plane.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "size": "medium", "dataStyles": {"by_carrier":{"renderer":"bar_chart","size":"large"}}}
-query: table('malloy-data.faa.flights') -> {
+query: table('bigquery:malloy-data.faa.flights') -> {
   nest: by_carrier is {
     group_by: carrier
     aggregate: aircraft_count is count(distinct tail_num)
@@ -34,7 +34,7 @@ with the destination SFO, OAK or SJC.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "size": "medium", "dataStyles": {"by_carrier":{"renderer":"bar_chart","size":"large"}}}
-query: table('malloy-data.faa.flights') -> {
+query: table('bigquery:malloy-data.faa.flights') -> {
   where: destination ? 'SFO' | 'OAK' | 'SJC'
   top: 10
   nest: by_carrier is {
@@ -58,7 +58,7 @@ We could flip the dimensions around and look at the airports' flights by carrier
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "size": "medium", "dataStyles": {"by_carrier":{"renderer":"bar_chart","size":"large"}}}
-query: table('malloy-data.faa.flights') -> {
+query: table('bigquery:malloy-data.faa.flights') -> {
   where: destination ? 'SFO'| 'OAK' | 'SJC'
   nest: by_carrier is {
     group_by: destination

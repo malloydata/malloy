@@ -48,30 +48,30 @@ All source data references prefixed with `malloy-data.faa.` must be changed to `
 The follow example code will run against the local Postgres database.
 
 ```malloy
-source: airports is table('malloytest.airports') {
+source: airports is table('test:malloytest.airports') {
   primary_key: code
   dimension: name is concat(code, ' - ', full_name)
   measure: airport_count is count()
 }
 
-source: carriers is table('malloytest.carriers') {
+source: carriers is table('test:malloytest.carriers') {
   primary_key: code
   measure: carrier_count is count()
 }
 
-source: aircraft_models is table('malloytest.aircraft_models') {
+source: aircraft_models is table('test:malloytest.aircraft_models') {
   primary_key: aircraft_model_code
   measure: aircraft_model_count is count()
 }
 
-source: aircraft is table('malloytest.aircraft') {
+source: aircraft is table('test:malloytest.aircraft') {
   primary_key: tail_num
   measure: aircraft_count is count()
   join_one: aircraft_models with aircraft_model_code
 }
 
 source: aircraft_facts is from(
-  table('malloytest.flights') -> {
+  table('test:malloytest.flights') -> {
     group_by: tail_num
     aggregate:
       lifetime_flights is count()
@@ -82,7 +82,7 @@ source: aircraft_facts is from(
   dimension: lifetime_flights_bucketed is floor(lifetime_flights / 1000) * 1000
 }
 
-source: flights is table('malloytest.flights') {
+source: flights is table('test:malloytest.flights') {
   primary_key: id2
   rename: origin_code is origin
   rename: destination_code is destination

@@ -14,7 +14,7 @@ We recommend looking at the individual visualization documents in this section a
 While the above approach is preferred, the extension additionally allows the renderer to utilize naming conventions as a shortcut for visualization specification. For example:
 
 ```
-query: flights_bar_chart is table('malloy-data.faa.flights') -> {
+query: flights_bar_chart is table('bigquery:malloy-data.faa.flights') -> {
   group_by: origin
   aggregate: flight_count is count()
 }
@@ -37,7 +37,7 @@ Styles apply to standalone queries as well as when nested.
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/airports_mini.malloy"}
-source: airports is table('malloy-data.faa.airports') {
+source: airports is table('bigquery:malloy-data.faa.airports') {
   measure: airport_count is count()
   query: by_state_and_county is {
     limit: 10

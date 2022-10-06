@@ -4,13 +4,13 @@ The plugin currently supports US maps. Segment maps take as input 4 columns: sta
 
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/e.malloy"}
-source: airports is table('malloy-data.faa.airports') {
+source: airports is table('bigquery:malloy-data.faa.airports') {
   primary_key: code
   dimension: name is concat(code, ' - ', full_name)
   measure: airport_count is count()
 }
 
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   primary_key: id2
   rename: origin_code is origin
   rename: destination_code is destination

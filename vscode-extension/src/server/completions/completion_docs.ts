@@ -16,7 +16,7 @@ const DOCS_ROOT = "https://looker-open-source.github.io/malloy/documentation";
 const MODEL_SOURCE_DOC = `Use \`source\` to name, describe, and augment a data source.
 
 \`\`\`malloy
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   measure: flight_count is count()
 }
 \`\`\`
@@ -195,7 +195,7 @@ Note: \`declare\` is an experimental feature.
 const SOURCE_DIMENSION_DOC = `Use \`dimension\` to define a non-aggregate calculation.
 
 \`\`\`malloy
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   dimension: distance_km is distance * 1.609
 }
 \`\`\`
@@ -206,7 +206,7 @@ View [the full documentation](${DOCS_ROOT}/language/fields.html#dimensions).
 const SOURCE_MEASURE_DOC = `Use \`measure\` to define an aggregate calculation.
 
 \`\`\`malloy
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   measure: flight_count is count()
 }
 \`\`\`
@@ -217,7 +217,7 @@ View [the full documentation](${DOCS_ROOT}/language/fields.html#measures).
 const SOURCE_QUERY_DOC = `Use \`query\` to define a named query which can be referenced and/or refined.
 
 \`\`\`malloy
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   query: by_carrier is {
     group_by: carrier,
     aggregate: flight_count
@@ -231,7 +231,7 @@ View [the full documentation](${DOCS_ROOT}/language/fields.html#queries).
 const SOURCE_JOIN_ONE_DOC = `Use \`join_one\` to define a joined explore which has one row for each row in the source table.
 
 \`\`\`malloy
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   join_one: carriers with carrier
   join_one: origin is airports with origin_code
 }
@@ -270,7 +270,7 @@ View [the full documentation](${DOCS_ROOT}/language/filters.html).
 const SOURCE_PRIMARY_KEY_DOC = `Use \`primary_key\` to specify a primary key for joining.
 
 \`\`\`malloy
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   primary_key: id2
 }
 \`\`\`
@@ -281,7 +281,7 @@ View [the full documentation](${DOCS_ROOT}/language/explore.html#primary-keys).
 const SOURCE_RENAME_DOC = `Use \`rename\` to rename a field from the source explore/table.
 
 \`\`\`malloy
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   rename: origin_code is origin
 }
 \`\`\`
@@ -292,7 +292,7 @@ View [the full documentation](${DOCS_ROOT}/language/explore.html#renaming-fields
 const SOURCE_ACCEPT_DOC = `Use \`accept\` to specify which fields to include from the source explore/table.
 
 \`\`\`malloy
-source: airports is table('malloy-data.faa.airports') {
+source: airports is table('bigquery:malloy-data.faa.airports') {
   accept: [ id, name, code, city, state, elevation ]
 }
 \`\`\`
@@ -303,7 +303,7 @@ View [the full documentation](${DOCS_ROOT}/language/explore.html#limiting-access
 const SOURCE_EXCEPT_DOC = `Use \`except\` to specify which fields to exclude from the source explore/table.
 
 \`\`\`malloy
-source: airports is table('malloy-data.faa.airports') {
+source: airports is table('bigquery:malloy-data.faa.airports') {
   except: [ c_ldg_rts, aero_cht, cntl_twr ]
 }
 \`\`\`
@@ -314,7 +314,7 @@ View [the full documentation](${DOCS_ROOT}/language/explore.html#limiting-access
 const SOURCE_DECLARE_DOC = `Use \`declare\` to declare either dimensions or measures.
 
 \`\`\`malloy
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   declare:
     flight_count is count()
     distance_km is distance * 1.609

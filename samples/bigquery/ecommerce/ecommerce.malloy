@@ -1,16 +1,16 @@
 --! styles ecommerce.styles.json
-source: users is table('malloy-data.ecomm.users'){
+source: users is table('bigquery:malloy-data.ecomm.users'){
   primary_key: id
   dimension: full_name is INITCAP(CONCAT(first_name,' ',last_name))
   measure: user_count is count()
 }
 
-source: product is table('malloy-data.ecomm.products'){
+source: product is table('bigquery:malloy-data.ecomm.products'){
   primary_key: id
   measure: product_count is count()
 }
 
-source: inventory_items is table('malloy-data.ecomm.inventory_items'){
+source: inventory_items is table('bigquery:malloy-data.ecomm.inventory_items'){
   primary_key: id
 
   join_one: product with product_id
@@ -21,7 +21,7 @@ source: inventory_items is table('malloy-data.ecomm.inventory_items'){
 }
 
 source: user_order_facts is from(
-  table('malloy-data.ecomm.order_items') ->  {
+  table('bigquery:malloy-data.ecomm.order_items') ->  {
     group_by: user_id
     aggregate: first_order is min(created_at)
     aggregate: most_recent_order is max(created_at)
@@ -46,7 +46,7 @@ source: user_order_facts is from(
     else null
 }
 
-source: order_items is table('malloy-data.ecomm.order_items'){
+source: order_items is table('bigquery:malloy-data.ecomm.order_items'){
   primary_key: id
 
   join_one:

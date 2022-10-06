@@ -43,7 +43,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        query: q is table('malloytest.aircraft')->{
+        query: q is table('test:malloytest.aircraft')->{
           where: state != null
           group_by: state
         }
@@ -69,7 +69,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .loadQuery(
         `
         query: from(
-          table('malloytest.state_facts')->{group_by: state; order_by: 1 desc; limit: 1}
+          table('test:malloytest.state_facts')->{group_by: state; order_by: 1 desc; limit: 1}
           )
           {
             dimension: lower_state is lower(state)
@@ -90,7 +90,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       await runtime
         .loadQuery(
           `
-        explore: foo is table('malloytest.state_facts'){primary_key: state}
+        explore: foo is table('test:malloytest.state_facts'){primary_key: state}
         query: foox->{aggregate: c is count()}
        `
         )
@@ -105,10 +105,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      explore: a is table('malloytest.aircraft'){
+      explore: a is table('test:malloytest.aircraft'){
         measure: avg_year is floor(avg(year_built))
       }
-      explore: m is table('malloytest.aircraft_models'){
+      explore: m is table('test:malloytest.aircraft_models'){
         join_many: a on a.aircraft_model_code=aircraft_model_code
         measure: avg_seats is floor(avg(seats))
       }
@@ -124,8 +124,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      explore: a is table('malloytest.airports'){}
-      explore: b is table('malloytest.state_facts') {
+      explore: a is table('test:malloytest.airports'){}
+      explore: b is table('test:malloytest.state_facts') {
         join_many: a on state=a.state
       }
       query: b->{aggregate: c is airport_count.sum()}
@@ -139,10 +139,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      explore: a is table('malloytest.airports'){
+      explore: a is table('test:malloytest.airports'){
         where: state = 'NH' | 'CA'
       }
-      explore: b is table('malloytest.state_facts') {
+      explore: b is table('test:malloytest.state_facts') {
         join_many: a on state=a.state
       }
       query: b->{
@@ -164,8 +164,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      explore: a is table('malloytest.state_facts'){}
-      explore: b is table('malloytest.airports') {
+      explore: a is table('test:malloytest.state_facts'){}
+      explore: b is table('test:malloytest.airports') {
         join_one: a on state=a.state
       }
       query: b->{aggregate: c is a.airport_count.sum()}
@@ -180,10 +180,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      explore: a is table('malloytest.state_facts'){
+      explore: a is table('test:malloytest.state_facts'){
         where: state = 'TX' | 'LA'
       }
-      explore: b is table('malloytest.airports') {
+      explore: b is table('test:malloytest.airports') {
         join_one: a on state=a.state
       }
       query: b->{
@@ -207,7 +207,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      explore: a is table('malloytest.state_facts')
+      explore: a is table('test:malloytest.state_facts')
       explore: f is a{
         join_cross: a
       }
@@ -234,10 +234,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      query: q is table('malloytest.state_facts')->{
+      query: q is table('test:malloytest.state_facts')->{
         aggregate: r is airport_count.sum()
       }
-      explore: f is table('malloytest.state_facts'){
+      explore: f is table('test:malloytest.state_facts'){
         join_one: a is from(->q)
       }
       query: f->{
@@ -263,7 +263,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      explore: a is table('malloytest.state_facts')
+      explore: a is table('test:malloytest.state_facts')
       explore: f is a{
         join_cross: a on a.state = 'CA' | 'NY'
       }
@@ -288,7 +288,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      query: table('malloytest.state_facts') -> {
+      query: table('test:malloytest.state_facts') -> {
         group_by: state
         aggregate: c is count()
         limit: 3
@@ -306,7 +306,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   //   const result = await runtime
   //     .loadQuery(
   //       `
-  //       source: s is table('malloytest.state_facts') + {
+  //       source: s is table('test:malloytest.state_facts') + {
   //       }
   //       query: s-> {
   //         group_by: state
@@ -328,7 +328,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      query: table('malloytest.state_facts') -> {
+      query: table('test:malloytest.state_facts') -> {
         group_by: state
         aggregate: c is count()
       }
@@ -345,7 +345,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      query: table('malloytest.state_facts') -> {
+      query: table('test:malloytest.state_facts') -> {
         project: state
         limit: 10
       }
@@ -363,7 +363,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        source: s is table('malloytest.state_facts') + {
+        source: s is table('test:malloytest.state_facts') + {
           measure: total_births is births.sum()
           measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
         }
@@ -383,7 +383,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        source: s is table('malloytest.state_facts') + {
+        source: s is table('test:malloytest.state_facts') + {
           measure: total_births is births.sum()
           measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
         }
@@ -408,7 +408,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        source: s is table('malloytest.state_facts') + {
+        source: s is table('test:malloytest.state_facts') + {
           measure: m is all(births.sum())
           where: state='CA' | 'NY'
         }
@@ -428,7 +428,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        source: s is table('malloytest.state_facts') + {
+        source: s is table('test:malloytest.state_facts') + {
           measure: total_births is births.sum()
           measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
         }
@@ -454,7 +454,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        source: airports is table('malloytest.airports') {
+        source: airports is table('test:malloytest.airports') {
           measure: c is count()
         }
 
@@ -497,7 +497,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        source: airports is table('malloytest.airports') {
+        source: airports is table('test:malloytest.airports') {
           measure: c is count()
         }
 
@@ -532,7 +532,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        source: s is table('malloytest.state_facts') + {
+        source: s is table('test:malloytest.state_facts') + {
           measure: total_births is births.sum()
           measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
         }
@@ -558,7 +558,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        source: s is table('malloytest.state_facts') + {
+        source: s is table('test:malloytest.state_facts') + {
           measure: total_births is births.sum()
           measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
         }
@@ -584,7 +584,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        source: s is table('malloytest.state_facts') + {
+        source: s is table('test:malloytest.state_facts') + {
           measure: total_births is births.sum()
           measure: ug is all(total_births)
         }
@@ -609,7 +609,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        source: s is table('malloytest.state_facts') + {
+        source: s is table('test:malloytest.state_facts') + {
           measure: total_births is births.sum()
         }
 
@@ -634,7 +634,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        source: s is table('malloytest.state_facts') + {
+        source: s is table('test:malloytest.state_facts') + {
           measure: total_births is births.sum()
           dimension: abc is floor(airport_count/300)
         }
@@ -666,7 +666,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      source: f is  table('malloytest.state_facts') {
+      source: f is  table('test:malloytest.state_facts') {
         query: fun is {
           aggregate: t is count()
         }
@@ -688,7 +688,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      source: f is  table('malloytest.state_facts') {
+      source: f is  table('test:malloytest.state_facts') {
         query: fun is {
           group_by: one is 1
           aggregate: t is count()
@@ -712,7 +712,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      source: f is  table('malloytest.state_facts') {
+      source: f is  table('test:malloytest.state_facts') {
         query: fun is {
           group_by: one is 1
           aggregate: t is count()
@@ -739,7 +739,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       sql: one is ||
         SELECT 1 as a, 2 as b
         UNION ALL SELECT 3, 4
-      ;;
+      ;; on "test"
 
       explore: eone is  from_sql(one) {}
 
@@ -757,7 +757,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       sql: one is ||
         SELECT 1 as a, 2 as b
         UNION ALL SELECT 3, 4
-      ;;
+      ;; on "test"
 
       query: from_sql(one) -> { project: a }
       `
@@ -772,7 +772,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   //       `
   //     sql: one is ||
   //       select version() as version
-  //     ;;
+  //     ;; on "test"
 
   //     query: from_sql(one) -> { project: version }
   //     `
@@ -789,7 +789,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       sql: one is ||
         SELECT 1 as a, 2 as b
         UNION ALL SELECT 3, 4
-      ;;
+      ;; on "test"
 
       query: from_sql(one) -> {
         declare: c is a + 1
@@ -808,7 +808,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       sql: one is ||
         SELECT 1 as a, 2 as b
         UNION ALL SELECT 3, 4
-      ;;
+      ;; on "test"
 
       source: foo is from_sql(one) + {
         query: bar is {
@@ -831,7 +831,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       sql: one is ||
         SELECT 1 as a, 2 as b
         UNION ALL SELECT 3, 4
-      ;;
+      ;; on "test"
 
       source: foo is from_sql(one) + {
         query: bar is {
@@ -859,7 +859,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       sql: one is ||
         SELECT 'hello mom' as a, 'cheese tastes good' as b
         UNION ALL SELECT 'lloyd is a bozo', 'michael likes poetry'
-      ;;
+      ;; on "test"
 
       query: from_sql(one) -> {
         aggregate: llo is count() {? a ~ r'llo'}
@@ -879,7 +879,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       sql: one is ||
         SELECT 5 as a, 2 as b
         UNION ALL SELECT 3, 4
-      ;;
+      ;; on "test"
 
       query: from_sql(one) -> {
         declare: c is b + 4
@@ -900,7 +900,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             city,
             ${splitFunction[databaseName]}(city,' ') as words
           FROM ${rootDbPath[databaseName]}malloytest.aircraft
-        ;;
+        ;; on "test"
 
         source: title is from_sql(atitle){}
 
@@ -927,7 +927,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             ${splitFunction[databaseName]}(city,'A') as abreak
           FROM ${rootDbPath[databaseName]}malloytest.aircraft
           where city IS NOT null
-        ;;
+        ;; on "test"
 
         source: title is from_sql(atitle){}
 
@@ -949,7 +949,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        query: table('malloytest.airports') -> {
+        query: table('test:malloytest.airports') -> {
           where: faa_region = null
           group_by: faa_region
           aggregate: airport_count is count()
@@ -979,7 +979,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        source: s is table('malloytest.state_facts') + {
+        source: s is table('test:malloytest.state_facts') + {
         }
         query: s-> {
           group_by: state

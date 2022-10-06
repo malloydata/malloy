@@ -1138,7 +1138,7 @@ export class MalloyToAST
     const commands = pcx.SQL_STRING().text;
     const sqlStmt = new ast.SQLStatement({
       select: commands.slice(2, commands.length - 2),
-      connection: this.optionalText(pcx.connectionName()),
+      connection: this.getIdText(pcx.connectionName()),
     });
     const nameCx = pcx.sqlCommandNameDef();
     if (nameCx) {

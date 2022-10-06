@@ -613,7 +613,7 @@ export interface SQLSelectStatements {
 export interface SQLBlock extends NamedObject, SQLSelectStatements {
   type: "sqlBlock";
   name: string; //  hash of the connection and the select
-  connection?: string;
+  connection: string;
 }
 
 interface SubquerySource {

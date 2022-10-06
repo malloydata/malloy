@@ -33,7 +33,7 @@ export function pretty(thing: any): string {
 }
 
 const mockSchema: Record<string, StructDef> = {
-  aTable: {
+  "test:aTable": {
     type: "struct",
     name: "aTable",
     dialect: "standardsql",
@@ -48,7 +48,7 @@ const mockSchema: Record<string, StructDef> = {
       { type: "timestamp", name: "ats" },
     ],
   },
-  "malloytest.carriers": {
+  "test:malloytest.carriers": {
     type: "struct",
     name: "malloytest.carriers",
     dialect: "standardsql",
@@ -64,7 +64,7 @@ const mockSchema: Record<string, StructDef> = {
     ],
     as: "carriers",
   },
-  "malloytest.flights": {
+  "test:malloytest.flights": {
     type: "struct",
     name: "malloytest.flights",
     dialect: "standardsql",
@@ -93,7 +93,7 @@ const mockSchema: Record<string, StructDef> = {
     ],
     as: "flights",
   },
-  "malloytest.airports": {
+  "test:malloytest.airports": {
     type: "struct",
     name: "malloytest.airports",
     dialect: "standardsql",
@@ -134,7 +134,7 @@ const mockSchema: Record<string, StructDef> = {
     as: "airports",
   },
 };
-export const aTableDef = mockSchema.aTable;
+export const aTableDef = mockSchema["test:aTable"];
 
 /**
  * When translating partial trees, there will not be a document node

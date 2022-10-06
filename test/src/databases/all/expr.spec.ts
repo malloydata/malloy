@@ -22,7 +22,7 @@ import { databasesFromEnvironmentOr, mkSqlEqWith } from "../../util";
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 const expressionModelText = `
-explore: aircraft_models is table('malloytest.aircraft_models'){
+explore: aircraft_models is table('test:malloytest.aircraft_models'){
   primary_key: aircraft_model_code
   measure:
     airport_count is count(*),
@@ -34,7 +34,7 @@ explore: aircraft_models is table('malloytest.aircraft_models'){
   dimension: seats_bucketed is FLOOR(seats/20)*20.0
 }
 
-explore: aircraft is table('malloytest.aircraft'){
+explore: aircraft is table('test:malloytest.aircraft'){
   primary_key: tail_num
   join_one: aircraft_models with aircraft_model_code
   measure: aircraft_count is count(*)
@@ -276,7 +276,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       const result = await expressionModel
         .loadQuery(
           `
-        query: table('malloytest.alltypes')->{
+        query: table('test:malloytest.alltypes')->{
           group_by:
             t_date,
             t_date_month is t_date.month,
@@ -422,11 +422,11 @@ expressionModels.forEach((expressionModel, databaseName) => {
     const result = await expressionModel
       .loadQuery(
         `
-  explore: a is table('malloytest.aircraft') {
+  explore: a is table('test:malloytest.aircraft') {
     primary_key: tail_num
     measure: aircraft_count is count()
   }
-  query: table('malloytest.aircraft_models') {
+  query: table('test:malloytest.aircraft_models') {
     primary_key: aircraft_model_code
     join_many: a on a.aircraft_model_code
 
@@ -445,13 +445,13 @@ expressionModels.forEach((expressionModel, databaseName) => {
     const result = await expressionModel
       .loadQuery(
         `
-    explore: a_models is table('malloytest.aircraft_models'){
+    explore: a_models is table('test:malloytest.aircraft_models'){
       where: manufacturer ? ~'B%'
       primary_key: aircraft_model_code
       measure:model_count is count()
     }
 
-    explore: aircraft2 is table('malloytest.aircraft'){
+    explore: aircraft2 is table('test:malloytest.aircraft'){
       join_one: model is a_models with aircraft_model_code
       measure: aircraft_count is count()
     }
@@ -474,7 +474,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
     explore: bo_models is
       from(
-          table('malloytest.aircraft_models') {? manufacturer ? ~ 'BO%' }
+          table('test:malloytest.aircraft_models') {? manufacturer ? ~ 'BO%' }
           -> { project: aircraft_model_code, manufacturer, seats }
         ) {
           primary_key: aircraft_model_code
@@ -483,7 +483,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
     explore: b_models is
         from(
-          table('malloytest.aircraft_models') {? manufacturer ? ~ 'B%' }
+          table('test:malloytest.aircraft_models') {? manufacturer ? ~ 'B%' }
           -> { project: aircraft_model_code, manufacturer, seats }
         ) {
           where: bo_models.seats > 200
@@ -492,7 +492,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
           join_one: bo_models with aircraft_model_code
         }
 
-    explore: models is table('malloytest.aircraft_models') {
+    explore: models is table('test:malloytest.aircraft_models') {
       join_one: b_models with aircraft_model_code
       measure: model_count is count()
     }
@@ -546,9 +546,9 @@ expressionModels.forEach((expressionModel, databaseName) => {
     const result = await expressionModel
       .loadQuery(
         `
-      explore: f is table('malloytest.flights'){
-        join_one: a is table('malloytest.aircraft') {
-          join_one: state_facts is table('malloytest.state_facts'){primary_key: state} with state
+      explore: f is table('test:malloytest.flights'){
+        join_one: a is table('test:malloytest.aircraft') {
+          join_one: state_facts is table('test:malloytest.state_facts'){primary_key: state} with state
         } on tail_num = a.tail_num
       }
 

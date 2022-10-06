@@ -45,7 +45,7 @@ defineSQLStatement
   ;
 
 sqlStatementDef
-  : (sqlCommandNameDef IS)? SQL_STRING (ON connectionName)?
+  : (sqlCommandNameDef IS)? SQL_STRING ON connectionName
   ;
 
 importStatement

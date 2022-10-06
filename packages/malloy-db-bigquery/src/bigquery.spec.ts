@@ -31,7 +31,9 @@ describe("db:BigQuery", () => {
   });
 
   it("gets table schema", async () => {
-    const res = await bq.getTableFieldSchema(`malloy-data.faa.carriers`);
+    const res = await bq.getTableFieldSchema(
+      `bigquery:malloy-data.faa.carriers`
+    );
     expect(res.schema).toStrictEqual({
       fields: [
         { name: "code", type: "STRING" },
@@ -46,7 +48,7 @@ describe("db:BigQuery", () => {
   it("runs a Malloy query", async () => {
     const sql = await runtime
       .loadModel(
-        "explore: carriers is table('malloy-data.faa.carriers') { measure: carrier_count is count() }"
+        "explore: carriers is table('test:malloy-data.faa.carriers') { measure: carrier_count is count() }"
       )
       .loadQuery("query: carriers -> { aggregate: carrier_count }")
       .getSQL();
@@ -57,7 +59,7 @@ describe("db:BigQuery", () => {
   it("streams a Malloy query for download", async () => {
     const sql = await runtime
       .loadModel(
-        "explore: carriers is table('malloy-data.faa.carriers') { measure: carrier_count is count() }"
+        "explore: carriers is table('test:malloy-data.faa.carriers') { measure: carrier_count is count() }"
       )
       .loadQuery("query: carriers -> { group_by: name }")
       .getSQL();

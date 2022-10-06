@@ -1,6 +1,6 @@
 --! styles election.styles.json
 
-source: stations is table('bigquery-public-data.fcc_political_ads.broadcast_tv_radio_station'){
+source: stations is table('bigquery:bigquery-public-data.fcc_political_ads.broadcast_tv_radio_station'){
   primary_key: stationId
   measure: station_count is count()
 
@@ -24,7 +24,7 @@ source: stations is table('bigquery-public-data.fcc_political_ads.broadcast_tv_r
   }
 }
 
-source: content is table('bigquery-public-data.fcc_political_ads.content_info'){
+source: content is table('bigquery:bigquery-public-data.fcc_political_ads.content_info'){
   primary_key: rawFilePath
   measure:
     total_spend is grossSpend.sum()

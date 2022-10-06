@@ -18,11 +18,11 @@ join_cross: <source-name> [is <source-exp>] [on <boolean expression>]
 
 Examples of the above, with `orders` as the implied source:
 ```malloy
-join_one: users is table('malloy-data.ecomm.users') on orders.user_id = users.id
+join_one: users is table('bigquery:malloy-data.ecomm.users') on orders.user_id = users.id
 join_one: users on orders.user_id = users.id
 join_one: users with user_id
 join_many: order_items on order_items.id = orders.id
-join_cross: order_items2 is table('malloy-data.ecomm.order_items') on user_id = order_items2.user_id
+join_cross: order_items2 is table('bigquery:malloy-data.ecomm.order_items') on user_id = order_items2.user_id
 ```
 
 `join_one:` - the table we are joining has one row for each row in the source table.
@@ -47,11 +47,11 @@ The easiest, most error-proof way to perform a join is using the following synta
 To join based on a foreign key through the `primary_key` of a joined source, use `with` to specify an expression, which could be as simple as a field name in the source. This expression is matched against the declared `primary_key` of the joined source. Sources without a `primary_key` cannot use `with` joins.
 
 ```malloy
-source: users is table('malloy-data.ecomm.users'){
+source: users is table('bigquery:malloy-data.ecomm.users'){
   primary_key: id
 }
 
-source: order_items is table('malloy-data.ecomm.order_items'){
+source: order_items is table('bigquery:malloy-data.ecomm.order_items'){
   join_one: users with user_id
 }
 ```
@@ -59,7 +59,7 @@ source: order_items is table('malloy-data.ecomm.order_items'){
 This is simply a shortcut, when joining based on the primary key of a joined source. It is exactly equivalent to the `on` join written like this.
 
 ```malloy
-source: order_items is table('malloy-data.ecomm.order_items'){
+source: order_items is table('bigquery:malloy-data.ecomm.order_items'){
   join_one: users on order_items.user_id = users.id
 }
 ```
@@ -71,11 +71,11 @@ If no alias is specified using `is`, the name of the join will be the name of th
 
 ```malloy
 
-source: carriers is table('malloy-data.faa.carriers') {
+source: carriers is table('bigquery:malloy-data.faa.carriers') {
   primary_key: code
 }
 
-source: flights is table('malloy-data.faa.flights'){
+source: flights is table('bigquery:malloy-data.faa.flights'){
   join_one: carriers with carrier
 }
 ```
@@ -83,11 +83,11 @@ source: flights is table('malloy-data.faa.flights'){
 To give the joined source a different name within the context source, use `is` to alias it.
 
 ```malloy
-source: airports is table('malloy-data.faa.airports') {
+source: airports is table('bigquery:malloy-data.faa.airports') {
   primary_key: code
 }
 
-source: flights is table('malloy-data.faa.flights'){
+source: flights is table('bigquery:malloy-data.faa.flights'){
   join_one: origin_airport is airports with origin
 }
 ```
@@ -97,8 +97,8 @@ source: flights is table('malloy-data.faa.flights'){
 Sources do not need to be modeled before they are used in a join, though the join must be named using `is`.
 
 ```malloy
-source: flights is table('malloy-data.faa.flights'){
-  join_one: carriers is table('malloy-data.faa.carriers'){primary_key: code} with carrier
+source: flights is table('bigquery:malloy-data.faa.flights'){
+  join_one: carriers is table('bigquery:malloy-data.faa.carriers'){primary_key: code} with carrier
 }
 ```
 
@@ -135,25 +135,25 @@ retained.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto",   "isPaginationEnabled": true, "size":"large"}
-source: aircraft_models is table('malloy-data.faa.aircraft_models') {
+source: aircraft_models is table('bigquery:malloy-data.faa.aircraft_models') {
   primary_key: aircraft_model_code
   measure: aircraft_model_count is count()
 }
 
 /* Individual airplanes */
-source: aircraft is table('malloy-data.faa.aircraft') {
+source: aircraft is table('bigquery:malloy-data.faa.aircraft') {
   primary_key: tail_num
   measure: aircraft_count is count()
   join_one: aircraft_models with aircraft_model_code
 }
 
 /* The airports that the aircraft fly to and from */
-source: airports is table('malloy-data.faa.airports') {
+source: airports is table('bigquery:malloy-data.faa.airports') {
   primary_key: code
   measure: airport_count is count()
 }
 
-source: flights is table('malloy-data.faa.flights') {
+source: flights is table('bigquery:malloy-data.faa.flights') {
   join_one: origin_airport is airports with origin
   join_one: destination_airport is airports with destination
   join_one: aircraft with tail_num
@@ -175,8 +175,8 @@ For more examples and how to reason about aggregation across joins, review the [
 Inner join are essentially left joins with an additional condition that the parent table has matches in the joined table. The example below functions logically as an INNER JOIN, returning only users that have at least one row in the orders table, and only orders that have an associated user.
 
 ```malloy
-source: users is table('malloy-data.ecomm.users') {
-  join_many: orders is table('malloy-data.ecomm.order_items') on id = orders.user_id
+source: users is table('bigquery:malloy-data.ecomm.users') {
+  join_many: orders is table('bigquery:malloy-data.ecomm.order_items') on id = orders.user_id
   where: orders.user_id != null
 }
 ```

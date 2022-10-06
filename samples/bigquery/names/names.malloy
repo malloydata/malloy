@@ -1,6 +1,6 @@
 --! styles names.styles.json
 
-source: names is table('bigquery-public-data.usa_names.usa_1910_current') {
+source: names is table('bigquery:bigquery-public-data.usa_names.usa_1910_current') {
 
   dimension: decade is floor(`year` / 10) * 10
 

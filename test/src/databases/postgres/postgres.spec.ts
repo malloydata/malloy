@@ -51,7 +51,7 @@ describe("Postgres tests", () => {
           select '2020-03-02'::date as t_date,
           '2020-03-02 12:35:56'::timestamp without time zone as t_timestamp_no_tz,
           '2020-03-02 12:35:56'::timestamp with time zone as t_timestamp_w_tz
-        ;;
+        ;; on "postgres"
 
         query: from_sql(times)->{
           group_by:
@@ -135,7 +135,7 @@ describe("Postgres tests", () => {
         `
       sql: one is ||
         SELECT 1 as n
-       ;;
+      ;; on "postgres"
 
       query: from_sql(one) -> { project: n }
       `
@@ -150,7 +150,7 @@ describe("Postgres tests", () => {
         `
       sql: one is ||
         SELECT 1 as "upperLower"
-       ;;
+       ;; on "postgres"
 
       query: from_sql(one) -> { project: upperLower }
       `
@@ -165,7 +165,7 @@ describe("Postgres tests", () => {
         `
       sql: one is ||
         SELECT 1 as "select"
-       ;;
+       ;; on "postgres"
 
       query: from_sql(one) -> {
         project:
@@ -184,7 +184,7 @@ describe("Postgres tests", () => {
     const result = await runtime
       .loadQuery(
         `
-      query: table('public.UpperTablePublic') -> { project: one }
+      query: table('postgres:public.UpperTablePublic') -> { project: one }
       `
       )
       .run();
@@ -195,7 +195,7 @@ describe("Postgres tests", () => {
     const result = await runtime
       .loadQuery(
         `
-      query: table('UpperSchema.UpperSchemaUpperTable') -> { project: one }
+      query: table('postgres:UpperSchema.UpperSchemaUpperTable') -> { project: one }
       `
       )
       .run();

@@ -14,14 +14,14 @@ The source of a query can be a table, a [source](source.md), or a [named query](
 
 ```malloy
 --! {"isRunnable": true, "showAs":"html", "runMode": "auto", "isPaginationEnabled": true}
-query: table('malloy-data.faa.flights') -> { aggregate: flight_count is count() }
+query: table('bigquery:malloy-data.faa.flights') -> { aggregate: flight_count is count() }
 ```
 
 **A query against a source**
 
 ```malloy
 --! {"isRunnable": true, "showAs":"html", "runMode": "auto", "isPaginationEnabled": true}
-source: flights is table('malloy-data.faa.flights')
+source: flights is table('bigquery:malloy-data.faa.flights')
 
 query: flights -> { aggregate: flight_count is count() }
 ```
@@ -31,7 +31,7 @@ query: flights -> { aggregate: flight_count is count() }
 The leading `->` is used when the source is a query:
 
 ```malloy
-query: flights_by_carrier is table('malloy-data.faa.flights') -> {
+query: flights_by_carrier is table('bigquery:malloy-data.faa.flights') -> {
   group_by: carrier
   aggregate: flight_count is count()
 }
@@ -44,7 +44,7 @@ When a query is defined as part of a source or nested inside another query stage
 
 Defined as part of a source:
 ```malloy
-source: flights is table('malloy-data.faa.flights'){
+source: flights is table('bigquery:malloy-data.faa.flights'){
   query: flights_by_carrier is {
     group_by: carrier
     aggregate: flight_count is count()
@@ -54,7 +54,7 @@ source: flights is table('malloy-data.faa.flights'){
 
 Nested inside another query stage:
 ```malloy
-query: table('malloy-data.faa.flights') -> {
+query: table('bigquery:malloy-data.faa.flights') -> {
   group_by: dep_year is dep_time.year
   nest: by_carrier is {
     group_by: carrier
@@ -103,7 +103,7 @@ query: flights -> by_carrier
 This example shows a pipeline with 3 stages, the multiple stages chained using `->`. Each stage generates a CTE in the SQL (click "SQL" on the right to see what this looks like.)
 ```malloy
 --! {"isRunnable": true, "showAs":"html", "runMode": "auto", "source": "faa/airports.malloy", "size": "large"}
-query: table('malloy-data.faa.flights') -> {
+query: table('bigquery:malloy-data.faa.flights') -> {
   project: *
   where: dep_time > @2003
 } -> {

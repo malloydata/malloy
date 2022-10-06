@@ -2,14 +2,14 @@
 ```malloy
 --! {"isModel": true, "modelPath": "/inline/w1.malloy", "isHidden":true}
 
-source: words is table('malloy-data.malloytest.words_bigger'){
+source: words is table('bigquery:malloy-data.malloytest.words_bigger'){
   query: five_letter_words is {
     where: length(word) = 5 and  word ~ r'^[a-z]....$'
     project: word is UPPER(word)
   }
 }
 
-source: numbers is table('malloy-data.malloytest.numbers'){
+source: numbers is table('bigquery:malloy-data.malloytest.numbers'){
   where: num <= 5
 
   -- code to fake a cross join
