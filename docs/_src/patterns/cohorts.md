@@ -18,7 +18,7 @@ Texas makes up 18% of the total population of Billies.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto",   "isPaginationEnabled": true, "pageSize":20, "size":"small" }
-query: table('bigquery-public-data.usa_names.usa_1910_2013') -> {
+query: table('bigquery:bigquery-public-data.usa_names.usa_1910_2013') -> {
   where: name = 'Billie'
   aggregate: total_population is `number`.sum()
   nest: main_query is {
@@ -39,7 +39,7 @@ Using the query below we can see that 26% of all Billies were born in the 1930s.
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto",   "isPaginationEnabled": true, "pageSize":20, "size":"small" }
-query: table('bigquery-public-data.usa_names.usa_1910_2013') -> {
+query: table('bigquery:bigquery-public-data.usa_names.usa_1910_2013') -> {
   where: name = 'Billie'
   aggregate: total_population is `number`.sum()
   nest: main_query is {
@@ -64,7 +64,7 @@ to measure a little differently.  Instead of looking at a percentage, let's look
 
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto",   "isPaginationEnabled": true, "pageSize":20, "size":"small" }
-query: table('bigquery-public-data.usa_names.usa_1910_2013') -> {
+query: table('bigquery:bigquery-public-data.usa_names.usa_1910_2013') -> {
   where: state = 'CA' and `year` = 1990
   aggregate: total_population is `number`.sum()
   nest: main_query is {

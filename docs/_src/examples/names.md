@@ -7,7 +7,7 @@ were born with that name in that gender, state and year.
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto",   "isPaginationEnabled": false, "pageSize": 100}
-query: table('bigquery-public-data.usa_names.usa_1910_2013') -> {
+query: table('bigquery:bigquery-public-data.usa_names.usa_1910_2013') -> {
   top: 10
   project: *
 }
@@ -23,7 +23,7 @@ and `year` are reserved words, we have to quote the names with back-tics.
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
-query: table('bigquery-public-data.usa_names.usa_1910_2013') -> {
+query: table('bigquery:bigquery-public-data.usa_names.usa_1910_2013') -> {
   group_by: name
   aggregate: population is `number`.sum()
 }
@@ -44,7 +44,7 @@ Expressions work much the same as they do in SQL.  We can look at population ove
 
 ```malloy
 --! {"isRunnable": true,   "isPaginationEnabled": false, "pageSize": 100}
-query: table('bigquery-public-data.usa_names.usa_1910_2013') -> {
+query: table('bigquery:bigquery-public-data.usa_names.usa_1910_2013') -> {
   top: 10
   group_by: decade is floor(`year` / 10) * 10
   aggregate: population is sum(`number`)
@@ -56,7 +56,7 @@ query: table('bigquery-public-data.usa_names.usa_1910_2013') -> {
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "isPaginationEnabled": true, "pageSize":20, "size":"large" }
 source: names is from(
-  table('bigquery-public-data.usa_names.usa_1910_2013') -> {
+  table('bigquery:bigquery-public-data.usa_names.usa_1910_2013') -> {
     group_by:
       decade is floor(`year` / 10) * 10
       state

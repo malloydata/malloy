@@ -20,7 +20,7 @@ The table below shows all columns in the data set and their most common or range
 
 ```malloy
 --! {"isRunnable": true, "isHidden": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-query: table('bigquery-public-data.iowa_liquor_sales.sales') -> { index: * } -> {
+query: table('bigquery:bigquery-public-data.iowa_liquor_sales.sales') -> { index: * } -> {
   nest: string_columns is {
     order_by: cardinality asc
     where: fieldType = 'string'
@@ -45,7 +45,7 @@ query: table('bigquery-public-data.iowa_liquor_sales.sales') -> { index: * } -> 
 
 ```malloy
 --! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-query: table('bigquery-public-data.iowa_liquor_sales.sales') -> {
+query: table('bigquery:bigquery-public-data.iowa_liquor_sales.sales') -> {
   project: *
   top: 100
 }

@@ -7,7 +7,7 @@ The following sections use these definitions, created in the [previous
 section](step2.md).
 
 ```malloy
-source: iowa is table('bigquery-public-data.iowa_liquor_sales.sales'){
+source: iowa is table('bigquery:bigquery-public-data.iowa_liquor_sales.sales'){
   measure:
     total_sale_dollars is sale_dollars.sum()
     total_bottles is sum(bottles_sold)
@@ -34,7 +34,7 @@ query: iowa { where: category_name ~ r'VODKA' } -> {
 This particular view of the data is pretty useful, an something we expect to re-use.  We can add this query to the model by incorporating it into the source definition:
 
 ```malloy
-source: iowa is table('bigquery-public-data.iowa_liquor_sales.sales'){
+source: iowa is table('bigquery:bigquery-public-data.iowa_liquor_sales.sales'){
   measure:
     total_sale_dollars is sale_dollars.sum()
     total_bottles is sum(bottles_sold)
