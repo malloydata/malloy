@@ -97,8 +97,7 @@ export async function compileModel(
   const model = await Malloy.compile({
     urlReader: new DummyFiles(),
     connections: new FixedConnectionMap(
-      new Map([["dummy", new DummyConnection()]]),
-      "dummy"
+      new Map([["dummy", new DummyConnection()]])
     ),
     model: baseModel,
     parse: Malloy.parse({ source: malloy }),
