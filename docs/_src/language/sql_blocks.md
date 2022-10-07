@@ -13,7 +13,7 @@ sql: my_sql_query is ||
     gender
   FROM malloy-data.ecomm.users
   LIMIT 10
-;;
+;; on "bigquery"
 ```
 
 ## Sources from SQL Blocks
@@ -29,7 +29,7 @@ sql: my_sql_query is ||
     gender
   FROM malloy-data.ecomm.users
   LIMIT 10
-;;
+;; on "bigquery"
 
 source: limited_users is from_sql(my_sql_query) {
   measure: user_count is count()
