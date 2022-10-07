@@ -74,7 +74,10 @@ describe("BigQuery hand-built expression test", () => {
     as: "aircraft_models",
     type: "struct",
     dialect: "standardsql",
-    structSource: { type: "table" },
+    structSource: {
+      type: "table",
+      tablePath: "malloy-data.malloytest.aircraft_models",
+    },
     structRelationship: { type: "basetable", connectionName: "bigquery" },
     fields: [
       { type: "string", name: "aircraft_model_code" },
@@ -171,7 +174,10 @@ describe("BigQuery hand-built expression test", () => {
     type: "struct",
     name: "malloy-data.malloytest.aircraft",
     dialect: "standardsql",
-    structSource: { type: "table" },
+    structSource: {
+      type: "table",
+      tablePath: "malloy-data.malloytest.aircraft",
+    },
     structRelationship: { type: "basetable", connectionName: "bigquery" },
     fields: [
       { type: "string", name: "tail_num" },

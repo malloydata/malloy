@@ -212,7 +212,7 @@ export class Malloy {
             Array<string>
           > = new Map();
           for (const connectionTableString of result.tables) {
-            const { connectionName } = parseTableURL(connectionTableString);
+            const { connectionName } = parseTableURI(connectionTableString);
 
             let connectionToTablesMap = tablesByConnection.get(connectionName);
             if (!connectionToTablesMap) {
@@ -257,6 +257,9 @@ export class Malloy {
           > = new Map();
           for (const missingSQLSchemaRef of result.sqlStructs) {
             const connectionName = missingSQLSchemaRef.connection;
+            // if (connectionName === undefined) {
+            //   throw new Error("Oops have not made it required here yet...");
+            // }
 
             let connectionToSQLReferencesMap =
               sqlRefsByConnection.get(connectionName);
@@ -736,11 +739,11 @@ export class PreparedQuery {
   }
 }
 
-export function parseTableURL(tableURL: string): {
+export function parseTableURI(tableURI: string): {
   connectionName?: string;
   tablePath: string;
 } {
-  const [firstPart, secondPart] = tableURL.split(":");
+  const [firstPart, secondPart] = tableURI.split(":");
   if (secondPart) {
     return { connectionName: firstPart, tablePath: secondPart };
   } else {

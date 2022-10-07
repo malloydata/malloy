@@ -37,7 +37,7 @@ const mockSchema: Record<string, StructDef> = {
     type: "struct",
     name: "aTable",
     dialect: "standardsql",
-    structSource: { type: "table" },
+    structSource: { type: "table", tablePath: "aTable" },
     structRelationship: { type: "basetable", connectionName: "test" },
     fields: [
       { type: "string", name: "astr" },

@@ -25,7 +25,7 @@ import {
   AtomicFieldTypeInner,
   QueryData,
   PooledConnection,
-  parseTableURL,
+  parseTableURI,
   SQLBlock,
   Connection,
   QueryDataRow,
@@ -323,20 +323,19 @@ export class PostgresConnection
   }
 
   private async getTableSchema(tableURL: string): Promise<StructDef> {
+    const { tablePath } = parseTableURI(tableURL);
     const structDef: StructDef = {
       type: "struct",
       name: tableURL,
       dialect: "postgres",
-      structSource: { type: "table" },
+      structSource: { type: "table", tablePath },
       structRelationship: {
         type: "basetable",
         connectionName: this.name,
       },
       fields: [],
     };
-
-    const { tablePath: tableName } = parseTableURL(tableURL);
-    const [schema, table] = tableName.split(".");
+    const [schema, table] = tablePath.split(".");
     if (table === undefined) {
       throw new Error("Default schema not yet supported in Postgres");
     }
