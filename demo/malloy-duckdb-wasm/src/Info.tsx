@@ -13,13 +13,13 @@
 
 import React from "react";
 import styled from "styled-components";
-
+import info from "./media/info.svg";
 export interface InfoProps {
   title: string;
 }
 
 export const Info: React.FC<InfoProps> = ({ title }) => {
-  return <Padding title={title} src="media/info.svg" />;
+  return <Padding title={title} src={info} />;
 };
 
 const Padding = styled.img`

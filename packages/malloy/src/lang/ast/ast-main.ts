@@ -46,7 +46,7 @@ const theErrorStruct: model.StructDef = {
   type: "struct",
   name: "~malformed~",
   dialect: "~malformed~",
-  structSource: { type: "table" },
+  structSource: { type: "table", tablePath: "//undefined_error_table_path" },
   structRelationship: {
     type: "basetable",
     connectionName: "//undefined_error_connection",
@@ -939,6 +939,7 @@ export class ExpressionJoin extends Join {
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved
       joinStruct.name = this.name.refString;
+      delete joinStruct.as;
     } else {
       joinStruct.as = this.name.refString;
     }

@@ -178,7 +178,10 @@ export const medicareModel: StructDef = {
   name: "malloy-data.malloytest.bq_medicare_test",
   primaryKey: "id",
   structRelationship: { type: "basetable", connectionName: "bigquery" },
-  structSource: { type: "table" },
+  structSource: {
+    type: "table",
+    tablePath: "malloy-data.malloytest.bq_medicare_test",
+  },
   type: "struct",
 };
 

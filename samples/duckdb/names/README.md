@@ -20,16 +20,23 @@ This dataset a lightly transformed version of the U.S. Social Security Administr
 
 ## Queries in `1_names`
 
-**by_name** - top 10 names by population
+### <!--malloy-query model="./1_names.malloy" source="names" query="by_name"--> `by_name`
+Top 10 names by population
 
-**by_state** - population by state
+### <!--malloy-query model="./1_names.malloy" source="names" query="by_state"--> `by_state`
+Population by state
 
-**by_gender** - population by gender
+### <!--malloy-query model="./1_names.malloy" source="names" query="by_gender"--> `by_gender`
+Population by gender
 
-**by_year** - population by year
+### <!--malloy-query model="./1_names.malloy" source="names" query="by_year"--> `by_year`
+Population by year
 
-**male_names** / **female_names** - top 10 names for M / F reported gender
+### <!--malloy-query model="./1_names.malloy" source="names" query="male_names"--> `male_names` / <!--malloy-query model="./1_names.malloy" source="names" query="male_names"--> `female_names`
+Top 10 names for M / F reported gender
 
-**top_names_by_state_ea_gender** - top 10 names in each state, for each gender
+### <!--malloy-query model="./1_names.malloy" source="names" query="top_names_by_state_ea_gender"--> `top_names_by_state_ea_gender`
+Top 10 names in each state, for each gender
 
-**j_names** - returns the name dashboard, filtered to 'J' names. Example of querying against a source vs. defining queries in a source.
+### `j_names`
+Returns the name dashboard, filtered to 'J' names. Example of querying against a source vs. defining queries in a source.
