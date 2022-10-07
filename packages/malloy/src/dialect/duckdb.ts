@@ -392,24 +392,24 @@ export class DuckDBDialect extends Dialect {
     }
   }
 
-  // sqlSumDistinct(key: string, value: string): string {
-  //   // return `sum_distinct(list({key:${key}, val: ${value}}))`;
-  //   return `(
-  //     fail -- force the query for fail until the bug is fixed.
-  //     SELECT sum(a.val) as value
-  //     FROM (
-  //       SELECT UNNEST(list(distinct {key:${key}, val: ${value}})) a
-  //     )
-  //   )`;
-  // }
   sqlSumDistinct(key: string, value: string): string {
-    const _factor = 32;
-    const precision = 0.000001;
-    const keySQL = `md5_number_lower(${key}::varchar)::int128`;
-    return `
-    (SUM(DISTINCT ${keySQL} + FLOOR(IFNULL(${value},0)/${precision})::int128) -  SUM(DISTINCT ${keySQL}))*${precision}
-    `;
+    // return `sum_distinct(list({key:${key}, val: ${value}}))`;
+    return `(
+      fail -- force the query for fail until the bug is fixed.
+      SELECT sum(a.val) as value
+      FROM (
+        SELECT UNNEST(list(distinct {key:${key}, val: ${value}})) a
+      )
+    )`;
   }
+  // sqlSumDistinct(key: string, value: string): string {
+  //   const _factor = 32;
+  //   const precision = 0.000001;
+  //   const keySQL = `md5_number_lower(${key}::varchar)::int128`;
+  //   return `
+  //   (SUM(DISTINCT ${keySQL} + FLOOR(IFNULL(${value},0)/${precision})::int128) -  SUM(DISTINCT ${keySQL}))*${precision}
+  //   `;
+  // }
 
   // default duckdb to sampling 50K rows.
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
