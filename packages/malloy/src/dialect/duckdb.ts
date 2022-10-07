@@ -395,7 +395,6 @@ export class DuckDBDialect extends Dialect {
   sqlSumDistinct(key: string, value: string): string {
     // return `sum_distinct(list({key:${key}, val: ${value}}))`;
     return `(
-      fail -- force the query for fail until the bug is fixed.
       SELECT sum(a.val) as value
       FROM (
         SELECT UNNEST(list(distinct {key:${key}, val: ${value}})) a
