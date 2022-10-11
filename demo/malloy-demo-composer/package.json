@@ -15,8 +15,7 @@
     "package-linux": "ts-node scripts/package linux x64",
     "debian": "electron-installer-debian --src dist//malloy-composer-demo-linux-x64/ --dest dist/installers/ --arch amd64",
     "clean": "rm -rf ./node_modules",
-    "server-build": "npm run build && npx tsc -p tsconfig.server.json",
-    "server-start": "npm run server-build && node ./dist/server/cli.js",
+    "server-start": "ts-node scripts/package-server --skip-package && node ./dist/cli.js --models ../../samples",
     "server-package": "ts-node scripts/package-server"
   },
   "dependencies": {
