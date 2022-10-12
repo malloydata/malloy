@@ -14,6 +14,10 @@
   "files": [
     "samples"
   ],
+  "engines": {
+    "node": ">=16",
+    "npm": ">=8"
+  },
   "scripts": {
     "clean": "npm run -w @malloydata/malloy clean && tsc --build --clean",
     "build": "npm run -w @malloydata/malloy build-parser && tsc --build",
