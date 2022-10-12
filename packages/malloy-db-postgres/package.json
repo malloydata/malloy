@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-postgres",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "license": "GPL-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,7 +12,7 @@
     "malloyc": "ts-node ../../scripts/malloy-to-json"
   },
   "dependencies": {
-    "@malloydata/malloy": "*",
+    "@malloydata/malloy": "0.0.3",
     "@types/pg": "^8.6.1",
     "pg": "^8.7.1",
     "pg-query-stream": "4.2.3"
