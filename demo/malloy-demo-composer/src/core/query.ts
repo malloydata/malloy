@@ -23,19 +23,19 @@ import {
   QuerySummaryItemFilter,
   stagePathParent,
 } from "../types";
-import { FilterExpression } from "@malloydata/malloy";
 import {
   FieldDef,
+  FilteredAliasedName,
+  FilterExpression,
   isFilteredAliasedName,
   PipeSegment,
   QueryFieldDef,
+  Segment as QuerySegment,
   StructDef,
   TurtleDef,
   FieldTypeDef,
 } from "@malloydata/malloy";
 import { DataStyles } from "@malloydata/render";
-import { Segment as QuerySegment } from "@malloydata/malloy";
-import { FilteredAliasedName } from "@malloydata/malloy/src/model";
 
 class SourceUtils {
   constructor(protected source: StructDef) {}

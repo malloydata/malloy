@@ -19,6 +19,11 @@
 
 import * as crypto from "crypto";
 import {
+  FetchSchemaAndRunSimultaneously,
+  FetchSchemaAndRunStreamSimultaneously,
+  PersistSQLResults,
+  RunSQLOptions,
+  StreamingConnection,
   StructDef,
   MalloyQueryData,
   NamedStructDefs,
@@ -30,15 +35,8 @@ import {
   Connection,
   QueryDataRow,
 } from "@malloydata/malloy";
-import {
-  FetchSchemaAndRunSimultaneously,
-  FetchSchemaAndRunStreamSimultaneously,
-  PersistSQLResults,
-  StreamingConnection,
-} from "@malloydata/malloy/src/runtime_types";
 import { Client, Pool, PoolClient } from "pg";
 import QueryStream from "pg-query-stream";
-import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
 
 const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   "character varying": "string",

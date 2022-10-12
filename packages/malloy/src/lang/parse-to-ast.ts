@@ -17,10 +17,9 @@ import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor
 import { MalloyParserVisitor } from "./lib/Malloy/MalloyParserVisitor";
 import * as parse from "./lib/Malloy/MalloyParser";
 import * as ast from "./ast";
-import { MessageLogger } from "./parse-log";
+import { LogSeverity, MessageLogger } from "./parse-log";
 import { MalloyParseRoot } from "./parse-malloy";
 import { Interval as StreamInterval } from "antlr4ts/misc/Interval";
-import { LogSeverity } from "./parse-log";
 
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy

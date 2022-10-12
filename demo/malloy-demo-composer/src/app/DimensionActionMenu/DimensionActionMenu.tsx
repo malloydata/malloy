@@ -11,8 +11,12 @@
  * GNU General Public License for more details.
  */
 
-import { FieldDef, FilterExpression, StructDef } from "@malloydata/malloy";
-import { QueryFieldDef } from "@malloydata/malloy";
+import {
+  FieldDef,
+  FilterExpression,
+  QueryFieldDef,
+  StructDef,
+} from "@malloydata/malloy";
 import {
   RendererName,
   StagePath,

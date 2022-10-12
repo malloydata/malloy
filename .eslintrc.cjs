@@ -38,6 +38,11 @@ module.exports = {
     "no-console": "warn",
     "prettier/prettier": "error",
     "sort-keys": "off",
+    "no-duplicate-imports": "error",
+    "no-restricted-imports": [
+      "error",
+      { patterns: ["@malloydata/malloy/src/*"] },
+    ],
     "no-use-before-define": "off",
     "no-throw-literal": "error",
     "@typescript-eslint/no-unused-vars": [

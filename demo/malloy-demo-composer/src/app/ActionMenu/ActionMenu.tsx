@@ -11,8 +11,11 @@
  * GNU General Public License for more details.
  */
 
-import { FilterExpression, StructDef } from "@malloydata/malloy";
-import { SearchValueMapResult } from "@malloydata/malloy";
+import {
+  FilterExpression,
+  SearchValueMapResult,
+  StructDef,
+} from "@malloydata/malloy";
 import { ReactElement, useState } from "react";
 import styled from "styled-components";
 import { compileFilter } from "../../core/compile";
