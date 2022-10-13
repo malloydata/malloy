@@ -20,6 +20,7 @@ export type {
   Query,
   // Needed for DB
   StructDef,
+  StructRelationship,
   NamedStructDefs,
   MalloyQueryData,
   AtomicFieldType as AtomicFieldTypeInner,
@@ -37,6 +38,7 @@ export type {
   SQLBlock,
   // Used in Composer Demo
   FieldDef,
+  FilteredAliasedName,
   PipeSegment,
   QueryFieldDef,
   TurtleDef,
@@ -93,6 +95,7 @@ export type {
   DocumentSymbol,
   DocumentHighlight,
   ResultJSON,
+  RunSQLOptions,
   PreparedResultMaterializer,
   SQLBlockMaterializer,
   ExploreMaterializer,
@@ -110,6 +113,9 @@ export type {
   PooledConnection,
   TestableConnection,
   PersistSQLResults,
+  FetchSchemaAndRunSimultaneously,
+  StreamingConnection,
+  FetchSchemaAndRunStreamSimultaneously,
 } from "./runtime_types";
 export type { Loggable } from "./malloy";
 export { toAsyncGenerator } from "./connection_utils";

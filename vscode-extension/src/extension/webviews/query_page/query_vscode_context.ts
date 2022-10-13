@@ -12,8 +12,7 @@
  */
 
 import { QueryPanelMessage } from "../../message_types";
-import { makeVSCodeContext } from "../vscode_context";
-import { makeUseVSCodeContext } from "../vscode_context";
+import { makeUseVSCodeContext, makeVSCodeContext } from "../vscode_context";
 
 export const QueryVSCodeContext = makeVSCodeContext<void, QueryPanelMessage>();
 

@@ -10,10 +10,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
-import { QueryDataRow } from "@malloydata/malloy";
+import { QueryDataRow, RunSQLOptions } from "@malloydata/malloy";
 import * as duckdb from "@duckdb/duckdb-wasm";
 import { StructRow, Table, Vector } from "apache-arrow";
-import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
 import { DuckDBCommon } from "./duckdb_common";
 
 /**

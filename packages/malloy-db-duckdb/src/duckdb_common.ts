@@ -13,22 +13,20 @@
 import {
   AtomicFieldTypeInner,
   Connection,
+  FetchSchemaAndRunSimultaneously,
+  FetchSchemaAndRunStreamSimultaneously,
   MalloyQueryData,
   NamedStructDefs,
   parseTableURI,
   PersistSQLResults,
   FieldTypeDef,
   PooledConnection,
+  RunSQLOptions,
   SQLBlock,
+  StreamingConnection,
   StructDef,
   QueryDataRow,
 } from "@malloydata/malloy";
-import {
-  FetchSchemaAndRunSimultaneously,
-  FetchSchemaAndRunStreamSimultaneously,
-  StreamingConnection,
-} from "@malloydata/malloy/src/runtime_types";
-import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
 
 const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   BIGINT: "number",

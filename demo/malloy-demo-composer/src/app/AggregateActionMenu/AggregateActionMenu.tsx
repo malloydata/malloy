@@ -11,14 +11,18 @@
  * GNU General Public License for more details.
  */
 
-import { FilterExpression, StructDef } from "@malloydata/malloy";
+import {
+  FilterExpression,
+  QueryFieldDef,
+  SearchValueMapResult,
+  StructDef,
+} from "@malloydata/malloy";
 import { OrderByField, RendererName, StagePath } from "../../types";
 import { FilterContextBar } from "../FilterContextBar";
 import { RenameField } from "../RenameField";
 import { ActionMenu } from "../ActionMenu";
 import { DataStyleContextBar } from "../DataStyleContextBar";
 import { AddNewMeasure } from "../AddNewMeasure";
-import { QueryFieldDef, SearchValueMapResult } from "@malloydata/malloy";
 import { EditOrderBy } from "../EditOrderBy";
 
 interface AggregateActionMenuProps {
