@@ -17,11 +17,11 @@
     "clean": "rm -rf ./node_modules"
   },
   "dependencies": {
-    "@malloydata/db-bigquery": "*",
-    "@malloydata/db-duckdb": "*",
-    "@malloydata/db-postgres": "*",
-    "@malloydata/malloy": "*",
-    "@malloydata/render": "*",
+    "@malloydata/db-bigquery": "0.0.2",
+    "@malloydata/db-duckdb": "0.0.2",
+    "@malloydata/db-postgres": "0.0.2",
+    "@malloydata/malloy": "0.0.3",
+    "@malloydata/render": "0.0.2",
     "@popperjs/core": "^2.11.4",
     "electron": "^18.2.3",
     "mdast-comment-marker": "^2.1.0",
