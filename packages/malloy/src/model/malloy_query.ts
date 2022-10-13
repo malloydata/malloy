@@ -1132,7 +1132,7 @@ class FieldInstanceResult implements FieldInstance {
   ): void {
     const name = qs.getIdentifier();
 
-    // we're already chasing the dependancy for this join.
+    // we're already chasing the dependency for this join.
     if (joinStack.indexOf(name) !== -1) {
       return;
     }
