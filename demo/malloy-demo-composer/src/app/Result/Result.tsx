@@ -210,7 +210,6 @@ const ViewTab = styled.div<{
 
 const PreWrapper = styled.div`
   padding: 0 15px;
-  overflow: hidden;
   font-family: "Roboto Mono";
   font-size: 14px;
 `;
