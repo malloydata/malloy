@@ -14,6 +14,7 @@
 import { useEffect } from "react";
 import { useQuery } from "react-query";
 import * as explore from "../../types";
+import { isElectron } from "../utils";
 
 export const KEY = "currentAnalysis";
 
@@ -23,8 +24,15 @@ async function refetchAnalysis(
   if (analysis === undefined || analysis.fullPath === undefined) {
     return undefined;
   }
+  if (isElectron()) {
+    return window.malloy.analysis(analysis.fullPath);
+  }
 
-  return window.malloy.analysis(analysis.fullPath);
+  const params = new URLSearchParams({
+    path: analysis.fullPath,
+  });
+  const raw = await (await fetch(`api/analysis?${params}`)).json();
+  return raw.analysis as explore.Analysis;
 }
 
 export function useWatchAnalysis(

@@ -13,6 +13,7 @@
 
 import { useQuery } from "react-query";
 import * as explore from "../../types";
+import { isElectron } from "../utils";
 
 export const KEY = (path: string | undefined): string => `directory/${path}`;
 
@@ -21,7 +22,13 @@ export function useDirectory(
 ): explore.Directory | undefined {
   const { data: directory } = useQuery(
     KEY(path),
-    () => window.malloy.analyses(path),
+    async () => {
+      if (isElectron()) {
+        return window.malloy.analyses(path);
+      }
+      const raw = await (await fetch("api/analyses")).json();
+      return raw.directory as explore.Directory;
+    },
     {
       refetchOnWindowFocus: false,
     }

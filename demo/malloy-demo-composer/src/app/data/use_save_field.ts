@@ -14,7 +14,8 @@
 import { useMutation, useQueryClient } from "react-query";
 import { Analysis } from "../../types";
 import { KEY as DIRECTORY_KEY } from "./use_directory";
-import { FieldDef, ModelDef } from "@malloydata/malloy";
+import { FieldDef, ModelDef, Result } from "@malloydata/malloy";
+import { isElectron } from "../utils";
 
 async function saveField(
   type: "query" | "dimension" | "measure",
@@ -25,14 +26,32 @@ async function saveField(
   if (analysis === undefined) {
     return undefined;
   }
-  const res = await window.malloy.saveField(type, field, name, {
-    ...analysis,
-    modelDef: {} as unknown as ModelDef,
-  });
-  if (res instanceof Error) {
-    throw res;
+  if (isElectron()) {
+    const res = await window.malloy.saveField(type, field, name, {
+      ...analysis,
+      modelDef: {} as unknown as ModelDef,
+    });
+    if (res instanceof Error) {
+      throw res;
+    }
+    return res;
   }
-  return res;
+
+  const raw = await (
+    await fetch("api/save_field", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type,
+        field,
+        name,
+        analysis: { ...analysis, modelDef: {} },
+      }),
+    })
+  ).json();
+  return raw.analysis as Analysis;
 }
 
 interface UseSaveFieldResult {
