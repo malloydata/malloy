@@ -14,13 +14,12 @@
 import { ParserRuleContext } from "antlr4ts";
 import type { ParseTree } from "antlr4ts/tree";
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
-import { MalloyVisitor } from "./lib/Malloy/MalloyVisitor";
+import { MalloyParserVisitor } from "./lib/Malloy/MalloyParserVisitor";
 import * as parse from "./lib/Malloy/MalloyParser";
 import * as ast from "./ast";
-import { MessageLogger } from "./parse-log";
+import { LogSeverity, MessageLogger } from "./parse-log";
 import { MalloyParseRoot } from "./parse-malloy";
 import { Interval as StreamInterval } from "antlr4ts/misc/Interval";
-import { LogSeverity } from "./parse-log";
 
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
@@ -28,7 +27,7 @@ import { LogSeverity } from "./parse-log";
  */
 export class MalloyToAST
   extends AbstractParseTreeVisitor<ast.MalloyElement>
-  implements MalloyVisitor<ast.MalloyElement>
+  implements MalloyParserVisitor<ast.MalloyElement>
 {
   constructor(readonly parse: MalloyParseRoot, readonly msgLog: MessageLogger) {
     super();
@@ -1135,7 +1134,7 @@ export class MalloyToAST
   }
 
   visitSQLStatementDef(pcx: parse.SqlStatementDefContext): ast.SQLStatement {
-    const commands = pcx.sqlBlock().text;
+    const commands = pcx.SQL_STRING().text;
     const sqlStmt = new ast.SQLStatement({
       select: commands.slice(2, commands.length - 2),
       connection: this.optionalText(pcx.connectionName()),

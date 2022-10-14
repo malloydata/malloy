@@ -77,7 +77,7 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   return async function (
     expr: string,
-    result: string | boolean
+    result: string | boolean | number
   ): Promise<Result> {
     const qExpr = expr.replace(/'/g, "`");
     const sqlV = initV?.sql || "SELECT 1 as one";
@@ -99,6 +99,17 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
           -> { project: ${varName} is ${expr} }
           -> {
             project: calc is pick ${whenPick} else ${elsePick}
+          }`;
+    } else if (typeof result === "number") {
+      query = `${sourceDef}
+          query: basicTypes
+          -> {
+            project: expect is ${result}
+            project: got is ${expr}
+          } -> {
+            project: calc is
+              pick '=' when expect = got
+              else concat('sqlEq failed', CHR(10), '    Expected: ${qExpr} == ${result}', CHR(10), '    Received: ', got::string)
           }`;
     } else {
       const qResult = result.replace(/'/g, "`");

@@ -318,11 +318,11 @@
     ]
   },
   "dependencies": {
-    "@malloydata/db-bigquery": "*",
-    "@malloydata/db-duckdb": "*",
-    "@malloydata/db-postgres": "*",
-    "@malloydata/malloy": "*",
-    "@malloydata/render": "*",
+    "@malloydata/db-bigquery": "0.0.2",
+    "@malloydata/db-duckdb": "0.0.2",
+    "@malloydata/db-postgres": "0.0.2",
+    "@malloydata/malloy": "0.0.3",
+    "@malloydata/render": "0.0.2",
     "@observablehq/plot": "^0.1.0",
     "@vscode/webview-ui-toolkit": "^1.0.0",
     "keytar": "7.7.0",
@@ -331,8 +331,6 @@
     "react-popper-tooltip": "^4.3.1",
     "shiki": "^0.10.0",
     "styled-components": "^5.3.3",
-    "vega": "5.21.0",
-    "vega-lite": "5.2.0",
     "vscode-languageclient": "^7.0.0",
     "vscode-languageserver": "^7.0.0",
     "vscode-languageserver-textdocument": "^1.0.1"

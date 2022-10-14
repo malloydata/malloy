@@ -15,7 +15,7 @@ Use the [VS Code ESLint extension](https://marketplace.visualstudio.com/items?it
 
 The tests can be run via the [VS Code Jest Runner extension](https://marketplace.visualstudio.com/items?itemName=firsttris.vscode-jest-runner). Alternatively, use `npm run test`, or a specific file, like `npm run test test/nomodel.spec.ts`.
 
-Some of the Postgres tests depend on static tables (i.e. `test/src/nomodel.spec.ts`). To set up the database locally for these tests, you can `gunzip` the `test/sql/malloytest-postgres.sql.gz` file and run its SQL with a command such as `psql -f test/sql/malloytest-postgres.sql`.
+Some of the Postgres tests depend on static tables (i.e. `test/src/nomodel.spec.ts`). To set up the database locally for these tests, you can `gunzip` the `test/data/postgres/malloytest-postgres.sql.gz` file and run its SQL with a command such as `psql -f test/data/postgres/malloytest-postgres.sql.gz`.
 
 ### VS Code tips
 

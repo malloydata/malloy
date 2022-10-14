@@ -13,6 +13,8 @@
 
 import {
   Connection,
+  FetchSchemaAndRunSimultaneously,
+  FetchSchemaAndRunStreamSimultaneously,
   FieldDef,
   FilterExpression,
   FixedConnectionMap,
@@ -20,17 +22,13 @@ import {
   Malloy,
   MalloyQueryData,
   ModelDef,
+  PersistSQLResults,
   PooledConnection,
   Runtime,
+  StreamingConnection,
   StructDef,
   URLReader,
 } from "@malloydata/malloy";
-import { PersistSQLResults } from "@malloydata/malloy";
-import {
-  FetchSchemaAndRunSimultaneously,
-  StreamingConnection,
-  FetchSchemaAndRunStreamSimultaneously,
-} from "@malloydata/malloy/src/runtime_types";
 
 class DummyFiles implements URLReader {
   async readURL(): Promise<string> {

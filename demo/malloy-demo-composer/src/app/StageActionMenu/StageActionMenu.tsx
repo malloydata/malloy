@@ -23,9 +23,9 @@ import { NestContextBar } from "../NestContextBar";
 import { FilterContextBar } from "../FilterContextBar";
 import { AddLimit } from "../AddLimit";
 import { OrderByContextBar } from "../OrderByContextBar";
-import { FilterExpression } from "@malloydata/malloy";
 import { ActionMenu } from "../ActionMenu";
 import {
+  FilterExpression,
   QueryFieldDef,
   SearchValueMapResult,
   StructDef,

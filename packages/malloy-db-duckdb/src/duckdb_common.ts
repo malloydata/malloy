@@ -13,22 +13,20 @@
 import {
   AtomicFieldTypeInner,
   Connection,
+  FetchSchemaAndRunSimultaneously,
+  FetchSchemaAndRunStreamSimultaneously,
   MalloyQueryData,
   NamedStructDefs,
-  parseTableURL,
+  parseTableURI,
   PersistSQLResults,
   FieldTypeDef,
   PooledConnection,
+  RunSQLOptions,
   SQLBlock,
+  StreamingConnection,
   StructDef,
   QueryDataRow,
 } from "@malloydata/malloy";
-import {
-  FetchSchemaAndRunSimultaneously,
-  FetchSchemaAndRunStreamSimultaneously,
-  StreamingConnection,
-} from "@malloydata/malloy/src/runtime_types";
-import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
 
 const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   BIGINT: "number",
@@ -290,12 +288,12 @@ export abstract class DuckDBCommon
   }
 
   private async getTableSchema(tableURL: string): Promise<StructDef> {
-    const { tablePath: tableName } = parseTableURL(tableURL);
+    const { tablePath } = parseTableURI(tableURL);
     const structDef: StructDef = {
       type: "struct",
-      name: tableName,
+      name: tablePath,
       dialect: "duckdb",
-      structSource: { type: "table" },
+      structSource: { type: "table", tablePath },
       structRelationship: {
         type: "basetable",
         connectionName: this.name,
@@ -303,20 +301,10 @@ export abstract class DuckDBCommon
       fields: [],
     };
 
-    // const { tablePath: tableName } = parseTableURL(tableURL);
-    // const [schema, table] = tableName.split(".");
-    // if (table === undefined) {
-    //   throw new Error("Default schema not yet supported in DuckDB");
-    // }
-    // const infoQuery = `
-    //   SELECT column_name, data_type FROM information_schema.columns
-    //   WHERE table_name = '${table}'
-    //     AND table_schema = '${schema}'
-    // `;
-
-    const infoQuery = `DESCRIBE SELECT * FROM ${
-      tableName.match(/\//) ? `'${tableName}'` : tableName
-    };`;
+    const quotedTablePath = tablePath.match(/\//)
+      ? `'${tablePath}'`
+      : tablePath;
+    const infoQuery = `DESCRIBE SELECT * FROM ${quotedTablePath}`;
     await this.schemaFromQuery(infoQuery, structDef);
     return structDef;
   }

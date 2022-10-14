@@ -31,7 +31,7 @@ describe("structdef comprehension", () => {
       type: "struct",
       name: "test",
       dialect: "standardsql",
-      structSource: { type: "table" },
+      structSource: { type: "table", tablePath: "test" },
       structRelationship: { type: "basetable", connectionName: "test" },
       fields: [field],
     };
@@ -140,7 +140,7 @@ describe("structdef comprehension", () => {
           { type: "field", path: "t.a" },
         ],
       },
-      structSource: { type: "table" },
+      structSource: { type: "table", tablePath: "t" },
       fields: [{ type: "string", name: "a" }],
     };
     const struct = mkStructDef(field);

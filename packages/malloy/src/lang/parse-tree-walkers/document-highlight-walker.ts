@@ -14,7 +14,7 @@
 import { CommonTokenStream, ParserRuleContext } from "antlr4ts";
 import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import { ParseTree } from "antlr4ts/tree";
-import { MalloyListener } from "../lib/Malloy/MalloyListener";
+import { MalloyParserListener } from "../lib/Malloy/MalloyParserListener";
 import * as parser from "../lib/Malloy/MalloyParser";
 import { MalloyParser } from "../lib/Malloy/MalloyParser";
 import { Token } from "antlr4ts/Token";
@@ -330,7 +330,7 @@ export function passForHighlights(
   return highlights;
 }
 
-class DocumentHighlightWalker implements MalloyListener {
+class DocumentHighlightWalker implements MalloyParserListener {
   constructor(
     readonly tokens: CommonTokenStream,
     readonly highlights: DocumentHighlight[]
@@ -369,7 +369,7 @@ export function walkForDocumentHighlights(
   parseTree: ParseTree
 ): DocumentHighlight[] {
   const finder = new DocumentHighlightWalker(tokens, []);
-  const listener: MalloyListener = finder;
+  const listener: MalloyParserListener = finder;
   ParseTreeWalker.DEFAULT.walk(listener, parseTree);
   return finder.highlights;
 }

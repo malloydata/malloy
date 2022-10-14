@@ -11,8 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { promises as fs } from "fs";
-import { existsSync } from "fs";
+import { existsSync, promises as fs } from "fs";
 import * as path from "path";
 import * as os from "os";
 

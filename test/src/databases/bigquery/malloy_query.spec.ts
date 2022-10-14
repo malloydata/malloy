@@ -636,7 +636,10 @@ describe("BigQuery expression tests", () => {
           dialect: "standardsql",
           as: "mtest",
           structRelationship: { type: "basetable", connectionName: "bigquery" },
-          structSource: { type: "table" },
+          structSource: {
+            type: "table",
+            tablePath: "malloy-data.malloytest.bq_medicare_test",
+          },
           fields: [
             {
               type: "number",

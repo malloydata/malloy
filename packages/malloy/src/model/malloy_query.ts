@@ -63,7 +63,6 @@ import {
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
-import { parseTableURL } from "../malloy";
 import md5 from "md5";
 import { ResultStructMetadataDef, SearchIndexResult } from ".";
 import { Connection } from "..";
@@ -1133,7 +1132,7 @@ class FieldInstanceResult implements FieldInstance {
   ): void {
     const name = qs.getIdentifier();
 
-    // we're already chasing the dependancy for this join.
+    // we're already chasing the dependency for this join.
     if (joinStack.indexOf(name) !== -1) {
       return;
     }
@@ -2133,8 +2132,7 @@ class QueryQuery extends QueryField {
         type: "basetable",
         connectionName: this.parent.connectionName,
       },
-      // structSource: {type: 'query', query: this.fieldDef}
-      structSource: { type: "table" },
+      structSource: { type: "query_result" },
       resultMetadata: this.getResultMetadata(this.rootResult),
       type: "struct",
     };
@@ -3205,7 +3203,7 @@ FROM ${resultStage}\n`
         type: "basetable",
         connectionName: this.parent.connectionName,
       },
-      structSource: { type: "table" },
+      structSource: { type: "query_result" },
     };
   }
 }
@@ -3550,9 +3548,7 @@ class QueryStruct extends QueryNode {
   structSourceSQL(stageWriter: StageWriter): string {
     switch (this.fieldDef.structSource.type) {
       case "table": {
-        const { tablePath } = parseTableURL(
-          this.fieldDef.structSource.tablePath || this.fieldDef.name
-        );
+        const tablePath = this.fieldDef.structSource.tablePath;
         return this.dialect.quoteTablePath(tablePath);
       }
       case "sql":

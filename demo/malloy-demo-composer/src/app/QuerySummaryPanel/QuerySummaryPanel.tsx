@@ -11,8 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { ReactElement, useRef } from "react";
-import { useState } from "react";
+import { ReactElement, useEffect, useRef, useState } from "react";
 import {
   QuerySummary,
   QuerySummaryItem,
@@ -34,7 +33,6 @@ import { FilterActionMenu } from "../FilterActionMenu";
 import { SearchValueMapResult, StructDef } from "@malloydata/malloy";
 import { OrderByActionMenu } from "../OrderByActionMenu";
 import { EmptyMessage } from "../CommonElements";
-import { useEffect } from "react";
 import { DataStyleActionMenu } from "../DataStyleActionMenu";
 import { VisIcon } from "../VisIcon";
 import { StageActionMenu } from "../StageActionMenu";
