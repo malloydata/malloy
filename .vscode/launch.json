@@ -79,6 +79,14 @@
       "name": "Attach to Composer Render Process",
       "port": 7151,
       "webRoot": "${workspaceRoot}/html"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Run and attach to Malloy Service",
+      "cwd": "${workspaceFolder}/packages/malloy-service",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["ts-node", "src/server.ts"]
     }
   ]
 }

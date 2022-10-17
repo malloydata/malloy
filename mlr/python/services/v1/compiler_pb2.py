@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1aservices/v1/compiler.proto\x12\x12malloy.services.v1\"\x9f\x01\n\x0e\x43ompileRequest\x12\x35\n\x08\x64ocument\x18\x01 \x01(\x0b\x32#.malloy.services.v1.CompileDocument\x12\x37\n\nreferences\x18\x02 \x03(\x0b\x32#.malloy.services.v1.CompileDocument\x12\x0e\n\x06schema\x18\x03 \x01(\t\x12\r\n\x05query\x18\x04 \x01(\t\"-\n\x0f\x43ompileResponse\x12\r\n\x05model\x18\x01 \x01(\t\x12\x0b\n\x03sql\x18\x02 \x01(\t\"/\n\x0f\x43ompileDocument\x12\x0b\n\x03url\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t2`\n\x08\x43ompiler\x12T\n\x07\x43ompile\x12\".malloy.services.v1.CompileRequest\x1a#.malloy.services.v1.CompileResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1aservices/v1/compiler.proto\x12\x12malloy.services.v1\"\x8e\x02\n\x0e\x43ompileRequest\x12\x35\n\x04type\x18\x01 \x01(\x0e\x32\'.malloy.services.v1.CompileRequest.Type\x12\x35\n\x08\x64ocument\x18\x02 \x01(\x0b\x32#.malloy.services.v1.CompileDocument\x12\x37\n\nreferences\x18\x03 \x03(\x0b\x32#.malloy.services.v1.CompileDocument\x12\x0e\n\x06schema\x18\x04 \x01(\t\x12\r\n\x05query\x18\x05 \x01(\t\"6\n\x04Type\x12\x0b\n\x07\x43OMPILE\x10\x00\x12\x0e\n\nREFERENCES\x10\x01\x12\x11\n\rTABLE_SCHEMAS\x10\x02\"-\n\x0f\x43ompileResponse\x12\r\n\x05model\x18\x01 \x01(\t\x12\x0b\n\x03sql\x18\x02 \x01(\t\"/\n\x0f\x43ompileDocument\x12\x0b\n\x03url\x18\x01 \x01(\t\x12\x0f\n\x07\x63ontent\x18\x02 \x01(\t\"\xc8\x01\n\x0f\x43ompilerRequest\x12\x36\n\x04type\x18\x01 \x01(\x0e\x32(.malloy.services.v1.CompilerRequest.Type\x12\x13\n\x0bimport_urls\x18\x02 \x03(\t\x12\x15\n\rtable_schemas\x18\x03 \x03(\t\x12\x0f\n\x07\x63ontent\x18\x63 \x01(\t\"@\n\x04Type\x12\x0b\n\x07UNKNOWN\x10\x00\x12\n\n\x06IMPORT\x10\x01\x12\x11\n\rTABLE_SCHEMAS\x10\x02\x12\x0c\n\x08\x43OMPLETE\x10\x03\x32\xc0\x01\n\x08\x43ompiler\x12T\n\x07\x43ompile\x12\".malloy.services.v1.CompileRequest\x1a#.malloy.services.v1.CompileResponse\"\x00\x12^\n\rCompileStream\x12\".malloy.services.v1.CompileRequest\x1a#.malloy.services.v1.CompilerRequest\"\x00(\x01\x30\x01\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'services.v1.compiler_pb2', globals())
@@ -21,11 +21,17 @@ if _descriptor._USE_C_DESCRIPTORS == False:
 
   DESCRIPTOR._options = None
   _COMPILEREQUEST._serialized_start=51
-  _COMPILEREQUEST._serialized_end=210
-  _COMPILERESPONSE._serialized_start=212
-  _COMPILERESPONSE._serialized_end=257
-  _COMPILEDOCUMENT._serialized_start=259
-  _COMPILEDOCUMENT._serialized_end=306
-  _COMPILER._serialized_start=308
-  _COMPILER._serialized_end=404
+  _COMPILEREQUEST._serialized_end=321
+  _COMPILEREQUEST_TYPE._serialized_start=267
+  _COMPILEREQUEST_TYPE._serialized_end=321
+  _COMPILERESPONSE._serialized_start=323
+  _COMPILERESPONSE._serialized_end=368
+  _COMPILEDOCUMENT._serialized_start=370
+  _COMPILEDOCUMENT._serialized_end=417
+  _COMPILERREQUEST._serialized_start=420
+  _COMPILERREQUEST._serialized_end=620
+  _COMPILERREQUEST_TYPE._serialized_start=556
+  _COMPILERREQUEST_TYPE._serialized_end=620
+  _COMPILER._serialized_start=623
+  _COMPILER._serialized_end=815
 # @@protoc_insertion_point(module_scope)

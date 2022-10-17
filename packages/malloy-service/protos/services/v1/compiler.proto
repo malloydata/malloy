@@ -4,13 +4,23 @@ package malloy.services.v1;
 
 service Compiler {
     rpc Compile (CompileRequest) returns (CompileResponse) {}
+
+    rpc CompileStream(stream CompileRequest) returns (stream CompilerRequest) {}
 }
 
 message CompileRequest {
-  CompileDocument document = 1;
-  repeated CompileDocument references = 2;
-  string schema = 3;
-  string query = 4;
+  enum Type {
+    COMPILE = 0;
+    REFERENCES = 1;
+    TABLE_SCHEMAS = 2;
+  }
+  CompileRequest.Type type = 1;
+
+
+  CompileDocument document = 2;
+  repeated CompileDocument references = 3;
+  string schema = 4;
+  string query = 5;
 }
 
 message CompileResponse {
@@ -21,4 +31,19 @@ message CompileResponse {
 message CompileDocument {
   string url = 1;
   string content = 2;
+}
+
+message CompilerRequest {
+  enum Type {
+    UNKNOWN = 0;
+    IMPORT = 1;
+    TABLE_SCHEMAS = 2;
+    COMPLETE = 3;
+  }
+
+  CompilerRequest.Type type = 1;
+  repeated string import_urls = 2;
+  repeated string table_schemas = 3;
+
+  string content = 99;
 }

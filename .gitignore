@@ -36,6 +36,7 @@ test/dist
 *_pb.js
 *_pb.d.ts
 __pycache__
+server.log
 
 # misc
 .DS_Store

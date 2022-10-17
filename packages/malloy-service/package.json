@@ -5,8 +5,9 @@
   "scripts": {
     "build": "npm run protos-gen && tsc --build",
     "start": "npm run build && node ./dist/server.js",
-    "protos-gen": "mkdir -p dist && npm run protos-gen-js && npm run protos-gen-ts",
+    "protos-gen": "mkdir -p dist && npm run protos-gen-js && npm run protos-gen-ts && npm run protos-gen-js-src",
     "protos-gen-js": "npx grpc_tools_node_protoc --js_out=import_style=commonjs,binary:dist --grpc_out=grpc_js:dist -I protos protos/**/**/*.proto",
+    "protos-gen-js-src": "npx grpc_tools_node_protoc --js_out=import_style=commonjs,binary:src --grpc_out=grpc_js:src -I protos protos/**/**/*.proto",
     "protos-gen-ts": "npx grpc_tools_node_protoc --plugin=protoc-gen-ts=$(which protoc-gen-ts) --ts_out=src -I protos protos/**/**/*.proto"
   },
   "dependencies": {
