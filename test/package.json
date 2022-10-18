@@ -10,8 +10,8 @@
   },
   "dependencies": {
     "@malloydata/malloy": "0.0.3",
-    "@malloydata/db-bigquery": "0.0.2",
-    "@malloydata/db-postgres": "0.0.2",
-    "@malloydata/db-duckdb": "0.0.2"
+    "@malloydata/db-bigquery": "0.0.3",
+    "@malloydata/db-postgres": "0.0.3",
+    "@malloydata/db-duckdb": "0.0.3"
   }
 }

@@ -4,6 +4,7 @@
   "license": "GPL-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "homepage": "https://github.com/looker-open-source/malloy#readme",
   "repository": {
     "type": "git",
     "url": "https://github.com/looker-open-source/malloy"

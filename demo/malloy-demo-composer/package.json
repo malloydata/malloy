@@ -20,11 +20,11 @@
     "server-package": "ts-node scripts/package-server"
   },
   "dependencies": {
-    "@malloydata/db-bigquery": "0.0.2",
-    "@malloydata/db-duckdb": "0.0.2",
-    "@malloydata/db-postgres": "0.0.2",
+    "@malloydata/db-bigquery": "0.0.3",
+    "@malloydata/db-duckdb": "0.0.3",
+    "@malloydata/db-postgres": "0.0.3",
     "@malloydata/malloy": "0.0.3",
-    "@malloydata/render": "0.0.2",
+    "@malloydata/render": "0.0.3",
     "@popperjs/core": "^2.11.4",
     "cors": "^2.8.5",
     "electron": "^18.2.3",
