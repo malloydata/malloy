@@ -714,6 +714,190 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       ).isSqlEq();
     });
   });
+
+  describe(`duration add - ${databaseName}`, () => {
+    const sqlEq = mkSqlEqWith(runtime);
+
+    test("seconds", async () => {
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 + 1 second", "@2022-10-03 10:23:09")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 - 1 second", "@2022-10-03 10:23:07")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 + 2 seconds", "@2022-10-03 10:23:10")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 - 2 seconds", "@2022-10-03 10:23:06")
+      ).isSqlEq();
+
+      expect(await sqlEq("@2022-10-03 + 1 second", "@2022-10-03")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 - 1 second", "@2022-10-03")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 + 2 seconds", "@2022-10-03")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 - 2 seconds", "@2022-10-03")).isSqlEq();
+
+      expect(
+        await sqlEq("@2022-10-03 + 86400 seconds", "@2022-10-04")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 - 86400 seconds", "@2022-10-02")
+      ).isSqlEq();
+    });
+
+    test("minutes", async () => {
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 + 1 minute", "@2022-10-03 10:24:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 - 1 minute", "@2022-10-03 10:22:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 + 2 minutes", "@2022-10-03 10:25:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 - 2 minutes", "@2022-10-03 10:21:08")
+      ).isSqlEq();
+
+      expect(await sqlEq("@2022-10-03 + 1 minute", "@2022-10-03")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 - 1 minute", "@2022-10-03")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 + 2 minutes", "@2022-10-03")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 - 2 minutes", "@2022-10-03")).isSqlEq();
+
+      expect(
+        await sqlEq("@2022-10-03 + 1440 minutes", "@2022-10-04")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 - 1440 minutes", "@2022-10-02")
+      ).isSqlEq();
+    });
+
+    test("hours", async () => {
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 + 1 hour", "@2022-10-03 11:23:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 - 1 hour", "@2022-10-03 09:23:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 + 2 hours", "@2022-10-03 12:23:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 - 2 hours", "@2022-10-03 08:23:08")
+      ).isSqlEq();
+
+      expect(await sqlEq("@2022-10-03 + 1 hour", "@2022-10-03")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 - 1 hour", "@2022-10-03")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 + 2 hours", "@2022-10-03")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 - 2 hours", "@2022-10-03")).isSqlEq();
+
+      expect(await sqlEq("@2022-10-03 + 24 hours", "@2022-10-04")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 - 24 hours", "@2022-10-02")).isSqlEq();
+    });
+
+    test("days", async () => {
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 + 1 day", "@2022-10-04 10:23:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 - 1 day", "@2022-10-02 10:23:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 + 2 days", "@2022-10-05 10:23:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 - 2 days", "@2022-10-01 10:23:08")
+      ).isSqlEq();
+
+      expect(await sqlEq("@2022-10-03 + 1 day", "@2022-10-04")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 - 1 day", "@2022-10-02")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 + 2 days", "@2022-10-05")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 - 2 days", "@2022-10-01")).isSqlEq();
+    });
+
+    test("weeks", async () => {
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 + 1 week", "@2022-10-10 10:23:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 - 1 week", "@2022-09-26 10:23:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 + 2 weeks", "@2022-10-17 10:23:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 - 2 weeks", "@2022-09-19 10:23:08")
+      ).isSqlEq();
+
+      expect(await sqlEq("@2022-10-03 + 1 week", "@2022-10-10")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 - 1 week", "@2022-09-26")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 + 2 weeks", "@2022-10-17")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 - 2 weeks", "@2022-09-19")).isSqlEq();
+    });
+
+    test("months", async () => {
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 + 1 month", "@2022-11-03 10:23:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 - 1 month", "@2022-09-03 10:23:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 + 2 months", "@2022-12-03 10:23:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 - 2 months", "@2022-08-03 10:23:08")
+      ).isSqlEq();
+
+      expect(await sqlEq("@2022-10-03 + 1 month", "@2022-11-03")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 - 1 month", "@2022-09-03")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 + 2 months", "@2022-12-03")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 - 2 months", "@2022-08-03")).isSqlEq();
+    });
+
+    test("quarters", async () => {
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 + 1 quarter", "@2023-01-03 10:23:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 - 1 quarter", "@2022-07-03 10:23:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 + 2 quarters", "@2023-04-03 10:23:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 - 2 quarters", "@2022-04-03 10:23:08")
+      ).isSqlEq();
+
+      expect(await sqlEq("@2022-10-03 + 1 quarter", "@2023-01-03")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 - 1 quarter", "@2022-07-03")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 + 2 quarters", "@2023-04-03")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 - 2 quarters", "@2022-04-03")).isSqlEq();
+    });
+
+    test("years", async () => {
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 + 1 year", "@2023-10-03 10:23:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 - 1 year", "@2021-10-03 10:23:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 + 2 years", "@2024-10-03 10:23:08")
+      ).isSqlEq();
+      expect(
+        await sqlEq("@2022-10-03 10:23:08 - 2 years", "@2020-10-03 10:23:08")
+      ).isSqlEq();
+
+      expect(await sqlEq("@2022-10-03 + 1 year", "@2023-10-03")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 - 1 year", "@2021-10-03")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 + 2 years", "@2024-10-03")).isSqlEq();
+      expect(await sqlEq("@2022-10-03 - 2 years", "@2020-10-03")).isSqlEq();
+
+      // Fun edge case...
+      expect(await sqlEq("@2024-02-29 - 2 years", "@2022-02-28")).isSqlEq();
+    });
+  });
 });
 
 afterAll(async () => {
