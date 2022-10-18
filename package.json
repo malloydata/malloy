@@ -45,9 +45,9 @@
   },
   "devDependencies": {
     "@jest/globals": "^26.6.2",
-    "@malloydata/db-bigquery": "0.0.2",
+    "@malloydata/db-bigquery": "0.0.3",
     "@malloydata/malloy": "0.0.3",
-    "@malloydata/render": "0.0.2",
+    "@malloydata/render": "0.0.3",
     "@types/archiver": "^5.3.1",
     "@types/jest-expect-message": "^1.0.3",
     "@types/md5": "^2.3.1",
