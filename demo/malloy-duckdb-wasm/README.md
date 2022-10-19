@@ -1,3 +1,7 @@
+| :warning: This Project has Moved                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------------- |
+| Future updates will appear at [https://github.com/malloydata/malloy-demo-fiddle](https://github.com/malloydata/malloy-demo-fiddle) |
+
 # Malloy duckdb-wasm Demo (Malloy Fiddle)
 
 The Malloy duckdb-wasm demo is a self-contained web application that allows people to test out the functionality of Malloy without having to download any code or set up any database connections, and to demonstrate how Malloy and DuckDB can be combined for interactive data exploration in a browser. [duckdb-wasm](https://github.com/duckdb/duckdb-wasm) is a web assembly version of the [DuckDB](https://duckdb.org) database that is supported by Malloy.
