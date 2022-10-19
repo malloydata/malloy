@@ -1,3 +1,7 @@
+| :warning: This Project has Moved                                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------------------- |
+| Future updates will appear at [https://github.com/malloydata/malloy-demo-bq-cli](https://github.com/malloydata/malloy-demo-bq-cli) |
+
 # malloy-demo-bq-cli
 
 This is a much-simplified demonstration of one use-case of the `malloy`
