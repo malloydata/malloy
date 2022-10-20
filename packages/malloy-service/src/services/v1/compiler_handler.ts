@@ -35,6 +35,7 @@ class CompilerHandler implements ICompilerServer {
     const runtime = new Runtime(urlReader, connection);
     let modelUrl: URL | undefined = undefined;
     let query = "";
+    let queryType = "unknown";
     call.on("data", (request: CompileRequest) => {
       console.log("compile stream data received");
       const response = new CompilerRequest();
@@ -50,7 +51,14 @@ class CompilerHandler implements ICompilerServer {
             return;
           }
           modelUrl = new URL(document.getUrl());
-          query = request.getQuery();
+          if (request.getNamedQuery()) {
+            query = request.getNamedQuery();
+            queryType = "named";
+          }
+          if (request.getQuery()) {
+            query = request.getQuery();
+            queryType = "query";
+          }
           urlReader.addDoc(document);
           break;
         case CompileRequest.Type.REFERENCES:
@@ -75,7 +83,19 @@ class CompilerHandler implements ICompilerServer {
       runtime
         .loadModel(modelUrl)
         .getModel()
-        .then((model) => model.getPreparedQueryByName(query))
+        .then((model) => {
+          switch (queryType) {
+            case "named":
+              return model.getPreparedQueryByName(query);
+            case "query":
+              return runtime
+                .loadModel(modelUrl!)
+                .loadQuery(query)
+                .getPreparedQuery();
+            default:
+              throw new Error(`Unhandled query type: ${queryType}`);
+          }
+        })
         .then((query) => query.preparedResult.sql)
         .then((sql) => response.setContent(sql))
         .then(() => response.setType(CompilerRequest.Type.COMPLETE))

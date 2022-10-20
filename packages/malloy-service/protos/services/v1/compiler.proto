@@ -21,6 +21,7 @@ message CompileRequest {
   repeated CompileDocument references = 3;
   string schema = 4;
   string query = 5;
+  string named_query = 6;
 }
 
 message CompileResponse {

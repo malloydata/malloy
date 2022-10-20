@@ -1,7 +1,7 @@
 
-// Sessionization - 
+// Sessionization -
 //  This is a subset of the data.
-// 
+//
 //  If we think of aircraft flights as a transaction.  We can roll up all transactions
 //  in a given day by a carrier into a single nested table.
 //
@@ -9,17 +9,17 @@
 //    aircraft events (ordered through the day)
 //
 //  see: https://looker-open-source.github.io/malloy/documentation/patterns/foreign_sums.html
-//  
+//
 
 import "2_flights.malloy"
 source: flights_sessions is flights {
- 
+
   query: sessionize is {
-    where: carrier ? 'WN' | 'DL', dep_time ? @2002-03-03 
+    where: carrier ? 'WN' | 'DL', dep_time ? @2002-03-03
 
     group_by: flight_date is dep_time.day
     group_by: carrier
-    aggregate: 
+    aggregate:
       daily_flight_count is flight_count
       aircraft.aircraft_count
     nest: per_plane_data is {
@@ -39,3 +39,5 @@ source: flights_sessions is flights {
     }
   }
 }
+
+query: flights_sessionize is flights_sessions -> sessionize {}
