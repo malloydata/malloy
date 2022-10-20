@@ -3,6 +3,7 @@
 import asyncio
 import hashlib
 import logging
+import platform
 from pydoc import doc
 import grpc
 import json
@@ -232,8 +233,24 @@ class MalloyRuntime:
             self._service_ready.set()
             return
 
+        service_path = './service/malloy-service'
+        system = platform.system()
+        if system == "Windows":
+            service_path += "-win"
+        elif system == "Linux":
+            service_path += "-linux"
+        elif system == "Darwin":
+            service_path += "-macos"
+
+        arch = platform.machine()
+        if arch == "x86_64":
+            service_path += "-x64"
+
+        if system == "Windows":
+            service_path += ".exe"
+
         proc = await asyncio.create_subprocess_shell(
-            './service/malloy-service-linux-x64',
+            service_path,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT)
         try:
@@ -255,12 +272,14 @@ class MalloyRuntime:
 
 
 async def run4() -> None:
-    # runtime = MalloyRuntime(service="localhost:14310").using_connection(
-    #     DuckDbConnection(home_dir='../../samples/duckdb/faa')).load_model(
-    #         '../../samples/duckdb/faa/7_sessionization.malloy')
-    # data = await runtime.run_query('flights_sessionize')
-    # if not data is None:
-    #     print(data.df())
+    runtime = MalloyRuntime().using_connection(
+        DuckDbConnection(home_dir='../../samples/duckdb/faa')).load_model(
+            '../../samples/duckdb/faa/7_sessionization.malloy')
+    data = await runtime.run_query('flights_sessionize')
+    if not data is None:
+        df = data.df()
+        print(df)
+        print(df['per_plane_data'][0][0]['flight_legs'][2]['origin_code'])
 
     # sql = await runtime.get_sql(named_query='flights_sessionize')
     # if not sql is None:
@@ -278,13 +297,15 @@ async def run4() -> None:
     # if not data is None:
     #     print(data.df())
 
-    data = await MalloyRuntime().using_connection(
-        BigQueryConnection()
-    ).load_model('../../samples/bigquery/faa/flights.malloy').run_query(
-        'sessionize_delta_southwest')
+    # data = await MalloyRuntime().using_connection(
+    #     BigQueryConnection()
+    # ).load_model('../../samples/bigquery/faa/flights.malloy').run_query(
+    #     'sessionize_delta_southwest')
 
-    if not data is None:
-        print(data.to_dataframe())
+    # if not data is None:
+    #     df = data.to_dataframe()
+    #     print(df)
+    #     print(df['per_plane_data'][0][0])
 
 
 if __name__ == '__main__':
