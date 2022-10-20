@@ -77,9 +77,9 @@ class MalloyRuntime:
         await self._service_ready.wait()
         try:
             if self._service is None:
-                service = self._service
-            else:
                 service = "localhost:14310"
+            else:
+                service = self._service
             async with grpc.aio.insecure_channel(service) as channel:
                 try:
                     stub = compiler_pb2_grpc.CompilerStub(channel)
@@ -239,7 +239,7 @@ class MalloyRuntime:
         try:
             while not self._compile_completed.is_set():
                 line = await proc.stdout.readline()
-                if line:
+                if not line is None:
                     sline = line.decode().rstrip()
                     self.logger.debug(sline)
                     if self.service_listening.match(sline):
@@ -255,36 +255,36 @@ class MalloyRuntime:
 
 
 async def run4() -> None:
-    runtime = MalloyRuntime(service="localhost:14310").using_connection(
-        DuckDbConnection().withHomeDirectory(
-            Path('../../samples/duckdb/faa').resolve())).load_model(
-                '../../samples/duckdb/faa/7_sessionization.malloy')
-    data = await runtime.run_query('flights_sessionize')
+    # runtime = MalloyRuntime(service="localhost:14310").using_connection(
+    #     DuckDbConnection(home_dir='../../samples/duckdb/faa')).load_model(
+    #         '../../samples/duckdb/faa/7_sessionization.malloy')
+    # data = await runtime.run_query('flights_sessionize')
+    # if not data is None:
+    #     print(data.df())
+
+    # sql = await runtime.get_sql(named_query='flights_sessionize')
+    # if not sql is None:
+    #     print(sql)
+
+    # sql = await runtime.get_sql(query="""
+    # query: flights->{group_by: flight_num}
+    # """)
+    # if not sql is None:
+    #     print(sql)
+
+    # data = await runtime.run_query(query="""
+    # query: flights->{group_by: flight_num}
+    # """)
+    # if not data is None:
+    #     print(data.df())
+
+    data = await MalloyRuntime().using_connection(
+        BigQueryConnection()
+    ).load_model('../../samples/bigquery/faa/flights.malloy').run_query(
+        'sessionize_delta_southwest')
+
     if not data is None:
-        print(data.df())
-
-    sql = await runtime.get_sql(named_query='flights_sessionize')
-    if not sql is None:
-        print(sql)
-
-    sql = await runtime.get_sql(query="""
-    query: flights->{group_by: flight_num}
-    """)
-    if not sql is None:
-        print(sql)
-
-    data = await runtime.run_query(query="""
-    query: flights->{group_by: flight_num}
-    """)
-    if not data is None:
-        print(data.df())
-
-
-    # data = await MalloyRuntime().using_connection(
-    #     BigQueryConnection()
-    # ).load_model('../../samples/bigquery/faa/flights.malloy').run_query(
-    #     'sessionize_delta_southwest')
-    # print(data.to_dataframe())
+        print(data.to_dataframe())
 
 
 if __name__ == '__main__':
