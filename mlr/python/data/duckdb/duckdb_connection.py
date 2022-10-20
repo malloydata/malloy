@@ -1,5 +1,6 @@
 from ..connection import ConnectionInterface
 from collections.abc import Sequence
+from pathlib import Path
 import duckdb
 import logging
 import re
@@ -9,9 +10,12 @@ class DuckDbConnection(ConnectionInterface):
     logger = logging.getLogger(__name__)
     table_regex = re.compile('^duckdb:(.+)$')
 
-    def __init__(self):
+    def __init__(self, home_dir=None):
         self._client_options = None
-        self._home_directory = None
+        if home_dir is None:
+            self._home_directory = None
+        else:
+            self._home_directory = Path(home_dir).resolve()
         self._con = None
 
     def withOptions(self, options):
