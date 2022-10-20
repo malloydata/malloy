@@ -14,7 +14,7 @@
 import { CommonTokenStream } from "antlr4ts";
 import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import { ParseTree } from "antlr4ts/tree";
-import { MalloyListener } from "../lib/Malloy/MalloyListener";
+import { MalloyParserListener } from "../lib/Malloy/MalloyParserListener";
 import * as parser from "../lib/Malloy/MalloyParser";
 import { DocumentRange } from "../../model/malloy_types";
 import { MalloyTranslation } from "../parse-malloy";
@@ -26,7 +26,7 @@ export interface DocumentSymbol {
   children: DocumentSymbol[];
 }
 
-class DocumentSymbolWalker implements MalloyListener {
+class DocumentSymbolWalker implements MalloyParserListener {
   constructor(
     readonly translator: MalloyTranslation,
     readonly tokens: CommonTokenStream,
@@ -199,7 +199,7 @@ export function walkForDocumentSymbols(
   parseTree: ParseTree
 ): DocumentSymbol[] {
   const finder = new DocumentSymbolWalker(forParse, tokens, [], []);
-  const listener: MalloyListener = finder;
+  const listener: MalloyParserListener = finder;
   ParseTreeWalker.DEFAULT.walk(listener, parseTree);
   return finder.symbols;
 }

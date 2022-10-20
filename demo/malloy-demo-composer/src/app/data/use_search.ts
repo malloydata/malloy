@@ -11,8 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { StructDef } from "@malloydata/malloy";
-import { SearchIndexResult } from "@malloydata/malloy";
+import { SearchIndexResult, StructDef } from "@malloydata/malloy";
 import { useQuery } from "react-query";
 import { isElectron } from "../utils";
 

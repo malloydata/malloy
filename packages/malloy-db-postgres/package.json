@@ -1,9 +1,14 @@
 {
   "name": "@malloydata/db-postgres",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "license": "GPL-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "homepage": "https://github.com/looker-open-source/malloy#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/looker-open-source/malloy"
+  },
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
@@ -12,7 +17,7 @@
     "malloyc": "ts-node ../../scripts/malloy-to-json"
   },
   "dependencies": {
-    "@malloydata/malloy": "*",
+    "@malloydata/malloy": "0.0.3",
     "@types/pg": "^8.6.1",
     "pg": "^8.7.1",
     "pg-query-stream": "4.2.3"

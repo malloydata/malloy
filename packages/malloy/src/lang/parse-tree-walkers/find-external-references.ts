@@ -15,13 +15,13 @@ import { CommonTokenStream } from "antlr4ts";
 import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
 import type { ParseTree } from "antlr4ts/tree";
 import * as parser from "../lib/Malloy/MalloyParser";
-import { MalloyListener } from "../lib/Malloy/MalloyListener";
+import { MalloyParserListener } from "../lib/Malloy/MalloyParserListener";
 import { DocumentRange } from "../../model/malloy_types";
 import { MalloyTranslation } from "../parse-malloy";
 
 type References = Record<string, DocumentRange>;
 
-class FindExternalReferences implements MalloyListener {
+class FindExternalReferences implements MalloyParserListener {
   needTables: References = {};
   needImports: References = {};
 
@@ -55,7 +55,7 @@ export function findReferences(
   parseTree: ParseTree
 ): FinderFound | null {
   const finder = new FindExternalReferences(trans, tokens);
-  const listener: MalloyListener = finder;
+  const listener: MalloyParserListener = finder;
   ParseTreeWalker.DEFAULT.walk(listener, parseTree);
 
   let refs: FinderFound = {};

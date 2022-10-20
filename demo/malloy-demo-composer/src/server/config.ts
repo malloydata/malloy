@@ -11,8 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { promises as fs } from "fs";
-import { existsSync } from "fs";
+import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 
@@ -25,9 +24,9 @@ export async function getConfig(): Promise<ComposerConfig> {
     modelsPath: path.resolve(process.cwd(), process.env.MODELS || ""),
   };
   const configFilePath = path.resolve("./composer_config.json");
-  if (existsSync(configFilePath)) {
+  if (fs.existsSync(configFilePath)) {
     try {
-      const file = await fs.readFile(configFilePath, "utf8");
+      const file = fs.readFileSync(configFilePath, "utf8");
       const fileConfig = JSON.parse(file);
       config = { ...config, ...fileConfig };
     } catch (error) {

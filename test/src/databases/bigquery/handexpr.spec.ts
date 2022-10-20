@@ -12,7 +12,12 @@
  * GNU General Public License for more details.
  */
 
-import { ModelDef, Query, StructDef } from "@malloydata/malloy";
+import {
+  ModelDef,
+  Query,
+  StructDef,
+  StructRelationship,
+} from "@malloydata/malloy";
 import {
   describeIfDatabaseAvailable,
   fStringEq,
@@ -21,7 +26,6 @@ import {
 
 import * as malloy from "@malloydata/malloy";
 import { RuntimeList } from "../../runtimes";
-import { StructRelationship } from "@malloydata/malloy/src/model";
 
 const [describe] = describeIfDatabaseAvailable(["bigquery"]);
 
@@ -74,7 +78,10 @@ describe("BigQuery hand-built expression test", () => {
     as: "aircraft_models",
     type: "struct",
     dialect: "standardsql",
-    structSource: { type: "table" },
+    structSource: {
+      type: "table",
+      tablePath: "malloy-data.malloytest.aircraft_models",
+    },
     structRelationship: { type: "basetable", connectionName: "bigquery" },
     fields: [
       { type: "string", name: "aircraft_model_code" },
@@ -171,7 +178,10 @@ describe("BigQuery hand-built expression test", () => {
     type: "struct",
     name: "malloy-data.malloytest.aircraft",
     dialect: "standardsql",
-    structSource: { type: "table" },
+    structSource: {
+      type: "table",
+      tablePath: "malloy-data.malloytest.aircraft",
+    },
     structRelationship: { type: "basetable", connectionName: "bigquery" },
     fields: [
       { type: "string", name: "tail_num" },

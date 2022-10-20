@@ -18,7 +18,7 @@ import {
   MalloyDocumentContext,
   QueryPropertiesContext,
 } from "../lib/Malloy/MalloyParser";
-import { MalloyVisitor } from "../lib/Malloy/MalloyVisitor";
+import { MalloyParserVisitor } from "../lib/Malloy/MalloyParserVisitor";
 
 export interface DocumentHelpContext {
   type: string;
@@ -27,7 +27,7 @@ export interface DocumentHelpContext {
 
 class HelpContextVisitor
   extends AbstractParseTreeVisitor<DocumentHelpContext | undefined>
-  implements MalloyVisitor<DocumentHelpContext | undefined>
+  implements MalloyParserVisitor<DocumentHelpContext | undefined>
 {
   type = "";
 

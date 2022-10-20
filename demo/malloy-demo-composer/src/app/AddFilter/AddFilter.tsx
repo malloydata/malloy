@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { FilterExpression, StructDef } from "@malloydata/malloy";
+import { FieldDef, FilterExpression, StructDef } from "@malloydata/malloy";
 import { useState } from "react";
 import { compileFilter } from "../../core/compile";
 import { CodeInput } from "../CodeInput";
@@ -25,7 +25,6 @@ import {
   FieldLabel,
   FormInputLabel,
 } from "../CommonElements";
-import { FieldDef } from "@malloydata/malloy";
 import { TypeIcon } from "../TypeIcon";
 import { StringFilterBuilder } from "./StringFilterBuilder";
 import {

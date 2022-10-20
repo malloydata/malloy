@@ -19,26 +19,24 @@
 
 import * as crypto from "crypto";
 import {
+  FetchSchemaAndRunSimultaneously,
+  FetchSchemaAndRunStreamSimultaneously,
+  PersistSQLResults,
+  RunSQLOptions,
+  StreamingConnection,
   StructDef,
   MalloyQueryData,
   NamedStructDefs,
   AtomicFieldTypeInner,
   QueryData,
   PooledConnection,
-  parseTableURL,
+  parseTableURI,
   SQLBlock,
   Connection,
   QueryDataRow,
 } from "@malloydata/malloy";
-import {
-  FetchSchemaAndRunSimultaneously,
-  FetchSchemaAndRunStreamSimultaneously,
-  PersistSQLResults,
-  StreamingConnection,
-} from "@malloydata/malloy/src/runtime_types";
 import { Client, Pool, PoolClient } from "pg";
 import QueryStream from "pg-query-stream";
-import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
 
 const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   "character varying": "string",
@@ -323,20 +321,19 @@ export class PostgresConnection
   }
 
   private async getTableSchema(tableURL: string): Promise<StructDef> {
+    const { tablePath } = parseTableURI(tableURL);
     const structDef: StructDef = {
       type: "struct",
       name: tableURL,
       dialect: "postgres",
-      structSource: { type: "table" },
+      structSource: { type: "table", tablePath },
       structRelationship: {
         type: "basetable",
         connectionName: this.name,
       },
       fields: [],
     };
-
-    const { tablePath: tableName } = parseTableURL(tableURL);
-    const [schema, table] = tableName.split(".");
+    const [schema, table] = tablePath.split(".");
     if (table === undefined) {
       throw new Error("Default schema not yet supported in Postgres");
     }

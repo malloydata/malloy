@@ -11,10 +11,9 @@
  * GNU General Public License for more details.
  */
 
-import { ModelDef, StructDef } from "@malloydata/malloy";
+import { ModelDef, StructDef, StructRelationship } from "@malloydata/malloy";
 import { medicareModel, medicareStateFacts } from "./medicare_model";
 import { fStringEq, fYearEq } from "../util";
-import { StructRelationship } from "@malloydata/malloy/src/model";
 
 function withJoin(leftKey: string, rightKey: string): StructRelationship {
   return {
@@ -33,7 +32,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
   name: "malloy-data.malloytest.flights",
   as: "flights",
   dialect: "standardsql",
-  structSource: { type: "table" },
+  structSource: { type: "table", tablePath: "malloy-data.malloytest.flights" },
   structRelationship: { type: "basetable", connectionName: "bigquery" },
   primaryKey: "id2",
   fields: [
@@ -78,7 +77,10 @@ export const FLIGHTS_EXPLORE: StructDef = {
       name: "malloy-data.malloytest.carriers",
       as: "carriers",
       dialect: "standardsql",
-      structSource: { type: "table" },
+      structSource: {
+        type: "table",
+        tablePath: "malloy-data.malloytest.carriers",
+      },
       structRelationship: {
         type: "one",
         onExpression: [
@@ -101,7 +103,10 @@ export const FLIGHTS_EXPLORE: StructDef = {
       name: "malloy-data.malloytest.aircraft",
       as: "aircraft",
       dialect: "standardsql",
-      structSource: { type: "table" },
+      structSource: {
+        type: "table",
+        tablePath: "malloy-data.malloytest.aircraft",
+      },
       structRelationship: withJoin("tail_num", "aircraft.tail_num"),
       primaryKey: "tail_num",
       fields: [
@@ -156,7 +161,10 @@ export const FLIGHTS_EXPLORE: StructDef = {
           as: "aircraft_models",
           dialect: "standardsql",
           primaryKey: "aircraft_model_code",
-          structSource: { type: "table" },
+          structSource: {
+            type: "table",
+            tablePath: "malloy-data.malloytest.aircraft_models",
+          },
           structRelationship: withJoin(
             "aircraft_model_code",
             "aircraft_models.aircraft_model_code"
@@ -204,7 +212,10 @@ export const FLIGHTS_EXPLORE: StructDef = {
       name: "malloy-data.malloytest.airports",
       as: "origin",
       dialect: "standardsql",
-      structSource: { type: "table" },
+      structSource: {
+        type: "table",
+        tablePath: "malloy-data.malloytest.airports",
+      },
       structRelationship: withJoin("origin_code", "origin.code"),
       primaryKey: "code",
       fields: [
@@ -250,7 +261,10 @@ export const FLIGHTS_EXPLORE: StructDef = {
       name: "malloy-data.malloytest.airports",
       as: "destination",
       dialect: "standardsql",
-      structSource: { type: "table" },
+      structSource: {
+        type: "table",
+        tablePath: "malloy-data.malloytest.airports",
+      },
       structRelationship: withJoin("destination_code", "destination.code"),
       primaryKey: "code",
       fields: [
@@ -829,7 +843,7 @@ const tableAirports: StructDef = {
   name: "malloy-data.malloytest.airports",
   as: "table_airports",
   dialect: "standardsql",
-  structSource: { type: "table" },
+  structSource: { type: "table", tablePath: "malloy-data.malloytest.airports" },
   structRelationship: { type: "basetable", connectionName: "bigquery" },
   primaryKey: "code",
   fields: [

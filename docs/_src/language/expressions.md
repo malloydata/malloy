@@ -230,7 +230,7 @@ one of the below extraction functions. This is Malloy's take on SQL's <code>DATE
 
 expression | meaning
 ---- | ----
-`seconds(t1 to t2)` | Number of seconds from t1 until t2
+`seconds(t1 to t2)` | Number of seconds from `t1` until `t2`
 `minutes(t1 to t2)` | ... minutes ...
 `hours(t1 to t2)` | ... hours ...
 `days(t1 to t2)` | ... days ...
@@ -239,7 +239,11 @@ expression | meaning
 `quarters(t1 to t2)` | ... quarters ...
 `years(t1 to t2)` | ... years ...
 
-These will return a negative number if t1 is later than t2.
+These will return a negative number if `t1` is later than `t2`.
+
+For `seconds`, `minutes`, and `hours`, the returned values is the number of complete seconds/minutes/hours beween the two values. For example, `hours(@2022-10-03 10:30:00 to @2022-10-03 11:29:00)` would return 0, because the range spans only 59 minutes, despite crossing over the hour boundry from 10 to 11. Likewise, `minutes(now to now + 59 seconds)` will always return 0, regardless of what time it is.
+
+For `days`, `weeks`, `months`, `quarters`, and `years`, the returned value is the number of day/week/month/quarter/year boundaries crossed between the two dates. For example, `days(@2022-10-03 11:59 to @2022-10-04 00:00)` is 1, because the end time is on the day after the start time, even though only one minute passed between them. So `weeks(now to now + 6 days)` will return either 0 or 1 depending on the day of the week.
 
 ### Time Literals
 

@@ -16,6 +16,7 @@ import { doBuild } from "./build";
 import * as pkg from "pkg";
 import * as fs from "fs";
 import * as path from "path";
+import { Command } from "commander";
 
 const outDir = "./dist";
 const thirdPartyNotices = "third_party_notices.txt";
@@ -35,7 +36,8 @@ const nodeTarget = "node16";
 async function packageServer(
   platform: string,
   architecture: string,
-  sign = true
+  sign = true,
+  skipPackageStep = false
 ) {
   let target = `${platform}-${architecture}`;
   doBuild(target);
@@ -45,7 +47,7 @@ async function packageServer(
   }
 
   if (!duckDbTargetMap.has(target)) {
-    throw `No DuckDb defined for target: ${target}`;
+    throw new Error(`No DuckDb defined for target: ${target}`);
   }
 
   fs.copyFileSync(
@@ -58,6 +60,10 @@ async function packageServer(
     target = `macos-${architecture}`;
   }
 
+  if (skipPackageStep) {
+    console.log("Skipping final packaging step");
+    return;
+  }
   await pkg.exec([
     "-c",
     "package.json",
@@ -70,19 +76,44 @@ async function packageServer(
 }
 
 (async () => {
-  const platform = process.argv[2];
-  const architecture = process.argv[3];
-  const signAndNotarize = process.argv[4];
+  const program = new Command();
+  program
+    .option("-p, --platform <string>", "Target platform")
+    .option("-a, --arch <string>", "Target architecture")
+    .option("--skip-package", "Skip packaging step")
+    .option("--sign", "Sign the build executable");
 
-  if (platform === undefined || architecture === undefined) {
-    throw new Error("Specify platform and architecture.");
+  program.parse();
+  const options = program.opts();
+  let platform: string;
+  let architecture: string;
+
+  if (options.platform) {
+    platform = options.platform;
+  } else {
+    platform = process.platform;
+    console.log(
+      `Target platform was not specified, using current: ${platform}`
+    );
   }
+
+  if (options.arch) {
+    architecture = options.arch;
+  } else {
+    architecture = process.arch;
+    console.log(
+      `Target architecture was not specified, using current: ${architecture}`
+    );
+  }
+
+  console.log(JSON.stringify(options));
 
   console.log(`Packaging server for ${platform}-${architecture}`);
   await packageServer(
     platform,
     architecture,
-    signAndNotarize == "false" ? false : true
+    options.sign,
+    options.skipPackage
   );
 })()
   .then(() => {

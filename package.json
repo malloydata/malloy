@@ -14,6 +14,10 @@
   "files": [
     "samples"
   ],
+  "engines": {
+    "node": ">=16",
+    "npm": ">=8"
+  },
   "scripts": {
     "clean": "npm run -w @malloydata/malloy clean && tsc --build --clean",
     "build": "npm run -w @malloydata/malloy build-parser && tsc --build",
@@ -41,9 +45,9 @@
   },
   "devDependencies": {
     "@jest/globals": "^26.6.2",
-    "@malloydata/db-bigquery": "*",
-    "@malloydata/malloy": "*",
-    "@malloydata/render": "*",
+    "@malloydata/db-bigquery": "0.0.3",
+    "@malloydata/malloy": "0.0.3",
+    "@malloydata/render": "0.0.3",
     "@types/archiver": "^5.3.1",
     "@types/jest-expect-message": "^1.0.3",
     "@types/md5": "^2.3.1",

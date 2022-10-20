@@ -17,7 +17,7 @@ import { DataStyles } from "@malloydata/render";
 import { HackyDataStylesAccumulator } from "./data_styles";
 import { WorkerURLReader } from "./files";
 import { log } from "./logger";
-import { MessageCancel, MessageRun } from "./types";
+import { MessageCancel, MessageRun, WorkerQueryPanelMessage } from "./types";
 
 import { CONNECTION_MANAGER } from "../server/connections";
 import {
@@ -25,7 +25,6 @@ import {
   QueryPanelMessage,
   QueryRunStatus,
 } from "../extension/message_types";
-import { WorkerQueryPanelMessage } from "./types";
 import { createRunnable } from "./utils";
 
 interface QueryEntry {

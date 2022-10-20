@@ -46,7 +46,7 @@ const theErrorStruct: model.StructDef = {
   type: "struct",
   name: "~malformed~",
   dialect: "~malformed~",
-  structSource: { type: "table" },
+  structSource: { type: "table", tablePath: "//undefined_error_table_path" },
   structRelationship: {
     type: "basetable",
     connectionName: "//undefined_error_connection",

@@ -624,11 +624,12 @@ interface SubquerySource {
 
 /** where does the struct come from? */
 export type StructSource =
-  | { type: "table"; tablePath?: string }
+  | { type: "table"; tablePath: string }
   | { type: "nested" }
   | { type: "inline" }
   | { type: "query"; query: Query }
   | { type: "sql"; method: "nested" | "lastStage" }
+  | { type: "query_result" }
   | SubquerySource;
 
 // Inline and nested tables, cannot have a StructRelationship

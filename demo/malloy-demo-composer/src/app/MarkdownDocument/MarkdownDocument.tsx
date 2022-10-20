@@ -48,6 +48,7 @@ export const MarkdownNode: React.FC<{
   const children = (node: { children: Markdown[] }) => (
     <MarkdownNodes nodes={node.children} loadQueryLink={loadQueryLink} />
   );
+
   switch (node.type) {
     case "root":
       return (
@@ -96,8 +97,9 @@ export const MarkdownNode: React.FC<{
       return <MarkdownCodeBlock code={node.value} language={node.lang} />;
     case "delete":
       return <del>{children(node)}</del>;
-    case "html":
-      return <div />;
+    case "html": {
+      return <span />;
+    }
     case "image":
       return (
         <img src={node.url} alt={node.alt} title={node.title ?? undefined} />
@@ -120,29 +122,17 @@ export const MarkdownNode: React.FC<{
       return <MarkdownTableCell>{children(node)}</MarkdownTableCell>;
     case "thematicBreak":
       return <hr />;
-    case "textDirective":
-      switch (node.name) {
-        case "malloy-query":
-          return (
-            <MarkdownLink
-              href="#"
-              onClick={() => {
-                loadQueryLink(
-                  node.attributes?.model || "",
-                  node.attributes?.source || "",
-                  node.attributes?.query || ""
-                );
-              }}
-            >
-              <code>{node.attributes?.query}</code>
-            </MarkdownLink>
-          );
-        default:
-          return <></>;
-      }
-    case "leafDirective":
-    case "containerDirective":
-      return <></>;
+    case "malloyQueryLink":
+      return (
+        <MarkdownLink
+          href="#"
+          onClick={() => {
+            loadQueryLink(node.model, node.source, node.query);
+          }}
+        >
+          <code>{node.value}</code>
+        </MarkdownLink>
+      );
   }
 };
 

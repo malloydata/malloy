@@ -25,25 +25,23 @@ import { ResourceStream } from "@google-cloud/paginator";
 import * as googleCommon from "@google-cloud/common";
 import { GaxiosError } from "gaxios";
 import {
+  FetchSchemaAndRunSimultaneously,
+  FetchSchemaAndRunStreamSimultaneously,
   Malloy,
+  PersistSQLResults,
+  PooledConnection,
   QueryData,
   StructDef,
+  StreamingConnection,
   MalloyQueryData,
   FieldTypeDef,
   NamedStructDefs,
   SQLBlock,
   Connection,
   QueryDataRow,
+  parseTableURI,
   toAsyncGenerator,
 } from "@malloydata/malloy";
-import { parseTableURL } from "@malloydata/malloy";
-import { PooledConnection } from "@malloydata/malloy";
-import {
-  FetchSchemaAndRunSimultaneously,
-  FetchSchemaAndRunStreamSimultaneously,
-  PersistSQLResults,
-  StreamingConnection,
-} from "@malloydata/malloy/src/runtime_types";
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -327,7 +325,7 @@ export class BigQueryConnection
   }
 
   public async getTableFieldSchema(tableURL: string): Promise<SchemaInfo> {
-    const { tablePath: tableName } = parseTableURL(tableURL);
+    const { tablePath: tableName } = parseTableURI(tableURL);
     const segments = tableName.split(".");
 
     // paths can have two or three segments
@@ -532,7 +530,7 @@ export class BigQueryConnection
   }
 
   private tableURLtoTablePath(tableURL: string): string {
-    const { tablePath } = parseTableURL(tableURL);
+    const { tablePath } = parseTableURI(tableURL);
     if (tablePath.split(".").length === 2) {
       return `${this.defaultProject}.${tablePath}`;
     } else {

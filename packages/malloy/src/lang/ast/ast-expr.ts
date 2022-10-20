@@ -129,20 +129,10 @@ class DollarReference extends ExpressionDef {
 class ConstantFieldSpace implements FieldSpace {
   readonly type = "fieldSpace";
   structDef(): StructDef {
-    return {
-      type: "struct",
-      name: "empty structdef",
-      structSource: { type: "table" },
-      structRelationship: {
-        type: "basetable",
-        connectionName: "noConnection",
-      },
-      fields: [],
-      dialect: "noDialect",
-    };
+    throw new Error("ConstantFieldSpace cannot generate a structDef");
   }
   emptyStructDef(): StructDef {
-    return { ...this.structDef(), fields: [] };
+    throw new Error("ConstantFieldSpace cannot generate a structDef");
   }
   lookup(_name: unknown): LookupResult {
     return {

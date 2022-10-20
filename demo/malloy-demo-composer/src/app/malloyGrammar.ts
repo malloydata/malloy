@@ -316,6 +316,10 @@ export const MALLOY_GRAMMAR = {
           match: "(?i)\\bwhere\\b",
           name: "keyword.control.where",
         },
+        {
+          match: "(?i)\\bdeclare\\b",
+          name: "keyword.control.declare",
+        },
       ],
     },
     keywords: {

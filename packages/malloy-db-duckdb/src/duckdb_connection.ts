@@ -14,8 +14,7 @@
 import * as crypto from "crypto";
 import { DuckDBCommon } from "./duckdb_common";
 import { Database, OPEN_READWRITE, Row } from "duckdb";
-import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
-import { QueryDataRow } from "@malloydata/malloy";
+import { QueryDataRow, RunSQLOptions } from "@malloydata/malloy";
 
 export class DuckDBConnection extends DuckDBCommon {
   protected connection;

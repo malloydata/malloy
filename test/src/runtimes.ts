@@ -15,12 +15,12 @@ import {
   EmptyURLReader,
   Result,
   MalloyQueryData,
+  RunSQLOptions,
   SingleConnectionRuntime,
 } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { PooledPostgresConnection } from "@malloydata/db-postgres";
 import { DuckDBConnection } from "@malloydata/db-duckdb";
-import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
 
 export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.

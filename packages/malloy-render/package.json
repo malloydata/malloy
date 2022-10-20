@@ -1,9 +1,14 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "license": "GPL-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "homepage": "https://github.com/looker-open-source/malloy#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/looker-open-source/malloy"
+  },
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
@@ -11,7 +16,9 @@
     "build": "tsc --build"
   },
   "dependencies": {
-    "@malloydata/malloy": "*",
-    "us-atlas": "^3.0.0"
+    "@malloydata/malloy": "0.0.3",
+    "us-atlas": "^3.0.0",
+    "vega": "^5.21.0",
+    "vega-lite": "^5.2.0"
   }
 }
