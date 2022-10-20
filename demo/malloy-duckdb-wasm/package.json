@@ -1,6 +1,6 @@
 {
   "name": "malloy-duckdb-wasm",
-  "version": "0.0.4",
+  "version": "0.0.3",
   "description": "",
   "main": "./dist/index.js",
   "scripts": {
@@ -12,9 +12,9 @@
   "author": "Malloy",
   "license": "GPL-2.0",
   "dependencies": {
-    "@malloydata/db-duckdb": "^0.0.4",
-    "@malloydata/malloy": "^0.0.4",
-    "@malloydata/render": "^0.0.4",
+    "@malloydata/db-duckdb": "0.0.3",
+    "@malloydata/malloy": "0.0.3",
+    "@malloydata/render": "0.0.3",
     "apache-arrow": "^9.0.0",
     "monaco-editor": "^0.34.0",
     "react": "^17.0.2",

@@ -3,7 +3,7 @@
   "publisher": "malloydata",
   "displayName": "Malloy",
   "description": "Malloy is an experimental language for describing data relationships and transformations",
-  "version": "0.0.4",
+  "version": "0.2.0",
   "private": true,
   "engines": {
     "vscode": "^1.63.0"
@@ -318,11 +318,11 @@
     ]
   },
   "dependencies": {
-    "@malloydata/db-bigquery": "^0.0.4",
-    "@malloydata/db-duckdb": "^0.0.4",
-    "@malloydata/db-postgres": "^0.0.4",
-    "@malloydata/malloy": "^0.0.4",
-    "@malloydata/render": "^0.0.4",
+    "@malloydata/db-bigquery": "0.0.3",
+    "@malloydata/db-duckdb": "0.0.3",
+    "@malloydata/db-postgres": "0.0.3",
+    "@malloydata/malloy": "0.0.3",
+    "@malloydata/render": "0.0.3",
     "@observablehq/plot": "^0.1.0",
     "@vscode/webview-ui-toolkit": "^1.0.0",
     "keytar": "7.7.0",
