@@ -12,6 +12,7 @@ class DuckDbConnection(ConnectionInterface):
     def __init__(self):
         self._client_options = None
         self._home_directory = None
+        self._con = None
 
     def withOptions(self, options):
         self._client_options = options
@@ -22,12 +23,14 @@ class DuckDbConnection(ConnectionInterface):
         return self
 
     def get_connection(self):
-        con = duckdb.connect(database=':memory:', config=self._client_options)
-        if self._home_directory:
-            sql = "SET FILE_SEARCH_PATH='{}'".format(self._home_directory)
-            self.logger.debug(sql)
-            con.execute(sql)
-        return con
+        if self._con is None:
+            self._con = duckdb.connect(database=':memory:',
+                                       config=self._client_options)
+            if self._home_directory:
+                sql = "SET FILE_SEARCH_PATH='{}'".format(self._home_directory)
+                self.logger.debug(sql)
+                self._con.execute(sql)
+        return self._con
 
     def get_schema_for_tables(self, tables: Sequence[str]):
         self.logger.debug("Fetching schema for tables...")
