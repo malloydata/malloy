@@ -15,6 +15,7 @@ import express from "express";
 import { routes } from "./routes";
 import cors from "cors";
 import * as path from "path";
+import logging from "./logging";
 
 const app = express();
 
@@ -30,6 +31,7 @@ if (DEV) {
   allowedOrigins.push(`http://${HOST}:${PORT}`);
 }
 
+app.use(logging.basicLogging);
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
