@@ -628,7 +628,26 @@ export class QueryBuilder extends SourceUtils {
     if (definition === undefined) {
       throw new Error("Field is not defined..");
     }
-    stage.fields[fieldIndex] = JSON.parse(JSON.stringify(definition));
+    const definitionCopy: FieldDef = JSON.parse(JSON.stringify(definition));
+    if (definitionCopy.type === "turtle") {
+      for (const stage of definitionCopy.pipeline) {
+        if (stage.type === "reduce" && stage.orderBy) {
+          const newOrderBy = stage.orderBy
+            ? stage.orderBy.map((orderBy) => {
+                if (typeof orderBy.field === "string") {
+                  return { ...orderBy };
+                } else {
+                  const field = stage.fields[orderBy.field - 1];
+                  return { ...orderBy, field: this.nameOf(field) };
+                }
+              })
+            : undefined;
+          stage.orderBy = newOrderBy;
+          stage.by = undefined;
+        }
+      }
+    }
+    stage.fields[fieldIndex] = definitionCopy;
   }
 
   setName(name: string): void {
