@@ -262,7 +262,17 @@ export class QueryBuilder extends SourceUtils {
           existingStage.limit = stage.limit;
         }
         if (stage.orderBy) {
-          existingStage.orderBy = stage.orderBy;
+          const newOrderBy = stage.orderBy
+            ? stage.orderBy.map((orderBy) => {
+                if (typeof orderBy.field === "string") {
+                  return { ...orderBy };
+                } else {
+                  const field = stage.fields[orderBy.field - 1];
+                  return { ...orderBy, field: this.nameOf(field) };
+                }
+              })
+            : undefined;
+          existingStage.orderBy = newOrderBy;
           existingStage.by = undefined;
         }
         existingStage.fields = stage.fields
