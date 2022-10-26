@@ -1176,14 +1176,13 @@ export class QueryWriter extends SourceUtils {
         }
         const byFieldQueryDef = stage.fields[byFieldIndex];
         if (byFieldQueryDef !== undefined) {
+          let as = undefined;
           let theField;
           if (typeof byFieldQueryDef === "string") {
             theField = this.getField(source, byFieldQueryDef);
           } else if (isFilteredAliasedName(byFieldQueryDef)) {
-            theField = this.getField(
-              source,
-              byFieldQueryDef.as || byFieldQueryDef.name
-            );
+            theField = this.getField(source, byFieldQueryDef.name);
+            as = byFieldQueryDef.as;
           } else {
             theField = byFieldQueryDef;
           }
@@ -1195,7 +1194,7 @@ export class QueryWriter extends SourceUtils {
             byField: {
               type: theField.type,
               fieldIndex: byFieldIndex,
-              name: this.nameOf(theField),
+              name: as || this.nameOf(theField),
             },
             direction: order.dir,
             orderByIndex,
