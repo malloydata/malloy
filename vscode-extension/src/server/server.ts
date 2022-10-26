@@ -84,16 +84,24 @@ connection.onInitialize((params: InitializeParams) => {
 
 async function diagnoseDocument(document: TextDocument) {
   if (haveConnectionsBeenSet) {
-    // Necessary to copy the version, because it's mutated in the same document object
-    const versionAtRequestTime = document.version;
+    // Necessary to copy the versions, because they're mutated in the same document object
+    const versionsAtRequestTime = new Map(
+      documents.all().map((document) => [document.uri, document.version])
+    );
     const diagnostics = await getMalloyDiagnostics(documents, document);
     // Only send diagnostics if the document hasn't changed since this request started
-    if (versionAtRequestTime === document.version) {
-      connection.sendDiagnostics({
-        uri: document.uri,
-        diagnostics,
-        version: document.version,
-      });
+    for (const uri in diagnostics) {
+      const versionAtRequest = versionsAtRequestTime.get(uri);
+      if (
+        versionAtRequest === undefined ||
+        versionAtRequest === document.version
+      ) {
+        connection.sendDiagnostics({
+          uri,
+          diagnostics: diagnostics[uri],
+          version: documents.get(uri)?.version,
+        });
+      }
     }
   }
 }
