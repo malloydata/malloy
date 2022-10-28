@@ -127,16 +127,10 @@ export function activate(context: vscode.ExtensionContext): void {
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration(async (e) => {
-      if (e.affectsConfiguration("malloy.connections")) {
-        const worker = getWorker();
+      if (e.affectsConfiguration("malloy")) {
         await CONNECTION_MANAGER.onConfigurationUpdated();
         connectionsTree.refresh();
-        worker.send({
-          type: "config",
-          config: vscode.workspace.getConfiguration(
-            "malloy"
-          ) as unknown as MalloyConfig,
-        });
+        sendWorkerConfig();
       }
     })
   );
@@ -216,6 +210,16 @@ export function getWorker(): WorkerConnection {
   return worker;
 }
 
+function sendWorkerConfig() {
+  worker.send({
+    type: "config",
+    config: vscode.workspace.getConfiguration(
+      "malloy"
+    ) as unknown as MalloyConfig,
+  });
+}
+
 function setupWorker(context: vscode.ExtensionContext): void {
   worker = new WorkerConnection(context);
+  sendWorkerConfig();
 }
