@@ -43,6 +43,7 @@ import {
   DocumentPosition as ModelDocumentPosition,
   SearchIndexResult,
   SearchValueMapResult,
+  doNotUseStringFromSqlBlockFIXME,
 } from "./model";
 import {
   LookupConnection,
@@ -318,7 +319,7 @@ export class Malloy {
       connection
         .fetchSchemaForSQLBlocks([sqlBlock])
         .then((result) => result.schemas[sqlBlock.name]),
-      connection.runSQL(sqlBlock.select),
+      connection.runSQL(doNotUseStringFromSqlBlockFIXME(sqlBlock)),
     ]);
     return { schema, data };
   }
@@ -402,7 +403,7 @@ export class Malloy {
       return new Result(
         {
           structs: [schema],
-          sql: sqlBlock.select,
+          sql: doNotUseStringFromSqlBlockFIXME(sqlBlock),
           result: data.rows,
           totalRows: data.totalRows,
           lastStageName: schema.name,
@@ -509,7 +510,7 @@ export class Malloy {
         );
       }
       resultExplore = new Explore(schema);
-      sql = sqlBlock.select;
+      sql = doNotUseStringFromSqlBlockFIXME(sqlBlock);
     } else if (preparedResult !== undefined) {
       resultExplore = preparedResult.resultExplore;
       sql = preparedResult.sql;
@@ -2512,7 +2513,7 @@ export class SQLBlockMaterializer extends FluentState<SQLBlock> {
    */
   public async getSQL(): Promise<string> {
     const sqlBlock = await this.getSQLBlock();
-    return sqlBlock.select;
+    return doNotUseStringFromSqlBlockFIXME(sqlBlock);
   }
 }
 

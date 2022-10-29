@@ -26,6 +26,7 @@ import {
   StreamingConnection,
   StructDef,
   QueryDataRow,
+  doNotUseStringFromSqlBlockFIXME,
 } from "@malloydata/malloy";
 
 const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
@@ -99,7 +100,7 @@ export abstract class DuckDBCommon
   public async runSQLBlockAndFetchResultSchema(
     sqlBlock: SQLBlock
   ): Promise<{ data: MalloyQueryData; schema: StructDef }> {
-    const data = await this.runSQL(sqlBlock.select);
+    const data = await this.runSQL(doNotUseStringFromSqlBlockFIXME(sqlBlock));
     const schema = (await this.fetchSchemaForSQLBlocks([sqlBlock])).schemas[
       sqlBlock.name
     ];

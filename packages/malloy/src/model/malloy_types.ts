@@ -618,6 +618,18 @@ export interface SQLBlock extends NamedObject {
   select: SQLPhrase[];
 }
 
+export function doNotUseStringFromSqlBlockFIXME(b: SQLBlock): string {
+  const strings: string[] = [];
+  for (const p of b.select) {
+    if (isSQLFragment(p)) {
+      strings.push(p.sql);
+    } else {
+      throw new Error("Queries embedded in SQL not implemented yet");
+    }
+  }
+  return strings.join("");
+}
+
 interface SubquerySource {
   type: "sql";
   method: "subquery";

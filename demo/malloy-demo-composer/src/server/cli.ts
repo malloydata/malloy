@@ -12,7 +12,7 @@ program
   .option("-p, --port <integer>", "Port for server to listen on", "4000")
   .option("-h, --host <string>", "Hostname for server to bind to", "localhost");
 
-program.parse();
+program.parse(process.argv);
 
 const composerProcess = exec(`node ${path.join(__dirname, "server.js")}`, {
   env: {
