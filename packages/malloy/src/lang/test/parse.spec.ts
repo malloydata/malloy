@@ -16,6 +16,8 @@ import { TranslateResponse } from "..";
 import {
   DocumentLocation,
   DocumentPosition,
+  isFieldTypeDef,
+  isFilteredAliasedName,
   Query,
   SQLBlock,
   StructDef,
@@ -1205,6 +1207,33 @@ describe("expressions", () => {
         "Cannot define 'd', value has unknown type"
       );
     });
+  });
+  test("paren and applied div", () => {
+    const modelSrc = `query: z is a -> { group_by: x is 1+(3/4) }`;
+    const m = new BetaModel(modelSrc);
+    expect(m).toTranslate();
+    const queryDef = m.translate()?.translated?.modelDef.contents.z;
+    expect(queryDef).toBeDefined();
+    expect(queryDef?.type).toBe("query");
+    if (queryDef && queryDef.type == "query") {
+      const x = queryDef.pipeline[0].fields[0];
+      if (
+        typeof x != "string" &&
+        !isFilteredAliasedName(x) &&
+        isFieldTypeDef(x) &&
+        x.type == "number" &&
+        x.e
+      ) {
+        const firstFrag = x.e[0];
+        if (typeof firstFrag == "string") {
+          expect(firstFrag).toContain("(");
+        } else {
+          fail("expression with parens compiled oddly");
+        }
+      } else {
+        fail("expression with parens compiled oddly");
+      }
+    }
   });
 });
 
