@@ -32,7 +32,7 @@ import {
   FieldDeclaration,
 } from "./index";
 import { QueryField } from "../space-field";
-import { makeSQLBlock, SQLBlockRequest } from "../../model/sql_block";
+import { makeSQLBlock } from "../../model/sql_block";
 import { inspect } from "util";
 import { castTo } from "./time-utils";
 
@@ -2296,21 +2296,51 @@ export class ConstantParameter extends HasParameter {
   }
 }
 
+type SQLStringSegment = string | QueryElement;
+export class SQLString extends MalloyElement {
+  elementType = "sqlString";
+  elements: SQLStringSegment[] = [];
+  push(el: string | MalloyElement): void {
+    if (typeof el == "string") {
+      if (el.length > 0) {
+        this.elements.push(el);
+      }
+    } else if (isQueryElement(el)) {
+      this.elements.push(el);
+    } else {
+      el.log("This element is not legal inside an SQL string");
+    }
+  }
+
+  sqlPhrases(): model.SQLPhrase[] {
+    return this.elements.map((el) => {
+      if (typeof el == "string") {
+        return { sql: el };
+      }
+      return el.query();
+    });
+  }
+}
+
 export class SQLStatement extends MalloyElement implements DocStatement {
   elementType = "sqlStatement";
   is?: string;
-  constructor(readonly blockReq: SQLBlockRequest) {
+  constructor(readonly connection: string, readonly select: SQLString) {
     super();
+    this.has({ select });
   }
 
   sqlBlock(): model.SQLBlock {
-    const sqlBlock = makeSQLBlock(this.blockReq);
+    const sqlBlock = makeSQLBlock({
+      connection: this.connection,
+      select: this.select.sqlPhrases(),
+    });
     sqlBlock.location = this.location;
     return sqlBlock;
   }
 
   execute(doc: Document): void {
-    if (!doc.defineSQL(this.sqlBlock(), this.is)) {
+    if (this.is && !doc.defineSQL(this.sqlBlock(), this.is)) {
       this.log(`${this.is} already defined`);
     }
   }

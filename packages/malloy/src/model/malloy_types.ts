@@ -600,20 +600,22 @@ export type StructRelationship =
   | { type: "inline" }
   | { type: "nested"; field: FieldRef; isArray: boolean };
 
-export interface SQLSelectStatements {
-  before?: string[];
-  select: string;
-  after?: string[];
+export interface SQLFragment {
+  sql: string;
 }
-
+export type SQLPhrase = Query | SQLFragment;
+export function isSQLFragment(f: SQLPhrase): f is SQLFragment {
+  return (f as SQLFragment).sql !== undefined;
+}
 /**
  * Use factory makeSQLBlock to create one of these, it will compute the
  * name: property and fill it in.
  */
-export interface SQLBlock extends NamedObject, SQLSelectStatements {
+export interface SQLBlock extends NamedObject {
   type: "sqlBlock";
-  name: string; //  hash of the connection and the select
+  name: string; // runtime unique name computed from select/connection
   connection?: string;
+  select: SQLPhrase[];
 }
 
 interface SubquerySource {

@@ -1239,7 +1239,7 @@ describe("sql backdoor", () => {
     if (needs) {
       expect(needs.length).toBe(1);
       const sql = makeSQLBlock({
-        select: " SELECT * FROM aTable ",
+        select: [{ sql: " SELECT * FROM aTable " }],
         connection: "someConnection",
       });
       expect(needs[0]).toMatchObject(sql);
@@ -1268,7 +1268,7 @@ describe("sql backdoor", () => {
     expect(needs).toBeDefined();
     if (needs) {
       expect(needs.length).toBe(1);
-      const sql = makeSQLBlock({ select: " SELECT * FROM aTable " });
+      const sql = makeSQLBlock({ select: [{ sql: " SELECT * FROM aTable " }] });
       expect(needs[0]).toMatchObject(sql);
       const refKey = needs[0].name;
       expect(refKey).toBeDefined();
@@ -1297,7 +1297,7 @@ describe("sql backdoor", () => {
     expect(needs).toBeDefined();
     if (needs) {
       expect(needs.length).toBe(1);
-      const sql = makeSQLBlock({ select: " SELECT * FROM aTable " });
+      const sql = makeSQLBlock({ select: [{ sql: " SELECT * FROM aTable " }] });
       expect(needs[0]).toMatchObject(sql);
       const refKey = needs[0].name;
       expect(refKey).toBeDefined();

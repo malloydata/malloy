@@ -41,11 +41,24 @@ topLevelAnonQueryDef
   ;
 
 defineSQLStatement
-  : SQL sqlStatementDef
+  : SQL (nameSQLBlock IS)? sqlBlock
   ;
 
-sqlStatementDef
-  : (sqlCommandNameDef IS)? SQL_STRING (ON connectionName)?
+sqlBlock
+  : OCURLY blockSQLDef+ CCURLY
+  ;
+
+blockSQLDef
+  : CONNECTION connectionName
+  | SELECT sqlString
+  ;
+
+sqlString
+  : SQL_BEGIN sqlInterpolation* SQL_END
+  ;
+
+sqlInterpolation
+  : OPEN_CODE query CLOSE_CODE
   ;
 
 importStatement
@@ -116,7 +129,7 @@ exploreSource
   : exploreName                                   # NamedSource
   | exploreTable                                  # TableSource
   | FROM OPAREN query CPAREN                      # QuerySource
-  | FROM_SQL OPAREN sqlExploreNameRef CPAREN      # SQLSource
+  | FROM_SQL OPAREN sqlExploreNameRef CPAREN      # SQLSourceName
   ;
 
 exploreNameDef: id;
@@ -456,5 +469,5 @@ jsonArray
    ;
 
 sqlExploreNameRef: id;
-sqlCommandNameDef: id;
+nameSQLBlock: id;
 connectionName: JSON_STRING;

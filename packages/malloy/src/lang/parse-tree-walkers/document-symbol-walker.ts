@@ -181,8 +181,8 @@ class DocumentSymbolWalker implements MalloyParserListener {
     }
   }
 
-  enterSqlStatementDef(pcx: parser.SqlStatementDefContext) {
-    const name = pcx.sqlCommandNameDef()?.id().text;
+  enterDefineSQLStatement(pcx: parser.DefineSQLStatementContext) {
+    const name = pcx.nameSQLBlock()?.text;
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
       name: name || "unnamed_sql",
