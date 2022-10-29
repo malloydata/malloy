@@ -13,30 +13,3 @@ _The [Malloy data model](source.md) can be reviewed in examples under ['iowa'](h
 * **Item information** (`item_number`, `item_description`, `category`, `category_name`)
 * **Volume Information** (`bottle_volume_ml`, `bottles_sold`, `volume_sold_liters`, `volume_sold_gallons`)
 * **Pricing information** (`state_bottle_cost`, `state_bottle_retail`, and `sale_dollars`)
-
-## Using a Malloy Query to Examine the Contents of the Table
-
-The table below shows all columns in the data set and their most common or ranges of values. The Malloy query below (or a derivation of it) can be used to examine just about any dataset.
-
-```malloy
---! {"isRunnable": true, "isHidden": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-query: table('bigquery-public-data.iowa_liquor_sales.sales') -> { index: * } -> {
-  nest: string_columns is {
-    order_by: cardinality asc
-    where: fieldType = 'string'
-    group_by: column_name is fieldName
-    aggregate: cardinality is count(distinct fieldValue)
-    nest: values_list_detail is {
-      top: 20
-      group_by: fieldValue
-      aggregate: rows_matched is weight.sum()
-    }
-  }
-  nest: other_columns is {
-    where: fieldType != 'string'
-    group_by:
-      column_name is fieldName
-      ranges_of_values is fieldValue
-  }
-}
-```
