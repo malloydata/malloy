@@ -131,3 +131,8 @@ query: luxco_dashboard is iowa->vendor_dashboard {
 query: jim_beam_dashboard is iowa->vendor_dashboard {
   where: vendor_name ? ~ r'Jim Beam'
 }
+
+query: table('bigquery-public-data.iowa_liquor_sales.sales') -> {
+   project: *
+   top: 100
+}
