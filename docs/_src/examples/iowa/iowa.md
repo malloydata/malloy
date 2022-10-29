@@ -40,13 +40,3 @@ query: table('bigquery-public-data.iowa_liquor_sales.sales') -> { index: * } -> 
   }
 }
 ```
-
-## First 100 Rows of the data set.
-
-```malloy
---! {"isRunnable": true, "runMode": "auto", "source": "iowa/iowa.malloy", "isPaginationEnabled": false, "pageSize": 100, "size": "large"}
-query: table('bigquery-public-data.iowa_liquor_sales.sales') -> {
-  project: *
-  top: 100
-}
-```
