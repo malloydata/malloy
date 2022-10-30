@@ -743,7 +743,7 @@ describe("explore properties", () => {
   test("except multi", modelOK("explore: c is a { except: astr, af }"));
   test(
     "explore-query",
-    modelOK("explore: c is a {query: q is { group_by: astr }}")
+    modelOK("explore: c is a {query: q is { group_by: astr } }")
   );
   test(
     "refined explore-query",
