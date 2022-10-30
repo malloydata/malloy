@@ -83,7 +83,7 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
     const sqlV = initV?.sql || "SELECT 1 as one";
     const malloyV = initV?.malloy || "";
     const sourceDef = `
-      sql: sqlData is || ${sqlV} ;;
+      sql: sqlData is { select: """${sqlV}""" }
       source: basicTypes is from_sql(sqlData) ${malloyV}
     `;
     let query: string;

@@ -736,10 +736,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
+      sql: one is {select: """
         SELECT 1 as a, 2 as b
         UNION ALL SELECT 3, 4
-      ;;
+      """}
 
       explore: eone is  from_sql(one) {}
 
@@ -750,16 +750,18 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.value[0].a).toBe(1);
   });
 
+  const sql1234 = `
+    sql: one is {select: """
+      SELECT 1 as a, 2 as b
+      UNION ALL SELECT 3, 4
+    """}`;
+
   it(`sql_block no explore- ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
-        SELECT 1 as a, 2 as b
-        UNION ALL SELECT 3, 4
-      ;;
-
-      query: from_sql(one) -> { project: a }
+          ${sql1234}
+          query: from_sql(one) -> { project: a }
       `
       )
       .run();
@@ -786,11 +788,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
-        SELECT 1 as a, 2 as b
-        UNION ALL SELECT 3, 4
-      ;;
-
+      ${sql1234}
       query: from_sql(one) -> {
         declare: c is a + 1
         project: c
@@ -805,11 +803,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
-        SELECT 1 as a, 2 as b
-        UNION ALL SELECT 3, 4
-      ;;
-
+      ${sql1234}
       source: foo is from_sql(one) + {
         query: bar is {
           declare: c is a + 1
@@ -828,11 +822,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
-        SELECT 1 as a, 2 as b
-        UNION ALL SELECT 3, 4
-      ;;
-
+      ${sql1234}
       source: foo is from_sql(one) + {
         query: bar is {
           declare: c is a + 1
@@ -856,10 +846,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
+      sql: { select: """
         SELECT 'hello mom' as a, 'cheese tastes good' as b
         UNION ALL SELECT 'lloyd is a bozo', 'michael likes poetry'
-      ;;
+      """}
 
       query: from_sql(one) -> {
         aggregate: llo is count() {? a ~ r'llo'}
@@ -876,10 +866,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
+      sql: one {select: """
         SELECT 5 as a, 2 as b
         UNION ALL SELECT 3, 4
-      ;;
+      """}
 
       query: from_sql(one) -> {
         declare: c is b + 4
@@ -895,12 +885,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        sql: atitle is ||
+        sql: atitle is {select:"""
           SELECT
             city,
             ${splitFunction[databaseName]}(city,' ') as words
           FROM ${rootDbPath[databaseName]}malloytest.aircraft
-        ;;
+          """}
 
         source: title is from_sql(atitle){}
 
@@ -920,14 +910,14 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        sql: atitle is ||
+        sql: atitle {select: """
           SELECT
             city,
             ${splitFunction[databaseName]}(city,' ') as words,
             ${splitFunction[databaseName]}(city,'A') as abreak
           FROM ${rootDbPath[databaseName]}malloytest.aircraft
           where city IS NOT null
-        ;;
+        """}
 
         source: title is from_sql(atitle){}
 

@@ -55,7 +55,7 @@ This document is intended to serve as a reference for those who already know SQL
 | <pre><code>HAVING flight_count > 5</code></pre>  | <pre> `having: flight_count > 5`</pre> | **HAVING** |
 | <pre> <code>LIMIT 100</code> <code>TOP 100</code> </pre>  | <pre> `limit: 100` `top: 100`</pre> | **LIMIT / TOP**: Both are accepted.  |
 | <pre><code>SELECT</code> <code>  ...</code> <code>FROM (</code> <code>  SELECT</code> <code>    ...</code> <code>  FROM order_items</code> <code>)</code></pre>  | <pre> `order_items -> {...} -> {...}`</pre> | **Pipelines** allow the output of one query to be used as the input to the next. |
-| <pre><code>FROM (...) AS user_facts</code></pre> | <pre> `sql: user_facts is \|\| ... ;;` </pre> | **Subqueries** Can be written into [SQL Blocks](https://looker-open-source.github.io/malloy/documentation/language/sql_blocks.html). Example below |
+| <pre><code>FROM (...) AS user_facts</code></pre> | <pre> sql: user_facts is  { ... } </pre> | **Subqueries** Can be written into [SQL Blocks](https://looker-open-source.github.io/malloy/documentation/language/sql_blocks.html). Example below |
 | <pre><code> WITH user_facts AS (...) … </code></pre>  | <pre> `source: user_facts is from(...)` </pre> | **CTEs**: can be generated through [Pipelines](https://looker-open-source.github.io/malloy/documentation/language/basic.html#pipelines-and-multi-stage-queries) and [Sources from queries](https://looker-open-source.github.io/malloy/documentation/language/source.html#sources-from-queries). |
 
 
