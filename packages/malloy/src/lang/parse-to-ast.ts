@@ -274,7 +274,7 @@ export class MalloyToAST
       sqlStr.push(beforeOpen);
       sqlStr.push(this.visit(part.query()));
     }
-    const lastChars = pcx.SQL_END()?.text.slice(-3);
+    const lastChars = pcx.SQL_END()?.text.slice(0, -3);
     sqlStr.push(lastChars || "");
     this.astAt(sqlStr, pcx);
   }
