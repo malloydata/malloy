@@ -262,16 +262,14 @@ export class QueryBuilder extends SourceUtils {
           existingStage.limit = stage.limit;
         }
         if (stage.orderBy) {
-          const newOrderBy = stage.orderBy
-            ? stage.orderBy.map((orderBy) => {
-                if (typeof orderBy.field === "string") {
-                  return { ...orderBy };
-                } else {
-                  const field = stage.fields[orderBy.field - 1];
-                  return { ...orderBy, field: this.nameOf(field) };
-                }
-              })
-            : undefined;
+          const newOrderBy = stage.orderBy.map((orderBy) => {
+            if (typeof orderBy.field === "string") {
+              return { ...orderBy };
+            } else {
+              const field = stage.fields[orderBy.field - 1];
+              return { ...orderBy, field: this.nameOf(field) };
+            }
+          });
           existingStage.orderBy = newOrderBy;
           existingStage.by = undefined;
         }
@@ -632,16 +630,14 @@ export class QueryBuilder extends SourceUtils {
     if (definitionCopy.type === "turtle") {
       for (const stage of definitionCopy.pipeline) {
         if (stage.type === "reduce" && stage.orderBy) {
-          const newOrderBy = stage.orderBy
-            ? stage.orderBy.map((orderBy) => {
-                if (typeof orderBy.field === "string") {
-                  return { ...orderBy };
-                } else {
-                  const field = stage.fields[orderBy.field - 1];
-                  return { ...orderBy, field: this.nameOf(field) };
-                }
-              })
-            : undefined;
+          const newOrderBy = stage.orderBy.map((orderBy) => {
+            if (typeof orderBy.field === "string") {
+              return { ...orderBy };
+            } else {
+              const field = stage.fields[orderBy.field - 1];
+              return { ...orderBy, field: this.nameOf(field) };
+            }
+          });
           stage.orderBy = newOrderBy;
           stage.by = undefined;
         }
