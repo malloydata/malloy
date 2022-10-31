@@ -262,7 +262,15 @@ export class QueryBuilder extends SourceUtils {
           existingStage.limit = stage.limit;
         }
         if (stage.orderBy) {
-          existingStage.orderBy = stage.orderBy;
+          const newOrderBy = stage.orderBy.map((orderBy) => {
+            if (typeof orderBy.field === "string") {
+              return { ...orderBy };
+            } else {
+              const field = stage.fields[orderBy.field - 1];
+              return { ...orderBy, field: this.nameOf(field) };
+            }
+          });
+          existingStage.orderBy = newOrderBy;
           existingStage.by = undefined;
         }
         existingStage.fields = stage.fields
@@ -618,7 +626,24 @@ export class QueryBuilder extends SourceUtils {
     if (definition === undefined) {
       throw new Error("Field is not defined..");
     }
-    stage.fields[fieldIndex] = JSON.parse(JSON.stringify(definition));
+    const definitionCopy: FieldDef = JSON.parse(JSON.stringify(definition));
+    if (definitionCopy.type === "turtle") {
+      for (const stage of definitionCopy.pipeline) {
+        if (stage.type === "reduce" && stage.orderBy) {
+          const newOrderBy = stage.orderBy.map((orderBy) => {
+            if (typeof orderBy.field === "string") {
+              return { ...orderBy };
+            } else {
+              const field = stage.fields[orderBy.field - 1];
+              return { ...orderBy, field: this.nameOf(field) };
+            }
+          });
+          stage.orderBy = newOrderBy;
+          stage.by = undefined;
+        }
+      }
+    }
+    stage.fields[fieldIndex] = definitionCopy;
   }
 
   setName(name: string): void {
@@ -1147,14 +1172,13 @@ export class QueryWriter extends SourceUtils {
         }
         const byFieldQueryDef = stage.fields[byFieldIndex];
         if (byFieldQueryDef !== undefined) {
+          let as = undefined;
           let theField;
           if (typeof byFieldQueryDef === "string") {
             theField = this.getField(source, byFieldQueryDef);
           } else if (isFilteredAliasedName(byFieldQueryDef)) {
-            theField = this.getField(
-              source,
-              byFieldQueryDef.as || byFieldQueryDef.name
-            );
+            theField = this.getField(source, byFieldQueryDef.name);
+            as = byFieldQueryDef.as;
           } else {
             theField = byFieldQueryDef;
           }
@@ -1166,7 +1190,7 @@ export class QueryWriter extends SourceUtils {
             byField: {
               type: theField.type,
               fieldIndex: byFieldIndex,
-              name: this.nameOf(theField),
+              name: as || this.nameOf(theField),
             },
             direction: order.dir,
             orderByIndex,
