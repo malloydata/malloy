@@ -46,14 +46,16 @@ explore: aircraft is table('malloytest.aircraft'){
 }
 `;
 
-const expressionModels = new Map<string, malloy.ModelMaterializer>();
+const expressionModels: Array<
+  [name: string, expressionModel: malloy.ModelMaterializer]
+> = [];
 runtimes.runtimeMap.forEach((runtime, databaseName) =>
-  expressionModels.set(databaseName, runtime.loadModel(expressionModelText))
+  expressionModels.push([databaseName, runtime.loadModel(expressionModelText)])
 );
 
-expressionModels.forEach((expressionModel, databaseName) => {
+describe.each(expressionModels)("%s", (databaseName, expressionModel) => {
   // basic calculations for sum, filtered sum, without a join.
-  it(`basic calculations - ${databaseName}`, async () => {
+  it(`basic calculations`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -86,8 +88,9 @@ expressionModels.forEach((expressionModel, databaseName) => {
     // expect(result.data.path(0, "percent_boeing_floor").value).toBe(55);
     // expect(result.data.path(0, "percent_boeing_floor2").value).toBe(55);
   });
+
   // Floor is broken (doesn't compile because the expression returned isn't an aggregate.)
-  it(`Floor() -or any function bustage with aggregates - ${databaseName}`, async () => {
+  it(`Floor() -or any function bustage with aggregates`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -104,7 +107,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
 
   // Model based version of sums.
-  it(`model: expression fixups. - ${databaseName}`, async () => {
+  it(`model: expression fixups.`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -121,7 +124,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
 
   // turtle expressions
-  it(`model: turtle - ${databaseName}`, async () => {
+  it(`model: turtle`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -133,7 +136,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
 
   // filtered turtle expressions
-  it(`model: filtered turtle - ${databaseName}`, async () => {
+  it(`model: filtered turtle`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -147,7 +150,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
 
   // having.
-  it(`model: simple having - ${databaseName}`, async () => {
+  it(`model: simple having`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -163,7 +166,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.data.path(0, "aircraft_count").value).toBe(91);
   });
 
-  it(`model: turtle having2 - ${databaseName}`, async () => {
+  it(`model: turtle having2`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -187,7 +190,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.data.path(0, "by_state", 0, "state").value).toBe("VA");
   });
 
-  it(`model: turtle having on main - ${databaseName}`, async () => {
+  it(`model: turtle having on main`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -218,7 +221,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
 
   // bigquery doesn't like to partition by floats,
-  it(`model: having float group by partition - ${databaseName}`, async () => {
+  it(`model: having float group by partition`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -238,7 +241,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.data.path(0, "aircraft_model_count").value).toBe(448);
   });
 
-  it(`model: aggregate functions distinct min max - ${databaseName}`, async () => {
+  it(`model: aggregate functions distinct min max`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -271,7 +274,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
 
   (databaseName !== "bigquery" ? it.skip : it)(
-    `model: dates named - ${databaseName}`,
+    `model: dates named`,
     async () => {
       const result = await expressionModel
         .loadQuery(
@@ -337,7 +340,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     //     `);
   });
 
-  it(`named query metadata undefined - ${databaseName}`, async () => {
+  it(`named query metadata undefined`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -354,7 +357,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result._queryResult.queryName).toBe(undefined);
   });
 
-  it(`named query metadata named - ${databaseName}`, async () => {
+  it(`named query metadata named`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -365,7 +368,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.resultExplore.name).toBe("by_manufacturer");
   });
 
-  it(`named query metadata named head of pipeline - ${databaseName}`, async () => {
+  it(`named query metadata named head of pipeline`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -378,7 +381,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result._queryResult.queryName).toBe(undefined);
   });
 
-  it(`filtered explores basic - ${databaseName}`, async () => {
+  it(`filtered explores basic`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -391,7 +394,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.data.path(0, "m_count").value).toBe(63);
   });
 
-  it(`query with aliasname used twice - ${databaseName}`, async () => {
+  it(`query with aliasname used twice`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -441,7 +444,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.data.path(0, "first_three").value).toBe("SAN");
   });
 
-  it(`joined filtered explores - ${databaseName}`, async () => {
+  it(`joined filtered explores`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -468,7 +471,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.data.path(0, "aircraft_count").value).toBe(3599);
   });
 
-  it(`joined filtered explores with dependancies - ${databaseName}`, async () => {
+  it(`joined filtered explores with dependancies`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -509,7 +512,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.data.path(0, "b_count").value).toBe(355);
   });
 
-  it(`group by explore - simple group by - ${databaseName}`, async () => {
+  it(`group by explore - simple group by`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -524,7 +527,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.data.path(0, "aircraft_models_id").value).toBe("7102802");
   });
 
-  it(`group by explore - pipeline - ${databaseName}`, async () => {
+  it(`group by explore - pipeline`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -542,7 +545,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.data.path(0, "manufacturer").value).toBe("CESSNA");
   });
 
-  it(`group by explore - pipeline 2 levels - ${databaseName}`, async () => {
+  it(`group by explore - pipeline 2 levels`, async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -568,7 +571,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
 });
 
-runtimes.runtimeMap.forEach((runtime, databaseName) => {
+describe.each(runtimes.runtimeList)("%s", (databaseName, runtime) => {
   const sqlEq = mkSqlEqWith(runtime, {
     malloy: `+ {
       dimension: friName is 'friday'
@@ -578,7 +581,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     }`,
   });
 
-  describe.skip(`alternations with not-eq - ${databaseName}`, () => {
+  describe.skip(`alternations with not-eq`, () => {
     /*
      Here's the desired truth table ...
 
@@ -618,7 +621,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     });
   });
 
-  describe(`interval extraction - ${databaseName}`, () => {
+  describe(`interval extraction`, () => {
     const sqlEq = mkSqlEqWith(runtime);
 
     test("seconds", async () => {

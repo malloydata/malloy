@@ -89,6 +89,7 @@ type RuntimeDatabaseNames = typeof allDatabases[number];
 
 export class RuntimeList {
   runtimeMap = new Map<string, SingleConnectionRuntime>();
+  runtimeList: Array<[string, SingleConnectionRuntime]> = [];
 
   constructor(databaseList: RuntimeDatabaseNames[] | undefined = undefined) {
     for (const dbName of databaseList || allDatabases) {
@@ -124,6 +125,9 @@ export class RuntimeList {
         }
       }
     }
+    this.runtimeMap.forEach((runtime, name) =>
+      this.runtimeList.push([name, runtime])
+    );
   }
 
   async closeAll(): Promise<void> {
