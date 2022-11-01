@@ -17,6 +17,7 @@ import * as vscode from "vscode";
 import { fetchFile } from "../extension/utils";
 import { Message, WorkerMessage, WorkerReadMessage } from "./types";
 const workerLog = vscode.window.createOutputChannel("Malloy Worker");
+const debugWorker = process.env.MALLOY_DEBUG_WORKER === "true";
 
 const DEFAULT_RESTART_SECONDS = 1;
 
@@ -25,10 +26,14 @@ export class WorkerConnection {
 
   constructor(context: vscode.ExtensionContext) {
     const workerModule = context.asAbsolutePath("dist/worker.js");
+    const execArgv = ["--no-lazy"];
+    if (debugWorker) {
+      execArgv.push("--inspect=6010");
+    }
 
     const startWorker = () => {
       this.worker = child_process
-        .fork(workerModule, { execArgv: ["--no-lazy", "--inspect=6010"] })
+        .fork(workerModule, { execArgv })
         .on("error", console.error)
         .on("exit", (status) => {
           if (status !== 0) {
