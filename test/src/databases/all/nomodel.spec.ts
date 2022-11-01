@@ -842,7 +842,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      sql: { select: """
+      sql: one is { select: """
         SELECT 'hello mom' as a, 'cheese tastes good' as b
         UNION ALL SELECT 'lloyd is a bozo', 'michael likes poetry'
       """}
@@ -862,7 +862,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one {select: """
+      sql: one is {select: """
         SELECT 5 as a, 2 as b
         UNION ALL SELECT 3, 4
       """}
@@ -906,7 +906,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        sql: atitle {select: """
+        sql: atitle is {select: """
           SELECT
             city,
             ${splitFunction[databaseName]}(city,' ') as words,
