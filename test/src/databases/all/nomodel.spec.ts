@@ -732,15 +732,17 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.path(0, "fun", 0, "t1").value).toBe(52);
   });
 
+  const sql1234 = `
+  sql: one is {select: """
+    SELECT 1 as a, 2 as b
+    UNION ALL SELECT 3, 4
+  """}`;
+
   it(`sql_block - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is {select: """
-        SELECT 1 as a, 2 as b
-        UNION ALL SELECT 3, 4
-      """}
-
+      ${sql1234}
       explore: eone is  from_sql(one) {}
 
       query: eone -> { project: a }
@@ -749,12 +751,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
     expect(result.data.value[0].a).toBe(1);
   });
-
-  const sql1234 = `
-    sql: one is {select: """
-      SELECT 1 as a, 2 as b
-      UNION ALL SELECT 3, 4
-    """}`;
 
   it(`sql_block no explore- ${databaseName}`, async () => {
     const result = await runtime

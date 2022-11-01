@@ -125,7 +125,7 @@ export abstract class DuckDBCommon
     };
 
     await this.schemaFromQuery(
-      `DESCRIBE SELECT * FROM (${sqlRef.select})`,
+      `DESCRIBE SELECT * FROM (${doNotUseStringFromSqlBlockFIXME(sqlRef)})`,
       structDef
     );
     return structDef;
