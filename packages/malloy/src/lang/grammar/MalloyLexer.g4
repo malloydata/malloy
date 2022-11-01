@@ -184,10 +184,9 @@ fragment Y: [yY] ; fragment Z: [zZ] ;
 BLOCK_COMMENT: '/*' .*? '*/' -> channel(HIDDEN);
 COMMENT_TO_EOL: ('--' | '//') ~[\r\n]* (('\r'? '\n') | EOF) -> channel(HIDDEN) ;
 WHITE_SPACE: SPACE_CHAR -> skip ;
-SQL_STRING: '||' .*? ';;';
 
 SQL_BEGIN: '"""' -> pushMode(SQL_MODE);
-CLOSE_CODE: '}}' -> popMode;
+CLOSE_CODE: '}%' -> popMode;
 
 // Matching any of these is a parse error
 UNWATED_CHARS_TRAILING_NUMBERS: DIGIT+ ID_CHAR+ (ID_CHAR | DIGIT)*;
@@ -197,11 +196,11 @@ mode SQL_MODE;
 
 fragment SQL_CHAR
   : '\\' .
-  | ~[{"]
+  | ~[%"]
   | '"' ~'"'
   | '""' ~'"'
-  | '{' ~'{'
+  | '%' ~'{'
   ;
 
-OPEN_CODE: SQL_CHAR*? '{{' -> pushMode(DEFAULT_MODE);
+OPEN_CODE: SQL_CHAR*? '%{' -> pushMode(DEFAULT_MODE);
 SQL_END: SQL_CHAR*? '"""' -> popMode;
