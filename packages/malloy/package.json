@@ -15,7 +15,8 @@
     "testLang": "npm run test --testPathPattern=packages/malloy/src/lang",
     "clean": "rm -rf src/lang/lib",
     "build": "npm run build-parser && tsc --build",
-    "malloyc": "ts-node ../../scripts/malloy-to-json"
+    "malloyc": "ts-node ../../scripts/malloy-to-json",
+    "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
     "antlr4ts": "^0.5.0-alpha.4",
