@@ -14,7 +14,8 @@
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
     "build": "tsc --build",
-    "malloyc": "ts-node ../../scripts/malloy-to-json"
+    "malloyc": "ts-node ../../scripts/malloy-to-json",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.17.0",

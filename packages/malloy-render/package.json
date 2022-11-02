@@ -13,7 +13,8 @@
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
-    "build": "tsc --build"
+    "build": "tsc --build",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@malloydata/malloy": "^0.0.4",
