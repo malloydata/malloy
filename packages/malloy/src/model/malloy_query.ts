@@ -2247,6 +2247,11 @@ class QueryQuery extends QueryField {
         structSQL,
         this.firstSegment.sample
       );
+      if (this.firstSegment.sample) {
+        structSQL = stageWriter.addStage(
+          `SELECT * from ${structSQL} as x limit 100000 `
+        );
+      }
     }
     const structRelationship = qs.fieldDef.structRelationship;
     if (structRelationship.type === "basetable") {
@@ -3020,10 +3025,11 @@ class QueryQueryReduce extends QueryQuery {}
 
 class QueryQueryProject extends QueryQuery {}
 
-class QueryQueryIndex extends QueryQuery {
+// generates a single stage query for the index.
+//  wildcards have been expanded
+//  nested repeated fields are safe to use.
+class QueryQueryIndexStage extends QueryQuery {
   fieldDef: TurtleDef;
-  fanPrefixes: string[] = [];
-
   constructor(
     fieldDef: TurtleDef,
     parent: QueryStruct,
@@ -3031,23 +3037,7 @@ class QueryQueryIndex extends QueryQuery {
   ) {
     super(fieldDef, parent, stageWriter);
     this.fieldDef = fieldDef;
-    this.findFanPrefexes(parent);
   }
-
-  // we want to generate a different query for each
-  //  nested structure so we don't do a crazy cross product.
-  findFanPrefexes(qs: QueryStruct) {
-    for (const [_name, f] of qs.nameMap) {
-      if (
-        f instanceof QueryStruct &&
-        (f.fieldDef.structRelationship.type === "many" ||
-          f.fieldDef.structRelationship.type === "nested")
-      ) {
-        this.fanPrefixes.push(f.getFullOutputName());
-      }
-    }
-  }
-
   // get a field ref and expand it.
   expandField(f: string) {
     const field = this.parent.getFieldByName(f);
@@ -3059,18 +3049,7 @@ class QueryQueryIndex extends QueryQuery {
     const groupIndex = resultStruct.groupSet;
     this.maxGroupSet = groupIndex;
 
-    // if no fields were specified, look in the parent struct for strings.
-    let fieldNames = (this.firstSegment as IndexSegment).fields || [];
-    if (fieldNames.length === 0) {
-      fieldNames.push("**");
-    }
-    fieldNames = this.expandWildCards(
-      fieldNames,
-      (qf) =>
-        ["string", "number", "timestamp", "date"].indexOf(qf.fieldDef.type) !==
-        -1
-    ) as string[];
-
+    const fieldNames = (this.firstSegment as IndexSegment).fields || [];
     for (const f of fieldNames) {
       const { as, field } = this.expandField(f);
 
@@ -3184,6 +3163,134 @@ class QueryQueryIndex extends QueryQuery {
   weight
 FROM ${resultStage}\n`
     );
+    return this.resultStage;
+  }
+}
+
+class QueryQueryIndex extends QueryQuery {
+  fieldDef: TurtleDef;
+  rootFields: string[] = [];
+  fanPrefixMap: Record<string, string[]> = {};
+
+  constructor(
+    fieldDef: TurtleDef,
+    parent: QueryStruct,
+    stageWriter: StageWriter | undefined
+  ) {
+    super(fieldDef, parent, stageWriter);
+    this.fieldDef = fieldDef;
+    this.findFanPrefexes(parent);
+  }
+
+  // we want to generate a different query for each
+  //  nested structure so we don't do a crazy cross product.
+  findFanPrefexes(qs: QueryStruct) {
+    for (const [_name, f] of qs.nameMap) {
+      if (
+        f instanceof QueryStruct &&
+        (f.fieldDef.structRelationship.type === "many" ||
+          f.fieldDef.structRelationship.type === "nested") &&
+        f.fieldDef.fields.length > 1 // leave arrays in parent.
+      ) {
+        this.fanPrefixMap[f.getFullOutputName()] = [];
+        this.findFanPrefexes(f);
+      }
+    }
+  }
+
+  expandIndexWildCards(): string[] {
+    // if no fields were specified, look in the parent struct for strings.
+    let fieldNames = (this.firstSegment as IndexSegment).fields || [];
+    if (fieldNames.length === 0) {
+      fieldNames.push("**");
+    }
+    fieldNames = this.expandWildCards(
+      fieldNames,
+      (qf) =>
+        ["string", "number", "timestamp", "date"].indexOf(qf.fieldDef.type) !==
+        -1
+    ) as string[];
+    return fieldNames;
+  }
+
+  // return the number of stages it is going to take to generate this index.
+  getStageFields(): string[][] {
+    const s: string[][] = [];
+    if (this.rootFields.length > 0) {
+      s.push(this.rootFields);
+    }
+    for (const fieldList of Object.values(this.fanPrefixMap)) {
+      if (fieldList.length > 0) {
+        s.push(fieldList);
+      }
+    }
+    return s;
+  }
+
+  // Map fields into stages based on their level of repeated nesting
+  //
+  mapFieldsIntoStages(fieldNames: string[]) {
+    // find all the fanned prefixes, longest ones first.
+    const fannedPrefixes = Object.keys(this.fanPrefixMap).sort((k1, k2) => {
+      if (k1.length < k2.length) {
+        return 1;
+      }
+      if (k1.length > k2.length) {
+        return -1;
+      }
+      return 0;
+    });
+
+    // Find the deepest fanned prefix
+    for (const fn of fieldNames) {
+      let found = false;
+      for (const prefix of fannedPrefixes) {
+        if (fn.startsWith(prefix)) {
+          this.fanPrefixMap[prefix].push(fn);
+          found = true;
+        }
+      }
+      if (!found) {
+        this.rootFields.push(fn);
+      }
+    }
+  }
+
+  expandFields(_resultStruct: FieldInstanceResult) {
+    const fieldNames = this.expandIndexWildCards();
+    this.mapFieldsIntoStages(fieldNames);
+  }
+
+  generateSQL(stageWriter: StageWriter): string {
+    const stages = this.getStageFields();
+    const outputStageNames: string[] = [];
+    for (const fields of stages) {
+      const q = new QueryQueryIndexStage(
+        {
+          ...this.fieldDef,
+          pipeline: [
+            {
+              ...(this.fieldDef.pipeline[0] as IndexSegment),
+              fields: fields,
+            },
+          ],
+        },
+        this.parent,
+        stageWriter
+      );
+      q.prepare(stageWriter);
+      const lastStageName = q.generateSQL(stageWriter);
+      outputStageNames.push(lastStageName);
+    }
+    if (outputStageNames.length === 1) {
+      this.resultStage = outputStageNames[0];
+    } else {
+      this.resultStage = stageWriter.addStage(
+        outputStageNames
+          .map((n) => `SELECT * FROM ${n}\n`)
+          .join(" UNION ALL \n")
+      );
+    }
     return this.resultStage;
   }
 
