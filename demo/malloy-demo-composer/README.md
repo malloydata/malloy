@@ -1,3 +1,7 @@
+| :warning: This Project has Moved                                                                                             |
+| ---------------------------------------------------------------------------------------------------------------------------- |
+| Future updates will appear at [https://github.com/malloydata/malloy-composer](https://github.com/malloydata/malloy-composer) |
+
 # Malloy Composer Demo
 
 The Malloy Composer Demo is provided as a working example of an application built on top of Malloy. If you have any questions about getting it running, please reach out to us for help! If you find bugs or have feature requests, you can submit them as issues in this repo. [Learn how to use the composer](https://docs.google.com/presentation/d/18KUl_rrz2K-hbsiKJYS3rtTcYxZMXKklyPllLmTtIYY/edit#slide=id.g1269816dcbe_0_140)
