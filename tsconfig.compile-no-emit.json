@@ -6,9 +6,7 @@
     { "path": "packages/malloy-db-duckdb" },
     { "path": "packages/malloy-db-postgres" },
     { "path": "test" },
-    { "path": "packages/malloy-render" },
-    { "path": "./vscode-extension" },
-    { "path": "demo/malloy-demo-composer" }
+    { "path": "packages/malloy-render" }
   ],
   "files": [],
   "exclude": ["**/node_modules"],

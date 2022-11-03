@@ -47,12 +47,10 @@ axios.defaults.httpsAgent = new https.Agent({ keepAlive: true });
 const malloyPackages = [
   "@malloydata/malloy",
   "@malloydata/render",
-  "vscode-extension",
   "test",
   "@malloydata/db-bigquery",
   "@malloydata/db-postgres",
   "@malloydata/db-duckdb",
-  "malloy-composer-demo",
 ];
 
 // licenses that we would need to mirror source for, if we included (we don't today)
