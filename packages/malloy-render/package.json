@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "license": "GPL-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -13,10 +13,11 @@
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
-    "build": "tsc --build"
+    "build": "tsc --build",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "0.0.3",
+    "@malloydata/malloy": "^0.0.5",
     "us-atlas": "^3.0.0",
     "vega": "^5.21.0",
     "vega-lite": "^5.2.0"

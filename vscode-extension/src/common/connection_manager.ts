@@ -105,7 +105,8 @@ const getConnectionForConfig = async (
         connection = new DuckDBConnection(
           connectionConfig.name,
           ":memory:",
-          connectionConfig.workingDirectory || workingDirectory
+          connectionConfig.workingDirectory || workingDirectory,
+          () => ({ rowLimit })
         );
       } catch (error) {
         console.log("Could not create DuckDB connection:", error);

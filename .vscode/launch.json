@@ -16,7 +16,10 @@
       "preLaunchTask": "build-extension-task",
       "sourceMaps": true,
       "console": "integratedTerminal",
-      "runtimeArgs": ["--preserve-symlinks"]
+      "runtimeArgs": ["--preserve-symlinks"],
+      "env": {
+        "MALLOY_DEBUG_WORKER": "true"
+      }
     },
     {
       "name": "Run VSCode Extension (and Debug Webviews)",
@@ -30,7 +33,10 @@
       "preLaunchTask": "build-extension-task",
       "sourceMaps": true,
       "console": "integratedTerminal",
-      "runtimeArgs": ["--preserve-symlinks"]
+      "runtimeArgs": ["--preserve-symlinks"],
+      "env": {
+        "MALLOY_DEBUG_WORKER": "true"
+      }
     },
     {
       "type": "node",

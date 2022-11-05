@@ -482,10 +482,6 @@ export class ExprParens extends ExpressionDef {
     super({ expr });
   }
 
-  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
-    return this.expr.apply(fs, op, expr);
-  }
-
   requestExpression(fs: FieldSpace): ExprValue | undefined {
     return this.expr.requestExpression(fs);
   }
