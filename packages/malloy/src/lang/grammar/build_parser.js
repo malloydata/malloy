@@ -55,16 +55,16 @@ for (const fn of compilerSrcs) {
 }
 
 if (rebuild) {
+  console.log(`-- Constructing Malloy parser from antlr specification ...`);
   const antlr = `antlr4ts -Xexact-output-dir -o ../lib/Malloy`;
   if (
     run(`${antlr} MalloyLexer.g4`) &&
     run(`${antlr} -visitor MalloyParser.g4`)
   ) {
     writeFileSync(digestFile, versionDigest);
-    console.log(`Antlr generated Malloy parser -- Created`);
   } else {
     rmSync(digestFile);
   }
 } else {
-  console.log(`Antlr generated Malloy parser -- Already exists`);
+  console.log(`-- Using existing Malloy parser`);
 }
