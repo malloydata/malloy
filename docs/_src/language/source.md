@@ -134,7 +134,7 @@ Sources can be created from a SQL block, e.g.
 ```malloy
 --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "size": "large" }
 sql: my_sql_query is {
-  selct: """
+  select: """
     SELECT
       first_name,
       last_name,
