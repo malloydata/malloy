@@ -682,6 +682,12 @@ export class NamedSource extends Mallobj {
     if (this.isBlock) {
       return this.structDef();
     }
+    const modelEnt = this.modelEntry(this.ref);
+    if (modelEnt && !modelEnt.exported) {
+      // If we are not exporting the referenced structdef, don't
+      // use the reference
+      return this.structDef();
+    }
     return this.refName;
   }
 

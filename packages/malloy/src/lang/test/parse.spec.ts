@@ -90,7 +90,7 @@ class BetaModel extends Testable {
         typeof queryName == "string"
           ? t.modelDef.contents[queryName]
           : t.queryList[queryName];
-      if (s.type == "query") {
+      if (s?.type == "query") {
         return s;
       }
     }
@@ -616,6 +616,29 @@ describe("model statements", () => {
         },
       });
       expect(docParse).compileToFailWith("Cannot redefine 'astr'");
+    });
+    test("source references expanded when not exported", () => {
+      const srcFiles = {
+        "internal://test/langtests/middle": `
+          import "bottom"
+          source: midSrc is from(bottomSrc -> { group_by: astr })
+        `,
+        "internal://test/langtests/bottom": `source: bottomSrc is table('aTable')`,
+      };
+      const fullModel = new BetaModel(`
+        import "middle"
+      `);
+      fullModel.update({ urls: srcFiles });
+      expect(fullModel).toTranslate();
+      const ms = fullModel.getSourceDef("midSrc");
+      expect(ms).toBeDefined();
+      if (ms) {
+        expect(ms.structSource.type).toBe("query");
+        if (ms.structSource.type == "query") {
+          const qs = ms.structSource.query.structRef;
+          expect(typeof qs).not.toBe("string");
+        }
+      }
     });
   });
 });
