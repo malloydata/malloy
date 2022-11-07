@@ -1,19 +1,15 @@
 steps:
-  - id: deploy-marketplace
+  - id: deploy-npm
     name: "nixos/nix"
     entrypoint: sh
     args:
       - -c
       - "./cloudbuild/deploy/$TRIGGER_NAME.sh"
     timeout: "1600s"
-    secretEnv: ["VSCE_PAT", "GA_API_SECRET", "GA_MEASUREMENT_ID"]
+    secretEnv: ["NPM_TOKEN"]
 logsBucket: "gs://malloy-cloudbuild-logs"
 timeout: "1600s"
 availableSecrets:
   secretManager:
-    - versionName: projects/malloy-303216/secrets/marketplace-prerelease-CI/versions/latest
-      env: "VSCE_PAT"
-    - versionName: projects/malloy-303216/secrets/vscode-extension-CI-GA-API-SECRET/versions/latest
-      env: "GA_API_SECRET"
-    - versionName: projects/malloy-303216/secrets/vscode-extension-CI-GA-MEASUREMENT-ID/versions/latest
-      env: "GA_MEASUREMENT_ID"
+    - versionName: projects/malloy-303216/secrets/npm-publish/versions/latest
+      env: "NPM_TOKEN"
