@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 set -euxo pipefail
 
-PACKAGES="\
-packages/malloy \
-packages/malloy-db-bq \
-packages/malloy-db-duckdb \
-packages/malloy-db-postgress \
-packages/malloy-render"
+export PACKAGES="packages/malloy packages/malloy-db-bigquery packages/malloy-db-duckdb packages/malloy-db-postgres packages/malloy-render"
 
-nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --command "$(cat <<NIXCMD
+nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --run "$(cat <<NIXCMD
   cd /workspace
-  npm ci --loglevel error
+  npm --no-audit --no-fund ci --loglevel error
   npm run build
-  for package in $PACKAGES; do
-    npm publish -w $package --dry-run
+  echo Publishing \$PACKAGES
+  for package in \$PACKAGES; do
+    echo Publishing \$package
+    VERSION=\$(jq -r .version \$package/package.json)
+    PRERELEASE=\$(git rev-list --count main)
+    npm version -w \$package \$VERSION-\$PRERELEASE
+    npm publish -w \$package --dry-run --tag next
   done
 NIXCMD
 )"
