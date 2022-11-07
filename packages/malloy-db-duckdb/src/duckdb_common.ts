@@ -264,7 +264,7 @@ export abstract class DuckDBCommon
             structDef.fields.push({
               name,
               type: "string",
-              e: [`DuckDB type "${duckDBType}" not supported by Malloy`],
+              e: [`'DuckDB type "${duckDBType}" not supported by Malloy'`],
             });
           }
         }

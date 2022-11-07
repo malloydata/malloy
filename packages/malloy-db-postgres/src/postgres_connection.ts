@@ -318,7 +318,7 @@ export class PostgresConnection
         s.fields.push({
           name,
           type: "string",
-          e: [`Postgres type "${postgresDataType}" not supported by Malloy`],
+          e: [`'Postgres type "${postgresDataType}" not supported by Malloy'`],
         });
       }
     }
