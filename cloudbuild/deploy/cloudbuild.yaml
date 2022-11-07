@@ -2,8 +2,6 @@ steps:
   - id: deploy-npm
     name: "nixos/nix"
     entrypoint: sh
-    env:
-      - "BRANCH_NAME=$BRANCH_NAME"
     args:
       - -c
       - "./cloudbuild/deploy/$TRIGGER_NAME.sh"
