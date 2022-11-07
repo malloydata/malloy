@@ -12,7 +12,6 @@
  * GNU General Public License for more details.
  */
 
-import { Result } from "@malloydata/malloy";
 import { RuntimeList } from "../../runtimes";
 import { describeIfDatabaseAvailable } from "../../util";
 
@@ -207,7 +206,7 @@ describe("Postgres tests", () => {
     const result = await runtime
       .loadQuery(
         `
-        sql: badType is || SELECT int4range(10, 20) as ranger ;;
+        sql: badType is { select: """SELECT int4range(10, 20) as ranger""" }
         query: from_sql(badType)->{ project: *}
       `
       )

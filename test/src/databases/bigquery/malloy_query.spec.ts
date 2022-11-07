@@ -995,7 +995,9 @@ describe("sql injection tests", () => {
     const result = await runtime
       .loadQuery(
         `
-        sql: badType is || SELECT ST_GEOGFROMTEXT('LINESTRING(1 2, 3 4)') as geo ;;
+        sql: badType is {
+          select: """SELECT ST_GEOGFROMTEXT('LINESTRING(1 2, 3 4)') as geo"""
+        }
         query: from_sql(badType)->{ project: *}
       `
       )
