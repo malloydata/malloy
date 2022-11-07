@@ -12,6 +12,7 @@
  * GNU General Public License for more details.
  */
 
+import { Result } from "@malloydata/malloy";
 import { RuntimeList } from "../../runtimes";
 import { describeIfDatabaseAvailable } from "../../util";
 
@@ -200,5 +201,19 @@ describe("Postgres tests", () => {
       )
       .run();
     expect(result.data.value[0].one).toBe(1);
+  });
+
+  it("passes test which should be deleted when type support improves", async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        sql: badType is || SELECT int4range(10, 20) as ranger ;;
+        query: from_sql(badType)->{ project: *}
+      `
+      )
+      .run();
+    expect(result.data.value[0].ranger).toBe(
+      'Postgres type "int4range" not supported by Malloy'
+    );
   });
 });

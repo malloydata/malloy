@@ -523,7 +523,7 @@ export class BigQueryConnection
           structDef.fields.push({
             name,
             type: "string",
-            e: [`BigQuery type "${type}" not supported by Malloy`],
+            e: [`'BigQuery type "${type}" not supported by Malloy'`],
           });
         }
       }
