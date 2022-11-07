@@ -261,7 +261,11 @@ export abstract class DuckDBCommon
               name,
             });
           } else {
-            throw new Error(`unknown duckdb type ${duckDBType}`);
+            structDef.fields.push({
+              name,
+              type: "string",
+              e: [`DuckDB type "${duckDBType}" not supported by Malloy`],
+            });
           }
         }
       }
