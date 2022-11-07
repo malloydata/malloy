@@ -315,7 +315,11 @@ export class PostgresConnection
           name,
         });
       } else {
-        throw new Error(`unknown postgres type ${postgresDataType}`);
+        s.fields.push({
+          name,
+          type: "string",
+          e: [`'Postgres type "${postgresDataType}" not supported by Malloy'`],
+        });
       }
     }
   }
