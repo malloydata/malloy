@@ -7,8 +7,7 @@ steps:
       - "./cloudbuild/deploy/$TRIGGER_NAME.sh"
     timeout: "1600s"
     secretEnv: ["NPM_TOKEN"]
-logsBucket: "gs://malloy-cloudbuild-logs"
-timeout: "1600s"
+timeout: "1800s"
 availableSecrets:
   secretManager:
     - versionName: projects/malloy-303216/secrets/npm-publish/versions/latest
