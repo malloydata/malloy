@@ -7,6 +7,8 @@ steps:
       - "./cloudbuild/deploy/$TRIGGER_NAME.sh"
     timeout: "1600s"
     secretEnv: ["NPM_TOKEN"]
+options:
+  logging: CLOUD_LOGGING_ONLY
 timeout: "1800s"
 availableSecrets:
   secretManager:
