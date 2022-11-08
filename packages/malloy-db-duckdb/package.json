@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.17.0",
-    "@malloydata/malloy": "^0.0.5",
+    "@malloydata/malloy": "0.0.6",
     "duckdb": "0.5.1"
   }
 }
