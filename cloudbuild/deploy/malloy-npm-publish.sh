@@ -14,7 +14,7 @@ nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --command "$(cat <<NIXCMD
     VERSION=\$(jq -r .version \$package/package.json)
     echo Publishing \$package \$VERSION-\$PRERELEASE
     npm version -w \$package \$VERSION-\$PRERELEASE
-    npm publish -w \$package --dry-run --tag next
+    npm publish -w \$package --tag next
   done
 NIXCMD
 )"
