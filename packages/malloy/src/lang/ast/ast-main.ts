@@ -24,7 +24,7 @@ import {
   ResultSpace,
 } from "../field-space";
 import { MessageLogger } from "../parse-log";
-import { MalloyTranslation } from "../parse-malloy";
+import { MalloyTranslation, ModelDataRequest } from "../parse-malloy";
 import {
   compressExpr,
   ConstantSubExpression,
@@ -35,6 +35,7 @@ import { QueryField } from "../space-field";
 import { makeSQLBlock } from "../../model/sql_block";
 import { inspect } from "util";
 import { castTo } from "./time-utils";
+import { randomUUID as uuid } from "crypto";
 
 /*
  ** For times when there is a code generation error but your function needs
@@ -441,7 +442,8 @@ class QueryHeadStruct extends Mallobj {
 }
 
 export interface DocStatement extends MalloyElement {
-  execute(doc: Document): void;
+  execId: string;
+  execute(doc: Document): ModelDataRequest;
 }
 
 export function isDocStatement(e: MalloyElement): e is DocStatement {
@@ -450,6 +452,7 @@ export function isDocStatement(e: MalloyElement): e is DocStatement {
 
 export class DefineExplore extends MalloyElement implements DocStatement {
   elementType = "defineExplore";
+  execId = uuid();
   readonly parameters?: HasParameter[];
   constructor(
     readonly name: string,
@@ -473,7 +476,7 @@ export class DefineExplore extends MalloyElement implements DocStatement {
     }
   }
 
-  execute(doc: Document): void {
+  execute(doc: Document): ModelDataRequest {
     if (doc.modelEntry(this.name)) {
       this.log(`Cannot redefine '${this.name}'`);
     } else {
@@ -497,15 +500,14 @@ export class DefineSourceList
   extends ListOf<DefineExplore>
   implements DocStatement
 {
+  execId = uuid();
   constructor(sourceList: DefineExplore[]) {
     super("defineSources", sourceList);
     this.has({ sourceList });
   }
 
-  execute(doc: Document): void {
-    for (const dq of this.list) {
-      dq.execute(doc);
-    }
+  execute(doc: Document): ModelDataRequest {
+    return doc.runner.executeList(this.list);
   }
 }
 
@@ -1564,16 +1566,72 @@ export interface NameSpace {
   setEntry(name: string, value: ModelEntry, exported: boolean): void;
 }
 
+/**
+ * Provides the ability keep track of which statements in a document
+ * have already been translated and written into the model.
+ */
+class DocumentRunner {
+  executed = new Set<string>();
+  constructor(readonly forDoc: Document) {}
+
+  executeStatement(ds: DocStatement): ModelDataRequest {
+    if (!this.executed.has(ds.execId)) {
+      const resp = ds.execute(this.forDoc);
+      if (resp) {
+        return resp;
+      }
+      this.executed.add(ds.execId);
+    }
+  }
+
+  executeList(dsl: DocStatement[]): ModelDataRequest {
+    for (const ds of dsl) {
+      if (this.forDoc.errorsExist()) {
+        // Once errors appear, don't continue executing statements, stops
+        // a number of cascasding errors.
+        return undefined;
+      }
+      const resp = this.executeStatement(ds);
+      if (resp) {
+        return resp;
+      }
+    }
+  }
+}
+
+interface DocumentCompileResult {
+  modelDef: model.ModelDef;
+  queryList: model.Query[];
+  sqlBlocks: model.SQLBlock[];
+  needs: ModelDataRequest;
+}
+
+/**
+ * The Document class is a little weird because we might need to bounce back
+ * to the requestor, which might be on the other side of a wire, to get
+ * back some schema information. The intended translation of a Document
+ * is to call initModelDef(), and then to call modelDataRequest() until it
+ * returns undefined. At any time you can call modelDef to get the model
+ * as it exists so far, but the translation is not complete until
+ * modelDataRequest() returns undefined;
+ *
+ * TODO probably modelRequest should be the method and you call it
+ * until it returns a model with no additional data needed ...
+ * that can be tomorrow
+ */
 export class Document extends MalloyElement implements NameSpace {
   elementType = "document";
   documentModel: Record<string, ModelEntry> = {};
   queryList: model.Query[] = [];
   sqlBlocks: model.SQLBlock[] = [];
+  runner: DocumentRunner;
+
   constructor(readonly statements: DocStatement[]) {
     super({ statements });
+    this.runner = new DocumentRunner(this);
   }
 
-  getModelDef(extendingModelDef: model.ModelDef | undefined): model.ModelDef {
+  initModelDef(extendingModelDef: model.ModelDef | undefined): void {
     this.documentModel = {};
     this.queryList = [];
     this.sqlBlocks = [];
@@ -1586,14 +1644,20 @@ export class Document extends MalloyElement implements NameSpace {
         }
       }
     }
-    for (const stmt of this.statements) {
-      if (this.errorsExist()) {
-        // Once errors appear, don't continue executing statements, stops
-        // a number of cascasding errors.
-        break;
-      }
-      stmt.execute(this);
-    }
+  }
+
+  compile(): DocumentCompileResult {
+    const ret: DocumentCompileResult = {
+      modelDef: this.modelDef(),
+      queryList: this.queryList,
+      sqlBlocks: this.sqlBlocks,
+      needs: undefined,
+    };
+    ret.needs = this.runner.executeList(this.statements);
+    return ret;
+  }
+
+  private modelDef(): model.ModelDef {
     const def: model.ModelDef = { name: "", exports: [], contents: {} };
     for (const entry in this.documentModel) {
       const entryDef = this.documentModel[entry].entry;
@@ -2070,26 +2134,26 @@ export class DefineQueryList
   extends ListOf<DefineQuery>
   implements DocStatement
 {
+  execId = uuid();
   constructor(queryList: DefineQuery[]) {
     super("defineQueries", queryList);
     this.has({ queryList });
   }
 
-  execute(doc: Document): void {
-    for (const dq of this.list) {
-      dq.execute(doc);
-    }
+  execute(doc: Document): ModelDataRequest {
+    return doc.runner.executeList(this.list);
   }
 }
 
 export class DefineQuery extends MalloyElement implements DocStatement {
   elementType = "defineQuery";
+  execId = uuid();
 
   constructor(readonly name: string, readonly queryDetails: QueryElement) {
     super({ queryDetails });
   }
 
-  execute(doc: Document): void {
+  execute(doc: Document): ModelDataRequest {
     const entry: model.NamedQuery = {
       ...this.queryDetails.query(),
       type: "query",
@@ -2098,19 +2162,23 @@ export class DefineQuery extends MalloyElement implements DocStatement {
     };
     const exported = false;
     doc.setEntry(this.name, { entry, exported });
+    return undefined;
   }
 }
 
 export class AnonymousQuery extends MalloyElement implements DocStatement {
   elementType = "anonymousQuery";
+  execId = uuid();
+
   constructor(readonly theQuery: QueryElement) {
     super();
     this.has({ query: theQuery });
   }
 
-  execute(doc: Document): void {
+  execute(doc: Document): ModelDataRequest {
     const modelQuery = this.theQuery.query();
     doc.queryList.push(modelQuery);
+    return undefined;
   }
 }
 
@@ -2186,6 +2254,7 @@ export class JSONStructDef extends Mallobj {
 export class ImportStatement extends MalloyElement implements DocStatement {
   elementType = "import statement";
   fullURL?: string;
+  execId = uuid();
 
   /*
    * At the time of writng this comment, it is guaranteed that if an AST
@@ -2205,7 +2274,7 @@ export class ImportStatement extends MalloyElement implements DocStatement {
     }
   }
 
-  execute(doc: Document): void {
+  execute(doc: Document): ModelDataRequest {
     const trans = this.translator();
     if (!trans) {
       this.log("Cannot import without translation context");
@@ -2225,6 +2294,7 @@ export class ImportStatement extends MalloyElement implements DocStatement {
         this.log(`import failed with status: '${src.status}'`);
       }
     }
+    return undefined;
   }
 }
 
@@ -2331,6 +2401,8 @@ export class SQLString extends MalloyElement {
 export class SQLStatement extends MalloyElement implements DocStatement {
   elementType = "sqlStatement";
   is?: string;
+  execId = uuid();
+
   constructor(readonly connection: string, readonly select: SQLString) {
     super();
     this.has({ select });
@@ -2345,10 +2417,11 @@ export class SQLStatement extends MalloyElement implements DocStatement {
     return sqlBlock;
   }
 
-  execute(doc: Document): void {
+  execute(doc: Document): ModelDataRequest {
     if (this.is && !doc.defineSQL(this.sqlBlock(), this.is)) {
       this.log(`${this.is} already defined`);
     }
+    return undefined;
   }
 }
 

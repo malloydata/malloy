@@ -138,6 +138,7 @@ export type DataRequestResponse = Partial<NeededData> | null;
 function isNeedResponse(dr: DataRequestResponse): dr is NeededData {
   return !!dr && (dr.tables || dr.urls || dr.sqlStructs) != undefined;
 }
+export type ModelDataRequest = NeedSQLStruct | undefined;
 
 interface ASTData extends ErrorResponse, NeededData, FinalResponse {
   ast: ast.MalloyElement;
@@ -655,9 +656,14 @@ class TranslateStep implements TranslationStep {
     if (that.grammarRule === "malloyDocument") {
       if (astResponse.ast instanceof ast.Document) {
         const doc = astResponse.ast;
-        that.modelDef = doc.getModelDef(extendingModel);
-        that.queryList = doc.queryList;
-        that.sqlBlocks = doc.sqlBlocks;
+        doc.initModelDef(extendingModel);
+        const compiled = doc.compile();
+        if (compiled.needs) {
+          throw new Error("Document request model data");
+        }
+        that.modelDef = compiled.modelDef;
+        that.queryList = compiled.queryList;
+        that.sqlBlocks = compiled.sqlBlocks;
       } else {
         that.root.logger.log({
           message: `'${that.sourceURL}' did not parse to malloy document`,
