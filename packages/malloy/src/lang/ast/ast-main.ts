@@ -1647,13 +1647,13 @@ export class Document extends MalloyElement implements NameSpace {
   }
 
   compile(): DocumentCompileResult {
+    const needs = this.runner.executeList(this.statements);
     const ret: DocumentCompileResult = {
       modelDef: this.modelDef(),
       queryList: this.queryList,
       sqlBlocks: this.sqlBlocks,
-      needs: undefined,
+      needs,
     };
-    ret.needs = this.runner.executeList(this.statements);
     return ret;
   }
 
