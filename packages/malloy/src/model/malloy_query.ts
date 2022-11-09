@@ -3209,7 +3209,7 @@ FROM ${resultStage}\n`
 }
 
 /** Structure object as it is used to build a query */
-export class QueryStruct extends QueryNode {
+class QueryStruct extends QueryNode {
   fieldDef: StructDef;
   parent: QueryStruct | undefined;
   model: QueryModel;
