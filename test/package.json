@@ -9,9 +9,9 @@
     "malloyc": "ts-node ../scripts/malloy-to-json"
   },
   "dependencies": {
-    "@malloydata/malloy": "0.0.5",
-    "@malloydata/db-bigquery": "0.0.5",
-    "@malloydata/db-postgres": "0.0.5",
-    "@malloydata/db-duckdb": "0.0.5"
+    "@malloydata/malloy": "0.0.6",
+    "@malloydata/db-bigquery": "0.0.6",
+    "@malloydata/db-postgres": "0.0.6",
+    "@malloydata/db-duckdb": "0.0.6"
   }
 }

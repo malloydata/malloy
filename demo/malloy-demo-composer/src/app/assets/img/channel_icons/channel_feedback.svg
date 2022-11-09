@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg width="100px" height="100px" viewBox="0 0 100 100" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-    <title>channel_feedback</title>
-    <g id="channel_feedback" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" class="hover-fill">
-        <g id="chat_FILL0_wght400_GRAD0_opsz48" transform="translate(4.000000, 4.000000)" fill="#4285F4" fill-rule="nonzero" class="primary-fill">
-            <path d="M18.4,55.315 L54.395,55.315 L54.395,48.415 L18.4,48.415 L18.4,55.315 Z M18.4,40.365 L73.6,40.365 L73.6,33.465 L18.4,33.465 L18.4,40.365 Z M18.4,25.415 L73.6,25.415 L73.6,18.515 L18.4,18.515 L18.4,25.415 Z M0,92 L0,6.9 C0,5.13666667 0.69,3.54583333 2.07,2.1275 C3.45,0.709166667 5.06,0 6.9,0 L85.1,0 C86.8633333,0 88.4541667,0.709166667 89.8725,2.1275 C91.2908333,3.54583333 92,5.13666667 92,6.9 L92,66.7 C92,68.4633333 91.2908333,70.0541667 89.8725,71.4725 C88.4541667,72.8908333 86.8633333,73.6 85.1,73.6 L18.4,73.6 L0,92 Z M6.9,75.325 L15.525,66.7 L85.1,66.7 L85.1,6.9 L6.9,6.9 L6.9,75.325 Z M6.9,6.9 L6.9,75.325 L6.9,6.9 Z" id="Shape"></path>
-        </g>
-    </g>
-</svg>

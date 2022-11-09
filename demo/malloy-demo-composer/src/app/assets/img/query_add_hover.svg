@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg width="110px" height="110px" viewBox="0 0 110 110" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-    <title>query_add_hover</title>
-    <g id="query_add_hover" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd">
-        <circle id="Oval" class="hoverfill" fill="transparent" cx="55" cy="55" r="55"></circle>
-        <path d="M75.8285714,28 L82,34.1714286 L61.171,55 L82,75.8285714 L75.8285714,82 L54.999,61.171 L34.1714286,82 L28,75.8285714 L48.828,55 L28,34.1714286 L34.1714286,28 L55,48.829 L75.8285714,28 Z" id="Combined-Shape-Copy" fill="#4285F4" class="primaryfill" transform="translate(55.000000, 55.000000) rotate(-315.000000) translate(-55.000000, -55.000000) "></path>
-    </g>
-</svg>

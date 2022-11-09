@@ -6,8 +6,6 @@
   "workspaces": {
     "packages": [
       "packages/*",
-      "demo/*",
-      "vscode-extension",
       "test"
     ]
   },
@@ -21,7 +19,6 @@
   "scripts": {
     "clean": "npm run -w @malloydata/malloy clean && tsc --build --clean",
     "build": "npm run -w @malloydata/malloy build-parser && tsc --build",
-    "package-extension": "npm run build && npm run -w malloy-vscode package-extension",
     "lint": "eslint --quiet '**/*.ts{,x}'",
     "test": "jest --runInBand",
     "test-bigquery": "MALLOY_DATABASE=bigquery jest --runInBand",
@@ -30,26 +27,24 @@
     "test-silent": "jest --runInBand --reporters jest-silent-reporter",
     "docs-clean": "rm -rf docs/.jekyll-cache/ && rm -rf docs/_includes/generated/ && rm -rf docs/documentation && rm -rf js/generated/",
     "docs-prebuild": "npm run build && npm run docs-clean",
-    "docs-build": "npm run docs-prebuild && npm run build-fiddle && ts-node --project tsconfig.docs.json --esm ./docs/_scripts/build_docs/index.ts && cd docs && bundle exec jekyll build",
+    "docs-build": "npm run docs-prebuild && ts-node --project tsconfig.docs.json --esm ./docs/_scripts/build_docs/index.ts && cd docs && bundle exec jekyll build",
     "docs-preprocess": "ts-node --esm --project tsconfig.docs.json docs/_scripts/build_docs/index.ts --watch",
     "docs-postprocess": "wait-on ./docs/_includes/generated/toc.html && cd docs && bundle exec jekyll serve -l -o",
     "docs-serve": "npm run docs-prebuild && concurrently --kill-others 'npm run docs-preprocess' 'npm run docs-postprocess'",
-    "vscode-build-extension-dev": "npm exec -- dotenv -- npm run -w malloy-vscode build-extension-dev",
-    "vscode-publish-extensions": "npm exec -- dotenv -- npm run -w malloy-vscode publish-extensions",
-    "vscode-build-composer-dev": "npm run -w malloy-composer-demo build",
     "third-party-licenses": "ts-node scripts/third_party_licenses",
     "malloyc": "ts-node scripts/malloy-to-json",
     "build-duckdb-db": "ts-node scripts/build_duckdb_test_database",
-    "update-duckdb": "ts-node scripts/update_duckdb",
-    "build-fiddle": "cd demo/malloy-duckdb-wasm && npm run build"
+    "update-duckdb": "ts-node scripts/update_duckdb"
   },
   "devDependencies": {
     "@jest/globals": "^26.6.2",
-    "@malloydata/db-bigquery": "0.0.5",
-    "@malloydata/malloy": "0.0.5",
-    "@malloydata/render": "0.0.5",
+    "@malloydata/db-bigquery": "0.0.6",
+    "@malloydata/malloy": "0.0.6",
+    "@malloydata/render": "0.0.6",
     "@types/archiver": "^5.3.1",
+    "@types/fs-extra": "^9.0.13",
     "@types/jest-expect-message": "^1.0.3",
+    "@types/jsdom": "^20.0.0",
     "@types/md5": "^2.3.1",
     "@types/node": "^16.6.2",
     "@types/node-fetch": "^2.6.2",
@@ -75,6 +70,7 @@
     "prettier": "^2.3.2",
     "remark-gfm": "^1.0.0",
     "remark-parse": "^10.0.1",
+    "shiki": "^0.10.1",
     "tar-stream": "^2.2.0",
     "ts-jest": "^26.4.4",
     "ts-node": "^10.9.1",
