@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-duckdb",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "license": "GPL-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.17.0",
-    "@malloydata/malloy": "0.0.7",
+    "@malloydata/malloy": "^0.0.8",
     "duckdb": "0.5.1"
   }
 }
