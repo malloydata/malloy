@@ -15,9 +15,7 @@
 export type {
   QueryDataRow,
   // Currently needed only by tests
-  ModelDef,
   Fragment,
-  Query,
   // Needed for DB
   StructDef,
   StructRelationship,
@@ -44,6 +42,9 @@ export type {
   TurtleDef,
   SearchValueMapResult,
   SearchIndexResult,
+  ModelDef,
+  Query,
+  NamedQuery,
 } from "./model";
 export {
   // Used in Composer Demo

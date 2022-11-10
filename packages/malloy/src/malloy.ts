@@ -44,6 +44,7 @@ import {
   SearchIndexResult,
   SearchValueMapResult,
   doNotUseStringFromSqlBlockFIXME,
+  NamedQuery,
 } from "./model";
 import {
   LookupConnection,
@@ -700,9 +701,9 @@ export class Model {
  * A prepared query which has all the necessary information to produce its SQL.
  */
 export class PreparedQuery {
-  private _modelDef: ModelDef;
-  private _query: InternalQuery;
-  private name?: string;
+  public _modelDef: ModelDef;
+  public _query: InternalQuery | NamedQuery;
+  public name?: string;
 
   constructor(query: InternalQuery, model: ModelDef, name?: string) {
     this._query = query;
@@ -737,6 +738,28 @@ export class PreparedQuery {
       throw new Error("Invalid source for query");
     }
     return source.dialect;
+  }
+
+  /**
+   * Get the flattened version of a query -- one that does not have a `pipeHead`.
+   */
+  public getFlattenedQuery(defaultName: string): PreparedQuery {
+    let structRef = this._query.structRef;
+    if (typeof structRef !== "string") {
+      structRef = structRef.as || structRef.name;
+    }
+    const queryModel = new QueryModel(this._modelDef);
+    const queryStruct = queryModel.getStructByName(structRef);
+    const turtleDef = queryStruct.flattenTurtleDef({
+      name: defaultName,
+      ...this._query,
+      type: "turtle",
+    });
+    return new PreparedQuery(
+      { ...turtleDef, structRef, type: "query" },
+      this._modelDef,
+      this.name || turtleDef.as || turtleDef.name
+    );
   }
 }
 
