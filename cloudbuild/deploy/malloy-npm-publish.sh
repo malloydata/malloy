@@ -6,6 +6,7 @@ export PACKAGES="packages/malloy packages/malloy-db-bigquery packages/malloy-db-
 nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --command "$(cat <<NIXCMD
   set -euxo pipefail
   cd /workspace
+  git branch -m main
   npm --no-audit --no-fund ci --loglevel error
   npm run build
   echo Publishing \$PACKAGES
