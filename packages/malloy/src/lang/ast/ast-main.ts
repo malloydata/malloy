@@ -35,7 +35,6 @@ import { QueryField } from "../space-field";
 import { makeSQLBlock } from "../../model/sql_block";
 import { inspect } from "util";
 import { castTo } from "./time-utils";
-import { randomUUID as uuid } from "crypto";
 
 /*
  ** For times when there is a code generation error but your function needs
@@ -332,7 +331,7 @@ export abstract class MalloyElement {
 
 export class ListOf<ET extends MalloyElement> extends MalloyElement {
   elementType = "genericElementList";
-  private elements: ET[];
+  protected elements: ET[];
   constructor(listDesc: string, elements: ET[]) {
     super();
     this.elements = elements;
@@ -442,8 +441,28 @@ class QueryHeadStruct extends Mallobj {
 }
 
 export interface DocStatement extends MalloyElement {
-  execId: string;
   execute(doc: Document): ModelDataRequest;
+}
+
+export class RunList extends ListOf<DocStatement> {
+  execCursor = 0;
+  executeList(doc: Document): ModelDataRequest {
+    while (this.execCursor < this.elements.length) {
+      if (doc.errorsExist()) {
+        // This stops cascading errors
+        return;
+      }
+      const el = this.elements[this.execCursor];
+      if (isDocStatement(el)) {
+        const resp = el.execute(doc);
+        if (resp) {
+          return resp;
+        }
+        this.execCursor += 1;
+      }
+    }
+    return undefined;
+  }
 }
 
 export function isDocStatement(e: MalloyElement): e is DocStatement {
@@ -452,7 +471,6 @@ export function isDocStatement(e: MalloyElement): e is DocStatement {
 
 export class DefineExplore extends MalloyElement implements DocStatement {
   elementType = "defineExplore";
-  execId = uuid();
   readonly parameters?: HasParameter[];
   constructor(
     readonly name: string,
@@ -496,18 +514,13 @@ export class DefineExplore extends MalloyElement implements DocStatement {
   }
 }
 
-export class DefineSourceList
-  extends ListOf<DefineExplore>
-  implements DocStatement
-{
-  execId = uuid();
+export class DefineSourceList extends RunList implements DocStatement {
   constructor(sourceList: DefineExplore[]) {
     super("defineSources", sourceList);
-    this.has({ sourceList });
   }
 
   execute(doc: Document): ModelDataRequest {
-    return doc.runner.executeList(this.list);
+    return this.executeList(doc);
   }
 }
 
@@ -1566,39 +1579,6 @@ export interface NameSpace {
   setEntry(name: string, value: ModelEntry, exported: boolean): void;
 }
 
-/**
- * Provides the ability keep track of which statements in a document
- * have already been translated and written into the model.
- */
-class DocumentRunner {
-  executed = new Set<string>();
-  constructor(readonly forDoc: Document) {}
-
-  executeStatement(ds: DocStatement): ModelDataRequest {
-    if (!this.executed.has(ds.execId)) {
-      const resp = ds.execute(this.forDoc);
-      if (resp) {
-        return resp;
-      }
-      this.executed.add(ds.execId);
-    }
-  }
-
-  executeList(dsl: DocStatement[]): ModelDataRequest {
-    for (const ds of dsl) {
-      if (this.forDoc.errorsExist()) {
-        // Once errors appear, don't continue executing statements, stops
-        // a number of cascasding errors.
-        return undefined;
-      }
-      const resp = this.executeStatement(ds);
-      if (resp) {
-        return resp;
-      }
-    }
-  }
-}
-
 interface DocumentCompileResult {
   modelDef: model.ModelDef;
   queryList: model.Query[];
@@ -1624,11 +1604,12 @@ export class Document extends MalloyElement implements NameSpace {
   documentModel: Record<string, ModelEntry> = {};
   queryList: model.Query[] = [];
   sqlBlocks: model.SQLBlock[] = [];
-  runner: DocumentRunner;
+  statements: RunList;
 
-  constructor(readonly statements: DocStatement[]) {
-    super({ statements });
-    this.runner = new DocumentRunner(this);
+  constructor(statements: DocStatement[]) {
+    super();
+    this.statements = new RunList("topLevelStatements", statements);
+    this.has({ statements });
   }
 
   initModelDef(extendingModelDef: model.ModelDef | undefined): void {
@@ -1647,7 +1628,7 @@ export class Document extends MalloyElement implements NameSpace {
   }
 
   compile(): DocumentCompileResult {
-    const needs = this.runner.executeList(this.statements);
+    const needs = this.statements.executeList(this);
     const ret: DocumentCompileResult = {
       modelDef: this.modelDef(),
       queryList: this.queryList,
@@ -2130,24 +2111,18 @@ export function isQueryElement(e: MalloyElement): e is QueryElement {
   return e instanceof FullQuery || e instanceof ExistingQuery;
 }
 
-export class DefineQueryList
-  extends ListOf<DefineQuery>
-  implements DocStatement
-{
-  execId = uuid();
+export class DefineQueryList extends RunList implements DocStatement {
   constructor(queryList: DefineQuery[]) {
     super("defineQueries", queryList);
-    this.has({ queryList });
   }
 
   execute(doc: Document): ModelDataRequest {
-    return doc.runner.executeList(this.list);
+    return this.executeList(doc);
   }
 }
 
 export class DefineQuery extends MalloyElement implements DocStatement {
   elementType = "defineQuery";
-  execId = uuid();
 
   constructor(readonly name: string, readonly queryDetails: QueryElement) {
     super({ queryDetails });
@@ -2168,7 +2143,6 @@ export class DefineQuery extends MalloyElement implements DocStatement {
 
 export class AnonymousQuery extends MalloyElement implements DocStatement {
   elementType = "anonymousQuery";
-  execId = uuid();
 
   constructor(readonly theQuery: QueryElement) {
     super();
@@ -2254,7 +2228,6 @@ export class JSONStructDef extends Mallobj {
 export class ImportStatement extends MalloyElement implements DocStatement {
   elementType = "import statement";
   fullURL?: string;
-  execId = uuid();
 
   /*
    * At the time of writng this comment, it is guaranteed that if an AST
@@ -2401,7 +2374,6 @@ export class SQLString extends MalloyElement {
 export class SQLStatement extends MalloyElement implements DocStatement {
   elementType = "sqlStatement";
   is?: string;
-  execId = uuid();
 
   constructor(readonly connection: string, readonly select: SQLString) {
     super();
