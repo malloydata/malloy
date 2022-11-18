@@ -764,6 +764,26 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.value[0].a).toBe(1);
   });
 
+  it(`sql_block with query- ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+          query: ca_facts is table('malloytest.state_facts') -> {
+            group_by: popular_name
+            aggregate: state_count is count()
+          }
+          sql: state_as_sql is {
+            select: """
+              SELECT * FROM %{ -> ca_facts }%
+            """
+          }
+          query: from_sql(state_as_sql) -> { where: popular_name = 'Emma' }
+        `
+      )
+      .run();
+    expect(result.data.value[0].state_count).toBe(42);
+  });
+
   // it(`sql_block version- ${databaseName}`, async () => {
   //   const result = await runtime
   //     .loadQuery(
