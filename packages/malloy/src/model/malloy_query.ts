@@ -60,6 +60,7 @@ import {
   isIndexSegment,
   UngroupFragment,
   isUngroupFragment,
+  NamedQuery,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -3992,4 +3993,18 @@ export class QueryModel {
     });
     return result.rows as unknown as SearchIndexResult[];
   }
+}
+
+export function flattenQuery(model: ModelDef, query: NamedQuery): TurtleDef {
+  let structRef = query.structRef;
+  if (typeof structRef !== "string") {
+    structRef = structRef.as || structRef.name;
+  }
+  const queryModel = new QueryModel(model);
+  const queryStruct = queryModel.getStructByName(structRef);
+  const turtleDef = queryStruct.flattenTurtleDef({
+    ...query,
+    type: "turtle",
+  });
+  return turtleDef;
 }
