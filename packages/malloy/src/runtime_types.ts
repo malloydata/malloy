@@ -65,15 +65,18 @@ export interface InfoConnection {
   }>;
 
   /**
-   * Fetch schemas for multiple SQL blocks.
+   * Fetch schemas an SQL blocks
    *
-   * @param tables The SQL blocks to fetch schemas for.
+   * @param block The SQL blocks to fetch schemas for.
    * @returns A mapping of SQL block names to schemas.
    */
-  fetchSchemaForSQLBlocks(sqlStructs: SQLBlock[]): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }>;
+
+  fetchSchemaForSQLBlock(
+    block: SQLBlock
+  ): Promise<
+    | { structDef: StructDef; error?: undefined }
+    | { error: string; structDef?: undefined }
+  >;
 
   /**
    * The name of the connection.

@@ -136,8 +136,8 @@ export class BigQueryConnection
   >();
   private sqlSchemaCache = new Map<
     string,
-    | { schema: StructDef; error?: undefined }
-    | { error: string; schema?: undefined }
+    | { structDef: StructDef; error?: undefined }
+    | { error: string; structDef?: undefined }
   >();
 
   private queryOptions?: QueryOptionsReader;
@@ -635,34 +635,26 @@ export class BigQueryConnection
     throw lastFetchError;
   }
 
-  public async fetchSchemaForSQLBlocks(sqlRefs: SQLBlock[]): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }> {
-    const schemas: NamedStructDefs = {};
-    const errors: { [name: string]: string } = {};
-
-    for (const sqlRef of sqlRefs) {
-      const key = sqlRef.name;
-      let inCache = this.sqlSchemaCache.get(key);
-      if (!inCache) {
-        try {
-          const tableFieldSchema = await this.getSQLBlockSchema(sqlRef);
-          inCache = {
-            schema: this.structDefFromSQLSchema(sqlRef, tableFieldSchema),
-          };
-          this.schemaCache.set(key, inCache);
-        } catch (error) {
-          inCache = { error: error.message };
-        }
+  public async fetchSchemaForSQLBlock(
+    sqlRef: SQLBlock
+  ): Promise<
+    | { structDef: StructDef; error?: undefined }
+    | { error: string; structDef?: undefined }
+  > {
+    const key = sqlRef.name;
+    let inCache = this.sqlSchemaCache.get(key);
+    if (!inCache) {
+      try {
+        const tableFieldSchema = await this.getSQLBlockSchema(sqlRef);
+        inCache = {
+          structDef: this.structDefFromSQLSchema(sqlRef, tableFieldSchema),
+        };
+      } catch (error) {
+        inCache = { error: error.message };
       }
-      if (inCache.schema !== undefined) {
-        schemas[key] = inCache.schema;
-      } else {
-        errors[key] = inCache.error;
-      }
+      this.sqlSchemaCache.set(key, inCache);
     }
-    return { schemas, errors };
+    return inCache;
   }
 
   // TODO this needs to extend the wait for results using a timeout set by the user,

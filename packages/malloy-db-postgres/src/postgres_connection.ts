@@ -99,8 +99,8 @@ export class PostgresConnection
   >();
   private sqlSchemaCache = new Map<
     string,
-    | { schema: StructDef; error?: undefined }
-    | { error: string; schema?: undefined }
+    | { structDef: StructDef; error?: undefined }
+    | { error: string; structDef?: undefined }
   >();
   private queryConfigReader: PostgresQueryConfigurationReader;
   private configReader: PostgresConnectionConfigurationReader;
@@ -185,33 +185,25 @@ export class PostgresConnection
     return { schemas, errors };
   }
 
-  public async fetchSchemaForSQLBlocks(sqlRefs: SQLBlock[]): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }> {
-    const schemas: NamedStructDefs = {};
-    const errors: { [name: string]: string } = {};
-
-    for (const sqlRef of sqlRefs) {
-      const key = sqlRef.name;
-      let inCache = this.sqlSchemaCache.get(key);
-      if (!inCache) {
-        try {
-          inCache = {
-            schema: await this.getSQLBlockSchema(sqlRef),
-          };
-          this.schemaCache.set(key, inCache);
-        } catch (error) {
-          inCache = { error: error.message };
-        }
+  public async fetchSchemaForSQLBlock(
+    sqlRef: SQLBlock
+  ): Promise<
+    | { structDef: StructDef; error?: undefined }
+    | { error: string; structDef?: undefined }
+  > {
+    const key = sqlRef.name;
+    let inCache = this.sqlSchemaCache.get(key);
+    if (!inCache) {
+      try {
+        inCache = {
+          structDef: await this.getSQLBlockSchema(sqlRef),
+        };
+      } catch (error) {
+        inCache = { error: error.message };
       }
-      if (inCache.schema !== undefined) {
-        schemas[key] = inCache.schema;
-      } else {
-        errors[key] = inCache.error;
-      }
+      this.sqlSchemaCache.set(key, inCache);
     }
-    return { schemas, errors };
+    return inCache;
   }
 
   protected async getClient(): Promise<Client> {

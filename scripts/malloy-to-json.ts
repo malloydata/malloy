@@ -55,11 +55,11 @@ async function translateMalloy(fileSrc: string, url: string, c: Connection) {
       );
       mt.update({ tables, errors: { tables: errors } });
     }
-    if (mr.sqlStructs) {
-      const { schemas: sqlStructs, errors } = await c.fetchSchemaForSQLBlocks(
-        mr.sqlStructs
-      );
-      mt.update({ sqlStructs, errors: { sqlStructs: errors } });
+    if (mr.compileSQL) {
+      // TODO don't be lazy here
+      throw new Error("turducken broke this");
+      // const { structDef, error } = await c.fetchSchemaForSQLBlock(mr.compileSQL);
+      // mt.update({ sqlStructs, errors: { sqlStructs: errors } });
     }
     if (mr.final) {
       translating = false;

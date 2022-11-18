@@ -48,6 +48,7 @@ import {
   SQLBlockSource,
   SQLBlockStructDef,
   flattenQuery,
+  isSQLBlock,
 } from "./model";
 import {
   LookupConnection,
@@ -264,8 +265,19 @@ export class Malloy {
               result.partialModel,
               toCompile
             );
-            const resolved = await conn.fetchSchemaForSQLBlocks([expanded]);
-            translator.update(resolved);
+            const resolved = await conn.fetchSchemaForSQLBlock(expanded);
+            if (resolved.error) {
+              translator.update({
+                errors: { compileSQL: { [expanded.name]: resolved.error } },
+              });
+            }
+            if (resolved.structDef) {
+              if (isSQLBlock(resolved.structDef)) {
+                translator.update({
+                  compileSQL: { [expanded.name]: resolved.structDef },
+                });
+              }
+            }
           } catch (error) {
             const errors: { [name: string]: string } = {};
             errors[toCompile.name] = error.toString();
