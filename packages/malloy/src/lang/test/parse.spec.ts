@@ -18,6 +18,7 @@ import {
   DocumentPosition,
   isFieldTypeDef,
   isFilteredAliasedName,
+  isSQLFragment,
   Query,
   SQLBlockSource,
   SQLBlockStructDef,
@@ -109,6 +110,7 @@ declare global {
       modelCompiled(): R;
       toReturnType(tp: string): R;
       compileToFailWith(...expectedErrors: string[]): R;
+      isLocationIn(at: DocumentLocation, txt: string): R;
     }
   }
 }
@@ -158,6 +160,31 @@ function checkForNeededs(trans: Testable) {
     message: () => "Unexpected complete translation",
     pass: true,
   };
+}
+
+function highlightError(dl: DocumentLocation, txt: string): string {
+  if (dl == undefined) {
+    return "~Location Undefined~";
+  }
+  const { start, end } = dl.range;
+  const output = [
+    `${start.line}:${start.character}-${end.line}:${end.character}`,
+  ];
+  let errStart = start.character;
+  const doc = txt.split("\n");
+  for (let line = start.line; line <= end.line; line += 1) {
+    const lineText = doc[line];
+    const lineStr = `     ${line}`.slice(-5);
+    output.push(`${lineStr}| ${lineText}`);
+    const upToError = `     | ` + " ".repeat(errStart);
+    let errLen = end.character - errStart;
+    if (line < end.line) {
+      errLen = lineText.length - errStart;
+      errStart = 0;
+    }
+    output.push(upToError + "-".repeat(errLen));
+  }
+  return output.join("\n");
 }
 
 expect.extend({
@@ -284,6 +311,26 @@ expect.extend({
           `Compiler did not generated expected errors\n${explain.join("\n")}`,
       };
     }
+  },
+  isLocationIn: function (
+    checkAt: DocumentLocation,
+    at: DocumentLocation,
+    text: string
+  ) {
+    if (this.equals(at, checkAt)) {
+      return {
+        pass: true,
+        message: () => `Locations match`,
+      };
+    }
+    const errMsg =
+      `Locations do not match\n` +
+      `Expected: ${highlightError(at, text)}\n` +
+      `Received: ${highlightError(checkAt, text)}\n`;
+    return {
+      pass: false,
+      message: () => errMsg,
+    };
   },
 });
 
@@ -1307,7 +1354,14 @@ describe("sql:", () => {
         const sr = makeSchemaResponse(sql);
         model.update({ compileSQL: { [refKey]: sr } });
         expect(model).modelCompiled();
-        const csr = model.sqlBlocks[0];
+        const csr = {
+          ...model.sqlBlocks[0],
+          fields: model.sqlBlocks[0].fields.map((f) => {
+            const nf = { ...f };
+            delete nf.location;
+            return nf;
+          }),
+        };
         expect(csr).toEqual({ ...sr, as: "users" });
       }
     }
@@ -1486,21 +1540,28 @@ describe("error handling", () => {
   );
 });
 
-// TODO RESTORE SQL BLOCK LOCATION TESTS
-// function getSelectOneStruct(sqlBlock: SQLBlock): StructDef {
-//   return {
-//     type: "struct",
-//     name: sqlBlock.name,
-//     dialect: "bigquery",
-//     structSource: {
-//       type: "sql",
-//       method: "subquery",
-//       sqlBlock,
-//     },
-//     structRelationship: { type: "basetable", connectionName: "bigquery" },
-//     fields: [{ type: "number", name: "one" }],
-//   };
-// }
+function getSelectOneStruct(sqlBlock: SQLBlockSource): SQLBlockStructDef {
+  const selectThis = sqlBlock.select[0];
+  if (!isSQLFragment(selectThis)) {
+    throw new Error("weird test support error sorry");
+  }
+  return {
+    type: "struct",
+    name: sqlBlock.name,
+    dialect: "bigquery",
+    structSource: {
+      type: "sql",
+      method: "subquery",
+      sqlBlock: {
+        type: "sqlBlock",
+        name: sqlBlock.name,
+        selectStr: selectThis.sql,
+      },
+    },
+    structRelationship: { type: "basetable", connectionName: "bigquery" },
+    fields: [{ type: "number", name: "one" }],
+  };
+}
 
 describe("source locations", () => {
   test("renamed explore location", () => {
@@ -1592,22 +1653,22 @@ describe("source locations", () => {
 
   test("location of field inherited from sql block", () => {
     const source = markSource`--- comment
-      ${`sql: s is { select: """SELECT 1 as one """ }`}
+      sql: s is { select: ${'"""SELECT 1 as one """'} }
       explore: na is from_sql(s)
     `;
     const m = new BetaModel(source.code);
-    const _result = m.translate();
-    fail("another sql block location test which needs fixing");
-    // const sqlBlock = (result.sqlStructs || [])[0];
-    // m.update({
-    //   sqlStructs: {
-    //     [sqlBlock.name]: getSelectOneStruct(sqlBlock),
-    //   },
-    // });
-    // expect(m).modelCompiled();
-    // const na = getExplore(m.modelDef, "na");
-    // const one = getField(na, "one");
-    // expect(one.location).toMatchObject(source.locations[0]);
+    expect(m).modelParsed();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.update({
+        compileSQL: { [compileSql.name]: getSelectOneStruct(compileSql) },
+      });
+      expect(m).modelCompiled();
+      const na = getExplore(m.modelDef, "na");
+      const one = getField(na, "one");
+      expect(one.location).isLocationIn(source.locations[0], source.code);
+    }
   });
 
   test("location of fields inherited from a query", () => {
@@ -2275,26 +2336,25 @@ describe("translation need error locations", () => {
     });
     expect(m).not.modelParsed();
     const errList = m.errors().errors;
-    expect(errList[0].at).toEqual(source.locations[0]);
+    expect(errList[0].at).isLocationIn(source.locations[0], source.code);
     return undefined;
   });
 
   test("sql struct error location", () => {
     const source = markSource`
-      sql: bad_sql is {select: """BAD_SQL"""}
-      query: ${"from_sql(bad_sql)"} -> { project: * }
+      sql: bad_sql is {select: ${'"""BAD_SQL"""'}}
+      query: from_sql(bad_sql) -> { project: * }
     `;
     const m = new BetaModel(source.code);
-    const _result = m.translate();
-    fail("another sql block location test which needs fixing");
-    // m.update({
-    //   errors: {
-    //     sqlStructs: { [(result.sqlStructs || [])[0].name]: "Bad SQL!" },
-    //   },
-    // });
-    // expect(m).not.modelParsed();
-    // const errList = m.errors().errors;
-    // expect(errList[0].at).toEqual(source.locations[0]);
+    expect(m).modelParsed();
+    const req = m.translate().compileSQL;
+    expect(req).toBeDefined();
+    if (req) {
+      m.update({ errors: { compileSQL: { [req.name]: "Bad SQL!" } } });
+    }
+    expect(m).not.modelCompiled();
+    const errList = m.errors().errors;
+    expect(errList[0].at).isLocationIn(source.locations[0], source.code);
   });
 
   test("table struct error location", () => {
@@ -2310,7 +2370,7 @@ describe("translation need error locations", () => {
     });
     expect(m).not.modelParsed();
     const errList = m.errors().errors;
-    expect(errList[0].at).toEqual(source.locations[0]);
+    expect(errList[0].at).isLocationIn(source.locations[0], source.code);
     return undefined;
   });
 });

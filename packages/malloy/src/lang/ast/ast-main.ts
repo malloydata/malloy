@@ -2395,7 +2395,12 @@ export class SQLStatement extends MalloyElement implements DocStatement {
       return undefined;
     }
     if (lookup.status == "present") {
-      if (this.is && !doc.defineSQL(lookup.value, this.is)) {
+      const location = this.select.location;
+      const locStruct = {
+        ...lookup.value,
+        fields: lookup.value.fields.map((f) => ({ ...f, location })),
+      };
+      if (this.is && !doc.defineSQL(locStruct, this.is)) {
         this.log(`'${this.is}' already defined`);
       }
       return undefined;
