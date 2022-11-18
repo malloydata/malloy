@@ -44,6 +44,7 @@ import {
   SearchIndexResult,
   SearchValueMapResult,
   NamedQuery,
+  flattenQuery,
 } from "./model";
 import {
   LookupConnection,
@@ -747,12 +748,11 @@ export class PreparedQuery {
     if (typeof structRef !== "string") {
       structRef = structRef.as || structRef.name;
     }
-    const queryModel = new QueryModel(this._modelDef);
-    const queryStruct = queryModel.getStructByName(structRef);
-    const turtleDef = queryStruct.flattenTurtleDef({
-      name: defaultName,
+    const turtleDef = flattenQuery(this._modelDef, {
       ...this._query,
-      type: "turtle",
+      type: "query",
+      name:
+        "as" in this._query ? this._query.as || this._query.name : defaultName,
     });
     return new PreparedQuery(
       { ...turtleDef, structRef, type: "query" },

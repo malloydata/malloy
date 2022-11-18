@@ -45,11 +45,13 @@ export type {
   ModelDef,
   Query,
   NamedQuery,
+  NamedModelObject,
 } from "./model";
 export {
   // Used in Composer Demo
   Segment,
   isFilteredAliasedName,
+  flattenQuery,
 } from "./model";
 export {
   // Neede for VSCode extension
