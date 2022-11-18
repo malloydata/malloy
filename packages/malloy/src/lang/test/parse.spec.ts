@@ -1412,6 +1412,24 @@ describe("sql:", () => {
     model.update({ compileSQL: { [sql.name]: makeSchemaResponse(sql) } });
     expect(model).modelCompiled();
   });
+  it("turducken", () => {
+    const m = new BetaModel(`
+      sql: someSql is {
+        select: """SELECT * FROM %{ a -> { group_by: astr } }% WHERE 1=1"""
+      }
+    `);
+    expect(m).modelParsed();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      const select = compileSql.select[0];
+      const star = compileSql.select[1];
+      const where = compileSql.select[2];
+      expect(select).toEqual({ sql: "SELECT * FROM " });
+      expect(isSQLFragment(star)).toBeFalsy();
+      expect(where).toEqual({ sql: " WHERE 1=1" });
+    }
+  });
 });
 
 describe("error handling", () => {

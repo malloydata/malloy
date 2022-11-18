@@ -2340,6 +2340,7 @@ export class SQLString extends MalloyElement {
     } else if (isQueryElement(el)) {
       this.elements.push(el);
       this.containsQueries = true;
+      el.parent = this;
     } else {
       el.log("This element is not legal inside an SQL string");
     }

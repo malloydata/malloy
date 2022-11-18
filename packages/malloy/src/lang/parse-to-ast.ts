@@ -270,8 +270,10 @@ export class MalloyToAST
     sqlStr: ast.SQLString
   ): void {
     for (const part of pcx.sqlInterpolation()) {
-      const beforeOpen = part.OPEN_CODE().text.slice(-2);
-      sqlStr.push(beforeOpen);
+      const upToOpen = part.OPEN_CODE().text;
+      if (upToOpen.length > 2) {
+        sqlStr.push(upToOpen.slice(0, upToOpen.length - 2));
+      }
       sqlStr.push(this.visit(part.query()));
     }
     const lastChars = pcx.SQL_END()?.text.slice(0, -3);
