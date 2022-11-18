@@ -41,7 +41,6 @@ import {
   QueryDataRow,
   parseTableURI,
   toAsyncGenerator,
-  doNotUseStringFromSqlBlockFIXME,
 } from "@malloydata/malloy";
 
 export interface BigQueryManagerOptions {
@@ -279,7 +278,7 @@ export class BigQueryConnection
     options?: { rowLimit?: number | undefined }
   ): Promise<{ data: MalloyQueryData; schema: StructDef }> {
     const { data, schema: schemaRaw } = await this._runSQL(
-      doNotUseStringFromSqlBlockFIXME(sqlBlock),
+      sqlBlock.selectStr,
       options
     );
     const schema = this.structDefFromSQLSchema(sqlBlock, schemaRaw);
@@ -624,7 +623,7 @@ export class BigQueryConnection
       try {
         const [job] = await this.bigQuery.createQueryJob({
           location: this.location,
-          query: doNotUseStringFromSqlBlockFIXME(sqlRef),
+          query: sqlRef.selectStr,
           dryRun: true,
         });
 

@@ -34,7 +34,6 @@ import {
   SQLBlock,
   Connection,
   QueryDataRow,
-  doNotUseStringFromSqlBlockFIXME,
 } from "@malloydata/malloy";
 import { Client, Pool, PoolClient } from "pg";
 import QueryStream from "pg-query-stream";
@@ -270,7 +269,7 @@ export class PostgresConnection
     const infoQuery = `
       drop table if exists ${tempTableName};
       create temp table ${tempTableName} as SELECT * FROM (
-        ${doNotUseStringFromSqlBlockFIXME(sqlRef)}
+        ${sqlRef.selectStr}
       ) as x where false;
       SELECT column_name, c.data_type, e.data_type as element_type
       FROM information_schema.columns c LEFT JOIN information_schema.element_types e

@@ -50,7 +50,6 @@ export {
   // Used in Composer Demo
   Segment,
   isFilteredAliasedName,
-  doNotUseStringFromSqlBlockFIXME,
 } from "./model";
 export {
   // Neede for VSCode extension

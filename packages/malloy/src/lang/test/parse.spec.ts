@@ -19,7 +19,8 @@ import {
   isFieldTypeDef,
   isFilteredAliasedName,
   Query,
-  SQLBlock,
+  SQLBlockSource,
+  SQLBlockStructDef,
   StructDef,
 } from "../../model";
 import { makeSQLBlock } from "../../model/sql_block";
@@ -135,9 +136,7 @@ function prettyNeeds(response: TranslateResponse) {
     response.tables.forEach((table) => (needString += `  - ${table}`));
   }
   if (response.compileSQL) {
-    needString +=
-      "Compile SQL:\n" +
-      `  - ${response.compileSQL.as || "(unnamed sql struct)"}`;
+    needString += `Compile SQL: ${response.compileSQL.name}`;
   }
   if (response.urls) {
     needString += "URLs:\n";
@@ -1267,8 +1266,9 @@ describe("expressions", () => {
   });
 });
 
-describe("sql backdoor", () => {
-  function _makeSchemaResponse(sql: SQLBlock): StructDef {
+describe("sql:", () => {
+  function makeSchemaResponse(sql: SQLBlockSource): SQLBlockStructDef {
+    const cname = sql.connection || "bigquery";
     return {
       type: "struct",
       name: sql.name,
@@ -1276,99 +1276,82 @@ describe("sql backdoor", () => {
       structSource: {
         type: "sql",
         method: "subquery",
-        sqlBlock: { ...sql },
+        sqlBlock: {
+          type: "sqlBlock",
+          ...sql,
+          selectStr: sql.select.filter((s) => typeof s == "string").join(""),
+        },
       },
-      structRelationship: { type: "basetable", connectionName: "bigquery" },
+      structRelationship: { type: "basetable", connectionName: cname },
       fields: aTableDef.fields,
     };
   }
-  test("single sql statement", () => {
-    expect(`sql: users is { select: """SELECT * FROM USERS""" }`).toCompile();
-  });
-  test("connection shows up in model", () => {
+  test("definition", () => {
+    const selStmt = "SELECT * FROM aTable";
     const model = new BetaModel(`
       sql: users IS {
-        select: """SELECT * FROM aTable"""
-        connection: "someConnection"
+        select: """${selStmt}"""
+        connection: "aConnection"
       }
-      source: malloyUsers is from_sql(users) { primary_key: ai }
     `);
     const needReq = model.translate();
-    expect(model).toBeErrorless();
+    expect(model).modelParsed();
     const needs = needReq?.compileSQL;
     expect(needs).toBeDefined();
     if (needs) {
-      const sql = makeSQLBlock({
-        select: [{ sql: "SELECT * FROM aTable" }],
-        connection: "someConnection",
-      });
+      const sql = makeSQLBlock([{ sql: selStmt }], "aConnection");
       expect(needs).toMatchObject(sql);
       const refKey = needs.name;
       expect(refKey).toBeDefined();
-      fail("move test to check compileSQL");
-      // if (refKey) {
-      //   model.update({ sqlStructs: { [refKey]: makeSchemaResponse(sql) } });
-      //   expect(model).modelCompiled();
-      // }
-      // const users = model.getSourceDef("malloyUsers");
-      // expect(users).toBeDefined();
-      // expect(users).toHaveProperty(
-      //   "structSource.sqlBlock.connection",
-      //   "someConnection"
-      // );
+      if (refKey) {
+        const sr = makeSchemaResponse(sql);
+        model.update({ compileSQL: { [refKey]: sr } });
+        expect(model).modelCompiled();
+        const csr = model.sqlBlocks[0];
+        expect(csr).toEqual({ ...sr, as: "users" });
+      }
     }
   });
-  test("explore from sql", () => {
+  test("source from sql", () => {
+    const selStmt = "SELECT * FROM aTable";
     const model = new BetaModel(`
-      sql: users IS { select: """SELECT * FROM aTable""" }
+      sql: users IS { select: """${selStmt}""" }
       source: malloyUsers is from_sql(users) { primary_key: ai }
     `);
-    const _needReq = model.translate();
-    expect(model).toBeErrorless();
-    fail("move test to check compileSQL");
-    // const needs = needReq?.sqlStructs;
-    // expect(needs).toBeDefined();
-    // if (needs) {
-    //   expect(needs.length).toBe(1);
-    //   const sql = makeSQLBlock({ select: [{ sql: "SELECT * FROM aTable" }] });
-    //   expect(needs[0]).toMatchObject(sql);
-    //   const refKey = needs[0].name;
-    //   expect(refKey).toBeDefined();
-    //   if (refKey) {
-    //     model.update({ sqlStructs: { [refKey]: makeSchemaResponse(sql) } });
-    //     expect(model).modelCompiled();
-    //   }
-    // }
+    expect(model).modelParsed();
+    const needReq = model.translate();
+    const needs = needReq?.compileSQL;
+    expect(needs).toBeDefined();
+    if (needs) {
+      const sql = makeSQLBlock([{ sql: selStmt }], "aConnection");
+      const refKey = needs.name;
+      model.update({ compileSQL: { [refKey]: makeSchemaResponse(sql) } });
+      expect(model).modelCompiled();
+      const users = model.getSourceDef("malloyUsers");
+      expect(users).toBeDefined();
+    }
   });
   test("explore from imported sql-based-source", () => {
+    const selStmt = "SELECT * FROM aTable";
     const createModel = `
-      sql: users IS { select: """SELECT * FROM aTable""" }
+      sql: users IS { select: """${selStmt}""" }
       source: malloyUsers is from_sql(users) { primary_key: ai }
     `;
     const model = new BetaModel(`
       import "createModel.malloy"
-      source: foo is malloyUsers
+      source: importUsers is malloyUsers
     `);
     model.importZone.define(
       "internal://test/langtests/createModel.malloy",
       createModel
     );
-    const _needReq = model.translate();
-    expect(model).toBeErrorless();
-    fail("test compileSQL");
-    // const needs = needReq?.sqlStructs;
-    // expect(needs).toBeDefined();
-    // if (needs) {
-    //   expect(needs.length).toBe(1);
-    //   const sql = makeSQLBlock({ select: [{ sql: "SELECT * FROM aTable" }] });
-    //   expect(needs[0]).toMatchObject(sql);
-    //   const refKey = needs[0].name;
-    //   expect(refKey).toBeDefined();
-    //   if (refKey) {
-    //     model.update({ sqlStructs: { [refKey]: makeSchemaResponse(sql) } });
-    //     expect(model).modelCompiled();
-    //   }
-    // }
+    expect(model).modelParsed();
+    const needReq = model.translate();
+    const needs = needReq?.compileSQL;
+    expect(needs).toBeDefined();
+    const sql = makeSQLBlock([{ sql: selStmt }]);
+    model.update({ compileSQL: { [sql.name]: makeSchemaResponse(sql) } });
+    expect(model).modelCompiled();
   });
 });
 
@@ -1503,20 +1486,21 @@ describe("error handling", () => {
   );
 });
 
-function _getSelectOneStruct(sqlBlock: SQLBlock): StructDef {
-  return {
-    type: "struct",
-    name: sqlBlock.name,
-    dialect: "bigquery",
-    structSource: {
-      type: "sql",
-      method: "subquery",
-      sqlBlock,
-    },
-    structRelationship: { type: "basetable", connectionName: "bigquery" },
-    fields: [{ type: "number", name: "one" }],
-  };
-}
+// TODO RESTORE SQL BLOCK LOCATION TESTS
+// function getSelectOneStruct(sqlBlock: SQLBlock): StructDef {
+//   return {
+//     type: "struct",
+//     name: sqlBlock.name,
+//     dialect: "bigquery",
+//     structSource: {
+//       type: "sql",
+//       method: "subquery",
+//       sqlBlock,
+//     },
+//     structRelationship: { type: "basetable", connectionName: "bigquery" },
+//     fields: [{ type: "number", name: "one" }],
+//   };
+// }
 
 describe("source locations", () => {
   test("renamed explore location", () => {
@@ -1613,7 +1597,7 @@ describe("source locations", () => {
     `;
     const m = new BetaModel(source.code);
     const _result = m.translate();
-    fail("move test to sqlCompile");
+    fail("another sql block location test which needs fixing");
     // const sqlBlock = (result.sqlStructs || [])[0];
     // m.update({
     //   sqlStructs: {
@@ -1665,9 +1649,11 @@ describe("source locations", () => {
   test("location of named SQL block", () => {
     const source = markSource`${`sql: s is { select: """SELECT 1 as one""" }`}`;
     const m = new BetaModel(source.code);
-    expect(m).modelCompiled();
-    const s = m.sqlBlocks[0];
-    expect(s.location).toMatchObject(source.locations[0]);
+    expect(m).modelParsed();
+    fail("another sql block location test which needs fixing");
+    // expect(m).modelParsed();
+    // const s = m.sqlBlocks[0];
+    // expect(s.location).toMatchObject(source.locations[0]);
   });
 
   test("location of renamed field", () => {
@@ -1836,7 +1822,7 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelParsed();
     const _result = m.translate();
-    fail("move to compileSQL");
+    fail("another sql block location test which needs fixing");
     // const sqlBlock = (result.sqlStructs || [])[0];
     // m.update({
     //   sqlStructs: {
@@ -2300,7 +2286,7 @@ describe("translation need error locations", () => {
     `;
     const m = new BetaModel(source.code);
     const _result = m.translate();
-    fail("move to sqlCompile");
+    fail("another sql block location test which needs fixing");
     // m.update({
     //   errors: {
     //     sqlStructs: { [(result.sqlStructs || [])[0].name]: "Bad SQL!" },

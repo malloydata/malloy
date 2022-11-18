@@ -1171,8 +1171,10 @@ export class MalloyToAST
         this.makeSqlString(selCx, sqlStr);
       }
     }
-    connectionName ||= "";
-    const stmt = new ast.SQLStatement(connectionName, sqlStr);
+    const stmt = new ast.SQLStatement(sqlStr);
+    if (connectionName !== undefined) {
+      stmt.connection = connectionName;
+    }
     stmt.is = blockName;
     return this.astAt(stmt, pcx);
   }

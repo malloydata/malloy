@@ -43,8 +43,10 @@ import {
   DocumentPosition as ModelDocumentPosition,
   SearchIndexResult,
   SearchValueMapResult,
-  doNotUseStringFromSqlBlockFIXME,
   NamedQuery,
+  isSQLFragment,
+  SQLBlockSource,
+  SQLBlockStructDef,
 } from "./model";
 import {
   LookupConnection,
@@ -251,78 +253,58 @@ export class Malloy {
             }
           }
         }
-        if (result.sqlStructs) {
-          // collect sql refs by connection name since there may be multiple connections
-          const sqlRefsByConnection: Map<
-            string | undefined,
-            Array<SQLBlock>
-          > = new Map();
-          for (const missingSQLSchemaRef of result.sqlStructs) {
-            const connectionName = missingSQLSchemaRef.connection;
-            // if (connectionName === undefined) {
-            //   throw new Error("Oops have not made it required here yet...");
-            // }
-
-            let connectionToSQLReferencesMap =
-              sqlRefsByConnection.get(connectionName);
-            if (!connectionToSQLReferencesMap) {
-              connectionToSQLReferencesMap = [missingSQLSchemaRef];
-            } else {
-              connectionToSQLReferencesMap.push(missingSQLSchemaRef);
-            }
-            sqlRefsByConnection.set(
-              connectionName,
-              connectionToSQLReferencesMap
+        if (result.compileSQL) {
+          // Unlike other requests, these do not come in batches
+          const toCompile = result.compileSQL;
+          const connectionName = toCompile.connection;
+          try {
+            const conn = await connections.lookupConnection(connectionName);
+            const expanded = Malloy.compileSQLBlock(
+              result.partialModel,
+              toCompile
             );
-          }
-          for (const [
-            connectionName,
-            connectionToSQLReferencesMap,
-          ] of sqlRefsByConnection) {
-            try {
-              const connection = await connections.lookupConnection(
-                connectionName
-              );
-              // TODO detect if the union of `Object.keys(sqlStructs)` and `Object.keys(errors)` is not the same
-              //      as `Object.keys(connectionToSQLReferencesMap)`, i.e. that all tables are accounted for. Otherwise
-              //      the translator runs into an infinite loop fetching SQL structs.
-              const { schemas: sqlStructs, errors } =
-                await connection.fetchSchemaForSQLBlocks(
-                  connectionToSQLReferencesMap
-                );
-              translator.update({ sqlStructs });
-              translator.update({ sqlStructs, errors: { sqlStructs: errors } });
-            } catch (error) {
-              // There was an exception getting the connection, associate that error
-              // with all its schemas
-              const sqlStructs = {};
-              const errors: { [name: string]: string } = {};
-              for (const sqlRef of connectionToSQLReferencesMap) {
-                errors[sqlRef.name] = error.toString();
-              }
-              translator.update({ sqlStructs, errors: { sqlStructs: errors } });
-            }
+            const resolved = await conn.fetchSchemaForSQLBlocks([expanded]);
+            translator.update(resolved);
+          } catch (error) {
+            const errors: { [name: string]: string } = {};
+            errors[toCompile.name] = error.toString();
+            translator.update({ errors: { compileSQL: errors } });
           }
         }
       }
     }
   }
 
-  private static async runSQLBlockAndFetchResultSchema(
-    connection: Connection,
-    sqlBlock: SQLBlock,
-    options?: RunSQLOptions
-  ) {
-    if (connection.canFetchSchemaAndRunSimultaneously()) {
-      return connection.runSQLBlockAndFetchResultSchema(sqlBlock, options);
-    }
-    const [schema, data] = await Promise.all([
-      connection
-        .fetchSchemaForSQLBlocks([sqlBlock])
-        .then((result) => result.schemas[sqlBlock.name]),
-      connection.runSQL(doNotUseStringFromSqlBlockFIXME(sqlBlock)),
-    ]);
-    return { schema, data };
+  private static compileSQLBlock(
+    partialModel: ModelDef | undefined,
+    toCompile: SQLBlockSource
+  ): SQLBlock {
+    let queryModel: QueryModel;
+    const sqlStrings = toCompile.select.map((segment) => {
+      if (isSQLFragment(segment)) {
+        return segment.sql;
+      } else {
+        // use toCompile.partilModel and segement which is a query
+        // get get a string
+        // TODO catch exceptions and throw errors ...
+        if (!queryModel) {
+          if (!partialModel) {
+            throw new Error(
+              "Internal error: Patial model mising when compiling SQL block"
+            );
+          }
+          queryModel = new QueryModel(partialModel);
+        }
+        return queryModel.compileQuery(segment).sql;
+      }
+    });
+    const { name, connection } = toCompile;
+    return {
+      type: "sqlBlock",
+      name,
+      connection,
+      selectStr: sqlStrings.join(""),
+    };
   }
 
   /**
@@ -344,73 +326,68 @@ export class Malloy {
   }): Promise<Result>;
   public static async run(params: {
     connection: Connection;
-    sqlBlock: SQLBlock;
+    sqlStruct: SQLBlockStructDef;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connections: LookupConnection<Connection>;
-    sqlBlock: SQLBlock;
+    sqlStruct: SQLBlockStructDef;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connection: Connection;
-    sqlBlock: SQLBlock;
+    sqlStruct: SQLBlockStructDef;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connections: LookupConnection<Connection>;
-    sqlBlock: SQLBlock;
+    sqlStruct: SQLBlockStructDef;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run({
     connections,
     preparedResult,
-    sqlBlock,
+    sqlStruct,
     connection,
     options,
   }: {
     connection?: Connection;
     preparedResult?: PreparedResult;
-    sqlBlock?: SQLBlock;
+    sqlStruct?: SQLBlockStructDef;
     connections?: LookupConnection<Connection>;
     options?: RunSQLOptions;
   }): Promise<Result> {
-    if (sqlBlock === undefined && preparedResult === undefined) {
-      throw new Error(
-        "Internal error: sqlBlock or preparedResult must be provided."
-      );
-    }
-    const connectionName =
-      sqlBlock?.connection || preparedResult?.connectionName;
-    if (connection === undefined) {
-      if (connections === undefined) {
+    const sqlBlock = sqlStruct?.structSource.sqlBlock;
+    if (!connection) {
+      if (!connections) {
         throw new Error(
           "Internal Error: Connection or LookupConnection<Connection> must be provided."
         );
       }
+      const connectionName =
+        sqlBlock?.connection || preparedResult?.connectionName;
+      if (!connectionName) {
+        throw new Error("Internal Error: Can't run without connection");
+      }
       connection = await connections.lookupConnection(connectionName);
     }
-    if (sqlBlock !== undefined) {
-      const { schema, data } = await this.runSQLBlockAndFetchResultSchema(
-        connection,
-        sqlBlock,
-        options
-      );
-      if (schema.structRelationship.type !== "basetable") {
+    if (sqlStruct && sqlBlock) {
+      if (sqlStruct.structRelationship.type !== "basetable") {
         throw new Error(
           "Expected schema's structRelationship type to be 'basetable'."
         );
       }
+      const data = await connection.runSQL(sqlBlock.selectStr);
       return new Result(
         {
-          structs: [schema],
-          sql: doNotUseStringFromSqlBlockFIXME(sqlBlock),
+          structs: [sqlStruct],
+          sql: sqlBlock.selectStr,
           result: data.rows,
           totalRows: data.totalRows,
-          lastStageName: schema.name,
+          lastStageName: sqlBlock.name,
           // TODO feature-sql-block There is no malloy code...
           malloy: "",
-          connectionName: schema.structRelationship.connectionName,
+          connectionName: sqlStruct.structRelationship.connectionName,
           // TODO feature-sql-block There is no source explore...
           sourceExplore: "",
           sourceFilters: [],
@@ -421,7 +398,7 @@ export class Malloy {
           contents: {},
         }
       );
-    } else if (preparedResult !== undefined) {
+    } else if (preparedResult) {
       const result = await connection.runSQL(preparedResult.sql, options);
       return new Result(
         {
@@ -433,7 +410,7 @@ export class Malloy {
       );
     } else {
       throw new Error(
-        "Internal error: sqlBlock or preparedResult must be provided."
+        "Internal error: sqlStruct or preparedResult must be provided."
       );
     }
   }
@@ -450,7 +427,7 @@ export class Malloy {
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
     connection: Connection;
-    sqlBlock: SQLBlock;
+    sqlStruct: SQLBlockStructDef;
     options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
@@ -460,27 +437,28 @@ export class Malloy {
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
     connection: Connection;
-    sqlBlock: SQLBlock;
+    sqlStruct: SQLBlockStructDef;
     options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
     connections: LookupConnection<Connection>;
-    sqlBlock: SQLBlock;
+    sqlStruct: SQLBlockStructDef;
     options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord>;
   public static async *runStream({
     connections,
     preparedResult,
-    sqlBlock,
+    sqlStruct,
     connection,
     options,
   }: {
     connection?: Connection;
     preparedResult?: PreparedResult;
-    sqlBlock?: SQLBlock;
+    sqlStruct?: SQLBlockStructDef;
     connections?: LookupConnection<Connection>;
     options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord> {
+    const sqlBlock = sqlStruct?.structSource.sqlBlock;
     if (sqlBlock === undefined && preparedResult === undefined) {
       throw new Error(
         "Internal error: sqlBlock or preparedResult must be provided."
@@ -502,22 +480,20 @@ export class Malloy {
     }
     let sql;
     let resultExplore;
-    if (sqlBlock !== undefined) {
-      const schema = (await connection.fetchSchemaForSQLBlocks([sqlBlock]))
-        .schemas[sqlBlock.name];
-      if (schema.structRelationship.type !== "basetable") {
+    if (sqlStruct) {
+      if (sqlStruct.structRelationship.type !== "basetable") {
         throw new Error(
           "Expected schema's structRelationship type to be 'basetable'."
         );
       }
-      resultExplore = new Explore(schema);
-      sql = doNotUseStringFromSqlBlockFIXME(sqlBlock);
+      resultExplore = new Explore(sqlStruct);
+      sql = sqlStruct.structSource.sqlBlock.selectStr;
     } else if (preparedResult !== undefined) {
       resultExplore = preparedResult.resultExplore;
       sql = preparedResult.sql;
     } else {
       throw new Error(
-        "Internal error: sqlBlock or preparedResult must be provided."
+        "Internal error: sqlStruct or preparedResult must be provided."
       );
     }
     let index = 0;
@@ -549,7 +525,7 @@ export class MalloyError extends Error {
 export class Model {
   private modelDef: ModelDef;
   private queryList: InternalQuery[];
-  private sqlBlocks: SQLBlock[];
+  private sqlBlocks: SQLBlockStructDef[];
   _referenceAt: (
     location: ModelDocumentPosition
   ) => DocumentReference | undefined;
@@ -557,7 +533,7 @@ export class Model {
   constructor(
     modelDef: ModelDef,
     queryList: InternalQuery[],
-    sqlBlocks: SQLBlock[],
+    sqlBlocks: SQLBlockStructDef[],
     referenceAt: (
       location: ModelDocumentPosition
     ) => DocumentReference | undefined = () => undefined
@@ -617,7 +593,7 @@ export class Model {
    * @param queryName Name of the query to retrieve.
    * @returns A prepared query.
    */
-  public getSQLBlockByName(sqlBlockName: string): SQLBlock {
+  public getSQLBlockByName(sqlBlockName: string): SQLBlockStructDef {
     const sqlBlock = this.sqlBlocks.find(
       (sqlBlock) => sqlBlock.as === sqlBlockName
     );
@@ -633,7 +609,7 @@ export class Model {
    * @param index Index of the SQL Block to retrieve.
    * @returns A prepared query.
    */
-  public getSQLBlockByIndex(index: number): SQLBlock {
+  public getSQLBlockByIndex(index: number): SQLBlockStructDef {
     const sqlBlock = this.sqlBlocks[index];
     if (sqlBlock === undefined) {
       throw new Error(`No SQL Block at index ${index}`);
@@ -1984,12 +1960,12 @@ export class Runtime {
    *
    * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
    * @param name The name of the sql block to use within the model.
-   * @returns A promise of a `SQLBlock`.
+   * @returns A promise of a `CompiledSQLBlock`.
    */
   public getSQLBlockByName(
     model: ModelURL | ModelString,
     name: string
-  ): Promise<SQLBlock> {
+  ): Promise<SQLBlockStructDef> {
     return this.loadSQLBlockByName(model, name).getSQLBlock();
   }
 
@@ -2004,7 +1980,7 @@ export class Runtime {
   public getSQLBlockByIndex(
     model: ModelURL | ModelString,
     index: number
-  ): Promise<SQLBlock> {
+  ): Promise<SQLBlockStructDef> {
     return this.loadSQLBlockByIndex(model, index).getSQLBlock();
   }
 }
@@ -2094,7 +2070,7 @@ class FluentState<T> {
   }
 
   protected makeSQLBlockMaterializer(
-    materialize: () => Promise<SQLBlock>
+    materialize: () => Promise<SQLBlockStructDef>
   ): SQLBlockMaterializer {
     return new SQLBlockMaterializer(this.runtime, materialize);
   }
@@ -2313,7 +2289,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * @param name The name of the SQL Block to load.
    * @returns A promise of a `SQLBlock`.
    */
-  public getSQLBlockByName(name: string): Promise<SQLBlock> {
+  public getSQLBlockByName(name: string): Promise<SQLBlockStructDef> {
     return this.loadSQLBlockByName(name).getSQLBlock();
   }
 
@@ -2325,7 +2301,7 @@ export class ModelMaterializer extends FluentState<Model> {
    *
    * TODO feature-sql-block Should named SQL blocks be indexable? This is not the way unnamed queries work.
    */
-  public getSQLBlockByIndex(index: number): Promise<SQLBlock> {
+  public getSQLBlockByIndex(index: number): Promise<SQLBlockStructDef> {
     return this.loadSQLBlockByIndex(index).getSQLBlock();
   }
 
@@ -2493,7 +2469,7 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
  * materializing the SQLBlock (via `getSQLBlock()`) or extending the task run
  * the query.
  */
-export class SQLBlockMaterializer extends FluentState<SQLBlock> {
+export class SQLBlockMaterializer extends FluentState<SQLBlockStructDef> {
   /**
    * Run this SQL block.
    *
@@ -2504,7 +2480,7 @@ export class SQLBlockMaterializer extends FluentState<SQLBlock> {
     const connections = this.runtime.connections;
     return Malloy.run({
       connections,
-      sqlBlock,
+      sqlStruct: sqlBlock,
       options,
     });
   }
@@ -2512,9 +2488,9 @@ export class SQLBlockMaterializer extends FluentState<SQLBlock> {
   async *runStream(options?: {
     rowLimit?: number;
   }): AsyncIterableIterator<DataRecord> {
-    const sqlBlock = await this.getSQLBlock();
+    const sqlStruct = await this.getSQLBlock();
     const connections = this.runtime.connections;
-    const stream = Malloy.runStream({ connections, sqlBlock, options });
+    const stream = Malloy.runStream({ connections, sqlStruct, options });
     for await (const row of stream) {
       yield row;
     }
@@ -2525,7 +2501,7 @@ export class SQLBlockMaterializer extends FluentState<SQLBlock> {
    *
    * @returns A promise of a SQL block.
    */
-  public getSQLBlock(): Promise<SQLBlock> {
+  public getSQLBlock(): Promise<SQLBlockStructDef> {
     return this.materialize();
   }
 
@@ -2535,8 +2511,8 @@ export class SQLBlockMaterializer extends FluentState<SQLBlock> {
    * @returns A promise to the SQL string.
    */
   public async getSQL(): Promise<string> {
-    const sqlBlock = await this.getSQLBlock();
-    return doNotUseStringFromSqlBlockFIXME(sqlBlock);
+    const sqlStruct = await this.getSQLBlock();
+    return sqlStruct.structSource.sqlBlock.selectStr;
   }
 }
 

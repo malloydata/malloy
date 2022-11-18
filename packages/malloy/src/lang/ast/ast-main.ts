@@ -185,19 +185,23 @@ export abstract class MalloyElement {
           location: reference.location,
         });
       } else if (result?.entry.type === "struct") {
-        this.addReference({
-          type: "exploreReference",
-          text: key,
-          definition: result.entry,
-          location: reference.location,
-        });
-      } else if (result?.entry.type === "sqlBlock") {
-        this.addReference({
-          type: "sqlBlockReference",
-          text: key,
-          definition: result.entry,
-          location: reference.location,
-        });
+        if (model.isSQLBlock(result.entry)) {
+          // TODO not sure what we should collect here, this is just a
+          // "make it compile" edit
+          this.addReference({
+            type: "sqlBlockReference",
+            text: key,
+            definition: result.entry.structSource.sqlBlock,
+            location: reference.location,
+          });
+        } else {
+          this.addReference({
+            type: "exploreReference",
+            text: key,
+            definition: result.entry,
+            location: reference.location,
+          });
+        }
       }
     }
     return result;
@@ -707,20 +711,21 @@ export class NamedSource extends Mallobj {
   }
 
   modelStruct(): model.StructDef | undefined {
-    const modelEnt = this.modelEntry(this.ref)?.entry;
-    if (!modelEnt) {
+    const modelEnt = this.modelEntry(this.ref);
+    const entry = modelEnt?.entry;
+    if (!entry) {
       const undefMsg = `Undefined source '${this.refName}'`;
       (this.ref instanceof ModelEntryReference ? this.ref : this).log(undefMsg);
       return;
     }
-    if (modelEnt.type === "query") {
-      this.log(`Must use 'from()' to explore query '${this.refName}`);
+    if (entry.type === "query") {
+      this.log(`Must use 'from()' for query source '${this.refName}`);
       return;
-    } else if (modelEnt.type === "sqlBlock") {
-      this.log(`Must use 'from_sql()' to explore sql query '${this.refName}`);
+    } else if (modelEnt.sqlType) {
+      this.log(`Must use 'from_sql()' for sql source '${this.refName}`);
       return;
     }
-    return { ...modelEnt };
+    return { ...entry };
   }
 
   structDef(): model.StructDef {
@@ -788,48 +793,20 @@ export class SQLSource extends NamedSource {
     return this.structDef();
   }
   modelStruct(): model.StructDef | undefined {
-    const modelEnt = this.modelEntry(this.ref)?.entry;
-    if (!modelEnt) {
+    const modelEnt = this.modelEntry(this.ref);
+    const entry = modelEnt?.entry;
+    if (!entry) {
       this.log(`Undefined from_sql source '${this.refName}'`);
       return;
     }
-    if (modelEnt.type === "query") {
+    if (entry.type === "query") {
       this.log(`Cannot use 'from_sql()' to explore query '${this.refName}'`);
       return;
-    } else if (modelEnt.type === "struct") {
+    } else if (!modelEnt.sqlType) {
       this.log(`Cannot use 'from_sql()' to explore '${this.refName}'`);
       return;
     }
-    const sqlDefEntry = this.translator()?.root.sqlQueryZone;
-    if (!sqlDefEntry) {
-      this.log(`Cant't look up schema for sql block '${this.refName}'`);
-      return;
-    }
-    if (modelEnt.type == "sqlBlock") {
-      const key = modelEnt.name;
-      const lookup = sqlDefEntry.getEntry(key);
-      let msg = `Schema read failure for sql query '${this.refName}'`;
-      if (lookup) {
-        if (lookup.status == "present") {
-          const structDef = lookup.value;
-          return {
-            ...structDef,
-            fields: structDef.fields.map((field) => ({
-              ...field,
-              location: modelEnt.location,
-            })),
-          };
-        }
-        if (lookup.status == "error") {
-          msg = lookup.message.includes(this.refName)
-            ? `'Schema error: ${lookup.message}`
-            : `Schema error '${this.refName}': ${lookup.message}`;
-        }
-        this.log(msg);
-      }
-    } else {
-      this.log(`Mis-typed definition for'${this.refName}'`);
-    }
+    return entry;
   }
 }
 
@@ -1571,8 +1548,9 @@ export class QOPDesc extends ListOf<QueryProperty> {
 }
 
 export interface ModelEntry {
-  entry: model.NamedModelObject | model.SQLBlock;
+  entry: model.NamedModelObject;
   exported?: boolean;
+  sqlType?: boolean;
 }
 export interface NameSpace {
   getEntry(name: string): ModelEntry | undefined;
@@ -1582,7 +1560,7 @@ export interface NameSpace {
 interface DocumentCompileResult {
   modelDef: model.ModelDef;
   queryList: model.Query[];
-  sqlBlocks: model.SQLBlock[];
+  sqlBlocks: model.SQLBlockStructDef[];
   needs: ModelDataRequest;
 }
 
@@ -1603,7 +1581,7 @@ export class Document extends MalloyElement implements NameSpace {
   elementType = "document";
   documentModel: Record<string, ModelEntry> = {};
   queryList: model.Query[] = [];
-  sqlBlocks: model.SQLBlock[] = [];
+  sqlBlocks: model.SQLBlockStructDef[] = [];
   statements: RunList;
 
   constructor(statements: DocStatement[]) {
@@ -1638,7 +1616,7 @@ export class Document extends MalloyElement implements NameSpace {
     return ret;
   }
 
-  private modelDef(): model.ModelDef {
+  modelDef(): model.ModelDef {
     const def: model.ModelDef = { name: "", exports: [], contents: {} };
     for (const entry in this.documentModel) {
       const entryDef = this.documentModel[entry].entry;
@@ -1652,14 +1630,14 @@ export class Document extends MalloyElement implements NameSpace {
     return def;
   }
 
-  defineSQL(sql: model.SQLBlock, name?: string): boolean {
+  defineSQL(sql: model.SQLBlockStructDef, name?: string): boolean {
     const ret = { ...sql, as: `$${this.sqlBlocks.length}` };
     if (name) {
       if (this.getEntry(name)) {
         return false;
       }
       ret.as = name;
-      this.setEntry(name, { entry: ret });
+      this.setEntry(name, { entry: ret, sqlType: true });
     }
     this.sqlBlocks.push(ret);
     return true;
@@ -2254,6 +2232,10 @@ export class ImportStatement extends MalloyElement implements DocStatement {
     } else if (this.fullURL) {
       const src = trans.root.importZone.getEntry(this.fullURL);
       if (src.status === "present") {
+        const childNeeds = trans.childRequest(this.fullURL);
+        if (childNeeds) {
+          return childNeeds;
+        }
         const importStructs = trans.getChildExports(this.fullURL);
         for (const importing in importStructs) {
           doc.setEntry(importing, {
@@ -2349,6 +2331,7 @@ type SQLStringSegment = string | QueryElement;
 export class SQLString extends MalloyElement {
   elementType = "sqlString";
   elements: SQLStringSegment[] = [];
+  containsQueries = false;
   push(el: string | MalloyElement): void {
     if (typeof el == "string") {
       if (el.length > 0) {
@@ -2356,6 +2339,7 @@ export class SQLString extends MalloyElement {
       }
     } else if (isQueryElement(el)) {
       this.elements.push(el);
+      this.containsQueries = true;
     } else {
       el.log("This element is not legal inside an SQL string");
     }
@@ -2374,26 +2358,52 @@ export class SQLString extends MalloyElement {
 export class SQLStatement extends MalloyElement implements DocStatement {
   elementType = "sqlStatement";
   is?: string;
+  connection?: string;
+  requestBlock?: model.SQLBlockSource;
 
-  constructor(readonly connection: string, readonly select: SQLString) {
+  constructor(readonly select: SQLString) {
     super();
     this.has({ select });
   }
 
-  sqlBlock(): model.SQLBlock {
-    const sqlBlock = makeSQLBlock({
-      connection: this.connection,
-      select: this.select.sqlPhrases(),
-    });
-    sqlBlock.location = this.location;
-    return sqlBlock;
+  sqlBlock(): model.SQLBlockSource {
+    if (!this.requestBlock) {
+      this.requestBlock = makeSQLBlock(
+        this.select.sqlPhrases(),
+        this.connection
+      );
+    }
+    return this.requestBlock;
   }
 
+  /**
+   * This is the one statement which pauses execution. First time through
+   * it will generate a schema request, next time through it will either
+   * record the error or record the schema.
+   */
   execute(doc: Document): ModelDataRequest {
-    if (this.is && !doc.defineSQL(this.sqlBlock(), this.is)) {
-      this.log(`${this.is} already defined`);
+    const sqlDefEntry = this.translator()?.root.sqlQueryZone;
+    if (!sqlDefEntry) {
+      this.log("Cant't look up schema for sql block");
+      return;
     }
-    return undefined;
+    const sql = this.sqlBlock();
+    sqlDefEntry.reference(sql.name, this.location);
+    const lookup = sqlDefEntry.getEntry(sql.name);
+    if (lookup.status == "error") {
+      this.select.log(`'Schema error: ${lookup.message}`);
+      return undefined;
+    }
+    if (lookup.status == "present") {
+      if (this.is && !doc.defineSQL(lookup.value, this.is)) {
+        this.log(`'${this.is}' already defined`);
+      }
+      return undefined;
+    }
+    return {
+      compileSQL: sql,
+      partialModel: this.select.containsQueries ? doc.modelDef() : undefined,
+    };
   }
 }
 

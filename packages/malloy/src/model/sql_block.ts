@@ -11,27 +11,24 @@
  * GNU General Public License for more details.
  */
 
-import { isSQLFragment, SQLBlock, SQLPhrase } from "./malloy_types";
+import { isSQLFragment, SQLBlockSource, SQLPhrase } from "./malloy_types";
 import md5 from "md5";
 
 /**
- * SQLBlockRequest does not have a digest in it
+ * The factory for SQLBlocks. Exists because the name is computed
+ * from the components of the block and that name needs to be
+ * unique, but predictable.
  */
-export interface SQLBlockRequest extends Partial<SQLBlock> {
-  select: SQLPhrase[];
-}
-
-/**
- * The factory for SQLBlocks.
- */
-export function makeSQLBlock(from: SQLBlockRequest): SQLBlock {
-  const theBlock: SQLBlock = {
-    type: "sqlBlock",
-    name: `md5:/${from.connection || "$default"}//${nameFor(from.select)}`,
-    select: from.select,
+export function makeSQLBlock(
+  select: SQLPhrase[],
+  connection?: string
+): SQLBlockSource {
+  const theBlock: SQLBlockSource = {
+    name: `md5:/${connection || "$default"}//${nameFor(select)}`,
+    select,
   };
-  if (from.connection) {
-    theBlock.connection = from.connection;
+  if (connection) {
+    theBlock.connection = connection;
   }
   return theBlock;
 }
@@ -48,5 +45,5 @@ function nameFor(select: SQLPhrase[]): string {
   const phrases = select.map((el) => {
     isSQLFragment(el) ? el.sql : JSON.stringify(el);
   });
-  return md5(phrases.join("--"));
+  return md5(phrases.join(";"));
 }
