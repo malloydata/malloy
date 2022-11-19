@@ -37,6 +37,7 @@ import {
 } from "@malloydata/malloy";
 import { Client, Pool, PoolClient } from "pg";
 import QueryStream from "pg-query-stream";
+import { randomUUID } from "crypto";
 
 const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   "character varying": "string",
@@ -256,8 +257,7 @@ export class PostgresConnection
       fields: [],
     };
 
-    // TODO -- Should be a uuid
-    const tempTableName = `malloy${Math.floor(Math.random() * 10000000)}`;
+    const tempTableName = `tmp-${randomUUID()}`;
     const infoQuery = `
       drop table if exists ${tempTableName};
       create temp table ${tempTableName} as SELECT * FROM (
