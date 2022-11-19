@@ -764,24 +764,29 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.value[0].a).toBe(1);
   });
 
-  it(`sql_block with query- ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
-          sql: state_as_sql is {
-            select: """%{
+  it(`sql_block with turducken- ${databaseName}`, async () => {
+    if (databaseName != "postgres") {
+      const turduckenQuery = `
+        sql: state_as_sql is {
+          select: """
+            SELECT
+              ROW_NUMBER() OVER (ORDER BY state_count) as row_number,
+              *
+            FROM (%{
               table('malloytest.state_facts')
               -> {
                 group_by: popular_name
                 aggregate: state_count is count()
               }
-            }%"""
-          }
-          query: from_sql(state_as_sql) -> { project: *; where: popular_name = 'Emma' }
-        `
-      )
-      .run();
-    expect(result.data.value[0].state_count).toBe(6);
+            }%)
+          """
+        }
+        query: from_sql(state_as_sql) -> {
+          project: *; where: popular_name = 'Emma'
+        }`;
+      const result = await runtime.loadQuery(turduckenQuery).run();
+      expect(result.data.value[0].state_count).toBe(6);
+    }
   });
 
   // it(`sql_block version- ${databaseName}`, async () => {

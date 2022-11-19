@@ -297,13 +297,11 @@ export class Malloy {
       if (isSQLFragment(segment)) {
         return segment.sql;
       } else {
-        // use toCompile.partilModel and segement which is a query
-        // get get a string
         // TODO catch exceptions and throw errors ...
         if (!queryModel) {
           if (!partialModel) {
             throw new Error(
-              "Internal error: Patial model mising when compiling SQL block"
+              "Internal error: Partial model missing when compiling SQL block"
             );
           }
           queryModel = new QueryModel(partialModel);
