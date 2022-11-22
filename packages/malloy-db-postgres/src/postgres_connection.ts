@@ -257,7 +257,7 @@ export class PostgresConnection
       fields: [],
     };
 
-    const tempTableName = `tmp-${randomUUID()}`;
+    const tempTableName = `tmp${randomUUID()}`.replace(/-/g, "");
     const infoQuery = `
       drop table if exists ${tempTableName};
       create temp table ${tempTableName} as SELECT * FROM (
