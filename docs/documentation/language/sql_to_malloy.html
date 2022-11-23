@@ -77,7 +77,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 
 <td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">query</span><span style="color: #000000">: </span><span style="color: #001080">order_items</span><span style="color: #000000"> -&gt; {</span><span style="color: #AF00DB">project</span><span style="color: #000000">: </span><span style="color: #001080">id</span><span style="color: #000000">}</span></span></code></pre></td>
 
-<td><strong>SELECT / FROM</strong>: <a href="https://looker-open-source.github.io/malloy/documentation/malloy_by_example.html">Malloy by Example</a></td>
+<td><strong>SELECT / FROM</strong>: <a href="https://malloydata.github.io/malloy/documentation/malloy_by_example.html">Malloy by Example</a></td>
 </tr>
 
 <tr>
@@ -85,7 +85,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 
 <td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">join_one</span><span style="color: #000000">: </span><span style="color: #001080">users</span><span style="color: #000000"> </span><span style="color: #AF00DB">on</span><span style="color: #000000"> </span><span style="color: #001080">users</span><span style="color: #000000">.</span><span style="color: #001080">id</span><span style="color: #000000"> = </span><span style="color: #001080">order_items</span><span style="color: #000000">.</span><span style="color: #001080">user_id</span></span></code></pre></td>
 
-<td><strong>JOIN</strong>: <a href="https://looker-open-source.github.io/malloy/documentation/language/join.html">Documentation</a> covers more join types and complex relationships. <a href="https://looker-open-source.github.io/malloy/documentation/language/sql_to_malloy.html#more-complex-example">Example</a></td>
+<td><strong>JOIN</strong>: <a href="https://malloydata.github.io/malloy/documentation/language/join.html">Documentation</a> covers more join types and complex relationships. <a href="https://malloydata.github.io/malloy/documentation/language/sql_to_malloy.html#more-complex-example">Example</a></td>
 </tr>
 
 <tr>
@@ -109,7 +109,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 
 <td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">order_by</span><span style="color: #000000">: </span><span style="color: #001080">flight_count</span><span style="color: #000000">, </span><span style="color: #795E26">avg</span><span style="color: #000000">(</span><span style="color: #001080">elevation</span><span style="color: #000000">)</span></span></code></pre></td>
 
-<td><strong>ORDER BY</strong>. By default, <code>ORDER BY</code> is generated following <a href="https://looker-open-source.github.io/malloy/documentation/language/order_by.html">implicit rules</a>; this can be overridden.</td>
+<td><strong>ORDER BY</strong>. By default, <code>ORDER BY</code> is generated following <a href="https://malloydata.github.io/malloy/documentation/language/order_by.html">implicit rules</a>; this can be overridden.</td>
 </tr>
 
 <tr>
@@ -141,7 +141,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 
 <td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">: </span><span style="color: #001080">user_facts</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> || ... ;;</span></span></code> </pre></td>
 
-<td><strong>Subqueries</strong> Can be written into <a href="https://looker-open-source.github.io/malloy/documentation/language/sql_blocks.html">SQL Blocks</a>. Example below</td>
+<td><strong>Subqueries</strong> Can be written into <a href="https://malloydata.github.io/malloy/documentation/language/sql_blocks.html">SQL Blocks</a>. Example below</td>
 </tr>
 
 <tr>
@@ -149,7 +149,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 
 <td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">user_facts</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from</span><span style="color: #000000">(...)</span></span></code> </pre></td>
 
-<td><strong>CTEs</strong>: can be generated through <a href="https://looker-open-source.github.io/malloy/documentation/language/basic.html#pipelines-and-multi-stage-queries">Pipelines</a> and <a href="https://looker-open-source.github.io/malloy/documentation/language/source.html#sources-from-queries">Sources from queries</a>.</td>
+<td><strong>CTEs</strong>: can be generated through <a href="https://malloydata.github.io/malloy/documentation/language/basic.html#pipelines-and-multi-stage-queries">Pipelines</a> and <a href="https://malloydata.github.io/malloy/documentation/language/source.html#sources-from-queries">Sources from queries</a>.</td>
 </tr>
 </tbody></table>
 
@@ -158,7 +158,7 @@ footer: /generated/footers/language/sql_to_malloy.html
           Expressions
         </a>
       </h3>
-    <p>Many SQL functions supported by the database can simply be used unchanged in Malloy. In certain cases we have implemented what we feel are improvements and simplifications of certain SQL functions. This is intended to serve as a quick reference, more complete documentation can be found <a href="https://looker-open-source.github.io/malloy/documentation/language/expressions.html">here</a>.</p>
+    <p>Many SQL functions supported by the database can simply be used unchanged in Malloy. In certain cases we have implemented what we feel are improvements and simplifications of certain SQL functions. This is intended to serve as a quick reference, more complete documentation can be found <a href="https://malloydata.github.io/malloy/documentation/language/expressions.html">here</a>.</p>
 <table>
 <thead>
 <tr>
@@ -174,7 +174,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 
 <td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">sum</span><span style="color: #000000">(), </span><span style="color: #795E26">avg</span><span style="color: #000000">(), </span><span style="color: #795E26">max</span><span style="color: #000000">(), </span><span style="color: #795E26">min</span><span style="color: #000000">(), </span><span style="color: #795E26">count</span><span style="color: #000000">(), </span><span style="color: #001080">etc</span><span style="color: #000000">...</span></span></code> </pre></td>
 
-<td>Basic SQL aggregations are supported verbatim, but it’s worth learning about Malloy’s additional <a href="https://looker-open-source.github.io/malloy/documentation/language/aggregates.html#aggregate-locality">aggregate locality</a> / <a href="https://help.looker.com/hc/en-us/articles/360023722974-A-Simple-Explanation-of-Symmetric-Aggregates-or-Why-On-Earth-Does-My-SQL-Look-Like-That-">symmetric aggregate</a> handling.</td>
+<td>Basic SQL aggregations are supported verbatim, but it’s worth learning about Malloy’s additional <a href="https://malloydata.github.io/malloy/documentation/language/aggregates.html#aggregate-locality">aggregate locality</a> / <a href="https://help.looker.com/hc/en-us/articles/360023722974-A-Simple-Explanation-of-Symmetric-Aggregates-or-Why-On-Earth-Does-My-SQL-Look-Like-That-">symmetric aggregate</a> handling.</td>
 </tr>
 
 <tr>
@@ -182,7 +182,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 
 <td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">size_n</span><span style="color: #000000"> ?</span></span></code> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">pick</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;S&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">when</span><span style="color: #000000"> &lt; </span><span style="color: #098658">3</span></span></code> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">pick</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;M&#39;</span><span style="color: #000000"> </span><span style="color: #0000FF">when</span><span style="color: #000000"> &lt;</span><span style="color: #098658">5</span></span></code> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">else</span><span style="color: #000000"> </span><span style="color: #A31515">&#39;L&#39;</span></span></code> </pre></td>
 
-<td><a href="https://looker-open-source.github.io/malloy/documentation/language/expressions.html#pick-expressions">Pick</a> is Malloy’s improvement of SQL’s <code>CASE</code> statement. This example also introduces the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">?</span></span></code> <a href="https://looker-open-source.github.io/malloy/documentation/language/expressions.html#application">Apply</a> operator, which  "applies" a value to another value, condition, or computation. This is most often used with <a href="https://looker-open-source.github.io/malloy/documentation/language/expressions.html#partial-comparison">partial</a> comparisons or <a href="https://looker-open-source.github.io/malloy/documentation/language/expressions.html#alternation">alternations</a>.</td>
+<td><a href="https://malloydata.github.io/malloy/documentation/language/expressions.html#pick-expressions">Pick</a> is Malloy’s improvement of SQL’s <code>CASE</code> statement. This example also introduces the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">?</span></span></code> <a href="https://malloydata.github.io/malloy/documentation/language/expressions.html#application">Apply</a> operator, which  "applies" a value to another value, condition, or computation. This is most often used with <a href="https://malloydata.github.io/malloy/documentation/language/expressions.html#partial-comparison">partial</a> comparisons or <a href="https://malloydata.github.io/malloy/documentation/language/expressions.html#alternation">alternations</a>.</td>
 </tr>
 
 <tr>
@@ -190,7 +190,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 
 <td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">count</span><span style="color: #000000">() {</span><span style="color: #AF00DB">where</span><span style="color: #000000">: </span><span style="color: #001080">status</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;Returned&#39;</span><span style="color: #000000">}</span></span></code> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">avg_price</span><span style="color: #000000"> {</span><span style="color: #AF00DB">where</span><span style="color: #000000"> ? </span><span style="color: #001080">brand</span><span style="color: #000000"> = </span><span style="color: #A31515">&#39;Levi</span><span style="color: #EE0000">\&#39;</span><span style="color: #A31515">s&#39;</span><span style="color: #000000">}</span></span></code> </pre></td>
 
-<td>Aggregates may be filtered using filter expressions. <a href="https://looker-open-source.github.io/malloy/documentation/language/expressions.html#filtered-expressions">Doc</a></td>
+<td>Aggregates may be filtered using filter expressions. <a href="https://malloydata.github.io/malloy/documentation/language/expressions.html#filtered-expressions">Doc</a></td>
 </tr>
 
 <tr>
@@ -198,7 +198,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 
 <td><pre><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">distance</span><span style="color: #000000">::</span><span style="color: #267F99">string</span></span></code></pre></td>
 
-<td><a href="https://looker-open-source.github.io/malloy/documentation/language/expressions.html#safe-type-cast">Safe Type Cast</a>. Also worth reviewing <a href="https://looker-open-source.github.io/malloy/documentation/language/types.html">Types</a> doc.</td>
+<td><a href="https://malloydata.github.io/malloy/documentation/language/expressions.html#safe-type-cast">Safe Type Cast</a>. Also worth reviewing <a href="https://malloydata.github.io/malloy/documentation/language/types.html">Types</a> doc.</td>
 </tr>
 </tbody></table>
 
@@ -207,7 +207,7 @@ footer: /generated/footers/language/sql_to_malloy.html
           Working with Time
         </a>
       </h4>
-    <p>The <a href="https://looker-open-source.github.io/malloy/documentation/language/expressions.html#time-expressions">Time Expressions</a> reference contains substantially more detail and examples.</p>
+    <p>The <a href="https://malloydata.github.io/malloy/documentation/language/expressions.html#time-expressions">Time Expressions</a> reference contains substantially more detail and examples.</p>
 <table>
 <thead>
 <tr>
@@ -223,7 +223,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 
 <td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">created_at</span><span style="color: #000000">.</span><span style="color: #0000FF">week</span></span></code> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">shipped_at</span><span style="color: #000000">.</span><span style="color: #0000FF">month</span></span></code> </pre></td>
 
-<td><a href="https://looker-open-source.github.io/malloy/documentation/language/expressions.html#time-truncation">Truncation</a></td>
+<td><a href="https://malloydata.github.io/malloy/documentation/language/expressions.html#time-truncation">Truncation</a></td>
 </tr>
 
 <tr>
@@ -231,7 +231,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 
 <td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">day_of_week</span><span style="color: #000000">(</span><span style="color: #001080">shipped_at</span><span style="color: #000000">)</span></span></code> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">hour</span><span style="color: #000000">(</span><span style="color: #001080">created_at</span><span style="color: #000000">)</span></span></code> </pre></td>
 
-<td><a href="https://looker-open-source.github.io/malloy/documentation/language/expressions.html#time-extraction">Extraction</a></td>
+<td><a href="https://malloydata.github.io/malloy/documentation/language/expressions.html#time-extraction">Extraction</a></td>
 </tr>
 
 <tr>
@@ -239,7 +239,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 
 <td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">days</span><span style="color: #000000">(</span><span style="color: #001080">created_at</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">now</span><span style="color: #000000">)</span></span></code> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #795E26">hours</span><span style="color: #000000">(</span><span style="color: #001080">created_at</span><span style="color: #000000"> </span><span style="color: #0000FF">to</span><span style="color: #000000"> </span><span style="color: #001080">shipped_at</span><span style="color: #000000">)</span></span></code> </pre></td>
 
-<td><a href="https://looker-open-source.github.io/malloy/documentation/language/expressions.html#time-intervals">Date Diff / Intervals</a></td>
+<td><a href="https://malloydata.github.io/malloy/documentation/language/expressions.html#time-intervals">Date Diff / Intervals</a></td>
 </tr>
 
 <tr>
@@ -249,7 +249,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 
 <td>7)` </pre></td>
 
-<td><a href="https://looker-open-source.github.io/malloy/documentation/language/expressions.html#time-expressions">Filter Expressions</a>, <a href="https://looker-open-source.github.io/malloy/documentation/language/expressions.html#application">Apply Operator</a></td>
+<td><a href="https://malloydata.github.io/malloy/documentation/language/expressions.html#time-expressions">Filter Expressions</a>, <a href="https://malloydata.github.io/malloy/documentation/language/expressions.html#application">Apply Operator</a></td>
 </tr>
 </tbody></table>
 
@@ -258,7 +258,7 @@ footer: /generated/footers/language/sql_to_malloy.html
           Not Supported and/or Coming Soon
         </a>
       </h3>
-    <p>Feature requests are tracked using <a href="https://github.com/looker-open-source/malloy/issues">Issues on Github</a>.</p>
+    <p>Feature requests are tracked using <a href="https://github.com/malloydata/malloy/issues">Issues on Github</a>.</p>
 <table>
 <thead>
 <tr>
@@ -272,7 +272,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 <tbody><tr>
 <td><pre><code>FIRST_VALUE(product_brand) OVER (PARTITION BY user_id ORDER BY created_at ASC) </code></pre></td>
 
-<td><strong>Window Functions</strong>: For now, reach out for advice on achieving what you need (much is possible with nesting, pipelines, or <a href="https://looker-open-source.github.io/malloy/documentation/language/sql_blocks.html">SQL Blocks</a>). <a href="https://looker-open-source.github.io/malloy/documentation/language/sql_to_malloy.html#subqueries-ctes-">Example</a>.</td>
+<td><strong>Window Functions</strong>: For now, reach out for advice on achieving what you need (much is possible with nesting, pipelines, or <a href="https://malloydata.github.io/malloy/documentation/language/sql_blocks.html">SQL Blocks</a>). <a href="https://malloydata.github.io/malloy/documentation/language/sql_to_malloy.html#subqueries-ctes-">Example</a>.</td>
 
 <td></td>
 </tr>
@@ -437,7 +437,7 @@ footer: /generated/footers/language/sql_to_malloy.html
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">aggregate</span><span style="color: #000000">:</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #001080">total_sale_price</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">sale_price</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #001080">order_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">(</span><span style="color: #795E26">distinct</span><span style="color: #000000"> </span><span style="color: #001080">order_id</span><span style="color: #000000">)</span></span>
-<span class="line"><span style="color: #000000">}</span></span></pre><p>One can also define a <a href="https://looker-open-source.github.io/malloy/documentation/language/sql_blocks.html">SQL block</a> to be used as a source in Malloy.</p>
+<span class="line"><span style="color: #000000">}</span></span></pre><p>One can also define a <a href="https://malloydata.github.io/malloy/documentation/language/sql_blocks.html">SQL block</a> to be used as a source in Malloy.</p>
 <pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">: </span><span style="color: #001080">order_facts</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> ||</span></span>
 <span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">SELECT</span></span>
 <span class="line"><span style="color: #000000">   order_id</span></span>
