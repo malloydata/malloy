@@ -15,11 +15,10 @@
 export type {
   QueryDataRow,
   // Currently needed only by tests
-  ModelDef,
   Fragment,
-  Query,
   // Needed for DB
   StructDef,
+  StructRelationship,
   NamedStructDefs,
   MalloyQueryData,
   AtomicFieldType as AtomicFieldTypeInner,
@@ -37,16 +36,22 @@ export type {
   SQLBlock,
   // Used in Composer Demo
   FieldDef,
+  FilteredAliasedName,
   PipeSegment,
   QueryFieldDef,
   TurtleDef,
   SearchValueMapResult,
   SearchIndexResult,
+  ModelDef,
+  Query,
+  NamedQuery,
+  NamedModelObject,
 } from "./model";
 export {
   // Used in Composer Demo
   Segment,
   isFilteredAliasedName,
+  flattenQuery,
 } from "./model";
 export {
   // Neede for VSCode extension
@@ -93,6 +98,7 @@ export type {
   DocumentSymbol,
   DocumentHighlight,
   ResultJSON,
+  RunSQLOptions,
   PreparedResultMaterializer,
   SQLBlockMaterializer,
   ExploreMaterializer,
@@ -110,6 +116,9 @@ export type {
   PooledConnection,
   TestableConnection,
   PersistSQLResults,
+  FetchSchemaAndRunSimultaneously,
+  StreamingConnection,
+  FetchSchemaAndRunStreamSimultaneously,
 } from "./runtime_types";
 export type { Loggable } from "./malloy";
 export { toAsyncGenerator } from "./connection_utils";

@@ -12,7 +12,12 @@
  * GNU General Public License for more details.
  */
 
-import { ModelDef, Query, StructDef } from "@malloydata/malloy";
+import {
+  ModelDef,
+  Query,
+  StructDef,
+  StructRelationship,
+} from "@malloydata/malloy";
 import {
   describeIfDatabaseAvailable,
   fStringEq,
@@ -21,7 +26,6 @@ import {
 
 import * as malloy from "@malloydata/malloy";
 import { RuntimeList } from "../../runtimes";
-import { StructRelationship } from "@malloydata/malloy/src/model";
 
 const [describe] = describeIfDatabaseAvailable(["bigquery"]);
 

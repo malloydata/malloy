@@ -13,22 +13,20 @@
 import {
   AtomicFieldTypeInner,
   Connection,
+  FetchSchemaAndRunSimultaneously,
+  FetchSchemaAndRunStreamSimultaneously,
   MalloyQueryData,
   NamedStructDefs,
   parseTableURI,
   PersistSQLResults,
   FieldTypeDef,
   PooledConnection,
+  RunSQLOptions,
   SQLBlock,
+  StreamingConnection,
   StructDef,
   QueryDataRow,
 } from "@malloydata/malloy";
-import {
-  FetchSchemaAndRunSimultaneously,
-  FetchSchemaAndRunStreamSimultaneously,
-  StreamingConnection,
-} from "@malloydata/malloy/src/runtime_types";
-import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
 
 const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   BIGINT: "number",
@@ -42,14 +40,41 @@ const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   INTEGER: "number",
 };
 
+export interface DuckDBQueryOptions {
+  rowLimit: number;
+}
+
+export type QueryOptionsReader =
+  | Partial<DuckDBQueryOptions>
+  | (() => Partial<DuckDBQueryOptions>);
+
 export abstract class DuckDBCommon
   implements Connection, PersistSQLResults, StreamingConnection
 {
+  static DEFAULT_QUERY_OPTIONS: DuckDBQueryOptions = {
+    rowLimit: 10,
+  };
+
   public readonly name: string = "duckdb_common";
 
   get dialectName(): string {
     return "duckdb";
   }
+
+  private readQueryOptions(): DuckDBQueryOptions {
+    const options = DuckDBCommon.DEFAULT_QUERY_OPTIONS;
+    if (this.queryOptions) {
+      if (this.queryOptions instanceof Function) {
+        return { ...options, ...this.queryOptions() };
+      } else {
+        return { ...options, ...this.queryOptions };
+      }
+    } else {
+      return options;
+    }
+  }
+
+  constructor(private queryOptions?: QueryOptionsReader) {}
 
   public isPool(): this is PooledConnection {
     return false;
@@ -76,7 +101,8 @@ export abstract class DuckDBCommon
     sql: string,
     options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
-    const rowLimit = options.rowLimit ?? 10;
+    const defaultOptions = this.readQueryOptions();
+    const rowLimit = options.rowLimit ?? defaultOptions.rowLimit;
 
     const statements = sql.split("-- hack: split on this");
 
@@ -137,7 +163,7 @@ export abstract class DuckDBCommon
    * to be fed back into fillStructDefFromTypeMap(). Handles commas
    * within nested STRUCT() declarations.
    *
-   * (https://github.com/looker-open-source/malloy/issues/635)
+   * (https://github.com/malloydata/malloy/issues/635)
    *
    * @param s struct's column declaration
    * @returns Array of column type declarations
@@ -235,7 +261,11 @@ export abstract class DuckDBCommon
               name,
             });
           } else {
-            throw new Error(`unknown duckdb type ${duckDBType}`);
+            structDef.fields.push({
+              name,
+              type: "string",
+              e: [`'DuckDB type "${duckDBType}" not supported by Malloy'`],
+            });
           }
         }
       }

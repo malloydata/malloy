@@ -12,10 +12,9 @@
  */
 
 import * as crypto from "crypto";
-import { DuckDBCommon } from "./duckdb_common";
+import { DuckDBCommon, QueryOptionsReader } from "./duckdb_common";
 import { Database, OPEN_READWRITE, Row } from "duckdb";
-import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
-import { QueryDataRow } from "@malloydata/malloy";
+import { QueryDataRow, RunSQLOptions } from "@malloydata/malloy";
 
 export class DuckDBConnection extends DuckDBCommon {
   protected connection;
@@ -25,9 +24,10 @@ export class DuckDBConnection extends DuckDBCommon {
   constructor(
     public readonly name: string,
     databasePath = "test/data/duckdb/duckdb_test.db",
-    private workingDirectory = "/"
+    private workingDirectory = "/",
+    queryOptions?: QueryOptionsReader
   ) {
-    super();
+    super(queryOptions);
 
     this.database = new Database(
       databasePath,

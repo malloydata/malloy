@@ -60,6 +60,7 @@ import {
   isIndexSegment,
   UngroupFragment,
   isUngroupFragment,
+  NamedQuery,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -1132,7 +1133,7 @@ class FieldInstanceResult implements FieldInstance {
   ): void {
     const name = qs.getIdentifier();
 
-    // we're already chasing the dependancy for this join.
+    // we're already chasing the dependency for this join.
     if (joinStack.indexOf(name) !== -1) {
       return;
     }
@@ -3992,4 +3993,18 @@ export class QueryModel {
     });
     return result.rows as unknown as SearchIndexResult[];
   }
+}
+
+export function flattenQuery(model: ModelDef, query: NamedQuery): TurtleDef {
+  let structRef = query.structRef;
+  if (typeof structRef !== "string") {
+    structRef = structRef.as || structRef.name;
+  }
+  const queryModel = new QueryModel(model);
+  const queryStruct = queryModel.getStructByName(structRef);
+  const turtleDef = queryStruct.flattenTurtleDef({
+    ...query,
+    type: "turtle",
+  });
+  return turtleDef;
 }

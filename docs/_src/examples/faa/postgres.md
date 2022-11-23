@@ -1,5 +1,5 @@
 # NTSB Flight Database Examples (PostgreSQL)
-_This page adapts the NTSB Flight Database examples [here](https://looker-open-source.github.io/malloy/documentation/examples/faa.html) to work with a Postgres instance rather than requiring BigQuery access.  Note that full support for Postgres is in progress and that date/time support is currently incomplete._
+_This page adapts the NTSB Flight Database examples [here](https://malloydata.github.io/malloy/documentation/examples/faa.html) to work with a Postgres instance rather than requiring BigQuery access.  Note that full support for Postgres is in progress and that date/time support is currently incomplete._
 
 ## PostgreSQL Setup
 Before you can run these NTSB sample models against a Postgres instance, you need to start up / connect to a database server instance and load it with the appropriate data.  These steps setup a database with the NTSB Flight dataset and respective sample models.  These steps use Docker for convenience, but the instructions can be modified to run a Postgres instance directly.
@@ -37,7 +37,7 @@ Use the connection settings shown below to connect the VS Code extension to your
 
 ## Modify the example Malloy models to work with Postgres
 
-The sample models from the NTSB Flight Dataset [here](https://looker-open-source.github.io/malloy/documentation/examples/faa.html#the-malloy-model) reference public BigQuery tables using the standard _project_name.dataset_name.table_name_ BigQuery format.  Therefore, all the data source references with this format need to be changed to the Postgres format.
+The sample models from the NTSB Flight Dataset [here](https://malloydata.github.io/malloy/documentation/examples/faa.html#the-malloy-model) reference public BigQuery tables using the standard _project_name.dataset_name.table_name_ BigQuery format.  Therefore, all the data source references with this format need to be changed to the Postgres format.
 
 ### Change data source references
 All source data references prefixed with `malloy-data.faa.` must be changed to `malloytest.` (since that is the Postgres schema we used above) to conform to Malloy's Postgres _schema_name.table_name_ format (the database name is not required).  Simply find and replace in VS Code or run `sed -i -e 's/malloy-data.faa./malloytest./g' path/to/<your_file.malloy>`

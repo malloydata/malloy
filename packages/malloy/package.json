@@ -1,12 +1,13 @@
 {
   "name": "@malloydata/malloy",
-  "version": "0.0.2",
+  "version": "0.0.9",
   "license": "GPL-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "homepage": "https://github.com/malloydata/malloy#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/looker-open-source/malloy"
+    "url": "https://github.com/malloydata/malloy"
   },
   "scripts": {
     "test": "jest --config=../../jest.config.js",
@@ -14,7 +15,8 @@
     "testLang": "npm run test --testPathPattern=packages/malloy/src/lang",
     "clean": "rm -rf src/lang/lib",
     "build": "npm run build-parser && tsc --build",
-    "malloyc": "ts-node ../../scripts/malloy-to-json"
+    "malloyc": "ts-node ../../scripts/malloy-to-json",
+    "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
     "antlr4ts": "^0.5.0-alpha.4",

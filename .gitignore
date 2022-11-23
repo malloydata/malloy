@@ -21,6 +21,7 @@ demo/**/.eslintcache
 /node_modules
 demo/malloy-demo-composer/composer_config.json
 demo/malloy-demo-composer/public/js
+demo/malloy-demo-composer/pkg
 vscode-extension/**/build
 vscode-extension/**/dist
 vscode-extension/**/node_modules

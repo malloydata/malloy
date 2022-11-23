@@ -25,25 +25,23 @@ import { ResourceStream } from "@google-cloud/paginator";
 import * as googleCommon from "@google-cloud/common";
 import { GaxiosError } from "gaxios";
 import {
+  FetchSchemaAndRunSimultaneously,
+  FetchSchemaAndRunStreamSimultaneously,
   Malloy,
+  PersistSQLResults,
+  PooledConnection,
   QueryData,
   StructDef,
+  StreamingConnection,
   MalloyQueryData,
   FieldTypeDef,
   NamedStructDefs,
   SQLBlock,
   Connection,
   QueryDataRow,
+  parseTableURI,
   toAsyncGenerator,
 } from "@malloydata/malloy";
-import { parseTableURI } from "@malloydata/malloy";
-import { PooledConnection } from "@malloydata/malloy";
-import {
-  FetchSchemaAndRunSimultaneously,
-  FetchSchemaAndRunStreamSimultaneously,
-  PersistSQLResults,
-  StreamingConnection,
-} from "@malloydata/malloy/src/runtime_types";
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -524,7 +522,7 @@ export class BigQueryConnection
           structDef.fields.push({
             name,
             type: "string",
-            e: [`BigQuery type "${type}" not supported by Malloy`],
+            e: [`'BigQuery type "${type}" not supported by Malloy'`],
           });
         }
       }

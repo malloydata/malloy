@@ -5,7 +5,7 @@ Malloy's key language features.
 
 Malloy is currently available as a VS Code extension and can query BigQuery and Postgres SQL databases.
 
-[Install Instructions](https://github.com/looker-open-source/malloy/)
+[Install Instructions](https://github.com/malloydata/malloy/)
 
 ## SQL SELECT vs Malloy's `query`
 

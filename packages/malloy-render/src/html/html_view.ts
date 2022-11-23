@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { DataArray, Field, Explore } from "@malloydata/malloy";
+import { AtomicFieldType, DataArray, Field, Explore } from "@malloydata/malloy";
 import { TopLevelSpec } from "vega-lite";
 import { DataStyles, StyleDefaults } from "../data_styles";
 import { Renderer } from "../renderer";
@@ -37,7 +37,6 @@ import { HTMLTableRenderer } from "./table";
 import { HTMLTextRenderer } from "./text";
 import { HTMLVegaSpecRenderer } from "./vega_spec";
 import { ContainerRenderer } from "./container";
-import { AtomicFieldType } from "@malloydata/malloy";
 import { createErrorElement } from "./utils";
 import { DrillFunction } from "../drill";
 

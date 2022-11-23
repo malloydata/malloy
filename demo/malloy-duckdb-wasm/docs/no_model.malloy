@@ -1,5 +1,0 @@
-// Sample Data Sources
-source: words is table('duckdb:words.parquet') {}
-source: recalls is table('duckdb:auto_recalls.csv') {}
-source: airports is table('duckdb:airports.parquet') {}
-source: ga_sample is table('duckdb:ga_sample.parquet') {}
