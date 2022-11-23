@@ -57,7 +57,7 @@ This document is intended to serve as a reference for those who already know SQL
 | <pre><code>SELECT</code> <code>  ...</code> <code>FROM (</code> <code>  SELECT</code> <code>    ...</code> <code>  FROM order_items</code> <code>)</code></pre>  | <pre> `order_items -> {...} -> {...}`</pre> | **Pipelines** allow the output of one query to be used as the input to the next. |
 | <pre><code>FROM (...) AS user_facts</code></pre> | <pre> sql: user_facts is  { ... } </pre> | **Subqueries** Can be written into [SQL Blocks](https://looker-open-source.github.io/malloy/documentation/language/sql_blocks.html). Example below |
 | <pre><code> WITH user_facts AS (...) … </code></pre>  | <pre> `source: user_facts is from(...)` </pre> | **CTEs**: can be generated through [Pipelines](https://looker-open-source.github.io/malloy/documentation/language/basic.html#pipelines-and-multi-stage-queries) and [Sources from queries](https://looker-open-source.github.io/malloy/documentation/language/source.html#sources-from-queries). |
-| <pre><code>FROM (...) AS user_facts</code></pre> | <pre> `sql: user_facts is \|\| ... ;;` </pre> | **Subqueries** Can be written into [SQL Blocks](https://malloydata.github.io/malloy/documentation/language/sql_blocks.html). Example below |
+| <pre><code>FROM (...) AS user_facts</code></pre> | <pre> `sql: user_facts is { ... }` </pre> | **Subqueries** Can be written into [SQL Blocks](https://malloydata.github.io/malloy/documentation/language/sql_blocks.html). Example below |
 | <pre><code> WITH user_facts AS (...) … </code></pre>  | <pre> `source: user_facts is from(...)` </pre> | **CTEs**: can be generated through [Pipelines](https://malloydata.github.io/malloy/documentation/language/basic.html#pipelines-and-multi-stage-queries) and [Sources from queries](https://malloydata.github.io/malloy/documentation/language/source.html#sources-from-queries). |
 
 
@@ -252,22 +252,26 @@ query: order_items -> {
 One can also define a [SQL block](https://malloydata.github.io/malloy/documentation/language/sql_blocks.html) to be used as a source in Malloy.
 
 ```malloy
-sql: order_facts is ||
- SELECT
-   order_id
-   , user_id
-   , ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY created_at) as user_order_sequence_number
- FROM malloy-data.ecomm.order_items
-;;
+sql: order_facts is {
+  select: """
+    SELECT
+      order_id
+      , user_id
+      , ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY created_at) as user_order_sequence_number
+    FROM malloy-data.ecomm.order_items
+  """
+}
 
-sql: order_items_sql is ||
- SELECT
-   id
-   , order_id
-   , created_at
- FROM malloy-data.ecomm.order_items
- WHERE status NOT IN ('Cancelled', 'Returned')
-;;
+sql: order_items_sql is {
+  select: """
+    SELECT
+      id
+      , order_id
+    , created_at
+    FROM malloy-data.ecomm.order_items
+    WHERE status NOT IN ('Cancelled', 'Returned')
+  """
+}
 
 source: order_items is from_sql(order_items_sql){
  join_one: order_facts is from_sql(order_facts) on order_id = order_facts.order_id
