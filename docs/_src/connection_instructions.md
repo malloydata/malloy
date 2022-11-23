@@ -12,7 +12,7 @@ _Note:  DuckDB is natively supported, allowing you to skip these initial steps._
 
 4. Press "Test" on the connection to confirm that you have successfully connected to the database
 
-5. Hit "Save," then dive into writing Malloy! We recommend starting with one of our Samples, which can be found [here](https://github.com/looker-open-source/malloy/tree/main/samples) or downloaded from the VS Code Plugin
+5. Hit "Save," then dive into writing Malloy! We recommend starting with one of our Samples, which can be found [here](https://github.com/malloydata/malloy/tree/main/samples) or downloaded from the VS Code Plugin
 
 <img width="393" alt="Screen Shot 2022-07-20 at 4 40 21 PM" src="https://user-images.githubusercontent.com/7178946/180100697-1cd6d1bc-4ee3-40c8-a8af-9e95eded3a6c.png">
 
