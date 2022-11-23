@@ -1,7 +1,7 @@
 
 // carrier analysis.
 //  show where carrires fly, what kinds of planes they use
-// 
+//
 // overview of carriers
 //   What percentage of the market does a carrier have?
 //   Where are their hubs and what percatage of flights go through that hub?
@@ -9,22 +9,22 @@
 
 
 // import existing source 'flights' from flights.malloy
-//  see: https://looker-open-source.github.io/malloy/documentation/language/imports.html
+//  see: https://malloydata.github.io/malloy/documentation/language/imports.html
 //
 import "2_flights.malloy"
 
-// source 'flights_carrier' refines source 'flights' 
-//  https://looker-open-source.github.io/malloy/documentation/language/source.html#source-refinement
+// source 'flights_carrier' refines source 'flights'
+//  https://malloydata.github.io/malloy/documentation/language/source.html#source-refinement
 source: flights_carrier is flights + {
 
-    // 
+    //
   // flight_count - aggregate calculation count(*), imported from
-  //  see: 
-  //    https://looker-open-source.github.io/malloy/documentation/language/aggregates.html
+  //  see:
+  //    https://malloydata.github.io/malloy/documentation/language/aggregates.html
   //
   // all(flight_count) - computes flight_count without any group_by
   //
-  // exclude(flight, carrier_name) - computes flight_count with the current 
+  // exclude(flight, carrier_name) - computes flight_count with the current
   //   group_by except carrier_name
   query: carrier_overview is {
     group_by: carrier_name is carriers.nickname
