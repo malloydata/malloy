@@ -3,7 +3,7 @@ _January 23, 2022_
 
 [⬅️ Previous Puzzle](wordle217.md)   |   [↩️ All Solved Puzzles](wordle5.md)  |  [➡️ Next Puzzle](wordle219.md)
 
-Wordlebot is written in [Malloy](https://github.com/looker-open-source/malloy/). Read about [How Wordlebot is constructed](wordle.md) (only 50 lines of code) and a good example of using data to solve interesting problems.
+Wordlebot is written in [Malloy](https://github.com/malloydata/malloy/). Read about [How Wordlebot is constructed](wordle.md) (only 50 lines of code) and a good example of using data to solve interesting problems.
 
 Today was a bit of a kerfuffle.  It turns out that the word list we were using was too small and missing the
 word we were searching for.  We found a larger dictionary and uploaded and re-ran.

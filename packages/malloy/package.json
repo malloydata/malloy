@@ -4,10 +4,10 @@
   "license": "GPL-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "homepage": "https://github.com/looker-open-source/malloy#readme",
+  "homepage": "https://github.com/malloydata/malloy#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/looker-open-source/malloy"
+    "url": "https://github.com/malloydata/malloy"
   },
   "scripts": {
     "test": "jest --config=../../jest.config.js",

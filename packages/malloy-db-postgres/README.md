@@ -4,4 +4,4 @@ Malloy is an experimental language for describing data relationships and transfo
 
 ## This package
 
-This package facilitates using the `malloydata/malloy` library with Postgres - see [here](https://github.com/looker-open-source/malloy/blob/main/packages/malloy/README.md) for additional information.
+This package facilitates using the `malloydata/malloy` library with Postgres - see [here](https://github.com/malloydata/malloy/blob/main/packages/malloy/README.md) for additional information.
