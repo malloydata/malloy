@@ -114,7 +114,8 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
               pick '=' when expect = got
               else concat('sqlEq failed', CHR(10), '    Expected: ${qExpr} == ${result}', CHR(10), '    Received: ', got::string)
           }`;
-    } else {
+    } else if (expr[0] == "'") {
+      // quoted strings
       const resultNoBacks = result.replace(/\\/g, "\\\\");
       const qResult = `'${resultNoBacks.replace(/'/g, "\\'")}'`;
       query = `${sourceDef}
@@ -128,6 +129,18 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
               else concat('sqlEq failed', CHR(10), '    Expected: ${sqlSafe(
                 expr
               )} == ${sqlSafe(result)}', CHR(10), '    Received: ', got::string)
+          }`;
+    } else {
+      const qResult = result.replace(/'/g, "`");
+      query = `${sourceDef}
+          query: basicTypes
+          -> {
+            project: expect is ${result}
+            project: got is ${expr}
+          } -> {
+            project: calc is
+              pick '=' when expect = got
+              else concat('sqlEq failed', CHR(10), '    Expected: ${qExpr} == ${qResult}', CHR(10), '    Received: ', got::string)
           }`;
     }
     return runtime.loadQuery(query).run();
