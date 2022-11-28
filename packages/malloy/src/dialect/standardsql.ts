@@ -431,4 +431,9 @@ ${indent(sql)}
     }
     return tableSQL;
   }
+
+  sqlLiteralString(literal: string): string {
+    const noVirgule = literal.replace(/\\/g, "\\\\");
+    return "'" + noVirgule.replace(/'/g, "\\'") + "'";
+  }
 }
