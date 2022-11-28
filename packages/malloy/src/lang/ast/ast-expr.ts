@@ -269,12 +269,25 @@ export class TypeMistmatch extends Error {}
 
 export class ExprString extends ExpressionDef {
   elementType = "string literal";
-  constructor(readonly value: string) {
+  value: string;
+  constructor(src: string) {
     super();
+    const bareStr = src.slice(1, -1);
+    const val = bareStr.replace(/\\(.)/g, "$1");
+    this.value = val;
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
-    return { ...FT.stringT, value: [this.value] };
+    return {
+      ...FT.stringT,
+      value: [
+        {
+          type: "dialect",
+          function: "stringLiteral",
+          literal: this.value,
+        },
+      ],
+    };
   }
 }
 
