@@ -42,8 +42,8 @@ export function makeSQLBlock(
 // here for later, and that the whole "how to determine the name of a query"
 // algorithm needs to change
 function nameFor(select: SQLPhrase[]): string {
-  const phrases = select.map((el) => {
-    isSQLFragment(el) ? el.sql : JSON.stringify(el);
-  });
+  const phrases = select.map((el) =>
+    isSQLFragment(el) ? el.sql : JSON.stringify(el)
+  );
   return md5(phrases.join(";"));
 }
