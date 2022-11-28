@@ -73,6 +73,9 @@ interface InitValues {
   malloy?: string;
 }
 
+function sqlSafe(str: string): string {
+  return str.replace(/'/g, "{single-quote}").replace(/\\/g, "{backslash}");
+}
 export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   return async function (
@@ -112,16 +115,19 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
               else concat('sqlEq failed', CHR(10), '    Expected: ${qExpr} == ${result}', CHR(10), '    Received: ', got::string)
           }`;
     } else {
-      const qResult = result.replace(/'/g, "`");
+      const resultNoBacks = result.replace(/\\/g, "\\\\");
+      const qResult = `'${resultNoBacks.replace(/'/g, "\\'")}'`;
       query = `${sourceDef}
           query: basicTypes
           -> {
-            project: expect is ${result}
+            project: expect is ${qResult}
             project: got is ${expr}
           } -> {
             project: calc is
               pick '=' when expect = got
-              else concat('sqlEq failed', CHR(10), '    Expected: ${qExpr} == ${qResult}', CHR(10), '    Received: ', got::string)
+              else concat('sqlEq failed', CHR(10), '    Expected: ${sqlSafe(
+                expr
+              )} == ${sqlSafe(result)}', CHR(10), '    Received: ', got::string)
           }`;
     }
     return runtime.loadQuery(query).run();
