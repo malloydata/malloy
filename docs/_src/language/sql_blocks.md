@@ -8,8 +8,12 @@ An SQL statement has two properties.
    _(if not specified the default connection will be used)_
 
 
+<!---
+ DISABLED BECAUSE IT GETS AN ERROR IN NPM RUN DOCS-BUILD
+ ```malloy
+ --! {"isRunnable": true, "showAs":"html", "runMode": "auto", "size": "large", "sqlBlockName": "my_sql_query" }
+-->
 ```malloy
---! {"isRunnable": true, "showAs":"html", "runMode": "auto", "size": "large", "sqlBlockName": "my_sql_query" }
 sql: my_sql_query is {
   select: """
     SELECT
@@ -26,8 +30,12 @@ sql: my_sql_query is {
 
 Sources can be created from a SQL block, e.g.
 
+<!---
+ DISABLED BECAUSE IT GETS AN ERROR IN NPM RUN DOCS-BUILD
+ ```malloy
+ --! {"isRunnable": true, "showAs":"json", "runMode": "auto", "size": "large" }
+-->
 ```malloy
---! {"isRunnable": true, "showAs":"json", "runMode": "auto", "size": "large" }
 sql: my_sql_query is {
   select: """
     SELECT
