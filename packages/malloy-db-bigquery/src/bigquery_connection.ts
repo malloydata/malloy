@@ -25,8 +25,6 @@ import { ResourceStream } from "@google-cloud/paginator";
 import * as googleCommon from "@google-cloud/common";
 import { GaxiosError } from "gaxios";
 import {
-  FetchSchemaAndRunSimultaneously,
-  FetchSchemaAndRunStreamSimultaneously,
   Malloy,
   PersistSQLResults,
   PooledConnection,
@@ -114,11 +112,7 @@ const TIMEOUT_MS = 1000 * 60 * 10;
 
 // manage access to BQ, control costs, enforce global data/API limits
 export class BigQueryConnection
-  implements
-    Connection,
-    PersistSQLResults,
-    StreamingConnection,
-    FetchSchemaAndRunSimultaneously
+  implements Connection, PersistSQLResults, StreamingConnection
 {
   static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
     rowLimit: 10,
@@ -215,14 +209,6 @@ export class BigQueryConnection
 
   public canStream(): this is StreamingConnection {
     return true;
-  }
-
-  public canFetchSchemaAndRunSimultaneously(): this is FetchSchemaAndRunSimultaneously {
-    return true;
-  }
-
-  public canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously {
-    return false;
   }
 
   private async _runSQL(

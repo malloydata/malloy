@@ -13,8 +13,6 @@
 import {
   AtomicFieldTypeInner,
   Connection,
-  FetchSchemaAndRunSimultaneously,
-  FetchSchemaAndRunStreamSimultaneously,
   MalloyQueryData,
   NamedStructDefs,
   parseTableURI,
@@ -327,16 +325,8 @@ export abstract class DuckDBCommon
     return structDef;
   }
 
-  canFetchSchemaAndRunSimultaneously(): this is FetchSchemaAndRunSimultaneously {
-    return false;
-  }
-
   canStream(): this is StreamingConnection {
     return true;
-  }
-
-  canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously {
-    return false;
   }
 
   public async test(): Promise<void> {

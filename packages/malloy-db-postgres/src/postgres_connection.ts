@@ -19,8 +19,6 @@
 
 import * as crypto from "crypto";
 import {
-  FetchSchemaAndRunSimultaneously,
-  FetchSchemaAndRunStreamSimultaneously,
   PersistSQLResults,
   RunSQLOptions,
   StreamingConnection,
@@ -143,15 +141,6 @@ export class PostgresConnection
 
   public canPersist(): this is PersistSQLResults {
     return true;
-  }
-
-  public canFetchSchemaAndRunSimultaneously(): this is FetchSchemaAndRunSimultaneously {
-    // TODO feature-sql-block Implement FetchSchemaAndRunSimultaneously
-    return false;
-  }
-
-  public canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously {
-    return false;
   }
 
   public canStream(): this is StreamingConnection {
