@@ -640,9 +640,7 @@ export class TableSource extends Mallobj {
         };
       }
       if (tableDefEntry.status == "error") {
-        msg = tableDefEntry.message.includes(this.name)
-          ? `'Schema error: ${tableDefEntry.message}`
-          : `Schema error '${this.name}': ${tableDefEntry.message}`;
+        msg = tableDefEntry.message;
       }
     }
     this.log(msg);
