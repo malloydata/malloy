@@ -173,6 +173,8 @@ export abstract class Dialect {
     timezone: string
   ): string;
 
+  abstract sqlLiteralString(literak: string): string;
+
   abstract sqlRegexpMatch(expr: Expr, regex: string): Expr;
 
   getFunctionInfo(functionName: string): FunctionInfo | undefined {
@@ -203,6 +205,8 @@ export abstract class Dialect {
       }
       case "timeLiteral":
         return [this.sqlLiteralTime(df.literal, df.literalType, df.timezone)];
+      case "stringLiteral":
+        return [this.sqlLiteralString(df.literal)];
     }
   }
 

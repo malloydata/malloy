@@ -1004,4 +1004,33 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
     expect(result.data.path(0, "ugly", 0, "foo").value).toBe(null);
   });
+
+  describe("quoting and strings", () => {
+    const tick = "'";
+    const back = "\\";
+    test("backslash quote", async () => {
+      const result = await runtime
+        .loadQuery(
+          `
+            query: table('malloytest.state_facts') -> {
+              project: tick is '${back}${tick}'
+            }
+        `
+        )
+        .run();
+      expect(result.data.value[0].tick).toBe(tick);
+    });
+    test("backslash backslash", async () => {
+      const result = await runtime
+        .loadQuery(
+          `
+            query: table('malloytest.state_facts') -> {
+              project: back is '${back}${back}'
+            }
+        `
+        )
+        .run();
+      expect(result.data.value[0].back).toBe(back);
+    });
+  });
 });

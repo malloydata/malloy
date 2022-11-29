@@ -1779,6 +1779,8 @@ class QueryQuery extends QueryField {
             break;
           case "timeLiteral":
             break;
+          case "stringLiteral":
+            break;
           case "timeDiff":
             expressions.push(expr.left.value, expr.right.value);
             break;

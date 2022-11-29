@@ -279,6 +279,11 @@ export interface TimeLiteralFragment extends DialectFragmentBase {
   timezone: string;
 }
 
+export interface StringLiteralFragment extends DialectFragmentBase {
+  function: "stringLiteral";
+  literal: string;
+}
+
 export type DialectFragment =
   | DivFragment
   | TimeLiteralFragment
@@ -288,6 +293,7 @@ export type DialectFragment =
   | TimeTruncFragment
   | TypecastFragment
   | TimeExtractFragment
+  | StringLiteralFragment
   | RegexpMatchFragment;
 
 export type Fragment =

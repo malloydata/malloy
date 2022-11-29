@@ -569,14 +569,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
 });
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
-  const sqlEq = mkSqlEqWith(runtime, {
-    malloy: `+ {
-      dimension: friName is 'friday'
-      dimension: friDay is 5
-      dimension: satName is 'saturday'
-      dimension: satDay is 6
-    }`,
-  });
+  const sqlEq = mkSqlEqWith(runtime);
 
   describe.skip(`alternations with not-eq - ${databaseName}`, () => {
     /*
@@ -712,6 +705,20 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       expect(
         await sqlEq("years(@2022-01-01 10:00 to @2024-01-01 09:00)", 2)
       ).isSqlEq();
+    });
+  });
+
+  describe("string literal quoting", () => {
+    const tick = "'";
+    const back = "\\";
+    test("quote single character", async () => {
+      expect(await sqlEq(`'${back}x'`, "x")).isSqlEq();
+    });
+    test("quote single quote", async () => {
+      expect(await sqlEq(`'${back}${tick}'`, tick)).isSqlEq();
+    });
+    test("quote backslash", async () => {
+      expect(await sqlEq(`'${back}${back}'`, back)).isSqlEq();
     });
   });
 });

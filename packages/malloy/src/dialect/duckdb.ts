@@ -428,4 +428,8 @@ export class DuckDBDialect extends Dialect {
   sqlOrderBy(orderTerms: string[]): string {
     return `ORDER BY ${orderTerms.map((t) => `${t} NULLS LAST`).join(",")}`;
   }
+
+  sqlLiteralString(literal: string): string {
+    return "'" + literal.replace(/'/g, "''") + "'";
+  }
 }
