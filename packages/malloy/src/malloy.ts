@@ -377,9 +377,6 @@ export class Malloy {
       }
       const connectionName =
         sqlBlock?.connection || preparedResult?.connectionName;
-      if (!connectionName) {
-        throw new Error("Internal Error: Can't run without connection");
-      }
       connection = await connections.lookupConnection(connectionName);
     }
     if (sqlStruct && sqlBlock) {
