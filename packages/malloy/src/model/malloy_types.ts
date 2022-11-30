@@ -70,7 +70,7 @@ export interface DocumentJoinReference extends DocumentReferenceBase {
 
 export interface DocumentSQLBlockReference extends DocumentReferenceBase {
   type: "sqlBlockReference";
-  definition: SQLBlock;
+  definition: SQLBlockStructDef;
 }
 
 export interface DocumentQueryReference extends DocumentReferenceBase {

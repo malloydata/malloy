@@ -186,12 +186,10 @@ export abstract class MalloyElement {
         });
       } else if (result?.entry.type === "struct") {
         if (model.isSQLBlock(result.entry)) {
-          // TODO not sure what we should collect here, this is just a
-          // "make it compile" edit
           this.addReference({
             type: "sqlBlockReference",
             text: key,
-            definition: result.entry.structSource.sqlBlock,
+            definition: result.entry,
             location: reference.location,
           });
         } else {

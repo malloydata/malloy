@@ -1904,8 +1904,7 @@ describe("source references", () => {
     });
   });
 
-  // TODO CHRIS NEEDS TO HELP ME HERE
-  test.skip("reference to sql block", () => {
+  test("reference to sql block", () => {
     const source = markSource`
       ${`sql: s is {select:"""SELECT 1 as one"""}`}
       explore: na is from_sql(${"s"})
@@ -1919,11 +1918,13 @@ describe("source references", () => {
         compileSQL: { [compileSql.name]: getSelectOneStruct(compileSql) },
       });
       expect(m).modelCompiled();
-      expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
+      const ref = m.referenceAt(pos(source.locations[1]));
+      expect(ref).toMatchObject({
         location: source.locations[1],
         type: "sqlBlockReference",
         text: "s",
         definition: {
+          ...getSelectOneStruct(compileSql),
           location: source.locations[0],
         },
       });
