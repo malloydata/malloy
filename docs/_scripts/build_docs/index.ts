@@ -223,7 +223,7 @@ async function outputSamplesZips(): Promise<void> {
         }
       }
     });
-    watchDebouncedRecursive(SAMPLES_PATH, (type, file) => {
+    watchDebouncedRecursive(SAMPLES_BIGQUERY_PATH, (type, file) => {
       log(`Model file ${file} ${type}d. Recompiling dependent documents...`);
       for (const doc of DEPENDENCIES.get(file) || []) {
         const fullPath = path.join(DOCS_ROOT_PATH, doc);
