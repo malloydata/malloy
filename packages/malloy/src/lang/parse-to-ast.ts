@@ -148,6 +148,15 @@ export class MalloyToAST
     return Number.parseInt(term.text);
   }
 
+  protected optionalString(
+    fromTerm: ParseTree | undefined
+  ): string | undefined {
+    if (fromTerm) {
+      return this.stripQuotes(fromTerm.text);
+    }
+    return undefined;
+  }
+
   protected getIdText(fromTerm: ParseTree): string {
     return this.stripQuotes(fromTerm.text);
   }
@@ -256,6 +265,22 @@ export class MalloyToAST
     );
   }
 
+  protected makeSqlString(
+    pcx: parse.SqlStringContext,
+    sqlStr: ast.SQLString
+  ): void {
+    for (const part of pcx.sqlInterpolation()) {
+      const upToOpen = part.OPEN_CODE().text;
+      if (upToOpen.length > 2) {
+        sqlStr.push(upToOpen.slice(0, upToOpen.length - 2));
+      }
+      sqlStr.push(this.visit(part.query()));
+    }
+    const lastChars = pcx.SQL_END()?.text.slice(0, -3);
+    sqlStr.push(lastChars || "");
+    this.astAt(sqlStr, pcx);
+  }
+
   visitMalloyDocument(pcx: parse.MalloyDocumentContext): ast.Document {
     const stmts = this.onlyDocStatements(
       pcx.malloyStatement().map((scx) => this.visit(scx))
@@ -317,7 +342,7 @@ export class MalloyToAST
     return this.visitExploreTable(pcx.exploreTable());
   }
 
-  visitSQLSource(pcx: parse.SQLSourceContext): ast.SQLSource {
+  visitSQLSourceName(pcx: parse.SQLSourceNameContext): ast.SQLSource {
     const name = this.getModelEntryName(pcx.sqlExploreNameRef());
     return this.astAt(new ast.SQLSource(name), pcx);
   }
@@ -1130,20 +1155,30 @@ export class MalloyToAST
   visitDefineSQLStatement(
     pcx: parse.DefineSQLStatementContext
   ): ast.SQLStatement {
-    return this.visitSQLStatementDef(pcx.sqlStatementDef());
-  }
-
-  visitSQLStatementDef(pcx: parse.SqlStatementDefContext): ast.SQLStatement {
-    const commands = pcx.SQL_STRING().text;
-    const sqlStmt = new ast.SQLStatement({
-      select: commands.slice(2, commands.length - 2),
-      connection: this.optionalText(pcx.connectionName()),
-    });
-    const nameCx = pcx.sqlCommandNameDef();
-    if (nameCx) {
-      sqlStmt.is = this.getIdText(nameCx);
+    const blockName = pcx.nameSQLBlock()?.text;
+    const blockParts = pcx.sqlBlock().blockSQLDef();
+    const sqlStr = new ast.SQLString();
+    let connectionName: string | undefined;
+    for (const blockEnt of blockParts) {
+      const nmCx = blockEnt.connectionName();
+      if (nmCx) {
+        if (connectionName) {
+          this.contextError(nmCx, "Cannot redefine connection");
+        } else {
+          connectionName = this.getIdText(nmCx);
+        }
+      }
+      const selCx = blockEnt.sqlString();
+      if (selCx) {
+        this.makeSqlString(selCx, sqlStr);
+      }
     }
-    return this.astAt(sqlStmt, pcx);
+    const stmt = new ast.SQLStatement(sqlStr);
+    if (connectionName !== undefined) {
+      stmt.connection = connectionName;
+    }
+    stmt.is = blockName;
+    return this.astAt(stmt, pcx);
   }
 
   visitSampleStatement(pcx: parse.SampleStatementContext): ast.SampleProperty {

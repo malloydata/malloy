@@ -498,9 +498,7 @@ describe("Datetimes", () => {
         const result = await runtime
           .loadQuery(
             `
-        sql: one is ||
-          ${basicTypes[databaseName]}
-        ;;
+        sql: one is {select:"""${basicTypes[databaseName]}"""}
 
         source: main is from_sql(one) {
           join_one: joined is from_sql(one) on t_date = joined.t_date

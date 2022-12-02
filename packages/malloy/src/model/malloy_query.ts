@@ -3561,7 +3561,7 @@ class QueryStruct extends QueryNode {
         ) {
           return this.fieldDef.name;
         } else if (this.fieldDef.structSource.method === "subquery") {
-          return `(${this.fieldDef.structSource.sqlBlock.select})`;
+          return `(${this.fieldDef.structSource.sqlBlock.selectStr})`;
         }
         throw new Error(
           "Internal Error: Unknown structSource type 'sql' method"

@@ -70,7 +70,7 @@ export interface DocumentJoinReference extends DocumentReferenceBase {
 
 export interface DocumentSQLBlockReference extends DocumentReferenceBase {
   type: "sqlBlockReference";
-  definition: SQLBlock;
+  definition: SQLBlockStructDef;
 }
 
 export interface DocumentQueryReference extends DocumentReferenceBase {
@@ -606,20 +606,28 @@ export type StructRelationship =
   | { type: "inline" }
   | { type: "nested"; field: FieldRef; isArray: boolean };
 
-export interface SQLSelectStatements {
-  before?: string[];
-  select: string;
-  after?: string[];
+export interface SQLFragment {
+  sql: string;
+}
+export type SQLPhrase = Query | SQLFragment;
+export function isSQLFragment(f: SQLPhrase): f is SQLFragment {
+  return (f as SQLFragment).sql !== undefined;
+}
+/**
+ * A source reference to an SQL block. The compiler uses these to request
+ * an SQLBlock with it's schema and structdef defined. Use the factory
+ * makeSQLBlock to construct these.
+ */
+export interface SQLBlockSource {
+  name: string;
+  connection?: string;
+  select: SQLPhrase[];
 }
 
-/**
- * Use factory makeSQLBlock to create one of these, it will compute the
- * name: property and fill it in.
- */
-export interface SQLBlock extends NamedObject, SQLSelectStatements {
+export interface SQLBlock extends NamedObject {
   type: "sqlBlock";
-  name: string; //  hash of the connection and the select
   connection?: string;
+  selectStr: string;
 }
 
 interface SubquerySource {
@@ -650,6 +658,15 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
   primaryKey?: PrimaryKeyRef;
   parameters?: Record<string, Parameter>;
   dialect: string;
+}
+
+export interface SQLBlockStructDef extends StructDef {
+  structSource: SubquerySource;
+}
+
+export function isSQLBlock(sd: StructDef): sd is SQLBlockStructDef {
+  const src = sd.structSource;
+  return src.type == "sql" && src.method == "subquery";
 }
 
 // /** the resulting structure of the query (and it's source) */

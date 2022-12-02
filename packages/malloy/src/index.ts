@@ -116,9 +116,7 @@ export type {
   PooledConnection,
   TestableConnection,
   PersistSQLResults,
-  FetchSchemaAndRunSimultaneously,
   StreamingConnection,
-  FetchSchemaAndRunStreamSimultaneously,
 } from "./runtime_types";
 export type { Loggable } from "./malloy";
 export { toAsyncGenerator } from "./connection_utils";

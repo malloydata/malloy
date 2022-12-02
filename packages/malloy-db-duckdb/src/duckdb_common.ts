@@ -13,8 +13,6 @@
 import {
   AtomicFieldTypeInner,
   Connection,
-  FetchSchemaAndRunSimultaneously,
-  FetchSchemaAndRunStreamSimultaneously,
   MalloyQueryData,
   NamedStructDefs,
   parseTableURI,
@@ -124,16 +122,6 @@ export abstract class DuckDBCommon
     _options: RunSQLOptions
   ): AsyncIterableIterator<QueryDataRow>;
 
-  public async runSQLBlockAndFetchResultSchema(
-    sqlBlock: SQLBlock
-  ): Promise<{ data: MalloyQueryData; schema: StructDef }> {
-    const data = await this.runSQL(sqlBlock.select);
-    const schema = (await this.fetchSchemaForSQLBlocks([sqlBlock])).schemas[
-      sqlBlock.name
-    ];
-    return { data, schema };
-  }
-
   private async getSQLBlockSchema(sqlRef: SQLBlock): Promise<StructDef> {
     const structDef: StructDef = {
       type: "struct",
@@ -152,7 +140,7 @@ export abstract class DuckDBCommon
     };
 
     await this.schemaFromQuery(
-      `DESCRIBE SELECT * FROM (${sqlRef.select})`,
+      `DESCRIBE SELECT * FROM (${sqlRef.selectStr})`,
       structDef
     );
     return structDef;
@@ -285,21 +273,17 @@ export abstract class DuckDBCommon
     this.fillStructDefFromTypeMap(structDef, typeMap);
   }
 
-  public async fetchSchemaForSQLBlocks(sqlRefs: SQLBlock[]): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }> {
-    const schemas: NamedStructDefs = {};
-    const errors: { [name: string]: string } = {};
-
-    for (const sqlRef of sqlRefs) {
-      try {
-        schemas[sqlRef.name] = await this.getSQLBlockSchema(sqlRef);
-      } catch (error) {
-        errors[sqlRef.name] = error;
-      }
+  public async fetchSchemaForSQLBlock(
+    sqlRef: SQLBlock
+  ): Promise<
+    | { structDef: StructDef; error?: undefined }
+    | { error: string; structDef?: undefined }
+  > {
+    try {
+      return { structDef: await this.getSQLBlockSchema(sqlRef) };
+    } catch (error) {
+      return { error: error.message };
     }
-    return { schemas, errors };
   }
 
   public async fetchSchemaForTables(tables: string[]): Promise<{
@@ -341,16 +325,8 @@ export abstract class DuckDBCommon
     return structDef;
   }
 
-  canFetchSchemaAndRunSimultaneously(): this is FetchSchemaAndRunSimultaneously {
-    return false;
-  }
-
   canStream(): this is StreamingConnection {
     return true;
-  }
-
-  canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously {
-    return false;
   }
 
   public async test(): Promise<void> {
