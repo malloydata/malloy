@@ -1561,6 +1561,11 @@ describe("error handling", () => {
     }
     `)
   );
+  test("popping out of embedding when not embedded", () => {
+    expect("}%").compileToFailWith(
+      "extraneous input '}%' expecting {<EOF>, EXPLORE, QUERY, SOURCE, SQL, IMPORT, ';'}"
+    );
+  });
 });
 
 function getSelectOneStruct(sqlBlock: SQLBlockSource): SQLBlockStructDef {
