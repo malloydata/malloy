@@ -546,8 +546,8 @@ export class ExprAddSub extends BinaryNumeric<"+" | "-"> {
   elementType = "+-";
 }
 
-export class ExprMulDiv extends BinaryNumeric<"*" | "/"> {
-  elementType = "*/";
+export class ExprMulDiv extends BinaryNumeric<"*" | "/" | "%"> {
+  elementType = "*/%";
 }
 
 export class ExprAlternationTree extends BinaryBoolean<"|" | "&"> {

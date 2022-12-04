@@ -379,7 +379,7 @@ fieldExpr
   | fieldExpr timeframe                                    # exprDuration
   | fieldExpr DOT timeframe                                # exprTimeTrunc
   | fieldExpr DOUBLECOLON malloyType                       # exprSafeCast
-  | fieldExpr ( STAR | SLASH ) fieldExpr                   # exprMulDiv
+  | fieldExpr ( STAR | SLASH | PERCENT ) fieldExpr         # exprMulDiv
   | fieldExpr ( PLUS | MINUS ) fieldExpr                   # exprAddSub
   | fieldExpr TO fieldExpr                                 # exprRange
   | startAt=fieldExpr FOR duration=fieldExpr timeframe     # exprForRange

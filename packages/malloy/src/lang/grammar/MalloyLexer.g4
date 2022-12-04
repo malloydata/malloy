@@ -145,6 +145,7 @@ BAR: '|' ;
 SEMI: ';' ;
 NOT_MATCH: '!~' ;
 MATCH: '~' ;
+PERCENT: '%';
 
 fragment F_YEAR: DIGIT DIGIT DIGIT DIGIT;
 fragment F_DD: DIGIT DIGIT;

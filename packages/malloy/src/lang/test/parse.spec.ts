@@ -1146,6 +1146,7 @@ describe("expressions", () => {
     test("addition", exprOK("42 + 7"));
     test("subtraction", exprOK("42 - 7"));
     test("multiplication", exprOK("42 * 7"));
+    test("mod", exprOK("42 % 7"));
     test("division", exprOK("42 / 7"));
     test("unary negation", exprOK("- ai"));
     test("equal", exprOK("42 = 7"));

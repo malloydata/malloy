@@ -899,9 +899,10 @@ export class MalloyToAST
   }
 
   visitExprMulDiv(pcx: parse.ExprMulDivContext): ast.ExprMulDiv {
+    const op = pcx.STAR() ? "*" : pcx.SLASH() ? "/" : "%";
     return new ast.ExprMulDiv(
       this.getFieldExpr(pcx.fieldExpr(0)),
-      pcx.STAR() ? "*" : "/",
+      op,
       this.getFieldExpr(pcx.fieldExpr(1))
     );
   }
