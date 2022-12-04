@@ -59,6 +59,19 @@ import {
 } from "./parse-tree-walkers/document-help-context-walker";
 import { ReferenceList } from "./reference-list";
 
+/**
+ * This ignores a -> popMode when the mode stack is empty, which is a hack,
+ * but it let's us parse }%
+ */
+class HandlesOverpoppingLexer extends MalloyLexer {
+  popMode(): number {
+    if (this._modeStack.isEmpty) {
+      return this._mode;
+    }
+    return super.popMode();
+  }
+}
+
 class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
   constructor(
     readonly translator: MalloyTranslation,
@@ -236,7 +249,15 @@ class ParseStep implements TranslationStep {
     const source = srcEnt.value == "" ? "\n" : srcEnt.value;
     this.sourceInfo = this.getSourceInfo(source);
 
-    const parse = this.runParser(source, that);
+    let parse: MalloyParseRoot | undefined;
+    try {
+      parse = this.runParser(source, that);
+    } catch (parseException) {
+      that.root.logger.log({
+        message: `Malloy internal parser exception [${parseException.message}]`,
+      });
+      parse = undefined;
+    }
 
     if (that.root.logger.hasErrors()) {
       this.response = {
@@ -286,7 +307,7 @@ class ParseStep implements TranslationStep {
 
   private runParser(source: string, that: MalloyTranslation): MalloyParseRoot {
     const inputStream = CharStreams.fromString(source);
-    const lexer = new MalloyLexer(inputStream);
+    const lexer = new HandlesOverpoppingLexer(inputStream);
     const tokenStream = new CommonTokenStream(lexer);
     const malloyParser = new MalloyParser(tokenStream);
     malloyParser.removeErrorListeners();
