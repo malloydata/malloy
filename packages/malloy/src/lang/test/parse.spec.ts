@@ -1431,6 +1431,22 @@ describe("sql:", () => {
       expect(where).toEqual({ sql: " WHERE 1=1" });
     }
   });
+  it("model preserved", () => {
+    const selStmt = "SELECT * FROM aTable";
+    const shouldBeOK = `
+      source: newa is a
+      sql: someSql is { select: """${selStmt}""" }
+      source: newaa is newa
+    `;
+    const model = new BetaModel(shouldBeOK);
+    expect(model).modelParsed();
+    const needReq = model.translate();
+    const needs = needReq?.compileSQL;
+    expect(needs).toBeDefined();
+    const sql = makeSQLBlock([{ sql: selStmt }]);
+    model.update({ compileSQL: { [sql.name]: makeSchemaResponse(sql) } });
+    expect(model).modelCompiled();
+  });
 });
 
 describe("error handling", () => {
