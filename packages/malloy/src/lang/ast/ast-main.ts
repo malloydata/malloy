@@ -1579,6 +1579,7 @@ export class Document extends MalloyElement implements NameSpace {
   queryList: model.Query[] = [];
   sqlBlocks: model.SQLBlockStructDef[] = [];
   statements: RunList;
+  didInitModel = false;
 
   constructor(statements: DocStatement[]) {
     super();
@@ -1587,6 +1588,9 @@ export class Document extends MalloyElement implements NameSpace {
   }
 
   initModelDef(extendingModelDef: model.ModelDef | undefined): void {
+    if (this.didInitModel) {
+      return;
+    }
     this.documentModel = {};
     this.queryList = [];
     this.sqlBlocks = [];
@@ -1599,6 +1603,7 @@ export class Document extends MalloyElement implements NameSpace {
         }
       }
     }
+    this.didInitModel = true;
   }
 
   compile(): DocumentCompileResult {
