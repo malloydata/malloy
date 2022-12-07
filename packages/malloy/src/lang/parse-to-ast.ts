@@ -837,15 +837,14 @@ export class MalloyToAST
     pcx: parse.PartialAllowedFieldExprContext
   ): ast.ExpressionDef {
     const fieldExpr = this.getFieldExpr(pcx.fieldExpr());
-    const partialOp = pcx.compareOp();
+    const partialOp = pcx.compareOp()?.text;
     if (partialOp) {
-      const op = partialOp.text;
-      if (ast.isComparison(op)) {
-        return this.astAt(new ast.PartialCompare(op, fieldExpr), pcx);
+      if (ast.isComparison(partialOp)) {
+        return this.astAt(new ast.PartialCompare(partialOp, fieldExpr), pcx);
       }
       throw this.internalError(
         pcx,
-        `partial comparison '${op}' not recognized`
+        `partial comparison '${partialOp}' not recognized`
       );
     }
     return fieldExpr;
