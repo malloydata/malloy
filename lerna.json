@@ -2,7 +2,7 @@
   "$schema": "node_modules/lerna/schemas/lerna-schema.json",
   "useNx": false,
   "useWorkspaces": true,
-  "version": "0.0.14",
+  "version": "0.0.15",
   "command": {
     "version": {
       "allowBranch": "main"
