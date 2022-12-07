@@ -317,7 +317,7 @@ export abstract class DuckDBCommon
       fields: [],
     };
 
-    const quotedTablePath = tablePath.match(/\//)
+    const quotedTablePath = tablePath.match(/[:*/]/)
       ? `'${tablePath}'`
       : tablePath;
     const infoQuery = `DESCRIBE SELECT * FROM ${quotedTablePath}`;
