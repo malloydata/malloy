@@ -33,8 +33,7 @@
     "docs-serve": "npm run docs-prebuild && concurrently --kill-others 'npm run docs-preprocess' 'npm run docs-postprocess'",
     "third-party-licenses": "ts-node scripts/third_party_licenses",
     "malloyc": "ts-node scripts/malloy-to-json",
-    "build-duckdb-db": "ts-node scripts/build_duckdb_test_database",
-    "update-duckdb": "ts-node scripts/update_duckdb"
+    "build-duckdb-db": "ts-node scripts/build_duckdb_test_database"
   },
   "devDependencies": {
     "@jest/globals": "^26.6.2",

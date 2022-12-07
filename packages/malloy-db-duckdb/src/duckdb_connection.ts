@@ -23,8 +23,8 @@ export class DuckDBConnection extends DuckDBCommon {
 
   constructor(
     public readonly name: string,
-    databasePath = "test/data/duckdb/duckdb_test.db",
-    private workingDirectory = "/",
+    databasePath = ":memory:",
+    private workingDirectory = ".",
     queryOptions?: QueryOptionsReader
   ) {
     super(queryOptions);
