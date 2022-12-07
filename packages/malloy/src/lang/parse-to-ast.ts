@@ -833,18 +833,22 @@ export class MalloyToAST
     return new ast.ExprAlternationTree(left, pcx.AMPER() ? "&" : "|", right);
   }
 
-  visitExprNotPartial(pcx: parse.ExprNotPartialContext): ast.ExpressionDef {
-    return this.getFieldExpr(pcx.fieldExpr());
-  }
-
-  visitExprPartialCompare(
-    pcx: parse.ExprPartialCompareContext
-  ): ast.MalloyElement {
-    const op = pcx.compareOp().text;
-    if (ast.isComparison(op)) {
-      return new ast.PartialCompare(op, this.getFieldExpr(pcx.fieldExpr()));
+  visitPartialAllowedFieldExpr(
+    pcx: parse.PartialAllowedFieldExprContext
+  ): ast.ExpressionDef {
+    const fieldExpr = this.getFieldExpr(pcx.fieldExpr());
+    const partialOp = pcx.compareOp();
+    if (partialOp) {
+      const op = partialOp.text;
+      if (ast.isComparison(op)) {
+        return this.astAt(new ast.PartialCompare(op, fieldExpr), pcx);
+      }
+      throw this.internalError(
+        pcx,
+        `partial comparison '${op}' not recognized`
+      );
     }
-    throw this.internalError(pcx, `partial comparison '${op}' not recognized`);
+    return fieldExpr;
   }
 
   visitExprString(pcx: parse.ExprStringContext): ast.ExprString {
