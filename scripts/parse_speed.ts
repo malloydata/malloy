@@ -12,7 +12,7 @@
  */
 /* eslint-disable no-console */
 import { Malloy, Connection } from "@malloydata/malloy";
-import { DuckDBConnection  } from "@malloydata/db-duckdb";
+import { DuckDBConnection } from "@malloydata/db-duckdb";
 import { readFile } from "fs/promises";
 import { readFileSync } from "fs";
 import { performance } from "perf_hooks";
@@ -32,11 +32,12 @@ async function translate(fileSrc: string, fileURL: string) {
     const src = await readFile(filePath, { encoding: "utf-8" });
     return src;
   };
-  await Malloy.compile({
+  const compiled = await Malloy.compile({
     urlReader: { readURL },
     connections: { lookupConnection },
     parse,
   });
+  compiled._modelDef;
 }
 
 function fullPath(fn: string): string {
@@ -52,14 +53,28 @@ async function main() {
       const filePath = fullPath(fileArg);
       const src = readFileSync(filePath, "utf-8");
       const url = `file:/${filePath}`;
-      console.log(`Begin benchmark marse for ${fileArg}`);
-      for (let i = 0; i < 100; i++) {
-        console.log("RUN");
+      const lines = src.split("\n").length;
+      console.log(
+        `Begin benchmark parse for ${fileArg}. ${lines} lines, ${src.length} characters`
+      );
+      let firstRun = 0;
+      let total = 0;
+      const runCount = 100;
+      for (let i = 0; i < runCount; i++) {
         const fromTime = performance.now();
         await translate(src, url);
         const elapsed = performance.now() - fromTime;
-        console.log(`#${i} ${elapsed}`);
+        if (i % 5 == 0) {
+          console.log(`#${i} ${elapsed}`);
+        }
+        if (i == 0) {
+          firstRun = elapsed;
+        } else if (i >= 5) {
+          total += elapsed;
+        }
       }
+      console.log("First run: ", firstRun);
+      console.log("Warm Average: ", total / (runCount - 5));
     }
   }
 }
