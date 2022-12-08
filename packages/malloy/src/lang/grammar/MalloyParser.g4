@@ -400,8 +400,7 @@ fieldExpr
   ;
 
 partialAllowedFieldExpr
-  : compareOp fieldExpr                                    # exprPartialCompare
-  | fieldExpr                                              # exprNotPartial
+  : compareOp? fieldExpr
   ;
 
 pickStatement
