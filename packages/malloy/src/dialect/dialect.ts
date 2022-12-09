@@ -61,6 +61,7 @@ export abstract class Dialect {
   abstract defaultSampling: Sampling;
   abstract supportUnnestArrayAgg: boolean; // won't need UDFs for nested pipelines
   abstract supportsCTEinCoorelatedSubQueries: boolean;
+  abstract dontUnionIndex: boolean;
 
   // return a quoted string for use as a table path.
   abstract quoteTablePath(tablePath: string): string;
