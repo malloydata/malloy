@@ -5,7 +5,7 @@
   "version": "0.0.15",
   "command": {
     "version": {
-      "allowBranch": "main"
+      "allowBranch": "test-deploy-release"
     }
   }
 }
