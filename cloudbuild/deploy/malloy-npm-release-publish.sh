@@ -10,6 +10,7 @@ nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --keep BRANCH_NAME --command "
   git branch \$BRANCH_NAME
   git checkout \$BRANCH_NAME
   # Configure git user
+  git remote set-url origin git@github.com:malloydata/malloy
   git config --global user.email "malloy-ci-bot@google.com"
   git config --global user.name "Malloy CI Bot"
   # Build
@@ -31,7 +32,6 @@ nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --keep BRANCH_NAME --command "
   echo Updating to \$VERSION
   # Push new version to github
   git commit -am "Version \$VERSION-dev"
-  git remote set-url origin git@github.com:malloydata/malloy
   git push origin \$BRANCH_NAME
 NIXCMD
 )"
