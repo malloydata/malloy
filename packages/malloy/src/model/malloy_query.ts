@@ -3190,7 +3190,8 @@ class QueryQueryIndex extends QueryQuery {
         f instanceof QueryStruct &&
         (f.fieldDef.structRelationship.type === "many" ||
           f.fieldDef.structRelationship.type === "nested") &&
-        f.fieldDef.fields.length > 1 // leave arrays in parent.
+        f.fieldDef.fields.length > 1 && // leave arrays in parent.
+        this.parent.dialect.dontUnionIndex === false
       ) {
         this.fanPrefixMap[f.getFullOutputName()] = [];
         this.findFanPrefexes(f);
@@ -3485,7 +3486,7 @@ class QueryStruct extends QueryNode {
     }
     // if this is an inline object, include the parents alias.
     if (this.fieldDef.structRelationship.type === "inline" && this.parent) {
-      return this.parent.getIdentifier() + "." + super.getIdentifier();
+      return this.parent.getSQLIdentifier() + "." + super.getIdentifier();
     }
     // we are somewhere in the join tree.  Make sure the alias is unique.
     return this.getAliasIdentifier();
