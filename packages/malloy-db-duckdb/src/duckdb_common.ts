@@ -53,6 +53,17 @@ export abstract class DuckDBCommon
     rowLimit: 10,
   };
 
+  private schemaCache = new Map<
+    string,
+    | { schema: StructDef; error?: undefined }
+    | { error: string; schema?: undefined }
+  >();
+  private sqlSchemaCache = new Map<
+    string,
+    | { structDef: StructDef; error?: undefined }
+    | { error: string; structDef?: undefined }
+  >();
+
   public readonly name: string = "duckdb_common";
 
   get dialectName(): string {
@@ -279,11 +290,19 @@ export abstract class DuckDBCommon
     | { structDef: StructDef; error?: undefined }
     | { error: string; structDef?: undefined }
   > {
-    try {
-      return { structDef: await this.getSQLBlockSchema(sqlRef) };
-    } catch (error) {
-      return { error: error.message };
+    const key = sqlRef.name;
+    let inCache = this.sqlSchemaCache.get(key);
+    if (!inCache) {
+      try {
+        inCache = {
+          structDef: await this.getSQLBlockSchema(sqlRef),
+        };
+      } catch (error) {
+        inCache = { error: error.message };
+      }
+      this.sqlSchemaCache.set(key, inCache);
     }
+    return inCache;
   }
 
   public async fetchSchemaForTables(tables: string[]): Promise<{
@@ -294,10 +313,21 @@ export abstract class DuckDBCommon
     const errors: { [name: string]: string } = {};
 
     for (const tableURL of tables) {
-      try {
-        schemas[tableURL] = await this.getTableSchema(tableURL);
-      } catch (error) {
-        errors[tableURL] = error.toString();
+      let inCache = this.schemaCache.get(tableURL);
+      if (!inCache) {
+        try {
+          inCache = {
+            schema: await this.getTableSchema(tableURL),
+          };
+          this.schemaCache.set(tableURL, inCache);
+        } catch (error) {
+          inCache = { error: error.message };
+        }
+      }
+      if (inCache.schema !== undefined) {
+        schemas[tableURL] = inCache.schema;
+      } else {
+        errors[tableURL] = inCache.error;
       }
     }
     return { schemas, errors };

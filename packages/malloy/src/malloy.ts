@@ -750,11 +750,12 @@ export function parseTableURI(tableURI: string): {
   connectionName?: string;
   tablePath: string;
 } {
-  const [firstPart, secondPart] = tableURI.split(":");
-  if (secondPart) {
+  const parts = tableURI.match(/^([^:]*):(.*)$/);
+  if (parts) {
+    const [, firstPart, secondPart] = parts;
     return { connectionName: firstPart, tablePath: secondPart };
   } else {
-    return { tablePath: firstPart };
+    return { tablePath: tableURI };
   }
 }
 
