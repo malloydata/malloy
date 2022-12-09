@@ -2,7 +2,7 @@
 //  Where do carriers fly?
 
 // flight_count - imported from flights.malloy
-//    https://looker-open-source.github.io/malloy/documentation/language/aggregates.html
+//    https://malloydata.github.io/malloy/documentation/language/aggregates.html
 
 import "2_flights.malloy"
 source: flights_carrier is flights {
@@ -18,10 +18,10 @@ source: flights_carrier is flights {
   }
 
   // Nests results
-  //  see: https://looker-open-source.github.io/malloy/documentation/language/nesting.html
+  //  see: https://malloydata.github.io/malloy/documentation/language/nesting.html
   //
   // Segment Map
-  //  see: https://looker-open-source.github.io/malloy/documentation/visualizations/segment_maps.html
+  //  see: https://malloydata.github.io/malloy/documentation/visualizations/segment_maps.html
   query: carrier_routes is {
     group_by: carriers.nickname
     aggregate: flight_count

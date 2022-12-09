@@ -1,25 +1,26 @@
 {
   "name": "@malloydata/db-bigquery",
-  "version": "0.0.3",
+  "version": "0.0.15",
   "license": "GPL-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "homepage": "https://github.com/looker-open-source/malloy#readme",
+  "homepage": "https://github.com/malloydata/malloy#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/looker-open-source/malloy"
+    "url": "https://github.com/malloydata/malloy"
   },
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
     "build": "tsc --build",
-    "malloyc": "ts-node ../../scripts/malloy-to-json"
+    "malloyc": "ts-node ../../scripts/malloy-to-json",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@google-cloud/bigquery": "^5.5.0",
     "@google-cloud/common": "^3.6.0",
-    "@malloydata/malloy": "0.0.3",
+    "@malloydata/malloy": "^0.0.15",
     "gaxios": "^4.2.0"
   }
 }

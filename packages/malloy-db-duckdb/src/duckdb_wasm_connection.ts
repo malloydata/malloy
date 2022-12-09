@@ -13,7 +13,7 @@
 import { QueryDataRow, RunSQLOptions } from "@malloydata/malloy";
 import * as duckdb from "@duckdb/duckdb-wasm";
 import { StructRow, Table, Vector } from "apache-arrow";
-import { DuckDBCommon } from "./duckdb_common";
+import { DuckDBCommon, QueryOptionsReader } from "./duckdb_common";
 
 /**
  * Arrow's toJSON() doesn't really do what I'd expect, since
@@ -83,9 +83,10 @@ export class DuckDBWASMConnection extends DuckDBCommon {
   constructor(
     public readonly name: string,
     databasePath = "test/data/duckdb/duckdb_test.db",
-    private workingDirectory = "/"
+    private workingDirectory = "/",
+    queryOptions?: QueryOptionsReader
   ) {
-    super();
+    super(queryOptions);
     this.connecting = this.init();
   }
 

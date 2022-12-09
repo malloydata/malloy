@@ -65,15 +65,18 @@ export interface InfoConnection {
   }>;
 
   /**
-   * Fetch schemas for multiple SQL blocks.
+   * Fetch schemas an SQL blocks
    *
-   * @param tables The SQL blocks to fetch schemas for.
+   * @param block The SQL blocks to fetch schemas for.
    * @returns A mapping of SQL block names to schemas.
    */
-  fetchSchemaForSQLBlocks(sqlStructs: SQLBlock[]): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }>;
+
+  fetchSchemaForSQLBlock(
+    block: SQLBlock
+  ): Promise<
+    | { structDef: StructDef; error?: undefined }
+    | { error: string; structDef?: undefined }
+  >;
 
   /**
    * The name of the connection.
@@ -100,11 +103,7 @@ export interface Connection extends InfoConnection {
 
   canPersist(): this is PersistSQLResults;
 
-  canFetchSchemaAndRunSimultaneously(): this is FetchSchemaAndRunSimultaneously;
-
   canStream(): this is StreamingConnection;
-
-  canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously;
 }
 
 // TODO feature-sql-block Comment
@@ -124,30 +123,11 @@ export interface PersistSQLResults extends Connection {
   manifestTemporaryTable(sqlCommand: string): Promise<string>;
 }
 
-export interface FetchSchemaAndRunSimultaneously extends Connection {
-  runSQLBlockAndFetchResultSchema(
-    sqlBlock: SQLBlock,
-    options?: { rowLimit?: number }
-  ): Promise<{ data: MalloyQueryData; schema: StructDef }>;
-}
-
 export interface StreamingConnection extends Connection {
   runSQLStream(
     sqlCommand: string,
     options?: { rowLimit?: number }
   ): AsyncIterableIterator<QueryDataRow>;
-}
-
-export interface FetchSchemaAndRunStreamSimultaneously
-  extends StreamingConnection,
-    FetchSchemaAndRunSimultaneously {
-  runSQLBlockStreamAndFetchResultSchema(
-    sqlCommand: string,
-    options?: { rowLimit?: number }
-  ): Promise<{
-    stream: AsyncIterableIterator<QueryDataRow>;
-    schema: StructDef;
-  }>;
 }
 
 /**

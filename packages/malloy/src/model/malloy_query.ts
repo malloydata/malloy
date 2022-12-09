@@ -60,6 +60,7 @@ import {
   isIndexSegment,
   UngroupFragment,
   isUngroupFragment,
+  NamedQuery,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -1777,6 +1778,8 @@ class QueryQuery extends QueryField {
             expressions.push(expr.numerator);
             break;
           case "timeLiteral":
+            break;
+          case "stringLiteral":
             break;
           case "timeDiff":
             expressions.push(expr.left.value, expr.right.value);
@@ -3666,7 +3669,7 @@ class QueryStruct extends QueryNode {
         ) {
           return this.fieldDef.name;
         } else if (this.fieldDef.structSource.method === "subquery") {
-          return `(${this.fieldDef.structSource.sqlBlock.select})`;
+          return `(${this.fieldDef.structSource.sqlBlock.selectStr})`;
         }
         throw new Error(
           "Internal Error: Unknown structSource type 'sql' method"
@@ -4100,4 +4103,18 @@ export class QueryModel {
     });
     return result.rows as unknown as SearchIndexResult[];
   }
+}
+
+export function flattenQuery(model: ModelDef, query: NamedQuery): TurtleDef {
+  let structRef = query.structRef;
+  if (typeof structRef !== "string") {
+    structRef = structRef.as || structRef.name;
+  }
+  const queryModel = new QueryModel(model);
+  const queryStruct = queryModel.getStructByName(structRef);
+  const turtleDef = queryStruct.flattenTurtleDef({
+    ...query,
+    type: "turtle",
+  });
+  return turtleDef;
 }

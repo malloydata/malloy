@@ -15,9 +15,7 @@
 export type {
   QueryDataRow,
   // Currently needed only by tests
-  ModelDef,
   Fragment,
-  Query,
   // Needed for DB
   StructDef,
   StructRelationship,
@@ -44,11 +42,16 @@ export type {
   TurtleDef,
   SearchValueMapResult,
   SearchIndexResult,
+  ModelDef,
+  Query,
+  NamedQuery,
+  NamedModelObject,
 } from "./model";
 export {
   // Used in Composer Demo
   Segment,
   isFilteredAliasedName,
+  flattenQuery,
 } from "./model";
 export {
   // Neede for VSCode extension
@@ -113,9 +116,7 @@ export type {
   PooledConnection,
   TestableConnection,
   PersistSQLResults,
-  FetchSchemaAndRunSimultaneously,
   StreamingConnection,
-  FetchSchemaAndRunStreamSimultaneously,
 } from "./runtime_types";
 export type { Loggable } from "./malloy";
 export { toAsyncGenerator } from "./connection_utils";

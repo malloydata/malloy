@@ -4,4 +4,4 @@ Malloy is an experimental language for describing data relationships and transfo
 
 ## This package
 
-This package provides a simple mechanism to render charts based on results from using the `malloydata/malloy` library. See [here](https://github.com/looker-open-source/malloy/blob/main/packages/malloy/README.md) for additional information.
+This package provides a simple mechanism to render charts based on results from using the `malloydata/malloy` library. See [here](https://github.com/malloydata/malloy/blob/main/packages/malloy/README.md) for additional information.

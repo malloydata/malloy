@@ -13,8 +13,9 @@
 /* eslint-disable no-console */
 import * as readline from "readline";
 import { inspect } from "util";
-import { MalloyTranslator, Connection } from "@malloydata/malloy";
+import { Malloy, Connection } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
+import { readFile } from "fs/promises";
 import { readFileSync } from "fs";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
@@ -43,36 +44,30 @@ CURRENTLY HAS TWO MODES
 
 */
 
-async function translateMalloy(fileSrc: string, url: string, c: Connection) {
-  const mt = new MalloyTranslator(url);
-  mt.update({ urls: { [url]: fileSrc } });
-  let translating = true;
-  let mr = mt.translate();
-  while (translating) {
-    if (mr.tables) {
-      const { schemas: tables, errors } = await c.fetchSchemaForTables(
-        mr.tables
-      );
-      mt.update({ tables, errors: { tables: errors } });
+async function printTranlsatedMalloy(fileSrc: string, fileURL: string) {
+  const url = new URL(fileURL);
+  const parse = Malloy.parse({ source: fileSrc, url });
+  const connection = new BigQueryConnection("bigquery");
+  const lookupConnection = async function (name: string): Promise<Connection> {
+    if (name == "bigquery" || name === undefined) {
+      return connection;
     }
-    if (mr.sqlStructs) {
-      const { schemas: sqlStructs, errors } = await c.fetchSchemaForSQLBlocks(
-        mr.sqlStructs
-      );
-      mt.update({ sqlStructs, errors: { sqlStructs: errors } });
-    }
-    if (mr.final) {
-      translating = false;
-    } else {
-      mr = mt.translate();
-    }
-  }
-  if (mr.translated) {
-    console.log(pretty(mr));
-  } else if (mr.errors) {
-    console.log(mt.prettyErrors());
-  } else {
-    console.log("Translation Response:", pretty(mr));
+    throw new Error(`No connection ${name}`);
+  };
+  const readURL = async function (url: URL): Promise<string> {
+    const filePath = url.pathname;
+    const src = await readFile(filePath, { encoding: "utf-8" });
+    return src;
+  };
+  try {
+    const model = await Malloy.compile({
+      urlReader: { readURL },
+      connections: { lookupConnection },
+      parse,
+    });
+    console.log(pretty(model._modelDef));
+  } catch (e) {
+    console.log(e.message);
   }
 }
 
@@ -90,13 +85,12 @@ function fullPath(fn: string): string {
 }
 
 async function main() {
-  const connection = new BigQueryConnection("bigquery");
   if (process.argv.length > 2) {
     for (const fileArg of process.argv.slice(2)) {
       const filePath = fullPath(fileArg);
       const src = readFileSync(filePath, "utf-8");
       const url = `file:/${filePath}`;
-      await translateMalloy(src, url, connection);
+      await printTranlsatedMalloy(src, url);
     }
   } else {
     const rl = readline.createInterface({
@@ -107,7 +101,7 @@ async function main() {
     while (translating) {
       const src = await ask(rl, "malloy> ");
       if (src) {
-        await translateMalloy(src, "malloy://cli/stdin", connection);
+        await printTranlsatedMalloy(src, "malloy://cli/stdin");
       } else {
         translating = false;
       }

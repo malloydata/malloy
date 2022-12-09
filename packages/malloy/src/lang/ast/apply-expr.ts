@@ -59,7 +59,7 @@ export function applyBinary(
   if (oneOf(op, "+", "-")) {
     return delta(fs, left, op, right);
   }
-  if (oneOf(op, "*")) {
+  if (oneOf(op, "*", "%")) {
     return numeric(fs, left, op, right);
   }
   if (oneOf(op, "/")) {

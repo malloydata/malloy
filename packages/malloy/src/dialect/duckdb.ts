@@ -330,7 +330,7 @@ export class DuckDBDialect extends Dialect {
   }
 
   sqlNow(): Expr {
-    return mkExpr`CURRENT_TIMESTAMP`;
+    return mkExpr`CURRENT_TIMESTAMP::TIMESTAMP`;
   }
 
   sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {
@@ -428,5 +428,9 @@ export class DuckDBDialect extends Dialect {
 
   sqlOrderBy(orderTerms: string[]): string {
     return `ORDER BY ${orderTerms.map((t) => `${t} NULLS LAST`).join(",")}`;
+  }
+
+  sqlLiteralString(literal: string): string {
+    return "'" + literal.replace(/'/g, "''") + "'";
   }
 }

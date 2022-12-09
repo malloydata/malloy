@@ -990,4 +990,20 @@ describe("sql injection tests", () => {
     );
     expect(result.data.value[0].test).toBe("foo \\");
   });
+
+  it("passes test which should be deleted when type support improves", async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        sql: badType is {
+          select: """SELECT ST_GEOGFROMTEXT('LINESTRING(1 2, 3 4)') as geo"""
+        }
+        query: from_sql(badType)->{ project: *}
+      `
+      )
+      .run();
+    expect(result.data.value[0].geo).toBe(
+      'BigQuery type "GEOGRAPHY" not supported by Malloy'
+    );
+  });
 });
