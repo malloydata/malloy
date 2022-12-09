@@ -4,51 +4,6 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "type": "npm",
-      "script": "vscode-build-extension-dev",
-      "label": "build-extension-task",
-      "problemMatcher": {
-        "owner": "typescript",
-        "source": "ts",
-        "severity": "error",
-        "pattern": [
-          {
-            "regexp": "\\[tsl\\] (ERROR|WARNING) in (.*)?\\((\\d+),(\\d+)\\)",
-            "severity": 1,
-            "file": 2,
-            "line": 3,
-            "column": 4
-          },
-          {
-            "regexp": "\\s*TS(\\d+):\\s*(.*)$",
-            "code": 1,
-            "message": 2
-          }
-        ],
-        "applyTo": "closedDocuments",
-        "fileLocation": "absolute",
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": {
-            "regexp": "Building extension"
-          },
-          "endsPattern": {
-            "regexp": "Extension built (.*?successfully|with .*?errors)"
-          }
-        }
-      },
-      "isBackground": true,
-      "presentation": {
-        "reveal": "silent",
-        "revealProblems": "onProblem",
-        "close": true
-      },
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      }
-    },
-    {
       "type": "typescript",
       "tsconfig": "tsconfig.compile-no-emit.json",
       "option": "watch",
@@ -61,51 +16,6 @@
         "revealProblems": "onProblem",
         "close": true
       }
-    },
-    {
-      "type": "npm",
-      "script": "vscode-build-composer-dev",
-      "label": "build-composer-task",
-      "problemMatcher": {
-        "owner": "typescript",
-        "source": "ts",
-        "severity": "error",
-        "pattern": [
-          {
-            "regexp": "\\[tsl\\] (ERROR|WARNING) in (.*)?\\((\\d+),(\\d+)\\)",
-            "severity": 1,
-            "file": 2,
-            "line": 3,
-            "column": 4
-          },
-          {
-            "regexp": "\\s*TS(\\d+):\\s*(.*)$",
-            "code": 1,
-            "message": 2
-          }
-        ],
-        "applyTo": "closedDocuments",
-        "fileLocation": "absolute",
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": {
-            "regexp": "Building composer"
-          },
-          "endsPattern": {
-            "regexp": "Composer built (.*?successfully|with .*?errors)"
-          }
-        }
-      },
-      "isBackground": true,
-      "presentation": {
-        "reveal": "silent",
-        "revealProblems": "onProblem",
-        "close": true
-      },
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      }
-    },
+    }
   ]
 }
