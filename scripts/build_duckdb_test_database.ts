@@ -79,6 +79,9 @@ console.log(`Creating database at ${databasePath}`);
     await run(
       `CREATE TABLE malloytest.words_bigger AS SELECT * FROM parquet_scan('${cwd}words_bigger.parquet')`
     );
+    await run(
+      `CREATE TABLE malloytest.ga_sample AS SELECT * FROM parquet_scan('${cwd}ga_sample.parquet')`
+    );
   } catch (e) {
     console.log(e);
   }
