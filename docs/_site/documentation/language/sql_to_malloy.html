@@ -590,7 +590,23 @@
 <tr>
 <td><pre><code>FROM (...) AS user_facts</code></pre></td>
 
-<td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">: </span><span style="color: #001080">user_facts</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> || ... ;;</span></span></code> </pre></td>
+<td><pre> sql: user_facts is  { ... } </pre></td>
+
+<td><strong>Subqueries</strong> Can be written into <a href="https://looker-open-source.github.io/malloy/documentation/language/sql_blocks.html">SQL Blocks</a>. Example below</td>
+</tr>
+
+<tr>
+<td><pre><code> WITH user_facts AS (...) … </code></pre></td>
+
+<td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">user_facts</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from</span><span style="color: #000000">(...)</span></span></code> </pre></td>
+
+<td><strong>CTEs</strong>: can be generated through <a href="https://looker-open-source.github.io/malloy/documentation/language/basic.html#pipelines-and-multi-stage-queries">Pipelines</a> and <a href="https://looker-open-source.github.io/malloy/documentation/language/source.html#sources-from-queries">Sources from queries</a>.</td>
+</tr>
+
+<tr>
+<td><pre><code>FROM (...) AS user_facts</code></pre></td>
+
+<td><pre> <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">: </span><span style="color: #001080">user_facts</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> { ... }</span></span></code> </pre></td>
 
 <td><strong>Subqueries</strong> Can be written into <a href="https://malloydata.github.io/malloy/documentation/language/sql_blocks.html">SQL Blocks</a>. Example below</td>
 </tr>
@@ -889,22 +905,26 @@
 <span class="line"><span style="color: #000000">    </span><span style="color: #001080">total_sale_price</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #001080">sale_price</span><span style="color: #000000">.</span><span style="color: #795E26">sum</span><span style="color: #000000">()</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #001080">order_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">(</span><span style="color: #795E26">distinct</span><span style="color: #000000"> </span><span style="color: #001080">order_id</span><span style="color: #000000">)</span></span>
 <span class="line"><span style="color: #000000">}</span></span></pre><p>One can also define a <a href="https://malloydata.github.io/malloy/documentation/language/sql_blocks.html">SQL block</a> to be used as a source in Malloy.</p>
-<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">: </span><span style="color: #001080">order_facts</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> ||</span></span>
-<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">SELECT</span></span>
-<span class="line"><span style="color: #000000">   order_id</span></span>
-<span class="line"><span style="color: #000000">   , </span><span style="color: #795E26">user_id</span></span>
-<span class="line"><span style="color: #000000">   , </span><span style="color: #795E26">ROW_NUMBER</span><span style="color: #000000">() </span><span style="color: #0000FF">OVER</span><span style="color: #000000">(</span><span style="color: #0000FF">PARTITION</span><span style="color: #000000"> </span><span style="color: #0000FF">BY</span><span style="color: #000000"> </span><span style="color: #795E26">user_id</span><span style="color: #000000"> </span><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> created_at) </span><span style="color: #0000FF">as</span><span style="color: #000000"> user_order_sequence_number</span></span>
-<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> malloy-</span><span style="color: #0000FF">data</span><span style="color: #000000">.ecomm.order_items</span></span>
-<span class="line"><span style="color: #000000">;;</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">: </span><span style="color: #001080">order_facts</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #001080">select</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;&quot;&quot;</span></span>
+<span class="line"><span style="color: #A31515">    SELECT</span></span>
+<span class="line"><span style="color: #A31515">      order_id</span></span>
+<span class="line"><span style="color: #A31515">      , user_id</span></span>
+<span class="line"><span style="color: #A31515">      , ROW_NUMBER() OVER(PARTITION BY user_id ORDER BY created_at) as user_order_sequence_number</span></span>
+<span class="line"><span style="color: #A31515">    FROM malloy-data.ecomm.order_items</span></span>
+<span class="line"><span style="color: #A31515">  &quot;&quot;&quot;</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
 <span class="line"></span>
-<span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">: </span><span style="color: #001080">order_items_sql</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> ||</span></span>
-<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">SELECT</span></span>
-<span class="line"><span style="color: #000000">   id</span></span>
-<span class="line"><span style="color: #000000">   , order_id</span></span>
-<span class="line"><span style="color: #000000">   , created_at</span></span>
-<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> malloy-</span><span style="color: #0000FF">data</span><span style="color: #000000">.ecomm.order_items</span></span>
-<span class="line"><span style="color: #000000"> </span><span style="color: #0000FF">WHERE</span><span style="color: #000000"> </span><span style="color: #0000FF">status</span><span style="color: #000000"> </span><span style="color: #0000FF">NOT</span><span style="color: #000000"> </span><span style="color: #0000FF">IN</span><span style="color: #000000"> (</span><span style="color: #A31515">&#39;Cancelled&#39;</span><span style="color: #000000">, </span><span style="color: #A31515">&#39;Returned&#39;</span><span style="color: #000000">)</span></span>
-<span class="line"><span style="color: #000000">;;</span></span>
+<span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">: </span><span style="color: #001080">order_items_sql</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #001080">select</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;&quot;&quot;</span></span>
+<span class="line"><span style="color: #A31515">    SELECT</span></span>
+<span class="line"><span style="color: #A31515">      id</span></span>
+<span class="line"><span style="color: #A31515">      , order_id</span></span>
+<span class="line"><span style="color: #A31515">    , created_at</span></span>
+<span class="line"><span style="color: #A31515">    FROM malloy-data.ecomm.order_items</span></span>
+<span class="line"><span style="color: #A31515">    WHERE status NOT IN (&#39;Cancelled&#39;, &#39;Returned&#39;)</span></span>
+<span class="line"><span style="color: #A31515">  &quot;&quot;&quot;</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">order_items</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from_sql</span><span style="color: #000000">(</span><span style="color: #001080">order_items_sql</span><span style="color: #000000">){</span></span>
 <span class="line"><span style="color: #000000"> </span><span style="color: #AF00DB">join_one</span><span style="color: #000000">: </span><span style="color: #001080">order_facts</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from_sql</span><span style="color: #000000">(</span><span style="color: #001080">order_facts</span><span style="color: #000000">) </span><span style="color: #AF00DB">on</span><span style="color: #000000"> </span><span style="color: #001080">order_id</span><span style="color: #000000"> = </span><span style="color: #001080">order_facts</span><span style="color: #000000">.</span><span style="color: #001080">order_id</span></span>

@@ -10,16 +10,24 @@ footer: /generated/footers/language/sql_blocks.html
           SQL Blocks
         </a>
       </h1>
-    <p>Sometimes it is useful to add SQL statements into a Malloy file. You can do so by using the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">:</span></span></code> keyword in combination with SQL literals, which are enclosed between an
-opening <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">||</span></span></code> and a closing <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">;;</span></span></code>.</p>
-<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">: </span><span style="color: #001080">my_sql_query</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> ||</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
-<span class="line"><span style="color: #000000">    first_name,</span></span>
-<span class="line"><span style="color: #000000">    last_name,</span></span>
-<span class="line"><span style="color: #000000">    gender</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> malloy-</span><span style="color: #0000FF">data</span><span style="color: #000000">.ecomm.users</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">10</span></span>
-<span class="line"><span style="color: #000000">;;</span></span></pre><div class="result-outer large">
+    <p>Sometimes it is useful to add SQL statements into a Malloy file. You can do so by using the <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">:</span></span></code> keyword.
+An SQL statement has two properties.</p>
+<ul>
+<li><p><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">select</span><span style="color: #000000">:</span></span></code> -- Has a string value which is bracketed with triple quotes <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #A31515">&quot;&quot;&quot;</span></span></code></p>
+</li>
+<li><p><code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">connection</span><span style="color: #000000">:</span></span></code> -- A string value which is the name of the connection
+<em>(if not specified the default connection will be used)</em></p>
+</li></ul>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">: </span><span style="color: #001080">my_sql_query</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #001080">select</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;&quot;&quot;</span></span>
+<span class="line"><span style="color: #A31515">    SELECT</span></span>
+<span class="line"><span style="color: #A31515">      first_name,</span></span>
+<span class="line"><span style="color: #A31515">      last_name,</span></span>
+<span class="line"><span style="color: #A31515">      gender</span></span>
+<span class="line"><span style="color: #A31515">    FROM malloy-data.ecomm.users</span></span>
+<span class="line"><span style="color: #A31515">    LIMIT 10</span></span>
+<span class="line"><span style="color: #A31515">  &quot;&quot;&quot;</span></span>
+<span class="line"><span style="color: #000000">}</span></span></pre><div class="result-outer large">
     <div class="result-controls-bar">
       <span class="result-label">QUERY RESULTS</span>
       <div class="result-controls">
@@ -30,35 +38,35 @@ opening <code class="language-malloy" style="background-color: #FBFBFB"><span cl
     </div>
     <div class="result-middle" data-result-kind="html" selected>
       <div class="result-inner">
-        <table style="vertical-align: top; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; text-align: left;">first_​name</th><th style="padding: 8px; text-align: left;">last_​name</th><th style="padding: 8px; text-align: left;">gender</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top;"><span>MARIA</span></td><td style="padding: 8px; vertical-align: top;"><span>SHAW</span></td><td style="padding: 8px; vertical-align: top;"><span>Male</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>RENE</span></td><td style="padding: 8px; vertical-align: top;"><span>VICK</span></td><td style="padding: 8px; vertical-align: top;"><span>Male</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>DONALD</span></td><td style="padding: 8px; vertical-align: top;"><span>CROUCH</span></td><td style="padding: 8px; vertical-align: top;"><span>Male</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>PHILLIP</span></td><td style="padding: 8px; vertical-align: top;"><span>TATUM</span></td><td style="padding: 8px; vertical-align: top;"><span>Male</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>CHRISTOPHER</span></td><td style="padding: 8px; vertical-align: top;"><span>DEMPSEY</span></td><td style="padding: 8px; vertical-align: top;"><span>Male</span></td></tr></tbody></table>
+        <table style="vertical-align: top; border-collapse: collapse; width: 100%;"><thead><tr><th style="padding: 8px; text-align: left;">first_​name</th><th style="padding: 8px; text-align: left;">last_​name</th><th style="padding: 8px; text-align: left;">gender</th></tr></thead><tbody><tr><td style="padding: 8px; vertical-align: top;"><span>HAROLD</span></td><td style="padding: 8px; vertical-align: top;"><span>WOLF</span></td><td style="padding: 8px; vertical-align: top;"><span>Male</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>NICHOLAS</span></td><td style="padding: 8px; vertical-align: top;"><span>MARQUEZ</span></td><td style="padding: 8px; vertical-align: top;"><span>Male</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>LARRY</span></td><td style="padding: 8px; vertical-align: top;"><span>PEREYRA</span></td><td style="padding: 8px; vertical-align: top;"><span>Male</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>THERON</span></td><td style="padding: 8px; vertical-align: top;"><span>ISAACS</span></td><td style="padding: 8px; vertical-align: top;"><span>Male</span></td></tr><tr><td style="padding: 8px; vertical-align: top;"><span>MATTHEW</span></td><td style="padding: 8px; vertical-align: top;"><span>NEALEY</span></td><td style="padding: 8px; vertical-align: top;"><span>Male</span></td></tr></tbody></table>
       </div>
     </div>
     <div class="result-middle" data-result-kind="json" >
       <div class="result-inner">
         <pre><pre class="language-json" style="background-color: #FBFBFB"><span class="line"><span style="color: #000000">[</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;first_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;MARIA&quot;</span><span style="color: #000000">,</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;last_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;SHAW&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;first_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;HAROLD&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;last_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;WOLF&quot;</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;gender&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Male&quot;</span></span>
 <span class="line"><span style="color: #000000">  },</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;first_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;RENE&quot;</span><span style="color: #000000">,</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;last_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;VICK&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;first_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;NICHOLAS&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;last_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;MARQUEZ&quot;</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;gender&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Male&quot;</span></span>
 <span class="line"><span style="color: #000000">  },</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;first_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DONALD&quot;</span><span style="color: #000000">,</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;last_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;CROUCH&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;first_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;LARRY&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;last_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;PEREYRA&quot;</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;gender&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Male&quot;</span></span>
 <span class="line"><span style="color: #000000">  },</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;first_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;PHILLIP&quot;</span><span style="color: #000000">,</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;last_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;TATUM&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;first_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;THERON&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;last_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;ISAACS&quot;</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;gender&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Male&quot;</span></span>
 <span class="line"><span style="color: #000000">  },</span></span>
 <span class="line"><span style="color: #000000">  {</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;first_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;CHRISTOPHER&quot;</span><span style="color: #000000">,</span></span>
-<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;last_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;DEMPSEY&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;first_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;MATTHEW&quot;</span><span style="color: #000000">,</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;last_name&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;NEALEY&quot;</span><span style="color: #000000">,</span></span>
 <span class="line"><span style="color: #000000">    </span><span style="color: #0451A5">&quot;gender&quot;</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;Male&quot;</span></span>
 <span class="line"><span style="color: #000000">  }</span></span>
 <span class="line"><span style="color: #000000">]</span></span></pre></pre>
@@ -67,13 +75,13 @@ opening <code class="language-malloy" style="background-color: #FBFBFB"><span cl
     <div class="result-middle" data-result-kind="sql" >
       <div class="result-inner">
         <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
-<span class="line"><span style="color: #000000">    first_name,</span></span>
-<span class="line"><span style="color: #000000">    last_name,</span></span>
-<span class="line"><span style="color: #000000">    gender</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> malloy-</span><span style="color: #0000FF">data</span><span style="color: #000000">.ecomm.users</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">10</span></span>
-<span class="line"></span></pre></pre>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">      first_name,</span></span>
+<span class="line"><span style="color: #000000">      last_name,</span></span>
+<span class="line"><span style="color: #000000">      gender</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> malloy-</span><span style="color: #0000FF">data</span><span style="color: #000000">.ecomm.users</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">10</span></span>
+<span class="line"><span style="color: #000000">  </span></span></pre></pre>
       </div>
     </div>
   </div>
@@ -83,14 +91,16 @@ opening <code class="language-malloy" style="background-color: #FBFBFB"><span cl
         </a>
       </h2>
     <p>Sources can be created from a SQL block, e.g.</p>
-<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">: </span><span style="color: #001080">my_sql_query</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> ||</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
-<span class="line"><span style="color: #000000">    first_name,</span></span>
-<span class="line"><span style="color: #000000">    last_name,</span></span>
-<span class="line"><span style="color: #000000">    gender</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> malloy-</span><span style="color: #0000FF">data</span><span style="color: #000000">.ecomm.users</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">10</span></span>
-<span class="line"><span style="color: #000000">;;</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">: </span><span style="color: #001080">my_sql_query</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #001080">select</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;&quot;&quot;</span></span>
+<span class="line"><span style="color: #A31515">    SELECT</span></span>
+<span class="line"><span style="color: #A31515">      first_name,</span></span>
+<span class="line"><span style="color: #A31515">      last_name,</span></span>
+<span class="line"><span style="color: #A31515">      gender</span></span>
+<span class="line"><span style="color: #A31515">    FROM malloy-data.ecomm.users</span></span>
+<span class="line"><span style="color: #A31515">    LIMIT 10</span></span>
+<span class="line"><span style="color: #A31515">  &quot;&quot;&quot;</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">limited_users</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from_sql</span><span style="color: #000000">(</span><span style="color: #001080">my_sql_query</span><span style="color: #000000">) {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">user_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
@@ -126,13 +136,13 @@ opening <code class="language-malloy" style="background-color: #FBFBFB"><span cl
         <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
 <span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> user_count</span></span>
 <span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> (</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
-<span class="line"><span style="color: #000000">    first_name,</span></span>
-<span class="line"><span style="color: #000000">    last_name,</span></span>
-<span class="line"><span style="color: #000000">    gender</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> malloy-</span><span style="color: #0000FF">data</span><span style="color: #000000">.ecomm.users</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">10</span></span>
-<span class="line"><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> limited_users</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">      first_name,</span></span>
+<span class="line"><span style="color: #000000">      last_name,</span></span>
+<span class="line"><span style="color: #000000">      gender</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> malloy-</span><span style="color: #0000FF">data</span><span style="color: #000000">.ecomm.users</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">10</span></span>
+<span class="line"><span style="color: #000000">  ) </span><span style="color: #0000FF">as</span><span style="color: #000000"> limited_users</span></span>
 <span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
 <span class="line"></span></pre></pre>
       </div>

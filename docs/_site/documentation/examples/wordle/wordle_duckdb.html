@@ -469,14 +469,14 @@ The below statements redefine the words and numbers sources using DuckDB instead
 <span class="line"><span style="color: #000000">// source: words is table(&#39;malloy-data.malloytest.words_bigger&#39;)</span></span>
 <span class="line"><span style="color: #000000"></span></span>
 <span class="line"><span style="color: #000000">// USE THIS</span></span>
-<span class="line"><span style="color: #000000">sql: words_sql is  || </span></span>
-<span class="line"><span style="color: #000000">  SELECT * FROM read_csv_auto(</span></span>
-<span class="line"><span style="color: #000000">    &#39;/usr/share/dict/words&#39;,</span></span>
-<span class="line"><span style="color: #000000">    ALL_VARCHAR=1 </span></span>
-<span class="line"><span style="color: #000000">  )</span></span>
-<span class="line"><span style="color: #000000">  ;;</span></span>
-<span class="line"><span style="color: #000000">  on &quot;duckdb&quot;</span></span>
-<span class="line"><span style="color: #000000">  </span></span>
+<span class="line"><span style="color: #000000">sql: words_sql is  {</span></span>
+<span class="line"><span style="color: #000000">  connection: &quot;duckdb&quot;</span></span>
+<span class="line"><span style="color: #000000">  select: &quot;&quot;&quot;</span></span>
+<span class="line"><span style="color: #000000">    SELECT *</span></span>
+<span class="line"><span style="color: #000000">    FROM read_csv_auto(&#39;/usr/share/dict/words&#39;, ALL_VARCHAR=1)</span></span>
+<span class="line"><span style="color: #000000">  &quot;&quot;&quot;</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
+<span class="line"><span style="color: #000000"></span></span>
 <span class="line"><span style="color: #000000">source: words is from_sql(words_sql) {</span></span>
 <span class="line"><span style="color: #000000">  dimension: word is column0</span></span>
 <span class="line"><span style="color: #000000">  query: five_letter_words is {</span></span>
@@ -491,7 +491,7 @@ The below statements redefine the words and numbers sources using DuckDB instead
 <span class="line"><span style="color: #000000">// }</span></span>
 <span class="line"><span style="color: #000000"></span></span>
 <span class="line"><span style="color: #000000">// USE THIS</span></span>
-<span class="line"><span style="color: #000000">sql: nums_sql is  || </span></span>
+<span class="line"><span style="color: #000000">sql: nums_sql is  ||</span></span>
 <span class="line"><span style="color: #000000">  WITH recursive nums AS</span></span>
 <span class="line"><span style="color: #000000">   (SELECT 1 AS num</span></span>
 <span class="line"><span style="color: #000000">    UNION ALL</span></span>
@@ -502,7 +502,7 @@ The below statements redefine the words and numbers sources using DuckDB instead
 <span class="line"><span style="color: #000000">  FROM nums</span></span>
 <span class="line"><span style="color: #000000">  ;;</span></span>
 <span class="line"><span style="color: #000000">  on &quot;duckdb&quot;</span></span>
-<span class="line"><span style="color: #000000">  </span></span>
+<span class="line"><span style="color: #000000"></span></span>
 <span class="line"><span style="color: #000000">source: numbers is from_sql(nums_sql) {}</span></span>
 <span class="line"><span style="color: #000000"></span></span></pre><p>The rest of the example code will run as expected</p>
 </div></div>

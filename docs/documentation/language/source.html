@@ -320,14 +320,16 @@ be defined inline or referenced by name.</p>
         </a>
       </h3>
     <p>Sources can be created from a SQL block, e.g.</p>
-<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">: </span><span style="color: #001080">my_sql_query</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> ||</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
-<span class="line"><span style="color: #000000">    first_name,</span></span>
-<span class="line"><span style="color: #000000">    last_name,</span></span>
-<span class="line"><span style="color: #000000">    gender</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> malloy-</span><span style="color: #0000FF">data</span><span style="color: #000000">.ecomm.users</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">10</span></span>
-<span class="line"><span style="color: #000000">;;</span></span>
+<pre class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #AF00DB">sql</span><span style="color: #000000">: </span><span style="color: #001080">my_sql_query</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> {</span></span>
+<span class="line"><span style="color: #000000">  </span><span style="color: #001080">select</span><span style="color: #000000">: </span><span style="color: #A31515">&quot;&quot;&quot;</span></span>
+<span class="line"><span style="color: #A31515">    SELECT</span></span>
+<span class="line"><span style="color: #A31515">      first_name,</span></span>
+<span class="line"><span style="color: #A31515">      last_name,</span></span>
+<span class="line"><span style="color: #A31515">      gender</span></span>
+<span class="line"><span style="color: #A31515">    FROM malloy-data.ecomm.users</span></span>
+<span class="line"><span style="color: #A31515">    LIMIT 10</span></span>
+<span class="line"><span style="color: #A31515">  &quot;&quot;&quot;</span></span>
+<span class="line"><span style="color: #000000">}</span></span>
 <span class="line"></span>
 <span class="line"><span style="color: #AF00DB">source</span><span style="color: #000000">: </span><span style="color: #001080">limited_users</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">from_sql</span><span style="color: #000000">(</span><span style="color: #001080">my_sql_query</span><span style="color: #000000">) {</span></span>
 <span class="line"><span style="color: #000000">  </span><span style="color: #AF00DB">measure</span><span style="color: #000000">: </span><span style="color: #001080">user_count</span><span style="color: #000000"> </span><span style="color: #AF00DB">is</span><span style="color: #000000"> </span><span style="color: #795E26">count</span><span style="color: #000000">()</span></span>
@@ -363,13 +365,13 @@ be defined inline or referenced by name.</p>
         <pre><pre class="language-sql" style="background-color: #FBFBFB"><span class="line"><span style="color: #0000FF">SELECT</span><span style="color: #000000"> </span></span>
 <span class="line"><span style="color: #000000">   </span><span style="color: #795E26">COUNT</span><span style="color: #000000">( </span><span style="color: #098658">1</span><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> user_count</span></span>
 <span class="line"><span style="color: #0000FF">FROM</span><span style="color: #000000"> (</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">SELECT</span></span>
-<span class="line"><span style="color: #000000">    first_name,</span></span>
-<span class="line"><span style="color: #000000">    last_name,</span></span>
-<span class="line"><span style="color: #000000">    gender</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> malloy-</span><span style="color: #0000FF">data</span><span style="color: #000000">.ecomm.users</span></span>
-<span class="line"><span style="color: #000000">  </span><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">10</span></span>
-<span class="line"><span style="color: #000000">) </span><span style="color: #0000FF">as</span><span style="color: #000000"> limited_users</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">SELECT</span></span>
+<span class="line"><span style="color: #000000">      first_name,</span></span>
+<span class="line"><span style="color: #000000">      last_name,</span></span>
+<span class="line"><span style="color: #000000">      gender</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">FROM</span><span style="color: #000000"> malloy-</span><span style="color: #0000FF">data</span><span style="color: #000000">.ecomm.users</span></span>
+<span class="line"><span style="color: #000000">    </span><span style="color: #0000FF">LIMIT</span><span style="color: #000000"> </span><span style="color: #098658">10</span></span>
+<span class="line"><span style="color: #000000">  ) </span><span style="color: #0000FF">as</span><span style="color: #000000"> limited_users</span></span>
 <span class="line"><span style="color: #0000FF">ORDER BY</span><span style="color: #000000"> </span><span style="color: #098658">1</span><span style="color: #000000"> </span><span style="color: #0000FF">desc</span></span>
 <span class="line"></span></pre></pre>
       </div>
