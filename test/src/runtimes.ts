@@ -60,7 +60,7 @@ export class DuckDBTestConnection extends DuckDBConnection {
   // we probably need a better way to do this.
 
   constructor(name: string) {
-    super(name);
+    super(name, "test/data/duckdb/duckdb_test.db");
   }
 
   public async runSQL(

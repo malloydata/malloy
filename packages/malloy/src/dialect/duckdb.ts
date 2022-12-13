@@ -329,7 +329,7 @@ export class DuckDBDialect extends Dialect {
   }
 
   sqlNow(): Expr {
-    return mkExpr`CURRENT_TIMESTAMP`;
+    return mkExpr`CURRENT_TIMESTAMP::TIMESTAMP`;
   }
 
   sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {

@@ -1,12 +1,30 @@
 steps:
+  - id: git-ssh-key
+    name: "gcr.io/cloud-builders/gcloud"
+    secretEnv: ["GITHUB_SSH_KEY"]
+    entrypoint: "bash"
+    args:
+      - -c
+      - |
+        echo "$$GITHUB_SSH_KEY" >> /root/.ssh/id_rsa
+        chmod 400 /root/.ssh/id_rsa
+        cp cloudbuild/known_hosts.github /root/.ssh/known_hosts
+    volumes:
+      - name: "ssh"
+        path: /root/.ssh
   - id: deploy-npm
     name: "nixos/nix"
     entrypoint: sh
     args:
       - -c
       - "./cloudbuild/deploy/$TRIGGER_NAME.sh"
-    timeout: "1600s"
-    secretEnv: ["NPM_TOKEN"]
+    timeout: "1800s"
+    secretEnv: ["NPM_TOKEN", "GITHUB_SSH_KEY"]
+    env:
+      - "BRANCH_NAME=$BRANCH_NAME"
+    volumes:
+      - name: "ssh"
+        path: /root/.ssh
 options:
   logging: CLOUD_LOGGING_ONLY
 timeout: "1800s"
@@ -14,3 +32,5 @@ availableSecrets:
   secretManager:
     - versionName: projects/malloy-303216/secrets/npm-publish/versions/latest
       env: "NPM_TOKEN"
+    - versionName: projects/malloy-303216/secrets/github-ssh-key/versions/latest
+      env: "GITHUB_SSH_KEY"

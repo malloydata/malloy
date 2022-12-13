@@ -23,6 +23,7 @@ fragment SPACE_CHAR: [ \u000B\t\r\n];
 // colon keywords ...
 ACCEPT: A C C E P T SPACE_CHAR* ':';
 AGGREGATE: A G G R E G A T E SPACE_CHAR* ':';
+CONNECTION: C O N N E C T I O N SPACE_CHAR* ':';
 DECLARE: D E C L A R E  ':' ;
 DIMENSION: D I M E N S I O N SPACE_CHAR* ':';
 EXCEPT: E X C E P T SPACE_CHAR* ':';
@@ -42,6 +43,7 @@ PROJECT: P R O J E C T SPACE_CHAR* ':';
 QUERY: Q U E R Y SPACE_CHAR* ':';
 RENAME: R E N A M E SPACE_CHAR* ':';
 SAMPLE: S A M P L E SPACE_CHAR* ':';
+SELECT: S E L E C T SPACE_CHAR* ':';
 SOURCE: S O U R C E SPACE_CHAR* ':';
 SQL: S Q L SPACE_CHAR* ':';
 FANCYSQL: T U R D U C K SPACE_CHAR* ':';
@@ -143,6 +145,7 @@ BAR: '|' ;
 SEMI: ';' ;
 NOT_MATCH: '!~' ;
 MATCH: '~' ;
+PERCENT: '%';
 
 fragment F_YEAR: DIGIT DIGIT DIGIT DIGIT;
 fragment F_DD: DIGIT DIGIT;
@@ -182,8 +185,23 @@ fragment Y: [yY] ; fragment Z: [zZ] ;
 BLOCK_COMMENT: '/*' .*? '*/' -> channel(HIDDEN);
 COMMENT_TO_EOL: ('--' | '//') ~[\r\n]* (('\r'? '\n') | EOF) -> channel(HIDDEN) ;
 WHITE_SPACE: SPACE_CHAR -> skip ;
-SQL_STRING: '||' .*? ';;';
+
+SQL_BEGIN: '"""' -> pushMode(SQL_MODE);
+CLOSE_CODE: '}%' -> popMode;
 
 // Matching any of these is a parse error
 UNWATED_CHARS_TRAILING_NUMBERS: DIGIT+ ID_CHAR+ (ID_CHAR | DIGIT)*;
 UNEXPECTED_CHAR: .;
+
+mode SQL_MODE;
+
+fragment SQL_CHAR
+  : '\\' .
+  | ~[%"]
+  | '"' ~'"'
+  | '""' ~'"'
+  | '%' ~'{'
+  ;
+
+OPEN_CODE: SQL_CHAR*? '%{' -> pushMode(DEFAULT_MODE);
+SQL_END: SQL_CHAR*? '"""' -> popMode;

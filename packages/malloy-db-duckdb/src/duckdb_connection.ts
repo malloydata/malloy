@@ -19,12 +19,12 @@ import { QueryDataRow, RunSQLOptions } from "@malloydata/malloy";
 export class DuckDBConnection extends DuckDBCommon {
   protected connection;
   protected database;
-  protected isSetup = false;
+  protected isSetup: Promise<void> | undefined;
 
   constructor(
     public readonly name: string,
-    databasePath = "test/data/duckdb/duckdb_test.db",
-    private workingDirectory = "/",
+    databasePath = ":memory:",
+    private workingDirectory = ".",
     queryOptions?: QueryOptionsReader
   ) {
     super(queryOptions);
@@ -42,28 +42,31 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   protected async setup(): Promise<void> {
-    if (!this.isSetup) {
+    const doSetup = async () => {
       if (this.workingDirectory) {
-        this.runDuckDBQuery(`SET FILE_SEARCH_PATH='${this.workingDirectory}'`);
+        await this.runDuckDBQuery(
+          `SET FILE_SEARCH_PATH='${this.workingDirectory}'`
+        );
       }
-      // TODO: This is where we will load extensions once we figure
-      // out how to better support them.
-      // await this.runDuckDBQuery("INSTALL 'json'");
-      // await this.runDuckDBQuery("LOAD 'json'");
-      // await this.runDuckDBQuery("INSTALL 'httpfs'");
-      // await this.runDuckDBQuery("LOAD 'httpfs'");
-      //   await this.runDuckDBQuery("DROP MACRO sum_distinct");
-      //   try {
-      //     await this.runDuckDBQuery(
-      //       `
-      //       create macro sum_distinct(l) as  (
-      //         select sum(x.val) as value FROM (select unnest(l)) x
-      //       )
-      //       `
-      //     );
-      //   } catch (e) {}
+      try {
+        await this.runDuckDBQuery("INSTALL 'json'");
+        await this.runDuckDBQuery("LOAD 'json'");
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error("Unable to load json extension", error);
+      }
+      try {
+        await this.runDuckDBQuery("INSTALL 'httpfs'");
+        await this.runDuckDBQuery("LOAD 'httpfs'");
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error("Unable to load httpfs extension", error);
+      }
+    };
+    if (!this.isSetup) {
+      this.isSetup = doSetup();
     }
-    this.isSetup = true;
+    await this.isSetup;
   }
 
   protected async runDuckDBQuery(

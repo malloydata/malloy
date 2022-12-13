@@ -41,11 +41,24 @@ topLevelAnonQueryDef
   ;
 
 defineSQLStatement
-  : SQL sqlStatementDef
+  : SQL (nameSQLBlock IS)? sqlBlock
   ;
 
-sqlStatementDef
-  : (sqlCommandNameDef IS)? SQL_STRING (ON connectionName)?
+sqlBlock
+  : OCURLY blockSQLDef+ CCURLY
+  ;
+
+blockSQLDef
+  : CONNECTION connectionName
+  | SELECT sqlString
+  ;
+
+sqlString
+  : SQL_BEGIN sqlInterpolation* SQL_END
+  ;
+
+sqlInterpolation
+  : OPEN_CODE query CLOSE_CODE
   ;
 
 importStatement
@@ -116,7 +129,7 @@ exploreSource
   : exploreName                                   # NamedSource
   | exploreTable                                  # TableSource
   | FROM OPAREN query CPAREN                      # QuerySource
-  | FROM_SQL OPAREN sqlExploreNameRef CPAREN      # SQLSource
+  | FROM_SQL OPAREN sqlExploreNameRef CPAREN      # SQLSourceName
   ;
 
 exploreNameDef: id;
@@ -366,7 +379,7 @@ fieldExpr
   | fieldExpr timeframe                                    # exprDuration
   | fieldExpr DOT timeframe                                # exprTimeTrunc
   | fieldExpr DOUBLECOLON malloyType                       # exprSafeCast
-  | fieldExpr ( STAR | SLASH ) fieldExpr                   # exprMulDiv
+  | fieldExpr ( STAR | SLASH | PERCENT ) fieldExpr         # exprMulDiv
   | fieldExpr ( PLUS | MINUS ) fieldExpr                   # exprAddSub
   | fieldExpr TO fieldExpr                                 # exprRange
   | startAt=fieldExpr FOR duration=fieldExpr timeframe     # exprForRange
@@ -387,8 +400,7 @@ fieldExpr
   ;
 
 partialAllowedFieldExpr
-  : compareOp fieldExpr                                    # exprPartialCompare
-  | fieldExpr                                              # exprNotPartial
+  : compareOp? fieldExpr
   ;
 
 pickStatement
@@ -456,5 +468,5 @@ jsonArray
    ;
 
 sqlExploreNameRef: id;
-sqlCommandNameDef: id;
+nameSQLBlock: id;
 connectionName: JSON_STRING;
