@@ -140,6 +140,7 @@ export class DuckDBDialect extends Dialect {
   defaultSampling = { rows: 50000 };
   supportUnnestArrayAgg = true;
   supportsCTEinCoorelatedSubQueries = true;
+  dontUnionIndex = true; // false;
 
   functionInfo: Record<string, FunctionInfo> = {
     concat: { returnType: "string" },
@@ -221,6 +222,8 @@ export class DuckDBDialect extends Dialect {
         100000, --
         -- (SELECT genres_length FROM movies limit 1),
         1)) as __row_id) as ${alias} ON  ${alias}.__row_id <= array_length(${source})`;
+    // When DuckDB supports lateral joins...
+    //return `,(select UNNEST(generate_series(1, length(${source}),1))) as ${alias}(__row_id)`;
   }
 
   sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
