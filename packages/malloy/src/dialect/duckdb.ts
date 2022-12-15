@@ -136,7 +136,7 @@ export class DuckDBDialect extends Dialect {
   stringTypeName = "VARCHAR";
   divisionIsInteger = true;
   supportsSumDistinctFunction = true;
-  unnestWithNumbers = true;
+  unnestWithNumbers = false;
   defaultSampling = { rows: 50000 };
   supportUnnestArrayAgg = true;
   supportsCTEinCoorelatedSubQueries = true;
@@ -212,18 +212,31 @@ export class DuckDBDialect extends Dialect {
     return `COALESCE(FIRST({${fields}}) FILTER(WHERE group_set=${groupSet}), {${nullValues}})`;
   }
 
+  // sqlUnnestAlias(
+  //   source: string,
+  //   alias: string,
+  //   _fieldList: DialectFieldList,
+  //   _needDistinctKey: boolean
+  // ): string {
+  //   return `LEFT JOIN (select UNNEST(generate_series(1,
+  //       100000, --
+  //       -- (SELECT genres_length FROM movies limit 1),
+  //       1)) as __row_id) as ${alias} ON  ${alias}.__row_id <= array_length(${source})`;
+  //   // When DuckDB supports lateral joins...
+  //   //return `,(select UNNEST(generate_series(1, length(${source}),1))) as ${alias}(__row_id)`;
+  // }
+
   sqlUnnestAlias(
     source: string,
     alias: string,
     _fieldList: DialectFieldList,
-    _needDistinctKey: boolean
+    needDistinctKey: boolean
   ): string {
-    return `LEFT JOIN (select UNNEST(generate_series(1,
-        100000, --
-        -- (SELECT genres_length FROM movies limit 1),
-        1)) as __row_id) as ${alias} ON  ${alias}.__row_id <= array_length(${source})`;
-    // When DuckDB supports lateral joins...
-    //return `,(select UNNEST(generate_series(1, length(${source}),1))) as ${alias}(__row_id)`;
+    if (needDistinctKey) {
+      return `, (SELECT GEN_RANDOM_UUID() as __row_id, ${alias}_outer.${alias} FROM (SELECT UNNEST(coalesce(${source},[null]))) as ${alias}_outer(${alias})) as ${alias}_outer`;
+    } else {
+      return `, (SELECT UNNEST(coalesce(${source},[null]))) as ${alias}_outer(${alias})`;
+    }
   }
 
   sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
@@ -245,7 +258,10 @@ export class DuckDBDialect extends Dialect {
     _isNested: boolean,
     isArray: boolean
   ): string {
-    if (isArray) {
+    // LTNOTE: hack, in duckdb we can't have structs as tables so we kind of simulate it.
+    if (fieldName === "__row_id") {
+      return `${alias}_outer.__row_id`;
+    } else if (isArray) {
       return alias;
     } else {
       return `${alias}.${this.sqlMaybeQuoteIdentifier(fieldName)}`;

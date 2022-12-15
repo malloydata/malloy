@@ -20,6 +20,6 @@
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.17.0",
     "@malloydata/malloy": "^0.0.16",
-    "duckdb": "0.6.1"
+    "duckdb": "^0.6.2-dev416.0"
   }
 }
