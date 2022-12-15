@@ -232,10 +232,11 @@ export class DuckDBDialect extends Dialect {
     _fieldList: DialectFieldList,
     needDistinctKey: boolean
   ): string {
-    if (needDistinctKey) {
-      return `, (SELECT GEN_RANDOM_UUID() as __row_id, ${alias}_outer.${alias} FROM (SELECT UNNEST(coalesce(${source},[null]))) as ${alias}_outer(${alias})) as ${alias}_outer`;
-    } else {
+    if (!needDistinctKey) {
+      //return `, (SELECT GEN_RANDOM_UUID() as __row_id, ${alias}_outer.${alias} FROM (SELECT UNNEST(coalesce(${source},[null]))) as ${alias}_outer(${alias})) as ${alias}_outer`;
       return `, (SELECT UNNEST(coalesce(${source},[null]))) as ${alias}_outer(${alias})`;
+    } else {
+      return `, (SELECT  UNNEST(GENERATE_SERIES(1,length(${source}),1)) as __row_id, UNNEST(coalesce(${source},[null]))) as ${alias}_outer(__row_id, ${alias})`;
     }
   }
 
