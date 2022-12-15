@@ -132,8 +132,8 @@ describe("Nested Source Table", () => {
         `
         )
         .run();
-      console.log(result.data.toObject());
-      console.log(result.sql);
+      // console.log(result.data.toObject());
+      // console.log(result.sql);
       expect(result.data.path(0, "pageTitle").value).toBe("Shopping Cart");
     });
 
@@ -175,7 +175,7 @@ describe("Nested Source Table", () => {
         `
         )
         .run();
-      console.log(JSON.stringify(result.data.toObject(), null, 2));
+      // console.log(JSON.stringify(result.data.toObject(), null, 2));
       // expect(result.data.path(0, "fieldName").value).toBe("channelGrouping");
       // expect(result.data.path(0, "fieldValue").value).toBe("Organic Search");
       // expect(result.data.path(0, "weight").value).toBe(18);

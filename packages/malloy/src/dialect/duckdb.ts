@@ -140,7 +140,7 @@ export class DuckDBDialect extends Dialect {
   defaultSampling = { rows: 50000 };
   supportUnnestArrayAgg = true;
   supportsCTEinCoorelatedSubQueries = true;
-  dontUnionIndex = true; // false;
+  dontUnionIndex = false;
 
   functionInfo: Record<string, FunctionInfo> = {
     concat: { returnType: "string" },
@@ -232,11 +232,12 @@ export class DuckDBDialect extends Dialect {
     _fieldList: DialectFieldList,
     needDistinctKey: boolean
   ): string {
+    // Simulate left joins by guarenteeing there is at least one row.
     if (!needDistinctKey) {
       //return `, (SELECT GEN_RANDOM_UUID() as __row_id, ${alias}_outer.${alias} FROM (SELECT UNNEST(coalesce(${source},[null]))) as ${alias}_outer(${alias})) as ${alias}_outer`;
-      return `, (SELECT UNNEST(coalesce(${source},[null]))) as ${alias}_outer(${alias})`;
+      return `, (SELECT UNNEST(CASE WHEN length(${source}) = 0  OR ${source} IS NULL THEN [null] ELSE ${source} END)) as ${alias}_outer(${alias})`;
     } else {
-      return `, (SELECT  UNNEST(GENERATE_SERIES(1,length(${source}),1)) as __row_id, UNNEST(coalesce(${source},[null]))) as ${alias}_outer(__row_id, ${alias})`;
+      return `, (SELECT UNNEST(GENERATE_SERIES(1,CASE WHEN COALESCE(length(${source}),0)=0 THEN 1 ELSE length(${source}) END,1)) as __row_id, UNNEST(CASE WHEN length(${source}) = 0 OR ${source} IS NULL THEN [null] ELSE ${source} END)) as ${alias}_outer(__row_id, ${alias})`;
     }
   }
 
