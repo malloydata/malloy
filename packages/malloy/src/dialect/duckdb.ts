@@ -234,10 +234,9 @@ export class DuckDBDialect extends Dialect {
   ): string {
     // Simulate left joins by guarenteeing there is at least one row.
     if (!needDistinctKey) {
-      //return `, (SELECT GEN_RANDOM_UUID() as __row_id, ${alias}_outer.${alias} FROM (SELECT UNNEST(coalesce(${source},[null]))) as ${alias}_outer(${alias})) as ${alias}_outer`;
-      return `, (SELECT UNNEST(CASE WHEN length(${source}) = 0  OR ${source} IS NULL THEN [null] ELSE ${source} END)) as ${alias}_outer(${alias})`;
+      return `LEFT JOIN LATERAL (SELECT UNNEST(${source}), 1 as ignoreme) as ${alias}_outer(${alias},ignoreme) ON ${alias}_outer.ignoreme=1`;
     } else {
-      return `, (SELECT UNNEST(GENERATE_SERIES(1,CASE WHEN COALESCE(length(${source}),0)=0 THEN 1 ELSE length(${source}) END,1)) as __row_id, UNNEST(CASE WHEN length(${source}) = 0 OR ${source} IS NULL THEN [null] ELSE ${source} END)) as ${alias}_outer(__row_id, ${alias})`;
+      return `LEFT JOIN LATERAL (SELECT UNNEST(GENERATE_SERIES(1, length(${source}),1)) as __row_id, UNNEST(${source}), 1 as ignoreme) as ${alias}_outer(__row_id, ${alias},ignoreme) ON  ${alias}_outer.ignoreme=1`;
     }
   }
 
