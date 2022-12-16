@@ -15,5 +15,6 @@
     "editor.tabSize": 4
   },
   "cSpell.words": ["antlr"],
-  "typescript.tsdk": "node_modules/typescript/lib"
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "task.allowAutomaticTasks": "on"
 }
