@@ -2393,7 +2393,8 @@ export class SQLStatement extends MalloyElement implements DocStatement {
     sqlDefEntry.reference(sql.name, this.location);
     const lookup = sqlDefEntry.getEntry(sql.name);
     if (lookup.status == "error") {
-      this.select.log(`'Schema error: ${lookup.message}`);
+      const msgLines = lookup.message.split(/\r?\n/);
+      this.select.log("Invalid SQL, " + msgLines.join("\n    "));
       return undefined;
     }
     if (lookup.status == "present") {
