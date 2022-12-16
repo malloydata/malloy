@@ -151,34 +151,34 @@ describe("Nested Source Table", () => {
         `
         )
         .run();
-      // console.log(result.data.toObject());
+      console.log(result.data.toObject());
       expect(result.data.path(0, "fieldName").value).toBe("channelGrouping");
       expect(result.data.path(0, "fieldValue").value).toBe("Organic Search");
       // expect(result.data.path(0, "weight").value).toBe(18);
     });
 
-    test(`manual index - ${databaseName}`, async () => {
-      const result = await runtime
-        .loadQuery(
-          `
-        query: table('malloytest.ga_sample')-> {
-          index: everything
-        }
-        -> {
-          aggregate: field_count is count(DISTINCT fieldName)
-          nest: top_fields is {
-            group_by: fieldName
-            aggregate: row_count is count()
-            limit: 100
-          }
-        }
-        `
-        )
-        .run();
-      // console.log(JSON.stringify(result.data.toObject(), null, 2));
-      // expect(result.data.path(0, "fieldName").value).toBe("channelGrouping");
-      // expect(result.data.path(0, "fieldValue").value).toBe("Organic Search");
-      // expect(result.data.path(0, "weight").value).toBe(18);
-    });
+    // test(`manual index - ${databaseName}`, async () => {
+    //   const result = await runtime
+    //     .loadQuery(
+    //       `
+    //     query: table('malloytest.ga_sample')-> {
+    //       index: everything
+    //     }
+    //     -> {
+    //       aggregate: field_count is count(DISTINCT fieldName)
+    //       nest: top_fields is {
+    //         group_by: fieldName
+    //         aggregate: row_count is count()
+    //         limit: 100
+    //       }
+    //     }
+    //     `
+    //     )
+    //     .run();
+    //   // console.log(JSON.stringify(result.data.toObject(), null, 2));
+    //   // expect(result.data.path(0, "fieldName").value).toBe("channelGrouping");
+    //   // expect(result.data.path(0, "fieldValue").value).toBe("Organic Search");
+    //   // expect(result.data.path(0, "weight").value).toBe(18);
+    // });
   });
 });
