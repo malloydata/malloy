@@ -140,7 +140,7 @@ export class DuckDBDialect extends Dialect {
   defaultSampling = { rows: 50000 };
   supportUnnestArrayAgg = true;
   supportsCTEinCoorelatedSubQueries = true;
-  dontUnionIndex = true; // false;
+  dontUnionIndex = false;
 
   functionInfo: Record<string, FunctionInfo> = {
     concat: { returnType: "string" },

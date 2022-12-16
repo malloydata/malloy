@@ -3111,13 +3111,15 @@ class QueryQueryIndexStage extends QueryQuery {
       s += `    WHEN ${i} THEN '${fields[i].type}'\n`;
     }
     s += `  END as ${fieldTypeColumn},`;
-    s += `  CASE group_set\n`;
+
+    s += `  CASE group_set WHEN 99999 THEN NULL\n`;
     for (let i = 0; i < fields.length; i++) {
       if (fields[i].type === "string") {
         s += `    WHEN ${i} THEN ${fields[i].expression}\n`;
       }
     }
     s += `  END as ${fieldValueColumn},\n`;
+
     s += ` ${measureSQL} as weight,\n`;
 
     // just in case we don't have any field types, force the case statement to have at least one value.
@@ -3196,7 +3198,8 @@ class QueryQueryIndex extends QueryQuery {
         f.fieldDef.fields.length > 1 && // leave arrays in parent.
         this.parent.dialect.dontUnionIndex === false
       ) {
-        this.fanPrefixMap[f.getFullOutputName()] = [];
+        const key = f.getFullOutputName();
+        this.fanPrefixMap[key] = [];
         this.findFanPrefexes(f);
       }
     }
