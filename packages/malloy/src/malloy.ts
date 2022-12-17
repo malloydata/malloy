@@ -1207,7 +1207,7 @@ abstract class Entity {
   }
 
   public get sourceClasses(): string[] {
-    const sourceClasses = [];
+    const sourceClasses: string[] = [];
     if (this.source) {
       sourceClasses.push(this.source.name);
     }

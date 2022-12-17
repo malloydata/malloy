@@ -17,6 +17,8 @@ import { DataArray, DataColumn, Field } from "@malloydata/malloy";
 import { Renderer } from "../renderer";
 import { ChartRenderOptions, StyleDefaults } from "../data_styles";
 
+type MappedRow = { [p: string]: string | number | Date | undefined | null };
+
 export abstract class HTMLChartRenderer implements Renderer {
   size: string;
   abstract getDataType(
@@ -27,10 +29,8 @@ export abstract class HTMLChartRenderer implements Renderer {
     value: DataColumn
   ): Date | string | number | null | undefined;
 
-  mapData(
-    data: DataArray
-  ): { [p: string]: string | number | Date | undefined | null }[] {
-    const mappedRows = [];
+  mapData(data: DataArray): MappedRow[] {
+    const mappedRows: MappedRow[] = [];
     for (const row of data) {
       const mappedRow: {
         [p: string]: string | number | Date | undefined | null;

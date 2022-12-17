@@ -11,7 +11,12 @@
  * GNU General Public License for more details.
  */
 
-import { CSVWriter, JSONWriter, WriteStream } from "@malloydata/malloy";
+import {
+  CSVWriter,
+  DataRecord,
+  JSONWriter,
+  WriteStream,
+} from "@malloydata/malloy";
 import { RuntimeList } from "../../runtimes";
 import { describeIfDatabaseAvailable } from "../../util";
 
@@ -45,7 +50,7 @@ describe("Streaming tests", () => {
         .loadModel(`source: airports is table('malloytest.airports') {}`)
         .loadQuery("query: airports -> { project: code }")
         .runStream({ rowLimit: 10 });
-      const rows = [];
+      const rows: DataRecord[] = [];
       for await (const row of stream) {
         rows.push(row);
       }

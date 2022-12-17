@@ -39,6 +39,7 @@ module.exports = {
     "prettier/prettier": "error",
     "sort-keys": "off",
     "no-duplicate-imports": "error",
+    "no-unsafe-any": true,
     "no-restricted-imports": [
       "error",
       { patterns: ["@malloydata/malloy/src/*"] },
