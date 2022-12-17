@@ -1583,6 +1583,23 @@ describe("error handling", () => {
       "extraneous input '}%' expecting {<EOF>, EXPLORE, QUERY, SOURCE, SQL, IMPORT, ';'}"
     );
   });
+
+  test("bad sql in sql block", () => {
+    const badModel = new BetaModel(`sql: { select: """)""" }`);
+    expect(badModel).modelParsed();
+    const needSchema = badModel.translate();
+    expect(needSchema.compileSQL).toBeDefined();
+    if (needSchema.compileSQL) {
+      badModel.update({
+        errors: {
+          compileSQL: {
+            [needSchema.compileSQL.name]: "ZZZZ",
+          },
+        },
+      });
+    }
+    expect(badModel).compileToFailWith("Invalid SQL, ZZZZ");
+  });
 });
 
 function getSelectOneStruct(sqlBlock: SQLBlockSource): SQLBlockStructDef {
