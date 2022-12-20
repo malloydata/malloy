@@ -13,6 +13,7 @@
 
 import { DuckDBDialect } from ".";
 import { Dialect } from "./dialect";
+import { F1SQLDialect } from "./f1sql";
 import { PostgresDialect } from "./postgres";
 import { StandardSQLDialect } from "./standardsql";
 
@@ -33,3 +34,4 @@ export function registerDialect(d: Dialect): void {
 registerDialect(new PostgresDialect());
 registerDialect(new StandardSQLDialect());
 registerDialect(new DuckDBDialect());
+registerDialect(new F1SQLDialect());

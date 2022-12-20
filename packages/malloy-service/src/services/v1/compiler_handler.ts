@@ -409,12 +409,17 @@ class StreamingCompileURLReader implements URLReader {
   addDocs = (docs: CompileDocument[]): void => docs.forEach(this.addDoc);
 
   addDoc = (doc: CompileDocument): void => {
-    this.doc_cache.set(doc.getUrl(), doc.getContent());
+    const docName = this.decodeUrlString(doc.getUrl());
+    this.doc_cache.set(docName, doc.getContent());
   };
 
   private urlToString = (url: URL): string => {
-    return decodeURI(url.toString());
+    return this.decodeUrlString(url.toString());
   };
+
+  private decodeUrlString = (url: string): string => {
+    return decodeURI(url);
+  }
 }
 
 class StreamingCompileConnection implements Connection {
