@@ -1,5 +1,5 @@
 // Time based Analysis
-//  
+//
 
 import "2_flights.malloy"
 source: flights_carrier is flights {
@@ -13,12 +13,12 @@ source: flights_carrier is flights {
   }
 
   // show it as a line chart
-  //  see: https://looker-open-source.github.io/malloy/documentation/visualizations/charts_line_chart.html
+  //  see: https://malloydata.github.io/malloy/documentation/visualizations/charts_line_chart.html
   query: carriers_over_time_line_chart is carriers_over_time
 
 
   // nesting result
-  //  see: https://looker-open-source.github.io/malloy/documentation/language/nesting.html
+  //  see: https://malloydata.github.io/malloy/documentation/language/nesting.html
   query: by_destination is {
     group_by: destination.name
     aggregate: flight_count
@@ -34,13 +34,13 @@ source: flights_carrier is flights {
   }
 
   // compare timeframes using filtered measures:
-  //  
+  //
   query: by_destination_growth_rate is {
-    declare: 
+    declare:
       flight2004 is flight_count {? dep_time: @2004}  // can use relative declarations
       flight2003 is flight_count {? dep_time: @2003}  //  also
     group_by: destination.name
-    aggregate: 
+    aggregate:
       flight2004
       flight2003
       delta is flight2004 - flight2003

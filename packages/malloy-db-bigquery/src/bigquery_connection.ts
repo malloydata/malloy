@@ -25,8 +25,6 @@ import { ResourceStream } from "@google-cloud/paginator";
 import * as googleCommon from "@google-cloud/common";
 import { GaxiosError } from "gaxios";
 import {
-  FetchSchemaAndRunSimultaneously,
-  FetchSchemaAndRunStreamSimultaneously,
   Malloy,
   PersistSQLResults,
   PooledConnection,
@@ -114,11 +112,7 @@ const TIMEOUT_MS = 1000 * 60 * 10;
 
 // manage access to BQ, control costs, enforce global data/API limits
 export class BigQueryConnection
-  implements
-    Connection,
-    PersistSQLResults,
-    StreamingConnection,
-    FetchSchemaAndRunSimultaneously
+  implements Connection, PersistSQLResults, StreamingConnection
 {
   static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
     rowLimit: 10,
@@ -136,8 +130,8 @@ export class BigQueryConnection
   >();
   private sqlSchemaCache = new Map<
     string,
-    | { schema: StructDef; error?: undefined }
-    | { error: string; schema?: undefined }
+    | { structDef: StructDef; error?: undefined }
+    | { error: string; structDef?: undefined }
   >();
 
   private queryOptions?: QueryOptionsReader;
@@ -217,14 +211,6 @@ export class BigQueryConnection
     return true;
   }
 
-  public canFetchSchemaAndRunSimultaneously(): this is FetchSchemaAndRunSimultaneously {
-    return true;
-  }
-
-  public canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously {
-    return false;
-  }
-
   private async _runSQL(
     sqlCommand: string,
     options: Partial<BigQueryQueryOptions> = {},
@@ -278,7 +264,7 @@ export class BigQueryConnection
     options?: { rowLimit?: number | undefined }
   ): Promise<{ data: MalloyQueryData; schema: StructDef }> {
     const { data, schema: schemaRaw } = await this._runSQL(
-      sqlBlock.select,
+      sqlBlock.selectStr,
       options
     );
     const schema = this.structDefFromSQLSchema(sqlBlock, schemaRaw);
@@ -522,7 +508,7 @@ export class BigQueryConnection
           structDef.fields.push({
             name,
             type: "string",
-            e: [`BigQuery type "${type}" not supported by Malloy`],
+            e: [`'BigQuery type "${type}" not supported by Malloy'`],
           });
         }
       }
@@ -623,7 +609,7 @@ export class BigQueryConnection
       try {
         const [job] = await this.bigQuery.createQueryJob({
           location: this.location,
-          query: sqlRef.select,
+          query: sqlRef.selectStr,
           dryRun: true,
         });
 
@@ -635,34 +621,26 @@ export class BigQueryConnection
     throw lastFetchError;
   }
 
-  public async fetchSchemaForSQLBlocks(sqlRefs: SQLBlock[]): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }> {
-    const schemas: NamedStructDefs = {};
-    const errors: { [name: string]: string } = {};
-
-    for (const sqlRef of sqlRefs) {
-      const key = sqlRef.name;
-      let inCache = this.sqlSchemaCache.get(key);
-      if (!inCache) {
-        try {
-          const tableFieldSchema = await this.getSQLBlockSchema(sqlRef);
-          inCache = {
-            schema: this.structDefFromSQLSchema(sqlRef, tableFieldSchema),
-          };
-          this.schemaCache.set(key, inCache);
-        } catch (error) {
-          inCache = { error: error.message };
-        }
+  public async fetchSchemaForSQLBlock(
+    sqlRef: SQLBlock
+  ): Promise<
+    | { structDef: StructDef; error?: undefined }
+    | { error: string; structDef?: undefined }
+  > {
+    const key = sqlRef.name;
+    let inCache = this.sqlSchemaCache.get(key);
+    if (!inCache) {
+      try {
+        const tableFieldSchema = await this.getSQLBlockSchema(sqlRef);
+        inCache = {
+          structDef: this.structDefFromSQLSchema(sqlRef, tableFieldSchema),
+        };
+      } catch (error) {
+        inCache = { error: error.message };
       }
-      if (inCache.schema !== undefined) {
-        schemas[key] = inCache.schema;
-      } else {
-        errors[key] = inCache.error;
-      }
+      this.sqlSchemaCache.set(key, inCache);
     }
-    return { schemas, errors };
+    return inCache;
   }
 
   // TODO this needs to extend the wait for results using a timeout set by the user,

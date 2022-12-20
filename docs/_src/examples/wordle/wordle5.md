@@ -1,6 +1,6 @@
 # Solved Puzzles
 
-_Wordlebot is writen in [Malloy](https://github.com/looker-open-source/malloy/). Read about [How Wordlebot is constructed](wordle.md) (only 50 lines of code) and a good example of using data to solve interesting problems._
+_Wordlebot is writen in [Malloy](https://github.com/malloydata/malloy/). Read about [How Wordlebot is constructed](wordle.md) (only 50 lines of code) and a good example of using data to solve interesting problems._
 
 Let's solve some puzzles!
 

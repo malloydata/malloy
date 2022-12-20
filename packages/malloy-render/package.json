@@ -1,22 +1,23 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.3",
+  "version": "0.0.16",
   "license": "GPL-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "homepage": "https://github.com/looker-open-source/malloy#readme",
+  "homepage": "https://github.com/malloydata/malloy#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/looker-open-source/malloy"
+    "url": "https://github.com/malloydata/malloy"
   },
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
-    "build": "tsc --build"
+    "build": "tsc --build",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "0.0.3",
+    "@malloydata/malloy": "^0.0.16",
     "us-atlas": "^3.0.0",
     "vega": "^5.21.0",
     "vega-lite": "^5.2.0"

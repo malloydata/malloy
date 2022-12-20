@@ -186,7 +186,7 @@ function term(f: Fragment[]): Fragment[] {
 
 export function compressExpr(expr: Expr): Expr {
   // compress all adjacent strings
-  const compressValue = [];
+  const compressValue: Array<string | Fragment> = [];
   let buildString;
   for (const fragment of expr.flat()) {
     if (typeof fragment === "string") {

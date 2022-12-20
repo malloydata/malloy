@@ -29,12 +29,12 @@ The `@malloydata/malloy` is basically a compiler that takes a few things as inpu
 
 In practice, much of this loop is handled by various database plugins:
 
-- [DuckDB](https://github.com/looker-open-source/malloy/tree/main/packages/malloy-db-duckdb)
-- [BigQuery](https://github.com/looker-open-source/malloy/tree/main/packages/malloy-db-bigquery)
-- [Postgres](https://github.com/looker-open-source/malloy/tree/main/packages/malloy-db-postgres)
+- [DuckDB](https://github.com/malloydata/malloy/tree/main/packages/malloy-db-duckdb)
+- [BigQuery](https://github.com/malloydata/malloy/tree/main/packages/malloy-db-bigquery)
+- [Postgres](https://github.com/malloydata/malloy/tree/main/packages/malloy-db-postgres)
 
 ## Do you have any examples?
 
-You can find a (very) simple example of writing a CLI for executing Malloy queries [here](https://github.com/looker-open-source/malloy/tree/main/demo/malloy-demo-bq-cli)
+You can find a (very) simple example of writing a CLI for executing Malloy queries [here](https://github.com/malloydata/malloy/tree/main/demo/malloy-demo-bq-cli)
 
-A more realistic and complex use case - we use these libraries to power our VSCode Extension. Some examples can be found [here](https://github.com/looker-open-source/malloy/tree/main/vscode-extension/src/extension/commands)
+A more realistic and complex use case - we use these libraries to power our VSCode Extension. Some examples can be found [here](https://github.com/malloydata/malloy/tree/main/vscode-extension/src/extension/commands)

@@ -59,6 +59,7 @@ export class StandardSQLDialect extends Dialect {
   defaultSampling = { enable: false };
   supportUnnestArrayAgg = false;
   supportsCTEinCoorelatedSubQueries = false;
+  dontUnionIndex = true; // bigquery can't use a sample table more than once in a query.
 
   functionInfo: Record<string, FunctionInfo> = {
     timestamp_seconds: { returnType: "timestamp" },
@@ -430,5 +431,10 @@ ${indent(sql)}
       }
     }
     return tableSQL;
+  }
+
+  sqlLiteralString(literal: string): string {
+    const noVirgule = literal.replace(/\\/g, "\\\\");
+    return "'" + noVirgule.replace(/'/g, "\\'") + "'";
   }
 }

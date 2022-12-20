@@ -36,7 +36,7 @@ const OUT_PATH = path.join(__dirname, "../../_includes/generated");
 const JS_OUT_PATH = path.join(__dirname, "../../js/generated");
 const OUT_PATH2 = path.join(__dirname, "../../documentation/");
 const CONTENTS_PATH = path.join(DOCS_ROOT_PATH, "table_of_contents.json");
-const SAMPLES_PATH = path.join(__dirname, "../../../samples/bigquery");
+const SAMPLES_BIGQUERY_PATH = path.join(__dirname, "../../../samples/bigquery");
 const SAMPLES_ROOT_PATH = path.join(__dirname, "../../../samples");
 const AUX_OUT_PATH = path.join(__dirname, "../../aux/generated");
 
@@ -132,7 +132,11 @@ function outputSearchSegmentsFile(
   log(`File js/generated/search_segments.js written.`);
 }
 
-function outputSamplesZip(relativePath: string, name: string): Promise<void> {
+function outputSamplesZip(
+  rootPath: string,
+  relativePath: string,
+  name: string
+): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
       const archive = archiver("zip");
@@ -147,7 +151,7 @@ function outputSamplesZip(relativePath: string, name: string): Promise<void> {
         reject(error);
       });
       archive.pipe(output);
-      archive.directory(path.join(SAMPLES_ROOT_PATH, relativePath), false);
+      archive.directory(path.join(rootPath, relativePath), false);
       archive.finalize();
     } catch (error) {
       log(error);
@@ -159,10 +163,18 @@ function outputSamplesZip(relativePath: string, name: string): Promise<void> {
 async function outputSamplesZips(): Promise<void> {
   log("Zipping samples");
   await Promise.all([
-    outputSamplesZip("/", "samples.zip"),
-    ...fs.readdirSync(SAMPLES_PATH).map((relativePath) => {
-      if (fs.statSync(path.join(SAMPLES_PATH, relativePath)).isDirectory()) {
-        return outputSamplesZip(relativePath, relativePath + ".zip");
+    outputSamplesZip(SAMPLES_ROOT_PATH, "/", "samples.zip"),
+    ...fs.readdirSync(SAMPLES_BIGQUERY_PATH).map((relativePath) => {
+      if (
+        fs
+          .statSync(path.join(SAMPLES_BIGQUERY_PATH, relativePath))
+          .isDirectory()
+      ) {
+        return outputSamplesZip(
+          SAMPLES_BIGQUERY_PATH,
+          relativePath,
+          relativePath + ".zip"
+        );
       }
     }),
   ]);
@@ -211,7 +223,7 @@ async function outputSamplesZips(): Promise<void> {
         }
       }
     });
-    watchDebouncedRecursive(SAMPLES_PATH, (type, file) => {
+    watchDebouncedRecursive(SAMPLES_BIGQUERY_PATH, (type, file) => {
       log(`Model file ${file} ${type}d. Recompiling dependent documents...`);
       for (const doc of DEPENDENCIES.get(file) || []) {
         const fullPath = path.join(DOCS_ROOT_PATH, doc);

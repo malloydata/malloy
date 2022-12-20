@@ -61,6 +61,7 @@ export abstract class Dialect {
   abstract defaultSampling: Sampling;
   abstract supportUnnestArrayAgg: boolean; // won't need UDFs for nested pipelines
   abstract supportsCTEinCoorelatedSubQueries: boolean;
+  abstract dontUnionIndex: boolean;
 
   // return a quoted string for use as a table path.
   abstract quoteTablePath(tablePath: string): string;
@@ -173,6 +174,8 @@ export abstract class Dialect {
     timezone: string
   ): string;
 
+  abstract sqlLiteralString(literak: string): string;
+
   abstract sqlRegexpMatch(expr: Expr, regex: string): Expr;
 
   getFunctionInfo(functionName: string): FunctionInfo | undefined {
@@ -203,6 +206,8 @@ export abstract class Dialect {
       }
       case "timeLiteral":
         return [this.sqlLiteralTime(df.literal, df.literalType, df.timezone)];
+      case "stringLiteral":
+        return [this.sqlLiteralString(df.literal)];
     }
   }
 

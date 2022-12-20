@@ -13,8 +13,6 @@
 import {
   AtomicFieldTypeInner,
   Connection,
-  FetchSchemaAndRunSimultaneously,
-  FetchSchemaAndRunStreamSimultaneously,
   MalloyQueryData,
   NamedStructDefs,
   parseTableURI,
@@ -40,14 +38,52 @@ const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   INTEGER: "number",
 };
 
+export interface DuckDBQueryOptions {
+  rowLimit: number;
+}
+
+export type QueryOptionsReader =
+  | Partial<DuckDBQueryOptions>
+  | (() => Partial<DuckDBQueryOptions>);
+
 export abstract class DuckDBCommon
   implements Connection, PersistSQLResults, StreamingConnection
 {
+  static DEFAULT_QUERY_OPTIONS: DuckDBQueryOptions = {
+    rowLimit: 10,
+  };
+
+  private schemaCache = new Map<
+    string,
+    | { schema: StructDef; error?: undefined }
+    | { error: string; schema?: undefined }
+  >();
+  private sqlSchemaCache = new Map<
+    string,
+    | { structDef: StructDef; error?: undefined }
+    | { error: string; structDef?: undefined }
+  >();
+
   public readonly name: string = "duckdb_common";
 
   get dialectName(): string {
     return "duckdb";
   }
+
+  private readQueryOptions(): DuckDBQueryOptions {
+    const options = DuckDBCommon.DEFAULT_QUERY_OPTIONS;
+    if (this.queryOptions) {
+      if (this.queryOptions instanceof Function) {
+        return { ...options, ...this.queryOptions() };
+      } else {
+        return { ...options, ...this.queryOptions };
+      }
+    } else {
+      return options;
+    }
+  }
+
+  constructor(private queryOptions?: QueryOptionsReader) {}
 
   public isPool(): this is PooledConnection {
     return false;
@@ -74,7 +110,8 @@ export abstract class DuckDBCommon
     sql: string,
     options: RunSQLOptions = {}
   ): Promise<MalloyQueryData> {
-    const rowLimit = options.rowLimit ?? 10;
+    const defaultOptions = this.readQueryOptions();
+    const rowLimit = options.rowLimit ?? defaultOptions.rowLimit;
 
     const statements = sql.split("-- hack: split on this");
 
@@ -96,16 +133,6 @@ export abstract class DuckDBCommon
     _options: RunSQLOptions
   ): AsyncIterableIterator<QueryDataRow>;
 
-  public async runSQLBlockAndFetchResultSchema(
-    sqlBlock: SQLBlock
-  ): Promise<{ data: MalloyQueryData; schema: StructDef }> {
-    const data = await this.runSQL(sqlBlock.select);
-    const schema = (await this.fetchSchemaForSQLBlocks([sqlBlock])).schemas[
-      sqlBlock.name
-    ];
-    return { data, schema };
-  }
-
   private async getSQLBlockSchema(sqlRef: SQLBlock): Promise<StructDef> {
     const structDef: StructDef = {
       type: "struct",
@@ -124,7 +151,7 @@ export abstract class DuckDBCommon
     };
 
     await this.schemaFromQuery(
-      `DESCRIBE SELECT * FROM (${sqlRef.select})`,
+      `DESCRIBE SELECT * FROM (${sqlRef.selectStr})`,
       structDef
     );
     return structDef;
@@ -135,13 +162,13 @@ export abstract class DuckDBCommon
    * to be fed back into fillStructDefFromTypeMap(). Handles commas
    * within nested STRUCT() declarations.
    *
-   * (https://github.com/looker-open-source/malloy/issues/635)
+   * (https://github.com/malloydata/malloy/issues/635)
    *
    * @param s struct's column declaration
    * @returns Array of column type declarations
    */
   private splitColumns(s: string) {
-    const columns = [];
+    const columns: string[] = [];
     let parens = 0;
     let column = "";
     let eatSpaces = true;
@@ -233,7 +260,11 @@ export abstract class DuckDBCommon
               name,
             });
           } else {
-            throw new Error(`unknown duckdb type ${duckDBType}`);
+            structDef.fields.push({
+              name,
+              type: "string",
+              e: [`'DuckDB type "${duckDBType}" not supported by Malloy'`],
+            });
           }
         }
       }
@@ -253,21 +284,25 @@ export abstract class DuckDBCommon
     this.fillStructDefFromTypeMap(structDef, typeMap);
   }
 
-  public async fetchSchemaForSQLBlocks(sqlRefs: SQLBlock[]): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }> {
-    const schemas: NamedStructDefs = {};
-    const errors: { [name: string]: string } = {};
-
-    for (const sqlRef of sqlRefs) {
+  public async fetchSchemaForSQLBlock(
+    sqlRef: SQLBlock
+  ): Promise<
+    | { structDef: StructDef; error?: undefined }
+    | { error: string; structDef?: undefined }
+  > {
+    const key = sqlRef.name;
+    let inCache = this.sqlSchemaCache.get(key);
+    if (!inCache) {
       try {
-        schemas[sqlRef.name] = await this.getSQLBlockSchema(sqlRef);
+        inCache = {
+          structDef: await this.getSQLBlockSchema(sqlRef),
+        };
       } catch (error) {
-        errors[sqlRef.name] = error;
+        inCache = { error: error.message };
       }
+      this.sqlSchemaCache.set(key, inCache);
     }
-    return { schemas, errors };
+    return inCache;
   }
 
   public async fetchSchemaForTables(tables: string[]): Promise<{
@@ -278,10 +313,21 @@ export abstract class DuckDBCommon
     const errors: { [name: string]: string } = {};
 
     for (const tableURL of tables) {
-      try {
-        schemas[tableURL] = await this.getTableSchema(tableURL);
-      } catch (error) {
-        errors[tableURL] = error.toString();
+      let inCache = this.schemaCache.get(tableURL);
+      if (!inCache) {
+        try {
+          inCache = {
+            schema: await this.getTableSchema(tableURL),
+          };
+          this.schemaCache.set(tableURL, inCache);
+        } catch (error) {
+          inCache = { error: error.message };
+        }
+      }
+      if (inCache.schema !== undefined) {
+        schemas[tableURL] = inCache.schema;
+      } else {
+        errors[tableURL] = inCache.error;
       }
     }
     return { schemas, errors };
@@ -301,7 +347,7 @@ export abstract class DuckDBCommon
       fields: [],
     };
 
-    const quotedTablePath = tablePath.match(/\//)
+    const quotedTablePath = tablePath.match(/[:*/]/)
       ? `'${tablePath}'`
       : tablePath;
     const infoQuery = `DESCRIBE SELECT * FROM ${quotedTablePath}`;
@@ -309,16 +355,8 @@ export abstract class DuckDBCommon
     return structDef;
   }
 
-  canFetchSchemaAndRunSimultaneously(): this is FetchSchemaAndRunSimultaneously {
-    return false;
-  }
-
   canStream(): this is StreamingConnection {
     return true;
-  }
-
-  canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously {
-    return false;
   }
 
   public async test(): Promise<void> {

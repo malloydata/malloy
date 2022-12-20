@@ -16,8 +16,5 @@
   },
   "cSpell.words": ["antlr"],
   "typescript.tsdk": "node_modules/typescript/lib",
-  "[python]": {
-    "editor.defaultFormatter": "ms-python.python"
-  },
-  "python.formatting.provider": "yapf"
+  "task.allowAutomaticTasks": "on"
 }

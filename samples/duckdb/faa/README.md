@@ -4,7 +4,7 @@ The NTSB FAA Dataset includes information about flights, airports, carriers, and
 
 ## Overview of models
 
-This set of models is a great place to get introduced to Malloy for the first time. You can use this model to follow along with the [Malloy by Example document](https://looker-open-source.github.io/malloy/documentation/malloy-by-example.html).
+This set of models is a great place to get introduced to Malloy for the first time. You can use this model to follow along with the [Malloy by Example document](https://malloydata.github.io/malloy/documentation/malloy-by-example.html).
 
 **`1_airports`** - the simplest model, using only the airports table. Start here to get familiar with core concepts in Malloy.
 

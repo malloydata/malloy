@@ -19,8 +19,6 @@
 
 import * as crypto from "crypto";
 import {
-  FetchSchemaAndRunSimultaneously,
-  FetchSchemaAndRunStreamSimultaneously,
   PersistSQLResults,
   RunSQLOptions,
   StreamingConnection,
@@ -37,6 +35,7 @@ import {
 } from "@malloydata/malloy";
 import { Client, Pool, PoolClient } from "pg";
 import QueryStream from "pg-query-stream";
+import { randomUUID } from "crypto";
 
 const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   "character varying": "string",
@@ -99,8 +98,8 @@ export class PostgresConnection
   >();
   private sqlSchemaCache = new Map<
     string,
-    | { schema: StructDef; error?: undefined }
-    | { error: string; schema?: undefined }
+    | { structDef: StructDef; error?: undefined }
+    | { error: string; structDef?: undefined }
   >();
   private queryConfigReader: PostgresQueryConfigurationReader;
   private configReader: PostgresConnectionConfigurationReader;
@@ -144,15 +143,6 @@ export class PostgresConnection
     return true;
   }
 
-  public canFetchSchemaAndRunSimultaneously(): this is FetchSchemaAndRunSimultaneously {
-    // TODO feature-sql-block Implement FetchSchemaAndRunSimultaneously
-    return false;
-  }
-
-  public canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously {
-    return false;
-  }
-
   public canStream(): this is StreamingConnection {
     return true;
   }
@@ -185,33 +175,25 @@ export class PostgresConnection
     return { schemas, errors };
   }
 
-  public async fetchSchemaForSQLBlocks(sqlRefs: SQLBlock[]): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }> {
-    const schemas: NamedStructDefs = {};
-    const errors: { [name: string]: string } = {};
-
-    for (const sqlRef of sqlRefs) {
-      const key = sqlRef.name;
-      let inCache = this.sqlSchemaCache.get(key);
-      if (!inCache) {
-        try {
-          inCache = {
-            schema: await this.getSQLBlockSchema(sqlRef),
-          };
-          this.schemaCache.set(key, inCache);
-        } catch (error) {
-          inCache = { error: error.message };
-        }
+  public async fetchSchemaForSQLBlock(
+    sqlRef: SQLBlock
+  ): Promise<
+    | { structDef: StructDef; error?: undefined }
+    | { error: string; structDef?: undefined }
+  > {
+    const key = sqlRef.name;
+    let inCache = this.sqlSchemaCache.get(key);
+    if (!inCache) {
+      try {
+        inCache = {
+          structDef: await this.getSQLBlockSchema(sqlRef),
+        };
+      } catch (error) {
+        inCache = { error: error.message };
       }
-      if (inCache.schema !== undefined) {
-        schemas[key] = inCache.schema;
-      } else {
-        errors[key] = inCache.error;
-      }
+      this.sqlSchemaCache.set(key, inCache);
     }
-    return { schemas, errors };
+    return inCache;
   }
 
   protected async getClient(): Promise<Client> {
@@ -264,12 +246,11 @@ export class PostgresConnection
       fields: [],
     };
 
-    // TODO -- Should be a uuid
-    const tempTableName = `malloy${Math.floor(Math.random() * 10000000)}`;
+    const tempTableName = `tmp${randomUUID()}`.replace(/-/g, "");
     const infoQuery = `
       drop table if exists ${tempTableName};
       create temp table ${tempTableName} as SELECT * FROM (
-        ${sqlRef.select}
+        ${sqlRef.selectStr}
       ) as x where false;
       SELECT column_name, c.data_type, e.data_type as element_type
       FROM information_schema.columns c LEFT JOIN information_schema.element_types e
@@ -315,7 +296,11 @@ export class PostgresConnection
           name,
         });
       } else {
-        throw new Error(`unknown postgres type ${postgresDataType}`);
+        s.fields.push({
+          name,
+          type: "string",
+          e: [`'Postgres type "${postgresDataType}" not supported by Malloy'`],
+        });
       }
     }
   }

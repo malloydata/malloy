@@ -193,7 +193,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    // https://github.com/looker-open-source/malloy/pull/501#discussion_r861022857
+    // https://github.com/malloydata/malloy/pull/501#discussion_r861022857
     expect(result.data.value).toHaveLength(3);
     expect(result.data.value).toContainEqual({ c: 1845, state: "TX" });
     expect(result.data.value).toContainEqual({ c: 500, state: "LA" });
@@ -732,15 +732,17 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.data.path(0, "fun", 0, "t1").value).toBe(52);
   });
 
+  const sql1234 = `
+  sql: one is {select: """
+    SELECT 1 as a, 2 as b
+    UNION ALL SELECT 3, 4
+  """}`;
+
   it(`sql_block - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
-        SELECT 1 as a, 2 as b
-        UNION ALL SELECT 3, 4
-      ;;
-
+      ${sql1234}
       explore: eone is  from_sql(one) {}
 
       query: eone -> { project: a }
@@ -754,16 +756,37 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
-        SELECT 1 as a, 2 as b
-        UNION ALL SELECT 3, 4
-      ;;
-
-      query: from_sql(one) -> { project: a }
+          ${sql1234}
+          query: from_sql(one) -> { project: a }
       `
       )
       .run();
     expect(result.data.value[0].a).toBe(1);
+  });
+
+  it(`sql_block with turducken- ${databaseName}`, async () => {
+    if (databaseName != "postgres") {
+      const turduckenQuery = `
+        sql: state_as_sql is {
+          select: """
+            SELECT
+              ROW_NUMBER() OVER (ORDER BY state_count) as row_number,
+              *
+            FROM (%{
+              table('malloytest.state_facts')
+              -> {
+                group_by: popular_name
+                aggregate: state_count is count()
+              }
+            }%)
+          """
+        }
+        query: from_sql(state_as_sql) -> {
+          project: *; where: popular_name = 'Emma'
+        }`;
+      const result = await runtime.loadQuery(turduckenQuery).run();
+      expect(result.data.value[0].state_count).toBe(6);
+    }
   });
 
   // it(`sql_block version- ${databaseName}`, async () => {
@@ -786,11 +809,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
-        SELECT 1 as a, 2 as b
-        UNION ALL SELECT 3, 4
-      ;;
-
+      ${sql1234}
       query: from_sql(one) -> {
         declare: c is a + 1
         project: c
@@ -805,11 +824,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
-        SELECT 1 as a, 2 as b
-        UNION ALL SELECT 3, 4
-      ;;
-
+      ${sql1234}
       source: foo is from_sql(one) + {
         query: bar is {
           declare: c is a + 1
@@ -828,11 +843,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
-        SELECT 1 as a, 2 as b
-        UNION ALL SELECT 3, 4
-      ;;
-
+      ${sql1234}
       source: foo is from_sql(one) + {
         query: bar is {
           declare: c is a + 1
@@ -856,10 +867,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
+      sql: one is { select: """
         SELECT 'hello mom' as a, 'cheese tastes good' as b
         UNION ALL SELECT 'lloyd is a bozo', 'michael likes poetry'
-      ;;
+      """}
 
       query: from_sql(one) -> {
         aggregate: llo is count() {? a ~ r'llo'}
@@ -876,10 +887,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
+      sql: one is {select: """
         SELECT 5 as a, 2 as b
         UNION ALL SELECT 3, 4
-      ;;
+      """}
 
       query: from_sql(one) -> {
         declare: c is b + 4
@@ -895,12 +906,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        sql: atitle is ||
+        sql: atitle is {select:"""
           SELECT
             city,
             ${splitFunction[databaseName]}(city,' ') as words
           FROM ${rootDbPath[databaseName]}malloytest.aircraft
-        ;;
+          """}
 
         source: title is from_sql(atitle){}
 
@@ -920,14 +931,14 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        sql: atitle is ||
+        sql: atitle is {select: """
           SELECT
             city,
             ${splitFunction[databaseName]}(city,' ') as words,
             ${splitFunction[databaseName]}(city,'A') as abreak
           FROM ${rootDbPath[databaseName]}malloytest.aircraft
           where city IS NOT null
-        ;;
+        """}
 
         source: title is from_sql(atitle){}
 
@@ -992,5 +1003,34 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     expect(result.data.path(0, "ugly", 0, "foo").value).toBe(null);
+  });
+
+  describe("quoting and strings", () => {
+    const tick = "'";
+    const back = "\\";
+    test("backslash quote", async () => {
+      const result = await runtime
+        .loadQuery(
+          `
+            query: table('malloytest.state_facts') -> {
+              project: tick is '${back}${tick}'
+            }
+        `
+        )
+        .run();
+      expect(result.data.value[0].tick).toBe(tick);
+    });
+    test("backslash backslash", async () => {
+      const result = await runtime
+        .loadQuery(
+          `
+            query: table('malloytest.state_facts') -> {
+              project: back is '${back}${back}'
+            }
+        `
+        )
+        .run();
+      expect(result.data.value[0].back).toBe(back);
+    });
   });
 });

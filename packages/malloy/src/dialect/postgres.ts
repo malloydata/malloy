@@ -66,6 +66,7 @@ export class PostgresDialect extends Dialect {
   defaultSampling = { rows: 50000 };
   supportUnnestArrayAgg = true;
   supportsCTEinCoorelatedSubQueries = true;
+  dontUnionIndex = false;
 
   functionInfo: Record<string, FunctionInfo> = {
     concat: { returnType: "string" },
@@ -388,5 +389,9 @@ export class PostgresDialect extends Dialect {
 
   sqlOrderBy(orderTerms: string[]): string {
     return `ORDER BY ${orderTerms.map((t) => `${t} NULLS LAST`).join(",")}`;
+  }
+
+  sqlLiteralString(literal: string): string {
+    return "'" + literal.replace(/'/g, "''") + "'";
   }
 }
