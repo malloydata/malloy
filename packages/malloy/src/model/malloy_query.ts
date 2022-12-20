@@ -1048,7 +1048,7 @@ class FieldInstanceResult implements FieldInstance {
   fieldNames(
     fn: undefined | ((field: FieldInstanceField) => boolean)
   ): string[] {
-    const ret = [];
+    const ret: string[] = [];
     for (const [name, fi] of this.allFields) {
       if (fi instanceof FieldInstanceField) {
         if (fn === undefined || fn(fi)) {
@@ -1628,7 +1628,7 @@ class QueryQuery extends QueryField {
     filter: ((qf: QueryNode) => boolean) | undefined = undefined
   ): string[] {
     let fieldNames: string[] = [];
-    const structs = [];
+    const structs: QueryStruct[] = [];
 
     for (const [_name, f] of struct.nameMap) {
       if (
@@ -2167,7 +2167,7 @@ class QueryQuery extends QueryField {
         onCondition = "1=1";
       }
       let filters = "";
-      let conditions = undefined;
+      let conditions: string[] | undefined = undefined;
       if (ji.joinFilterConditions) {
         conditions = ji.joinFilterConditions.map((qf) =>
           qf.generateExpression(this.rootResult)
@@ -2281,7 +2281,7 @@ class QueryQuery extends QueryField {
       return ""; // No default ordering for project.
     }
     const orderBy = queryDef.orderBy || resultStruct.calculateDefaultOrderBy();
-    const o = [];
+    const o: string[] = [];
     for (const f of orderBy) {
       if (typeof f.field === "string") {
         // convert name to an index
@@ -2304,7 +2304,7 @@ class QueryQuery extends QueryField {
   generateSimpleSQL(stageWriter: StageWriter): string {
     let s = "";
     s += "SELECT \n";
-    const fields = [];
+    const fields: string[] = [];
 
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
@@ -2322,7 +2322,7 @@ class QueryQuery extends QueryField {
 
     // group by
     if (this.firstSegment.type === "reduce") {
-      const n = [];
+      const n: string[] = [];
       for (const field of this.rootResult.fields()) {
         const fi = field as FieldInstanceField;
         if (fi.fieldUsage.type === "result" && isScalarField(fi.f)) {
@@ -2496,7 +2496,7 @@ class QueryQuery extends QueryField {
     stageWriter: StageWriter,
     lastStageName: string
   ): string {
-    const fields = [];
+    const fields: string[] = [];
     const resultsWithHaving = this.rootResult.selectStructs(
       [],
       (result: FieldInstanceResult) => result.hasHaving
@@ -2505,7 +2505,7 @@ class QueryQuery extends QueryField {
     if (resultsWithHaving.length > 0) {
       for (const result of resultsWithHaving) {
         // find all the parent dimension names.
-        const dimensions = [];
+        const dimensions: string[] = [];
         let r: FieldInstanceResult | undefined = result;
         while (r) {
           for (const name of r.fieldNames((fi) => isScalarField(fi.f))) {
@@ -2601,7 +2601,7 @@ class QueryQuery extends QueryField {
     output: StageOutputContext,
     stageWriter: StageWriter
   ) {
-    const groupsToMap = [];
+    const groupsToMap: number[] = [];
     for (const [name, fi] of resultSet.allFields) {
       const sqlFieldName = this.parent.dialect.sqlMaybeQuoteIdentifier(
         `${name}__${resultSet.groupSet}`
@@ -2696,10 +2696,10 @@ class QueryQuery extends QueryField {
     stage0Name: string
   ): string {
     let s = "SELECT\n";
-    const fieldsSQL = [];
+    const fieldsSQL: string[] = [];
     let fieldIndex = 1;
     const outputPipelinedSQL: OutputPipelinedSQL[] = [];
-    const dimensionIndexes = [];
+    const dimensionIndexes: number[] = [];
     for (const [name, fi] of this.rootResult.allFields) {
       const sqlName = this.parent.dialect.sqlMaybeQuoteIdentifier(name);
       if (fi instanceof FieldInstanceField) {
@@ -2789,7 +2789,7 @@ class QueryQuery extends QueryField {
     const limit: number | undefined = resultStruct.firstSegment.limit;
 
     // calculate the ordering.
-    const obSQL = [];
+    const obSQL: string[] = [];
     let orderingField;
     const orderByDef =
       (resultStruct.firstSegment as QuerySegment).orderBy ||
@@ -3091,7 +3091,8 @@ class QueryQueryIndexStage extends QueryQuery {
         .f.generateExpression(this.rootResult);
     }
 
-    const fields = [];
+    const fields: Array<{ name: string; type: string; expression: string }> =
+      [];
     for (const [name, field] of this.rootResult.allFields) {
       const fi = field as FieldInstanceField;
       if (fi.fieldUsage.type === "result" && isScalarField(fi.f)) {

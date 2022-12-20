@@ -168,7 +168,7 @@ export abstract class DuckDBCommon
    * @returns Array of column type declarations
    */
   private splitColumns(s: string) {
-    const columns = [];
+    const columns: string[] = [];
     let parens = 0;
     let column = "";
     let eatSpaces = true;

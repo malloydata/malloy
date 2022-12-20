@@ -62,7 +62,7 @@ function enrichTableOfContents(sections: Section[]): EnrichedSection[] {
 }
 
 function extractItems(sections: (Section | SectionItem)[]): SectionItem[] {
-  const items = [];
+  const items: SectionItem[] = [];
   const stack = [...sections].reverse();
   while (stack.length) {
     const section = stack.pop() as Section | SectionItem;
