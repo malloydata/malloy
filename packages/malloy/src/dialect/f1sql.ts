@@ -59,6 +59,7 @@ export class F1SQLDialect extends Dialect {
   defaultSampling = { enable: false };
   supportUnnestArrayAgg = false;
   supportsCTEinCoorelatedSubQueries = false;
+  dontUnionIndex = true;
 
   functionInfo: Record<string, FunctionInfo> = {
     timestamp_seconds: { returnType: "timestamp" },
@@ -430,5 +431,10 @@ ${indent(sql)}
       }
     }
     return tableSQL;
+  }
+
+  sqlLiteralString(literal: string): string {
+    const noVirgule = literal.replace(/\\/g, "\\\\");
+    return "'" + noVirgule.replace(/'/g, "\\'") + "'";
   }
 }

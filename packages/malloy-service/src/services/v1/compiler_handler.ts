@@ -12,11 +12,7 @@ import {
   PooledConnection,
 } from "@malloydata/malloy";
 import { RunSQLOptions } from "@malloydata/malloy/src/malloy";
-import {
-  FetchSchemaAndRunSimultaneously,
-  StreamingConnection,
-  FetchSchemaAndRunStreamSimultaneously,
-} from "@malloydata/malloy/src/runtime_types";
+import { StreamingConnection } from "@malloydata/malloy/src/runtime_types";
 import { CompilerService, ICompilerServer } from "./compiler_grpc_pb";
 import {
   CompileDocument,
@@ -311,6 +307,15 @@ class CompilerRuntime implements LookupConnection<Connection>, Connection {
       console.warn(ex);
     }
   }
+  fetchSchemaForSQLBlock = async (
+    block: SQLBlock
+  ): Promise<
+    | { structDef: StructDef; error?: undefined }
+    | { error: string; structDef?: undefined }
+  > => {
+    console.log("ERROR: fetchSchemaForSQLBlock() called.");
+    throw new Error("Method not implemented.");
+  };
 
   runSQL = async (sql: string, options?: unknown): Promise<MalloyQueryData> => {
     console.log("ERROR: runSQL() called.");
@@ -419,10 +424,19 @@ class StreamingCompileURLReader implements URLReader {
 
   private decodeUrlString = (url: string): string => {
     return decodeURI(url);
-  }
+  };
 }
 
 class StreamingCompileConnection implements Connection {
+  fetchSchemaForSQLBlock = async (
+    block: SQLBlock
+  ): Promise<
+    | { structDef: StructDef; error?: undefined }
+    | { error: string; structDef?: undefined }
+  > => {
+    console.log("ERROR: fetchSchemaForSQLBlock() called.");
+    throw new Error("Method not implemented.");
+  };
   private table_schema_cache = new Map<string, StructDef>();
 
   runSQL = async (sql: string, options?: unknown): Promise<MalloyQueryData> => {
