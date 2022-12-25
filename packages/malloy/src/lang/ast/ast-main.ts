@@ -596,7 +596,7 @@ export class RefinedExplore extends Mallobj {
     for (const filter of filters) {
       for (const el of filter.list) {
         const fc = el.filterExpression(fs);
-        if (fc.aggregate) {
+        if (model.expressionIsCalculation(fc.expressionType)) {
           el.log("Can't use aggregate computations in top level filters");
         } else {
           filterList.push(fc);
@@ -1019,15 +1019,14 @@ export class FilterElement extends MalloyElement {
       return {
         code: this.exprSrc,
         expression: ["_FILTER_MUST_RETURN_BOOLEAN_"],
+        expressionType: "scalar",
       };
     }
     const exprCond: model.FilterExpression = {
       code: this.exprSrc,
       expression: compressExpr(exprVal.value),
+      expressionType: exprVal.expressionType,
     };
-    if (exprVal.aggregate) {
-      exprCond.aggregate = true;
-    }
     return exprCond;
   }
 }
@@ -1051,13 +1050,17 @@ export class Filter extends ListOf<FilterElement> {
       // here allows better reflection of errors back to user.
       if (this.havingClause !== undefined) {
         if (this.havingClause) {
-          if (!fExpr.aggregate) {
-            oneElement.log("Aggregate expression expected in HAVING filter");
+          if (model.expressionIsCalculation(fExpr.expressionType)) {
+            oneElement.log(
+              "Aggregate or Analytical expression expected in HAVING filter"
+            );
             continue;
           }
         } else {
-          if (fExpr.aggregate) {
-            oneElement.log("Aggregate expression not allowed in WHERE");
+          if (fExpr.expressionType !== "scalar") {
+            oneElement.log(
+              "Aggregate or Analytical expressions not allowed in WHERE"
+            );
             continue;
           }
         }
@@ -2155,7 +2158,7 @@ export class Top extends MalloyElement {
         return { by: "name", name: this.by.refString };
       } else {
         const byExpr = this.by.getExpression(fs);
-        if (!byExpr.aggregate) {
+        if (model.expressionIsAggregate(byExpr.expressionType)) {
           this.log("top by expression must be an aggregate");
         }
         return { by: "expression", e: compressExpr(byExpr.value) };

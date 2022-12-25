@@ -16,6 +16,7 @@ import {
   Expr,
   mkExpr,
   DivFragment,
+  maxExpressionType,
 } from "../../model/malloy_types";
 import { FieldSpace } from "../field-space";
 import {
@@ -79,7 +80,10 @@ export function applyBinary(
       };
       return {
         dataType: "number",
-        aggregate: num.aggregate || denom.aggregate,
+        expressionType: maxExpressionType(
+          num.expressionType,
+          denom.expressionType
+        ),
         value: [div],
       };
     }
@@ -220,7 +224,7 @@ function equality(
 
   return {
     dataType: "boolean",
-    aggregate: lhs.aggregate || rhs.aggregate,
+    expressionType: maxExpressionType(lhs.expressionType, rhs.expressionType),
     value,
   };
 }
@@ -233,12 +237,15 @@ function compare(
 ): ExprValue {
   const lhs = left.getExpression(fs);
   const rhs = right.getExpression(fs);
-  const anyAggregate = lhs.aggregate || rhs.aggregate;
+  const expressionType = maxExpressionType(
+    lhs.expressionType,
+    rhs.expressionType
+  );
   const value = timeCompare(lhs, op, rhs) || compose(lhs.value, op, rhs.value);
 
   return {
     dataType: "boolean",
-    aggregate: anyAggregate,
+    expressionType,
     value: value,
   };
 }
@@ -251,12 +258,15 @@ function numeric(
 ): ExprValue {
   const lhs = left.getExpression(fs);
   const rhs = right.getExpression(fs);
-  const anyAggregate = lhs.aggregate || rhs.aggregate;
+  const expressionType = maxExpressionType(
+    lhs.expressionType,
+    rhs.expressionType
+  );
 
   if (allAre("number", lhs, rhs)) {
     return {
       dataType: "number",
-      aggregate: anyAggregate,
+      expressionType,
       value: compose(lhs.value, op, rhs.value),
     };
   }

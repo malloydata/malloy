@@ -43,7 +43,7 @@ function timestampToDateFilter(
 function getTableFilters(table: DataArray): FilterItem[] {
   const filters: FilterItem[] = [];
   for (const f of table.field.filters || []) {
-    if (!f.aggregate) {
+    if (f.expressionType === "scalar") {
       filters.push({ key: f.code, value: undefined });
     }
   }

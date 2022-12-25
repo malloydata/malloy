@@ -22,6 +22,8 @@ import {
   isTimeFieldType,
   TimeFieldType,
   mkExpr,
+  maxExpressionType,
+  ExpressionType,
 } from "../../model/malloy_types";
 import { FieldSpace } from "../field-space";
 import {
@@ -143,7 +145,7 @@ export class ExprGranularTime extends ExpressionDef {
     const endTime = new ExprTime(
       "timestamp",
       timeOffset("timestamp", begin.value, "+", mkExpr`1`, this.units),
-      begin.aggregate
+      begin.expressionType
     );
     const range = new Range(beginTime, endTime);
     return range.apply(fs, op, expr);
@@ -155,9 +157,9 @@ export class ExprGranularTime extends ExpressionDef {
     expr: ExpressionDef
   ): ExprValue {
     const begin = this.getExpression(fs);
-    const beginTime = new ExprTime("date", begin.value, begin.aggregate);
+    const beginTime = new ExprTime("date", begin.value, begin.expressionType);
     const endAt = timeOffset("date", begin.value, "+", ["1"], this.units);
-    const end = new ExprTime("date", endAt, begin.aggregate);
+    const end = new ExprTime("date", endAt, begin.expressionType);
     const range = new Range(beginTime, end);
     return range.apply(fs, op, expr);
   }
@@ -293,7 +295,7 @@ export class GranularLiteral extends ExpressionDef {
     const dataType = this.timeType || "date";
     const value: TimeResult = {
       dataType,
-      aggregate: false,
+      expressionType: "scalar",
       value: timeLiteral(this.moment, dataType, "UTC"),
     };
     // Literals with date resolution can be used as timestamps or dates,
@@ -321,7 +323,7 @@ export class ExprNow extends ExpressionDef {
   getExpression(_fs: FieldSpace): ExprValue {
     return {
       dataType: "timestamp",
-      aggregate: false,
+      expressionType: "scalar",
       value: [
         {
           type: "dialect",
@@ -366,7 +368,10 @@ export class ExprDuration extends ExpressionDef {
         return timeResult(
           {
             dataType: "timestamp",
-            aggregate: lhs.aggregate || num.aggregate,
+            expressionType: maxExpressionType(
+              lhs.expressionType,
+              num.expressionType
+            ),
             value: result,
           },
           resultGranularity
@@ -375,7 +380,10 @@ export class ExprDuration extends ExpressionDef {
       return timeResult(
         {
           dataType: "date",
-          aggregate: lhs.aggregate || num.aggregate,
+          expressionType: maxExpressionType(
+            lhs.expressionType,
+            num.expressionType
+          ),
           value: timeOffset("date", lhs.value, op, num.value, this.timeframe),
         },
         resultGranularity
@@ -387,7 +395,7 @@ export class ExprDuration extends ExpressionDef {
   getExpression(_fs: FieldSpace): ExprValue {
     return {
       dataType: "duration",
-      aggregate: false,
+      expressionType: "scalar",
       value: ["__ERROR_DURATION_IS_NOT_A_VALUE__"],
     };
   }
@@ -515,10 +523,10 @@ export class ForRange extends ExpressionDef {
         // ... not a literal, need a cast
         from = castDateToTimestamp(from);
       }
-      rangeStart = new ExprTime("timestamp", from, startV.aggregate);
+      rangeStart = new ExprTime("timestamp", from, startV.expressionType);
     }
     const to = timeOffset("timestamp", from, "+", nV.value, units);
-    const rangeEnd = new ExprTime("timestamp", to, startV.aggregate);
+    const rangeEnd = new ExprTime("timestamp", to, startV.expressionType);
 
     return new Range(rangeStart, rangeEnd).apply(fs, op, applyTo);
   }
@@ -585,7 +593,10 @@ export class ExprTimeExtract extends ExpressionDef {
         }
         return {
           dataType: "number",
-          aggregate: first.aggregate || last.aggregate,
+          expressionType: maxExpressionType(
+            first.expressionType,
+            last.expressionType
+          ),
           value: [
             {
               type: "dialect",
@@ -601,7 +612,7 @@ export class ExprTimeExtract extends ExpressionDef {
         if (isTimeFieldType(argV.dataType)) {
           return {
             dataType: "number",
-            aggregate: argV.aggregate,
+            expressionType: argV.expressionType,
             value: [
               {
                 type: "dialect",
@@ -629,14 +640,13 @@ export class ExprFunc extends ExpressionDef {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    let anyAggregate = false;
+    let expressionType: ExpressionType = "scalar";
     let collectType: FieldValueType | undefined;
     const funcCall: Fragment[] = [`${this.name}(`];
     for (const fexpr of this.args) {
       const expr = fexpr.getExpression(fs);
-      if (expr.aggregate) {
-        anyAggregate = true;
-      }
+      expressionType = maxExpressionType(expressionType, expr.expressionType);
+
       if (collectType) {
         funcCall.push(",");
       } else {
@@ -653,7 +663,7 @@ export class ExprFunc extends ExpressionDef {
       "number";
     return {
       dataType: dataType,
-      aggregate: anyAggregate,
+      expressionType,
       value: compressExpr(funcCall),
     };
   }

@@ -352,10 +352,36 @@ export function mkExpr(
   return ret;
 }
 
+export type ExpressionType = "scalar" | "aggregate" | "analytic";
+
 export interface Expression {
   e?: Expr;
-  aggregate?: boolean;
+  expressionType?: ExpressionType;
   code?: string;
+}
+
+export function expressionIsAggregate(e: ExpressionType | undefined): boolean {
+  return e === "aggregate";
+}
+
+export function expressionIsCalculation(
+  e: ExpressionType | undefined
+): boolean {
+  return e === "aggregate" || e === "analytic";
+}
+
+export function maxExpressionType(
+  e1: ExpressionType,
+  e2: ExpressionType
+): ExpressionType {
+  let ret: ExpressionType = "scalar";
+  if (e1 === "aggregate" || e2 === "aggregate") {
+    ret = "aggregate";
+  }
+  if (e1 === "analytic" || e2 === "analytic") {
+    ret = "analytic";
+  }
+  return ret;
 }
 
 interface JustExpression {
@@ -727,7 +753,7 @@ export type PrimaryKeyRef = string;
 export interface FilterExpression {
   expression: Expr;
   code: string;
-  aggregate?: boolean;
+  expressionType: ExpressionType;
 }
 
 /** Get the output name for a NamedObject */

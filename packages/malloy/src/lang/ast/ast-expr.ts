@@ -28,6 +28,10 @@ import {
   StructDef,
   TimeFieldType,
   UngroupFragment,
+  ExpressionType,
+  expressionIsAggregate,
+  maxExpressionType,
+  expressionIsCalculation,
 } from "../../model/malloy_types";
 import { DefSpace, FieldSpace, LookupResult, QuerySpace } from "../field-space";
 import {
@@ -121,7 +125,7 @@ class DollarReference extends ExpressionDef {
     return {
       dataType: this.refType,
       value: [{ type: "applyVal" }],
-      aggregate: false,
+      expressionType: "scalar",
     };
   }
 }
@@ -237,8 +241,8 @@ export class FieldDeclaration extends MalloyElement {
       if (compressValue.length > 0) {
         template.e = compressValue;
       }
-      if (exprValue.aggregate) {
-        template.aggregate = true;
+      if (exprValue.expressionType) {
+        template.expressionType = exprValue.expressionType;
       }
       if (this.exprSrc) {
         template.code = this.exprSrc;
@@ -315,7 +319,7 @@ export class ExprRegEx extends ExpressionDef {
   getExpression(): ExprValue {
     return {
       dataType: "regular expression",
-      aggregate: false,
+      expressionType: "scalar",
       value: [`r'${this.regex}'`],
     };
   }
@@ -327,13 +331,13 @@ export class ExprTime extends ExpressionDef {
   constructor(
     timeType: TimeFieldType,
     value: Fragment[] | string,
-    aggregate = false
+    expressionType: ExpressionType = "scalar"
   ) {
     super();
     this.elementType = timeType;
     this.translationValue = {
       dataType: timeType,
-      aggregate: aggregate,
+      expressionType,
       value: typeof value === "string" ? [value] : value,
     };
   }
@@ -357,7 +361,7 @@ export class ExprTime extends ExpressionDef {
       }
       value = compressExpr([toTs]);
     }
-    return new ExprTime(timeType, value, expr.aggregate);
+    return new ExprTime(timeType, value, expr.expressionType);
   }
 }
 
@@ -417,7 +421,10 @@ export abstract class BinaryBoolean<
     if (this.typeCheck(this.left, left) && this.typeCheck(this.right, right)) {
       return {
         dataType: "boolean",
-        aggregate: left.aggregate || right.aggregate,
+        expressionType: maxExpressionType(
+          left.expressionType,
+          right.expressionType
+        ),
         value: compose(left.value, this.op, right.value),
       };
     }
@@ -447,9 +454,9 @@ export class ExprIdReference extends ExpressionDef {
       // TODO if type is a query or a struct this should fail nicely
       const typeMixin = def.found.type();
       const dataType = typeMixin.type;
-      const aggregate = !!typeMixin.aggregate;
+      const expressionType = typeMixin.expressionType || "scalar";
       const value = [{ type: def.found.refType, path: this.refString }];
-      return { dataType, aggregate, value };
+      return { dataType, expressionType, value };
     }
     this.log(def.error);
     return errorFor(def.error);
@@ -463,7 +470,7 @@ export class ExprIdReference extends ExpressionDef {
         const lval = expr.getExpression(fs);
         return {
           dataType: "boolean",
-          aggregate: lval.aggregate,
+          expressionType: lval.expressionType,
           value: [
             {
               type: "apply",
@@ -484,7 +491,7 @@ export class ExprNULL extends ExpressionDef {
     return {
       dataType: "null",
       value: ["NULL"],
-      aggregate: false,
+      expressionType: "scalar",
     };
   }
 }
@@ -562,7 +569,10 @@ export class ExprAlternationTree extends BinaryBoolean<"|" | "&"> {
     const choice2 = this.right.apply(fs, applyOp, expr);
     return {
       dataType: "boolean",
-      aggregate: choice1.aggregate || choice2.aggregate,
+      expressionType: maxExpressionType(
+        choice1.expressionType,
+        choice2.expressionType
+      ),
       value: compose(
         choice1.value,
         this.op === "&" ? "and" : "or",
@@ -609,7 +619,7 @@ abstract class ExprAggregateFunction extends ExpressionDef {
         if (isAtomicFieldType(footType.type)) {
           exprVal = {
             dataType: footType.type,
-            aggregate: !!footType.aggregate,
+            expressionType: footType.expressionType || "scalar",
             value: [{ type: "field", path: this.source.refString }],
           };
           structPath = this.source.sourceString;
@@ -630,7 +640,12 @@ abstract class ExprAggregateFunction extends ExpressionDef {
       this.log("Missing expression for aggregate function");
       return errorFor("agggregate without expression");
     }
-    if (this.typeCheck(this.expr || this, { ...exprVal, aggregate: false })) {
+    if (
+      this.typeCheck(this.expr || this, {
+        ...exprVal,
+        expressionType: "scalar",
+      })
+    ) {
       const f: AggregateFragment = {
         type: "aggregate",
         function: this.func,
@@ -641,7 +656,7 @@ abstract class ExprAggregateFunction extends ExpressionDef {
       }
       return {
         dataType: this.returns(exprVal),
-        aggregate: true,
+        expressionType: "aggregate",
         value: [f],
       };
     }
@@ -727,7 +742,7 @@ export class ExprCount extends ExprAggregateFunction {
     }
     return {
       dataType: "number",
-      aggregate: true,
+      expressionType: "aggregate",
       value: [ret],
     };
   }
@@ -764,12 +779,12 @@ export class ExprUngroup extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const exprVal = this.expr.getExpression(fs);
-    if (!exprVal.aggregate) {
+    if (!expressionIsAggregate(exprVal.expressionType)) {
       this.expr.log(`${this.control}() expression must be an aggregate`);
       return errorFor("ungrouped scalar");
     }
     const ungroup: UngroupFragment = { type: this.control, e: exprVal.value };
-    if (this.typeCheck(this.expr, { ...exprVal, aggregate: false })) {
+    if (this.typeCheck(this.expr, { ...exprVal, expressionType: "scalar" })) {
       if (this.fields.length > 0) {
         let qs = fs;
         if (fs instanceof DefSpace) {
@@ -794,7 +809,7 @@ export class ExprUngroup extends ExpressionDef {
       }
       return {
         dataType: this.returns(exprVal),
-        aggregate: true,
+        expressionType: "analytic",
         value: [ungroup],
       };
     }
@@ -829,12 +844,15 @@ export class ExprCase extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     let retType: FragType | undefined;
-    let aggregate = false;
+    let expressionType: ExpressionType = "scalar";
     const caseExpr: Fragment[] = ["CASE "];
     for (const clause of this.when) {
       const whenExpr = clause.whenThis.getExpression(fs);
       const thenExpr = clause.thenThis.getExpression(fs);
-      aggregate ||= whenExpr.aggregate || thenExpr.aggregate;
+      expressionType = maxExpressionType(
+        expressionType,
+        maxExpressionType(whenExpr.expressionType, thenExpr.expressionType)
+      );
       if (thenExpr.dataType !== "null") {
         if (retType && !FT.typeEq(retType, thenExpr)) {
           this.log(
@@ -849,7 +867,10 @@ export class ExprCase extends ExpressionDef {
     }
     if (this.elseClause) {
       const elseExpr = this.elseClause.getExpression(fs);
-      aggregate ||= elseExpr.aggregate;
+      expressionType = maxExpressionType(
+        expressionType,
+        elseExpr.expressionType
+      );
       caseExpr.push(" ELSE ", ...elseExpr.value);
       if (elseExpr.dataType !== "null") {
         if (retType && !FT.typeEq(retType, elseExpr)) {
@@ -869,7 +890,7 @@ export class ExprCase extends ExpressionDef {
     caseExpr.push(" END");
     return {
       dataType: retType.dataType,
-      aggregate: aggregate,
+      expressionType,
       value: caseExpr,
     };
   }
@@ -886,17 +907,21 @@ export class ExprFilter extends ExpressionDef {
     const testList = this.filter.getFilterList(fs);
     const resultExpr = this.expr.getExpression(fs);
     for (const cond of testList) {
-      if (cond.aggregate) {
-        this.filter.log("Cannot filter a field with an aggregate computation");
+      if (expressionIsCalculation(cond.expressionType)) {
+        this.filter.log(
+          "Cannot filter a field with an aggregate or analytical computation"
+        );
         return errorFor("no filter on aggregate");
       }
     }
-    if (!resultExpr.aggregate) {
+    if (resultExpr.expressionType === "scalar") {
       // TODO could log a warning, but I have a problem with the
       // idea of warnings, so for now ...
       return resultExpr;
     }
-    if (this.typeCheck(this.expr, { ...resultExpr, aggregate: false })) {
+    if (
+      this.typeCheck(this.expr, { ...resultExpr, expressionType: "scalar" })
+    ) {
       return {
         ...resultExpr,
         value: [
@@ -932,7 +957,7 @@ export class ExprCast extends ExpressionDef {
     const expr = this.expr.getExpression(fs);
     return {
       dataType: this.castType,
-      aggregate: expr.aggregate,
+      expressionType: expr.expressionType,
       value: compressExpr(castTo(this.castType, expr.value, this.safe)),
     };
   }
@@ -950,7 +975,7 @@ export class TopBy extends MalloyElement {
   getBy(fs: FieldSpace): By {
     if (this.by instanceof ExpressionDef) {
       const byExpr = this.by.getExpression(fs);
-      if (!byExpr.aggregate) {
+      if (!expressionIsAggregate(byExpr.expressionType)) {
         this.log("top by expression must be an aggregate");
       }
       return { by: "expression", e: compressExpr(byExpr.value) };
@@ -976,7 +1001,10 @@ export class Range extends ExpressionDef {
         const toValue = this.last.apply(fs, op3, expr);
         return {
           dataType: "boolean",
-          aggregate: fromValue.aggregate || toValue.aggregate,
+          expressionType: maxExpressionType(
+            fromValue.expressionType,
+            toValue.expressionType
+          ),
           value: compose(fromValue.value, op2, toValue.value),
         };
       }
@@ -1056,13 +1084,16 @@ export class Pick extends ExpressionDef {
   apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
     const caseValue: Fragment[] = ["CASE"];
     let returnType: ExprValue | undefined;
-    let anyAggregate = false;
+    let anyExpressionType: ExpressionType = "scalar";
     for (const choice of this.choices) {
       const whenExpr = choice.when.apply(fs, "=", expr);
       const thenExpr = choice.pick
         ? choice.pick.getExpression(fs)
         : expr.getExpression(fs);
-      anyAggregate ||= whenExpr.aggregate || thenExpr.aggregate;
+      anyExpressionType = maxExpressionType(
+        anyExpressionType,
+        maxExpressionType(whenExpr.expressionType, thenExpr.expressionType)
+      );
       if (returnType) {
         if (!FT.typeEq(returnType, thenExpr, true)) {
           const whenType = FT.inspect(thenExpr);
@@ -1090,7 +1121,10 @@ export class Pick extends ExpressionDef {
     }
     return {
       dataType: returnType.dataType,
-      aggregate: anyAggregate || elseVal.aggregate,
+      expressionType: maxExpressionType(
+        anyExpressionType,
+        elseVal.expressionType
+      ),
       value: compressExpr([...caseValue, " ELSE ", ...elseVal.value, " END"]),
     };
   }
@@ -1120,7 +1154,7 @@ export class Pick extends ExpressionDef {
     const returnType = choiceValues[0].pick;
 
     const caseValue: Fragment[] = ["CASE"];
-    let anyAggregate = returnType.aggregate;
+    let anyExpressionType: ExpressionType = returnType.expressionType;
     for (const aChoice of choiceValues) {
       if (!FT.typeEq(aChoice.when, FT.boolT)) {
         this.log(
@@ -1133,7 +1167,13 @@ export class Pick extends ExpressionDef {
         this.log(`pick type '${whenType}', expected '${returnType.dataType}'`);
         return errorFor("pick value type");
       }
-      anyAggregate ||= aChoice.pick.aggregate || aChoice.when.aggregate;
+      anyExpressionType = maxExpressionType(
+        anyExpressionType,
+        maxExpressionType(
+          aChoice.pick.expressionType,
+          aChoice.when.expressionType
+        )
+      );
       caseValue.push(
         " WHEN ",
         ...aChoice.when.value,
@@ -1142,7 +1182,10 @@ export class Pick extends ExpressionDef {
       );
     }
     const defVal = this.elsePick.getExpression(fs);
-    anyAggregate ||= defVal.aggregate;
+    anyExpressionType = maxExpressionType(
+      anyExpressionType,
+      defVal.expressionType
+    );
     if (!FT.typeEq(returnType, defVal, true)) {
       this.elsePick.log(
         `else type '${FT.inspect(defVal)}', expected '${returnType.dataType}'`
@@ -1152,7 +1195,7 @@ export class Pick extends ExpressionDef {
     caseValue.push(" ELSE ", ...defVal.value, " END");
     return {
       dataType: returnType.dataType,
-      aggregate: !!anyAggregate,
+      expressionType: anyExpressionType,
       value: compressExpr(caseValue),
     };
   }

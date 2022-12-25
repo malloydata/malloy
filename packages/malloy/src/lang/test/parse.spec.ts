@@ -16,6 +16,7 @@ import { TranslateResponse } from "..";
 import {
   DocumentLocation,
   DocumentPosition,
+  expressionIsCalculation,
   isFieldTypeDef,
   isFilteredAliasedName,
   isSQLFragment,
@@ -1039,7 +1040,7 @@ describe("qops", () => {
         const f = q.extendSource[0];
         expect(f.type).toBe("number");
         if (f.type == "number") {
-          expect(f.aggregate).toBeTruthy();
+          expect(expressionIsCalculation(f.expressionType)).toBeTruthy();
         }
       } else {
         fail("Did not generate extendSource");
@@ -1062,7 +1063,7 @@ describe("qops", () => {
         const f = q.extendSource[0];
         expect(f.type).toBe("number");
         if (f.type == "number") {
-          expect(f.aggregate).toBeTruthy();
+          expect(expressionIsCalculation(f.expressionType)).toBeTruthy();
         }
       } else {
         fail("Did not generate extendSource");

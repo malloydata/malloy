@@ -31,7 +31,7 @@ import {
 
 interface FieldType {
   type: FieldValueType;
-  aggregate?: boolean;
+  expressionType?: model.ExpressionType;
 }
 
 export abstract class SpaceEntry {
@@ -78,8 +78,8 @@ export abstract class SpaceField extends SpaceEntry {
 
   protected fieldTypeFromFieldDef(def: model.FieldDef): FieldType {
     const ref: FieldType = { type: def.type };
-    if (model.isFieldTypeDef(def) && def.aggregate) {
-      ref.aggregate = true;
+    if (model.isFieldTypeDef(def) && def.expressionType) {
+      ref.expressionType = def.expressionType;
     }
     return ref;
   }
@@ -278,7 +278,7 @@ export class FANSPaceField extends SpaceField {
           type: fieldType,
           name: this.as,
           e: [{ type: "parameter", path: this.ref.refString }],
-          aggregate: false,
+          expressionType: "scalar",
         };
       }
       let fieldExpr: model.Expr = [{ type: "field", path: this.ref.refString }];
@@ -296,7 +296,7 @@ export class FANSPaceField extends SpaceField {
         type: fieldType,
         name: this.as,
         e: fieldExpr,
-        aggregate: fieldTypeInfo.aggregate,
+        expressionType: fieldTypeInfo.expressionType,
       };
     }
     return undefined;

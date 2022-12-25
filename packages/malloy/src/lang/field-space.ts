@@ -635,7 +635,7 @@ export class ProjectFieldSpace extends ResultSpace {
         this.log("Cannot nest queries in project");
         return false;
       }
-      if (qd.aggregate) {
+      if (model.expressionIsAggregate(qd.expressionType)) {
         this.log("Cannot add aggregate measures to project");
         return false;
       }
