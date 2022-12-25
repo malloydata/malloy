@@ -98,7 +98,18 @@ describe("BigQuery expression tests", () => {
                     "origin_code",
                     "destination_code",
                     "flight_count",
-                    { as: "route_flights", name: "flight_count" },
+                    {
+                      type: "number",
+                      name: "route_flights",
+                      expressionType: "aggregate",
+                      e: [
+                        {
+                          type: "aggregate",
+                          function: "count",
+                          e: [],
+                        },
+                      ],
+                    },
                   ],
                 },
               ],
@@ -193,7 +204,7 @@ describe("BigQuery expression tests", () => {
             {
               type: "number",
               name: "total_distance_ca",
-              aggregate: true,
+              expressionType: "aggregate",
               e: [
                 {
                   type: "filterExpression",
@@ -261,7 +272,7 @@ describe("BigQuery expression tests", () => {
           fields: [
             {
               type: "number",
-              aggregate: true,
+              expressionType: "aggregate",
               name: "total_distance",
               e: [
                 {
@@ -308,7 +319,7 @@ describe("BigQuery expression tests", () => {
             "carriers.name",
             {
               type: "number",
-              aggregate: true,
+              expressionType: "aggregate",
               name: "total_distance",
               e: [
                 {
@@ -336,7 +347,7 @@ describe("BigQuery expression tests", () => {
             "aircraft.aircraft_models.manufacturer",
             {
               type: "number",
-              aggregate: true,
+              expressionType: "aggregate",
               name: "total_distance",
               e: [
                 {
@@ -370,7 +381,7 @@ describe("BigQuery expression tests", () => {
             "flight_count",
             {
               type: "number",
-              aggregate: true,
+              expressionType: "aggregate",
               name: "total_distance",
               e: [
                 {
@@ -484,7 +495,12 @@ describe("BigQuery expression tests", () => {
           fields: [
             "main.name",
             "main.flight_count",
-            { as: "total_flights", name: "totals.flight_count" },
+            {
+              name: "total_flights",
+              type: "number",
+              expressionType: "scalar",
+              e: [{ type: "field", path: "totals.flight_count" }],
+            },
           ],
         },
       ],
@@ -644,7 +660,7 @@ describe("BigQuery expression tests", () => {
             {
               type: "number",
               name: "c",
-              aggregate: true,
+              expressionType: "aggregate",
               e: [{ type: "aggregate", function: "count", e: [] }],
             },
             {
