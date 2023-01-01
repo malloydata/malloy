@@ -167,6 +167,16 @@ status ?
   else null                        // ignore the rest
 ```
 
+If you need to match on multiple fields and conditions, use a dimension.
+
+```malloy
+  dimension: Facility_Type_State is
+      pick 'Cali Heli' when state = 'CA' and fac_type = 'HELIPORT'
+      pick 'Seaplane at SeaTac' when state = 'WA' and city = 'SEATTLE' and fac_type = 'SEAPLANE BASE'
+      pick 'Phoenix Ultra' when state = 'AZ' and fac_type = 'ULTRALIGHT' and city = 'PHOENIX'
+      else 'Not Needed'
+```
+
 ## Time Expressions
 
 Malloy has built in constructs to simplify many time-related operations, which are described here.
