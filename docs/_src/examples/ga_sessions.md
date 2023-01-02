@@ -1,6 +1,6 @@
 # Google Analytics
 
-_You can find the complete source code for this model [here](https://github.com/malloydata/malloy/blob/docs-release/samples/ga_sessions/ga_sessions.malloy)._
+_You can find the complete source code for this model [here](https://github.com/malloydata/malloy/blob/main/samples/bigquery/ga_sessions/ga_sessions.malloy)._
 
 Start by defining a source based on a query.
 
