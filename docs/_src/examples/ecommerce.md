@@ -1,5 +1,5 @@
 # eCommerce Walkthrough: An Intro to Malloy Syntax & the VSCode Plugin
-_The following walk-through covers similar concepts to the [Quick Start](https://github.com/malloydata/malloy/#quick-start-videos) videos in the README. You can find the complete source code for this model [here](https://github.com/malloydata/malloy/blob/docs-release/samples/ecommerce/ecommerce.malloy)._
+_The following walk-through covers similar concepts to the [Quick Start](https://github.com/malloydata/malloy/#quick-start-videos) videos in the README. You can find the complete source code for this model [here](https://github.com/malloydata/malloy/blob/main/samples/bigquery/ecommerce/ecommerce.malloy)._
 
 Malloy queries compile to SQL. As Malloy queries become more complex, the SQL complexity expands dramatically, while the Malloy query remains concise and easier to read.
 

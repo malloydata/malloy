@@ -3,7 +3,7 @@ Liquor sales in Iowa are state-controlled, with all liquor wholesale run by the 
 
 All data here is stored in BigQuery, in the table `'bigquery-public-data.iowa_liquor_sales.sales'`.
 
-_The [Malloy data model](source.md) can be reviewed in examples under ['iowa'](https://github.com/malloydata/malloy/blob/docs-release/samples/iowa/iowa.malloy)._
+_The [Malloy data model](source.md) can be reviewed in examples under ['iowa'](https://github.com/malloydata/malloy/blob/main/samples/bigquery/iowa/iowa.malloy)._
 
 ## A quick overview of the dataset:
 
