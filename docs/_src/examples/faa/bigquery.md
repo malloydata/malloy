@@ -1,6 +1,6 @@
 # NTSB Flight Database Examples
 
-_The follow examples all run against the model at the bottom of this page OR you can find the source code [here](https://github.com/malloydata/malloy/blob/docs-release/samples/faa/flights.malloy)._
+_The follow examples all run against the model at the bottom of this page OR you can find the source code [here](https://github.com/malloydata/malloy/blob/main/samples/bigquery/faa/flights.malloy)._
 
 ## Airport Dashboard
 Where can you fly from SJC? For each destination; Which carriers?  How long have they been flying there?

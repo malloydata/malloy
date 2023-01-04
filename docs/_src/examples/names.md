@@ -1,6 +1,6 @@
 # Name Game
 
-_You can find the complete source code for this model [here](https://github.com/malloydata/malloy/blob/docs-release/samples/names/names.malloy)._
+_You can find the complete source code for this model [here](https://github.com/malloydata/malloy/blob/main/samples/bigquery/names/names.malloy)._
 
 The Data set consists of name, gender, state and year with the number of people that
 were born with that name in that gender, state and year.
