@@ -62,6 +62,9 @@ import {
   isUngroupFragment,
   NamedQuery,
   expressionIsCalculation,
+  isAnalyticFragment,
+  AnalyticFragment,
+  malloyFunctions,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -566,6 +569,80 @@ class QueryField extends QueryNode {
     );
   }
 
+  generateAnalyticFragment(
+    resultStruct: FieldInstanceResult,
+    context: QueryStruct,
+    expr: AnalyticFragment,
+    state: GenerateState
+  ): string {
+    const fields = resultStruct.getUngroupPartitions(undefined);
+    let partitionBy = "";
+    const fieldsString = fields.map((f) => f.getPartitionSQL()).join(", ");
+    if (fieldsString.length > 0) {
+      partitionBy = `PARTITION BY ${fieldsString}`;
+    }
+
+    let orderBy = "";
+
+    // calculate the ordering.
+    const obSQL: string[] = [];
+    let orderingField;
+    const orderByDef =
+      (resultStruct.firstSegment as QuerySegment).orderBy ||
+      resultStruct.calculateDefaultOrderBy();
+    for (const ordering of orderByDef) {
+      if (typeof ordering.field === "string") {
+        orderingField = {
+          name: ordering.field,
+          fif: resultStruct.getField(ordering.field),
+        };
+      } else {
+        orderingField = resultStruct.getFieldByNumber(ordering.field);
+      }
+      if (resultStruct.firstSegment.type === "reduce") {
+        obSQL.push(
+          " " +
+            orderingField.fif.getSQL() +
+            // this.parent.dialect.sqlMaybeQuoteIdentifier(
+            //   `${orderingField.name}__${resultStruct.groupSet}`
+            // ) +
+            ` ${ordering.dir || "ASC"}`
+        );
+      } else if (resultStruct.firstSegment.type === "project") {
+        obSQL.push(
+          ` ${orderingField.fif.f.generateExpression(resultStruct)} ${
+            ordering.dir || "ASC"
+          }`
+        );
+      }
+    }
+    const func = malloyFunctions[expr.function];
+    const paramSQL: string[] = [];
+    if (expr.parameters !== undefined) {
+      for (const e of expr.parameters) {
+        if (typeof e === "string") {
+          paramSQL.push(e); // need to map to dimensional expression.
+        } else if (typeof e === "number") {
+          paramSQL.push(e.toString());
+        } else {
+          paramSQL.push(
+            this.generateExpressionFromExpr(resultStruct, context, e, state)
+          );
+        }
+      }
+    }
+
+    if (obSQL.length > 0) {
+      orderBy = " " + this.parent.dialect.sqlOrderBy(obSQL);
+    }
+
+    const sqlName = func.sqlName || expr.function;
+
+    return `${sqlName}(${paramSQL.join(
+      ", "
+    )}) OVER(${partitionBy} ${orderBy} )`;
+  }
+
   generateExpressionFromExpr(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
@@ -584,6 +661,8 @@ class QueryField extends QueryNode {
         s += this.generateFilterFragment(resultSet, context, expr, state);
       } else if (isUngroupFragment(expr)) {
         s += this.generateUngroupedFragment(resultSet, context, expr, state);
+      } else if (isAnalyticFragment(expr)) {
+        s += this.generateAnalyticFragment(resultSet, context, expr, state);
       } else if (isAggregateFragment(expr)) {
         let agg;
         if (expr.function === "sum") {
@@ -1269,7 +1348,7 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
   joins = new Map<string, JoinInstance>();
   havings = new AndChain();
   isComplexQuery = false;
-  queryUsesUngrouped = false;
+  queryUsesPartitioning = false;
   computeOnlyGroups: number[] = [];
   elimatedComputeGroups = false;
 
@@ -1732,7 +1811,7 @@ class QueryQuery extends QueryField {
       if (isUngroupFragment(expr)) {
         resultStruct.resultUsesUngrouped = true;
         resultStruct.root().isComplexQuery = true;
-        resultStruct.root().queryUsesUngrouped = true;
+        resultStruct.root().queryUsesPartitioning = true;
         if (expr.fields && expr.fields.length > 0) {
           const key = expr.fields.sort().join("|") + expr.type;
           if (resultStruct.ungroupedSets.get(key) === undefined) {
@@ -1825,6 +1904,8 @@ class QueryQuery extends QueryField {
           }
         }
         this.addDependantExpr(resultStruct, context, expr.e, joinStack);
+      } else if (isAnalyticFragment(expr)) {
+        resultStruct.root().queryUsesPartitioning = true;
       }
     }
   }
@@ -2394,7 +2475,7 @@ class QueryQuery extends QueryField {
           if (isScalarField(fi.f)) {
             if (
               this.parent.dialect.name === "standardsql" &&
-              this.rootResult.queryUsesUngrouped
+              this.rootResult.queryUsesPartitioning
             ) {
               // BigQuery can't partition aggregate function except when the field has no
               //  expression.  Additionally it can't partition by floats.  We stuff expressions

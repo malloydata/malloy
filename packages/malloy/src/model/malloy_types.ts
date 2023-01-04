@@ -184,6 +184,77 @@ export function isUngroupFragment(f: Fragment): f is UngroupFragment {
   return ftype == "all" || ftype == "exclude";
 }
 
+export type MalloyFunctionParam = AtomicFieldType | "any" | "nconst" | "regexp";
+
+export interface MalloyFunctionInfo {
+  returnType: AtomicFieldType;
+  parameters: "any" | "none" | MalloyFunctionParam[];
+  expressionType?: "aggregate" | "analytic"; // forces expression type
+  sqlName?: string;
+}
+
+export const malloyFunctions: Record<string, MalloyFunctionInfo> = {
+  row_number: {
+    returnType: "number",
+    parameters: "none",
+    expressionType: "analytic",
+  },
+  rank: {
+    returnType: "number",
+    parameters: "none",
+    expressionType: "analytic",
+  },
+  dense_rank: {
+    returnType: "number",
+    parameters: "none",
+    expressionType: "analytic",
+  },
+  first_value_in_column: {
+    returnType: "number",
+    parameters: "any",
+    expressionType: "analytic",
+    sqlName: "first_value",
+  },
+  last_value_in_column: {
+    returnType: "number",
+    parameters: "any",
+    expressionType: "analytic",
+    sqlName: "last_value",
+  },
+  min_in_column: {
+    returnType: "number",
+    parameters: "any",
+    expressionType: "analytic",
+    sqlName: "min",
+  },
+  max_in_column: {
+    returnType: "number",
+    parameters: "any",
+    expressionType: "analytic",
+    sqlName: "max",
+  },
+  ntile: {
+    returnType: "number",
+    parameters: ["nconst"],
+    expressionType: "analytic",
+  },
+  lag: {
+    returnType: "number",
+    parameters: ["number", "nconst"],
+    expressionType: "analytic",
+  },
+};
+
+export interface AnalyticFragment {
+  type: "analytic";
+  function: string;
+  parameters?: (string | number | Expr)[]; // output field name or expression
+}
+
+export function isAnalyticFragment(f: Fragment): f is AnalyticFragment {
+  return (f as AnalyticFragment)?.type === "analytic";
+}
+
 export interface FieldFragment {
   type: "field";
   path: string;
@@ -305,7 +376,8 @@ export type Fragment =
   | FilterFragment
   | AggregateFragment
   | UngroupFragment
-  | DialectFragment;
+  | DialectFragment
+  | AnalyticFragment;
 
 export type Expr = Fragment[];
 

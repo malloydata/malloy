@@ -67,6 +67,7 @@ export class PostgresDialect extends Dialect {
   supportUnnestArrayAgg = true;
   supportsCTEinCoorelatedSubQueries = true;
   dontUnionIndex = false;
+  supportsQualify = false;
 
   functionInfo: Record<string, FunctionInfo> = {
     concat: { returnType: "string" },
