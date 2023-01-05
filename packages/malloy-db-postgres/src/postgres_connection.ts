@@ -394,6 +394,10 @@ export class PostgresConnection
     await this.runPostgresQuery(cmd, 1000, 0, false);
     return tableName;
   }
+
+  async close(): Promise<void> {
+    return;
+  }
 }
 
 export class PooledPostgresConnection
@@ -467,5 +471,9 @@ export class PooledPostgresConnection
       }
     }
     releaseClient();
+  }
+
+  async close(): Promise<void> {
+    await this.drain();
   }
 }

@@ -108,4 +108,15 @@ export class DuckDBConnection extends DuckDBCommon {
       crypto.createHash("md5").update(sqlCommand).digest("hex")
     );
   }
+
+  async close(): Promise<void> {
+    if (this.connection) {
+      this.connection.close();
+      this.connection = null;
+    }
+    if (this.database) {
+      this.database.close();
+      this.database = null;
+    }
+  }
 }

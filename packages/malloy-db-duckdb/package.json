@@ -20,6 +20,7 @@
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.17.0",
     "@malloydata/malloy": "^0.0.20",
-    "duckdb": "0.6.1"
+    "duckdb": "0.5.1",
+    "web-worker": "^1.2.0"
   }
 }

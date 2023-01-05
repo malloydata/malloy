@@ -374,4 +374,6 @@ export abstract class DuckDBCommon
     await this.runRawSQL(cmd);
     return tableName;
   }
+
+  public abstract close(): Promise<void>;
 }

@@ -20,7 +20,8 @@ import {
 } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { PooledPostgresConnection } from "@malloydata/db-postgres";
-import { DuckDBConnection } from "@malloydata/db-duckdb";
+// import { DuckDBConnection } from "@malloydata/db-duckdb";
+import { DuckDBWASMConnection as DuckDBConnection } from "@malloydata/db-duckdb";
 
 export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.
@@ -128,7 +129,7 @@ export class RuntimeList {
 
   async closeAll(): Promise<void> {
     for (const [_key, runtime] of this.runtimeMap) {
-      if (runtime.connection.isPool()) runtime.connection.drain();
+      await runtime.connection.close();
     }
   }
 }

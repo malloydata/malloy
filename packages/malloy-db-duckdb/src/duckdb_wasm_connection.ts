@@ -10,8 +10,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
-import { QueryDataRow, RunSQLOptions } from "@malloydata/malloy";
 import * as duckdb from "@duckdb/duckdb-wasm";
+import Worker from "web-worker";
+import { QueryDataRow, RunSQLOptions } from "@malloydata/malloy";
 import { StructRow, Table, Vector } from "apache-arrow";
 import { DuckDBCommon, QueryOptionsReader } from "./duckdb_common";
 
@@ -74,11 +75,15 @@ const unwrapTable = (table: Table): QueryDataRow[] => {
   return table.toArray().map(unwrapRow);
 };
 
+const isNode = () => typeof navigator === "undefined";
+const DIST = "./node_modules/@duckdb/duckdb-wasm/dist/";
+
 export class DuckDBWASMConnection extends DuckDBCommon {
   connecting: Promise<void>;
   protected _connection: duckdb.AsyncDuckDBConnection | null = null;
   protected _database: duckdb.AsyncDuckDB | null = null;
   protected isSetup = false;
+  private worker: Worker | null = null;
 
   constructor(
     public readonly name: string,
@@ -91,22 +96,36 @@ export class DuckDBWASMConnection extends DuckDBCommon {
   }
 
   private async init(): Promise<void> {
-    const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
+    console.log("Initializing");
+    const BUNDLES = isNode()
+      ? {
+          mvp: {
+            mainModule: `${DIST}/duckdb-mvp.wasm`,
+            mainWorker: `${DIST}/duckdb-node-mvp.worker.cjs`,
+          },
+          eh: {
+            mainModule: `${DIST}/duckdb-eh.wasm`,
+            mainWorker: `${DIST}/duckdb-node-eh.worker.cjs`,
+          },
+        }
+      : duckdb.getJsDelivrBundles();
 
     // Select a bundle based on browser checks
-    const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+    const bundle = await duckdb.selectBundle(BUNDLES);
 
     if (bundle.mainWorker) {
-      const workerUrl = URL.createObjectURL(
-        new Blob([`importScripts("${bundle.mainWorker}");`], {
-          type: "text/javascript",
-        })
-      );
+      const workerUrl = isNode()
+        ? bundle.mainWorker
+        : URL.createObjectURL(
+            new Blob([`importScripts("${bundle.mainWorker}");`], {
+              type: "text/javascript",
+            })
+          );
 
       // Instantiate the asynchronous version of DuckDB-wasm
-      const worker = new Worker(workerUrl);
-      const logger = new duckdb.ConsoleLogger();
-      this._database = new duckdb.AsyncDuckDB(logger, worker);
+      this.worker = new Worker(workerUrl);
+      const logger = new duckdb.VoidLogger();
+      this._database = new duckdb.AsyncDuckDB(logger, this.worker);
       await this._database.instantiate(bundle.mainModule, bundle.pthreadWorker);
       URL.revokeObjectURL(workerUrl);
       this._connection = await this._database.connect();
@@ -174,5 +193,21 @@ export class DuckDBWASMConnection extends DuckDBCommon {
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
     return hashHex;
+  }
+
+  async close(): Promise<void> {
+    console.log("Closing");
+    if (this._connection) {
+      await this._connection.close();
+      this._connection = null;
+    }
+    if (this._database) {
+      await this._database.terminate();
+      this._database = null;
+    }
+    if (this.worker) {
+      this.worker.terminate();
+      this.worker = null;
+    }
   }
 }

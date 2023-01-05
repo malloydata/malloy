@@ -724,4 +724,8 @@ export class BigQueryConnection
     }
     return toAsyncGenerator<QueryDataRow>(streamBigQuery);
   }
+
+  async close(): Promise<void> {
+    return;
+  }
 }
