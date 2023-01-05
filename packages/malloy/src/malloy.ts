@@ -49,6 +49,7 @@ import {
   SQLBlockStructDef,
   flattenQuery,
   isSQLBlock,
+  expressionIsCalculation,
 } from "./model";
 import {
   LookupConnection,
@@ -1450,8 +1451,9 @@ export class AtomicField extends Entity {
     return true;
   }
 
-  public isAggregate(): boolean {
-    return !!this.fieldTypeDef.aggregate;
+  public isCalculation(): boolean {
+    //return !!this.fieldTypeDef.aggregate;
+    return expressionIsCalculation(this.fieldTypeDef.expressionType);
   }
 
   public get sourceField(): Field {

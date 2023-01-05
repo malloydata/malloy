@@ -18,6 +18,7 @@ import {
   TimestampUnit,
   Expr,
   TimeFieldType,
+  ExpressionType,
 } from "../../model/malloy_types";
 
 // These are the types which a field expression will evaluate to
@@ -44,7 +45,7 @@ export type FieldValueType = ExpressionValueType | StageFieldType | "struct";
 
 export interface FragType {
   dataType: FieldValueType;
-  aggregate: boolean;
+  expressionType: ExpressionType;
 }
 
 /**
@@ -73,7 +74,7 @@ export class FT {
     return (
       checkThis !== undefined &&
       good.dataType === checkThis.dataType &&
-      good.aggregate === checkThis.aggregate
+      good.expressionType === checkThis.expressionType
     );
   }
 
@@ -100,8 +101,8 @@ export class FT {
     const strings = types.map((type) => {
       if (type) {
         let inspected: string = type.dataType;
-        if (type.aggregate) {
-          inspected = `aggregate ${inspected}`;
+        if (type.expressionType != "scalar") {
+          inspected = `expressionType ${type.expressionType}`;
         }
         return inspected;
       }
@@ -126,7 +127,7 @@ export class FT {
 }
 
 function mkFragType(dType: FieldValueType): FragType {
-  return { dataType: dType, aggregate: false };
+  return { dataType: dType, expressionType: "scalar" };
 }
 
 export type ExprValue = ExprResult | GranularResult;
@@ -162,7 +163,7 @@ export function isGranularResult(v: ExprValue): v is GranularResult {
 export function errorFor(reason: string): ExprValue {
   return {
     dataType: "unknown",
-    aggregate: false,
+    expressionType: "scalar",
     value: [`_ERROR_${reason.replace(/ /g, "_")}`],
   };
 }

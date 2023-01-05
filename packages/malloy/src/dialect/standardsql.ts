@@ -60,9 +60,13 @@ export class StandardSQLDialect extends Dialect {
   supportUnnestArrayAgg = false;
   supportsCTEinCoorelatedSubQueries = false;
   dontUnionIndex = true; // bigquery can't use a sample table more than once in a query.
+  supportsQualify = true;
 
+  // I think we want an optional list of parameters types that we force a cast to.
   functionInfo: Record<string, FunctionInfo> = {
-    timestamp_seconds: { returnType: "timestamp" },
+    timestamp_seconds: {
+      returnType: "timestamp",
+    },
     concat: { returnType: "string" },
   };
 

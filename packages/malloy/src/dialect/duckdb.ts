@@ -141,6 +141,7 @@ export class DuckDBDialect extends Dialect {
   supportUnnestArrayAgg = true;
   supportsCTEinCoorelatedSubQueries = true;
   dontUnionIndex = false;
+  supportsQualify = true;
 
   functionInfo: Record<string, FunctionInfo> = {
     concat: { returnType: "string" },

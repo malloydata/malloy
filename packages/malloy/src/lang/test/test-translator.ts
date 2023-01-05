@@ -210,7 +210,7 @@ export class TestTranslator extends MalloyTranslator {
             type: "number",
             name: "acount",
             numberType: "integer",
-            aggregate: true,
+            expressionType: "aggregate",
             e: ["COUNT()"],
             code: "count()",
           },

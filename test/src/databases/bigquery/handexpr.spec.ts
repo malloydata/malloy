@@ -103,7 +103,7 @@ describe("BigQuery hand-built expression test", () => {
         name: "model_count",
         type: "number",
         e: [{ type: "aggregate", function: "count", e: [] }],
-        aggregate: true,
+        expressionType: "aggregate",
         numberType: "float",
       },
       {
@@ -116,12 +116,13 @@ describe("BigQuery hand-built expression test", () => {
             e: [{ type: "field", path: "seats" }],
           },
         ],
-        aggregate: true,
+        expressionType: "aggregate",
         numberType: "float",
       },
       {
         name: "boeing_seats",
         type: "number",
+        expressionType: "aggregate",
         e: [
           {
             type: "filterExpression",
@@ -134,7 +135,7 @@ describe("BigQuery hand-built expression test", () => {
             ],
             filterList: [
               {
-                aggregate: false,
+                expressionType: "aggregate",
                 code: "manufacturer='BOEING'",
                 expression: [
                   {
@@ -147,7 +148,6 @@ describe("BigQuery hand-built expression test", () => {
             ],
           },
         ],
-        aggregate: true,
         numberType: "float",
       },
       {
@@ -160,13 +160,13 @@ describe("BigQuery hand-built expression test", () => {
           { type: "field", path: "total_seats" },
           ")*100",
         ],
-        aggregate: true,
+        expressionType: "aggregate",
         numberType: "float",
       },
       {
         name: "percent_boeing_floor",
         type: "number",
-        aggregate: true,
+        expressionType: "aggregate",
         e: ["FLOOR(", { type: "field", path: "percent_boeing" }, ")"],
         numberType: "float",
       },
@@ -216,7 +216,7 @@ describe("BigQuery hand-built expression test", () => {
         name: "aircraft_count",
         type: "number",
         e: [{ type: "aggregate", function: "count", e: [] }],
-        aggregate: true,
+        expressionType: "aggregate",
         numberType: "float",
       },
       {
@@ -228,8 +228,8 @@ describe("BigQuery hand-built expression test", () => {
         type: "turtle",
         name: "hand_turtle_pipeline",
         pipeline: [
-          { type: "reduce", fields: [{ name: "aircraft_count", as: "a" }] },
-          { type: "reduce", fields: ["a"] },
+          { type: "reduce", fields: ["aircraft_count"] },
+          { type: "reduce", fields: ["aircraft_count"] },
         ],
       },
     ],
@@ -290,10 +290,45 @@ describe("BigQuery hand-built expression test", () => {
             //   ],
             // },
             {
-              name: "aircraft_models.total_seats",
-              as: "my_boeing_seats2",
-              filterList: [fStringEq("aircraft_models.manufacturer", "BOEING")],
+              name: "total_seats",
+              type: "number",
+              expressionType: "aggregate",
+              e: [
+                {
+                  type: "filterExpression",
+                  e: [
+                    {
+                      type: "aggregate",
+                      function: "sum",
+                      e: [
+                        {
+                          type: "field",
+                          path: "aircraft_models.seats",
+                        },
+                      ],
+                    },
+                  ],
+                  filterList: [
+                    {
+                      expressionType: "aggregate",
+                      code: "manufacturer='BOEING'",
+                      expression: [
+                        {
+                          type: "field",
+                          path: "aircraft_models.manufacturer",
+                        },
+                        "='BOEING'",
+                      ],
+                    },
+                  ],
+                },
+              ],
             },
+            // {
+            //   name: "aircraft_models.total_seats",
+            //   as: "my_boeing_seats2",
+            //   filterList: [fStringEq("aircraft_models.manufacturer", "BOEING")],
+            // },
           ],
         },
       ],
@@ -393,7 +428,7 @@ describe("BigQuery hand-built expression test", () => {
             {
               name: "total_aircraft",
               type: "number",
-              aggregate: true,
+              expressionType: "aggregate",
               e: [
                 {
                   type: "exclude",
@@ -446,7 +481,7 @@ describe("BigQuery hand-built expression test", () => {
                     {
                       name: "total_aircraft",
                       type: "number",
-                      aggregate: true,
+                      expressionType: "aggregate",
                       e: [
                         {
                           type: "exclude",
@@ -511,7 +546,7 @@ describe("BigQuery hand-built expression test", () => {
                             e: [{ type: "field", path: "aircraft_count" }],
                           },
                         ],
-                        aggregate: true,
+                        expressionType: "aggregate",
                         numberType: "float",
                       },
                     ],
@@ -621,10 +656,34 @@ describe("BigQuery hand-built expression test", () => {
             type: "reduce",
             fields: [
               {
-                name: "aircraft_models.total_seats",
-                as: "boeing_seats",
-                filterList: [
-                  fStringEq("aircraft_models.manufacturer", "BOEING"),
+                name: "boeing_seats",
+                type: "number",
+                expressionType: "aggregate",
+                e: [
+                  {
+                    type: "filterExpression",
+                    e: [
+                      {
+                        type: "aggregate",
+                        function: "sum",
+                        structPath: "aircraft_models",
+                        e: [{ type: "field", path: "aircraft_models.seats" }],
+                      },
+                    ],
+                    filterList: [
+                      {
+                        expressionType: "aggregate",
+                        code: "manufacturer='BOEING'",
+                        expression: [
+                          {
+                            type: "field",
+                            path: "aircraft_models.manufacturer",
+                          },
+                          "='BOEING'",
+                        ],
+                      },
+                    ],
+                  },
                 ],
               },
             ],
@@ -632,7 +691,7 @@ describe("BigQuery hand-built expression test", () => {
         ],
       })
       .run();
-    // console.log(result.sql);
+    console.log(result.sql);
     expect(result.data.value[0].boeing_seats).toBe(6244);
   });
 

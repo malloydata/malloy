@@ -61,6 +61,10 @@ import {
   UngroupFragment,
   isUngroupFragment,
   NamedQuery,
+  expressionIsCalculation,
+  isAnalyticFragment,
+  AnalyticFragment,
+  malloyFunctions,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
@@ -565,6 +569,80 @@ class QueryField extends QueryNode {
     );
   }
 
+  generateAnalyticFragment(
+    resultStruct: FieldInstanceResult,
+    context: QueryStruct,
+    expr: AnalyticFragment,
+    state: GenerateState
+  ): string {
+    const fields = resultStruct.getUngroupPartitions(undefined);
+    let partitionBy = "";
+    const fieldsString = fields.map((f) => f.getPartitionSQL()).join(", ");
+    if (fieldsString.length > 0) {
+      partitionBy = `PARTITION BY ${fieldsString}`;
+    }
+
+    let orderBy = "";
+
+    // calculate the ordering.
+    const obSQL: string[] = [];
+    let orderingField;
+    const orderByDef =
+      (resultStruct.firstSegment as QuerySegment).orderBy ||
+      resultStruct.calculateDefaultOrderBy();
+    for (const ordering of orderByDef) {
+      if (typeof ordering.field === "string") {
+        orderingField = {
+          name: ordering.field,
+          fif: resultStruct.getField(ordering.field),
+        };
+      } else {
+        orderingField = resultStruct.getFieldByNumber(ordering.field);
+      }
+      if (resultStruct.firstSegment.type === "reduce") {
+        obSQL.push(
+          " " +
+            orderingField.fif.getSQL() +
+            // this.parent.dialect.sqlMaybeQuoteIdentifier(
+            //   `${orderingField.name}__${resultStruct.groupSet}`
+            // ) +
+            ` ${ordering.dir || "ASC"}`
+        );
+      } else if (resultStruct.firstSegment.type === "project") {
+        obSQL.push(
+          ` ${orderingField.fif.f.generateExpression(resultStruct)} ${
+            ordering.dir || "ASC"
+          }`
+        );
+      }
+    }
+    const func = malloyFunctions[expr.function];
+    const paramSQL: string[] = [];
+    if (expr.parameters !== undefined) {
+      for (const e of expr.parameters) {
+        if (typeof e === "string") {
+          paramSQL.push(e); // need to map to dimensional expression.
+        } else if (typeof e === "number") {
+          paramSQL.push(e.toString());
+        } else {
+          paramSQL.push(
+            this.generateExpressionFromExpr(resultStruct, context, e, state)
+          );
+        }
+      }
+    }
+
+    if (obSQL.length > 0) {
+      orderBy = " " + this.parent.dialect.sqlOrderBy(obSQL);
+    }
+
+    const sqlName = func.sqlName || expr.function;
+
+    return `${sqlName}(${paramSQL.join(
+      ", "
+    )}) OVER(${partitionBy} ${orderBy} )`;
+  }
+
   generateExpressionFromExpr(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
@@ -583,6 +661,8 @@ class QueryField extends QueryNode {
         s += this.generateFilterFragment(resultSet, context, expr, state);
       } else if (isUngroupFragment(expr)) {
         s += this.generateUngroupedFragment(resultSet, context, expr, state);
+      } else if (isAnalyticFragment(expr)) {
+        s += this.generateAnalyticFragment(resultSet, context, expr, state);
       } else if (isAggregateFragment(expr)) {
         let agg;
         if (expr.function === "sum") {
@@ -671,12 +751,12 @@ class QueryField extends QueryNode {
   }
 }
 
-function isAggregateField(f: QueryField): f is QueryAtomicField {
-  return f instanceof QueryAtomicField && f.isAggregate();
+function isCalculatedField(f: QueryField): f is QueryAtomicField {
+  return f instanceof QueryAtomicField && f.isCalculated();
 }
 
 function isScalarField(f: QueryField): f is QueryAtomicField {
-  return f instanceof QueryAtomicField && !f.isAggregate();
+  return f instanceof QueryAtomicField && !f.isCalculated();
 }
 
 class QueryAtomicField extends QueryField {
@@ -684,10 +764,9 @@ class QueryAtomicField extends QueryField {
     return true;
   }
 
-  isAggregate(): boolean {
-    return (
-      (this.fieldDef as FieldAtomicDef).aggregate !== undefined &&
-      (this.fieldDef as FieldAtomicDef).aggregate === true
+  isCalculated(): boolean {
+    return expressionIsCalculation(
+      (this.fieldDef as FieldAtomicDef).expressionType
     );
   }
 
@@ -1113,7 +1192,7 @@ class FieldInstanceResult implements FieldInstance {
           firstField ||= fi.fieldUsage.resultIndex;
           if (["date", "timestamp"].indexOf(fi.f.fieldDef.type) > -1) {
             return [{ dir: "desc", field: fi.fieldUsage.resultIndex }];
-          } else if (isAggregateField(fi.f)) {
+          } else if (isCalculatedField(fi.f)) {
             return [{ dir: "desc", field: fi.fieldUsage.resultIndex }];
           }
         }
@@ -1269,7 +1348,7 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
   joins = new Map<string, JoinInstance>();
   havings = new AndChain();
   isComplexQuery = false;
-  queryUsesUngrouped = false;
+  queryUsesPartitioning = false;
   computeOnlyGroups: number[] = [];
   elimatedComputeGroups = false;
 
@@ -1578,7 +1657,7 @@ class QueryQuery extends QueryField {
       // Timestamps and Dates (are just fine to leave as is).
       // measures
 
-      let e: Expr;
+      // let e: Expr;
       if (field instanceof QueryQuery) {
         const newFieldDef: TurtleDefPlus = cloneDeep(field.fieldDef);
         newFieldDef.as = f.name;
@@ -1590,18 +1669,24 @@ class QueryQuery extends QueryField {
           field instanceof QueryFieldDate
         )
       ) {
-        // its a measure
-        e = [{ type: "field", path: field.getFullOutputName() }];
-        if ("filterList" in f && f.filterList) {
-          e = [{ type: "filterExpression", filterList: f.filterList, e: e }];
-        }
-        const newFieldDef = {
-          type: field.fieldDef.type,
-          name: f.as,
-          e,
-          aggregate: isAggregateField(field as QueryField),
-        };
-        field = this.parent.makeQueryField(newFieldDef as FieldDef);
+        throw new Error(
+          `No longer generate code this way. \n ${JSON.stringify(
+            f,
+            undefined,
+            2
+          )}`
+        );
+        // // its a measure
+        // e = [{ type: "field", path: field.getFullOutputName() }];
+        // if ("filterList" in f && f.filterList) {
+        //   e = [{ type: "filterExpression", filterList: f.filterList, e: e }];
+        // }
+        // const newFieldDef = {
+        //   type: field.fieldDef.type,
+        //   name: f.as,
+        //   e,
+        // };
+        // field = this.parent.makeQueryField(newFieldDef as FieldDef);
       }
 
       // or inline field FieldTypeDef
@@ -1726,7 +1811,7 @@ class QueryQuery extends QueryField {
       if (isUngroupFragment(expr)) {
         resultStruct.resultUsesUngrouped = true;
         resultStruct.root().isComplexQuery = true;
-        resultStruct.root().queryUsesUngrouped = true;
+        resultStruct.root().queryUsesPartitioning = true;
         if (expr.fields && expr.fields.length > 0) {
           const key = expr.fields.sort().join("|") + expr.type;
           if (resultStruct.ungroupedSets.get(key) === undefined) {
@@ -1819,6 +1904,8 @@ class QueryQuery extends QueryField {
           }
         }
         this.addDependantExpr(resultStruct, context, expr.e, joinStack);
+      } else if (isAnalyticFragment(expr)) {
+        resultStruct.root().queryUsesPartitioning = true;
       }
     }
   }
@@ -1853,7 +1940,7 @@ class QueryQuery extends QueryField {
         });
         this.addDependancies(resultStruct, field);
 
-        if (isAggregateField(field)) {
+        if (isCalculatedField(field)) {
           if (this.firstSegment.type === "project") {
             throw new Error(
               `Aggregate Fields cannot be used in PROJECT - '${field.fieldDef.name}'`
@@ -1921,8 +2008,8 @@ class QueryQuery extends QueryField {
       const context = this.parent;
 
       if (
-        (which === "having" && cond.aggregate) ||
-        (which === "where" && !cond.aggregate)
+        (which === "having" && expressionIsCalculation(cond.expressionType)) ||
+        (which === "where" && cond.expressionType === "scalar")
       ) {
         const sqlClause = this.generateExpressionFromExpr(
           resultStruct,
@@ -1957,7 +2044,7 @@ class QueryQuery extends QueryField {
           fi.f.parent.getFullOutputName() + (fieldDef.name || fieldDef.as);
         const sourceExpression: string | undefined = fieldDef.code;
         const sourceClasses = [sourceField];
-        if (isAggregateField(fi.f)) {
+        if (isCalculatedField(fi.f)) {
           filterList = fi.f.getFilterList();
           return {
             sourceField,
@@ -2388,7 +2475,7 @@ class QueryQuery extends QueryField {
           if (isScalarField(fi.f)) {
             if (
               this.parent.dialect.name === "standardsql" &&
-              this.rootResult.queryUsesUngrouped
+              this.rootResult.queryUsesPartitioning
             ) {
               // BigQuery can't partition aggregate function except when the field has no
               //  expression.  Additionally it can't partition by floats.  We stuff expressions
@@ -2416,7 +2503,7 @@ class QueryQuery extends QueryField {
               output.sql.push(`${exp} as ${outputName}`);
             }
             output.dimensionIndexes.push(output.fieldIndex++);
-          } else if (isAggregateField(fi.f)) {
+          } else if (isCalculatedField(fi.f)) {
             output.sql.push(`${exp} as ${outputName}`);
             output.fieldIndex++;
           }
@@ -2615,7 +2702,7 @@ class QueryQuery extends QueryField {
             );
             output.sql.push(`${exp} as ${sqlFieldName}`);
             output.dimensionIndexes.push(output.fieldIndex++);
-          } else if (isAggregateField(fi.f)) {
+          } else if (isCalculatedField(fi.f)) {
             const exp = this.parent.dialect.sqlAnyValue(
               resultSet.groupSet,
               sqlFieldName
@@ -2711,7 +2798,7 @@ class QueryQuery extends QueryField {
               ) + ` as ${sqlName}`
             );
             dimensionIndexes.push(fieldIndex++);
-          } else if (isAggregateField(fi.f)) {
+          } else if (isCalculatedField(fi.f)) {
             fieldsSQL.push(
               this.parent.dialect.sqlAnyValueLastTurtle(
                 name,
