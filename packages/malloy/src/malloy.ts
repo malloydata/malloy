@@ -2804,11 +2804,11 @@ class DataTimestamp extends ScalarData<Date> {
     if (this._value instanceof Date) {
       return this._value;
     } else if (typeof this._value === "number") {
-      return new Date(super.value);
+      return new Date(this._value);
     } else if (typeof this._value !== "string") {
       return new Date((this._value as unknown as { value: string }).value);
     } else {
-      return new Date(super.value);
+      return new Date(this._value);
     }
   }
 
@@ -2832,7 +2832,7 @@ class DataDate extends ScalarData<Date> {
     } else if (typeof this._value !== "string") {
       return new Date((this._value as unknown as { value: string }).value);
     } else {
-      return new Date(super.value);
+      return new Date(this._value);
     }
   }
 
