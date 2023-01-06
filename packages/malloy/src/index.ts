@@ -53,7 +53,7 @@ export {
   Segment,
   isFilteredAliasedName,
   flattenQuery,
-  expressionIsAggregate,
+  expressionIsCalculation,
 } from "./model";
 export {
   // Neede for VSCode extension
