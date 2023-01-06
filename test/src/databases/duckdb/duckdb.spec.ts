@@ -15,26 +15,23 @@ import { Runtime } from "@malloydata/malloy";
 import { RuntimeList } from "../../runtimes";
 import { describeIfDatabaseAvailable } from "../../util";
 
-const [describe] = describeIfDatabaseAvailable(["duckdb"]);
+const [describe] = describeIfDatabaseAvailable(["duckdb", "duckdb_wasm"]);
 
 describe("duckdb", () => {
   let runtimeList: RuntimeList;
-  let runtime: Runtime;
 
   beforeAll(() => {
-    runtimeList = new RuntimeList(["duckdb"]);
-    runtime = runtimeList.runtimeMap.get("duckdb") as Runtime;
-    if (runtime === undefined) {
-      throw new Error("Couldn't build runtime");
-    }
+    runtimeList = new RuntimeList(["duckdb", "duckdb_wasm"]);
   });
 
   afterAll(async () => {
     await runtimeList.closeAll();
   });
 
-  describe("tables", () => {
+  describe.each(["duckdb", "duckdb_wasm"])("%s tables", (runtimeName) => {
     it("can open tables with wildcards", async () => {
+      const runtime = runtimeList.runtimeMap.get(runtimeName) as Runtime;
+      expect(runtime).not.toBeUndefined();
       const result = await runtime
         .loadQuery(
           `

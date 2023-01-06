@@ -87,7 +87,7 @@ export class DuckDBWASMConnection extends DuckDBCommon {
 
   constructor(
     public readonly name: string,
-    databasePath = "test/data/duckdb/duckdb_test.db",
+    private databasePath = "test/data/duckdb/duckdb_test.db",
     private workingDirectory = "/",
     queryOptions?: QueryOptionsReader
   ) {
@@ -96,7 +96,6 @@ export class DuckDBWASMConnection extends DuckDBCommon {
   }
 
   private async init(): Promise<void> {
-    console.log("Initializing");
     const BUNDLES = isNode()
       ? {
           mvp: {
@@ -127,6 +126,11 @@ export class DuckDBWASMConnection extends DuckDBCommon {
       const logger = new duckdb.VoidLogger();
       this._database = new duckdb.AsyncDuckDB(logger, this.worker);
       await this._database.instantiate(bundle.mainModule, bundle.pthreadWorker);
+      if (this.databasePath) {
+        await this._database.open({
+          path: this.databasePath,
+        });
+      }
       URL.revokeObjectURL(workerUrl);
       this._connection = await this._database.connect();
     } else {
@@ -185,18 +189,7 @@ export class DuckDBWASMConnection extends DuckDBCommon {
     }
   }
 
-  protected async createHash(sqlCommand: string): Promise<string> {
-    const msgUint8 = new TextEncoder().encode(sqlCommand);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    return hashHex;
-  }
-
   async close(): Promise<void> {
-    console.log("Closing");
     if (this._connection) {
       await this._connection.close();
       this._connection = null;
