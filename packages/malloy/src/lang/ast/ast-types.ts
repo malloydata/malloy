@@ -102,7 +102,7 @@ export class FT {
       if (type) {
         let inspected: string = type.dataType;
         if (type.expressionType != "scalar") {
-          inspected = `expressionType ${type.expressionType}`;
+          inspected = `${type.expressionType} ${inspected}`;
         }
         return inspected;
       }

@@ -46,12 +46,14 @@ export type {
   Query,
   NamedQuery,
   NamedModelObject,
+  ExpressionType,
 } from "./model";
 export {
   // Used in Composer Demo
   Segment,
   isFilteredAliasedName,
   flattenQuery,
+  expressionIsAggregate,
 } from "./model";
 export {
   // Neede for VSCode extension
