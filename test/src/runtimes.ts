@@ -145,5 +145,8 @@ export class RuntimeList {
     for (const [_key, runtime] of this.runtimeMap) {
       await runtime.connection.close();
     }
+    // Unfortunate hack to avoid slow to die background threads tripping
+    // up jest
+    await new Promise((resolve) => setTimeout(resolve, 10000));
   }
 }

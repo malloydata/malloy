@@ -15,20 +15,22 @@ import { Runtime } from "@malloydata/malloy";
 import { RuntimeList } from "../../runtimes";
 import { describeIfDatabaseAvailable } from "../../util";
 
-const [describe] = describeIfDatabaseAvailable(["duckdb", "duckdb_wasm"]);
+const runtimes = ["duckdb", "duckdb_wasm"];
+
+const [describe] = describeIfDatabaseAvailable(runtimes);
 
 describe("duckdb", () => {
   let runtimeList: RuntimeList;
 
   beforeAll(() => {
-    runtimeList = new RuntimeList(["duckdb", "duckdb_wasm"]);
+    runtimeList = new RuntimeList(runtimes);
   });
 
   afterAll(async () => {
     await runtimeList.closeAll();
   });
 
-  describe.each(["duckdb", "duckdb_wasm"])("%s tables", (runtimeName) => {
+  describe.each(runtimes)("%s tables", (runtimeName) => {
     it("can open tables with wildcards", async () => {
       const runtime = runtimeList.runtimeMap.get(runtimeName) as Runtime;
       expect(runtime).not.toBeUndefined();
