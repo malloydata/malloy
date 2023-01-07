@@ -50,6 +50,7 @@ import {
   flattenQuery,
   isSQLBlock,
   expressionIsCalculation,
+  FieldJSONDef,
 } from "./model";
 import {
   LookupConnection,
@@ -1327,6 +1328,8 @@ export class Explore extends Entity {
               return [name, new TimestampField(fieldDef, this, sourceField)];
             } else if (fieldDef.type === "boolean") {
               return [name, new BooleanField(fieldDef, this, sourceField)];
+            } else if (fieldDef.type === "json") {
+              return [name, new JSONField(fieldDef, this, sourceField)];
             }
           }
         }) as [string, Field][]
@@ -1404,6 +1407,7 @@ export enum AtomicFieldType {
   Boolean = "boolean",
   Date = "date",
   Timestamp = "timestamp",
+  Json = "json",
 }
 
 export class AtomicField extends Entity {
@@ -1432,6 +1436,8 @@ export class AtomicField extends Entity {
         return AtomicFieldType.Timestamp;
       case "number":
         return AtomicFieldType.Number;
+      case "json":
+        return AtomicFieldType.Json;
     }
   }
 
@@ -1500,6 +1506,10 @@ export class AtomicField extends Entity {
 
   public isBoolean(): this is BooleanField {
     return this instanceof BooleanField;
+  }
+
+  public isJSON(): this is JSONField {
+    return this instanceof JSONField;
   }
 
   public isTimestamp(): this is TimestampField {
@@ -1625,6 +1635,18 @@ export class BooleanField extends AtomicField {
   ) {
     super(fieldBooleanDef, parent, source);
     this.fieldBooleanDef = fieldBooleanDef;
+  }
+}
+
+export class JSONField extends AtomicField {
+  private fieldJSONDef: FieldJSONDef;
+  constructor(
+    fieldJSONDef: FieldJSONDef,
+    parent: Explore,
+    source?: AtomicField
+  ) {
+    super(fieldJSONDef, parent, source);
+    this.fieldJSONDef = fieldJSONDef;
   }
 }
 
@@ -2616,7 +2638,8 @@ export type DataColumn =
   | DataDate
   | DataTimestamp
   | DataNull
-  | DataBytes;
+  | DataBytes
+  | DataJSON;
 
 export type DataArrayOrRecord = DataArray | DataRecord;
 
@@ -2774,6 +2797,19 @@ class DataBoolean extends ScalarData<boolean> {
   }
 
   get field(): BooleanField {
+    return this._field;
+  }
+}
+
+class DataJSON extends ScalarData<string> {
+  protected _field: JSONField;
+
+  constructor(value: string, field: JSONField) {
+    super(value, field);
+    this._field = field;
+  }
+
+  get field(): JSONField {
     return this._field;
   }
 }
@@ -2964,6 +3000,8 @@ export class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
         return new DataBoolean(value as boolean, field);
       } else if (field.isDate()) {
         return new DataDate(value as Date, field);
+      } else if (field.isJSON()) {
+        return new DataJSON(value as string, field);
       } else if (field.isTimestamp()) {
         return new DataTimestamp(value as Date, field);
       } else if (field.isNumber()) {
