@@ -469,9 +469,16 @@ export type TimeFieldType = "date" | "timestamp";
 export function isTimeFieldType(s: string): s is TimeFieldType {
   return s == "date" || s == "timestamp";
 }
-export type AtomicFieldType = "string" | "number" | TimeFieldType | "boolean";
+export type AtomicFieldType =
+  | "string"
+  | "number"
+  | TimeFieldType
+  | "boolean"
+  | "json";
 export function isAtomicFieldType(s: string): s is AtomicFieldType {
-  return ["string", "number", "date", "timestamp", "boolean"].includes(s);
+  return ["string", "number", "date", "timestamp", "boolean", "json"].includes(
+    s
+  );
 }
 
 /** All scalars can have an optional expression */
@@ -512,6 +519,11 @@ export interface FieldNumberDef extends FieldAtomicDef {
 /** Scalar Boolean Field */
 export interface FieldBooleanDef extends FieldAtomicDef {
   type: "boolean";
+}
+
+/** Scalar JSON Field */
+export interface FieldJSONDef extends FieldAtomicDef {
+  type: "json";
 }
 
 export type DateUnit = "day" | "week" | "month" | "quarter" | "year";
@@ -781,7 +793,8 @@ export type FieldTypeDef =
   | FieldDateDef
   | FieldTimestampDef
   | FieldNumberDef
-  | FieldBooleanDef;
+  | FieldBooleanDef
+  | FieldJSONDef;
 
 export function isFieldTypeDef(f: FieldDef): f is FieldTypeDef {
   return (
@@ -789,7 +802,8 @@ export function isFieldTypeDef(f: FieldDef): f is FieldTypeDef {
     f.type === "date" ||
     f.type === "number" ||
     f.type === "timestamp" ||
-    f.type === "boolean"
+    f.type === "boolean" ||
+    f.type === "json"
   );
 }
 
