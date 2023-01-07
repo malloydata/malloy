@@ -151,7 +151,7 @@ describe("Nested Source Table", () => {
         `
         )
         .run();
-      console.log(result.data.toObject());
+      // console.log(result.data.toObject());
       expect(result.data.path(0, "fieldName").value).toBe("channelGrouping");
       expect(result.data.path(0, "fieldValue").value).toBe("Organic Search");
       // expect(result.data.path(0, "weight").value).toBe(18);
