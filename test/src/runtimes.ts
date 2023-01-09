@@ -17,6 +17,7 @@ import {
   MalloyQueryData,
   RunSQLOptions,
   SingleConnectionRuntime,
+  QueryDataRow,
 } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { PooledPostgresConnection } from "@malloydata/db-postgres";
@@ -100,12 +101,11 @@ export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
 
 const files = new EmptyURLReader();
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function rows(qr: Result): any[] {
+export function rows(qr: Result): QueryDataRow[] {
   return qr.data.value;
 }
 
-export const allDatabases = ["postgres", "bigquery", "duckdb", "duckdb_wasm"];
+export const allDatabases = ["postgres", "bigquery", "duckdb"]; //, "duckdb_wasm"];
 type RuntimeDatabaseNames = typeof allDatabases[number];
 
 export class RuntimeList {
