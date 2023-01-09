@@ -22,4 +22,4 @@ steps:
     timeout: "1800s"
 timeout: "1800s"
 options:
-  machineType: "e1-highcpu-8"
+  machineType: "e2-highcpu-8"
