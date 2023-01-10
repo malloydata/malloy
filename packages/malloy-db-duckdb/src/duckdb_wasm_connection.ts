@@ -86,7 +86,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
 
   constructor(
     public readonly name: string,
-    private databasePath = "test/data/duckdb/duckdb_test.db",
+    private databasePath: string | null = null,
     private workingDirectory = "/",
     queryOptions?: QueryOptionsReader
   ) {
