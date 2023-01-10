@@ -26,8 +26,6 @@ import {
   QueryDataRow,
 } from "@malloydata/malloy";
 
-const isNode = () => typeof navigator === "undefined";
-
 const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   BIGINT: "number",
   DOUBLE: "number",
@@ -365,20 +363,7 @@ export abstract class DuckDBCommon
     await this.runRawSQL("SELECT 1");
   }
 
-  protected async createHash(sqlCommand: string): Promise<string> {
-    if (isNode()) {
-      const crypto = await import("crypto");
-      return crypto.createHash("md5").update(sqlCommand).digest("hex");
-    } else {
-      const msgUint8 = new TextEncoder().encode(sqlCommand);
-      const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-      return hashHex;
-    }
-  }
+  abstract createHash(sqlCommand: string): Promise<string>;
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
     const hash = await this.createHash(sqlCommand);

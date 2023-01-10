@@ -21,8 +21,8 @@ import {
 } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { PooledPostgresConnection } from "@malloydata/db-postgres";
-import { DuckDBConnection, DuckDBWASMConnection } from "@malloydata/db-duckdb";
-
+import { DuckDBConnection } from "@malloydata/db-duckdb";
+import { DuckDBWASMConnection } from "@malloydata/db-duckdb/wasm";
 export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.
 

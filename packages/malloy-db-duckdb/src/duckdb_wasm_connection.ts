@@ -76,9 +76,8 @@ const unwrapTable = (table: Table): QueryDataRow[] => {
 };
 
 const isNode = () => typeof navigator === "undefined";
-const DIST = "./node_modules/@duckdb/duckdb-wasm/dist/";
 
-export class DuckDBWASMConnection extends DuckDBCommon {
+export abstract class DuckDBWASMConnection extends DuckDBCommon {
   connecting: Promise<void>;
   protected _connection: duckdb.AsyncDuckDBConnection | null = null;
   protected _database: duckdb.AsyncDuckDB | null = null;
@@ -96,21 +95,8 @@ export class DuckDBWASMConnection extends DuckDBCommon {
   }
 
   private async init(): Promise<void> {
-    const BUNDLES = isNode()
-      ? {
-          mvp: {
-            mainModule: `${DIST}/duckdb-mvp.wasm`,
-            mainWorker: `${DIST}/duckdb-node-mvp.worker.cjs`,
-          },
-          eh: {
-            mainModule: `${DIST}/duckdb-eh.wasm`,
-            mainWorker: `${DIST}/duckdb-node-eh.worker.cjs`,
-          },
-        }
-      : duckdb.getJsDelivrBundles();
-
     // Select a bundle based on browser checks
-    const bundle = await duckdb.selectBundle(BUNDLES);
+    const bundle = await duckdb.selectBundle(this.getBundles());
 
     if (bundle.mainWorker) {
       const workerUrl = isNode()
@@ -137,6 +123,8 @@ export class DuckDBWASMConnection extends DuckDBCommon {
       throw new Error("Unable to instantiate duckdb-wasm");
     }
   }
+
+  abstract getBundles(): duckdb.DuckDBBundles;
 
   get connection(): duckdb.AsyncDuckDBConnection | null {
     return this._connection;
@@ -202,5 +190,14 @@ export class DuckDBWASMConnection extends DuckDBCommon {
       this.worker.terminate();
       this.worker = null;
     }
+  }
+
+  async registerRemoteTable(tableName: string, url: string): Promise<void> {
+    this.database?.registerFileURL(
+      tableName,
+      url,
+      duckdb.DuckDBDataProtocol.HTTP,
+      true
+    );
   }
 }

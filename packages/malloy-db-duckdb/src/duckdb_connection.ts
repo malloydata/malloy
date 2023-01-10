@@ -11,6 +11,7 @@
  * GNU General Public License for more details.
  */
 
+import crypto from "crypto";
 import { DuckDBCommon, QueryOptionsReader } from "./duckdb_common";
 import { Connection, Database, OPEN_READWRITE, Row } from "duckdb";
 import { QueryDataRow, RunSQLOptions } from "@malloydata/malloy";
@@ -116,6 +117,10 @@ export class DuckDBConnection extends DuckDBCommon {
     for await (const row of this.connection.stream(statements[0])) {
       yield row;
     }
+  }
+
+  async createHash(sqlCommand: string): Promise<string> {
+    return crypto.createHash("md5").update(sqlCommand).digest("hex");
   }
 
   async close(): Promise<void> {

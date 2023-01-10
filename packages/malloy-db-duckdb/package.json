@@ -2,8 +2,26 @@
   "name": "@malloydata/db-duckdb",
   "version": "0.0.20",
   "license": "GPL-2.0",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./package.json": "./package.json",
+    "./wasm": {
+      "browser": "./dist/duckdb_wasm_connection_browser.js",
+      "node": "./dist/duckdb_wasm_connection_node.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "index": [
+        "./dist/index.d.ts"
+    ],
+      "wasm": [
+        "./dist/duckdb_wasm_connection.d.ts"
+      ]
+    }
+  },
   "homepage": "https://github.com/malloydata/malloy#readme",
   "repository": {
     "type": "git",

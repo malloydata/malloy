@@ -12,4 +12,3 @@
  */
 
 export { DuckDBConnection } from "./duckdb_connection";
-export { DuckDBWASMConnection } from "./duckdb_wasm_connection";
