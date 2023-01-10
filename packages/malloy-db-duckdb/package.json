@@ -18,7 +18,7 @@
         "./dist/index.d.ts"
     ],
       "wasm": [
-        "./dist/duckdb_wasm_connection.d.ts"
+        "./dist/duckdb_wasm_connection_browser.d.ts"
       ]
     }
   },
