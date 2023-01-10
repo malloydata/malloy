@@ -16,7 +16,7 @@
 // duckdb node bindings do not come with Typescript types, require is required
 // https://github.com/duckdb/duckdb/tree/master/tools/nodejs
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const duckdb = require("duckdb");
+import { DuckDBConnection } from "@malloydata/db-duckdb";
 
 import fs from "fs";
 
@@ -27,15 +27,10 @@ if (fs.existsSync(databasePath)) {
   fs.rmSync(databasePath);
 }
 
-const database = new duckdb.Database(databasePath);
+const database = new DuckDBConnection("duckdb", databasePath);
 
 const run = (sql: string) => {
-  return new Promise((resolve, reject) => {
-    database.all(sql, (err: any, res: any) => {
-      if (err) reject(err);
-      else resolve(res);
-    });
-  });
+  return database.runRawSQL(sql);
 };
 
 console.log(`Creating database at ${databasePath}`);
@@ -85,4 +80,6 @@ console.log(`Creating database at ${databasePath}`);
   } catch (e) {
     console.log(e);
   }
+
+  await database.close();
 })();

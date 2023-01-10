@@ -784,7 +784,7 @@ describe("BigQuery hand-built expression test", () => {
         ],
       })
       .run();
-    console.log(result.sql);
+    // console.log(result.sql);
     expect(result.data.value[0].boeing_seats).toBe(6244);
   });
 

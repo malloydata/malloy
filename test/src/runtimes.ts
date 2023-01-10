@@ -17,11 +17,12 @@ import {
   MalloyQueryData,
   RunSQLOptions,
   SingleConnectionRuntime,
+  QueryDataRow,
 } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { PooledPostgresConnection } from "@malloydata/db-postgres";
 import { DuckDBConnection } from "@malloydata/db-duckdb";
-
+import { DuckDBWASMConnection } from "@malloydata/db-duckdb/wasm";
 export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.
 
@@ -77,14 +78,34 @@ export class DuckDBTestConnection extends DuckDBConnection {
   }
 }
 
+export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
+  // we probably need a better way to do this.
+
+  constructor(name: string) {
+    super(name, "test/data/duckdb/duckdb_test.db");
+  }
+
+  public async runSQL(
+    sqlCommand: string,
+    options?: RunSQLOptions
+  ): Promise<MalloyQueryData> {
+    try {
+      return await super.runSQL(sqlCommand, options);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.log(`Error in SQL:\n ${sqlCommand}`);
+      throw e;
+    }
+  }
+}
+
 const files = new EmptyURLReader();
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function rows(qr: Result): any[] {
+export function rows(qr: Result): QueryDataRow[] {
   return qr.data.value;
 }
 
-export const allDatabases = ["postgres", "bigquery", "duckdb"];
+export const allDatabases = ["postgres", "bigquery", "duckdb", "duckdb_wasm"];
 type RuntimeDatabaseNames = typeof allDatabases[number];
 
 export class RuntimeList {
@@ -92,43 +113,40 @@ export class RuntimeList {
 
   constructor(databaseList: RuntimeDatabaseNames[] | undefined = undefined) {
     for (const dbName of databaseList || allDatabases) {
+      let connection;
       switch (dbName) {
         case "bigquery":
-          this.runtimeMap.set(
-            "bigquery",
-            new SingleConnectionRuntime(
-              files,
-              new BigQueryTestConnection(
-                "bigquery",
-                {},
-                { defaultProject: "malloy-data" }
-              )
-            )
+          connection = new BigQueryTestConnection(
+            dbName,
+            {},
+            { defaultProject: "malloy-data" }
           );
           break;
         case "postgres":
-          {
-            const pg = new PostgresTestConnection("postgres");
-            this.runtimeMap.set(
-              "postgres",
-              new SingleConnectionRuntime(files, pg)
-            );
-          }
+          connection = new PostgresTestConnection(dbName);
           break;
-        case "duckdb": {
-          const duckdb = new DuckDBTestConnection("duckdb");
-          this.runtimeMap.set(
-            "duckdb",
-            new SingleConnectionRuntime(files, duckdb)
-          );
-        }
+        case "duckdb":
+          connection = new DuckDBTestConnection(dbName);
+          break;
+        case "duckdb_wasm":
+          connection = new DuckDBWASMTestConnection(dbName);
+          break;
+        default:
+          throw new Error(`Unknown runtime "${dbName}`);
       }
+      this.runtimeMap.set(
+        dbName,
+        new SingleConnectionRuntime(files, connection)
+      );
     }
   }
 
   async closeAll(): Promise<void> {
     for (const [_key, runtime] of this.runtimeMap) {
-      if (runtime.connection.isPool()) runtime.connection.drain();
+      await runtime.connection.close();
     }
+    // Unfortunate hack to avoid slow to die background threads tripping
+    // up jest
+    await new Promise((resolve) => setTimeout(resolve, 10000));
   }
 }

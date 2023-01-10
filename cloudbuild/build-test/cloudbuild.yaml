@@ -19,5 +19,7 @@ steps:
       - -c
       - "(/workspace/cloud_sql_proxy -enable_iam_login -instances=malloy-303216:us-central1:pg-test=tcp:5432 -log_debug_stdout > /dev/null & sleep 2) && (./cloudbuild/build-test/$TRIGGER_NAME.sh)"
     waitFor: ["proxy-install"]
-    timeout: "1600s"
-timeout: "1600s"
+    timeout: "1800s"
+timeout: "1800s"
+options:
+  machineType: "E2_HIGHCPU_8"

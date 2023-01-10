@@ -10,8 +10,9 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  * GNU General Public License for more details.
  */
-import { QueryDataRow, RunSQLOptions } from "@malloydata/malloy";
 import * as duckdb from "@duckdb/duckdb-wasm";
+import Worker from "web-worker";
+import { QueryDataRow, RunSQLOptions } from "@malloydata/malloy";
 import { StructRow, Table, Vector } from "apache-arrow";
 import { DuckDBCommon, QueryOptionsReader } from "./duckdb_common";
 
@@ -74,15 +75,18 @@ const unwrapTable = (table: Table): QueryDataRow[] => {
   return table.toArray().map(unwrapRow);
 };
 
-export class DuckDBWASMConnection extends DuckDBCommon {
+const isNode = () => typeof navigator === "undefined";
+
+export abstract class DuckDBWASMConnection extends DuckDBCommon {
   connecting: Promise<void>;
   protected _connection: duckdb.AsyncDuckDBConnection | null = null;
   protected _database: duckdb.AsyncDuckDB | null = null;
   protected isSetup = false;
+  private worker: Worker | null = null;
 
   constructor(
     public readonly name: string,
-    databasePath = "test/data/duckdb/duckdb_test.db",
+    private databasePath: string | null = null,
     private workingDirectory = "/",
     queryOptions?: QueryOptionsReader
   ) {
@@ -91,29 +95,36 @@ export class DuckDBWASMConnection extends DuckDBCommon {
   }
 
   private async init(): Promise<void> {
-    const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
-
     // Select a bundle based on browser checks
-    const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+    const bundle = await duckdb.selectBundle(this.getBundles());
 
     if (bundle.mainWorker) {
-      const workerUrl = URL.createObjectURL(
-        new Blob([`importScripts("${bundle.mainWorker}");`], {
-          type: "text/javascript",
-        })
-      );
+      const workerUrl = isNode()
+        ? bundle.mainWorker
+        : URL.createObjectURL(
+            new Blob([`importScripts("${bundle.mainWorker}");`], {
+              type: "text/javascript",
+            })
+          );
 
       // Instantiate the asynchronous version of DuckDB-wasm
-      const worker = new Worker(workerUrl);
-      const logger = new duckdb.ConsoleLogger();
-      this._database = new duckdb.AsyncDuckDB(logger, worker);
+      this.worker = new Worker(workerUrl);
+      const logger = new duckdb.VoidLogger();
+      this._database = new duckdb.AsyncDuckDB(logger, this.worker);
       await this._database.instantiate(bundle.mainModule, bundle.pthreadWorker);
+      if (this.databasePath) {
+        await this._database.open({
+          path: this.databasePath,
+        });
+      }
       URL.revokeObjectURL(workerUrl);
       this._connection = await this._database.connect();
     } else {
       throw new Error("Unable to instantiate duckdb-wasm");
     }
   }
+
+  abstract getBundles(): duckdb.DuckDBBundles;
 
   get connection(): duckdb.AsyncDuckDBConnection | null {
     return this._connection;
@@ -166,13 +177,27 @@ export class DuckDBWASMConnection extends DuckDBCommon {
     }
   }
 
-  protected async createHash(sqlCommand: string): Promise<string> {
-    const msgUint8 = new TextEncoder().encode(sqlCommand);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    return hashHex;
+  async close(): Promise<void> {
+    if (this._connection) {
+      await this._connection.close();
+      this._connection = null;
+    }
+    if (this._database) {
+      await this._database.terminate();
+      this._database = null;
+    }
+    if (this.worker) {
+      this.worker.terminate();
+      this.worker = null;
+    }
+  }
+
+  async registerRemoteTable(tableName: string, url: string): Promise<void> {
+    this.database?.registerFileURL(
+      tableName,
+      url,
+      duckdb.DuckDBDataProtocol.HTTP,
+      true
+    );
   }
 }
