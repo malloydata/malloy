@@ -22,8 +22,7 @@
     "antlr4ts": "^0.5.0-alpha.4",
     "assert": "^2.0.0",
     "lodash": "^4.17.20",
-    "luxon": "^1.26.0",
-    "md5": "^2.3.0"
+    "luxon": "^1.26.0"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.165",

@@ -68,7 +68,7 @@ import {
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
-import md5 from "md5";
+import * as crypto from "crypto";
 import { ResultStructMetadataDef, SearchIndexResult } from ".";
 import { Connection } from "..";
 
@@ -141,7 +141,10 @@ class StageWriter {
   addPDT(baseName: string, dialect: Dialect): string {
     const sql =
       this.combineStages(false).sql + this.withs[this.withs.length - 1];
-    const tableName = "scratch." + baseName + md5(sql);
+    const tableName =
+      "scratch." +
+      baseName +
+      crypto.createHash("md5").update(sql).digest("hex");
     this.root().pdts.push(dialect.sqlCreateTableAsSelect(tableName, sql));
     return tableName;
   }

@@ -18,7 +18,7 @@
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-var-requires */
 const { readFileSync, writeFileSync, existsSync, rmSync } = require("fs");
-const md5 = require("md5");
+const crypto = require('crypto');
 const path = require("path");
 const { execSync } = require("child_process");
 
@@ -45,9 +45,7 @@ function run(cmd) {
 }
 
 process.chdir(path.join(langSrc, "grammar"));
-const versionDigest = md5(
-  digestSrcFiles.map((fn) => readFileSync(fn, "utf-8")).join("")
-);
+const versionDigest = crypto.createHash('md5').update(digestSrcFiles.map((fn) => readFileSync(fn, "utf-8")).join("")).digest('hex');
 let rebuild = versionDigest != oldDigest();
 
 for (const fn of compilerSrcs) {
