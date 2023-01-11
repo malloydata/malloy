@@ -25,12 +25,14 @@ const splitFunction: Record<string, string> = {
   bigquery: "split",
   postgres: "string_to_array",
   duckdb: "string_to_array",
+  duckdb_wasm: "string_to_array",
 };
 
 const rootDbPath: Record<string, string> = {
   bigquery: "malloy-data.",
   postgres: "",
   duckdb: "",
+  duckdb_wasm: "",
 };
 
 afterAll(async () => {

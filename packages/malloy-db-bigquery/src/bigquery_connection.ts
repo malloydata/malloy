@@ -154,6 +154,7 @@ export class BigQueryConnection
     TIMESTAMP: { type: "timestamp" },
     BOOLEAN: { type: "boolean" },
     BOOL: { type: "boolean" },
+    JSON: { type: "json" },
     // TODO (https://cloud.google.com/bigquery/docs/reference/rest/v2/tables#tablefieldschema):
     // BYTES
     // DATETIME
@@ -722,5 +723,9 @@ export class BigQueryConnection
         .on("end", onEnd);
     }
     return toAsyncGenerator<QueryDataRow>(streamBigQuery);
+  }
+
+  async close(): Promise<void> {
+    return;
   }
 }

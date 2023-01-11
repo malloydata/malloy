@@ -104,6 +104,8 @@ export interface Connection extends InfoConnection {
   canPersist(): this is PersistSQLResults;
 
   canStream(): this is StreamingConnection;
+
+  close(): Promise<void>;
 }
 
 // TODO feature-sql-block Comment

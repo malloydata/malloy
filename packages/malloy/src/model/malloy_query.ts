@@ -787,6 +787,7 @@ class QueryAtomicField extends QueryField {
 class QueryFieldString extends QueryAtomicField {}
 class QueryFieldNumber extends QueryAtomicField {}
 class QueryFieldBoolean extends QueryAtomicField {}
+class QueryFieldJSON extends QueryAtomicField {}
 
 // in a query a struct can be referenced.  The struct will
 //  emit the primary key field in the actual result set and
@@ -2143,6 +2144,7 @@ class QueryQuery extends QueryField {
           // build out the result fields...
           switch (fi.f.fieldDef.type) {
             case "boolean":
+            case "json":
             case "string":
               fields.push({
                 name,
@@ -3718,6 +3720,8 @@ class QueryStruct extends QueryNode {
         return new QueryFieldNumber(field, this);
       case "boolean":
         return new QueryFieldBoolean(field, this);
+      case "json":
+        return new QueryFieldJSON(field, this);
       // case "reduce":
       // case "project":
       // case "index":

@@ -363,7 +363,7 @@ export abstract class DuckDBCommon
     await this.runRawSQL("SELECT 1");
   }
 
-  protected abstract createHash(sqlCommand: string): Promise<string>;
+  abstract createHash(sqlCommand: string): Promise<string>;
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
     const hash = await this.createHash(sqlCommand);
@@ -374,4 +374,6 @@ export abstract class DuckDBCommon
     await this.runRawSQL(cmd);
     return tableName;
   }
+
+  public abstract close(): Promise<void>;
 }

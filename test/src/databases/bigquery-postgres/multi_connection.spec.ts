@@ -52,7 +52,7 @@ describe("Multi-connection", () => {
   const runtime = new malloy.Runtime(files, connectionMap);
 
   afterAll(async () => {
-    await postgresConnection.drain();
+    await postgresConnection.close();
   });
 
   const expressionModelText = `

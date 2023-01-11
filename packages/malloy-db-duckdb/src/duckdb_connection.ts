@@ -11,34 +11,41 @@
  * GNU General Public License for more details.
  */
 
-import * as crypto from "crypto";
+import crypto from "crypto";
 import { DuckDBCommon, QueryOptionsReader } from "./duckdb_common";
-import { Database, OPEN_READWRITE, Row } from "duckdb";
+import { Connection, Database, OPEN_READWRITE, Row } from "duckdb";
 import { QueryDataRow, RunSQLOptions } from "@malloydata/malloy";
 
 export class DuckDBConnection extends DuckDBCommon {
-  protected connection;
-  protected database;
+  connecting: Promise<void>;
+  protected connection: Connection | null = null;
+  protected database: Database | null = null;
   protected isSetup: Promise<void> | undefined;
 
   constructor(
     public readonly name: string,
-    databasePath = ":memory:",
+    private databasePath = ":memory:",
     private workingDirectory = ".",
     queryOptions?: QueryOptionsReader
   ) {
     super(queryOptions);
+    this.connecting = this.init();
+  }
 
-    this.database = new Database(
-      databasePath,
-      OPEN_READWRITE, // databasePath === ":memory:" ? OPEN_READWRITE : OPEN_READONLY,
-      (err) => {
-        if (err) {
-          return console.error(err);
+  private async init(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.database = new Database(
+        this.databasePath,
+        OPEN_READWRITE, // databasePath === ":memory:" ? OPEN_READWRITE : OPEN_READONLY,
+        (err) => {
+          if (err) {
+            reject(err);
+          }
         }
-      }
-    );
-    this.connection = this.database.connect();
+      );
+      this.connection = this.database.connect();
+      resolve();
+    });
   }
 
   protected async setup(): Promise<void> {
@@ -63,6 +70,7 @@ export class DuckDBConnection extends DuckDBCommon {
         console.error("Unable to load httpfs extension", error);
       }
     };
+    await this.connecting;
     if (!this.isSetup) {
       this.isSetup = doSetup();
     }
@@ -73,16 +81,20 @@ export class DuckDBConnection extends DuckDBCommon {
     sql: string
   ): Promise<{ rows: Row[]; totalRows: number }> {
     return new Promise((resolve, reject) => {
-      this.connection.all(sql, (err: Error, rows: Row[]) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({
-            rows,
-            totalRows: rows.length,
-          });
-        }
-      });
+      if (this.connection) {
+        this.connection.all(sql, (err: Error, rows: Row[]) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve({
+              rows,
+              totalRows: rows.length,
+            });
+          }
+        });
+      } else {
+        reject(new Error("Connection not open"));
+      }
     });
   }
 
@@ -91,6 +103,10 @@ export class DuckDBConnection extends DuckDBCommon {
     _options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
     await this.setup();
+    if (!this.connection) {
+      throw new Error("Connection not open");
+    }
+
     const statements = sql.split("-- hack: split on this");
 
     while (statements.length > 1) {
@@ -103,9 +119,17 @@ export class DuckDBConnection extends DuckDBCommon {
     }
   }
 
-  createHash(sqlCommand: string): Promise<string> {
-    return Promise.resolve(
-      crypto.createHash("md5").update(sqlCommand).digest("hex")
-    );
+  async createHash(sqlCommand: string): Promise<string> {
+    return crypto.createHash("md5").update(sqlCommand).digest("hex");
+  }
+
+  async close(): Promise<void> {
+    if (this.connection) {
+      this.connection = null;
+    }
+    if (this.database) {
+      this.database.close();
+      this.database = null;
+    }
   }
 }
