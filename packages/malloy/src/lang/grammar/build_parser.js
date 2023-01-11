@@ -45,7 +45,10 @@ function run(cmd) {
 }
 
 process.chdir(path.join(langSrc, "grammar"));
-const versionDigest = crypto.createHash('md5').update(digestSrcFiles.map((fn) => readFileSync(fn, "utf-8")).join("")).digest('hex');
+const versionDigest = crypto
+  .createHash('md5')
+  .update(digestSrcFiles.map((fn) => readFileSync(fn, "utf-8")).join(""))
+  .digest('hex');
 let rebuild = versionDigest != oldDigest();
 
 for (const fn of compilerSrcs) {
