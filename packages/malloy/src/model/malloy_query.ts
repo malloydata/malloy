@@ -3539,7 +3539,9 @@ class QueryStruct extends QueryNode {
     const pkField = this.getPrimaryKeyField(this.fieldDef);
     const pkType = pkField.fieldDef.type;
     if (pkType !== "string" && pkType !== "number") {
-      throw new Error(`Unknown Primary key data type for ${name}`);
+      throw new Error(
+        `Unknown Primary key data type for ${pkField.fieldDef.name}`
+      );
     }
     const aliasName = getIdentifier(this.fieldDef);
     const pkName = this.fieldDef.primaryKey;
