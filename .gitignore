@@ -11,7 +11,7 @@ docs/aux/generated/
 packages/**/build
 packages/**/dist
 packages/**/node_modules
-#packages/malloy/src/lang/lib
+packages/malloy/src/lang/lib
 *.tsbuildinfo
 packages/**/package-lock.json
 packages/**/.eslintcache
