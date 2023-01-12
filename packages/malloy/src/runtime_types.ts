@@ -12,7 +12,12 @@
  */
 
 import { RunSQLOptions } from "./run_sql_options";
-import { MalloyQueryData, QueryDataRow, SQLBlock, StructDef } from "./model/malloy_types";
+import {
+  MalloyQueryData,
+  QueryDataRow,
+  SQLBlock,
+  StructDef,
+} from "./model/malloy_types";
 
 /**
  * The contents of a Malloy query document.

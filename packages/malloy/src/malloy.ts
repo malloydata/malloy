@@ -11,7 +11,6 @@
  * GNU General Public License for more details.
  */
 
-import { InfoConnection } from "./runtime_types";
 import { RunSQLOptions } from "./run_sql_options";
 import {
   DocumentHighlight as DocumentHighlightDefinition,
@@ -61,6 +60,7 @@ import {
   QueryURL,
   URLReader,
   Connection,
+  InfoConnection,
 } from "./runtime_types";
 
 export interface Loggable {

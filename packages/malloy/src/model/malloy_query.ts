@@ -66,7 +66,7 @@ import {
   AnalyticFragment,
   malloyFunctions,
   ResultStructMetadataDef,
-  SearchIndexResult
+  SearchIndexResult,
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
