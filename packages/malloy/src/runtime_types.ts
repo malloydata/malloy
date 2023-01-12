@@ -11,8 +11,8 @@
  * GNU General Public License for more details.
  */
 
-import { RunSQLOptions } from "./malloy";
-import { MalloyQueryData, QueryDataRow, SQLBlock, StructDef } from "./model";
+import { RunSQLOptions } from "./run_sql_options";
+import { MalloyQueryData, QueryDataRow, SQLBlock, StructDef } from "./model/malloy_types";
 
 /**
  * The contents of a Malloy query document.

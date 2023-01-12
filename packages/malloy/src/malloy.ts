@@ -11,7 +11,8 @@
  * GNU General Public License for more details.
  */
 
-import { InfoConnection } from ".";
+import { InfoConnection } from "./runtime_types";
+import { RunSQLOptions } from "./run_sql_options";
 import {
   DocumentHighlight as DocumentHighlightDefinition,
   DocumentSymbol as DocumentSymbolDefinition,
@@ -71,10 +72,6 @@ export interface Loggable {
   warn: (message?: any, ...optionalParams: any[]) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   error: (message?: any, ...optionalParams: any[]) => void;
-}
-
-export interface RunSQLOptions {
-  rowLimit?: number;
 }
 
 export class Malloy {

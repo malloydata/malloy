@@ -25,7 +25,7 @@ import {
   isSamplingPercent,
   isSamplingRows,
   Sampling,
-} from "../model";
+} from "../model/malloy_types";
 import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 
 const castMap: Record<string, string> = {

@@ -65,12 +65,13 @@ import {
   isAnalyticFragment,
   AnalyticFragment,
   malloyFunctions,
+  ResultStructMetadataDef,
+  SearchIndexResult
 } from "./malloy_types";
 
 import { indent, AndChain } from "./utils";
 import md5 from "md5";
-import { ResultStructMetadataDef, SearchIndexResult } from ".";
-import { Connection } from "..";
+import { Connection } from "../runtime_types";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 

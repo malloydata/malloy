@@ -100,12 +100,14 @@ export type {
   DocumentSymbol,
   DocumentHighlight,
   ResultJSON,
-  RunSQLOptions,
   PreparedResultMaterializer,
   SQLBlockMaterializer,
   ExploreMaterializer,
   WriteStream,
 } from "./malloy";
+export type {
+  RunSQLOptions
+} from "./run_sql_options";
 export type {
   URLReader,
   InfoConnection,

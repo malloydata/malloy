@@ -11,7 +11,7 @@
  * GNU General Public License for more details.
  */
 
-import { DuckDBDialect } from ".";
+import { DuckDBDialect } from "./duckdb";
 import { Dialect } from "./dialect";
 import { PostgresDialect } from "./postgres";
 import { StandardSQLDialect } from "./standardsql";
