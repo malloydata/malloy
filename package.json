@@ -25,8 +25,8 @@
     "test-postgres": "MALLOY_DATABASE=postgres jest --runInBand",
     "test-duckdb": "MALLOY_DATABASE=duckdb jest --runInBand",
     "test-silent": "jest --runInBand --reporters jest-silent-reporter",
-    "docs-build": "bundle exec jekyll build",
-    "docs-serve": "bundle exec jekyll serve -l -o",
+    "docs-build": "cd docs && bundle exec jekyll build",
+    "docs-serve": "cd docs && bundle exec jekyll serve -l -o",
     "third-party-licenses": "ts-node scripts/third_party_licenses",
     "malloyc": "ts-node scripts/malloy-to-json",
     "build-duckdb-db": "ts-node scripts/build_duckdb_test_database"
