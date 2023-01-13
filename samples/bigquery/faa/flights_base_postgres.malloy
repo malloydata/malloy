@@ -1,7 +1,0 @@
-
--- export define airports_base is (explore 'postgres:malloytest.airports');
--- export define carriers_base is (explore 'postgres:malloytest.carriers');
--- export define aircraft_base is (explore 'postgres:malloytest.aircraft');
--- export define aircraft_models_base is (explore 'postgres:malloytest.aircraft_models');
--- export define flights_base is (explore 'postgres:malloytest.flights');
-
