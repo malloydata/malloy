@@ -1,7 +1,7 @@
 # auto-generated docs
 docs/.jekyll-cache/
 docs/js/generated/
-docs/aux/generated/
+docs/_site/
 
 # Workspace related exclusions
 packages/**/build

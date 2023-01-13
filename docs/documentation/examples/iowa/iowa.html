@@ -1,35 +1,5 @@
 ---
-layout: documentation
-title: Malloy Documentation
-footer: /generated/footers/examples/iowa/iowa.html
+  layout: redirect
+  redirect: https://malloydata.github.io/documentation/examples/iowa/iowa
 ---
 
-<div class="document">
-      <h1>
-        <a id="step-1-understanding-the-iowa-liquor-market-using-malloy" class="header-link anchor" href="#step-1-understanding-the-iowa-liquor-market-using-malloy">
-          Step 1: Understanding the Iowa Liquor Market Using Malloy
-        </a>
-      </h1>
-    <p>Liquor sales in Iowa are state-controlled, with all liquor wholesale run by the state. All purchases and sales of liquor that stores make are a matter of public record. We are going to explore this data set to better understand the Iowa Liquor market.</p>
-<p>All data here is stored in BigQuery, in the table <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #A31515">&#39;bigquery-public-data.iowa_liquor_sales.sales&#39;</span></span></code>.</p>
-<p><em>The <a href="source.html">Malloy data model</a> can be reviewed in examples under <a href="https://github.com/malloydata/malloy/blob/docs-release/samples/iowa/iowa.malloy">'iowa'</a>.</em></p>
-
-      <h2>
-        <a id="a-quick-overview-of-the-dataset-" class="header-link anchor" href="#a-quick-overview-of-the-dataset-">
-          A quick overview of the dataset:
-        </a>
-      </h2>
-    <ul>
-<li><p><strong>Date/Time information</strong> (<code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">`date`</span></span></code>)</p>
-</li>
-<li><p><strong>Store and Location</strong> (<code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">store_name</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">store_address</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">store_location</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">city</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">county</span></span></code>, and <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">zip_code</span></span></code>)</p>
-</li>
-<li><p><strong>Vendor information</strong> (<code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">vendor_name</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">vendor_number</span></span></code>)</p>
-</li>
-<li><p><strong>Item information</strong> (<code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">item_number</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">item_description</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">category</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">category_name</span></span></code>)</p>
-</li>
-<li><p><strong>Volume Information</strong> (<code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">bottle_volume_ml</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">bottles_sold</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">volume_sold_liters</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">volume_sold_gallons</span></span></code>)</p>
-</li>
-<li><p><strong>Pricing information</strong> (<code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">state_bottle_cost</span></span></code>, <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">state_bottle_retail</span></span></code>, and <code class="language-malloy" style="background-color: #FBFBFB"><span class="line"><span style="color: #001080">sale_dollars</span></span></code>)</p>
-</li></ul>
-</div>
