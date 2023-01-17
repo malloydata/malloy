@@ -80,7 +80,6 @@ import {
 } from "./malloy_types";
 
 import { indent, AndChain, generateHash } from "./utils";
-import md5 from "md5";
 import { Connection } from "../runtime_types";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
