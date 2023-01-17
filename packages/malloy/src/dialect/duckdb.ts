@@ -36,7 +36,7 @@ import {
   TimestampUnit,
   TimeValue,
   TypecastFragment,
-} from "../model";
+} from "../model/malloy_types";
 import { indent } from "../model/utils";
 import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 

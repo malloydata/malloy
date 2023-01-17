@@ -22,18 +22,12 @@
  */
 
 import {
-  AtomicFieldTypeInner,
+  AtomicFieldType as AtomicFieldTypeInner,
   TimeFieldType,
   TimestampUnit,
   ExtractUnit,
   DialectFragment,
   TimeValue,
-} from "..";
-// Can't get these from "../model" because model includes this file
-// and that can create a circular reference problem. This is a patch
-// and really indicates a problem in the relationship between
-// dialect and model, it's going to come up again some time.
-import {
   mkExpr,
   Expr,
   Sampling,

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { InfoConnection } from ".";
+import { RunSQLOptions } from "./run_sql_options";
 import {
   DocumentHighlight as DocumentHighlightDefinition,
   DocumentSymbol as DocumentSymbolDefinition,
@@ -70,6 +70,7 @@ import {
   QueryURL,
   URLReader,
   Connection,
+  InfoConnection,
 } from "./runtime_types";
 
 export interface Loggable {
@@ -81,10 +82,6 @@ export interface Loggable {
   warn: (message?: any, ...optionalParams: any[]) => void;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   error: (message?: any, ...optionalParams: any[]) => void;
-}
-
-export interface RunSQLOptions {
-  rowLimit?: number;
 }
 
 export class Malloy {
