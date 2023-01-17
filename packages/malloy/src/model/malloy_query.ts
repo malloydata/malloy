@@ -79,7 +79,7 @@ import {
   SearchIndexResult,
 } from "./malloy_types";
 
-import { indent, AndChain } from "./utils";
+import { indent, AndChain, generateHash } from "./utils";
 import md5 from "md5";
 import { Connection } from "../runtime_types";
 
@@ -152,7 +152,7 @@ class StageWriter {
   addPDT(baseName: string, dialect: Dialect): string {
     const sql =
       this.combineStages(false).sql + this.withs[this.withs.length - 1];
-    const tableName = "scratch." + baseName + md5(sql);
+    const tableName = "scratch." + baseName + generateHash(sql);
     this.root().pdts.push(dialect.sqlCreateTableAsSelect(tableName, sql));
     return tableName;
   }

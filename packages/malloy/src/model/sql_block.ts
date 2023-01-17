@@ -22,7 +22,7 @@
  */
 
 import { isSQLFragment, SQLBlockSource, SQLPhrase } from "./malloy_types";
-import md5 from "md5";
+import { generateHash } from "./utils";
 
 /**
  * The factory for SQLBlocks. Exists because the name is computed
@@ -55,5 +55,5 @@ function nameFor(select: SQLPhrase[]): string {
   const phrases = select.map((el) =>
     isSQLFragment(el) ? el.sql : JSON.stringify(el)
   );
-  return md5(phrases.join(";"));
+  return generateHash(phrases.join(";"));
 }
