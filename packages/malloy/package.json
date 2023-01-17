@@ -1,7 +1,7 @@
 {
   "name": "@malloydata/malloy",
-  "version": "0.0.21",
-  "license": "GPL-2.0",
+  "version": "0.0.22",
+  "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "homepage": "https://github.com/malloydata/malloy#readme",
@@ -28,6 +28,7 @@
   "devDependencies": {
     "@types/lodash": "^4.14.165",
     "@types/luxon": "^1.26.4",
+    "@types/md5": "^2.3.1",
     "antlr4ts-cli": "^0.5.0-alpha.4"
   }
 }

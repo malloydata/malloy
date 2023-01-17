@@ -1,17 +1,10 @@
-# auto-generated docs
-docs/_includes/generated/
-docs/_site/
-docs/documentation/
-docs/fiddle/
-docs/.jekyll-cache/
-docs/js/generated/
-docs/aux/generated/
+/docs
 
 # Workspace related exclusions
 packages/**/build
 packages/**/dist
 packages/**/node_modules
-#packages/malloy/src/lang/lib
+packages/malloy/src/lang/lib
 *.tsbuildinfo
 packages/**/package-lock.json
 packages/**/.eslintcache

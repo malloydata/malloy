@@ -1,7 +1,7 @@
 {
   "private": true,
   "version": "0.0.1",
-  "license": "GPL-2.0",
+  "license": "MIT",
   "name": "malloy",
   "workspaces": {
     "packages": [
@@ -25,12 +25,6 @@
     "test-postgres": "MALLOY_DATABASE=postgres jest --runInBand",
     "test-duckdb": "MALLOY_DATABASE=duckdb jest --runInBand",
     "test-silent": "jest --runInBand --reporters jest-silent-reporter",
-    "docs-clean": "rm -rf docs/.jekyll-cache/ && rm -rf docs/_includes/generated/ && rm -rf docs/documentation && rm -rf js/generated/",
-    "docs-prebuild": "npm run build && npm run docs-clean",
-    "docs-build": "npm run docs-prebuild && ts-node --project tsconfig.docs.json --esm ./docs/_scripts/build_docs/index.ts && cd docs && bundle exec jekyll build",
-    "docs-preprocess": "ts-node --esm --project tsconfig.docs.json docs/_scripts/build_docs/index.ts --watch",
-    "docs-postprocess": "wait-on ./docs/_includes/generated/toc.html && cd docs && bundle exec jekyll serve -l -o",
-    "docs-serve": "npm run docs-prebuild && concurrently --kill-others 'npm run docs-preprocess' 'npm run docs-postprocess'",
     "third-party-licenses": "ts-node scripts/third_party_licenses",
     "malloyc": "ts-node scripts/malloy-to-json",
     "build-duckdb-db": "ts-node scripts/build_duckdb_test_database"
@@ -40,18 +34,12 @@
     "@malloydata/db-bigquery": "*",
     "@malloydata/malloy": "*",
     "@malloydata/render": "*",
-    "@types/archiver": "^5.3.1",
     "@types/fs-extra": "^9.0.13",
     "@types/jest-expect-message": "^1.0.3",
     "@types/jsdom": "^20.0.0",
-    "@types/md5": "^2.3.1",
     "@types/node": "^16.6.2",
-    "@types/node-fetch": "^2.6.2",
-    "@types/tar-stream": "^2.2.2",
     "@typescript-eslint/eslint-plugin": "^4.9.1",
     "@typescript-eslint/parser": "^4.18.0",
-    "archiver": "^5.3.0",
-    "concurrently": "^6.2.1",
     "cross-os": "^1.5.0",
     "csv-stringify": "^5.6.5",
     "dotenv-cli": "^6.0.0",
@@ -65,25 +53,16 @@
     "jest-silent-reporter": "^0.5.0",
     "jsdom": "^19.0.0",
     "lerna": "^5.4.3",
-    "node-fetch": "^2.6.1",
     "prettier": "^2.3.2",
-    "remark-gfm": "^1.0.0",
-    "remark-parse": "^10.0.1",
-    "shiki": "^0.10.1",
-    "tar-stream": "^2.2.0",
     "ts-jest": "^29.0.3",
     "ts-node": "^10.9.1",
     "typescript": "4.8.4",
-    "unified": "^10.1.2",
-    "wait-on": "^6.0.0"
+    "unified": "^10.1.2"
   },
   "resolutions": {
     "simple-get": "3.1.1",
-    "node-fetch": "2.6.7",
     "nanoid": "3.1.31",
     "node-forge": "1.3.0",
-    "ansi-regex": "5.0.1",
-    "nth-check": "2.0.1",
-    "markdown-it": "12.3.2"
+    "ansi-regex": "5.0.1"
   }
 }
