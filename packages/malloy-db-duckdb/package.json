@@ -1,7 +1,7 @@
 {
   "name": "@malloydata/db-duckdb",
   "version": "0.0.21",
-  "license": "GPL-2.0",
+  "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

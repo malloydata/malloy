@@ -1,7 +1,7 @@
 {
   "name": "@malloydata/db-postgres",
   "version": "0.0.21",
-  "license": "GPL-2.0",
+  "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "homepage": "https://github.com/malloydata/malloy#readme",
