@@ -1,5 +1,0 @@
-source: airpots_base is table('malloy-data.malloytest.airports')
-source: carriers_base is table('malloy-data.malloytest.carriers')
-source: aircraft_base is table('malloy-data.malloytest.aircraft')
-source: aircraft_models_base is table('malloy-data.malloytest.aircraft_models')
-source: flights_base is table('malloy-data.malloytest.flights')

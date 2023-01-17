@@ -21,7 +21,7 @@ If you haven't already done so, you'll need to start by [Building the Malloy rep
 1. `npm install` to install dependencies
 2. `npm run build` to build all the libraries Malloy needs
 
-Make sure you have a [database connected](https://malloydata.github.io/malloy/documentation/connection_instructions.html), and you'll also likely want to set up the [VS Code Extension](https://github.com/malloydata/malloy#installing-the-extension) to view and edit Malloy files.
+Make sure you have a [database connected](https://malloydata.github.io/documentation/connection_instructions.html), and you'll also likely want to set up the [VS Code Extension](https://github.com/malloydata/malloy#installing-the-extension) to view and edit Malloy files.
 
 ### Launch the Composer
 
@@ -35,14 +35,14 @@ This will start a desktop application. You should see any sources defined in `.m
 Troubleshooting notes:
 
 - If you have models in your Malloy models directory and one or all of them are not showing up in the composer menu, you may have an error in your Malloy code. Try opening them up in VS Code with the Malloy Extension installed to find the problem.
-- You'll need to define a [source](https://malloydata.github.io/malloy/documentation/language/source.html) for it to be explorable; top-level named queries that are not inside a source are not explorable.
+- You'll need to define a [source](https://malloydata.github.io/documentation/language/source.html) for it to be explorable; top-level named queries that are not inside a source are not explorable.
 
 ### Set up Query Saving
 
 The composer can write saved queries back to `.a.malloy` files in the Malloy models directory (see below).
 
 1. Create a new file with the suffix `.a.malloy` (e.g. `flights.a.malloy`). You'll need separate ones for each source you want to make explorable.
-2. [Import](https://malloydata.github.io/malloy/documentation/language/imports.html) the base file in this `.a.malloy` file, then create a refinement of a source named in the base file. For example, if your base file looks like:
+2. [Import](https://malloydata.github.io/documentation/language/imports.html) the base file in this `.a.malloy` file, then create a refinement of a source named in the base file. For example, if your base file looks like:
 
 ```malloy
 source: flights_base is table('malloy-data.faa.flights'){}
