@@ -29,20 +29,19 @@ import {
   maxExpressionType,
 } from "../../model/malloy_types";
 import { FieldSpace } from "../field-space";
+import { ExprDuration } from "./ast-time-expr";
 import {
-  ExprDuration,
   ExprValue,
-  ExpressionDef,
   FieldValueType,
   isComparison,
   isGranularResult,
-  TypeMistmatch,
   errorFor,
   isEquality,
   Equality,
   compose,
-  castTimestampToDate,
-} from "./index";
+} from "./ast-types";
+import { ExpressionDef, TypeMistmatch } from "./ast-expr";
+import { castTimestampToDate } from "./time-utils";
 
 /**
  * All of the magic of malloy expressions eventually flows to here,

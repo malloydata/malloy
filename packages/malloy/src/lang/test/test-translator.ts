@@ -34,7 +34,7 @@ import {
   TurtleDef,
   DocumentLocation,
 } from "../../model/malloy_types";
-import { MalloyElement, ModelEntry, NameSpace } from "../ast";
+import { MalloyElement, ModelEntry, NameSpace } from "../ast/ast-main";
 import { MalloyTranslator, TranslateResponse } from "../parse-malloy";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types

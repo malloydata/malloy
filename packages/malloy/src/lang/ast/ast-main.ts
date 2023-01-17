@@ -35,12 +35,12 @@ import {
 } from "../field-space";
 import { MessageLogger } from "../parse-log";
 import { MalloyTranslation, ModelDataRequest } from "../parse-malloy";
+import { compressExpr } from "./ast-types";
 import {
-  compressExpr,
   ConstantSubExpression,
   ExpressionDef,
   FieldDeclaration,
-} from "./index";
+} from "./ast-expr";
 import { QueryField } from "../space-field";
 import { makeSQLBlock } from "../../model/sql_block";
 import { inspect } from "util";

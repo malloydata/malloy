@@ -36,27 +36,26 @@ import {
   ExpressionType,
 } from "../../model/malloy_types";
 import { FieldSpace } from "../field-space";
+import { ExpressionDef, BinaryBoolean, Range, ExprTime } from "./ast-expr";
 import {
-  ExpressionDef,
-  BinaryBoolean,
-  Range,
-  ExprTime,
   ExprValue,
   errorFor,
   isGranularResult,
   TimeResult,
   GranularResult,
   FT,
-  timeResult,
   compressExpr,
   FieldValueType,
-  MalloyElement,
   Comparison,
+} from "./ast-types";
+import {
+  timeResult,
   timeOffset,
   resolution,
   castDateToTimestamp,
   timeLiteral,
-} from "./index";
+} from "./time-utils";
+import { MalloyElement } from "./ast-main";
 
 export class Timeframe extends MalloyElement {
   elementType = "timeframe";

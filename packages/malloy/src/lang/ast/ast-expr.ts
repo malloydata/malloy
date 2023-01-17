@@ -44,9 +44,12 @@ import {
   expressionIsCalculation,
 } from "../../model/malloy_types";
 import { DefSpace, FieldSpace, LookupResult, QuerySpace } from "../field-space";
+import { applyBinary, nullsafeNot } from "./apply-expr";
+import { SpaceParam, StructSpaceField } from "../space-field";
+import { Filter, FieldName, FieldReference, MalloyElement } from "./ast-main";
+import { castTo } from "./time-utils";
+import { ExprCompare } from "./ast-time-expr";
 import {
-  Filter,
-  MalloyElement,
   compose,
   errorFor,
   ExprValue,
@@ -55,12 +58,7 @@ import {
   FT,
   isGranularResult,
   compressExpr,
-  ExprCompare,
-} from "./index";
-import { applyBinary, nullsafeNot } from "./apply-expr";
-import { SpaceParam, StructSpaceField } from "../space-field";
-import { FieldName, FieldReference } from "./ast-main";
-import { castTo } from "./time-utils";
+} from "./ast-types";
 
 /**
  * Root node for any element in an expression. These essentially

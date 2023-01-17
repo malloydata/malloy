@@ -28,7 +28,7 @@ import {
   QueryFieldStruct,
 } from "../space-field";
 import { StaticSpace } from "../field-space";
-import { FieldName } from "../ast";
+import { FieldName } from "../ast/ast-main";
 
 /*
  **  A set of tests to make sure structdefs can become fieldspaces
