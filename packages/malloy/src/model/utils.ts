@@ -21,6 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import md5 from "md5";
+
 /** simple indent function */
 export function indent(s: string): string {
   const re = /(^|\n)/g;
@@ -95,4 +97,8 @@ export class AndChain {
     }
     return prefix + this.clauses.map((c) => `(${c})`).join("\nAND ") + postfix;
   }
+}
+
+export function generateHash(input: string): string {
+  return md5(input);
 }
