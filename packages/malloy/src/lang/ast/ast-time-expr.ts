@@ -31,12 +31,11 @@ import {
   isDateUnit,
   isTimeFieldType,
   TimeFieldType,
-  mkExpr,
   maxExpressionType,
   ExpressionType,
 } from "../../model/malloy_types";
 import { FieldSpace } from "../field-space";
-import { BinaryBoolean, ExpressionDef, ExprTime, Range } from "./ast-expr";
+import { ExpressionDef, ExprTime, Range } from "./ast-expr";
 import {
   Comparison,
   compressExpr,
@@ -44,7 +43,6 @@ import {
   ExprValue,
   FieldValueType,
   FT,
-  GranularResult,
   isGranularResult,
   TimeResult,
 } from "./ast-types";
@@ -53,7 +51,6 @@ import {
   resolution,
   timeLiteral,
   timeOffset,
-  timeResult,
 } from "./time-utils";
 import { MalloyElement } from "./ast-main";
 
@@ -67,110 +64,6 @@ export class Timeframe extends MalloyElement {
       tf = tf.slice(0, -1);
     }
     this.text = isTimestampUnit(tf) ? tf : "second";
-  }
-}
-
-/**
- * GranularTime is a moment in time which ALSO has a "granularity"
- * commonly this are created by applying ".datePart" to an expression
- * 1) They have a value, which is the moment in time
- * 2) When used in a comparison, they act like a range, for the
- *    duration of 1 unit of granularity
- */
-export class ExprGranularTime extends ExpressionDef {
-  elementType = "granularTime";
-  legalChildTypes = [FT.timestampT, FT.dateT];
-  constructor(
-    readonly expr: ExpressionDef,
-    readonly units: TimestampUnit,
-    readonly truncate: boolean
-  ) {
-    super({ expr });
-  }
-
-  granular(): boolean {
-    return true;
-  }
-
-  getExpression(fs: FieldSpace): ExprValue {
-    const timeframe = this.units;
-    const exprVal = this.expr.getExpression(fs);
-    if (isTimeFieldType(exprVal.dataType)) {
-      const tsVal: GranularResult = {
-        ...exprVal,
-        dataType: exprVal.dataType,
-        timeframe: timeframe,
-      };
-      if (this.truncate) {
-        tsVal.value = [
-          {
-            type: "dialect",
-            function: "trunc",
-            expr: { value: exprVal.value, valueType: exprVal.dataType },
-            units: timeframe,
-          },
-        ];
-      }
-      return tsVal;
-    }
-    this.log(`Cannot do time truncation on type '${exprVal.dataType}'`);
-    return errorFor(`granularity typecheck`);
-  }
-
-  apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
-    const rangeType = this.getExpression(fs).dataType;
-    const _valueType = left.getExpression(fs).dataType;
-    const granularityType = isDateUnit(this.units) ? "date" : "timestamp";
-
-    if (rangeType == "date" && granularityType == "date") {
-      return this.dateRange(fs, op, left);
-    }
-    return this.timestampRange(fs, op, left);
-
-    /*
-      write tests for each of these cases ....
-
-      vt  rt  gt  use
-      dt  dt  dt  dateRange
-      dt  dt  ts  == or timeStampRange
-      dt  ts  dt  timestampRange
-      dt  ts  ts  timeStampRange
-
-      ts  ts  ts  timestampRange
-      ts  ts  dt  timestampRange
-      ts  dt  ts  timestampRange
-      ts  dt  dt  either
-
-    */
-  }
-
-  protected timestampRange(
-    fs: FieldSpace,
-    op: string,
-    expr: ExpressionDef
-  ): ExprValue {
-    const begin = this.getExpression(fs);
-    const beginTime = ExprTime.fromValue("timestamp", begin);
-    const endTime = new ExprTime(
-      "timestamp",
-      timeOffset("timestamp", begin.value, "+", mkExpr`1`, this.units),
-      begin.expressionType
-    );
-    const range = new Range(beginTime, endTime);
-    return range.apply(fs, op, expr);
-  }
-
-  protected dateRange(
-    fs: FieldSpace,
-    op: string,
-    expr: ExpressionDef
-  ): ExprValue {
-    const begin = this.getExpression(fs);
-    const beginTime = new ExprTime("date", begin.value, begin.expressionType);
-    const endAt = timeOffset("date", begin.value, "+", ["1"], this.units);
-    const end = new ExprTime("date", endAt, begin.expressionType);
-    const range = new Range(beginTime, end);
-    return range.apply(fs, op, expr);
   }
 }
 
@@ -342,111 +235,6 @@ export class ExprNow extends ExpressionDef {
     };
   }
 }
-
-export class ExprDuration extends ExpressionDef {
-  elementType = "duration";
-  legalChildTypes = [FT.timestampT, FT.dateT];
-  constructor(readonly n: ExpressionDef, readonly timeframe: TimestampUnit) {
-    super({ n });
-  }
-
-  apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
-    const lhs = left.getExpression(fs);
-    this.typeCheck(this, lhs);
-    if (isTimeFieldType(lhs.dataType) && (op === "+" || op === "-")) {
-      const num = this.n.getExpression(fs);
-      if (!FT.typeEq(num, FT.numberT)) {
-        this.log(`Duration units needs number not '${num.dataType}`);
-        return errorFor("illegal unit expression");
-      }
-      let resultGranularity: TimestampUnit | undefined;
-      // Only allow the output of this to be granular if the
-      // granularities match, this is still an area where
-      // more thought is required.
-      if (isGranularResult(lhs) && lhs.timeframe == this.timeframe) {
-        resultGranularity = lhs.timeframe;
-      }
-      if (lhs.dataType === "timestamp") {
-        const result = timeOffset(
-          "timestamp",
-          lhs.value,
-          op,
-          num.value,
-          this.timeframe
-        );
-        return timeResult(
-          {
-            dataType: "timestamp",
-            expressionType: maxExpressionType(
-              lhs.expressionType,
-              num.expressionType
-            ),
-            value: result,
-          },
-          resultGranularity
-        );
-      }
-      return timeResult(
-        {
-          dataType: "date",
-          expressionType: maxExpressionType(
-            lhs.expressionType,
-            num.expressionType
-          ),
-          value: timeOffset("date", lhs.value, op, num.value, this.timeframe),
-        },
-        resultGranularity
-      );
-    }
-    return super.apply(fs, op, left);
-  }
-
-  getExpression(_fs: FieldSpace): ExprValue {
-    return {
-      dataType: "duration",
-      expressionType: "scalar",
-      value: ["__ERROR_DURATION_IS_NOT_A_VALUE__"],
-    };
-  }
-}
-
-export class ExprCompare extends BinaryBoolean<Comparison> {
-  elementType = "a<=>b";
-  constructor(left: ExpressionDef, op: Comparison, right: ExpressionDef) {
-    super(left, op, right);
-    this.legalChildTypes = compareTypes[op];
-  }
-
-  getExpression(fs: FieldSpace): ExprValue {
-    if (!this.right.granular()) {
-      const rhs = this.right.requestExpression(fs);
-      if (rhs && isGranularResult(rhs)) {
-        const newRight = new ExprGranularTime(this.right, rhs.timeframe, false);
-        return newRight.apply(fs, this.op, this.left);
-      }
-    }
-
-    return this.right.apply(fs, this.op, this.left);
-  }
-}
-
-export class Apply extends ExprCompare {
-  elementType = "apply";
-  constructor(readonly left: ExpressionDef, readonly right: ExpressionDef) {
-    super(left, "=", right);
-  }
-}
-
-const compareTypes = {
-  "~": [FT.stringT],
-  "!~": [FT.stringT],
-  "<": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  "<=": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  "=": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  "!=": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  ">=": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  ">": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-};
 
 export class PartialCompare extends ExpressionDef {
   elementType = "<=> a";
