@@ -44,22 +44,20 @@ import {
   expressionIsCalculation,
 } from "../../model/malloy_types";
 import { DefSpace, FieldSpace, LookupResult, QuerySpace } from "../field-space";
+import { FieldName, FieldReference, Filter, MalloyElement } from "./ast-main";
 import {
-  Filter,
-  MalloyElement,
   compose,
+  compressExpr,
   errorFor,
   ExprValue,
   FieldValueType,
   FragType,
   FT,
   isGranularResult,
-  compressExpr,
-  ExprCompare,
-} from "./index";
+} from "./ast-types";
+import { ExprCompare } from "./ast-time-expr";
 import { applyBinary, nullsafeNot } from "./apply-expr";
 import { SpaceParam, StructSpaceField } from "../space-field";
-import { FieldName, FieldReference } from "./ast-main";
 import { castTo } from "./time-utils";
 
 /**
