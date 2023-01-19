@@ -34,7 +34,6 @@ import {
   maxExpressionType,
   ExpressionType,
 } from "../../model/malloy_types";
-import { FieldSpace } from "../field-space";
 import {
   Comparison,
   compressExpr,
@@ -51,7 +50,13 @@ import {
   timeLiteral,
   timeOffset,
 } from "./time-utils";
-import { ExpressionDef, ExprTime, MalloyElement, Range } from "./ast-main";
+import {
+  ExpressionDef,
+  ExprTime,
+  FieldSpace,
+  MalloyElement,
+  Range,
+} from "./ast-main";
 
 export class Timeframe extends MalloyElement {
   elementType = "timeframe";
