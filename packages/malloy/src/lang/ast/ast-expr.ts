@@ -29,57 +29,41 @@
 import {
   By,
   AggregateFragment,
-  FieldTypeDef,
   Fragment,
   isAtomicFieldType,
-  isDateUnit,
-  isTimeFieldType,
   isConditionParameter,
-  StructDef,
-  TimeFieldType,
   UngroupFragment,
   ExpressionType,
   Expr,
-  mkExpr,
-  DivFragment,
   expressionIsAggregate,
   maxExpressionType,
   expressionIsCalculation,
-  TimestampUnit,
 } from "../../model/malloy_types";
-import { DefSpace, FieldSpace, LookupResult, QuerySpace } from "../field-space";
 import {
   BinaryBoolean,
+  DefSpace,
   ExpressionDef,
   ExprCompare,
   FieldName,
   FieldReference,
+  FieldSpace,
   Filter,
   MalloyElement,
+  QuerySpace,
+  SpaceParam,
+  StructSpaceField,
 } from "./ast-main";
 import {
-  Comparison,
   compose,
   compressExpr,
-  Equality,
   errorFor,
   ExprValue,
   FieldValueType,
   FragType,
   FT,
-  GranularResult,
-  isComparison,
-  isEquality,
-  isGranularResult,
 } from "./ast-types";
 import { nullsafeNot } from "./apply-expr";
-import { SpaceParam, StructSpaceField } from "../space-field";
-import {
-  castTimestampToDate,
-  castTo,
-  timeOffset,
-  timeResult,
-} from "./time-utils";
+import { castTo } from "./time-utils";
 
 export class ExprString extends ExpressionDef {
   elementType = "string literal";
