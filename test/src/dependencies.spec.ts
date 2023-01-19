@@ -26,14 +26,14 @@ import { default as madge } from "madge";
 describe("dependencies", () => {
   function getMessage(circles: string[][]): string {
     let message = "Circular References:\n";
-    for (let circle of circles) {
-      message += '    ';
-      for (let dep of circle) {
+    for (const circle of circles) {
+      message += "    ";
+      for (const dep of circle) {
         message += `${dep} -> `;
       }
       message += `${circle[0]}\n`;
     }
-    return message
+    return message;
   }
 
   it("should not be circular", () => {
