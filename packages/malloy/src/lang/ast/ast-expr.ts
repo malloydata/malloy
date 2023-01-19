@@ -29,257 +29,57 @@
 import {
   By,
   AggregateFragment,
-  AtomicFieldType,
   FieldTypeDef,
   Fragment,
   isAtomicFieldType,
+  isDateUnit,
   isTimeFieldType,
   isConditionParameter,
   StructDef,
   TimeFieldType,
   UngroupFragment,
   ExpressionType,
+  Expr,
+  mkExpr,
+  DivFragment,
   expressionIsAggregate,
   maxExpressionType,
   expressionIsCalculation,
+  TimestampUnit,
 } from "../../model/malloy_types";
 import { DefSpace, FieldSpace, LookupResult, QuerySpace } from "../field-space";
 import {
+  BinaryBoolean,
+  ExpressionDef,
+  ExprCompare,
+  FieldName,
+  FieldReference,
   Filter,
   MalloyElement,
+} from "./ast-main";
+import {
+  Comparison,
   compose,
+  compressExpr,
+  Equality,
   errorFor,
   ExprValue,
   FieldValueType,
   FragType,
   FT,
+  GranularResult,
+  isComparison,
+  isEquality,
   isGranularResult,
-  compressExpr,
-  ExprCompare,
-} from "./index";
-import { applyBinary, nullsafeNot } from "./apply-expr";
+} from "./ast-types";
+import { nullsafeNot } from "./apply-expr";
 import { SpaceParam, StructSpaceField } from "../space-field";
-import { FieldName, FieldReference } from "./ast-main";
-import { castTo } from "./time-utils";
-
-/**
- * Root node for any element in an expression. These essentially
- * create a sub-tree in the larger AST. Expression nodes know
- * how to write themselves as SQL (or rather, generate the
- * template for SQL required by the query writer)
- */
-export abstract class ExpressionDef extends MalloyElement {
-  abstract elementType: string;
-  granular(): boolean {
-    return false;
-  }
-
-  /**
-   * Returns the "translation" or template for SQL generation. When asking
-   * for a tranlsation you may pass the types you can accept, allowing
-   * the translation code a chance to convert to match your expectations
-   * @param space Namespace for looking up field references
-   */
-  abstract getExpression(fs: FieldSpace): ExprValue;
-  legalChildTypes = FT.anyAtomicT;
-
-  /**
-   * Some operators want to give the right hand value a chance to
-   * rewrite itself. This requests a translation for a rewrite,
-   * or returns undefined if that request should be denied.
-   * @param fs FieldSpace
-   * @returns Translated expression or undefined
-   */
-  requestExpression(fs: FieldSpace): ExprValue | undefined {
-    return this.getExpression(fs);
-  }
-
-  defaultFieldName(): string | undefined {
-    return undefined;
-  }
-
-  /**
-   * Check an expression for type compatibility
-   * @param _eNode currently unused, will be used to get error location
-   * @param eVal ...list of expressions that must match legalChildTypes
-   */
-  typeCheck(eNode: ExpressionDef, eVal: ExprValue): boolean {
-    if (!FT.in(eVal, this.legalChildTypes)) {
-      eNode.log(`'${this.elementType}' Can't use type ${FT.inspect(eVal)}`);
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * This is the operation which makes partial comparison and value trees work
-   * The default implemention merely constructs LEFT OP RIGHT, but specialized
-   * nodes like alternation trees or or partial comparison can control how
-   * the appplication gets generated
-   * @param fs The symbol table
-   * @param op The operator being applied
-   * @param expr The "other" (besdies 'this') value
-   * @returns The translated expression
-   */
-  apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
-    return applyBinary(fs, left, op, this);
-  }
-}
-
-class DollarReference extends ExpressionDef {
-  elementType = "$";
-  constructor(readonly refType: FieldValueType) {
-    super();
-  }
-  getExpression(_fs: FieldSpace): ExprValue {
-    return {
-      dataType: this.refType,
-      value: [{ type: "applyVal" }],
-      expressionType: "scalar",
-    };
-  }
-}
-
-class ConstantFieldSpace implements FieldSpace {
-  readonly type = "fieldSpace";
-  structDef(): StructDef {
-    throw new Error("ConstantFieldSpace cannot generate a structDef");
-  }
-  emptyStructDef(): StructDef {
-    throw new Error("ConstantFieldSpace cannot generate a structDef");
-  }
-  lookup(_name: unknown): LookupResult {
-    return {
-      error: "Only constants allowed in parameter expressions",
-      found: undefined,
-    };
-  }
-  dialectObj(): undefined {
-    return undefined;
-  }
-  whenComplete(step: () => void): void {
-    step();
-  }
-}
-
-export class ConstantSubExpression extends ExpressionDef {
-  elementType = "constantExpression";
-  private cfs?: ConstantFieldSpace;
-  constructor(readonly expr: ExpressionDef) {
-    super({ expr });
-  }
-
-  getExpression(_fs: FieldSpace): ExprValue {
-    return this.constantValue();
-  }
-
-  private get constantFs(): FieldSpace {
-    if (!this.cfs) {
-      this.cfs = new ConstantFieldSpace();
-    }
-    return this.cfs;
-  }
-
-  constantValue(): ExprValue {
-    return this.expr.getExpression(this.constantFs);
-  }
-
-  constantCondition(type: AtomicFieldType): ExprValue {
-    const compareAndContrast = new ExprCompare(
-      new DollarReference(type),
-      "=",
-      this.expr
-    );
-    const application = compareAndContrast.getExpression(this.constantFs);
-    return { ...application, value: compressExpr(application.value) };
-  }
-
-  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
-    return this.expr.apply(fs, op, expr);
-  }
-
-  requestExpression(fs: FieldSpace): ExprValue | undefined {
-    return this.expr.requestExpression(fs);
-  }
-}
-
-export class FieldDeclaration extends MalloyElement {
-  elementType = "fieldDeclaration";
-  isMeasure?: boolean;
-
-  constructor(
-    readonly expr: ExpressionDef,
-    readonly defineName: string,
-    readonly exprSrc?: string
-  ) {
-    super({ expr });
-  }
-
-  fieldDef(fs: FieldSpace, exprName: string): FieldTypeDef {
-    /*
-     * In an explore we cannot reference the thing we are defining, you need
-     * to use rename. In a query, the output space is a new thing, and expressions
-     * can reference the outer value in order to make a value with the new name,
-     * and it feels wrong that this is HERE and not somehow in the QueryOperation.
-     * For now, this stops the stack overflow, and passes all tests, but I think
-     * a refactor of QueryFieldSpace might someday be the place where this should
-     * happen.
-     */
-    return this.queryFieldDef(new DefSpace(fs, this), exprName);
-  }
-
-  queryFieldDef(exprFS: FieldSpace, exprName: string): FieldTypeDef {
-    let exprValue;
-
-    try {
-      exprValue = this.expr.getExpression(exprFS);
-    } catch (error) {
-      this.log(`Cannot define '${exprName}', ${error.message}`);
-      return {
-        name: `error_defining_${exprName}`,
-        type: "string",
-      };
-    }
-    const compressValue = compressExpr(exprValue.value);
-    const retType = exprValue.dataType;
-    if (isAtomicFieldType(retType)) {
-      const template: FieldTypeDef = {
-        name: exprName,
-        type: retType,
-        location: this.location,
-      };
-      if (compressValue.length > 0) {
-        template.e = compressValue;
-      }
-      if (exprValue.expressionType) {
-        template.expressionType = exprValue.expressionType;
-      }
-      if (this.exprSrc) {
-        template.code = this.exprSrc;
-      }
-      // TODO this should work for dates too
-      if (isGranularResult(exprValue) && template.type === "timestamp") {
-        template.timeframe = exprValue.timeframe;
-      }
-      return template;
-    }
-    const circularDef = exprFS instanceof DefSpace && exprFS.foundCircle;
-    if (!circularDef) {
-      if (exprValue.dataType == "unknown") {
-        this.log(`Cannot define '${exprName}', value has unknown type`);
-      } else {
-        const badType = FT.inspect(exprValue);
-        this.log(`Cannot define '${exprName}', unexpected type: ${badType}`);
-      }
-    }
-    return {
-      name: `error_defining_${exprName}`,
-      type: "string",
-    };
-  }
-}
-
-export class TypeMistmatch extends Error {}
+import {
+  castTimestampToDate,
+  castTo,
+  timeOffset,
+  timeResult,
+} from "./time-utils";
 
 export class ExprString extends ExpressionDef {
   elementType = "string literal";
@@ -335,46 +135,6 @@ export class ExprRegEx extends ExpressionDef {
   }
 }
 
-export class ExprTime extends ExpressionDef {
-  elementType = "timestampOrDate";
-  readonly translationValue: ExprValue;
-  constructor(
-    timeType: TimeFieldType,
-    value: Fragment[] | string,
-    expressionType: ExpressionType = "scalar"
-  ) {
-    super();
-    this.elementType = timeType;
-    this.translationValue = {
-      dataType: timeType,
-      expressionType,
-      value: typeof value === "string" ? [value] : value,
-    };
-  }
-
-  getExpression(_fs: FieldSpace): ExprValue {
-    return this.translationValue;
-  }
-
-  static fromValue(timeType: TimeFieldType, expr: ExprValue): ExprTime {
-    let value = expr.value;
-    if (timeType != expr.dataType) {
-      const toTs: Fragment = {
-        type: "dialect",
-        function: "cast",
-        safe: false,
-        dstType: timeType,
-        expr: expr.value,
-      };
-      if (isTimeFieldType(expr.dataType)) {
-        toTs.srcType = expr.dataType;
-      }
-      value = compressExpr([toTs]);
-    }
-    return new ExprTime(timeType, value, expr.expressionType);
-  }
-}
-
 abstract class Unary extends ExpressionDef {
   constructor(readonly expr: ExpressionDef) {
     super({ expr });
@@ -409,36 +169,6 @@ export class Boolean extends ExpressionDef {
 
   getExpression(): ExprValue {
     return { ...FT.boolT, value: [this.value] };
-  }
-}
-
-export abstract class BinaryBoolean<
-  opType extends string
-> extends ExpressionDef {
-  elementType = "abstract boolean binary";
-  legalChildTypes = [FT.boolT];
-  constructor(
-    readonly left: ExpressionDef,
-    readonly op: opType,
-    readonly right: ExpressionDef
-  ) {
-    super({ left, right });
-  }
-
-  getExpression(fs: FieldSpace): ExprValue {
-    const left = this.left.getExpression(fs);
-    const right = this.right.getExpression(fs);
-    if (this.typeCheck(this.left, left) && this.typeCheck(this.right, right)) {
-      return {
-        dataType: "boolean",
-        expressionType: maxExpressionType(
-          left.expressionType,
-          right.expressionType
-        ),
-        value: compose(left.value, this.op, right.value),
-      };
-    }
-    return errorFor("logial required boolean");
   }
 }
 
@@ -994,61 +724,6 @@ export class TopBy extends MalloyElement {
   }
 }
 
-export class Range extends ExpressionDef {
-  elementType = "range";
-  constructor(readonly first: ExpressionDef, readonly last: ExpressionDef) {
-    super({ first, last });
-  }
-
-  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
-    switch (op) {
-      case "=":
-      case "!=": {
-        const op1 = op === "=" ? ">=" : "<";
-        const op2 = op === "=" ? "and" : "or";
-        const op3 = op === "=" ? "<" : ">=";
-        const fromValue = this.first.apply(fs, op1, expr);
-        const toValue = this.last.apply(fs, op3, expr);
-        return {
-          dataType: "boolean",
-          expressionType: maxExpressionType(
-            fromValue.expressionType,
-            toValue.expressionType
-          ),
-          value: compose(fromValue.value, op2, toValue.value),
-        };
-      }
-
-      /**
-       * This is a little surprising, but is actually how you comapre a
-       * value to a range ...
-       *
-       * val > begin to end     val >= end
-       * val >= begin to end    val >= begin
-       * val < begin to end     val < begin
-       * val <= begin to end    val < end
-       */
-      case ">":
-        return this.last.apply(fs, ">=", expr);
-      case ">=":
-        return this.first.apply(fs, ">=", expr);
-      case "<":
-        return this.first.apply(fs, "<", expr);
-      case "<=":
-        return this.last.apply(fs, "<", expr);
-    }
-    throw new Error("mysterious error in range computation");
-  }
-
-  requestExpression(_fs: FieldSpace): ExprValue | undefined {
-    return undefined;
-  }
-
-  getExpression(_fs: FieldSpace): ExprValue {
-    return errorFor("a range is not a value");
-  }
-}
-
 export class PickWhen extends MalloyElement {
   elementType = "pickWhen";
   constructor(
@@ -1208,5 +883,31 @@ export class Pick extends ExpressionDef {
       expressionType: anyExpressionType,
       value: compressExpr(caseValue),
     };
+  }
+}
+
+function nullCompare(
+  left: ExprValue,
+  op: string,
+  right: ExprValue
+): Expr | undefined {
+  const not = op === "!=" || op === "!~";
+  if (left.dataType === "null" || right.dataType === "null") {
+    const maybeNot = not ? " NOT" : "";
+    if (left.dataType !== "null") {
+      return [...left.value, ` IS${maybeNot} NULL`];
+    }
+    if (right.dataType !== "null") {
+      return [...right.value, `IS${maybeNot} NULL`];
+    }
+    return [not ? "false" : "true"];
+  }
+  return undefined;
+}
+
+export class Apply extends ExprCompare {
+  elementType = "apply";
+  constructor(readonly left: ExpressionDef, readonly right: ExpressionDef) {
+    super(left, "=", right);
   }
 }
