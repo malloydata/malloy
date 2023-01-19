@@ -36,14 +36,12 @@ import {
 } from "../../model/malloy_types";
 import {
   Comparison,
-  compressExpr,
-  errorFor,
   ExprValue,
   FieldValueType,
   FT,
-  isGranularResult,
   TimeResult,
 } from "./ast-types";
+import { compressExpr, errorFor, isGranularResult } from "./ast-utils";
 import {
   castDateToTimestamp,
   resolution,

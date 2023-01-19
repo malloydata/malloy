@@ -54,14 +54,13 @@ import {
   StructSpaceField,
 } from "./ast-main";
 import {
-  compose,
-  compressExpr,
-  errorFor,
+  Comparison,
   ExprValue,
   FieldValueType,
   FragType,
   FT,
 } from "./ast-types";
+import { compose, compressExpr, errorFor } from "./ast-utils";
 import { nullsafeNot } from "./apply-expr";
 import { castTo } from "./time-utils";
 
@@ -892,6 +891,6 @@ function nullCompare(
 export class Apply extends ExprCompare {
   elementType = "apply";
   constructor(readonly left: ExpressionDef, readonly right: ExpressionDef) {
-    super(left, "=", right);
+    super(left, Comparison.EqualTo, right);
   }
 }

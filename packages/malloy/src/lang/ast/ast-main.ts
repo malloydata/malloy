@@ -45,18 +45,20 @@ import { MessageLogger } from "../parse-log";
 import { MalloyTranslation, ModelDataRequest } from "../parse-malloy";
 import {
   Comparison,
-  compose,
-  compressExpr,
   Equality,
-  errorFor,
   ExprValue,
   FieldValueType,
   FT,
   GranularResult,
+} from "./ast-types";
+import {
+  compose,
+  compressExpr,
+  errorFor,
   isComparison,
   isEquality,
   isGranularResult,
-} from "./ast-types";
+} from "./ast-utils";
 import { makeSQLBlock } from "../../model/sql_block";
 import { inspect } from "util";
 import {
@@ -2550,7 +2552,7 @@ export class ConstantSubExpression extends ExpressionDef {
   constantCondition(type: AtomicFieldType): ExprValue {
     const compareAndContrast = new ExprCompare(
       new DollarReference(type),
-      "=",
+      Comparison.EqualTo,
       this.expr
     );
     const application = compareAndContrast.getExpression(this.constantFs);

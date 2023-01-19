@@ -39,15 +39,6 @@ export type ExpressionValueType =
   | "duration"
   | "regular expression";
 
-export function isExpressionValueType(
-  fv: FieldValueType
-): fv is ExpressionValueType {
-  return (
-    isAtomicFieldType(fv) ||
-    ["null", "unknown", "duration", "regular expression"].includes(fv)
-  );
-}
-
 export type StageFieldType = "turtle";
 
 // And these are the other field value types
@@ -155,137 +146,24 @@ export interface GranularResult extends TimeResult {
   timeframe: TimestampUnit;
 }
 
-export function isGranularResult(v: ExprValue): v is GranularResult {
-  if (v.dataType !== "date" && v.dataType !== "timestamp") {
-    return false;
-  }
-  return (v as GranularResult).timeframe !== undefined;
+// export type Comparison = "~" | "!~" | "<" | "<=" | "=" | ">" | ">=" | "!=";
+
+// export type Equality = "~" | "!~" | "=" | "!=";
+
+export enum Equality {
+  Like = "~",
+  NotLike = "!~",
+  Equals = "=",
+  NotEquals = "!=",
 }
 
-/**
- * When a translation hits an error, log and return one of these as a value.
- * This will allow the rest of the translation walk to complete. The
- * generated SQL will have a reference to an impossible variable name
- * with the reason embedded in it.
- * @param reason very short phrase, only read by implementers
- * @returns Fragment[] which a debugging humnan will regognize
- */
-export function errorFor(reason: string): ExprValue {
-  return {
-    dataType: "unknown",
-    expressionType: "scalar",
-    value: [`_ERROR_${reason.replace(/ /g, "_")}`],
-  };
-}
-
-/**
- * If the passed expresion is not a single term, wrap it in parens
- * @param f expression fragment
- */
-function term(f: Fragment[]): Fragment[] {
-  if (f.length > 1) {
-    return ["(", ...f, ")"];
-  }
-  if (f.length === 0) {
-    // Trying to compose a binary expresion with an entity that has no value
-    // this should at least cause the generated SQL to error, but likely
-    // there has already been a semantic error reported.
-    return ["__MISSING_VALUE__"];
-  }
-  return f;
-}
-
-export function compressExpr(expr: Expr): Expr {
-  // compress all adjacent strings
-  const compressValue: Array<string | Fragment> = [];
-  let buildString;
-  for (const fragment of expr.flat()) {
-    if (typeof fragment === "string") {
-      buildString = buildString ? buildString + fragment : fragment;
-    } else {
-      if (buildString) {
-        compressValue.push(buildString);
-        buildString = undefined;
-      }
-      compressValue.push(fragment);
-    }
-  }
-  if (buildString) {
-    compressValue.push(buildString);
-  }
-
-  return compressValue;
-}
-/**
- * Compose a binary expression. Tries to write them safely and concisely
- * @param left
- * @param op
- * @param right
- * @returns Fragment list of the composed expression
- */
-export function compose(
-  left: Fragment[],
-  op: string,
-  right: Fragment[]
-): Fragment[] {
-  const opAlpha = op.match(/^[A-Za-z]/);
-  const leftSpace = left.length === 1 && opAlpha ? " " : "";
-  const rightSpace = right.length === 1 && opAlpha ? " " : "";
-  const newOp = leftSpace + op + rightSpace;
-  return [...term(left), newOp, ...term(right)];
-}
-
-export function dateOffset(
-  from: Fragment[],
-  op: "+" | "-",
-  n: Fragment[],
-  timeframe: TimestampUnit
-): Fragment[] {
-  const add = op === "+" ? "_ADD" : "_SUB";
-  const units = timeframe.toUpperCase();
-  return compressExpr([
-    `DATE${add}(`,
-    ...from,
-    `,INTERVAL `,
-    ...n,
-    ` ${units})`,
-  ]);
-}
-
-export function timestampOffset(
-  from: Fragment[],
-  op: "+" | "-",
-  n: Fragment[],
-  timeframe: TimestampUnit,
-  fromNotTimestamp = false
-): Fragment[] {
-  const useDatetime = ["week", "month", "quarter", "year"].includes(timeframe);
-  const add = op === "+" ? "_ADD" : "_SUB";
-  const units = timeframe.toUpperCase();
-  if (useDatetime) {
-    return [
-      `TIMESTAMP(DATETIME${add}(DATETIME(`,
-      ...from,
-      `),INTERVAL `,
-      ...n,
-      ` ${units}))`,
-    ];
-  }
-  const typeFrom = fromNotTimestamp ? ["TIMESTAMP(", ...from, ")"] : from;
-  return compressExpr([
-    `TIMESTAMP${add}(`,
-    ...typeFrom,
-    `,INTERVAL `,
-    ...n,
-    ` ${units})`,
-  ]);
-}
-
-export type Comparison = "~" | "!~" | "<" | "<=" | "=" | ">" | ">=" | "!=";
-export function isComparison(s: string): s is Comparison {
-  return ["~", "!~", "<", "<=", "=", ">", ">=", "!="].includes(s);
-}
-export type Equality = "~" | "!~" | "=" | "!=";
-export function isEquality(s: string): s is Equality {
-  return ["~", "!~", "=", "!="].includes(s);
+export enum Comparison {
+  Like = "~",
+  NotLike = "!~",
+  LessThan = "<",
+  LessThanOrEqualTo = "<=",
+  EqualTo = "=",
+  GreaterThan = ">",
+  GreaterThanOrEqualTo = ">=",
+  NotEqualTo = "!=",
 }
