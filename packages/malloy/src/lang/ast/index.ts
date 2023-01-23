@@ -25,5 +25,6 @@ export * from "./ast-types";
 export * from "./ast-main";
 export * from "./ast-expr";
 export * from "./ast-time-expr";
-export * from "./time-utils";
 export * from "./ast-utils";
+export * from "./malloy-element";
+export * from "./time-utils";

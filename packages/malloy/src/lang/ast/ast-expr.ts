@@ -48,11 +48,11 @@ import {
   FieldReference,
   FieldSpace,
   Filter,
-  MalloyElement,
   QuerySpace,
   SpaceParam,
   StructSpaceField,
 } from "./ast-main";
+import { MalloyElement } from "./malloy-element";
 import {
   Comparison,
   ExprValue,

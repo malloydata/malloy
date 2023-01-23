@@ -24,12 +24,15 @@
 import {
   AtomicFieldType,
   Fragment,
-  isAtomicFieldType,
   TimestampUnit,
-  Expr,
+  NamedModelObject,
   TimeFieldType,
   ExpressionType,
+  ModelDef,
+  Query,
+  SQLBlockStructDef,
 } from "../../model/malloy_types";
+import { ModelDataRequest } from "../parse-malloy";
 
 // These are the types which a field expression will evaluate to
 export type ExpressionValueType =
@@ -166,4 +169,21 @@ export enum Comparison {
   GreaterThan = ">",
   GreaterThanOrEqualTo = ">=",
   NotEqualTo = "!=",
+}
+
+export interface ModelEntry {
+  entry: NamedModelObject;
+  exported?: boolean;
+  sqlType?: boolean;
+}
+export interface NameSpace {
+  getEntry(name: string): ModelEntry | undefined;
+  setEntry(name: string, value: ModelEntry, exported: boolean): void;
+}
+
+export interface DocumentCompileResult {
+  modelDef: ModelDef;
+  queryList: Query[];
+  sqlBlocks: SQLBlockStructDef[];
+  needs: ModelDataRequest;
 }
