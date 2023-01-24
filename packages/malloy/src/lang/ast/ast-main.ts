@@ -54,6 +54,7 @@ import { ConstantSubExpression } from "./constant-sub-expression";
 import { HasParameter } from "./has-parameter";
 import { Ordering } from "./ordering";
 import { NamedSource } from "./sources/named-source";
+import { SpaceField } from "./space-field";
 
 function opOutputStruct(
   logTo: MalloyElement,
@@ -1885,26 +1886,6 @@ export class ProjectFieldSpace extends ResultSpace {
 }
 
 type FieldMap = Record<string, SpaceEntry>;
-
-export abstract class SpaceField extends SpaceEntry {
-  readonly refType = "field";
-
-  protected fieldTypeFromFieldDef(def: model.FieldDef): FieldType {
-    const ref: FieldType = { type: def.type };
-    if (model.isFieldTypeDef(def) && def.expressionType) {
-      ref.expressionType = def.expressionType;
-    }
-    return ref;
-  }
-
-  getQueryFieldDef(_fs: FieldSpace): model.QueryFieldDef | undefined {
-    return undefined;
-  }
-
-  fieldDef(): model.FieldDef | undefined {
-    return undefined;
-  }
-}
 
 export class StructSpaceField extends SpaceField {
   protected space?: FieldSpace;
