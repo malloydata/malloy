@@ -1392,45 +1392,6 @@ export class Top extends MalloyElement {
   }
 }
 
-export class JSONElement extends MalloyElement {
-  elementType = "jsonElement";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readonly value: any;
-  constructor(jsonSrc: string) {
-    super();
-    try {
-      this.value = JSON.parse(jsonSrc);
-    } catch (SyntaxError) {
-      this.log("JSON syntax error");
-      this.value = undefined;
-    }
-  }
-}
-
-export class JSONStructDef extends Mallobj {
-  elementType = "jsonStructDef";
-  constructor(readonly struct: model.StructDef) {
-    super();
-  }
-
-  static fromJSON(jsonObj: JSONElement): JSONStructDef | undefined {
-    const obj = jsonObj.value;
-    if (
-      obj &&
-      obj.type === "struct" &&
-      obj.structRelationship &&
-      obj.structSource
-    ) {
-      return new JSONStructDef(obj as model.StructDef);
-    }
-    return undefined;
-  }
-
-  structDef(): model.StructDef {
-    return this.struct;
-  }
-}
-
 export class ConstantParameter extends HasParameter {
   constructor(name: string, readonly value: ConstantSubExpression) {
     super({ name, isCondition: false });
