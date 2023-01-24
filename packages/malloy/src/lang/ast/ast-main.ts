@@ -24,7 +24,6 @@ import { cloneDeep } from "lodash";
 import * as model from "../../model/malloy_types";
 import { Dialect } from "../../dialect/dialect";
 import { getDialect } from "../../dialect/dialect_map";
-import { FieldTypeDef, isAtomicFieldType } from "../../model/malloy_types";
 import { Segment as ModelQuerySegment } from "../../model/malloy_query";
 import {
   DocStatement,
@@ -35,13 +34,11 @@ import {
 } from "./malloy-element";
 import { ModelDataRequest } from "../parse-malloy";
 import { FieldType, FT, LookupResult, SpaceEntry } from "./ast-types";
-import { compressExpr, isGranularResult } from "./ast-utils";
 import { makeSQLBlock } from "../../model/sql_block";
 import { inspect } from "util";
 import { mergeFields, nameOf } from "../field-utils";
 import { FieldName, FieldSpace } from "./field-space";
 import { ErrorFactory } from "./error-factory";
-import { ExpressionDef } from "./expression-def";
 import {
   FieldReference,
   FieldReferences,
@@ -55,6 +52,7 @@ import { HasParameter } from "./has-parameter";
 import { Ordering } from "./ordering";
 import { NamedSource } from "./sources/named-source";
 import { SpaceField } from "./space-field";
+import { FieldDeclaration } from "./field-declaration";
 import { Filter } from "./filters";
 import { Top } from "./top";
 
@@ -1187,116 +1185,6 @@ export class SampleProperty extends MalloyElement {
   }
   sampling(): model.Sampling {
     return this.sample;
-  }
-}
-
-export class FieldDeclaration extends MalloyElement {
-  elementType = "fieldDeclaration";
-  isMeasure?: boolean;
-
-  constructor(
-    readonly expr: ExpressionDef,
-    readonly defineName: string,
-    readonly exprSrc?: string
-  ) {
-    super({ expr });
-  }
-
-  fieldDef(fs: FieldSpace, exprName: string): FieldTypeDef {
-    /*
-     * In an explore we cannot reference the thing we are defining, you need
-     * to use rename. In a query, the output space is a new thing, and expressions
-     * can reference the outer value in order to make a value with the new name,
-     * and it feels wrong that this is HERE and not somehow in the QueryOperation.
-     * For now, this stops the stack overflow, and passes all tests, but I think
-     * a refactor of QueryFieldSpace might someday be the place where this should
-     * happen.
-     */
-    return this.queryFieldDef(new DefSpace(fs, this), exprName);
-  }
-
-  queryFieldDef(exprFS: FieldSpace, exprName: string): FieldTypeDef {
-    let exprValue;
-
-    try {
-      exprValue = this.expr.getExpression(exprFS);
-    } catch (error) {
-      this.log(`Cannot define '${exprName}', ${error.message}`);
-      return {
-        name: `error_defining_${exprName}`,
-        type: "string",
-      };
-    }
-    const compressValue = compressExpr(exprValue.value);
-    const retType = exprValue.dataType;
-    if (isAtomicFieldType(retType)) {
-      const template: FieldTypeDef = {
-        name: exprName,
-        type: retType,
-        location: this.location,
-      };
-      if (compressValue.length > 0) {
-        template.e = compressValue;
-      }
-      if (exprValue.expressionType) {
-        template.expressionType = exprValue.expressionType;
-      }
-      if (this.exprSrc) {
-        template.code = this.exprSrc;
-      }
-      // TODO this should work for dates too
-      if (isGranularResult(exprValue) && template.type === "timestamp") {
-        template.timeframe = exprValue.timeframe;
-      }
-      return template;
-    }
-    const circularDef = exprFS instanceof DefSpace && exprFS.foundCircle;
-    if (!circularDef) {
-      if (exprValue.dataType == "unknown") {
-        this.log(`Cannot define '${exprName}', value has unknown type`);
-      } else {
-        const badType = FT.inspect(exprValue);
-        this.log(`Cannot define '${exprName}', unexpected type: ${badType}`);
-      }
-    }
-    return {
-      name: `error_defining_${exprName}`,
-      type: "string",
-    };
-  }
-}
-
-/**
- * Used to detect references to fields in the statement which defines them
- */
-export class DefSpace implements FieldSpace {
-  readonly type = "fieldSpace";
-  foundCircle = false;
-  constructor(
-    readonly realFS: FieldSpace,
-    readonly circular: FieldDeclaration
-  ) {}
-  structDef(): model.StructDef {
-    return this.realFS.structDef();
-  }
-  emptyStructDef(): model.StructDef {
-    return this.realFS.emptyStructDef();
-  }
-  lookup(symbol: FieldName[]): LookupResult {
-    if (symbol[0] && symbol[0].refString === this.circular.defineName) {
-      this.foundCircle = true;
-      return {
-        error: `Circular reference to '${this.circular.defineName}' in definition`,
-        found: undefined,
-      };
-    }
-    return this.realFS.lookup(symbol);
-  }
-  dialectObj(): Dialect | undefined {
-    return this.realFS.dialectObj();
-  }
-  whenComplete(step: () => void): void {
-    this.realFS.whenComplete(step);
   }
 }
 

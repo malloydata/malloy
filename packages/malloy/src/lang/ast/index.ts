@@ -46,3 +46,4 @@ export * from "./sources/sql-source";
 export * from "./sources/query-source";
 export * from "./filters";
 export * from "./top";
+export * from "./field-declaration";

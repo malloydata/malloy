@@ -39,7 +39,8 @@ import {
   maxExpressionType,
   expressionIsCalculation,
 } from "../../model/malloy_types";
-import { DefSpace, QuerySpace, SpaceParam, StructSpaceField } from "./ast-main";
+import { QuerySpace, SpaceParam, StructSpaceField } from "./ast-main";
+import { DefSpace } from "./field-declaration";
 import { Filter } from "./filters";
 import { BinaryBoolean, ExprCompare } from "./expression-compare";
 import { FieldName, FieldSpace } from "./field-space";
