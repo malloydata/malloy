@@ -44,14 +44,13 @@ import {
   DefSpace,
   ExpressionDef,
   ExprCompare,
-  FieldName,
   FieldReference,
-  FieldSpace,
   Filter,
   QuerySpace,
   SpaceParam,
   StructSpaceField,
 } from "./ast-main";
+import { FieldName, FieldSpace } from "./field-space";
 import { MalloyElement } from "./malloy-element";
 import {
   Comparison,

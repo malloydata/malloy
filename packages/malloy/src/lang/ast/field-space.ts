@@ -21,14 +21,40 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export * from "./ast-types";
-export * from "./ast-main";
-export * from "./ast-expr";
-export * from "./ast-time-expr";
-export * from "./ast-utils";
-export * from "./malloy-element";
-export * from "./time-utils";
-export * from "./define-explore";
-export * from "./define-query";
-export * from "./import-statement";
-export * from "./field-space";
+import { StructDef } from "../../model/malloy_types";
+import { Dialect } from "../../dialect";
+import { MalloyElement } from "./malloy-element";
+import { LookupResult } from "./ast-types";
+
+/**
+ * A FieldSpace is a hierarchy of namespaces, where the leaf nodes
+ * are fields. A FieldSpace can lookup fields, and generate a StructDef
+ */
+export interface FieldSpace {
+  type: "fieldSpace";
+  structDef(): StructDef;
+  emptyStructDef(): StructDef;
+  lookup(symbol: FieldName[]): LookupResult;
+  dialectObj(): Dialect | undefined;
+  whenComplete: (step: () => void) => void;
+}
+
+export class FieldName extends MalloyElement {
+  elementType = "fieldName";
+
+  constructor(readonly name: string) {
+    super();
+  }
+
+  get refString(): string {
+    return this.name;
+  }
+
+  toString(): string {
+    return this.refString;
+  }
+
+  getField(fs: FieldSpace): LookupResult {
+    return fs.lookup([this]);
+  }
+}

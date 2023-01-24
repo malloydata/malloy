@@ -194,3 +194,18 @@ export interface FieldType {
 }
 
 export class TypeMismatch extends Error {}
+
+export abstract class SpaceEntry {
+  abstract type(): FieldType;
+  abstract refType: "field" | "parameter";
+}
+
+interface LookupFound {
+  found: SpaceEntry;
+  error: undefined;
+}
+interface LookupError {
+  error: string;
+  found: undefined;
+}
+export type LookupResult = LookupFound | LookupError;

@@ -57,7 +57,9 @@ import {
   FieldValueType,
   FT,
   GranularResult,
+  LookupResult,
   TypeMismatch,
+  SpaceEntry,
 } from "./ast-types";
 import {
   compose,
@@ -77,6 +79,7 @@ import {
 } from "./time-utils";
 import { nullsafeNot } from "./apply-expr";
 import { mergeFields, nameOf } from "../field-utils";
+import { FieldName, FieldSpace } from "./field-space";
 
 /*
  ** For times when there is a code generation error but your function needs
@@ -772,26 +775,6 @@ export class Dimensions extends DeclareFields {
 export class Renames extends ListOf<RenameField> {
   constructor(renames: RenameField[]) {
     super("renameField", renames);
-  }
-}
-
-export class FieldName extends MalloyElement {
-  elementType = "fieldName";
-
-  constructor(readonly name: string) {
-    super();
-  }
-
-  get refString(): string {
-    return this.name;
-  }
-
-  toString(): string {
-    return this.refString;
-  }
-
-  getField(fs: FieldSpace): LookupResult {
-    return fs.lookup([this]);
   }
 }
 
@@ -2719,19 +2702,6 @@ export class Range extends ExpressionDef {
 }
 
 /**
- * A FieldSpace is a hierarchy of namespaces, where the leaf nodes
- * are fields. A FieldSpace can lookup fields, and generate a StructDef
- */
-export interface FieldSpace {
-  type: "fieldSpace";
-  structDef(): model.StructDef;
-  emptyStructDef(): model.StructDef;
-  lookup(symbol: FieldName[]): LookupResult;
-  dialectObj(): Dialect | undefined;
-  whenComplete: (step: () => void) => void;
-}
-
-/**
  * Used to detect references to fields in the statement which defines them
  */
 export class DefSpace implements FieldSpace {
@@ -3257,10 +3227,6 @@ export class ProjectFieldSpace extends ResultSpace {
   }
 }
 
-export abstract class SpaceEntry {
-  abstract type(): FieldType;
-  abstract refType: "field" | "parameter";
-}
 type FieldMap = Record<string, SpaceEntry>;
 
 export abstract class SpaceField extends SpaceEntry {
@@ -3584,16 +3550,6 @@ export class WildSpaceField extends SpaceField {
     return this.wildText;
   }
 }
-
-interface LookupFound {
-  found: SpaceEntry;
-  error: undefined;
-}
-interface LookupError {
-  error: string;
-  found: undefined;
-}
-export type LookupResult = LookupFound | LookupError;
 
 export class IndexFieldSpace extends ResultSpace {
   readonly segmentType = "index";

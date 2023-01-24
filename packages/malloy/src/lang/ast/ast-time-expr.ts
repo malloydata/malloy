@@ -48,7 +48,8 @@ import {
   timeLiteral,
   timeOffset,
 } from "./time-utils";
-import { ExpressionDef, ExprTime, FieldSpace, Range } from "./ast-main";
+import { ExpressionDef, ExprTime, Range } from "./ast-main";
+import { FieldSpace } from "./field-space";
 import { MalloyElement } from "./malloy-element";
 
 export class Timeframe extends MalloyElement {
