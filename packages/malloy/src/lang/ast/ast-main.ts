@@ -66,6 +66,7 @@ import { opOutputStruct, getStructFieldDef } from "./struct-utils";
 import { QueryHeadStruct } from "./query-head-struct";
 import { OpDesc } from "./op-desc";
 import { PipelineDesc } from "./pipeline-desc";
+import { TurtleHeadedPipe } from "./turtle-headed-pipe";
 
 type FieldDecl = FieldDeclaration | Join | TurtleDecl | Turtles;
 function isFieldDecl(f: MalloyElement): f is FieldDecl {
@@ -652,19 +653,6 @@ export class ExistingQuery extends PipelineDesc {
 
   query(): model.Query {
     return this.queryComp().query;
-  }
-}
-
-export abstract class TurtleHeadedPipe extends PipelineDesc {
-  _turtleName?: FieldName;
-
-  set turtleName(turtleName: FieldName | undefined) {
-    this._turtleName = turtleName;
-    this.has({ turtleName });
-  }
-
-  get turtleName(): FieldName | undefined {
-    return this._turtleName;
   }
 }
 

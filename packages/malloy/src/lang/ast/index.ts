@@ -34,6 +34,7 @@ export * from "./import-statement";
 export * from "./field-space";
 export * from "./expression-def";
 export * from "./field-references";
+export * from "./turtle-headed-pipe";
 
 export * from "./time-expressions";
 export * from "./expression-compare";
