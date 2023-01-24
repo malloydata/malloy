@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Expr, isJoinOn, StructDef } from "../../model/malloy_types";
-import { compressExpr } from "./ast-utils";
-import { ExpressionDef } from "./expression-def";
-import { FieldSpace } from "./field-space";
-import { ListOf, MalloyElement, ModelEntryReference } from "./malloy-element";
-import { Mallobj } from "./mallobj";
+import { Expr, isJoinOn, StructDef } from "../../../model/malloy_types";
+import { compressExpr } from "../ast-utils";
+import { ExpressionDef } from "../expression-def";
+import { FieldSpace } from "../field-space";
+import { ListOf, MalloyElement, ModelEntryReference } from "../malloy-element";
+import { Mallobj } from "../mallobj";
 
 export abstract class Join extends MalloyElement {
   abstract name: ModelEntryReference;

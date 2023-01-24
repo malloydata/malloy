@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { OrderBy as ModelOrderBy } from "../../model/malloy_types";
-import { FieldName, FieldSpace } from "./field-space";
-import { ListOf, MalloyElement } from "./malloy-element";
+import { OrderBy as ModelOrderBy } from "../../../model/malloy_types";
+import { FieldName, FieldSpace } from "../field-space";
+import { ListOf, MalloyElement } from "../malloy-element";
 
 export class OrderBy extends MalloyElement {
   elementType = "orderBy";

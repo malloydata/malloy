@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { By as ModelBy, expressionIsAggregate } from "../../model/malloy_types";
+import { By as ModelBy, expressionIsAggregate } from "../../../model/malloy_types";
 
-import { compressExpr } from "./ast-utils";
-import { ExpressionDef } from "./expression-def";
-import { FieldName, FieldSpace } from "./field-space";
-import { MalloyElement } from "./malloy-element";
+import { compressExpr } from "../ast-utils";
+import { ExpressionDef } from "../expression-def";
+import { FieldName, FieldSpace } from "../field-space";
+import { MalloyElement } from "../malloy-element";
 
 type TopInit = FieldName | ExpressionDef;
 

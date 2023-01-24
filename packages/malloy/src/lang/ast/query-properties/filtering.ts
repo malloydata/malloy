@@ -24,12 +24,12 @@
 import {
   expressionIsCalculation,
   FilterExpression,
-} from "../../model/malloy_types";
+} from "../../../model/malloy_types";
 
-import { compressExpr } from "./ast-utils";
-import { ExpressionDef } from "./expression-def";
-import { FieldSpace } from "./field-space";
-import { ListOf, MalloyElement } from "./malloy-element";
+import { compressExpr } from "../ast-utils";
+import { ExpressionDef } from "../expression-def";
+import { FieldSpace } from "../field-space";
+import { ListOf, MalloyElement } from "../malloy-element";
 
 export class FilterElement extends MalloyElement {
   elementType = "filterElement";

@@ -45,16 +45,16 @@ import {
   FieldReferenceElement,
   WildcardFieldReference,
 } from "./field-references";
-import { Join, Joins } from "./joins";
+import { Join, Joins } from "./query-properties/joins";
 import { Mallobj } from "./mallobj";
 import { ConstantSubExpression } from "./constant-sub-expression";
 import { HasParameter } from "./has-parameter";
-import { Ordering } from "./ordering";
+import { Ordering } from "./query-properties/ordering";
 import { NamedSource } from "./sources/named-source";
 import { SpaceField } from "./space-field";
 import { DeclareFields, FieldDeclaration } from "./field-declaration";
-import { Filter } from "./filters";
-import { Top } from "./top";
+import { Filter } from "./query-properties/filtering";
+import { Top } from "./query-properties/top";
 import { ColumnSpaceField } from "./space-fields/column-space-field";
 import { ReferenceField } from "./space-fields/reference-field";
 import { WildSpaceField } from "./space-fields/wild-space-field";
@@ -65,6 +65,7 @@ import { SpaceParam } from "./space-param";
 import { DefinedParameter } from "./space-parameters/defined-parameter";
 import { AbstractParameter } from "./space-parameters/abstract-parameter";
 import { Measures } from "./field-declarations/measures";
+import { Limit } from "./query-properties/limit";
 
 function opOutputStruct(
   logTo: MalloyElement,
@@ -673,13 +674,6 @@ export class RenameField extends MalloyElement {
   constructor(readonly newName: string, readonly oldName: FieldName) {
     super();
     this.has({ oldName });
-  }
-}
-
-export class Limit extends MalloyElement {
-  elementType = "limit";
-  constructor(readonly limit: number) {
-    super();
   }
 }
 
