@@ -34,7 +34,7 @@ import { FieldCollectionMember } from "./field-collection-member";
 import { FieldDeclaration } from "./field-declaration";
 import { Measures } from "./field-declarations/measures";
 import { FieldReference, WildcardFieldReference } from "./field-references";
-import { FieldName, FieldSpace } from "./field-space";
+import { FieldName, FieldSpace, isFieldSpace, SourceSpec } from "./field-space";
 import { HasParameter } from "./has-parameter";
 import { Mallobj } from "./mallobj";
 import {
@@ -1309,11 +1309,6 @@ export class SpaceSeed {
     }
     return this.asFS;
   }
-}
-
-export type SourceSpec = model.StructDef | FieldSpace;
-function isFieldSpace(x: SourceSpec): x is FieldSpace {
-  return x.type == "fieldSpace";
 }
 
 export class ExpressionFieldFromAst extends SpaceField {

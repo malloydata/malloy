@@ -59,3 +59,8 @@ export class FieldName extends MalloyElement {
     return fs.lookup([this]);
   }
 }
+
+export type SourceSpec = StructDef | FieldSpace;
+export function isFieldSpace(x: SourceSpec): x is FieldSpace {
+  return x.type == "fieldSpace";
+}
