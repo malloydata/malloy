@@ -57,6 +57,7 @@ import { SampleProperty } from "./query-properties/sampling";
 import { Top } from "./query-properties/top";
 import { NamedSource } from "./sources/named-source";
 import { SpaceField } from "./space-field";
+import { JoinSpaceField } from "./space-fields/join-space-field";
 import { QueryField } from "./space-fields/query-space-field";
 import { ReferenceField } from "./space-fields/reference-field";
 import { RenameSpaceField } from "./space-fields/rename-space-field";
@@ -1532,12 +1533,6 @@ export class QueryFieldAST extends QueryField {
       def.as = this.renameAs;
     }
     return def;
-  }
-}
-
-export class JoinSpaceField extends StructSpaceField {
-  constructor(readonly intoFS: FieldSpace, readonly join: Join) {
-    super(join.structDef());
   }
 }
 
