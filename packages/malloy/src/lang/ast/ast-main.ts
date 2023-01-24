@@ -64,6 +64,8 @@ import { AbstractParameter } from "./space-parameters/abstract-parameter";
 import { StaticSpace, StructSpaceField } from "./static-space";
 import { opOutputStruct, getStructFieldDef } from "./struct-utils";
 import { QueryHeadStruct } from "./query-head-struct";
+import { OpDesc } from "./op-desc";
+import { PipelineDesc } from "./pipeline-desc";
 
 type FieldDecl = FieldDeclaration | Join | TurtleDecl | Turtles;
 function isFieldDecl(f: MalloyElement): f is FieldDecl {
@@ -485,10 +487,6 @@ class IndexExecutor implements Executor {
   }
 }
 
-interface OpDesc {
-  segment: model.PipeSegment;
-  outputSpace: () => FieldSpace;
-}
 type QOPType = "grouping" | "aggregate" | "project" | "index";
 
 export class QOPDesc extends ListOf<QueryProperty> {
@@ -598,101 +596,6 @@ function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
     fd && typeof fd !== "string" && (fd as model.TurtleDef).type === "turtle";
   return !!ret;
-}
-
-/**
- * Generic abstract for all pipelines, the first segment might be a reference
- * to an existing pipeline (query or turtle), and if there is a refinement it
- * is refers to the first segment of the composed pipeline.
- */
-abstract class PipelineDesc extends MalloyElement {
-  elementType = "pipelineDesc";
-  protected headRefinement?: QOPDesc;
-  protected qops: QOPDesc[] = [];
-  nestedInQuerySpace?: QuerySpace;
-
-  refineHead(refinement: QOPDesc): void {
-    this.headRefinement = refinement;
-    this.has({ headRefinement: refinement });
-  }
-
-  addSegments(...segDesc: QOPDesc[]): void {
-    this.qops.push(...segDesc);
-    this.has({ segments: this.qops });
-  }
-
-  protected appendOps(
-    modelPipe: model.PipeSegment[],
-    existingEndSpace: FieldSpace
-  ) {
-    let nextFS = existingEndSpace;
-    let returnPipe: model.PipeSegment[] | undefined;
-    for (const qop of this.qops) {
-      const qopIsNested = modelPipe.length == 0;
-      const next = qop.getOp(nextFS, qopIsNested ? this : null);
-      if (returnPipe == undefined) {
-        returnPipe = [...modelPipe];
-      }
-      returnPipe.push(next.segment);
-      nextFS = next.outputSpace();
-    }
-    return {
-      opList: returnPipe || modelPipe,
-      structDef: nextFS.structDef(),
-    };
-  }
-
-  protected refinePipeline(
-    fs: FieldSpace,
-    modelPipe: model.Pipeline
-  ): model.Pipeline {
-    if (!this.headRefinement) {
-      return modelPipe;
-    }
-    const pipeline: model.PipeSegment[] = [];
-    if (modelPipe.pipeHead) {
-      const { pipeline: turtlePipe } = this.expandTurtle(
-        modelPipe.pipeHead.name,
-        fs.structDef()
-      );
-      pipeline.push(...turtlePipe);
-    }
-    pipeline.push(...modelPipe.pipeline);
-    const firstSeg = pipeline[0];
-    if (firstSeg) {
-      this.headRefinement.refineFrom(firstSeg);
-    }
-    pipeline[0] = this.headRefinement.getOp(fs, this).segment;
-    return { pipeline };
-  }
-
-  protected expandTurtle(
-    turtleName: string,
-    fromStruct: model.StructDef
-  ): {
-    pipeline: model.PipeSegment[];
-    location: model.DocumentLocation | undefined;
-  } {
-    const turtle = getStructFieldDef(fromStruct, turtleName);
-    if (!turtle) {
-      this.log(`Query '${turtleName}' is not defined in source`);
-    } else if (turtle.type !== "turtle") {
-      this.log(`'${turtleName}' is not a query`);
-    } else {
-      return { pipeline: turtle.pipeline, location: turtle.location };
-    }
-    return { pipeline: [], location: undefined };
-  }
-
-  protected getOutputStruct(
-    walkStruct: model.StructDef,
-    pipeline: model.PipeSegment[]
-  ): model.StructDef {
-    for (const modelQop of pipeline) {
-      walkStruct = opOutputStruct(this, walkStruct, modelQop);
-    }
-    return walkStruct;
-  }
 }
 
 export class ExistingQuery extends PipelineDesc {
