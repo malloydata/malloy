@@ -221,61 +221,6 @@ class QueryHeadStruct extends Mallobj {
   }
 }
 
-export class DefineExplore extends MalloyElement implements DocStatement {
-  elementType = "defineExplore";
-  readonly parameters?: HasParameter[];
-  constructor(
-    readonly name: string,
-    readonly mallobj: Mallobj,
-    readonly exported: boolean,
-    params?: MalloyElement[]
-  ) {
-    super({ explore: mallobj });
-    if (params) {
-      this.parameters = [];
-      for (const el of params) {
-        if (el instanceof HasParameter) {
-          this.parameters.push(el);
-        } else {
-          this.log(
-            `Unexpected element type in define statement: ${el.elementType}`
-          );
-        }
-      }
-      this.has({ parameters: this.parameters });
-    }
-  }
-
-  execute(doc: Document): ModelDataRequest {
-    if (doc.modelEntry(this.name)) {
-      this.log(`Cannot redefine '${this.name}'`);
-    } else {
-      const structDef = this.mallobj.withParameters(this.parameters);
-      if (ErrorFactory.isErrorStructDef(structDef)) {
-        return;
-      }
-      doc.setEntry(this.name, {
-        entry: {
-          ...structDef,
-          as: this.name,
-          location: this.location,
-        },
-        exported: this.exported,
-      });
-    }
-  }
-}
-
-export class DefineSourceList extends RunList implements DocStatement {
-  constructor(sourceList: DefineExplore[]) {
-    super("defineSources", sourceList);
-  }
-
-  execute(doc: Document): ModelDataRequest {
-    return this.executeList(doc);
-  }
-}
-
 /**
  * A Mallobj made from a source and a set of refinements
  */
@@ -1715,36 +1660,6 @@ export class Nests extends ListOf<NestedQuery> {
 export type QueryElement = FullQuery | ExistingQuery;
 export function isQueryElement(e: MalloyElement): e is QueryElement {
   return e instanceof FullQuery || e instanceof ExistingQuery;
-}
-
-export class DefineQueryList extends RunList implements DocStatement {
-  constructor(queryList: DefineQuery[]) {
-    super("defineQueries", queryList);
-  }
-
-  execute(doc: Document): ModelDataRequest {
-    return this.executeList(doc);
-  }
-}
-
-export class DefineQuery extends MalloyElement implements DocStatement {
-  elementType = "defineQuery";
-
-  constructor(readonly name: string, readonly queryDetails: QueryElement) {
-    super({ queryDetails });
-  }
-
-  execute(doc: Document): ModelDataRequest {
-    const entry: model.NamedQuery = {
-      ...this.queryDetails.query(),
-      type: "query",
-      name: this.name,
-      location: this.location,
-    };
-    const exported = false;
-    doc.setEntry(this.name, { entry, exported });
-    return undefined;
-  }
 }
 
 export class AnonymousQuery extends MalloyElement implements DocStatement {

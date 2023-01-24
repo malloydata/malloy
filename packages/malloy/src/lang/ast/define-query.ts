@@ -21,12 +21,42 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export * from "./ast-types";
-export * from "./ast-main";
-export * from "./ast-expr";
-export * from "./ast-time-expr";
-export * from "./ast-utils";
-export * from "./malloy-element";
-export * from "./time-utils";
-export * from "./define-explore";
-export * from "./define-query";
+import { NamedQuery } from "../../model/malloy_types";
+import { ModelDataRequest } from "../parse-malloy";
+import {
+  DocStatement,
+  Document,
+  MalloyElement,
+  RunList,
+} from "./malloy-element";
+import { QueryElement } from "./ast-main";
+
+export class DefineQuery extends MalloyElement implements DocStatement {
+  elementType = "defineQuery";
+
+  constructor(readonly name: string, readonly queryDetails: QueryElement) {
+    super({ queryDetails });
+  }
+
+  execute(doc: Document): ModelDataRequest {
+    const entry: NamedQuery = {
+      ...this.queryDetails.query(),
+      type: "query",
+      name: this.name,
+      location: this.location,
+    };
+    const exported = false;
+    doc.setEntry(this.name, { entry, exported });
+    return undefined;
+  }
+}
+
+export class DefineQueryList extends RunList implements DocStatement {
+  constructor(queryList: DefineQuery[]) {
+    super("defineQueries", queryList);
+  }
+
+  execute(doc: Document): ModelDataRequest {
+    return this.executeList(doc);
+  }
+}
