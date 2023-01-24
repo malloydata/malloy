@@ -52,7 +52,7 @@ import { HasParameter } from "./has-parameter";
 import { Ordering } from "./ordering";
 import { NamedSource } from "./sources/named-source";
 import { SpaceField } from "./space-field";
-import { FieldDeclaration } from "./field-declaration";
+import { DeclareFields, FieldDeclaration } from "./field-declaration";
 import { Filter } from "./filters";
 import { Top } from "./top";
 import { ColumnSpaceField } from "./space-fields/column-space-field";
@@ -268,12 +268,6 @@ export function isExploreProperty(p: MalloyElement): p is ExploreProperty {
 export class ExploreDesc extends ListOf<ExploreProperty> {
   constructor(props: ExploreProperty[]) {
     super("exploreDesc", props);
-  }
-}
-
-export class DeclareFields extends ListOf<FieldDeclaration> {
-  constructor(fields: FieldDeclaration[], fieldType = "declare") {
-    super(fieldType, fields);
   }
 }
 

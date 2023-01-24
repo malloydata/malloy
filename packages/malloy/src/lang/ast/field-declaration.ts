@@ -32,7 +32,7 @@ import { FT, LookupResult } from "./ast-types";
 import { compressExpr, isGranularResult } from "./ast-utils";
 import { FieldName, FieldSpace } from "./field-space";
 import { ExpressionDef } from "./expression-def";
-import { MalloyElement } from "./malloy-element";
+import { ListOf, MalloyElement } from "./malloy-element";
 
 export class FieldDeclaration extends MalloyElement {
   elementType = "fieldDeclaration";
@@ -141,5 +141,12 @@ export class DefSpace implements FieldSpace {
   }
   whenComplete(step: () => void): void {
     this.realFS.whenComplete(step);
+  }
+}
+
+// TODO(maden): Rename to FieldDeclarations ?
+export class DeclareFields extends ListOf<FieldDeclaration> {
+  constructor(fields: FieldDeclaration[], fieldType = "declare") {
+    super(fieldType, fields);
   }
 }
