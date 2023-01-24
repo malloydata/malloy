@@ -21,31 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export * from "./ast-types";
-export * from "./ast-main";
-export * from "./ast-expr";
-export * from "./ast-time-expr";
-export * from "./ast-utils";
-export * from "./malloy-element";
-export * from "./time-utils";
-export * from "./define-explore";
-export * from "./define-query";
-export * from "./import-statement";
-export * from "./field-space";
-export * from "./expression-def";
-export * from "./field-references";
-export * from "./joins";
-export * from "./time-expressions";
-export * from "./expression-compare";
-export * from "./mallobj";
-export * from "./has-parameter";
-export * from "./ordering";
-export * from "./sources/named-source";
-export * from "./sources/table-source";
-export * from "./sources/sql-source";
-export * from "./sources/query-source";
-export * from "./filters";
-export * from "./top";
-export * from "./field-declaration";
-export * from "./field-declarations/dimmensions";
-export * from "./field-declarations/measures";
+import { DeclareFields, FieldDeclaration } from "../field-declaration";
+
+export class Dimensions extends DeclareFields {
+  constructor(dimensions: FieldDeclaration[]) {
+    super(dimensions, "dimension");
+    for (const dim of dimensions) {
+      dim.isMeasure = false;
+    }
+  }
+}

@@ -64,6 +64,7 @@ import { QueryFieldStruct } from "./space-fields/query-field-struct";
 import { SpaceParam } from "./space-param";
 import { DefinedParameter } from "./space-parameters/defined-parameter";
 import { AbstractParameter } from "./space-parameters/abstract-parameter";
+import { Measures } from "./field-declarations/measures";
 
 function opOutputStruct(
   logTo: MalloyElement,
@@ -268,24 +269,6 @@ export function isExploreProperty(p: MalloyElement): p is ExploreProperty {
 export class ExploreDesc extends ListOf<ExploreProperty> {
   constructor(props: ExploreProperty[]) {
     super("exploreDesc", props);
-  }
-}
-
-export class Measures extends DeclareFields {
-  constructor(measures: FieldDeclaration[]) {
-    super(measures, "measure");
-    for (const dim of measures) {
-      dim.isMeasure = true;
-    }
-  }
-}
-
-export class Dimensions extends DeclareFields {
-  constructor(dimensions: FieldDeclaration[]) {
-    super(dimensions, "dimension");
-    for (const dim of dimensions) {
-      dim.isMeasure = false;
-    }
   }
 }
 
