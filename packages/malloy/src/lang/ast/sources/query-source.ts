@@ -21,26 +21,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export * from "./ast-types";
-export * from "./ast-main";
-export * from "./ast-expr";
-export * from "./ast-time-expr";
-export * from "./ast-utils";
-export * from "./malloy-element";
-export * from "./time-utils";
-export * from "./define-explore";
-export * from "./define-query";
-export * from "./import-statement";
-export * from "./field-space";
-export * from "./expression-def";
-export * from "./field-references";
-export * from "./joins";
-export * from "./time-expressions";
-export * from "./expression-compare";
-export * from "./mallobj";
-export * from "./has-parameter";
-export * from "./ordering";
-export * from "./sources/named-source";
-export * from "./sources/table-source";
-export * from "./sources/sql-source";
-export * from "./sources/query-source";
+import { StructDef } from "../../../model";
+import { Mallobj } from "../mallobj";
+import { QueryElement } from "../ast-main";
+
+export class QuerySource extends Mallobj {
+  elementType = "querySource";
+  constructor(readonly query: QueryElement) {
+    super({ query });
+  }
+
+  structDef(): StructDef {
+    const comp = this.query.queryComp();
+    const queryStruct = comp.outputStruct;
+    queryStruct.structSource = { type: "query", query: comp.query };
+    return queryStruct;
+  }
+}

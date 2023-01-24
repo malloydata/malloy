@@ -21,26 +21,28 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export * from "./ast-types";
-export * from "./ast-main";
-export * from "./ast-expr";
-export * from "./ast-time-expr";
-export * from "./ast-utils";
-export * from "./malloy-element";
-export * from "./time-utils";
-export * from "./define-explore";
-export * from "./define-query";
-export * from "./import-statement";
-export * from "./field-space";
-export * from "./expression-def";
-export * from "./field-references";
-export * from "./joins";
-export * from "./time-expressions";
-export * from "./expression-compare";
-export * from "./mallobj";
-export * from "./has-parameter";
-export * from "./ordering";
-export * from "./sources/named-source";
-export * from "./sources/table-source";
-export * from "./sources/sql-source";
-export * from "./sources/query-source";
+import { StructDef, StructRef } from "../../../model/malloy_types";
+import { NamedSource } from "./named-source";
+
+export class SQLSource extends NamedSource {
+  elementType = "sqlSource";
+  structRef(): StructRef {
+    return this.structDef();
+  }
+  modelStruct(): StructDef | undefined {
+    const modelEnt = this.modelEntry(this.ref);
+    const entry = modelEnt?.entry;
+    if (!entry) {
+      this.log(`Undefined from_sql source '${this.refName}'`);
+      return;
+    }
+    if (entry.type === "query") {
+      this.log(`Cannot use 'from_sql()' to explore query '${this.refName}'`);
+      return;
+    } else if (!modelEnt.sqlType) {
+      this.log(`Cannot use 'from_sql()' to explore '${this.refName}'`);
+      return;
+    }
+    return entry;
+  }
+}

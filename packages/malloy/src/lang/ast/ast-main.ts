@@ -38,7 +38,6 @@ import { FieldType, FT, LookupResult, SpaceEntry } from "./ast-types";
 import { compressExpr, isGranularResult } from "./ast-utils";
 import { makeSQLBlock } from "../../model/sql_block";
 import { inspect } from "util";
-import { castTo, timeOffset } from "./time-utils";
 import { mergeFields, nameOf } from "../field-utils";
 import { FieldName, FieldSpace } from "./field-space";
 import { ErrorFactory } from "./error-factory";
@@ -54,6 +53,7 @@ import { Mallobj } from "./mallobj";
 import { ConstantSubExpression } from "./constant-sub-expression";
 import { HasParameter } from "./has-parameter";
 import { Ordering } from "./ordering";
+import { NamedSource } from "./sources/named-source";
 
 function opOutputStruct(
   logTo: MalloyElement,
@@ -199,199 +199,6 @@ export class RefinedExplore extends Mallobj {
       return { ...retStruct, filterList };
     }
     return retStruct;
-  }
-}
-
-export class TableSource extends Mallobj {
-  elementType = "tableSource";
-  constructor(readonly name: string) {
-    super();
-  }
-
-  structDef(): model.StructDef {
-    const tableDefEntry = this.translator()?.root.schemaZone.getEntry(
-      this.name
-    );
-    let msg = `Schema read failure for table '${this.name}'`;
-    if (tableDefEntry) {
-      if (tableDefEntry.status == "present") {
-        tableDefEntry.value.location = this.location;
-        tableDefEntry.value.fields.forEach(
-          (field) => (field.location = this.location)
-        );
-        return {
-          ...tableDefEntry.value,
-          fields: tableDefEntry.value.fields.map((field) => ({
-            ...field,
-            location: this.location,
-          })),
-          location: this.location,
-        };
-      }
-      if (tableDefEntry.status == "error") {
-        msg = tableDefEntry.message;
-      }
-    }
-    this.log(msg);
-    return ErrorFactory.structDef;
-  }
-}
-
-export class IsValueBlock extends MalloyElement {
-  elementType = "isValueBlock";
-
-  constructor(readonly isMap: Record<string, ConstantSubExpression>) {
-    super();
-    this.has(isMap);
-  }
-}
-
-export class NamedSource extends Mallobj {
-  elementType = "namedSource";
-  protected isBlock?: IsValueBlock;
-
-  constructor(
-    readonly ref: ModelEntryReference | string,
-    paramValues: Record<string, ConstantSubExpression> = {}
-  ) {
-    super();
-    if (paramValues && Object.keys(paramValues).length > 0) {
-      this.isBlock = new IsValueBlock(paramValues);
-      this.has({ parameterValues: this.isBlock });
-    }
-    if (ref instanceof ModelEntryReference) {
-      this.has({ ref });
-    }
-  }
-
-  get refName(): string {
-    return this.ref instanceof ModelEntryReference ? this.ref.name : this.ref;
-  }
-
-  structRef(): model.StructRef {
-    if (this.isBlock) {
-      return this.structDef();
-    }
-    const modelEnt = this.modelEntry(this.ref);
-    if (modelEnt && !modelEnt.exported) {
-      // If we are not exporting the referenced structdef, don't
-      // use the reference
-      return this.structDef();
-    }
-    return this.refName;
-  }
-
-  modelStruct(): model.StructDef | undefined {
-    const modelEnt = this.modelEntry(this.ref);
-    const entry = modelEnt?.entry;
-    if (!entry) {
-      const undefMsg = `Undefined source '${this.refName}'`;
-      (this.ref instanceof ModelEntryReference ? this.ref : this).log(undefMsg);
-      return;
-    }
-    if (entry.type === "query") {
-      this.log(`Must use 'from()' for query source '${this.refName}`);
-      return;
-    } else if (modelEnt.sqlType) {
-      this.log(`Must use 'from_sql()' for sql source '${this.refName}`);
-      return;
-    }
-    return { ...entry };
-  }
-
-  structDef(): model.StructDef {
-    /*
-      Can't really generate the callback list until after all the
-      things before me are translated, and that kinda screws up
-      the translation process, so that might be a better place
-      to start the next step, because how that gets done might
-      make any code I write which ignores the translation problem
-      kind of meaningless.
-
-      Maybe the output of a translation is something which describes
-      all the missing data, and then there is a "link" step where you
-      can do other translations and link them into a partial translation
-      which might result in a full translation.
-    */
-
-    const ret = this.modelStruct();
-    if (!ret) {
-      const notFound = ErrorFactory.structDef;
-      const err = `${this.refName}-undefined`;
-      notFound.name = notFound.name + err;
-      notFound.dialect = notFound.dialect + err;
-      return notFound;
-    }
-    const declared = { ...ret.parameters } || {};
-
-    const makeWith = this.isBlock?.isMap || {};
-    for (const [pName, pExpr] of Object.entries(makeWith)) {
-      const decl = declared[pName];
-      // const pVal = pExpr.constantValue();
-      if (!decl) {
-        this.log(`Value given for undeclared parameter '${pName}`);
-      } else {
-        if (model.isValueParameter(decl)) {
-          if (decl.constant) {
-            pExpr.log(`Cannot override constant parameter ${pName}`);
-          } else {
-            const pVal = pExpr.constantValue();
-            let value = pVal.value;
-            if (pVal.dataType !== decl.type) {
-              value = castTo(decl.type, pVal.value, true);
-            }
-            decl.value = value;
-          }
-        } else {
-          // TODO type checking here -- except I am still not sure what
-          // datatype half conditions have ..
-          decl.condition = pExpr.constantCondition(decl.type).value;
-        }
-      }
-    }
-    for (const checkDef in ret.parameters) {
-      if (!model.paramHasValue(declared[checkDef])) {
-        this.log(`Value not provided for required parameter ${checkDef}`);
-      }
-    }
-    return ret;
-  }
-}
-
-export class SQLSource extends NamedSource {
-  elementType = "sqlSource";
-  structRef(): model.StructRef {
-    return this.structDef();
-  }
-  modelStruct(): model.StructDef | undefined {
-    const modelEnt = this.modelEntry(this.ref);
-    const entry = modelEnt?.entry;
-    if (!entry) {
-      this.log(`Undefined from_sql source '${this.refName}'`);
-      return;
-    }
-    if (entry.type === "query") {
-      this.log(`Cannot use 'from_sql()' to explore query '${this.refName}'`);
-      return;
-    } else if (!modelEnt.sqlType) {
-      this.log(`Cannot use 'from_sql()' to explore '${this.refName}'`);
-      return;
-    }
-    return entry;
-  }
-}
-
-export class QuerySource extends Mallobj {
-  elementType = "querySource";
-  constructor(readonly query: QueryElement) {
-    super({ query });
-  }
-
-  structDef(): model.StructDef {
-    const comp = this.query.queryComp();
-    const queryStruct = comp.outputStruct;
-    queryStruct.structSource = { type: "query", query: comp.query };
-    return queryStruct;
   }
 }
 
