@@ -21,10 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import { Dialect } from "../../dialect/dialect";
 import { StructDef } from "../../model/malloy_types";
-import { Dialect } from "../../dialect";
-import { MalloyElement } from "./malloy-element";
+
 import { LookupResult } from "./ast-types";
+import { MalloyElement } from "./malloy-element";
 
 /**
  * A FieldSpace is a hierarchy of namespaces, where the leaf nodes
@@ -50,7 +51,7 @@ export class FieldName extends MalloyElement {
     return this.name;
   }
 
-  toString(): string {
+  override toString(): string {
     return this.refString;
   }
 
