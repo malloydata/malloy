@@ -36,7 +36,8 @@ import {
   StructDef,
 } from "../../model";
 import { makeSQLBlock } from "../../model/sql_block";
-import { ExpressionDef, StaticSpace } from "../ast/ast-main";
+import { StaticSpace } from "../ast/ast-main";
+import { ExpressionDef } from "../ast/expression-def";
 import { DataRequestResponse } from "../parse-malloy";
 import {
   TestTranslator,

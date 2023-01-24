@@ -48,7 +48,8 @@ import {
   timeLiteral,
   timeOffset,
 } from "./time-utils";
-import { ExpressionDef, ExprTime, Range } from "./ast-main";
+import { ExprTime, Range } from "./ast-main";
+import { ExpressionDef } from "./expression-def";
 import { FieldSpace } from "./field-space";
 import { MalloyElement } from "./malloy-element";
 

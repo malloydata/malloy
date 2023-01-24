@@ -42,7 +42,6 @@ import {
 import {
   BinaryBoolean,
   DefSpace,
-  ExpressionDef,
   ExprCompare,
   FieldReference,
   Filter,
@@ -51,6 +50,7 @@ import {
   StructSpaceField,
 } from "./ast-main";
 import { FieldName, FieldSpace } from "./field-space";
+import { ExpressionDef } from "./expression-def";
 import { MalloyElement } from "./malloy-element";
 import {
   Comparison,
