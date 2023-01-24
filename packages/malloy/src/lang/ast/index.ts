@@ -45,3 +45,4 @@ export * from "./sources/table-source";
 export * from "./sources/sql-source";
 export * from "./sources/query-source";
 export * from "./filters";
+export * from "./top";

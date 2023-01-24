@@ -56,6 +56,7 @@ import { Ordering } from "./ordering";
 import { NamedSource } from "./sources/named-source";
 import { SpaceField } from "./space-field";
 import { Filter } from "./filters";
+import { Top } from "./top";
 
 function opOutputStruct(
   logTo: MalloyElement,
@@ -1061,36 +1062,6 @@ export class AnonymousQuery extends MalloyElement implements DocStatement {
   execute(doc: Document): ModelDataRequest {
     const modelQuery = this.theQuery.query();
     doc.queryList.push(modelQuery);
-    return undefined;
-  }
-}
-
-type TopInit = FieldName | ExpressionDef;
-
-export class Top extends MalloyElement {
-  elementType = "top";
-  constructor(readonly limit: number, readonly by?: TopInit) {
-    super();
-    this.has({ by });
-  }
-
-  getBy(fs: FieldSpace): model.By | undefined {
-    if (this.by) {
-      if (this.by instanceof FieldName) {
-        // TODO jump-to-definition `fs` cannot currently `lookup` fields in the output space
-        // const entry = this.by.getField(fs);
-        // if (entry.error) {
-        //   this.by.log(entry.error);
-        // }
-        return { by: "name", name: this.by.refString };
-      } else {
-        const byExpr = this.by.getExpression(fs);
-        if (model.expressionIsAggregate(byExpr.expressionType)) {
-          this.log("top by expression must be an aggregate");
-        }
-        return { by: "expression", e: compressExpr(byExpr.value) };
-      }
-    }
     return undefined;
   }
 }
