@@ -59,6 +59,8 @@ import { ColumnSpaceField } from "./space-fields/column-space-field";
 import { ReferenceField } from "./space-fields/reference-field";
 import { WildSpaceField } from "./space-fields/wild-space-field";
 import { RenameSpaceField } from "./space-fields/rename-space-field";
+import { QueryField } from "./space-fields/query-space-field";
+import { QueryFieldStruct } from "./space-fields/query-field-struct";
 
 function opOutputStruct(
   logTo: MalloyElement,
@@ -1705,40 +1707,6 @@ export class StructSpaceField extends SpaceField {
 
   type(): FieldType {
     return { type: "struct" };
-  }
-}
-
-export abstract class QueryField extends SpaceField {
-  constructor(protected inSpace: FieldSpace) {
-    super();
-  }
-
-  abstract getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef | undefined;
-  abstract fieldDef(): model.FieldDef;
-
-  type(): FieldType {
-    return { type: "turtle" };
-  }
-}
-
-export class QueryFieldStruct extends QueryField {
-  constructor(fs: FieldSpace, protected turtleDef: model.TurtleDef) {
-    super(fs);
-  }
-
-  rename(name: string): void {
-    this.turtleDef = {
-      ...this.turtleDef,
-      as: name,
-    };
-  }
-
-  fieldDef(): model.TurtleDef {
-    return this.turtleDef;
-  }
-
-  getQueryFieldDef(_fs: FieldSpace): model.QueryFieldDef | undefined {
-    return this.fieldDef();
   }
 }
 

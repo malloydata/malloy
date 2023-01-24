@@ -22,13 +22,10 @@
  */
 
 import * as model from "../../model/malloy_types";
-import {
-  DefinedParameter,
-  QueryFieldStruct,
-  StaticSpace,
-} from "../ast/ast-main";
+import { DefinedParameter, StaticSpace } from "../ast/ast-main";
 import { ColumnSpaceField } from "../ast/space-fields/column-space-field";
 import { FieldName } from "../ast/field-space";
+import { QueryFieldStruct } from "../ast/space-fields/query-field-struct";
 
 /*
  **  A set of tests to make sure structdefs can become fieldspaces
