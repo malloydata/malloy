@@ -22,8 +22,9 @@
  */
 
 import * as model from "../model/malloy_types";
-import { FieldReference, SpaceField, SpaceParam } from "./ast/ast-main";
+import { SpaceField, SpaceParam } from "./ast/ast-main";
 import { FieldSpace } from "./ast/field-space";
+import { FieldReference } from "./ast/field-references";
 import { FieldType } from "./ast/ast-types";
 // "Space Fields" are a field in a field space
 

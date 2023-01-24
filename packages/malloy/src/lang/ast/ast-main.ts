@@ -64,6 +64,12 @@ import { castTo, timeOffset } from "./time-utils";
 import { mergeFields, nameOf } from "../field-utils";
 import { FieldName, FieldSpace } from "./field-space";
 import { ExpressionDef } from "./expression-def";
+import {
+  FieldReference,
+  FieldReferences,
+  FieldReferenceElement,
+  WildcardFieldReference,
+} from "./field-references";
 
 /*
  ** For times when there is a code generation error but your function needs
@@ -762,48 +768,6 @@ export class Renames extends ListOf<RenameField> {
   }
 }
 
-export class FieldReference extends ListOf<FieldName> {
-  elementType = "fieldReference";
-
-  constructor(names: FieldName[]) {
-    super("fieldReference", names);
-  }
-
-  get refString(): string {
-    return this.list.map((n) => n.refString).join(".");
-  }
-
-  get outputName(): string {
-    const last = this.list[this.list.length - 1];
-    return last.refString;
-  }
-
-  get sourceString(): string | undefined {
-    if (this.list.length > 1) {
-      return this.list
-        .slice(0, -1)
-        .map((n) => n.refString)
-        .join(".");
-    }
-    return undefined;
-  }
-
-  get nameString(): string {
-    return this.list[this.list.length - 1].refString;
-  }
-
-  getField(fs: FieldSpace): LookupResult {
-    return fs.lookup(this.list);
-  }
-}
-
-export type FieldReferenceElement = FieldReference | WildcardFieldReference;
-
-export class FieldReferences extends ListOf<FieldReferenceElement> {
-  constructor(members: FieldReferenceElement[]) {
-    super("fieldReferenceList", members);
-  }
-}
 export type FieldCollectionMember = FieldReferenceElement | FieldDeclaration;
 export function isFieldCollectionMember(
   el: MalloyElement
@@ -1199,27 +1163,6 @@ export class RenameField extends MalloyElement {
   constructor(readonly newName: string, readonly oldName: FieldName) {
     super();
     this.has({ oldName });
-  }
-}
-
-export class WildcardFieldReference extends MalloyElement {
-  elementType = "wildcardFieldReference";
-  constructor(
-    readonly joinPath: FieldReference | undefined,
-    readonly star: "*" | "**"
-  ) {
-    super();
-    this.has({ joinPath });
-  }
-
-  getFieldDef(): model.FieldDef {
-    throw this.internalError("fielddef request from wildcard reference");
-  }
-
-  get refString(): string {
-    return this.joinPath
-      ? `${this.joinPath.refString}.${this.star}`
-      : this.star;
   }
 }
 

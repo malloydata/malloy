@@ -43,7 +43,6 @@ import {
   BinaryBoolean,
   DefSpace,
   ExprCompare,
-  FieldReference,
   Filter,
   QuerySpace,
   SpaceParam,
@@ -51,6 +50,7 @@ import {
 } from "./ast-main";
 import { FieldName, FieldSpace } from "./field-space";
 import { ExpressionDef } from "./expression-def";
+import { FieldReference } from "./field-references";
 import { MalloyElement } from "./malloy-element";
 import {
   Comparison,
