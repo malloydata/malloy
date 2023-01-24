@@ -58,6 +58,7 @@ import {
   FieldValueType,
   FT,
   GranularResult,
+  TypeMismatch,
 } from "./ast-types";
 import {
   compose,
@@ -2313,7 +2314,7 @@ function equality(
         } else {
           const regexCmp = regexEqual(lhs, rhs);
           if (regexCmp === undefined) {
-            throw new TypeMistmatch(
+            throw new TypeMismatch(
               "Incompatible types for match('~') operator"
             );
           }
@@ -2582,8 +2583,6 @@ function regexEqual(left: ExprValue, right: ExprValue): Expr | undefined {
   }
   return undefined;
 }
-
-export class TypeMistmatch extends Error {}
 
 function nullCompare(
   left: ExprValue,

@@ -192,3 +192,5 @@ export interface FieldType {
   type: FieldValueType;
   expressionType?: ExpressionType;
 }
+
+export class TypeMismatch extends Error {}
