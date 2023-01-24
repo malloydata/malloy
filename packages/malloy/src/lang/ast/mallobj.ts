@@ -23,7 +23,7 @@
 
 import { StructDef, StructRef } from "../../model/malloy_types";
 import { MalloyElement } from "./malloy-element";
-import { HasParameter } from "./ast-main";
+import { HasParameter } from "./has-parameter";
 
 /**
  * A "Mallobj" is a thing which you can run queries against, it has been called

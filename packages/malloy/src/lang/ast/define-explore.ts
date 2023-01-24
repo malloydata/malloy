@@ -28,7 +28,7 @@ import {
   MalloyElement,
   RunList,
 } from "./malloy-element";
-import { HasParameter } from "./ast-main";
+import { HasParameter } from "./has-parameter";
 import { ErrorFactory } from "./error-factory";
 import { Mallobj } from "./mallobj";
 

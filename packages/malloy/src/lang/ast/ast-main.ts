@@ -52,6 +52,7 @@ import {
 import { Join, Joins } from "./joins";
 import { Mallobj } from "./mallobj";
 import { ConstantSubExpression } from "./constant-sub-expression";
+import { HasParameter } from "./has-parameter";
 
 function opOutputStruct(
   logTo: MalloyElement,
@@ -1427,54 +1428,6 @@ export class JSONStructDef extends Mallobj {
 
   structDef(): model.StructDef {
     return this.struct;
-  }
-}
-
-interface HasInit {
-  name: string;
-  isCondition: boolean;
-  type?: string;
-  default?: ConstantSubExpression;
-}
-
-export class HasParameter extends MalloyElement {
-  elementType = "hasParameter";
-  readonly name: string;
-  readonly isCondition: boolean;
-  readonly type?: model.AtomicFieldType;
-  readonly default?: ConstantSubExpression;
-
-  constructor(init: HasInit) {
-    super();
-    this.name = init.name;
-    this.isCondition = init.isCondition;
-    if (init.type && model.isAtomicFieldType(init.type)) {
-      this.type = init.type;
-    }
-    if (init.default) {
-      this.default = init.default;
-      this.has({ default: this.default });
-    }
-  }
-
-  parameter(): model.Parameter {
-    const name = this.name;
-    const type = this.type || "string";
-    if (this.isCondition) {
-      const cCond = this.default?.constantCondition(type).value || null;
-      return {
-        type,
-        name,
-        condition: cCond,
-      };
-    }
-    const cVal = this.default?.constantValue().value || null;
-    return {
-      value: cVal,
-      type,
-      name: this.name,
-      constant: false,
-    };
   }
 }
 
