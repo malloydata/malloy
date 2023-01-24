@@ -55,6 +55,10 @@ import { SpaceField } from "./space-field";
 import { FieldDeclaration } from "./field-declaration";
 import { Filter } from "./filters";
 import { Top } from "./top";
+import { ColumnSpaceField } from "./space-fields/column-space-field";
+import { ReferenceField } from "./space-fields/reference-field";
+import { WildSpaceField } from "./space-fields/wild-space-field";
+import { RenameSpaceField } from "./space-fields/rename-space-field";
 
 function opOutputStruct(
   logTo: MalloyElement,
@@ -1738,20 +1742,6 @@ export class QueryFieldStruct extends QueryField {
   }
 }
 
-export class ColumnSpaceField extends SpaceField {
-  constructor(protected def: model.FieldTypeDef) {
-    super();
-  }
-
-  fieldDef(): model.FieldDef {
-    return this.def;
-  }
-
-  type(): FieldType {
-    return this.fieldTypeFromFieldDef(this.def);
-  }
-}
-
 export abstract class SpaceParam extends SpaceEntry {
   abstract parameter(): model.Parameter;
   readonly refType = "parameter";
@@ -1890,32 +1880,6 @@ export class QueryFieldAST extends QueryField {
   }
 }
 
-export class RenameSpaceField extends SpaceField {
-  constructor(
-    private readonly otherField: SpaceField,
-    private readonly newName: string,
-    private readonly location: model.DocumentLocation
-  ) {
-    super();
-  }
-
-  fieldDef(): model.FieldDef | undefined {
-    const renamedFieldRaw = this.otherField.fieldDef();
-    if (renamedFieldRaw === undefined) {
-      return undefined;
-    }
-    return {
-      ...renamedFieldRaw,
-      as: this.newName,
-      location: this.location,
-    };
-  }
-
-  type(): FieldType {
-    return this.otherField.type();
-  }
-}
-
 export class JoinSpaceField extends StructSpaceField {
   constructor(readonly intoFS: FieldSpace, readonly join: Join) {
     super(join.structDef());
@@ -1948,39 +1912,6 @@ export class QuerySpace extends DynamicSpace {
     } else {
       this.extendList.push(extendField.defineName);
     }
-  }
-}
-
-export class ReferenceField extends SpaceField {
-  constructor(readonly fieldRef: FieldReference) {
-    super();
-  }
-
-  getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef | undefined {
-    // Lookup string and generate error if it isn't defined.
-    const check = this.fieldRef.getField(fs);
-    if (check.error) {
-      this.fieldRef.log(check.error);
-    }
-    return this.fieldRef.refString;
-  }
-
-  type(): FieldType {
-    return { type: "unknown" };
-  }
-}
-
-export class WildSpaceField extends SpaceField {
-  constructor(readonly wildText: string) {
-    super();
-  }
-
-  type(): FieldType {
-    throw new Error("should never ask a wild field for its type");
-  }
-
-  getQueryFieldDef(_fs: FieldSpace): model.QueryFieldDef {
-    return this.wildText;
   }
 }
 

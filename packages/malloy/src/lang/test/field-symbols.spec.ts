@@ -23,11 +23,11 @@
 
 import * as model from "../../model/malloy_types";
 import {
-  ColumnSpaceField,
   DefinedParameter,
   QueryFieldStruct,
   StaticSpace,
 } from "../ast/ast-main";
+import { ColumnSpaceField } from "../ast/space-fields/column-space-field";
 import { FieldName } from "../ast/field-space";
 
 /*
