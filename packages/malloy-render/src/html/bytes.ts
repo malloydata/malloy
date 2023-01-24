@@ -25,7 +25,7 @@ import { DataColumn } from "@malloydata/malloy";
 import { HTMLTextRenderer } from "./text";
 
 export class HTMLBytesRenderer extends HTMLTextRenderer {
-  getText(data: DataColumn): string | null {
+  override getText(data: DataColumn): string | null {
     if (data.isNull()) {
       return null;
     }

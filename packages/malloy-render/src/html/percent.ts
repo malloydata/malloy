@@ -25,7 +25,7 @@ import { DataColumn } from "@malloydata/malloy";
 import { HTMLNumberRenderer } from "./number";
 
 export class HTMLPercentRenderer extends HTMLNumberRenderer {
-  getText(data: DataColumn): string | null {
+  override getText(data: DataColumn): string | null {
     const num = this.getNumber(data);
 
     return num === null
