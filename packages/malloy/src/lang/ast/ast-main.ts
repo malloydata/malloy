@@ -53,6 +53,7 @@ import { Join, Joins } from "./joins";
 import { Mallobj } from "./mallobj";
 import { ConstantSubExpression } from "./constant-sub-expression";
 import { HasParameter } from "./has-parameter";
+import { Ordering } from "./ordering";
 
 function opOutputStruct(
   logTo: MalloyElement,
@@ -943,48 +944,6 @@ export class RenameField extends MalloyElement {
   constructor(readonly newName: string, readonly oldName: FieldName) {
     super();
     this.has({ oldName });
-  }
-}
-
-export class OrderBy extends MalloyElement {
-  elementType = "orderBy";
-  constructor(
-    readonly field: number | FieldName,
-    readonly dir?: "asc" | "desc"
-  ) {
-    super();
-    if (field instanceof FieldName) {
-      this.has({ field });
-    }
-  }
-
-  get modelField(): string | number {
-    return typeof this.field === "number" ? this.field : this.field.refString;
-  }
-
-  getOrderBy(_fs: FieldSpace): model.OrderBy {
-    // TODO jump-to-definition `fs` cannot currently `lookup` fields in the output space
-    // if (this.field instanceof FieldName) {
-    //   const entry = this.field.getField(_fs);
-    //   if (entry.error) {
-    //     this.field.log(entry.error);
-    //   }
-    // }
-    const orderElement: model.OrderBy = { field: this.modelField };
-    if (this.dir) {
-      orderElement.dir = this.dir;
-    }
-    return orderElement;
-  }
-}
-
-export class Ordering extends ListOf<OrderBy> {
-  constructor(list: OrderBy[]) {
-    super("ordering", list);
-  }
-
-  getOrderBy(fs: FieldSpace): model.OrderBy[] {
-    return this.list.map((el) => el.getOrderBy(fs));
   }
 }
 

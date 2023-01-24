@@ -39,3 +39,4 @@ export * from "./time-expressions";
 export * from "./expression-compare";
 export * from "./mallobj";
 export * from "./has-parameter";
+export * from "./ordering";
