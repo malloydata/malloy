@@ -39,7 +39,7 @@ import {
   maxExpressionType,
   expressionIsCalculation,
 } from "../../model/malloy_types";
-import { QuerySpace, SpaceParam, StructSpaceField } from "./ast-main";
+import { QuerySpace, StructSpaceField } from "./ast-main";
 import { DefSpace } from "./field-declaration";
 import { Filter } from "./filters";
 import { BinaryBoolean, ExprCompare } from "./expression-compare";
@@ -57,6 +57,7 @@ import {
 import { compose, compressExpr, errorFor } from "./ast-utils";
 import { nullsafeNot } from "./apply-expr";
 import { castTo } from "./time-utils";
+import { SpaceParam } from "./space-param";
 
 export class ExprString extends ExpressionDef {
   elementType = "string literal";

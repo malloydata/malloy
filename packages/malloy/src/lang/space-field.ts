@@ -22,7 +22,8 @@
  */
 
 import * as model from "../model/malloy_types";
-import { SpaceParam } from "./ast/ast-main";
+
+import { SpaceParam } from "./ast/space-param";
 import { FieldSpace } from "./ast/field-space";
 import { FieldReference } from "./ast/field-references";
 import { FieldType } from "./ast/ast-types";

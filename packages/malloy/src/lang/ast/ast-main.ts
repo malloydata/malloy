@@ -61,6 +61,9 @@ import { WildSpaceField } from "./space-fields/wild-space-field";
 import { RenameSpaceField } from "./space-fields/rename-space-field";
 import { QueryField } from "./space-fields/query-space-field";
 import { QueryFieldStruct } from "./space-fields/query-field-struct";
+import { SpaceParam } from "./space-param";
+import { DefinedParameter } from "./space-parameters/defined-parameter";
+import { AbstractParameter } from "./space-parameters/abstract-parameter";
 
 function opOutputStruct(
   logTo: MalloyElement,
@@ -1710,25 +1713,6 @@ export class StructSpaceField extends SpaceField {
   }
 }
 
-export abstract class SpaceParam extends SpaceEntry {
-  abstract parameter(): model.Parameter;
-  readonly refType = "parameter";
-}
-
-export class DefinedParameter extends SpaceParam {
-  constructor(readonly paramDef: model.Parameter) {
-    super();
-  }
-
-  parameter(): model.Parameter {
-    return this.paramDef;
-  }
-
-  type(): FieldType {
-    return { type: this.paramDef.type };
-  }
-}
-
 /**
  * Based on how things are constructed, the starting field space
  * can either be another field space or an existing structdef.
@@ -1768,21 +1752,6 @@ export class SpaceSeed {
 export type SourceSpec = model.StructDef | FieldSpace;
 function isFieldSpace(x: SourceSpec): x is FieldSpace {
   return x.type == "fieldSpace";
-}
-
-export class AbstractParameter extends SpaceParam {
-  constructor(readonly astParam: HasParameter) {
-    super();
-  }
-
-  parameter(): model.Parameter {
-    return this.astParam.parameter();
-  }
-
-  type(): FieldType {
-    const type = this.astParam.type || "unknown";
-    return { type };
-  }
 }
 
 export class ExpressionFieldFromAst extends SpaceField {
