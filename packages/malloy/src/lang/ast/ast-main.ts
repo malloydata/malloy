@@ -989,32 +989,6 @@ export class AnonymousQuery extends MalloyElement implements DocStatement {
   }
 }
 
-export class ConstantParameter extends HasParameter {
-  constructor(name: string, readonly value: ConstantSubExpression) {
-    super({ name, isCondition: false });
-    this.has({ value });
-  }
-
-  parameter(): model.Parameter {
-    const cVal = this.value.constantValue();
-    if (!model.isAtomicFieldType(cVal.dataType)) {
-      this.log(`Unexpected expression type '${cVal.dataType}'`);
-      return {
-        value: ["XXX-type-mismatch-error-XXX"],
-        type: "string",
-        name: this.name,
-        constant: true,
-      };
-    }
-    return {
-      value: cVal.value,
-      type: cVal.dataType,
-      name: this.name,
-      constant: true,
-    };
-  }
-}
-
 type SQLStringSegment = string | QueryElement;
 export class SQLString extends MalloyElement {
   elementType = "sqlString";
