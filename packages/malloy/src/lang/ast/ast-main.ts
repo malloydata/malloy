@@ -63,6 +63,7 @@ import { inspect } from "util";
 import { castTo, timeOffset } from "./time-utils";
 import { mergeFields, nameOf } from "../field-utils";
 import { FieldName, FieldSpace } from "./field-space";
+import { ErrorFactory } from "./error-factory";
 import { ExpressionDef } from "./expression-def";
 import {
   FieldReference,
@@ -70,53 +71,6 @@ import {
   FieldReferenceElement,
   WildcardFieldReference,
 } from "./field-references";
-
-/*
- ** For times when there is a code generation error but your function needs
- ** to return some kind of object to type properly, the ErrorFactory is
- ** here to help you.
- */
-
-const theErrorStruct: model.StructDef = {
-  type: "struct",
-  name: "~malformed~",
-  dialect: "~malformed~",
-  structSource: { type: "table", tablePath: "//undefined_error_table_path" },
-  structRelationship: {
-    type: "basetable",
-    connectionName: "//undefined_error_connection",
-  },
-  fields: [],
-};
-
-export class ErrorFactory {
-  static get structDef(): model.StructDef {
-    return { ...theErrorStruct };
-  }
-
-  static isErrorStructDef(s: model.StructDef): boolean {
-    return s.name.includes(theErrorStruct.name);
-  }
-
-  static get query(): model.Query {
-    return {
-      structRef: ErrorFactory.structDef,
-      pipeline: [],
-    };
-  }
-
-  static get reduceSegment(): model.ReduceSegment {
-    return { type: "reduce", fields: [] };
-  }
-
-  static get projectSegment(): model.ProjectSegment {
-    return { type: "project", fields: [] };
-  }
-
-  static get indexSegment(): model.IndexSegment {
-    return { type: "index", fields: [] };
-  }
-}
 
 function opOutputStruct(
   logTo: MalloyElement,

@@ -28,7 +28,8 @@ import {
   MalloyElement,
   RunList,
 } from "./malloy-element";
-import { ErrorFactory, HasParameter, Mallobj } from "./ast-main";
+import { HasParameter, Mallobj } from "./ast-main";
+import { ErrorFactory } from "./error-factory";
 
 export class DefineExplore extends MalloyElement implements DocStatement {
   elementType = "defineExplore";
