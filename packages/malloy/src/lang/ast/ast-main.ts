@@ -47,7 +47,6 @@ import {
   ListOf,
   MalloyElement,
   ModelEntryReference,
-  RunList,
 } from "./malloy-element";
 import { ModelDataRequest } from "../parse-malloy";
 import {
@@ -1744,56 +1743,6 @@ export class JSONStructDef extends Mallobj {
 
   structDef(): model.StructDef {
     return this.struct;
-  }
-}
-
-export class ImportStatement extends MalloyElement implements DocStatement {
-  elementType = "import statement";
-  fullURL?: string;
-
-  /*
-   * At the time of writng this comment, it is guaranteed that if an AST
-   * node for an import statement is created, the translator has already
-   * succesfully fetched the URL referred to in the statement.
-   *
-   * Error checking code in here is future proofing against a day when
-   * there are other ways to contruct an AST.
-   */
-
-  constructor(readonly url: string, baseURL: string) {
-    super();
-    try {
-      this.fullURL = decodeURI(new URL(url, baseURL).toString());
-    } catch (e) {
-      this.log("Invalid URI in import statement");
-    }
-  }
-
-  execute(doc: Document): ModelDataRequest {
-    const trans = this.translator();
-    if (!trans) {
-      this.log("Cannot import without translation context");
-    } else if (this.fullURL) {
-      const src = trans.root.importZone.getEntry(this.fullURL);
-      if (src.status === "present") {
-        const childNeeds = trans.childRequest(this.fullURL);
-        if (childNeeds) {
-          return childNeeds;
-        }
-        const importStructs = trans.getChildExports(this.fullURL);
-        for (const importing in importStructs) {
-          doc.setEntry(importing, {
-            entry: importStructs[importing],
-            exported: false,
-          });
-        }
-      } else if (src.status === "error") {
-        this.log(`import failed: '${src.message}'`);
-      } else {
-        this.log(`import failed with status: '${src.status}'`);
-      }
-    }
-    return undefined;
   }
 }
 

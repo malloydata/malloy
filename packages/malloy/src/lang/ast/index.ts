@@ -30,3 +30,4 @@ export * from "./malloy-element";
 export * from "./time-utils";
 export * from "./define-explore";
 export * from "./define-query";
+export * from "./import-statement";
