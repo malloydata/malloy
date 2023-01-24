@@ -145,11 +145,6 @@ function opOutputStruct(
   return { ...ErrorFactory.structDef, dialect: inputStruct.dialect };
 }
 
-export class Unimplemented extends MalloyElement {
-  elementType = "unimplemented";
-  reported = false;
-}
-
 function getStructFieldDef(
   s: model.StructDef,
   fn: string

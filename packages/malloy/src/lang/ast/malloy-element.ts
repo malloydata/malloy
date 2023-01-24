@@ -258,6 +258,11 @@ export abstract class MalloyElement {
   }
 }
 
+export class Unimplemented extends MalloyElement {
+  elementType = "unimplemented";
+  reported = false;
+}
+
 type ChildBody = MalloyElement | MalloyElement[];
 type ElementChildren = Record<string, ChildBody>;
 
