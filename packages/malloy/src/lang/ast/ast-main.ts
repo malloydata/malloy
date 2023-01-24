@@ -55,6 +55,7 @@ import { HasParameter } from "./has-parameter";
 import { Ordering } from "./ordering";
 import { NamedSource } from "./sources/named-source";
 import { SpaceField } from "./space-field";
+import { Filter } from "./filters";
 
 function opOutputStruct(
   logTo: MalloyElement,
@@ -259,71 +260,6 @@ export function isExploreProperty(p: MalloyElement): p is ExploreProperty {
 export class ExploreDesc extends ListOf<ExploreProperty> {
   constructor(props: ExploreProperty[]) {
     super("exploreDesc", props);
-  }
-}
-
-export class FilterElement extends MalloyElement {
-  elementType = "filterElement";
-  constructor(readonly expr: ExpressionDef, readonly exprSrc: string) {
-    super({ expr });
-  }
-
-  filterExpression(fs: FieldSpace): model.FilterExpression {
-    const exprVal = this.expr.getExpression(fs);
-    if (exprVal.dataType !== "boolean") {
-      this.expr.log("Filter expression must have boolean value");
-      return {
-        code: this.exprSrc,
-        expression: ["_FILTER_MUST_RETURN_BOOLEAN_"],
-        expressionType: "scalar",
-      };
-    }
-    const exprCond: model.FilterExpression = {
-      code: this.exprSrc,
-      expression: compressExpr(exprVal.value),
-      expressionType: exprVal.expressionType,
-    };
-    return exprCond;
-  }
-}
-
-export class Filter extends ListOf<FilterElement> {
-  elementType = "filter";
-  private havingClause?: boolean;
-  constructor(elements: FilterElement[] = []) {
-    super("filterElements", elements);
-  }
-
-  set having(isHaving: boolean) {
-    this.elementType = isHaving ? "having" : "where";
-  }
-
-  getFilterList(fs: FieldSpace): model.FilterExpression[] {
-    const checked: model.FilterExpression[] = [];
-    for (const oneElement of this.list) {
-      const fExpr = oneElement.filterExpression(fs);
-      // Aggregates are ALSO checked at SQL generation time, but checking
-      // here allows better reflection of errors back to user.
-      if (this.havingClause !== undefined) {
-        if (this.havingClause) {
-          if (model.expressionIsCalculation(fExpr.expressionType)) {
-            oneElement.log(
-              "Aggregate or Analytical expression expected in HAVING filter"
-            );
-            continue;
-          }
-        } else {
-          if (fExpr.expressionType !== "scalar") {
-            oneElement.log(
-              "Aggregate or Analytical expressions not allowed in WHERE"
-            );
-            continue;
-          }
-        }
-      }
-      checked.push(fExpr);
-    }
-    return checked;
   }
 }
 
