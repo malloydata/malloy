@@ -21,8 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { cloneDeep } from "lodash";
-import { inspect } from "util";
-import { Segment as ModelQuerySegment } from "../../model/malloy_query";
 import * as model from "../../model/malloy_types";
 import { makeSQLBlock } from "../../model/sql_block";
 import { mergeFields, nameOf } from "../field-utils";
@@ -55,7 +53,6 @@ import { Ordering } from "./query-properties/ordering";
 import { ProjectStatement } from "./query-properties/project-statement";
 import { SampleProperty } from "./query-properties/sampling";
 import { Top } from "./query-properties/top";
-import { NamedSource } from "./sources/named-source";
 import { SpaceField } from "./space-field";
 import { JoinSpaceField } from "./space-fields/join-space-field";
 import { QueryField } from "./space-fields/query-space-field";
@@ -65,33 +62,8 @@ import { WildSpaceField } from "./space-fields/wild-space-field";
 import { SpaceParam } from "./space-param";
 import { AbstractParameter } from "./space-parameters/abstract-parameter";
 import { StaticSpace, StructSpaceField } from "./static-space";
-
-function opOutputStruct(
-  logTo: MalloyElement,
-  inputStruct: model.StructDef,
-  opDesc: model.PipeSegment
-): model.StructDef {
-  const badModel = ErrorFactory.isErrorStructDef(inputStruct);
-  // Don't call into the model code with a broken model
-  if (!badModel) {
-    try {
-      return ModelQuerySegment.nextStructDef(inputStruct, opDesc);
-    } catch (e) {
-      logTo.log(
-        `INTERNAL ERROR model/Segment.nextStructDef: ${e.message}\n` +
-          `QUERY: ${inspect(opDesc, { breakLength: 72, depth: Infinity })}`
-      );
-    }
-  }
-  return { ...ErrorFactory.structDef, dialect: inputStruct.dialect };
-}
-
-function getStructFieldDef(
-  s: model.StructDef,
-  fn: string
-): model.FieldDef | undefined {
-  return s.fields.find((fld) => (fld.as || fld.name) === fn);
-}
+import { opOutputStruct, getStructFieldDef } from "./struct-utils";
+import { QueryHeadStruct } from "./query-head-struct";
 
 type FieldDecl = FieldDeclaration | Join | TurtleDecl | Turtles;
 function isFieldDecl(f: MalloyElement): f is FieldDecl {
@@ -106,26 +78,6 @@ function isFieldDecl(f: MalloyElement): f is FieldDecl {
 export type ExploreField = FieldDecl | RenameField;
 export function isExploreField(f: MalloyElement): f is ExploreField {
   return isFieldDecl(f) || f instanceof RenameField;
-}
-
-class QueryHeadStruct extends Mallobj {
-  elementType = "internalOnlyQueryHead";
-  constructor(readonly fromRef: model.StructRef) {
-    super();
-  }
-
-  structRef(): model.StructRef {
-    return this.fromRef;
-  }
-
-  structDef(): model.StructDef {
-    if (model.refIsStructDef(this.fromRef)) {
-      return this.fromRef;
-    }
-    const ns = new NamedSource(this.fromRef);
-    this.has({ exploreReference: ns });
-    return ns.structDef();
-  }
 }
 
 /**
