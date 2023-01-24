@@ -54,6 +54,7 @@ import {
   Comparison,
   Equality,
   ExprValue,
+  FieldType,
   FieldValueType,
   FT,
   GranularResult,
@@ -3422,11 +3423,6 @@ export abstract class SpaceField extends SpaceEntry {
   fieldDef(): model.FieldDef | undefined {
     return undefined;
   }
-}
-
-export interface FieldType {
-  type: FieldValueType;
-  expressionType?: model.ExpressionType;
 }
 
 export class StructSpaceField extends SpaceField {

@@ -187,3 +187,8 @@ export interface DocumentCompileResult {
   sqlBlocks: SQLBlockStructDef[];
   needs: ModelDataRequest;
 }
+
+export interface FieldType {
+  type: FieldValueType;
+  expressionType?: ExpressionType;
+}
