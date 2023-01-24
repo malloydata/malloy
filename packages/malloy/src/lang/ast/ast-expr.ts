@@ -40,14 +40,13 @@ import {
   expressionIsCalculation,
 } from "../../model/malloy_types";
 import {
-  BinaryBoolean,
   DefSpace,
-  ExprCompare,
   Filter,
   QuerySpace,
   SpaceParam,
   StructSpaceField,
 } from "./ast-main";
+import { BinaryBoolean, ExprCompare } from "./expression-compare";
 import { FieldName, FieldSpace } from "./field-space";
 import { ExpressionDef } from "./expression-def";
 import { FieldReference } from "./field-references";

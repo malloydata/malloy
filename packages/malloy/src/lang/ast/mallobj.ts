@@ -21,20 +21,35 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export * from "./ast-types";
-export * from "./ast-main";
-export * from "./ast-expr";
-export * from "./ast-time-expr";
-export * from "./ast-utils";
-export * from "./malloy-element";
-export * from "./time-utils";
-export * from "./define-explore";
-export * from "./define-query";
-export * from "./import-statement";
-export * from "./field-space";
-export * from "./expression-def";
-export * from "./field-references";
-export * from "./joins";
-export * from "./time-expressions";
-export * from "./expression-compare";
-export * from "./mallobj";
+import { StructDef, StructRef } from "../../model/malloy_types";
+import { MalloyElement } from "./malloy-element";
+import { HasParameter } from "./ast-main";
+
+/**
+ * A "Mallobj" is a thing which you can run queries against, it has been called
+ * an "exploreable", or a "space".
+ */
+export abstract class Mallobj extends MalloyElement {
+  abstract structDef(): StructDef;
+
+  structRef(): StructRef {
+    return this.structDef();
+  }
+
+  withParameters(pList: HasParameter[] | undefined): StructDef {
+    const before = this.structDef();
+    // TODO name collisions are flagged where?
+    if (pList) {
+      const parameters = { ...(before.parameters || {}) };
+      for (const hasP of pList) {
+        const pVal = hasP.parameter();
+        parameters[pVal.name] = pVal;
+      }
+      return {
+        ...before,
+        parameters,
+      };
+    }
+    return before;
+  }
+}

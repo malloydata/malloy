@@ -20,7 +20,6 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
 import {
   DivFragment,
   Expr,
@@ -31,6 +30,7 @@ import {
 import { MalloyElement } from "./malloy-element";
 import { FieldSpace } from "./field-space";
 import {
+  Comparison,
   Equality,
   ExprValue,
   FieldValueType,
