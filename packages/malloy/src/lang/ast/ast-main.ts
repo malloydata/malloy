@@ -21,10 +21,27 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { cloneDeep } from "lodash";
-import * as model from "../../model/malloy_types";
+import { inspect } from "util";
 import { Dialect } from "../../dialect/dialect";
 import { getDialect } from "../../dialect/dialect_map";
 import { Segment as ModelQuerySegment } from "../../model/malloy_query";
+import * as model from "../../model/malloy_types";
+import { makeSQLBlock } from "../../model/sql_block";
+import { mergeFields, nameOf } from "../field-utils";
+import { ModelDataRequest } from "../parse-malloy";
+import { FieldType, FT, LookupResult, SpaceEntry } from "./ast-types";
+import { ConstantSubExpression } from "./constant-sub-expression";
+import { ErrorFactory } from "./error-factory";
+import { FieldListEdit } from "./explore-properties/field-list-edit";
+import { PrimaryKey } from "./explore-properties/primary-key";
+import { RenameField, Renames } from "./explore-properties/renames";
+import { FieldCollectionMember } from "./field-collection-member";
+import { FieldDeclaration } from "./field-declaration";
+import { Measures } from "./field-declarations/measures";
+import { FieldReference, WildcardFieldReference } from "./field-references";
+import { FieldName, FieldSpace } from "./field-space";
+import { HasParameter } from "./has-parameter";
+import { Mallobj } from "./mallobj";
 import {
   DocStatement,
   Document,
@@ -32,45 +49,26 @@ import {
   MalloyElement,
   ModelEntryReference,
 } from "./malloy-element";
-import { ModelDataRequest } from "../parse-malloy";
-import { FieldType, FT, LookupResult, SpaceEntry } from "./ast-types";
-import { makeSQLBlock } from "../../model/sql_block";
-import { inspect } from "util";
-import { mergeFields, nameOf } from "../field-utils";
-import { FieldName, FieldSpace } from "./field-space";
-import { ErrorFactory } from "./error-factory";
-import {
-  FieldReference,
-  FieldReferences,
-  FieldReferenceElement,
-  WildcardFieldReference,
-} from "./field-references";
+import { DeclareFields } from "./query-properties/declare-fields";
+import { Filter } from "./query-properties/filters";
+import { Index } from "./query-properties/indexing";
 import { Join, Joins } from "./query-properties/joins";
-import { Mallobj } from "./mallobj";
-import { ConstantSubExpression } from "./constant-sub-expression";
-import { HasParameter } from "./has-parameter";
+import { Limit } from "./query-properties/limit";
 import { Ordering } from "./query-properties/ordering";
+import { ProjectStatement } from "./query-properties/project-statement";
+import { SampleProperty } from "./query-properties/sampling";
+import { Top } from "./query-properties/top";
 import { NamedSource } from "./sources/named-source";
 import { SpaceField } from "./space-field";
-import { FieldDeclaration } from "./field-declaration";
-import { Filter } from "./query-properties/filters";
-import { Top } from "./query-properties/top";
 import { ColumnSpaceField } from "./space-fields/column-space-field";
-import { ReferenceField } from "./space-fields/reference-field";
-import { WildSpaceField } from "./space-fields/wild-space-field";
-import { RenameSpaceField } from "./space-fields/rename-space-field";
-import { QueryField } from "./space-fields/query-space-field";
 import { QueryFieldStruct } from "./space-fields/query-field-struct";
+import { QueryField } from "./space-fields/query-space-field";
+import { ReferenceField } from "./space-fields/reference-field";
+import { RenameSpaceField } from "./space-fields/rename-space-field";
+import { WildSpaceField } from "./space-fields/wild-space-field";
 import { SpaceParam } from "./space-param";
-import { DefinedParameter } from "./space-parameters/defined-parameter";
 import { AbstractParameter } from "./space-parameters/abstract-parameter";
-import { Measures } from "./field-declarations/measures";
-import { Limit } from "./query-properties/limit";
-import { Index } from "./query-properties/indexing";
-import { SampleProperty } from "./query-properties/sampling";
-import { DeclareFields } from "./query-properties/declare-fields";
-import { ProjectStatement } from "./query-properties/project-statement";
-import { FieldCollectionMember } from "./field-collection-member";
+import { DefinedParameter } from "./space-parameters/defined-parameter";
 
 function opOutputStruct(
   logTo: MalloyElement,
@@ -273,25 +271,10 @@ export function isExploreProperty(p: MalloyElement): p is ExploreProperty {
     p instanceof Turtles
   );
 }
+
 export class ExploreDesc extends ListOf<ExploreProperty> {
   constructor(props: ExploreProperty[]) {
     super("exploreDesc", props);
-  }
-}
-
-export class Renames extends ListOf<RenameField> {
-  constructor(renames: RenameField[]) {
-    super("renameField", renames);
-  }
-}
-
-export class FieldListEdit extends MalloyElement {
-  elementType = "fieldListEdit";
-  constructor(
-    readonly edit: "accept" | "except",
-    readonly refs: FieldReferences
-  ) {
-    super({ refs });
   }
 }
 
@@ -649,21 +632,6 @@ export class QOPDesc extends ListOf<QueryProperty> {
       outputSpace: () =>
         new DynamicSpace(opOutputStruct(this, inputFS.structDef(), segment)),
     };
-  }
-}
-
-export class PrimaryKey extends MalloyElement {
-  elementType = "primary key";
-  constructor(readonly field: FieldName) {
-    super({ field });
-  }
-}
-
-export class RenameField extends MalloyElement {
-  elementType = "renameField";
-  constructor(readonly newName: string, readonly oldName: FieldName) {
-    super();
-    this.has({ oldName });
   }
 }
 

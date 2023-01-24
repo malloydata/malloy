@@ -43,20 +43,24 @@ export * from "./has-parameter";
 export * from "./field-collection-member";
 export * from "./field-declaration";
 
+export * from "./explore-properties/field-list-edit";
+export * from "./explore-properties/primary-key";
+export * from "./explore-properties/renames";
+
 export * from "./field-declarations/dimmensions";
 export * from "./field-declarations/measures";
 
-export * from "./query-properties/joins";
-export * from "./query-properties/ordering";
-export * from "./query-properties/filters";
-export * from "./query-properties/top";
-export * from "./query-properties/limit";
-export * from "./query-properties/indexing";
-export * from "./query-properties/sampling";
 export * from "./query-properties/declare-fields";
+export * from "./query-properties/filters";
+export * from "./query-properties/indexing";
+export * from "./query-properties/joins";
+export * from "./query-properties/limit";
+export * from "./query-properties/ordering";
 export * from "./query-properties/project-statement";
+export * from "./query-properties/sampling";
+export * from "./query-properties/top";
 
 export * from "./sources/named-source";
-export * from "./sources/table-source";
-export * from "./sources/sql-source";
 export * from "./sources/query-source";
+export * from "./sources/sql-source";
+export * from "./sources/table-source";
