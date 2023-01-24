@@ -33,7 +33,7 @@ export class HTMLNumberRenderer extends HTMLTextRenderer {
     return data.number.value;
   }
 
-  getText(data: DataColumn): string | null {
+  override getText(data: DataColumn): string | null {
     const num = this.getNumber(data);
 
     return num === null ? num : num.toLocaleString();
