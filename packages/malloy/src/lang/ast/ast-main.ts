@@ -22,15 +22,12 @@
  */
 import { cloneDeep } from "lodash";
 import { inspect } from "util";
-import { Dialect } from "../../dialect/dialect";
-import { getDialect } from "../../dialect/dialect_map";
 import { Segment as ModelQuerySegment } from "../../model/malloy_query";
 import * as model from "../../model/malloy_types";
 import { makeSQLBlock } from "../../model/sql_block";
 import { mergeFields, nameOf } from "../field-utils";
 import { ModelDataRequest } from "../parse-malloy";
 import { FieldType, FT, LookupResult, SpaceEntry } from "./ast-types";
-import { ConstantSubExpression } from "./constant-sub-expression";
 import { ErrorFactory } from "./error-factory";
 import { FieldListEdit } from "./explore-properties/field-list-edit";
 import { PrimaryKey } from "./explore-properties/primary-key";
@@ -60,15 +57,13 @@ import { SampleProperty } from "./query-properties/sampling";
 import { Top } from "./query-properties/top";
 import { NamedSource } from "./sources/named-source";
 import { SpaceField } from "./space-field";
-import { ColumnSpaceField } from "./space-fields/column-space-field";
-import { QueryFieldStruct } from "./space-fields/query-field-struct";
 import { QueryField } from "./space-fields/query-space-field";
 import { ReferenceField } from "./space-fields/reference-field";
 import { RenameSpaceField } from "./space-fields/rename-space-field";
 import { WildSpaceField } from "./space-fields/wild-space-field";
 import { SpaceParam } from "./space-param";
 import { AbstractParameter } from "./space-parameters/abstract-parameter";
-import { DefinedParameter } from "./space-parameters/defined-parameter";
+import { StaticSpace, StructSpaceField } from "./static-space";
 
 function opOutputStruct(
   logTo: MalloyElement,
@@ -1077,139 +1072,6 @@ export class SQLStatement extends MalloyElement implements DocStatement {
   }
 }
 
-export class StaticSpace implements FieldSpace {
-  readonly type = "fieldSpace";
-  private memoMap?: FieldMap;
-  protected fromStruct: model.StructDef;
-
-  constructor(sourceStructDef: model.StructDef) {
-    this.fromStruct = sourceStructDef;
-  }
-
-  whenComplete(step: () => void): void {
-    step();
-  }
-
-  dialectObj(): Dialect | undefined {
-    try {
-      return getDialect(this.fromStruct.dialect);
-    } catch {
-      return undefined;
-    }
-  }
-
-  fromFieldDef(from: model.FieldDef): SpaceField {
-    if (from.type === "struct") {
-      return new StructSpaceField(from);
-    } else if (model.isTurtleDef(from)) {
-      return new QueryFieldStruct(this, from);
-    }
-    // TODO field has a filter and needs to be a filteredalias
-    return new ColumnSpaceField(from);
-  }
-
-  private get map(): FieldMap {
-    if (this.memoMap === undefined) {
-      this.memoMap = {};
-      for (const f of this.fromStruct.fields) {
-        const name = f.as || f.name;
-        this.memoMap[name] = this.fromFieldDef(f);
-      }
-      if (this.fromStruct.parameters) {
-        for (const [paramName, paramDef] of Object.entries(
-          this.fromStruct.parameters
-        )) {
-          if (this.memoMap[paramName]) {
-            throw new Error(
-              `In struct '${this.fromStruct.as || this.fromStruct.name}': ` +
-                ` : Field and parameter name conflict '${paramName}`
-            );
-          }
-          this.memoMap[paramName] = new DefinedParameter(paramDef);
-        }
-      }
-    }
-    return this.memoMap;
-  }
-
-  protected dropEntries(): void {
-    this.memoMap = {};
-  }
-
-  protected dropEntry(name: string): void {
-    delete this.map[name];
-  }
-
-  protected entry(name: string): SpaceEntry | undefined {
-    return this.map[name];
-  }
-
-  protected setEntry(name: string, value: SpaceEntry): void {
-    this.map[name] = value;
-  }
-
-  protected entries(): [string, SpaceEntry][] {
-    return Object.entries(this.map);
-  }
-
-  structDef(): model.StructDef {
-    return this.fromStruct;
-  }
-
-  emptyStructDef(): model.StructDef {
-    return { ...this.fromStruct, fields: [] };
-  }
-
-  lookup(path: FieldName[]): LookupResult {
-    const head = path[0];
-    const rest = path.slice(1);
-    const found = this.entry(head.refString);
-    if (!found) {
-      return { error: `'${head}' is not defined`, found };
-    }
-    if (found instanceof SpaceField) {
-      /*
-       * TODO cache defs, post the addReference call to whenComplete
-       *
-       * In the cleanup phase of query space construction, it may check
-       * the output space for ungrouping variables. However if an
-       * ungrouping variable is a measure, the field expression value
-       * needed to get the definition needs to be computed in the
-       * input space of the query. There is a test which failed which
-       * caused this code to be here, but this is really a bandaid.
-       *
-       * Some re-work of how to get the definition of a SpaceField
-       * no matter what it is contained in needs to be thought out.
-       *
-       * ... or this check would look at the finalized output of
-       * the namespace and not re-compile ...
-       */
-      const definition = found.fieldDef();
-      if (definition) {
-        head.addReference({
-          type:
-            found instanceof StructSpaceField
-              ? "joinReference"
-              : "fieldReference",
-          definition,
-          location: head.location,
-          text: head.refString,
-        });
-      }
-    }
-    if (rest.length) {
-      if (found instanceof StructSpaceField) {
-        return found.fieldSpace.lookup(rest);
-      }
-      return {
-        error: `'${head}' cannot contain a '${rest[0]}'`,
-        found: undefined,
-      };
-    }
-    return { found, error: undefined };
-  }
-}
-
 /**
  * A FieldSpace which may undergo modification
  */
@@ -1566,30 +1428,6 @@ export class ProjectFieldSpace extends ResultSpace {
       }
     }
     return true;
-  }
-}
-
-type FieldMap = Record<string, SpaceEntry>;
-
-export class StructSpaceField extends SpaceField {
-  protected space?: FieldSpace;
-  constructor(protected sourceDef: model.StructDef) {
-    super();
-  }
-
-  get fieldSpace(): FieldSpace {
-    if (!this.space) {
-      this.space = new StaticSpace(this.sourceDef);
-    }
-    return this.space;
-  }
-
-  fieldDef(): model.FieldDef {
-    return this.sourceDef;
-  }
-
-  type(): FieldType {
-    return { type: "struct" };
   }
 }
 

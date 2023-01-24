@@ -200,6 +200,8 @@ export abstract class SpaceEntry {
   abstract refType: "field" | "parameter";
 }
 
+export type FieldMap = Record<string, SpaceEntry>;
+
 interface LookupFound {
   found: SpaceEntry;
   error: undefined;
