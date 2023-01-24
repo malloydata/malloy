@@ -21,42 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  By as ModelBy,
-  expressionIsAggregate,
-} from "../../../model/malloy_types";
+import { Sampling } from "../../../model/malloy_types";
 
-import { compressExpr } from "../ast-utils";
-import { ExpressionDef } from "../expression-def";
-import { FieldName, FieldSpace } from "../field-space";
 import { MalloyElement } from "../malloy-element";
 
-type TopInit = FieldName | ExpressionDef;
-
-export class Top extends MalloyElement {
-  elementType = "top";
-  constructor(readonly limit: number, readonly by?: TopInit) {
+export class SampleProperty extends MalloyElement {
+  elementType = "sampleProperty";
+  constructor(readonly sample: Sampling) {
     super();
-    this.has({ by });
   }
-
-  getBy(fs: FieldSpace): ModelBy | undefined {
-    if (this.by) {
-      if (this.by instanceof FieldName) {
-        // TODO jump-to-definition `fs` cannot currently `lookup` fields in the output space
-        // const entry = this.by.getField(fs);
-        // if (entry.error) {
-        //   this.by.log(entry.error);
-        // }
-        return { by: "name", name: this.by.refString };
-      } else {
-        const byExpr = this.by.getExpression(fs);
-        if (expressionIsAggregate(byExpr.expressionType)) {
-          this.log("top by expression must be an aggregate");
-        }
-        return { by: "expression", e: compressExpr(byExpr.value) };
-      }
-    }
-    return undefined;
+  sampling(): Sampling {
+    return this.sample;
   }
 }

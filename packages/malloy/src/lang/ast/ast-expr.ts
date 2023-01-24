@@ -41,7 +41,7 @@ import {
 } from "../../model/malloy_types";
 import { QuerySpace, StructSpaceField } from "./ast-main";
 import { DefSpace } from "./field-declaration";
-import { Filter } from "./query-properties/filtering";
+import { Filter } from "./query-properties/filters";
 import { BinaryBoolean, ExprCompare } from "./expression-compare";
 import { FieldName, FieldSpace } from "./field-space";
 import { ExpressionDef } from "./expression-def";

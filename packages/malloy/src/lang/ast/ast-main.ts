@@ -53,7 +53,7 @@ import { Ordering } from "./query-properties/ordering";
 import { NamedSource } from "./sources/named-source";
 import { SpaceField } from "./space-field";
 import { DeclareFields, FieldDeclaration } from "./field-declaration";
-import { Filter } from "./query-properties/filtering";
+import { Filter } from "./query-properties/filters";
 import { Top } from "./query-properties/top";
 import { ColumnSpaceField } from "./space-fields/column-space-field";
 import { ReferenceField } from "./space-fields/reference-field";
@@ -66,6 +66,8 @@ import { DefinedParameter } from "./space-parameters/defined-parameter";
 import { AbstractParameter } from "./space-parameters/abstract-parameter";
 import { Measures } from "./field-declarations/measures";
 import { Limit } from "./query-properties/limit";
+import { Index } from "./query-properties/indexing";
+import { SampleProperty } from "./query-properties/sampling";
 
 function opOutputStruct(
   logTo: MalloyElement,
@@ -683,19 +685,6 @@ export class Turtles extends ListOf<TurtleDecl> {
   }
 }
 
-export class Index extends MalloyElement {
-  elementType = "index";
-  weightBy?: FieldName;
-  constructor(readonly fields: FieldReferences) {
-    super({ fields });
-  }
-
-  useWeight(fn: FieldName): void {
-    this.has({ weightBy: fn });
-    this.weightBy = fn;
-  }
-}
-
 interface QueryComp {
   outputStruct: model.StructDef;
   query: model.Query;
@@ -1155,16 +1144,6 @@ export class SQLStatement extends MalloyElement implements DocStatement {
       compileSQL: sql,
       partialModel: this.select.containsQueries ? doc.modelDef() : undefined,
     };
-  }
-}
-
-export class SampleProperty extends MalloyElement {
-  elementType = "sampleProperty";
-  constructor(readonly sample: model.Sampling) {
-    super();
-  }
-  sampling(): model.Sampling {
-    return this.sample;
   }
 }
 

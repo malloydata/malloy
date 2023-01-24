@@ -21,42 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  By as ModelBy,
-  expressionIsAggregate,
-} from "../../../model/malloy_types";
-
-import { compressExpr } from "../ast-utils";
-import { ExpressionDef } from "../expression-def";
-import { FieldName, FieldSpace } from "../field-space";
 import { MalloyElement } from "../malloy-element";
+import { FieldReferences } from "../field-references";
+import { FieldName } from "../field-space";
 
-type TopInit = FieldName | ExpressionDef;
-
-export class Top extends MalloyElement {
-  elementType = "top";
-  constructor(readonly limit: number, readonly by?: TopInit) {
-    super();
-    this.has({ by });
+export class Index extends MalloyElement {
+  elementType = "index";
+  weightBy?: FieldName;
+  constructor(readonly fields: FieldReferences) {
+    super({ fields });
   }
 
-  getBy(fs: FieldSpace): ModelBy | undefined {
-    if (this.by) {
-      if (this.by instanceof FieldName) {
-        // TODO jump-to-definition `fs` cannot currently `lookup` fields in the output space
-        // const entry = this.by.getField(fs);
-        // if (entry.error) {
-        //   this.by.log(entry.error);
-        // }
-        return { by: "name", name: this.by.refString };
-      } else {
-        const byExpr = this.by.getExpression(fs);
-        if (expressionIsAggregate(byExpr.expressionType)) {
-          this.log("top by expression must be an aggregate");
-        }
-        return { by: "expression", e: compressExpr(byExpr.value) };
-      }
-    }
-    return undefined;
+  useWeight(fn: FieldName): void {
+    this.has({ weightBy: fn });
+    this.weightBy = fn;
   }
 }
