@@ -52,7 +52,7 @@ import { HasParameter } from "./has-parameter";
 import { Ordering } from "./query-properties/ordering";
 import { NamedSource } from "./sources/named-source";
 import { SpaceField } from "./space-field";
-import { DeclareFields, FieldDeclaration } from "./field-declaration";
+import { FieldDeclaration } from "./field-declaration";
 import { Filter } from "./query-properties/filters";
 import { Top } from "./query-properties/top";
 import { ColumnSpaceField } from "./space-fields/column-space-field";
@@ -68,6 +68,9 @@ import { Measures } from "./field-declarations/measures";
 import { Limit } from "./query-properties/limit";
 import { Index } from "./query-properties/indexing";
 import { SampleProperty } from "./query-properties/sampling";
+import { DeclareFields } from "./query-properties/declare-fields";
+import { ProjectStatement } from "./query-properties/project-statement";
+import { FieldCollectionMember } from "./field-collection-member";
 
 function opOutputStruct(
   logTo: MalloyElement,
@@ -232,6 +235,7 @@ export type QueryProperty =
   | Nests
   | Aggregate
   | GroupBy;
+
 export function isQueryProperty(q: MalloyElement): q is QueryProperty {
   return (
     q instanceof Ordering ||
@@ -278,22 +282,6 @@ export class ExploreDesc extends ListOf<ExploreProperty> {
 export class Renames extends ListOf<RenameField> {
   constructor(renames: RenameField[]) {
     super("renameField", renames);
-  }
-}
-
-export type FieldCollectionMember = FieldReferenceElement | FieldDeclaration;
-export function isFieldCollectionMember(
-  el: MalloyElement
-): el is FieldCollectionMember {
-  return (
-    el instanceof FieldReference ||
-    el instanceof WildcardFieldReference ||
-    el instanceof FieldDeclaration
-  );
-}
-export class ProjectStatement extends ListOf<FieldCollectionMember> {
-  constructor(members: FieldCollectionMember[]) {
-    super("fieldCollection", members);
   }
 }
 

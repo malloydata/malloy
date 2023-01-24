@@ -21,14 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldDeclaration } from "../field-declaration";
-import { DeclareFields } from "../query-properties/declare-fields";
+import { FieldCollectionMember } from "../field-collection-member";
+import { ListOf } from "../malloy-element";
 
-export class Measures extends DeclareFields {
-  constructor(measures: FieldDeclaration[]) {
-    super(measures, "measure");
-    for (const dim of measures) {
-      dim.isMeasure = true;
-    }
+export class ProjectStatement extends ListOf<FieldCollectionMember> {
+  constructor(members: FieldCollectionMember[]) {
+    super("fieldCollection", members);
   }
 }

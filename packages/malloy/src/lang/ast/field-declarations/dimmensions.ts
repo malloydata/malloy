@@ -21,7 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DeclareFields, FieldDeclaration } from "../field-declaration";
+import { FieldDeclaration } from "../field-declaration";
+import { DeclareFields } from "../query-properties/declare-fields";
 
 export class Dimensions extends DeclareFields {
   constructor(dimensions: FieldDeclaration[]) {

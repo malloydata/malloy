@@ -20,15 +20,21 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+import { FieldDeclaration } from "./field-declaration";
+import {
+  FieldReference,
+  FieldReferenceElement,
+  WildcardFieldReference,
+} from "./field-references";
+import { MalloyElement } from "./malloy-element";
 
-import { FieldDeclaration } from "../field-declaration";
-import { DeclareFields } from "../query-properties/declare-fields";
-
-export class Measures extends DeclareFields {
-  constructor(measures: FieldDeclaration[]) {
-    super(measures, "measure");
-    for (const dim of measures) {
-      dim.isMeasure = true;
-    }
-  }
+export type FieldCollectionMember = FieldReferenceElement | FieldDeclaration;
+export function isFieldCollectionMember(
+  el: MalloyElement
+): el is FieldCollectionMember {
+  return (
+    el instanceof FieldReference ||
+    el instanceof WildcardFieldReference ||
+    el instanceof FieldDeclaration
+  );
 }

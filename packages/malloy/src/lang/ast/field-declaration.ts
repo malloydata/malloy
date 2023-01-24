@@ -143,10 +143,3 @@ export class DefSpace implements FieldSpace {
     this.realFS.whenComplete(step);
   }
 }
-
-// TODO(maden): Rename to FieldDeclarations ?
-export class DeclareFields extends ListOf<FieldDeclaration> {
-  constructor(fields: FieldDeclaration[], fieldType = "declare") {
-    super(fieldType, fields);
-  }
-}

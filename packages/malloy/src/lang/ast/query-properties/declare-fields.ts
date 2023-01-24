@@ -22,13 +22,10 @@
  */
 
 import { FieldDeclaration } from "../field-declaration";
-import { DeclareFields } from "../query-properties/declare-fields";
+import { ListOf } from "../malloy-element";
 
-export class Measures extends DeclareFields {
-  constructor(measures: FieldDeclaration[]) {
-    super(measures, "measure");
-    for (const dim of measures) {
-      dim.isMeasure = true;
-    }
+export class DeclareFields extends ListOf<FieldDeclaration> {
+  constructor(fields: FieldDeclaration[], fieldType = "declare") {
+    super(fieldType, fields);
   }
 }
