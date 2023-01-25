@@ -21,24 +21,31 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { TurtleDecl } from "./ast-main";
-import { RenameField } from "./explore-properties/renames";
-import { FieldDeclaration } from "./field-declaration";
-import { MalloyElement } from "./malloy-element";
-import { Join } from "./query-properties/joins";
-import { ExploreField } from "./compound-types/explore-field";
-import { FieldDecl } from "./compound-types/field-decl";
-import { Turtles } from "./explore-properties/turtles";
+import { ExpressionDef } from "./expression-def";
+import { FieldSpace } from "../field-space";
+import { ExprValue } from "../compound-types/expr-value";
+import { FT } from "../fragtype-utils";
 
-function isFieldDecl(f: MalloyElement): f is FieldDecl {
-  return (
-    f instanceof FieldDeclaration ||
-    f instanceof Join ||
-    f instanceof TurtleDecl ||
-    f instanceof Turtles
-  );
-}
+export class ExprString extends ExpressionDef {
+  elementType = "string literal";
+  value: string;
+  constructor(src: string) {
+    super();
+    const bareStr = src.slice(1, -1);
+    const val = bareStr.replace(/\\(.)/g, "$1");
+    this.value = val;
+  }
 
-export function isExploreField(f: MalloyElement): f is ExploreField {
-  return isFieldDecl(f) || f instanceof RenameField;
+  getExpression(_fs: FieldSpace): ExprValue {
+    return {
+      ...FT.stringT,
+      value: [
+        {
+          type: "dialect",
+          function: "stringLiteral",
+          literal: this.value,
+        },
+      ],
+    };
+  }
 }

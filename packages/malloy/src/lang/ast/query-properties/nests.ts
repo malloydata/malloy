@@ -22,7 +22,7 @@
  */
 
 import { ListOf } from "../malloy-element";
-import { NestedQuery } from "../types/nested-query";
+import { NestedQuery } from "../compound-types/nested-query";
 
 export class Nests extends ListOf<NestedQuery> {
   constructor(nests: NestedQuery[]) {

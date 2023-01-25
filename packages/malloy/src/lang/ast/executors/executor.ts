@@ -23,7 +23,7 @@
 
 import { PipeSegment } from "../../../model/malloy_types";
 
-import { QueryProperty } from "../types/query-property";
+import { QueryProperty } from "../compound-types/query-property";
 
 import { QuerySpace, ResultSpace } from "../ast-main";
 

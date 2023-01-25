@@ -23,7 +23,7 @@
 
 import { FieldDeclaration } from "../field-declaration";
 import { ListOf } from "../malloy-element";
-import { QueryItem } from "../types/query-item";
+import { QueryItem } from "../compound-types/query-item";
 
 export class Aggregate extends ListOf<QueryItem> {
   constructor(members: QueryItem[]) {

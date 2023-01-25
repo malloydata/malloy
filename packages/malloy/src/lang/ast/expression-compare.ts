@@ -22,9 +22,11 @@
  */
 
 import { maxExpressionType } from "../../model/malloy_types";
-import { Comparison, ExprValue, FT } from "./ast-types";
+import { Comparison } from "./ast-types";
+import { FT } from "./fragtype-utils";
+import { ExprValue } from "./compound-types/expr-value";
 import { compose, errorFor, isGranularResult } from "./ast-utils";
-import { ExpressionDef } from "./expression-def";
+import { ExpressionDef } from "./expressions/expression-def";
 import { FieldSpace } from "./field-space";
 import { ExprGranularTime } from "./time-expressions";
 

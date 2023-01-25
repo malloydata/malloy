@@ -37,7 +37,7 @@ import {
 } from "../../model";
 import { makeSQLBlock } from "../../model/sql_block";
 import { StaticSpace } from "../ast/static-space";
-import { ExpressionDef } from "../ast/expression-def";
+import { ExpressionDef } from "../ast/expressions/expression-def";
 import { DataRequestResponse } from "../parse-malloy";
 import {
   TestTranslator,

@@ -28,11 +28,12 @@ import {
   StructDef,
 } from "../../model/malloy_types";
 
-import { FT, LookupResult } from "./ast-types";
+import { LookupResult } from "./ast-types";
 import { compressExpr, isGranularResult } from "./ast-utils";
+import { ExpressionDef } from "./expressions/expression-def";
 import { FieldName, FieldSpace } from "./field-space";
-import { ExpressionDef } from "./expression-def";
-import { ListOf, MalloyElement } from "./malloy-element";
+import { FT } from "./fragtype-utils";
+import { MalloyElement } from "./malloy-element";
 
 export class FieldDeclaration extends MalloyElement {
   elementType = "fieldDeclaration";

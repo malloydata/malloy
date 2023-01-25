@@ -34,7 +34,7 @@ import { Filter } from "../query-properties/filters";
 import { GroupBy } from "../query-properties/group-by";
 import { ProjectStatement } from "../query-properties/project-statement";
 import { ProjectFieldSpace } from "../result-spaces/project-field-space";
-import { QueryProperty } from "../types/query-property";
+import { QueryProperty } from "../compound-types/query-property";
 import { ReduceExecutor } from "./reduce-executor";
 
 export class ProjectExecutor extends ReduceExecutor {

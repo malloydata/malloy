@@ -30,7 +30,7 @@ import {
   MalloyElement,
   RunList,
 } from "./malloy-element";
-import { QueryElement } from "./types/query-element";
+import { QueryElement } from "./compound-types/query-element";
 
 export class DefineQuery extends MalloyElement implements DocStatement {
   elementType = "defineQuery";

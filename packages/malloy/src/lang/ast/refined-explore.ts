@@ -35,7 +35,7 @@ import { Mallobj } from "./mallobj";
 import { DeclareFields } from "./query-properties/declare-fields";
 import { Filter } from "./query-properties/filters";
 import { Joins } from "./query-properties/joins";
-import { ExploreField } from "./types/explore-field";
+import { ExploreField } from "./compound-types/explore-field";
 
 import { DynamicSpace } from "./ast-main";
 

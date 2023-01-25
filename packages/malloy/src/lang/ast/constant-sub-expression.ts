@@ -22,14 +22,10 @@
  */
 
 import { AtomicFieldType, StructDef } from "../../model/malloy_types";
-import { ExpressionDef } from "./expression-def";
+import { ExpressionDef } from "./expressions/expression-def";
 import { FieldSpace } from "./field-space";
-import {
-  Comparison,
-  ExprValue,
-  FieldValueType,
-  LookupResult,
-} from "./ast-types";
+import { Comparison, FieldValueType, LookupResult } from "./ast-types";
+import { ExprValue } from "./compound-types/expr-value";
 import { compressExpr } from "./ast-utils";
 import { ExprCompare } from "./expression-compare";
 

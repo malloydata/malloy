@@ -23,7 +23,7 @@
 
 import { Expr, isJoinOn, StructDef } from "../../../model/malloy_types";
 import { compressExpr } from "../ast-utils";
-import { ExpressionDef } from "../expression-def";
+import { ExpressionDef } from "../expressions/expression-def";
 import { FieldSpace } from "../field-space";
 import { ListOf, MalloyElement, ModelEntryReference } from "../malloy-element";
 import { Mallobj } from "../mallobj";

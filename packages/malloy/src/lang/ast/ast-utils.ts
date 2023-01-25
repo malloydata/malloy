@@ -25,10 +25,10 @@ import {
   Comparison,
   Equality,
   ExpressionValueType,
-  ExprValue,
   FieldValueType,
   GranularResult,
 } from "./ast-types";
+import { ExprValue } from "./compound-types/expr-value";
 import {
   Expr,
   Fragment,

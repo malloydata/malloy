@@ -27,7 +27,7 @@ import {
 } from "../../../model/malloy_types";
 
 import { compressExpr } from "../ast-utils";
-import { ExpressionDef } from "../expression-def";
+import { ExpressionDef } from "../expressions/expression-def";
 import { FieldName, FieldSpace } from "../field-space";
 import { MalloyElement } from "../malloy-element";
 

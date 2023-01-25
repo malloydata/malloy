@@ -24,7 +24,7 @@
 import { ExistingQuery } from "./existing-query";
 import { FullQuery } from "./full-query";
 import { MalloyElement } from "./malloy-element";
-import { QueryElement } from "./types/query-element";
+import { QueryElement } from "./compound-types/query-element";
 
 export function isQueryElement(e: MalloyElement): e is QueryElement {
   return e instanceof FullQuery || e instanceof ExistingQuery;

@@ -37,7 +37,7 @@ import { Index } from "./query-properties/indexing";
 import { Nests } from "./query-properties/nests";
 import { ProjectStatement } from "./query-properties/project-statement";
 import { opOutputStruct } from "./struct-utils";
-import { QueryProperty } from "./types/query-property";
+import { QueryProperty } from "./compound-types/query-property";
 
 import { DynamicSpace, isNestedQuery } from "./ast-main";
 

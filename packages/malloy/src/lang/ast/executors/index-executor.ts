@@ -34,7 +34,7 @@ import { Index } from "../query-properties/indexing";
 import { Limit } from "../query-properties/limit";
 import { SampleProperty } from "../query-properties/sampling";
 import { IndexFieldSpace } from "../result-spaces/index-field-space";
-import { QueryProperty } from "../types/query-property";
+import { QueryProperty } from "../compound-types/query-property";
 import { Executor } from "./executor";
 
 import { QuerySpace } from "../ast-main";

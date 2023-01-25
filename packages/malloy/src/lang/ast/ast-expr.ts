@@ -27,62 +27,34 @@
  */
 
 import {
-  By,
   AggregateFragment,
+  By,
+  Expr,
+  expressionIsAggregate,
+  expressionIsCalculation,
+  ExpressionType,
   Fragment,
   isAtomicFieldType,
   isConditionParameter,
-  UngroupFragment,
-  ExpressionType,
-  Expr,
-  expressionIsAggregate,
   maxExpressionType,
-  expressionIsCalculation,
+  UngroupFragment,
 } from "../../model/malloy_types";
-import { QuerySpace } from "./ast-main";
-import { StructSpaceField } from "./static-space";
-import { DefSpace } from "./field-declaration";
-import { Filter } from "./query-properties/filters";
-import { BinaryBoolean, ExprCompare } from "./expression-compare";
-import { FieldName, FieldSpace } from "./field-space";
-import { ExpressionDef } from "./expression-def";
-import { FieldReference } from "./field-references";
-import { MalloyElement } from "./malloy-element";
-import {
-  Comparison,
-  ExprValue,
-  FieldValueType,
-  FragType,
-  FT,
-} from "./ast-types";
-import { compose, compressExpr, errorFor } from "./ast-utils";
 import { nullsafeNot } from "./apply-expr";
-import { castTo } from "./time-utils";
+import { QuerySpace } from "./ast-main";
+import { Comparison, FieldValueType, FragType } from "./ast-types";
+import { FT } from "./fragtype-utils";
+import { compose, compressExpr, errorFor } from "./ast-utils";
+import { ExprValue } from "./compound-types/expr-value";
+import { BinaryBoolean, ExprCompare } from "./expression-compare";
+import { ExpressionDef } from "./expressions/expression-def";
+import { DefSpace } from "./field-declaration";
+import { FieldReference } from "./field-references";
+import { FieldName, FieldSpace } from "./field-space";
+import { MalloyElement } from "./malloy-element";
+import { Filter } from "./query-properties/filters";
 import { SpaceParam } from "./space-param";
-
-export class ExprString extends ExpressionDef {
-  elementType = "string literal";
-  value: string;
-  constructor(src: string) {
-    super();
-    const bareStr = src.slice(1, -1);
-    const val = bareStr.replace(/\\(.)/g, "$1");
-    this.value = val;
-  }
-
-  getExpression(_fs: FieldSpace): ExprValue {
-    return {
-      ...FT.stringT,
-      value: [
-        {
-          type: "dialect",
-          function: "stringLiteral",
-          literal: this.value,
-        },
-      ],
-    };
-  }
-}
+import { StructSpaceField } from "./static-space";
+import { castTo } from "./time-utils";
 
 export class ExprNumber extends ExpressionDef {
   elementType = "numeric literal";

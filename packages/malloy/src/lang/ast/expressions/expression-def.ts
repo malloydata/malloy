@@ -26,26 +26,26 @@ import {
   isTimeFieldType,
   maxExpressionType,
   TimestampUnit,
-} from "../../model/malloy_types";
-import { MalloyElement } from "./malloy-element";
-import { FieldSpace } from "./field-space";
+} from "../../../model/malloy_types";
+import { MalloyElement } from "../malloy-element";
+import { FieldSpace } from "../field-space";
 import {
   Comparison,
   Equality,
-  ExprValue,
   FieldValueType,
-  FT,
   TypeMismatch,
-} from "./ast-types";
+} from "../ast-types";
+import { ExprValue } from "../compound-types/expr-value";
 import {
   compose,
   errorFor,
   isComparison,
   isEquality,
   isGranularResult,
-} from "./ast-utils";
-import { castTimestampToDate, timeOffset, timeResult } from "./time-utils";
-import { nullsafeNot } from "./apply-expr";
+} from "../ast-utils";
+import { castTimestampToDate, timeOffset, timeResult } from "../time-utils";
+import { nullsafeNot } from "../apply-expr";
+import { FT } from "../fragtype-utils";
 
 /**
  * Root node for any element in an expression. These essentially

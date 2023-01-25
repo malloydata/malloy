@@ -47,9 +47,9 @@ import { SpaceSeed } from "./space-seed";
 import { StaticSpace, StructSpaceField } from "./static-space";
 import { opOutputStruct } from "./struct-utils";
 import { TurtleHeadedPipe } from "./turtle-headed-pipe";
-import { ExploreField } from "./types/explore-field";
-import { NestedQuery } from "./types/nested-query";
-import { QueryItem } from "./types/query-item";
+import { ExploreField } from "./compound-types/explore-field";
+import { NestedQuery } from "./compound-types/nested-query";
+import { QueryItem } from "./compound-types/query-item";
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =

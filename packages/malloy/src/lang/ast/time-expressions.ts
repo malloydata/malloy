@@ -32,10 +32,12 @@ import {
   TimestampUnit,
 } from "../../model/malloy_types";
 
-import { ExprValue, FT, GranularResult } from "./ast-types";
+import { GranularResult } from "./ast-types";
 import { compose, compressExpr, errorFor } from "./ast-utils";
-import { ExpressionDef } from "./expression-def";
+import { ExprValue } from "./compound-types/expr-value";
+import { ExpressionDef } from "./expressions/expression-def";
 import { FieldSpace } from "./field-space";
+import { FT } from "./fragtype-utils";
 import { timeOffset } from "./time-utils";
 
 export class ExprTime extends ExpressionDef {

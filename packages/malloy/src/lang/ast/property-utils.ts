@@ -39,8 +39,8 @@ import { Ordering } from "./query-properties/ordering";
 import { ProjectStatement } from "./query-properties/project-statement";
 import { SampleProperty } from "./query-properties/sampling";
 import { Top } from "./query-properties/top";
-import { ExploreProperty } from "./types/explore-property";
-import { QueryProperty } from "./types/query-property";
+import { ExploreProperty } from "./compound-types/explore-property";
+import { QueryProperty } from "./compound-types/query-property";
 
 export function isExploreProperty(p: MalloyElement): p is ExploreProperty {
   return (

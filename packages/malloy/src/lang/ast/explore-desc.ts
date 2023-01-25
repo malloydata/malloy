@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExploreProperty } from "./types/explore-property";
+import { ExploreProperty } from "./compound-types/explore-property";
 import { ListOf } from "./malloy-element";
 
 export class ExploreDesc extends ListOf<ExploreProperty> {
