@@ -25,8 +25,7 @@ import { SQLPhrase } from "../../model/malloy_types";
 
 import { MalloyElement } from "./malloy-element";
 import { isQueryElement } from "./element-utils";
-
-import { QueryElement } from "./ast-main";
+import { QueryElement } from "./types/query-element";
 
 type SQLStringSegment = string | QueryElement;
 export class SQLString extends MalloyElement {

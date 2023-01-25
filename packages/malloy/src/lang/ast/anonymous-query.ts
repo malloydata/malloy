@@ -23,8 +23,8 @@
 
 import { ModelDataRequest } from "../parse-malloy";
 
-import { QueryElement } from "./ast-main";
 import { DocStatement, Document, MalloyElement } from "./malloy-element";
+import { QueryElement } from "./types/query-element";
 
 export class AnonymousQuery extends MalloyElement implements DocStatement {
   elementType = "anonymousQuery";

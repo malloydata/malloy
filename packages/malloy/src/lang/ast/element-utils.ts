@@ -21,8 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExistingQuery, FullQuery, QueryElement } from "./ast-main";
+import { ExistingQuery, FullQuery } from "./ast-main";
 import { MalloyElement } from "./malloy-element";
+import { QueryElement } from "./types/query-element";
 
 export function isQueryElement(e: MalloyElement): e is QueryElement {
   return e instanceof FullQuery || e instanceof ExistingQuery;

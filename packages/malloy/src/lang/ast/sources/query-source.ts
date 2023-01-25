@@ -23,7 +23,7 @@
 
 import { StructDef } from "../../../model";
 import { Mallobj } from "../mallobj";
-import { QueryElement } from "../ast-main";
+import { QueryElement } from "../types/query-element";
 
 export class QuerySource extends Mallobj {
   elementType = "querySource";

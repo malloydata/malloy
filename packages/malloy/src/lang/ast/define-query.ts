@@ -23,13 +23,14 @@
 
 import { NamedQuery } from "../../model/malloy_types";
 import { ModelDataRequest } from "../parse-malloy";
+
 import {
   DocStatement,
   Document,
   MalloyElement,
   RunList,
 } from "./malloy-element";
-import { QueryElement } from "./ast-main";
+import { QueryElement } from "./types/query-element";
 
 export class DefineQuery extends MalloyElement implements DocStatement {
   elementType = "defineQuery";

@@ -52,12 +52,9 @@ import { opOutputStruct } from "./struct-utils";
 import { TurtleHeadedPipe } from "./turtle-headed-pipe";
 import { QueryItem } from "./types/query-item";
 import { NestedQuery } from "./types/nested-query";
-
-export type FieldDecl = FieldDeclaration | Join | TurtleDecl | Turtles;
+import { FieldDecl } from "./types/field-decl";
 
 export type ExploreField = FieldDecl | RenameField;
-
-export type QueryElement = FullQuery | ExistingQuery;
 
 export class Turtles extends ListOf<TurtleDecl> {
   constructor(turtles: TurtleDecl[]) {
