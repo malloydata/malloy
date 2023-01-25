@@ -21,7 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExistingQuery } from "../existing-query";
-import { FullQuery } from "../full-query";
+import { StructDef, Query } from "../../model/malloy_types";
 
-export type QueryElement = FullQuery | ExistingQuery;
+export interface QueryComp {
+  outputStruct: StructDef;
+  query: Query;
+}

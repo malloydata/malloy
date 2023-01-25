@@ -21,7 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExistingQuery, FullQuery } from "./ast-main";
+import { ExistingQuery } from "./existing-query";
+import { FullQuery } from "./full-query";
 import { MalloyElement } from "./malloy-element";
 import { QueryElement } from "./types/query-element";
 

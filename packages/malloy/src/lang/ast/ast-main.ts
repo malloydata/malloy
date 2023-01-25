@@ -33,7 +33,7 @@ import { FieldReference, WildcardFieldReference } from "./field-references";
 import { FieldName, FieldSpace, isFieldSpace, SourceSpec } from "./field-space";
 import { HasParameter } from "./has-parameter";
 import { Mallobj } from "./mallobj";
-import { ListOf, MalloyElement, ModelEntryReference } from "./malloy-element";
+import { MalloyElement, ModelEntryReference } from "./malloy-element";
 import { NestReference } from "./nesting/nest-reference";
 import { PipelineDesc } from "./pipeline-desc";
 import { QueryHeadStruct } from "./query-head-struct";
@@ -50,131 +50,14 @@ import { SpaceSeed } from "./space-seed";
 import { StaticSpace, StructSpaceField } from "./static-space";
 import { opOutputStruct } from "./struct-utils";
 import { TurtleHeadedPipe } from "./turtle-headed-pipe";
-import { QueryItem } from "./types/query-item";
-import { NestedQuery } from "./types/nested-query";
 import { ExploreField } from "./types/explore-field";
+import { NestedQuery } from "./types/nested-query";
+import { QueryItem } from "./types/query-item";
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
     fd && typeof fd !== "string" && (fd as model.TurtleDef).type === "turtle";
   return !!ret;
-}
-
-interface QueryComp {
-  outputStruct: model.StructDef;
-  query: model.Query;
-}
-
-export class ExistingQuery extends PipelineDesc {
-  _head?: ModelEntryReference;
-
-  set head(head: ModelEntryReference | undefined) {
-    this._head = head;
-    this.has({ head });
-  }
-
-  get head(): ModelEntryReference | undefined {
-    return this._head;
-  }
-
-  queryComp(): QueryComp {
-    if (!this.head) {
-      throw this.internalError("can't make query from nameless query");
-    }
-    const queryEntry = this.modelEntry(this.head);
-    const seedQuery = queryEntry?.entry;
-    const oops = function () {
-      return {
-        outputStruct: ErrorFactory.structDef,
-        query: ErrorFactory.query,
-      };
-    };
-    if (!seedQuery) {
-      this.log(`Reference to undefined query '${this.head}'`);
-      return oops();
-    }
-    if (seedQuery.type !== "query") {
-      this.log(`Illegal reference to '${this.head}', query expected`);
-      return oops();
-    }
-    const queryHead = new QueryHeadStruct(seedQuery.structRef);
-    this.has({ queryHead });
-    const exploreStruct = queryHead.structDef();
-    const exploreFS = new DynamicSpace(exploreStruct);
-    const sourcePipe = this.refinePipeline(exploreFS, seedQuery);
-    const walkStruct = this.getOutputStruct(exploreStruct, sourcePipe.pipeline);
-    const appended = this.appendOps(
-      sourcePipe.pipeline,
-      new DynamicSpace(walkStruct)
-    );
-    const destPipe = { ...sourcePipe, pipeline: appended.opList };
-    const query: model.Query = {
-      type: "query",
-      ...destPipe,
-      structRef: queryHead.structRef(),
-      location: this.location,
-    };
-    return { outputStruct: appended.structDef, query };
-  }
-
-  query(): model.Query {
-    return this.queryComp().query;
-  }
-}
-
-export class FullQuery extends TurtleHeadedPipe {
-  constructor(readonly explore: Mallobj) {
-    super({ explore });
-  }
-
-  queryComp(): QueryComp {
-    const structRef = this.explore.structRef();
-    const destQuery: model.Query = {
-      type: "query",
-      structRef,
-      pipeline: [],
-      location: this.location,
-    };
-    const structDef = model.refIsStructDef(structRef)
-      ? structRef
-      : this.explore.structDef();
-    let pipeFs = new DynamicSpace(structDef);
-
-    if (ErrorFactory.isErrorStructDef(structDef)) {
-      return {
-        outputStruct: structDef,
-        query: {
-          structRef: structRef,
-          pipeline: [],
-        },
-      };
-    }
-    if (this.turtleName) {
-      const { error } = this.turtleName.getField(pipeFs);
-      if (error) this.log(error);
-      const name = this.turtleName.refString;
-      const { pipeline, location } = this.expandTurtle(name, structDef);
-      destQuery.location = location;
-      const refined = this.refinePipeline(pipeFs, { pipeline }).pipeline;
-      if (this.headRefinement) {
-        // TODO there is an issue with losing the name of the turtle
-        // which we need to fix, possibly adding a "name:" field to a segment
-        // TODO there was mention of promoting filters to the query
-        destQuery.pipeline = refined;
-      } else {
-        destQuery.pipeHead = { name };
-      }
-      const pipeStruct = this.getOutputStruct(structDef, refined);
-      pipeFs = new DynamicSpace(pipeStruct);
-    }
-    const appended = this.appendOps(destQuery.pipeline, pipeFs);
-    destQuery.pipeline = appended.opList;
-    return { outputStruct: appended.structDef, query: destQuery };
-  }
-
-  query(): model.Query {
-    return this.queryComp().query;
-  }
 }
 
 export class TurtleDecl extends TurtleHeadedPipe {
