@@ -65,6 +65,7 @@ import { QueryHeadStruct } from "./query-head-struct";
 import { PipelineDesc } from "./pipeline-desc";
 import { TurtleHeadedPipe } from "./turtle-headed-pipe";
 import { NestReference } from "./nesting/nest-reference";
+import { SpaceSeed } from "./space-seed";
 
 type FieldDecl = FieldDeclaration | Join | TurtleDecl | Turtles;
 function isFieldDecl(f: MalloyElement): f is FieldDecl {
@@ -737,42 +738,6 @@ export abstract class ResultSpace extends DynamicSpace {
     }
     this.isComplete();
     return segment;
-  }
-}
-
-/**
- * Based on how things are constructed, the starting field space
- * can either be another field space or an existing structdef.
- * Using a SpaceSeed allows a class to accept either one
- * and use either version at some future time.
- */
-export class SpaceSeed {
-  private spaceSpec: SourceSpec;
-  private asFS?: StaticSpace;
-  private asStruct?: model.StructDef;
-
-  constructor(readonly sourceSpec: SourceSpec) {
-    this.spaceSpec = sourceSpec;
-  }
-
-  get structDef(): model.StructDef {
-    if (isFieldSpace(this.spaceSpec)) {
-      if (!this.asStruct) {
-        this.asStruct = this.spaceSpec.structDef();
-      }
-      return this.asStruct;
-    }
-    return this.spaceSpec;
-  }
-
-  get fieldSpace(): FieldSpace {
-    if (isFieldSpace(this.spaceSpec)) {
-      return this.spaceSpec;
-    }
-    if (!this.asFS) {
-      this.asFS = new StaticSpace(this.spaceSpec);
-    }
-    return this.asFS;
   }
 }
 
