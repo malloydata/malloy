@@ -21,41 +21,30 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export * from "./ast-types";
-export * from "./ast-main";
 export * from "./ast-expr";
+export * from "./ast-main";
 export * from "./ast-time-expr";
+export * from "./ast-types";
 export * from "./ast-utils";
-export * from "./malloy-element";
-export * from "./time-utils";
 export * from "./define-explore";
 export * from "./define-query";
-export * from "./import-statement";
-export * from "./field-space";
-export * from "./expression-def";
-export * from "./field-references";
-export * from "./turtle-headed-pipe";
-export * from "./refined-explore";
-export * from "./qop-desc";
-export * from "./sql-statement";
-
-export * from "./time-expressions";
-export * from "./expression-compare";
-export * from "./mallobj";
-export * from "./has-parameter";
-
-export * from "./field-collection-member";
-export * from "./field-declaration";
-
 export * from "./explore-properties/field-list-edit";
 export * from "./explore-properties/primary-key";
 export * from "./explore-properties/renames";
-
+export * from "./expression-compare";
+export * from "./expression-def";
+export * from "./field-collection-member";
+export * from "./field-declaration";
 export * from "./field-declarations/dimmensions";
 export * from "./field-declarations/measures";
-
+export * from "./field-references";
+export * from "./field-space";
+export * from "./has-parameter";
+export * from "./import-statement";
+export * from "./mallobj";
+export * from "./malloy-element";
 export * from "./nesting/nest-reference";
-
+export * from "./qop-desc";
 export * from "./query-properties/declare-fields";
 export * from "./query-properties/filters";
 export * from "./query-properties/indexing";
@@ -65,8 +54,13 @@ export * from "./query-properties/ordering";
 export * from "./query-properties/project-statement";
 export * from "./query-properties/sampling";
 export * from "./query-properties/top";
-
+export * from "./refined-explore";
 export * from "./sources/named-source";
 export * from "./sources/query-source";
 export * from "./sources/sql-source";
 export * from "./sources/table-source";
+export * from "./sql-statement";
+export * from "./sql-string";
+export * from "./time-expressions";
+export * from "./time-utils";
+export * from "./turtle-headed-pipe";

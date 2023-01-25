@@ -409,35 +409,6 @@ export class AnonymousQuery extends MalloyElement implements DocStatement {
   }
 }
 
-type SQLStringSegment = string | QueryElement;
-export class SQLString extends MalloyElement {
-  elementType = "sqlString";
-  elements: SQLStringSegment[] = [];
-  containsQueries = false;
-  push(el: string | MalloyElement): void {
-    if (typeof el == "string") {
-      if (el.length > 0) {
-        this.elements.push(el);
-      }
-    } else if (isQueryElement(el)) {
-      this.elements.push(el);
-      this.containsQueries = true;
-      el.parent = this;
-    } else {
-      el.log("This element is not legal inside an SQL string");
-    }
-  }
-
-  sqlPhrases(): model.SQLPhrase[] {
-    return this.elements.map((el) => {
-      if (typeof el == "string") {
-        return { sql: el };
-      }
-      return el.query();
-    });
-  }
-}
-
 /**
  * A FieldSpace which may undergo modification
  */

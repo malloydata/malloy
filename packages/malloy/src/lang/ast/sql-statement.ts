@@ -26,8 +26,7 @@ import { makeSQLBlock } from "../../model/sql_block";
 
 import { ModelDataRequest } from "../parse-malloy";
 import { DocStatement, Document, MalloyElement } from "./malloy-element";
-
-import { SQLString } from "./ast-main";
+import { SQLString } from "./sql-string";
 
 export class SQLStatement extends MalloyElement implements DocStatement {
   elementType = "sqlStatement";
