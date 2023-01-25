@@ -24,7 +24,7 @@
 import { AtomicFieldType, DataArray, Field, Explore } from "@malloydata/malloy";
 import { TopLevelSpec } from "vega-lite";
 import { DataStyles, StyleDefaults } from "../data_styles";
-import { Renderer } from "../renderer";
+import { ChildRenderers, Renderer } from "../renderer";
 import { HTMLBarChartRenderer } from "./bar_chart";
 import { HTMLBooleanRenderer } from "./boolean";
 import { HTMLJSONRenderer } from "./json";
@@ -165,12 +165,18 @@ export function makeRenderer(
     renderDef.renderer === "dashboard" ||
     field.name.endsWith("_dashboard")
   ) {
-    return ContainerRenderer.make(
+    return createRenderer(
       HTMLDashboardRenderer,
       document,
       isContainer(field),
       options
     );
+    // return ContainerRenderer.make(
+    //   HTMLDashboardRenderer,
+    //   document,
+    //   isContainer(field),
+    //   options
+    // );
   } else if (renderDef.renderer === "json" || field.name.endsWith("_json")) {
     return new HTMLJSONRenderer(document);
   } else if (
@@ -245,35 +251,74 @@ export function makeRenderer(
     } else if (renderDef.renderer === "link" || field.name.endsWith("_url")) {
       return new HTMLLinkRenderer(document);
     } else if (renderDef.renderer === "list" || field.name.endsWith("_list")) {
-      return ContainerRenderer.make(
+      return createRenderer(
         HTMLListRenderer,
         document,
         isContainer(field),
         options
       );
+      // return ContainerRenderer.make(
+      //   HTMLListRenderer,
+      //   document,
+      //   isContainer(field),
+      //   options
+      // );
     } else if (
       renderDef.renderer === "list_detail" ||
       field.name.endsWith("_list_detail")
     ) {
-      return ContainerRenderer.make(
+      return createRenderer(
         HTMLListDetailRenderer,
         document,
         isContainer(field),
         options
       );
+      // return ContainerRenderer.make(
+      //   HTMLListDetailRenderer,
+      //   document,
+      //   isContainer(field),
+      //   options
+      // );
     } else if (
       renderDef.renderer === "table" ||
       !field.hasParentExplore() ||
       field.isExploreField()
     ) {
-      return ContainerRenderer.make(
+      return createRenderer(
         HTMLTableRenderer,
         document,
         isContainer(field),
         options
       );
+      // return ContainerRenderer.make(
+      //   HTMLTableRenderer,
+      //   document,
+      //   isContainer(field),
+      //   options
+      // );
     } else {
       return new HTMLTextRenderer(document);
     }
   }
+}
+
+function createRenderer<Type extends ContainerRenderer>(
+    cType: new (
+      document: Document,
+      options: {isDrillingEnabled?: boolean; onDrill?: DrillFunction;}) => Type,
+    document: Document,
+    explore: Explore,
+    options: {
+      dataStyles: DataStyles;
+      isDrillingEnabled?: boolean;
+      onDrill?: DrillFunction;
+    }): ContainerRenderer {
+  const c = ContainerRenderer.make(cType, document, explore, options);
+  const result: ChildRenderers = {};
+  explore.intrinsicFields.forEach((field: Field) => {
+    result[field.name] = makeRenderer(
+      field, document, options, c.defaultStylesForChildren);
+  });
+  c.childRenderers = result;
+  return c;
 }

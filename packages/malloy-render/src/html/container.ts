@@ -31,26 +31,30 @@ export abstract class ContainerRenderer extends RenderTree {
   childRenderers: ChildRenderers = {};
   protected abstract childrenStyleDefaults: StyleDefaults;
 
-  makeChildRenderers(
-    explore: Explore,
-    document: Document,
-    options: {
-      dataStyles: DataStyles;
-      isDrillingEnabled?: boolean;
-      onDrill?: DrillFunction;
-    }
-  ): void {
-    const result: ChildRenderers = {};
-    explore.intrinsicFields.forEach((field: Field) => {
-      result[field.name] = makeRenderer(
-        field,
-        document,
-        options,
-        this.childrenStyleDefaults
-      );
-    });
-    this.childRenderers = result;
+  get defaultStylesForChildren(): StyleDefaults {
+    return this.childrenStyleDefaults;
   }
+
+  // makeChildRenderers(
+  //   explore: Explore,
+  //   document: Document,
+  //   options: {
+  //     dataStyles: DataStyles;
+  //     isDrillingEnabled?: boolean;
+  //     onDrill?: DrillFunction;
+  //   }
+  // ): void {
+  //   const result: ChildRenderers = {};
+  //   explore.intrinsicFields.forEach((field: Field) => {
+  //     result[field.name] = makeRenderer(
+  //       field,
+  //       document,
+  //       options,
+  //       this.childrenStyleDefaults
+  //     );
+  //   });
+  //   this.childRenderers = result;
+  // }
 
   // We can't use a normal constructor here because we need
   //  we need to be fully constructed before we construct
@@ -75,7 +79,7 @@ export abstract class ContainerRenderer extends RenderTree {
       isDrillingEnabled: options.isDrillingEnabled,
       onDrill: options.onDrill,
     });
-    n.makeChildRenderers(exploreField, document, options);
+    // n.makeChildRenderers(exploreField, document, options);
     return n;
   }
 }
