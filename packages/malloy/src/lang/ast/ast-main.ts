@@ -67,20 +67,9 @@ import { TurtleHeadedPipe } from "./turtle-headed-pipe";
 import { NestReference } from "./nesting/nest-reference";
 import { SpaceSeed } from "./space-seed";
 
-type FieldDecl = FieldDeclaration | Join | TurtleDecl | Turtles;
-function isFieldDecl(f: MalloyElement): f is FieldDecl {
-  return (
-    f instanceof FieldDeclaration ||
-    f instanceof Join ||
-    f instanceof TurtleDecl ||
-    f instanceof Turtles
-  );
-}
+export type FieldDecl = FieldDeclaration | Join | TurtleDecl | Turtles;
 
 export type ExploreField = FieldDecl | RenameField;
-export function isExploreField(f: MalloyElement): f is ExploreField {
-  return isFieldDecl(f) || f instanceof RenameField;
-}
 
 export type QueryProperty =
   | Ordering
@@ -107,12 +96,6 @@ export type ExploreProperty =
   | Renames
   | PrimaryKey
   | Turtles;
-
-export class ExploreDesc extends ListOf<ExploreProperty> {
-  constructor(props: ExploreProperty[]) {
-    super("exploreDesc", props);
-  }
-}
 
 export type QueryItem =
   | FieldDeclaration
@@ -364,21 +347,6 @@ export class Nests extends ListOf<NestedQuery> {
 export type QueryElement = FullQuery | ExistingQuery;
 export function isQueryElement(e: MalloyElement): e is QueryElement {
   return e instanceof FullQuery || e instanceof ExistingQuery;
-}
-
-export class AnonymousQuery extends MalloyElement implements DocStatement {
-  elementType = "anonymousQuery";
-
-  constructor(readonly theQuery: QueryElement) {
-    super();
-    this.has({ query: theQuery });
-  }
-
-  execute(doc: Document): ModelDataRequest {
-    const modelQuery = this.theQuery.query();
-    doc.queryList.push(modelQuery);
-    return undefined;
-  }
 }
 
 /**

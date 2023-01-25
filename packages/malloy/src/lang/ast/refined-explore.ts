@@ -33,8 +33,9 @@ import { Filter } from "./query-properties/filters";
 import { DeclareFields } from "./query-properties/declare-fields";
 import { Joins } from "./query-properties/joins";
 import { Renames } from "./explore-properties/renames";
+import { ExploreDesc } from "./explore-desc";
 
-import { DynamicSpace, ExploreDesc, ExploreField, Turtles } from "./ast-main";
+import { DynamicSpace, ExploreField, Turtles } from "./ast-main";
 
 /**
  * A Mallobj made from a source and a set of refinements

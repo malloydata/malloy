@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+export * from "./anonymous-query";
 export * from "./ast-expr";
 export * from "./ast-main";
 export * from "./ast-time-expr";
@@ -28,6 +29,7 @@ export * from "./ast-types";
 export * from "./ast-utils";
 export * from "./define-explore";
 export * from "./define-query";
+export * from "./explore-desc";
 export * from "./explore-properties/field-list-edit";
 export * from "./explore-properties/primary-key";
 export * from "./explore-properties/renames";
@@ -44,6 +46,7 @@ export * from "./import-statement";
 export * from "./mallobj";
 export * from "./malloy-element";
 export * from "./nesting/nest-reference";
+export * from "./property-utils";
 export * from "./qop-desc";
 export * from "./query-properties/declare-fields";
 export * from "./query-properties/filters";
@@ -64,4 +67,3 @@ export * from "./sql-string";
 export * from "./time-expressions";
 export * from "./time-utils";
 export * from "./turtle-headed-pipe";
-export * from "./property-utils";
