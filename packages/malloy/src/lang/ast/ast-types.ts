@@ -22,7 +22,6 @@
  */
 
 import {
-  AtomicFieldType,
   Fragment,
   TimestampUnit,
   NamedModelObject,
@@ -33,14 +32,7 @@ import {
   SQLBlockStructDef,
 } from "../../model/malloy_types";
 import { ModelDataRequest } from "../parse-malloy";
-
-// These are the types which a field expression will evaluate to
-export type ExpressionValueType =
-  | AtomicFieldType
-  | "null"
-  | "unknown"
-  | "duration"
-  | "regular expression";
+import { ExpressionValueType } from "./compound-types/expression-value-type";
 
 export type StageFieldType = "turtle";
 

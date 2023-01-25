@@ -24,10 +24,10 @@
 import {
   Comparison,
   Equality,
-  ExpressionValueType,
   FieldValueType,
   GranularResult,
 } from "./ast-types";
+import { ExpressionValueType } from "./compound-types/expression-value-type";
 import { ExprValue } from "./compound-types/expr-value";
 import {
   Expr,
