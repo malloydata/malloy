@@ -59,6 +59,7 @@ import { SpaceSeed } from "./space-seed";
 import { StaticSpace, StructSpaceField } from "./static-space";
 import { opOutputStruct } from "./struct-utils";
 import { TurtleHeadedPipe } from "./turtle-headed-pipe";
+import { QueryItem } from "./types/query-item";
 
 export type FieldDecl = FieldDeclaration | Join | TurtleDecl | Turtles;
 
@@ -90,12 +91,6 @@ export type ExploreProperty =
   | PrimaryKey
   | Turtles;
 
-export type QueryItem =
-  | FieldDeclaration
-  | FieldReference
-  | NestDefinition
-  | NestReference;
-
 export type QueryElement = FullQuery | ExistingQuery;
 
 export class GroupBy extends ListOf<QueryItem> {
@@ -126,15 +121,15 @@ export class Turtles extends ListOf<TurtleDecl> {
   }
 }
 
-interface QueryComp {
-  outputStruct: model.StructDef;
-  query: model.Query;
-}
-
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
     fd && typeof fd !== "string" && (fd as model.TurtleDef).type === "turtle";
   return !!ret;
+}
+
+interface QueryComp {
+  outputStruct: model.StructDef;
+  query: model.Query;
 }
 
 export class ExistingQuery extends PipelineDesc {

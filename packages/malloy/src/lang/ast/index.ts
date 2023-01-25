@@ -68,3 +68,4 @@ export * from "./sql-string";
 export * from "./time-expressions";
 export * from "./time-utils";
 export * from "./turtle-headed-pipe";
+export * from "./types/query-item";
