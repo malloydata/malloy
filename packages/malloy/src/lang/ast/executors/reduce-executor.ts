@@ -37,6 +37,7 @@ import { Joins } from "../query-properties/joins";
 import { Limit } from "../query-properties/limit";
 import { Ordering } from "../query-properties/ordering";
 import { Top } from "../query-properties/top";
+import { ReduceFieldSpace } from "../result-spaces/reduce-field-space";
 import { Executor } from "./executor";
 
 import {
@@ -47,7 +48,6 @@ import {
   Nests,
   QueryProperty,
   QuerySpace,
-  ReduceFieldSpace,
   ResultSpace,
 } from "../ast-main";
 

@@ -829,13 +829,6 @@ export abstract class ResultSpace extends DynamicSpace {
   }
 }
 
-/**
- * Reduce and project queries use a "QuerySpace"
- */
-export class ReduceFieldSpace extends ResultSpace {
-  readonly segmentType = "reduce";
-}
-
 export class ProjectFieldSpace extends ResultSpace {
   readonly segmentType = "project";
 
