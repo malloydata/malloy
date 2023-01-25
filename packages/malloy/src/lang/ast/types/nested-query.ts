@@ -21,11 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ListOf } from "../malloy-element";
-import { NestedQuery } from "../types/nested-query";
+import { NestDefinition, NestRefinement } from "../ast-main";
+import { NestReference } from "../nesting/nest-reference";
 
-export class Nests extends ListOf<NestedQuery> {
-  constructor(nests: NestedQuery[]) {
-    super("nestedQueries", nests);
-  }
-}
+export type NestedQuery = NestReference | NestDefinition | NestRefinement;

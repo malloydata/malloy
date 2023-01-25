@@ -74,3 +74,4 @@ export * from "./turtle-headed-pipe";
 export * from "./types/explore-property";
 export * from "./types/query-item";
 export * from "./types/query-property";
+export * from "./types/nested-query";

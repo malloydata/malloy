@@ -51,6 +51,7 @@ import { StaticSpace, StructSpaceField } from "./static-space";
 import { opOutputStruct } from "./struct-utils";
 import { TurtleHeadedPipe } from "./turtle-headed-pipe";
 import { QueryItem } from "./types/query-item";
+import { NestedQuery } from "./types/nested-query";
 
 export type FieldDecl = FieldDeclaration | Join | TurtleDecl | Turtles;
 
@@ -262,7 +263,6 @@ export class NestDefinition extends TurtleDecl {
   }
 }
 
-export type NestedQuery = NestReference | NestDefinition | NestRefinement;
 export function isNestedQuery(me: MalloyElement): me is NestedQuery {
   return (
     me instanceof NestRefinement ||
