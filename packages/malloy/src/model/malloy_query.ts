@@ -1460,8 +1460,8 @@ class JoinInstance {
     // convert the filter list into a list of boolean fields so we can
     //  generate dependancies and code for them.
     if (this.queryStruct.fieldDef.filterList) {
+      this.joinFilterConditions = [];
       for (const filter of this.queryStruct.fieldDef.filterList) {
-        this.joinFilterConditions = [];
         const qf = new QueryFieldBoolean(
           {
             type: "boolean",
