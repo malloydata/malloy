@@ -42,11 +42,11 @@ import { Top } from "../query-properties/top";
 import { ReduceFieldSpace } from "../result-spaces/reduce-field-space";
 import { QueryProperty } from "../types/query-property";
 import { Executor } from "./executor";
+import { Nests } from "../query-properties/nests";
 
 import {
   DynamicSpace,
   isNestedQuery,
-  Nests,
   QuerySpace,
   ResultSpace,
 } from "../ast-main";

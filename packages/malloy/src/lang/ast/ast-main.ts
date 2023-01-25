@@ -271,12 +271,6 @@ export function isNestedQuery(me: MalloyElement): me is NestedQuery {
   );
 }
 
-export class Nests extends ListOf<NestedQuery> {
-  constructor(nests: NestedQuery[]) {
-    super("nestedQueries", nests);
-  }
-}
-
 /**
  * A FieldSpace which may undergo modification
  */

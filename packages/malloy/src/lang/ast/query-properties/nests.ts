@@ -21,34 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { NestDefinition } from "../ast-main";
-import { NestReference } from "../nesting/nest-reference";
-import { Aggregate } from "../query-properties/aggregate";
-import { DeclareFields } from "../query-properties/declare-fields";
-import { Filter } from "../query-properties/filters";
-import { GroupBy } from "../query-properties/group-by";
-import { Index } from "../query-properties/indexing";
-import { Joins } from "../query-properties/joins";
-import { Limit } from "../query-properties/limit";
-import { Ordering } from "../query-properties/ordering";
-import { ProjectStatement } from "../query-properties/project-statement";
-import { SampleProperty } from "../query-properties/sampling";
-import { Top } from "../query-properties/top";
-import { Nests } from "../query-properties/nests";
+import { NestedQuery } from "../ast-main";
+import { ListOf } from "../malloy-element";
 
-export type QueryProperty =
-  | Ordering
-  | Top
-  | Limit
-  | Filter
-  | Index
-  | SampleProperty
-  | Joins
-  | DeclareFields
-  | ProjectStatement
-  | NestReference
-  | NestDefinition
-  | NestReference
-  | Nests
-  | Aggregate
-  | GroupBy;
+export class Nests extends ListOf<NestedQuery> {
+  constructor(nests: NestedQuery[]) {
+    super("nestedQueries", nests);
+  }
+}

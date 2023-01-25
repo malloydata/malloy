@@ -56,6 +56,7 @@ export * from "./query-properties/group-by";
 export * from "./query-properties/indexing";
 export * from "./query-properties/joins";
 export * from "./query-properties/limit";
+export * from "./query-properties/nests";
 export * from "./query-properties/ordering";
 export * from "./query-properties/project-statement";
 export * from "./query-properties/sampling";
