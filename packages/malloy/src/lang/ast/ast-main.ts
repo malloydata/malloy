@@ -58,17 +58,6 @@ export type ExploreField = FieldDecl | RenameField;
 
 export type QueryElement = FullQuery | ExistingQuery;
 
-export class Aggregate extends ListOf<QueryItem> {
-  constructor(members: QueryItem[]) {
-    super("aggregate", members);
-    for (const el of members) {
-      if (el instanceof FieldDeclaration) {
-        el.isMeasure = true;
-      }
-    }
-  }
-}
-
 export class Turtles extends ListOf<TurtleDecl> {
   constructor(turtles: TurtleDecl[]) {
     super("turtleDeclarationList", turtles);
