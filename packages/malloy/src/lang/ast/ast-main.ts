@@ -22,7 +22,6 @@
  */
 import { cloneDeep } from "lodash";
 import * as model from "../../model/malloy_types";
-import { makeSQLBlock } from "../../model/sql_block";
 import { mergeFields, nameOf } from "../field-utils";
 import { ModelDataRequest } from "../parse-malloy";
 import { FieldType, SpaceEntry } from "./ast-types";
@@ -436,65 +435,6 @@ export class SQLString extends MalloyElement {
       }
       return el.query();
     });
-  }
-}
-
-export class SQLStatement extends MalloyElement implements DocStatement {
-  elementType = "sqlStatement";
-  is?: string;
-  connection?: string;
-  requestBlock?: model.SQLBlockSource;
-
-  constructor(readonly select: SQLString) {
-    super();
-    this.has({ select });
-  }
-
-  sqlBlock(): model.SQLBlockSource {
-    if (!this.requestBlock) {
-      this.requestBlock = makeSQLBlock(
-        this.select.sqlPhrases(),
-        this.connection
-      );
-    }
-    return this.requestBlock;
-  }
-
-  /**
-   * This is the one statement which pauses execution. First time through
-   * it will generate a schema request, next time through it will either
-   * record the error or record the schema.
-   */
-  execute(doc: Document): ModelDataRequest {
-    const sqlDefEntry = this.translator()?.root.sqlQueryZone;
-    if (!sqlDefEntry) {
-      this.log("Cant't look up schema for sql block");
-      return;
-    }
-    const sql = this.sqlBlock();
-    sqlDefEntry.reference(sql.name, this.location);
-    const lookup = sqlDefEntry.getEntry(sql.name);
-    if (lookup.status == "error") {
-      const msgLines = lookup.message.split(/\r?\n/);
-      this.select.log("Invalid SQL, " + msgLines.join("\n    "));
-      return undefined;
-    }
-    if (lookup.status == "present") {
-      const location = this.select.location;
-      const locStruct = {
-        ...lookup.value,
-        fields: lookup.value.fields.map((f) => ({ ...f, location })),
-        location: this.location,
-      };
-      if (this.is && !doc.defineSQL(locStruct, this.is)) {
-        this.log(`'${this.is}' already defined`);
-      }
-      return undefined;
-    }
-    return {
-      compileSQL: sql,
-      partialModel: this.select.containsQueries ? doc.modelDef() : undefined,
-    };
   }
 }
 
@@ -954,35 +894,5 @@ export class QuerySpace extends DynamicSpace {
     } else {
       this.extendList.push(extendField.defineName);
     }
-  }
-}
-
-export class IndexFieldSpace extends ResultSpace {
-  readonly segmentType = "index";
-  fieldList = new Set<string>();
-
-  addReference(ref: FieldReference): void {
-    if (ref.getField(this.exprSpace).found) {
-      this.fieldList.add(ref.refString);
-    }
-  }
-
-  addWild(wild: WildcardFieldReference): void {
-    this.fieldList.add(wild.refString);
-  }
-
-  getPipeSegment(refineIndex?: model.PipeSegment): model.IndexSegment {
-    if (refineIndex && refineIndex.fields) {
-      for (const exists of refineIndex.fields) {
-        if (typeof exists == "string") {
-          this.fieldList.add(exists);
-        }
-      }
-    }
-    this.isComplete();
-    return {
-      type: "index",
-      fields: Array.from(this.fieldList.values()),
-    };
   }
 }

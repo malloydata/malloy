@@ -34,8 +34,9 @@ import { Index } from "../query-properties/indexing";
 import { Limit } from "../query-properties/limit";
 import { SampleProperty } from "../query-properties/sampling";
 import { Executor } from "./executor";
+import { IndexFieldSpace } from "../result-spaces/index-field-space";
 
-import { IndexFieldSpace, QueryProperty, QuerySpace } from "../ast-main";
+import { QueryProperty, QuerySpace } from "../ast-main";
 
 export class IndexExecutor implements Executor {
   filters: FilterExpression[] = [];

@@ -37,6 +37,7 @@ export * from "./field-references";
 export * from "./turtle-headed-pipe";
 export * from "./refined-explore";
 export * from "./qop-desc";
+export * from "./sql-statement";
 
 export * from "./time-expressions";
 export * from "./expression-compare";
