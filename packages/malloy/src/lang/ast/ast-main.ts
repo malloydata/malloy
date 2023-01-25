@@ -58,17 +58,6 @@ export type ExploreField = FieldDecl | RenameField;
 
 export type QueryElement = FullQuery | ExistingQuery;
 
-export class GroupBy extends ListOf<QueryItem> {
-  constructor(members: QueryItem[]) {
-    super("groupBy", members);
-    for (const el of members) {
-      if (el instanceof FieldDeclaration) {
-        el.isMeasure = false;
-      }
-    }
-  }
-}
-
 export class Aggregate extends ListOf<QueryItem> {
   constructor(members: QueryItem[]) {
     super("aggregate", members);

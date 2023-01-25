@@ -31,18 +31,13 @@ import { FieldSpace } from "./field-space";
 import { ListOf } from "./malloy-element";
 import { OpDesc } from "./op-desc";
 import { PipelineDesc } from "./pipeline-desc";
+import { GroupBy } from "./query-properties/group-by";
 import { Index } from "./query-properties/indexing";
 import { ProjectStatement } from "./query-properties/project-statement";
 import { opOutputStruct } from "./struct-utils";
 import { QueryProperty } from "./types/query-property";
 
-import {
-  Aggregate,
-  DynamicSpace,
-  GroupBy,
-  isNestedQuery,
-  Nests,
-} from "./ast-main";
+import { Aggregate, DynamicSpace, isNestedQuery, Nests } from "./ast-main";
 
 type QOPType = "grouping" | "aggregate" | "project" | "index";
 

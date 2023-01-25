@@ -31,12 +31,11 @@ import { ErrorFactory } from "../error-factory";
 import { Measures } from "../field-declarations/measures";
 import { FieldSpace } from "../field-space";
 import { Filter } from "../query-properties/filters";
+import { GroupBy } from "../query-properties/group-by";
 import { ProjectStatement } from "../query-properties/project-statement";
 import { ProjectFieldSpace } from "../result-spaces/project-field-space";
 import { QueryProperty } from "../types/query-property";
 import { ReduceExecutor } from "./reduce-executor";
-
-import { GroupBy } from "../ast-main";
 
 export class ProjectExecutor extends ReduceExecutor {
   getResultSpace(fs: FieldSpace): ProjectFieldSpace {

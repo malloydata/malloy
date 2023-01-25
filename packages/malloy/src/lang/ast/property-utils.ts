@@ -21,13 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Aggregate, GroupBy, isNestedQuery, Nests, Turtles } from "./ast-main";
+import { Aggregate, isNestedQuery, Nests, Turtles } from "./ast-main";
 import { FieldListEdit } from "./explore-properties/field-list-edit";
 import { PrimaryKey } from "./explore-properties/primary-key";
 import { Renames } from "./explore-properties/renames";
 import { MalloyElement } from "./malloy-element";
 import { DeclareFields } from "./query-properties/declare-fields";
 import { Filter } from "./query-properties/filters";
+import { GroupBy } from "./query-properties/group-by";
 import { Index } from "./query-properties/indexing";
 import { Joins } from "./query-properties/joins";
 import { Limit } from "./query-properties/limit";

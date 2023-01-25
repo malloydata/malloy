@@ -40,11 +40,11 @@ import { Top } from "../query-properties/top";
 import { ReduceFieldSpace } from "../result-spaces/reduce-field-space";
 import { QueryProperty } from "../types/query-property";
 import { Executor } from "./executor";
+import { GroupBy } from "../query-properties/group-by";
 
 import {
   Aggregate,
   DynamicSpace,
-  GroupBy,
   isNestedQuery,
   Nests,
   QuerySpace,
