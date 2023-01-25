@@ -23,7 +23,9 @@
 import { cloneDeep } from "lodash";
 import { MessageLogger } from "../parse-log";
 import { MalloyTranslation, ModelDataRequest } from "../parse-malloy";
-import { DocumentCompileResult, ModelEntry, NameSpace } from "./ast-types";
+import { DocumentCompileResult } from "./type-interfaces/document-compile-result";
+import { NameSpace } from "./type-interfaces/name-space";
+import { ModelEntry } from "./type-interfaces/model-entry";
 import {
   DocumentLocation,
   DocumentReference,

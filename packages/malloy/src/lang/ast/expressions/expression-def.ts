@@ -29,12 +29,8 @@ import {
 } from "../../../model/malloy_types";
 import { MalloyElement } from "../malloy-element";
 import { FieldSpace } from "../field-space";
-import {
-  Comparison,
-  Equality,
-  FieldValueType,
-  TypeMismatch,
-} from "../ast-types";
+import { Comparison, Equality, TypeMismatch } from "../ast-types";
+import { FieldValueType } from "../compound-types/field-value-type";
 import { ExprValue } from "../compound-types/expr-value";
 import {
   compose,

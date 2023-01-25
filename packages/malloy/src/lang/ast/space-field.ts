@@ -26,7 +26,8 @@ import {
   isFieldTypeDef,
   QueryFieldDef,
 } from "../../model/malloy_types";
-import { FieldType, SpaceEntry } from "./ast-types";
+import { SpaceEntry } from "./ast-types";
+import { FieldType } from "./type-interfaces/field-type";
 import { FieldSpace } from "./field-space";
 
 export abstract class SpaceField extends SpaceEntry {

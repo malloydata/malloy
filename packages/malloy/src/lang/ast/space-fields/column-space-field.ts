@@ -23,7 +23,7 @@
 
 import { FieldDef, FieldTypeDef } from "../../../model/malloy_types";
 
-import { FieldType } from "../ast-types";
+import { FieldType } from "../type-interfaces/field-type";
 import { SpaceField } from "../space-field";
 
 export class ColumnSpaceField extends SpaceField {

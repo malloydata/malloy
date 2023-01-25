@@ -23,7 +23,7 @@
 
 import { ExpressionType } from "../../../model/malloy_types";
 
-import { FieldValueType } from "../ast-types";
+import { FieldValueType } from "../compound-types/field-value-type";
 
 export interface FragType {
   dataType: FieldValueType;

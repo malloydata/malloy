@@ -23,7 +23,8 @@
 import { cloneDeep } from "lodash";
 import * as model from "../../model/malloy_types";
 import { mergeFields, nameOf } from "../field-utils";
-import { FieldType, SpaceEntry } from "./ast-types";
+import { SpaceEntry } from "./ast-types";
+import { FieldType } from "./type-interfaces/field-type";
 import { ErrorFactory } from "./error-factory";
 import { FieldListEdit } from "./explore-properties/field-list-edit";
 import { RenameField, Renames } from "./explore-properties/renames";

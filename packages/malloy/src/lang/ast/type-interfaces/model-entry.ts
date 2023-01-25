@@ -21,43 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldType } from "./type-interfaces/field-type";
+import { NamedModelObject } from "../../../model/malloy_types";
 
-export type StageFieldType = "turtle";
-
-export enum Equality {
-  Like = "~",
-  NotLike = "!~",
-  Equals = "=",
-  NotEquals = "!=",
+export interface ModelEntry {
+  entry: NamedModelObject;
+  exported?: boolean;
+  sqlType?: boolean;
 }
-
-export enum Comparison {
-  Like = "~",
-  NotLike = "!~",
-  LessThan = "<",
-  LessThanOrEqualTo = "<=",
-  EqualTo = "=",
-  GreaterThan = ">",
-  GreaterThanOrEqualTo = ">=",
-  NotEqualTo = "!=",
-}
-
-export class TypeMismatch extends Error {}
-
-export abstract class SpaceEntry {
-  abstract type(): FieldType;
-  abstract refType: "field" | "parameter";
-}
-
-export type FieldMap = Record<string, SpaceEntry>;
-
-interface LookupFound {
-  found: SpaceEntry;
-  error: undefined;
-}
-interface LookupError {
-  error: string;
-  found: undefined;
-}
-export type LookupResult = LookupFound | LookupError;

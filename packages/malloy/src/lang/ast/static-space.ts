@@ -25,7 +25,8 @@ import { Dialect } from "../../dialect/dialect";
 import { getDialect } from "../../dialect/dialect_map";
 import { FieldDef, isTurtleDef, StructDef } from "../../model/malloy_types";
 
-import { FieldMap, FieldType, LookupResult, SpaceEntry } from "./ast-types";
+import { FieldMap, LookupResult, SpaceEntry } from "./ast-types";
+import { FieldType } from "./type-interfaces/field-type";
 import { FieldName, FieldSpace } from "./field-space";
 import { SpaceField } from "./space-field";
 import { ColumnSpaceField } from "./space-fields/column-space-field";

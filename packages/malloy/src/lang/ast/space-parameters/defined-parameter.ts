@@ -23,7 +23,7 @@
 
 import { Parameter } from "../../../model/malloy_types";
 
-import { FieldType } from "../ast-types";
+import { FieldType } from "../type-interfaces/field-type";
 import { SpaceParam } from "../space-param";
 
 export class DefinedParameter extends SpaceParam {

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldValueType } from "./ast-types";
+import { FieldValueType } from "./compound-types/field-value-type";
 import { FragType } from "./type-interfaces/frag-type";
 
 function mkFragType(dType: FieldValueType): FragType {

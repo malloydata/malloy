@@ -23,7 +23,7 @@
 
 import { FieldDef, QueryFieldDef } from "../../../model/malloy_types";
 
-import { FieldType } from "../ast-types";
+import { FieldType } from "../type-interfaces/field-type";
 import { FieldSpace } from "../field-space";
 import { SpaceField } from "../space-field";
 

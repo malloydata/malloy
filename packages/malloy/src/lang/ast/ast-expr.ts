@@ -41,7 +41,8 @@ import {
 } from "../../model/malloy_types";
 import { nullsafeNot } from "./apply-expr";
 import { QuerySpace } from "./ast-main";
-import { Comparison, FieldValueType } from "./ast-types";
+import { Comparison } from "./ast-types";
+import { FieldValueType } from "./compound-types/field-value-type";
 import { FragType } from "./type-interfaces/frag-type";
 import { FT } from "./fragtype-utils";
 import { compose, compressExpr, errorFor } from "./ast-utils";
