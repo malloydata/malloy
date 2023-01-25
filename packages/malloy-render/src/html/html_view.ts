@@ -165,7 +165,7 @@ export function makeRenderer(
     renderDef.renderer === "dashboard" ||
     field.name.endsWith("_dashboard")
   ) {
-    return createRenderer(
+    return createContainerRenderer(
       HTMLDashboardRenderer,
       document,
       isContainer(field),
@@ -251,7 +251,7 @@ export function makeRenderer(
     } else if (renderDef.renderer === "link" || field.name.endsWith("_url")) {
       return new HTMLLinkRenderer(document);
     } else if (renderDef.renderer === "list" || field.name.endsWith("_list")) {
-      return createRenderer(
+      return createContainerRenderer(
         HTMLListRenderer,
         document,
         isContainer(field),
@@ -267,7 +267,7 @@ export function makeRenderer(
       renderDef.renderer === "list_detail" ||
       field.name.endsWith("_list_detail")
     ) {
-      return createRenderer(
+      return createContainerRenderer(
         HTMLListDetailRenderer,
         document,
         isContainer(field),
@@ -284,7 +284,7 @@ export function makeRenderer(
       !field.hasParentExplore() ||
       field.isExploreField()
     ) {
-      return createRenderer(
+      return createContainerRenderer(
         HTMLTableRenderer,
         document,
         isContainer(field),
@@ -302,7 +302,7 @@ export function makeRenderer(
   }
 }
 
-function createRenderer<Type extends ContainerRenderer>(
+function createContainerRenderer<Type extends ContainerRenderer>(
     cType: new (
       document: Document,
       options: {isDrillingEnabled?: boolean; onDrill?: DrillFunction;}) => Type,
