@@ -32,7 +32,7 @@ import {
   TimestampUnit,
 } from "../../model/malloy_types";
 
-import { GranularResult } from "./ast-types";
+import { GranularResult } from "./type-interfaces/granular-result";
 import { compose, compressExpr, errorFor } from "./ast-utils";
 import { ExprValue } from "./compound-types/expr-value";
 import { ExpressionDef } from "./expressions/expression-def";

@@ -22,10 +22,7 @@
  */
 
 import {
-  Fragment,
-  TimestampUnit,
   NamedModelObject,
-  TimeFieldType,
   ExpressionType,
   ModelDef,
   Query,
@@ -38,24 +35,6 @@ export type StageFieldType = "turtle";
 
 // And these are the other field value types
 export type FieldValueType = ExpressionValueType | StageFieldType | "struct";
-
-export interface FragType {
-  dataType: FieldValueType;
-  expressionType: ExpressionType;
-}
-
-export interface ExprResult extends FragType {
-  value: Fragment[];
-}
-
-export interface TimeResult extends ExprResult {
-  dataType: TimeFieldType;
-  alsoTimestamp?: true;
-}
-
-export interface GranularResult extends TimeResult {
-  timeframe: TimestampUnit;
-}
 
 // export type Comparison = "~" | "!~" | "<" | "<=" | "=" | ">" | ">=" | "!=";
 

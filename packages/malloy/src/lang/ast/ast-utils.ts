@@ -21,12 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  Comparison,
-  Equality,
-  FieldValueType,
-  GranularResult,
-} from "./ast-types";
+import { Comparison, Equality, FieldValueType } from "./ast-types";
+import { GranularResult } from "./type-interfaces/granular-result";
 import { ExpressionValueType } from "./compound-types/expression-value-type";
 import { ExprValue } from "./compound-types/expr-value";
 import {

@@ -29,7 +29,8 @@ import {
   AtomicFieldType,
   TimeLiteralFragment,
 } from "../../model/malloy_types";
-import { GranularResult, TimeResult } from "./ast-types";
+import { GranularResult } from "./type-interfaces/granular-result";
+import { TimeResult } from "./type-interfaces/time-result";
 
 export function timeOffset(
   timeType: TimeFieldType,

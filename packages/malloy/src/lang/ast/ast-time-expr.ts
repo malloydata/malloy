@@ -34,7 +34,8 @@ import {
   TimeFieldType,
   TimestampUnit,
 } from "../../model/malloy_types";
-import { Comparison, FieldValueType, TimeResult } from "./ast-types";
+import { Comparison, FieldValueType } from "./ast-types";
+import { TimeResult } from "./type-interfaces/time-result";
 import { compressExpr, errorFor, isGranularResult } from "./ast-utils";
 import { ExprValue } from "./compound-types/expr-value";
 import { ExpressionDef } from "./expressions/expression-def";
