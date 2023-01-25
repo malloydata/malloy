@@ -173,8 +173,6 @@ export class Aggregate extends ListOf<QueryItem> {
   }
 }
 
-export type QOPType = "grouping" | "aggregate" | "project" | "index";
-
 export class Turtles extends ListOf<TurtleDecl> {
   constructor(turtles: TurtleDecl[]) {
     super("turtleDeclarationList", turtles);

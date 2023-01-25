@@ -41,9 +41,10 @@ import {
   GroupBy,
   isNestedQuery,
   Nests,
-  QOPType,
   QueryProperty,
 } from "./ast-main";
+
+type QOPType = "grouping" | "aggregate" | "project" | "index";
 
 export class QOPDesc extends ListOf<QueryProperty> {
   opType: QOPType = "grouping";
