@@ -53,6 +53,8 @@ export * from "./explore-properties/renames";
 export * from "./field-declarations/dimmensions";
 export * from "./field-declarations/measures";
 
+export * from "./nesting/nest-reference";
+
 export * from "./query-properties/declare-fields";
 export * from "./query-properties/filters";
 export * from "./query-properties/indexing";

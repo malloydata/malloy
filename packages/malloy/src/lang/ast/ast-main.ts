@@ -25,14 +25,13 @@ import * as model from "../../model/malloy_types";
 import { makeSQLBlock } from "../../model/sql_block";
 import { mergeFields, nameOf } from "../field-utils";
 import { ModelDataRequest } from "../parse-malloy";
-import { FieldType, FT, LookupResult, SpaceEntry } from "./ast-types";
+import { FieldType, SpaceEntry } from "./ast-types";
 import { ErrorFactory } from "./error-factory";
 import { FieldListEdit } from "./explore-properties/field-list-edit";
 import { PrimaryKey } from "./explore-properties/primary-key";
 import { RenameField, Renames } from "./explore-properties/renames";
 import { FieldCollectionMember } from "./field-collection-member";
 import { FieldDeclaration } from "./field-declaration";
-import { Measures } from "./field-declarations/measures";
 import { FieldReference, WildcardFieldReference } from "./field-references";
 import { FieldName, FieldSpace, isFieldSpace, SourceSpec } from "./field-space";
 import { HasParameter } from "./has-parameter";
@@ -64,10 +63,9 @@ import { AbstractParameter } from "./space-parameters/abstract-parameter";
 import { StaticSpace, StructSpaceField } from "./static-space";
 import { opOutputStruct, getStructFieldDef } from "./struct-utils";
 import { QueryHeadStruct } from "./query-head-struct";
-import { OpDesc } from "./op-desc";
 import { PipelineDesc } from "./pipeline-desc";
 import { TurtleHeadedPipe } from "./turtle-headed-pipe";
-import { Executor } from "./executors/executor";
+import { NestReference } from "./nesting/nest-reference";
 
 type FieldDecl = FieldDeclaration | Join | TurtleDecl | Turtles;
 function isFieldDecl(f: MalloyElement): f is FieldDecl {
@@ -359,13 +357,6 @@ export class TurtleDecl extends TurtleHeadedPipe {
       ...pipe,
       location: this.location,
     };
-  }
-}
-
-export class NestReference extends FieldReference {
-  elementType = "nestReference";
-  constructor(readonly name: FieldName) {
-    super([name]);
   }
 }
 
