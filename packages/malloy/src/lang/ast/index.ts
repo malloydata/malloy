@@ -29,6 +29,7 @@ export * from "./ast-types";
 export * from "./ast-utils";
 export * from "./define-explore";
 export * from "./define-query";
+export * from "./element-utils";
 export * from "./explore-desc";
 export * from "./explore-properties/field-list-edit";
 export * from "./explore-properties/primary-key";

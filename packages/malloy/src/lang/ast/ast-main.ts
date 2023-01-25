@@ -23,7 +23,6 @@
 import { cloneDeep } from "lodash";
 import * as model from "../../model/malloy_types";
 import { mergeFields, nameOf } from "../field-utils";
-import { ModelDataRequest } from "../parse-malloy";
 import { FieldType, SpaceEntry } from "./ast-types";
 import { ErrorFactory } from "./error-factory";
 import { FieldListEdit } from "./explore-properties/field-list-edit";
@@ -35,13 +34,10 @@ import { FieldReference, WildcardFieldReference } from "./field-references";
 import { FieldName, FieldSpace, isFieldSpace, SourceSpec } from "./field-space";
 import { HasParameter } from "./has-parameter";
 import { Mallobj } from "./mallobj";
-import {
-  DocStatement,
-  Document,
-  ListOf,
-  MalloyElement,
-  ModelEntryReference,
-} from "./malloy-element";
+import { ListOf, MalloyElement, ModelEntryReference } from "./malloy-element";
+import { NestReference } from "./nesting/nest-reference";
+import { PipelineDesc } from "./pipeline-desc";
+import { QueryHeadStruct } from "./query-head-struct";
 import { DeclareFields } from "./query-properties/declare-fields";
 import { Filter } from "./query-properties/filters";
 import { Index } from "./query-properties/indexing";
@@ -59,13 +55,10 @@ import { RenameSpaceField } from "./space-fields/rename-space-field";
 import { WildSpaceField } from "./space-fields/wild-space-field";
 import { SpaceParam } from "./space-param";
 import { AbstractParameter } from "./space-parameters/abstract-parameter";
-import { StaticSpace, StructSpaceField } from "./static-space";
-import { opOutputStruct, getStructFieldDef } from "./struct-utils";
-import { QueryHeadStruct } from "./query-head-struct";
-import { PipelineDesc } from "./pipeline-desc";
-import { TurtleHeadedPipe } from "./turtle-headed-pipe";
-import { NestReference } from "./nesting/nest-reference";
 import { SpaceSeed } from "./space-seed";
+import { StaticSpace, StructSpaceField } from "./static-space";
+import { opOutputStruct } from "./struct-utils";
+import { TurtleHeadedPipe } from "./turtle-headed-pipe";
 
 export type FieldDecl = FieldDeclaration | Join | TurtleDecl | Turtles;
 
@@ -102,6 +95,8 @@ export type QueryItem =
   | FieldReference
   | NestDefinition
   | NestReference;
+
+export type QueryElement = FullQuery | ExistingQuery;
 
 export class GroupBy extends ListOf<QueryItem> {
   constructor(members: QueryItem[]) {
@@ -342,11 +337,6 @@ export class Nests extends ListOf<NestedQuery> {
   constructor(nests: NestedQuery[]) {
     super("nestedQueries", nests);
   }
-}
-
-export type QueryElement = FullQuery | ExistingQuery;
-export function isQueryElement(e: MalloyElement): e is QueryElement {
-  return e instanceof FullQuery || e instanceof ExistingQuery;
 }
 
 /**
