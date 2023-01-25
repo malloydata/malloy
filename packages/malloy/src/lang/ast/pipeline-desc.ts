@@ -28,11 +28,12 @@ import {
   StructDef,
 } from "../../model/malloy_types";
 
-import { MalloyElement } from "./malloy-element";
 import { FieldSpace } from "./field-space";
+import { MalloyElement } from "./malloy-element";
+import { QOPDesc } from "./qop-desc";
 import { getStructFieldDef, opOutputStruct } from "./struct-utils";
 
-import { QOPDesc, QuerySpace } from "./ast-main";
+import { QuerySpace } from "./ast-main";
 
 /**
  * Generic abstract for all pipelines, the first segment might be a reference
