@@ -54,12 +54,6 @@ import { QueryItem } from "./types/query-item";
 import { NestedQuery } from "./types/nested-query";
 import { ExploreField } from "./types/explore-field";
 
-export class Turtles extends ListOf<TurtleDecl> {
-  constructor(turtles: TurtleDecl[]) {
-    super("turtleDeclarationList", turtles);
-  }
-}
-
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
     fd && typeof fd !== "string" && (fd as model.TurtleDef).type === "turtle";

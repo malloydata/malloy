@@ -21,7 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { TurtleDecl, Turtles } from "../ast-main";
+import { TurtleDecl } from "../ast-main";
+import { Turtles } from "../explore-properties/turtles";
 import { FieldDeclaration } from "../field-declaration";
 import { Join } from "../query-properties/joins";
 

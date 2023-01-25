@@ -27,7 +27,7 @@ import { DeclareFields } from "../query-properties/declare-fields";
 import { FieldListEdit } from "../explore-properties/field-list-edit";
 import { Renames } from "../explore-properties/renames";
 import { PrimaryKey } from "../explore-properties/primary-key";
-import { Turtles } from "../ast-main";
+import { Turtles } from "../explore-properties/turtles";
 
 export type ExploreProperty =
   | Filter

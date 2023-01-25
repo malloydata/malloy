@@ -29,6 +29,7 @@ import { ExploreDesc } from "./explore-desc";
 import { FieldListEdit } from "./explore-properties/field-list-edit";
 import { PrimaryKey } from "./explore-properties/primary-key";
 import { Renames } from "./explore-properties/renames";
+import { Turtles } from "./explore-properties/turtles";
 import { HasParameter } from "./has-parameter";
 import { Mallobj } from "./mallobj";
 import { DeclareFields } from "./query-properties/declare-fields";
@@ -36,7 +37,7 @@ import { Filter } from "./query-properties/filters";
 import { Joins } from "./query-properties/joins";
 import { ExploreField } from "./types/explore-field";
 
-import { DynamicSpace, Turtles } from "./ast-main";
+import { DynamicSpace } from "./ast-main";
 
 /**
  * A Mallobj made from a source and a set of refinements
