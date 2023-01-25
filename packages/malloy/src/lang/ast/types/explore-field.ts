@@ -21,23 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { TurtleDecl, Turtles } from "./ast-main";
-import { RenameField } from "./explore-properties/renames";
-import { FieldDeclaration } from "./field-declaration";
-import { MalloyElement } from "./malloy-element";
-import { Join } from "./query-properties/joins";
-import { ExploreField } from "./types/explore-field";
-import { FieldDecl } from "./types/field-decl";
+import { RenameField } from "../explore-properties/renames";
+import { FieldDecl } from "./field-decl";
 
-function isFieldDecl(f: MalloyElement): f is FieldDecl {
-  return (
-    f instanceof FieldDeclaration ||
-    f instanceof Join ||
-    f instanceof TurtleDecl ||
-    f instanceof Turtles
-  );
-}
-
-export function isExploreField(f: MalloyElement): f is ExploreField {
-  return isFieldDecl(f) || f instanceof RenameField;
-}
+export type ExploreField = FieldDecl | RenameField;

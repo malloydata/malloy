@@ -25,17 +25,18 @@ import { cloneDeep } from "lodash";
 
 import { expressionIsCalculation, StructDef } from "../../model/malloy_types";
 
-import { Mallobj } from "./mallobj";
-import { HasParameter } from "./has-parameter";
-import { PrimaryKey } from "./explore-properties/primary-key";
-import { FieldListEdit } from "./explore-properties/field-list-edit";
-import { Filter } from "./query-properties/filters";
-import { DeclareFields } from "./query-properties/declare-fields";
-import { Joins } from "./query-properties/joins";
-import { Renames } from "./explore-properties/renames";
 import { ExploreDesc } from "./explore-desc";
+import { FieldListEdit } from "./explore-properties/field-list-edit";
+import { PrimaryKey } from "./explore-properties/primary-key";
+import { Renames } from "./explore-properties/renames";
+import { HasParameter } from "./has-parameter";
+import { Mallobj } from "./mallobj";
+import { DeclareFields } from "./query-properties/declare-fields";
+import { Filter } from "./query-properties/filters";
+import { Joins } from "./query-properties/joins";
+import { ExploreField } from "./types/explore-field";
 
-import { DynamicSpace, ExploreField, Turtles } from "./ast-main";
+import { DynamicSpace, Turtles } from "./ast-main";
 
 /**
  * A Mallobj made from a source and a set of refinements
