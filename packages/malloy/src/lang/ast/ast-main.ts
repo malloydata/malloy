@@ -99,24 +99,6 @@ export type QueryProperty =
   | Aggregate
   | GroupBy;
 
-export function isQueryProperty(q: MalloyElement): q is QueryProperty {
-  return (
-    q instanceof Ordering ||
-    q instanceof Top ||
-    q instanceof Limit ||
-    q instanceof Filter ||
-    q instanceof Index ||
-    q instanceof SampleProperty ||
-    q instanceof Joins ||
-    q instanceof DeclareFields ||
-    q instanceof ProjectStatement ||
-    q instanceof Aggregate ||
-    q instanceof Nests ||
-    isNestedQuery(q) ||
-    q instanceof GroupBy
-  );
-}
-
 export type ExploreProperty =
   | Filter
   | Joins
@@ -125,17 +107,6 @@ export type ExploreProperty =
   | Renames
   | PrimaryKey
   | Turtles;
-export function isExploreProperty(p: MalloyElement): p is ExploreProperty {
-  return (
-    p instanceof Filter ||
-    p instanceof Joins ||
-    p instanceof DeclareFields ||
-    p instanceof FieldListEdit ||
-    p instanceof Renames ||
-    p instanceof PrimaryKey ||
-    p instanceof Turtles
-  );
-}
 
 export class ExploreDesc extends ListOf<ExploreProperty> {
   constructor(props: ExploreProperty[]) {
