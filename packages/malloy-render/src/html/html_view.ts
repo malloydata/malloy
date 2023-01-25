@@ -257,12 +257,6 @@ export function makeRenderer(
         isContainer(field),
         options
       );
-      // return ContainerRenderer.make(
-      //   HTMLListRenderer,
-      //   document,
-      //   isContainer(field),
-      //   options
-      // );
     } else if (
       renderDef.renderer === "list_detail" ||
       field.name.endsWith("_list_detail")
@@ -273,12 +267,6 @@ export function makeRenderer(
         isContainer(field),
         options
       );
-      // return ContainerRenderer.make(
-      //   HTMLListDetailRenderer,
-      //   document,
-      //   isContainer(field),
-      //   options
-      // );
     } else if (
       renderDef.renderer === "table" ||
       !field.hasParentExplore() ||
@@ -290,12 +278,6 @@ export function makeRenderer(
         isContainer(field),
         options
       );
-      // return ContainerRenderer.make(
-      //   HTMLTableRenderer,
-      //   document,
-      //   isContainer(field),
-      //   options
-      // );
     } else {
       return new HTMLTextRenderer(document);
     }
@@ -303,21 +285,27 @@ export function makeRenderer(
 }
 
 function makeContainerRenderer<Type extends ContainerRenderer>(
-    cType: new (
-      document: Document,
-      options: {isDrillingEnabled?: boolean; onDrill?: DrillFunction;}) => Type,
+  cType: new (
     document: Document,
-    explore: Explore,
-    options: {
-      dataStyles: DataStyles;
-      isDrillingEnabled?: boolean;
-      onDrill?: DrillFunction;
-    }): ContainerRenderer {
+    options: { isDrillingEnabled?: boolean; onDrill?: DrillFunction }
+  ) => Type,
+  document: Document,
+  explore: Explore,
+  options: {
+    dataStyles: DataStyles;
+    isDrillingEnabled?: boolean;
+    onDrill?: DrillFunction;
+  }
+): ContainerRenderer {
   const c = ContainerRenderer.make(cType, document, explore, options);
   const result: ChildRenderers = {};
   explore.intrinsicFields.forEach((field: Field) => {
     result[field.name] = makeRenderer(
-      field, document, options, c.defaultStylesForChildren);
+      field,
+      document,
+      options,
+      c.defaultStylesForChildren
+    );
   });
   c.childRenderers = result;
   return c;
