@@ -38,6 +38,7 @@ import { Limit } from "../query-properties/limit";
 import { Ordering } from "../query-properties/ordering";
 import { Top } from "../query-properties/top";
 import { ReduceFieldSpace } from "../result-spaces/reduce-field-space";
+import { QueryProperty } from "../types/query-property";
 import { Executor } from "./executor";
 
 import {
@@ -46,7 +47,6 @@ import {
   GroupBy,
   isNestedQuery,
   Nests,
-  QueryProperty,
   QuerySpace,
   ResultSpace,
 } from "../ast-main";

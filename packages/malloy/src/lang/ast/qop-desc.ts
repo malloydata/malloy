@@ -34,6 +34,7 @@ import { PipelineDesc } from "./pipeline-desc";
 import { Index } from "./query-properties/indexing";
 import { ProjectStatement } from "./query-properties/project-statement";
 import { opOutputStruct } from "./struct-utils";
+import { QueryProperty } from "./types/query-property";
 
 import {
   Aggregate,
@@ -41,7 +42,6 @@ import {
   GroupBy,
   isNestedQuery,
   Nests,
-  QueryProperty,
 } from "./ast-main";
 
 type QOPType = "grouping" | "aggregate" | "project" | "index";

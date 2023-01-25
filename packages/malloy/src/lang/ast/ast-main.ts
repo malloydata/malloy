@@ -26,7 +26,6 @@ import { mergeFields, nameOf } from "../field-utils";
 import { FieldType, SpaceEntry } from "./ast-types";
 import { ErrorFactory } from "./error-factory";
 import { FieldListEdit } from "./explore-properties/field-list-edit";
-import { PrimaryKey } from "./explore-properties/primary-key";
 import { RenameField, Renames } from "./explore-properties/renames";
 import { FieldCollectionMember } from "./field-collection-member";
 import { FieldDeclaration } from "./field-declaration";
@@ -38,15 +37,7 @@ import { ListOf, MalloyElement, ModelEntryReference } from "./malloy-element";
 import { NestReference } from "./nesting/nest-reference";
 import { PipelineDesc } from "./pipeline-desc";
 import { QueryHeadStruct } from "./query-head-struct";
-import { DeclareFields } from "./query-properties/declare-fields";
-import { Filter } from "./query-properties/filters";
-import { Index } from "./query-properties/indexing";
-import { Join, Joins } from "./query-properties/joins";
-import { Limit } from "./query-properties/limit";
-import { Ordering } from "./query-properties/ordering";
-import { ProjectStatement } from "./query-properties/project-statement";
-import { SampleProperty } from "./query-properties/sampling";
-import { Top } from "./query-properties/top";
+import { Join } from "./query-properties/joins";
 import { SpaceField } from "./space-field";
 import { JoinSpaceField } from "./space-fields/join-space-field";
 import { QueryField } from "./space-fields/query-space-field";
@@ -64,32 +55,6 @@ import { QueryItem } from "./types/query-item";
 export type FieldDecl = FieldDeclaration | Join | TurtleDecl | Turtles;
 
 export type ExploreField = FieldDecl | RenameField;
-
-export type QueryProperty =
-  | Ordering
-  | Top
-  | Limit
-  | Filter
-  | Index
-  | SampleProperty
-  | Joins
-  | DeclareFields
-  | ProjectStatement
-  | NestReference
-  | NestDefinition
-  | NestReference
-  | Nests
-  | Aggregate
-  | GroupBy;
-
-export type ExploreProperty =
-  | Filter
-  | Joins
-  | DeclareFields
-  | FieldListEdit
-  | Renames
-  | PrimaryKey
-  | Turtles;
 
 export type QueryElement = FullQuery | ExistingQuery;
 

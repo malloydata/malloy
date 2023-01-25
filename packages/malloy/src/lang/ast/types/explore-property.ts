@@ -21,11 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExploreProperty } from "./types/explore-property";
-import { ListOf } from "./malloy-element";
+import { Filter } from "../query-properties/filters";
+import { Joins } from "../query-properties/joins";
+import { DeclareFields } from "../query-properties/declare-fields";
+import { FieldListEdit } from "../explore-properties/field-list-edit";
+import { Renames } from "../explore-properties/renames";
+import { PrimaryKey } from "../explore-properties/primary-key";
+import { Turtles } from "../ast-main";
 
-export class ExploreDesc extends ListOf<ExploreProperty> {
-  constructor(props: ExploreProperty[]) {
-    super("exploreDesc", props);
-  }
-}
+export type ExploreProperty =
+  | Filter
+  | Joins
+  | DeclareFields
+  | FieldListEdit
+  | Renames
+  | PrimaryKey
+  | Turtles;

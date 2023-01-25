@@ -33,9 +33,10 @@ import { FieldSpace } from "../field-space";
 import { Filter } from "../query-properties/filters";
 import { ProjectStatement } from "../query-properties/project-statement";
 import { ProjectFieldSpace } from "../result-spaces/project-field-space";
+import { QueryProperty } from "../types/query-property";
 import { ReduceExecutor } from "./reduce-executor";
 
-import { GroupBy, QueryProperty } from "../ast-main";
+import { GroupBy } from "../ast-main";
 
 export class ProjectExecutor extends ReduceExecutor {
   getResultSpace(fs: FieldSpace): ProjectFieldSpace {

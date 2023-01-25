@@ -21,15 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  Aggregate,
-  ExploreProperty,
-  GroupBy,
-  isNestedQuery,
-  Nests,
-  QueryProperty,
-  Turtles,
-} from "./ast-main";
+import { Aggregate, GroupBy, isNestedQuery, Nests, Turtles } from "./ast-main";
 import { FieldListEdit } from "./explore-properties/field-list-edit";
 import { PrimaryKey } from "./explore-properties/primary-key";
 import { Renames } from "./explore-properties/renames";
@@ -43,6 +35,8 @@ import { Ordering } from "./query-properties/ordering";
 import { ProjectStatement } from "./query-properties/project-statement";
 import { SampleProperty } from "./query-properties/sampling";
 import { Top } from "./query-properties/top";
+import { ExploreProperty } from "./types/explore-property";
+import { QueryProperty } from "./types/query-property";
 
 export function isExploreProperty(p: MalloyElement): p is ExploreProperty {
   return (

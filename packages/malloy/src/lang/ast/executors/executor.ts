@@ -23,7 +23,9 @@
 
 import { PipeSegment } from "../../../model/malloy_types";
 
-import { QueryProperty, QuerySpace, ResultSpace } from "../ast-main";
+import { QueryProperty } from "../types/query-property";
+
+import { QuerySpace, ResultSpace } from "../ast-main";
 
 export interface Executor {
   inputFS: QuerySpace;
