@@ -32,9 +32,10 @@ import { Measures } from "../field-declarations/measures";
 import { FieldSpace } from "../field-space";
 import { Filter } from "../query-properties/filters";
 import { ProjectStatement } from "../query-properties/project-statement";
+import { ProjectFieldSpace } from "../result-spaces/project-field-space";
 import { ReduceExecutor } from "./reduce-executor";
 
-import { GroupBy, ProjectFieldSpace, QueryProperty } from "../ast-main";
+import { GroupBy, QueryProperty } from "../ast-main";
 
 export class ProjectExecutor extends ReduceExecutor {
   getResultSpace(fs: FieldSpace): ProjectFieldSpace {

@@ -829,27 +829,6 @@ export abstract class ResultSpace extends DynamicSpace {
   }
 }
 
-export class ProjectFieldSpace extends ResultSpace {
-  readonly segmentType = "project";
-
-  canContain(qd: model.QueryFieldDef): boolean {
-    if (typeof qd !== "string") {
-      if (model.isFilteredAliasedName(qd)) {
-        return true;
-      }
-      if (qd.type === "turtle") {
-        this.log("Cannot nest queries in project");
-        return false;
-      }
-      if (model.expressionIsAggregate(qd.expressionType)) {
-        this.log("Cannot add aggregate measures to project");
-        return false;
-      }
-    }
-    return true;
-  }
-}
-
 /**
  * Based on how things are constructed, the starting field space
  * can either be another field space or an existing structdef.
