@@ -484,9 +484,9 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
   }
 
   translateField(explore: Explore, fieldString: string): string {
-    const m = fieldString.match(/#\{(?<fieldnum>\d+)\}/);
+    const m = fieldString.match(/#\{(\d+)\}/);
     if (m && m.groups) {
-      return explore.intrinsicFields[parseInt(m.groups["fieldnum"]) - 1].name;
+      return explore.intrinsicFields[parseInt(m.groups[1]) - 1].name;
     }
     return fieldString;
   }
