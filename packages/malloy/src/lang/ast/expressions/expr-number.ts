@@ -21,41 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldType } from "./type-interfaces/field-type";
+import { ExprValue } from "../compound-types/expr-value";
+import { FieldSpace } from "../field-space";
+import { FT } from "../fragtype-utils";
+import { ExpressionDef } from "./expression-def";
 
-export type StageFieldType = "turtle";
+export class ExprNumber extends ExpressionDef {
+  elementType = "numeric literal";
+  constructor(readonly n: string) {
+    super();
+  }
 
-export enum Equality {
-  Like = "~",
-  NotLike = "!~",
-  Equals = "=",
-  NotEquals = "!=",
+  getExpression(_fs: FieldSpace): ExprValue {
+    return this.constantExpression();
+  }
+
+  constantExpression(): ExprValue {
+    return { ...FT.numberT, value: [this.n] };
+  }
 }
-
-export enum Comparison {
-  Like = "~",
-  NotLike = "!~",
-  LessThan = "<",
-  LessThanOrEqualTo = "<=",
-  EqualTo = "=",
-  GreaterThan = ">",
-  GreaterThanOrEqualTo = ">=",
-  NotEqualTo = "!=",
-}
-
-export abstract class SpaceEntry {
-  abstract type(): FieldType;
-  abstract refType: "field" | "parameter";
-}
-
-export type FieldMap = Record<string, SpaceEntry>;
-
-interface LookupFound {
-  found: SpaceEntry;
-  error: undefined;
-}
-interface LookupError {
-  error: string;
-  found: undefined;
-}
-export type LookupResult = LookupFound | LookupError;

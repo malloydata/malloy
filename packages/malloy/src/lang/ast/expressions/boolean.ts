@@ -21,41 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldType } from "./type-interfaces/field-type";
+import { ExprValue } from "../compound-types/expr-value";
+import { ExpressionDef } from "./expression-def";
+import { FT } from "../fragtype-utils";
 
-export type StageFieldType = "turtle";
+export class Boolean extends ExpressionDef {
+  elementType = "boolean literal";
+  constructor(readonly value: "true" | "false") {
+    super();
+  }
 
-export enum Equality {
-  Like = "~",
-  NotLike = "!~",
-  Equals = "=",
-  NotEquals = "!=",
+  getExpression(): ExprValue {
+    return { ...FT.boolT, value: [this.value] };
+  }
 }
-
-export enum Comparison {
-  Like = "~",
-  NotLike = "!~",
-  LessThan = "<",
-  LessThanOrEqualTo = "<=",
-  EqualTo = "=",
-  GreaterThan = ">",
-  GreaterThanOrEqualTo = ">=",
-  NotEqualTo = "!=",
-}
-
-export abstract class SpaceEntry {
-  abstract type(): FieldType;
-  abstract refType: "field" | "parameter";
-}
-
-export type FieldMap = Record<string, SpaceEntry>;
-
-interface LookupFound {
-  found: SpaceEntry;
-  error: undefined;
-}
-interface LookupError {
-  error: string;
-  found: undefined;
-}
-export type LookupResult = LookupFound | LookupError;

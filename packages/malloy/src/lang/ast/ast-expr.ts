@@ -35,11 +35,9 @@ import {
   ExpressionType,
   Fragment,
   isAtomicFieldType,
-  isConditionParameter,
   maxExpressionType,
   UngroupFragment,
 } from "../../model/malloy_types";
-import { nullsafeNot } from "./apply-expr";
 import { QuerySpace } from "./ast-main";
 import { Comparison } from "./ast-types";
 import { FieldValueType } from "./compound-types/field-value-type";
@@ -54,156 +52,8 @@ import { FieldReference } from "./field-references";
 import { FieldName, FieldSpace } from "./field-space";
 import { MalloyElement } from "./malloy-element";
 import { Filter } from "./query-properties/filters";
-import { SpaceParam } from "./space-param";
 import { StructSpaceField } from "./static-space";
 import { castTo } from "./time-utils";
-
-export class ExprNumber extends ExpressionDef {
-  elementType = "numeric literal";
-  constructor(readonly n: string) {
-    super();
-  }
-
-  getExpression(_fs: FieldSpace): ExprValue {
-    return this.constantExpression();
-  }
-
-  constantExpression(): ExprValue {
-    return { ...FT.numberT, value: [this.n] };
-  }
-}
-
-export class ExprRegEx extends ExpressionDef {
-  elementType = "regular expression literal";
-  constructor(readonly regex: string) {
-    super();
-  }
-
-  getExpression(): ExprValue {
-    return {
-      dataType: "regular expression",
-      expressionType: "scalar",
-      value: [`r'${this.regex}'`],
-    };
-  }
-}
-
-abstract class Unary extends ExpressionDef {
-  constructor(readonly expr: ExpressionDef) {
-    super({ expr });
-  }
-}
-
-export class ExprNot extends Unary {
-  elementType = "not";
-  legalChildTypes = [FT.boolT, FT.nullT];
-  constructor(expr: ExpressionDef) {
-    super(expr);
-  }
-
-  getExpression(fs: FieldSpace): ExprValue {
-    const notThis = this.expr.getExpression(fs);
-    if (this.typeCheck(this.expr, notThis)) {
-      return {
-        ...notThis,
-        dataType: "boolean",
-        value: nullsafeNot(notThis.value),
-      };
-    }
-    return errorFor("not requires boolean");
-  }
-}
-
-export class Boolean extends ExpressionDef {
-  elementType = "boolean literal";
-  constructor(readonly value: "true" | "false") {
-    super();
-  }
-
-  getExpression(): ExprValue {
-    return { ...FT.boolT, value: [this.value] };
-  }
-}
-
-export class ExprLogicalOp extends BinaryBoolean<"and" | "or"> {
-  elementType = "logical operator";
-  legalChildTypes = [FT.boolT, { ...FT.boolT, aggregate: true }];
-}
-
-export class ExprIdReference extends ExpressionDef {
-  elementType = "ExpressionIdReference";
-  constructor(readonly fieldReference: FieldReference) {
-    super();
-    this.has({ fieldPath: fieldReference });
-  }
-
-  get refString(): string {
-    return this.fieldReference.refString;
-  }
-
-  getExpression(fs: FieldSpace): ExprValue {
-    const def = this.fieldReference.getField(fs);
-    if (def.found) {
-      // TODO if type is a query or a struct this should fail nicely
-      const typeMixin = def.found.type();
-      const dataType = typeMixin.type;
-      const expressionType = typeMixin.expressionType || "scalar";
-      const value = [{ type: def.found.refType, path: this.refString }];
-      return { dataType, expressionType, value };
-    }
-    this.log(def.error);
-    return errorFor(def.error);
-  }
-
-  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
-    const entry = this.fieldReference.getField(fs).found;
-    if (entry instanceof SpaceParam) {
-      const cParam = entry.parameter();
-      if (isConditionParameter(cParam)) {
-        const lval = expr.getExpression(fs);
-        return {
-          dataType: "boolean",
-          expressionType: lval.expressionType,
-          value: [
-            {
-              type: "apply",
-              value: lval.value,
-              to: [{ type: "parameter", path: this.refString }],
-            },
-          ],
-        };
-      }
-    }
-    return super.apply(fs, op, expr);
-  }
-}
-
-export class ExprNULL extends ExpressionDef {
-  elementType = "NULL";
-  getExpression(): ExprValue {
-    return {
-      dataType: "null",
-      value: ["NULL"],
-      expressionType: "scalar",
-    };
-  }
-}
-
-export class ExprParens extends ExpressionDef {
-  elementType = "(expression)";
-  constructor(readonly expr: ExpressionDef) {
-    super({ expr });
-  }
-
-  requestExpression(fs: FieldSpace): ExprValue | undefined {
-    return this.expr.requestExpression(fs);
-  }
-
-  getExpression(fs: FieldSpace): ExprValue {
-    const subExpr = this.expr.getExpression(fs);
-    return { ...subExpr, value: ["(", ...subExpr.value, ")"] };
-  }
-}
 
 export class ExprMinus extends ExpressionDef {
   elementType = "unary minus";

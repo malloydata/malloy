@@ -29,7 +29,7 @@ import {
 } from "../../../model/malloy_types";
 import { MalloyElement } from "../malloy-element";
 import { FieldSpace } from "../field-space";
-import { Comparison, Equality, TypeMismatch } from "../ast-types";
+import { Equality } from "../ast-types";
 import { FieldValueType } from "../compound-types/field-value-type";
 import { ExprValue } from "../compound-types/expr-value";
 import {
@@ -42,6 +42,8 @@ import {
 import { castTimestampToDate, timeOffset, timeResult } from "../time-utils";
 import { nullsafeNot } from "../apply-expr";
 import { FT } from "../fragtype-utils";
+
+class TypeMismatch extends Error {}
 
 /**
  * Root node for any element in an expression. These essentially
