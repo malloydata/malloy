@@ -171,12 +171,6 @@ export function makeRenderer(
       isContainer(field),
       options
     );
-    // return ContainerRenderer.make(
-    //   HTMLDashboardRenderer,
-    //   document,
-    //   isContainer(field),
-    //   options
-    // );
   } else if (renderDef.renderer === "json" || field.name.endsWith("_json")) {
     return new HTMLJSONRenderer(document);
   } else if (
