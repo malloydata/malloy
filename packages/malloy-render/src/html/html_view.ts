@@ -24,7 +24,7 @@
 import { AtomicFieldType, DataArray, Field, Explore } from "@malloydata/malloy";
 import { TopLevelSpec } from "vega-lite";
 import { DataStyles, StyleDefaults } from "../data_styles";
-import { Renderer } from "../renderer";
+import { ChildRenderers, Renderer } from "../renderer";
 import { HTMLBarChartRenderer } from "./bar_chart";
 import { HTMLBooleanRenderer } from "./boolean";
 import { HTMLJSONRenderer } from "./json";
@@ -165,7 +165,7 @@ export function makeRenderer(
     renderDef.renderer === "dashboard" ||
     field.name.endsWith("_dashboard")
   ) {
-    return ContainerRenderer.make(
+    return makeContainerRenderer(
       HTMLDashboardRenderer,
       document,
       isContainer(field),
@@ -245,7 +245,7 @@ export function makeRenderer(
     } else if (renderDef.renderer === "link" || field.name.endsWith("_url")) {
       return new HTMLLinkRenderer(document);
     } else if (renderDef.renderer === "list" || field.name.endsWith("_list")) {
-      return ContainerRenderer.make(
+      return makeContainerRenderer(
         HTMLListRenderer,
         document,
         isContainer(field),
@@ -255,7 +255,7 @@ export function makeRenderer(
       renderDef.renderer === "list_detail" ||
       field.name.endsWith("_list_detail")
     ) {
-      return ContainerRenderer.make(
+      return makeContainerRenderer(
         HTMLListDetailRenderer,
         document,
         isContainer(field),
@@ -266,7 +266,7 @@ export function makeRenderer(
       !field.hasParentExplore() ||
       field.isExploreField()
     ) {
-      return ContainerRenderer.make(
+      return makeContainerRenderer(
         HTMLTableRenderer,
         document,
         isContainer(field),
@@ -276,4 +276,31 @@ export function makeRenderer(
       return new HTMLTextRenderer(document);
     }
   }
+}
+
+function makeContainerRenderer<Type extends ContainerRenderer>(
+  cType: new (
+    document: Document,
+    options: { isDrillingEnabled?: boolean; onDrill?: DrillFunction }
+  ) => Type,
+  document: Document,
+  explore: Explore,
+  options: {
+    dataStyles: DataStyles;
+    isDrillingEnabled?: boolean;
+    onDrill?: DrillFunction;
+  }
+): ContainerRenderer {
+  const c = ContainerRenderer.make(cType, document, explore, options);
+  const result: ChildRenderers = {};
+  explore.intrinsicFields.forEach((field: Field) => {
+    result[field.name] = makeRenderer(
+      field,
+      document,
+      options,
+      c.defaultStylesForChildren
+    );
+  });
+  c.childRenderers = result;
+  return c;
 }
