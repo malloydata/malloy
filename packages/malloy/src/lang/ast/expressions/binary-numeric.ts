@@ -21,7 +21,25 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { GranularResult } from "../type-interfaces/granular-result";
-import { ExprResult } from "../type-interfaces/expr-result";
+import { ExprValue } from "../compound-types/expr-value";
+import { FieldSpace } from "../field-space";
+import { FT } from "../fragtype-utils";
+import { ExpressionDef } from "./expression-def";
 
-export type ExprValue = ExprResult | GranularResult;
+export abstract class BinaryNumeric<
+  opType extends string
+> extends ExpressionDef {
+  elementType = "numeric binary abstract";
+  constructor(
+    readonly left: ExpressionDef,
+    readonly op: opType,
+    readonly right: ExpressionDef
+  ) {
+    super({ left, right });
+    this.legalChildTypes = [FT.numberT];
+  }
+
+  getExpression(fs: FieldSpace): ExprValue {
+    return this.right.apply(fs, this.op, this.left);
+  }
+}

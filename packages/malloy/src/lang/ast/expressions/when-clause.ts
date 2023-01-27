@@ -20,8 +20,20 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+import { ExprValue } from "../compound-types/expr-value";
+import { FieldSpace } from "../field-space";
+import { ExpressionDef } from "./expression-def";
 
-import { GranularResult } from "../type-interfaces/granular-result";
-import { ExprResult } from "../type-interfaces/expr-result";
+export class WhenClause extends ExpressionDef {
+  elementType = "when clause";
+  constructor(
+    readonly whenThis: ExpressionDef,
+    readonly thenThis: ExpressionDef
+  ) {
+    super({ whenThis, thenThis });
+  }
 
-export type ExprValue = ExprResult | GranularResult;
+  getExpression(_fs: FieldSpace): ExprValue {
+    throw new Error("expression did something unxpected with 'WHEN'");
+  }
+}

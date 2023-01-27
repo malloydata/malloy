@@ -21,7 +21,25 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { GranularResult } from "../type-interfaces/granular-result";
-import { ExprResult } from "../type-interfaces/expr-result";
+import { Expr } from "../../../model/malloy_types";
 
-export type ExprValue = ExprResult | GranularResult;
+import { ExprValue } from "../compound-types/expr-value";
+
+function nullCompare(
+  left: ExprValue,
+  op: string,
+  right: ExprValue
+): Expr | undefined {
+  const not = op === "!=" || op === "!~";
+  if (left.dataType === "null" || right.dataType === "null") {
+    const maybeNot = not ? " NOT" : "";
+    if (left.dataType !== "null") {
+      return [...left.value, ` IS${maybeNot} NULL`];
+    }
+    if (right.dataType !== "null") {
+      return [...right.value, `IS${maybeNot} NULL`];
+    }
+    return [not ? "false" : "true"];
+  }
+  return undefined;
+}

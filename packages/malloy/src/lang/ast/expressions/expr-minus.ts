@@ -21,7 +21,28 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { GranularResult } from "../type-interfaces/granular-result";
-import { ExprResult } from "../type-interfaces/expr-result";
+import { errorFor } from "../ast-utils";
+import { ExprValue } from "../compound-types/expr-value";
+import { FieldSpace } from "../field-space";
+import { FT } from "../fragtype-utils";
+import { ExpressionDef } from "./expression-def";
 
-export type ExprValue = ExprResult | GranularResult;
+export class ExprMinus extends ExpressionDef {
+  elementType = "unary minus";
+  constructor(readonly expr: ExpressionDef) {
+    super({ expr });
+
+    this.legalChildTypes = [FT.numberT];
+  }
+
+  getExpression(fs: FieldSpace): ExprValue {
+    const expr = this.expr.getExpression(fs);
+    if (this.typeCheck(this.expr, expr)) {
+      if (expr.value.length > 1) {
+        return { ...expr, value: ["-(", ...expr.value, ")"] };
+      }
+      return { ...expr, value: ["-", ...expr.value] };
+    }
+    return errorFor("negate requires number");
+  }
+}

@@ -20,8 +20,33 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+import { compressExpr } from "../ast-utils";
+import { ExprValue } from "../compound-types/expr-value";
+import { FieldSpace } from "../field-space";
+import { castTo } from "../time-utils";
+import { ExpressionDef } from "./expression-def";
 
-import { GranularResult } from "../type-interfaces/granular-result";
-import { ExprResult } from "../type-interfaces/expr-result";
+export type CastType = "string" | "number" | "boolean" | "date" | "timestamp";
+export function isCastType(t: string): t is CastType {
+  return ["string", "number", "boolean", "date", "timestamp"].includes(t);
+}
 
-export type ExprValue = ExprResult | GranularResult;
+export class ExprCast extends ExpressionDef {
+  elementType = "cast";
+  constructor(
+    readonly expr: ExpressionDef,
+    readonly castType: CastType,
+    readonly safe = false
+  ) {
+    super({ expr });
+  }
+
+  getExpression(fs: FieldSpace): ExprValue {
+    const expr = this.expr.getExpression(fs);
+    return {
+      dataType: this.castType,
+      expressionType: expr.expressionType,
+      value: compressExpr(castTo(this.castType, expr.value, this.safe)),
+    };
+  }
+}

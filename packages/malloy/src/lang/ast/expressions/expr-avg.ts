@@ -21,7 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { GranularResult } from "../type-interfaces/granular-result";
-import { ExprResult } from "../type-interfaces/expr-result";
+import { ExpressionDef } from "./expression-def";
+import { FieldReference } from "../field-references";
+import { ExprAsymmetric } from "./expr-asymmetric";
 
-export type ExprValue = ExprResult | GranularResult;
+export class ExprAvg extends ExprAsymmetric {
+  constructor(expr: ExpressionDef | undefined, source?: FieldReference) {
+    super("avg", expr, source);
+    this.has({ source });
+  }
+}

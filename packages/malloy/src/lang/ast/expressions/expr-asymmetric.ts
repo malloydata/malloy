@@ -20,8 +20,30 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+import { FieldReference } from "../field-references";
+import { ExprAggregateFunction } from "./expr-aggregate-function";
+import { ExpressionDef } from "./expression-def";
 
-import { GranularResult } from "../type-interfaces/granular-result";
-import { ExprResult } from "../type-interfaces/expr-result";
+export abstract class ExprAsymmetric extends ExprAggregateFunction {
+  constructor(
+    readonly func: "sum" | "avg",
+    readonly expr: ExpressionDef | undefined,
+    readonly source?: FieldReference
+  ) {
+    super(func, expr);
+    this.has({ source });
+  }
 
-export type ExprValue = ExprResult | GranularResult;
+  defaultFieldName(): undefined | string {
+    if (this.source && this.expr === undefined) {
+      const tag = this.source.nameString;
+      switch (this.func) {
+        case "sum":
+          return `total_${tag}`;
+        case "avg":
+          return `avg_${tag}`;
+      }
+    }
+    return undefined;
+  }
+}

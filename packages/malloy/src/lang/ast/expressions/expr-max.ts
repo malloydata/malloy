@@ -20,8 +20,19 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+import { ExprValue } from "../compound-types/expr-value";
+import { FieldValueType } from "../compound-types/field-value-type";
+import { FT } from "../fragtype-utils";
+import { ExprAggregateFunction } from "./expr-aggregate-function";
+import { ExpressionDef } from "./expression-def";
 
-import { GranularResult } from "../type-interfaces/granular-result";
-import { ExprResult } from "../type-interfaces/expr-result";
+export class ExprMax extends ExprAggregateFunction {
+  legalChildTypes = [FT.numberT, FT.stringT, FT.dateT, FT.timestampT];
+  constructor(expr: ExpressionDef) {
+    super("max", expr);
+  }
 
-export type ExprValue = ExprResult | GranularResult;
+  returns(forExpression: ExprValue): FieldValueType {
+    return forExpression.dataType;
+  }
+}

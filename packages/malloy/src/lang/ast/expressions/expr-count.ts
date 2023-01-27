@@ -21,7 +21,40 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { GranularResult } from "../type-interfaces/granular-result";
-import { ExprResult } from "../type-interfaces/expr-result";
+import { AggregateFragment } from "../../../model/malloy_types";
 
-export type ExprValue = ExprResult | GranularResult;
+import { ExprValue } from "../compound-types/expr-value";
+import { FieldReference } from "../field-references";
+import { FieldSpace } from "../field-space";
+import { ExprAggregateFunction } from "./expr-aggregate-function";
+
+export class ExprCount extends ExprAggregateFunction {
+  elementType = "count";
+  constructor(readonly source?: FieldReference) {
+    super("count");
+    this.has({ source });
+  }
+
+  defaultFieldName(): string | undefined {
+    if (this.source) {
+      return "count_" + this.source.nameString;
+    }
+    return undefined;
+  }
+
+  getExpression(_fs: FieldSpace): ExprValue {
+    const ret: AggregateFragment = {
+      type: "aggregate",
+      function: "count",
+      e: [],
+    };
+    if (this.source) {
+      ret.structPath = this.source.refString;
+    }
+    return {
+      dataType: "number",
+      expressionType: "aggregate",
+      value: [ret],
+    };
+  }
+}

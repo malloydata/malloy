@@ -21,7 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { GranularResult } from "../type-interfaces/granular-result";
-import { ExprResult } from "../type-interfaces/expr-result";
+import { FT } from "../fragtype-utils";
+import { ExprAggregateFunction } from "./expr-aggregate-function";
+import { ExpressionDef } from "./expression-def";
 
-export type ExprValue = ExprResult | GranularResult;
+export class ExprCountDistinct extends ExprAggregateFunction {
+  legalChildTypes = [FT.numberT, FT.stringT, FT.dateT, FT.timestampT];
+  constructor(expr: ExpressionDef) {
+    super("count_distinct", expr);
+  }
+}

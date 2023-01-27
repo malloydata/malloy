@@ -20,8 +20,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+import { BinaryNumeric } from "./binary-numeric";
 
-import { GranularResult } from "../type-interfaces/granular-result";
-import { ExprResult } from "../type-interfaces/expr-result";
-
-export type ExprValue = ExprResult | GranularResult;
+export class ExprMulDiv extends BinaryNumeric<"*" | "/" | "%"> {
+  elementType = "*/%";
+}

@@ -20,8 +20,13 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+import { FieldReference } from "../field-references";
+import { ExprAsymmetric } from "./expr-asymmetric";
+import { ExpressionDef } from "./expression-def";
 
-import { GranularResult } from "../type-interfaces/granular-result";
-import { ExprResult } from "../type-interfaces/expr-result";
-
-export type ExprValue = ExprResult | GranularResult;
+export class ExprSum extends ExprAsymmetric {
+  constructor(expr: ExpressionDef | undefined, source?: FieldReference) {
+    super("sum", expr, source);
+    this.has({ source });
+  }
+}

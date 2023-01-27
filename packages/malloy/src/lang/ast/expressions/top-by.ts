@@ -20,8 +20,29 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+import { By, expressionIsAggregate } from "../../../model/malloy_types";
+import { compressExpr } from "../ast-utils";
+import { FieldSpace } from "../field-space";
+import { MalloyElement } from "../malloy-element";
+import { ExpressionDef } from "./expression-def";
 
-import { GranularResult } from "../type-interfaces/granular-result";
-import { ExprResult } from "../type-interfaces/expr-result";
+export class TopBy extends MalloyElement {
+  elementType = "topBy";
+  constructor(readonly by: string | ExpressionDef) {
+    super();
+    if (by instanceof ExpressionDef) {
+      this.has({ by });
+    }
+  }
 
-export type ExprValue = ExprResult | GranularResult;
+  getBy(fs: FieldSpace): By {
+    if (this.by instanceof ExpressionDef) {
+      const byExpr = this.by.getExpression(fs);
+      if (!expressionIsAggregate(byExpr.expressionType)) {
+        this.log("top by expression must be an aggregate");
+      }
+      return { by: "expression", e: compressExpr(byExpr.value) };
+    }
+    return { by: "name", name: this.by };
+  }
+}
