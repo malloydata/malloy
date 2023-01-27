@@ -21,13 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { cloneDeep } from "lodash";
+
 import * as model from "../../model/malloy_types";
+
 import { mergeFields, nameOf } from "../field-utils";
 import { SpaceEntry } from "./ast-types";
-import { FieldType } from "./type-interfaces/field-type";
+import { ExploreField } from "./compound-types/explore-field";
+import { NestedQuery } from "./compound-types/nested-query";
+import { QueryItem } from "./compound-types/query-item";
 import { ErrorFactory } from "./error-factory";
 import { FieldListEdit } from "./explore-properties/field-list-edit";
-import { RenameField, Renames } from "./explore-properties/renames";
+import { RenameField } from "./explore-properties/renames";
 import { FieldCollectionMember } from "./field-collection-member";
 import { FieldDeclaration } from "./field-declaration";
 import { FieldReference, WildcardFieldReference } from "./field-references";
@@ -48,9 +52,7 @@ import { SpaceSeed } from "./space-seed";
 import { StaticSpace, StructSpaceField } from "./static-space";
 import { opOutputStruct } from "./struct-utils";
 import { TurtleHeadedPipe } from "./turtle-headed-pipe";
-import { ExploreField } from "./compound-types/explore-field";
-import { NestedQuery } from "./compound-types/nested-query";
-import { QueryItem } from "./compound-types/query-item";
+import { FieldType } from "./type-interfaces/field-type";
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
