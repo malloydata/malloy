@@ -21,12 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { errorFor, isGranularResult } from "../ast-utils";
+import { errorFor } from "../ast-utils";
 import { ExprValue } from "../compound-types/expr-value";
 import { FieldSpace } from "../field-space";
 import { FT } from "../fragtype-utils";
 import { ExprTime, Range } from "../time-expressions";
-import { castDateToTimestamp, resolution, timeOffset } from "../time-utils";
+import {
+  castDateToTimestamp,
+  isGranularResult,
+  resolution,
+  timeOffset,
+} from "../time-utils";
 import { ExpressionDef } from "./expression-def";
 import { Timeframe } from "./time-frame";
 

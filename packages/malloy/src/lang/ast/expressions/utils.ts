@@ -21,9 +21,56 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Expr } from "../../../model/malloy_types";
+import { Expr, Fragment, isAtomicFieldType } from "../../../model/malloy_types";
 
 import { ExprValue } from "../compound-types/expr-value";
+import { ExpressionValueType } from "../compound-types/expression-value-type";
+import { FieldValueType } from "../compound-types/field-value-type";
+
+export function isExpressionValueType(
+  fv: FieldValueType
+): fv is ExpressionValueType {
+  return (
+    isAtomicFieldType(fv) ||
+    ["null", "unknown", "duration", "regular expression"].includes(fv)
+  );
+}
+
+/**
+ * If the passed expresion is not a single term, wrap it in parens
+ * @param f expression fragment
+ */
+function term(f: Fragment[]): Fragment[] {
+  if (f.length > 1) {
+    return ["(", ...f, ")"];
+  }
+  if (f.length === 0) {
+    // Trying to compose a binary expresion with an entity that has no value
+    // this should at least cause the generated SQL to error, but likely
+    // there has already been a semantic error reported.
+    return ["__MISSING_VALUE__"];
+  }
+  return f;
+}
+
+/**
+ * Compose a binary expression. Tries to write them safely and concisely
+ * @param left
+ * @param op
+ * @param right
+ * @returns Fragment list of the composed expression
+ */
+export function compose(
+  left: Fragment[],
+  op: string,
+  right: Fragment[]
+): Fragment[] {
+  const opAlpha = op.match(/^[A-Za-z]/);
+  const leftSpace = left.length === 1 && opAlpha ? " " : "";
+  const rightSpace = right.length === 1 && opAlpha ? " " : "";
+  const newOp = leftSpace + op + rightSpace;
+  return [...term(left), newOp, ...term(right)];
+}
 
 function nullCompare(
   left: ExprValue,

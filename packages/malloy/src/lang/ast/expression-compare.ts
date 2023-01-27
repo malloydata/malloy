@@ -22,13 +22,15 @@
  */
 
 import { maxExpressionType } from "../../model/malloy_types";
+import { errorFor } from "./ast-utils";
 import { Comparison } from "./comparators";
-import { FT } from "./fragtype-utils";
 import { ExprValue } from "./compound-types/expr-value";
-import { compose, errorFor, isGranularResult } from "./ast-utils";
 import { ExpressionDef } from "./expressions/expression-def";
+import { compose } from "./expressions/utils";
 import { FieldSpace } from "./field-space";
+import { FT } from "./fragtype-utils";
 import { ExprGranularTime } from "./time-expressions";
+import { isGranularResult } from "./time-utils";
 
 export abstract class BinaryBoolean<
   opType extends string

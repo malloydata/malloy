@@ -22,13 +22,17 @@
  */
 
 import {
-  TimestampUnit,
-  Expr,
-  TimeFieldType,
-  TypecastFragment,
   AtomicFieldType,
+  Expr,
+  Fragment,
+  TimeFieldType,
   TimeLiteralFragment,
+  TimestampUnit,
+  TypecastFragment,
 } from "../../model/malloy_types";
+
+import { compressExpr } from "./ast-utils";
+import { ExprValue } from "./compound-types/expr-value";
 import { GranularResult } from "./type-interfaces/granular-result";
 import { TimeResult } from "./type-interfaces/time-result";
 
@@ -125,4 +129,57 @@ export function timeLiteral(
     timezone: tz,
   };
   return [fragment];
+}
+
+export function timestampOffset(
+  from: Fragment[],
+  op: "+" | "-",
+  n: Fragment[],
+  timeframe: TimestampUnit,
+  fromNotTimestamp = false
+): Fragment[] {
+  const useDatetime = ["week", "month", "quarter", "year"].includes(timeframe);
+  const add = op === "+" ? "_ADD" : "_SUB";
+  const units = timeframe.toUpperCase();
+  if (useDatetime) {
+    return [
+      `TIMESTAMP(DATETIME${add}(DATETIME(`,
+      ...from,
+      `),INTERVAL `,
+      ...n,
+      ` ${units}))`,
+    ];
+  }
+  const typeFrom = fromNotTimestamp ? ["TIMESTAMP(", ...from, ")"] : from;
+  return compressExpr([
+    `TIMESTAMP${add}(`,
+    ...typeFrom,
+    `,INTERVAL `,
+    ...n,
+    ` ${units})`,
+  ]);
+}
+
+export function isGranularResult(v: ExprValue): v is GranularResult {
+  if (v.dataType !== "date" && v.dataType !== "timestamp") {
+    return false;
+  }
+  return (v as GranularResult).timeframe !== undefined;
+}
+
+export function dateOffset(
+  from: Fragment[],
+  op: "+" | "-",
+  n: Fragment[],
+  timeframe: TimestampUnit
+): Fragment[] {
+  const add = op === "+" ? "_ADD" : "_SUB";
+  const units = timeframe.toUpperCase();
+  return compressExpr([
+    `DATE${add}(`,
+    ...from,
+    `,INTERVAL `,
+    ...n,
+    ` ${units})`,
+  ]);
 }
