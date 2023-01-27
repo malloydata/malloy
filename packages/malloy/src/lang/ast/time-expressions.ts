@@ -29,13 +29,13 @@ import {
   maxExpressionType,
   mkExpr,
   TimeFieldType,
-  TimestampUnit,
+  TimestampUnit
 } from "../../model/malloy_types";
 
-import { compressExpr, errorFor } from "./ast-utils";
+import { errorFor } from "./ast-utils";
 import { ExprValue } from "./compound-types/expr-value";
 import { ExpressionDef } from "./expressions/expression-def";
-import { compose } from "./expressions/utils";
+import { compose, compressExpr } from "./expressions/utils";
 import { FieldSpace } from "./field-space";
 import { FT } from "./fragtype-utils";
 import { timeOffset } from "./time-utils";

@@ -20,11 +20,11 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { compressExpr } from "../ast-utils";
 import { ExprValue } from "../compound-types/expr-value";
 import { FieldSpace } from "../field-space";
 import { castTo } from "../time-utils";
 import { ExpressionDef } from "./expression-def";
+import { compressExpr } from "./utils";
 
 export type CastType = "string" | "number" | "boolean" | "date" | "timestamp";
 export function isCastType(t: string): t is CastType {

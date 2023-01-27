@@ -23,11 +23,11 @@
 
 import {
   expressionIsCalculation,
-  FilterExpression,
+  FilterExpression
 } from "../../../model/malloy_types";
 
-import { compressExpr } from "../ast-utils";
 import { ExpressionDef } from "../expressions/expression-def";
+import { compressExpr } from "../expressions/utils";
 import { FieldSpace } from "../field-space";
 import { ListOf, MalloyElement } from "../malloy-element";
 

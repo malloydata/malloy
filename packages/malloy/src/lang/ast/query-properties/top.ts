@@ -23,11 +23,11 @@
 
 import {
   By as ModelBy,
-  expressionIsAggregate,
+  expressionIsAggregate
 } from "../../../model/malloy_types";
 
-import { compressExpr } from "../ast-utils";
 import { ExpressionDef } from "../expressions/expression-def";
+import { compressExpr } from "../expressions/utils";
 import { FieldName, FieldSpace } from "../field-space";
 import { MalloyElement } from "../malloy-element";
 

@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { By, expressionIsAggregate } from "../../../model/malloy_types";
-import { compressExpr } from "../ast-utils";
 import { FieldSpace } from "../field-space";
 import { MalloyElement } from "../malloy-element";
 import { ExpressionDef } from "./expression-def";
+import { compressExpr } from "./utils";
 
 export class TopBy extends MalloyElement {
   elementType = "topBy";

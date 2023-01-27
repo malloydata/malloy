@@ -25,7 +25,7 @@ import {
   Expr,
   Fragment,
   isAtomicFieldType,
-  mkExpr,
+  mkExpr
 } from "../../model/malloy_types";
 
 import { Equality } from "./comparators";
@@ -47,28 +47,6 @@ export function errorFor(reason: string): ExprValue {
     expressionType: "scalar",
     value: [`_ERROR_${reason.replace(/ /g, "_")}`],
   };
-}
-
-export function compressExpr(expr: Expr): Expr {
-  // compress all adjacent strings
-  const compressValue: Array<string | Fragment> = [];
-  let buildString;
-  for (const fragment of expr.flat()) {
-    if (typeof fragment === "string") {
-      buildString = buildString ? buildString + fragment : fragment;
-    } else {
-      if (buildString) {
-        compressValue.push(buildString);
-        buildString = undefined;
-      }
-      compressValue.push(fragment);
-    }
-  }
-  if (buildString) {
-    compressValue.push(buildString);
-  }
-
-  return compressValue;
 }
 
 export function nullsafeNot(expr: Expr, op?: Equality): Expr {

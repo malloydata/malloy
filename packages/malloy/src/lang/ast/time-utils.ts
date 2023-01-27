@@ -28,11 +28,11 @@ import {
   TimeFieldType,
   TimeLiteralFragment,
   TimestampUnit,
-  TypecastFragment,
+  TypecastFragment
 } from "../../model/malloy_types";
 
-import { compressExpr } from "./ast-utils";
 import { ExprValue } from "./compound-types/expr-value";
+import { compressExpr } from "./expressions/utils";
 import { GranularResult } from "./type-interfaces/granular-result";
 import { TimeResult } from "./type-interfaces/time-result";
 

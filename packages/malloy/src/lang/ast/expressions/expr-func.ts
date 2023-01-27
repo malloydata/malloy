@@ -24,14 +24,14 @@
 import {
   ExpressionType,
   Fragment,
-  maxExpressionType,
+  maxExpressionType
 } from "../../../model/malloy_types";
 
-import { compressExpr } from "../ast-utils";
 import { ExprValue } from "../compound-types/expr-value";
 import { FieldValueType } from "../compound-types/field-value-type";
 import { FieldSpace } from "../field-space";
 import { ExpressionDef } from "./expression-def";
+import { compressExpr } from "./utils";
 
 export class ExprFunc extends ExpressionDef {
   elementType = "function call()";

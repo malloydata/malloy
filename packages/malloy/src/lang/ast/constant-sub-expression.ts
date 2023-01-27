@@ -22,14 +22,14 @@
  */
 
 import { AtomicFieldType, StructDef } from "../../model/malloy_types";
-import { ExpressionDef } from "./expressions/expression-def";
-import { FieldSpace } from "./field-space";
 import { LookupResult } from "./ast-types";
-import { FieldValueType } from "./compound-types/field-value-type";
-import { ExprValue } from "./compound-types/expr-value";
-import { compressExpr } from "./ast-utils";
-import { ExprCompare } from "./expression-compare";
 import { Comparison } from "./comparators";
+import { ExprValue } from "./compound-types/expr-value";
+import { FieldValueType } from "./compound-types/field-value-type";
+import { ExprCompare } from "./expression-compare";
+import { ExpressionDef } from "./expressions/expression-def";
+import { compressExpr } from "./expressions/utils";
+import { FieldSpace } from "./field-space";
 
 class ConstantFieldSpace implements FieldSpace {
   readonly type = "fieldSpace";

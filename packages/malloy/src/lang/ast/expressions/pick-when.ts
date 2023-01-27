@@ -24,15 +24,16 @@
 import {
   ExpressionType,
   Fragment,
-  maxExpressionType,
+  maxExpressionType
 } from "../../../model/malloy_types";
 
-import { compressExpr, errorFor } from "../ast-utils";
+import { errorFor } from "../ast-utils";
 import { ExprValue } from "../compound-types/expr-value";
 import { FieldSpace } from "../field-space";
 import { FT } from "../fragtype-utils";
 import { MalloyElement } from "../malloy-element";
 import { ExpressionDef } from "./expression-def";
+import { compressExpr } from "./utils";
 
 interface Choice {
   pick: ExprValue;
