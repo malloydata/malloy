@@ -24,7 +24,7 @@
 import * as lite from "vega-lite";
 import { DataColumn, Explore, Field } from "@malloydata/malloy";
 import { HTMLChartRenderer } from "./chart";
-import { cloneDeep } from "lodash";
+import cloneDeep from "lodash/cloneDeep";
 import { getColorScale } from "./utils";
 import { StyleDefaults } from "../data_styles";
 

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { cloneDeep } from "lodash";
+import cloneDeep from "lodash/cloneDeep";
 import * as model from "../../../model/malloy_types";
 import { nameOf } from "../../field-utils";
 import { SpaceEntry } from "../types/space-entry";
