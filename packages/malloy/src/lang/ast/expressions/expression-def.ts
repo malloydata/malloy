@@ -25,23 +25,22 @@ import {
   Expr,
   isTimeFieldType,
   maxExpressionType,
-  TimestampUnit,
+  TimestampUnit
 } from "../../../model/malloy_types";
-import { MalloyElement } from "../malloy-element";
-import { FieldSpace } from "../field-space";
-import { Equality } from "../ast-types";
-import { FieldValueType } from "../compound-types/field-value-type";
-import { ExprValue } from "../compound-types/expr-value";
+
 import {
   compose,
   errorFor,
-  isComparison,
-  isEquality,
   isGranularResult,
+  nullsafeNot
 } from "../ast-utils";
-import { castTimestampToDate, timeOffset, timeResult } from "../time-utils";
-import { nullsafeNot } from "../apply-expr";
+import { Equality, isComparison, isEquality } from "../comparators";
+import { ExprValue } from "../compound-types/expr-value";
+import { FieldValueType } from "../compound-types/field-value-type";
+import { FieldSpace } from "../field-space";
 import { FT } from "../fragtype-utils";
+import { MalloyElement } from "../malloy-element";
+import { castTimestampToDate, timeOffset, timeResult } from "../time-utils";
 
 class TypeMismatch extends Error {}
 

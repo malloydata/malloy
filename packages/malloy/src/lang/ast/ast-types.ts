@@ -25,24 +25,6 @@ import { FieldType } from "./type-interfaces/field-type";
 
 export type StageFieldType = "turtle";
 
-export enum Equality {
-  Like = "~",
-  NotLike = "!~",
-  Equals = "=",
-  NotEquals = "!=",
-}
-
-export enum Comparison {
-  Like = "~",
-  NotLike = "!~",
-  LessThan = "<",
-  LessThanOrEqualTo = "<=",
-  EqualTo = "=",
-  GreaterThan = ">",
-  GreaterThanOrEqualTo = ">=",
-  NotEqualTo = "!=",
-}
-
 export abstract class SpaceEntry {
   abstract type(): FieldType;
   abstract refType: "field" | "parameter";

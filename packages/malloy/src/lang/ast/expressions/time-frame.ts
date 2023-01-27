@@ -20,13 +20,19 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { Comparison } from "../comparators";
-import { ExprCompare } from "../expression-compare";
-import { ExpressionDef } from "./expression-def";
+import { isTimestampUnit, TimestampUnit } from "../../../model/malloy_types";
 
-export class Apply extends ExprCompare {
-  elementType = "apply";
-  constructor(readonly left: ExpressionDef, readonly right: ExpressionDef) {
-    super(left, Comparison.EqualTo, right);
+import { MalloyElement } from "../malloy-element";
+
+export class Timeframe extends MalloyElement {
+  elementType = "timeframe";
+  readonly text: TimestampUnit;
+  constructor(timeframeName: string) {
+    super();
+    let tf = timeframeName.toLowerCase();
+    if (tf.endsWith("s")) {
+      tf = tf.slice(0, -1);
+    }
+    this.text = isTimestampUnit(tf) ? tf : "second";
   }
 }

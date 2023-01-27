@@ -20,13 +20,29 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { Comparison } from "../comparators";
-import { ExprCompare } from "../expression-compare";
-import { ExpressionDef } from "./expression-def";
 
-export class Apply extends ExprCompare {
-  elementType = "apply";
-  constructor(readonly left: ExpressionDef, readonly right: ExpressionDef) {
-    super(left, Comparison.EqualTo, right);
-  }
+export enum Equality {
+  Like = "~",
+  NotLike = "!~",
+  Equals = "=",
+  NotEquals = "!=",
+}
+
+export enum Comparison {
+  Like = "~",
+  NotLike = "!~",
+  LessThan = "<",
+  LessThanOrEqualTo = "<=",
+  EqualTo = "=",
+  GreaterThan = ">",
+  GreaterThanOrEqualTo = ">=",
+  NotEqualTo = "!=",
+}
+
+export function isEquality(s: string): s is Equality {
+  return Object.values(Equality).includes(s as Equality);
+}
+
+export function isComparison(s: string): s is Comparison {
+  return Object.values(Comparison).includes(s as Comparison);
 }

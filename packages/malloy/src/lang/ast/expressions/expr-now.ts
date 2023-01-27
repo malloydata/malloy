@@ -20,13 +20,24 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { Comparison } from "../comparators";
-import { ExprCompare } from "../expression-compare";
+
+import { ExprValue } from "../compound-types/expr-value";
+import { FieldSpace } from "../field-space";
 import { ExpressionDef } from "./expression-def";
 
-export class Apply extends ExprCompare {
-  elementType = "apply";
-  constructor(readonly left: ExpressionDef, readonly right: ExpressionDef) {
-    super(left, Comparison.EqualTo, right);
+export class ExprNow extends ExpressionDef {
+  elementType = "timestamp";
+
+  getExpression(_fs: FieldSpace): ExprValue {
+    return {
+      dataType: "timestamp",
+      expressionType: "scalar",
+      value: [
+        {
+          type: "dialect",
+          function: "now",
+        },
+      ],
+    };
   }
 }

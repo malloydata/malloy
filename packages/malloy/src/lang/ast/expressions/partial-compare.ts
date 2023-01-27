@@ -20,13 +20,32 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+import { errorFor } from "../ast-utils";
+import { Comparison } from "../comparators";
+import { ExprValue } from "../compound-types/expr-value";
+import { FieldSpace } from "../field-space";
+import { ExpressionDef } from "./expression-def";
 
-import { Expr, mkExpr } from "../../model/malloy_types";
-import { Equality } from "./ast-types";
-
-export function nullsafeNot(expr: Expr, op?: Equality): Expr {
-  if (op === undefined || op === "!=" || op === "!~") {
-    return mkExpr`COALESCE(NOT(${expr}),FALSE)`;
+export class PartialCompare extends ExpressionDef {
+  elementType = "<=> a";
+  constructor(readonly op: Comparison, readonly right: ExpressionDef) {
+    super({ right });
   }
-  return expr;
+
+  granular(): boolean {
+    return this.right.granular();
+  }
+
+  apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
+    return this.right.apply(fs, this.op, expr);
+  }
+
+  requestExpression(_fs: FieldSpace): ExprValue | undefined {
+    return undefined;
+  }
+
+  getExpression(_fs: FieldSpace): ExprValue {
+    this.log(`Partial comparison does not have a value`);
+    return errorFor("no value for partial compare");
+  }
 }

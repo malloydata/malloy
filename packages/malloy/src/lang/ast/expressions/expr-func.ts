@@ -21,29 +21,50 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { errorFor, nullsafeNot } from "../ast-utils";
-import { ExprValue } from "../compound-types/expr-value";
-import { FieldSpace } from "../field-space";
-import { FT } from "../fragtype-utils";
-import { ExpressionDef } from "./expression-def";
-import { Unary } from "./unary";
+import {
+  ExpressionType,
+  Fragment,
+  maxExpressionType,
+} from "../../../model/malloy_types";
 
-export class ExprNot extends Unary {
-  elementType = "not";
-  legalChildTypes = [FT.boolT, FT.nullT];
-  constructor(expr: ExpressionDef) {
-    super(expr);
+import { compressExpr } from "../ast-utils";
+import { ExprValue } from "../compound-types/expr-value";
+import { FieldValueType } from "../compound-types/field-value-type";
+import { FieldSpace } from "../field-space";
+import { ExpressionDef } from "./expression-def";
+
+export class ExprFunc extends ExpressionDef {
+  elementType = "function call()";
+  constructor(readonly name: string, readonly args: ExpressionDef[]) {
+    super({ args });
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    const notThis = this.expr.getExpression(fs);
-    if (this.typeCheck(this.expr, notThis)) {
-      return {
-        ...notThis,
-        dataType: "boolean",
-        value: nullsafeNot(notThis.value),
-      };
+    let expressionType: ExpressionType = "scalar";
+    let collectType: FieldValueType | undefined;
+    const funcCall: Fragment[] = [`${this.name}(`];
+    for (const fexpr of this.args) {
+      const expr = fexpr.getExpression(fs);
+      expressionType = maxExpressionType(expressionType, expr.expressionType);
+
+      if (collectType) {
+        funcCall.push(",");
+      } else {
+        collectType = expr.dataType;
+      }
+      funcCall.push(...expr.value);
     }
-    return errorFor("not requires boolean");
+    funcCall.push(")");
+
+    const dialect = fs.dialectObj();
+    const dataType =
+      dialect?.getFunctionInfo(this.name)?.returnType ??
+      collectType ??
+      "number";
+    return {
+      dataType: dataType,
+      expressionType,
+      value: compressExpr(funcCall),
+    };
   }
 }

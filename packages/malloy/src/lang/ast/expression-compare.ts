@@ -22,7 +22,7 @@
  */
 
 import { maxExpressionType } from "../../model/malloy_types";
-import { Comparison } from "./ast-types";
+import { Comparison } from "./comparators";
 import { FT } from "./fragtype-utils";
 import { ExprValue } from "./compound-types/expr-value";
 import { compose, errorFor, isGranularResult } from "./ast-utils";

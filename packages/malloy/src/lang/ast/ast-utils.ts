@@ -21,25 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Comparison, Equality } from "./ast-types";
-import { FieldValueType } from "./compound-types/field-value-type";
-import { GranularResult } from "./type-interfaces/granular-result";
-import { ExpressionValueType } from "./compound-types/expression-value-type";
-import { ExprValue } from "./compound-types/expr-value";
 import {
   Expr,
   Fragment,
   isAtomicFieldType,
+  mkExpr,
   TimestampUnit,
 } from "../../model/malloy_types";
 
-export function isEquality(s: string): s is Equality {
-  return Object.values(Equality).includes(s as Equality);
-}
-
-export function isComparison(s: string): s is Comparison {
-  return Object.values(Comparison).includes(s as Comparison);
-}
+import { Comparison, Equality } from "./comparators";
+import { ExprValue } from "./compound-types/expr-value";
+import { ExpressionValueType } from "./compound-types/expression-value-type";
+import { FieldValueType } from "./compound-types/field-value-type";
+import { GranularResult } from "./type-interfaces/granular-result";
 
 /**
  * Compose a binary expression. Tries to write them safely and concisely
@@ -175,4 +169,11 @@ export function isGranularResult(v: ExprValue): v is GranularResult {
     return false;
   }
   return (v as GranularResult).timeframe !== undefined;
+}
+
+export function nullsafeNot(expr: Expr, op?: Equality): Expr {
+  if (op === undefined || op === "!=" || op === "!~") {
+    return mkExpr`COALESCE(NOT(${expr}),FALSE)`;
+  }
+  return expr;
 }
