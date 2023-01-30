@@ -92,6 +92,7 @@ export {
   CSVWriter,
   JSONWriter,
   DataWriter,
+  Parse,
 } from "./malloy";
 export type {
   Explore,
