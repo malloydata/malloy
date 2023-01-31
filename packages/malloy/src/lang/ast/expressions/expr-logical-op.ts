@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { BinaryBoolean } from "../expression-compare";
+import { BinaryBoolean } from "./binary-boolean";
 import { FT } from "../fragtype-utils";
 
 export class ExprLogicalOp extends BinaryBoolean<"and" | "or"> {

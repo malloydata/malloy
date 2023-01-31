@@ -35,8 +35,8 @@ import {
   DocumentLocation,
 } from "../../model/malloy_types";
 import { MalloyElement } from "../ast";
-import { NameSpace } from "../ast/type-interfaces/name-space";
-import { ModelEntry } from "../ast/type-interfaces/model-entry";
+import { NameSpace } from "../ast/types/name-space";
+import { ModelEntry } from "../ast/types/model-entry";
 import { MalloyTranslator, TranslateResponse } from "../parse-malloy";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types

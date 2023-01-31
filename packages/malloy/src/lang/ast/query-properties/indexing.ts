@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { MalloyElement } from "../malloy-element";
-import { FieldReferences } from "../field-references";
-import { FieldName } from "../field-space";
+import { MalloyElement } from "../types/malloy-element";
+import { FieldReferences } from "../query-items/field-references";
+import { FieldName } from "../types/field-space";
 
 export class Index extends MalloyElement {
   elementType = "index";

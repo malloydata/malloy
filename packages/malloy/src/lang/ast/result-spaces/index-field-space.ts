@@ -24,7 +24,10 @@
 import { IndexSegment, PipeSegment } from "../../../model/malloy_types";
 
 import { ResultSpace } from "../ast-main";
-import { FieldReference, WildcardFieldReference } from "../field-references";
+import {
+  FieldReference,
+  WildcardFieldReference,
+} from "../query-items/field-references";
 
 export class IndexFieldSpace extends ResultSpace {
   readonly segmentType = "index";

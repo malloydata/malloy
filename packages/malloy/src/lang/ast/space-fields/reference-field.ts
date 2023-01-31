@@ -23,10 +23,10 @@
 
 import { QueryFieldDef } from "../../../model/malloy_types";
 
-import { FieldType } from "../type-interfaces/field-type";
-import { FieldReference } from "../field-references";
-import { FieldSpace } from "../field-space";
-import { SpaceField } from "../space-field";
+import { FieldType } from "../types/field-type";
+import { FieldReference } from "../query-items/field-references";
+import { FieldSpace } from "../types/field-space";
+import { SpaceField } from "../types/space-field";
 
 export class ReferenceField extends SpaceField {
   constructor(readonly fieldRef: FieldReference) {

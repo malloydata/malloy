@@ -23,10 +23,10 @@
 
 import { maxExpressionType } from "../../../model/malloy_types";
 import { errorFor } from "../ast-utils";
-import { ExprValue } from "../compound-types/expr-value";
-import { BinaryBoolean } from "../expression-compare";
-import { FieldSpace } from "../field-space";
-import { ExpressionDef } from "./expression-def";
+import { ExprValue } from "../types/expr-value";
+import { BinaryBoolean } from "./binary-boolean";
+import { FieldSpace } from "../types/field-space";
+import { ExpressionDef } from "../types/expression-def";
 import { compose } from "./utils";
 
 export class ExprAlternationTree extends BinaryBoolean<"|" | "&"> {

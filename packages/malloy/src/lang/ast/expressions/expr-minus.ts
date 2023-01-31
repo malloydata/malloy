@@ -22,10 +22,10 @@
  */
 
 import { errorFor } from "../ast-utils";
-import { ExprValue } from "../compound-types/expr-value";
-import { FieldSpace } from "../field-space";
+import { ExprValue } from "../types/expr-value";
+import { FieldSpace } from "../types/field-space";
 import { FT } from "../fragtype-utils";
-import { ExpressionDef } from "./expression-def";
+import { ExpressionDef } from "../types/expression-def";
 
 export class ExprMinus extends ExpressionDef {
   elementType = "unary minus";

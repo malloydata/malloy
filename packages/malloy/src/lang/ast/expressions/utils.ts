@@ -21,11 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Expr, Fragment, isAtomicFieldType } from "../../../model/malloy_types";
+import {
+  Expr,
+  Fragment,
+  isAtomicFieldType,
+  mkExpr,
+} from "../../../model/malloy_types";
 
-import { ExprValue } from "../compound-types/expr-value";
-import { ExpressionValueType } from "../compound-types/expression-value-type";
-import { FieldValueType } from "../compound-types/field-value-type";
+import { Equality } from "../types/equality";
+import { ExprValue } from "../types/expr-value";
+import { ExpressionValueType } from "../types/expression-value-type";
+import { FieldValueType } from "../types/field-value-type";
 
 export function isExpressionValueType(
   fv: FieldValueType
@@ -111,4 +117,11 @@ export function compressExpr(expr: Expr): Expr {
   }
 
   return compressValue;
+}
+
+export function nullsafeNot(expr: Expr, op?: Equality): Expr {
+  if (op === undefined || op === "!=" || op === "!~") {
+    return mkExpr`COALESCE(NOT(${expr}),FALSE)`;
+  }
+  return expr;
 }

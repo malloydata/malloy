@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldCollectionMember } from "../field-collection-member";
-import { ListOf } from "../malloy-element";
+import { FieldCollectionMember } from "../types/field-collection-member";
+import { ListOf } from "../types/malloy-element";
 
 export class ProjectStatement extends ListOf<FieldCollectionMember> {
   constructor(members: FieldCollectionMember[]) {

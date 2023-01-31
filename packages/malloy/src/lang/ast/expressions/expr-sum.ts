@@ -20,9 +20,9 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { FieldReference } from "../field-references";
+import { FieldReference } from "../query-items/field-references";
 import { ExprAsymmetric } from "./expr-asymmetric";
-import { ExpressionDef } from "./expression-def";
+import { ExpressionDef } from "../types/expression-def";
 
 export class ExprSum extends ExprAsymmetric {
   constructor(expr: ExpressionDef | undefined, source?: FieldReference) {

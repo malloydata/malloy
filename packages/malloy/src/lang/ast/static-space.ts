@@ -25,15 +25,17 @@ import { Dialect } from "../../dialect/dialect";
 import { getDialect } from "../../dialect/dialect_map";
 import { FieldDef, isTurtleDef, StructDef } from "../../model/malloy_types";
 
-import { FieldMap, LookupResult, SpaceEntry } from "./ast-types";
-import { FieldType } from "./type-interfaces/field-type";
-import { FieldName, FieldSpace } from "./field-space";
-import { SpaceField } from "./space-field";
+import { SpaceEntry } from "./types/space-entry";
+import { FieldMap } from "./types/field-map";
+import { LookupResult } from "./types/lookup-result";
+import { FieldName, FieldSpace } from "./types/field-space";
 import { ColumnSpaceField } from "./space-fields/column-space-field";
 import { QueryFieldStruct } from "./space-fields/query-field-struct";
 import { DefinedParameter } from "./space-parameters/defined-parameter";
+import { FieldType } from "./types/field-type";
+import { SpaceField } from "./types/space-field";
 
-// TODO(maden): Should this be categorized with the other space fields?
+// TODO(maden): These two classes are intertwined, we may want to look into decoupling them.
 export class StructSpaceField extends SpaceField {
   protected space?: FieldSpace;
   constructor(protected sourceDef: StructDef) {

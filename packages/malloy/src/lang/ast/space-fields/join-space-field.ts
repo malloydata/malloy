@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldSpace } from "../field-space";
+import { FieldSpace } from "../types/field-space";
 import { Join } from "../query-properties/joins";
 import { StructSpaceField } from "../static-space";
 

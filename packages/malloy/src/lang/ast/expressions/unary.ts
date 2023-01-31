@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExpressionDef } from "./expression-def";
+import { ExpressionDef } from "../types/expression-def";
 
 export abstract class Unary extends ExpressionDef {
   constructor(readonly expr: ExpressionDef) {

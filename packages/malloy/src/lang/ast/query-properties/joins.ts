@@ -22,11 +22,15 @@
  */
 
 import { Expr, isJoinOn, StructDef } from "../../../model/malloy_types";
-import { ExpressionDef } from "../expressions/expression-def";
+import { ExpressionDef } from "../types/expression-def";
 import { compressExpr } from "../expressions/utils";
-import { FieldSpace } from "../field-space";
-import { Mallobj } from "../mallobj";
-import { ListOf, MalloyElement, ModelEntryReference } from "../malloy-element";
+import { FieldSpace } from "../types/field-space";
+import { Mallobj } from "../elements/mallobj";
+import {
+  ListOf,
+  MalloyElement,
+  ModelEntryReference,
+} from "../types/malloy-element";
 
 export abstract class Join extends MalloyElement {
   abstract name: ModelEntryReference;

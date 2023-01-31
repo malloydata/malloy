@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldDeclaration } from "../field-declaration";
-import { ListOf } from "../malloy-element";
-import { QueryItem } from "../compound-types/query-item";
+import { FieldDeclaration } from "../query-items/field-declaration";
+import { ListOf } from "../types/malloy-element";
+import { QueryItem } from "../types/query-item";
 
 export class GroupBy extends ListOf<QueryItem> {
   constructor(members: QueryItem[]) {

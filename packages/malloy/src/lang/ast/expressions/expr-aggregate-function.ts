@@ -26,13 +26,13 @@ import {
   isAtomicFieldType,
 } from "../../../model/malloy_types";
 import { errorFor } from "../ast-utils";
-import { ExprValue } from "../compound-types/expr-value";
-import { FieldValueType } from "../compound-types/field-value-type";
-import { FieldReference } from "../field-references";
-import { FieldSpace } from "../field-space";
+import { ExprValue } from "../types/expr-value";
+import { FieldValueType } from "../types/field-value-type";
+import { FieldReference } from "../query-items/field-references";
+import { FieldSpace } from "../types/field-space";
 import { FT } from "../fragtype-utils";
 import { StructSpaceField } from "../static-space";
-import { ExpressionDef } from "./expression-def";
+import { ExpressionDef } from "../types/expression-def";
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;

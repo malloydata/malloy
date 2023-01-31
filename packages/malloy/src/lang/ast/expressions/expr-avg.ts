@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExpressionDef } from "./expression-def";
-import { FieldReference } from "../field-references";
+import { ExpressionDef } from "../types/expression-def";
+import { FieldReference } from "../query-items/field-references";
 import { ExprAsymmetric } from "./expr-asymmetric";
 
 export class ExprAvg extends ExprAsymmetric {

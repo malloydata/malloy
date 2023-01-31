@@ -24,7 +24,7 @@
 import { QueryFieldDef, TurtleDef } from "../../../model/malloy_types";
 
 import { QueryField } from "./query-space-field";
-import { FieldSpace } from "../field-space";
+import { FieldSpace } from "../types/field-space";
 
 export class QueryFieldStruct extends QueryField {
   constructor(fs: FieldSpace, protected turtleDef: TurtleDef) {

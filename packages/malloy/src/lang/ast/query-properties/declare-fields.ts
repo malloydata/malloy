@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldDeclaration } from "../field-declaration";
-import { ListOf } from "../malloy-element";
+import { FieldDeclaration } from "../query-items/field-declaration";
+import { ListOf } from "../types/malloy-element";
 
 export class DeclareFields extends ListOf<FieldDeclaration> {
   constructor(fields: FieldDeclaration[], fieldType = "declare") {

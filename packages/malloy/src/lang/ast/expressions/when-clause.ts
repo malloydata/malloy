@@ -20,9 +20,9 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { ExprValue } from "../compound-types/expr-value";
-import { FieldSpace } from "../field-space";
-import { ExpressionDef } from "./expression-def";
+import { ExprValue } from "../types/expr-value";
+import { FieldSpace } from "../types/field-space";
+import { ExpressionDef } from "../types/expression-def";
 
 export class WhenClause extends ExpressionDef {
   elementType = "when clause";

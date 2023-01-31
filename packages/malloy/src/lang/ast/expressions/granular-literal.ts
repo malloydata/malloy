@@ -29,12 +29,13 @@ import {
   TimestampUnit,
 } from "../../../model/malloy_types";
 
-import { ExprValue } from "../compound-types/expr-value";
-import { FieldSpace } from "../field-space";
-import { ExprTime, Range } from "../time-expressions";
+import { ExprValue } from "../types/expr-value";
+import { FieldSpace } from "../types/field-space";
+import { Range } from "./range";
+import { ExprTime } from "./expr-time";
 import { timeLiteral } from "../time-utils";
-import { TimeResult } from "../type-interfaces/time-result";
-import { ExpressionDef } from "./expression-def";
+import { TimeResult } from "../types/time-result";
+import { ExpressionDef } from "../types/expression-def";
 
 /**
  * GranularTime made from a literal. Funky because it doesn't know if it

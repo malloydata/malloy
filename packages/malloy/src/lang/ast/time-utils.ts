@@ -28,13 +28,12 @@ import {
   TimeFieldType,
   TimeLiteralFragment,
   TimestampUnit,
-  TypecastFragment
+  TypecastFragment,
 } from "../../model/malloy_types";
 
-import { ExprValue } from "./compound-types/expr-value";
 import { compressExpr } from "./expressions/utils";
-import { GranularResult } from "./type-interfaces/granular-result";
-import { TimeResult } from "./type-interfaces/time-result";
+import { GranularResult } from "./types/granular-result";
+import { TimeResult } from "./types/time-result";
 
 export function timeOffset(
   timeType: TimeFieldType,
@@ -158,13 +157,6 @@ export function timestampOffset(
     ...n,
     ` ${units})`,
   ]);
-}
-
-export function isGranularResult(v: ExprValue): v is GranularResult {
-  if (v.dataType !== "date" && v.dataType !== "timestamp") {
-    return false;
-  }
-  return (v as GranularResult).timeframe !== undefined;
 }
 
 export function dateOffset(

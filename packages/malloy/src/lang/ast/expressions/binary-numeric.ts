@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExprValue } from "../compound-types/expr-value";
-import { FieldSpace } from "../field-space";
+import { ExprValue } from "../types/expr-value";
+import { FieldSpace } from "../types/field-space";
 import { FT } from "../fragtype-utils";
-import { ExpressionDef } from "./expression-def";
+import { ExpressionDef } from "../types/expression-def";
 
 export abstract class BinaryNumeric<
   opType extends string

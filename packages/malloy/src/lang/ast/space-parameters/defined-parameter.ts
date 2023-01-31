@@ -23,8 +23,8 @@
 
 import { Parameter } from "../../../model/malloy_types";
 
-import { FieldType } from "../type-interfaces/field-type";
-import { SpaceParam } from "../space-param";
+import { FieldType } from "../types/field-type";
+import { SpaceParam } from "../types/space-param";
 
 export class DefinedParameter extends SpaceParam {
   constructor(readonly paramDef: Parameter) {

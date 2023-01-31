@@ -20,9 +20,10 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { Comparison } from "../comparators";
-import { ExprCompare } from "../expression-compare";
-import { ExpressionDef } from "./expression-def";
+
+import { Comparison } from "../types/comparison";
+import { ExprCompare } from "./expr-compare";
+import { ExpressionDef } from "../types/expression-def";
 
 export class Apply extends ExprCompare {
   elementType = "apply";

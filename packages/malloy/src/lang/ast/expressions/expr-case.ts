@@ -28,11 +28,11 @@ import {
 } from "../../../model/malloy_types";
 
 import { errorFor } from "../ast-utils";
-import { ExprValue } from "../compound-types/expr-value";
-import { FieldSpace } from "../field-space";
+import { ExprValue } from "../types/expr-value";
+import { FieldSpace } from "../types/field-space";
 import { FT } from "../fragtype-utils";
-import { FragType } from "../type-interfaces/frag-type";
-import { ExpressionDef } from "./expression-def";
+import { FragType } from "../types/frag-type";
+import { ExpressionDef } from "../types/expression-def";
 import { WhenClause } from "./when-clause";
 
 export class ExprCase extends ExpressionDef {

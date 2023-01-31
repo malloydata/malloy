@@ -23,9 +23,9 @@
 
 import { Parameter } from "../../../model/malloy_types";
 
-import { FieldType } from "../type-interfaces/field-type";
-import { HasParameter } from "../has-parameter";
-import { SpaceParam } from "../space-param";
+import { FieldType } from "../types/field-type";
+import { HasParameter } from "../parameters/has-parameter";
+import { SpaceParam } from "../types/space-param";
 
 export class AbstractParameter extends SpaceParam {
   constructor(readonly astParam: HasParameter) {

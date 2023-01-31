@@ -23,13 +23,13 @@
 
 import {
   expressionIsCalculation,
-  FilterExpression
+  FilterExpression,
 } from "../../../model/malloy_types";
 
-import { ExpressionDef } from "../expressions/expression-def";
+import { ExpressionDef } from "../types/expression-def";
 import { compressExpr } from "../expressions/utils";
-import { FieldSpace } from "../field-space";
-import { ListOf, MalloyElement } from "../malloy-element";
+import { FieldSpace } from "../types/field-space";
+import { ListOf, MalloyElement } from "../types/malloy-element";
 
 export class FilterElement extends MalloyElement {
   elementType = "filterElement";

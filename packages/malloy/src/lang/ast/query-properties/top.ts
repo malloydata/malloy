@@ -23,13 +23,13 @@
 
 import {
   By as ModelBy,
-  expressionIsAggregate
+  expressionIsAggregate,
 } from "../../../model/malloy_types";
 
-import { ExpressionDef } from "../expressions/expression-def";
+import { ExpressionDef } from "../types/expression-def";
 import { compressExpr } from "../expressions/utils";
-import { FieldName, FieldSpace } from "../field-space";
-import { MalloyElement } from "../malloy-element";
+import { FieldName, FieldSpace } from "../types/field-space";
+import { MalloyElement } from "../types/malloy-element";
 
 type TopInit = FieldName | ExpressionDef;
 

@@ -23,11 +23,11 @@
 
 import { inspect } from "util";
 
-import { FieldDef, PipeSegment, StructDef } from "../../model/malloy_types";
 import { Segment } from "../../model/malloy_query";
+import { FieldDef, PipeSegment, StructDef } from "../../model/malloy_types";
 
 import { ErrorFactory } from "./error-factory";
-import { MalloyElement } from "./malloy-element";
+import { MalloyElement } from "./types/malloy-element";
 
 export function opOutputStruct(
   logTo: MalloyElement,

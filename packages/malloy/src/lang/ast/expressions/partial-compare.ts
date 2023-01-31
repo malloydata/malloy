@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { errorFor } from "../ast-utils";
-import { Comparison } from "../comparators";
-import { ExprValue } from "../compound-types/expr-value";
-import { FieldSpace } from "../field-space";
-import { ExpressionDef } from "./expression-def";
+import { Comparison } from "../types/comparison";
+import { ExprValue } from "../types/expr-value";
+import { FieldSpace } from "../types/field-space";
+import { ExpressionDef } from "../types/expression-def";
 
 export class PartialCompare extends ExpressionDef {
   elementType = "<=> a";

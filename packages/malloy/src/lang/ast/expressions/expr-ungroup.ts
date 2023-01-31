@@ -27,12 +27,12 @@ import {
 
 import { QuerySpace } from "../ast-main";
 import { errorFor } from "../ast-utils";
-import { ExprValue } from "../compound-types/expr-value";
-import { FieldValueType } from "../compound-types/field-value-type";
-import { DefSpace } from "../field-declaration";
-import { FieldName, FieldSpace } from "../field-space";
+import { ExprValue } from "../types/expr-value";
+import { FieldValueType } from "../types/field-value-type";
+import { DefSpace } from "../query-items/field-declaration";
+import { FieldName, FieldSpace } from "../types/field-space";
 import { FT } from "../fragtype-utils";
-import { ExpressionDef } from "./expression-def";
+import { ExpressionDef } from "../types/expression-def";
 
 export class ExprUngroup extends ExpressionDef {
   legalChildTypes = FT.anyAtomicT;

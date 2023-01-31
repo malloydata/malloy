@@ -25,34 +25,42 @@ import { cloneDeep } from "lodash";
 import * as model from "../../model/malloy_types";
 
 import { mergeFields, nameOf } from "../field-utils";
-import { SpaceEntry } from "./ast-types";
-import { ExploreField } from "./compound-types/explore-field";
-import { NestedQuery } from "./compound-types/nested-query";
-import { QueryItem } from "./compound-types/query-item";
+import { SpaceEntry } from "./types/space-entry";
+import { ExploreField } from "./types/explore-field";
+import { NestedQuery } from "./types/nested-query";
+import { QueryItem } from "./types/query-item";
 import { ErrorFactory } from "./error-factory";
 import { FieldListEdit } from "./explore-properties/field-list-edit";
 import { RenameField } from "./explore-properties/renames";
-import { FieldCollectionMember } from "./field-collection-member";
-import { FieldDeclaration } from "./field-declaration";
-import { FieldReference, WildcardFieldReference } from "./field-references";
-import { FieldName, FieldSpace, isFieldSpace, SourceSpec } from "./field-space";
-import { HasParameter } from "./has-parameter";
-import { MalloyElement, ModelEntryReference } from "./malloy-element";
+import { FieldCollectionMember } from "./types/field-collection-member";
+import { FieldDeclaration } from "./query-items/field-declaration";
+import {
+  FieldReference,
+  WildcardFieldReference,
+} from "./query-items/field-references";
+import {
+  FieldName,
+  FieldSpace,
+  isFieldSpace,
+  SourceSpec,
+} from "./types/field-space";
+import { HasParameter } from "./parameters/has-parameter";
+import { MalloyElement, ModelEntryReference } from "./types/malloy-element";
 import { NestReference } from "./nesting/nest-reference";
 import { Join } from "./query-properties/joins";
-import { SpaceField } from "./space-field";
+import { SpaceField } from "./types/space-field";
 import { JoinSpaceField } from "./space-fields/join-space-field";
 import { QueryField } from "./space-fields/query-space-field";
 import { ReferenceField } from "./space-fields/reference-field";
 import { RenameSpaceField } from "./space-fields/rename-space-field";
 import { WildSpaceField } from "./space-fields/wild-space-field";
-import { SpaceParam } from "./space-param";
+import { SpaceParam } from "./types/space-param";
 import { AbstractParameter } from "./space-parameters/abstract-parameter";
 import { SpaceSeed } from "./space-seed";
 import { StaticSpace, StructSpaceField } from "./static-space";
 import { opOutputStruct } from "./struct-utils";
-import { TurtleHeadedPipe } from "./turtle-headed-pipe";
-import { FieldType } from "./type-interfaces/field-type";
+import { TurtleHeadedPipe } from "./types/turtle-headed-pipe";
+import { FieldType } from "./types/field-type";
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =

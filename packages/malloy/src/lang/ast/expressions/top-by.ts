@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { By, expressionIsAggregate } from "../../../model/malloy_types";
-import { FieldSpace } from "../field-space";
-import { MalloyElement } from "../malloy-element";
-import { ExpressionDef } from "./expression-def";
+import { FieldSpace } from "../types/field-space";
+import { MalloyElement } from "../types/malloy-element";
+import { ExpressionDef } from "../types/expression-def";
 import { compressExpr } from "./utils";
 
 export class TopBy extends MalloyElement {

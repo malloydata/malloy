@@ -22,17 +22,14 @@
  */
 
 import { errorFor } from "../ast-utils";
-import { ExprValue } from "../compound-types/expr-value";
-import { FieldSpace } from "../field-space";
+import { FieldSpace } from "../types/field-space";
 import { FT } from "../fragtype-utils";
-import { ExprTime, Range } from "../time-expressions";
-import {
-  castDateToTimestamp,
-  isGranularResult,
-  resolution,
-  timeOffset,
-} from "../time-utils";
-import { ExpressionDef } from "./expression-def";
+import { castDateToTimestamp, resolution, timeOffset } from "../time-utils";
+import { ExprValue } from "../types/expr-value";
+import { ExpressionDef } from "../types/expression-def";
+import { isGranularResult } from "../types/granular-result";
+import { ExprTime } from "./expr-time";
+import { Range } from "./range";
 import { Timeframe } from "./time-frame";
 
 /**

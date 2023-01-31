@@ -22,8 +22,8 @@
  */
 
 import { OrderBy as ModelOrderBy } from "../../../model/malloy_types";
-import { FieldName, FieldSpace } from "../field-space";
-import { ListOf, MalloyElement } from "../malloy-element";
+import { FieldName, FieldSpace } from "../types/field-space";
+import { ListOf, MalloyElement } from "../types/malloy-element";
 
 export class OrderBy extends MalloyElement {
   elementType = "orderBy";

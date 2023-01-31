@@ -23,7 +23,7 @@
 
 import { FT } from "../fragtype-utils";
 import { ExprAggregateFunction } from "./expr-aggregate-function";
-import { ExpressionDef } from "./expression-def";
+import { ExpressionDef } from "../types/expression-def";
 
 export class ExprCountDistinct extends ExprAggregateFunction {
   legalChildTypes = [FT.numberT, FT.stringT, FT.dateT, FT.timestampT];

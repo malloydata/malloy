@@ -23,9 +23,9 @@
 
 import { AggregateFragment } from "../../../model/malloy_types";
 
-import { ExprValue } from "../compound-types/expr-value";
-import { FieldReference } from "../field-references";
-import { FieldSpace } from "../field-space";
+import { ExprValue } from "../types/expr-value";
+import { FieldReference } from "../query-items/field-references";
+import { FieldSpace } from "../types/field-space";
 import { ExprAggregateFunction } from "./expr-aggregate-function";
 
 export class ExprCount extends ExprAggregateFunction {

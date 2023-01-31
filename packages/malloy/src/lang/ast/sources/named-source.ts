@@ -26,9 +26,9 @@ import {
   StructDef,
   StructRef,
 } from "../../../model";
-import { Mallobj } from "../mallobj";
-import { MalloyElement, ModelEntryReference } from "../malloy-element";
-import { ConstantSubExpression } from "../constant-sub-expression";
+import { Mallobj } from "../elements/mallobj";
+import { MalloyElement, ModelEntryReference } from "../types/malloy-element";
+import { ConstantSubExpression } from "../expressions/constant-sub-expression";
 import { ErrorFactory } from "../error-factory";
 import { castTo } from "../time-utils";
 

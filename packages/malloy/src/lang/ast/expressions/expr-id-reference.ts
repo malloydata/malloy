@@ -23,11 +23,11 @@
 
 import { isConditionParameter } from "../../../model/malloy_types";
 import { errorFor } from "../ast-utils";
-import { ExprValue } from "../compound-types/expr-value";
-import { FieldReference } from "../field-references";
-import { FieldSpace } from "../field-space";
-import { SpaceParam } from "../space-param";
-import { ExpressionDef } from "./expression-def";
+import { ExprValue } from "../types/expr-value";
+import { FieldReference } from "../query-items/field-references";
+import { FieldSpace } from "../types/field-space";
+import { SpaceParam } from "../types/space-param";
+import { ExpressionDef } from "../types/expression-def";
 
 export class ExprIdReference extends ExpressionDef {
   elementType = "ExpressionIdReference";

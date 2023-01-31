@@ -22,7 +22,7 @@
  */
 
 import { TurtleDecl } from "../ast-main";
-import { ListOf } from "../malloy-element";
+import { ListOf } from "../types/malloy-element";
 
 export class Turtles extends ListOf<TurtleDecl> {
   constructor(turtles: TurtleDecl[]) {

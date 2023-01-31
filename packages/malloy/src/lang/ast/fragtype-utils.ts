@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldValueType } from "./compound-types/field-value-type";
-import { FragType } from "./type-interfaces/frag-type";
+import { FieldValueType } from "./types/field-value-type";
+import { FragType } from "./types/frag-type";
 
 function mkFragType(dType: FieldValueType): FragType {
   return { dataType: dType, expressionType: "scalar" };

@@ -23,7 +23,7 @@
 
 import { StructDef } from "../../model/malloy_types";
 
-import { FieldSpace, isFieldSpace, SourceSpec } from "./field-space";
+import { FieldSpace, isFieldSpace, SourceSpec } from "./types/field-space";
 import { StaticSpace } from "./static-space";
 
 /**

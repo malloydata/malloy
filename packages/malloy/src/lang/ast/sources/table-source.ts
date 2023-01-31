@@ -23,7 +23,7 @@
 
 import { StructDef } from "../../../model/malloy_types";
 import { ErrorFactory } from "../error-factory";
-import { Mallobj } from "../mallobj";
+import { Mallobj } from "../elements/mallobj";
 
 export class TableSource extends Mallobj {
   elementType = "tableSource";

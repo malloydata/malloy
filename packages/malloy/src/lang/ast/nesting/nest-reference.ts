@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldReference } from "../field-references";
-import { FieldName } from "../field-space";
+import { FieldReference } from "../query-items/field-references";
+import { FieldName } from "../types/field-space";
 
 export class NestReference extends FieldReference {
   elementType = "nestReference";

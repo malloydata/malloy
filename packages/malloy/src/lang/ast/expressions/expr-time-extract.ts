@@ -29,10 +29,10 @@ import {
 } from "../../../model/malloy_types";
 
 import { errorFor } from "../ast-utils";
-import { ExprValue } from "../compound-types/expr-value";
-import { FieldSpace } from "../field-space";
-import { Range } from "../time-expressions";
-import { ExpressionDef } from "./expression-def";
+import { ExprValue } from "../types/expr-value";
+import { FieldSpace } from "../types/field-space";
+import { Range } from "./range";
+import { ExpressionDef } from "../types/expression-def";
 
 export class ExprTimeExtract extends ExpressionDef {
   elementType = "timeExtract";

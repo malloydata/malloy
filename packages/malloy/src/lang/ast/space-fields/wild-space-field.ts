@@ -23,9 +23,9 @@
 
 import { QueryFieldDef } from "../../../model/malloy_types";
 
-import { FieldType } from "../type-interfaces/field-type";
-import { FieldSpace } from "../field-space";
-import { SpaceField } from "../space-field";
+import { FieldType } from "../types/field-type";
+import { FieldSpace } from "../types/field-space";
+import { SpaceField } from "../types/space-field";
 
 export class WildSpaceField extends SpaceField {
   constructor(readonly wildText: string) {

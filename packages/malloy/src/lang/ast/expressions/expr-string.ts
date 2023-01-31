@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExpressionDef } from "./expression-def";
-import { FieldSpace } from "../field-space";
-import { ExprValue } from "../compound-types/expr-value";
+import { ExpressionDef } from "../types/expression-def";
+import { FieldSpace } from "../types/field-space";
+import { ExprValue } from "../types/expr-value";
 import { FT } from "../fragtype-utils";
 
 export class ExprString extends ExpressionDef {

@@ -22,7 +22,7 @@
  */
 import { isTimestampUnit, TimestampUnit } from "../../../model/malloy_types";
 
-import { MalloyElement } from "../malloy-element";
+import { MalloyElement } from "../types/malloy-element";
 
 export class Timeframe extends MalloyElement {
   elementType = "timeframe";

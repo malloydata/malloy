@@ -20,11 +20,11 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { ExprValue } from "../compound-types/expr-value";
-import { FieldValueType } from "../compound-types/field-value-type";
+import { ExprValue } from "../types/expr-value";
+import { FieldValueType } from "../types/field-value-type";
 import { FT } from "../fragtype-utils";
 import { ExprAggregateFunction } from "./expr-aggregate-function";
-import { ExpressionDef } from "./expression-def";
+import { ExpressionDef } from "../types/expression-def";
 
 export class ExprMin extends ExprAggregateFunction {
   legalChildTypes = [FT.numberT, FT.stringT, FT.dateT, FT.timestampT];

@@ -21,17 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  Expr,
-  Fragment,
-  isAtomicFieldType,
-  mkExpr
-} from "../../model/malloy_types";
-
-import { Equality } from "./comparators";
-import { ExprValue } from "./compound-types/expr-value";
-import { ExpressionValueType } from "./compound-types/expression-value-type";
-import { FieldValueType } from "./compound-types/field-value-type";
+import { ExprValue } from "./types/expr-value";
 
 /**
  * When a translation hits an error, log and return one of these as a value.
@@ -47,11 +37,4 @@ export function errorFor(reason: string): ExprValue {
     expressionType: "scalar",
     value: [`_ERROR_${reason.replace(/ /g, "_")}`],
   };
-}
-
-export function nullsafeNot(expr: Expr, op?: Equality): Expr {
-  if (op === undefined || op === "!=" || op === "!~") {
-    return mkExpr`COALESCE(NOT(${expr}),FALSE)`;
-  }
-  return expr;
 }

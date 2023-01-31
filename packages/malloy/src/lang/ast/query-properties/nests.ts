@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ListOf } from "../malloy-element";
-import { NestedQuery } from "../compound-types/nested-query";
+import { ListOf } from "../types/malloy-element";
+import { NestedQuery } from "../types/nested-query";
 
 export class Nests extends ListOf<NestedQuery> {
   constructor(nests: NestedQuery[]) {

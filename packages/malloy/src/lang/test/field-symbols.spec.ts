@@ -24,7 +24,7 @@
 import * as model from "../../model/malloy_types";
 import { StaticSpace } from "../ast/static-space";
 import { ColumnSpaceField } from "../ast/space-fields/column-space-field";
-import { FieldName } from "../ast/field-space";
+import { FieldName } from "../ast/types/field-space";
 import { QueryFieldStruct } from "../ast/space-fields/query-field-struct";
 import { DefinedParameter } from "../ast/space-parameters/defined-parameter";
 

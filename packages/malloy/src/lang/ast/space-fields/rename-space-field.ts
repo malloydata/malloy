@@ -23,8 +23,8 @@
 
 import { DocumentLocation, FieldDef } from "../../../model/malloy_types";
 
-import { FieldType } from "../type-interfaces/field-type";
-import { SpaceField } from "../space-field";
+import { FieldType } from "../types/field-type";
+import { SpaceField } from "../types/space-field";
 
 export class RenameSpaceField extends SpaceField {
   constructor(

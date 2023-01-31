@@ -28,14 +28,14 @@ import {
 } from "../../../model/malloy_types";
 
 import { ErrorFactory } from "../error-factory";
-import { FieldName, FieldSpace } from "../field-space";
+import { FieldName, FieldSpace } from "../types/field-space";
 import { Filter } from "../query-properties/filters";
 import { Index } from "../query-properties/indexing";
 import { Limit } from "../query-properties/limit";
 import { SampleProperty } from "../query-properties/sampling";
 import { IndexFieldSpace } from "../result-spaces/index-field-space";
-import { QueryProperty } from "../compound-types/query-property";
-import { Executor } from "./executor";
+import { QueryProperty } from "../types/query-property";
+import { Executor } from "../types/executor";
 
 import { QuerySpace } from "../ast-main";
 

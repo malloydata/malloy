@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldName } from "../field-space";
-import { ListOf, MalloyElement } from "../malloy-element";
+import { FieldName } from "../types/field-space";
+import { ListOf, MalloyElement } from "../types/malloy-element";
 
 export class RenameField extends MalloyElement {
   elementType = "renameField";
