@@ -134,10 +134,14 @@ export class FT {
     FT.timestampT,
     FT.boolT,
   ];
+  static aggregateBoolT = mkFragType("boolean", "aggregate");
 }
 
-function mkFragType(dType: FieldValueType): FragType {
-  return { dataType: dType, expressionType: "scalar" };
+function mkFragType(
+  dataType: FieldValueType,
+  expressionType: ExpressionType = "scalar"
+): FragType {
+  return { dataType, expressionType };
 }
 
 export type ExprValue = ExprResult | GranularResult;

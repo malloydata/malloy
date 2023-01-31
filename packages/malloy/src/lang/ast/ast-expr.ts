@@ -158,7 +158,7 @@ export class Boolean extends ExpressionDef {
 
 export class ExprLogicalOp extends BinaryBoolean<"and" | "or"> {
   elementType = "logical operator";
-  legalChildTypes = [FT.boolT, { ...FT.boolT, aggregate: true }];
+  legalChildTypes = [FT.boolT, FT.aggregateBoolT];
 }
 
 export class ExprIdReference extends ExpressionDef {
