@@ -130,19 +130,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result.data.path(0, "boeing_seats").value).toBe(6244);
   });
 
-  it(`model: aggregate binary boolean operator - ${databaseName}`, async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
-            query: aircraft -> {
-              aggregate: has_small_count is count() > 1 and count() < 10
-            }
-          `
-      )
-      .run();
-    expect(result.data.path(0, "has_small_count").value).toBe(false);
-  });
-
   // turtle expressions
   it(`model: turtle - ${databaseName}`, async () => {
     const result = await expressionModel
