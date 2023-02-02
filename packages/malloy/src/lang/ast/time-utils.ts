@@ -22,14 +22,18 @@
  */
 
 import {
-  TimestampUnit,
-  Expr,
-  TimeFieldType,
-  TypecastFragment,
   AtomicFieldType,
+  Expr,
+  Fragment,
+  TimeFieldType,
   TimeLiteralFragment,
+  TimestampUnit,
+  TypecastFragment,
 } from "../../model/malloy_types";
-import { GranularResult, TimeResult } from "./ast-types";
+
+import { compressExpr } from "./expressions/utils";
+import { GranularResult } from "./types/granular-result";
+import { TimeResult } from "./types/time-result";
 
 export function timeOffset(
   timeType: TimeFieldType,
@@ -124,4 +128,50 @@ export function timeLiteral(
     timezone: tz,
   };
   return [fragment];
+}
+
+export function timestampOffset(
+  from: Fragment[],
+  op: "+" | "-",
+  n: Fragment[],
+  timeframe: TimestampUnit,
+  fromNotTimestamp = false
+): Fragment[] {
+  const useDatetime = ["week", "month", "quarter", "year"].includes(timeframe);
+  const add = op === "+" ? "_ADD" : "_SUB";
+  const units = timeframe.toUpperCase();
+  if (useDatetime) {
+    return [
+      `TIMESTAMP(DATETIME${add}(DATETIME(`,
+      ...from,
+      `),INTERVAL `,
+      ...n,
+      ` ${units}))`,
+    ];
+  }
+  const typeFrom = fromNotTimestamp ? ["TIMESTAMP(", ...from, ")"] : from;
+  return compressExpr([
+    `TIMESTAMP${add}(`,
+    ...typeFrom,
+    `,INTERVAL `,
+    ...n,
+    ` ${units})`,
+  ]);
+}
+
+export function dateOffset(
+  from: Fragment[],
+  op: "+" | "-",
+  n: Fragment[],
+  timeframe: TimestampUnit
+): Fragment[] {
+  const add = op === "+" ? "_ADD" : "_SUB";
+  const units = timeframe.toUpperCase();
+  return compressExpr([
+    `DATE${add}(`,
+    ...from,
+    `,INTERVAL `,
+    ...n,
+    ` ${units})`,
+  ]);
 }
