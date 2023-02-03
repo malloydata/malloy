@@ -27,10 +27,10 @@ import {
   StructRef,
 } from "../../../model/malloy_types";
 
-import { Mallobj } from "../elements/mallobj";
+import { Source } from "../elements/source";
 import { NamedSource } from "../sources/named-source";
 
-export class QueryHeadStruct extends Mallobj {
+export class QueryHeadStruct extends Source {
   elementType = "internalOnlyQueryHead";
   constructor(readonly fromRef: StructRef) {
     super();

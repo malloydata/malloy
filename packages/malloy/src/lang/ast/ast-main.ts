@@ -30,8 +30,8 @@ import { ExploreField } from "./types/explore-field";
 import { NestedQuery } from "./types/nested-query";
 import { QueryItem } from "./types/query-item";
 import { ErrorFactory } from "./error-factory";
-import { FieldListEdit } from "./explore-properties/field-list-edit";
-import { RenameField } from "./explore-properties/renames";
+import { FieldListEdit } from "./source-properties/field-list-edit";
+import { RenameField } from "./source-properties/renames";
 import { FieldCollectionMember } from "./types/field-collection-member";
 import { FieldDeclaration } from "./query-items/field-declaration";
 import {

@@ -21,35 +21,31 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { StructDef, StructRef } from "../../../model/malloy_types";
-import { MalloyElement } from "../types/malloy-element";
-import { HasParameter } from "../parameters/has-parameter";
+import { Filter } from "../query-properties/filters";
+import { Joins } from "../query-properties/joins";
+import { DeclareFields } from "../query-properties/declare-fields";
+import { FieldListEdit } from "../source-properties/field-list-edit";
+import { Renames } from "../source-properties/renames";
+import { PrimaryKey } from "../source-properties/primary-key";
+import { Turtles } from "../source-properties/turtles";
+import { MalloyElement } from "./malloy-element";
 
-/**
- * A "Mallobj" is a thing which you can run queries against, it has been called
- * an "exploreable", or a "space".
- */
-export abstract class Mallobj extends MalloyElement {
-  abstract structDef(): StructDef;
-
-  structRef(): StructRef {
-    return this.structDef();
-  }
-
-  withParameters(pList: HasParameter[] | undefined): StructDef {
-    const before = this.structDef();
-    // TODO name collisions are flagged where?
-    if (pList) {
-      const parameters = { ...(before.parameters || {}) };
-      for (const hasP of pList) {
-        const pVal = hasP.parameter();
-        parameters[pVal.name] = pVal;
-      }
-      return {
-        ...before,
-        parameters,
-      };
-    }
-    return before;
-  }
+export type SourceProperty =
+  | Filter
+  | Joins
+  | DeclareFields
+  | FieldListEdit
+  | Renames
+  | PrimaryKey
+  | Turtles;
+export function isSourceProperty(p: MalloyElement): p is SourceProperty {
+  return (
+    p instanceof Filter ||
+    p instanceof Joins ||
+    p instanceof DeclareFields ||
+    p instanceof FieldListEdit ||
+    p instanceof Renames ||
+    p instanceof PrimaryKey ||
+    p instanceof Turtles
+  );
 }

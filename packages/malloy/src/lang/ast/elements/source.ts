@@ -21,31 +21,35 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Filter } from "../query-properties/filters";
-import { Joins } from "../query-properties/joins";
-import { DeclareFields } from "../query-properties/declare-fields";
-import { FieldListEdit } from "../explore-properties/field-list-edit";
-import { Renames } from "../explore-properties/renames";
-import { PrimaryKey } from "../explore-properties/primary-key";
-import { Turtles } from "../explore-properties/turtles";
-import { MalloyElement } from "./malloy-element";
+import { StructDef, StructRef } from "../../../model/malloy_types";
+import { MalloyElement } from "../types/malloy-element";
+import { HasParameter } from "../parameters/has-parameter";
 
-export type ExploreProperty =
-  | Filter
-  | Joins
-  | DeclareFields
-  | FieldListEdit
-  | Renames
-  | PrimaryKey
-  | Turtles;
-export function isExploreProperty(p: MalloyElement): p is ExploreProperty {
-  return (
-    p instanceof Filter ||
-    p instanceof Joins ||
-    p instanceof DeclareFields ||
-    p instanceof FieldListEdit ||
-    p instanceof Renames ||
-    p instanceof PrimaryKey ||
-    p instanceof Turtles
-  );
+/**
+ * A "Source" is a thing which you can run queries against. The main
+ * function of a source is to represent an eventual StructDef
+ */
+export abstract class Source extends MalloyElement {
+  abstract structDef(): StructDef;
+
+  structRef(): StructRef {
+    return this.structDef();
+  }
+
+  withParameters(pList: HasParameter[] | undefined): StructDef {
+    const before = this.structDef();
+    // TODO name collisions are flagged where?
+    if (pList) {
+      const parameters = { ...(before.parameters || {}) };
+      for (const hasP of pList) {
+        const pVal = hasP.parameter();
+        parameters[pVal.name] = pVal;
+      }
+      return {
+        ...before,
+        parameters,
+      };
+    }
+    return before;
+  }
 }

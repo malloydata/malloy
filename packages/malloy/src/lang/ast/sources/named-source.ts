@@ -26,7 +26,7 @@ import {
   StructDef,
   StructRef,
 } from "../../../model";
-import { Mallobj } from "../elements/mallobj";
+import { Source } from "../elements/source";
 import { MalloyElement, ModelEntryReference } from "../types/malloy-element";
 import { ConstantSubExpression } from "../expressions/constant-sub-expression";
 import { ErrorFactory } from "../error-factory";
@@ -41,7 +41,7 @@ export class IsValueBlock extends MalloyElement {
   }
 }
 
-export class NamedSource extends Mallobj {
+export class NamedSource extends Source {
   elementType = "namedSource";
   protected isBlock?: IsValueBlock;
 

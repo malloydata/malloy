@@ -88,10 +88,10 @@ export class MalloyToAST
 
   protected onlyExploreProperties(
     els: ast.MalloyElement[]
-  ): ast.ExploreProperty[] {
-    const eps: ast.ExploreProperty[] = [];
+  ): ast.SourceProperty[] {
+    const eps: ast.SourceProperty[] = [];
     for (const el of els) {
-      if (ast.isExploreProperty(el)) {
+      if (ast.isSourceProperty(el)) {
         eps.push(el);
       } else {
         this.astError(el, `Expected explore property, not '${el.elementType}'`);
@@ -264,9 +264,9 @@ export class MalloyToAST
     return new ast.Filter([el]);
   }
 
-  protected getExploreSource(pcx: parse.ExploreSourceContext): ast.Mallobj {
+  protected getExploreSource(pcx: parse.ExploreSourceContext): ast.Source {
     const element = this.visit(pcx);
-    if (element instanceof ast.Mallobj) {
+    if (element instanceof ast.Source) {
       return element;
     }
     throw this.internalError(
@@ -298,22 +298,20 @@ export class MalloyToAST
     return new ast.Document(stmts);
   }
 
-  visitDefineExploreStatement(
-    pcx: parse.DefineExploreStatementContext
-  ): ast.DefineSourceList | ast.DefineExplore {
-    const defsCx = pcx.exploreDefinitionList().exploreDefinition();
-    const defs = defsCx.map((dcx) => this.visitExploreDefinition(dcx));
+  visitDefineSourceStatement(
+    pcx: parse.DefineSourceStatementContext
+  ): ast.DefineSourceList | ast.DefineSource {
+    const defsCx = pcx.sourcePropertyList().sourceDefinition();
+    const defs = defsCx.map((dcx) => this.visitsourceDefinition(dcx));
     if (defs.length == 1) {
       return defs[0];
     }
     return new ast.DefineSourceList(defs);
   }
 
-  visitExploreDefinition(
-    pcx: parse.ExploreDefinitionContext
-  ): ast.DefineExplore {
-    const exploreDef = new ast.DefineExplore(
-      this.getIdText(pcx.exploreNameDef()),
+  visitsourceDefinition(pcx: parse.SourceDefinitionContext): ast.DefineSource {
+    const exploreDef = new ast.DefineSource(
+      this.getIdText(pcx.sourceNameDef()),
       this.visitExplore(pcx.explore()),
       true,
       []
@@ -321,12 +319,12 @@ export class MalloyToAST
     return this.astAt(exploreDef, pcx);
   }
 
-  visitExplore(pcx: parse.ExploreContext): ast.Mallobj {
+  visitExplore(pcx: parse.ExploreContext): ast.Source {
     const source = this.getExploreSource(pcx.exploreSource());
     const refineCx = pcx.exploreProperties();
     if (refineCx) {
       return this.astAt(
-        new ast.RefinedExplore(source, this.visitExploreProperties(refineCx)),
+        new ast.RefinedSource(source, this.visitExploreProperties(refineCx)),
         pcx
       );
     }
@@ -357,7 +355,7 @@ export class MalloyToAST
     return this.astAt(new ast.SQLSource(name), pcx);
   }
 
-  visitQuerySource(pcx: parse.QuerySourceContext): ast.Mallobj {
+  visitQuerySource(pcx: parse.QuerySourceContext): ast.Source {
     const query = this.visit(pcx.query());
     if (ast.isQueryElement(query)) {
       return this.astAt(new ast.QuerySource(query), pcx);
@@ -424,7 +422,7 @@ export class MalloyToAST
   protected getJoinSource(
     name: ast.ModelEntryReference,
     ecx: parse.ExploreContext | undefined
-  ): ast.Mallobj {
+  ): ast.Source {
     if (ecx) {
       return this.visitExplore(ecx);
     }

@@ -22,7 +22,7 @@
  */
 
 import { TurtleDecl } from "../ast-main";
-import { Turtles } from "../explore-properties/turtles";
+import { Turtles } from "../source-properties/turtles";
 import { FieldDeclaration } from "../query-items/field-declaration";
 import { Join } from "../query-properties/joins";
 import { MalloyElement } from "./malloy-element";

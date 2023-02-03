@@ -22,10 +22,10 @@
  */
 
 import { StructDef } from "../../../model";
-import { Mallobj } from "../elements/mallobj";
+import { Source } from "../elements/source";
 import { QueryElement } from "../types/query-element";
 
-export class QuerySource extends Mallobj {
+export class QuerySource extends Source {
   elementType = "querySource";
   constructor(readonly query: QueryElement) {
     super({ query });

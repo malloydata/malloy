@@ -25,12 +25,12 @@ import { Query, refIsStructDef } from "../../../model/malloy_types";
 
 import { DynamicSpace } from "../ast-main";
 import { ErrorFactory } from "../error-factory";
-import { Mallobj } from "../elements/mallobj";
+import { Source } from "../elements/source";
 import { QueryComp } from "../types/query-comp";
 import { TurtleHeadedPipe } from "../types/turtle-headed-pipe";
 
 export class FullQuery extends TurtleHeadedPipe {
-  constructor(readonly explore: Mallobj) {
+  constructor(readonly explore: Source) {
     super({ explore });
   }
 
