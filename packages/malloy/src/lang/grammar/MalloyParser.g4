@@ -136,14 +136,14 @@ explore
   ;
 
 exploreSource
-  : sourceName                                    # NamedSource
+  : sourceID                                      # NamedSource
   | exploreTable                                  # TableSource
   | FROM OPAREN query CPAREN                      # QuerySource
   | FROM_SQL OPAREN sqlExploreNameRef CPAREN      # SQLSourceName
   ;
 
 sourceNameDef: id;
-sourceName: id;
+sourceID: id;
 
 exploreProperties
   : OCURLY (exploreStatement | SEMI)* CCURLY

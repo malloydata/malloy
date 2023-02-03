@@ -701,7 +701,7 @@ export class MalloyToAST
     return this.astAt(top, pcx);
   }
 
-  visitExploreName(pcx: parse.ExploreNameContext): ast.NamedSource {
+  visitSourceID(pcx: parse.SourceIDContext): ast.NamedSource {
     const name = this.getModelEntryName(pcx.id());
     return this.astAt(new ast.NamedSource(name), pcx);
   }
@@ -1096,7 +1096,7 @@ export class MalloyToAST
   }
 
   visitNamedSource(pcx: parse.NamedSourceContext): ast.NamedSource {
-    const name = this.getModelEntryName(pcx.exploreName());
+    const name = this.getModelEntryName(pcx.sourceID());
     // Parameters ... coming ...
     // const paramListCx = pcx.isParam();
     // if (paramListCx) {
