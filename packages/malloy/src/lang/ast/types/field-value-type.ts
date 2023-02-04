@@ -22,8 +22,7 @@
  */
 
 import { ExpressionValueType } from "./expression-value-type";
-import { StageFieldType } from "./stage-field-type";
 
 // And these are the other field value types
 
-export type FieldValueType = ExpressionValueType | StageFieldType | "struct";
+export type FieldValueType = ExpressionValueType | "turtle" | "struct";
