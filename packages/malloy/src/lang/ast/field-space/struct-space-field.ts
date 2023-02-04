@@ -21,12 +21,30 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import { FieldDef, StructDef } from "../../../model/malloy_types";
 import { FieldSpace } from "../types/field-space";
-import { Join } from "../query-properties/joins";
-import { StructSpaceField } from "../static-space";
+import { FieldType } from "../types/field-type";
+import { SpaceField } from "../types/space-field";
+import { StaticSpace } from "./static-space";
 
-export class JoinSpaceField extends StructSpaceField {
-  constructor(readonly intoFS: FieldSpace, readonly join: Join) {
-    super(join.structDef());
+export class StructSpaceField extends SpaceField {
+  protected space?: FieldSpace;
+  constructor(protected sourceDef: StructDef) {
+    super();
+  }
+
+  get fieldSpace(): FieldSpace {
+    if (!this.space) {
+      this.space = new StaticSpace(this.sourceDef);
+    }
+    return this.space;
+  }
+
+  fieldDef(): FieldDef {
+    return this.sourceDef;
+  }
+
+  type(): FieldType {
+    return { type: "struct" };
   }
 }

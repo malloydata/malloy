@@ -33,7 +33,7 @@ import { Filter } from "../query-properties/filters";
 import { Index } from "../query-properties/indexing";
 import { Limit } from "../query-properties/limit";
 import { SampleProperty } from "../query-properties/sampling";
-import { IndexFieldSpace } from "../result-spaces/index-field-space";
+import { IndexFieldSpace } from "../field-space/index-field-space";
 import { QueryProperty } from "../types/query-property";
 import { Executor } from "../types/executor";
 

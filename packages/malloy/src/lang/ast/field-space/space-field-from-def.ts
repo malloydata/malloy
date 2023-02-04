@@ -21,43 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { StructDef } from "../../model/malloy_types";
+import { FieldDef, isTurtleDef } from "../../../model";
+import { SpaceField } from "../types/space-field";
+import { StructSpaceField } from "./struct-space-field";
+import { QueryFieldStruct } from "./query-field-struct";
+import { ColumnSpaceField } from "./column-space-field";
+import { FieldSpace } from "../types/field-space";
 
-import { FieldSpace, isFieldSpace, SourceSpec } from "./types/field-space";
-import { StaticSpace } from "./field-space/static-space";
-
-/**
- * Based on how things are constructed, the starting field space
- * can either be another field space or an existing structdef.
- * Using a SpaceSeed allows a class to accept either one
- * and use either version at some future time.
- */
-export class SpaceSeed {
-  private spaceSpec: SourceSpec;
-  private asFS?: StaticSpace;
-  private asStruct?: StructDef;
-
-  constructor(readonly sourceSpec: SourceSpec) {
-    this.spaceSpec = sourceSpec;
+export function defToSpaceField(fs: FieldSpace, from: FieldDef): SpaceField {
+  if (from.type === "struct") {
+    return new StructSpaceField(from);
+  } else if (isTurtleDef(from)) {
+    return new QueryFieldStruct(fs, from);
   }
-
-  get structDef(): StructDef {
-    if (isFieldSpace(this.spaceSpec)) {
-      if (!this.asStruct) {
-        this.asStruct = this.spaceSpec.structDef();
-      }
-      return this.asStruct;
-    }
-    return this.spaceSpec;
-  }
-
-  get fieldSpace(): FieldSpace {
-    if (isFieldSpace(this.spaceSpec)) {
-      return this.spaceSpec;
-    }
-    if (!this.asFS) {
-      this.asFS = new StaticSpace(this.spaceSpec);
-    }
-    return this.asFS;
-  }
+  return new ColumnSpaceField(from);
 }

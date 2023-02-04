@@ -21,42 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Dialect } from "../../dialect/dialect";
-import { getDialect } from "../../dialect/dialect_map";
-import { FieldDef, isTurtleDef, StructDef } from "../../model/malloy_types";
+import { Dialect } from "../../../dialect/dialect";
+import { getDialect } from "../../../dialect/dialect_map";
+import { StructDef } from "../../../model/malloy_types";
 
-import { SpaceEntry } from "./types/space-entry";
-import { FieldMap } from "./types/field-map";
-import { LookupResult } from "./types/lookup-result";
-import { FieldName, FieldSpace } from "./types/field-space";
-import { ColumnSpaceField } from "./space-fields/column-space-field";
-import { QueryFieldStruct } from "./space-fields/query-field-struct";
-import { DefinedParameter } from "./types/space-param";
-import { FieldType } from "./types/field-type";
-import { SpaceField } from "./types/space-field";
-
-// TODO(maden): These two classes are intertwined, we may want to look into decoupling them.
-export class StructSpaceField extends SpaceField {
-  protected space?: FieldSpace;
-  constructor(protected sourceDef: StructDef) {
-    super();
-  }
-
-  get fieldSpace(): FieldSpace {
-    if (!this.space) {
-      this.space = new StaticSpace(this.sourceDef);
-    }
-    return this.space;
-  }
-
-  fieldDef(): FieldDef {
-    return this.sourceDef;
-  }
-
-  type(): FieldType {
-    return { type: "struct" };
-  }
-}
+import { SpaceEntry } from "../types/space-entry";
+import { FieldMap } from "../types/field-map";
+import { LookupResult } from "../types/lookup-result";
+import { FieldName, FieldSpace } from "../types/field-space";
+import { DefinedParameter } from "../types/space-param";
+import { SpaceField } from "../types/space-field";
+import { defToSpaceField } from "./space-field-from-def";
+import { StructSpaceField } from "./struct-space-field";
 
 export class StaticSpace implements FieldSpace {
   readonly type = "fieldSpace";
@@ -79,22 +55,12 @@ export class StaticSpace implements FieldSpace {
     }
   }
 
-  fromFieldDef(from: FieldDef): SpaceField {
-    if (from.type === "struct") {
-      return new StructSpaceField(from);
-    } else if (isTurtleDef(from)) {
-      return new QueryFieldStruct(this, from);
-    }
-    // TODO field has a filter and needs to be a filteredalias
-    return new ColumnSpaceField(from);
-  }
-
   private get map(): FieldMap {
     if (this.memoMap === undefined) {
       this.memoMap = {};
       for (const f of this.fromStruct.fields) {
         const name = f.as || f.name;
-        this.memoMap[name] = this.fromFieldDef(f);
+        this.memoMap[name] = defToSpaceField(this, f);
       }
       if (this.fromStruct.parameters) {
         for (const [paramName, paramDef] of Object.entries(

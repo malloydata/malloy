@@ -44,17 +44,19 @@ import { MalloyElement } from "./types/malloy-element";
 import { NestReference } from "./nesting/nest-reference";
 import { Join } from "./query-properties/joins";
 import { SpaceField } from "./types/space-field";
-import { JoinSpaceField } from "./space-fields/join-space-field";
-import { QueryField } from "./space-fields/query-space-field";
-import { ReferenceField } from "./space-fields/reference-field";
-import { RenameSpaceField } from "./space-fields/rename-space-field";
-import { WildSpaceField } from "./space-fields/wild-space-field";
+import { JoinSpaceField } from "./field-space/join-space-field";
+import { QueryField } from "./field-space/query-space-field";
+import { ReferenceField } from "./field-space/reference-field";
+import { RenameSpaceField } from "./field-space/rename-space-field";
+import { WildSpaceField } from "./field-space/wild-space-field";
 import { SpaceParam, AbstractParameter } from "./types/space-param";
 import { SpaceSeed } from "./space-seed";
-import { StaticSpace, StructSpaceField } from "./static-space";
+import { StaticSpace } from "./field-space/static-space";
+import { StructSpaceField } from "./field-space/struct-space-field";
 import { opOutputStruct } from "./struct-utils";
 import { TurtleHeadedPipe } from "./types/turtle-headed-pipe";
 import { FieldType } from "./types/field-type";
+import { defToSpaceField } from "./field-space/space-field-from-def";
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
@@ -268,7 +270,7 @@ export class DynamicSpace extends StaticSpace {
   }
 
   addFieldDef(fd: model.FieldDef): void {
-    this.setEntry(nameOf(fd), this.fromFieldDef(fd));
+    this.setEntry(nameOf(fd), defToSpaceField(this, fd));
   }
 
   structDef(): model.StructDef {

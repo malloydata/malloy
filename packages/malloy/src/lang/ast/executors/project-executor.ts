@@ -33,7 +33,7 @@ import { FieldSpace } from "../types/field-space";
 import { Filter } from "../query-properties/filters";
 import { GroupBy } from "../query-properties/group-by";
 import { ProjectStatement } from "../query-properties/project-statement";
-import { ProjectFieldSpace } from "../result-spaces/project-field-space";
+import { ProjectFieldSpace } from "../field-space/project-field-space";
 import { QueryProperty } from "../types/query-property";
 import { ReduceExecutor } from "./reduce-executor";
 
