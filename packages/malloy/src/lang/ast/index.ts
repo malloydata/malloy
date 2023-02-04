@@ -22,7 +22,6 @@
  */
 
 export * from "./ast-main";
-export * from "./ast-utils";
 export * from "./elements/define-source";
 export * from "./elements/define-query";
 export * from "./elements/source";
@@ -102,7 +101,6 @@ export * from "./sources/sql-source";
 export * from "./sources/table-source";
 export * from "./sql-elements/sql-statement";
 export * from "./sql-elements/sql-string";
-export * from "./time-utils";
 export * from "./types/comparison";
 export * from "./types/compart-types";
 export * from "./types/explore-desc";
@@ -115,5 +113,4 @@ export * from "./types/nested-query";
 export * from "./types/query-element";
 export * from "./types/query-item";
 export * from "./types/query-property";
-export * from "./types/stage-field-type";
 export * from "./types/turtle-headed-pipe";
