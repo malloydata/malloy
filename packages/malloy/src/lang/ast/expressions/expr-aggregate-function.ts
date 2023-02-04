@@ -31,7 +31,7 @@ import { FieldValueType } from "../types/field-value-type";
 import { FieldReference } from "../query-items/field-references";
 import { FieldSpace } from "../types/field-space";
 import { FT } from "../fragtype-utils";
-import {StructSpaceField} from "../field-space/struct-space-field";
+import { StructSpaceField } from "../field-space/struct-space-field";
 import { ExpressionDef } from "../types/expression-def";
 
 export abstract class ExprAggregateFunction extends ExpressionDef {

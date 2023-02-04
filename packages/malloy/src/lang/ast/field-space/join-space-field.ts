@@ -23,7 +23,7 @@
 
 import { FieldSpace } from "../types/field-space";
 import { Join } from "../query-properties/joins";
-import {StructSpaceField} from "./struct-space-field";
+import { StructSpaceField } from "./struct-space-field";
 
 export class JoinSpaceField extends StructSpaceField {
   constructor(readonly intoFS: FieldSpace, readonly join: Join) {
