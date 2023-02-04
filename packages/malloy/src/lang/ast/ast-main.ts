@@ -52,11 +52,10 @@ import { WildSpaceField } from "./field-space/wild-space-field";
 import { SpaceParam, AbstractParameter } from "./types/space-param";
 import { SpaceSeed } from "./space-seed";
 import { StaticSpace } from "./field-space/static-space";
-import { StructSpaceField } from "./field-space/struct-space-field";
+import { StructSpaceFieldBase } from "./field-space/struct-space-field-base";
 import { opOutputStruct } from "./struct-utils";
 import { TurtleHeadedPipe } from "./types/turtle-headed-pipe";
 import { FieldType } from "./types/field-type";
-import { defToSpaceField } from "./field-space/space-field-from-def";
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
@@ -270,7 +269,7 @@ export class DynamicSpace extends StaticSpace {
   }
 
   addFieldDef(fd: model.FieldDef): void {
-    this.setEntry(nameOf(fd), defToSpaceField(this, fd));
+    this.setEntry(nameOf(fd), this.defToSpaceField(fd));
   }
 
   structDef(): model.StructDef {
@@ -286,7 +285,7 @@ export class DynamicSpace extends StaticSpace {
       const turtles: [string, SpaceField][] = [];
       const fixupJoins: [Join, model.StructDef][] = [];
       for (const [name, spaceEntry] of this.entries()) {
-        if (spaceEntry instanceof StructSpaceField) {
+        if (spaceEntry instanceof StructSpaceFieldBase) {
           joins.push([name, spaceEntry]);
         } else if (spaceEntry instanceof QueryField) {
           turtles.push([name, spaceEntry]);

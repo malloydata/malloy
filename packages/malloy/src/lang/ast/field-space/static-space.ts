@@ -23,7 +23,7 @@
 
 import { Dialect } from "../../../dialect/dialect";
 import { getDialect } from "../../../dialect/dialect_map";
-import { StructDef } from "../../../model/malloy_types";
+import { FieldDef, isTurtleDef, StructDef } from "../../../model/malloy_types";
 
 import { SpaceEntry } from "../types/space-entry";
 import { FieldMap } from "../types/field-map";
@@ -31,8 +31,19 @@ import { LookupResult } from "../types/lookup-result";
 import { FieldName, FieldSpace } from "../types/field-space";
 import { DefinedParameter } from "../types/space-param";
 import { SpaceField } from "../types/space-field";
-import { defToSpaceField } from "./space-field-from-def";
-import { StructSpaceField } from "./struct-space-field";
+import { StructSpaceFieldBase } from "./struct-space-field-base";
+import { ColumnSpaceField } from "./column-space-field";
+import { QueryFieldStruct } from "./query-field-struct";
+
+export class StructSpaceField extends StructSpaceFieldBase {
+  constructor(def: StructDef) {
+    super(def);
+  }
+
+  get fieldSpace(): FieldSpace {
+    return new StaticSpace(this.sourceDef);
+  }
+}
 
 export class StaticSpace implements FieldSpace {
   readonly type = "fieldSpace";
@@ -55,12 +66,21 @@ export class StaticSpace implements FieldSpace {
     }
   }
 
+  defToSpaceField(from: FieldDef): SpaceField {
+    if (from.type === "struct") {
+      return new StructSpaceField(from);
+    } else if (isTurtleDef(from)) {
+      return new QueryFieldStruct(this, from);
+    }
+    return new ColumnSpaceField(from);
+  }
+
   private get map(): FieldMap {
     if (this.memoMap === undefined) {
       this.memoMap = {};
       for (const f of this.fromStruct.fields) {
         const name = f.as || f.name;
-        this.memoMap[name] = defToSpaceField(this, f);
+        this.memoMap[name] = this.defToSpaceField(f);
       }
       if (this.fromStruct.parameters) {
         for (const [paramName, paramDef] of Object.entries(
@@ -135,7 +155,7 @@ export class StaticSpace implements FieldSpace {
       if (definition) {
         head.addReference({
           type:
-            found instanceof StructSpaceField
+            found instanceof StructSpaceFieldBase
               ? "joinReference"
               : "fieldReference",
           definition,
@@ -145,7 +165,7 @@ export class StaticSpace implements FieldSpace {
       }
     }
     if (rest.length) {
-      if (found instanceof StructSpaceField) {
+      if (found instanceof StructSpaceFieldBase) {
         return found.fieldSpace.lookup(rest);
       }
       return {

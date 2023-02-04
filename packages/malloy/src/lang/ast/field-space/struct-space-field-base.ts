@@ -25,20 +25,13 @@ import { FieldDef, StructDef } from "../../../model/malloy_types";
 import { FieldSpace } from "../types/field-space";
 import { FieldType } from "../types/field-type";
 import { SpaceField } from "../types/space-field";
-import { StaticSpace } from "./static-space";
 
-export class StructSpaceField extends SpaceField {
-  protected space?: FieldSpace;
+export abstract class StructSpaceFieldBase extends SpaceField {
   constructor(protected sourceDef: StructDef) {
     super();
   }
 
-  get fieldSpace(): FieldSpace {
-    if (!this.space) {
-      this.space = new StaticSpace(this.sourceDef);
-    }
-    return this.space;
-  }
+  abstract get fieldSpace(): FieldSpace;
 
   fieldDef(): FieldDef {
     return this.sourceDef;
