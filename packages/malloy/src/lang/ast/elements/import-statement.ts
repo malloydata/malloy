@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ModelDataRequest } from "../../parse-malloy";
+import { ModelDataRequest } from "../../translate-response";
 import { DocStatement, Document, MalloyElement } from "../types/malloy-element";
 
 export class ImportStatement extends MalloyElement implements DocStatement {

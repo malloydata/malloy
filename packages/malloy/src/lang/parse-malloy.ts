@@ -22,7 +22,6 @@
  */
 
 import {
-  ANTLRErrorListener,
   Token,
   CharStreams,
   CommonTokenStream,
@@ -35,7 +34,6 @@ import {
   NamedStructDefs,
   StructDef,
   ModelDef,
-  SQLBlockSource,
   DocumentReference,
   DocumentPosition,
   DocumentLocation,
@@ -45,14 +43,11 @@ import {
 import { MalloyLexer } from "./lib/Malloy/MalloyLexer";
 import { MalloyParser } from "./lib/Malloy/MalloyParser";
 import * as ast from "./ast";
-import { MalloyToAST } from "./parse-to-ast";
-import { MessageLogger, LogMessage, MessageLog } from "./parse-log";
+import { MalloyToAST } from "./malloy-to-ast";
+import { MessageLog } from "./parse-log";
 import { findReferences } from "./parse-tree-walkers/find-external-references";
 import { Zone, ZoneData } from "./zone";
-import {
-  DocumentSymbol,
-  walkForDocumentSymbols,
-} from "./parse-tree-walkers/document-symbol-walker";
+import { walkForDocumentSymbols } from "./parse-tree-walkers/document-symbol-walker";
 import {
   DocumentHighlight,
   walkForDocumentHighlights,
@@ -68,6 +63,28 @@ import {
   walkForDocumentHelpContext,
 } from "./parse-tree-walkers/document-help-context-walker";
 import { ReferenceList } from "./reference-list";
+import {
+  ErrorResponse,
+  NeedURLData,
+  FinalResponse,
+  DataRequestResponse,
+  isNeedResponse,
+  ASTResponse,
+  MetadataResponse,
+  CompletionsResponse,
+  HelpContextResponse,
+  TranslateResponse,
+  FatalResponse,
+  ModelDataRequest,
+} from "./translate-response";
+import { MalloyParserErrorHandler } from "./parse-error-handler";
+
+export type StepResponses =
+  | DataRequestResponse
+  | ASTResponse
+  | TranslateResponse
+  | ParseResponse
+  | MetadataResponse;
 
 /**
  * This ignores a -> popMode when the mode stack is empty, which is a hack,
@@ -81,105 +98,6 @@ class HandlesOverpoppingLexer extends MalloyLexer {
     return super.popMode();
   }
 }
-
-class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
-  constructor(
-    readonly translator: MalloyTranslation,
-    readonly messages: MessageLogger
-  ) {}
-
-  syntaxError(
-    recognizer: unknown,
-    offendingSymbol: Token | undefined,
-    line: number,
-    charPositionInLine: number,
-    msg: string,
-    _e: unknown
-  ) {
-    const errAt = { line: line - 1, character: charPositionInLine };
-    const range = offendingSymbol
-      ? this.translator.rangeFromToken(offendingSymbol)
-      : { start: errAt, end: errAt };
-    const error: LogMessage = {
-      message: msg,
-      at: { url: this.translator.sourceURL, range },
-    };
-    this.messages.log(error);
-  }
-}
-
-/**
- * The translation interface is essentially a request/respone protocol, and
- * this is the list of all the "protocol" messages.
- */
-interface FinalResponse {
-  final: true; // When final, there is no need to reply, translation is over
-}
-interface ErrorResponse {
-  errors: LogMessage[];
-}
-type FatalResponse = FinalResponse & ErrorResponse;
-
-export interface NeedSchemaData {
-  tables: string[];
-}
-
-export interface NeedURLData {
-  urls: string[];
-}
-
-export interface NeedCompileSQL {
-  compileSQL: SQLBlockSource;
-  partialModel: ModelDef | undefined;
-}
-
-interface NeededData extends NeedURLData, NeedSchemaData, NeedCompileSQL {}
-export type DataRequestResponse = Partial<NeededData> | null;
-function isNeedResponse(dr: DataRequestResponse): dr is NeededData {
-  return !!dr && (dr.tables || dr.urls || dr.compileSQL) != undefined;
-}
-export type ModelDataRequest = NeedCompileSQL | undefined;
-
-interface ASTData extends ErrorResponse, NeededData, FinalResponse {
-  ast: ast.MalloyElement;
-}
-type ASTResponse = Partial<ASTData>;
-
-interface Metadata extends NeededData, ErrorResponse, FinalResponse {
-  symbols: DocumentSymbol[];
-  highlights: DocumentHighlight[];
-}
-type MetadataResponse = Partial<Metadata>;
-
-interface Completions extends NeededData, ErrorResponse, FinalResponse {
-  completions: DocumentCompletion[];
-}
-type CompletionsResponse = Partial<Completions>;
-
-interface HelpContext extends NeededData, ErrorResponse, FinalResponse {
-  helpContext: DocumentHelpContext | undefined;
-}
-type HelpContextResponse = Partial<HelpContext>;
-
-interface TranslatedResponseData
-  extends NeededData,
-    ErrorResponse,
-    FinalResponse {
-  translated: {
-    modelDef: ModelDef;
-    queryList: Query[];
-    sqlBlocks: SQLBlockStructDef[];
-  };
-}
-
-export type TranslateResponse = Partial<TranslatedResponseData>;
-
-type StepResponses =
-  | DataRequestResponse
-  | ASTResponse
-  | TranslateResponse
-  | ParseResponse
-  | MetadataResponse;
 
 /**
  * A Translation is a series of translation steps. Each step can depend
@@ -208,7 +126,7 @@ export interface MalloyParseRoot {
 interface ParseData extends ErrorResponse, NeedURLData, FinalResponse {
   parse: MalloyParseRoot;
 }
-type ParseResponse = Partial<ParseData>;
+export type ParseResponse = Partial<ParseData>;
 
 /**
  * ParseStep -- Parse the source URL

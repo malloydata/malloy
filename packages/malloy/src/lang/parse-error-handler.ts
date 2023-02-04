@@ -21,22 +21,32 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ModelDataRequest } from "../../translate-response";
+import { ANTLRErrorListener, Token } from "antlr4ts";
+import { MessageLogger, LogMessage } from "./parse-log";
+import { MalloyTranslation } from "./parse-malloy";
 
-import { DocStatement, Document, MalloyElement } from "../types/malloy-element";
-import { QueryElement } from "../types/query-element";
+export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
+  constructor(
+    readonly translator: MalloyTranslation,
+    readonly messages: MessageLogger
+  ) {}
 
-export class AnonymousQuery extends MalloyElement implements DocStatement {
-  elementType = "anonymousQuery";
-
-  constructor(readonly theQuery: QueryElement) {
-    super();
-    this.has({ query: theQuery });
-  }
-
-  execute(doc: Document): ModelDataRequest {
-    const modelQuery = this.theQuery.query();
-    doc.queryList.push(modelQuery);
-    return undefined;
+  syntaxError(
+    recognizer: unknown,
+    offendingSymbol: Token | undefined,
+    line: number,
+    charPositionInLine: number,
+    msg: string,
+    _e: unknown
+  ): void {
+    const errAt = { line: line - 1, character: charPositionInLine };
+    const range = offendingSymbol
+      ? this.translator.rangeFromToken(offendingSymbol)
+      : { start: errAt, end: errAt };
+    const error: LogMessage = {
+      message: msg,
+      at: { url: this.translator.sourceURL, range },
+    };
+    this.messages.log(error);
   }
 }
