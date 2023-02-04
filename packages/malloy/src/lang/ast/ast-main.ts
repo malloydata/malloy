@@ -38,14 +38,9 @@ import {
   FieldReference,
   WildcardFieldReference,
 } from "./query-items/field-references";
-import {
-  FieldName,
-  FieldSpace,
-  isFieldSpace,
-  SourceSpec,
-} from "./types/field-space";
+import { FieldName, FieldSpace, SourceSpec } from "./types/field-space";
 import { HasParameter } from "./parameters/has-parameter";
-import { MalloyElement, ModelEntryReference } from "./types/malloy-element";
+import { MalloyElement } from "./types/malloy-element";
 import { NestReference } from "./nesting/nest-reference";
 import { Join } from "./query-properties/joins";
 import { SpaceField } from "./types/space-field";
@@ -54,8 +49,7 @@ import { QueryField } from "./space-fields/query-space-field";
 import { ReferenceField } from "./space-fields/reference-field";
 import { RenameSpaceField } from "./space-fields/rename-space-field";
 import { WildSpaceField } from "./space-fields/wild-space-field";
-import { SpaceParam } from "./types/space-param";
-import { AbstractParameter } from "./space-parameters/abstract-parameter";
+import { SpaceParam, AbstractParameter } from "./types/space-param";
 import { SpaceSeed } from "./space-seed";
 import { StaticSpace, StructSpaceField } from "./static-space";
 import { opOutputStruct } from "./struct-utils";

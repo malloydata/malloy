@@ -73,7 +73,7 @@ export * from "./expressions/top-by";
 export * from "./expressions/unary";
 export * from "./expressions/utils";
 export * from "./expressions/when-clause";
-export * from "./import-elements/import-statement";
+export * from "./elements/import-statement";
 export * from "./nesting/nest-reference";
 export * from "./parameters/has-parameter";
 export * from "./query-elements/anonymous-query";

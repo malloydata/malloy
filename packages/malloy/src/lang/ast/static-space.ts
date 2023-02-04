@@ -31,7 +31,7 @@ import { LookupResult } from "./types/lookup-result";
 import { FieldName, FieldSpace } from "./types/field-space";
 import { ColumnSpaceField } from "./space-fields/column-space-field";
 import { QueryFieldStruct } from "./space-fields/query-field-struct";
-import { DefinedParameter } from "./space-parameters/defined-parameter";
+import { DefinedParameter } from "./types/space-param";
 import { FieldType } from "./types/field-type";
 import { SpaceField } from "./types/space-field";
 
