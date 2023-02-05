@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export * from "./ast-main";
+export * from "./query-properties/nest";
 export * from "./elements/define-source";
 export * from "./elements/define-query";
 export * from "./elements/source";

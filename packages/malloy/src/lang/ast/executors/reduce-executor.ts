@@ -42,7 +42,7 @@ import { Top } from "../query-properties/top";
 import { QueryProperty } from "../types/query-property";
 import { Executor } from "../types/executor";
 import { Nests } from "../query-properties/nests";
-import { isNestedQuery } from "../ast-main";
+import { isNestedQuery } from "../query-properties/nest";
 import {
   QueryInputSpace,
   QuerySpace,

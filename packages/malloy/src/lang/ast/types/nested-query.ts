@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { NestDefinition, NestRefinement } from "../ast-main";
+import { NestDefinition, NestRefinement } from "../query-properties/nest";
 import { NestReference } from "../nesting/nest-reference";
 
 export type NestedQuery = NestReference | NestDefinition | NestRefinement;

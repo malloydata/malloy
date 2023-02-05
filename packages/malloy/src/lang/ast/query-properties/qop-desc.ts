@@ -39,7 +39,7 @@ import { ProjectStatement } from "./project-statement";
 import { opOutputStruct } from "../struct-utils";
 import { QueryProperty } from "../types/query-property";
 
-import { isNestedQuery } from "../ast-main";
+import { isNestedQuery } from "./nest";
 import { StaticSpace } from "../field-space/static-space";
 
 type QOPType = "grouping" | "aggregate" | "project" | "index";

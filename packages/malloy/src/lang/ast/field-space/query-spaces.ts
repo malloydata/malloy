@@ -30,7 +30,7 @@ import { Join } from "../query-properties/joins";
 import { SpaceField } from "../types/space-field";
 import { SpaceSeed } from "../space-seed";
 
-import { isNestedQuery, QueryFieldAST } from "../ast-main";
+import { isNestedQuery, QueryFieldAST } from "../query-properties/nest";
 import { NestReference } from "../nesting/nest-reference";
 import {
   FieldReference,

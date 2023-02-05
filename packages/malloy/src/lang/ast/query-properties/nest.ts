@@ -21,20 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as model from "../../model/malloy_types";
+import * as model from "../../../model/malloy_types";
 
-import { NestedQuery } from "./types/nested-query";
-import { FieldDeclaration } from "./query-items/field-declaration";
-import { FieldName, FieldSpace } from "./types/field-space";
-import { MalloyElement } from "./types/malloy-element";
-import { NestReference } from "./nesting/nest-reference";
-import { SpaceField } from "./types/space-field";
-import { QueryField } from "./field-space/query-space-field";
-import { opOutputStruct } from "./struct-utils";
-import { TurtleHeadedPipe } from "./types/turtle-headed-pipe";
-import { FieldType } from "./types/field-type";
-import { QueryInputSpace } from "./field-space/query-spaces";
-import { StaticSpace } from "./field-space/static-space";
+import { NestedQuery } from "../types/nested-query";
+import { FieldName, FieldSpace } from "../types/field-space";
+import { MalloyElement } from "../types/malloy-element";
+import { NestReference } from "../nesting/nest-reference";
+import { QueryField } from "../field-space/query-space-field";
+import { opOutputStruct } from "../struct-utils";
+import { TurtleHeadedPipe } from "../types/turtle-headed-pipe";
+import { QueryInputSpace } from "../field-space/query-spaces";
+import { StaticSpace } from "../field-space/static-space";
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
@@ -123,38 +120,6 @@ export function isNestedQuery(me: MalloyElement): me is NestedQuery {
     me instanceof NestReference ||
     me instanceof NestDefinition
   );
-}
-
-export class ExpressionFieldFromAst extends SpaceField {
-  fieldName: string;
-  defType?: FieldType;
-  constructor(readonly space: FieldSpace, readonly exprDef: FieldDeclaration) {
-    super();
-    this.fieldName = exprDef.defineName;
-  }
-
-  get name(): string {
-    return this.fieldName;
-  }
-
-  fieldDef(): model.FieldDef {
-    const def = this.exprDef.fieldDef(this.space, this.name);
-    this.defType = this.fieldTypeFromFieldDef(def);
-    return def;
-  }
-
-  getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef {
-    const def = this.exprDef.queryFieldDef(fs, this.name);
-    this.defType = this.fieldTypeFromFieldDef(def);
-    return def;
-  }
-
-  type(): FieldType {
-    if (this.defType) {
-      return this.defType;
-    }
-    return this.fieldTypeFromFieldDef(this.fieldDef());
-  }
 }
 
 export class QueryFieldAST extends QueryField {

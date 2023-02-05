@@ -21,11 +21,40 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { TurtleDecl } from "../query-properties/nest";
-import { ListOf } from "../types/malloy-element";
+import * as model from "../../../model/malloy_types";
+import { FieldDeclaration } from "../query-items/field-declaration";
+import { FieldSpace } from "../types/field-space";
+import { SpaceField } from "../types/space-field";
+import { FieldType } from "../types/field-type";
 
-export class Turtles extends ListOf<TurtleDecl> {
-  constructor(turtles: TurtleDecl[]) {
-    super("turtleDeclarationList", turtles);
+export class FieldDefinitionValue extends SpaceField {
+  fieldName: string;
+  defType?: FieldType;
+  constructor(readonly space: FieldSpace, readonly exprDef: FieldDeclaration) {
+    super();
+    this.fieldName = exprDef.defineName;
+  }
+
+  get name(): string {
+    return this.fieldName;
+  }
+
+  fieldDef(): model.FieldDef {
+    const def = this.exprDef.fieldDef(this.space, this.name);
+    this.defType = this.fieldTypeFromFieldDef(def);
+    return def;
+  }
+
+  getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef {
+    const def = this.exprDef.queryFieldDef(fs, this.name);
+    this.defType = this.fieldTypeFromFieldDef(def);
+    return def;
+  }
+
+  type(): FieldType {
+    if (this.defType) {
+      return this.defType;
+    }
+    return this.fieldTypeFromFieldDef(this.fieldDef());
   }
 }
