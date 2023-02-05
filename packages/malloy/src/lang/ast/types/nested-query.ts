@@ -22,6 +22,6 @@
  */
 
 import { NestDefinition, NestRefinement } from "../query-properties/nest";
-import { NestReference } from "../nesting/nest-reference";
+import { NestReference } from "../query-properties/nest-reference";
 
 export type NestedQuery = NestReference | NestDefinition | NestRefinement;

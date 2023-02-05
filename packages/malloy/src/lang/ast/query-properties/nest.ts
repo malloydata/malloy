@@ -26,7 +26,7 @@ import * as model from "../../../model/malloy_types";
 import { NestedQuery } from "../types/nested-query";
 import { FieldName, FieldSpace } from "../types/field-space";
 import { MalloyElement } from "../types/malloy-element";
-import { NestReference } from "../nesting/nest-reference";
+import { NestReference } from "./nest-reference";
 import { QueryField } from "../field-space/query-space-field";
 import { opOutputStruct } from "../struct-utils";
 import { TurtleHeadedPipe } from "../types/turtle-headed-pipe";

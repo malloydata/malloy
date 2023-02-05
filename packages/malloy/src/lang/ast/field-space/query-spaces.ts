@@ -31,7 +31,7 @@ import { SpaceField } from "../types/space-field";
 import { SpaceSeed } from "../space-seed";
 
 import { isNestedQuery, QueryFieldAST } from "../query-properties/nest";
-import { NestReference } from "../nesting/nest-reference";
+import { NestReference } from "../query-properties/nest-reference";
 import {
   FieldReference,
   WildcardFieldReference,

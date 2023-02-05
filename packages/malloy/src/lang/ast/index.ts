@@ -71,7 +71,7 @@ export * from "./expressions/top-by";
 export * from "./expressions/unary";
 export * from "./expressions/utils";
 export * from "./elements/import-statement";
-export * from "./nesting/nest-reference";
+export * from "./query-properties/nest-reference";
 export * from "./parameters/has-parameter";
 export * from "./query-elements/anonymous-query";
 export * from "./query-elements/existing-query";

@@ -22,7 +22,7 @@
  */
 
 import { isNestedQuery, NestDefinition } from "../query-properties/nest";
-import { NestReference } from "../nesting/nest-reference";
+import { NestReference } from "../query-properties/nest-reference";
 import { MalloyElement } from "./malloy-element";
 import { Aggregate } from "../query-properties/aggregate";
 import { DeclareFields } from "../query-properties/declare-fields";
