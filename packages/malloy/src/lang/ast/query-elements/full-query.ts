@@ -23,11 +23,11 @@
 
 import { Query, refIsStructDef } from "../../../model/malloy_types";
 
-import { DynamicSpace } from "../ast-main";
 import { ErrorFactory } from "../error-factory";
 import { Source } from "../elements/source";
 import { QueryComp } from "../types/query-comp";
 import { TurtleHeadedPipe } from "../types/turtle-headed-pipe";
+import { StaticSpace } from "../field-space/static-space";
 
 export class FullQuery extends TurtleHeadedPipe {
   constructor(readonly explore: Source) {
@@ -45,7 +45,7 @@ export class FullQuery extends TurtleHeadedPipe {
     const structDef = refIsStructDef(structRef)
       ? structRef
       : this.explore.structDef();
-    let pipeFs = new DynamicSpace(structDef);
+    let pipeFs = new StaticSpace(structDef);
 
     if (ErrorFactory.isErrorStructDef(structDef)) {
       return {
@@ -72,7 +72,7 @@ export class FullQuery extends TurtleHeadedPipe {
         destQuery.pipeHead = { name };
       }
       const pipeStruct = this.getOutputStruct(structDef, refined);
-      pipeFs = new DynamicSpace(pipeStruct);
+      pipeFs = new StaticSpace(pipeStruct);
     }
     const appended = this.appendOps(destQuery.pipeline, pipeFs);
     destQuery.pipeline = appended.opList;

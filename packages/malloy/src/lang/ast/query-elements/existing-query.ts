@@ -23,12 +23,12 @@
 
 import { Query } from "../../../model/malloy_types";
 
-import { DynamicSpace } from "../ast-main";
 import { ErrorFactory } from "../error-factory";
 import { ModelEntryReference } from "../types/malloy-element";
 import { PipelineDesc } from "../elements/pipeline-desc";
 import { QueryComp } from "../types/query-comp";
 import { QueryHeadStruct } from "./query-head-struct";
+import { StaticSpace } from "../field-space/static-space";
 
 export class ExistingQuery extends PipelineDesc {
   _head?: ModelEntryReference;
@@ -65,12 +65,12 @@ export class ExistingQuery extends PipelineDesc {
     const queryHead = new QueryHeadStruct(seedQuery.structRef);
     this.has({ queryHead });
     const exploreStruct = queryHead.structDef();
-    const exploreFS = new DynamicSpace(exploreStruct);
+    const exploreFS = new StaticSpace(exploreStruct);
     const sourcePipe = this.refinePipeline(exploreFS, seedQuery);
     const walkStruct = this.getOutputStruct(exploreStruct, sourcePipe.pipeline);
     const appended = this.appendOps(
       sourcePipe.pipeline,
-      new DynamicSpace(walkStruct)
+      new StaticSpace(walkStruct)
     );
     const destPipe = { ...sourcePipe, pipeline: appended.opList };
     const query: Query = {

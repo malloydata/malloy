@@ -25,11 +25,11 @@ import { PipeSegment } from "../../../model/malloy_types";
 
 import { QueryProperty } from "./query-property";
 
-import { QuerySpace, ResultSpace } from "../ast-main";
+import { QueryInputSpace, QuerySpace } from "../field-space/query-spaces";
 
 export interface Executor {
-  inputFS: QuerySpace;
-  resultFS: ResultSpace;
+  inputFS: QueryInputSpace;
+  resultFS: QuerySpace;
   execute(qp: QueryProperty): void;
   finalize(refineFrom: PipeSegment | undefined): PipeSegment;
 }

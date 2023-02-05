@@ -25,7 +25,7 @@ import {
   UngroupFragment,
 } from "../../../model/malloy_types";
 
-import { QuerySpace } from "../ast-main";
+import { QueryInputSpace } from "../field-space/query-spaces";
 import { errorFor } from "../ast-utils";
 import { ExprValue } from "../types/expr-value";
 import { FieldValueType } from "../types/field-value-type";
@@ -62,7 +62,7 @@ export class ExprUngroup extends ExpressionDef {
         if (fs instanceof DefSpace) {
           qs = fs.realFS;
         }
-        if (!(qs instanceof QuerySpace)) {
+        if (!(qs instanceof QueryInputSpace)) {
           this.log(
             `${this.control}() must be in a query -- weird internal error`
           );

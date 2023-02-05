@@ -36,8 +36,7 @@ import { SampleProperty } from "../query-properties/sampling";
 import { IndexFieldSpace } from "../field-space/index-field-space";
 import { QueryProperty } from "../types/query-property";
 import { Executor } from "../types/executor";
-
-import { QuerySpace } from "../ast-main";
+import { QueryInputSpace } from "../field-space/query-spaces";
 
 export class IndexExecutor implements Executor {
   filters: FilterExpression[] = [];
@@ -45,7 +44,7 @@ export class IndexExecutor implements Executor {
   indexOn?: FieldName;
   sample?: Sampling;
   resultFS: IndexFieldSpace;
-  inputFS: QuerySpace;
+  inputFS: QueryInputSpace;
 
   constructor(inputFS: FieldSpace) {
     this.resultFS = new IndexFieldSpace(inputFS);

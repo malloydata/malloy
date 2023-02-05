@@ -32,9 +32,7 @@ import { FieldSpace } from "../types/field-space";
 import { MalloyElement } from "../types/malloy-element";
 import { QOPDesc } from "../query-properties/qop-desc";
 import { getStructFieldDef, opOutputStruct } from "../struct-utils";
-
-import { QuerySpace } from "../ast-main";
-
+import { QueryInputSpace } from "../field-space/query-spaces";
 /**
  * Generic abstract for all pipelines, the first segment might be a reference
  * to an existing pipeline (query or turtle), and if there is a refinement it
@@ -44,7 +42,7 @@ export abstract class PipelineDesc extends MalloyElement {
   elementType = "pipelineDesc";
   protected headRefinement?: QOPDesc;
   protected qops: QOPDesc[] = [];
-  nestedInQuerySpace?: QuerySpace;
+  nestedInQuerySpace?: QueryInputSpace;
 
   refineHead(refinement: QOPDesc): void {
     this.headRefinement = refinement;

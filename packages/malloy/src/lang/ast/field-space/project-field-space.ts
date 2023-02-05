@@ -27,9 +27,9 @@ import {
   QueryFieldDef,
 } from "../../../model/malloy_types";
 
-import { ResultSpace } from "../ast-main";
+import { QuerySpace } from "./query-spaces";
 
-export class ProjectFieldSpace extends ResultSpace {
+export class ProjectFieldSpace extends QuerySpace {
   readonly segmentType = "project";
 
   canContain(qd: QueryFieldDef): boolean {

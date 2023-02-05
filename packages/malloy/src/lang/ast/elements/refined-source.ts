@@ -40,7 +40,7 @@ import { Filter } from "../query-properties/filters";
 import { Joins } from "../query-properties/joins";
 import { ExploreField } from "../types/explore-field";
 
-import { DynamicSpace } from "../ast-main";
+import { RefinedSpace } from "../field-space/refined-space";
 
 /**
  * A Source made from a source reference and a set of refinements
@@ -94,7 +94,7 @@ export class RefinedSource extends Source {
     if (primaryKey) {
       from.primaryKey = primaryKey.field.name;
     }
-    const fs = DynamicSpace.filteredFrom(from, fieldListEdit);
+    const fs = RefinedSpace.filteredFrom(from, fieldListEdit);
     fs.addField(...fields);
     if (pList) {
       fs.addParameters(pList);

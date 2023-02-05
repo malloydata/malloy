@@ -22,19 +22,18 @@
  */
 
 import { IndexSegment, PipeSegment } from "../../../model/malloy_types";
-
-import { ResultSpace } from "../ast-main";
 import {
   FieldReference,
   WildcardFieldReference,
 } from "../query-items/field-references";
+import { QuerySpace } from "./query-spaces";
 
-export class IndexFieldSpace extends ResultSpace {
+export class IndexFieldSpace extends QuerySpace {
   readonly segmentType = "index";
   fieldList = new Set<string>();
 
   addReference(ref: FieldReference): void {
-    if (ref.getField(this.exprSpace).found) {
+    if (ref.getField(this).found) {
       this.fieldList.add(ref.refString);
     }
   }
