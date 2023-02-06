@@ -21,25 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  Expr,
-  Fragment,
-  isAtomicFieldType,
-  mkExpr,
-} from "../../../model/malloy_types";
+import { Expr, Fragment, mkExpr } from "../../../model/malloy_types";
 
 import { Equality } from "../types/equality";
-import { ExpressionValueType } from "../types/expression-value-type";
-import { FieldValueType } from "../types/field-value-type";
-
-export function isExpressionValueType(
-  fv: FieldValueType
-): fv is ExpressionValueType {
-  return (
-    isAtomicFieldType(fv) ||
-    ["null", "unknown", "duration", "regular expression"].includes(fv)
-  );
-}
 
 /**
  * If the passed expresion is not a single term, wrap it in parens

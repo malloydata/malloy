@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { ExprValue } from "../types/expr-value";
-import { FieldValueType } from "../types/field-value-type";
+import { FieldValueType } from "../types/type-desc";
 import { FT } from "../fragtype-utils";
 import { ExprAggregateFunction } from "./expr-aggregate-function";
 import { ExpressionDef } from "../types/expression-def";

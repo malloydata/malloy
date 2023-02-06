@@ -21,10 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldValueType } from "./types/field-value-type";
-import { FragType } from "./types/frag-type";
+import { TypeDesc, FieldValueType } from "./types/type-desc";
 
-function mkFragType(dType: FieldValueType): FragType {
+function mkFragType(dType: FieldValueType): TypeDesc {
   return { dataType: dType, expressionType: "scalar" };
 }
 
@@ -37,7 +36,7 @@ export class FT {
    * @param check The type to check (can be undefined)
    * @param from List of types which are OK
    */
-  static in(check: FragType | undefined, from: FragType[]): boolean {
+  static in(check: TypeDesc | undefined, from: TypeDesc[]): boolean {
     if (check) {
       const found = from.find((okType) => FT.eq(okType, check));
       return found !== undefined;
@@ -50,7 +49,7 @@ export class FT {
    * @param good The real type
    * @param checkThis The possibly undefined candidate
    */
-  static eq(good: FragType, checkThis: FragType | undefined): boolean {
+  static eq(good: TypeDesc, checkThis: TypeDesc | undefined): boolean {
     return (
       checkThis !== undefined &&
       good.dataType === checkThis.dataType &&
@@ -64,7 +63,7 @@ export class FT {
    * @param right Right type
    * @param nullOk True if a NULL is an acceptable match
    */
-  static typeEq(left: FragType, right: FragType, nullOk = false): boolean {
+  static typeEq(left: TypeDesc, right: TypeDesc, nullOk = false): boolean {
     const maybeEq = left.dataType === right.dataType;
     const nullEq =
       nullOk && (left.dataType === "null" || right.dataType === "null");
@@ -77,7 +76,7 @@ export class FT {
    * for a list of types.
    * @param types List of type or objects with types
    */
-  static inspect(...types: (FragType | undefined)[]): string {
+  static inspect(...types: (TypeDesc | undefined)[]): string {
     const strings = types.map((type) => {
       if (type) {
         let inspected: string = type.dataType;

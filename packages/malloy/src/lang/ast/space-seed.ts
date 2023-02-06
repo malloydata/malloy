@@ -23,14 +23,17 @@
 
 import { StructDef } from "../../model/malloy_types";
 
-import { FieldSpace, isFieldSpace, SourceSpec } from "./types/field-space";
+import { FieldSpace } from "./types/field-space";
 import { StaticSpace } from "./field-space/static-space";
 
+export type SourceSpec = StructDef | FieldSpace;
+function isFieldSpace(x: SourceSpec): x is FieldSpace {
+  return x.type == "fieldSpace";
+}
+
 /**
- * Based on how things are constructed, the starting field space
- * can either be another field space or an existing structdef.
- * Using a SpaceSeed allows a class to accept either one
- * and use either version at some future time.
+ * Based on how things are constructed, a DynamicSpace can be seeded
+ * with a StructDef, or from another field space.
  */
 export class SpaceSeed {
   private spaceSpec: SourceSpec;

@@ -24,11 +24,11 @@
 import * as model from "../../../model/malloy_types";
 import { mergeFields, nameOf } from "../../field-utils";
 import { FieldDeclaration } from "../query-items/field-declaration";
-import { FieldName, FieldSpace, SourceSpec } from "../types/field-space";
+import { FieldName, FieldSpace } from "../types/field-space";
 import { MalloyElement } from "../types/malloy-element";
 import { Join } from "../query-properties/joins";
 import { SpaceField } from "../types/space-field";
-import { SpaceSeed } from "../space-seed";
+import { SpaceSeed, SourceSpec } from "../space-seed";
 
 import { isNestedQuery, QueryFieldAST } from "../query-properties/nest";
 import { NestReference } from "../query-properties/nest-reference";
@@ -48,8 +48,6 @@ import { RefinedSpace } from "./refined-space";
  * source, which it might modify. This set of fields used to resolve
  * expressions in the query is called the "input space". There is a
  * specialized QuerySpace for each type of query operation.
- *
- * The query output is managed by an instance of ResultSpace.
  */
 
 export class QueryInputSpace extends RefinedSpace {

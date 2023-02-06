@@ -23,8 +23,8 @@
 
 import { FieldDef, StructDef } from "../../../model/malloy_types";
 import { FieldSpace } from "../types/field-space";
-import { FieldType } from "../types/field-type";
 import { SpaceField } from "../types/space-field";
+import { TypeDesc } from "../types/type-desc";
 
 export abstract class StructSpaceFieldBase extends SpaceField {
   constructor(protected sourceDef: StructDef) {
@@ -37,7 +37,7 @@ export abstract class StructSpaceFieldBase extends SpaceField {
     return this.sourceDef;
   }
 
-  type(): FieldType {
-    return { type: "struct" };
+  typeDesc(): TypeDesc {
+    return { dataType: "struct", expressionType: "scalar" };
   }
 }

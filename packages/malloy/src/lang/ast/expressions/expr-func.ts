@@ -28,7 +28,7 @@ import {
 } from "../../../model/malloy_types";
 
 import { ExprValue } from "../types/expr-value";
-import { FieldValueType } from "../types/field-value-type";
+import { FieldValueType } from "../types/type-desc";
 import { FieldSpace } from "../types/field-space";
 import { ExpressionDef } from "../types/expression-def";
 import { compressExpr } from "./utils";

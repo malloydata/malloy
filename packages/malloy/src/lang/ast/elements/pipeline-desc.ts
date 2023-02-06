@@ -33,6 +33,12 @@ import { MalloyElement } from "../types/malloy-element";
 import { QOPDesc } from "../query-properties/qop-desc";
 import { getStructFieldDef, opOutputStruct } from "../struct-utils";
 import { QueryInputSpace } from "../field-space/query-spaces";
+
+interface AppendResult {
+  opList: PipeSegment[];
+  structDef: StructDef;
+}
+
 /**
  * Generic abstract for all pipelines, the first segment might be a reference
  * to an existing pipeline (query or turtle), and if there is a refinement it
@@ -54,7 +60,10 @@ export abstract class PipelineDesc extends MalloyElement {
     this.has({ segments: this.qops });
   }
 
-  protected appendOps(modelPipe: PipeSegment[], existingEndSpace: FieldSpace) {
+  protected appendOps(
+    modelPipe: PipeSegment[],
+    existingEndSpace: FieldSpace
+  ): AppendResult {
     let nextFS = existingEndSpace;
     let returnPipe: PipeSegment[] | undefined;
     for (const qop of this.qops) {

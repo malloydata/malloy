@@ -25,7 +25,7 @@ import { AtomicFieldType, StructDef } from "../../../model/malloy_types";
 import { LookupResult } from "../types/lookup-result";
 import { Comparison } from "../types/comparison";
 import { ExprValue } from "../types/expr-value";
-import { FieldValueType } from "../types/field-value-type";
+import { FieldValueType } from "../types/type-desc";
 import { ExprCompare } from "./expr-compare";
 import { ExpressionDef } from "../types/expression-def";
 import { compressExpr } from "./utils";
