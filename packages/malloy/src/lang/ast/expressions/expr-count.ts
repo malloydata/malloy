@@ -46,7 +46,7 @@ export class ExprCount extends ExprAggregateFunction {
     const ret: AggregateFragment = {
       "type": "aggregate",
       "function": "count",
-      "e": [],
+      "e": []
     };
     if (this.source) {
       ret.structPath = this.source.refString;
@@ -54,7 +54,7 @@ export class ExprCount extends ExprAggregateFunction {
     return {
       "dataType": "number",
       "expressionType": "aggregate",
-      "value": [ret],
+      "value": [ret]
     };
   }
 }

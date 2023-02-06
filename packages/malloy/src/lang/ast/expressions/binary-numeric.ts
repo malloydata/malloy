@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExprValue } from "../types/expr-value";
-import { FieldSpace } from "../types/field-space";
 import { FT } from "../fragtype-utils";
+import { ExprValue } from "../types/expr-value";
 import { ExpressionDef } from "../types/expression-def";
+import { FieldSpace } from "../types/field-space";
 
 export abstract class BinaryNumeric<
   opType extends string
@@ -35,7 +35,7 @@ export abstract class BinaryNumeric<
     readonly op: opType,
     readonly right: ExpressionDef
   ) {
-    super({ left, right });
+    super({ "left": left, "right": right });
     this.legalChildTypes = [FT.numberT];
   }
 

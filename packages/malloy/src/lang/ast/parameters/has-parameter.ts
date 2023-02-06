@@ -23,8 +23,8 @@
 
 import {
   AtomicFieldType,
-  isAtomicFieldType,
   Parameter,
+  isAtomicFieldType
 } from "../../../model/malloy_types";
 
 import { ConstantSubExpression } from "../expressions/constant-sub-expression";
@@ -65,7 +65,7 @@ export class HasParameter extends MalloyElement {
       return {
         type,
         name,
-        "condition": cCond,
+        "condition": cCond
       };
     }
     const cVal = this.default?.constantValue().value || null;
@@ -73,7 +73,7 @@ export class HasParameter extends MalloyElement {
       "value": cVal,
       type,
       "name": this.name,
-      "constant": false,
+      "constant": false
     };
   }
 }

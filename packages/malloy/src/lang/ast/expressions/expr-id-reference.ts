@@ -46,7 +46,7 @@ export class ExprIdReference extends ExpressionDef {
       const value = [{ "type": def.found.refType, "path": this.refString }];
       return {
         ...def.found.typeDesc(),
-        value,
+        value
       };
     }
     this.log(def.error);
@@ -66,9 +66,9 @@ export class ExprIdReference extends ExpressionDef {
             {
               "type": "apply",
               "value": lval.value,
-              "to": [{ "type": "parameter", "path": this.refString }],
-            },
-          ],
+              "to": [{ "type": "parameter", "path": this.refString }]
+            }
+          ]
         };
       }
     }

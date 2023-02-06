@@ -22,12 +22,12 @@
  */
 
 import {
-  DateTimeframe,
-  TimestampTimeframe,
-  DataRecord,
-  DataArrayOrRecord,
-  Explore,
   DataArray,
+  DataArrayOrRecord,
+  DataRecord,
+  DateTimeframe,
+  Explore,
+  TimestampTimeframe
 } from "@malloydata/malloy";
 import { timeToString } from "./html/utils";
 

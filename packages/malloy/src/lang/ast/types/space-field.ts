@@ -23,8 +23,8 @@
 
 import {
   FieldDef,
-  isFieldTypeDef,
   QueryFieldDef,
+  isFieldTypeDef
 } from "../../../model/malloy_types";
 import { SpaceEntry } from "./space-entry";
 import { FieldSpace } from "./field-space";

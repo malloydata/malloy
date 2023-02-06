@@ -61,9 +61,9 @@ export class ExprFilter extends ExpressionDef {
           {
             "type": "filterExpression",
             "e": resultExpr.value,
-            "filterList": testList,
-          },
-        ],
+            "filterList": testList
+          }
+        ]
       };
     }
     this.expr.log(`Cannot filter '${resultExpr.dataType}' data`);

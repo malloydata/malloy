@@ -129,5 +129,5 @@ export const STATE_CODES: { [code: string]: string } = {
   "VI": "78",
   "AS": "60",
   "MP": "69",
-  "GU": "66",
+  "GU": "66"
 };

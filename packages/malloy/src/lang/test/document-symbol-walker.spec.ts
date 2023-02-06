@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { MarkedSource, markSource, TestTranslator } from "./test-translator";
+import { MarkedSource, TestTranslator, markSource } from "./test-translator";
 import { DocumentSymbol } from "../parse-tree-walkers/document-symbol-walker";
 
 class MalloyExplore extends TestTranslator {
@@ -50,7 +50,7 @@ function testSymbol(
   expect(current).toMatchObject({
     name,
     "range": source.locations[0].range,
-    type,
+    type
   });
 }
 

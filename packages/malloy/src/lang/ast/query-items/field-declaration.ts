@@ -24,8 +24,8 @@
 import { Dialect } from "../../../dialect/dialect";
 import {
   FieldTypeDef,
-  isAtomicFieldType,
   StructDef,
+  isAtomicFieldType
 } from "../../../model/malloy_types";
 
 import { LookupResult } from "../types/lookup-result";
@@ -70,7 +70,7 @@ export class FieldDeclaration extends MalloyElement {
       this.log(`Cannot define '${exprName}', ${error.message}`);
       return {
         "name": `error_defining_${exprName}`,
-        "type": "string",
+        "type": "string"
       };
     }
     const compressValue = compressExpr(exprValue.value);
@@ -79,7 +79,7 @@ export class FieldDeclaration extends MalloyElement {
       const template: FieldTypeDef = {
         "name": exprName,
         "type": retType,
-        "location": this.location,
+        "location": this.location
       };
       if (compressValue.length > 0) {
         template.e = compressValue;
@@ -107,7 +107,7 @@ export class FieldDeclaration extends MalloyElement {
     }
     return {
       "name": `error_defining_${exprName}`,
-      "type": "string",
+      "type": "string"
     };
   }
 }
@@ -133,7 +133,7 @@ export class DefSpace implements FieldSpace {
       this.foundCircle = true;
       return {
         "error": `Circular reference to '${this.circular.defineName}' in definition`,
-        "found": undefined,
+        "found": undefined
       };
     }
     return this.realFS.lookup(symbol);

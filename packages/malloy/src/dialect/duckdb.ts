@@ -25,17 +25,17 @@ import {
   DateUnit,
   Expr,
   ExtractUnit,
+  Sampling,
+  StructDef,
+  TimeFieldType,
+  TimeValue,
+  TimestampUnit,
+  TypecastFragment,
   getIdentifier,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  mkExpr,
-  Sampling,
-  StructDef,
-  TimeFieldType,
-  TimestampUnit,
-  TimeValue,
-  TypecastFragment,
+  mkExpr
 } from "../model/malloy_types";
 import { indent } from "../model/utils";
 import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
@@ -125,18 +125,18 @@ WITH
 
 const castMap: Record<string, string> = {
   "number": "double precision",
-  "string": "varchar",
+  "string": "varchar"
 };
 
 const pgExtractionMap: Record<string, string> = {
   "day_of_week": "dow",
-  "day_of_year": "doy",
+  "day_of_year": "doy"
 };
 
 const inSeconds: Record<string, number> = {
   "second": 1,
   "minute": 60,
-  "hour": 3600,
+  "hour": 3600
 };
 
 export class DuckDBDialect extends Dialect {
@@ -154,7 +154,7 @@ export class DuckDBDialect extends Dialect {
   supportsQualify = true;
 
   functionInfo: Record<string, FunctionInfo> = {
-    "concat": { "returnType": "string" },
+    "concat": { "returnType": "string" }
   };
 
   // hack until they support temporary macros.

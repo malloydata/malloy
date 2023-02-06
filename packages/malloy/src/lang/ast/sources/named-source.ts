@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import {
-  isValueParameter,
-  paramHasValue,
   StructDef,
   StructRef,
+  isValueParameter,
+  paramHasValue
 } from "../../../model";
 import { Source } from "../elements/source";
 import { MalloyElement, ModelEntryReference } from "../types/malloy-element";

@@ -73,7 +73,7 @@ export class SQLStatement extends MalloyElement implements DocStatement {
       const locStruct = {
         ...lookup.value,
         "fields": lookup.value.fields.map((f) => ({ ...f, location })),
-        "location": this.location,
+        "location": this.location
       };
       if (this.is && !doc.defineSQL(locStruct, this.is)) {
         this.log(`'${this.is}' already defined`);
@@ -82,7 +82,7 @@ export class SQLStatement extends MalloyElement implements DocStatement {
     }
     return {
       "compileSQL": sql,
-      "partialModel": this.select.containsQueries ? doc.modelDef() : undefined,
+      "partialModel": this.select.containsQueries ? doc.modelDef() : undefined
     };
   }
 }

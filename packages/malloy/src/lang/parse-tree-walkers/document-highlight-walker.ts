@@ -45,7 +45,7 @@ export const HighlightType = {
     "String": "literal.string",
     "RegularExpression": "literal.regular_expression",
     "Boolean": "literal.boolean",
-    "Null": "literal.null",
+    "Null": "literal.null"
   },
   "Call": {
     "Aggregate": "call.aggregate",
@@ -54,15 +54,15 @@ export const HighlightType = {
     "Table": "call.table",
     "From": "call.from",
     "Function": "call.function",
-    "FromSQL": "call.from_sql",
+    "FromSQL": "call.from_sql"
   },
   // TODO many of these should probably be categorized further
   "Keyword": {
     "AggregateModifier": {
-      "Distinct": "keyword.aggregate_modifier.distinct",
+      "Distinct": "keyword.aggregate_modifier.distinct"
     },
     "CastModifier": {
-      "As": "keyword.cast_modifier.as",
+      "As": "keyword.cast_modifier.as"
     },
     "Is": "keyword.is",
     "On": "keyword.on",
@@ -76,16 +76,16 @@ export const HighlightType = {
     "JSON": "keyword.json",
     // TODO or is this a meta type?
     "Turtle": "keyword.turtle",
-    "Import": "keyword.import",
+    "Import": "keyword.import"
   },
   "Operator": {
     "Comparison": "operator.comparison",
     "Boolean": "operator.boolean",
-    "Date": "operator.date",
+    "Date": "operator.date"
   },
   "Comment": {
     "Line": "comment.line",
-    "Block": "comment.block",
+    "Block": "comment.block"
   },
   "Property": {
     "Accept": "property.accept",
@@ -109,8 +109,8 @@ export const HighlightType = {
     "Rename": "property.rename",
     "Top": "property.top",
     "Where": "property.where",
-    "SQL": "property.sql",
-  },
+    "SQL": "property.sql"
+  }
 };
 
 export function passForHighlights(
@@ -130,7 +130,7 @@ export function passForHighlights(
       "range": {
         "start": {
           "line": token.line - 1,
-          "character": token.startIndex - offset,
+          "character": token.startIndex - offset
         },
         "end": {
           "line": token.line - 1 + numberOfLines - 1,
@@ -140,9 +140,9 @@ export function passForHighlights(
             (numberOfLines > 1 ? token.startIndex : offset) -
             lengthOfAllButLastLine -
             numberOfLines -
-            colonAdjustment,
-        },
-      },
+            colonAdjustment
+        }
+      }
     });
   };
   for (let i = 0; i < tokens.size; i++) {
@@ -354,15 +354,15 @@ class DocumentHighlightWalker implements MalloyParserListener {
     return {
       "start": {
         "line": pcx.start.line - 1,
-        "character": pcx.start.charPositionInLine,
+        "character": pcx.start.charPositionInLine
       },
       "end": {
         "line": stopToken.line - 1,
         "character":
           stopToken.stopIndex -
           (stopToken.startIndex - stopToken.charPositionInLine) +
-          1,
-      },
+          1
+      }
     };
   }
 
@@ -371,7 +371,7 @@ class DocumentHighlightWalker implements MalloyParserListener {
     if (id) {
       this.highlights.push({
         "range": this.rangeOf(id),
-        "type": HighlightType.Call.Function,
+        "type": HighlightType.Call.Function
       });
     }
   }

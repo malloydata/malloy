@@ -34,7 +34,7 @@ export class ExprRegEx extends ExpressionDef {
     return {
       "dataType": "regular expression",
       "expressionType": "scalar",
-      "value": [`r'${this.regex}'`],
+      "value": [`r'${this.regex}'`]
     };
   }
 }

@@ -23,7 +23,7 @@
 
 import { SQLPhrase } from "../../../model/malloy_types";
 
-import { isQueryElement, QueryElement } from "../types/query-element";
+import { QueryElement, isQueryElement } from "../types/query-element";
 import { MalloyElement } from "../types/malloy-element";
 
 type SQLStringSegment = string | QueryElement;

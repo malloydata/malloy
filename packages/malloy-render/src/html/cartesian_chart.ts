@@ -52,7 +52,7 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
             "field": colorField.name,
             "type": colorType,
             "axis": { "title": colorField.name },
-            "scale": getColorScale(colorType, mark === "bar"),
+            "scale": getColorScale(colorType, mark === "bar")
           }
         : { "value": "#4285F4" };
 
@@ -60,7 +60,7 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       ? {
           "field": sizeField.name,
           "type": sizeType,
-          "axis": { "title": sizeField.name },
+          "axis": { "title": sizeField.name }
         }
       : undefined;
 
@@ -68,7 +68,7 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       ? {
           "field": shapeField.name,
           "type": shapeType,
-          "axis": { "title": shapeField.name },
+          "axis": { "title": shapeField.name }
         }
       : undefined;
 
@@ -79,21 +79,21 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       "field": xField.name,
       "type": xType,
       "sort": xSort,
-      "axis": { "title": xField.name },
+      "axis": { "title": xField.name }
     };
 
     const yDef = {
       "field": yField.name,
       "type": yType,
       "sort": ySort,
-      "axis": { "title": yField.name },
+      "axis": { "title": yField.name }
     };
 
     return {
       ...DEFAULT_SPEC,
       ...this.getSize(),
       "data": {
-        "values": this.mapData(data),
+        "values": this.mapData(data)
       },
       mark,
       "encoding": {
@@ -101,9 +101,9 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
         "y": yDef,
         "size": sizeDef,
         "color": colorDef,
-        "shape": shapeDef,
+        "shape": shapeDef
       },
-      "background": "transparent",
+      "background": "transparent"
     };
   }
 }

@@ -57,7 +57,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
       "range": this.translator.rangeFromContext(pcx),
       "name": pcx.queryName().text,
       "type": "query",
-      "children": [],
+      "children": []
     });
   }
 
@@ -66,7 +66,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
       "range": this.translator.rangeFromContext(pcx),
       "name": "unnamed_query",
       "type": "unnamed_query",
-      "children": [],
+      "children": []
     });
   }
 
@@ -75,7 +75,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
       "range": this.translator.rangeFromContext(pcx),
       "name": pcx.sourceNameDef().id().text,
       "type": "explore",
-      "children": [],
+      "children": []
     });
   }
 
@@ -91,7 +91,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
       "range": this.translator.rangeFromContext(pcx),
       "name": pcx.exploreQueryNameDef().id().text,
       "type": "query",
-      "children": [],
+      "children": []
     };
     const parent = this.peekScope();
     if (parent) {
@@ -109,7 +109,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
       "range": this.translator.rangeFromContext(pcx),
       "name": pcx.queryName().id().text,
       "type": "query",
-      "children": [],
+      "children": []
     };
     const parent = this.peekScope();
     if (parent) {
@@ -136,7 +136,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
       "range": this.translator.rangeFromContext(pcx),
       "name": pcx.fieldNameDef().id().text,
       "type": "field",
-      "children": [],
+      "children": []
     };
     const parent = this.peekScope();
     if (parent) {
@@ -149,7 +149,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
       "range": this.translator.rangeFromContext(pcx),
       "name": pcx.fieldPath().text,
       "type": "field",
-      "children": [],
+      "children": []
     };
     const parent = this.peekScope();
     if (parent) {
@@ -162,7 +162,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
       "range": this.translator.rangeFromContext(pcx),
       "name": pcx.fieldName()[0].text,
       "type": "field",
-      "children": [],
+      "children": []
     };
     const parent = this.peekScope();
     if (parent) {
@@ -183,7 +183,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
       "range": this.translator.rangeFromContext(pcx),
       "name": pcx.joinNameDef().id().text,
       "type": "join",
-      "children": [],
+      "children": []
     };
     const parent = this.peekScope();
     if (parent) {
@@ -197,7 +197,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
       "range": this.translator.rangeFromContext(pcx),
       "name": name || "unnamed_sql",
       "type": name === undefined ? "unnamed_sql" : "sql",
-      "children": [],
+      "children": []
     };
     this.symbols.push(symbol);
   }

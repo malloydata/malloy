@@ -52,8 +52,8 @@ export function getColorScale(
               "#F9C85B",
               "#AACD85",
               "#B87CED",
-              "#ACB0B3",
-            ],
+              "#ACB0B3"
+            ]
           }
         : {
             "range": [
@@ -64,8 +64,8 @@ export function getColorScale(
               "#F9AB00",
               "#7CB342",
               "#9334E6",
-              "#80868B",
-            ],
+              "#80868B"
+            ]
           };
   }
 }

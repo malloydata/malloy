@@ -25,7 +25,7 @@ import {
   isExtractUnit,
   isTimeFieldType,
   isTimestampUnit,
-  maxExpressionType,
+  maxExpressionType
 } from "../../../model/malloy_types";
 
 import { errorFor } from "../ast-utils";
@@ -44,7 +44,7 @@ export class ExprTimeExtract extends ExpressionDef {
     "days": "day",
     "hours": "hour",
     "minutes": "minute",
-    "seconds": "second",
+    "seconds": "second"
   };
 
   static extractor(funcName: string): ExtractUnit | undefined {
@@ -96,9 +96,9 @@ export class ExprTimeExtract extends ExpressionDef {
               "function": "timeDiff",
               "units": extractTo,
               "left": { "valueType": first.dataType, "value": first.value },
-              "right": { "valueType": last.dataType, "value": last.value },
-            },
-          ],
+              "right": { "valueType": last.dataType, "value": last.value }
+            }
+          ]
         };
       } else {
         const argV = from.getExpression(fs);
@@ -111,9 +111,9 @@ export class ExprTimeExtract extends ExpressionDef {
                 "type": "dialect",
                 "function": "extract",
                 "expr": { "value": argV.value, "valueType": argV.dataType },
-                "units": extractTo,
-              },
-            ],
+                "units": extractTo
+              }
+            ]
           };
         }
         this.log(

@@ -44,7 +44,7 @@ const EXPLORE_PROPERTIES = [
   "accept",
   "except",
   "query",
-  "declare",
+  "declare"
 ];
 
 const QUERY_PROPERTIES = [
@@ -58,7 +58,7 @@ const QUERY_PROPERTIES = [
   "where",
   "having",
   "nest",
-  "declare",
+  "declare"
 ];
 
 const MODEL_PROPERTIES = ["source", "explore", "query", "sql"];
@@ -75,15 +75,15 @@ class DocumentCompletionWalker implements MalloyParserListener {
     return {
       "start": {
         "line": pcx.start.line - 1,
-        "character": pcx.start.charPositionInLine,
+        "character": pcx.start.charPositionInLine
       },
       "end": {
         "line": stopToken.line - 1,
         "character":
           stopToken.stopIndex -
           (stopToken.startIndex - stopToken.charPositionInLine) +
-          1,
-      },
+          1
+      }
     };
   }
 
@@ -115,7 +115,7 @@ class DocumentCompletionWalker implements MalloyParserListener {
         for (const property of EXPLORE_PROPERTIES) {
           this.completions.push({
             "type": "explore_property",
-            "text": `${property}: `,
+            "text": `${property}: `
           });
         }
       }
@@ -134,7 +134,7 @@ class DocumentCompletionWalker implements MalloyParserListener {
         for (const property of QUERY_PROPERTIES) {
           this.completions.push({
             "type": "query_property",
-            "text": `${property}: `,
+            "text": `${property}: `
           });
         }
       }
@@ -153,7 +153,7 @@ class DocumentCompletionWalker implements MalloyParserListener {
         for (const property of MODEL_PROPERTIES) {
           this.completions.push({
             "type": "model_property",
-            "text": `${property}: `,
+            "text": `${property}: `
           });
         }
       }

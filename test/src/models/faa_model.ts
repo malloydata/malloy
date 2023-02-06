@@ -22,8 +22,10 @@
  */
 
 import { ModelDef, StructDef, StructRelationship } from "@malloydata/malloy";
-import { medicareModel, medicareStateFacts } from "./medicare_model";
+
 import { fStringEq, fYearEq } from "../util";
+
+import { medicareModel, medicareStateFacts } from "./medicare_model";
 
 function withJoin(leftKey: string, rightKey: string): StructRelationship {
   return {
@@ -31,8 +33,8 @@ function withJoin(leftKey: string, rightKey: string): StructRelationship {
     "onExpression": [
       { "type": "field", "path": `${leftKey}` },
       "=",
-      { "type": "field", "path": `${rightKey}` },
-    ],
+      { "type": "field", "path": `${rightKey}` }
+    ]
   };
 }
 
@@ -44,7 +46,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
   "dialect": "standardsql",
   "structSource": {
     "type": "table",
-    "tablePath": "malloy-data.malloytest.flights",
+    "tablePath": "malloy-data.malloytest.flights"
   },
   "structRelationship": { "type": "basetable", "connectionName": "bigquery" },
   "primaryKey": "id2",
@@ -69,7 +71,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       "type": "number",
       "name": "flight_count",
       "expressionType": "aggregate",
-      "e": [{ "type": "aggregate", "function": "count", "e": [] }],
+      "e": [{ "type": "aggregate", "function": "count", "e": [] }]
     },
     {
       "type": "number",
@@ -79,9 +81,9 @@ export const FLIGHTS_EXPLORE: StructDef = {
         {
           "type": "aggregate",
           "function": "sum",
-          "e": [{ "type": "field", "path": "distance" }],
-        },
-      ],
+          "e": [{ "type": "field", "path": "distance" }]
+        }
+      ]
     },
 
     // carriers
@@ -92,22 +94,22 @@ export const FLIGHTS_EXPLORE: StructDef = {
       "dialect": "standardsql",
       "structSource": {
         "type": "table",
-        "tablePath": "malloy-data.malloytest.carriers",
+        "tablePath": "malloy-data.malloytest.carriers"
       },
       "structRelationship": {
         "type": "one",
         "onExpression": [
           { "type": "field", "path": "carrier" },
           "=",
-          { "type": "field", "path": "carriers.code" },
-        ],
+          { "type": "field", "path": "carriers.code" }
+        ]
       },
       "primaryKey": "code",
       "fields": [
         { "type": "string", "name": "code" },
         { "type": "string", "name": "name" },
-        { "type": "string", "name": "nickname" },
-      ],
+        { "type": "string", "name": "nickname" }
+      ]
     },
 
     // aircraft
@@ -118,7 +120,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       "dialect": "standardsql",
       "structSource": {
         "type": "table",
-        "tablePath": "malloy-data.malloytest.aircraft",
+        "tablePath": "malloy-data.malloytest.aircraft"
       },
       "structRelationship": withJoin("tail_num", "aircraft.tail_num"),
       "primaryKey": "tail_num",
@@ -131,17 +133,17 @@ export const FLIGHTS_EXPLORE: StructDef = {
         {
           "type": "number",
           "name": "aircraft_type_id",
-          "numberType": "integer",
+          "numberType": "integer"
         },
         {
           "type": "number",
           "name": "aircraft_engine_type_id",
-          "numberType": "integer",
+          "numberType": "integer"
         },
         {
           "type": "number",
           "name": "registrant_type_id",
-          "numberType": "integer",
+          "numberType": "integer"
         },
         { "type": "string", "name": "name" },
         { "type": "string", "name": "address1" },
@@ -160,7 +162,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
           "type": "number",
           "name": "aircraft_count",
           "expressionType": "aggregate",
-          "e": [{ "type": "aggregate", "function": "count", "e": [] }],
+          "e": [{ "type": "aggregate", "function": "count", "e": [] }]
         },
         {
           "type": "number",
@@ -170,9 +172,9 @@ export const FLIGHTS_EXPLORE: StructDef = {
             {
               "type": "aggregate",
               "function": "sum",
-              "e": [{ "type": "field", "path": "aircraft_models.engines" }],
-            },
-          ],
+              "e": [{ "type": "field", "path": "aircraft_models.engines" }]
+            }
+          ]
         },
 
         // subjoin aircraft models
@@ -184,7 +186,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
           "primaryKey": "aircraft_model_code",
           "structSource": {
             "type": "table",
-            "tablePath": "malloy-data.malloytest.aircraft_models",
+            "tablePath": "malloy-data.malloytest.aircraft_models"
           },
           "structRelationship": withJoin(
             "aircraft_model_code",
@@ -197,17 +199,17 @@ export const FLIGHTS_EXPLORE: StructDef = {
             {
               "type": "number",
               "name": "aircraft_type_id",
-              "numberType": "integer",
+              "numberType": "integer"
             },
             {
               "type": "number",
               "name": "aircraft_engine_type_id",
-              "numberType": "integer",
+              "numberType": "integer"
             },
             {
               "type": "number",
               "name": "aircraft_category_id",
-              "numberType": "integer",
+              "numberType": "integer"
             },
             { "type": "number", "name": "amateur", "numberType": "integer" },
             { "type": "number", "name": "engines", "numberType": "integer" },
@@ -222,13 +224,13 @@ export const FLIGHTS_EXPLORE: StructDef = {
                 {
                   "type": "aggregate",
                   "function": "sum",
-                  "e": [{ "type": "field", "path": "seats" }],
-                },
-              ],
-            },
-          ],
-        },
-      ],
+                  "e": [{ "type": "field", "path": "seats" }]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
 
     // origin
@@ -239,7 +241,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       "dialect": "standardsql",
       "structSource": {
         "type": "table",
-        "tablePath": "malloy-data.malloytest.airports",
+        "tablePath": "malloy-data.malloytest.airports"
       },
       "structRelationship": withJoin("origin_code", "origin.code"),
       "primaryKey": "code",
@@ -275,9 +277,9 @@ export const FLIGHTS_EXPLORE: StructDef = {
           "type": "number",
           "name": "count",
           "expressionType": "aggregate",
-          "e": [{ "type": "aggregate", "function": "count", "e": [] }],
-        },
-      ],
+          "e": [{ "type": "aggregate", "function": "count", "e": [] }]
+        }
+      ]
     },
 
     // destination
@@ -288,7 +290,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       "dialect": "standardsql",
       "structSource": {
         "type": "table",
-        "tablePath": "malloy-data.malloytest.airports",
+        "tablePath": "malloy-data.malloytest.airports"
       },
       "structRelationship": withJoin("destination_code", "destination.code"),
       "primaryKey": "code",
@@ -324,9 +326,9 @@ export const FLIGHTS_EXPLORE: StructDef = {
           "type": "number",
           "name": "count",
           "expressionType": "aggregate",
-          "e": [{ "type": "aggregate", "function": "count", "e": [] }],
-        },
-      ],
+          "e": [{ "type": "aggregate", "function": "count", "e": [] }]
+        }
+      ]
     },
 
     // derived table from a named query.
@@ -340,15 +342,15 @@ export const FLIGHTS_EXPLORE: StructDef = {
           "type": "query",
           "structRef": "flights",
           "pipeHead": { "name": "aircraft_facts_query" },
-          "pipeline": [],
-        },
+          "pipeline": []
+        }
       },
       "structRelationship": withJoin("tail_num", "aircraft_facts.tail_num"),
       "primaryKey": "tail_num",
       "fields": [
         { "type": "string", "name": "tail_num" },
-        { "type": "number", "name": "lifetime_distance" },
-      ],
+        { "type": "number", "name": "lifetime_distance" }
+      ]
     },
 
     // // Inline derived table
@@ -390,9 +392,9 @@ export const FLIGHTS_EXPLORE: StructDef = {
                   "type": "aggregate",
                   "function": "count",
                   "e": [],
-                  "structPath": "origin",
-                },
-              ],
+                  "structPath": "origin"
+                }
+              ]
             },
             {
               "type": "number",
@@ -402,14 +404,14 @@ export const FLIGHTS_EXPLORE: StructDef = {
                 {
                   "type": "aggregate",
                   "function": "sum",
-                  "e": [{ "type": "field", "path": "distance" }],
-                },
-              ],
-            },
+                  "e": [{ "type": "field", "path": "distance" }]
+                }
+              ]
+            }
           ],
-          "orderBy": [{ "field": "name", "dir": "asc" }],
-        },
-      ],
+          "orderBy": [{ "field": "name", "dir": "asc" }]
+        }
+      ]
     },
     {
       "type": "turtle",
@@ -432,11 +434,11 @@ export const FLIGHTS_EXPLORE: StructDef = {
                     {
                       "type": "aggregate",
                       "function": "count",
-                      "e": [],
-                    },
-                  ],
-                },
-              ],
+                      "e": []
+                    }
+                  ]
+                }
+              ]
             },
             {
               "name": "flights_2002",
@@ -450,16 +452,16 @@ export const FLIGHTS_EXPLORE: StructDef = {
                     {
                       "type": "aggregate",
                       "function": "count",
-                      "e": [],
-                    },
-                  ],
-                },
-              ],
-            },
+                      "e": []
+                    }
+                  ]
+                }
+              ]
+            }
           ],
-          "orderBy": [{ "field": "name", "dir": "asc" }],
-        },
-      ],
+          "orderBy": [{ "field": "name", "dir": "asc" }]
+        }
+      ]
     },
     // EXPLORE flights | REDUCE destination.city, flight_count ORDER BY 2 desc
     {
@@ -470,9 +472,9 @@ export const FLIGHTS_EXPLORE: StructDef = {
           "type": "reduce",
           "fields": ["destination.city", "flight_count"],
           "orderBy": [{ "field": 2, "dir": "desc" }],
-          "limit": 5,
-        },
-      ],
+          "limit": 5
+        }
+      ]
     },
     // EXPLORE flights [origin.state:'CA] | REDUCE aircraft.aircraft_models.manufacturer, aircraft.aircraft_models.manufacturer.
     //    aircraft.aircraft_count, flight_count ORDER BY flight_count LIMIT 5
@@ -486,13 +488,13 @@ export const FLIGHTS_EXPLORE: StructDef = {
             "aircraft.aircraft_models.manufacturer",
             "aircraft.aircraft_models.model",
             "aircraft.aircraft_count",
-            "flight_count",
+            "flight_count"
           ],
           "orderBy": [{ "field": "flight_count", "dir": "desc" }],
           "filterList": [fStringEq("origin.state", "CA")],
-          "limit": 5,
-        },
-      ],
+          "limit": 5
+        }
+      ]
     },
     // EXPLORE flights | REDUCE tail_num, total_distance as lifetime_distance
     {
@@ -512,13 +514,13 @@ export const FLIGHTS_EXPLORE: StructDef = {
                 {
                   "type": "aggregate",
                   "function": "sum",
-                  "e": [{ "type": "field", "path": "distance" }],
-                },
-              ],
-            },
-          ],
-        },
-      ],
+                  "e": [{ "type": "field", "path": "distance" }]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     // expore flights | reduce carriers.name, aircraft.total_engines, flight_count
     {
@@ -527,9 +529,9 @@ export const FLIGHTS_EXPLORE: StructDef = {
       "pipeline": [
         {
           "type": "reduce",
-          "fields": ["carriers.name", "aircraft.total_engines", "flight_count"],
-        },
-      ],
+          "fields": ["carriers.name", "aircraft.total_engines", "flight_count"]
+        }
+      ]
     },
     // expore flights | reduce aircraft_facts.lifetime_distance, flight_count
     {
@@ -538,9 +540,9 @@ export const FLIGHTS_EXPLORE: StructDef = {
       "pipeline": [
         {
           "type": "reduce",
-          "fields": ["aircraft_facts.lifetime_distance", "flight_count"],
-        },
-      ],
+          "fields": ["aircraft_facts.lifetime_distance", "flight_count"]
+        }
+      ]
     },
     // expore flights | reduce flight_count, origin.city, origin.state
     {
@@ -549,9 +551,9 @@ export const FLIGHTS_EXPLORE: StructDef = {
       "pipeline": [
         {
           "type": "reduce",
-          "fields": ["flight_count", "origin.city", "origin.state"],
-        },
-      ],
+          "fields": ["flight_count", "origin.city", "origin.state"]
+        }
+      ]
     },
 
     // explore flights
@@ -580,13 +582,13 @@ export const FLIGHTS_EXPLORE: StructDef = {
                   "type": "reduce",
                   "fields": ["origin_code", "destination_code", "flight_count"],
                   "limit": 5,
-                  "orderBy": [{ "field": "flight_count", "dir": "desc" }],
-                },
-              ],
-            },
-          ],
-        },
-      ],
+                  "orderBy": [{ "field": "flight_count", "dir": "desc" }]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     // explore flights
     // | reduce order by 3 desc
@@ -601,9 +603,9 @@ export const FLIGHTS_EXPLORE: StructDef = {
           "type": "reduce",
           "fields": ["origin_code", "destination_code", "flight_count"],
           "limit": 5,
-          "orderBy": [{ "field": "flight_count", "dir": "desc" }],
-        },
-      ],
+          "orderBy": [{ "field": "flight_count", "dir": "desc" }]
+        }
+      ]
     },
     // EXPLORE flights | REDUCE carrier, flight_count, top_5_routes
     {
@@ -612,9 +614,9 @@ export const FLIGHTS_EXPLORE: StructDef = {
       "pipeline": [
         {
           "type": "reduce",
-          "fields": ["carrier", "flight_count", "top_5_routes"],
-        },
-      ],
+          "fields": ["carrier", "flight_count", "top_5_routes"]
+        }
+      ]
     },
     // EXPLORE flights [destination.state: 'NY] | REDUCE destination.code as newyork_airport, flight_count ORDER BY 2 DESC
     {
@@ -625,9 +627,9 @@ export const FLIGHTS_EXPLORE: StructDef = {
           "type": "reduce",
           "fields": ["destination.code", "flight_count"],
           "filterList": [fStringEq("destination.state", "NY")],
-          "orderBy": [{ "field": "flight_count", "dir": "desc" }],
-        },
-      ],
+          "orderBy": [{ "field": "flight_count", "dir": "desc" }]
+        }
+      ]
     },
     // EXPLORE flights | REDUCE aircraft.aircraft_models.manufacturer, aircraft.aircraft_count, flight_count ORDER BY 3 DESC
     {
@@ -639,12 +641,12 @@ export const FLIGHTS_EXPLORE: StructDef = {
           "fields": [
             "aircraft.aircraft_models.manufacturer",
             "aircraft.aircraft_count",
-            "flight_count",
+            "flight_count"
           ],
           "orderBy": [{ "field": "flight_count", "dir": "desc" }],
-          "limit": 5,
-        },
-      ],
+          "limit": 5
+        }
+      ]
     },
     // EXPLORE flights [origin.state:'CA'x] | REDUCE carrier, flight_count, top_5_routes, flights_by_manufacturer
     {
@@ -657,11 +659,11 @@ export const FLIGHTS_EXPLORE: StructDef = {
             "carrier",
             "flight_count",
             "top_5_routes",
-            "flights_by_manufacturer",
+            "flights_by_manufacturer"
           ],
-          "filterList": [fStringEq("origin.state", "CA")],
-        },
-      ],
+          "filterList": [fStringEq("origin.state", "CA")]
+        }
+      ]
     },
     {
       "type": "turtle",
@@ -673,12 +675,12 @@ export const FLIGHTS_EXPLORE: StructDef = {
             "origin_code",
             "destination_code",
             "flight_count",
-            "flights_by_carrier",
+            "flights_by_carrier"
           ],
           "limit": 5,
-          "orderBy": [{ "field": "flight_count", "dir": "desc" }],
-        },
-      ],
+          "orderBy": [{ "field": "flight_count", "dir": "desc" }]
+        }
+      ]
     },
     {
       "type": "turtle",
@@ -707,14 +709,14 @@ export const FLIGHTS_EXPLORE: StructDef = {
                           "type": "aggregate",
                           "function": "count",
                           "e": [],
-                          "structPath": "origin",
-                        },
-                      ],
-                    },
+                          "structPath": "origin"
+                        }
+                      ]
+                    }
                   ],
-                  "orderBy": [{ "field": "flight_count", "dir": "desc" }],
-                },
-              ],
+                  "orderBy": [{ "field": "flight_count", "dir": "desc" }]
+                }
+              ]
             },
             {
               "type": "turtle",
@@ -722,13 +724,13 @@ export const FLIGHTS_EXPLORE: StructDef = {
               "pipeline": [
                 {
                   "type": "reduce",
-                  "fields": ["flight_count"],
-                },
-              ],
-            },
-          ],
-        },
-      ],
+                  "fields": ["flight_count"]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "type": "turtle",
@@ -745,11 +747,11 @@ export const FLIGHTS_EXPLORE: StructDef = {
             "origin_code",
             "destination_code",
             "distance",
-            "dep_delay",
+            "dep_delay"
           ],
-          "limit": 500,
-        },
-      ],
+          "limit": 500
+        }
+      ]
     },
     {
       "type": "turtle",
@@ -760,10 +762,10 @@ export const FLIGHTS_EXPLORE: StructDef = {
           "fields": [
             "flight_count",
             "total_distance",
-            "aircraft.aircraft_count",
-          ],
-        },
-      ],
+            "aircraft.aircraft_count"
+          ]
+        }
+      ]
     },
     {
       "type": "turtle",
@@ -773,7 +775,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
           "type": "reduce",
           "filterList": [
             fStringEq("origin.state", "CA"),
-            fStringEq("carrier", "UA"),
+            fStringEq("carrier", "UA")
           ],
           "limit": 20,
           "fields": [
@@ -781,7 +783,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
               "type": "timestamp",
               "name": "dep_time",
               "as": "dep_date",
-              "timeframe": "day",
+              "timeframe": "day"
             },
             "carrier",
             {
@@ -807,19 +809,19 @@ export const FLIGHTS_EXPLORE: StructDef = {
                             "dep_time",
                             "tail_num",
                             "flight_num",
-                            "dep_delay",
-                          ],
-                        },
-                      ],
-                    },
+                            "dep_delay"
+                          ]
+                        }
+                      ]
+                    }
                   ],
-                  "orderBy": [{ "field": "flight_count", "dir": "desc" }],
-                },
-              ],
-            },
-          ],
-        },
-      ],
+                  "orderBy": [{ "field": "flight_count", "dir": "desc" }]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     /*
       FROM flights |
@@ -849,7 +851,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
               "type": "timestamp",
               "name": "dep_time",
               "as": "dep_date",
-              "timeframe": "day",
+              "timeframe": "day"
             },
             "carrier",
             "flight_count",
@@ -876,19 +878,19 @@ export const FLIGHTS_EXPLORE: StructDef = {
                             "origin_code",
                             "destination_code",
                             "flight_num",
-                            "dep_delay",
-                          ],
-                        },
-                      ],
-                    },
+                            "dep_delay"
+                          ]
+                        }
+                      ]
+                    }
                   ],
-                  "orderBy": [{ "field": "flight_count", "dir": "desc" }],
-                },
-              ],
-            },
-          ],
-        },
-      ],
+                  "orderBy": [{ "field": "flight_count", "dir": "desc" }]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "type": "turtle",
@@ -914,17 +916,17 @@ export const FLIGHTS_EXPLORE: StructDef = {
             "destination.state",
             "aircraft.aircraft_model_code",
             "aircraft.aircraft_models.manufacturer",
-            "aircraft.aircraft_models.model",
-          ],
-        },
-      ],
-    },
+            "aircraft.aircraft_models.model"
+          ]
+        }
+      ]
+    }
     // {
     //   type: "reduce",
     //   name: "some_measures",
     //   fields: ["flight_count", "total_distance"],
     // },
-  ],
+  ]
 };
 
 const tableAirports: StructDef = {
@@ -934,7 +936,7 @@ const tableAirports: StructDef = {
   "dialect": "standardsql",
   "structSource": {
     "type": "table",
-    "tablePath": "malloy-data.malloytest.airports",
+    "tablePath": "malloy-data.malloytest.airports"
   },
   "structRelationship": { "type": "basetable", "connectionName": "bigquery" },
   "primaryKey": "code",
@@ -970,9 +972,9 @@ const tableAirports: StructDef = {
       "type": "number",
       "name": "count",
       "expressionType": "aggregate",
-      "e": [{ "type": "aggregate", "function": "count", "e": [] }],
-    },
-  ],
+      "e": [{ "type": "aggregate", "function": "count", "e": [] }]
+    }
+  ]
 };
 
 /** Test model */
@@ -982,16 +984,16 @@ export const testModel: ModelDef = {
     "flights",
     "table_airports",
     "medicare_test",
-    "medicare_state_facts",
+    "medicare_state_facts"
     // "aircraft",
   ],
   "contents": {
     "flights": FLIGHTS_EXPLORE,
     "table_airports": tableAirports,
     "medicare_test": medicareModel,
-    "medicare_state_facts": medicareStateFacts,
+    "medicare_state_facts": medicareStateFacts
     // aircraft: aircraftHandStructDef,
-  },
+  }
 };
 
 // // clang-format on

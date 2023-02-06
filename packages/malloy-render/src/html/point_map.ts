@@ -26,7 +26,7 @@ import {
   DataArray,
   DataColumn,
   Field,
-  TimestampTimeframe,
+  TimestampTimeframe
 } from "@malloydata/malloy";
 import usAtlas from "us-atlas/states-10m.json";
 import { HTMLChartRenderer } from "./chart";
@@ -79,7 +79,7 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
             "field": colorField.name,
             "type": colorType,
             "axis": { "title": colorField.name },
-            "scale": getColorScale(colorType, false),
+            "scale": getColorScale(colorType, false)
           }
         : undefined;
 
@@ -87,7 +87,7 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
       ? {
           "field": sizeField.name,
           "type": sizeType,
-          "axis": { "title": sizeField.name },
+          "axis": { "title": sizeField.name }
         }
       : { "value": 5 };
 
@@ -95,17 +95,17 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
       ? {
           "field": shapeField.name,
           "type": shapeType,
-          "axis": { "title": shapeField.name },
+          "axis": { "title": shapeField.name }
         }
       : { "value": "circle" };
 
     return {
       ...this.getSize(),
       "data": {
-        "values": this.mapData(data),
+        "values": this.mapData(data)
       },
       "projection": {
-        "type": "albersUsa",
+        "type": "albersUsa"
       },
       "layer": [
         {
@@ -113,14 +113,14 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
             "values": usAtlas,
             "format": {
               "type": "topojson",
-              "feature": "states",
-            },
+              "feature": "states"
+            }
           },
           "mark": {
             "type": "geoshape",
             "fill": "#efefef",
-            "stroke": "white",
-          },
+            "stroke": "white"
+          }
         },
         {
           "mark": "point",
@@ -129,9 +129,9 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
             "longitude": { "field": lonField.name, "type": "quantitative" },
             "size": sizeDef,
             "color": colorDef,
-            "shape": shapeDef,
-          },
-        },
+            "shape": shapeDef
+          }
+        }
       ],
       "background": "transparent",
       "config": {
@@ -141,7 +141,7 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
           "titleFontWeight": 500,
           "titleColor": "var(--malloy-title-color, #505050)",
           "labelColor": "var(--malloy-label-color, #000000)",
-          "titleFontSize": 12,
+          "titleFontSize": 12
         },
         "legend": {
           "labelFont": "var(--malloy-font-family, Roboto)",
@@ -149,20 +149,20 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
           "titleFontWeight": 500,
           "titleColor": "var(--malloy-title-color, #505050)",
           "labelColor": "var(--malloy-label-color, #000000)",
-          "titleFontSize": 12,
+          "titleFontSize": 12
         },
         "header": {
           "labelFont": "var(--malloy-font-family, Roboto)",
           "titleFont": "var(--malloy-font-family, Roboto)",
-          "titleFontWeight": 500,
+          "titleFontWeight": 500
         },
         "mark": { "font": "var(--malloy-Roboto" },
         "title": {
           "font": "var(--malloy-font-family, Roboto)",
           "subtitleFont": "var(--malloy-font-family, Roboto)",
-          "fontWeight": 500,
-        },
-      },
+          "fontWeight": 500
+        }
+      }
     };
   }
 }

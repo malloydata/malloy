@@ -25,14 +25,14 @@ import {
   FilterExpression,
   Fragment,
   Result,
-  Runtime,
+  Runtime
 } from "@malloydata/malloy";
 
 export function fStringEq(field: string, value: string): FilterExpression {
   return {
     "expression": [{ "type": "field", "path": field }, `='${value}'`],
     "code": `${field}='${value}'`,
-    "expressionType": "scalar",
+    "expressionType": "scalar"
   };
 }
 
@@ -40,7 +40,7 @@ export function fStringLike(field: string, value: string): FilterExpression {
   return {
     "expression": [{ "type": "field", "path": field }, ` LIKE '${value}'`],
     "code": `${field}~'${value}'`,
-    "expressionType": "scalar",
+    "expressionType": "scalar"
   };
 }
 
@@ -51,7 +51,7 @@ export function fYearEq(field: string, year: number): FilterExpression {
   return {
     "expression": [fx, `>=${yBegin} and `, fx, `<${yEnd}`],
     "code": `${field}:@${year}`,
-    "expressionType": "scalar",
+    "expressionType": "scalar"
   };
 }
 

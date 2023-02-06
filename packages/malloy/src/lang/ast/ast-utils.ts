@@ -35,6 +35,6 @@ export function errorFor(reason: string): ExprValue {
   return {
     "dataType": "unknown",
     "expressionType": "scalar",
-    "value": [`_ERROR_${reason.replace(/ /g, "_")}`],
+    "value": [`_ERROR_${reason.replace(/ /g, "_")}`]
   };
 }

@@ -29,19 +29,19 @@
 
 import * as crypto from "crypto";
 import {
-  PersistSQLResults,
-  RunSQLOptions,
-  StreamingConnection,
-  StructDef,
+  AtomicFieldTypeInner,
+  Connection,
   MalloyQueryData,
   NamedStructDefs,
-  AtomicFieldTypeInner,
-  QueryData,
+  PersistSQLResults,
   PooledConnection,
-  parseTableURI,
-  SQLBlock,
-  Connection,
+  QueryData,
   QueryDataRow,
+  RunSQLOptions,
+  SQLBlock,
+  StreamingConnection,
+  StructDef,
+  parseTableURI
 } from "@malloydata/malloy";
 import { Client, Pool, PoolClient } from "pg";
 import QueryStream from "pg-query-stream";
@@ -71,7 +71,7 @@ const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   "regtype": "string",
   "numeric": "number",
   "bytea": "string",
-  "pg_ndistinct": "number",
+  "pg_ndistinct": "number"
 };
 
 interface PostgresQueryConfiguration {
@@ -169,7 +169,7 @@ export class PostgresConnection
       if (!inCache) {
         try {
           inCache = {
-            "schema": await this.getTableSchema(tableURL),
+            "schema": await this.getTableSchema(tableURL)
           };
           this.schemaCache.set(tableURL, inCache);
         } catch (error) {
@@ -196,7 +196,7 @@ export class PostgresConnection
     if (!inCache) {
       try {
         inCache = {
-          "structDef": await this.getSQLBlockSchema(sqlRef),
+          "structDef": await this.getSQLBlockSchema(sqlRef)
         };
       } catch (error) {
         inCache = { "error": error.message };
@@ -213,7 +213,7 @@ export class PostgresConnection
       "password": config.password,
       "database": config.databaseName,
       "port": config.port,
-      "host": config.host,
+      "host": config.host
     });
   }
 
@@ -238,7 +238,7 @@ export class PostgresConnection
     await client.end();
     return {
       "rows": result.rows as QueryData,
-      "totalRows": result.rows.length,
+      "totalRows": result.rows.length
     };
   }
 
@@ -250,13 +250,13 @@ export class PostgresConnection
       "structSource": {
         "type": "sql",
         "method": "subquery",
-        "sqlBlock": sqlRef,
+        "sqlBlock": sqlRef
       },
       "structRelationship": {
         "type": "basetable",
-        "connectionName": this.name,
+        "connectionName": this.name
       },
-      "fields": [],
+      "fields": []
     };
 
     const tempTableName = `tmp${randomUUID()}`.replace(/-/g, "");
@@ -299,10 +299,10 @@ export class PostgresConnection
           "structRelationship": {
             "type": "nested",
             "field": name,
-            "isArray": true,
+            "isArray": true
           },
           "structSource": { "type": "nested" },
-          "fields": [],
+          "fields": []
         };
         structDef.fields.push(s);
         name = "value";
@@ -310,15 +310,13 @@ export class PostgresConnection
       if (malloyType !== undefined) {
         s.fields.push({
           "type": malloyType,
-          name,
+          name
         });
       } else {
         s.fields.push({
           name,
           "type": "string",
-          "e": [
-            `'Postgres type "${postgresDataType}" not supported by Malloy'`,
-          ],
+          "e": [`'Postgres type "${postgresDataType}" not supported by Malloy'`]
         });
       }
     }
@@ -333,9 +331,9 @@ export class PostgresConnection
       "structSource": { "type": "table", tablePath },
       "structRelationship": {
         "type": "basetable",
-        "connectionName": this.name,
+        "connectionName": this.name
       },
-      "fields": [],
+      "fields": []
     };
     const [schema, table] = tablePath.split(".");
     if (table === undefined) {
@@ -456,7 +454,7 @@ export class PooledPostgresConnection
     }
     return {
       "rows": result.rows as QueryData,
-      "totalRows": result.rows.length,
+      "totalRows": result.rows.length
     };
   }
 

@@ -24,7 +24,7 @@
 import {
   DataColumn,
   DateTimeframe,
-  TimestampTimeframe,
+  TimestampTimeframe
 } from "@malloydata/malloy";
 import { Renderer } from "../renderer";
 import { createErrorElement, createNullElement, timeToString } from "./utils";

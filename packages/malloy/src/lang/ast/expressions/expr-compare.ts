@@ -38,7 +38,7 @@ const compareTypes = {
   "=": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
   "!=": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
   ">=": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  ">": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
+  ">": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT]
 };
 
 export class ExprCompare extends BinaryBoolean<Comparison> {

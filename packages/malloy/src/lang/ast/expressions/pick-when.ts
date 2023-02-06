@@ -24,7 +24,7 @@
 import {
   ExpressionType,
   Fragment,
-  maxExpressionType,
+  maxExpressionType
 } from "../../../model/malloy_types";
 
 import { errorFor } from "../ast-utils";
@@ -110,7 +110,7 @@ export class Pick extends ExpressionDef {
         anyExpressionType,
         elseVal.expressionType
       ),
-      "value": compressExpr([...caseValue, " ELSE ", ...elseVal.value, " END"]),
+      "value": compressExpr([...caseValue, " ELSE ", ...elseVal.value, " END"])
     };
   }
 
@@ -133,7 +133,7 @@ export class Pick extends ExpressionDef {
       }
       choiceValues.push({
         "pick": c.pick.getExpression(fs),
-        "when": c.when.getExpression(fs),
+        "when": c.when.getExpression(fs)
       });
     }
     const returnType = choiceValues[0].pick;
@@ -181,7 +181,7 @@ export class Pick extends ExpressionDef {
     return {
       "dataType": returnType.dataType,
       "expressionType": anyExpressionType,
-      "value": compressExpr(caseValue),
+      "value": compressExpr(caseValue)
     };
   }
 }

@@ -46,9 +46,9 @@ export class TableSource extends Source {
           ...tableDefEntry.value,
           "fields": tableDefEntry.value.fields.map((field) => ({
             ...field,
-            "location": this.location,
+            "location": this.location
           })),
-          "location": this.location,
+          "location": this.location
         };
       }
       if (tableDefEntry.status == "error") {

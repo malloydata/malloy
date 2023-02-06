@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 /* eslint-disable no-console */
-import { Malloy, Connection } from "@malloydata/malloy";
+import { Connection, Malloy } from "@malloydata/malloy";
 import { DuckDBConnection } from "@malloydata/db-duckdb";
 import { readFile } from "fs/promises";
 import { readFileSync } from "fs";
@@ -45,7 +45,7 @@ async function translate(fileSrc: string, fileURL: string) {
   const compiled = await Malloy.compile({
     "urlReader": { readURL },
     "connections": { lookupConnection },
-    parse,
+    parse
   });
   compiled._modelDef;
 }

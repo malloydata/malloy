@@ -22,14 +22,16 @@
  */
 
 import { AtomicFieldType, StructDef } from "../../../model/malloy_types";
-import { LookupResult } from "../types/lookup-result";
+
 import { Comparison } from "../types/comparison";
 import { ExprValue } from "../types/expr-value";
-import { FieldValueType } from "../types/type-desc";
-import { ExprCompare } from "./expr-compare";
 import { ExpressionDef } from "../types/expression-def";
-import { compressExpr } from "./utils";
 import { FieldSpace } from "../types/field-space";
+import { LookupResult } from "../types/lookup-result";
+import { FieldValueType } from "../types/type-desc";
+
+import { ExprCompare } from "./expr-compare";
+import { compressExpr } from "./utils";
 
 class ConstantFieldSpace implements FieldSpace {
   readonly type = "fieldSpace";
@@ -42,7 +44,7 @@ class ConstantFieldSpace implements FieldSpace {
   lookup(_name: unknown): LookupResult {
     return {
       "error": "Only constants allowed in parameter expressions",
-      "found": undefined,
+      "found": undefined
     };
   }
   dialectObj(): undefined {
@@ -62,7 +64,7 @@ class DollarReference extends ExpressionDef {
     return {
       "dataType": this.refType,
       "value": [{ "type": "applyVal" }],
-      "expressionType": "scalar",
+      "expressionType": "scalar"
     };
   }
 }

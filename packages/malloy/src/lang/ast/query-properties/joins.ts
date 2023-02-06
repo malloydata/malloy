@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Expr, isJoinOn, StructDef } from "../../../model/malloy_types";
+import { Expr, StructDef, isJoinOn } from "../../../model/malloy_types";
 import { ExpressionDef } from "../types/expression-def";
 import { compressExpr } from "../expressions/utils";
 import { FieldSpace } from "../types/field-space";
@@ -29,7 +29,7 @@ import { Source } from "../elements/source";
 import {
   ListOf,
   MalloyElement,
-  ModelEntryReference,
+  ModelEntryReference
 } from "../types/malloy-element";
 
 export abstract class Join extends MalloyElement {
@@ -54,9 +54,9 @@ export class KeyJoin extends Join {
       ...sourceDef,
       "structRelationship": {
         "type": "one",
-        "onExpression": ["('join fixup'='not done yet')"],
+        "onExpression": ["('join fixup'='not done yet')"]
       },
-      "location": this.location,
+      "location": this.location
     };
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved
@@ -81,11 +81,11 @@ export class KeyJoin extends Join {
             "onExpression": [
               {
                 "type": "field",
-                "path": `${this.name}.${inStruct.primaryKey}`,
+                "path": `${this.name}.${inStruct.primaryKey}`
               },
               "=",
-              ...exprX.value,
-            ],
+              ...exprX.value
+            ]
           };
           return;
         } else {
@@ -140,7 +140,7 @@ export class ExpressionJoin extends Join {
     const joinStruct: StructDef = {
       ...sourceDef,
       "structRelationship": { "type": this.joinType },
-      "location": this.location,
+      "location": this.location
     };
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved

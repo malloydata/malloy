@@ -40,12 +40,12 @@ const basicTypes: Record<string, string> = {
     SELECT
       DATE('2021-02-24') as t_date,
       '2021-02-24 03:05:06'::timestamp with time zone as t_timestamp
-  `,
+  `
 };
 
 const [describe, databases] = describeIfDatabaseAvailable([
   "bigquery",
-  "postgres",
+  "postgres"
 ]);
 
 describe("Datetimes", () => {

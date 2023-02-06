@@ -32,7 +32,7 @@ import {
   ProjectSegment,
   Query,
   ReduceSegment,
-  StructDef,
+  StructDef
 } from "../../model/malloy_types";
 
 const theErrorStruct: StructDef = {
@@ -41,13 +41,13 @@ const theErrorStruct: StructDef = {
   "dialect": "~malformed~",
   "structSource": {
     "type": "table",
-    "tablePath": "//undefined_error_table_path",
+    "tablePath": "//undefined_error_table_path"
   },
   "structRelationship": {
     "type": "basetable",
-    "connectionName": "//undefined_error_connection",
+    "connectionName": "//undefined_error_connection"
   },
-  "fields": [],
+  "fields": []
 };
 
 export class ErrorFactory {
@@ -62,7 +62,7 @@ export class ErrorFactory {
   static get query(): Query {
     return {
       "structRef": ErrorFactory.structDef,
-      "pipeline": [],
+      "pipeline": []
     };
   }
 

@@ -50,7 +50,7 @@ export class Range extends ExpressionDef {
             fromValue.expressionType,
             toValue.expressionType
           ),
-          "value": compose(fromValue.value, op2, toValue.value),
+          "value": compose(fromValue.value, op2, toValue.value)
         };
       }
 

@@ -25,7 +25,7 @@ import {
   CSVWriter,
   DataRecord,
   JSONWriter,
-  WriteStream,
+  WriteStream
 } from "@malloydata/malloy";
 import { RuntimeList } from "../../runtimes";
 import { describeIfDatabaseAvailable } from "../../util";
@@ -44,7 +44,7 @@ class StringAccumulator implements WriteStream {
 
 const [describe, databases] = describeIfDatabaseAvailable([
   "bigquery",
-  "postgres",
+  "postgres"
 ]);
 
 describe("Streaming tests", () => {

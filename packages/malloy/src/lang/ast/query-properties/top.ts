@@ -23,7 +23,7 @@
 
 import {
   By as ModelBy,
-  expressionIsAggregate,
+  expressionIsAggregate
 } from "../../../model/malloy_types";
 
 import { ExpressionDef } from "../types/expression-def";

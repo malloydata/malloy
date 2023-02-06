@@ -24,7 +24,7 @@
 import { IndexSegment, PipeSegment } from "../../../model/malloy_types";
 import {
   FieldReference,
-  WildcardFieldReference,
+  WildcardFieldReference
 } from "../query-items/field-references";
 import { QuerySpace } from "./query-spaces";
 
@@ -53,7 +53,7 @@ export class IndexFieldSpace extends QuerySpace {
     this.isComplete();
     return {
       "type": "index",
-      "fields": Array.from(this.fieldList.values()),
+      "fields": Array.from(this.fieldList.values())
     };
   }
 }

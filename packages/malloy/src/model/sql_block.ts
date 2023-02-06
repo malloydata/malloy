@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { isSQLFragment, SQLBlockSource, SQLPhrase } from "./malloy_types";
+import { SQLBlockSource, SQLPhrase, isSQLFragment } from "./malloy_types";
 import { generateHash } from "./utils";
 
 /**
@@ -35,7 +35,7 @@ export function makeSQLBlock(
 ): SQLBlockSource {
   const theBlock: SQLBlockSource = {
     "name": `md5:/${connection || "$default"}//${nameFor(select)}`,
-    select,
+    select
   };
   if (connection) {
     theBlock.connection = connection;

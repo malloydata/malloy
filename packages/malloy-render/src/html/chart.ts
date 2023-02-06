@@ -99,11 +99,11 @@ export abstract class HTMLChartRenderer implements Renderer {
         },
         debug() {
           return this;
-        },
-      },
+        }
+      }
     }).spec;
     const view = new vega.View(vega.parse(vegaspec), {
-      "renderer": "none",
+      "renderer": "none"
     });
     view.logger().level(-1);
     const element = this.document.createElement("div");

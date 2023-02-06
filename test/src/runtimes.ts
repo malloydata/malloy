@@ -20,19 +20,19 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
 import {
   EmptyURLReader,
-  Result,
   MalloyQueryData,
-  RunSQLOptions,
-  SingleConnectionRuntime,
   QueryDataRow,
+  Result,
+  RunSQLOptions,
+  SingleConnectionRuntime
 } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
-import { PooledPostgresConnection } from "@malloydata/db-postgres";
 import { DuckDBConnection } from "@malloydata/db-duckdb";
 import { DuckDBWASMConnection } from "@malloydata/db-duckdb/wasm";
+import { PooledPostgresConnection } from "@malloydata/db-postgres";
+
 export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.
 

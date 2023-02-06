@@ -62,7 +62,7 @@ export async function* toAsyncGenerator<T>(
           "isError": false,
           "next": new Promise((res) => {
             resolve = res;
-          }),
+          })
         });
       },
       () => {

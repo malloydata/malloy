@@ -28,27 +28,27 @@ import {
   PagedResponse,
   Query,
   QueryResultsOptions,
-  RowMetadata,
+  RowMetadata
 } from "@google-cloud/bigquery";
 import bigquery from "@google-cloud/bigquery/build/src/types";
 import { ResourceStream } from "@google-cloud/paginator";
 import * as googleCommon from "@google-cloud/common";
 import { GaxiosError } from "gaxios";
 import {
+  Connection,
+  FieldTypeDef,
   Malloy,
+  MalloyQueryData,
+  NamedStructDefs,
   PersistSQLResults,
   PooledConnection,
   QueryData,
-  StructDef,
-  StreamingConnection,
-  MalloyQueryData,
-  FieldTypeDef,
-  NamedStructDefs,
-  SQLBlock,
-  Connection,
   QueryDataRow,
+  SQLBlock,
+  StreamingConnection,
+  StructDef,
   parseTableURI,
-  toAsyncGenerator,
+  toAsyncGenerator
 } from "@malloydata/malloy";
 
 export interface BigQueryManagerOptions {
@@ -125,7 +125,7 @@ export class BigQueryConnection
   implements Connection, PersistSQLResults, StreamingConnection
 {
   static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
-    "rowLimit": 10,
+    "rowLimit": 10
   };
 
   private bigQuery: BigQuerySDK;
@@ -164,7 +164,7 @@ export class BigQueryConnection
     "TIMESTAMP": { "type": "timestamp" },
     "BOOLEAN": { "type": "boolean" },
     "BOOL": { "type": "boolean" },
-    "JSON": { "type": "json" },
+    "JSON": { "type": "json" }
     // TODO (https://cloud.google.com/bigquery/docs/reference/rest/v2/tables#tablefieldschema):
     // BYTES
     // DATETIME
@@ -180,7 +180,7 @@ export class BigQueryConnection
     this.name = name;
     this.bigQuery = new BigQuerySDK({
       "userAgent": `Malloy/${Malloy.version}`,
-      "keyFilename": config.serviceAccountKeyPath,
+      "keyFilename": config.serviceAccountKeyPath
     });
 
     // record project ID because for unclear reasons we have to modify the project ID on the SDK when
@@ -233,7 +233,7 @@ export class BigQueryConnection
     try {
       const queryResultsOptions = {
         "maxResults": pageSize,
-        "startIndex": rowIndex.toString(),
+        "startIndex": rowIndex.toString()
       };
 
       const jobResult = await this.createBigQueryJobAndGetResults(
@@ -286,7 +286,7 @@ export class BigQueryConnection
     sqlCommand: string
   ): Promise<ResourceStream<RowMetadata>> {
     const job = await this.createBigQueryJob({
-      "query": sqlCommand,
+      "query": sqlCommand
     });
 
     return job.getQueryResultsStream();
@@ -297,7 +297,7 @@ export class BigQueryConnection
       const [result] = await this.bigQuery.createQueryJob({
         "location": this.location,
         "query": sqlCommand,
-        "dryRun": true,
+        "dryRun": true
       });
       return result;
     } catch (e) {
@@ -353,7 +353,7 @@ export class BigQueryConnection
         "schema": metadata.schema,
         "needsPartitionPsuedoColumn":
           metadata.timePartitioning?.type !== undefined &&
-          metadata.timePartitioning?.field === undefined,
+          metadata.timePartitioning?.field === undefined
       };
     } catch (e) {
       throw maybeRewriteError(e);
@@ -397,7 +397,7 @@ export class BigQueryConnection
       try {
         const [job] = await this.bigQuery.createQueryJob({
           "location": this.location,
-          "query": sqlCommand,
+          "query": sqlCommand
         });
 
         let [metaData] = await job.getMetadata();
@@ -464,7 +464,7 @@ export class BigQueryConnection
     const [job] = await this.bigQuery.createQueryJob({
       "query": sqlCommand,
       "location": this.location,
-      "destination": table,
+      "destination": table
     });
 
     // if creating this job didn't throw, there's an ID.
@@ -494,9 +494,9 @@ export class BigQueryConnection
             "structRelationship": {
               "type": "nested",
               "field": name,
-              "isArray": true,
+              "isArray": true
             },
-            "fields": [{ ...malloyType, "name": "value" } as FieldTypeDef],
+            "fields": [{ ...malloyType, "name": "value" } as FieldTypeDef]
           };
           structDef.fields.push(innerStructDef);
         }
@@ -513,7 +513,7 @@ export class BigQueryConnection
             field.mode === "REPEATED"
               ? { "type": "nested", "field": name, "isArray": false }
               : { "type": "inline" },
-          "fields": [],
+          "fields": []
         };
         this.addFieldsToStructDef(innerStructDef, field);
         structDef.fields.push(innerStructDef);
@@ -525,7 +525,7 @@ export class BigQueryConnection
           structDef.fields.push({
             name,
             "type": "string",
-            "e": [`'BigQuery type "${type}" not supported by Malloy'`],
+            "e": [`'BigQuery type "${type}" not supported by Malloy'`]
           });
         }
       }
@@ -551,19 +551,19 @@ export class BigQueryConnection
       "dialect": this.dialectName,
       "structSource": {
         "type": "table",
-        "tablePath": this.tableURLtoTablePath(tableURL),
+        "tablePath": this.tableURLtoTablePath(tableURL)
       },
       "structRelationship": {
         "type": "basetable",
-        "connectionName": this.name,
+        "connectionName": this.name
       },
-      "fields": [],
+      "fields": []
     };
     this.addFieldsToStructDef(structDef, schemaInfo.schema);
     if (schemaInfo.needsPartitionPsuedoColumn) {
       structDef.fields.push({
         "type": "timestamp",
-        "name": "_PARTITIONTIME",
+        "name": "_PARTITIONTIME"
       });
     }
     return structDef;
@@ -580,13 +580,13 @@ export class BigQueryConnection
       "structSource": {
         "type": "sql",
         "method": "subquery",
-        sqlBlock,
+        sqlBlock
       },
       "structRelationship": {
         "type": "basetable",
-        "connectionName": this.name,
+        "connectionName": this.name
       },
-      "fields": [],
+      "fields": []
     };
     this.addFieldsToStructDef(structDef, tableFieldSchema);
     return structDef;
@@ -605,7 +605,7 @@ export class BigQueryConnection
         try {
           const tableFieldSchema = await this.getTableFieldSchema(tableURL);
           inCache = {
-            "schema": this.structDefFromTableSchema(tableURL, tableFieldSchema),
+            "schema": this.structDefFromTableSchema(tableURL, tableFieldSchema)
           };
           this.schemaCache.set(tableURL, inCache);
         } catch (error) {
@@ -633,7 +633,7 @@ export class BigQueryConnection
         const [job] = await this.bigQuery.createQueryJob({
           "location": this.location,
           "query": sqlRef.selectStr,
-          "dryRun": true,
+          "dryRun": true
         });
 
         return job.metadata.statistics.query.schema;
@@ -656,7 +656,7 @@ export class BigQueryConnection
       try {
         const tableFieldSchema = await this.getSQLBlockSchema(sqlRef);
         inCache = {
-          "structDef": this.structDefFromSQLSchema(sqlRef, tableFieldSchema),
+          "structDef": this.structDefFromSQLSchema(sqlRef, tableFieldSchema)
         };
       } catch (error) {
         inCache = { "error": error.message };
@@ -679,7 +679,7 @@ export class BigQueryConnection
     try {
       const job = await this.createBigQueryJob({
         "query": sqlCommand,
-        ...createQueryJobOptions,
+        ...createQueryJobOptions
       });
 
       // TODO we should check if this is still required?
@@ -693,7 +693,7 @@ export class BigQueryConnection
         try {
           return await job.getQueryResults({
             "timeoutMs": 1000 * 60 * 2, // TODO - this requires some rethinking, and is a hack to resolve some issues. talk to @bporterfield
-            ...getQueryResultsOptions,
+            ...getQueryResultsOptions
           });
         } catch (fetchError) {
           lastFetchError = fetchError;
@@ -712,7 +712,7 @@ export class BigQueryConnection
       "maximumBytesBilled":
         this.config.maximumBytesBilled || MAXIMUM_BYTES_BILLED,
       "jobTimeoutMs": Number(this.config.timeoutMs) || TIMEOUT_MS,
-      ...createQueryJobOptions,
+      ...createQueryJobOptions
     });
     return job;
   }

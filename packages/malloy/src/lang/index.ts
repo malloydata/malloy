@@ -26,7 +26,7 @@ export type {
   UpdateData,
   SchemaData,
   URLData,
-  SQLBlockData,
+  SQLBlockData
 } from "./parse-malloy";
 export type { TranslateResponse } from "./translate-response";
 export { exploreQueryWalkerBuilder } from "./parse-tree-walkers/explore-query-walker";

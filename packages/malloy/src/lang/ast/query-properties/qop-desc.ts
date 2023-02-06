@@ -131,7 +131,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
     return {
       segment,
       "outputSpace": () =>
-        new StaticSpace(opOutputStruct(this, inputFS.structDef(), segment)),
+        new StaticSpace(opOutputStruct(this, inputFS.structDef(), segment))
     };
   }
 }

@@ -23,7 +23,7 @@
 /* eslint-disable no-console */
 import * as readline from "readline";
 import { inspect } from "util";
-import { Malloy, Connection } from "@malloydata/malloy";
+import { Connection, Malloy } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { readFile } from "fs/promises";
 import { readFileSync } from "fs";
@@ -73,7 +73,7 @@ async function printTranlsatedMalloy(fileSrc: string, fileURL: string) {
     const model = await Malloy.compile({
       "urlReader": { readURL },
       "connections": { lookupConnection },
-      parse,
+      parse
     });
     console.log(pretty(model._modelDef));
   } catch (e) {
@@ -105,7 +105,7 @@ async function main() {
   } else {
     const rl = readline.createInterface({
       "input": process.stdin,
-      "output": process.stdout,
+      "output": process.stdout
     });
     let translating = true;
     while (translating) {

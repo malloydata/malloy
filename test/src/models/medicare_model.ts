@@ -44,34 +44,34 @@ export const medicareModel: StructDef = {
       "as": "discharges",
       "name": "total_discharges",
       "numberType": "float",
-      "type": "number",
+      "type": "number"
     },
     {
       "name": "average_covered_charges",
       "numberType": "float",
-      "type": "number",
+      "type": "number"
     },
     {
       "name": "average_total_payments",
       "numberType": "float",
-      "type": "number",
+      "type": "number"
     },
     {
       "name": "average_medicare_payments",
       "numberType": "float",
-      "type": "number",
+      "type": "number"
     },
     {
       "type": "number",
       "name": "count_of_drugs",
       "expressionType": "aggregate",
-      "e": [{ "type": "aggregate", "function": "count", "e": [] }],
+      "e": [{ "type": "aggregate", "function": "count", "e": [] }]
     },
     {
       "type": "number",
       "name": "provider_count",
       "expressionType": "aggregate",
-      "e": ["COUNT(DISTINCT ", { "type": "field", "path": "provider_id" }, ")"],
+      "e": ["COUNT(DISTINCT ", { "type": "field", "path": "provider_id" }, ")"]
     },
     {
       "type": "number",
@@ -81,9 +81,9 @@ export const medicareModel: StructDef = {
         {
           "type": "aggregate",
           "function": "sum",
-          "e": [{ "type": "field", "path": "discharges" }],
-        },
-      ],
+          "e": [{ "type": "field", "path": "discharges" }]
+        }
+      ]
     },
 
     {
@@ -93,9 +93,9 @@ export const medicareModel: StructDef = {
         {
           "fields": ["provider_state", "total_discharges"],
           "orderBy": [{ "dir": "desc", "field": 2 }],
-          "type": "reduce",
-        },
-      ],
+          "type": "reduce"
+        }
+      ]
     },
     {
       "type": "turtle",
@@ -104,9 +104,9 @@ export const medicareModel: StructDef = {
         {
           "fields": ["provider_city", "total_discharges"],
           "orderBy": [{ "dir": "desc", "field": 2 }],
-          "type": "reduce",
-        },
-      ],
+          "type": "reduce"
+        }
+      ]
     },
     {
       "type": "turtle",
@@ -117,12 +117,12 @@ export const medicareModel: StructDef = {
             "provider_state",
             "total_discharges",
             "discharges_by_city",
-            "discharges_by_zip",
+            "discharges_by_zip"
           ],
           "orderBy": [{ "dir": "desc", "field": 1 }],
-          "type": "reduce",
-        },
-      ],
+          "type": "reduce"
+        }
+      ]
     },
     {
       "type": "turtle",
@@ -131,9 +131,9 @@ export const medicareModel: StructDef = {
         {
           "fields": ["provider_zipcode", "total_discharges"],
           "orderBy": [{ "dir": "desc", "field": 2 }],
-          "type": "reduce",
-        },
-      ],
+          "type": "reduce"
+        }
+      ]
     },
     {
       "type": "turtle",
@@ -142,9 +142,9 @@ export const medicareModel: StructDef = {
         {
           "fields": ["provider_city", "total_discharges", "discharges_by_zip"],
           "orderBy": [{ "dir": "desc", "field": 1 }],
-          "type": "reduce",
-        },
-      ],
+          "type": "reduce"
+        }
+      ]
     },
     {
       "type": "turtle",
@@ -153,9 +153,9 @@ export const medicareModel: StructDef = {
         {
           "fields": ["provider_state", "total_discharges", "turtle_city_zip"],
           "orderBy": [{ "dir": "desc", "field": 1 }],
-          "type": "reduce",
-        },
-      ],
+          "type": "reduce"
+        }
+      ]
     },
     {
       "type": "turtle",
@@ -180,31 +180,31 @@ export const medicareModel: StructDef = {
                         {
                           "fields": ["provider_zipcode", "total_discharges"],
                           "orderBy": [{ "dir": "desc", "field": 2 }],
-                          "type": "reduce",
-                        },
-                      ],
-                    },
+                          "type": "reduce"
+                        }
+                      ]
+                    }
                   ],
                   "orderBy": [{ "dir": "desc", "field": 1 }],
-                  "type": "reduce",
-                },
-              ],
-            },
+                  "type": "reduce"
+                }
+              ]
+            }
           ],
           "orderBy": [{ "dir": "desc", "field": 1 }],
-          "type": "reduce",
-        },
-      ],
-    },
+          "type": "reduce"
+        }
+      ]
+    }
   ],
   "name": "malloy-data.malloytest.bq_medicare_test",
   "primaryKey": "id",
   "structRelationship": { "type": "basetable", "connectionName": "bigquery" },
   "structSource": {
     "type": "table",
-    "tablePath": "malloy-data.malloytest.bq_medicare_test",
+    "tablePath": "malloy-data.malloytest.bq_medicare_test"
   },
-  "type": "struct",
+  "type": "struct"
 };
 
 export const medicareStateFacts: StructDef = {
@@ -226,17 +226,17 @@ export const medicareStateFacts: StructDef = {
               "e": [
                 "COUNT(DISTINCT ",
                 { "type": "field", "path": "provider_id" },
-                ")",
-              ],
-            },
+                ")"
+              ]
+            }
           ],
-          "type": "reduce",
-        },
-      ],
+          "type": "reduce"
+        }
+      ]
     },
-    "type": "query",
+    "type": "query"
   },
-  "type": "struct",
+  "type": "struct"
 };
 
 // export const medicareStateFacts: StructDef = {

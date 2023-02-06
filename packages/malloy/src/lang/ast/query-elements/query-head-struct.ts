@@ -22,9 +22,9 @@
  */
 
 import {
-  refIsStructDef,
   StructDef,
   StructRef,
+  refIsStructDef
 } from "../../../model/malloy_types";
 
 import { Source } from "../elements/source";

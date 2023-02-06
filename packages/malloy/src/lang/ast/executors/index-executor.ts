@@ -24,7 +24,7 @@
 import {
   FilterExpression,
   PipeSegment,
-  Sampling,
+  Sampling
 } from "../../../model/malloy_types";
 
 import { ErrorFactory } from "../error-factory";

@@ -39,12 +39,12 @@ export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
     return {
       "mvp": {
         "mainModule": `${dist}/duckdb-mvp.wasm`,
-        "mainWorker": `${dist}/duckdb-node-mvp.worker.cjs`,
+        "mainWorker": `${dist}/duckdb-node-mvp.worker.cjs`
       },
       "eh": {
         "mainModule": `${dist}/duckdb-eh.wasm`,
-        "mainWorker": `${dist}/duckdb-node-eh.worker.cjs`,
-      },
+        "mainWorker": `${dist}/duckdb-node-eh.worker.cjs`
+      }
     };
   }
 

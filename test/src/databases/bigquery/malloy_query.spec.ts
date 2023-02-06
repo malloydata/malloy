@@ -22,13 +22,11 @@
  */
 
 import { test } from "@jest/globals";
-import { testModel } from "../../models/faa_model";
-import { describeIfDatabaseAvailable, fStringEq } from "../../util";
-
 import * as malloy from "@malloydata/malloy";
-
 import { Query } from "@malloydata/malloy";
+import { testModel } from "../../models/faa_model";
 import { BigQueryTestConnection, RuntimeList } from "../../runtimes";
+import { describeIfDatabaseAvailable, fStringEq } from "../../util";
 
 const runtimeList = new RuntimeList(["bigquery"]);
 const runtime = runtimeList.runtimeMap.get("bigquery");
@@ -71,7 +69,7 @@ describe("BigQuery expression tests", () => {
     const sql = await compileQueryFromQueryDef(faa, {
       "structRef": "flights",
       "pipeHead": { "name": "flights_by_carrier" },
-      "pipeline": [{ "fields": ["name", "flight_count"], "type": "reduce" }],
+      "pipeline": [{ "fields": ["name", "flight_count"], "type": "reduce" }]
     });
     await bqCompile(sql);
   });
@@ -116,17 +114,17 @@ describe("BigQuery expression tests", () => {
                         {
                           "type": "aggregate",
                           "function": "count",
-                          "e": [],
-                        },
-                      ],
-                    },
-                  ],
-                },
-              ],
-            },
+                          "e": []
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
           ],
           "limit": 5,
-          "orderBy": [{ "dir": "desc", "field": "carrier" }],
+          "orderBy": [{ "dir": "desc", "field": "carrier" }]
         },
         // carrier top routes
         {
@@ -135,10 +133,10 @@ describe("BigQuery expression tests", () => {
             "carrier",
             "flight_count",
             "routes.origin_code",
-            "routes.route_flights",
-          ],
-        },
-      ],
+            "routes.route_flights"
+          ]
+        }
+      ]
     });
     await bqCompile(sql);
   });
@@ -147,8 +145,8 @@ describe("BigQuery expression tests", () => {
     const sql = await compileQueryFromQueryDef(faa, {
       "structRef": "flights",
       "pipeline": [
-        { "type": "reduce", "fields": ["carriers.name", "flight_count"] },
-      ],
+        { "type": "reduce", "fields": ["carriers.name", "flight_count"] }
+      ]
     });
     await bqCompile(sql);
   });
@@ -158,11 +156,11 @@ describe("BigQuery expression tests", () => {
       "structRef": "flights",
       "filterList": [
         fStringEq("origin.state", "CA"),
-        fStringEq("destination.state", "NY"),
+        fStringEq("destination.state", "NY")
       ],
       "pipeline": [
-        { "type": "reduce", "fields": ["carriers.name", "flight_count"] },
-      ],
+        { "type": "reduce", "fields": ["carriers.name", "flight_count"] }
+      ]
     });
     await bqCompile(sql);
   });
@@ -177,43 +175,43 @@ describe("BigQuery expression tests", () => {
               "as": "dep_year",
               "name": "dep_time",
               "timeframe": "year",
-              "type": "timestamp",
+              "type": "timestamp"
             },
             {
               "as": "dep_month",
               "name": "dep_time",
               "timeframe": "month",
-              "type": "timestamp",
+              "type": "timestamp"
             },
             {
               "as": "dep_week",
               "name": "dep_time",
               "timeframe": "week",
-              "type": "timestamp",
+              "type": "timestamp"
             },
             {
               "as": "dep_date",
               "name": "dep_time",
               "timeframe": "day",
-              "type": "timestamp",
+              "type": "timestamp"
             },
             {
               "as": "dep_hour",
               "name": "dep_time",
               "timeframe": "hour",
-              "type": "timestamp",
+              "type": "timestamp"
             },
             {
               "as": "dep_minute",
               "name": "dep_time",
               "timeframe": "minute",
-              "type": "timestamp",
+              "type": "timestamp"
             },
             {
               "as": "dep_second",
               "name": "dep_time",
               "timeframe": "second",
-              "type": "timestamp",
+              "type": "timestamp"
             },
             {
               "type": "number",
@@ -227,17 +225,17 @@ describe("BigQuery expression tests", () => {
                     {
                       "type": "aggregate",
                       "function": "sum",
-                      "e": [{ "type": "field", "path": "distance" }],
-                    },
-                  ],
-                },
-              ],
-            },
+                      "e": [{ "type": "field", "path": "distance" }]
+                    }
+                  ]
+                }
+              ]
+            }
           ],
           "limit": 20,
-          "type": "reduce",
-        },
-      ],
+          "type": "reduce"
+        }
+      ]
     });
     await bqCompile(sql);
   });
@@ -251,15 +249,15 @@ describe("BigQuery expression tests", () => {
               "bucketFilter": "AA,WN,DL",
               "bucketOther": "Other Carrier",
               "name": "carrier",
-              "type": "string",
+              "type": "string"
             },
-            "flight_count",
+            "flight_count"
           ],
           "orderBy": [{ "dir": "asc", "field": 2 }],
-          "type": "reduce",
-        },
+          "type": "reduce"
+        }
       ],
-      "structRef": "flights",
+      "structRef": "flights"
     });
     await bqCompile(sql);
   });
@@ -272,7 +270,7 @@ describe("BigQuery expression tests", () => {
   it("simple_reduce", async () => {
     const sql = await compileQueryFromQueryDef(faa, {
       "structRef": "flights",
-      "pipeline": [{ "type": "reduce", "fields": ["carrier", "flight_count"] }],
+      "pipeline": [{ "type": "reduce", "fields": ["carrier", "flight_count"] }]
     });
     await bqCompile(sql);
   });
@@ -292,14 +290,14 @@ describe("BigQuery expression tests", () => {
                 {
                   "type": "aggregate",
                   "function": "sum",
-                  "e": [{ "type": "field", "path": "distance" }],
-                },
-              ],
+                  "e": [{ "type": "field", "path": "distance" }]
+                }
+              ]
             },
-            "aircraft.aircraft_models.total_seats",
-          ],
-        },
-      ],
+            "aircraft.aircraft_models.total_seats"
+          ]
+        }
+      ]
     });
     await bqCompile(sql);
   });
@@ -317,13 +315,13 @@ describe("BigQuery expression tests", () => {
               "e": [
                 "UPPER(",
                 { "type": "field", "path": "carriers.nickname" },
-                ")",
-              ],
+                ")"
+              ]
             },
-            "flight_count",
-          ],
-        },
-      ],
+            "flight_count"
+          ]
+        }
+      ]
     });
     await bqCompile(sql);
   });
@@ -343,14 +341,14 @@ describe("BigQuery expression tests", () => {
                 {
                   "type": "aggregate",
                   "function": "sum",
-                  "e": [{ "type": "field", "path": "distance" }],
-                },
-              ],
-            },
+                  "e": [{ "type": "field", "path": "distance" }]
+                }
+              ]
+            }
           ],
-          "type": "reduce",
-        },
-      ],
+          "type": "reduce"
+        }
+      ]
     });
     await bqCompile(sql);
   });
@@ -375,15 +373,15 @@ describe("BigQuery expression tests", () => {
                     {
                       "type": "aggregate",
                       "function": "sum",
-                      "e": [{ "type": "field", "path": "distance" }],
-                    },
-                  ],
-                },
-              ],
-            },
-          ],
-        },
-      ],
+                      "e": [{ "type": "field", "path": "distance" }]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
     });
     await bqCompile(sql);
   });
@@ -409,16 +407,16 @@ describe("BigQuery expression tests", () => {
                     {
                       "type": "aggregate",
                       "function": "sum",
-                      "e": [{ "type": "field", "path": "distance" }],
-                    },
-                  ],
-                },
-              ],
-            },
+                      "e": [{ "type": "field", "path": "distance" }]
+                    }
+                  ]
+                }
+              ]
+            }
           ],
-          "filterList": [fStringEq("carriers.code", "WN")],
-        },
-      ],
+          "filterList": [fStringEq("carriers.code", "WN")]
+        }
+      ]
     });
     await bqCompile(sql);
   });
@@ -428,7 +426,7 @@ describe("BigQuery expression tests", () => {
       "structRef": "flights",
       "filterList": [fStringEq("destination_code", "AL")],
       "pipeHead": { "name": "flights_by_city_top_5" },
-      "pipeline": [],
+      "pipeline": []
     });
     await bqCompile(sql);
   });
@@ -493,11 +491,11 @@ describe("BigQuery expression tests", () => {
             "flights_by_model",
             "flights_by_carrier",
             "measures_first",
-            "first_turtle",
+            "first_turtle"
           ],
-          "type": "reduce",
-        },
-      ],
+          "type": "reduce"
+        }
+      ]
     });
     await bqCompile(sql);
   });
@@ -517,11 +515,11 @@ describe("BigQuery expression tests", () => {
               "name": "total_flights",
               "type": "number",
               "expressionType": "scalar",
-              "e": [{ "type": "field", "path": "totals.flight_count" }],
-            },
-          ],
-        },
-      ],
+              "e": [{ "type": "field", "path": "totals.flight_count" }]
+            }
+          ]
+        }
+      ]
     });
     await bqCompile(sql);
   });
@@ -651,9 +649,9 @@ describe("BigQuery expression tests", () => {
           {
             "type": "reduce",
             "fields": ["provider_state", "num_providers"],
-            "orderBy": [{ "dir": "desc", "field": 2 }],
-          },
-        ],
+            "orderBy": [{ "dir": "desc", "field": 2 }]
+          }
+        ]
       })
       .run();
     expect(result.data.value[0].num_providers).toBe(296);
@@ -671,28 +669,28 @@ describe("BigQuery expression tests", () => {
           "as": "mtest",
           "structRelationship": {
             "type": "basetable",
-            "connectionName": "bigquery",
+            "connectionName": "bigquery"
           },
           "structSource": {
             "type": "table",
-            "tablePath": "malloy-data.malloytest.bq_medicare_test",
+            "tablePath": "malloy-data.malloytest.bq_medicare_test"
           },
           "fields": [
             {
               "type": "number",
               "name": "c",
               "expressionType": "aggregate",
-              "e": [{ "type": "aggregate", "function": "count", "e": [] }],
+              "e": [{ "type": "aggregate", "function": "count", "e": [] }]
             },
             {
               "type": "turtle",
               "name": "get_count",
-              "pipeline": [{ "type": "reduce", "fields": ["c"] }],
-            },
-          ],
+              "pipeline": [{ "type": "reduce", "fields": ["c"] }]
+            }
+          ]
         },
         "pipeHead": { "name": "get_count" },
-        "pipeline": [],
+        "pipeline": []
       })
       .run();
     expect(result.data.value[0].c).toBe(202656);

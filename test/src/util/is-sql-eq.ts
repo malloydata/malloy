@@ -42,12 +42,12 @@ expect.extend({
     if (wantEq != "=") {
       return {
         "pass": false,
-        "message": () => `${wantEq}\nSQL:\n    ${sql}`,
+        "message": () => `${wantEq}\nSQL:\n    ${sql}`
       };
     }
     return {
       "pass": true,
-      "message": () => "SQL expression matched",
+      "message": () => "SQL expression matched"
     };
-  },
+  }
 });

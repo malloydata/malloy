@@ -22,7 +22,7 @@
  */
 
 import { ANTLRErrorListener, Token } from "antlr4ts";
-import { MessageLogger, LogMessage } from "./parse-log";
+import { LogMessage, MessageLogger } from "./parse-log";
 import { MalloyTranslation } from "./parse-malloy";
 
 export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
@@ -45,7 +45,7 @@ export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
       : { "start": errAt, "end": errAt };
     const error: LogMessage = {
       "message": msg,
-      "at": { "url": this.translator.sourceURL, range },
+      "at": { "url": this.translator.sourceURL, range }
     };
     this.messages.log(error);
   }

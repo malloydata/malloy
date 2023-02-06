@@ -46,7 +46,7 @@ describe("Postgres tests", () => {
       ),
       runtime.connection.runSQL(
         'create table if not exists "UpperTablePublic" as select 1 as one;'
-      ),
+      )
     ]);
   });
 

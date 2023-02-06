@@ -22,7 +22,7 @@
  */
 /* eslint-disable no-console */
 
-import { allDatabases, RuntimeList } from "../../runtimes";
+import { RuntimeList, allDatabases } from "../../runtimes";
 import { databasesFromEnvironmentOr } from "../../util";
 
 const joinModelText = `

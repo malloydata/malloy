@@ -30,10 +30,10 @@ import { ModelEntry } from "./model-entry";
 import {
   DocumentLocation,
   DocumentReference,
-  isSQLBlock,
   ModelDef,
   Query,
   SQLBlockStructDef,
+  isSQLBlock
 } from "../../../model/malloy_types";
 
 export abstract class MalloyElement {
@@ -84,8 +84,8 @@ export abstract class MalloyElement {
       "url": this.sourceURL,
       "range": {
         "start": { "line": 0, "character": 0 },
-        "end": { "line": 0, "character": 0 },
-      },
+        "end": { "line": 0, "character": 0 }
+      }
     };
   }
 
@@ -112,7 +112,7 @@ export abstract class MalloyElement {
           "type": "queryReference",
           "text": key,
           "definition": result.entry,
-          "location": reference.location,
+          "location": reference.location
         });
       } else if (result?.entry.type === "struct") {
         if (isSQLBlock(result.entry)) {
@@ -120,14 +120,14 @@ export abstract class MalloyElement {
             "type": "sqlBlockReference",
             "text": key,
             "definition": result.entry,
-            "location": reference.location,
+            "location": reference.location
           });
         } else {
           this.addReference({
             "type": "exploreReference",
             "text": key,
             "definition": result.entry,
-            "location": reference.location,
+            "location": reference.location
           });
         }
       }
@@ -401,7 +401,7 @@ export class Document extends MalloyElement implements NameSpace {
       "modelDef": this.modelDef(),
       "queryList": this.queryList,
       "sqlBlocks": this.sqlBlocks,
-      needs,
+      needs
     };
     return ret;
   }

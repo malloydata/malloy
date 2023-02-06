@@ -28,7 +28,7 @@ import {
   TimeFieldType,
   TimeLiteralFragment,
   TimestampUnit,
-  TypecastFragment,
+  TypecastFragment
 } from "../../model/malloy_types";
 
 import { compressExpr } from "./expressions/utils";
@@ -49,8 +49,8 @@ export function timeOffset(
       "base": { "valueType": timeType, "value": from },
       op,
       "delta": n,
-      "units": timeframe,
-    },
+      "units": timeframe
+    }
   ];
 }
 
@@ -64,7 +64,7 @@ export function castTo(
     "function": "cast",
     "dstType": castType,
     "expr": from,
-    safe,
+    safe
   };
   return [cast];
 }
@@ -76,7 +76,7 @@ export function castTimestampToDate(from: Expr, safe = false): Expr {
     "dstType": "date",
     "srcType": "timestamp",
     "expr": from,
-    safe,
+    safe
   };
   return [cast];
 }
@@ -88,7 +88,7 @@ export function castDateToTimestamp(from: Expr, safe = false): Expr {
     "dstType": "timestamp",
     "srcType": "date",
     "expr": from,
-    safe,
+    safe
   };
   return [cast];
 }
@@ -125,7 +125,7 @@ export function timeLiteral(
     "function": "timeLiteral",
     "literal": literalStr,
     "literalType": timeType,
-    "timezone": tz,
+    "timezone": tz
   };
   return [fragment];
 }
@@ -146,7 +146,7 @@ export function timestampOffset(
       ...from,
       `),INTERVAL `,
       ...n,
-      ` ${units}))`,
+      ` ${units}))`
     ];
   }
   const typeFrom = fromNotTimestamp ? ["TIMESTAMP(", ...from, ")"] : from;
@@ -155,7 +155,7 @@ export function timestampOffset(
     ...typeFrom,
     `,INTERVAL `,
     ...n,
-    ` ${units})`,
+    ` ${units})`
   ]);
 }
 
@@ -172,6 +172,6 @@ export function dateOffset(
     ...from,
     `,INTERVAL `,
     ...n,
-    ` ${units})`,
+    ` ${units})`
   ]);
 }

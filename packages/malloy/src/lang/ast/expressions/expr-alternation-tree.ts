@@ -49,7 +49,7 @@ export class ExprAlternationTree extends BinaryBoolean<"|" | "&"> {
         choice1.value,
         this.op === "&" ? "and" : "or",
         choice2.value
-      ),
+      )
     };
   }
 

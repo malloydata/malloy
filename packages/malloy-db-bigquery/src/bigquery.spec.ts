@@ -38,7 +38,7 @@ describe("db:BigQuery", () => {
       "readURL": async (url: URL) => {
         const filePath = fileURLToPath(url);
         return await util.promisify(fs.readFile)(filePath, "utf8");
-      },
+      }
     };
     runtime = new malloy.Runtime(files, bq);
   });
@@ -59,8 +59,8 @@ describe("db:BigQuery", () => {
       "fields": [
         { "name": "code", "type": "STRING" },
         { "name": "name", "type": "STRING" },
-        { "name": "nickname", "type": "STRING" },
-      ],
+        { "name": "nickname", "type": "STRING" }
+      ]
     });
   });
 
@@ -116,7 +116,7 @@ describe("db:BigQuery", () => {
       const dataset = sdk.dataset(datasetName);
       if ((await dataset.exists())[0]) {
         await dataset.delete({
-          "force": true,
+          "force": true
         });
       }
     };

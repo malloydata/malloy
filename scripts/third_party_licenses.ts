@@ -60,7 +60,7 @@ const malloyPackages = [
   "test",
   "@malloydata/db-bigquery",
   "@malloydata/db-postgres",
-  "@malloydata/db-duckdb",
+  "@malloydata/db-duckdb"
 ];
 
 // licenses that we would need to mirror source for, if we included (we don't today)
@@ -79,7 +79,7 @@ const sourceMirrorLicenses = [
   "APSL-1.1",
   "APSL-1.2",
   "APSL-2.0",
-  "Ruby",
+  "Ruby"
 ];
 
 // packages that don't provide license files in standard places
@@ -88,7 +88,7 @@ const licenseFoundElsewhere: { [id: string]: string } = {
     "https://github.com/TooTallNate/node-agent-base/blob/master/README.md",
   "crypt": "https://github.com/pvorb/node-crypt/blob/master/LICENSE.mkd",
   "http-proxy-agent": "https://github.com/TooTallNate/node-http-proxy-agent",
-  "https-proxy-agent": "https://github.com/TooTallNate/node-https-proxy-agent",
+  "https-proxy-agent": "https://github.com/TooTallNate/node-https-proxy-agent"
 };
 
 const packagesWithoutLocationsSpecified: { [id: string]: string } = {};
@@ -119,7 +119,7 @@ const getLicenses = async () => {
     const row: Partial<outputRow> = {
       name,
       "binaryName": "Malloy VSCode Extension",
-      "licenseName": dependency[2],
+      "licenseName": dependency[2]
     };
 
     const url = dependency[3];
@@ -163,7 +163,7 @@ const getLicenses = async () => {
         "License",
         "LICENCE",
         "LICENSE-MIT",
-        "license",
+        "license"
       ];
       const licenseExtensions = ["", ".md", ".txt"];
       const defaultBranchNames = ["blob/main/", "blob/master/", ""]; // "" is because some sub-packages already have branch name embedded in package URL
@@ -233,8 +233,8 @@ const getLicenses = async () => {
         "licenseName",
         "binaryName",
         "copyrightIncluded",
-        "sourceCodeIncluded",
-      ],
+        "sourceCodeIncluded"
+      ]
     },
     (err: any, output: string) => {
       fs.writeFileSync(outputFile, output);

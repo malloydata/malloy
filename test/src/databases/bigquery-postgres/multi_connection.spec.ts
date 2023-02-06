@@ -53,7 +53,7 @@ describe("Multi-connection", () => {
     new Map(
       Object.entries({
         "bigquery": bqConnection,
-        "postgres": postgresConnection,
+        "postgres": postgresConnection
       })
     ),
     "bigquery"

@@ -80,9 +80,9 @@ export class MalloyToAST
       "message": msg,
       "at": {
         "url": this.parse.subTranslator.sourceURL,
-        "range": this.parse.subTranslator.rangeFromContext(cx),
+        "range": this.parse.subTranslator.rangeFromContext(cx)
       },
-      "severity": sev,
+      "severity": sev
     });
   }
 
@@ -204,7 +204,7 @@ export class MalloyToAST
   ): MT {
     el.location = {
       "url": this.parse.subTranslator.sourceURL,
-      "range": this.parse.subTranslator.rangeFromContext(cx),
+      "range": this.parse.subTranslator.rangeFromContext(cx)
     };
     return el;
   }

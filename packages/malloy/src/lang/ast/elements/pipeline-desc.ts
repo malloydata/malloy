@@ -23,9 +23,9 @@
 
 import {
   DocumentLocation,
-  Pipeline,
   PipeSegment,
-  StructDef,
+  Pipeline,
+  StructDef
 } from "../../../model/malloy_types";
 
 import { FieldSpace } from "../types/field-space";
@@ -77,7 +77,7 @@ export abstract class PipelineDesc extends MalloyElement {
     }
     return {
       "opList": returnPipe || modelPipe,
-      "structDef": nextFS.structDef(),
+      "structDef": nextFS.structDef()
     };
   }
 

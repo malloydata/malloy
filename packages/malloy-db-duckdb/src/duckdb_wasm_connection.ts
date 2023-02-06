@@ -113,7 +113,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
         ? bundle.mainWorker
         : URL.createObjectURL(
             new Blob([`importScripts("${bundle.mainWorker}");`], {
-              "type": "text/javascript",
+              "type": "text/javascript"
             })
           );
 
@@ -124,7 +124,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
       await this._database.instantiate(bundle.mainModule, bundle.pthreadWorker);
       if (this.databasePath) {
         await this._database.open({
-          "path": this.databasePath,
+          "path": this.databasePath
         });
       }
       URL.revokeObjectURL(workerUrl);
@@ -158,7 +158,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
       return {
         // Normalize the data from its default proxied form
         rows,
-        "totalRows": table.numRows,
+        "totalRows": table.numRows
       };
     } else {
       throw new Error("Boom");

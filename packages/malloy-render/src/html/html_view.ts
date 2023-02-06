@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { AtomicFieldType, DataArray, Field, Explore } from "@malloydata/malloy";
+import { AtomicFieldType, DataArray, Explore, Field } from "@malloydata/malloy";
 import { TopLevelSpec } from "vega-lite";
 import { DataStyles, StyleDefaults } from "../data_styles";
 import { ChildRenderers, Renderer } from "../renderer";
@@ -66,7 +66,7 @@ export class HTMLView {
     }
   ): Promise<HTMLElement> {
     const renderer = makeRenderer(table.field, this.document, options, {
-      "size": "large",
+      "size": "large"
     });
     try {
       // TODO Implement row streaming capability for some renderers: some renderers should be usable

@@ -68,17 +68,17 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
             "field": colorField.name,
             "type": colorType,
             "axis": { "title": colorField.name },
-            "scale": getColorScale(colorType, false),
+            "scale": getColorScale(colorType, false)
           }
         : undefined;
 
     return {
       ...this.getSize(),
       "data": {
-        "values": this.mapData(data),
+        "values": this.mapData(data)
       },
       "projection": {
-        "type": "albersUsa",
+        "type": "albersUsa"
       },
       "layer": [
         {
@@ -86,14 +86,14 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
             "values": usAtlas,
             "format": {
               "type": "topojson",
-              "feature": "states",
-            },
+              "feature": "states"
+            }
           },
           "mark": {
             "type": "geoshape",
             "fill": "lightgray",
-            "stroke": "white",
-          },
+            "stroke": "white"
+          }
         },
         {
           "mark": "line",
@@ -102,9 +102,9 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
             "longitude": { "field": lon1Field.name, "type": "quantitative" },
             "latitude2": { "field": lat2Field.name, "type": "quantitative" },
             "longitude2": { "field": lon2Field.name, "type": "quantitative" },
-            "color": colorDef,
-          },
-        },
+            "color": colorDef
+          }
+        }
       ],
       "background": "transparent",
       "config": {
@@ -114,7 +114,7 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
           "titleFontWeight": 500,
           "titleColor": "var(--malloy-title-color, #505050)",
           "labelColor": "var(--malloy-label-color, #000000)",
-          "titleFontSize": 12,
+          "titleFontSize": 12
         },
         "legend": {
           "labelFont": "var(--malloy-font-family, Roboto)",
@@ -122,20 +122,20 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
           "titleFontWeight": 500,
           "titleColor": "var(--malloy-title-color, #505050)",
           "labelColor": "var(--malloy-label-color, #000000)",
-          "titleFontSize": 12,
+          "titleFontSize": 12
         },
         "header": {
           "labelFont": "var(--malloy-font-family, Roboto)",
           "titleFont": "var(--malloy-font-family, Roboto)",
-          "titleFontWeight": 500,
+          "titleFontWeight": 500
         },
         "mark": { "font": "var(--malloy-font-family, Roboto)" },
         "title": {
           "font": "var(--malloy-font-family, Roboto)",
           "subtitleFont": "var(--malloy-font-family, Roboto)",
-          "fontWeight": 500,
-        },
-      },
+          "fontWeight": 500
+        }
+      }
     };
   }
 }

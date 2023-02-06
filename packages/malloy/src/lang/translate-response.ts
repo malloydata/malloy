@@ -22,10 +22,10 @@
  */
 
 import {
-  Query,
   ModelDef,
+  Query,
   SQLBlockSource,
-  SQLBlockStructDef,
+  SQLBlockStructDef
 } from "../model/malloy_types";
 import { MalloyElement } from "./ast";
 import { LogMessage } from "./parse-log";

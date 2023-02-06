@@ -22,8 +22,8 @@
  */
 
 import {
-  expressionIsCalculation,
   FilterExpression,
+  expressionIsCalculation
 } from "../../../model/malloy_types";
 
 import { ExpressionDef } from "../types/expression-def";
@@ -44,13 +44,13 @@ export class FilterElement extends MalloyElement {
       return {
         "code": this.exprSrc,
         "expression": ["_FILTER_MUST_RETURN_BOOLEAN_"],
-        "expressionType": "scalar",
+        "expressionType": "scalar"
       };
     }
     const exprCond: FilterExpression = {
       "code": this.exprSrc,
       "expression": compressExpr(exprVal.value),
-      "expressionType": exprVal.expressionType,
+      "expressionType": exprVal.expressionType
     };
     return exprCond;
   }

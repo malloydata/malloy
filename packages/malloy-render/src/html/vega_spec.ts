@@ -36,30 +36,30 @@ export const DEFAULT_SPEC: Partial<lite.TopLevelSpec> = {
     "params": [
       {
         "name": "defaultFont",
-        "value": "var(--malloy-font-family, 'Roboto')",
+        "value": "var(--malloy-font-family, 'Roboto')"
       },
       { "name": "titleColor", "value": "var(--malloy-title-color, #505050)" },
-      { "name": "labelColor", "value": "var(--malloy-label-color, #505050)" },
+      { "name": "labelColor", "value": "var(--malloy-label-color, #505050)" }
     ],
     "background": undefined,
     "color": { "expr": "titleColor" },
     "header": {
       "labelFont": { "expr": "defaultFont" },
       "titleFont": { "expr": "defaultFont" },
-      "titleFontWeight": 500,
+      "titleFontWeight": 500
     },
     "text": {
       "font": { "expr": "defaultFont" },
-      "color": { "expr": "labelColor" },
+      "color": { "expr": "labelColor" }
     },
     "mark": {
       "font": { "expr": "defaultFont" },
-      "color": { "expr": "labelColor" },
+      "color": { "expr": "labelColor" }
     },
     "title": {
       "font": { "expr": "defaultFont" },
       "subtitleFont": { "expr": "defaultFont" },
-      "fontWeight": 500,
+      "fontWeight": 500
     },
     "axis": {
       "labelColor": { "expr": "labelColor" },
@@ -67,7 +67,7 @@ export const DEFAULT_SPEC: Partial<lite.TopLevelSpec> = {
       "titleFont": { "expr": "defaultFont" },
       "titleFontWeight": 500,
       "titleColor": { "expr": "titleColor" },
-      "titleFontSize": 12,
+      "titleFontSize": 12
     },
     "legend": {
       "titleFontWeight": 500,
@@ -75,22 +75,22 @@ export const DEFAULT_SPEC: Partial<lite.TopLevelSpec> = {
       "titleFontSize": 12,
       "labelColor": { "expr": "labelColor" },
       "labelFont": { "expr": "defaultFont" },
-      "titleFont": { "expr": "defaultFont" },
-    },
-  },
+      "titleFont": { "expr": "defaultFont" }
+    }
+  }
 };
 
 const sizeSmall = {
   "height": 80,
-  "width": 150,
+  "width": 150
 };
 
 const sizeSmallWidth = {
-  "width": 150,
+  "width": 150
 };
 
 const sizeSmallHeightStep = {
-  "height": { "step": 13 },
+  "height": { "step": 13 }
 };
 
 const sizeSmallStep = { ...sizeSmallWidth, ...sizeSmallHeightStep };
@@ -98,7 +98,7 @@ const sizeMediumStep = { ...sizeSmallWidth };
 
 const sizeMedium = {
   "height": 150,
-  "width": 200,
+  "width": 200
 };
 
 const sizeLarge = {
@@ -110,7 +110,7 @@ const sizeLarge = {
 const bar_SM: lite.TopLevelSpec = {
   ...DEFAULT_SPEC,
   "encoding": {
-    "y": { "field": "#{1}", "type": "nominal", "axis": null, "sort": null },
+    "y": { "field": "#{1}", "type": "nominal", "axis": null, "sort": null }
   },
   "layer": [
     {
@@ -119,18 +119,18 @@ const bar_SM: lite.TopLevelSpec = {
         "x": {
           "field": "#{2}",
           "type": "quantitative",
-          "sort": null,
+          "sort": null
         },
-        "color": { "value": "#4285F4" },
-      },
+        "color": { "value": "#4285F4" }
+      }
     },
     {
       "mark": { "type": "text", "align": "left", "x": 5 },
       "encoding": {
-        "text": { "field": "#{1}" },
-      },
-    },
-  ],
+        "text": { "field": "#{1}" }
+      }
+    }
+  ]
 };
 
 const bar_SM_large: lite.TopLevelSpec = {
@@ -140,8 +140,8 @@ const bar_SM_large: lite.TopLevelSpec = {
   "encoding": {
     "x": { "field": "#{1}", "type": "nominal", "sort": null },
     "y": { "field": "#{2}", "type": "quantitative", "sort": null },
-    "color": { "value": "#4285F4" },
-  },
+    "color": { "value": "#4285F4" }
+  }
 };
 
 const bar_SMM_large = {
@@ -151,9 +151,9 @@ const bar_SMM_large = {
     "color": {
       "field": "#{3}",
       "type": "quantitative",
-      "scale": getColorScale("quantitative", true, true),
-    },
-  },
+      "scale": getColorScale("quantitative", true, true)
+    }
+  }
 } as lite.TopLevelSpec;
 
 const bar_SMS_large = {
@@ -162,9 +162,9 @@ const bar_SMS_large = {
     ...bar_SM_large.encoding,
     "color": {
       "field": "#{3}",
-      "scale": getColorScale("nominal", true, true),
-    },
-  },
+      "scale": getColorScale("nominal", true, true)
+    }
+  }
 } as lite.TopLevelSpec;
 
 const bar_SMS = {
@@ -176,12 +176,12 @@ const bar_SMS = {
         ...bar_SM.layer[0].encoding,
         "color": {
           "field": "#{3}",
-          "scale": getColorScale("nominal", true, true),
-        },
-      },
+          "scale": getColorScale("nominal", true, true)
+        }
+      }
     },
-    bar_SM.layer[1],
-  ],
+    bar_SM.layer[1]
+  ]
 } as lite.TopLevelSpec;
 
 const bar_SMM = {
@@ -194,12 +194,12 @@ const bar_SMM = {
         "color": {
           "field": "#{3}",
           "type": "quantitative",
-          "scale": getColorScale("quantitative", true, true),
-        },
-      },
+          "scale": getColorScale("quantitative", true, true)
+        }
+      }
     },
-    bar_SM.layer[1],
-  ],
+    bar_SM.layer[1]
+  ]
 } as lite.TopLevelSpec;
 
 // simple column chart
@@ -210,8 +210,8 @@ const bar_NM: lite.TopLevelSpec = {
   "encoding": {
     "x": { "field": "#{1}", "type": "nominal", "sort": null },
     "y": { "field": "#{2}", "type": "quantitative", "sort": null },
-    "color": { "value": "#4285F4" },
-  },
+    "color": { "value": "#4285F4" }
+  }
 };
 
 const bar_NMS: lite.TopLevelSpec = {
@@ -221,9 +221,9 @@ const bar_NMS: lite.TopLevelSpec = {
     "color": {
       "field": "#{3}",
       "type": "nominal",
-      "scale": getColorScale("nominal", true),
-    },
-  },
+      "scale": getColorScale("nominal", true)
+    }
+  }
 };
 
 const bar_NMM: lite.TopLevelSpec = {
@@ -233,9 +233,9 @@ const bar_NMM: lite.TopLevelSpec = {
     "color": {
       "field": "#{3}",
       "type": "quantitative",
-      "scale": getColorScale("quantitative", true),
-    },
-  },
+      "scale": getColorScale("quantitative", true)
+    }
+  }
 };
 
 export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
@@ -275,34 +275,34 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
     "spec": {
       "description": "A simple bar chart with embedded data.",
       "encoding": {
-        "y": { "field": "#{1}", "type": "nominal", "axis": null, "sort": null },
+        "y": { "field": "#{1}", "type": "nominal", "axis": null, "sort": null }
       },
       "layer": [
         {
           "mark": {
-            "type": "bar",
+            "type": "bar"
           },
           "encoding": {
             "x": {
               "field": { "repeat": "repeat" },
               "type": "quantitative",
-              "sort": null,
+              "sort": null
             },
             "color": {
               "field": "#{2}",
-              "scale": getColorScale("nominal", true, true),
-            },
-          },
+              "scale": getColorScale("nominal", true, true)
+            }
+          }
         },
         {
           "mark": { "type": "text", "align": "left", "x": 5 },
           "encoding": {
             "text": { "field": "#{1}" },
-            "detail": { "aggregate": "count" },
-          },
-        },
-      ],
-    },
+            "detail": { "aggregate": "count" }
+          }
+        }
+      ]
+    }
   },
   "bubble_NNM": {
     ...DEFAULT_SPEC,
@@ -313,19 +313,19 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
       "y": {
         "field": "#{1}",
         "type": "ordinal",
-        "sort": null,
+        "sort": null
       },
       "x": {
         "field": "#{2}",
         "type": "ordinal",
-        "sort": null,
+        "sort": null
       },
       "size": {
         "field": "#{3}",
-        "type": "quantitative",
+        "type": "quantitative"
       },
-      "color": { "value": "#4285F4" },
-    },
+      "color": { "value": "#4285F4" }
+    }
   },
   "heat_NNM": {
     ...DEFAULT_SPEC,
@@ -336,19 +336,19 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
       "y": {
         "field": "#{1}",
         "type": "ordinal",
-        "sort": null,
+        "sort": null
       },
       "x": {
         "field": "#{2}",
         "type": "ordinal",
-        "sort": null,
+        "sort": null
       },
       "color": {
         "field": "#{3}",
         "type": "quantitative",
-        "scale": getColorScale("quantitative", false),
-      },
-    },
+        "scale": getColorScale("quantitative", false)
+      }
+    }
   },
   "heat_SNM": {
     ...DEFAULT_SPEC,
@@ -359,19 +359,19 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
       "y": {
         "field": "#{1}",
         "type": "nominal",
-        "sort": null,
+        "sort": null
       },
       "x": {
         "field": "#{2}",
         "type": "ordinal",
-        "sort": null,
+        "sort": null
       },
       "color": {
         "field": "#{3}",
         "type": "quantitative",
-        "scale": getColorScale("quantitative", false),
-      },
-    },
+        "scale": getColorScale("quantitative", false)
+      }
+    }
   },
   "stacked_line_STM": {
     ...DEFAULT_SPEC,
@@ -383,26 +383,26 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
         "field": "#{2}",
         "type": "temporal",
         "axis": { "grid": false },
-        "sort": null,
+        "sort": null
       },
       "y": {
         "field": "#{3}",
         "type": "quantitative",
         "axis": { "grid": false },
         "title": null,
-        "sort": null,
+        "sort": null
       },
       "color": {
         "field": "#{1}",
         "type": "nominal",
         "legend": null,
-        "scale": getColorScale("nominal", false),
+        "scale": getColorScale("nominal", false)
       },
       "row": {
         "field": "#{1}",
-        "type": "nominal",
-      },
-    },
+        "type": "nominal"
+      }
+    }
   },
   "grid_line_SSTM": {
     ...DEFAULT_SPEC,
@@ -414,31 +414,31 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
         "field": "#{3}",
         "type": "temporal",
         "axis": { "grid": false },
-        "sort": null,
+        "sort": null
       },
       "y": {
         "field": "#{4}",
         "type": "quantitative",
         "axis": { "grid": false },
         "title": null,
-        "sort": null,
+        "sort": null
       },
       "color": {
         "field": "#{1}",
         "type": "nominal",
         "legend": null,
-        "scale": getColorScale("nominal", false),
+        "scale": getColorScale("nominal", false)
       },
       "row": {
         "field": "#{1}",
-        "type": "nominal",
+        "type": "nominal"
       },
       "column": {
         "field": "#{2}",
-        "type": "nominal",
-      },
-    },
-  },
+        "type": "nominal"
+      }
+    }
+  }
 };
 
 export function isDataContainer(a: unknown): a is DataContainer {
@@ -538,7 +538,7 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
 
     this.translateFields(newSpec as unknown as DataContainer, data.field);
     const rdata = {
-      "values": this.mapData(data),
+      "values": this.mapData(data)
     };
     newSpec.data = rdata;
 

@@ -24,7 +24,7 @@
 import {
   ExpressionType,
   Fragment,
-  maxExpressionType,
+  maxExpressionType
 } from "../../../model/malloy_types";
 
 import { ExprValue } from "../types/expr-value";
@@ -64,7 +64,7 @@ export class ExprFunc extends ExpressionDef {
     return {
       "dataType": dataType,
       expressionType,
-      "value": compressExpr(funcCall),
+      "value": compressExpr(funcCall)
     };
   }
 }

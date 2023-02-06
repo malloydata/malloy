@@ -51,7 +51,7 @@ export class ExistingQuery extends PipelineDesc {
     const oops = function () {
       return {
         "outputStruct": ErrorFactory.structDef,
-        "query": ErrorFactory.query,
+        "query": ErrorFactory.query
       };
     };
     if (!seedQuery) {
@@ -77,7 +77,7 @@ export class ExistingQuery extends PipelineDesc {
       "type": "query",
       ...destPipe,
       "structRef": queryHead.structRef(),
-      "location": this.location,
+      "location": this.location
     };
     return { "outputStruct": appended.structDef, query };
   }

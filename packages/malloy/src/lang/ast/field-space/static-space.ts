@@ -23,7 +23,7 @@
 
 import { Dialect } from "../../../dialect/dialect";
 import { getDialect } from "../../../dialect/dialect_map";
-import { FieldDef, isTurtleDef, StructDef } from "../../../model/malloy_types";
+import { FieldDef, StructDef, isTurtleDef } from "../../../model/malloy_types";
 
 import { SpaceEntry } from "../types/space-entry";
 import { LookupResult } from "../types/lookup-result";
@@ -151,7 +151,7 @@ export class StaticSpace implements FieldSpace {
               : "fieldReference",
           definition,
           "location": head.location,
-          "text": head.refString,
+          "text": head.refString
         });
       }
     }
@@ -161,7 +161,7 @@ export class StaticSpace implements FieldSpace {
       }
       return {
         "error": `'${head}' cannot contain a '${rest[0]}'`,
-        "found": undefined,
+        "found": undefined
       };
     }
     return { found, "error": undefined };

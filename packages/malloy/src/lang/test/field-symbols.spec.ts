@@ -41,7 +41,7 @@ describe("structdef comprehension", () => {
       "dialect": "standardsql",
       "structSource": { "type": "table", "tablePath": "test" },
       "structRelationship": { "type": "basetable", "connectionName": "test" },
-      "fields": [field],
+      "fields": [field]
     };
   }
 
@@ -52,7 +52,7 @@ describe("structdef comprehension", () => {
   test(`import string field`, () => {
     const field: model.FieldDef = {
       "name": "t",
-      "type": "string",
+      "type": "string"
     };
     const struct = mkStructDef(field);
     const space = new StaticSpace(struct);
@@ -65,7 +65,7 @@ describe("structdef comprehension", () => {
     const field: model.FieldDef = {
       "name": "t",
       "type": "number",
-      "numberType": "float",
+      "numberType": "float"
     };
     const struct = mkStructDef(field);
     const space = new StaticSpace(struct);
@@ -78,7 +78,7 @@ describe("structdef comprehension", () => {
     const field: model.FieldDef = {
       "name": "t",
       "type": "number",
-      "numberType": "integer",
+      "numberType": "integer"
     };
     const struct = mkStructDef(field);
     const space = new StaticSpace(struct);
@@ -90,7 +90,7 @@ describe("structdef comprehension", () => {
   test(`import boolean field`, () => {
     const field: model.FieldDef = {
       "name": "t",
-      "type": "boolean",
+      "type": "boolean"
     };
     const struct = mkStructDef(field);
     const space = new StaticSpace(struct);
@@ -107,10 +107,10 @@ describe("structdef comprehension", () => {
       "structRelationship": {
         "type": "nested",
         "field": "a",
-        "isArray": false,
+        "isArray": false
       },
       "structSource": { "type": "nested" },
-      "fields": [{ "type": "string", "name": "b" }],
+      "fields": [{ "type": "string", "name": "b" }]
     };
     const struct = mkStructDef(field);
     const space = new StaticSpace(struct);
@@ -128,7 +128,7 @@ describe("structdef comprehension", () => {
       "dialect": "standardsql",
       "structRelationship": { "type": "inline" },
       "structSource": { "type": "inline" },
-      "fields": [{ "type": "string", "name": "a" }],
+      "fields": [{ "type": "string", "name": "a" }]
     };
     const struct = mkStructDef(field);
     const space = new StaticSpace(struct);
@@ -149,11 +149,11 @@ describe("structdef comprehension", () => {
         "onExpression": [
           { "type": "field", "path": "aKey" },
           "=",
-          { "type": "field", "path": "t.a" },
-        ],
+          { "type": "field", "path": "t.a" }
+        ]
       },
       "structSource": { "type": "table", "tablePath": "t" },
-      "fields": [{ "type": "string", "name": "a" }],
+      "fields": [{ "type": "string", "name": "a" }]
     };
     const struct = mkStructDef(field);
     const space = new StaticSpace(struct);
@@ -171,9 +171,9 @@ describe("structdef comprehension", () => {
       "pipeline": [
         {
           "type": "reduce",
-          "fields": ["a"],
-        },
-      ],
+          "fields": ["a"]
+        }
+      ]
     };
     const struct = mkStructDef(field);
     const space = new StaticSpace(struct);
@@ -189,14 +189,14 @@ describe("structdef comprehension", () => {
         "name": "cReqStr",
         "type": "string",
         "value": null,
-        "constant": false,
+        "constant": false
       },
       "cOptStr": {
         "name": "cOptStr",
         "type": "string",
         "value": ["value"],
-        "constant": false,
-      },
+        "constant": false
+      }
     };
     const space = new StaticSpace(struct);
     expect(space.lookup(fieldRef("cReqStr")).found).toBeInstanceOf(

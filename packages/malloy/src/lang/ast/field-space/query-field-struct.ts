@@ -34,7 +34,7 @@ export class QueryFieldStruct extends QueryField {
   rename(name: string): void {
     this.turtleDef = {
       ...this.turtleDef,
-      "as": name,
+      "as": name
     };
   }
 

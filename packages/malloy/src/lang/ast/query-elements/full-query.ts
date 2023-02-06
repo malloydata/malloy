@@ -40,7 +40,7 @@ export class FullQuery extends TurtleHeadedPipe {
       "type": "query",
       structRef,
       "pipeline": [],
-      "location": this.location,
+      "location": this.location
     };
     const structDef = refIsStructDef(structRef)
       ? structRef
@@ -52,8 +52,8 @@ export class FullQuery extends TurtleHeadedPipe {
         "outputStruct": structDef,
         "query": {
           "structRef": structRef,
-          "pipeline": [],
-        },
+          "pipeline": []
+        }
       };
     }
     if (this.turtleName) {

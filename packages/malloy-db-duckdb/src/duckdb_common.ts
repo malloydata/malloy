@@ -23,17 +23,17 @@
 import {
   AtomicFieldTypeInner,
   Connection,
+  FieldTypeDef,
   MalloyQueryData,
   NamedStructDefs,
-  parseTableURI,
   PersistSQLResults,
-  FieldTypeDef,
   PooledConnection,
+  QueryDataRow,
   RunSQLOptions,
   SQLBlock,
   StreamingConnection,
   StructDef,
-  QueryDataRow,
+  parseTableURI
 } from "@malloydata/malloy";
 
 const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
@@ -45,7 +45,7 @@ const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   "TIME": "string",
   "DECIMAL": "number",
   "BOOLEAN": "boolean",
-  "INTEGER": "number",
+  "INTEGER": "number"
 };
 
 export interface DuckDBQueryOptions {
@@ -60,7 +60,7 @@ export abstract class DuckDBCommon
   implements Connection, PersistSQLResults, StreamingConnection
 {
   static DEFAULT_QUERY_OPTIONS: DuckDBQueryOptions = {
-    "rowLimit": 10,
+    "rowLimit": 10
   };
 
   private schemaCache = new Map<
@@ -151,13 +151,13 @@ export abstract class DuckDBCommon
       "structSource": {
         "type": "sql",
         "method": "subquery",
-        "sqlBlock": sqlRef,
+        "sqlBlock": sqlRef
       },
       "structRelationship": {
         "type": "basetable",
-        "connectionName": this.name,
+        "connectionName": this.name
       },
-      "fields": [],
+      "fields": []
     };
 
     await this.schemaFromQuery(
@@ -245,9 +245,9 @@ export abstract class DuckDBCommon
           "structRelationship": {
             "type": arrayMatch ? "nested" : "inline",
             "field": name,
-            "isArray": false,
+            "isArray": false
           },
-          "fields": [],
+          "fields": []
         };
         this.fillStructDefFromTypeMap(innerStructDef, newTypeMap);
         structDef.fields.push(innerStructDef);
@@ -262,22 +262,22 @@ export abstract class DuckDBCommon
             "structRelationship": {
               "type": "nested",
               "field": name,
-              "isArray": true,
+              "isArray": true
             },
-            "fields": [{ "type": malloyType, "name": "value" } as FieldTypeDef],
+            "fields": [{ "type": malloyType, "name": "value" } as FieldTypeDef]
           };
           structDef.fields.push(innerStructDef);
         } else {
           if (malloyType !== undefined) {
             structDef.fields.push({
               "type": malloyType,
-              name,
+              name
             });
           } else {
             structDef.fields.push({
               name,
               "type": "string",
-              "e": [`'DuckDB type "${duckDBType}" not supported by Malloy'`],
+              "e": [`'DuckDB type "${duckDBType}" not supported by Malloy'`]
             });
           }
         }
@@ -309,7 +309,7 @@ export abstract class DuckDBCommon
     if (!inCache) {
       try {
         inCache = {
-          "structDef": await this.getSQLBlockSchema(sqlRef),
+          "structDef": await this.getSQLBlockSchema(sqlRef)
         };
       } catch (error) {
         inCache = { "error": error.message };
@@ -331,7 +331,7 @@ export abstract class DuckDBCommon
       if (!inCache) {
         try {
           inCache = {
-            "schema": await this.getTableSchema(tableURL),
+            "schema": await this.getTableSchema(tableURL)
           };
           this.schemaCache.set(tableURL, inCache);
         } catch (error) {
@@ -356,9 +356,9 @@ export abstract class DuckDBCommon
       "structSource": { "type": "table", tablePath },
       "structRelationship": {
         "type": "basetable",
-        "connectionName": this.name,
+        "connectionName": this.name
       },
-      "fields": [],
+      "fields": []
     };
 
     const quotedTablePath = tablePath.match(/[:*/]/)

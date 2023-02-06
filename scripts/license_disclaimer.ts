@@ -103,7 +103,7 @@ function doDependencies(nodeModulesPath: string, packageJson: any): void {
         pkg.repository?.url,
         pkg.repository?.baseUrl,
         pkg.repo,
-        `https://npmjs.com/package/${dependency}`,
+        `https://npmjs.com/package/${dependency}`
       ].find((el) => el !== undefined);
 
       fs.appendFileSync(

@@ -23,10 +23,10 @@
 import { DateTime } from "luxon";
 
 import {
-  isDateUnit,
-  isTimeFieldType,
   TimeFieldType,
   TimestampUnit,
+  isDateUnit,
+  isTimeFieldType
 } from "../../../model/malloy_types";
 
 import { ExprValue } from "../types/expr-value";
@@ -169,7 +169,7 @@ export class GranularLiteral extends ExpressionDef {
     const value: TimeResult = {
       dataType,
       "expressionType": "scalar",
-      "value": timeLiteral(this.moment, dataType, "UTC"),
+      "value": timeLiteral(this.moment, dataType, "UTC")
     };
     // Literals with date resolution can be used as timestamps or dates,
     // this is the third attempt to make that work. It still feels like
@@ -183,7 +183,7 @@ export class GranularLiteral extends ExpressionDef {
     if (this.units != "second") {
       return {
         ...value,
-        "timeframe": this.units,
+        "timeframe": this.units
       };
     }
     return value;

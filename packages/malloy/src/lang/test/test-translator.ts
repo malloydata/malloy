@@ -23,16 +23,16 @@
 
 import { inspect } from "util";
 import {
-  StructDef,
-  NamedModelObject,
+  DocumentLocation,
+  FieldDef,
   ModelDef,
+  NamedModelObject,
+  PipeSegment,
   Query,
   QueryFieldDef,
-  FieldDef,
-  isFilteredAliasedName,
-  PipeSegment,
+  StructDef,
   TurtleDef,
-  DocumentLocation,
+  isFilteredAliasedName
 } from "../../model/malloy_types";
 import { MalloyElement } from "../ast";
 import { NameSpace } from "../ast/types/name-space";
@@ -58,8 +58,8 @@ const mockSchema: Record<string, StructDef> = {
       { "type": "number", "name": "ai", "numberType": "integer" },
       { "type": "date", "name": "ad" },
       { "type": "boolean", "name": "abool" },
-      { "type": "timestamp", "name": "ats" },
-    ],
+      { "type": "timestamp", "name": "ats" }
+    ]
   },
   "malloytest.carriers": {
     "type": "struct",
@@ -67,15 +67,15 @@ const mockSchema: Record<string, StructDef> = {
     "dialect": "standardsql",
     "structSource": {
       "type": "table",
-      "tablePath": "malloytest.carriers",
+      "tablePath": "malloytest.carriers"
     },
     "structRelationship": { "type": "basetable", "connectionName": "bigquery" },
     "fields": [
       { "name": "code", "type": "string" },
       { "name": "name", "type": "string" },
-      { "name": "nickname", "type": "string" },
+      { "name": "nickname", "type": "string" }
     ],
-    "as": "carriers",
+    "as": "carriers"
   },
   "malloytest.flights": {
     "type": "struct",
@@ -83,7 +83,7 @@ const mockSchema: Record<string, StructDef> = {
     "dialect": "standardsql",
     "structSource": {
       "type": "table",
-      "tablePath": "malloytest.flights",
+      "tablePath": "malloytest.flights"
     },
     "structRelationship": { "type": "basetable", "connectionName": "bigquery" },
     "fields": [
@@ -102,9 +102,9 @@ const mockSchema: Record<string, StructDef> = {
       { "name": "distance", "type": "number", "numberType": "integer" },
       { "name": "cancelled", "type": "string" },
       { "name": "diverted", "type": "string" },
-      { "name": "id2", "type": "number", "numberType": "integer" },
+      { "name": "id2", "type": "number", "numberType": "integer" }
     ],
-    "as": "flights",
+    "as": "flights"
   },
   "malloytest.airports": {
     "type": "struct",
@@ -112,7 +112,7 @@ const mockSchema: Record<string, StructDef> = {
     "dialect": "standardsql",
     "structSource": {
       "type": "table",
-      "tablePath": "malloytest.airports",
+      "tablePath": "malloytest.airports"
     },
     "structRelationship": { "type": "basetable", "connectionName": "bigquery" },
     "fields": [
@@ -142,10 +142,10 @@ const mockSchema: Record<string, StructDef> = {
       { "name": "joint_use", "type": "string" },
       { "name": "mil_rts", "type": "string" },
       { "name": "cntl_twr", "type": "string" },
-      { "name": "major", "type": "string" },
+      { "name": "major", "type": "string" }
     ],
-    "as": "airports",
-  },
+    "as": "airports"
+  }
 };
 export const aTableDef = mockSchema.aTable;
 
@@ -215,9 +215,9 @@ export class TestTranslator extends MalloyTranslator {
               "onExpression": [
                 { "type": "field", "path": "astr" },
                 "=",
-                { "type": "field", "path": "b.astr" },
-              ],
-            },
+                { "type": "field", "path": "b.astr" }
+              ]
+            }
           },
           {
             "type": "number",
@@ -225,7 +225,7 @@ export class TestTranslator extends MalloyTranslator {
             "numberType": "integer",
             "expressionType": "aggregate",
             "e": ["COUNT()"],
-            "code": "count()",
+            "code": "count()"
           },
           {
             "type": "turtle",
@@ -233,13 +233,13 @@ export class TestTranslator extends MalloyTranslator {
             "pipeline": [
               {
                 "type": "reduce",
-                "fields": ["astr", "acount"],
-              },
-            ],
-          },
-        ],
-      },
-    },
+                "fields": ["astr", "acount"]
+              }
+            ]
+          }
+        ]
+      }
+    }
   };
 
   constructor(source: string, rootRule = "malloyDocument") {
@@ -274,7 +274,7 @@ export class TestTranslator extends MalloyTranslator {
         mysterious = false;
         this.logger.log({
           "at": this.defaultLocation(),
-          "message": `Missing imports: ${whatImports.join(",")}`,
+          "message": `Missing imports: ${whatImports.join(",")}`
         });
       }
       const needThese = this.schemaZone.getUndefined();
@@ -282,13 +282,13 @@ export class TestTranslator extends MalloyTranslator {
         mysterious = false;
         this.logger.log({
           "at": this.defaultLocation(),
-          "message": `Missing schema: ${needThese.join(",")}`,
+          "message": `Missing schema: ${needThese.join(",")}`
         });
       }
       if (mysterious) {
         this.logger.log({
           "at": this.defaultLocation(),
-          "message": "mysterious translation failure",
+          "message": "mysterious translation failure"
         });
       }
     }
@@ -363,7 +363,7 @@ export function markSource(
     const lines = code.split("\n");
     const start = {
       "line": lines.length - 1,
-      "character": lines[lines.length - 1].length,
+      "character": lines[lines.length - 1].length
     };
     const bitLines = mark.split("\n");
     const location = {
@@ -373,9 +373,9 @@ export function markSource(
         "end": {
           "line": start.line + bitLines.length - 1,
           "character":
-            bitLines.length === 1 ? start.character + mark.length : mark.length,
-        },
-      },
+            bitLines.length === 1 ? start.character + mark.length : mark.length
+        }
+      }
     };
     locations.push(location);
     code += mark;

@@ -95,7 +95,7 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
             "field": colorField.name,
             "type": colorType,
             "axis": { "title": colorField.name },
-            "scale": getColorScale(colorType, false),
+            "scale": getColorScale(colorType, false)
           }
         : undefined;
 
@@ -107,7 +107,7 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
       ...this.getSize(),
       "data": { "values": mapped },
       "projection": {
-        "type": "albersUsa",
+        "type": "albersUsa"
       },
       "layer": [
         {
@@ -115,14 +115,14 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
             "values": usAtlas,
             "format": {
               "type": "topojson",
-              "feature": "states",
-            },
+              "feature": "states"
+            }
           },
           "mark": {
             "type": "geoshape",
             "fill": "#efefef",
-            "stroke": "white",
-          },
+            "stroke": "white"
+          }
         },
         {
           "transform": [
@@ -133,20 +133,20 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
                   "values": usAtlas,
                   "format": {
                     "type": "topojson",
-                    "feature": "states",
-                  },
+                    "feature": "states"
+                  }
                 },
-                "key": "id",
+                "key": "id"
               },
-              "as": "geo",
-            },
+              "as": "geo"
+            }
           ],
           "mark": "geoshape",
           "encoding": {
             "shape": { "field": "geo", "type": "geojson" },
-            "color": colorDef,
-          },
-        },
+            "color": colorDef
+          }
+        }
       ],
       "background": "transparent",
       "config": {
@@ -156,7 +156,7 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
           "titleFontWeight": 500,
           "titleColor": "var(--malloy-title-color, #505050)",
           "labelColor": "var(--malloy-label-color, #000000)",
-          "titleFontSize": 12,
+          "titleFontSize": 12
         },
         "legend": {
           "labelFont": "var(--malloy-font-family, Roboto)",
@@ -164,20 +164,20 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
           "titleFontWeight": 500,
           "titleColor": "var(--malloy-title-color, #505050)",
           "labelColor": "var(--malloy-label-color, #000000)",
-          "titleFontSize": 12,
+          "titleFontSize": 12
         },
         "header": {
           "labelFont": "var(--malloy-font-family, Roboto)",
           "titleFont": "var(--malloy-font-family, Roboto)",
-          "titleFontWeight": 500,
+          "titleFontWeight": 500
         },
         "mark": { "font": "var(--malloy-font-family, Roboto)" },
         "title": {
           "font": "var(--malloy-font-family, Roboto)",
           "subtitleFont": "var(--malloy-font-family, Roboto)",
-          "fontWeight": 500,
-        },
-      },
+          "fontWeight": 500
+        }
+      }
     };
   }
 }

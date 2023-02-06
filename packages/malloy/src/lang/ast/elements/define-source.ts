@@ -22,14 +22,16 @@
  */
 
 import { ModelDataRequest } from "../../translate-response";
+
+import { ErrorFactory } from "../error-factory";
+import { HasParameter } from "../parameters/has-parameter";
 import {
   DocStatement,
   Document,
   MalloyElement,
-  RunList,
+  RunList
 } from "../types/malloy-element";
-import { HasParameter } from "../parameters/has-parameter";
-import { ErrorFactory } from "../error-factory";
+
 import { Source } from "./source";
 
 export class DefineSource extends MalloyElement implements DocStatement {
@@ -69,9 +71,9 @@ export class DefineSource extends MalloyElement implements DocStatement {
         "entry": {
           ...structDef,
           "as": this.name,
-          "location": this.location,
+          "location": this.location
         },
-        "exported": this.exported,
+        "exported": this.exported
       });
     }
   }

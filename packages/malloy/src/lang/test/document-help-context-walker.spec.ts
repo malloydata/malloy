@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { MarkedSource, markSource, TestTranslator } from "./test-translator";
+import { MarkedSource, TestTranslator, markSource } from "./test-translator";
 
 function testHelpContext(
   source: MarkedSource,

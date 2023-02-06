@@ -26,30 +26,30 @@ import { TranslateResponse } from "..";
 import {
   DocumentLocation,
   DocumentPosition,
-  expressionIsCalculation,
-  isFieldTypeDef,
-  isFilteredAliasedName,
-  isSQLFragment,
   Query,
   SQLBlockSource,
   SQLBlockStructDef,
   StructDef,
+  expressionIsCalculation,
+  isFieldTypeDef,
+  isFilteredAliasedName,
+  isSQLFragment
 } from "../../model";
 import { makeSQLBlock } from "../../model/sql_block";
 import { StaticSpace } from "../ast/field-space/static-space";
 import { ExpressionDef } from "../ast/types/expression-def";
 import { DataRequestResponse } from "../translate-response";
 import {
+  MarkedSource,
   TestTranslator,
-  pretty,
   aTableDef,
   getExplore,
   getField,
-  getQueryField,
-  getModelQuery,
   getJoinField,
+  getModelQuery,
+  getQueryField,
   markSource,
-  MarkedSource,
+  pretty
 } from "./test-translator";
 import { isEqual } from "lodash";
 import { inspect } from "util";
@@ -133,12 +133,12 @@ function checkForErrors(trans: Testable) {
   if (trans.logger.hasErrors()) {
     return {
       "message": () => `Translation Errors:\n${trans.prettyErrors()}`,
-      "pass": false,
+      "pass": false
     };
   }
   return {
     "message": () => "Unexpected error free translation",
-    "pass": true,
+    "pass": true
   };
 }
 
@@ -164,12 +164,12 @@ function checkForNeededs(trans: Testable) {
     return {
       "message": () =>
         `Translation is not complete, needs:\n${prettyNeeds(response)}`,
-      "pass": false,
+      "pass": false
     };
   }
   return {
     "message": () => "Unexpected complete translation",
-    "pass": true,
+    "pass": true
   };
 }
 
@@ -179,7 +179,7 @@ function highlightError(dl: DocumentLocation, txt: string): string {
   }
   const { start, end } = dl.range;
   const output = [
-    `${start.line}:${start.character}-${end.line}:${end.character}`,
+    `${start.line}:${start.character}-${end.line}:${end.character}`
   ];
   let errStart = start.character;
   const doc = txt.split("\n");
@@ -249,7 +249,7 @@ expect.extend({
     }
     return {
       "pass": true,
-      "message": () => "",
+      "message": () => ""
     };
   },
   "compileToFailWith": function (
@@ -289,7 +289,7 @@ expect.extend({
           `TEST ERROR, not all objects resolved in source\n` +
           pretty(t) +
           "\n" +
-          emsg,
+          emsg
       };
     } else {
       const explain: string[] = [];
@@ -324,13 +324,13 @@ expect.extend({
       if (explain.length == 0) {
         return {
           "pass": true,
-          "message": () => `All expected errors found: ${pretty(msgs)}`,
+          "message": () => `All expected errors found: ${pretty(msgs)}`
         };
       }
       return {
         "pass": false,
         "message": () =>
-          `Compiler did not generated expected errors\n${explain.join("\n")}`,
+          `Compiler did not generated expected errors\n${explain.join("\n")}`
       };
     }
   },
@@ -342,7 +342,7 @@ expect.extend({
     if (this.equals(at, checkAt)) {
       return {
         "pass": true,
-        "message": () => `Locations match`,
+        "message": () => `Locations match`
       };
     }
     const errMsg =
@@ -351,9 +351,9 @@ expect.extend({
       `Received: ${highlightError(checkAt, text)}\n`;
     return {
       "pass": false,
-      "message": () => errMsg,
+      "message": () => errMsg
     };
-  },
+  }
 });
 
 class BetaExpression extends Testable {
@@ -638,7 +638,7 @@ describe("model statements", () => {
       expect(docParse).toBeErrorless();
       expect(xr).toEqual({ "urls": ["internal://test/langtests/child"] });
       docParse.update({
-        "urls": { "internal://test/langtests/child": "explore: aa is a" },
+        "urls": { "internal://test/langtests/child": "explore: aa is a" }
       });
       const yr = docParse.unresolved();
       expect(yr).toBeNull();
@@ -651,8 +651,8 @@ describe("model statements", () => {
       const reportedError = "ENOWAY: No way to find your child";
       docParse.update({
         "errors": {
-          "urls": { "internal://test/langtests/child": reportedError },
-        },
+          "urls": { "internal://test/langtests/child": reportedError }
+        }
       });
       docParse.translate();
       expect(docParse).not.toBeErrorless();
@@ -661,7 +661,7 @@ describe("model statements", () => {
     test("chained imports", () => {
       const docParse = new BetaModel(`import "child"`);
       docParse.update({
-        "urls": { "internal://test/langtests/child": `import "grandChild"` },
+        "urls": { "internal://test/langtests/child": `import "grandChild"` }
       });
       const xr = docParse.unresolved();
       expect(docParse).toBeErrorless();
@@ -674,8 +674,8 @@ describe("model statements", () => {
       expect(xr).toEqual({ "urls": ["internal://test/parent.malloy"] });
       docParse.update({
         "urls": {
-          "internal://test/parent.malloy": `source: aa is table('aTable')`,
-        },
+          "internal://test/parent.malloy": `source: aa is table('aTable')`
+        }
       });
       expect(docParse).modelCompiled();
     });
@@ -689,8 +689,8 @@ describe("model statements", () => {
           "internal://test/parent.malloy": `
             source: aa is table('aTable') {
               dimension: astr is 'not legal beause astr exists'
-            }`,
-        },
+            }`
+        }
       });
       expect(docParse).compileToFailWith("Cannot redefine 'astr'");
     });
@@ -700,7 +700,7 @@ describe("model statements", () => {
           import "bottom"
           source: midSrc is from(bottomSrc -> { group_by: astr })
         `,
-        "internal://test/langtests/bottom": `source: bottomSrc is table('aTable')`,
+        "internal://test/langtests/bottom": `source: bottomSrc is table('aTable')`
       };
       const fullModel = new BetaModel(`
         import "middle"
@@ -1135,7 +1135,7 @@ describe("expressions", () => {
       "week",
       "month",
       "quarter",
-      "year",
+      "year"
     ];
 
     describe("timestamp truncation", () => {
@@ -1351,11 +1351,11 @@ describe("sql:", () => {
         "sqlBlock": {
           "type": "sqlBlock",
           ...sql,
-          "selectStr": sql.select.filter((s) => typeof s == "string").join(""),
-        },
+          "selectStr": sql.select.filter((s) => typeof s == "string").join("")
+        }
       },
       "structRelationship": { "type": "basetable", "connectionName": cname },
-      "fields": aTableDef.fields,
+      "fields": aTableDef.fields
     };
   }
   test("definition", () => {
@@ -1606,9 +1606,9 @@ describe("error handling", () => {
       badModel.update({
         "errors": {
           "compileSQL": {
-            [needSchema.compileSQL.name]: "ZZZZ",
-          },
-        },
+            [needSchema.compileSQL.name]: "ZZZZ"
+          }
+        }
       });
     }
     expect(badModel).compileToFailWith("Invalid SQL, ZZZZ");
@@ -1630,11 +1630,11 @@ function getSelectOneStruct(sqlBlock: SQLBlockSource): SQLBlockStructDef {
       "sqlBlock": {
         "type": "sqlBlock",
         "name": sqlBlock.name,
-        "selectStr": selectThis.sql,
-      },
+        "selectStr": selectThis.sql
+      }
     },
     "structRelationship": { "type": "basetable", "connectionName": "bigquery" },
-    "fields": [{ "type": "number", "name": "one" }],
+    "fields": [{ "type": "number", "name": "one" }]
   };
 }
 
@@ -1737,7 +1737,7 @@ describe("source locations", () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        "compileSQL": { [compileSql.name]: getSelectOneStruct(compileSql) },
+        "compileSQL": { [compileSql.name]: getSelectOneStruct(compileSql) }
       });
       expect(m).modelCompiled();
       const na = getExplore(m.modelDef, "na");
@@ -1790,7 +1790,7 @@ describe("source locations", () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        "compileSQL": { [compileSql.name]: getSelectOneStruct(compileSql) },
+        "compileSQL": { [compileSql.name]: getSelectOneStruct(compileSql) }
       });
       expect(m).modelCompiled();
       const s = m.sqlBlocks[0];
@@ -1915,8 +1915,8 @@ describe("source references", () => {
       "type": "exploreReference",
       "text": "na",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -1934,8 +1934,8 @@ describe("source references", () => {
       "type": "fieldReference",
       "text": "q",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -1951,8 +1951,8 @@ describe("source references", () => {
       "type": "fieldReference",
       "text": "x",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -1967,7 +1967,7 @@ describe("source references", () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        "compileSQL": { [compileSql.name]: getSelectOneStruct(compileSql) },
+        "compileSQL": { [compileSql.name]: getSelectOneStruct(compileSql) }
       });
       expect(m).modelCompiled();
       const ref = m.referenceAt(pos(source.locations[1]));
@@ -1977,8 +1977,8 @@ describe("source references", () => {
         "text": "s",
         "definition": {
           ...getSelectOneStruct(compileSql),
-          "location": source.locations[0],
-        },
+          "location": source.locations[0]
+        }
       });
     }
   });
@@ -1995,8 +1995,8 @@ describe("source references", () => {
       "type": "queryReference",
       "text": "q",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2012,8 +2012,8 @@ describe("source references", () => {
       "type": "queryReference",
       "text": "q",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2029,8 +2029,8 @@ describe("source references", () => {
       "type": "queryReference",
       "text": "q",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2046,8 +2046,8 @@ describe("source references", () => {
       "type": "fieldReference",
       "text": "abool",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2065,8 +2065,8 @@ describe("source references", () => {
       "type": "fieldReference",
       "text": "name",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2085,8 +2085,8 @@ describe("source references", () => {
       "type": "fieldReference",
       "text": "astr",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2104,8 +2104,8 @@ describe("source references", () => {
       "type": "joinReference",
       "text": "self",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2120,8 +2120,8 @@ describe("source references", () => {
       "type": "fieldReference",
       "text": "abool",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2137,8 +2137,8 @@ describe("source references", () => {
       "type": "fieldReference",
       "text": "abool",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2156,8 +2156,8 @@ describe("source references", () => {
       "type": "fieldReference",
       "text": "abool",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2175,8 +2175,8 @@ describe("source references", () => {
       "type": "fieldReference",
       "text": "abool",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2194,8 +2194,8 @@ describe("source references", () => {
       "type": "fieldReference",
       "text": "c",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2213,8 +2213,8 @@ describe("source references", () => {
       "type": "fieldReference",
       "text": "c",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2232,8 +2232,8 @@ describe("source references", () => {
       "type": "fieldReference",
       "text": "abool",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2251,8 +2251,8 @@ describe("source references", () => {
       "type": "fieldReference",
       "text": "abool",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2270,8 +2270,8 @@ describe("source references", () => {
       "type": "fieldReference",
       "text": "abool",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2287,8 +2287,8 @@ describe("source references", () => {
       "type": "fieldReference",
       "text": "ai",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2310,8 +2310,8 @@ describe("source references", () => {
       "type": "joinReference",
       "text": "self",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2329,8 +2329,8 @@ describe("source references", () => {
       "type": "joinReference",
       "text": "self",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2348,8 +2348,8 @@ describe("source references", () => {
       "type": "exploreReference",
       "text": "exp1",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2365,8 +2365,8 @@ describe("source references", () => {
       "type": "fieldReference",
       "text": "ai",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2383,8 +2383,8 @@ describe("source references", () => {
       "type": "fieldReference",
       "text": "abool",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2402,8 +2402,8 @@ describe("source references", () => {
       "type": "fieldReference",
       "text": "astr",
       "definition": {
-        "location": source.locations[0],
-      },
+        "location": source.locations[0]
+      }
     });
   });
 });
@@ -2414,7 +2414,7 @@ describe("translation need error locations", () => {
     const m = new BetaModel(source.code);
     const result = m.translate();
     m.update({
-      "errors": { "urls": { [(result.urls || [])[0]]: "Bad file!" } },
+      "errors": { "urls": { [(result.urls || [])[0]]: "Bad file!" } }
     });
     expect(m).not.modelParsed();
     const errList = m.errors().errors;
@@ -2447,8 +2447,8 @@ describe("translation need error locations", () => {
     const result = m.translate();
     m.update({
       "errors": {
-        "tables": { [(result.tables || [])[0]]: "Bad table!" },
-      },
+        "tables": { [(result.tables || [])[0]]: "Bad table!" }
+      }
     });
     expect(m).not.modelParsed();
     const errList = m.errors().errors;

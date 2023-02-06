@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import {
-  expressionIsAggregate,
   UngroupFragment,
+  expressionIsAggregate
 } from "../../../model/malloy_types";
 
 import { QueryInputSpace } from "../field-space/query-spaces";
@@ -57,7 +57,7 @@ export class ExprUngroup extends ExpressionDef {
     }
     const ungroup: UngroupFragment = {
       "type": this.control,
-      "e": exprVal.value,
+      "e": exprVal.value
     };
     if (this.typeCheck(this.expr, { ...exprVal, "expressionType": "scalar" })) {
       if (this.fields.length > 0) {
@@ -85,7 +85,7 @@ export class ExprUngroup extends ExpressionDef {
       return {
         "dataType": this.returns(exprVal),
         "expressionType": "analytic",
-        "value": [ungroup],
+        "value": [ungroup]
       };
     }
     this.log(`${this.control}() incompatible type`);

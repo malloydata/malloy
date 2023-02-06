@@ -23,7 +23,7 @@
 
 import {
   AggregateFragment,
-  isAtomicFieldType,
+  isAtomicFieldType
 } from "../../../model/malloy_types";
 import { errorFor } from "../ast-utils";
 import { ExprValue } from "../types/expr-value";
@@ -63,7 +63,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           exprVal = {
             "dataType": footType.dataType,
             "expressionType": footType.expressionType,
-            "value": [{ "type": "field", "path": this.source.refString }],
+            "value": [{ "type": "field", "path": this.source.refString }]
           };
           structPath = this.source.sourceString;
         } else {
@@ -88,13 +88,13 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     if (
       this.typeCheck(this.expr || this, {
         ...exprVal,
-        "expressionType": "scalar",
+        "expressionType": "scalar"
       })
     ) {
       const f: AggregateFragment = {
         "type": "aggregate",
         "function": this.func,
-        "e": exprVal.value,
+        "e": exprVal.value
       };
       if (structPath) {
         f.structPath = structPath;
@@ -102,7 +102,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
       return {
         "dataType": this.returns(exprVal),
         "expressionType": "aggregate",
-        "value": [f],
+        "value": [f]
       };
     }
     return errorFor("aggregate type check");

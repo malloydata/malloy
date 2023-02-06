@@ -42,7 +42,7 @@ export class ExprNot extends Unary {
       return {
         ...notThis,
         "dataType": "boolean",
-        "value": nullsafeNot(notThis.value),
+        "value": nullsafeNot(notThis.value)
       };
     }
     return errorFor("not requires boolean");

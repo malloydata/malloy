@@ -35,9 +35,9 @@ export class ExprNow extends ExpressionDef {
       "value": [
         {
           "type": "dialect",
-          "function": "now",
-        },
-      ],
+          "function": "now"
+        }
+      ]
     };
   }
 }

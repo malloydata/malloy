@@ -22,13 +22,14 @@
  */
 
 import { NamedQuery } from "../../../model/malloy_types";
+
 import { ModelDataRequest } from "../../translate-response";
 
 import {
   DocStatement,
   Document,
   MalloyElement,
-  RunList,
+  RunList
 } from "../types/malloy-element";
 import { QueryElement } from "../types/query-element";
 
@@ -36,7 +37,7 @@ export class DefineQuery extends MalloyElement implements DocStatement {
   elementType = "defineQuery";
 
   constructor(readonly name: string, readonly queryDetails: QueryElement) {
-    super({ queryDetails });
+    super({ "queryDetails": queryDetails });
   }
 
   execute(doc: Document): ModelDataRequest {
@@ -44,7 +45,7 @@ export class DefineQuery extends MalloyElement implements DocStatement {
       ...this.queryDetails.query(),
       "type": "query",
       "name": this.name,
-      "location": this.location,
+      "location": this.location
     };
     const exported = false;
     doc.setEntry(this.name, { entry, exported });

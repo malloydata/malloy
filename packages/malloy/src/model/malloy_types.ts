@@ -207,52 +207,52 @@ export const malloyFunctions: Record<string, MalloyFunctionInfo> = {
   "row_number": {
     "returnType": "number",
     "parameters": "none",
-    "expressionType": "analytic",
+    "expressionType": "analytic"
   },
   "rank": {
     "returnType": "number",
     "parameters": "none",
-    "expressionType": "analytic",
+    "expressionType": "analytic"
   },
   "dense_rank": {
     "returnType": "number",
     "parameters": "none",
-    "expressionType": "analytic",
+    "expressionType": "analytic"
   },
   "first_value_in_column": {
     "returnType": "number",
     "parameters": "any",
     "expressionType": "analytic",
-    "sqlName": "first_value",
+    "sqlName": "first_value"
   },
   "last_value_in_column": {
     "returnType": "number",
     "parameters": "any",
     "expressionType": "analytic",
-    "sqlName": "last_value",
+    "sqlName": "last_value"
   },
   "min_in_column": {
     "returnType": "number",
     "parameters": "any",
     "expressionType": "analytic",
-    "sqlName": "min",
+    "sqlName": "min"
   },
   "max_in_column": {
     "returnType": "number",
     "parameters": "any",
     "expressionType": "analytic",
-    "sqlName": "max",
+    "sqlName": "max"
   },
   "ntile": {
     "returnType": "number",
     "parameters": ["nconst"],
-    "expressionType": "analytic",
+    "expressionType": "analytic"
   },
   "lag": {
     "returnType": "number",
     "parameters": ["number", "nconst"],
-    "expressionType": "analytic",
-  },
+    "expressionType": "analytic"
+  }
 };
 
 export interface AnalyticFragment {
@@ -553,7 +553,7 @@ export enum ValueType {
   Date = "date",
   Timestamp = "timestamp",
   Number = "number",
-  String = "string",
+  String = "string"
 }
 
 export type TimeValueType = ValueType.Date | ValueType.Timestamp;

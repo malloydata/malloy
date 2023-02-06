@@ -94,7 +94,7 @@ export class TurtleDecl extends TurtleHeadedPipe {
       "type": "turtle",
       "name": this.name,
       ...pipe,
-      "location": this.location,
+      "location": this.location
     };
   }
 }

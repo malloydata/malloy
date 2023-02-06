@@ -43,9 +43,9 @@ export class ExprString extends ExpressionDef {
         {
           "type": "dialect",
           "function": "stringLiteral",
-          "literal": this.value,
-        },
-      ],
+          "literal": this.value
+        }
+      ]
     };
   }
 }

@@ -33,8 +33,8 @@ import { Join } from "../query-properties/joins";
 import { SpaceField } from "../types/space-field";
 import { JoinSpaceField } from "./join-space-field";
 import { QueryField } from "./query-space-field";
-import { SpaceParam, AbstractParameter } from "../types/space-param";
-import { SpaceSeed, SourceSpec } from "../space-seed";
+import { AbstractParameter, SpaceParam } from "../types/space-param";
+import { SourceSpec, SpaceSeed } from "../space-seed";
 import { StaticSpace } from "./static-space";
 import { StructSpaceFieldBase } from "./struct-space-field-base";
 
@@ -99,7 +99,7 @@ export abstract class DynamicSpace extends StaticSpace {
     if (this.final === undefined) {
       this.final = {
         ...this.fromStruct,
-        "fields": [],
+        "fields": []
       };
       // Need to process the entities in specific order
       const fields: [string, SpaceField][] = [];
