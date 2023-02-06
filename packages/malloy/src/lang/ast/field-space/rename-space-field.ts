@@ -23,8 +23,8 @@
 
 import { DocumentLocation, FieldDef } from "../../../model/malloy_types";
 
-import { FieldType } from "../types/field-type";
 import { SpaceField } from "../types/space-field";
+import { TypeDesc } from "../types/type-desc";
 
 export class RenameSpaceField extends SpaceField {
   constructor(
@@ -47,7 +47,7 @@ export class RenameSpaceField extends SpaceField {
     };
   }
 
-  type(): FieldType {
-    return this.otherField.type();
+  typeDesc(): TypeDesc {
+    return this.otherField.typeDesc();
   }
 }

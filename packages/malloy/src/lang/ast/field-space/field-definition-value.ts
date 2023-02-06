@@ -25,11 +25,11 @@ import * as model from "../../../model/malloy_types";
 import { FieldDeclaration } from "../query-items/field-declaration";
 import { FieldSpace } from "../types/field-space";
 import { SpaceField } from "../types/space-field";
-import { FieldType } from "../types/field-type";
+import { TypeDesc } from "../types/type-desc";
 
 export class FieldDefinitionValue extends SpaceField {
   fieldName: string;
-  defType?: FieldType;
+  defType?: TypeDesc;
   constructor(readonly space: FieldSpace, readonly exprDef: FieldDeclaration) {
     super();
     this.fieldName = exprDef.defineName;
@@ -51,7 +51,7 @@ export class FieldDefinitionValue extends SpaceField {
     return def;
   }
 
-  type(): FieldType {
+  typeDesc(): TypeDesc {
     if (this.defType) {
       return this.defType;
     }

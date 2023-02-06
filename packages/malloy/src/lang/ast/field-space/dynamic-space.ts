@@ -26,7 +26,7 @@ import * as model from "../../../model/malloy_types";
 import { nameOf } from "../../field-utils";
 import { SpaceEntry } from "../types/space-entry";
 import { ErrorFactory } from "../error-factory";
-import { FieldSpace, SourceSpec } from "../types/field-space";
+import { FieldSpace } from "../types/field-space";
 import { HasParameter } from "../parameters/has-parameter";
 import { MalloyElement } from "../types/malloy-element";
 import { Join } from "../query-properties/joins";
@@ -34,7 +34,7 @@ import { SpaceField } from "../types/space-field";
 import { JoinSpaceField } from "./join-space-field";
 import { QueryField } from "./query-space-field";
 import { SpaceParam, AbstractParameter } from "../types/space-param";
-import { SpaceSeed } from "../space-seed";
+import { SpaceSeed, SourceSpec } from "../space-seed";
 import { StaticSpace } from "./static-space";
 import { StructSpaceFieldBase } from "./struct-space-field-base";
 

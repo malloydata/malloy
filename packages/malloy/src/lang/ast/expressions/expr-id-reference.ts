@@ -43,12 +43,11 @@ export class ExprIdReference extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const def = this.fieldReference.getField(fs);
     if (def.found) {
-      // TODO if type is a query or a struct this should fail nicely
-      const typeMixin = def.found.type();
-      const dataType = typeMixin.type;
-      const expressionType = typeMixin.expressionType || "scalar";
       const value = [{ type: def.found.refType, path: this.refString }];
-      return { dataType, expressionType, value };
+      return {
+        ...def.found.typeDesc(),
+        value,
+      };
     }
     this.log(def.error);
     return errorFor(def.error);

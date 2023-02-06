@@ -36,7 +36,7 @@ import { isComparison } from "./comparison";
 import { Equality, isEquality } from "./equality";
 import { ExprValue } from "./expr-value";
 import { FieldSpace } from "./field-space";
-import { FieldValueType } from "./field-value-type";
+import { FieldValueType } from "./type-desc";
 import { isGranularResult } from "./granular-result";
 import { MalloyElement } from "./malloy-element";
 

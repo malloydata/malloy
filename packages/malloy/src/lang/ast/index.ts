@@ -100,7 +100,6 @@ export * from "./sources/table-source";
 export * from "./sql-elements/sql-statement";
 export * from "./sql-elements/sql-string";
 export * from "./types/comparison";
-export * from "./types/compart-types";
 export * from "./types/explore-desc";
 export * from "./types/source-property";
 export * from "./types/expression-def";

@@ -23,8 +23,8 @@
 
 import { Fragment } from "../../../model/malloy_types";
 
-import { FragType } from "./frag-type";
+import { TypeDesc } from "./type-desc";
 
-export interface ExprResult extends FragType {
+export interface ExprResult extends TypeDesc {
   value: Fragment[];
 }
