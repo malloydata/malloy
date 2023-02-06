@@ -32,17 +32,17 @@ import { databasesFromEnvironmentOr } from "../../util";
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 const splitFunction: Record<string, string> = {
-  bigquery: "split",
-  postgres: "string_to_array",
-  duckdb: "string_to_array",
-  duckdb_wasm: "string_to_array",
+  "bigquery": "split",
+  "postgres": "string_to_array",
+  "duckdb": "string_to_array",
+  "duckdb_wasm": "string_to_array",
 };
 
 const rootDbPath: Record<string, string> = {
-  bigquery: "malloy-data.",
-  postgres: "",
-  duckdb: "",
-  duckdb_wasm: "",
+  "bigquery": "malloy-data.",
+  "postgres": "",
+  "duckdb": "",
+  "duckdb_wasm": "",
 };
 
 afterAll(async () => {
@@ -207,9 +207,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
     // https://github.com/malloydata/malloy/pull/501#discussion_r861022857
     expect(result.data.value).toHaveLength(3);
-    expect(result.data.value).toContainEqual({ c: 1845, state: "TX" });
-    expect(result.data.value).toContainEqual({ c: 500, state: "LA" });
-    expect(result.data.value).toContainEqual({ c: 0, state: null });
+    expect(result.data.value).toContainEqual({ "c": 1845, "state": "TX" });
+    expect(result.data.value).toContainEqual({ "c": 500, "state": "LA" });
+    expect(result.data.value).toContainEqual({ "c": 0, "state": null });
   });
 
   it(`join_many cross from  - ${databaseName}`, async () => {

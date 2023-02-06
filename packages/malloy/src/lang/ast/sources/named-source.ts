@@ -52,7 +52,7 @@ export class NamedSource extends Source {
     super();
     if (paramValues && Object.keys(paramValues).length > 0) {
       this.isBlock = new IsValueBlock(paramValues);
-      this.has({ parameterValues: this.isBlock });
+      this.has({ "parameterValues": this.isBlock });
     }
     if (ref instanceof ModelEntryReference) {
       this.has({ ref });

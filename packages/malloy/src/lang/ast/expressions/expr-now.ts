@@ -30,12 +30,12 @@ export class ExprNow extends ExpressionDef {
 
   getExpression(_fs: FieldSpace): ExprValue {
     return {
-      dataType: "timestamp",
-      expressionType: "scalar",
-      value: [
+      "dataType": "timestamp",
+      "expressionType": "scalar",
+      "value": [
         {
-          type: "dialect",
-          function: "now",
+          "type": "dialect",
+          "function": "now",
         },
       ],
     };

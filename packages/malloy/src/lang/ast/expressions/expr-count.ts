@@ -44,17 +44,17 @@ export class ExprCount extends ExprAggregateFunction {
 
   getExpression(_fs: FieldSpace): ExprValue {
     const ret: AggregateFragment = {
-      type: "aggregate",
-      function: "count",
-      e: [],
+      "type": "aggregate",
+      "function": "count",
+      "e": [],
     };
     if (this.source) {
       ret.structPath = this.source.refString;
     }
     return {
-      dataType: "number",
-      expressionType: "aggregate",
-      value: [ret],
+      "dataType": "number",
+      "expressionType": "aggregate",
+      "value": [ret],
     };
   }
 }

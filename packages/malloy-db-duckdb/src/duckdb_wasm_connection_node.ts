@@ -37,13 +37,13 @@ export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
     }
     const dist = distMatch[0];
     return {
-      mvp: {
-        mainModule: `${dist}/duckdb-mvp.wasm`,
-        mainWorker: `${dist}/duckdb-node-mvp.worker.cjs`,
+      "mvp": {
+        "mainModule": `${dist}/duckdb-mvp.wasm`,
+        "mainWorker": `${dist}/duckdb-node-mvp.worker.cjs`,
       },
-      eh: {
-        mainModule: `${dist}/duckdb-eh.wasm`,
-        mainWorker: `${dist}/duckdb-node-eh.worker.cjs`,
+      "eh": {
+        "mainModule": `${dist}/duckdb-eh.wasm`,
+        "mainWorker": `${dist}/duckdb-node-eh.worker.cjs`,
       },
     };
   }

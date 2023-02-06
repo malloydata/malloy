@@ -62,9 +62,9 @@ export class ExprFunc extends ExpressionDef {
       collectType ??
       "number";
     return {
-      dataType: dataType,
+      "dataType": dataType,
       expressionType,
-      value: compressExpr(funcCall),
+      "value": compressExpr(funcCall),
     };
   }
 }

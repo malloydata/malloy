@@ -130,7 +130,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
     const segment = qex.finalize(this.refineThis);
     return {
       segment,
-      outputSpace: () =>
+      "outputSpace": () =>
         new StaticSpace(opOutputStruct(this, inputFS.structDef(), segment)),
     };
   }

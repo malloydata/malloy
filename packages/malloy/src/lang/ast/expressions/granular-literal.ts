@@ -68,7 +68,7 @@ export class GranularLiteral extends ExpressionDef {
 
     const tss = DateTime.fromFormat(s, fSecond);
     if (tss.isValid) {
-      const nextSecond = tss.plus({ second: 1 }).toFormat(fSecond);
+      const nextSecond = tss.plus({ "second": 1 }).toFormat(fSecond);
       const tsLit = new GranularLiteral(s, nextSecond, "second");
       tsLit.timeType = "timestamp";
       return tsLit;
@@ -78,7 +78,7 @@ export class GranularLiteral extends ExpressionDef {
     if (tsm.isValid) {
       // working around a weird bigquery bug ...
       const thisMin = s + ":00";
-      const nextMinute = tsm.plus({ minute: 1 }).toFormat(fMinute) + ":00";
+      const nextMinute = tsm.plus({ "minute": 1 }).toFormat(fMinute) + ":00";
       const tsLit = new GranularLiteral(thisMin, nextMinute, "minute");
       tsLit.timeType = "timestamp";
       return tsLit;
@@ -89,9 +89,9 @@ export class GranularLiteral extends ExpressionDef {
       const qplus = Number.parseInt(quarter[2]) - 1;
       let qstart = DateTime.fromFormat(quarter[1], "yyyy");
       if (qplus > 0) {
-        qstart = qstart.plus({ quarters: qplus });
+        qstart = qstart.plus({ "quarters": qplus });
       }
-      const qend = qstart.plus({ quarter: 1 });
+      const qend = qstart.plus({ "quarter": 1 });
       return new GranularLiteral(
         `${qstart.toFormat(fDay)}`,
         `${qend.toFormat(fDay)}`,
@@ -101,7 +101,7 @@ export class GranularLiteral extends ExpressionDef {
 
     const yyyymmdd = DateTime.fromFormat(s, fDay);
     if (yyyymmdd.isValid) {
-      const next = yyyymmdd.plus({ days: 1 });
+      const next = yyyymmdd.plus({ "days": 1 });
       return new GranularLiteral(
         `${yyyymmdd.toFormat(fDay)}`,
         `${next.toFormat(fDay)}`,
@@ -111,7 +111,7 @@ export class GranularLiteral extends ExpressionDef {
 
     const yyyymm = DateTime.fromFormat(s, fMonth);
     if (yyyymm.isValid) {
-      const next = yyyymm.plus({ months: 1 });
+      const next = yyyymm.plus({ "months": 1 });
       return new GranularLiteral(
         `${yyyymm.toFormat(fDay)}`,
         `${next.toFormat(fDay)}`,
@@ -122,7 +122,7 @@ export class GranularLiteral extends ExpressionDef {
     const yyyy = DateTime.fromFormat(s, fYear);
     if (yyyy.isValid) {
       const year = yyyy.toFormat(`yyyy-01-01`);
-      const nextYear = yyyy.plus({ year: 1 }).toFormat(`yyyy-01-01`);
+      const nextYear = yyyy.plus({ "year": 1 }).toFormat(`yyyy-01-01`);
       return new GranularLiteral(year, nextYear, "year");
     }
 
@@ -132,9 +132,9 @@ export class GranularLiteral extends ExpressionDef {
         // wonky because luxon uses monday weeks and bigquery uses sunday weeks
         let sunday = yyyymmdd;
         if (yyyymmdd.weekday !== 7) {
-          sunday = yyyymmdd.startOf("week").minus({ day: 1 });
+          sunday = yyyymmdd.startOf("week").minus({ "day": 1 });
         }
-        const next = sunday.plus({ days: 7 });
+        const next = sunday.plus({ "days": 7 });
 
         return new GranularLiteral(
           `${sunday.toFormat(fDay)}`,
@@ -168,8 +168,8 @@ export class GranularLiteral extends ExpressionDef {
     const dataType = this.timeType || "date";
     const value: TimeResult = {
       dataType,
-      expressionType: "scalar",
-      value: timeLiteral(this.moment, dataType, "UTC"),
+      "expressionType": "scalar",
+      "value": timeLiteral(this.moment, dataType, "UTC"),
     };
     // Literals with date resolution can be used as timestamps or dates,
     // this is the third attempt to make that work. It still feels like
@@ -183,7 +183,7 @@ export class GranularLiteral extends ExpressionDef {
     if (this.units != "second") {
       return {
         ...value,
-        timeframe: this.units,
+        "timeframe": this.units,
       };
     }
     return value;

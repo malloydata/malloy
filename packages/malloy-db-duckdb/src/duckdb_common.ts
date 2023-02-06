@@ -37,15 +37,15 @@ import {
 } from "@malloydata/malloy";
 
 const duckDBToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
-  BIGINT: "number",
-  DOUBLE: "number",
-  VARCHAR: "string",
-  DATE: "date",
-  TIMESTAMP: "timestamp",
-  TIME: "string",
-  DECIMAL: "number",
-  BOOLEAN: "boolean",
-  INTEGER: "number",
+  "BIGINT": "number",
+  "DOUBLE": "number",
+  "VARCHAR": "string",
+  "DATE": "date",
+  "TIMESTAMP": "timestamp",
+  "TIME": "string",
+  "DECIMAL": "number",
+  "BOOLEAN": "boolean",
+  "INTEGER": "number",
 };
 
 export interface DuckDBQueryOptions {
@@ -60,7 +60,7 @@ export abstract class DuckDBCommon
   implements Connection, PersistSQLResults, StreamingConnection
 {
   static DEFAULT_QUERY_OPTIONS: DuckDBQueryOptions = {
-    rowLimit: 10,
+    "rowLimit": 10,
   };
 
   private schemaCache = new Map<
@@ -135,7 +135,7 @@ export abstract class DuckDBCommon
     if (result.length > rowLimit) {
       result = result.slice(0, rowLimit);
     }
-    return { rows: result, totalRows: result.length };
+    return { "rows": result, "totalRows": result.length };
   }
 
   public abstract runSQLStream(
@@ -145,19 +145,19 @@ export abstract class DuckDBCommon
 
   private async getSQLBlockSchema(sqlRef: SQLBlock): Promise<StructDef> {
     const structDef: StructDef = {
-      type: "struct",
-      dialect: "duckdb",
-      name: sqlRef.name,
-      structSource: {
-        type: "sql",
-        method: "subquery",
-        sqlBlock: sqlRef,
+      "type": "struct",
+      "dialect": "duckdb",
+      "name": sqlRef.name,
+      "structSource": {
+        "type": "sql",
+        "method": "subquery",
+        "sqlBlock": sqlRef,
       },
-      structRelationship: {
-        type: "basetable",
-        connectionName: this.name,
+      "structRelationship": {
+        "type": "basetable",
+        "connectionName": this.name,
       },
-      fields: [],
+      "fields": [],
     };
 
     await this.schemaFromQuery(
@@ -238,16 +238,16 @@ export abstract class DuckDBCommon
       if (structMatch && structMatch.groups) {
         const newTypeMap = this.stringToTypeMap(structMatch.groups["fields"]);
         const innerStructDef: StructDef = {
-          type: "struct",
+          "type": "struct",
           name,
-          dialect: this.dialectName,
-          structSource: { type: arrayMatch ? "nested" : "inline" },
-          structRelationship: {
-            type: arrayMatch ? "nested" : "inline",
-            field: name,
-            isArray: false,
+          "dialect": this.dialectName,
+          "structSource": { "type": arrayMatch ? "nested" : "inline" },
+          "structRelationship": {
+            "type": arrayMatch ? "nested" : "inline",
+            "field": name,
+            "isArray": false,
           },
-          fields: [],
+          "fields": [],
         };
         this.fillStructDefFromTypeMap(innerStructDef, newTypeMap);
         structDef.fields.push(innerStructDef);
@@ -255,25 +255,29 @@ export abstract class DuckDBCommon
         if (arrayMatch) {
           malloyType = duckDBToMalloyTypes[duckDBType];
           const innerStructDef: StructDef = {
-            type: "struct",
+            "type": "struct",
             name,
-            dialect: this.dialectName,
-            structSource: { type: "nested" },
-            structRelationship: { type: "nested", field: name, isArray: true },
-            fields: [{ type: malloyType, name: "value" } as FieldTypeDef],
+            "dialect": this.dialectName,
+            "structSource": { "type": "nested" },
+            "structRelationship": {
+              "type": "nested",
+              "field": name,
+              "isArray": true,
+            },
+            "fields": [{ "type": malloyType, "name": "value" } as FieldTypeDef],
           };
           structDef.fields.push(innerStructDef);
         } else {
           if (malloyType !== undefined) {
             structDef.fields.push({
-              type: malloyType,
+              "type": malloyType,
               name,
             });
           } else {
             structDef.fields.push({
               name,
-              type: "string",
-              e: [`'DuckDB type "${duckDBType}" not supported by Malloy'`],
+              "type": "string",
+              "e": [`'DuckDB type "${duckDBType}" not supported by Malloy'`],
             });
           }
         }
@@ -305,10 +309,10 @@ export abstract class DuckDBCommon
     if (!inCache) {
       try {
         inCache = {
-          structDef: await this.getSQLBlockSchema(sqlRef),
+          "structDef": await this.getSQLBlockSchema(sqlRef),
         };
       } catch (error) {
-        inCache = { error: error.message };
+        inCache = { "error": error.message };
       }
       this.sqlSchemaCache.set(key, inCache);
     }
@@ -327,11 +331,11 @@ export abstract class DuckDBCommon
       if (!inCache) {
         try {
           inCache = {
-            schema: await this.getTableSchema(tableURL),
+            "schema": await this.getTableSchema(tableURL),
           };
           this.schemaCache.set(tableURL, inCache);
         } catch (error) {
-          inCache = { error: error.message };
+          inCache = { "error": error.message };
         }
       }
       if (inCache.schema !== undefined) {
@@ -346,15 +350,15 @@ export abstract class DuckDBCommon
   private async getTableSchema(tableURL: string): Promise<StructDef> {
     const { tablePath } = parseTableURI(tableURL);
     const structDef: StructDef = {
-      type: "struct",
-      name: tablePath,
-      dialect: "duckdb",
-      structSource: { type: "table", tablePath },
-      structRelationship: {
-        type: "basetable",
-        connectionName: this.name,
+      "type": "struct",
+      "name": tablePath,
+      "dialect": "duckdb",
+      "structSource": { "type": "table", tablePath },
+      "structRelationship": {
+        "type": "basetable",
+        "connectionName": this.name,
       },
-      fields: [],
+      "fields": [],
     };
 
     const quotedTablePath = tablePath.match(/[:*/]/)

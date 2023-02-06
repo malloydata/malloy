@@ -50,14 +50,14 @@ query: bar {
 test("Supports model properties", () => {
   testHelpContext(
     markSource`${source}`,
-    { line: 0, character: 1 },
+    { "line": 0, "character": 1 },
     "model_property",
     "source:"
   );
 
   testHelpContext(
     markSource`${source}`,
-    { line: 8, character: 1 },
+    { "line": 8, "character": 1 },
     "model_property",
     "query:"
   );
@@ -66,14 +66,14 @@ test("Supports model properties", () => {
 test("Supports explore properties", () => {
   testHelpContext(
     markSource`${source}`,
-    { line: 1, character: 3 },
+    { "line": 1, "character": 3 },
     "explore_property",
     "where:"
   );
 
   testHelpContext(
     markSource`${source}`,
-    { line: 2, character: 3 },
+    { "line": 2, "character": 3 },
     "explore_property",
     "query:"
   );
@@ -82,14 +82,14 @@ test("Supports explore properties", () => {
 test("Supports query properties", () => {
   testHelpContext(
     markSource`${source}`,
-    { line: 3, character: 5 },
+    { "line": 3, "character": 5 },
     "query_property",
     "group_by:"
   );
 
   testHelpContext(
     markSource`${source}`,
-    { line: 4, character: 5 },
+    { "line": 4, "character": 5 },
     "query_property",
     "where:"
   );

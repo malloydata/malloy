@@ -44,12 +44,12 @@ export function timeOffset(
 ): Expr {
   return [
     {
-      type: "dialect",
-      function: "delta",
-      base: { valueType: timeType, value: from },
+      "type": "dialect",
+      "function": "delta",
+      "base": { "valueType": timeType, "value": from },
       op,
-      delta: n,
-      units: timeframe,
+      "delta": n,
+      "units": timeframe,
     },
   ];
 }
@@ -60,10 +60,10 @@ export function castTo(
   safe = false
 ): Expr {
   const cast: TypecastFragment = {
-    type: "dialect",
-    function: "cast",
-    dstType: castType,
-    expr: from,
+    "type": "dialect",
+    "function": "cast",
+    "dstType": castType,
+    "expr": from,
     safe,
   };
   return [cast];
@@ -71,11 +71,11 @@ export function castTo(
 
 export function castTimestampToDate(from: Expr, safe = false): Expr {
   const cast: TypecastFragment = {
-    type: "dialect",
-    function: "cast",
-    dstType: "date",
-    srcType: "timestamp",
-    expr: from,
+    "type": "dialect",
+    "function": "cast",
+    "dstType": "date",
+    "srcType": "timestamp",
+    "expr": from,
     safe,
   };
   return [cast];
@@ -83,11 +83,11 @@ export function castTimestampToDate(from: Expr, safe = false): Expr {
 
 export function castDateToTimestamp(from: Expr, safe = false): Expr {
   const cast: TypecastFragment = {
-    type: "dialect",
-    function: "cast",
-    dstType: "timestamp",
-    srcType: "date",
-    expr: from,
+    "type": "dialect",
+    "function": "cast",
+    "dstType": "timestamp",
+    "srcType": "date",
+    "expr": from,
     safe,
   };
   return [cast];
@@ -110,7 +110,7 @@ export function timeResult(
   tt: TimestampUnit | undefined
 ): TimeResult | GranularResult {
   if (tt) {
-    return { ...t, timeframe: tt };
+    return { ...t, "timeframe": tt };
   }
   return t;
 }
@@ -121,11 +121,11 @@ export function timeLiteral(
   tz: string
 ): Expr {
   const fragment: TimeLiteralFragment = {
-    type: "dialect",
-    function: "timeLiteral",
-    literal: literalStr,
-    literalType: timeType,
-    timezone: tz,
+    "type": "dialect",
+    "function": "timeLiteral",
+    "literal": literalStr,
+    "literalType": timeType,
+    "timezone": tz,
   };
   return [fragment];
 }

@@ -66,7 +66,7 @@ export class HTMLView {
     }
   ): Promise<HTMLElement> {
     const renderer = makeRenderer(table.field, this.document, options, {
-      size: "large",
+      "size": "large",
     });
     try {
       // TODO Implement row streaming capability for some renderers: some renderers should be usable

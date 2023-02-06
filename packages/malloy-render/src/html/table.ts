@@ -30,7 +30,7 @@ import { createDrillIcon, yieldTask } from "./utils";
 
 export class HTMLTableRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
-    size: "medium",
+    "size": "medium",
   };
 
   async render(table: DataColumn): Promise<HTMLElement> {

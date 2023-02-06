@@ -37,10 +37,10 @@ export class FullQuery extends TurtleHeadedPipe {
   queryComp(): QueryComp {
     const structRef = this.explore.structRef();
     const destQuery: Query = {
-      type: "query",
+      "type": "query",
       structRef,
-      pipeline: [],
-      location: this.location,
+      "pipeline": [],
+      "location": this.location,
     };
     const structDef = refIsStructDef(structRef)
       ? structRef
@@ -49,10 +49,10 @@ export class FullQuery extends TurtleHeadedPipe {
 
     if (ErrorFactory.isErrorStructDef(structDef)) {
       return {
-        outputStruct: structDef,
-        query: {
-          structRef: structRef,
-          pipeline: [],
+        "outputStruct": structDef,
+        "query": {
+          "structRef": structRef,
+          "pipeline": [],
         },
       };
     }
@@ -76,7 +76,7 @@ export class FullQuery extends TurtleHeadedPipe {
     }
     const appended = this.appendOps(destQuery.pipeline, pipeFs);
     destQuery.pipeline = appended.opList;
-    return { outputStruct: appended.structDef, query: destQuery };
+    return { "outputStruct": appended.structDef, "query": destQuery };
   }
 
   query(): Query {

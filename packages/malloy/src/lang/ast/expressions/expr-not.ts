@@ -41,8 +41,8 @@ export class ExprNot extends Unary {
     if (this.typeCheck(this.expr, notThis)) {
       return {
         ...notThis,
-        dataType: "boolean",
-        value: nullsafeNot(notThis.value),
+        "dataType": "boolean",
+        "value": nullsafeNot(notThis.value),
       };
     }
     return errorFor("not requires boolean");

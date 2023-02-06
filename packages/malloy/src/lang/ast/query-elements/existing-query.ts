@@ -50,8 +50,8 @@ export class ExistingQuery extends PipelineDesc {
     const seedQuery = queryEntry?.entry;
     const oops = function () {
       return {
-        outputStruct: ErrorFactory.structDef,
-        query: ErrorFactory.query,
+        "outputStruct": ErrorFactory.structDef,
+        "query": ErrorFactory.query,
       };
     };
     if (!seedQuery) {
@@ -72,14 +72,14 @@ export class ExistingQuery extends PipelineDesc {
       sourcePipe.pipeline,
       new StaticSpace(walkStruct)
     );
-    const destPipe = { ...sourcePipe, pipeline: appended.opList };
+    const destPipe = { ...sourcePipe, "pipeline": appended.opList };
     const query: Query = {
-      type: "query",
+      "type": "query",
       ...destPipe,
-      structRef: queryHead.structRef(),
-      location: this.location,
+      "structRef": queryHead.structRef(),
+      "location": this.location,
     };
-    return { outputStruct: appended.structDef, query };
+    return { "outputStruct": appended.structDef, query };
   }
 
   query(): Query {

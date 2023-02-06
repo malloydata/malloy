@@ -34,7 +34,7 @@ export class QuerySource extends Source {
   structDef(): StructDef {
     const comp = this.query.queryComp();
     const queryStruct = comp.outputStruct;
-    queryStruct.structSource = { type: "query", query: comp.query };
+    queryStruct.structSource = { "type": "query", "query": comp.query };
     return queryStruct;
   }
 }

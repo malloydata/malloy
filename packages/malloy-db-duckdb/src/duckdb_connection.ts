@@ -98,7 +98,7 @@ export class DuckDBConnection extends DuckDBCommon {
           } else {
             resolve({
               rows,
-              totalRows: rows.length,
+              "totalRows": rows.length,
             });
           }
         });

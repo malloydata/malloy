@@ -42,14 +42,14 @@ function testSymbol(
   path: number[]
 ) {
   const doc = new MalloyExplore(source.code);
-  let current = { children: doc.symbols };
+  let current = { "children": doc.symbols };
   path.forEach((segment) => {
     current = current.children[segment];
   });
   expect(doc.logger.hasErrors()).toBeFalsy();
   expect(current).toMatchObject({
     name,
-    range: source.locations[0].range,
+    "range": source.locations[0].range,
     type,
   });
 }

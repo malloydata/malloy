@@ -69,9 +69,9 @@ describe("BigQuery expression tests", () => {
 
   it("simple_pipeline", async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      structRef: "flights",
-      pipeHead: { name: "flights_by_carrier" },
-      pipeline: [{ fields: ["name", "flight_count"], type: "reduce" }],
+      "structRef": "flights",
+      "pipeHead": { "name": "flights_by_carrier" },
+      "pipeline": [{ "fields": ["name", "flight_count"], "type": "reduce" }],
     });
     await bqCompile(sql);
   });
@@ -90,33 +90,33 @@ describe("BigQuery expression tests", () => {
   //         flight_count / routes.route_flights as percent_of_carrier_flights
   it("turtle_requery", async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      structRef: "flights",
-      pipeline: [
+      "structRef": "flights",
+      "pipeline": [
         // top 5 routes per carrier
         {
-          type: "reduce",
-          fields: [
+          "type": "reduce",
+          "fields": [
             "carrier",
             "flight_count",
             {
-              type: "turtle",
-              name: "routes",
-              pipeline: [
+              "type": "turtle",
+              "name": "routes",
+              "pipeline": [
                 {
-                  type: "reduce",
-                  fields: [
+                  "type": "reduce",
+                  "fields": [
                     "origin_code",
                     "destination_code",
                     "flight_count",
                     {
-                      type: "number",
-                      name: "route_flights",
-                      expressionType: "aggregate",
-                      e: [
+                      "type": "number",
+                      "name": "route_flights",
+                      "expressionType": "aggregate",
+                      "e": [
                         {
-                          type: "aggregate",
-                          function: "count",
-                          e: [],
+                          "type": "aggregate",
+                          "function": "count",
+                          "e": [],
                         },
                       ],
                     },
@@ -125,13 +125,13 @@ describe("BigQuery expression tests", () => {
               ],
             },
           ],
-          limit: 5,
-          orderBy: [{ dir: "desc", field: "carrier" }],
+          "limit": 5,
+          "orderBy": [{ "dir": "desc", "field": "carrier" }],
         },
         // carrier top routes
         {
-          type: "project",
-          fields: [
+          "type": "project",
+          "fields": [
             "carrier",
             "flight_count",
             "routes.origin_code",
@@ -145,93 +145,97 @@ describe("BigQuery expression tests", () => {
 
   it("step_0", async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      structRef: "flights",
-      pipeline: [{ type: "reduce", fields: ["carriers.name", "flight_count"] }],
+      "structRef": "flights",
+      "pipeline": [
+        { "type": "reduce", "fields": ["carriers.name", "flight_count"] },
+      ],
     });
     await bqCompile(sql);
   });
 
   it("filtered_measures", async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      structRef: "flights",
-      filterList: [
+      "structRef": "flights",
+      "filterList": [
         fStringEq("origin.state", "CA"),
         fStringEq("destination.state", "NY"),
       ],
-      pipeline: [{ type: "reduce", fields: ["carriers.name", "flight_count"] }],
+      "pipeline": [
+        { "type": "reduce", "fields": ["carriers.name", "flight_count"] },
+      ],
     });
     await bqCompile(sql);
   });
 
   it("timestamp", async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      structRef: "flights",
-      pipeline: [
+      "structRef": "flights",
+      "pipeline": [
         {
-          fields: [
+          "fields": [
             {
-              as: "dep_year",
-              name: "dep_time",
-              timeframe: "year",
-              type: "timestamp",
+              "as": "dep_year",
+              "name": "dep_time",
+              "timeframe": "year",
+              "type": "timestamp",
             },
             {
-              as: "dep_month",
-              name: "dep_time",
-              timeframe: "month",
-              type: "timestamp",
+              "as": "dep_month",
+              "name": "dep_time",
+              "timeframe": "month",
+              "type": "timestamp",
             },
             {
-              as: "dep_week",
-              name: "dep_time",
-              timeframe: "week",
-              type: "timestamp",
+              "as": "dep_week",
+              "name": "dep_time",
+              "timeframe": "week",
+              "type": "timestamp",
             },
             {
-              as: "dep_date",
-              name: "dep_time",
-              timeframe: "day",
-              type: "timestamp",
+              "as": "dep_date",
+              "name": "dep_time",
+              "timeframe": "day",
+              "type": "timestamp",
             },
             {
-              as: "dep_hour",
-              name: "dep_time",
-              timeframe: "hour",
-              type: "timestamp",
+              "as": "dep_hour",
+              "name": "dep_time",
+              "timeframe": "hour",
+              "type": "timestamp",
             },
             {
-              as: "dep_minute",
-              name: "dep_time",
-              timeframe: "minute",
-              type: "timestamp",
+              "as": "dep_minute",
+              "name": "dep_time",
+              "timeframe": "minute",
+              "type": "timestamp",
             },
             {
-              as: "dep_second",
-              name: "dep_time",
-              timeframe: "second",
-              type: "timestamp",
+              "as": "dep_second",
+              "name": "dep_time",
+              "timeframe": "second",
+              "type": "timestamp",
             },
             {
-              type: "number",
-              name: "total_distance_ca",
-              expressionType: "aggregate",
-              e: [
+              "type": "number",
+              "name": "total_distance_ca",
+              "expressionType": "aggregate",
+              "e": [
                 {
-                  type: "filterExpression",
-                  filterList: [fStringEq("origin.state", "CA")],
-                  e: [
+                  "type": "filterExpression",
+                  "filterList": [fStringEq("origin.state", "CA")],
+                  "e": [
                     {
-                      type: "aggregate",
-                      function: "sum",
-                      e: [{ type: "field", path: "distance" }],
+                      "type": "aggregate",
+                      "function": "sum",
+                      "e": [{ "type": "field", "path": "distance" }],
                     },
                   ],
                 },
               ],
             },
           ],
-          limit: 20,
-          type: "reduce",
+          "limit": 20,
+          "type": "reduce",
         },
       ],
     });
@@ -240,22 +244,22 @@ describe("BigQuery expression tests", () => {
 
   it("bucket_test", async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      pipeline: [
+      "pipeline": [
         {
-          fields: [
+          "fields": [
             {
-              bucketFilter: "AA,WN,DL",
-              bucketOther: "Other Carrier",
-              name: "carrier",
-              type: "string",
+              "bucketFilter": "AA,WN,DL",
+              "bucketOther": "Other Carrier",
+              "name": "carrier",
+              "type": "string",
             },
             "flight_count",
           ],
-          orderBy: [{ dir: "asc", field: 2 }],
-          type: "reduce",
+          "orderBy": [{ "dir": "asc", "field": 2 }],
+          "type": "reduce",
         },
       ],
-      structRef: "flights",
+      "structRef": "flights",
     });
     await bqCompile(sql);
   });
@@ -267,28 +271,28 @@ describe("BigQuery expression tests", () => {
 
   it("simple_reduce", async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      structRef: "flights",
-      pipeline: [{ type: "reduce", fields: ["carrier", "flight_count"] }],
+      "structRef": "flights",
+      "pipeline": [{ "type": "reduce", "fields": ["carrier", "flight_count"] }],
     });
     await bqCompile(sql);
   });
 
   it("two_sums", async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      structRef: "flights",
-      pipeline: [
+      "structRef": "flights",
+      "pipeline": [
         {
-          type: "reduce",
-          fields: [
+          "type": "reduce",
+          "fields": [
             {
-              type: "number",
-              expressionType: "aggregate",
-              name: "total_distance",
-              e: [
+              "type": "number",
+              "expressionType": "aggregate",
+              "name": "total_distance",
+              "e": [
                 {
-                  type: "aggregate",
-                  function: "sum",
-                  e: [{ type: "field", path: "distance" }],
+                  "type": "aggregate",
+                  "function": "sum",
+                  "e": [{ "type": "field", "path": "distance" }],
                 },
               ],
             },
@@ -302,15 +306,19 @@ describe("BigQuery expression tests", () => {
 
   it("first_fragment", async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      structRef: "flights",
-      pipeline: [
+      "structRef": "flights",
+      "pipeline": [
         {
-          type: "reduce",
-          fields: [
+          "type": "reduce",
+          "fields": [
             {
-              type: "string",
-              name: "carrier",
-              e: ["UPPER(", { type: "field", path: "carriers.nickname" }, ")"],
+              "type": "string",
+              "name": "carrier",
+              "e": [
+                "UPPER(",
+                { "type": "field", "path": "carriers.nickname" },
+                ")",
+              ],
             },
             "flight_count",
           ],
@@ -322,25 +330,25 @@ describe("BigQuery expression tests", () => {
 
   it("sum_in_expr", async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      structRef: "flights",
-      pipeline: [
+      "structRef": "flights",
+      "pipeline": [
         {
-          fields: [
+          "fields": [
             "carriers.name",
             {
-              type: "number",
-              expressionType: "aggregate",
-              name: "total_distance",
-              e: [
+              "type": "number",
+              "expressionType": "aggregate",
+              "name": "total_distance",
+              "e": [
                 {
-                  type: "aggregate",
-                  function: "sum",
-                  e: [{ type: "field", path: "distance" }],
+                  "type": "aggregate",
+                  "function": "sum",
+                  "e": [{ "type": "field", "path": "distance" }],
                 },
               ],
             },
           ],
-          type: "reduce",
+          "type": "reduce",
         },
       ],
     });
@@ -349,25 +357,25 @@ describe("BigQuery expression tests", () => {
 
   it("filtered_sum_in_expr", async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      structRef: "flights",
-      pipeline: [
+      "structRef": "flights",
+      "pipeline": [
         {
-          type: "reduce",
-          fields: [
+          "type": "reduce",
+          "fields": [
             "aircraft.aircraft_models.manufacturer",
             {
-              type: "number",
-              expressionType: "aggregate",
-              name: "total_distance",
-              e: [
+              "type": "number",
+              "expressionType": "aggregate",
+              "name": "total_distance",
+              "e": [
                 {
-                  type: "filterExpression",
-                  filterList: [fStringEq("origin_code", "SFO")],
-                  e: [
+                  "type": "filterExpression",
+                  "filterList": [fStringEq("origin_code", "SFO")],
+                  "e": [
                     {
-                      type: "aggregate",
-                      function: "sum",
-                      e: [{ type: "field", path: "distance" }],
+                      "type": "aggregate",
+                      "function": "sum",
+                      "e": [{ "type": "field", "path": "distance" }],
                     },
                   ],
                 },
@@ -382,33 +390,33 @@ describe("BigQuery expression tests", () => {
 
   it("dynamic_measure", async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      structRef: "flights",
-      pipeline: [
+      "structRef": "flights",
+      "pipeline": [
         {
-          type: "reduce",
-          fields: [
+          "type": "reduce",
+          "fields": [
             "origin.state",
             "flight_count",
             {
-              type: "number",
-              expressionType: "aggregate",
-              name: "total_distance",
-              e: [
+              "type": "number",
+              "expressionType": "aggregate",
+              "name": "total_distance",
+              "e": [
                 {
-                  type: "filterExpression",
-                  filterList: [fStringEq("origin_code", "SFO")],
-                  e: [
+                  "type": "filterExpression",
+                  "filterList": [fStringEq("origin_code", "SFO")],
+                  "e": [
                     {
-                      type: "aggregate",
-                      function: "sum",
-                      e: [{ type: "field", path: "distance" }],
+                      "type": "aggregate",
+                      "function": "sum",
+                      "e": [{ "type": "field", "path": "distance" }],
                     },
                   ],
                 },
               ],
             },
           ],
-          filterList: [fStringEq("carriers.code", "WN")],
+          "filterList": [fStringEq("carriers.code", "WN")],
         },
       ],
     });
@@ -417,10 +425,10 @@ describe("BigQuery expression tests", () => {
 
   it("add_filter_to_named_query", async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      structRef: "flights",
-      filterList: [fStringEq("destination_code", "AL")],
-      pipeHead: { name: "flights_by_city_top_5" },
-      pipeline: [],
+      "structRef": "flights",
+      "filterList": [fStringEq("destination_code", "AL")],
+      "pipeHead": { "name": "flights_by_city_top_5" },
+      "pipeline": [],
     });
     await bqCompile(sql);
   });
@@ -476,10 +484,10 @@ describe("BigQuery expression tests", () => {
 
   it("lotsoturtles", async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      structRef: "flights",
-      pipeline: [
+      "structRef": "flights",
+      "pipeline": [
         {
-          fields: [
+          "fields": [
             "origin.state",
             "flight_count",
             "flights_by_model",
@@ -487,7 +495,7 @@ describe("BigQuery expression tests", () => {
             "measures_first",
             "first_turtle",
           ],
-          type: "reduce",
+          "type": "reduce",
         },
       ],
     });
@@ -496,20 +504,20 @@ describe("BigQuery expression tests", () => {
 
   it("add_filter_to_def", async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      structRef: "flights",
-      filterList: [fStringEq("destination_code", "AL")],
-      pipeHead: { name: "flights_by_carrier_with_totals" },
-      pipeline: [
+      "structRef": "flights",
+      "filterList": [fStringEq("destination_code", "AL")],
+      "pipeHead": { "name": "flights_by_carrier_with_totals" },
+      "pipeline": [
         {
-          type: "reduce",
-          fields: [
+          "type": "reduce",
+          "fields": [
             "main.name",
             "main.flight_count",
             {
-              name: "total_flights",
-              type: "number",
-              expressionType: "scalar",
-              e: [{ type: "field", path: "totals.flight_count" }],
+              "name": "total_flights",
+              "type": "number",
+              "expressionType": "scalar",
+              "e": [{ "type": "field", "path": "totals.flight_count" }],
             },
           ],
         },
@@ -638,12 +646,12 @@ describe("BigQuery expression tests", () => {
   it("table_base_on_query", async () => {
     const result = await faa
       ._loadQueryFromQueryDef({
-        structRef: "medicare_state_facts",
-        pipeline: [
+        "structRef": "medicare_state_facts",
+        "pipeline": [
           {
-            type: "reduce",
-            fields: ["provider_state", "num_providers"],
-            orderBy: [{ dir: "desc", field: 2 }],
+            "type": "reduce",
+            "fields": ["provider_state", "num_providers"],
+            "orderBy": [{ "dir": "desc", "field": 2 }],
           },
         ],
       })
@@ -656,32 +664,35 @@ describe("BigQuery expression tests", () => {
   it("table_base_on_query2", async () => {
     const result = await faa
       ._loadQueryFromQueryDef({
-        structRef: {
-          type: "struct",
-          name: "malloy-data.malloytest.bq_medicare_test",
-          dialect: "standardsql",
-          as: "mtest",
-          structRelationship: { type: "basetable", connectionName: "bigquery" },
-          structSource: {
-            type: "table",
-            tablePath: "malloy-data.malloytest.bq_medicare_test",
+        "structRef": {
+          "type": "struct",
+          "name": "malloy-data.malloytest.bq_medicare_test",
+          "dialect": "standardsql",
+          "as": "mtest",
+          "structRelationship": {
+            "type": "basetable",
+            "connectionName": "bigquery",
           },
-          fields: [
+          "structSource": {
+            "type": "table",
+            "tablePath": "malloy-data.malloytest.bq_medicare_test",
+          },
+          "fields": [
             {
-              type: "number",
-              name: "c",
-              expressionType: "aggregate",
-              e: [{ type: "aggregate", function: "count", e: [] }],
+              "type": "number",
+              "name": "c",
+              "expressionType": "aggregate",
+              "e": [{ "type": "aggregate", "function": "count", "e": [] }],
             },
             {
-              type: "turtle",
-              name: "get_count",
-              pipeline: [{ type: "reduce", fields: ["c"] }],
+              "type": "turtle",
+              "name": "get_count",
+              "pipeline": [{ "type": "reduce", "fields": ["c"] }],
             },
           ],
         },
-        pipeHead: { name: "get_count" },
-        pipeline: [],
+        "pipeHead": { "name": "get_count" },
+        "pipeline": [],
       })
       .run();
     expect(result.data.value[0].c).toBe(202656);

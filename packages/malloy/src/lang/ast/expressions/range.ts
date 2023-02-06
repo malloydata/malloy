@@ -45,12 +45,12 @@ export class Range extends ExpressionDef {
         const fromValue = this.first.apply(fs, op1, expr);
         const toValue = this.last.apply(fs, op3, expr);
         return {
-          dataType: "boolean",
-          expressionType: maxExpressionType(
+          "dataType": "boolean",
+          "expressionType": maxExpressionType(
             fromValue.expressionType,
             toValue.expressionType
           ),
-          value: compose(fromValue.value, op2, toValue.value),
+          "value": compose(fromValue.value, op2, toValue.value),
         };
       }
 

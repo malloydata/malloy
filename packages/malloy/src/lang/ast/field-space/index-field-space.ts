@@ -52,8 +52,8 @@ export class IndexFieldSpace extends QuerySpace {
     }
     this.isComplete();
     return {
-      type: "index",
-      fields: Array.from(this.fieldList.values()),
+      "type": "index",
+      "fields": Array.from(this.fieldList.values()),
     };
   }
 }

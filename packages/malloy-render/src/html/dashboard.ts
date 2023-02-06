@@ -30,7 +30,7 @@ import { createDrillIcon, createErrorElement, yieldTask } from "./utils";
 
 export class HTMLDashboardRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
-    size: "medium",
+    "size": "medium",
   };
 
   async render(table: DataArrayOrRecord): Promise<HTMLElement> {

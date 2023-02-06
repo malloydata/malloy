@@ -53,15 +53,15 @@ export class ExprFilter extends ExpressionDef {
       return resultExpr;
     }
     if (
-      this.typeCheck(this.expr, { ...resultExpr, expressionType: "scalar" })
+      this.typeCheck(this.expr, { ...resultExpr, "expressionType": "scalar" })
     ) {
       return {
         ...resultExpr,
-        value: [
+        "value": [
           {
-            type: "filterExpression",
-            e: resultExpr.value,
-            filterList: testList,
+            "type": "filterExpression",
+            "e": resultExpr.value,
+            "filterList": testList,
           },
         ],
       };

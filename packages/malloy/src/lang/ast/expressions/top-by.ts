@@ -41,8 +41,8 @@ export class TopBy extends MalloyElement {
       if (!expressionIsAggregate(byExpr.expressionType)) {
         this.log("top by expression must be an aggregate");
       }
-      return { by: "expression", e: compressExpr(byExpr.value) };
+      return { "by": "expression", "e": compressExpr(byExpr.value) };
     }
-    return { by: "name", name: this.by };
+    return { "by": "name", "name": this.by };
   }
 }

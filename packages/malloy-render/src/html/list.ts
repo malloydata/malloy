@@ -28,7 +28,7 @@ import { createErrorElement, yieldTask } from "./utils";
 
 export class HTMLListRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
-    size: "small",
+    "size": "small",
   };
 
   getValueField(struct: Explore): Field {

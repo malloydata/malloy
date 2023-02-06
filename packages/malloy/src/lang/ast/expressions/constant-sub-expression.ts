@@ -41,8 +41,8 @@ class ConstantFieldSpace implements FieldSpace {
   }
   lookup(_name: unknown): LookupResult {
     return {
-      error: "Only constants allowed in parameter expressions",
-      found: undefined,
+      "error": "Only constants allowed in parameter expressions",
+      "found": undefined,
     };
   }
   dialectObj(): undefined {
@@ -60,9 +60,9 @@ class DollarReference extends ExpressionDef {
   }
   getExpression(_fs: FieldSpace): ExprValue {
     return {
-      dataType: this.refType,
-      value: [{ type: "applyVal" }],
-      expressionType: "scalar",
+      "dataType": this.refType,
+      "value": [{ "type": "applyVal" }],
+      "expressionType": "scalar",
     };
   }
 }
@@ -96,7 +96,7 @@ export class ConstantSubExpression extends ExpressionDef {
       this.expr
     );
     const application = compareAndContrast.getExpression(this.constantFs);
-    return { ...application, value: compressExpr(application.value) };
+    return { ...application, "value": compressExpr(application.value) };
   }
 
   apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {

@@ -61,9 +61,9 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         const footType = sourceFoot.typeDesc();
         if (isAtomicFieldType(footType.dataType)) {
           exprVal = {
-            dataType: footType.dataType,
-            expressionType: footType.expressionType,
-            value: [{ type: "field", path: this.source.refString }],
+            "dataType": footType.dataType,
+            "expressionType": footType.expressionType,
+            "value": [{ "type": "field", "path": this.source.refString }],
           };
           structPath = this.source.sourceString;
         } else {
@@ -88,21 +88,21 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     if (
       this.typeCheck(this.expr || this, {
         ...exprVal,
-        expressionType: "scalar",
+        "expressionType": "scalar",
       })
     ) {
       const f: AggregateFragment = {
-        type: "aggregate",
-        function: this.func,
-        e: exprVal.value,
+        "type": "aggregate",
+        "function": this.func,
+        "e": exprVal.value,
       };
       if (structPath) {
         f.structPath = structPath;
       }
       return {
-        dataType: this.returns(exprVal),
-        expressionType: "aggregate",
-        value: [f],
+        "dataType": this.returns(exprVal),
+        "expressionType": "aggregate",
+        "value": [f],
       };
     }
     return errorFor("aggregate type check");

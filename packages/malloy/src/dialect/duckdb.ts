@@ -124,19 +124,19 @@ WITH
 `.split(/\s/);
 
 const castMap: Record<string, string> = {
-  number: "double precision",
-  string: "varchar",
+  "number": "double precision",
+  "string": "varchar",
 };
 
 const pgExtractionMap: Record<string, string> = {
-  day_of_week: "dow",
-  day_of_year: "doy",
+  "day_of_week": "dow",
+  "day_of_year": "doy",
 };
 
 const inSeconds: Record<string, number> = {
-  second: 1,
-  minute: 60,
-  hour: 3600,
+  "second": 1,
+  "minute": 60,
+  "hour": 3600,
 };
 
 export class DuckDBDialect extends Dialect {
@@ -147,14 +147,14 @@ export class DuckDBDialect extends Dialect {
   divisionIsInteger = true;
   supportsSumDistinctFunction = true;
   unnestWithNumbers = true;
-  defaultSampling = { rows: 50000 };
+  defaultSampling = { "rows": 50000 };
   supportUnnestArrayAgg = true;
   supportsCTEinCoorelatedSubQueries = true;
   dontUnionIndex = false;
   supportsQualify = true;
 
   functionInfo: Record<string, FunctionInfo> = {
-    concat: { returnType: "string" },
+    "concat": { "returnType": "string" },
   };
 
   // hack until they support temporary macros.

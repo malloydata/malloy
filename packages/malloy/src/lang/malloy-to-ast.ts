@@ -65,7 +65,7 @@ export class MalloyToAST
     str: string,
     sev: LogSeverity = "error"
   ): void {
-    this.msgLog.log({ message: str, at: el.location, severity: sev });
+    this.msgLog.log({ "message": str, "at": el.location, "severity": sev });
   }
 
   /**
@@ -77,12 +77,12 @@ export class MalloyToAST
     sev: LogSeverity = "error"
   ): void {
     this.msgLog.log({
-      message: msg,
-      at: {
-        url: this.parse.subTranslator.sourceURL,
-        range: this.parse.subTranslator.rangeFromContext(cx),
+      "message": msg,
+      "at": {
+        "url": this.parse.subTranslator.sourceURL,
+        "range": this.parse.subTranslator.rangeFromContext(cx),
       },
-      severity: sev,
+      "severity": sev,
     });
   }
 
@@ -203,8 +203,8 @@ export class MalloyToAST
     cx: ParserRuleContext
   ): MT {
     el.location = {
-      url: this.parse.subTranslator.sourceURL,
-      range: this.parse.subTranslator.rangeFromContext(cx),
+      "url": this.parse.subTranslator.sourceURL,
+      "range": this.parse.subTranslator.rangeFromContext(cx),
     };
     return el;
   }
@@ -1196,13 +1196,13 @@ export class MalloyToAST
   visitSampleStatement(pcx: parse.SampleStatementContext): ast.SampleProperty {
     const rowCx = pcx.sampleSpec().INTEGER_LITERAL();
     if (rowCx) {
-      return new ast.SampleProperty({ rows: this.getNumber(rowCx) });
+      return new ast.SampleProperty({ "rows": this.getNumber(rowCx) });
     }
     const limitCx = pcx.sampleSpec().PERCENT_LITERAL();
     if (limitCx) {
-      return new ast.SampleProperty({ percent: this.getNumber(limitCx) });
+      return new ast.SampleProperty({ "percent": this.getNumber(limitCx) });
     }
     const enabled = pcx.sampleSpec().TRUE() != undefined;
-    return new ast.SampleProperty({ enable: enabled });
+    return new ast.SampleProperty({ "enable": enabled });
   }
 }

@@ -48,12 +48,12 @@ export abstract class BinaryBoolean<
     const right = this.right.getExpression(fs);
     if (this.typeCheck(this.left, left) && this.typeCheck(this.right, right)) {
       return {
-        dataType: "boolean",
-        expressionType: maxExpressionType(
+        "dataType": "boolean",
+        "expressionType": maxExpressionType(
           left.expressionType,
           right.expressionType
         ),
-        value: compose(left.value, this.op, right.value),
+        "value": compose(left.value, this.op, right.value),
       };
     }
     return errorFor("logial required boolean");

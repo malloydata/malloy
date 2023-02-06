@@ -36,12 +36,12 @@ import { DefinedParameter } from "../ast/types/space-param";
 describe("structdef comprehension", () => {
   function mkStructDef(field: model.FieldDef): model.StructDef {
     return {
-      type: "struct",
-      name: "test",
-      dialect: "standardsql",
-      structSource: { type: "table", tablePath: "test" },
-      structRelationship: { type: "basetable", connectionName: "test" },
-      fields: [field],
+      "type": "struct",
+      "name": "test",
+      "dialect": "standardsql",
+      "structSource": { "type": "table", "tablePath": "test" },
+      "structRelationship": { "type": "basetable", "connectionName": "test" },
+      "fields": [field],
     };
   }
 
@@ -51,8 +51,8 @@ describe("structdef comprehension", () => {
 
   test(`import string field`, () => {
     const field: model.FieldDef = {
-      name: "t",
-      type: "string",
+      "name": "t",
+      "type": "string",
     };
     const struct = mkStructDef(field);
     const space = new StaticSpace(struct);
@@ -63,9 +63,9 @@ describe("structdef comprehension", () => {
 
   test(`import float field`, () => {
     const field: model.FieldDef = {
-      name: "t",
-      type: "number",
-      numberType: "float",
+      "name": "t",
+      "type": "number",
+      "numberType": "float",
     };
     const struct = mkStructDef(field);
     const space = new StaticSpace(struct);
@@ -76,9 +76,9 @@ describe("structdef comprehension", () => {
 
   test(`import integer field`, () => {
     const field: model.FieldDef = {
-      name: "t",
-      type: "number",
-      numberType: "integer",
+      "name": "t",
+      "type": "number",
+      "numberType": "integer",
     };
     const struct = mkStructDef(field);
     const space = new StaticSpace(struct);
@@ -89,8 +89,8 @@ describe("structdef comprehension", () => {
 
   test(`import boolean field`, () => {
     const field: model.FieldDef = {
-      name: "t",
-      type: "boolean",
+      "name": "t",
+      "type": "boolean",
     };
     const struct = mkStructDef(field);
     const space = new StaticSpace(struct);
@@ -101,12 +101,16 @@ describe("structdef comprehension", () => {
 
   test(`import nested field`, () => {
     const field: model.FieldDef = {
-      name: "t",
-      type: "struct",
-      dialect: "standardsql",
-      structRelationship: { type: "nested", field: "a", isArray: false },
-      structSource: { type: "nested" },
-      fields: [{ type: "string", name: "b" }],
+      "name": "t",
+      "type": "struct",
+      "dialect": "standardsql",
+      "structRelationship": {
+        "type": "nested",
+        "field": "a",
+        "isArray": false,
+      },
+      "structSource": { "type": "nested" },
+      "fields": [{ "type": "string", "name": "b" }],
     };
     const struct = mkStructDef(field);
     const space = new StaticSpace(struct);
@@ -119,12 +123,12 @@ describe("structdef comprehension", () => {
 
   test(`import inline field`, () => {
     const field: model.FieldDef = {
-      name: "t",
-      type: "struct",
-      dialect: "standardsql",
-      structRelationship: { type: "inline" },
-      structSource: { type: "inline" },
-      fields: [{ type: "string", name: "a" }],
+      "name": "t",
+      "type": "struct",
+      "dialect": "standardsql",
+      "structRelationship": { "type": "inline" },
+      "structSource": { "type": "inline" },
+      "fields": [{ "type": "string", "name": "a" }],
     };
     const struct = mkStructDef(field);
     const space = new StaticSpace(struct);
@@ -137,19 +141,19 @@ describe("structdef comprehension", () => {
 
   test(`import join field`, () => {
     const field: model.FieldDef = {
-      name: "t",
-      type: "struct",
-      dialect: "standardsql",
-      structRelationship: {
-        type: "one",
-        onExpression: [
-          { type: "field", path: "aKey" },
+      "name": "t",
+      "type": "struct",
+      "dialect": "standardsql",
+      "structRelationship": {
+        "type": "one",
+        "onExpression": [
+          { "type": "field", "path": "aKey" },
           "=",
-          { type: "field", path: "t.a" },
+          { "type": "field", "path": "t.a" },
         ],
       },
-      structSource: { type: "table", tablePath: "t" },
-      fields: [{ type: "string", name: "a" }],
+      "structSource": { "type": "table", "tablePath": "t" },
+      "fields": [{ "type": "string", "name": "a" }],
     };
     const struct = mkStructDef(field);
     const space = new StaticSpace(struct);
@@ -162,12 +166,12 @@ describe("structdef comprehension", () => {
 
   test(`import query stage field`, () => {
     const field: model.TurtleDef = {
-      name: "t",
-      type: "turtle",
-      pipeline: [
+      "name": "t",
+      "type": "turtle",
+      "pipeline": [
         {
-          type: "reduce",
-          fields: ["a"],
+          "type": "reduce",
+          "fields": ["a"],
         },
       ],
     };
@@ -179,19 +183,19 @@ describe("structdef comprehension", () => {
   });
 
   test("import struct with parameters", () => {
-    const struct = mkStructDef({ name: "f", type: "string" });
+    const struct = mkStructDef({ "name": "f", "type": "string" });
     struct.parameters = {
-      cReqStr: {
-        name: "cReqStr",
-        type: "string",
-        value: null,
-        constant: false,
+      "cReqStr": {
+        "name": "cReqStr",
+        "type": "string",
+        "value": null,
+        "constant": false,
       },
-      cOptStr: {
-        name: "cOptStr",
-        type: "string",
-        value: ["value"],
-        constant: false,
+      "cOptStr": {
+        "name": "cOptStr",
+        "type": "string",
+        "value": ["value"],
+        "constant": false,
       },
     };
     const space = new StaticSpace(struct);

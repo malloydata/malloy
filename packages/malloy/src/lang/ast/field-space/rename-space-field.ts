@@ -42,8 +42,8 @@ export class RenameSpaceField extends SpaceField {
     }
     return {
       ...renamedFieldRaw,
-      as: this.newName,
-      location: this.location,
+      "as": this.newName,
+      "location": this.location,
     };
   }
 

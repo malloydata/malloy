@@ -47,14 +47,14 @@ function timestampToDateFilter(
       ? TimestampTimeframe.Second
       : timeframe || TimestampTimeframe.Second;
   const filterValue = "@" + timeToString(value, adjustedTimeframe);
-  return { key, value: filterValue };
+  return { key, "value": filterValue };
 }
 
 function getTableFilters(table: DataArray): FilterItem[] {
   const filters: FilterItem[] = [];
   for (const f of table.field.filters || []) {
     if (f.expressionType === "scalar") {
-      filters.push({ key: f.code, value: undefined });
+      filters.push({ "key": f.code, "value": undefined });
     }
   }
   return filters;
@@ -73,11 +73,11 @@ function getRowFilters(row: DataRecord): FilterItem[] {
       dim.isAtomicField() || dim.isQueryField() ? dim.expression : undefined;
     if (key && !cell.isArray()) {
       if (cell.isNull()) {
-        filters.push({ key, value: "null" });
+        filters.push({ key, "value": "null" });
       } else if (cell.isString()) {
-        filters.push({ key, value: filterQuote(cell.value) });
+        filters.push({ key, "value": filterQuote(cell.value) });
       } else if (cell.isNumber() || cell.isBoolean()) {
-        filters.push({ key, value: cell.value.toString() });
+        filters.push({ key, "value": cell.value.toString() });
       } else if (cell.isTimestamp() || cell.isDate()) {
         filters.push(
           timestampToDateFilter(key, cell.value, cell.field.timeframe)
@@ -129,7 +129,7 @@ export function getDrillFilters(data: DataArrayOrRecord): {
       ) === undefined
   );
 
-  return { formattedFilters: dedupedFilters, source };
+  return { "formattedFilters": dedupedFilters, source };
 }
 
 export function getDrillQuery(data: DataArrayOrRecord): {
@@ -142,7 +142,7 @@ export function getDrillQuery(data: DataArrayOrRecord): {
     ret += `{ \n  where: \n    ${formattedFilters.join(",\n    ")}\n  \n}\n`;
   }
   const drillQuery = ret + "-> ";
-  return { drillQuery, drillFilters: formattedFilters };
+  return { drillQuery, "drillFilters": formattedFilters };
 }
 
 export type DrillFunction = (

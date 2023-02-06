@@ -32,6 +32,6 @@ export class Boolean extends ExpressionDef {
   }
 
   getExpression(): ExprValue {
-    return { ...FT.boolT, value: [this.value] };
+    return { ...FT.boolT, "value": [this.value] };
   }
 }

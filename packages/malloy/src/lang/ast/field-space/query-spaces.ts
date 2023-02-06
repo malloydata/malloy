@@ -193,8 +193,8 @@ export abstract class QuerySpace extends RefinedSpace {
     }
 
     const segment: model.QuerySegment = {
-      type: this.segmentType,
-      fields: this.queryFieldDefs(),
+      "type": this.segmentType,
+      "fields": this.queryFieldDefs(),
     };
 
     segment.fields = mergeFields(refineFrom?.fields, segment.fields);

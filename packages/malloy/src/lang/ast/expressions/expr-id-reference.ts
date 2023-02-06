@@ -33,7 +33,7 @@ export class ExprIdReference extends ExpressionDef {
   elementType = "ExpressionIdReference";
   constructor(readonly fieldReference: FieldReference) {
     super();
-    this.has({ fieldPath: fieldReference });
+    this.has({ "fieldPath": fieldReference });
   }
 
   get refString(): string {
@@ -43,7 +43,7 @@ export class ExprIdReference extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const def = this.fieldReference.getField(fs);
     if (def.found) {
-      const value = [{ type: def.found.refType, path: this.refString }];
+      const value = [{ "type": def.found.refType, "path": this.refString }];
       return {
         ...def.found.typeDesc(),
         value,
@@ -60,13 +60,13 @@ export class ExprIdReference extends ExpressionDef {
       if (isConditionParameter(cParam)) {
         const lval = expr.getExpression(fs);
         return {
-          dataType: "boolean",
-          expressionType: lval.expressionType,
-          value: [
+          "dataType": "boolean",
+          "expressionType": lval.expressionType,
+          "value": [
             {
-              type: "apply",
-              value: lval.value,
-              to: [{ type: "parameter", path: this.refString }],
+              "type": "apply",
+              "value": lval.value,
+              "to": [{ "type": "parameter", "path": this.refString }],
             },
           ],
         };

@@ -37,6 +37,6 @@ export class ExprParens extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const subExpr = this.expr.getExpression(fs);
-    return { ...subExpr, value: ["(", ...subExpr.value, ")"] };
+    return { ...subExpr, "value": ["(", ...subExpr.value, ")"] };
   }
 }

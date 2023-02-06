@@ -129,7 +129,7 @@ export class RuntimeList {
           connection = new BigQueryTestConnection(
             dbName,
             {},
-            { defaultProject: "malloy-data" }
+            { "defaultProject": "malloy-data" }
           );
           break;
         case "postgres":

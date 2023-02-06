@@ -48,13 +48,13 @@ export class Top extends MalloyElement {
         // if (entry.error) {
         //   this.by.log(entry.error);
         // }
-        return { by: "name", name: this.by.refString };
+        return { "by": "name", "name": this.by.refString };
       } else {
         const byExpr = this.by.getExpression(fs);
         if (expressionIsAggregate(byExpr.expressionType)) {
           this.log("top by expression must be an aggregate");
         }
-        return { by: "expression", e: compressExpr(byExpr.value) };
+        return { "by": "expression", "e": compressExpr(byExpr.value) };
       }
     }
     return undefined;

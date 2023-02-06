@@ -204,54 +204,54 @@ export interface MalloyFunctionInfo {
 }
 
 export const malloyFunctions: Record<string, MalloyFunctionInfo> = {
-  row_number: {
-    returnType: "number",
-    parameters: "none",
-    expressionType: "analytic",
+  "row_number": {
+    "returnType": "number",
+    "parameters": "none",
+    "expressionType": "analytic",
   },
-  rank: {
-    returnType: "number",
-    parameters: "none",
-    expressionType: "analytic",
+  "rank": {
+    "returnType": "number",
+    "parameters": "none",
+    "expressionType": "analytic",
   },
-  dense_rank: {
-    returnType: "number",
-    parameters: "none",
-    expressionType: "analytic",
+  "dense_rank": {
+    "returnType": "number",
+    "parameters": "none",
+    "expressionType": "analytic",
   },
-  first_value_in_column: {
-    returnType: "number",
-    parameters: "any",
-    expressionType: "analytic",
-    sqlName: "first_value",
+  "first_value_in_column": {
+    "returnType": "number",
+    "parameters": "any",
+    "expressionType": "analytic",
+    "sqlName": "first_value",
   },
-  last_value_in_column: {
-    returnType: "number",
-    parameters: "any",
-    expressionType: "analytic",
-    sqlName: "last_value",
+  "last_value_in_column": {
+    "returnType": "number",
+    "parameters": "any",
+    "expressionType": "analytic",
+    "sqlName": "last_value",
   },
-  min_in_column: {
-    returnType: "number",
-    parameters: "any",
-    expressionType: "analytic",
-    sqlName: "min",
+  "min_in_column": {
+    "returnType": "number",
+    "parameters": "any",
+    "expressionType": "analytic",
+    "sqlName": "min",
   },
-  max_in_column: {
-    returnType: "number",
-    parameters: "any",
-    expressionType: "analytic",
-    sqlName: "max",
+  "max_in_column": {
+    "returnType": "number",
+    "parameters": "any",
+    "expressionType": "analytic",
+    "sqlName": "max",
   },
-  ntile: {
-    returnType: "number",
-    parameters: ["nconst"],
-    expressionType: "analytic",
+  "ntile": {
+    "returnType": "number",
+    "parameters": ["nconst"],
+    "expressionType": "analytic",
   },
-  lag: {
-    returnType: "number",
-    parameters: ["number", "nconst"],
-    expressionType: "analytic",
+  "lag": {
+    "returnType": "number",
+    "parameters": ["number", "nconst"],
+    "expressionType": "analytic",
   },
 };
 

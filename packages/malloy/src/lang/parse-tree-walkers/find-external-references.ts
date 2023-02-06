@@ -70,10 +70,10 @@ export function findReferences(
 
   let refs: FinderFound = {};
   if (Object.keys(finder.needTables).length > 0) {
-    refs = { tables: finder.needTables };
+    refs = { "tables": finder.needTables };
   }
   if (Object.keys(finder.needImports).length > 0) {
-    refs = { ...refs, urls: finder.needImports };
+    refs = { ...refs, "urls": finder.needImports };
   }
   return Object.keys(refs).length > 0 ? refs : null;
 }

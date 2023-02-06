@@ -52,7 +52,7 @@ if (!outputFile) throw new Error("Output file required as argument");
 if (fs.existsSync(outputFile)) throw new Error("Output file exists already");
 
 axios.defaults.timeout = 500000;
-axios.defaults.httpsAgent = new https.Agent({ keepAlive: true });
+axios.defaults.httpsAgent = new https.Agent({ "keepAlive": true });
 
 const malloyPackages = [
   "@malloydata/malloy",
@@ -86,7 +86,7 @@ const sourceMirrorLicenses = [
 const licenseFoundElsewhere: { [id: string]: string } = {
   "agent-base":
     "https://github.com/TooTallNate/node-agent-base/blob/master/README.md",
-  crypt: "https://github.com/pvorb/node-crypt/blob/master/LICENSE.mkd",
+  "crypt": "https://github.com/pvorb/node-crypt/blob/master/LICENSE.mkd",
   "http-proxy-agent": "https://github.com/TooTallNate/node-http-proxy-agent",
   "https-proxy-agent": "https://github.com/TooTallNate/node-https-proxy-agent",
 };
@@ -118,8 +118,8 @@ const getLicenses = async () => {
 
     const row: Partial<outputRow> = {
       name,
-      binaryName: "Malloy VSCode Extension",
-      licenseName: dependency[2],
+      "binaryName": "Malloy VSCode Extension",
+      "licenseName": dependency[2],
     };
 
     const url = dependency[3];
@@ -227,7 +227,7 @@ const getLicenses = async () => {
   stringify(
     out,
     {
-      columns: [
+      "columns": [
         "name",
         "licenseLink",
         "licenseName",

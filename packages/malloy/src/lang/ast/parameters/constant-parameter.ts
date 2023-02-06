@@ -28,7 +28,7 @@ import { HasParameter } from "./has-parameter";
 
 export class ConstantParameter extends HasParameter {
   constructor(name: string, readonly value: ConstantSubExpression) {
-    super({ name, isCondition: false });
+    super({ name, "isCondition": false });
     this.has({ value });
   }
 
@@ -37,17 +37,17 @@ export class ConstantParameter extends HasParameter {
     if (!isAtomicFieldType(cVal.dataType)) {
       this.log(`Unexpected expression type '${cVal.dataType}'`);
       return {
-        value: ["XXX-type-mismatch-error-XXX"],
-        type: "string",
-        name: this.name,
-        constant: true,
+        "value": ["XXX-type-mismatch-error-XXX"],
+        "type": "string",
+        "name": this.name,
+        "constant": true,
       };
     }
     return {
-      value: cVal.value,
-      type: cVal.dataType,
-      name: this.name,
-      constant: true,
+      "value": cVal.value,
+      "type": cVal.dataType,
+      "name": this.name,
+      "constant": true,
     };
   }
 }

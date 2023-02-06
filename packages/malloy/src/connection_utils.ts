@@ -53,20 +53,20 @@ export async function* toAsyncGenerator<T>(
     });
     startStreaming(
       (error) => {
-        resolve({ done: true, isError: true, error });
+        resolve({ "done": true, "isError": true, error });
       },
       (data) => {
         resolve({
-          done: false,
-          value: data,
-          isError: false,
-          next: new Promise((res) => {
+          "done": false,
+          "value": data,
+          "isError": false,
+          "next": new Promise((res) => {
             resolve = res;
           }),
         });
       },
       () => {
-        resolve({ done: true, isError: false });
+        resolve({ "done": true, "isError": false });
       }
     );
     return promise;

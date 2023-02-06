@@ -44,9 +44,9 @@ export class ExprCast extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
     return {
-      dataType: this.castType,
-      expressionType: expr.expressionType,
-      value: compressExpr(castTo(this.castType, expr.value, this.safe)),
+      "dataType": this.castType,
+      "expressionType": expr.expressionType,
+      "value": compressExpr(castTo(this.castType, expr.value, this.safe)),
     };
   }
 }

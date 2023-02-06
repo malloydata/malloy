@@ -49,7 +49,7 @@ export class OrderBy extends MalloyElement {
     //     this.field.log(entry.error);
     //   }
     // }
-    const orderElement: ModelOrderBy = { field: this.modelField };
+    const orderElement: ModelOrderBy = { "field": this.modelField };
     if (this.dir) {
       orderElement.dir = this.dir;
     }

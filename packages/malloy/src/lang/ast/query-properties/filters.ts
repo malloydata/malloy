@@ -42,15 +42,15 @@ export class FilterElement extends MalloyElement {
     if (exprVal.dataType !== "boolean") {
       this.expr.log("Filter expression must have boolean value");
       return {
-        code: this.exprSrc,
-        expression: ["_FILTER_MUST_RETURN_BOOLEAN_"],
-        expressionType: "scalar",
+        "code": this.exprSrc,
+        "expression": ["_FILTER_MUST_RETURN_BOOLEAN_"],
+        "expressionType": "scalar",
       };
     }
     const exprCond: FilterExpression = {
-      code: this.exprSrc,
-      expression: compressExpr(exprVal.value),
-      expressionType: exprVal.expressionType,
+      "code": this.exprSrc,
+      "expression": compressExpr(exprVal.value),
+      "expressionType": exprVal.expressionType,
     };
     return exprCond;
   }

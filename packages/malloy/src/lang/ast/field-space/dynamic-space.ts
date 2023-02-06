@@ -99,7 +99,7 @@ export abstract class DynamicSpace extends StaticSpace {
     if (this.final === undefined) {
       this.final = {
         ...this.fromStruct,
-        fields: [],
+        "fields": [],
       };
       // Need to process the entities in specific order
       const fields: [string, SpaceField][] = [];

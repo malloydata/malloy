@@ -45,11 +45,11 @@ describe("BigQuery hand-built expression test", () => {
 
   function withJoin(leftKey: string, rightKey: string): StructRelationship {
     return {
-      type: "one",
-      onExpression: [
-        { type: "field", path: `${leftKey}` },
+      "type": "one",
+      "onExpression": [
+        { "type": "field", "path": `${leftKey}` },
         "=",
-        { type: "field", path: `${rightKey}` },
+        { "type": "field", "path": `${rightKey}` },
       ],
     };
   }
@@ -81,73 +81,77 @@ describe("BigQuery hand-built expression test", () => {
   }
 
   const modelHandBase: StructDef = {
-    name: "malloy-data.malloytest.aircraft_models",
-    as: "aircraft_models",
-    type: "struct",
-    dialect: "standardsql",
-    structSource: {
-      type: "table",
-      tablePath: "malloy-data.malloytest.aircraft_models",
+    "name": "malloy-data.malloytest.aircraft_models",
+    "as": "aircraft_models",
+    "type": "struct",
+    "dialect": "standardsql",
+    "structSource": {
+      "type": "table",
+      "tablePath": "malloy-data.malloytest.aircraft_models",
     },
-    structRelationship: { type: "basetable", connectionName: "bigquery" },
-    fields: [
-      { type: "string", name: "aircraft_model_code" },
-      { type: "string", name: "manufacturer" },
-      { type: "string", name: "model" },
-      { type: "number", name: "aircraft_type_id", numberType: "integer" },
+    "structRelationship": { "type": "basetable", "connectionName": "bigquery" },
+    "fields": [
+      { "type": "string", "name": "aircraft_model_code" },
+      { "type": "string", "name": "manufacturer" },
+      { "type": "string", "name": "model" },
+      { "type": "number", "name": "aircraft_type_id", "numberType": "integer" },
       {
-        type: "number",
-        name: "aircraft_engine_type_id",
-        numberType: "integer",
-      },
-      { type: "number", name: "aircraft_category_id", numberType: "integer" },
-      { type: "number", name: "amateur", numberType: "integer" },
-      { type: "number", name: "engines", numberType: "integer" },
-      { type: "number", name: "seats", numberType: "integer" },
-      { type: "number", name: "weight", numberType: "integer" },
-      { type: "number", name: "speed", numberType: "integer" },
-      {
-        name: "model_count",
-        type: "number",
-        e: [{ type: "aggregate", function: "count", e: [] }],
-        expressionType: "aggregate",
-        numberType: "float",
+        "type": "number",
+        "name": "aircraft_engine_type_id",
+        "numberType": "integer",
       },
       {
-        name: "total_seats",
-        type: "number",
-        e: [
+        "type": "number",
+        "name": "aircraft_category_id",
+        "numberType": "integer",
+      },
+      { "type": "number", "name": "amateur", "numberType": "integer" },
+      { "type": "number", "name": "engines", "numberType": "integer" },
+      { "type": "number", "name": "seats", "numberType": "integer" },
+      { "type": "number", "name": "weight", "numberType": "integer" },
+      { "type": "number", "name": "speed", "numberType": "integer" },
+      {
+        "name": "model_count",
+        "type": "number",
+        "e": [{ "type": "aggregate", "function": "count", "e": [] }],
+        "expressionType": "aggregate",
+        "numberType": "float",
+      },
+      {
+        "name": "total_seats",
+        "type": "number",
+        "e": [
           {
-            type: "aggregate",
-            function: "sum",
-            e: [{ type: "field", path: "seats" }],
+            "type": "aggregate",
+            "function": "sum",
+            "e": [{ "type": "field", "path": "seats" }],
           },
         ],
-        expressionType: "aggregate",
-        numberType: "float",
+        "expressionType": "aggregate",
+        "numberType": "float",
       },
       {
-        name: "boeing_seats",
-        type: "number",
-        expressionType: "aggregate",
-        e: [
+        "name": "boeing_seats",
+        "type": "number",
+        "expressionType": "aggregate",
+        "e": [
           {
-            type: "filterExpression",
-            e: [
+            "type": "filterExpression",
+            "e": [
               {
-                type: "aggregate",
-                function: "sum",
-                e: [{ type: "field", path: "seats" }],
+                "type": "aggregate",
+                "function": "sum",
+                "e": [{ "type": "field", "path": "seats" }],
               },
             ],
-            filterList: [
+            "filterList": [
               {
-                expressionType: "aggregate",
-                code: "manufacturer='BOEING'",
-                expression: [
+                "expressionType": "aggregate",
+                "code": "manufacturer='BOEING'",
+                "expression": [
                   {
-                    type: "field",
-                    path: "manufacturer",
+                    "type": "field",
+                    "path": "manufacturer",
                   },
                   "='BOEING'",
                 ],
@@ -155,102 +159,106 @@ describe("BigQuery hand-built expression test", () => {
             ],
           },
         ],
-        numberType: "float",
+        "numberType": "float",
       },
       {
-        name: "percent_boeing",
-        type: "number",
-        e: [
+        "name": "percent_boeing",
+        "type": "number",
+        "e": [
           "(",
-          { type: "field", path: "boeing_seats" },
+          { "type": "field", "path": "boeing_seats" },
           "/",
-          { type: "field", path: "total_seats" },
+          { "type": "field", "path": "total_seats" },
           ")*100",
         ],
-        expressionType: "aggregate",
-        numberType: "float",
+        "expressionType": "aggregate",
+        "numberType": "float",
       },
       {
-        name: "percent_boeing_floor",
-        type: "number",
-        expressionType: "aggregate",
-        e: ["FLOOR(", { type: "field", path: "percent_boeing" }, ")"],
-        numberType: "float",
+        "name": "percent_boeing_floor",
+        "type": "number",
+        "expressionType": "aggregate",
+        "e": ["FLOOR(", { "type": "field", "path": "percent_boeing" }, ")"],
+        "numberType": "float",
       },
     ],
-    primaryKey: "aircraft_model_code",
+    "primaryKey": "aircraft_model_code",
   };
 
   const aircraftHandBase: StructDef = {
-    type: "struct",
-    name: "malloy-data.malloytest.aircraft",
-    dialect: "standardsql",
-    structSource: {
-      type: "table",
-      tablePath: "malloy-data.malloytest.aircraft",
+    "type": "struct",
+    "name": "malloy-data.malloytest.aircraft",
+    "dialect": "standardsql",
+    "structSource": {
+      "type": "table",
+      "tablePath": "malloy-data.malloytest.aircraft",
     },
-    structRelationship: { type: "basetable", connectionName: "bigquery" },
-    fields: [
-      { type: "string", name: "tail_num" },
-      { type: "string", name: "aircraft_serial" },
-      { type: "string", name: "aircraft_model_code" },
-      { type: "string", name: "aircraft_engine_code" },
-      { type: "number", name: "year_built", numberType: "integer" },
-      { type: "number", name: "aircraft_type_id", numberType: "integer" },
+    "structRelationship": { "type": "basetable", "connectionName": "bigquery" },
+    "fields": [
+      { "type": "string", "name": "tail_num" },
+      { "type": "string", "name": "aircraft_serial" },
+      { "type": "string", "name": "aircraft_model_code" },
+      { "type": "string", "name": "aircraft_engine_code" },
+      { "type": "number", "name": "year_built", "numberType": "integer" },
+      { "type": "number", "name": "aircraft_type_id", "numberType": "integer" },
       {
-        type: "number",
-        name: "aircraft_engine_type_id",
-        numberType: "integer",
-      },
-      { type: "number", name: "registrant_type_id", numberType: "integer" },
-      { type: "string", name: "name" },
-      { type: "string", name: "address1" },
-      { type: "string", name: "address2" },
-      { type: "string", name: "city" },
-      { type: "string", name: "state" },
-      { type: "string", name: "zip" },
-      { type: "string", name: "region" },
-      { type: "string", name: "county" },
-      { type: "string", name: "country" },
-      { type: "string", name: "certification" },
-      { type: "string", name: "status_code" },
-      { type: "string", name: "mode_s_code" },
-      { type: "string", name: "fract_owner" },
-      { type: "date", name: "last_action_date" },
-      { type: "date", name: "cert_issue_date" },
-      { type: "date", name: "air_worth_date" },
-      {
-        name: "aircraft_count",
-        type: "number",
-        e: [{ type: "aggregate", function: "count", e: [] }],
-        expressionType: "aggregate",
-        numberType: "float",
+        "type": "number",
+        "name": "aircraft_engine_type_id",
+        "numberType": "integer",
       },
       {
-        type: "turtle",
-        name: "hand_turtle",
-        pipeline: [{ type: "reduce", fields: ["aircraft_count"] }],
+        "type": "number",
+        "name": "registrant_type_id",
+        "numberType": "integer",
+      },
+      { "type": "string", "name": "name" },
+      { "type": "string", "name": "address1" },
+      { "type": "string", "name": "address2" },
+      { "type": "string", "name": "city" },
+      { "type": "string", "name": "state" },
+      { "type": "string", "name": "zip" },
+      { "type": "string", "name": "region" },
+      { "type": "string", "name": "county" },
+      { "type": "string", "name": "country" },
+      { "type": "string", "name": "certification" },
+      { "type": "string", "name": "status_code" },
+      { "type": "string", "name": "mode_s_code" },
+      { "type": "string", "name": "fract_owner" },
+      { "type": "date", "name": "last_action_date" },
+      { "type": "date", "name": "cert_issue_date" },
+      { "type": "date", "name": "air_worth_date" },
+      {
+        "name": "aircraft_count",
+        "type": "number",
+        "e": [{ "type": "aggregate", "function": "count", "e": [] }],
+        "expressionType": "aggregate",
+        "numberType": "float",
       },
       {
-        type: "turtle",
-        name: "hand_turtle_pipeline",
-        pipeline: [
-          { type: "reduce", fields: ["aircraft_count"] },
-          { type: "reduce", fields: ["aircraft_count"] },
+        "type": "turtle",
+        "name": "hand_turtle",
+        "pipeline": [{ "type": "reduce", "fields": ["aircraft_count"] }],
+      },
+      {
+        "type": "turtle",
+        "name": "hand_turtle_pipeline",
+        "pipeline": [
+          { "type": "reduce", "fields": ["aircraft_count"] },
+          { "type": "reduce", "fields": ["aircraft_count"] },
         ],
       },
     ],
-    primaryKey: "tail_num",
-    as: "aircraft",
+    "primaryKey": "tail_num",
+    "as": "aircraft",
   };
 
   const aircraftHandStructDef: StructDef = {
     ...aircraftHandBase,
-    fields: [
+    "fields": [
       ...aircraftHandBase.fields,
       {
         ...modelHandBase,
-        structRelationship: withJoin(
+        "structRelationship": withJoin(
           "aircraft_model_code",
           "aircraft_models.aircraft_model_code"
         ),
@@ -259,10 +267,10 @@ describe("BigQuery hand-built expression test", () => {
   };
 
   const handCodedModel: ModelDef = {
-    name: "Hand Coded Models",
-    exports: ["aircraft"],
-    contents: {
-      aircraft: aircraftHandStructDef,
+    "name": "Hand Coded Models",
+    "exports": ["aircraft"],
+    "contents": {
+      "aircraft": aircraftHandStructDef,
     },
   };
 
@@ -277,11 +285,11 @@ describe("BigQuery hand-built expression test", () => {
 
   it(`hand query hand model - ${databaseName}`, async () => {
     const sql = await compileHandQueryToSQL(handModel, {
-      structRef: "aircraft",
-      pipeline: [
+      "structRef": "aircraft",
+      "pipeline": [
         {
-          type: "reduce",
-          fields: [
+          "type": "reduce",
+          "fields": [
             // "aircraft_models.total_seats",
             // "aircraft_models.boeing_seats"
             // "aircraft_models.percent_boeing",
@@ -297,32 +305,32 @@ describe("BigQuery hand-built expression test", () => {
             //   ],
             // },
             {
-              name: "total_seats",
-              type: "number",
-              expressionType: "aggregate",
-              e: [
+              "name": "total_seats",
+              "type": "number",
+              "expressionType": "aggregate",
+              "e": [
                 {
-                  type: "filterExpression",
-                  e: [
+                  "type": "filterExpression",
+                  "e": [
                     {
-                      type: "aggregate",
-                      function: "sum",
-                      e: [
+                      "type": "aggregate",
+                      "function": "sum",
+                      "e": [
                         {
-                          type: "field",
-                          path: "aircraft_models.seats",
+                          "type": "field",
+                          "path": "aircraft_models.seats",
                         },
                       ],
                     },
                   ],
-                  filterList: [
+                  "filterList": [
                     {
-                      expressionType: "aggregate",
-                      code: "manufacturer='BOEING'",
-                      expression: [
+                      "expressionType": "aggregate",
+                      "code": "manufacturer='BOEING'",
+                      "expression": [
                         {
-                          type: "field",
-                          path: "aircraft_models.manufacturer",
+                          "type": "field",
+                          "path": "aircraft_models.manufacturer",
                         },
                         "='BOEING'",
                       ],
@@ -348,9 +356,9 @@ describe("BigQuery hand-built expression test", () => {
   it(`hand turtle - ${databaseName}`, async () => {
     const result = await handModel
       ._loadQueryFromQueryDef({
-        structRef: "aircraft",
-        pipeHead: { name: "hand_turtle" },
-        pipeline: [],
+        "structRef": "aircraft",
+        "pipeHead": { "name": "hand_turtle" },
+        "pipeline": [],
       })
       .run();
     expect(result.data.value[0].aircraft_count).toBe(3599);
@@ -400,18 +408,18 @@ describe("BigQuery hand-built expression test", () => {
 
   it(`hand turtle2 - ${databaseName}`, async () => {
     const sql = await compileHandQueryToSQL(handModel, {
-      structRef: "aircraft",
-      pipeline: [
+      "structRef": "aircraft",
+      "pipeline": [
         {
-          type: "reduce",
-          fields: [
+          "type": "reduce",
+          "fields": [
             "state",
             "aircraft_count",
             {
-              type: "turtle",
-              name: "my_turtle",
-              pipeline: [
-                { type: "reduce", fields: ["county", "aircraft_count"] },
+              "type": "turtle",
+              "name": "my_turtle",
+              "pipeline": [
+                { "type": "reduce", "fields": ["county", "aircraft_count"] },
               ],
             },
           ],
@@ -425,21 +433,21 @@ describe("BigQuery hand-built expression test", () => {
 
   it(`hand total - ${databaseName}`, async () => {
     const sql = await compileHandQueryToSQL(handModel, {
-      structRef: "aircraft",
-      pipeline: [
+      "structRef": "aircraft",
+      "pipeline": [
         {
-          type: "reduce",
-          fields: [
+          "type": "reduce",
+          "fields": [
             "state",
             "aircraft_count",
             {
-              name: "total_aircraft",
-              type: "number",
-              expressionType: "aggregate",
-              e: [
+              "name": "total_aircraft",
+              "type": "number",
+              "expressionType": "aggregate",
+              "e": [
                 {
-                  type: "exclude",
-                  e: [{ type: "field", path: "aircraft_count" }],
+                  "type": "exclude",
+                  "e": [{ "type": "field", "path": "aircraft_count" }],
                 },
               ],
             },
@@ -455,32 +463,32 @@ describe("BigQuery hand-built expression test", () => {
   it(`hand row_number - ${databaseName}`, async () => {
     const result = await handModel
       ._loadQueryFromQueryDef({
-        structRef: "aircraft",
-        pipeline: [
+        "structRef": "aircraft",
+        "pipeline": [
           {
-            type: "reduce",
-            fields: [
+            "type": "reduce",
+            "fields": [
               "state",
               "aircraft_count",
               {
-                name: "row_num",
-                type: "number",
-                expressionType: "analytic",
-                e: [
+                "name": "row_num",
+                "type": "number",
+                "expressionType": "analytic",
+                "e": [
                   {
-                    type: "analytic",
-                    function: "row_number",
+                    "type": "analytic",
+                    "function": "row_number",
                   },
                 ],
               },
               {
-                name: "_rank",
-                type: "number",
-                expressionType: "analytic",
-                e: [
+                "name": "_rank",
+                "type": "number",
+                "expressionType": "analytic",
+                "e": [
                   {
-                    type: "analytic",
-                    function: "rank",
+                    "type": "analytic",
+                    "function": "rank",
                   },
                 ],
               },
@@ -496,11 +504,11 @@ describe("BigQuery hand-built expression test", () => {
 
   it(`hand turtle3 - ${databaseName}`, async () => {
     const sql = await compileHandQueryToSQL(handModel, {
-      structRef: "aircraft",
-      pipeline: [
+      "structRef": "aircraft",
+      "pipeline": [
         {
-          type: "reduce",
-          fields: ["state", "aircraft_count", "hand_turtle"],
+          "type": "reduce",
+          "fields": ["state", "aircraft_count", "hand_turtle"],
         },
       ],
     });
@@ -511,30 +519,30 @@ describe("BigQuery hand-built expression test", () => {
 
   it(`hand turtle total - ${databaseName}`, async () => {
     const sql = await compileHandQueryToSQL(handModel, {
-      structRef: "aircraft",
-      pipeline: [
+      "structRef": "aircraft",
+      "pipeline": [
         {
-          type: "reduce",
-          fields: [
+          "type": "reduce",
+          "fields": [
             "state",
             "aircraft_count",
             {
-              type: "turtle",
-              name: "my_turtle",
-              pipeline: [
+              "type": "turtle",
+              "name": "my_turtle",
+              "pipeline": [
                 {
-                  type: "reduce",
-                  fields: [
+                  "type": "reduce",
+                  "fields": [
                     "county",
                     "aircraft_count",
                     {
-                      name: "total_aircraft",
-                      type: "number",
-                      expressionType: "aggregate",
-                      e: [
+                      "name": "total_aircraft",
+                      "type": "number",
+                      "expressionType": "aggregate",
+                      "e": [
                         {
-                          type: "exclude",
-                          e: [{ type: "field", path: "aircraft_count" }],
+                          "type": "exclude",
+                          "e": [{ "type": "field", "path": "aircraft_count" }],
                         },
                       ],
                     },
@@ -554,31 +562,31 @@ describe("BigQuery hand-built expression test", () => {
   it(`hand turtle analytic - ${databaseName}`, async () => {
     const result = await handModel
       ._loadQueryFromQueryDef({
-        structRef: "aircraft",
-        pipeline: [
+        "structRef": "aircraft",
+        "pipeline": [
           {
-            type: "reduce",
-            fields: [
+            "type": "reduce",
+            "fields": [
               "state",
               "aircraft_count",
               {
-                type: "turtle",
-                name: "my_turtle",
-                pipeline: [
+                "type": "turtle",
+                "name": "my_turtle",
+                "pipeline": [
                   {
-                    type: "reduce",
-                    limit: 4,
-                    fields: [
+                    "type": "reduce",
+                    "limit": 4,
+                    "fields": [
                       "county",
                       "aircraft_count",
                       {
-                        name: "row_num",
-                        type: "number",
-                        expressionType: "analytic",
-                        e: [
+                        "name": "row_num",
+                        "type": "number",
+                        "expressionType": "analytic",
+                        "e": [
                           {
-                            type: "analytic",
-                            function: "row_number",
+                            "type": "analytic",
+                            "function": "row_number",
                           },
                         ],
                       },
@@ -608,9 +616,9 @@ describe("BigQuery hand-built expression test", () => {
 
   it(`hand: declared pipeline as main query - ${databaseName}`, async () => {
     const sql = await compileHandQueryToSQL(handModel, {
-      structRef: "aircraft",
-      pipeHead: { name: "hand_turtle_pipeline" },
-      pipeline: [],
+      "structRef": "aircraft",
+      "pipeHead": { "name": "hand_turtle_pipeline" },
+      "pipeline": [],
     });
     // console.log(result.sql);
     await validateCompilation(databaseName, sql);
@@ -621,37 +629,39 @@ describe("BigQuery hand-built expression test", () => {
   it(`hand: turtle is pipeline - ${databaseName}`, async () => {
     const result = await handModel
       ._loadQueryFromQueryDef({
-        structRef: "aircraft",
-        pipeline: [
+        "structRef": "aircraft",
+        "pipeline": [
           {
-            type: "reduce",
-            fields: [
+            "type": "reduce",
+            "fields": [
               "aircraft_count",
               {
-                type: "turtle",
-                name: "pipe",
-                pipeline: [
+                "type": "turtle",
+                "name": "pipe",
+                "pipeline": [
                   {
-                    type: "reduce",
-                    fields: ["state", "county", "aircraft_count"],
+                    "type": "reduce",
+                    "fields": ["state", "county", "aircraft_count"],
                   },
                   {
-                    type: "reduce",
-                    filterList: [fStringLike("county", "2%")],
-                    fields: [
+                    "type": "reduce",
+                    "filterList": [fStringLike("county", "2%")],
+                    "fields": [
                       "state",
                       {
-                        name: "total_aircraft",
-                        type: "number",
-                        e: [
+                        "name": "total_aircraft",
+                        "type": "number",
+                        "e": [
                           {
-                            type: "aggregate",
-                            function: "sum",
-                            e: [{ type: "field", path: "aircraft_count" }],
+                            "type": "aggregate",
+                            "function": "sum",
+                            "e": [
+                              { "type": "field", "path": "aircraft_count" },
+                            ],
                           },
                         ],
-                        expressionType: "aggregate",
-                        numberType: "float",
+                        "expressionType": "aggregate",
+                        "numberType": "float",
                       },
                     ],
                   },
@@ -754,34 +764,36 @@ describe("BigQuery hand-built expression test", () => {
   it(`hand: filtered measures - ${databaseName}`, async () => {
     const result = await handModel
       ._loadQueryFromQueryDef({
-        structRef: "aircraft",
-        pipeline: [
+        "structRef": "aircraft",
+        "pipeline": [
           {
-            type: "reduce",
-            fields: [
+            "type": "reduce",
+            "fields": [
               {
-                name: "boeing_seats",
-                type: "number",
-                expressionType: "aggregate",
-                e: [
+                "name": "boeing_seats",
+                "type": "number",
+                "expressionType": "aggregate",
+                "e": [
                   {
-                    type: "filterExpression",
-                    e: [
+                    "type": "filterExpression",
+                    "e": [
                       {
-                        type: "aggregate",
-                        function: "sum",
-                        structPath: "aircraft_models",
-                        e: [{ type: "field", path: "aircraft_models.seats" }],
+                        "type": "aggregate",
+                        "function": "sum",
+                        "structPath": "aircraft_models",
+                        "e": [
+                          { "type": "field", "path": "aircraft_models.seats" },
+                        ],
                       },
                     ],
-                    filterList: [
+                    "filterList": [
                       {
-                        expressionType: "aggregate",
-                        code: "manufacturer='BOEING'",
-                        expression: [
+                        "expressionType": "aggregate",
+                        "code": "manufacturer='BOEING'",
+                        "expression": [
                           {
-                            type: "field",
-                            path: "aircraft_models.manufacturer",
+                            "type": "field",
+                            "path": "aircraft_models.manufacturer",
                           },
                           "='BOEING'",
                         ],
@@ -801,17 +813,17 @@ describe("BigQuery hand-built expression test", () => {
 
   const joinModelAircraftHandStructDef: StructDef = {
     ...modelHandBase,
-    as: "model_aircraft",
-    fields: [
+    "as": "model_aircraft",
+    "fields": [
       ...modelHandBase.fields,
       {
         ...aircraftHandBase,
-        structRelationship: {
-          type: "many",
-          onExpression: [
-            { type: "field", path: "aircraft_model_code" },
+        "structRelationship": {
+          "type": "many",
+          "onExpression": [
+            { "type": "field", "path": "aircraft_model_code" },
             "=",
-            { type: "field", path: "aircraft.aircraft_model_code" },
+            { "type": "field", "path": "aircraft.aircraft_model_code" },
           ],
         },
       },
@@ -821,10 +833,10 @@ describe("BigQuery hand-built expression test", () => {
   // Join tests
 
   const joinModel: ModelDef = {
-    name: "Hand Coded Join Models",
-    exports: ["model_aircraft"],
-    contents: {
-      model_aircraft: joinModelAircraftHandStructDef,
+    "name": "Hand Coded Join Models",
+    "exports": ["model_aircraft"],
+    "contents": {
+      "model_aircraft": joinModelAircraftHandStructDef,
     },
   };
 
@@ -833,11 +845,11 @@ describe("BigQuery hand-built expression test", () => {
   it(`hand join ON - ${databaseName}`, async () => {
     const sql = await handJoinModel
       ._loadQueryFromQueryDef({
-        structRef: "model_aircraft",
-        pipeline: [
+        "structRef": "model_aircraft",
+        "pipeline": [
           {
-            type: "reduce",
-            fields: [
+            "type": "reduce",
+            "fields": [
               "aircraft.state",
               "aircraft.aircraft_count",
               "model_count",
@@ -854,11 +866,11 @@ describe("BigQuery hand-built expression test", () => {
   it(`hand join symmetric agg - ${databaseName}`, async () => {
     const result = await handJoinModel
       ._loadQueryFromQueryDef({
-        structRef: "model_aircraft",
-        pipeline: [
+        "structRef": "model_aircraft",
+        "pipeline": [
           {
-            type: "reduce",
-            fields: ["total_seats", "aircraft.aircraft_count"],
+            "type": "reduce",
+            "fields": ["total_seats", "aircraft.aircraft_count"],
           },
         ],
       })

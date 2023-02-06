@@ -34,7 +34,7 @@ export function makeSQLBlock(
   connection?: string
 ): SQLBlockSource {
   const theBlock: SQLBlockSource = {
-    name: `md5:/${connection || "$default"}//${nameFor(select)}`,
+    "name": `md5:/${connection || "$default"}//${nameFor(select)}`,
     select,
   };
   if (connection) {

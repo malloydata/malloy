@@ -31,7 +31,7 @@ export class AnonymousQuery extends MalloyElement implements DocStatement {
 
   constructor(readonly theQuery: QueryElement) {
     super();
-    this.has({ query: theQuery });
+    this.has({ "query": theQuery });
   }
 
   execute(doc: Document): ModelDataRequest {

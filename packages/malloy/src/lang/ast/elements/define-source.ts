@@ -41,7 +41,7 @@ export class DefineSource extends MalloyElement implements DocStatement {
     readonly exported: boolean,
     params?: MalloyElement[]
   ) {
-    super({ explore: theSource });
+    super({ "explore": theSource });
     if (params) {
       this.parameters = [];
       for (const el of params) {
@@ -53,7 +53,7 @@ export class DefineSource extends MalloyElement implements DocStatement {
           );
         }
       }
-      this.has({ parameters: this.parameters });
+      this.has({ "parameters": this.parameters });
     }
   }
 
@@ -66,12 +66,12 @@ export class DefineSource extends MalloyElement implements DocStatement {
         return;
       }
       doc.setEntry(this.name, {
-        entry: {
+        "entry": {
           ...structDef,
-          as: this.name,
-          location: this.location,
+          "as": this.name,
+          "location": this.location,
         },
-        exported: this.exported,
+        "exported": this.exported,
       });
     }
   }

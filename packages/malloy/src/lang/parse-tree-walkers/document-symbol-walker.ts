@@ -54,28 +54,28 @@ class DocumentSymbolWalker implements MalloyParserListener {
 
   enterTopLevelQueryDef(pcx: parser.TopLevelQueryDefContext) {
     this.symbols.push({
-      range: this.translator.rangeFromContext(pcx),
-      name: pcx.queryName().text,
-      type: "query",
-      children: [],
+      "range": this.translator.rangeFromContext(pcx),
+      "name": pcx.queryName().text,
+      "type": "query",
+      "children": [],
     });
   }
 
   enterTopLevelAnonQueryDef(pcx: parser.TopLevelAnonQueryDefContext) {
     this.symbols.push({
-      range: this.translator.rangeFromContext(pcx),
-      name: "unnamed_query",
-      type: "unnamed_query",
-      children: [],
+      "range": this.translator.rangeFromContext(pcx),
+      "name": "unnamed_query",
+      "type": "unnamed_query",
+      "children": [],
     });
   }
 
   enterSourceDefinition(pcx: parser.SourceDefinitionContext) {
     this.scopes.push({
-      range: this.translator.rangeFromContext(pcx),
-      name: pcx.sourceNameDef().id().text,
-      type: "explore",
-      children: [],
+      "range": this.translator.rangeFromContext(pcx),
+      "name": pcx.sourceNameDef().id().text,
+      "type": "explore",
+      "children": [],
     });
   }
 
@@ -88,10 +88,10 @@ class DocumentSymbolWalker implements MalloyParserListener {
 
   enterExploreQueryDef(pcx: parser.ExploreQueryDefContext) {
     const symbol = {
-      range: this.translator.rangeFromContext(pcx),
-      name: pcx.exploreQueryNameDef().id().text,
-      type: "query",
-      children: [],
+      "range": this.translator.rangeFromContext(pcx),
+      "name": pcx.exploreQueryNameDef().id().text,
+      "type": "query",
+      "children": [],
     };
     const parent = this.peekScope();
     if (parent) {
@@ -106,10 +106,10 @@ class DocumentSymbolWalker implements MalloyParserListener {
 
   handleNestEntry(pcx: parser.NestExistingContext | parser.NestDefContext) {
     const symbol = {
-      range: this.translator.rangeFromContext(pcx),
-      name: pcx.queryName().id().text,
-      type: "query",
-      children: [],
+      "range": this.translator.rangeFromContext(pcx),
+      "name": pcx.queryName().id().text,
+      "type": "query",
+      "children": [],
     };
     const parent = this.peekScope();
     if (parent) {
@@ -133,10 +133,10 @@ class DocumentSymbolWalker implements MalloyParserListener {
 
   enterFieldDef(pcx: parser.FieldDefContext) {
     const symbol = {
-      range: this.translator.rangeFromContext(pcx),
-      name: pcx.fieldNameDef().id().text,
-      type: "field",
-      children: [],
+      "range": this.translator.rangeFromContext(pcx),
+      "name": pcx.fieldNameDef().id().text,
+      "type": "field",
+      "children": [],
     };
     const parent = this.peekScope();
     if (parent) {
@@ -146,10 +146,10 @@ class DocumentSymbolWalker implements MalloyParserListener {
 
   enterQueryFieldRef(pcx: parser.QueryFieldRefContext) {
     const symbol = {
-      range: this.translator.rangeFromContext(pcx),
-      name: pcx.fieldPath().text,
-      type: "field",
-      children: [],
+      "range": this.translator.rangeFromContext(pcx),
+      "name": pcx.fieldPath().text,
+      "type": "field",
+      "children": [],
     };
     const parent = this.peekScope();
     if (parent) {
@@ -159,10 +159,10 @@ class DocumentSymbolWalker implements MalloyParserListener {
 
   enterExploreRenameDef(pcx: parser.ExploreRenameDefContext) {
     const symbol = {
-      range: this.translator.rangeFromContext(pcx),
-      name: pcx.fieldName()[0].text,
-      type: "field",
-      children: [],
+      "range": this.translator.rangeFromContext(pcx),
+      "name": pcx.fieldName()[0].text,
+      "type": "field",
+      "children": [],
     };
     const parent = this.peekScope();
     if (parent) {
@@ -180,10 +180,10 @@ class DocumentSymbolWalker implements MalloyParserListener {
 
   handleJoinDef(pcx: parser.JoinWithContext | parser.JoinOnContext) {
     const symbol = {
-      range: this.translator.rangeFromContext(pcx),
-      name: pcx.joinNameDef().id().text,
-      type: "join",
-      children: [],
+      "range": this.translator.rangeFromContext(pcx),
+      "name": pcx.joinNameDef().id().text,
+      "type": "join",
+      "children": [],
     };
     const parent = this.peekScope();
     if (parent) {
@@ -194,10 +194,10 @@ class DocumentSymbolWalker implements MalloyParserListener {
   enterDefineSQLStatement(pcx: parser.DefineSQLStatementContext) {
     const name = pcx.nameSQLBlock()?.text;
     const symbol = {
-      range: this.translator.rangeFromContext(pcx),
-      name: name || "unnamed_sql",
-      type: name === undefined ? "unnamed_sql" : "sql",
-      children: [],
+      "range": this.translator.rangeFromContext(pcx),
+      "name": name || "unnamed_sql",
+      "type": name === undefined ? "unnamed_sql" : "sql",
+      "children": [],
     };
     this.symbols.push(symbol);
   }

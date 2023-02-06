@@ -48,7 +48,7 @@ export class SQLString extends MalloyElement {
   sqlPhrases(): SQLPhrase[] {
     return this.elements.map((el) => {
       if (typeof el == "string") {
-        return { sql: el };
+        return { "sql": el };
       }
       return el.query();
     });

@@ -55,8 +55,11 @@ export class ExprUngroup extends ExpressionDef {
       this.expr.log(`${this.control}() expression must be an aggregate`);
       return errorFor("ungrouped scalar");
     }
-    const ungroup: UngroupFragment = { type: this.control, e: exprVal.value };
-    if (this.typeCheck(this.expr, { ...exprVal, expressionType: "scalar" })) {
+    const ungroup: UngroupFragment = {
+      "type": this.control,
+      "e": exprVal.value,
+    };
+    if (this.typeCheck(this.expr, { ...exprVal, "expressionType": "scalar" })) {
       if (this.fields.length > 0) {
         let qs = fs;
         if (fs instanceof DefSpace) {
@@ -80,9 +83,9 @@ export class ExprUngroup extends ExpressionDef {
         ungroup.fields = dstFields;
       }
       return {
-        dataType: this.returns(exprVal),
-        expressionType: "analytic",
-        value: [ungroup],
+        "dataType": this.returns(exprVal),
+        "expressionType": "analytic",
+        "value": [ungroup],
       };
     }
     this.log(`${this.control}() incompatible type`);

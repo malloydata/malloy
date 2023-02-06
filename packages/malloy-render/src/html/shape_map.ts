@@ -92,10 +92,10 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
     const colorDef =
       colorField !== undefined
         ? {
-            field: colorField.name,
-            type: colorType,
-            axis: { title: colorField.name },
-            scale: getColorScale(colorType, false),
+            "field": colorField.name,
+            "type": colorType,
+            "axis": { "title": colorField.name },
+            "scale": getColorScale(colorType, false),
           }
         : undefined;
 
@@ -105,77 +105,77 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
 
     return {
       ...this.getSize(),
-      data: { values: mapped },
-      projection: {
-        type: "albersUsa",
+      "data": { "values": mapped },
+      "projection": {
+        "type": "albersUsa",
       },
-      layer: [
+      "layer": [
         {
-          data: {
-            values: usAtlas,
-            format: {
-              type: "topojson",
-              feature: "states",
+          "data": {
+            "values": usAtlas,
+            "format": {
+              "type": "topojson",
+              "feature": "states",
             },
           },
-          mark: {
-            type: "geoshape",
-            fill: "#efefef",
-            stroke: "white",
+          "mark": {
+            "type": "geoshape",
+            "fill": "#efefef",
+            "stroke": "white",
           },
         },
         {
-          transform: [
+          "transform": [
             {
-              lookup: regionField.name,
-              from: {
-                data: {
-                  values: usAtlas,
-                  format: {
-                    type: "topojson",
-                    feature: "states",
+              "lookup": regionField.name,
+              "from": {
+                "data": {
+                  "values": usAtlas,
+                  "format": {
+                    "type": "topojson",
+                    "feature": "states",
                   },
                 },
-                key: "id",
+                "key": "id",
               },
-              as: "geo",
+              "as": "geo",
             },
           ],
-          mark: "geoshape",
-          encoding: {
-            shape: { field: "geo", type: "geojson" },
-            color: colorDef,
+          "mark": "geoshape",
+          "encoding": {
+            "shape": { "field": "geo", "type": "geojson" },
+            "color": colorDef,
           },
         },
       ],
-      background: "transparent",
-      config: {
-        axis: {
-          labelFont: "var(--malloy-font-family, Roboto)",
-          titleFont: "var(--malloy-font-family, Roboto)",
-          titleFontWeight: 500,
-          titleColor: "var(--malloy-title-color, #505050)",
-          labelColor: "var(--malloy-label-color, #000000)",
-          titleFontSize: 12,
+      "background": "transparent",
+      "config": {
+        "axis": {
+          "labelFont": "var(--malloy-font-family, Roboto)",
+          "titleFont": "var(--malloy-font-family, Roboto)",
+          "titleFontWeight": 500,
+          "titleColor": "var(--malloy-title-color, #505050)",
+          "labelColor": "var(--malloy-label-color, #000000)",
+          "titleFontSize": 12,
         },
-        legend: {
-          labelFont: "var(--malloy-font-family, Roboto)",
-          titleFont: "var(--malloy-font-family, Roboto)",
-          titleFontWeight: 500,
-          titleColor: "var(--malloy-title-color, #505050)",
-          labelColor: "var(--malloy-label-color, #000000)",
-          titleFontSize: 12,
+        "legend": {
+          "labelFont": "var(--malloy-font-family, Roboto)",
+          "titleFont": "var(--malloy-font-family, Roboto)",
+          "titleFontWeight": 500,
+          "titleColor": "var(--malloy-title-color, #505050)",
+          "labelColor": "var(--malloy-label-color, #000000)",
+          "titleFontSize": 12,
         },
-        header: {
-          labelFont: "var(--malloy-font-family, Roboto)",
-          titleFont: "var(--malloy-font-family, Roboto)",
-          titleFontWeight: 500,
+        "header": {
+          "labelFont": "var(--malloy-font-family, Roboto)",
+          "titleFont": "var(--malloy-font-family, Roboto)",
+          "titleFontWeight": 500,
         },
-        mark: { font: "var(--malloy-font-family, Roboto)" },
-        title: {
-          font: "var(--malloy-font-family, Roboto)",
-          subtitleFont: "var(--malloy-font-family, Roboto)",
-          fontWeight: 500,
+        "mark": { "font": "var(--malloy-font-family, Roboto)" },
+        "title": {
+          "font": "var(--malloy-font-family, Roboto)",
+          "subtitleFont": "var(--malloy-font-family, Roboto)",
+          "fontWeight": 500,
         },
       },
     };

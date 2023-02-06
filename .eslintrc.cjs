@@ -59,5 +59,6 @@ module.exports = {
       "warn",
       { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
     ],
+    "quote-props": ["error", "always"],
   },
 };

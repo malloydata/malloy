@@ -33,7 +33,7 @@ export class Index extends MalloyElement {
   }
 
   useWeight(fn: FieldName): void {
-    this.has({ weightBy: fn });
+    this.has({ "weightBy": fn });
     this.weightBy = fn;
   }
 }

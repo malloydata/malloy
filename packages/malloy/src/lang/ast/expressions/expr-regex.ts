@@ -32,9 +32,9 @@ export class ExprRegEx extends ExpressionDef {
 
   getExpression(): ExprValue {
     return {
-      dataType: "regular expression",
-      expressionType: "scalar",
-      value: [`r'${this.regex}'`],
+      "dataType": "regular expression",
+      "expressionType": "scalar",
+      "value": [`r'${this.regex}'`],
     };
   }
 }

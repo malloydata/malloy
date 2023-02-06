@@ -24,7 +24,7 @@
 import { TypeDesc, FieldValueType } from "./types/type-desc";
 
 function mkFragType(dType: FieldValueType): TypeDesc {
-  return { dataType: dType, expressionType: "scalar" };
+  return { "dataType": dType, "expressionType": "scalar" };
 }
 
 /**

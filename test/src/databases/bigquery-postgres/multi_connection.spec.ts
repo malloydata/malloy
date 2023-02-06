@@ -44,7 +44,7 @@ describe("Multi-connection", () => {
   const bqConnection = new BigQueryTestConnection(
     "bigquery",
     {},
-    { defaultProject: "malloy-data" }
+    { "defaultProject": "malloy-data" }
   );
   const postgresConnection = new PostgresTestConnection("postgres");
   const files = new EmptyURLReader();
@@ -52,8 +52,8 @@ describe("Multi-connection", () => {
   const connectionMap = new malloy.FixedConnectionMap(
     new Map(
       Object.entries({
-        bigquery: bqConnection,
-        postgres: postgresConnection,
+        "bigquery": bqConnection,
+        "postgres": postgresConnection,
       })
     ),
     "bigquery"

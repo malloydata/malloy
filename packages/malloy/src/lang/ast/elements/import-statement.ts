@@ -60,8 +60,8 @@ export class ImportStatement extends MalloyElement implements DocStatement {
         const importStructs = trans.getChildExports(this.fullURL);
         for (const importing in importStructs) {
           doc.setEntry(importing, {
-            entry: importStructs[importing],
-            exported: false,
+            "entry": importStructs[importing],
+            "exported": false,
           });
         }
       } else if (src.status === "error") {

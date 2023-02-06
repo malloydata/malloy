@@ -52,11 +52,11 @@ export class KeyJoin extends Join {
     const sourceDef = this.source.structDef();
     const joinStruct: StructDef = {
       ...sourceDef,
-      structRelationship: {
-        type: "one",
-        onExpression: ["('join fixup'='not done yet')"],
+      "structRelationship": {
+        "type": "one",
+        "onExpression": ["('join fixup'='not done yet')"],
       },
-      location: this.location,
+      "location": this.location,
     };
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved
@@ -77,9 +77,12 @@ export class KeyJoin extends Join {
       if (pkey) {
         if (pkey.type === exprX.dataType) {
           inStruct.structRelationship = {
-            type: "one",
-            onExpression: [
-              { type: "field", path: `${this.name}.${inStruct.primaryKey}` },
+            "type": "one",
+            "onExpression": [
+              {
+                "type": "field",
+                "path": `${this.name}.${inStruct.primaryKey}`,
+              },
               "=",
               ...exprX.value,
             ],
@@ -110,7 +113,7 @@ export class ExpressionJoin extends Join {
 
   set joinOn(joinExpr: ExpressionDef | undefined) {
     this.expr = joinExpr;
-    this.has({ on: joinExpr });
+    this.has({ "on": joinExpr });
   }
 
   get joinOn(): ExpressionDef | undefined {
@@ -136,8 +139,8 @@ export class ExpressionJoin extends Join {
     const sourceDef = this.source.structDef();
     const joinStruct: StructDef = {
       ...sourceDef,
-      structRelationship: { type: this.joinType },
-      location: this.location,
+      "structRelationship": { "type": this.joinType },
+      "location": this.location,
     };
     if (sourceDef.structSource.type === "query") {
       // the name from query does not need to be preserved

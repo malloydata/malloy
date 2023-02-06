@@ -37,14 +37,14 @@ import { ExpressionDef } from "../types/expression-def";
 export class ExprTimeExtract extends ExpressionDef {
   elementType = "timeExtract";
   static pluralMap: Record<string, ExtractUnit> = {
-    years: "year",
-    quarters: "quarter",
-    months: "month",
-    weeks: "week",
-    days: "day",
-    hours: "hour",
-    minutes: "minute",
-    seconds: "second",
+    "years": "year",
+    "quarters": "quarter",
+    "months": "month",
+    "weeks": "week",
+    "days": "day",
+    "hours": "hour",
+    "minutes": "minute",
+    "seconds": "second",
   };
 
   static extractor(funcName: string): ExtractUnit | undefined {
@@ -85,18 +85,18 @@ export class ExprTimeExtract extends ExpressionDef {
           return errorFor(`${extractTo} bad extraction`);
         }
         return {
-          dataType: "number",
-          expressionType: maxExpressionType(
+          "dataType": "number",
+          "expressionType": maxExpressionType(
             first.expressionType,
             last.expressionType
           ),
-          value: [
+          "value": [
             {
-              type: "dialect",
-              function: "timeDiff",
-              units: extractTo,
-              left: { valueType: first.dataType, value: first.value },
-              right: { valueType: last.dataType, value: last.value },
+              "type": "dialect",
+              "function": "timeDiff",
+              "units": extractTo,
+              "left": { "valueType": first.dataType, "value": first.value },
+              "right": { "valueType": last.dataType, "value": last.value },
             },
           ],
         };
@@ -104,14 +104,14 @@ export class ExprTimeExtract extends ExpressionDef {
         const argV = from.getExpression(fs);
         if (isTimeFieldType(argV.dataType)) {
           return {
-            dataType: "number",
-            expressionType: argV.expressionType,
-            value: [
+            "dataType": "number",
+            "expressionType": argV.expressionType,
+            "value": [
               {
-                type: "dialect",
-                function: "extract",
-                expr: { value: argV.value, valueType: argV.dataType },
-                units: extractTo,
+                "type": "dialect",
+                "function": "extract",
+                "expr": { "value": argV.value, "valueType": argV.dataType },
+                "units": extractTo,
               },
             ],
           };

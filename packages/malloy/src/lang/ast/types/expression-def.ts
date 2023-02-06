@@ -139,24 +139,24 @@ export class ExprDuration extends ExpressionDef {
         );
         return timeResult(
           {
-            dataType: "timestamp",
-            expressionType: maxExpressionType(
+            "dataType": "timestamp",
+            "expressionType": maxExpressionType(
               lhs.expressionType,
               num.expressionType
             ),
-            value: result,
+            "value": result,
           },
           resultGranularity
         );
       }
       return timeResult(
         {
-          dataType: "date",
-          expressionType: maxExpressionType(
+          "dataType": "date",
+          "expressionType": maxExpressionType(
             lhs.expressionType,
             num.expressionType
           ),
-          value: timeOffset("date", lhs.value, op, num.value, this.timeframe),
+          "value": timeOffset("date", lhs.value, op, num.value, this.timeframe),
         },
         resultGranularity
       );
@@ -166,9 +166,9 @@ export class ExprDuration extends ExpressionDef {
 
   getExpression(_fs: FieldSpace): ExprValue {
     return {
-      dataType: "duration",
-      expressionType: "scalar",
-      value: ["__ERROR_DURATION_IS_NOT_A_VALUE__"],
+      "dataType": "duration",
+      "expressionType": "scalar",
+      "value": ["__ERROR_DURATION_IS_NOT_A_VALUE__"],
     };
   }
 }
@@ -198,10 +198,10 @@ function regexEqual(left: ExprValue, right: ExprValue): Expr | undefined {
     if (right.dataType === "regular expression") {
       return [
         {
-          type: "dialect",
-          function: "regexpMatch",
-          expr: left.value,
-          regexp: (right.value[0] as string).replace(/^r'/, "'"),
+          "type": "dialect",
+          "function": "regexpMatch",
+          "expr": left.value,
+          "regexp": (right.value[0] as string).replace(/^r'/, "'"),
         },
       ];
     }
@@ -209,10 +209,10 @@ function regexEqual(left: ExprValue, right: ExprValue): Expr | undefined {
     if (left.dataType === "regular expression") {
       return [
         {
-          type: "dialect",
-          function: "regexpMatch",
-          expr: right.value,
-          regexp: (left.value[0] as string).replace(/^r'/, "'"),
+          "type": "dialect",
+          "function": "regexpMatch",
+          "expr": right.value,
+          "regexp": (left.value[0] as string).replace(/^r'/, "'"),
         },
       ];
     }
@@ -284,8 +284,8 @@ function equality(
   }
 
   return {
-    dataType: "boolean",
-    expressionType: maxExpressionType(lhs.expressionType, rhs.expressionType),
+    "dataType": "boolean",
+    "expressionType": maxExpressionType(lhs.expressionType, rhs.expressionType),
     value,
   };
 }
@@ -305,9 +305,9 @@ function compare(
   const value = timeCompare(lhs, op, rhs) || compose(lhs.value, op, rhs.value);
 
   return {
-    dataType: "boolean",
+    "dataType": "boolean",
     expressionType,
-    value: value,
+    "value": value,
   };
 }
 
@@ -339,9 +339,9 @@ function numeric(
 
   if (allAre("number", lhs, rhs)) {
     return {
-      dataType: "number",
+      "dataType": "number",
       expressionType,
-      value: compose(lhs.value, op, rhs.value),
+      "value": compose(lhs.value, op, rhs.value),
     };
   }
 
@@ -414,18 +414,18 @@ export function applyBinary(
       right.log("Denominator for division must be a number");
     } else {
       const div: DivFragment = {
-        type: "dialect",
-        function: "div",
-        numerator: num.value,
-        denominator: denom.value,
+        "type": "dialect",
+        "function": "div",
+        "numerator": num.value,
+        "denominator": denom.value,
       };
       return {
-        dataType: "number",
-        expressionType: maxExpressionType(
+        "dataType": "number",
+        "expressionType": maxExpressionType(
           num.expressionType,
           denom.expressionType
         ),
-        value: [div],
+        "value": [div],
       };
     }
     return errorFor("divide type mismatch");
