@@ -26,7 +26,6 @@ import { getDialect } from "../../../dialect/dialect_map";
 import { FieldDef, isTurtleDef, StructDef } from "../../../model/malloy_types";
 
 import { SpaceEntry } from "../types/space-entry";
-import { FieldMap } from "../types/field-map";
 import { LookupResult } from "../types/lookup-result";
 import { FieldName, FieldSpace } from "../types/field-space";
 import { DefinedParameter } from "../types/space-param";
@@ -35,15 +34,7 @@ import { StructSpaceFieldBase } from "./struct-space-field-base";
 import { ColumnSpaceField } from "./column-space-field";
 import { QueryFieldStruct } from "./query-field-struct";
 
-export class StructSpaceField extends StructSpaceFieldBase {
-  constructor(def: StructDef) {
-    super(def);
-  }
-
-  get fieldSpace(): FieldSpace {
-    return new StaticSpace(this.sourceDef);
-  }
-}
+type FieldMap = Record<string, SpaceEntry>;
 
 export class StaticSpace implements FieldSpace {
   readonly type = "fieldSpace";
@@ -174,5 +165,15 @@ export class StaticSpace implements FieldSpace {
       };
     }
     return { found, error: undefined };
+  }
+}
+
+export class StructSpaceField extends StructSpaceFieldBase {
+  constructor(def: StructDef) {
+    super(def);
+  }
+
+  get fieldSpace(): FieldSpace {
+    return new StaticSpace(this.sourceDef);
   }
 }
