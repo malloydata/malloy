@@ -25,10 +25,21 @@ import { Comparison } from "../types/comparison";
 import { FieldSpace } from "../types/field-space";
 import { ExprGranularTime } from "./expr-granular-time";
 import { isGranularResult } from "../types/granular-result";
-import { compareTypes } from "../types/compart-types";
 import { ExprValue } from "../types/expr-value";
 import { ExpressionDef } from "../types/expression-def";
 import { BinaryBoolean } from "./binary-boolean";
+import { FT } from "../fragtype-utils";
+
+const compareTypes = {
+  "~": [FT.stringT],
+  "!~": [FT.stringT],
+  "<": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
+  "<=": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
+  "=": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
+  "!=": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
+  ">=": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
+  ">": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
+};
 
 export class ExprCompare extends BinaryBoolean<Comparison> {
   elementType = "a<=>b";
