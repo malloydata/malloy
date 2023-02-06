@@ -23,16 +23,16 @@
 
 import { QueryFieldDef } from "../../../model/malloy_types";
 
-import { FieldType } from "../types/field-type";
 import { FieldSpace } from "../types/field-space";
 import { SpaceField } from "../types/space-field";
+import { TypeDesc } from "../types/type-desc";
 
 export class WildSpaceField extends SpaceField {
   constructor(readonly wildText: string) {
     super();
   }
 
-  type(): FieldType {
+  typeDesc(): TypeDesc {
     throw new Error("should never ask a wild field for its type");
   }
 

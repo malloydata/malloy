@@ -23,8 +23,8 @@
 
 import { FieldDef, FieldTypeDef } from "../../../model/malloy_types";
 
-import { FieldType } from "../types/field-type";
 import { SpaceField } from "../types/space-field";
+import { TypeDesc } from "../types/type-desc";
 
 export class ColumnSpaceField extends SpaceField {
   constructor(protected def: FieldTypeDef) {
@@ -35,7 +35,7 @@ export class ColumnSpaceField extends SpaceField {
     return this.def;
   }
 
-  type(): FieldType {
+  typeDesc(): TypeDesc {
     return this.fieldTypeFromFieldDef(this.def);
   }
 }

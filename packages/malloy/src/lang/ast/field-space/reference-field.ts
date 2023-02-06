@@ -23,10 +23,10 @@
 
 import { QueryFieldDef } from "../../../model/malloy_types";
 
-import { FieldType } from "../types/field-type";
 import { FieldReference } from "../query-items/field-references";
 import { FieldSpace } from "../types/field-space";
 import { SpaceField } from "../types/space-field";
+import { TypeDesc } from "../types/type-desc";
 
 export class ReferenceField extends SpaceField {
   constructor(readonly fieldRef: FieldReference) {
@@ -42,7 +42,7 @@ export class ReferenceField extends SpaceField {
     return this.fieldRef.refString;
   }
 
-  type(): FieldType {
-    return { type: "unknown" };
+  typeDesc(): TypeDesc {
+    return { dataType: "unknown", expressionType: "scalar" };
   }
 }

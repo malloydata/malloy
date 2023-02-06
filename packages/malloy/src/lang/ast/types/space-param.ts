@@ -25,7 +25,7 @@ import { Parameter } from "../../../model/malloy_types";
 
 import { SpaceEntry } from "./space-entry";
 import { HasParameter } from "../parameters/has-parameter";
-import { FieldType } from "../types/field-type";
+import { TypeDesc } from "./type-desc";
 
 export abstract class SpaceParam extends SpaceEntry {
   abstract parameter(): Parameter;
@@ -41,9 +41,9 @@ export class AbstractParameter extends SpaceParam {
     return this.astParam.parameter();
   }
 
-  type(): FieldType {
+  typeDesc(): TypeDesc {
     const type = this.astParam.type || "unknown";
-    return { type };
+    return { dataType: type, expressionType: "scalar" };
   }
 }
 
@@ -56,7 +56,7 @@ export class DefinedParameter extends SpaceParam {
     return this.paramDef;
   }
 
-  type(): FieldType {
-    return { type: this.paramDef.type };
+  typeDesc(): TypeDesc {
+    return { dataType: this.paramDef.type, expressionType: "scalar" };
   }
 }

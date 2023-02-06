@@ -23,9 +23,9 @@
 
 import { FieldDef, QueryFieldDef } from "../../../model/malloy_types";
 
-import { FieldType } from "../types/field-type";
 import { FieldSpace } from "../types/field-space";
 import { SpaceField } from "../types/space-field";
+import { TypeDesc } from "../types/type-desc";
 
 export abstract class QueryField extends SpaceField {
   constructor(protected inSpace: FieldSpace) {
@@ -35,7 +35,7 @@ export abstract class QueryField extends SpaceField {
   abstract getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined;
   abstract fieldDef(): FieldDef;
 
-  type(): FieldType {
-    return { type: "turtle" };
+  typeDesc(): TypeDesc {
+    return { dataType: "turtle", expressionType: "scalar" };
   }
 }

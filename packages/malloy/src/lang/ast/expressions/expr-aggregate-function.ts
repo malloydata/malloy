@@ -58,18 +58,20 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     if (this.source) {
       const sourceFoot = this.source.getField(fs).found;
       if (sourceFoot) {
-        const footType = sourceFoot.type();
-        if (isAtomicFieldType(footType.type)) {
+        const footType = sourceFoot.typeDesc();
+        if (isAtomicFieldType(footType.dataType)) {
           exprVal = {
-            dataType: footType.type,
-            expressionType: footType.expressionType || "scalar",
+            dataType: footType.dataType,
+            expressionType: footType.expressionType,
             value: [{ type: "field", path: this.source.refString }],
           };
           structPath = this.source.sourceString;
         } else {
           if (!(sourceFoot instanceof StructSpaceFieldBase)) {
-            this.log(`Aggregate source cannot be a ${footType.type}`);
-            return errorFor(`Aggregate source cannot be a ${footType.type}`);
+            this.log(`Aggregate source cannot be a ${footType.dataType}`);
+            return errorFor(
+              `Aggregate source cannot be a ${footType.dataType}`
+            );
           }
         }
       } else {
