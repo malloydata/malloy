@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ModelDataRequest } from "../../parse-malloy";
+import { ModelDataRequest } from "../../translate-response";
 import {
   DocStatement,
   Document,
@@ -30,18 +30,18 @@ import {
 } from "../types/malloy-element";
 import { HasParameter } from "../parameters/has-parameter";
 import { ErrorFactory } from "../error-factory";
-import { Mallobj } from "./mallobj";
+import { Source } from "./source";
 
-export class DefineExplore extends MalloyElement implements DocStatement {
-  elementType = "defineExplore";
+export class DefineSource extends MalloyElement implements DocStatement {
+  elementType = "defineSource";
   readonly parameters?: HasParameter[];
   constructor(
     readonly name: string,
-    readonly mallobj: Mallobj,
+    readonly theSource: Source,
     readonly exported: boolean,
     params?: MalloyElement[]
   ) {
-    super({ explore: mallobj });
+    super({ explore: theSource });
     if (params) {
       this.parameters = [];
       for (const el of params) {
@@ -61,7 +61,7 @@ export class DefineExplore extends MalloyElement implements DocStatement {
     if (doc.modelEntry(this.name)) {
       this.log(`Cannot redefine '${this.name}'`);
     } else {
-      const structDef = this.mallobj.withParameters(this.parameters);
+      const structDef = this.theSource.withParameters(this.parameters);
       if (ErrorFactory.isErrorStructDef(structDef)) {
         return;
       }
@@ -78,7 +78,7 @@ export class DefineExplore extends MalloyElement implements DocStatement {
 }
 
 export class DefineSourceList extends RunList implements DocStatement {
-  constructor(sourceList: DefineExplore[]) {
+  constructor(sourceList: DefineSource[]) {
     super("defineSources", sourceList);
   }
 

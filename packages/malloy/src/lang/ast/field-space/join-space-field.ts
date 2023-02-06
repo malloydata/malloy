@@ -21,11 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ResultSpace } from "../ast-main";
+import { FieldSpace } from "../types/field-space";
+import { Join } from "../query-properties/joins";
+import { StructSpaceField } from "./static-space";
 
-/**
- * Reduce and project queries use a "QuerySpace"
- */
-export class ReduceFieldSpace extends ResultSpace {
-  readonly segmentType = "reduce";
+export class JoinSpaceField extends StructSpaceField {
+  constructor(readonly intoFS: FieldSpace, readonly join: Join) {
+    super(join.structDef());
+  }
 }

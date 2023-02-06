@@ -25,7 +25,7 @@ import { Expr, isJoinOn, StructDef } from "../../../model/malloy_types";
 import { ExpressionDef } from "../types/expression-def";
 import { compressExpr } from "../expressions/utils";
 import { FieldSpace } from "../types/field-space";
-import { Mallobj } from "../elements/mallobj";
+import { Source } from "../elements/source";
 import {
   ListOf,
   MalloyElement,
@@ -42,7 +42,7 @@ export class KeyJoin extends Join {
   elementType = "joinOnKey";
   constructor(
     readonly name: ModelEntryReference,
-    readonly source: Mallobj,
+    readonly source: Source,
     readonly keyExpr: ExpressionDef
   ) {
     super({ name, source, keyExpr });
@@ -104,7 +104,7 @@ export class ExpressionJoin extends Join {
   elementType = "joinOnExpr";
   joinType: ExpressionJoinType = "one";
   private expr?: ExpressionDef;
-  constructor(readonly name: ModelEntryReference, readonly source: Mallobj) {
+  constructor(readonly name: ModelEntryReference, readonly source: Source) {
     super({ name, source });
   }
 

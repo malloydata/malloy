@@ -37,7 +37,8 @@ import {
 import { MalloyElement } from "../ast";
 import { NameSpace } from "../ast/types/name-space";
 import { ModelEntry } from "../ast/types/model-entry";
-import { MalloyTranslator, TranslateResponse } from "../parse-malloy";
+import { MalloyTranslator } from "../parse-malloy";
+import { TranslateResponse } from "../translate-response";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {

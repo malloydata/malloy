@@ -20,20 +20,32 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { ExprValue } from "../types/expr-value";
-import { FieldSpace } from "../types/field-space";
-import { ExpressionDef } from "../types/expression-def";
 
-export class WhenClause extends ExpressionDef {
-  elementType = "when clause";
-  constructor(
-    readonly whenThis: ExpressionDef,
-    readonly thenThis: ExpressionDef
-  ) {
-    super({ whenThis, thenThis });
-  }
+import { Filter } from "../query-properties/filters";
+import { Joins } from "../query-properties/joins";
+import { DeclareFields } from "../query-properties/declare-fields";
+import { FieldListEdit } from "../source-properties/field-list-edit";
+import { Renames } from "../source-properties/renames";
+import { PrimaryKey } from "../source-properties/primary-key";
+import { Turtles } from "../source-properties/turtles";
+import { MalloyElement } from "./malloy-element";
 
-  getExpression(_fs: FieldSpace): ExprValue {
-    throw new Error("expression did something unxpected with 'WHEN'");
-  }
+export type SourceProperty =
+  | Filter
+  | Joins
+  | DeclareFields
+  | FieldListEdit
+  | Renames
+  | PrimaryKey
+  | Turtles;
+export function isSourceProperty(p: MalloyElement): p is SourceProperty {
+  return (
+    p instanceof Filter ||
+    p instanceof Joins ||
+    p instanceof DeclareFields ||
+    p instanceof FieldListEdit ||
+    p instanceof Renames ||
+    p instanceof PrimaryKey ||
+    p instanceof Turtles
+  );
 }

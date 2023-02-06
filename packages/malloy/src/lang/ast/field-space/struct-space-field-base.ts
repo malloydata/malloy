@@ -21,31 +21,23 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { StructDef } from "../../../model/malloy_types";
+import { FieldDef, StructDef } from "../../../model/malloy_types";
+import { FieldSpace } from "../types/field-space";
+import { FieldType } from "../types/field-type";
+import { SpaceField } from "../types/space-field";
 
-import { Mallobj } from "../elements/mallobj";
-import { JSONElement } from "./json-element";
-
-export class JSONStructDef extends Mallobj {
-  elementType = "jsonStructDef";
-  constructor(readonly struct: StructDef) {
+export abstract class StructSpaceFieldBase extends SpaceField {
+  constructor(protected sourceDef: StructDef) {
     super();
   }
 
-  static fromJSON(jsonObj: JSONElement): JSONStructDef | undefined {
-    const obj = jsonObj.value;
-    if (
-      obj &&
-      obj.type === "struct" &&
-      obj.structRelationship &&
-      obj.structSource
-    ) {
-      return new JSONStructDef(obj as StructDef);
-    }
-    return undefined;
+  abstract get fieldSpace(): FieldSpace;
+
+  fieldDef(): FieldDef {
+    return this.sourceDef;
   }
 
-  structDef(): StructDef {
-    return this.struct;
+  type(): FieldType {
+    return { type: "struct" };
   }
 }

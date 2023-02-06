@@ -23,12 +23,12 @@
 
 export { MalloyTranslator } from "./parse-malloy";
 export type {
-  TranslateResponse,
   UpdateData,
   SchemaData,
   URLData,
   SQLBlockData,
 } from "./parse-malloy";
+export type { TranslateResponse } from "./translate-response";
 export { exploreQueryWalkerBuilder } from "./parse-tree-walkers/explore-query-walker";
 export type { ExploreClauseRef } from "./parse-tree-walkers/explore-query-walker";
 export { HighlightType } from "./parse-tree-walkers/document-highlight-walker";

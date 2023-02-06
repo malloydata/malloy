@@ -21,31 +21,32 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  expressionIsAggregate,
-  isFilteredAliasedName,
-  QueryFieldDef,
-} from "../../../model/malloy_types";
+import { ANTLRErrorListener, Token } from "antlr4ts";
+import { MessageLogger, LogMessage } from "./parse-log";
+import { MalloyTranslation } from "./parse-malloy";
 
-import { ResultSpace } from "../ast-main";
+export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
+  constructor(
+    readonly translator: MalloyTranslation,
+    readonly messages: MessageLogger
+  ) {}
 
-export class ProjectFieldSpace extends ResultSpace {
-  readonly segmentType = "project";
-
-  canContain(qd: QueryFieldDef): boolean {
-    if (typeof qd !== "string") {
-      if (isFilteredAliasedName(qd)) {
-        return true;
-      }
-      if (qd.type === "turtle") {
-        this.log("Cannot nest queries in project");
-        return false;
-      }
-      if (expressionIsAggregate(qd.expressionType)) {
-        this.log("Cannot add aggregate measures to project");
-        return false;
-      }
-    }
-    return true;
+  syntaxError(
+    recognizer: unknown,
+    offendingSymbol: Token | undefined,
+    line: number,
+    charPositionInLine: number,
+    msg: string,
+    _e: unknown
+  ): void {
+    const errAt = { line: line - 1, character: charPositionInLine };
+    const range = offendingSymbol
+      ? this.translator.rangeFromToken(offendingSymbol)
+      : { start: errAt, end: errAt };
+    const error: LogMessage = {
+      message: msg,
+      at: { url: this.translator.sourceURL, range },
+    };
+    this.messages.log(error);
   }
 }

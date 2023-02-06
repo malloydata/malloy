@@ -21,12 +21,39 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldSpace } from "../types/field-space";
-import { Join } from "../query-properties/joins";
-import { StructSpaceField } from "../static-space";
+import { IndexSegment, PipeSegment } from "../../../model/malloy_types";
+import {
+  FieldReference,
+  WildcardFieldReference,
+} from "../query-items/field-references";
+import { QuerySpace } from "./query-spaces";
 
-export class JoinSpaceField extends StructSpaceField {
-  constructor(readonly intoFS: FieldSpace, readonly join: Join) {
-    super(join.structDef());
+export class IndexFieldSpace extends QuerySpace {
+  readonly segmentType = "index";
+  fieldList = new Set<string>();
+
+  addReference(ref: FieldReference): void {
+    if (ref.getField(this.exprSpace).found) {
+      this.fieldList.add(ref.refString);
+    }
+  }
+
+  addWild(wild: WildcardFieldReference): void {
+    this.fieldList.add(wild.refString);
+  }
+
+  getPipeSegment(refineIndex?: PipeSegment): IndexSegment {
+    if (refineIndex && refineIndex.fields) {
+      for (const exists of refineIndex.fields) {
+        if (typeof exists == "string") {
+          this.fieldList.add(exists);
+        }
+      }
+    }
+    this.isComplete();
+    return {
+      type: "index",
+      fields: Array.from(this.fieldList.values()),
+    };
   }
 }

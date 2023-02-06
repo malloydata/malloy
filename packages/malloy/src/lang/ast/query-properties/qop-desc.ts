@@ -39,7 +39,8 @@ import { ProjectStatement } from "./project-statement";
 import { opOutputStruct } from "../struct-utils";
 import { QueryProperty } from "../types/query-property";
 
-import { DynamicSpace, isNestedQuery } from "../ast-main";
+import { isNestedQuery } from "./nest";
+import { StaticSpace } from "../field-space/static-space";
 
 type QOPType = "grouping" | "aggregate" | "project" | "index";
 
@@ -130,7 +131,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
     return {
       segment,
       outputSpace: () =>
-        new DynamicSpace(opOutputStruct(this, inputFS.structDef(), segment)),
+        new StaticSpace(opOutputStruct(this, inputFS.structDef(), segment)),
     };
   }
 }

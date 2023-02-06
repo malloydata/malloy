@@ -29,26 +29,26 @@ import {
 } from "../../../model/malloy_types";
 
 import { ExploreDesc } from "../types/explore-desc";
-import { FieldListEdit } from "../explore-properties/field-list-edit";
-import { PrimaryKey } from "../explore-properties/primary-key";
-import { Renames } from "../explore-properties/renames";
-import { Turtles } from "../explore-properties/turtles";
+import { FieldListEdit } from "../source-properties/field-list-edit";
+import { PrimaryKey } from "../source-properties/primary-key";
+import { Renames } from "../source-properties/renames";
+import { Turtles } from "../source-properties/turtles";
 import { HasParameter } from "../parameters/has-parameter";
-import { Mallobj } from "./mallobj";
+import { Source } from "./source";
 import { DeclareFields } from "../query-properties/declare-fields";
 import { Filter } from "../query-properties/filters";
 import { Joins } from "../query-properties/joins";
 import { ExploreField } from "../types/explore-field";
 
-import { DynamicSpace } from "../ast-main";
+import { RefinedSpace } from "../field-space/refined-space";
 
 /**
- * A Mallobj made from a source and a set of refinements
+ * A Source made from a source reference and a set of refinements
  */
-export class RefinedExplore extends Mallobj {
-  elementType = "refinedExplore";
+export class RefinedSource extends Source {
+  elementType = "refinedSource";
 
-  constructor(readonly source: Mallobj, readonly refinement: ExploreDesc) {
+  constructor(readonly source: Source, readonly refinement: ExploreDesc) {
     super({ source, refinement });
   }
 
@@ -94,7 +94,7 @@ export class RefinedExplore extends Mallobj {
     if (primaryKey) {
       from.primaryKey = primaryKey.field.name;
     }
-    const fs = DynamicSpace.filteredFrom(from, fieldListEdit);
+    const fs = RefinedSpace.filteredFrom(from, fieldListEdit);
     fs.addField(...fields);
     if (pList) {
       fs.addParameters(pList);

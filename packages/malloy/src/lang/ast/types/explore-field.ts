@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { RenameField } from "../explore-properties/renames";
+import { RenameField } from "../source-properties/renames";
 import { FieldDecl, isFieldDecl } from "./field-decl";
 import { MalloyElement } from "./malloy-element";
 

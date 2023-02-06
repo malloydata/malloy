@@ -21,40 +21,27 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Dialect } from "../../dialect/dialect";
-import { getDialect } from "../../dialect/dialect_map";
-import { FieldDef, isTurtleDef, StructDef } from "../../model/malloy_types";
+import { Dialect } from "../../../dialect/dialect";
+import { getDialect } from "../../../dialect/dialect_map";
+import { FieldDef, isTurtleDef, StructDef } from "../../../model/malloy_types";
 
-import { SpaceEntry } from "./types/space-entry";
-import { FieldMap } from "./types/field-map";
-import { LookupResult } from "./types/lookup-result";
-import { FieldName, FieldSpace } from "./types/field-space";
-import { ColumnSpaceField } from "./space-fields/column-space-field";
-import { QueryFieldStruct } from "./space-fields/query-field-struct";
-import { DefinedParameter } from "./space-parameters/defined-parameter";
-import { FieldType } from "./types/field-type";
-import { SpaceField } from "./types/space-field";
+import { SpaceEntry } from "../types/space-entry";
+import { FieldMap } from "../types/field-map";
+import { LookupResult } from "../types/lookup-result";
+import { FieldName, FieldSpace } from "../types/field-space";
+import { DefinedParameter } from "../types/space-param";
+import { SpaceField } from "../types/space-field";
+import { StructSpaceFieldBase } from "./struct-space-field-base";
+import { ColumnSpaceField } from "./column-space-field";
+import { QueryFieldStruct } from "./query-field-struct";
 
-// TODO(maden): These two classes are intertwined, we may want to look into decoupling them.
-export class StructSpaceField extends SpaceField {
-  protected space?: FieldSpace;
-  constructor(protected sourceDef: StructDef) {
-    super();
+export class StructSpaceField extends StructSpaceFieldBase {
+  constructor(def: StructDef) {
+    super(def);
   }
 
   get fieldSpace(): FieldSpace {
-    if (!this.space) {
-      this.space = new StaticSpace(this.sourceDef);
-    }
-    return this.space;
-  }
-
-  fieldDef(): FieldDef {
-    return this.sourceDef;
-  }
-
-  type(): FieldType {
-    return { type: "struct" };
+    return new StaticSpace(this.sourceDef);
   }
 }
 
@@ -79,13 +66,12 @@ export class StaticSpace implements FieldSpace {
     }
   }
 
-  fromFieldDef(from: FieldDef): SpaceField {
+  defToSpaceField(from: FieldDef): SpaceField {
     if (from.type === "struct") {
       return new StructSpaceField(from);
     } else if (isTurtleDef(from)) {
       return new QueryFieldStruct(this, from);
     }
-    // TODO field has a filter and needs to be a filteredalias
     return new ColumnSpaceField(from);
   }
 
@@ -94,7 +80,7 @@ export class StaticSpace implements FieldSpace {
       this.memoMap = {};
       for (const f of this.fromStruct.fields) {
         const name = f.as || f.name;
-        this.memoMap[name] = this.fromFieldDef(f);
+        this.memoMap[name] = this.defToSpaceField(f);
       }
       if (this.fromStruct.parameters) {
         for (const [paramName, paramDef] of Object.entries(
@@ -169,7 +155,7 @@ export class StaticSpace implements FieldSpace {
       if (definition) {
         head.addReference({
           type:
-            found instanceof StructSpaceField
+            found instanceof StructSpaceFieldBase
               ? "joinReference"
               : "fieldReference",
           definition,
@@ -179,7 +165,7 @@ export class StaticSpace implements FieldSpace {
       }
     }
     if (rest.length) {
-      if (found instanceof StructSpaceField) {
+      if (found instanceof StructSpaceFieldBase) {
         return found.fieldSpace.lookup(rest);
       }
       return {

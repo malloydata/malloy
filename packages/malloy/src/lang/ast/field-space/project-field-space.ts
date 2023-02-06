@@ -21,4 +21,31 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type StageFieldType = "turtle";
+import {
+  expressionIsAggregate,
+  isFilteredAliasedName,
+  QueryFieldDef,
+} from "../../../model/malloy_types";
+
+import { QuerySpace } from "./query-spaces";
+
+export class ProjectFieldSpace extends QuerySpace {
+  readonly segmentType = "project";
+
+  canContain(qd: QueryFieldDef): boolean {
+    if (typeof qd !== "string") {
+      if (isFilteredAliasedName(qd)) {
+        return true;
+      }
+      if (qd.type === "turtle") {
+        this.log("Cannot nest queries in project");
+        return false;
+      }
+      if (expressionIsAggregate(qd.expressionType)) {
+        this.log("Cannot add aggregate measures to project");
+        return false;
+      }
+    }
+    return true;
+  }
+}

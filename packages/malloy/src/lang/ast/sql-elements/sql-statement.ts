@@ -24,7 +24,7 @@
 import { SQLBlockSource } from "../../../model/malloy_types";
 import { makeSQLBlock } from "../../../model/sql_block";
 
-import { ModelDataRequest } from "../../parse-malloy";
+import { ModelDataRequest } from "../../translate-response";
 import { DocStatement, Document, MalloyElement } from "../types/malloy-element";
 import { SQLString } from "./sql-string";
 

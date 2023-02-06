@@ -39,21 +39,20 @@ import { Joins } from "../query-properties/joins";
 import { Limit } from "../query-properties/limit";
 import { Ordering } from "../query-properties/ordering";
 import { Top } from "../query-properties/top";
-import { ReduceFieldSpace } from "../result-spaces/reduce-field-space";
 import { QueryProperty } from "../types/query-property";
 import { Executor } from "../types/executor";
 import { Nests } from "../query-properties/nests";
-
+import { isNestedQuery } from "../query-properties/nest";
 import {
-  DynamicSpace,
-  isNestedQuery,
+  QueryInputSpace,
   QuerySpace,
-  ResultSpace,
-} from "../ast-main";
+  ReduceFieldSpace,
+} from "../field-space/query-spaces";
+import { DynamicSpace } from "../field-space/dynamic-space";
 
 export class ReduceExecutor implements Executor {
-  inputFS: QuerySpace;
-  resultFS: ResultSpace;
+  inputFS: QueryInputSpace;
+  resultFS: QuerySpace;
   filters: FilterExpression[] = [];
   order?: Top | Ordering;
   limit?: number;
@@ -64,7 +63,7 @@ export class ReduceExecutor implements Executor {
     this.inputFS = this.resultFS.exprSpace;
   }
 
-  getResultSpace(fs: FieldSpace): ResultSpace {
+  getResultSpace(fs: FieldSpace): QuerySpace {
     return new ReduceFieldSpace(fs);
   }
 

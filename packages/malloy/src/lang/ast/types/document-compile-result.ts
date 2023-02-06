@@ -27,7 +27,7 @@ import {
   SQLBlockStructDef,
 } from "../../../model/malloy_types";
 
-import { ModelDataRequest } from "../../parse-malloy";
+import { ModelDataRequest } from "../../translate-response";
 
 export interface DocumentCompileResult {
   modelDef: ModelDef;

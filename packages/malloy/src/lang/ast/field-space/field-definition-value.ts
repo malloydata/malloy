@@ -21,19 +21,40 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { MalloyElement } from "../types/malloy-element";
+import * as model from "../../../model/malloy_types";
+import { FieldDeclaration } from "../query-items/field-declaration";
+import { FieldSpace } from "../types/field-space";
+import { SpaceField } from "../types/space-field";
+import { FieldType } from "../types/field-type";
 
-export class JSONElement extends MalloyElement {
-  elementType = "jsonElement";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  readonly value: any;
-  constructor(jsonSrc: string) {
+export class FieldDefinitionValue extends SpaceField {
+  fieldName: string;
+  defType?: FieldType;
+  constructor(readonly space: FieldSpace, readonly exprDef: FieldDeclaration) {
     super();
-    try {
-      this.value = JSON.parse(jsonSrc);
-    } catch (SyntaxError) {
-      this.log("JSON syntax error");
-      this.value = undefined;
+    this.fieldName = exprDef.defineName;
+  }
+
+  get name(): string {
+    return this.fieldName;
+  }
+
+  fieldDef(): model.FieldDef {
+    const def = this.exprDef.fieldDef(this.space, this.name);
+    this.defType = this.fieldTypeFromFieldDef(def);
+    return def;
+  }
+
+  getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef {
+    const def = this.exprDef.queryFieldDef(fs, this.name);
+    this.defType = this.fieldTypeFromFieldDef(def);
+    return def;
+  }
+
+  type(): FieldType {
+    if (this.defType) {
+      return this.defType;
     }
+    return this.fieldTypeFromFieldDef(this.fieldDef());
   }
 }

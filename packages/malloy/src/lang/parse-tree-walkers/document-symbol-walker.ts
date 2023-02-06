@@ -70,16 +70,16 @@ class DocumentSymbolWalker implements MalloyParserListener {
     });
   }
 
-  enterExploreDefinition(pcx: parser.ExploreDefinitionContext) {
+  enterSourceDefinition(pcx: parser.SourceDefinitionContext) {
     this.scopes.push({
       range: this.translator.rangeFromContext(pcx),
-      name: pcx.exploreNameDef().id().text,
+      name: pcx.sourceNameDef().id().text,
       type: "explore",
       children: [],
     });
   }
 
-  exitExploreDefinition(_pcx: parser.ExploreDefinitionContext) {
+  exitSourceDefinition(_pcx: parser.SourceDefinitionContext) {
     const scope = this.popScope();
     if (scope) {
       this.symbols.push(scope);

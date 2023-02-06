@@ -22,7 +22,7 @@
  */
 
 import { NamedQuery } from "../../../model/malloy_types";
-import { ModelDataRequest } from "../../parse-malloy";
+import { ModelDataRequest } from "../../translate-response";
 
 import {
   DocStatement,

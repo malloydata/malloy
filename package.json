@@ -20,6 +20,7 @@
     "clean": "npm run -w @malloydata/malloy clean && tsc --build --clean",
     "build": "npm run -w @malloydata/malloy build-parser && tsc --build",
     "lint": "eslint --quiet '**/*.ts{,x}'",
+    "lint-fix": "eslint --quiet '**/*.ts{,x}' --fix",
     "test": "jest --runInBand",
     "test-bigquery": "MALLOY_DATABASE=bigquery jest --runInBand",
     "test-postgres": "MALLOY_DATABASE=postgres jest --runInBand",

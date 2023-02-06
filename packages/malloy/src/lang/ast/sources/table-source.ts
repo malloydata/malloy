@@ -23,9 +23,9 @@
 
 import { StructDef } from "../../../model/malloy_types";
 import { ErrorFactory } from "../error-factory";
-import { Mallobj } from "../elements/mallobj";
+import { Source } from "../elements/source";
 
-export class TableSource extends Mallobj {
+export class TableSource extends Source {
   elementType = "tableSource";
   constructor(readonly name: string) {
     super();

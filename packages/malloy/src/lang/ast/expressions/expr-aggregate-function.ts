@@ -31,7 +31,7 @@ import { FieldValueType } from "../types/field-value-type";
 import { FieldReference } from "../query-items/field-references";
 import { FieldSpace } from "../types/field-space";
 import { FT } from "../fragtype-utils";
-import { StructSpaceField } from "../static-space";
+import { StructSpaceFieldBase } from "../field-space/struct-space-field-base";
 import { ExpressionDef } from "../types/expression-def";
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
@@ -67,7 +67,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           };
           structPath = this.source.sourceString;
         } else {
-          if (!(sourceFoot instanceof StructSpaceField)) {
+          if (!(sourceFoot instanceof StructSpaceFieldBase)) {
             this.log(`Aggregate source cannot be a ${footType.type}`);
             return errorFor(`Aggregate source cannot be a ${footType.type}`);
           }

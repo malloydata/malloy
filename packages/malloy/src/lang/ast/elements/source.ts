@@ -21,21 +21,35 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Parameter } from "../../../model/malloy_types";
+import { StructDef, StructRef } from "../../../model/malloy_types";
+import { MalloyElement } from "../types/malloy-element";
+import { HasParameter } from "../parameters/has-parameter";
 
-import { FieldType } from "../types/field-type";
-import { SpaceParam } from "../types/space-param";
+/**
+ * A "Source" is a thing which you can run queries against. The main
+ * function of a source is to represent an eventual StructDef
+ */
+export abstract class Source extends MalloyElement {
+  abstract structDef(): StructDef;
 
-export class DefinedParameter extends SpaceParam {
-  constructor(readonly paramDef: Parameter) {
-    super();
+  structRef(): StructRef {
+    return this.structDef();
   }
 
-  parameter(): Parameter {
-    return this.paramDef;
-  }
-
-  type(): FieldType {
-    return { type: this.paramDef.type };
+  withParameters(pList: HasParameter[] | undefined): StructDef {
+    const before = this.structDef();
+    // TODO name collisions are flagged where?
+    if (pList) {
+      const parameters = { ...(before.parameters || {}) };
+      for (const hasP of pList) {
+        const pVal = hasP.parameter();
+        parameters[pVal.name] = pVal;
+      }
+      return {
+        ...before,
+        parameters,
+      };
+    }
+    return before;
   }
 }

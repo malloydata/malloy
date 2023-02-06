@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { isNestedQuery, NestDefinition } from "../ast-main";
-import { NestReference } from "../nesting/nest-reference";
+import { isNestedQuery, NestDefinition } from "../query-properties/nest";
+import { NestReference } from "../query-properties/nest-reference";
 import { MalloyElement } from "./malloy-element";
 import { Aggregate } from "../query-properties/aggregate";
 import { DeclareFields } from "../query-properties/declare-fields";

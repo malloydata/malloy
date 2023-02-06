@@ -21,23 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Parameter } from "../../../model/malloy_types";
+import { TurtleDecl } from "../query-properties/nest";
+import { ListOf } from "../types/malloy-element";
 
-import { FieldType } from "../types/field-type";
-import { HasParameter } from "../parameters/has-parameter";
-import { SpaceParam } from "../types/space-param";
-
-export class AbstractParameter extends SpaceParam {
-  constructor(readonly astParam: HasParameter) {
-    super();
-  }
-
-  parameter(): Parameter {
-    return this.astParam.parameter();
-  }
-
-  type(): FieldType {
-    const type = this.astParam.type || "unknown";
-    return { type };
+export class Turtles extends ListOf<TurtleDecl> {
+  constructor(turtles: TurtleDecl[]) {
+    super("turtleDeclarationList", turtles);
   }
 }

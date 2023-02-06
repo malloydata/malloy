@@ -29,7 +29,6 @@ import {
 } from "../../../model/malloy_types";
 
 import { Equality } from "../types/equality";
-import { ExprValue } from "../types/expr-value";
 import { ExpressionValueType } from "../types/expression-value-type";
 import { FieldValueType } from "../types/field-value-type";
 
@@ -76,25 +75,6 @@ export function compose(
   const rightSpace = right.length === 1 && opAlpha ? " " : "";
   const newOp = leftSpace + op + rightSpace;
   return [...term(left), newOp, ...term(right)];
-}
-
-function nullCompare(
-  left: ExprValue,
-  op: string,
-  right: ExprValue
-): Expr | undefined {
-  const not = op === "!=" || op === "!~";
-  if (left.dataType === "null" || right.dataType === "null") {
-    const maybeNot = not ? " NOT" : "";
-    if (left.dataType !== "null") {
-      return [...left.value, ` IS${maybeNot} NULL`];
-    }
-    if (right.dataType !== "null") {
-      return [...right.value, `IS${maybeNot} NULL`];
-    }
-    return [not ? "false" : "true"];
-  }
-  return undefined;
 }
 
 export function compressExpr(expr: Expr): Expr {
