@@ -28,7 +28,7 @@ import {
   ParserRuleContext,
   CodePointCharStream,
 } from "antlr4ts";
-import type { ParseTree } from "antlr4ts/tree";
+import { ParseTree } from "antlr4ts/tree";
 import {
   Query,
   NamedStructDefs,

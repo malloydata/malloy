@@ -23,7 +23,7 @@
 
 import { CommonTokenStream } from "antlr4ts";
 import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
-import type { ParseTree } from "antlr4ts/tree";
+import { ParseTree } from "antlr4ts/tree";
 import * as parser from "../lib/Malloy/MalloyParser";
 import { MalloyParserListener } from "../lib/Malloy/MalloyParserListener";
 import { DocumentRange } from "../../model/malloy_types";
