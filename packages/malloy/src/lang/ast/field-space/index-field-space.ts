@@ -33,7 +33,7 @@ export class IndexFieldSpace extends QuerySpace {
   fieldList = new Set<string>();
 
   addReference(ref: FieldReference): void {
-    if (ref.getField(this).found) {
+    if (ref.getField(this.exprSpace).found) {
       this.fieldList.add(ref.refString);
     }
   }
