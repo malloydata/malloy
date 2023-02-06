@@ -22,7 +22,7 @@
  */
 
 import { ParserRuleContext } from "antlr4ts";
-import type { ParseTree } from "antlr4ts/tree";
+import { ParseTree } from "antlr4ts/tree";
 import { AbstractParseTreeVisitor } from "antlr4ts/tree/AbstractParseTreeVisitor";
 import { MalloyParserVisitor } from "./lib/Malloy/MalloyParserVisitor";
 import * as parse from "./lib/Malloy/MalloyParser";
