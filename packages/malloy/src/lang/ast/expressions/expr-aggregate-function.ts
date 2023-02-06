@@ -27,7 +27,7 @@ import {
 } from "../../../model/malloy_types";
 import { errorFor } from "../ast-utils";
 import { ExprValue } from "../types/expr-value";
-import { FieldValueType } from "../types/field-value-type";
+import { FieldValueType } from "../types/type-desc";
 import { FieldReference } from "../query-items/field-references";
 import { FieldSpace } from "../types/field-space";
 import { FT } from "../fragtype-utils";

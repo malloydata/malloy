@@ -23,7 +23,7 @@
 
 import { ExpressionType } from "../../../model/malloy_types";
 
-import { FieldValueType } from "./field-value-type";
+import { FieldValueType } from "./type-desc";
 
 export interface FieldType {
   type: FieldValueType;

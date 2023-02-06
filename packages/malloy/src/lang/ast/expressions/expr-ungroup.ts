@@ -28,7 +28,7 @@ import {
 import { QueryInputSpace } from "../field-space/query-spaces";
 import { errorFor } from "../ast-utils";
 import { ExprValue } from "../types/expr-value";
-import { FieldValueType } from "../types/field-value-type";
+import { FieldValueType } from "../types/type-desc";
 import { DefSpace } from "../query-items/field-declaration";
 import { FieldName, FieldSpace } from "../types/field-space";
 import { FT } from "../fragtype-utils";
