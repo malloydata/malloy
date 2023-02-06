@@ -421,15 +421,15 @@ export class Document extends MalloyElement implements NameSpace {
   }
 
   defineSQL(sql: SQLBlockStructDef, name?: string): boolean {
-    const ret = { ...sql, as: `$${this.sqlBlocks.length}` };
+    const entry = { ...sql, as: `$${this.sqlBlocks.length}` };
     if (name) {
       if (this.getEntry(name)) {
         return false;
       }
-      ret.as = name;
-      this.setEntry(name, { entry: ret, sqlType: true });
+      entry.as = name;
+      this.setEntry(name, { entry });
     }
-    this.sqlBlocks.push(ret);
+    this.sqlBlocks.push(entry);
     return true;
   }
 

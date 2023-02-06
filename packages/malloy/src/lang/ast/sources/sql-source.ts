@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { StructDef, StructRef } from "../../../model/malloy_types";
+import { isSQLBlock, StructDef, StructRef } from "../../../model/malloy_types";
 import { NamedSource } from "./named-source";
 
 export class SQLSource extends NamedSource {
@@ -39,7 +39,7 @@ export class SQLSource extends NamedSource {
     if (entry.type === "query") {
       this.log(`Cannot use 'from_sql()' to explore query '${this.refName}'`);
       return;
-    } else if (!modelEnt.sqlType) {
+    } else if (!isSQLBlock(entry)) {
       this.log(`Cannot use 'from_sql()' to explore '${this.refName}'`);
       return;
     }
