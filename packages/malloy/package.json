@@ -13,7 +13,7 @@
     "test": "jest --config=../../jest.config.js",
     "build-parser": "node src/lang/grammar/build_parser.js",
     "testLang": "npm run test --testPathPattern=packages/malloy/src/lang",
-    "clean": "rm -rf src/lang/lib",
+    "clean": "tsc --build --clean && rm -rf src/lang/lib dist",
     "build": "npm run build-parser && tsc --build",
     "malloyc": "ts-node ../../scripts/malloy-to-json",
     "prepublishOnly": "npm run clean && npm run build"
