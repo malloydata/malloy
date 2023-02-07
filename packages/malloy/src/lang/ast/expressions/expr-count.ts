@@ -23,8 +23,8 @@
 
 import { AggregateFragment } from "../../../model/malloy_types";
 
-import { ExprValue } from "../types/expr-value";
 import { FieldReference } from "../query-items/field-references";
+import { ExprValue } from "../types/expr-value";
 import { FieldSpace } from "../types/field-space";
 import { ExprAggregateFunction } from "./expr-aggregate-function";
 
@@ -32,7 +32,7 @@ export class ExprCount extends ExprAggregateFunction {
   elementType = "count";
   constructor(readonly source?: FieldReference) {
     super("count");
-    this.has({ source });
+    this.has({ "source": source });
   }
 
   defaultFieldName(): string | undefined {

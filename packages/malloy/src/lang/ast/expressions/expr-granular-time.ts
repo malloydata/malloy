@@ -22,21 +22,21 @@
  */
 
 import {
-  TimestampUnit,
   isDateUnit,
   isTimeFieldType,
-  mkExpr
+  mkExpr,
+  TimestampUnit
 } from "../../../model/malloy_types";
 
 import { errorFor } from "../ast-utils";
-import { FieldSpace } from "../types/field-space";
-import { ExprTime } from "./expr-time";
 import { FT } from "../fragtype-utils";
-import { Range } from "./range";
 import { timeOffset } from "../time-utils";
 import { ExprValue } from "../types/expr-value";
 import { ExpressionDef } from "../types/expression-def";
+import { FieldSpace } from "../types/field-space";
 import { GranularResult } from "../types/granular-result";
+import { ExprTime } from "./expr-time";
+import { Range } from "./range";
 
 /**
  * GranularTime is a moment in time which ALSO has a "granularity"
@@ -54,7 +54,7 @@ export class ExprGranularTime extends ExpressionDef {
     readonly units: TimestampUnit,
     readonly truncate: boolean
   ) {
-    super({ expr });
+    super({ "expr": expr });
   }
 
   granular(): boolean {
