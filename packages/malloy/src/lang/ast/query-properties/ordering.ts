@@ -22,7 +22,8 @@
  */
 
 import { OrderBy as ModelOrderBy } from "../../../model/malloy_types";
-import { FieldName, FieldSpace } from "../types/field-space";
+import { QuerySpace } from "../field-space/query-spaces";
+import { FieldName } from "../types/field-space";
 import { ListOf, MalloyElement } from "../types/malloy-element";
 
 export class OrderBy extends MalloyElement {
@@ -41,14 +42,18 @@ export class OrderBy extends MalloyElement {
     return typeof this.field === "number" ? this.field : this.field.refString;
   }
 
-  getOrderBy(_fs: FieldSpace): ModelOrderBy {
-    // TODO jump-to-definition `fs` cannot currently `lookup` fields in the output space
-    // if (this.field instanceof FieldName) {
-    //   const entry = this.field.getField(_fs);
-    //   if (entry.error) {
-    //     this.field.log(entry.error);
-    //   }
-    // }
+  getOrderBy(qfs: QuerySpace): ModelOrderBy {
+    if (this.field instanceof FieldName) {
+      const entry = this.field.getField(qfs);
+      if (entry.error) {
+        this.field.log(entry.error);
+      }
+      if (entry.found && entry.found.typeDesc().expressionType != "scalar") {
+        this.field.log(
+          "top: by '${this.field.refString}' must be an aggregate"
+        );
+      }
+    }
     const orderElement: ModelOrderBy = { field: this.modelField };
     if (this.dir) {
       orderElement.dir = this.dir;
@@ -62,7 +67,7 @@ export class Ordering extends ListOf<OrderBy> {
     super("ordering", list);
   }
 
-  getOrderBy(fs: FieldSpace): ModelOrderBy[] {
+  getOrderBy(fs: QuerySpace): ModelOrderBy[] {
     return this.list.map((el) => el.getOrderBy(fs));
   }
 }

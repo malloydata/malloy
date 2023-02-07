@@ -135,7 +135,7 @@ export class ReduceExecutor implements Executor {
       }
     }
     if (this.order instanceof Ordering) {
-      to.orderBy = this.order.getOrderBy(this.inputFS);
+      to.orderBy = this.order.getOrderBy(this.resultFS);
     }
 
     const oldFilters = from?.filterList || [];

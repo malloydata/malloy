@@ -48,11 +48,14 @@ export class Top extends MalloyElement {
         if (entry.error) {
           this.by.log(entry.error);
         }
+        if (entry.found && entry.found.typeDesc().expressionType != "scalar") {
+          this.by.log("top: by '${this.by.refString}' must be an aggregate");
+        }
         return { by: "name", name: this.by.refString };
       } else {
         const byExpr = this.by.getExpression(qfs.exprSpace);
         if (expressionIsAggregate(byExpr.expressionType)) {
-          this.log("top by expression must be an aggregate");
+          this.log("top: by expression must be an aggregate");
         }
         return { by: "expression", e: compressExpr(byExpr.value) };
       }
