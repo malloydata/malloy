@@ -110,7 +110,7 @@ export class ExprDuration extends ExpressionDef {
   elementType = "duration";
   legalChildTypes = [FT.timestampT, FT.dateT];
   constructor(readonly n: ExpressionDef, readonly timeframe: TimestampUnit) {
-    super({ n });
+    super({ "n": n });
   }
 
   apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {

@@ -64,7 +64,7 @@ export function compose(
 export function compressExpr(expr: Expr): Expr {
   // compress all adjacent strings
   const compressValue: Array<string | Fragment> = [];
-  let buildString;
+  let buildString: string | undefined;
   for (const fragment of expr.flat()) {
     if (typeof fragment === "string") {
       buildString = buildString ? buildString + fragment : fragment;

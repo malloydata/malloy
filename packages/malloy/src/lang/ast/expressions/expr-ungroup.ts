@@ -21,18 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import {
-  UngroupFragment,
-  expressionIsAggregate
+  expressionIsAggregate,
+  UngroupFragment
 } from "../../../model/malloy_types";
 
-import { QueryInputSpace } from "../field-space/query-spaces";
 import { errorFor } from "../ast-utils";
-import { ExprValue } from "../types/expr-value";
-import { FieldValueType } from "../types/type-desc";
-import { DefSpace } from "../query-items/field-declaration";
-import { FieldName, FieldSpace } from "../types/field-space";
+import { QueryInputSpace } from "../field-space/query-spaces";
 import { FT } from "../fragtype-utils";
+import { DefSpace } from "../query-items/field-declaration";
+import { ExprValue } from "../types/expr-value";
 import { ExpressionDef } from "../types/expression-def";
+import { FieldName, FieldSpace } from "../types/field-space";
+import { FieldValueType } from "../types/type-desc";
 
 export class ExprUngroup extends ExpressionDef {
   legalChildTypes = FT.anyAtomicT;
@@ -42,7 +42,7 @@ export class ExprUngroup extends ExpressionDef {
     readonly expr: ExpressionDef,
     readonly fields: FieldName[]
   ) {
-    super({ expr, fields });
+    super({ "expr": expr, "fields": fields });
   }
 
   returns(_forExpression: ExprValue): FieldValueType {

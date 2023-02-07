@@ -23,17 +23,17 @@
 import { expressionIsCalculation } from "../../../model/malloy_types";
 
 import { errorFor } from "../ast-utils";
-import { ExprValue } from "../types/expr-value";
-import { FieldSpace } from "../types/field-space";
 import { FT } from "../fragtype-utils";
 import { Filter } from "../query-properties/filters";
+import { ExprValue } from "../types/expr-value";
 import { ExpressionDef } from "../types/expression-def";
+import { FieldSpace } from "../types/field-space";
 
 export class ExprFilter extends ExpressionDef {
   elementType = "filtered expression";
   legalChildTypes = FT.anyAtomicT;
   constructor(readonly expr: ExpressionDef, readonly filter: Filter) {
-    super({ expr, filter });
+    super({ "expr": expr, "filter": filter });
   }
 
   getExpression(fs: FieldSpace): ExprValue {

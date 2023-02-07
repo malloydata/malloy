@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Expr, StructDef, isJoinOn } from "../../../model/malloy_types";
-import { ExpressionDef } from "../types/expression-def";
-import { compressExpr } from "../expressions/utils";
-import { FieldSpace } from "../types/field-space";
+import { Expr, isJoinOn, StructDef } from "../../../model/malloy_types";
 import { Source } from "../elements/source";
+import { compressExpr } from "../expressions/utils";
+import { ExpressionDef } from "../types/expression-def";
+import { FieldSpace } from "../types/field-space";
 import {
   ListOf,
   MalloyElement,
@@ -45,7 +45,7 @@ export class KeyJoin extends Join {
     readonly source: Source,
     readonly keyExpr: ExpressionDef
   ) {
-    super({ name, source, keyExpr });
+    super({ "name": name, "source": source, "keyExpr": keyExpr });
   }
 
   structDef(): StructDef {
@@ -108,7 +108,7 @@ export class ExpressionJoin extends Join {
   joinType: ExpressionJoinType = "one";
   private expr?: ExpressionDef;
   constructor(readonly name: ModelEntryReference, readonly source: Source) {
-    super({ name, source });
+    super({ "name": name, "source": source });
   }
 
   set joinOn(joinExpr: ExpressionDef | undefined) {

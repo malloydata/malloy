@@ -28,15 +28,15 @@ import {
 } from "../../../model/malloy_types";
 
 import { ExprValue } from "../types/expr-value";
-import { FieldValueType } from "../types/type-desc";
-import { FieldSpace } from "../types/field-space";
 import { ExpressionDef } from "../types/expression-def";
+import { FieldSpace } from "../types/field-space";
+import { FieldValueType } from "../types/type-desc";
 import { compressExpr } from "./utils";
 
 export class ExprFunc extends ExpressionDef {
   elementType = "function call()";
   constructor(readonly name: string, readonly args: ExpressionDef[]) {
-    super({ args });
+    super({ "args": args });
   }
 
   getExpression(fs: FieldSpace): ExprValue {

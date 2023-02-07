@@ -23,19 +23,19 @@
 
 import { Query } from "../../../model/malloy_types";
 
-import { ErrorFactory } from "../error-factory";
-import { ModelEntryReference } from "../types/malloy-element";
 import { PipelineDesc } from "../elements/pipeline-desc";
+import { ErrorFactory } from "../error-factory";
+import { StaticSpace } from "../field-space/static-space";
+import { ModelEntryReference } from "../types/malloy-element";
 import { QueryComp } from "../types/query-comp";
 import { QueryHeadStruct } from "./query-head-struct";
-import { StaticSpace } from "../field-space/static-space";
 
 export class ExistingQuery extends PipelineDesc {
   _head?: ModelEntryReference;
 
   set head(head: ModelEntryReference | undefined) {
     this._head = head;
-    this.has({ head });
+    this.has({ "head": head });
   }
 
   get head(): ModelEntryReference | undefined {
@@ -63,7 +63,7 @@ export class ExistingQuery extends PipelineDesc {
       return oops();
     }
     const queryHead = new QueryHeadStruct(seedQuery.structRef);
-    this.has({ queryHead });
+    this.has({ "queryHead": queryHead });
     const exploreStruct = queryHead.structDef();
     const exploreFS = new StaticSpace(exploreStruct);
     const sourcePipe = this.refinePipeline(exploreFS, seedQuery);

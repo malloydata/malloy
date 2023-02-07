@@ -24,17 +24,17 @@
 import { Dialect } from "../../../dialect/dialect";
 import {
   FieldTypeDef,
-  StructDef,
-  isAtomicFieldType
+  isAtomicFieldType,
+  StructDef
 } from "../../../model/malloy_types";
 
-import { LookupResult } from "../types/lookup-result";
-import { ExpressionDef } from "../types/expression-def";
 import { compressExpr } from "../expressions/utils";
-import { FieldName, FieldSpace } from "../types/field-space";
 import { FT } from "../fragtype-utils";
-import { MalloyElement } from "../types/malloy-element";
+import { ExpressionDef } from "../types/expression-def";
+import { FieldName, FieldSpace } from "../types/field-space";
 import { isGranularResult } from "../types/granular-result";
+import { LookupResult } from "../types/lookup-result";
+import { MalloyElement } from "../types/malloy-element";
 
 export class FieldDeclaration extends MalloyElement {
   elementType = "fieldDeclaration";
@@ -45,7 +45,7 @@ export class FieldDeclaration extends MalloyElement {
     readonly defineName: string,
     readonly exprSrc?: string
   ) {
-    super({ expr });
+    super({ "expr": expr });
   }
 
   fieldDef(fs: FieldSpace, exprName: string): FieldTypeDef {

@@ -23,13 +23,13 @@
 import { errorFor } from "../ast-utils";
 import { Comparison } from "../types/comparison";
 import { ExprValue } from "../types/expr-value";
-import { FieldSpace } from "../types/field-space";
 import { ExpressionDef } from "../types/expression-def";
+import { FieldSpace } from "../types/field-space";
 
 export class PartialCompare extends ExpressionDef {
   elementType = "<=> a";
   constructor(readonly op: Comparison, readonly right: ExpressionDef) {
-    super({ right });
+    super({ "right": right });
   }
 
   granular(): boolean {

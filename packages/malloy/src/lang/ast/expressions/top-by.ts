@@ -21,9 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { By, expressionIsAggregate } from "../../../model/malloy_types";
+
+import { ExpressionDef } from "../types/expression-def";
 import { FieldSpace } from "../types/field-space";
 import { MalloyElement } from "../types/malloy-element";
-import { ExpressionDef } from "../types/expression-def";
 import { compressExpr } from "./utils";
 
 export class TopBy extends MalloyElement {
@@ -31,7 +32,7 @@ export class TopBy extends MalloyElement {
   constructor(readonly by: string | ExpressionDef) {
     super();
     if (by instanceof ExpressionDef) {
-      this.has({ by });
+      this.has({ "by": by });
     }
   }
 

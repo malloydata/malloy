@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { FieldReference } from "../query-items/field-references";
-import { ExprAggregateFunction } from "./expr-aggregate-function";
 import { ExpressionDef } from "../types/expression-def";
+import { ExprAggregateFunction } from "./expr-aggregate-function";
 
 export abstract class ExprAsymmetric extends ExprAggregateFunction {
   constructor(
@@ -31,7 +31,7 @@ export abstract class ExprAsymmetric extends ExprAggregateFunction {
     readonly source?: FieldReference
   ) {
     super(func, expr);
-    this.has({ source });
+    this.has({ "source": source });
   }
 
   defaultFieldName(): undefined | string {

@@ -41,7 +41,8 @@ module.exports = {
   ],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "warnOnUnsupportedTypeScriptVersion": false
+    "warnOnUnsupportedTypeScriptVersion": false,
+    "project": ['./tsconfig.packages.json']
   },
   "plugins": ["@typescript-eslint", "prettier"],
   "rules": {
@@ -59,6 +60,7 @@ module.exports = {
       "warn",
       { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
     ],
-    "quote-props": ["error", "always"]
+    "quote-props": ["error", "always"],
+    "@typescript-eslint/restrict-plus-operands": "error"
   }
 };

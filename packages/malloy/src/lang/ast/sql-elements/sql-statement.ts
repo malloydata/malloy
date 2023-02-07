@@ -36,7 +36,7 @@ export class SQLStatement extends MalloyElement implements DocStatement {
 
   constructor(readonly select: SQLString) {
     super();
-    this.has({ select });
+    this.has({ "select": select });
   }
 
   sqlBlock(): SQLBlockSource {

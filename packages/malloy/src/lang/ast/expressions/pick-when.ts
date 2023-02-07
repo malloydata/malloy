@@ -28,11 +28,11 @@ import {
 } from "../../../model/malloy_types";
 
 import { errorFor } from "../ast-utils";
-import { ExprValue } from "../types/expr-value";
-import { FieldSpace } from "../types/field-space";
 import { FT } from "../fragtype-utils";
-import { MalloyElement } from "../types/malloy-element";
+import { ExprValue } from "../types/expr-value";
 import { ExpressionDef } from "../types/expression-def";
+import { FieldSpace } from "../types/field-space";
+import { MalloyElement } from "../types/malloy-element";
 import { compressExpr } from "./utils";
 
 interface Choice {
@@ -192,7 +192,7 @@ export class PickWhen extends MalloyElement {
     readonly pick: ExpressionDef | undefined,
     readonly when: ExpressionDef
   ) {
-    super({ when });
-    this.has({ pick });
+    super({ "when": when });
+    this.has({ "pick": pick });
   }
 }

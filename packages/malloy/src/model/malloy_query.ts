@@ -22,45 +22,28 @@
  */
 
 import { cloneDeep } from "lodash";
-import { StandardSQLDialect } from "../dialect/standardsql";
 import { Dialect, DialectFieldList, getDialect } from "../dialect";
+import { StandardSQLDialect } from "../dialect/standardsql";
 import {
   AggregateFragment,
   AnalyticFragment,
   CompiledQuery,
   DialectFragment,
   Expr,
+  expressionIsCalculation,
   FieldAtomicDef,
   FieldDateDef,
   FieldDef,
   FieldFragment,
   FieldRef,
   FieldTimestampDef,
+  Filtered,
   FilterExpression,
   FilterFragment,
-  Filtered,
-  IndexSegment,
-  JoinRelationship,
-  ModelDef,
-  NamedQuery,
-  OrderBy,
-  Parameter,
-  ParameterFragment,
-  PipeSegment,
-  Query,
-  QueryFieldDef,
-  QuerySegment,
-  ResultMetadataDef,
-  ResultStructMetadataDef,
-  SearchIndexResult,
-  StructDef,
-  StructRef,
-  TurtleDef,
-  UngroupFragment,
-  expressionIsCalculation,
   getIdentifier,
   getPhysicalFields,
   hasExpression,
+  IndexSegment,
   isAggregateFragment,
   isAnalyticFragment,
   isApplyFragment,
@@ -76,11 +59,28 @@ import {
   isQuerySegment,
   isUngroupFragment,
   isValueParameter,
-  malloyFunctions
+  JoinRelationship,
+  malloyFunctions,
+  ModelDef,
+  NamedQuery,
+  OrderBy,
+  Parameter,
+  ParameterFragment,
+  PipeSegment,
+  Query,
+  QueryFieldDef,
+  QuerySegment,
+  ResultMetadataDef,
+  ResultStructMetadataDef,
+  SearchIndexResult,
+  StructDef,
+  StructRef,
+  TurtleDef,
+  UngroupFragment
 } from "./malloy_types";
 
-import { AndChain, generateHash, indent } from "./utils";
 import { Connection } from "../runtime_types";
+import { AndChain, generateHash, indent } from "./utils";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -611,8 +611,7 @@ class QueryField extends QueryNode {
       }
       if (resultStruct.firstSegment.type === "reduce") {
         obSQL.push(
-          " " +
-            orderingField.fif.getSQL() +
+          ` ${orderingField.fif.getSQL()}` +
             // this.parent.dialect.sqlMaybeQuoteIdentifier(
             //   `${orderingField.name}__${resultStruct.groupSet}`
             // ) +
@@ -2055,7 +2054,8 @@ class QueryQuery extends QueryField {
         const fieldDef = fi.f.fieldDef as FieldAtomicDef;
         let filterList;
         const sourceField =
-          fi.f.parent.getFullOutputName() + (fieldDef.name || fieldDef.as);
+          fi.f.parent.getFullOutputName() +
+          (fieldDef.name || fieldDef.as || "undefined");
         const sourceExpression: string | undefined = fieldDef.code;
         const sourceClasses = [sourceField];
         if (isCalculatedField(fi.f)) {

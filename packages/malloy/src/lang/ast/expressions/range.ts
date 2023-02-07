@@ -26,13 +26,13 @@ import { maxExpressionType } from "../../../model/malloy_types";
 import { errorFor } from "../ast-utils";
 import { ExprValue } from "../types/expr-value";
 import { ExpressionDef } from "../types/expression-def";
-import { compose } from "./utils";
 import { FieldSpace } from "../types/field-space";
+import { compose } from "./utils";
 
 export class Range extends ExpressionDef {
   elementType = "range";
   constructor(readonly first: ExpressionDef, readonly last: ExpressionDef) {
-    super({ first, last });
+    super({ "first": first, "last": last });
   }
 
   apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {

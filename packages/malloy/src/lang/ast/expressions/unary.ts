@@ -25,6 +25,6 @@ import { ExpressionDef } from "../types/expression-def";
 
 export abstract class Unary extends ExpressionDef {
   constructor(readonly expr: ExpressionDef) {
-    super({ expr });
+    super({ "expr": expr });
   }
 }

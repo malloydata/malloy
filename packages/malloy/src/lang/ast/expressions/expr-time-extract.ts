@@ -30,9 +30,9 @@ import {
 
 import { errorFor } from "../ast-utils";
 import { ExprValue } from "../types/expr-value";
+import { ExpressionDef } from "../types/expression-def";
 import { FieldSpace } from "../types/field-space";
 import { Range } from "./range";
-import { ExpressionDef } from "../types/expression-def";
 
 export class ExprTimeExtract extends ExpressionDef {
   elementType = "timeExtract";
@@ -58,7 +58,7 @@ export class ExprTimeExtract extends ExpressionDef {
   }
 
   constructor(readonly extractText: string, readonly args: ExpressionDef[]) {
-    super({ args });
+    super({ "args": args });
   }
 
   getExpression(fs: FieldSpace): ExprValue {

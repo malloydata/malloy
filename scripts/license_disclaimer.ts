@@ -113,8 +113,8 @@ function doDependencies(nodeModulesPath: string, packageJson: any): void {
 Package: ${dependency}
 Url: ${url}
 License(s): ${licenseType}
-${license ? "License Text:\n" + license + "\n" : ""}
-${notice ? "\nNotice:\n" + notice + "\n" : ""}
+${license ? `License Text:\n${license}\n` : ""}
+${notice ? `\nNotice:\n${notice}\n` : ""}
         `
       );
 

@@ -26,8 +26,8 @@ import {
   expressionIsAggregate
 } from "../../../model/malloy_types";
 
-import { ExpressionDef } from "../types/expression-def";
 import { compressExpr } from "../expressions/utils";
+import { ExpressionDef } from "../types/expression-def";
 import { FieldName, FieldSpace } from "../types/field-space";
 import { MalloyElement } from "../types/malloy-element";
 
@@ -37,7 +37,7 @@ export class Top extends MalloyElement {
   elementType = "top";
   constructor(readonly limit: number, readonly by?: TopInit) {
     super();
-    this.has({ by });
+    this.has({ "by": by });
   }
 
   getBy(fs: FieldSpace): ModelBy | undefined {

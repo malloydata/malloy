@@ -22,11 +22,11 @@
  */
 
 import { errorFor } from "../ast-utils";
-import { FieldSpace } from "../types/field-space";
 import { FT } from "../fragtype-utils";
 import { castDateToTimestamp, resolution, timeOffset } from "../time-utils";
 import { ExprValue } from "../types/expr-value";
 import { ExpressionDef } from "../types/expression-def";
+import { FieldSpace } from "../types/field-space";
 import { isGranularResult } from "../types/granular-result";
 import { ExprTime } from "./expr-time";
 import { Range } from "./range";
@@ -45,7 +45,7 @@ export class ForRange extends ExpressionDef {
     readonly duration: ExpressionDef,
     readonly timeframe: Timeframe
   ) {
-    super({ from, duration, timeframe });
+    super({ "from": from, "duration": duration, "timeframe": timeframe });
   }
 
   apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {

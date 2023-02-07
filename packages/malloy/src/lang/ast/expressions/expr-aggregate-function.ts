@@ -25,14 +25,15 @@ import {
   AggregateFragment,
   isAtomicFieldType
 } from "../../../model/malloy_types";
+
 import { errorFor } from "../ast-utils";
-import { ExprValue } from "../types/expr-value";
-import { FieldValueType } from "../types/type-desc";
-import { FieldReference } from "../query-items/field-references";
-import { FieldSpace } from "../types/field-space";
-import { FT } from "../fragtype-utils";
 import { StructSpaceFieldBase } from "../field-space/struct-space-field-base";
+import { FT } from "../fragtype-utils";
+import { FieldReference } from "../query-items/field-references";
+import { ExprValue } from "../types/expr-value";
 import { ExpressionDef } from "../types/expression-def";
+import { FieldSpace } from "../types/field-space";
+import { FieldValueType } from "../types/type-desc";
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
@@ -44,7 +45,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     this.elementType = func;
     if (expr) {
       this.expr = expr;
-      this.has({ expr });
+      this.has({ "expr": expr });
     }
   }
 

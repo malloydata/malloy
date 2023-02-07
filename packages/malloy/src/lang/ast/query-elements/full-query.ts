@@ -23,15 +23,15 @@
 
 import { Query, refIsStructDef } from "../../../model/malloy_types";
 
-import { ErrorFactory } from "../error-factory";
 import { Source } from "../elements/source";
+import { ErrorFactory } from "../error-factory";
+import { StaticSpace } from "../field-space/static-space";
 import { QueryComp } from "../types/query-comp";
 import { TurtleHeadedPipe } from "../types/turtle-headed-pipe";
-import { StaticSpace } from "../field-space/static-space";
 
 export class FullQuery extends TurtleHeadedPipe {
   constructor(readonly explore: Source) {
-    super({ explore });
+    super({ "explore": explore });
   }
 
   queryComp(): QueryComp {

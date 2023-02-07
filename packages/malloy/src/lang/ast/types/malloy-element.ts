@@ -21,27 +21,29 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { cloneDeep } from "lodash";
+
+import {
+  DocumentLocation,
+  DocumentReference,
+  isSQLBlock,
+  ModelDef,
+  Query,
+  SQLBlockStructDef
+} from "../../../model/malloy_types";
+
 import { MessageLogger } from "../../parse-log";
 import { MalloyTranslation } from "../../parse-malloy";
 import { ModelDataRequest } from "../../translate-response";
 import { DocumentCompileResult } from "./document-compile-result";
-import { NameSpace } from "./name-space";
 import { ModelEntry } from "./model-entry";
-import {
-  DocumentLocation,
-  DocumentReference,
-  ModelDef,
-  Query,
-  SQLBlockStructDef,
-  isSQLBlock
-} from "../../../model/malloy_types";
+import { NameSpace } from "./name-space";
 
 export abstract class MalloyElement {
   abstract elementType: string;
   codeLocation?: DocumentLocation;
   children: ElementChildren = {};
   parent: MalloyElement | null = null;
-  private logger?: MessageLogger;
+  private readonly logger?: MessageLogger;
 
   /**
    * @param kids All children passed to the constructor are not optional
@@ -168,7 +170,7 @@ export abstract class MalloyElement {
     return true;
   }
 
-  private logged = new Set<string>();
+  private readonly logged = new Set<string>();
   log(message: string): void {
     if (this.codeLocation) {
       /*
@@ -373,7 +375,7 @@ export class Document extends MalloyElement implements NameSpace {
   constructor(statements: DocStatement[]) {
     super();
     this.statements = new RunList("topLevelStatements", statements);
-    this.has({ statements });
+    this.has({ "statements": statements });
   }
 
   initModelDef(extendingModelDef: ModelDef | undefined): void {

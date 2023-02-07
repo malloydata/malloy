@@ -36,7 +36,7 @@ function isFieldSpace(x: SourceSpec): x is FieldSpace {
  * with a StructDef, or from another field space.
  */
 export class SpaceSeed {
-  private spaceSpec: SourceSpec;
+  private readonly spaceSpec: SourceSpec;
   private asFS?: StaticSpace;
   private asStruct?: StructDef;
 

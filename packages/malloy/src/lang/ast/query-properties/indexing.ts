@@ -21,15 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { MalloyElement } from "../types/malloy-element";
 import { FieldReferences } from "../query-items/field-references";
 import { FieldName } from "../types/field-space";
+import { MalloyElement } from "../types/malloy-element";
 
 export class Index extends MalloyElement {
   elementType = "index";
   weightBy?: FieldName;
   constructor(readonly fields: FieldReferences) {
-    super({ fields });
+    super({ "fields": fields });
   }
 
   useWeight(fn: FieldName): void {
