@@ -24,8 +24,8 @@
 import {
   ExpressionType,
   Fragment,
-  isTimeFieldType,
   TimeFieldType,
+  isTimeFieldType
 } from "../../../model/malloy_types";
 
 import { FieldSpace } from "../types/field-space";
@@ -44,9 +44,9 @@ export class ExprTime extends ExpressionDef {
     super();
     this.elementType = timeType;
     this.translationValue = {
-      dataType: timeType,
+      "dataType": timeType,
       expressionType,
-      value: typeof value === "string" ? [value] : value,
+      "value": typeof value === "string" ? [value] : value
     };
   }
 
@@ -58,11 +58,11 @@ export class ExprTime extends ExpressionDef {
     let value = expr.value;
     if (timeType != expr.dataType) {
       const toTs: Fragment = {
-        type: "dialect",
-        function: "cast",
-        safe: false,
-        dstType: timeType,
-        expr: expr.value,
+        "type": "dialect",
+        "function": "cast",
+        "safe": false,
+        "dstType": timeType,
+        "expr": expr.value
       };
       if (isTimeFieldType(expr.dataType)) {
         toTs.srcType = expr.dataType;

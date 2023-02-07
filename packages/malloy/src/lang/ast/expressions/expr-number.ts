@@ -37,6 +37,6 @@ export class ExprNumber extends ExpressionDef {
   }
 
   constantExpression(): ExprValue {
-    return { ...FT.numberT, value: [this.n] };
+    return { ...FT.numberT, "value": [this.n] };
   }
 }

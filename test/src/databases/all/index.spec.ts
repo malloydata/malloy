@@ -24,7 +24,7 @@
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
-import { allDatabases, RuntimeList } from "../../runtimes";
+import { RuntimeList, allDatabases } from "../../runtimes";
 import { databasesFromEnvironmentOr } from "../../util";
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.

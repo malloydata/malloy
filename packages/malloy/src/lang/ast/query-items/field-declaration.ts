@@ -25,16 +25,16 @@ import { Dialect } from "../../../dialect/dialect";
 import {
   FieldTypeDef,
   isAtomicFieldType,
-  StructDef,
+  StructDef
 } from "../../../model/malloy_types";
 
-import { LookupResult } from "../types/lookup-result";
-import { ExpressionDef } from "../types/expression-def";
 import { compressExpr } from "../expressions/utils";
-import { FieldName, FieldSpace } from "../types/field-space";
 import { FT } from "../fragtype-utils";
-import { MalloyElement } from "../types/malloy-element";
+import { ExpressionDef } from "../types/expression-def";
+import { FieldName, FieldSpace } from "../types/field-space";
 import { isGranularResult } from "../types/granular-result";
+import { LookupResult } from "../types/lookup-result";
+import { MalloyElement } from "../types/malloy-element";
 
 export class FieldDeclaration extends MalloyElement {
   elementType = "fieldDeclaration";
@@ -45,7 +45,7 @@ export class FieldDeclaration extends MalloyElement {
     readonly defineName: string,
     readonly exprSrc?: string
   ) {
-    super({ expr });
+    super({ "expr": expr });
   }
 
   fieldDef(fs: FieldSpace, exprName: string): FieldTypeDef {
@@ -69,17 +69,17 @@ export class FieldDeclaration extends MalloyElement {
     } catch (error) {
       this.log(`Cannot define '${exprName}', ${error.message}`);
       return {
-        name: `error_defining_${exprName}`,
-        type: "string",
+        "name": `error_defining_${exprName}`,
+        "type": "string"
       };
     }
     const compressValue = compressExpr(exprValue.value);
     const retType = exprValue.dataType;
     if (isAtomicFieldType(retType)) {
       const template: FieldTypeDef = {
-        name: exprName,
-        type: retType,
-        location: this.location,
+        "name": exprName,
+        "type": retType,
+        "location": this.location
       };
       if (compressValue.length > 0) {
         template.e = compressValue;
@@ -106,8 +106,8 @@ export class FieldDeclaration extends MalloyElement {
       }
     }
     return {
-      name: `error_defining_${exprName}`,
-      type: "string",
+      "name": `error_defining_${exprName}`,
+      "type": "string"
     };
   }
 }
@@ -132,8 +132,8 @@ export class DefSpace implements FieldSpace {
     if (symbol[0] && symbol[0].refString === this.circular.defineName) {
       this.foundCircle = true;
       return {
-        error: `Circular reference to '${this.circular.defineName}' in definition`,
-        found: undefined,
+        "error": `Circular reference to '${this.circular.defineName}' in definition`,
+        "found": undefined
       };
     }
     return this.realFS.lookup(symbol);

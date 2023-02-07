@@ -25,7 +25,7 @@ export enum Equality {
   Like = "~",
   NotLike = "!~",
   Equals = "=",
-  NotEquals = "!=",
+  NotEquals = "!="
 }
 
 export function isEquality(s: string): s is Equality {

@@ -23,24 +23,24 @@
 
 import { Query, refIsStructDef } from "../../../model/malloy_types";
 
-import { ErrorFactory } from "../error-factory";
 import { Source } from "../elements/source";
+import { ErrorFactory } from "../error-factory";
+import { StaticSpace } from "../field-space/static-space";
 import { QueryComp } from "../types/query-comp";
 import { TurtleHeadedPipe } from "../types/turtle-headed-pipe";
-import { StaticSpace } from "../field-space/static-space";
 
 export class FullQuery extends TurtleHeadedPipe {
   constructor(readonly explore: Source) {
-    super({ explore });
+    super({ "explore": explore });
   }
 
   queryComp(): QueryComp {
     const structRef = this.explore.structRef();
     const destQuery: Query = {
-      type: "query",
+      "type": "query",
       structRef,
-      pipeline: [],
-      location: this.location,
+      "pipeline": [],
+      "location": this.location
     };
     const structDef = refIsStructDef(structRef)
       ? structRef
@@ -49,11 +49,11 @@ export class FullQuery extends TurtleHeadedPipe {
 
     if (ErrorFactory.isErrorStructDef(structDef)) {
       return {
-        outputStruct: structDef,
-        query: {
-          structRef: structRef,
-          pipeline: [],
-        },
+        "outputStruct": structDef,
+        "query": {
+          "structRef": structRef,
+          "pipeline": []
+        }
       };
     }
     if (this.turtleName) {
@@ -76,7 +76,7 @@ export class FullQuery extends TurtleHeadedPipe {
     }
     const appended = this.appendOps(destQuery.pipeline, pipeFs);
     destQuery.pipeline = appended.opList;
-    return { outputStruct: appended.structDef, query: destQuery };
+    return { "outputStruct": appended.structDef, "query": destQuery };
   }
 
   query(): Query {

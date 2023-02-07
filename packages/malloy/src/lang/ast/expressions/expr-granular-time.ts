@@ -22,10 +22,10 @@
  */
 
 import {
+  TimestampUnit,
   isDateUnit,
   isTimeFieldType,
-  mkExpr,
-  TimestampUnit,
+  mkExpr
 } from "../../../model/malloy_types";
 
 import { errorFor } from "../ast-utils";
@@ -67,17 +67,17 @@ export class ExprGranularTime extends ExpressionDef {
     if (isTimeFieldType(exprVal.dataType)) {
       const tsVal: GranularResult = {
         ...exprVal,
-        dataType: exprVal.dataType,
-        timeframe: timeframe,
+        "dataType": exprVal.dataType,
+        "timeframe": timeframe
       };
       if (this.truncate) {
         tsVal.value = [
           {
-            type: "dialect",
-            function: "trunc",
-            expr: { value: exprVal.value, valueType: exprVal.dataType },
-            units: timeframe,
-          },
+            "type": "dialect",
+            "function": "trunc",
+            "expr": { "value": exprVal.value, "valueType": exprVal.dataType },
+            "units": timeframe
+          }
         ];
       }
       return tsVal;

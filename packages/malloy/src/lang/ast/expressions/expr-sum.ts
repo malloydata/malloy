@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { FieldReference } from "../query-items/field-references";
-import { ExprAsymmetric } from "./expr-asymmetric";
 import { ExpressionDef } from "../types/expression-def";
+import { ExprAsymmetric } from "./expr-asymmetric";
 
 export class ExprSum extends ExprAsymmetric {
   constructor(expr: ExpressionDef | undefined, source?: FieldReference) {
     super("sum", expr, source);
-    this.has({ source });
+    this.has({ "source": source });
   }
 }

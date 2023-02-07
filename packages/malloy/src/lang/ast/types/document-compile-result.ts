@@ -24,7 +24,7 @@
 import {
   ModelDef,
   Query,
-  SQLBlockStructDef,
+  SQLBlockStructDef
 } from "../../../model/malloy_types";
 
 import { ModelDataRequest } from "../../translate-response";

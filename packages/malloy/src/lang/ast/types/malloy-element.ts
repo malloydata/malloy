@@ -21,27 +21,29 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import { cloneDeep } from "lodash";
-import { MessageLogger } from "../../parse-log";
-import { MalloyTranslation } from "../../parse-malloy";
-import { ModelDataRequest } from "../../translate-response";
-import { DocumentCompileResult } from "./document-compile-result";
-import { NameSpace } from "./name-space";
-import { ModelEntry } from "./model-entry";
+
 import {
   DocumentLocation,
   DocumentReference,
   isSQLBlock,
   ModelDef,
   Query,
-  SQLBlockStructDef,
+  SQLBlockStructDef
 } from "../../../model/malloy_types";
+
+import { MessageLogger } from "../../parse-log";
+import { MalloyTranslation } from "../../parse-malloy";
+import { ModelDataRequest } from "../../translate-response";
+import { DocumentCompileResult } from "./document-compile-result";
+import { ModelEntry } from "./model-entry";
+import { NameSpace } from "./name-space";
 
 export abstract class MalloyElement {
   abstract elementType: string;
   codeLocation?: DocumentLocation;
   children: ElementChildren = {};
   parent: MalloyElement | null = null;
-  private logger?: MessageLogger;
+  private readonly logger?: MessageLogger;
 
   /**
    * @param kids All children passed to the constructor are not optional
@@ -81,11 +83,11 @@ export abstract class MalloyElement {
       return this.parent.location;
     }
     return {
-      url: this.sourceURL,
-      range: {
-        start: { line: 0, character: 0 },
-        end: { line: 0, character: 0 },
-      },
+      "url": this.sourceURL,
+      "range": {
+        "start": { "line": 0, "character": 0 },
+        "end": { "line": 0, "character": 0 }
+      }
     };
   }
 
@@ -109,25 +111,25 @@ export abstract class MalloyElement {
     if (reference instanceof ModelEntryReference) {
       if (result?.entry.type === "query") {
         this.addReference({
-          type: "queryReference",
-          text: key,
-          definition: result.entry,
-          location: reference.location,
+          "type": "queryReference",
+          "text": key,
+          "definition": result.entry,
+          "location": reference.location
         });
       } else if (result?.entry.type === "struct") {
         if (isSQLBlock(result.entry)) {
           this.addReference({
-            type: "sqlBlockReference",
-            text: key,
-            definition: result.entry,
-            location: reference.location,
+            "type": "sqlBlockReference",
+            "text": key,
+            "definition": result.entry,
+            "location": reference.location
           });
         } else {
           this.addReference({
-            type: "exploreReference",
-            text: key,
-            definition: result.entry,
-            location: reference.location,
+            "type": "exploreReference",
+            "text": key,
+            "definition": result.entry,
+            "location": reference.location
           });
         }
       }
@@ -168,7 +170,7 @@ export abstract class MalloyElement {
     return true;
   }
 
-  private logged = new Set<string>();
+  private readonly logged = new Set<string>();
   log(message: string): void {
     if (this.codeLocation) {
       /*
@@ -181,7 +183,7 @@ export abstract class MalloyElement {
       this.logged.add(message);
     }
     const trans = this.translator();
-    const msg = { at: this.location, message };
+    const msg = { "at": this.location, message };
     const logTo = trans?.root.logger;
     if (logTo) {
       logTo.log(msg);
@@ -373,7 +375,7 @@ export class Document extends MalloyElement implements NameSpace {
   constructor(statements: DocStatement[]) {
     super();
     this.statements = new RunList("topLevelStatements", statements);
-    this.has({ statements });
+    this.has({ "statements": statements });
   }
 
   initModelDef(extendingModelDef: ModelDef | undefined): void {
@@ -388,7 +390,7 @@ export class Document extends MalloyElement implements NameSpace {
         const struct = extendingModelDef.contents[inName];
         if (struct.type == "struct") {
           const exported = extendingModelDef.exports.includes(inName);
-          this.setEntry(inName, { entry: struct, exported });
+          this.setEntry(inName, { "entry": struct, exported });
         }
       }
     }
@@ -398,16 +400,16 @@ export class Document extends MalloyElement implements NameSpace {
   compile(): DocumentCompileResult {
     const needs = this.statements.executeList(this);
     const ret: DocumentCompileResult = {
-      modelDef: this.modelDef(),
-      queryList: this.queryList,
-      sqlBlocks: this.sqlBlocks,
-      needs,
+      "modelDef": this.modelDef(),
+      "queryList": this.queryList,
+      "sqlBlocks": this.sqlBlocks,
+      needs
     };
     return ret;
   }
 
   modelDef(): ModelDef {
-    const def: ModelDef = { name: "", exports: [], contents: {} };
+    const def: ModelDef = { "name": "", "exports": [], "contents": {} };
     for (const entry in this.documentModel) {
       const entryDef = this.documentModel[entry].entry;
       if (entryDef.type === "struct" || entryDef.type === "query") {
@@ -421,13 +423,13 @@ export class Document extends MalloyElement implements NameSpace {
   }
 
   defineSQL(sql: SQLBlockStructDef, name?: string): boolean {
-    const ret = { ...sql, as: `$${this.sqlBlocks.length}` };
+    const ret = { ...sql, "as": `$${this.sqlBlocks.length}` };
     if (name) {
       if (this.getEntry(name)) {
         return false;
       }
       ret.as = name;
-      this.setEntry(name, { entry: ret, sqlType: true });
+      this.setEntry(name, { "entry": ret, "sqlType": true });
     }
     this.sqlBlocks.push(ret);
     return true;

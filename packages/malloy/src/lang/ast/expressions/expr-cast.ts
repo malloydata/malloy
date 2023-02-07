@@ -20,10 +20,10 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { ExprValue } from "../types/expr-value";
-import { FieldSpace } from "../types/field-space";
 import { castTo } from "../time-utils";
+import { ExprValue } from "../types/expr-value";
 import { ExpressionDef } from "../types/expression-def";
+import { FieldSpace } from "../types/field-space";
 import { compressExpr } from "./utils";
 
 export type CastType = "string" | "number" | "boolean" | "date" | "timestamp";
@@ -38,15 +38,15 @@ export class ExprCast extends ExpressionDef {
     readonly castType: CastType,
     readonly safe = false
   ) {
-    super({ expr });
+    super({ "expr": expr });
   }
 
   getExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
     return {
-      dataType: this.castType,
-      expressionType: expr.expressionType,
-      value: compressExpr(castTo(this.castType, expr.value, this.safe)),
+      "dataType": this.castType,
+      "expressionType": expr.expressionType,
+      "value": compressExpr(castTo(this.castType, expr.value, this.safe))
     };
   }
 }

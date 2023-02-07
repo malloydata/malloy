@@ -22,42 +22,45 @@
  */
 
 module.exports = {
-  env: {
-    browser: true,
-    jest: true,
-    node: true,
+  "env": {
+    "browser": true,
+    "jest": true,
+    "node": true
   },
-  extends: [
+  "extends": [
     "prettier",
     "plugin:prettier/recommended",
     "eslint:recommended",
     "plugin:@typescript-eslint/eslint-recommended",
-    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended"
   ],
-  ignorePatterns: [
+  "ignorePatterns": [
     "*.d.ts",
     "node_modules/",
-    "packages/malloy/src/lang/lib/Malloy",
+    "packages/malloy/src/lang/lib/Malloy"
   ],
-  parser: "@typescript-eslint/parser",
-  parserOptions: {
-    warnOnUnsupportedTypeScriptVersion: false,
+  "parser": "@typescript-eslint/parser",
+  "parserOptions": {
+    "warnOnUnsupportedTypeScriptVersion": false,
+    "project": ['./tsconfig.packages.json']
   },
-  plugins: ["@typescript-eslint", "prettier"],
-  rules: {
+  "plugins": ["@typescript-eslint", "prettier"],
+  "rules": {
     "no-console": "warn",
     "prettier/prettier": "error",
     "sort-keys": "off",
     "no-duplicate-imports": "error",
     "no-restricted-imports": [
       "error",
-      { patterns: ["@malloydata/malloy/src/*"] },
+      { "patterns": ["@malloydata/malloy/src/*"] }
     ],
     "no-use-before-define": "off",
     "no-throw-literal": "error",
     "@typescript-eslint/no-unused-vars": [
       "warn",
-      { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
     ],
-  },
+    "quote-props": ["error", "always"],
+    "@typescript-eslint/restrict-plus-operands": "error"
+  }
 };

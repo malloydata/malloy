@@ -20,7 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { isTimestampUnit, TimestampUnit } from "../../../model/malloy_types";
+import { TimestampUnit, isTimestampUnit } from "../../../model/malloy_types";
 
 import { MalloyElement } from "../types/malloy-element";
 

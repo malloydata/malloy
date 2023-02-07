@@ -24,7 +24,7 @@ import { FieldDeclaration } from "../query-items/field-declaration";
 import {
   FieldReference,
   FieldReferenceElement,
-  WildcardFieldReference,
+  WildcardFieldReference
 } from "../query-items/field-references";
 import { MalloyElement } from "./malloy-element";
 

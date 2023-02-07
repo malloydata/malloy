@@ -21,14 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import { FT } from "../fragtype-utils";
 import { Comparison } from "../types/comparison";
-import { FieldSpace } from "../types/field-space";
-import { ExprGranularTime } from "./expr-granular-time";
-import { isGranularResult } from "../types/granular-result";
 import { ExprValue } from "../types/expr-value";
 import { ExpressionDef } from "../types/expression-def";
+import { FieldSpace } from "../types/field-space";
+import { isGranularResult } from "../types/granular-result";
 import { BinaryBoolean } from "./binary-boolean";
-import { FT } from "../fragtype-utils";
+import { ExprGranularTime } from "./expr-granular-time";
 
 const compareTypes = {
   "~": [FT.stringT],
@@ -38,7 +38,7 @@ const compareTypes = {
   "=": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
   "!=": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
   ">=": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  ">": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
+  ">": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT]
 };
 
 export class ExprCompare extends BinaryBoolean<Comparison> {

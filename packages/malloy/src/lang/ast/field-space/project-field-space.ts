@@ -22,9 +22,9 @@
  */
 
 import {
-  expressionIsAggregate,
-  isFilteredAliasedName,
   QueryFieldDef,
+  expressionIsAggregate,
+  isFilteredAliasedName
 } from "../../../model/malloy_types";
 
 import { QuerySpace } from "./query-spaces";

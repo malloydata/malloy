@@ -28,7 +28,7 @@ import { FieldSpace } from "../types/field-space";
 export class ExprParens extends ExpressionDef {
   elementType = "(expression)";
   constructor(readonly expr: ExpressionDef) {
-    super({ expr });
+    super({ "expr": expr });
   }
 
   requestExpression(fs: FieldSpace): ExprValue | undefined {
@@ -37,6 +37,6 @@ export class ExprParens extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const subExpr = this.expr.getExpression(fs);
-    return { ...subExpr, value: ["(", ...subExpr.value, ")"] };
+    return { ...subExpr, "value": ["(", ...subExpr.value, ")"] };
   }
 }

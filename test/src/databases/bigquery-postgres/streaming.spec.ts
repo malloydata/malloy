@@ -25,7 +25,7 @@ import {
   CSVWriter,
   DataRecord,
   JSONWriter,
-  WriteStream,
+  WriteStream
 } from "@malloydata/malloy";
 import { RuntimeList } from "../../runtimes";
 import { describeIfDatabaseAvailable } from "../../util";
@@ -44,7 +44,7 @@ class StringAccumulator implements WriteStream {
 
 const [describe, databases] = describeIfDatabaseAvailable([
   "bigquery",
-  "postgres",
+  "postgres"
 ]);
 
 describe("Streaming tests", () => {
@@ -59,7 +59,7 @@ describe("Streaming tests", () => {
       const stream = runtime
         .loadModel(`source: airports is table('malloytest.airports') {}`)
         .loadQuery("query: airports -> { project: code }")
-        .runStream({ rowLimit: 10 });
+        .runStream({ "rowLimit": 10 });
       const rows: DataRecord[] = [];
       for await (const row of stream) {
         rows.push(row);
@@ -72,7 +72,7 @@ describe("Streaming tests", () => {
       const stream = runtime
         .loadModel(`source: airports is table('malloytest.airports') {}`)
         .loadQuery("query: airports -> { project: code }")
-        .runStream({ rowLimit: 1 });
+        .runStream({ "rowLimit": 1 });
       const accummulator = new StringAccumulator();
       const jsonWriter = new JSONWriter(accummulator);
       await jsonWriter.process(stream);
@@ -90,7 +90,7 @@ describe("Streaming tests", () => {
       const stream = runtime
         .loadModel(`source: airports is table('malloytest.airports') {}`)
         .loadQuery("query: airports -> { project: code }")
-        .runStream({ rowLimit: 1 });
+        .runStream({ "rowLimit": 1 });
       const accummulator = new StringAccumulator();
       const csvWriter = new CSVWriter(accummulator);
       await csvWriter.process(stream);

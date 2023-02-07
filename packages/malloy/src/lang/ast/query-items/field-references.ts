@@ -22,9 +22,10 @@
  */
 
 import { FieldDef } from "../../../model/malloy_types";
+
 import { FieldName, FieldSpace } from "../types/field-space";
-import { ListOf, MalloyElement } from "../types/malloy-element";
 import { LookupResult } from "../types/lookup-result";
+import { ListOf, MalloyElement } from "../types/malloy-element";
 
 export class FieldReference extends ListOf<FieldName> {
   elementType = "fieldReference";
@@ -68,7 +69,7 @@ export class WildcardFieldReference extends MalloyElement {
     readonly star: "*" | "**"
   ) {
     super();
-    this.has({ joinPath });
+    this.has({ "joinPath": joinPath });
   }
 
   getFieldDef(): FieldDef {

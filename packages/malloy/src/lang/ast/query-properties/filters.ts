@@ -23,18 +23,18 @@
 
 import {
   expressionIsCalculation,
-  FilterExpression,
+  FilterExpression
 } from "../../../model/malloy_types";
 
-import { ExpressionDef } from "../types/expression-def";
 import { compressExpr } from "../expressions/utils";
+import { ExpressionDef } from "../types/expression-def";
 import { FieldSpace } from "../types/field-space";
 import { ListOf, MalloyElement } from "../types/malloy-element";
 
 export class FilterElement extends MalloyElement {
   elementType = "filterElement";
   constructor(readonly expr: ExpressionDef, readonly exprSrc: string) {
-    super({ expr });
+    super({ "expr": expr });
   }
 
   filterExpression(fs: FieldSpace): FilterExpression {
@@ -42,15 +42,15 @@ export class FilterElement extends MalloyElement {
     if (exprVal.dataType !== "boolean") {
       this.expr.log("Filter expression must have boolean value");
       return {
-        code: this.exprSrc,
-        expression: ["_FILTER_MUST_RETURN_BOOLEAN_"],
-        expressionType: "scalar",
+        "code": this.exprSrc,
+        "expression": ["_FILTER_MUST_RETURN_BOOLEAN_"],
+        "expressionType": "scalar"
       };
     }
     const exprCond: FilterExpression = {
-      code: this.exprSrc,
-      expression: compressExpr(exprVal.value),
-      expressionType: exprVal.expressionType,
+      "code": this.exprSrc,
+      "expression": compressExpr(exprVal.value),
+      "expressionType": exprVal.expressionType
     };
     return exprCond;
   }
@@ -58,7 +58,8 @@ export class FilterElement extends MalloyElement {
 
 export class Filter extends ListOf<FilterElement> {
   elementType = "filter";
-  private havingClause?: boolean;
+  // TODO(maden): Check this field usage/need
+  private readonly havingClause?: boolean;
   constructor(elements: FilterElement[] = []) {
     super("filterElements", elements);
   }

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 /* eslint-disable no-console */
-import { Malloy, Connection } from "@malloydata/malloy";
+import { Connection, Malloy } from "@malloydata/malloy";
 import { DuckDBConnection } from "@malloydata/db-duckdb";
 import { readFile } from "fs/promises";
 import { readFileSync } from "fs";
@@ -29,7 +29,7 @@ import { performance } from "perf_hooks";
 
 async function translate(fileSrc: string, fileURL: string) {
   const url = new URL(fileURL);
-  const parse = Malloy.parse({ source: fileSrc, url });
+  const parse = Malloy.parse({ "source": fileSrc, url });
   const connection = new DuckDBConnection("duckdb");
   const lookupConnection = async function (name: string): Promise<Connection> {
     if (name == "duckdb" || name === undefined) {
@@ -39,13 +39,13 @@ async function translate(fileSrc: string, fileURL: string) {
   };
   const readURL = async function (url: URL): Promise<string> {
     const filePath = url.pathname;
-    const src = await readFile(filePath, { encoding: "utf-8" });
+    const src = await readFile(filePath, { "encoding": "utf-8" });
     return src;
   };
   const compiled = await Malloy.compile({
-    urlReader: { readURL },
-    connections: { lookupConnection },
-    parse,
+    "urlReader": { readURL },
+    "connections": { lookupConnection },
+    parse
   });
   compiled._modelDef;
 }

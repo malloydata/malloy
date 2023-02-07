@@ -36,7 +36,7 @@ export class SQLStatement extends MalloyElement implements DocStatement {
 
   constructor(readonly select: SQLString) {
     super();
-    this.has({ select });
+    this.has({ "select": select });
   }
 
   sqlBlock(): SQLBlockSource {
@@ -72,8 +72,8 @@ export class SQLStatement extends MalloyElement implements DocStatement {
       const location = this.select.location;
       const locStruct = {
         ...lookup.value,
-        fields: lookup.value.fields.map((f) => ({ ...f, location })),
-        location: this.location,
+        "fields": lookup.value.fields.map((f) => ({ ...f, location })),
+        "location": this.location
       };
       if (this.is && !doc.defineSQL(locStruct, this.is)) {
         this.log(`'${this.is}' already defined`);
@@ -81,8 +81,8 @@ export class SQLStatement extends MalloyElement implements DocStatement {
       return undefined;
     }
     return {
-      compileSQL: sql,
-      partialModel: this.select.containsQueries ? doc.modelDef() : undefined,
+      "compileSQL": sql,
+      "partialModel": this.select.containsQueries ? doc.modelDef() : undefined
     };
   }
 }

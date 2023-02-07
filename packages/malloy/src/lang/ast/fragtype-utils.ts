@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { TypeDesc, FieldValueType } from "./types/type-desc";
+import { FieldValueType, TypeDesc } from "./types/type-desc";
 
 function mkFragType(dType: FieldValueType): TypeDesc {
-  return { dataType: dType, expressionType: "scalar" };
+  return { "dataType": dType, "expressionType": "scalar" };
 }
 
 /**
@@ -101,6 +101,6 @@ export class FT {
     FT.stringT,
     FT.dateT,
     FT.timestampT,
-    FT.boolT,
+    FT.boolT
   ];
 }

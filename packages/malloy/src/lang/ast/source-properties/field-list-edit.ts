@@ -30,6 +30,6 @@ export class FieldListEdit extends MalloyElement {
     readonly edit: "accept" | "except",
     readonly refs: FieldReferences
   ) {
-    super({ refs });
+    super({ "refs": refs });
   }
 }

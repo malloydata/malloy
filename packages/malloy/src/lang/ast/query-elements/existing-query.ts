@@ -23,19 +23,19 @@
 
 import { Query } from "../../../model/malloy_types";
 
-import { ErrorFactory } from "../error-factory";
-import { ModelEntryReference } from "../types/malloy-element";
 import { PipelineDesc } from "../elements/pipeline-desc";
+import { ErrorFactory } from "../error-factory";
+import { StaticSpace } from "../field-space/static-space";
+import { ModelEntryReference } from "../types/malloy-element";
 import { QueryComp } from "../types/query-comp";
 import { QueryHeadStruct } from "./query-head-struct";
-import { StaticSpace } from "../field-space/static-space";
 
 export class ExistingQuery extends PipelineDesc {
   _head?: ModelEntryReference;
 
   set head(head: ModelEntryReference | undefined) {
     this._head = head;
-    this.has({ head });
+    this.has({ "head": head });
   }
 
   get head(): ModelEntryReference | undefined {
@@ -50,8 +50,8 @@ export class ExistingQuery extends PipelineDesc {
     const seedQuery = queryEntry?.entry;
     const oops = function () {
       return {
-        outputStruct: ErrorFactory.structDef,
-        query: ErrorFactory.query,
+        "outputStruct": ErrorFactory.structDef,
+        "query": ErrorFactory.query
       };
     };
     if (!seedQuery) {
@@ -63,7 +63,7 @@ export class ExistingQuery extends PipelineDesc {
       return oops();
     }
     const queryHead = new QueryHeadStruct(seedQuery.structRef);
-    this.has({ queryHead });
+    this.has({ "queryHead": queryHead });
     const exploreStruct = queryHead.structDef();
     const exploreFS = new StaticSpace(exploreStruct);
     const sourcePipe = this.refinePipeline(exploreFS, seedQuery);
@@ -72,14 +72,14 @@ export class ExistingQuery extends PipelineDesc {
       sourcePipe.pipeline,
       new StaticSpace(walkStruct)
     );
-    const destPipe = { ...sourcePipe, pipeline: appended.opList };
+    const destPipe = { ...sourcePipe, "pipeline": appended.opList };
     const query: Query = {
-      type: "query",
+      "type": "query",
       ...destPipe,
-      structRef: queryHead.structRef(),
-      location: this.location,
+      "structRef": queryHead.structRef(),
+      "location": this.location
     };
-    return { outputStruct: appended.structDef, query };
+    return { "outputStruct": appended.structDef, query };
   }
 
   query(): Query {

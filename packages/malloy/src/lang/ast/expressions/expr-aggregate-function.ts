@@ -23,16 +23,17 @@
 
 import {
   AggregateFragment,
-  isAtomicFieldType,
+  isAtomicFieldType
 } from "../../../model/malloy_types";
+
 import { errorFor } from "../ast-utils";
-import { ExprValue } from "../types/expr-value";
-import { FieldValueType } from "../types/type-desc";
-import { FieldReference } from "../query-items/field-references";
-import { FieldSpace } from "../types/field-space";
-import { FT } from "../fragtype-utils";
 import { StructSpaceFieldBase } from "../field-space/struct-space-field-base";
+import { FT } from "../fragtype-utils";
+import { FieldReference } from "../query-items/field-references";
+import { ExprValue } from "../types/expr-value";
 import { ExpressionDef } from "../types/expression-def";
+import { FieldSpace } from "../types/field-space";
+import { FieldValueType } from "../types/type-desc";
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
@@ -44,7 +45,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     this.elementType = func;
     if (expr) {
       this.expr = expr;
-      this.has({ expr });
+      this.has({ "expr": expr });
     }
   }
 
@@ -61,9 +62,9 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         const footType = sourceFoot.typeDesc();
         if (isAtomicFieldType(footType.dataType)) {
           exprVal = {
-            dataType: footType.dataType,
-            expressionType: footType.expressionType,
-            value: [{ type: "field", path: this.source.refString }],
+            "dataType": footType.dataType,
+            "expressionType": footType.expressionType,
+            "value": [{ "type": "field", "path": this.source.refString }]
           };
           structPath = this.source.sourceString;
         } else {
@@ -88,21 +89,21 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     if (
       this.typeCheck(this.expr || this, {
         ...exprVal,
-        expressionType: "scalar",
+        "expressionType": "scalar"
       })
     ) {
       const f: AggregateFragment = {
-        type: "aggregate",
-        function: this.func,
-        e: exprVal.value,
+        "type": "aggregate",
+        "function": this.func,
+        "e": exprVal.value
       };
       if (structPath) {
         f.structPath = structPath;
       }
       return {
-        dataType: this.returns(exprVal),
-        expressionType: "aggregate",
-        value: [f],
+        "dataType": this.returns(exprVal),
+        "expressionType": "aggregate",
+        "value": [f]
       };
     }
     return errorFor("aggregate type check");

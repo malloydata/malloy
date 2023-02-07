@@ -22,15 +22,15 @@
  */
 
 import { errorFor } from "../ast-utils";
-import { ExprValue } from "../types/expr-value";
-import { FieldSpace } from "../types/field-space";
 import { FT } from "../fragtype-utils";
+import { ExprValue } from "../types/expr-value";
 import { ExpressionDef } from "../types/expression-def";
+import { FieldSpace } from "../types/field-space";
 
 export class ExprMinus extends ExpressionDef {
   elementType = "unary minus";
   constructor(readonly expr: ExpressionDef) {
-    super({ expr });
+    super({ "expr": expr });
 
     this.legalChildTypes = [FT.numberT];
   }
@@ -39,9 +39,9 @@ export class ExprMinus extends ExpressionDef {
     const expr = this.expr.getExpression(fs);
     if (this.typeCheck(this.expr, expr)) {
       if (expr.value.length > 1) {
-        return { ...expr, value: ["-(", ...expr.value, ")"] };
+        return { ...expr, "value": ["-(", ...expr.value, ")"] };
       }
-      return { ...expr, value: ["-", ...expr.value] };
+      return { ...expr, "value": ["-", ...expr.value] };
     }
     return errorFor("negate requires number");
   }

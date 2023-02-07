@@ -23,9 +23,9 @@
 
 import {
   DocumentLocation,
-  Pipeline,
   PipeSegment,
-  StructDef,
+  Pipeline,
+  StructDef
 } from "../../../model/malloy_types";
 
 import { FieldSpace } from "../types/field-space";
@@ -52,12 +52,12 @@ export abstract class PipelineDesc extends MalloyElement {
 
   refineHead(refinement: QOPDesc): void {
     this.headRefinement = refinement;
-    this.has({ headRefinement: refinement });
+    this.has({ "headRefinement": refinement });
   }
 
   addSegments(...segDesc: QOPDesc[]): void {
     this.qops.push(...segDesc);
-    this.has({ segments: this.qops });
+    this.has({ "segments": this.qops });
   }
 
   protected appendOps(
@@ -76,8 +76,8 @@ export abstract class PipelineDesc extends MalloyElement {
       nextFS = next.outputSpace();
     }
     return {
-      opList: returnPipe || modelPipe,
-      structDef: nextFS.structDef(),
+      "opList": returnPipe || modelPipe,
+      "structDef": nextFS.structDef()
     };
   }
 
@@ -87,7 +87,7 @@ export abstract class PipelineDesc extends MalloyElement {
     }
     const pipeline: PipeSegment[] = [];
     if (modelPipe.pipeHead) {
-      const { pipeline: turtlePipe } = this.expandTurtle(
+      const { "pipeline": turtlePipe } = this.expandTurtle(
         modelPipe.pipeHead.name,
         fs.structDef()
       );
@@ -115,9 +115,9 @@ export abstract class PipelineDesc extends MalloyElement {
     } else if (turtle.type !== "turtle") {
       this.log(`'${turtleName}' is not a query`);
     } else {
-      return { pipeline: turtle.pipeline, location: turtle.location };
+      return { "pipeline": turtle.pipeline, "location": turtle.location };
     }
-    return { pipeline: [], location: undefined };
+    return { "pipeline": [], "location": undefined };
   }
 
   protected getOutputStruct(

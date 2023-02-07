@@ -24,23 +24,23 @@
 import { cloneDeep } from "lodash";
 
 import {
-  expressionIsCalculation,
   StructDef,
+  expressionIsCalculation
 } from "../../../model/malloy_types";
 
-import { ExploreDesc } from "../types/explore-desc";
+import { RefinedSpace } from "../field-space/refined-space";
+import { HasParameter } from "../parameters/has-parameter";
+import { DeclareFields } from "../query-properties/declare-fields";
+import { Filter } from "../query-properties/filters";
+import { Joins } from "../query-properties/joins";
 import { FieldListEdit } from "../source-properties/field-list-edit";
 import { PrimaryKey } from "../source-properties/primary-key";
 import { Renames } from "../source-properties/renames";
 import { Turtles } from "../source-properties/turtles";
-import { HasParameter } from "../parameters/has-parameter";
-import { Source } from "./source";
-import { DeclareFields } from "../query-properties/declare-fields";
-import { Filter } from "../query-properties/filters";
-import { Joins } from "../query-properties/joins";
+import { ExploreDesc } from "../types/explore-desc";
 import { ExploreField } from "../types/explore-field";
 
-import { RefinedSpace } from "../field-space/refined-space";
+import { Source } from "./source";
 
 /**
  * A Source made from a source reference and a set of refinements
@@ -49,7 +49,7 @@ export class RefinedSource extends Source {
   elementType = "refinedSource";
 
   constructor(readonly source: Source, readonly refinement: ExploreDesc) {
-    super({ source, refinement });
+    super({ "source": source, "refinement": refinement });
   }
 
   structDef(): StructDef {

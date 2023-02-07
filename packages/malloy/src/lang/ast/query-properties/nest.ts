@@ -45,7 +45,7 @@ export class TurtleDecl extends TurtleHeadedPipe {
   }
 
   getPipeline(fs: FieldSpace): model.Pipeline {
-    const modelPipe: model.Pipeline = { pipeline: [] };
+    const modelPipe: model.Pipeline = { "pipeline": [] };
     if (this.turtleName) {
       const headEnt = this.turtleName.getField(fs);
       let reportWrongType = true;
@@ -91,10 +91,10 @@ export class TurtleDecl extends TurtleHeadedPipe {
     }
     const pipe = this.getPipeline(fs);
     return {
-      type: "turtle",
-      name: this.name,
+      "type": "turtle",
+      "name": this.name,
       ...pipe,
-      location: this.location,
+      "location": this.location
     };
   }
 }

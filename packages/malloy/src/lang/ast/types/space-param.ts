@@ -43,7 +43,7 @@ export class AbstractParameter extends SpaceParam {
 
   typeDesc(): TypeDesc {
     const type = this.astParam.type || "unknown";
-    return { dataType: type, expressionType: "scalar" };
+    return { "dataType": type, "expressionType": "scalar" };
   }
 }
 
@@ -57,6 +57,6 @@ export class DefinedParameter extends SpaceParam {
   }
 
   typeDesc(): TypeDesc {
-    return { dataType: this.paramDef.type, expressionType: "scalar" };
+    return { "dataType": this.paramDef.type, "expressionType": "scalar" };
   }
 }

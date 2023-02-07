@@ -22,9 +22,9 @@
  */
 
 import {
-  isProjectSegment,
   PipeSegment,
   ProjectSegment,
+  isProjectSegment
 } from "../../../model/malloy_types";
 
 import { ErrorFactory } from "../error-factory";

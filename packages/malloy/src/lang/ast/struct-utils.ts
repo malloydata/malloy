@@ -42,11 +42,11 @@ export function opOutputStruct(
     } catch (e) {
       logTo.log(
         `INTERNAL ERROR model/Segment.nextStructDef: ${e.message}\n` +
-          `QUERY: ${inspect(opDesc, { breakLength: 72, depth: Infinity })}`
+          `QUERY: ${inspect(opDesc, { "breakLength": 72, "depth": Infinity })}`
       );
     }
   }
-  return { ...ErrorFactory.structDef, dialect: inputStruct.dialect };
+  return { ...ErrorFactory.structDef, "dialect": inputStruct.dialect };
 }
 
 export function getStructFieldDef(

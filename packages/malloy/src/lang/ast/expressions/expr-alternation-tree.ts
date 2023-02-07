@@ -40,16 +40,16 @@ export class ExprAlternationTree extends BinaryBoolean<"|" | "&"> {
     const choice1 = this.left.apply(fs, applyOp, expr);
     const choice2 = this.right.apply(fs, applyOp, expr);
     return {
-      dataType: "boolean",
-      expressionType: maxExpressionType(
+      "dataType": "boolean",
+      "expressionType": maxExpressionType(
         choice1.expressionType,
         choice2.expressionType
       ),
-      value: compose(
+      "value": compose(
         choice1.value,
         this.op === "&" ? "and" : "or",
         choice2.value
-      ),
+      )
     };
   }
 

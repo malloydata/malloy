@@ -22,17 +22,17 @@
  */
 import {
   expressionIsAggregate,
-  UngroupFragment,
+  UngroupFragment
 } from "../../../model/malloy_types";
 
-import { QueryInputSpace } from "../field-space/query-spaces";
 import { errorFor } from "../ast-utils";
-import { ExprValue } from "../types/expr-value";
-import { FieldValueType } from "../types/type-desc";
-import { DefSpace } from "../query-items/field-declaration";
-import { FieldName, FieldSpace } from "../types/field-space";
+import { QueryInputSpace } from "../field-space/query-spaces";
 import { FT } from "../fragtype-utils";
+import { DefSpace } from "../query-items/field-declaration";
+import { ExprValue } from "../types/expr-value";
 import { ExpressionDef } from "../types/expression-def";
+import { FieldName, FieldSpace } from "../types/field-space";
+import { FieldValueType } from "../types/type-desc";
 
 export class ExprUngroup extends ExpressionDef {
   legalChildTypes = FT.anyAtomicT;
@@ -42,7 +42,7 @@ export class ExprUngroup extends ExpressionDef {
     readonly expr: ExpressionDef,
     readonly fields: FieldName[]
   ) {
-    super({ expr, fields });
+    super({ "expr": expr, "fields": fields });
   }
 
   returns(_forExpression: ExprValue): FieldValueType {
@@ -55,8 +55,11 @@ export class ExprUngroup extends ExpressionDef {
       this.expr.log(`${this.control}() expression must be an aggregate`);
       return errorFor("ungrouped scalar");
     }
-    const ungroup: UngroupFragment = { type: this.control, e: exprVal.value };
-    if (this.typeCheck(this.expr, { ...exprVal, expressionType: "scalar" })) {
+    const ungroup: UngroupFragment = {
+      "type": this.control,
+      "e": exprVal.value
+    };
+    if (this.typeCheck(this.expr, { ...exprVal, "expressionType": "scalar" })) {
       if (this.fields.length > 0) {
         let qs = fs;
         if (fs instanceof DefSpace) {
@@ -80,9 +83,9 @@ export class ExprUngroup extends ExpressionDef {
         ungroup.fields = dstFields;
       }
       return {
-        dataType: this.returns(exprVal),
-        expressionType: "analytic",
-        value: [ungroup],
+        "dataType": this.returns(exprVal),
+        "expressionType": "analytic",
+        "value": [ungroup]
       };
     }
     this.log(`${this.control}() incompatible type`);

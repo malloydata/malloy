@@ -22,6 +22,7 @@
  */
 
 import { OrderBy as ModelOrderBy } from "../../../model/malloy_types";
+
 import { FieldName, FieldSpace } from "../types/field-space";
 import { ListOf, MalloyElement } from "../types/malloy-element";
 
@@ -33,7 +34,7 @@ export class OrderBy extends MalloyElement {
   ) {
     super();
     if (field instanceof FieldName) {
-      this.has({ field });
+      this.has({ "field": field });
     }
   }
 
@@ -49,7 +50,7 @@ export class OrderBy extends MalloyElement {
     //     this.field.log(entry.error);
     //   }
     // }
-    const orderElement: ModelOrderBy = { field: this.modelField };
+    const orderElement: ModelOrderBy = { "field": this.modelField };
     if (this.dir) {
       orderElement.dir = this.dir;
     }

@@ -23,7 +23,7 @@
 
 import { SQLPhrase } from "../../../model/malloy_types";
 
-import { isQueryElement, QueryElement } from "../types/query-element";
+import { QueryElement, isQueryElement } from "../types/query-element";
 import { MalloyElement } from "../types/malloy-element";
 
 type SQLStringSegment = string | QueryElement;
@@ -48,7 +48,7 @@ export class SQLString extends MalloyElement {
   sqlPhrases(): SQLPhrase[] {
     return this.elements.map((el) => {
       if (typeof el == "string") {
-        return { sql: el };
+        return { "sql": el };
       }
       return el.query();
     });

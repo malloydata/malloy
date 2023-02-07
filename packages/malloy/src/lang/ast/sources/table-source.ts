@@ -22,8 +22,9 @@
  */
 
 import { StructDef } from "../../../model/malloy_types";
-import { ErrorFactory } from "../error-factory";
+
 import { Source } from "../elements/source";
+import { ErrorFactory } from "../error-factory";
 
 export class TableSource extends Source {
   elementType = "tableSource";
@@ -39,16 +40,16 @@ export class TableSource extends Source {
     if (tableDefEntry) {
       if (tableDefEntry.status == "present") {
         tableDefEntry.value.location = this.location;
-        tableDefEntry.value.fields.forEach(
-          (field) => (field.location = this.location)
-        );
+        tableDefEntry.value.fields.forEach((field) => {
+          field.location = this.location;
+        });
         return {
           ...tableDefEntry.value,
-          fields: tableDefEntry.value.fields.map((field) => ({
+          "fields": tableDefEntry.value.fields.map((field) => ({
             ...field,
-            location: this.location,
+            "location": this.location
           })),
-          location: this.location,
+          "location": this.location
         };
       }
       if (tableDefEntry.status == "error") {

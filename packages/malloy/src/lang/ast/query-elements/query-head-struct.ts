@@ -22,9 +22,9 @@
  */
 
 import {
-  refIsStructDef,
   StructDef,
   StructRef,
+  refIsStructDef
 } from "../../../model/malloy_types";
 
 import { Source } from "../elements/source";
@@ -45,7 +45,7 @@ export class QueryHeadStruct extends Source {
       return this.fromRef;
     }
     const ns = new NamedSource(this.fromRef);
-    this.has({ exploreReference: ns });
+    this.has({ "exploreReference": ns });
     return ns.structDef();
   }
 }

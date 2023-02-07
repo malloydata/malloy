@@ -23,23 +23,23 @@
 
 import { indent } from "../model/utils";
 import {
-  TimestampUnit,
-  ExtractUnit,
   Expr,
-  isTimeFieldType,
-  mkExpr,
+  ExtractUnit,
+  Sampling,
   TimeValue,
+  TimestampUnit,
   TypecastFragment,
   isDateUnit,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  Sampling,
+  isTimeFieldType,
+  mkExpr
 } from "../model/malloy_types";
 import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
 
 const castMap: Record<string, string> = {
-  number: "float64",
+  "number": "float64"
 };
 
 // These are the units that "TIMESTAMP_ADD" accepts
@@ -49,12 +49,12 @@ const timestampAddUnits = [
   "second",
   "minute",
   "hour",
-  "day",
+  "day"
 ];
 
 const extractMap: Record<string, string> = {
-  day_of_week: "dayofweek",
-  day_of_year: "dayofyear",
+  "day_of_week": "dayofweek",
+  "day_of_year": "dayofyear"
 };
 
 export class StandardSQLDialect extends Dialect {
@@ -66,7 +66,7 @@ export class StandardSQLDialect extends Dialect {
   divisionIsInteger = false;
   supportsSumDistinctFunction = false;
   unnestWithNumbers = false;
-  defaultSampling = { enable: false };
+  defaultSampling = { "enable": false };
   supportUnnestArrayAgg = false;
   supportsCTEinCoorelatedSubQueries = false;
   dontUnionIndex = true; // bigquery can't use a sample table more than once in a query.
@@ -74,10 +74,10 @@ export class StandardSQLDialect extends Dialect {
 
   // I think we want an optional list of parameters types that we force a cast to.
   functionInfo: Record<string, FunctionInfo> = {
-    timestamp_seconds: {
-      returnType: "timestamp",
+    "timestamp_seconds": {
+      "returnType": "timestamp"
     },
-    concat: { returnType: "string" },
+    "concat": { "returnType": "string" }
   };
 
   quoteTablePath(tablePath: string): string {

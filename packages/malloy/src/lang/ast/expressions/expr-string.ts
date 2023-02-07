@@ -39,13 +39,13 @@ export class ExprString extends ExpressionDef {
   getExpression(_fs: FieldSpace): ExprValue {
     return {
       ...FT.stringT,
-      value: [
+      "value": [
         {
-          type: "dialect",
-          function: "stringLiteral",
-          literal: this.value,
-        },
-      ],
+          "type": "dialect",
+          "function": "stringLiteral",
+          "literal": this.value
+        }
+      ]
     };
   }
 }

@@ -23,7 +23,7 @@
 
 import { CommonTokenStream } from "antlr4ts";
 import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
-import type { ParseTree } from "antlr4ts/tree";
+import { ParseTree } from "antlr4ts/tree";
 import * as parser from "../lib/Malloy/MalloyParser";
 import { MalloyParserListener } from "../lib/Malloy/MalloyParserListener";
 import { DocumentRange } from "../../model/malloy_types";
@@ -70,10 +70,10 @@ export function findReferences(
 
   let refs: FinderFound = {};
   if (Object.keys(finder.needTables).length > 0) {
-    refs = { tables: finder.needTables };
+    refs = { "tables": finder.needTables };
   }
   if (Object.keys(finder.needImports).length > 0) {
-    refs = { ...refs, urls: finder.needImports };
+    refs = { ...refs, "urls": finder.needImports };
   }
   return Object.keys(refs).length > 0 ? refs : null;
 }

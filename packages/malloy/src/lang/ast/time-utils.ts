@@ -28,7 +28,7 @@ import {
   TimeFieldType,
   TimeLiteralFragment,
   TimestampUnit,
-  TypecastFragment,
+  TypecastFragment
 } from "../../model/malloy_types";
 
 import { compressExpr } from "./expressions/utils";
@@ -44,13 +44,13 @@ export function timeOffset(
 ): Expr {
   return [
     {
-      type: "dialect",
-      function: "delta",
-      base: { valueType: timeType, value: from },
+      "type": "dialect",
+      "function": "delta",
+      "base": { "valueType": timeType, "value": from },
       op,
-      delta: n,
-      units: timeframe,
-    },
+      "delta": n,
+      "units": timeframe
+    }
   ];
 }
 
@@ -60,35 +60,35 @@ export function castTo(
   safe = false
 ): Expr {
   const cast: TypecastFragment = {
-    type: "dialect",
-    function: "cast",
-    dstType: castType,
-    expr: from,
-    safe,
+    "type": "dialect",
+    "function": "cast",
+    "dstType": castType,
+    "expr": from,
+    safe
   };
   return [cast];
 }
 
 export function castTimestampToDate(from: Expr, safe = false): Expr {
   const cast: TypecastFragment = {
-    type: "dialect",
-    function: "cast",
-    dstType: "date",
-    srcType: "timestamp",
-    expr: from,
-    safe,
+    "type": "dialect",
+    "function": "cast",
+    "dstType": "date",
+    "srcType": "timestamp",
+    "expr": from,
+    safe
   };
   return [cast];
 }
 
 export function castDateToTimestamp(from: Expr, safe = false): Expr {
   const cast: TypecastFragment = {
-    type: "dialect",
-    function: "cast",
-    dstType: "timestamp",
-    srcType: "date",
-    expr: from,
-    safe,
+    "type": "dialect",
+    "function": "cast",
+    "dstType": "timestamp",
+    "srcType": "date",
+    "expr": from,
+    safe
   };
   return [cast];
 }
@@ -110,7 +110,7 @@ export function timeResult(
   tt: TimestampUnit | undefined
 ): TimeResult | GranularResult {
   if (tt) {
-    return { ...t, timeframe: tt };
+    return { ...t, "timeframe": tt };
   }
   return t;
 }
@@ -121,11 +121,11 @@ export function timeLiteral(
   tz: string
 ): Expr {
   const fragment: TimeLiteralFragment = {
-    type: "dialect",
-    function: "timeLiteral",
-    literal: literalStr,
-    literalType: timeType,
-    timezone: tz,
+    "type": "dialect",
+    "function": "timeLiteral",
+    "literal": literalStr,
+    "literalType": timeType,
+    "timezone": tz
   };
   return [fragment];
 }
@@ -146,7 +146,7 @@ export function timestampOffset(
       ...from,
       `),INTERVAL `,
       ...n,
-      ` ${units}))`,
+      ` ${units}))`
     ];
   }
   const typeFrom = fromNotTimestamp ? ["TIMESTAMP(", ...from, ")"] : from;
@@ -155,7 +155,7 @@ export function timestampOffset(
     ...typeFrom,
     `,INTERVAL `,
     ...n,
-    ` ${units})`,
+    ` ${units})`
   ]);
 }
 
@@ -172,6 +172,6 @@ export function dateOffset(
     ...from,
     `,INTERVAL `,
     ...n,
-    ` ${units})`,
+    ` ${units})`
   ]);
 }

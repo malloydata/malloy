@@ -43,6 +43,6 @@ export class ReferenceField extends SpaceField {
   }
 
   typeDesc(): TypeDesc {
-    return { dataType: "unknown", expressionType: "scalar" };
+    return { "dataType": "unknown", "expressionType": "scalar" };
   }
 }

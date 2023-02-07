@@ -47,7 +47,7 @@ export abstract class Source extends MalloyElement {
       }
       return {
         ...before,
-        parameters,
+        parameters
       };
     }
     return before;

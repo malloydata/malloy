@@ -26,7 +26,7 @@ import { FieldListEdit } from "../source-properties/field-list-edit";
 import { RenameField } from "../source-properties/renames";
 import { Join } from "../query-properties/joins";
 import { DynamicSpace } from "./dynamic-space";
-import { TurtleDecl, QueryFieldAST } from "../query-properties/nest";
+import { QueryFieldAST, TurtleDecl } from "../query-properties/nest";
 import { FieldDefinitionValue } from "./field-definition-value";
 import { JoinSpaceField } from "./join-space-field";
 import { RenameSpaceField } from "./rename-space-field";

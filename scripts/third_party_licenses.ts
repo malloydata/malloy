@@ -52,7 +52,7 @@ if (!outputFile) throw new Error("Output file required as argument");
 if (fs.existsSync(outputFile)) throw new Error("Output file exists already");
 
 axios.defaults.timeout = 500000;
-axios.defaults.httpsAgent = new https.Agent({ keepAlive: true });
+axios.defaults.httpsAgent = new https.Agent({ "keepAlive": true });
 
 const malloyPackages = [
   "@malloydata/malloy",
@@ -60,7 +60,7 @@ const malloyPackages = [
   "test",
   "@malloydata/db-bigquery",
   "@malloydata/db-postgres",
-  "@malloydata/db-duckdb",
+  "@malloydata/db-duckdb"
 ];
 
 // licenses that we would need to mirror source for, if we included (we don't today)
@@ -79,16 +79,16 @@ const sourceMirrorLicenses = [
   "APSL-1.1",
   "APSL-1.2",
   "APSL-2.0",
-  "Ruby",
+  "Ruby"
 ];
 
 // packages that don't provide license files in standard places
 const licenseFoundElsewhere: { [id: string]: string } = {
   "agent-base":
     "https://github.com/TooTallNate/node-agent-base/blob/master/README.md",
-  crypt: "https://github.com/pvorb/node-crypt/blob/master/LICENSE.mkd",
+  "crypt": "https://github.com/pvorb/node-crypt/blob/master/LICENSE.mkd",
   "http-proxy-agent": "https://github.com/TooTallNate/node-http-proxy-agent",
-  "https-proxy-agent": "https://github.com/TooTallNate/node-https-proxy-agent",
+  "https-proxy-agent": "https://github.com/TooTallNate/node-https-proxy-agent"
 };
 
 const packagesWithoutLocationsSpecified: { [id: string]: string } = {};
@@ -118,8 +118,8 @@ const getLicenses = async () => {
 
     const row: Partial<outputRow> = {
       name,
-      binaryName: "Malloy VSCode Extension",
-      licenseName: dependency[2],
+      "binaryName": "Malloy VSCode Extension",
+      "licenseName": dependency[2]
     };
 
     const url = dependency[3];
@@ -163,7 +163,7 @@ const getLicenses = async () => {
         "License",
         "LICENCE",
         "LICENSE-MIT",
-        "license",
+        "license"
       ];
       const licenseExtensions = ["", ".md", ".txt"];
       const defaultBranchNames = ["blob/main/", "blob/master/", ""]; // "" is because some sub-packages already have branch name embedded in package URL
@@ -198,7 +198,7 @@ const getLicenses = async () => {
               } catch (e) {
                 if (axios.isAxiosError(e)) {
                   if (!e.response || e.response.status != 404) {
-                    console.warn("ERROR: " + e.message);
+                    console.warn(`ERROR: ${e.message}`);
                     errors.push([name, e]);
                   }
                 } else throw e;
@@ -227,14 +227,14 @@ const getLicenses = async () => {
   stringify(
     out,
     {
-      columns: [
+      "columns": [
         "name",
         "licenseLink",
         "licenseName",
         "binaryName",
         "copyrightIncluded",
-        "sourceCodeIncluded",
-      ],
+        "sourceCodeIncluded"
+      ]
     },
     (err: any, output: string) => {
       fs.writeFileSync(outputFile, output);

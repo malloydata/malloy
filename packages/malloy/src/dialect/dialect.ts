@@ -23,16 +23,16 @@
 
 import {
   AtomicFieldType as AtomicFieldTypeInner,
-  TimeFieldType,
-  TimestampUnit,
-  ExtractUnit,
   DialectFragment,
-  TimeValue,
-  mkExpr,
   Expr,
+  ExtractUnit,
   Sampling,
   StructDef,
+  TimeFieldType,
+  TimeValue,
+  TimestampUnit,
   TypecastFragment,
+  mkExpr
 } from "../model/malloy_types";
 
 interface DialectField {

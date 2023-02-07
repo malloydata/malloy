@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExpressionType, AtomicFieldType } from "../../../model/malloy_types";
+import { AtomicFieldType, ExpressionType } from "../../../model/malloy_types";
 
 export type ExpressionValueType =
   | AtomicFieldType

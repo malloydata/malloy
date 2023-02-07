@@ -27,6 +27,6 @@ import { MalloyElement } from "../types/malloy-element";
 export class PrimaryKey extends MalloyElement {
   elementType = "primary key";
   constructor(readonly field: FieldName) {
-    super({ field });
+    super({ "field": field });
   }
 }

@@ -24,13 +24,14 @@ import {
   isValueParameter,
   paramHasValue,
   StructDef,
-  StructRef,
-} from "../../../model";
+  StructRef
+} from "../../../model/malloy_types";
+
 import { Source } from "../elements/source";
-import { MalloyElement, ModelEntryReference } from "../types/malloy-element";
-import { ConstantSubExpression } from "../expressions/constant-sub-expression";
 import { ErrorFactory } from "../error-factory";
+import { ConstantSubExpression } from "../expressions/constant-sub-expression";
 import { castTo } from "../time-utils";
+import { MalloyElement, ModelEntryReference } from "../types/malloy-element";
 
 export class IsValueBlock extends MalloyElement {
   elementType = "isValueBlock";
@@ -52,10 +53,10 @@ export class NamedSource extends Source {
     super();
     if (paramValues && Object.keys(paramValues).length > 0) {
       this.isBlock = new IsValueBlock(paramValues);
-      this.has({ parameterValues: this.isBlock });
+      this.has({ "parameterValues": this.isBlock });
     }
     if (ref instanceof ModelEntryReference) {
-      this.has({ ref });
+      this.has({ "ref": ref });
     }
   }
 

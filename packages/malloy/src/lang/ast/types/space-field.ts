@@ -23,8 +23,8 @@
 
 import {
   FieldDef,
-  isFieldTypeDef,
   QueryFieldDef,
+  isFieldTypeDef
 } from "../../../model/malloy_types";
 import { SpaceEntry } from "./space-entry";
 import { FieldSpace } from "./field-space";
@@ -34,7 +34,7 @@ export abstract class SpaceField extends SpaceEntry {
   readonly refType = "field";
 
   protected fieldTypeFromFieldDef(def: FieldDef): TypeDesc {
-    const ref: TypeDesc = { dataType: def.type, expressionType: "scalar" };
+    const ref: TypeDesc = { "dataType": def.type, "expressionType": "scalar" };
     if (isFieldTypeDef(def) && def.expressionType) {
       ref.expressionType = def.expressionType;
     }

@@ -24,15 +24,15 @@
 import {
   ExpressionType,
   Fragment,
-  maxExpressionType,
+  maxExpressionType
 } from "../../../model/malloy_types";
 
 import { errorFor } from "../ast-utils";
-import { ExprValue } from "../types/expr-value";
-import { FieldSpace } from "../types/field-space";
 import { FT } from "../fragtype-utils";
-import { MalloyElement } from "../types/malloy-element";
+import { ExprValue } from "../types/expr-value";
 import { ExpressionDef } from "../types/expression-def";
+import { FieldSpace } from "../types/field-space";
+import { MalloyElement } from "../types/malloy-element";
 import { compressExpr } from "./utils";
 
 interface Choice {
@@ -105,12 +105,12 @@ export class Pick extends ExpressionDef {
       return errorFor("pick else type");
     }
     return {
-      dataType: returnType.dataType,
-      expressionType: maxExpressionType(
+      "dataType": returnType.dataType,
+      "expressionType": maxExpressionType(
         anyExpressionType,
         elseVal.expressionType
       ),
-      value: compressExpr([...caseValue, " ELSE ", ...elseVal.value, " END"]),
+      "value": compressExpr([...caseValue, " ELSE ", ...elseVal.value, " END"])
     };
   }
 
@@ -132,8 +132,8 @@ export class Pick extends ExpressionDef {
         return errorFor("partial when");
       }
       choiceValues.push({
-        pick: c.pick.getExpression(fs),
-        when: c.when.getExpression(fs),
+        "pick": c.pick.getExpression(fs),
+        "when": c.when.getExpression(fs)
       });
     }
     const returnType = choiceValues[0].pick;
@@ -179,9 +179,9 @@ export class Pick extends ExpressionDef {
     }
     caseValue.push(" ELSE ", ...defVal.value, " END");
     return {
-      dataType: returnType.dataType,
-      expressionType: anyExpressionType,
-      value: compressExpr(caseValue),
+      "dataType": returnType.dataType,
+      "expressionType": anyExpressionType,
+      "value": compressExpr(caseValue)
     };
   }
 }
@@ -192,7 +192,7 @@ export class PickWhen extends MalloyElement {
     readonly pick: ExpressionDef | undefined,
     readonly when: ExpressionDef
   ) {
-    super({ when });
-    this.has({ pick });
+    super({ "when": when });
+    this.has({ "pick": pick });
   }
 }

@@ -29,7 +29,7 @@ export enum Comparison {
   EqualTo = "=",
   GreaterThan = ">",
   GreaterThanOrEqualTo = ">=",
-  NotEqualTo = "!=",
+  NotEqualTo = "!="
 }
 
 export function isComparison(s: string): s is Comparison {

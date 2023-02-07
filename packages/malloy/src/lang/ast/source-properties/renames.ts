@@ -28,7 +28,7 @@ export class RenameField extends MalloyElement {
   elementType = "renameField";
   constructor(readonly newName: string, readonly oldName: FieldName) {
     super();
-    this.has({ oldName });
+    this.has({ "oldName": oldName });
   }
 }
 

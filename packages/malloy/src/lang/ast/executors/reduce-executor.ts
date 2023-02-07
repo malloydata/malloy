@@ -23,10 +23,10 @@
 
 import {
   FilterExpression,
-  isReduceSegment,
   PipeSegment,
   QuerySegment,
   ReduceSegment,
+  isReduceSegment
 } from "../../../model/malloy_types";
 
 import { ErrorFactory } from "../error-factory";
@@ -46,7 +46,7 @@ import { isNestedQuery } from "../query-properties/nest";
 import {
   QueryInputSpace,
   QuerySpace,
-  ReduceFieldSpace,
+  ReduceFieldSpace
 } from "../field-space/query-spaces";
 import { DynamicSpace } from "../field-space/dynamic-space";
 

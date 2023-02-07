@@ -28,13 +28,13 @@ import { FieldName, FieldSpace } from "../types/field-space";
 import { MalloyElement } from "../types/malloy-element";
 import { Join } from "../query-properties/joins";
 import { SpaceField } from "../types/space-field";
-import { SpaceSeed, SourceSpec } from "../space-seed";
+import { SourceSpec, SpaceSeed } from "../space-seed";
 
-import { isNestedQuery, QueryFieldAST } from "../query-properties/nest";
+import { QueryFieldAST, isNestedQuery } from "../query-properties/nest";
 import { NestReference } from "../query-properties/nest-reference";
 import {
   FieldReference,
-  WildcardFieldReference,
+  WildcardFieldReference
 } from "../query-items/field-references";
 import { FieldCollectionMember } from "../types/field-collection-member";
 import { QueryItem } from "../types/query-item";
@@ -193,8 +193,8 @@ export abstract class QuerySpace extends RefinedSpace {
     }
 
     const segment: model.QuerySegment = {
-      type: this.segmentType,
-      fields: this.queryFieldDefs(),
+      "type": this.segmentType,
+      "fields": this.queryFieldDefs()
     };
 
     segment.fields = mergeFields(refineFrom?.fields, segment.fields);
