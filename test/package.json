@@ -6,6 +6,7 @@
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../jest.config.js",
     "build": "tsc --build",
+    "clean": "tsc --build --clean",
     "malloyc": "ts-node ../scripts/malloy-to-json"
   },
   "dependencies": {

@@ -2,6 +2,7 @@
 set -euxo pipefail
 
 nix-shell --quiet --pure --command "$(cat <<NIXCMD
+  set -euxo pipefail
   export PGHOST=127.0.0.1
   export PGDATABASE=postgres
   export PGUSER=673673622326@cloudbuild

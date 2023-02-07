@@ -5,7 +5,11 @@
   "name": "malloy",
   "workspaces": {
     "packages": [
-      "packages/*",
+      "packages/malloy",
+      "packages/malloy-db-bigquery",
+      "packages/malloy-db-duckdb",
+      "packages/malloy-db-postgres",
+      "packages/malloy-render",
       "test"
     ]
   },
@@ -17,8 +21,8 @@
     "npm": ">=8"
   },
   "scripts": {
-    "clean": "npm run -w @malloydata/malloy clean && tsc --build --clean",
-    "build": "npm run -w @malloydata/malloy build-parser && tsc --build",
+    "clean": "npm run -ws clean",
+    "build": "npm run -ws build",
     "lint": "eslint --quiet '**/*.ts{,x}'",
     "lint-fix": "eslint --quiet '**/*.ts{,x}' --fix",
     "test": "jest --runInBand",
