@@ -28,8 +28,9 @@ import {
 
 import { ExpressionDef } from "../types/expression-def";
 import { compressExpr } from "../expressions/utils";
-import { FieldName, FieldSpace } from "../types/field-space";
+import { FieldName } from "../types/field-space";
 import { MalloyElement } from "../types/malloy-element";
+import { QuerySpace } from "../field-space/query-spaces";
 
 type TopInit = FieldName | ExpressionDef;
 
@@ -40,17 +41,16 @@ export class Top extends MalloyElement {
     this.has({ by });
   }
 
-  getBy(fs: FieldSpace): ModelBy | undefined {
+  getBy(qfs: QuerySpace): ModelBy | undefined {
     if (this.by) {
       if (this.by instanceof FieldName) {
-        // TODO jump-to-definition `fs` cannot currently `lookup` fields in the output space
-        // const entry = this.by.getField(fs);
-        // if (entry.error) {
-        //   this.by.log(entry.error);
-        // }
+        const entry = this.by.getField(qfs);
+        if (entry.error) {
+          this.by.log(entry.error);
+        }
         return { by: "name", name: this.by.refString };
       } else {
-        const byExpr = this.by.getExpression(fs);
+        const byExpr = this.by.getExpression(qfs.exprSpace);
         if (expressionIsAggregate(byExpr.expressionType)) {
           this.log("top by expression must be an aggregate");
         }

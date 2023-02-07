@@ -129,7 +129,7 @@ export class ReduceExecutor implements Executor {
     }
 
     if (this.order instanceof Top) {
-      const topBy = this.order.getBy(this.inputFS);
+      const topBy = this.order.getBy(this.resultFS);
       if (topBy) {
         to.by = topBy;
       }
