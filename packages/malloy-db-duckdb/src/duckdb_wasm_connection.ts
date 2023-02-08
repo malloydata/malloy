@@ -207,7 +207,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
 
     for (const tableUri of tables) {
       const { tablePath } = parseTableURI(tableUri);
-      if (tablePath.startsWith("https://")) {
+      if (tablePath.match(/^https?:\/\//)) {
         continue;
       }
       if (this.remoteFileStatus[tablePath]) {
