@@ -26,7 +26,7 @@ import {
   MalloyQueryData,
   QueryDataRow,
   SQLBlock,
-  StructDef,
+  StructDef
 } from "./model/malloy_types";
 
 /**

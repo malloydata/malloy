@@ -31,21 +31,21 @@ import { describeIfDatabaseAvailable, mkSqlEqWith } from "../../util";
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
 const basicTypes: Record<string, string> = {
-  bigquery: `
+  "bigquery": `
     SELECT * FROM UNNEST([STRUCT(
       CAST('2021-02-24' as DATE) as t_date,
       CAST('2021-02-24 03:05:06' as TIMESTAMP) as t_timestamp
     )])`,
-  postgres: `
+  "postgres": `
     SELECT
       DATE('2021-02-24') as t_date,
       '2021-02-24 03:05:06'::timestamp with time zone as t_timestamp
-  `,
+  `
 };
 
 const [describe, databases] = describeIfDatabaseAvailable([
   "bigquery",
-  "postgres",
+  "postgres"
 ]);
 
 describe("Datetimes", () => {
@@ -56,7 +56,7 @@ describe("Datetimes", () => {
   });
 
   runtimes.runtimeMap.forEach((runtime, databaseName) => {
-    const sqlEq = mkSqlEqWith(runtime, { sql: basicTypes[databaseName] });
+    const sqlEq = mkSqlEqWith(runtime, { "sql": basicTypes[databaseName] });
 
     test(`date in sql_block no explore- ${databaseName}`, async () => {
       const eq = sqlEq("t_date", "@2021-02-24");

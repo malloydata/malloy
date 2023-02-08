@@ -56,20 +56,20 @@ export type {
   Query,
   NamedQuery,
   NamedModelObject,
-  ExpressionType,
+  ExpressionType
 } from "./model";
 export {
   // Used in Composer Demo
   Segment,
   isFilteredAliasedName,
   flattenQuery,
-  expressionIsCalculation,
+  expressionIsCalculation
 } from "./model";
 export {
   // Neede for VSCode extension
   HighlightType,
   // Needed for tests only
-  MalloyTranslator,
+  MalloyTranslator
 } from "./lang";
 export type { LogMessage, TranslateResponse } from "./lang";
 export {
@@ -91,8 +91,8 @@ export {
   QueryMaterializer,
   CSVWriter,
   JSONWriter,
-  DataWriter,
   Parse,
+  DataWriter
 } from "./malloy";
 export type {
   Explore,
@@ -114,7 +114,7 @@ export type {
   PreparedResultMaterializer,
   SQLBlockMaterializer,
   ExploreMaterializer,
-  WriteStream,
+  WriteStream
 } from "./malloy";
 export type { RunSQLOptions } from "./run_sql_options";
 export type {
@@ -129,7 +129,7 @@ export type {
   PooledConnection,
   TestableConnection,
   PersistSQLResults,
-  StreamingConnection,
+  StreamingConnection
 } from "./runtime_types";
 export type { Loggable } from "./malloy";
 export { toAsyncGenerator } from "./connection_utils";

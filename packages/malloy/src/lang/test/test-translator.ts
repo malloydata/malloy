@@ -23,126 +23,129 @@
 
 import { inspect } from "util";
 import {
-  StructDef,
-  NamedModelObject,
+  DocumentLocation,
+  FieldDef,
   ModelDef,
+  NamedModelObject,
+  PipeSegment,
   Query,
   QueryFieldDef,
-  FieldDef,
-  isFilteredAliasedName,
-  PipeSegment,
+  StructDef,
   TurtleDef,
-  DocumentLocation,
+  isFilteredAliasedName
 } from "../../model/malloy_types";
-import { MalloyElement, ModelEntry, NameSpace } from "../ast";
-import { MalloyTranslator, TranslateResponse } from "../parse-malloy";
+import { MalloyElement } from "../ast";
+import { NameSpace } from "../ast/types/name-space";
+import { ModelEntry } from "../ast/types/model-entry";
+import { MalloyTranslator } from "../parse-malloy";
+import { TranslateResponse } from "../translate-response";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
-  return inspect(thing, { breakLength: 72, depth: Infinity });
+  return inspect(thing, { "breakLength": 72, "depth": Infinity });
 }
 
 const mockSchema: Record<string, StructDef> = {
-  aTable: {
-    type: "struct",
-    name: "aTable",
-    dialect: "standardsql",
-    structSource: { type: "table", tablePath: "aTable" },
-    structRelationship: { type: "basetable", connectionName: "test" },
-    fields: [
-      { type: "string", name: "astr" },
-      { type: "number", name: "af", numberType: "float" },
-      { type: "number", name: "ai", numberType: "integer" },
-      { type: "date", name: "ad" },
-      { type: "boolean", name: "abool" },
-      { type: "timestamp", name: "ats" },
-    ],
+  "aTable": {
+    "type": "struct",
+    "name": "aTable",
+    "dialect": "standardsql",
+    "structSource": { "type": "table", "tablePath": "aTable" },
+    "structRelationship": { "type": "basetable", "connectionName": "test" },
+    "fields": [
+      { "type": "string", "name": "astr" },
+      { "type": "number", "name": "af", "numberType": "float" },
+      { "type": "number", "name": "ai", "numberType": "integer" },
+      { "type": "date", "name": "ad" },
+      { "type": "boolean", "name": "abool" },
+      { "type": "timestamp", "name": "ats" }
+    ]
   },
   "malloytest.carriers": {
-    type: "struct",
-    name: "malloytest.carriers",
-    dialect: "standardsql",
-    structSource: {
-      type: "table",
-      tablePath: "malloytest.carriers",
+    "type": "struct",
+    "name": "malloytest.carriers",
+    "dialect": "standardsql",
+    "structSource": {
+      "type": "table",
+      "tablePath": "malloytest.carriers"
     },
-    structRelationship: { type: "basetable", connectionName: "bigquery" },
-    fields: [
-      { name: "code", type: "string" },
-      { name: "name", type: "string" },
-      { name: "nickname", type: "string" },
+    "structRelationship": { "type": "basetable", "connectionName": "bigquery" },
+    "fields": [
+      { "name": "code", "type": "string" },
+      { "name": "name", "type": "string" },
+      { "name": "nickname", "type": "string" }
     ],
-    as: "carriers",
+    "as": "carriers"
   },
   "malloytest.flights": {
-    type: "struct",
-    name: "malloytest.flights",
-    dialect: "standardsql",
-    structSource: {
-      type: "table",
-      tablePath: "malloytest.flights",
+    "type": "struct",
+    "name": "malloytest.flights",
+    "dialect": "standardsql",
+    "structSource": {
+      "type": "table",
+      "tablePath": "malloytest.flights"
     },
-    structRelationship: { type: "basetable", connectionName: "bigquery" },
-    fields: [
-      { name: "carrier", type: "string" },
-      { name: "origin", type: "string" },
-      { name: "destination", type: "string" },
-      { name: "flight_num", type: "string" },
-      { name: "flight_time", type: "number", numberType: "integer" },
-      { name: "tail_num", type: "string" },
-      { name: "dep_time", type: "timestamp" },
-      { name: "arr_time", type: "timestamp" },
-      { name: "dep_delay", type: "number", numberType: "integer" },
-      { name: "arr_delay", type: "number", numberType: "integer" },
-      { name: "taxi_out", type: "number", numberType: "integer" },
-      { name: "taxi_in", type: "number", numberType: "integer" },
-      { name: "distance", type: "number", numberType: "integer" },
-      { name: "cancelled", type: "string" },
-      { name: "diverted", type: "string" },
-      { name: "id2", type: "number", numberType: "integer" },
+    "structRelationship": { "type": "basetable", "connectionName": "bigquery" },
+    "fields": [
+      { "name": "carrier", "type": "string" },
+      { "name": "origin", "type": "string" },
+      { "name": "destination", "type": "string" },
+      { "name": "flight_num", "type": "string" },
+      { "name": "flight_time", "type": "number", "numberType": "integer" },
+      { "name": "tail_num", "type": "string" },
+      { "name": "dep_time", "type": "timestamp" },
+      { "name": "arr_time", "type": "timestamp" },
+      { "name": "dep_delay", "type": "number", "numberType": "integer" },
+      { "name": "arr_delay", "type": "number", "numberType": "integer" },
+      { "name": "taxi_out", "type": "number", "numberType": "integer" },
+      { "name": "taxi_in", "type": "number", "numberType": "integer" },
+      { "name": "distance", "type": "number", "numberType": "integer" },
+      { "name": "cancelled", "type": "string" },
+      { "name": "diverted", "type": "string" },
+      { "name": "id2", "type": "number", "numberType": "integer" }
     ],
-    as: "flights",
+    "as": "flights"
   },
   "malloytest.airports": {
-    type: "struct",
-    name: "malloytest.airports",
-    dialect: "standardsql",
-    structSource: {
-      type: "table",
-      tablePath: "malloytest.airports",
+    "type": "struct",
+    "name": "malloytest.airports",
+    "dialect": "standardsql",
+    "structSource": {
+      "type": "table",
+      "tablePath": "malloytest.airports"
     },
-    structRelationship: { type: "basetable", connectionName: "bigquery" },
-    fields: [
-      { name: "id", type: "number", numberType: "integer" },
-      { name: "code", type: "string" },
-      { name: "site_number", type: "string" },
-      { name: "fac_type", type: "string" },
-      { name: "fac_use", type: "string" },
-      { name: "faa_region", type: "string" },
-      { name: "faa_dist", type: "string" },
-      { name: "city", type: "string" },
-      { name: "county", type: "string" },
-      { name: "state", type: "string" },
-      { name: "full_name", type: "string" },
-      { name: "own_type", type: "string" },
-      { name: "longitude", type: "number", numberType: "float" },
-      { name: "latitude", type: "number", numberType: "float" },
-      { name: "elevation", type: "number", numberType: "integer" },
-      { name: "aero_cht", type: "string" },
-      { name: "cbd_dist", type: "number", numberType: "integer" },
-      { name: "cbd_dir", type: "string" },
-      { name: "act_date", type: "string" },
-      { name: "cert", type: "string" },
-      { name: "fed_agree", type: "string" },
-      { name: "cust_intl", type: "string" },
-      { name: "c_ldg_rts", type: "string" },
-      { name: "joint_use", type: "string" },
-      { name: "mil_rts", type: "string" },
-      { name: "cntl_twr", type: "string" },
-      { name: "major", type: "string" },
+    "structRelationship": { "type": "basetable", "connectionName": "bigquery" },
+    "fields": [
+      { "name": "id", "type": "number", "numberType": "integer" },
+      { "name": "code", "type": "string" },
+      { "name": "site_number", "type": "string" },
+      { "name": "fac_type", "type": "string" },
+      { "name": "fac_use", "type": "string" },
+      { "name": "faa_region", "type": "string" },
+      { "name": "faa_dist", "type": "string" },
+      { "name": "city", "type": "string" },
+      { "name": "county", "type": "string" },
+      { "name": "state", "type": "string" },
+      { "name": "full_name", "type": "string" },
+      { "name": "own_type", "type": "string" },
+      { "name": "longitude", "type": "number", "numberType": "float" },
+      { "name": "latitude", "type": "number", "numberType": "float" },
+      { "name": "elevation", "type": "number", "numberType": "integer" },
+      { "name": "aero_cht", "type": "string" },
+      { "name": "cbd_dist", "type": "number", "numberType": "integer" },
+      { "name": "cbd_dir", "type": "string" },
+      { "name": "act_date", "type": "string" },
+      { "name": "cert", "type": "string" },
+      { "name": "fed_agree", "type": "string" },
+      { "name": "cust_intl", "type": "string" },
+      { "name": "c_ldg_rts", "type": "string" },
+      { "name": "joint_use", "type": "string" },
+      { "name": "mil_rts", "type": "string" },
+      { "name": "cntl_twr", "type": "string" },
+      { "name": "major", "type": "string" }
     ],
-    as: "airports",
-  },
+    "as": "airports"
+  }
 };
 export const aTableDef = mockSchema.aTable;
 
@@ -170,7 +173,7 @@ class TestRoot extends MalloyElement implements NameSpace {
     const struct = this.modelDef.contents[name];
     if (struct.type == "struct") {
       const exported = this.modelDef.exports.includes(name);
-      return { entry: struct, exported };
+      return { "entry": struct, exported };
     }
   }
 
@@ -193,50 +196,50 @@ export class TestTranslator extends MalloyTranslator {
    *   }
    */
   internalModel: ModelDef = {
-    name: testURI,
-    exports: [],
-    contents: {
-      a: { ...aTableDef, primaryKey: "astr", as: "a" },
-      b: { ...aTableDef, primaryKey: "astr", as: "b" },
-      ab: {
+    "name": testURI,
+    "exports": [],
+    "contents": {
+      "a": { ...aTableDef, "primaryKey": "astr", "as": "a" },
+      "b": { ...aTableDef, "primaryKey": "astr", "as": "b" },
+      "ab": {
         ...aTableDef,
-        as: "ab",
-        primaryKey: "astr",
-        fields: [
+        "as": "ab",
+        "primaryKey": "astr",
+        "fields": [
           ...aTableDef.fields,
           {
             ...aTableDef,
-            as: "b",
-            structRelationship: {
-              type: "one",
-              onExpression: [
-                { type: "field", path: "astr" },
+            "as": "b",
+            "structRelationship": {
+              "type": "one",
+              "onExpression": [
+                { "type": "field", "path": "astr" },
                 "=",
-                { type: "field", path: "b.astr" },
-              ],
-            },
+                { "type": "field", "path": "b.astr" }
+              ]
+            }
           },
           {
-            type: "number",
-            name: "acount",
-            numberType: "integer",
-            expressionType: "aggregate",
-            e: ["COUNT()"],
-            code: "count()",
+            "type": "number",
+            "name": "acount",
+            "numberType": "integer",
+            "expressionType": "aggregate",
+            "e": ["COUNT()"],
+            "code": "count()"
           },
           {
-            type: "turtle",
-            name: "aturtle",
-            pipeline: [
+            "type": "turtle",
+            "name": "aturtle",
+            "pipeline": [
               {
-                type: "reduce",
-                fields: ["astr", "acount"],
-              },
-            ],
-          },
-        ],
-      },
-    },
+                "type": "reduce",
+                "fields": ["astr", "acount"]
+              }
+            ]
+          }
+        ]
+      }
+    }
   };
 
   constructor(source: string, rootRule = "malloyDocument") {
@@ -270,22 +273,22 @@ export class TestTranslator extends MalloyTranslator {
       if (whatImports) {
         mysterious = false;
         this.logger.log({
-          at: this.defaultLocation(),
-          message: `Missing imports: ${whatImports.join(",")}`,
+          "at": this.defaultLocation(),
+          "message": `Missing imports: ${whatImports.join(",")}`
         });
       }
       const needThese = this.schemaZone.getUndefined();
       if (needThese) {
         mysterious = false;
         this.logger.log({
-          at: this.defaultLocation(),
-          message: `Missing schema: ${needThese.join(",")}`,
+          "at": this.defaultLocation(),
+          "message": `Missing schema: ${needThese.join(",")}`
         });
       }
       if (mysterious) {
         this.logger.log({
-          at: this.defaultLocation(),
-          message: "mysterious translation failure",
+          "at": this.defaultLocation(),
+          "message": "mysterious translation failure"
         });
       }
     }
@@ -359,20 +362,20 @@ export function markSource(
     code += unmarked[index];
     const lines = code.split("\n");
     const start = {
-      line: lines.length - 1,
-      character: lines[lines.length - 1].length,
+      "line": lines.length - 1,
+      "character": lines[lines.length - 1].length
     };
     const bitLines = mark.split("\n");
     const location = {
-      url: testURI,
-      range: {
+      "url": testURI,
+      "range": {
         start,
-        end: {
-          line: start.line + bitLines.length - 1,
-          character:
-            bitLines.length === 1 ? start.character + mark.length : mark.length,
-        },
-      },
+        "end": {
+          "line": start.line + bitLines.length - 1,
+          "character":
+            bitLines.length === 1 ? start.character + mark.length : mark.length
+        }
+      }
     };
     locations.push(location);
     code += mark;

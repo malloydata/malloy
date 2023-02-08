@@ -22,65 +22,65 @@
  */
 
 import { cloneDeep } from "lodash";
-import { StandardSQLDialect } from "../dialect/standardsql";
 import { Dialect, DialectFieldList, getDialect } from "../dialect";
+import { StandardSQLDialect } from "../dialect/standardsql";
 import {
+  AggregateFragment,
+  AnalyticFragment,
+  CompiledQuery,
+  DialectFragment,
+  Expr,
+  expressionIsCalculation,
+  FieldAtomicDef,
   FieldDateDef,
   FieldDef,
+  FieldFragment,
   FieldRef,
   FieldTimestampDef,
-  FilterExpression,
-  getIdentifier,
-  ModelDef,
-  Query,
-  QueryFieldDef,
-  StructDef,
-  StructRef,
-  OrderBy,
-  ResultMetadataDef,
-  FieldAtomicDef,
-  Expr,
-  isFieldFragment,
-  FieldFragment,
-  AggregateFragment,
-  isAggregateFragment,
-  isAsymmetricFragment,
-  CompiledQuery,
-  FilterFragment,
-  isFilterFragment,
-  hasExpression,
-  PipeSegment,
-  TurtleDef,
-  QuerySegment,
-  IndexSegment,
   Filtered,
+  FilterExpression,
+  FilterFragment,
+  getIdentifier,
+  getPhysicalFields,
+  hasExpression,
+  IndexSegment,
+  isAggregateFragment,
+  isAnalyticFragment,
   isApplyFragment,
   isApplyValue,
+  isAsymmetricFragment,
+  isDialectFragment,
+  isFieldFragment,
+  isFilterFragment,
+  isIndexSegment,
+  isJoinOn,
   isParameterFragment,
-  ParameterFragment,
-  Parameter,
+  isPhysical,
+  isQuerySegment,
+  isUngroupFragment,
   isValueParameter,
   JoinRelationship,
-  isPhysical,
-  isJoinOn,
-  isQuerySegment,
-  DialectFragment,
-  isDialectFragment,
-  getPhysicalFields,
-  isIndexSegment,
-  UngroupFragment,
-  isUngroupFragment,
-  NamedQuery,
-  expressionIsCalculation,
-  isAnalyticFragment,
-  AnalyticFragment,
   malloyFunctions,
+  ModelDef,
+  NamedQuery,
+  OrderBy,
+  Parameter,
+  ParameterFragment,
+  PipeSegment,
+  Query,
+  QueryFieldDef,
+  QuerySegment,
+  ResultMetadataDef,
   ResultStructMetadataDef,
   SearchIndexResult,
+  StructDef,
+  StructRef,
+  TurtleDef,
+  UngroupFragment
 } from "./malloy_types";
 
-import { indent, AndChain, generateHash } from "./utils";
 import { Connection } from "../runtime_types";
+import { AndChain, generateHash, indent } from "./utils";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -163,7 +163,7 @@ class StageWriter {
     lastStageName: string | undefined;
   } {
     if (!this.useCTE) {
-      return { sql: this.withs[0], lastStageName: this.withs[0] };
+      return { "sql": this.withs[0], "lastStageName": this.withs[0] };
     }
     let lastStageName = this.getName(0);
     let prefix = `WITH `;
@@ -179,7 +179,7 @@ class StageWriter {
       w += `${prefix}${lastStageName} AS (\n${indent(sql)})\n`;
       prefix = ", ";
     }
-    return { sql: w, lastStageName };
+    return { "sql": w, lastStageName };
   }
 
   /** emit the SQL for all the stages.  */
@@ -603,16 +603,15 @@ class QueryField extends QueryNode {
     for (const ordering of orderByDef) {
       if (typeof ordering.field === "string") {
         orderingField = {
-          name: ordering.field,
-          fif: resultStruct.getField(ordering.field),
+          "name": ordering.field,
+          "fif": resultStruct.getField(ordering.field)
         };
       } else {
         orderingField = resultStruct.getFieldByNumber(ordering.field);
       }
       if (resultStruct.firstSegment.type === "reduce") {
         obSQL.push(
-          " " +
-            orderingField.fif.getSQL() +
+          ` ${orderingField.fif.getSQL()}` +
             // this.parent.dialect.sqlMaybeQuoteIdentifier(
             //   `${orderingField.name}__${resultStruct.groupSet}`
             // ) +
@@ -748,7 +747,7 @@ class QueryField extends QueryNode {
             this.parent.fieldDef.structSource.method === "nested"),
         this.parent.fieldDef.structRelationship.type === "nested" &&
           this.parent.fieldDef.structRelationship.isArray
-      ),
+      )
     ];
   }
 
@@ -815,17 +814,17 @@ class QueryFieldStruct extends QueryAtomicField {
   getAsJoinedStructDef(foreignKeyName: string): StructDef {
     return {
       ...this.parent.fieldDef,
-      structRelationship: {
-        type: "one",
-        onExpression: [
+      "structRelationship": {
+        "type": "one",
+        "onExpression": [
           {
-            type: "field",
-            path: this.primaryKey,
+            "type": "field",
+            "path": this.primaryKey
           },
           "=",
-          { type: "field", path: foreignKeyName },
-        ],
-      },
+          { "type": "field", "path": foreignKeyName }
+        ]
+      }
     };
   }
 }
@@ -837,7 +836,7 @@ class QueryFieldDate extends QueryAtomicField {
       return super.generateExpression(resultSet);
     } else {
       const truncated = this.parent.dialect.sqlTrunc(
-        { value: this.getExpr(), valueType: "date" },
+        { "value": this.getExpr(), "valueType": "date" },
         fd.timeframe
       );
       return this.generateExpressionFromExpr(resultSet, this.parent, truncated);
@@ -848,8 +847,8 @@ class QueryFieldDate extends QueryAtomicField {
   getChildByName(name: string): QueryFieldDate {
     const fieldDef = {
       ...this.fieldDef,
-      as: `${this.getIdentifier()}_${name}`,
-      timeframe: name,
+      "as": `${this.getIdentifier()}_${name}`,
+      "timeframe": name
     };
     return new QueryFieldDate(fieldDef as FieldDateDef, this.parent);
   }
@@ -860,8 +859,8 @@ class QueryFieldTimestamp extends QueryAtomicField {
   getChildByName(name: string): QueryFieldTimestamp {
     const fieldDef = {
       ...this.fieldDef,
-      as: `${this.getIdentifier()}_${name}`,
-      timeframe: name,
+      "as": `${this.getIdentifier()}_${name}`,
+      "timeframe": name
     };
     return new QueryFieldTimestamp(fieldDef as FieldTimestampDef, this.parent);
   }
@@ -1069,7 +1068,7 @@ class FieldInstanceResult implements FieldInstance {
           fi.fieldUsage.type === "result" &&
           fi.fieldUsage.resultIndex === index
         ) {
-          return { name, fif: fi };
+          return { name, "fif": fi };
         }
       }
     }
@@ -1202,15 +1201,15 @@ class FieldInstanceResult implements FieldInstance {
         if (fi.fieldUsage.type === "result") {
           firstField ||= fi.fieldUsage.resultIndex;
           if (["date", "timestamp"].indexOf(fi.f.fieldDef.type) > -1) {
-            return [{ dir: "desc", field: fi.fieldUsage.resultIndex }];
+            return [{ "dir": "desc", "field": fi.fieldUsage.resultIndex }];
           } else if (isCalculatedField(fi.f)) {
-            return [{ dir: "desc", field: fi.fieldUsage.resultIndex }];
+            return [{ "dir": "desc", "field": fi.fieldUsage.resultIndex }];
           }
         }
       }
     }
     if (firstField) {
-      return [{ dir: "asc", field: firstField }];
+      return [{ "dir": "asc", "field": firstField }];
     }
     return [];
   }
@@ -1253,7 +1252,7 @@ class FieldInstanceResult implements FieldInstance {
     ) {
       query.addDependantExpr(this, qs.parent, sr.onExpression, [
         ...joinStack,
-        name,
+        name
       ]);
     }
 
@@ -1464,9 +1463,9 @@ class JoinInstance {
       for (const filter of this.queryStruct.fieldDef.filterList) {
         const qf = new QueryFieldBoolean(
           {
-            type: "boolean",
-            name: "ignoreme",
-            e: filter.expression,
+            "type": "boolean",
+            "name": "ignoreme",
+            "e": filter.expression
           },
           this.queryStruct
         );
@@ -1503,9 +1502,9 @@ class JoinInstance {
 
     for (const f of this.queryStruct.fieldDef.fields.filter(isPhysical)) {
       dialectFieldList.push({
-        type: f.type,
-        sqlExpression: getIdentifier(f),
-        sqlOutputName: getIdentifier(f),
+        "type": f.type,
+        "sqlExpression": getIdentifier(f),
+        "sqlOutputName": getIdentifier(f)
       });
     }
     return dialectFieldList;
@@ -1524,12 +1523,12 @@ export class Segment {
   // static nextStructDef(s: StructDef, q: AnonymousQueryDef): StructDef
   static nextStructDef(structDef: StructDef, segment: PipeSegment): StructDef {
     const qs = new QueryStruct(structDef, {
-      model: new QueryModel(undefined),
+      "model": new QueryModel(undefined)
     });
     const turtleDef: TurtleDef = {
-      type: "turtle",
-      name: "ignoreme",
-      pipeline: [segment],
+      "type": "turtle",
+      "name": "ignoreme",
+      "pipeline": [segment]
     };
 
     const queryQueryQuery = QueryQuery.makeQuery(
@@ -1598,19 +1597,22 @@ class QueryQuery extends QueryField {
       parent = new QueryStruct(
         {
           ...parentStruct.fieldDef,
-          fields: [...parentStruct.fieldDef.fields, ...firstStage.extendSource],
+          "fields": [
+            ...parentStruct.fieldDef.fields,
+            ...firstStage.extendSource
+          ]
         },
-        parent.parent ? { struct: parent } : { model: parent.model }
+        parent.parent ? { "struct": parent } : { "model": parent.model }
       );
       flatTurtleDef = {
         ...flatTurtleDef,
-        pipeline: [
+        "pipeline": [
           {
             ...firstStage,
-            extendSource: undefined,
+            "extendSource": undefined
           },
-          ...flatTurtleDef.pipeline.slice(1),
-        ],
+          ...flatTurtleDef.pipeline.slice(1)
+        ]
       };
     }
 
@@ -1827,9 +1829,9 @@ class QueryQuery extends QueryField {
           const key = expr.fields.sort().join("|") + expr.type;
           if (resultStruct.ungroupedSets.get(key) === undefined) {
             resultStruct.ungroupedSets.set(key, {
-              type: expr.type,
-              fields: expr.fields,
-              groupSet: -1,
+              "type": expr.type,
+              "fields": expr.fields,
+              "groupSet": -1
             });
           }
         }
@@ -1947,7 +1949,7 @@ class QueryQuery extends QueryField {
       } else if (field instanceof QueryAtomicField) {
         resultStruct.addField(as, field, {
           resultIndex,
-          type: "result",
+          "type": "result"
         });
         this.addDependancies(resultStruct, field);
 
@@ -2052,7 +2054,8 @@ class QueryQuery extends QueryField {
         const fieldDef = fi.f.fieldDef as FieldAtomicDef;
         let filterList;
         const sourceField =
-          fi.f.parent.getFullOutputName() + (fieldDef.name || fieldDef.as);
+          fi.f.parent.getFullOutputName() +
+          (fieldDef.name || fieldDef.as || "undefined");
         const sourceExpression: string | undefined = fieldDef.code;
         const sourceClasses = [sourceField];
         if (isCalculatedField(fi.f)) {
@@ -2062,7 +2065,7 @@ class QueryQuery extends QueryField {
             sourceExpression,
             filterList,
             sourceClasses,
-            fieldKind: "measure",
+            "fieldKind": "measure"
           };
         }
         if (isScalarField(fi.f)) {
@@ -2071,7 +2074,7 @@ class QueryQuery extends QueryField {
             sourceExpression,
             filterList,
             sourceClasses,
-            fieldKind: "dimension",
+            "fieldKind": "dimension"
           };
         } else {
           return undefined;
@@ -2089,8 +2092,8 @@ class QueryQuery extends QueryField {
           sourceField,
           filterList,
           sourceClasses,
-          fieldKind: "struct",
-          limit,
+          "fieldKind": "struct",
+          limit
         };
       }
     }
@@ -2123,11 +2126,11 @@ class QueryQuery extends QueryField {
           fi.getRepeatedResultType() === "nested" ? "nested" : "inline";
         structDef.name = name;
         structDef.structRelationship = {
-          field: name,
-          type: resultType,
-          isArray: false,
+          "field": name,
+          "type": resultType,
+          "isArray": false
         };
-        structDef.structSource = { type: resultType };
+        structDef.structSource = { "type": resultType };
         structDef.resultMetadata = resultMetadata;
         fields.push(structDef);
       } else if (fi instanceof FieldInstanceField) {
@@ -2155,9 +2158,9 @@ class QueryQuery extends QueryField {
             case "string":
               fields.push({
                 name,
-                type: fi.f.fieldDef.type,
+                "type": fi.f.fieldDef.type,
                 resultMetadata,
-                location,
+                location
               });
               break;
             case "timestamp": {
@@ -2170,10 +2173,10 @@ class QueryQuery extends QueryField {
                 case "day":
                   fields.push({
                     name,
-                    type: "date",
+                    "type": "date",
                     timeframe,
                     resultMetadata,
-                    location,
+                    location
                   });
                   break;
                 case "second":
@@ -2181,18 +2184,18 @@ class QueryQuery extends QueryField {
                 case "hour":
                   fields.push({
                     name,
-                    type: "timestamp",
+                    "type": "timestamp",
                     timeframe,
                     resultMetadata,
-                    location,
+                    location
                   });
                   break;
                 default:
                   fields.push({
                     name,
-                    type: "timestamp",
+                    "type": "timestamp",
                     resultMetadata,
-                    location,
+                    location
                   });
                   break;
               }
@@ -2201,20 +2204,20 @@ class QueryQuery extends QueryField {
             case "date": {
               fields.push({
                 name,
-                type: fi.f.fieldDef.type,
-                timeframe: fi.f.fieldDef.timeframe,
+                "type": fi.f.fieldDef.type,
+                "timeframe": fi.f.fieldDef.timeframe,
                 resultMetadata,
-                location,
+                location
               });
               break;
             }
             case "number":
               fields.push({
                 name,
-                numberType: fi.f.fieldDef.numberType,
-                type: "number",
+                "numberType": fi.f.fieldDef.numberType,
+                "type": "number",
                 resultMetadata,
-                location,
+                location
               });
               break;
             default:
@@ -2227,16 +2230,16 @@ class QueryQuery extends QueryField {
     }
     return {
       fields,
-      name: this.resultStage || "result",
-      dialect: this.parent.dialect.name,
+      "name": this.resultStage || "result",
+      "dialect": this.parent.dialect.name,
       primaryKey,
-      structRelationship: {
-        type: "basetable",
-        connectionName: this.parent.connectionName,
+      "structRelationship": {
+        "type": "basetable",
+        "connectionName": this.parent.connectionName
       },
-      structSource: { type: "query_result" },
-      resultMetadata: this.getResultMetadata(this.rootResult),
-      type: "struct",
+      "structSource": { "type": "query_result" },
+      "resultMetadata": this.getResultMetadata(this.rootResult),
+      "type": "struct"
     };
   }
 
@@ -2256,9 +2259,9 @@ class QueryQuery extends QueryField {
       if (structRelationship.onExpression) {
         onCondition = new QueryFieldBoolean(
           {
-            type: "boolean",
-            name: "ignoreme",
-            e: structRelationship.onExpression,
+            "type": "boolean",
+            "name": "ignoreme",
+            "e": structRelationship.onExpression
           },
           qs.parent
         ).generateExpression(this.rootResult);
@@ -2652,12 +2655,12 @@ class QueryQuery extends QueryField {
     const wheres = this.generateSQLWhereTurtled();
 
     const f: StageOutputContext = {
-      dimensionIndexes: [1],
-      fieldIndex: 2,
-      sql: ["group_set"],
-      lateralJoinSQLExpressions: [],
-      groupsAggregated: [],
-      outputPipelinedSQL: [],
+      "dimensionIndexes": [1],
+      "fieldIndex": 2,
+      "sql": ["group_set"],
+      "lateralJoinSQLExpressions": [],
+      "groupsAggregated": [],
+      "outputPipelinedSQL": []
     };
     this.generateStage0Fields(this.rootResult, f, stageWriter);
 
@@ -2734,8 +2737,8 @@ class QueryQuery extends QueryField {
             output.outputPipelinedSQL
           );
           output.groupsAggregated.push({
-            fromGroup: fi.groupSet,
-            toGroup: resultSet.groupSet,
+            "fromGroup": fi.groupSet,
+            "toGroup": resultSet.groupSet
           });
           groupsToMap.push(fi.groupSet);
           output.sql.push(`${s} as ${sqlFieldName}`);
@@ -2761,12 +2764,12 @@ class QueryQuery extends QueryField {
   ): string {
     let s = "SELECT \n";
     const f: StageOutputContext = {
-      dimensionIndexes: [1],
-      fieldIndex: 2,
-      sql: ["group_set"],
-      lateralJoinSQLExpressions: [],
-      groupsAggregated: [],
-      outputPipelinedSQL: [],
+      "dimensionIndexes": [1],
+      "fieldIndex": 2,
+      "sql": ["group_set"],
+      "lateralJoinSQLExpressions": [],
+      "groupsAggregated": [],
+      "outputPipelinedSQL": []
     };
     this.generateDepthNFields(depth, this.rootResult, f, stageWriter);
     s += indent(f.sql.join(",\n")) + "\n";
@@ -2896,8 +2899,8 @@ class QueryQuery extends QueryField {
     for (const ordering of orderByDef) {
       if (typeof ordering.field === "string") {
         orderingField = {
-          name: ordering.field,
-          fif: resultStruct.getField(ordering.field),
+          "name": ordering.field,
+          "fif": resultStruct.getField(ordering.field)
         };
       } else {
         orderingField = resultStruct.getFieldByNumber(ordering.field);
@@ -2935,14 +2938,14 @@ class QueryQuery extends QueryField {
         // fieldsSQL.push(`${name}__${resultStruct.groupSet} as ${sqlName}`);
         // outputFieldNames.push(name);
         dialectFieldList.push({
-          type:
+          "type":
             field instanceof FieldInstanceField
               ? field.f.fieldDef.type
               : "struct",
-          sqlExpression: this.parent.dialect.sqlMaybeQuoteIdentifier(
+          "sqlExpression": this.parent.dialect.sqlMaybeQuoteIdentifier(
             `${name}__${resultStruct.groupSet}`
           ),
-          sqlOutputName: sqlName,
+          "sqlOutputName": sqlName
         });
       } else if (
         resultStruct.firstSegment.type === "project" &&
@@ -2953,9 +2956,9 @@ class QueryQuery extends QueryField {
         //   `${field.f.generateExpression(resultStruct)} as ${sqlName}`
         // );
         dialectFieldList.push({
-          type: field.type,
-          sqlExpression: field.f.generateExpression(resultStruct),
-          sqlOutputName: sqlName,
+          "type": field.type,
+          "sqlExpression": field.f.generateExpression(resultStruct),
+          "sqlOutputName": sqlName
         });
       }
     }
@@ -3006,7 +3009,7 @@ class QueryQuery extends QueryField {
       } else {
         outputPipelinedSQL.push({
           sqlFieldName,
-          pipelineSQL: `(${sql})`,
+          "pipelineSQL": `(${sql})`
         });
       }
     }
@@ -3030,17 +3033,17 @@ class QueryQuery extends QueryField {
       const pipeline: PipeSegment[] = [...fi.turtleDef.pipeline];
       pipeline.shift();
       const newTurtle: TurtleDef = {
-        type: "turtle",
-        name: "starthere",
-        pipeline,
+        "type": "turtle",
+        "name": "starthere",
+        pipeline
       };
       structDef.name = this.parent.dialect.sqlUnnestPipelineHead(
         repeatedResultType === "inline_all_numbers",
         sourceSQLExpression
       );
-      structDef.structSource = { type: "sql", method: "nested" };
+      structDef.structSource = { "type": "sql", "method": "nested" };
       const qs = new QueryStruct(structDef, {
-        model: this.parent.getModel(),
+        "model": this.parent.getModel()
       });
       const q = QueryQuery.makeQuery(newTurtle, qs, stageWriter);
       pipeOut = q.generateSQLFromPipeline(stageWriter);
@@ -3049,7 +3052,7 @@ class QueryQuery extends QueryField {
     }
     return {
       structDef,
-      pipeOut,
+      pipeOut
     };
   }
 
@@ -3098,15 +3101,15 @@ class QueryQuery extends QueryField {
       const pipeline = [...this.fieldDef.pipeline];
       let structDef: StructDef = {
         ...outputStruct,
-        structSource: { type: "sql", method: "lastStage" },
+        "structSource": { "type": "sql", "method": "lastStage" }
       };
       pipeline.shift();
       for (const transform of pipeline) {
         const s = new QueryStruct(structDef, {
-          model: this.parent.getModel(),
+          "model": this.parent.getModel()
         });
         const q = QueryQuery.makeQuery(
-          { type: "turtle", name: "ignoreme", pipeline: [transform] },
+          { "type": "turtle", "name": "ignoreme", "pipeline": [transform] },
           s,
           stageWriter
         );
@@ -3115,7 +3118,7 @@ class QueryQuery extends QueryField {
         outputStruct = q.getResultStructDef();
         structDef = {
           ...outputStruct,
-          structSource: { type: "sql", method: "lastStage" },
+          "structSource": { "type": "sql", "method": "lastStage" }
         };
       }
     }
@@ -3143,7 +3146,7 @@ class QueryQueryIndexStage extends QueryQuery {
   // get a field ref and expand it.
   expandField(f: string) {
     const field = this.parent.getFieldByName(f);
-    return { as: f, field };
+    return { "as": f, field };
   }
 
   expandFields(resultStruct: FieldInstanceResult) {
@@ -3157,7 +3160,7 @@ class QueryQueryIndexStage extends QueryQuery {
 
       resultStruct.addField(as, field as QueryField, {
         resultIndex,
-        type: "result",
+        "type": "result"
       });
       if (field instanceof QueryAtomicField) {
         this.addDependancies(resultStruct, field);
@@ -3169,7 +3172,7 @@ class QueryQueryIndexStage extends QueryQuery {
       const f = this.parent.getFieldByName(measure) as QueryField;
       resultStruct.addField(measure, f, {
         resultIndex,
-        type: "result",
+        "type": "result"
       });
       this.addDependancies(resultStruct, f);
     }
@@ -3196,7 +3199,7 @@ class QueryQueryIndexStage extends QueryQuery {
       const fi = field as FieldInstanceField;
       if (fi.fieldUsage.type === "result" && isScalarField(fi.f)) {
         const expression = fi.f.generateExpression(this.rootResult);
-        fields.push({ name, type: fi.f.fieldDef.type, expression });
+        fields.push({ name, "type": fi.f.fieldDef.type, expression });
       }
     }
 
@@ -3375,12 +3378,12 @@ class QueryQueryIndex extends QueryQuery {
       const q = new QueryQueryIndexStage(
         {
           ...this.fieldDef,
-          pipeline: [
+          "pipeline": [
             {
               ...(this.fieldDef.pipeline[0] as IndexSegment),
-              fields: fields,
-            },
-          ],
+              "fields": fields
+            }
+          ]
         },
         this.parent,
         stageWriter
@@ -3404,20 +3407,20 @@ class QueryQueryIndex extends QueryQuery {
   /**  All Indexes have the same output schema */
   getResultStructDef(): StructDef {
     return {
-      type: "struct",
-      name: this.resultStage || "result",
-      dialect: this.parent.fieldDef.dialect,
-      fields: [
-        { type: "string", name: "fieldName" },
-        { type: "string", name: "fieldValue" },
-        { type: "string", name: "fieldType" },
-        { type: "number", name: "weight", numberType: "integer" },
+      "type": "struct",
+      "name": this.resultStage || "result",
+      "dialect": this.parent.fieldDef.dialect,
+      "fields": [
+        { "type": "string", "name": "fieldName" },
+        { "type": "string", "name": "fieldValue" },
+        { "type": "string", "name": "fieldType" },
+        { "type": "number", "name": "weight", "numberType": "integer" }
       ],
-      structRelationship: {
-        type: "basetable",
-        connectionName: this.parent.connectionName,
+      "structRelationship": {
+        "type": "basetable",
+        "connectionName": this.parent.connectionName
       },
-      structSource: { type: "query_result" },
+      "structSource": { "type": "query_result" }
     };
   }
 }
@@ -3478,7 +3481,7 @@ class QueryStruct extends QueryNode {
           this.addFieldToNameMap(
             as,
             new QueryStruct(field as StructDef, {
-              struct: this,
+              "struct": this
             })
           );
           break;
@@ -3499,7 +3502,7 @@ class QueryStruct extends QueryNode {
       this.addFieldToNameMap(
         "__distinct_key",
         new QueryFieldDistinctKey(
-          { type: "string", name: "__distinct_key" },
+          { "type": "string", "name": "__distinct_key" },
           this
         )
       );
@@ -3556,15 +3559,15 @@ class QueryStruct extends QueryNode {
     const aliasName = getIdentifier(this.fieldDef);
     const pkName = this.fieldDef.primaryKey;
     const fieldDef: FieldDef = {
-      type: pkType,
-      name: `${aliasName}_id`,
-      e: [
+      "type": pkType,
+      "name": `${aliasName}_id`,
+      "e": [
         {
-          type: "field",
+          "type": "field",
           // path: pkField.getFullOutputName(),
-          path: pkField.getIdentifier(),
-        },
-      ],
+          "path": pkField.getIdentifier()
+        }
+      ]
     };
     return new QueryFieldStruct(fieldDef, this, `${aliasName}.${pkName}`);
   }
@@ -3921,10 +3924,10 @@ class QueryStruct extends QueryNode {
     );
 
     const flatTurtleDef: TurtleDef = {
-      type: "turtle",
-      name: turtleDef.name,
+      "type": "turtle",
+      "name": turtleDef.name,
       pipeline,
-      location: turtleDef.location,
+      "location": turtleDef.location
     };
     return flatTurtleDef;
   }
@@ -3998,7 +4001,7 @@ export class QueryModel {
     for (const s of Object.values(this.modelDef.contents)) {
       let qs;
       if (s.type === "struct") {
-        qs = new QueryStruct(s, { model: this });
+        qs = new QueryStruct(s, { "model": this });
         this.structs.set(getIdentifier(s), qs);
         qs.resolveQueryFields();
       } else if (s.type === "query") {
@@ -4018,7 +4021,7 @@ export class QueryModel {
       } else {
         throw new Error(`No query specified in Struct '${path[0]}'`);
       }
-      return { queryName: path.join("."), struct };
+      return { "queryName": path.join("."), struct };
     } else {
       throw new Error(`Cannot find Struct '${path[0]}' Model`);
     }
@@ -4042,7 +4045,7 @@ export class QueryModel {
     } else {
       throw new Error("Broken for now");
     }
-    return new QueryStruct(structDef, { model: this });
+    return new QueryStruct(structDef, { "model": this });
   }
 
   loadQuery(
@@ -4057,11 +4060,11 @@ export class QueryModel {
     }
 
     const turtleDef: TurtleDefPlus = {
-      type: "turtle",
-      name: "ignoreme",
-      pipeHead: query.pipeHead,
-      pipeline: query.pipeline,
-      filterList: query.filterList,
+      "type": "turtle",
+      "name": "ignoreme",
+      "pipeHead": query.pipeHead,
+      "pipeline": query.pipeline,
+      "filterList": query.filterList
     };
 
     const q = QueryQuery.makeQuery(
@@ -4084,11 +4087,11 @@ export class QueryModel {
       );
     }
     return {
-      lastStageName: ret.lastStageName,
+      "lastStageName": ret.lastStageName,
       malloy,
       stageWriter,
-      structs: [ret.outputStruct],
-      connectionName: q.parent.connectionName,
+      "structs": [ret.outputStruct],
+      "connectionName": q.parent.connectionName
     };
   }
 
@@ -4112,17 +4115,17 @@ export class QueryModel {
       );
     }
     return {
-      lastStageName: ret.lastStageName,
-      malloy: ret.malloy,
-      sql: ret.stageWriter.generateSQLStages(),
-      structs: ret.structs,
+      "lastStageName": ret.lastStageName,
+      "malloy": ret.malloy,
+      "sql": ret.stageWriter.generateSQLStages(),
+      "structs": ret.structs,
       sourceExplore,
-      sourceFilters: query.filterList,
-      queryName:
+      "sourceFilters": query.filterList,
+      "queryName":
         query.pipeHead && query.pipeline.length === 0
           ? query.pipeHead.name
           : undefined,
-      connectionName: ret.connectionName,
+      "connectionName": ret.connectionName
     };
   }
 
@@ -4144,20 +4147,20 @@ export class QueryModel {
 
     if (!struct.nameMap.get("search_index")) {
       indexQuery = {
-        structRef: explore,
-        pipeline: [
+        "structRef": explore,
+        "pipeline": [
           {
-            type: "index",
-            fields: ["*"],
-            sample: struct.dialect.defaultSampling,
-          },
-        ],
+            "type": "index",
+            "fields": ["*"],
+            "sample": struct.dialect.defaultSampling
+          }
+        ]
       };
     } else {
       indexQuery = {
-        structRef: explore,
-        pipeHead: { name: "search_index" },
-        pipeline: [],
+        "structRef": explore,
+        "pipeHead": { "name": "search_index" },
+        "pipeline": []
       };
     }
     const fieldNameColumn = struct.dialect.sqlMaybeQuoteIdentifier("fieldName");
@@ -4201,12 +4204,12 @@ export class QueryModel {
           fieldValueColumn,
           fieldTypeColumn,
           "weight",
-          "match_first",
+          "match_first"
         ]
       )}`;
     }
     const result = await connection.runSQL(query, {
-      rowLimit: 1000,
+      "rowLimit": 1000
     });
     return result.rows as unknown as SearchIndexResult[];
   }
@@ -4221,7 +4224,7 @@ export function flattenQuery(model: ModelDef, query: NamedQuery): TurtleDef {
   const queryStruct = queryModel.getStructByName(structRef);
   const turtleDef = queryStruct.flattenTurtleDef({
     ...query,
-    type: "turtle",
+    "type": "turtle"
   });
   return turtleDef;
 }

@@ -30,6 +30,6 @@ export class HTMLPercentRenderer extends HTMLNumberRenderer {
 
     return num === null
       ? num
-      : (num * 100).toLocaleString("en", { maximumFractionDigits: 2 }) + "%";
+      : (num * 100).toLocaleString("en", { "maximumFractionDigits": 2 }) + "%";
   }
 }

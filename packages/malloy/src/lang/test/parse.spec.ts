@@ -26,29 +26,30 @@ import { TranslateResponse } from "..";
 import {
   DocumentLocation,
   DocumentPosition,
-  expressionIsCalculation,
-  isFieldTypeDef,
-  isFilteredAliasedName,
-  isSQLFragment,
   Query,
   SQLBlockSource,
   SQLBlockStructDef,
   StructDef,
+  expressionIsCalculation,
+  isFieldTypeDef,
+  isFilteredAliasedName,
+  isSQLFragment
 } from "../../model";
 import { makeSQLBlock } from "../../model/sql_block";
-import { ExpressionDef, StaticSpace } from "../ast/ast-main";
-import { DataRequestResponse } from "../parse-malloy";
+import { StaticSpace } from "../ast/field-space/static-space";
+import { ExpressionDef } from "../ast/types/expression-def";
+import { DataRequestResponse } from "../translate-response";
 import {
+  MarkedSource,
   TestTranslator,
-  pretty,
   aTableDef,
   getExplore,
   getField,
-  getQueryField,
-  getModelQuery,
   getJoinField,
+  getModelQuery,
+  getQueryField,
   markSource,
-  MarkedSource,
+  pretty
 } from "./test-translator";
 import { isEqual } from "lodash";
 import { inspect } from "util";
@@ -131,13 +132,13 @@ function checkForErrors(trans: Testable) {
   }
   if (trans.logger.hasErrors()) {
     return {
-      message: () => `Translation Errors:\n${trans.prettyErrors()}`,
-      pass: false,
+      "message": () => `Translation Errors:\n${trans.prettyErrors()}`,
+      "pass": false
     };
   }
   return {
-    message: () => "Unexpected error free translation",
-    pass: true,
+    "message": () => "Unexpected error free translation",
+    "pass": true
   };
 }
 
@@ -161,14 +162,14 @@ function checkForNeededs(trans: Testable) {
   const response = trans.translateStep.step(trans);
   if (!response.final) {
     return {
-      message: () =>
+      "message": () =>
         `Translation is not complete, needs:\n${prettyNeeds(response)}`,
-      pass: false,
+      "pass": false
     };
   }
   return {
-    message: () => "Unexpected complete translation",
-    pass: true,
+    "message": () => "Unexpected complete translation",
+    "pass": true
   };
 }
 
@@ -178,7 +179,7 @@ function highlightError(dl: DocumentLocation, txt: string): string {
   }
   const { start, end } = dl.range;
   const output = [
-    `${start.line}:${start.character}-${end.line}:${end.character}`,
+    `${start.line}:${start.character}-${end.line}:${end.character}`
   ];
   let errStart = start.character;
   const doc = txt.split("\n");
@@ -209,7 +210,7 @@ function unlocatedStructDef(sd: StructDef): StructDef {
 }
 
 expect.extend({
-  toCompile: function (s: string) {
+  "toCompile": function (s: string) {
     const x = new BetaModel(s);
     x.compile();
     const errorCheck = checkForErrors(x);
@@ -219,11 +220,11 @@ expect.extend({
     x.translate();
     return checkForNeededs(x);
   },
-  modelParsed: function (x: Testable) {
+  "modelParsed": function (x: Testable) {
     x.compile();
     return checkForErrors(x);
   },
-  modelCompiled: function (x: Testable) {
+  "modelCompiled": function (x: Testable) {
     x.compile();
     const errorCheck = checkForErrors(x);
     if (!errorCheck.pass) {
@@ -232,10 +233,10 @@ expect.extend({
     x.translate();
     return checkForNeededs(x);
   },
-  toBeErrorless: function (trans: Testable) {
+  "toBeErrorless": function (trans: Testable) {
     return checkForErrors(trans);
   },
-  toReturnType: function (functionCall: string, returnType: string) {
+  "toReturnType": function (functionCall: string, returnType: string) {
     const exprModel = new BetaModel(
       `explore: x is a { dimension: d is ${functionCall} }`
     );
@@ -247,11 +248,11 @@ expect.extend({
       expect(d?.type).toBe(returnType);
     }
     return {
-      pass: true,
-      message: () => "",
+      "pass": true,
+      "message": () => ""
     };
   },
-  compileToFailWith: function (
+  "compileToFailWith": function (
     s: MarkedSource | string | BetaModel,
     ...msgs: string[]
   ) {
@@ -280,15 +281,15 @@ expect.extend({
     emsg += `\nSource:\n${src}`;
     const t = m.translate();
     if (t.translated) {
-      return { pass: false, message: () => emsg };
+      return { "pass": false, "message": () => emsg };
     } else if (t.errors == undefined) {
       return {
-        pass: false,
-        message: () =>
+        "pass": false,
+        "message": () =>
           `TEST ERROR, not all objects resolved in source\n` +
           pretty(t) +
           "\n" +
-          emsg,
+          emsg
       };
     } else {
       const explain: string[] = [];
@@ -322,26 +323,26 @@ expect.extend({
       }
       if (explain.length == 0) {
         return {
-          pass: true,
-          message: () => `All expected errors found: ${pretty(msgs)}`,
+          "pass": true,
+          "message": () => `All expected errors found: ${pretty(msgs)}`
         };
       }
       return {
-        pass: false,
-        message: () =>
-          `Compiler did not generated expected errors\n${explain.join("\n")}`,
+        "pass": false,
+        "message": () =>
+          `Compiler did not generated expected errors\n${explain.join("\n")}`
       };
     }
   },
-  isLocationIn: function (
+  "isLocationIn": function (
     checkAt: DocumentLocation,
     at: DocumentLocation,
     text: string
   ) {
     if (this.equals(at, checkAt)) {
       return {
-        pass: true,
-        message: () => `Locations match`,
+        "pass": true,
+        "message": () => `Locations match`
       };
     }
     const errMsg =
@@ -349,10 +350,10 @@ expect.extend({
       `Expected: ${highlightError(at, text)}\n` +
       `Received: ${highlightError(checkAt, text)}\n`;
     return {
-      pass: false,
-      message: () => errMsg,
+      "pass": false,
+      "message": () => errMsg
     };
-  },
+  }
 });
 
 class BetaExpression extends Testable {
@@ -635,9 +636,9 @@ describe("model statements", () => {
       const docParse = new BetaModel(`import "child"`);
       const xr = docParse.unresolved();
       expect(docParse).toBeErrorless();
-      expect(xr).toEqual({ urls: ["internal://test/langtests/child"] });
+      expect(xr).toEqual({ "urls": ["internal://test/langtests/child"] });
       docParse.update({
-        urls: { "internal://test/langtests/child": "explore: aa is a" },
+        "urls": { "internal://test/langtests/child": "explore: aa is a" }
       });
       const yr = docParse.unresolved();
       expect(yr).toBeNull();
@@ -646,10 +647,12 @@ describe("model statements", () => {
       const docParse = new BetaModel(`import "child"`);
       const xr = docParse.unresolved();
       expect(docParse).toBeErrorless();
-      expect(xr).toEqual({ urls: ["internal://test/langtests/child"] });
+      expect(xr).toEqual({ "urls": ["internal://test/langtests/child"] });
       const reportedError = "ENOWAY: No way to find your child";
       docParse.update({
-        errors: { urls: { "internal://test/langtests/child": reportedError } },
+        "errors": {
+          "urls": { "internal://test/langtests/child": reportedError }
+        }
       });
       docParse.translate();
       expect(docParse).not.toBeErrorless();
@@ -658,21 +661,21 @@ describe("model statements", () => {
     test("chained imports", () => {
       const docParse = new BetaModel(`import "child"`);
       docParse.update({
-        urls: { "internal://test/langtests/child": `import "grandChild"` },
+        "urls": { "internal://test/langtests/child": `import "grandChild"` }
       });
       const xr = docParse.unresolved();
       expect(docParse).toBeErrorless();
-      expect(xr).toEqual({ urls: ["internal://test/langtests/grandChild"] });
+      expect(xr).toEqual({ "urls": ["internal://test/langtests/grandChild"] });
     });
     test("relative imports", () => {
       const docParse = new BetaModel(`import "../parent.malloy"`);
       expect(docParse).modelParsed();
       const xr = docParse.unresolved();
-      expect(xr).toEqual({ urls: ["internal://test/parent.malloy"] });
+      expect(xr).toEqual({ "urls": ["internal://test/parent.malloy"] });
       docParse.update({
-        urls: {
-          "internal://test/parent.malloy": `source: aa is table('aTable')`,
-        },
+        "urls": {
+          "internal://test/parent.malloy": `source: aa is table('aTable')`
+        }
       });
       expect(docParse).modelCompiled();
     });
@@ -680,14 +683,14 @@ describe("model statements", () => {
       const docParse = new BetaModel(`import "../parent.malloy"`);
       expect(docParse).modelParsed();
       const xr = docParse.unresolved();
-      expect(xr).toEqual({ urls: ["internal://test/parent.malloy"] });
+      expect(xr).toEqual({ "urls": ["internal://test/parent.malloy"] });
       docParse.update({
-        urls: {
+        "urls": {
           "internal://test/parent.malloy": `
             source: aa is table('aTable') {
               dimension: astr is 'not legal beause astr exists'
-            }`,
-        },
+            }`
+        }
       });
       expect(docParse).compileToFailWith("Cannot redefine 'astr'");
     });
@@ -697,12 +700,12 @@ describe("model statements", () => {
           import "bottom"
           source: midSrc is from(bottomSrc -> { group_by: astr })
         `,
-        "internal://test/langtests/bottom": `source: bottomSrc is table('aTable')`,
+        "internal://test/langtests/bottom": `source: bottomSrc is table('aTable')`
       };
       const fullModel = new BetaModel(`
         import "middle"
       `);
-      fullModel.update({ urls: srcFiles });
+      fullModel.update({ "urls": srcFiles });
       expect(fullModel).modelCompiled();
       const ms = fullModel.getSourceDef("midSrc");
       expect(ms).toBeDefined();
@@ -939,7 +942,7 @@ describe("qops", () => {
       const index = q.pipeline[0];
       expect(index.type).toBe("index");
       if (index.type == "index") {
-        expect(index.sample).toEqual({ percent: 42 });
+        expect(index.sample).toEqual({ "percent": 42 });
       }
     }
   });
@@ -1132,7 +1135,7 @@ describe("expressions", () => {
       "week",
       "month",
       "quarter",
-      "year",
+      "year"
     ];
 
     describe("timestamp truncation", () => {
@@ -1339,20 +1342,20 @@ describe("sql:", () => {
   function makeSchemaResponse(sql: SQLBlockSource): SQLBlockStructDef {
     const cname = sql.connection || "bigquery";
     return {
-      type: "struct",
-      name: sql.name,
-      dialect: "standardsql'",
-      structSource: {
-        type: "sql",
-        method: "subquery",
-        sqlBlock: {
-          type: "sqlBlock",
+      "type": "struct",
+      "name": sql.name,
+      "dialect": "standardsql'",
+      "structSource": {
+        "type": "sql",
+        "method": "subquery",
+        "sqlBlock": {
+          "type": "sqlBlock",
           ...sql,
-          selectStr: sql.select.filter((s) => typeof s == "string").join(""),
-        },
+          "selectStr": sql.select.filter((s) => typeof s == "string").join("")
+        }
       },
-      structRelationship: { type: "basetable", connectionName: cname },
-      fields: aTableDef.fields,
+      "structRelationship": { "type": "basetable", "connectionName": cname },
+      "fields": aTableDef.fields
     };
   }
   test("definition", () => {
@@ -1368,16 +1371,16 @@ describe("sql:", () => {
     const needs = needReq?.compileSQL;
     expect(needs).toBeDefined();
     if (needs) {
-      const sql = makeSQLBlock([{ sql: selStmt }], "aConnection");
+      const sql = makeSQLBlock([{ "sql": selStmt }], "aConnection");
       expect(needs).toMatchObject(sql);
       const refKey = needs.name;
       expect(refKey).toBeDefined();
       if (refKey) {
         const sr = makeSchemaResponse(sql);
-        model.update({ compileSQL: { [refKey]: sr } });
+        model.update({ "compileSQL": { [refKey]: sr } });
         expect(model).modelCompiled();
         expect(unlocatedStructDef(model.sqlBlocks[0])).toEqual(
-          unlocatedStructDef({ ...sr, as: "users" })
+          unlocatedStructDef({ ...sr, "as": "users" })
         );
       }
     }
@@ -1393,9 +1396,9 @@ describe("sql:", () => {
     const needs = needReq?.compileSQL;
     expect(needs).toBeDefined();
     if (needs) {
-      const sql = makeSQLBlock([{ sql: selStmt }], "aConnection");
+      const sql = makeSQLBlock([{ "sql": selStmt }], "aConnection");
       const refKey = needs.name;
-      model.update({ compileSQL: { [refKey]: makeSchemaResponse(sql) } });
+      model.update({ "compileSQL": { [refKey]: makeSchemaResponse(sql) } });
       expect(model).modelCompiled();
       const users = model.getSourceDef("malloyUsers");
       expect(users).toBeDefined();
@@ -1419,8 +1422,8 @@ describe("sql:", () => {
     const needReq = model.translate();
     const needs = needReq?.compileSQL;
     expect(needs).toBeDefined();
-    const sql = makeSQLBlock([{ sql: selStmt }]);
-    model.update({ compileSQL: { [sql.name]: makeSchemaResponse(sql) } });
+    const sql = makeSQLBlock([{ "sql": selStmt }]);
+    model.update({ "compileSQL": { [sql.name]: makeSchemaResponse(sql) } });
     expect(model).modelCompiled();
   });
   it("turducken", () => {
@@ -1436,9 +1439,9 @@ describe("sql:", () => {
       const select = compileSql.select[0];
       const star = compileSql.select[1];
       const where = compileSql.select[2];
-      expect(select).toEqual({ sql: "SELECT * FROM " });
+      expect(select).toEqual({ "sql": "SELECT * FROM " });
       expect(isSQLFragment(star)).toBeFalsy();
-      expect(where).toEqual({ sql: " WHERE 1=1" });
+      expect(where).toEqual({ "sql": " WHERE 1=1" });
     }
   });
   it("model preserved", () => {
@@ -1453,8 +1456,8 @@ describe("sql:", () => {
     const needReq = model.translate();
     const needs = needReq?.compileSQL;
     expect(needs).toBeDefined();
-    const sql = makeSQLBlock([{ sql: selStmt }]);
-    model.update({ compileSQL: { [sql.name]: makeSchemaResponse(sql) } });
+    const sql = makeSQLBlock([{ "sql": selStmt }]);
+    model.update({ "compileSQL": { [sql.name]: makeSchemaResponse(sql) } });
     expect(model).modelCompiled();
   });
 });
@@ -1601,11 +1604,11 @@ describe("error handling", () => {
     expect(needSchema.compileSQL).toBeDefined();
     if (needSchema.compileSQL) {
       badModel.update({
-        errors: {
-          compileSQL: {
-            [needSchema.compileSQL.name]: "ZZZZ",
-          },
-        },
+        "errors": {
+          "compileSQL": {
+            [needSchema.compileSQL.name]: "ZZZZ"
+          }
+        }
       });
     }
     expect(badModel).compileToFailWith("Invalid SQL, ZZZZ");
@@ -1618,20 +1621,20 @@ function getSelectOneStruct(sqlBlock: SQLBlockSource): SQLBlockStructDef {
     throw new Error("weird test support error sorry");
   }
   return {
-    type: "struct",
-    name: sqlBlock.name,
-    dialect: "bigquery",
-    structSource: {
-      type: "sql",
-      method: "subquery",
-      sqlBlock: {
-        type: "sqlBlock",
-        name: sqlBlock.name,
-        selectStr: selectThis.sql,
-      },
+    "type": "struct",
+    "name": sqlBlock.name,
+    "dialect": "bigquery",
+    "structSource": {
+      "type": "sql",
+      "method": "subquery",
+      "sqlBlock": {
+        "type": "sqlBlock",
+        "name": sqlBlock.name,
+        "selectStr": selectThis.sql
+      }
     },
-    structRelationship: { type: "basetable", connectionName: "bigquery" },
-    fields: [{ type: "number", name: "one" }],
+    "structRelationship": { "type": "basetable", "connectionName": "bigquery" },
+    "fields": [{ "type": "number", "name": "one" }]
   };
 }
 
@@ -1734,7 +1737,7 @@ describe("source locations", () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: { [compileSql.name]: getSelectOneStruct(compileSql) },
+        "compileSQL": { [compileSql.name]: getSelectOneStruct(compileSql) }
       });
       expect(m).modelCompiled();
       const na = getExplore(m.modelDef, "na");
@@ -1787,7 +1790,7 @@ describe("source locations", () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: { [compileSql.name]: getSelectOneStruct(compileSql) },
+        "compileSQL": { [compileSql.name]: getSelectOneStruct(compileSql) }
       });
       expect(m).modelCompiled();
       const s = m.sqlBlocks[0];
@@ -1908,12 +1911,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "exploreReference",
-      text: "na",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "exploreReference",
+      "text": "na",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -1927,12 +1930,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "fieldReference",
-      text: "q",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "fieldReference",
+      "text": "q",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -1944,12 +1947,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "fieldReference",
-      text: "x",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "fieldReference",
+      "text": "x",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -1964,18 +1967,18 @@ describe("source references", () => {
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
-        compileSQL: { [compileSql.name]: getSelectOneStruct(compileSql) },
+        "compileSQL": { [compileSql.name]: getSelectOneStruct(compileSql) }
       });
       expect(m).modelCompiled();
       const ref = m.referenceAt(pos(source.locations[1]));
       expect(ref).toMatchObject({
-        location: source.locations[1],
-        type: "sqlBlockReference",
-        text: "s",
-        definition: {
+        "location": source.locations[1],
+        "type": "sqlBlockReference",
+        "text": "s",
+        "definition": {
           ...getSelectOneStruct(compileSql),
-          location: source.locations[0],
-        },
+          "location": source.locations[0]
+        }
       });
     }
   });
@@ -1988,12 +1991,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "queryReference",
-      text: "q",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "queryReference",
+      "text": "q",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2005,12 +2008,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "queryReference",
-      text: "q",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "queryReference",
+      "text": "q",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2022,12 +2025,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "queryReference",
-      text: "q",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "queryReference",
+      "text": "q",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2039,12 +2042,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "fieldReference",
-      text: "abool",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "fieldReference",
+      "text": "abool",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2058,12 +2061,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "fieldReference",
-      text: "name",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "fieldReference",
+      "text": "name",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2078,12 +2081,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "fieldReference",
-      text: "astr",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "fieldReference",
+      "text": "astr",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2097,12 +2100,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "joinReference",
-      text: "self",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "joinReference",
+      "text": "self",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2113,12 +2116,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "fieldReference",
-      text: "abool",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "fieldReference",
+      "text": "abool",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2130,12 +2133,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "fieldReference",
-      text: "abool",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "fieldReference",
+      "text": "abool",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2149,12 +2152,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "fieldReference",
-      text: "abool",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "fieldReference",
+      "text": "abool",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2168,12 +2171,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "fieldReference",
-      text: "abool",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "fieldReference",
+      "text": "abool",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2187,12 +2190,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "fieldReference",
-      text: "c",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "fieldReference",
+      "text": "c",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2206,12 +2209,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "fieldReference",
-      text: "c",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "fieldReference",
+      "text": "c",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2225,12 +2228,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "fieldReference",
-      text: "abool",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "fieldReference",
+      "text": "abool",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2244,12 +2247,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "fieldReference",
-      text: "abool",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "fieldReference",
+      "text": "abool",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2263,12 +2266,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "fieldReference",
-      text: "abool",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "fieldReference",
+      "text": "abool",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2280,12 +2283,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "fieldReference",
-      text: "ai",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "fieldReference",
+      "text": "ai",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2303,12 +2306,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "joinReference",
-      text: "self",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "joinReference",
+      "text": "self",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2322,12 +2325,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "joinReference",
-      text: "self",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "joinReference",
+      "text": "self",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2341,12 +2344,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "exploreReference",
-      text: "exp1",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "exploreReference",
+      "text": "exp1",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2358,12 +2361,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "fieldReference",
-      text: "ai",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "fieldReference",
+      "text": "ai",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2376,12 +2379,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "fieldReference",
-      text: "abool",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "fieldReference",
+      "text": "abool",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 
@@ -2395,12 +2398,12 @@ describe("source references", () => {
     const m = new BetaModel(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
-      location: source.locations[1],
-      type: "fieldReference",
-      text: "astr",
-      definition: {
-        location: source.locations[0],
-      },
+      "location": source.locations[1],
+      "type": "fieldReference",
+      "text": "astr",
+      "definition": {
+        "location": source.locations[0]
+      }
     });
   });
 });
@@ -2411,7 +2414,7 @@ describe("translation need error locations", () => {
     const m = new BetaModel(source.code);
     const result = m.translate();
     m.update({
-      errors: { urls: { [(result.urls || [])[0]]: "Bad file!" } },
+      "errors": { "urls": { [(result.urls || [])[0]]: "Bad file!" } }
     });
     expect(m).not.modelParsed();
     const errList = m.errors().errors;
@@ -2429,7 +2432,7 @@ describe("translation need error locations", () => {
     const req = m.translate().compileSQL;
     expect(req).toBeDefined();
     if (req) {
-      m.update({ errors: { compileSQL: { [req.name]: "Bad SQL!" } } });
+      m.update({ "errors": { "compileSQL": { [req.name]: "Bad SQL!" } } });
     }
     expect(m).not.modelCompiled();
     const errList = m.errors().errors;
@@ -2443,9 +2446,9 @@ describe("translation need error locations", () => {
     const m = new BetaModel(source.code);
     const result = m.translate();
     m.update({
-      errors: {
-        tables: { [(result.tables || [])[0]]: "Bad table!" },
-      },
+      "errors": {
+        "tables": { [(result.tables || [])[0]]: "Bad table!" }
+      }
     });
     expect(m).not.modelParsed();
     const errList = m.errors().errors;

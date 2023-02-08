@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { QueryFieldDef, FieldDef } from "../model/malloy_types";
+import { FieldDef, QueryFieldDef } from "../model/malloy_types";
 
 type Field = QueryFieldDef | FieldDef;
 

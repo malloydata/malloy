@@ -37,80 +37,80 @@ export interface DocumentHighlight {
 
 // TODO maybe this could be an enum like Definition__Field, etc.
 export const HighlightType = {
-  Identifier: "identifier",
-  Type: "type",
-  Literal: {
-    Date: "literal.date",
-    Number: "literal.number",
-    String: "literal.string",
-    RegularExpression: "literal.regular_expression",
-    Boolean: "literal.boolean",
-    Null: "literal.null",
+  "Identifier": "identifier",
+  "Type": "type",
+  "Literal": {
+    "Date": "literal.date",
+    "Number": "literal.number",
+    "String": "literal.string",
+    "RegularExpression": "literal.regular_expression",
+    "Boolean": "literal.boolean",
+    "Null": "literal.null"
   },
-  Call: {
-    Aggregate: "call.aggregate",
-    TimeFrame: "call.time_frame",
-    Cast: "call.cast",
-    Table: "call.table",
-    From: "call.from",
-    Function: "call.function",
-    FromSQL: "call.from_sql",
+  "Call": {
+    "Aggregate": "call.aggregate",
+    "TimeFrame": "call.time_frame",
+    "Cast": "call.cast",
+    "Table": "call.table",
+    "From": "call.from",
+    "Function": "call.function",
+    "FromSQL": "call.from_sql"
   },
   // TODO many of these should probably be categorized further
-  Keyword: {
-    AggregateModifier: {
-      Distinct: "keyword.aggregate_modifier.distinct",
+  "Keyword": {
+    "AggregateModifier": {
+      "Distinct": "keyword.aggregate_modifier.distinct"
     },
-    CastModifier: {
-      As: "keyword.cast_modifier.as",
+    "CastModifier": {
+      "As": "keyword.cast_modifier.as"
     },
-    Is: "keyword.is",
-    On: "keyword.on",
-    Desc: "keyword.desc",
-    Asc: "keyword.asc",
-    Pick: "keyword.pick",
-    When: "keyword.when",
-    Else: "keyword.else",
-    With: "keyword.with",
+    "Is": "keyword.is",
+    "On": "keyword.on",
+    "Desc": "keyword.desc",
+    "Asc": "keyword.asc",
+    "Pick": "keyword.pick",
+    "When": "keyword.when",
+    "Else": "keyword.else",
+    "With": "keyword.with",
     // TODO or is this a meta type?
-    JSON: "keyword.json",
+    "JSON": "keyword.json",
     // TODO or is this a meta type?
-    Turtle: "keyword.turtle",
-    Import: "keyword.import",
+    "Turtle": "keyword.turtle",
+    "Import": "keyword.import"
   },
-  Operator: {
-    Comparison: "operator.comparison",
-    Boolean: "operator.boolean",
-    Date: "operator.date",
+  "Operator": {
+    "Comparison": "operator.comparison",
+    "Boolean": "operator.boolean",
+    "Date": "operator.date"
   },
-  Comment: {
-    Line: "comment.line",
-    Block: "comment.block",
+  "Comment": {
+    "Line": "comment.line",
+    "Block": "comment.block"
   },
-  Property: {
-    Accept: "property.accept",
-    Aggregate: "property.aggregate",
-    Dimension: "property.dimension",
-    Except: "property.except",
-    Source: "property.source",
-    GroupBy: "property.group_by",
-    Having: "property.having",
-    Index: "property.index",
-    JoinOne: "keyword.join_one",
-    JoinMany: "keyword.join_many",
-    JoinCross: "keyword.join_cross",
-    Limit: "property.limit",
-    Measure: "property.measure",
-    Nest: "property.nest",
-    OrderBy: "property.order_by",
-    PrimaryKey: "property.primary_key",
-    Project: "property.project",
-    Query: "property.query",
-    Rename: "property.rename",
-    Top: "property.top",
-    Where: "property.where",
-    SQL: "property.sql",
-  },
+  "Property": {
+    "Accept": "property.accept",
+    "Aggregate": "property.aggregate",
+    "Dimension": "property.dimension",
+    "Except": "property.except",
+    "Source": "property.source",
+    "GroupBy": "property.group_by",
+    "Having": "property.having",
+    "Index": "property.index",
+    "JoinOne": "keyword.join_one",
+    "JoinMany": "keyword.join_many",
+    "JoinCross": "keyword.join_cross",
+    "Limit": "property.limit",
+    "Measure": "property.measure",
+    "Nest": "property.nest",
+    "OrderBy": "property.order_by",
+    "PrimaryKey": "property.primary_key",
+    "Project": "property.project",
+    "Query": "property.query",
+    "Rename": "property.rename",
+    "Top": "property.top",
+    "Where": "property.where",
+    "SQL": "property.sql"
+  }
 };
 
 export function passForHighlights(
@@ -127,19 +127,22 @@ export function passForHighlights(
     const colonAdjustment = removeColon ? 1 : 0;
     highlights.push({
       type,
-      range: {
-        start: { line: token.line - 1, character: token.startIndex - offset },
-        end: {
-          line: token.line - 1 + numberOfLines - 1,
-          character:
+      "range": {
+        "start": {
+          "line": token.line - 1,
+          "character": token.startIndex - offset
+        },
+        "end": {
+          "line": token.line - 1 + numberOfLines - 1,
+          "character":
             token.stopIndex +
             2 -
             (numberOfLines > 1 ? token.startIndex : offset) -
             lengthOfAllButLastLine -
             numberOfLines -
-            colonAdjustment,
-        },
-      },
+            colonAdjustment
+        }
+      }
     });
   };
   for (let i = 0; i < tokens.size; i++) {
@@ -349,17 +352,17 @@ class DocumentHighlightWalker implements MalloyParserListener {
   rangeOf(pcx: ParserRuleContext) {
     const stopToken = pcx.stop || pcx.start;
     return {
-      start: {
-        line: pcx.start.line - 1,
-        character: pcx.start.charPositionInLine,
+      "start": {
+        "line": pcx.start.line - 1,
+        "character": pcx.start.charPositionInLine
       },
-      end: {
-        line: stopToken.line - 1,
-        character:
+      "end": {
+        "line": stopToken.line - 1,
+        "character":
           stopToken.stopIndex -
           (stopToken.startIndex - stopToken.charPositionInLine) +
-          1,
-      },
+          1
+      }
     };
   }
 
@@ -367,8 +370,8 @@ class DocumentHighlightWalker implements MalloyParserListener {
     const id = pcx.id() || pcx.timeframe();
     if (id) {
       this.highlights.push({
-        range: this.rangeOf(id),
-        type: HighlightType.Call.Function,
+        "range": this.rangeOf(id),
+        "type": HighlightType.Call.Function
       });
     }
   }

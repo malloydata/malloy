@@ -26,14 +26,14 @@ options { tokenVocab=MalloyLexer; }
 malloyDocument: (malloyStatement | SEMI)* EOF;
 
 malloyStatement
-  : defineExploreStatement
+  : defineSourceStatement
   | defineSQLStatement
   | defineQuery
   | importStatement
   ;
 
-defineExploreStatement
-  : exploreKeyword exploreDefinitionList
+defineSourceStatement
+  : exploreKeyword sourcePropertyList
   ;
 
 exploreKeyword
@@ -123,12 +123,12 @@ filterShortcut
 exploreQueryName : id;
 queryName : id;
 
-exploreDefinitionList
-  : exploreDefinition (COMMA? exploreDefinition)* COMMA?
+sourcePropertyList
+  : sourceDefinition (COMMA? sourceDefinition)* COMMA?
   ;
 
-exploreDefinition
-  : exploreNameDef IS explore
+sourceDefinition
+  : sourceNameDef IS explore
   ;
 
 explore
@@ -136,14 +136,14 @@ explore
   ;
 
 exploreSource
-  : exploreName                                   # NamedSource
+  : sourceID                                      # NamedSource
   | exploreTable                                  # TableSource
   | FROM OPAREN query CPAREN                      # QuerySource
   | FROM_SQL OPAREN sqlExploreNameRef CPAREN      # SQLSourceName
   ;
 
-exploreNameDef: id;
-exploreName: id;
+sourceNameDef: id;
+sourceID: id;
 
 exploreProperties
   : OCURLY (exploreStatement | SEMI)* CCURLY

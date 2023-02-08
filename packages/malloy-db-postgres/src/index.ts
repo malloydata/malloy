@@ -23,5 +23,5 @@
 
 export {
   PostgresConnection,
-  PooledPostgresConnection,
+  PooledPostgresConnection
 } from "./postgres_connection";

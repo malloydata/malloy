@@ -33,18 +33,18 @@ export function getColorScale(
   }
   switch (type) {
     case "ordinal":
-      return { range: ["#C2D5EE", "#1A73E8"] };
+      return { "range": ["#C2D5EE", "#1A73E8"] };
     case "temporal":
     case "quantitative":
       return isRectMark
         ? hasOverlappingText
-          ? { range: ["#6BA4EE", "#EEA361"] }
-          : { range: ["#1A73E8", "#E8710A"] }
-        : { range: ["#C2D5EE", "#1A73E8"] };
+          ? { "range": ["#6BA4EE", "#EEA361"] }
+          : { "range": ["#1A73E8", "#E8710A"] }
+        : { "range": ["#C2D5EE", "#1A73E8"] };
     case "nominal":
       return hasOverlappingText
         ? {
-            range: [
+            "range": [
               "#6BA4EE",
               "#66CEDC",
               "#EC72B8",
@@ -52,11 +52,11 @@ export function getColorScale(
               "#F9C85B",
               "#AACD85",
               "#B87CED",
-              "#ACB0B3",
-            ],
+              "#ACB0B3"
+            ]
           }
         : {
-            range: [
+            "range": [
               "#1A73E8",
               "#12B5CB",
               "#E52592",
@@ -64,8 +64,8 @@ export function getColorScale(
               "#F9AB00",
               "#7CB342",
               "#9334E6",
-              "#80868B",
-            ],
+              "#80868B"
+            ]
           };
   }
 }
