@@ -20,6 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
 import { cloneDeep } from "lodash";
 
 import {
@@ -297,10 +298,8 @@ export function isDocStatement(e: MalloyElement): e is DocStatement {
 
 export class ListOf<ET extends MalloyElement> extends MalloyElement {
   elementType = "genericElementList";
-  protected elements: ET[];
-  constructor(listDesc: string, elements: ET[]) {
+  constructor(listDesc: string, protected elements: ET[]) {
     super();
-    this.elements = elements;
     if (this.elementType === "genericElementList") {
       this.elementType = listDesc;
     }

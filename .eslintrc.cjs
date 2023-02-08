@@ -61,6 +61,7 @@ module.exports = {
       { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
     ],
     "quote-props": ["error", "always"],
-    "@typescript-eslint/restrict-plus-operands": "error"
+    "@typescript-eslint/restrict-plus-operands": "error",
+    "@typescript-eslint/parameter-properties": [ "warn" , { "prefer": "parameter-property"}]
   }
 };
