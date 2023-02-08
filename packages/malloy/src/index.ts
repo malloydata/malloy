@@ -91,6 +91,7 @@ export {
   QueryMaterializer,
   CSVWriter,
   JSONWriter,
+  Parse,
   DataWriter
 } from "./malloy";
 export type {
