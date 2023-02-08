@@ -22,7 +22,12 @@
  */
 import * as duckdb from "@duckdb/duckdb-wasm";
 import Worker from "web-worker";
-import { QueryDataRow, RunSQLOptions } from "@malloydata/malloy";
+import {
+  QueryDataRow,
+  RunSQLOptions,
+  StructDef,
+  parseTableURI
+} from "@malloydata/malloy";
 import { StructRow, Table, Vector } from "apache-arrow";
 import { DuckDBCommon, QueryOptionsReader } from "./duckdb_common";
 
@@ -87,12 +92,19 @@ const unwrapTable = (table: Table): QueryDataRow[] => {
 
 const isNode = () => typeof navigator === "undefined";
 
+type RemoteFileCallback = (
+  tableName: string
+) => Promise<Uint8Array | undefined>;
+
 export abstract class DuckDBWASMConnection extends DuckDBCommon {
   connecting: Promise<void>;
   protected _connection: duckdb.AsyncDuckDBConnection | null = null;
   protected _database: duckdb.AsyncDuckDB | null = null;
   protected isSetup = false;
   private worker: Worker | null = null;
+
+  private remoteFileCallbacks: RemoteFileCallback[] = [];
+  private remoteFileStatus: Record<string, boolean> = {};
 
   constructor(
     public readonly name: string,
@@ -187,6 +199,32 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     }
   }
 
+  async fetchSchemaForTables(tables: string[]): Promise<{
+    schemas: Record<string, StructDef>;
+    errors: Record<string, string>;
+  }> {
+    await this.setup();
+
+    for (const tableUri of tables) {
+      const { tablePath } = parseTableURI(tableUri);
+      if (tablePath.match(/^https?:\/\//)) {
+        continue;
+      }
+      if (this.remoteFileStatus[tablePath]) {
+        continue;
+      }
+      for (const callback of this.remoteFileCallbacks) {
+        this.remoteFileStatus[tablePath] = true;
+        const data = await callback(tablePath);
+        if (data) {
+          await this.database?.registerFileBuffer(tablePath, data);
+          break;
+        }
+      }
+    }
+    return super.fetchSchemaForTables(tables);
+  }
+
   async close(): Promise<void> {
     if (this._connection) {
       await this._connection.close();
@@ -200,6 +238,10 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
       this.worker.terminate();
       this.worker = null;
     }
+  }
+
+  registerRemoteTableCallback(callback: RemoteFileCallback): void {
+    this.remoteFileCallbacks.push(callback);
   }
 
   async registerRemoteTable(tableName: string, url: string): Promise<void> {
