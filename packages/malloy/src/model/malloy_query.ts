@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { cloneDeep } from "lodash";
+import cloneDeep from "lodash/cloneDeep";
 import { Dialect, DialectFieldList, getDialect } from "../dialect";
 import { StandardSQLDialect } from "../dialect/standardsql";
 import {
