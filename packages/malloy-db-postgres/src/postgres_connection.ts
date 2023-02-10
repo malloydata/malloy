@@ -307,18 +307,7 @@ export class PostgresConnection
         structDef.fields.push(s);
         name = "value";
       }
-      if (malloyType !== undefined) {
-        s.fields.push({
-          "type": malloyType,
-          name
-        });
-      } else {
-        s.fields.push({
-          name,
-          "type": "string",
-          "e": [`'Postgres type "${postgresDataType}" not supported by Malloy'`]
-        });
-      }
+      s.fields.push({ "type": malloyType || "unsupported", name });
     }
   }
 
