@@ -484,11 +484,18 @@ export type AtomicFieldType =
   | "number"
   | TimeFieldType
   | "boolean"
+  | "unsupported"
   | "json";
 export function isAtomicFieldType(s: string): s is AtomicFieldType {
-  return ["string", "number", "date", "timestamp", "boolean", "json"].includes(
-    s
-  );
+  return [
+    "string",
+    "number",
+    "date",
+    "timestamp",
+    "boolean",
+    "json",
+    "unsupported"
+  ].includes(s);
 }
 
 /** All scalars can have an optional expression */
@@ -536,6 +543,10 @@ export interface FieldJSONDef extends FieldAtomicDef {
   type: "json";
 }
 
+/** Scalar unsupported Field */
+export interface FieldUnsupportedDef extends FieldAtomicDef {
+  type: "unsupported";
+}
 export type DateUnit = "day" | "week" | "month" | "quarter" | "year";
 export function isDateUnit(str: string): str is DateUnit {
   return ["day", "week", "month", "quarter", "year"].includes(str);
@@ -804,7 +815,8 @@ export type FieldTypeDef =
   | FieldTimestampDef
   | FieldNumberDef
   | FieldBooleanDef
-  | FieldJSONDef;
+  | FieldJSONDef
+  | FieldUnsupportedDef;
 
 export function isFieldTypeDef(f: FieldDef): f is FieldTypeDef {
   return (
