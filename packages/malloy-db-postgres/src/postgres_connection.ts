@@ -71,7 +71,8 @@ const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   "regtype": "string",
   "numeric": "number",
   "bytea": "string",
-  "pg_ndistinct": "number"
+  "pg_ndistinct": "number",
+  "uuid": "string"
 };
 
 interface PostgresQueryConfiguration {

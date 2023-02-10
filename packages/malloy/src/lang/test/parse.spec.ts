@@ -51,7 +51,7 @@ import {
   markSource,
   pretty
 } from "./test-translator";
-import { isEqual } from "lodash";
+import isEqual from "lodash/isEqual";
 import { inspect } from "util";
 
 const inspectCompile = false;
