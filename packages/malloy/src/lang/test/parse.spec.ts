@@ -1336,6 +1336,22 @@ describe("expressions", () => {
       }
     }
   });
+  test("unsupported reference in result allowed", () => {
+    const uModel = new BetaModel(`query: a->{ group_by: aun }`);
+    expect(uModel).modelCompiled();
+  });
+  test("unsupported reference can be compared to NULL", () => {
+    const uModel = new BetaModel(
+      `query: a->{ where: aun != NULL; project: * }`
+    );
+    expect(uModel).modelCompiled();
+  });
+  test("unsupported comparison illegal", () => {
+    const uModel = new BetaModel(
+      `query: ab->{ where: aun = b.aun  project: * }`
+    );
+    expect(uModel).compileToFailWith("Cannot operate with unsupported type");
+  });
 });
 
 describe("sql:", () => {
