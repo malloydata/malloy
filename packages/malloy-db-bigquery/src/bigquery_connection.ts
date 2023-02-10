@@ -518,7 +518,9 @@ export class BigQueryConnection
         this.addFieldsToStructDef(innerStructDef, field);
         structDef.fields.push(innerStructDef);
       } else {
-        const malloyType = this.bqToMalloyTypes[type] || "unsupported";
+        const malloyType = this.bqToMalloyTypes[type] || {
+          "type": "unsupported"
+        };
         structDef.fields.push({ name, ...malloyType } as FieldTypeDef);
       }
     }
