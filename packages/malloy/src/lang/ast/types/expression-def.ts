@@ -250,9 +250,8 @@ function equality(
 
   // Unsupported types can be compare with null
   if (lhs.dataType !== "null" && rhs.dataType !== "null") {
-    const noGo = unsupportError(lhs, rhs);
+    const noGo = unsupportError(left, lhs, right, rhs);
     if (noGo) {
-      left.log("Cannot operate with unsupported type");
       return { ...noGo, "dataType": "boolean" };
     }
   }
@@ -311,9 +310,8 @@ function compare(
     lhs.expressionType,
     rhs.expressionType
   );
-  const noCompare = unsupportError(lhs, rhs);
+  const noCompare = unsupportError(left, lhs, right, rhs);
   if (noCompare) {
-    left.log("Cannot compare to unsupported tpes");
     return { ...noCompare, "dataType": "boolean" };
   }
   const value = timeCompare(lhs, op, rhs) || compose(lhs.value, op, rhs.value);
@@ -346,9 +344,8 @@ function numeric(
 ): ExprValue {
   const lhs = left.getExpression(fs);
   const rhs = right.getExpression(fs);
-  const noGo = unsupportError(lhs, rhs);
+  const noGo = unsupportError(left, lhs, right, rhs);
   if (noGo) {
-    left.log("Cannot operate with unsupported type");
     return noGo;
   }
   const expressionType = maxExpressionType(
@@ -376,9 +373,8 @@ function delta(
 ): ExprValue {
   const lhs = left.getExpression(fs);
   const rhs = right.getExpression(fs);
-  const noGo = unsupportError(lhs, rhs);
+  const noGo = unsupportError(left, lhs, right, rhs);
   if (noGo) {
-    left.log("Cannot operate with unsupported type");
     return noGo;
   }
 
@@ -431,7 +427,7 @@ export function applyBinary(
   if (oneOf(op, "/")) {
     const num = left.getExpression(fs);
     const denom = right.getExpression(fs);
-    const noGo = unsupportError(num, denom);
+    const noGo = unsupportError(left, num, right, denom);
     if (noGo) {
       left.log("Cannot operate with unsupported type");
       return noGo;
@@ -463,15 +459,24 @@ export function applyBinary(
   return errorFor("applybinary bad operator");
 }
 
-function unsupportError(lhs: ExprValue, rhs: ExprValue): ExprValue | undefined {
-  if (lhs.dataType === "unsupported" || rhs.dataType === "unsupported") {
-    return {
-      "dataType": "unsupported",
-      "expressionType": maxExpressionType(
-        lhs.expressionType,
-        rhs.expressionType
-      ),
-      "value": ["'unsupported operation'"]
-    };
+function unsupportError(
+  l: ExpressionDef,
+  lhs: ExprValue,
+  r: ExpressionDef,
+  rhs: ExprValue
+): ExprValue | undefined {
+  const ret = {
+    "dataType": lhs.dataType,
+    "expressionType": maxExpressionType(lhs.expressionType, rhs.expressionType),
+    "value": ["'unsupported operation'"]
+  };
+  if (lhs.dataType === "unsupported") {
+    l.log("Unsupported type not allowed in expression");
+    return { ...ret, "dataType": rhs.dataType };
   }
+  if (rhs.dataType === "unsupported") {
+    r.log("Unsupported type not allowed in expression");
+    return ret;
+  }
+  return undefined;
 }

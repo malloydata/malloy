@@ -21,7 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { errorFor } from "../ast-utils";
 import { FT } from "../fragtype-utils";
 import { ExprValue } from "../types/expr-value";
 import { ExpressionDef } from "../types/expression-def";
@@ -38,13 +37,11 @@ export class ExprNot extends Unary {
 
   getExpression(fs: FieldSpace): ExprValue {
     const notThis = this.expr.getExpression(fs);
-    if (this.typeCheck(this.expr, notThis)) {
-      return {
-        ...notThis,
-        "dataType": "boolean",
-        "value": nullsafeNot(notThis.value)
-      };
-    }
-    return errorFor("not requires boolean");
+    const doNot = this.typeCheck(this.expr, notThis);
+    return {
+      ...notThis,
+      "dataType": "boolean",
+      "value": doNot ? nullsafeNot(notThis.value) : ["false"]
+    };
   }
 }
