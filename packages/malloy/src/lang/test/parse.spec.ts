@@ -1370,6 +1370,12 @@ describe("expressions", () => {
     );
     expect(uModel).compileToFailWith("'not' Can't use type unsupported");
   });
+  test("allow unsupported to be cast", () => {
+    const uModel = new BetaModel(
+      `source: x is a { dimension: notUn is aun::string }`
+    );
+    expect(uModel).modelCompiled();
+  });
 });
 
 describe("sql:", () => {
