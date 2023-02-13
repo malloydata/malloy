@@ -59,7 +59,8 @@ const mockSchema: Record<string, StructDef> = {
       { "type": "date", "name": "ad" },
       { "type": "boolean", "name": "abool" },
       { "type": "timestamp", "name": "ats" },
-      { "type": "unsupported", "name": "aun" }
+      { "type": "unsupported", "name": "aun" },
+      { "type": "unsupported", "name": "aweird", "rawType": "weird" }
     ]
   },
   "malloytest.carriers": {

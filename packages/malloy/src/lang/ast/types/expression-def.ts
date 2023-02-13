@@ -249,10 +249,16 @@ function equality(
   const rhs = right.getExpression(fs);
 
   // Unsupported types can be compare with null
-  if (lhs.dataType !== "null" && rhs.dataType !== "null") {
-    const noGo = unsupportError(left, lhs, right, rhs);
-    if (noGo) {
-      return { ...noGo, "dataType": "boolean" };
+  const checkUnsupport =
+    lhs.dataType === "unsupported" || rhs.dataType === "unsupported";
+  if (checkUnsupport) {
+    const oneNull = lhs.dataType === "null" || rhs.dataType === "null";
+    const rawMatch = lhs.rawType && lhs.rawType === rhs.rawType;
+    if (!(oneNull || rawMatch)) {
+      const noGo = unsupportError(left, lhs, right, rhs);
+      if (noGo) {
+        return { ...noGo, "dataType": "boolean" };
+      }
     }
   }
   let value = timeCompare(lhs, op, rhs) || compose(lhs.value, op, rhs.value);
@@ -459,6 +465,9 @@ export function applyBinary(
   return errorFor("applybinary bad operator");
 }
 
+/**
+ * Return an error if an binary operation includes unsupported types.
+ */
 function unsupportError(
   l: ExpressionDef,
   lhs: ExprValue,

@@ -1336,6 +1336,8 @@ describe("expressions", () => {
       }
     }
   });
+});
+describe("unspported fields in schema", () => {
   test("unsupported reference in result allowed", () => {
     const uModel = new BetaModel(`query: a->{ group_by: aun }`);
     expect(uModel).modelCompiled();
@@ -1363,6 +1365,12 @@ describe("expressions", () => {
     expect(uModel).compileToFailWith(
       "Unsupported type not allowed in expression"
     );
+  });
+  test("allow unsupported equality when raw types match", () => {
+    const uModel = new BetaModel(
+      `query: ab->{ where: aweird = b.aweird  project: * }`
+    );
+    expect(uModel).modelCompiled();
   });
   test("flag not applied to unsupported", () => {
     const uModel = new BetaModel(
