@@ -546,6 +546,7 @@ export interface FieldJSONDef extends FieldAtomicDef {
 /** Scalar unsupported Field */
 export interface FieldUnsupportedDef extends FieldAtomicDef {
   type: "unsupported";
+  rawType?: string;
 }
 export type DateUnit = "day" | "week" | "month" | "quarter" | "year";
 export function isDateUnit(str: string): str is DateUnit {
