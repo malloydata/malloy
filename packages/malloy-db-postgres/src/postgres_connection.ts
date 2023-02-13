@@ -308,7 +308,15 @@ export class PostgresConnection
         structDef.fields.push(s);
         name = "value";
       }
-      s.fields.push({ "type": malloyType || "unsupported", name });
+      if (malloyType) {
+        structDef.fields.push({ "type": malloyType, name });
+      } else {
+        structDef.fields.push({
+          "type": "unsupported",
+          "rawType": postgresDataType.toLowerCase(),
+          name
+        });
+      }
     }
   }
 

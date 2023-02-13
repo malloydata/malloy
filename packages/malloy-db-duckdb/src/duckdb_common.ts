@@ -268,7 +268,15 @@ export abstract class DuckDBCommon
           };
           structDef.fields.push(innerStructDef);
         } else {
-          structDef.fields.push({ "type": malloyType || "unsupported", name });
+          if (malloyType) {
+            structDef.fields.push({ "type": malloyType, name });
+          } else {
+            structDef.fields.push({
+              "type": "unsupported",
+              "rawType": duckDBType.toLowerCase(),
+              name
+            });
+          }
         }
       }
     }
