@@ -309,9 +309,9 @@ export class PostgresConnection
         name = "value";
       }
       if (malloyType) {
-        structDef.fields.push({ "type": malloyType, name });
+        s.fields.push({ "type": malloyType, name });
       } else {
-        structDef.fields.push({
+        s.fields.push({
           "type": "unsupported",
           "rawType": postgresDataType.toLowerCase(),
           name
