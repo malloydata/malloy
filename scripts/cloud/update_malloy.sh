@@ -83,7 +83,7 @@ install_composer() {
 configure_cloud_project() {
   cd ~
 
-  echo $1
+  echo "  Updating workspace settings..."
   cat .theia/settings.json | jq '."cloudcode.cloudshell.project" = $project_id' --arg project_id $1 > settings.json
 
   if [ $? -eq 0 ]; then
