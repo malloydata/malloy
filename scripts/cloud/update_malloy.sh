@@ -67,6 +67,9 @@ install_extension() {
     fatal "Error occurred while unpacking extension"
   fi
 
+  # Force IDE to reload so it will pickup the new extension
+  killall node
+
   log "  Extension Installed Successfully"
 }
 
