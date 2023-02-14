@@ -15,7 +15,12 @@ log() {
 }
 
 err() {
-  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]: $*" >&2
+  echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')]:(ERROR) $*" >&2
+}
+
+fatal() {
+  err $*
+  exit 1
 }
 
 ### Component Functions ###
@@ -41,18 +46,26 @@ install_extension() {
   if [ -d $theia_dir/$extension_dir ]; then
     log "  Found existing version..."
     log "  Removing existing version..."
-    rm -Rf $theia_dir/$extension_dir;
+    if ! rm -Rf $theia_dir/$extension_dir; then
+      fatal "Unable to remove existing extesion version"
+    fi
   fi
 
-  mkdir -p $theia_dir/$extension_dir
+  if ! mkdir -p $theia_dir/$extension_dir; then
+    fatal "Unable to create extension directory"
+  fi
 
   cd $theia_dir
 
   log "  Downloading Extension..."
-  curl $extension_url --output $extension_file
+  if ! curl $extension_url --output $extension_file; then
+    fatal "Error occurred during download"
+  fi
 
   log "  Unpacking Exension..."
-  unzip -d $extension_dir $extension_file
+  if ! unzip -d $extension_dir $extension_file; then
+    fatal "Error occurred while unpacking extension"
+  fi
 
   log "  Extension Installed Successfully"
 }
@@ -72,10 +85,14 @@ install_samples() {
   if [ -d $samples_dir ]; then
     log "  Found existing samples..."
     log "  Removing existing samples...."
-    rm -Rf $samples_dir
+    if ! rm -Rf $samples_dir; then
+      fatal "Unable to remove existing samples directory"
+    fi
   fi
 
-  git clone $samples_repo
+  if ! git clone $samples_repo; then
+    fatal "Failed to clone samples repository"
+  fi
   log "  Samples Installed Successfully"
 }
 
@@ -89,17 +106,26 @@ install_composer() {
 
   cd ~
   log "  Fetching latest version..."
-  local latest_url=$(curl -s $composer_latest_api | jq -r ".assets[] | select(.name|match(\"linux-x64.zip\")) | .browser_download_url")
+  local latest_url
+  latest_url=$(curl -s $composer_latest_api | jq -r ".assets[] | select(.name|match(\"linux-x64.zip\")) | .browser_download_url")
+  if [ $? -e 0]; then
+    fatal "Error while parsing github api for latest version"
+  fi
+
   local latest_zip=${latest_url##*/}
   local version_base=${latest_url%/$latest_zip}
   local version=${version_base##*/}
 
   log "  Latest version found: $version"
   log "  Pulling from: $latest_url"
-  curl -L $latest_url --output $latest_zip
+  if ! curl -L $latest_url --output $latest_zip; then
+    fatal "Error downloading latest release package"
+  fi
 
   log "  Unpacking composer executable"
-  unzip -p $latest_zip composer > composer
+  if ! unzip -p $latest_zip composer > composer; then
+    fatal "Error unpacking executable from zip"
+  fi
   chmod a+x composer
 
   rm $latest_zip
@@ -120,7 +146,9 @@ configure_cloud_project() {
   cat .theia/settings.json | jq '."cloudcode.cloudshell.project" = $project_id' --arg project_id $1 > settings.json
 
   if [ $? -eq 0 ]; then
-    mv settings.json .theia/settings.json
+    if ! mv settings.json .theia/settings.json; then
+      err "Failed to write settings update"
+    fi
     log "  Workspace Cloud Project ID has been updated"
   else
     err "  An error occurred updating workspace settings"
@@ -141,16 +169,25 @@ write_update_script() {
   chmod a+x $update_file
 }
 
-### Main execution block ###
-install_extension
-install_samples
-install_composer
+#######################################
+# Main function call
+# Arguments:
+#   PROJECT_ID
+#######################################
+main() {
+  ### Main execution block ###
+  install_extension
+  install_samples
+  install_composer
 
-if [[ -n $1 ]]; then
-  configure_cloud_project $1
-fi
+  if [[ -n $1 ]]; then
+    configure_cloud_project $1
+  fi
 
-write_update_script
+  write_update_script
 
-# Return to starting directory
-cd $starting_dir
+  # Return to starting directory
+  cd $starting_dir
+}
+
+main "$@"
