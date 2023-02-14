@@ -111,7 +111,7 @@ install_composer() {
   log "  Fetching latest version..."
   local latest_url
   latest_url=$(curl -s $composer_latest_api | jq -r ".assets[] | select(.name|match(\"linux-x64.zip\")) | .browser_download_url")
-  if [ $? -eq 0 ]; then
+  if [ $? -ne 0 ]; then
     fatal "Error while parsing github api for latest version"
   fi
 
