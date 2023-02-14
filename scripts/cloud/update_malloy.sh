@@ -83,13 +83,15 @@ install_composer() {
 configure_cloud_project() {
   cd ~
 
-  echo -n "Enter your cloud platform project [PROJECT_ID]: "
-  read -r project_id
+  echo $1
+  cat .theia/settings.json | jq '."cloudcode.cloudshell.project" = $project_id' --arg project_id $1 > settings.json
 
-  cat .theia/settings.json | jq '."cloudcode.cloudshell.project" = $project_id' --arg project_id $project_id > settings.json
-  mv settings.json .theia/settings.json
-
-  echo "Workspace Cloud Project ID has been updated"
+  if [ $? -eq 0 ]; then
+    mv settings.json .theia/settings.json
+    echo "Workspace Cloud Project ID has been updated"
+  else
+    echo "An error occurred updating workspace settings"
+  fi
 }
 
 ### Main execution block ###
@@ -97,13 +99,8 @@ install_extension
 install_samples
 install_composer
 
-
-echo -n "Configure cloud project? [y/n]: "
-read -r ans
-
-positive_response='[yY]'
-if [[ $ans =~ $positive_response ]]; then
-  configure_cloud_project
+if [[ -n $1 ]]; then
+  configure_cloud_project $1
 fi
 
 # Return to starting directory
