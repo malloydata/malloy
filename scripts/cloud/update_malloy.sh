@@ -77,20 +77,21 @@ install_composer() {
 
   rm $latest_zip
 
-  echo " Composer Installed Successfully"
+  echo "  Composer Installed Successfully"
 }
 
 configure_cloud_project() {
-  cd ~
+  echo "Configuring Cloud Project:"
 
+  cd ~
   echo "  Updating workspace settings..."
   cat .theia/settings.json | jq '."cloudcode.cloudshell.project" = $project_id' --arg project_id $1 > settings.json
 
   if [ $? -eq 0 ]; then
     mv settings.json .theia/settings.json
-    echo "Workspace Cloud Project ID has been updated"
+    echo "  Workspace Cloud Project ID has been updated"
   else
-    echo "An error occurred updating workspace settings"
+    echo "  An error occurred updating workspace settings"
   fi
 }
 
