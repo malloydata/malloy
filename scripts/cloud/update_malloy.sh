@@ -95,6 +95,15 @@ configure_cloud_project() {
   fi
 }
 
+write_update_script() {
+  cd ~
+  update_file=update_malloy.sh
+
+  echo "#!/bin/bash" > $update_file
+  echo "curl -s https://raw.githubusercontent.com/malloydata/malloy/maden/cloud-ide-setup/scripts/cloud/update_malloy.sh | bash" >> $update_file
+  chmod a+x $update_file
+}
+
 ### Main execution block ###
 install_extension
 install_samples
@@ -103,6 +112,8 @@ install_composer
 if [[ -n $1 ]]; then
   configure_cloud_project $1
 fi
+
+write_update_script
 
 # Return to starting directory
 cd $starting_dir
