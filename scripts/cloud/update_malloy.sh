@@ -28,12 +28,12 @@ err() {
 #######################################
 install_extension() {
   log "Installing Extension:"
-  extension_file="malloy-vscode-linux-x64-0.2.0.vsix"
+  local extension_file="malloy-vscode-linux-x64-0.2.0.vsix"
 
-  extension_url="https://www.scullinsteel.com/$extension_file"
-  theia_dir=".theia/extensions"
+  local extension_url="https://www.scullinsteel.com/$extension_file"
+  local theia_dir=".theia/extensions"
 
-  extension_dir=${extension_file%.vsix}
+  local extension_dir=${extension_file%.vsix}
 
   log "  Creating directory: ~/$theia_dir/$extension_dir"
   cd ~
@@ -89,10 +89,10 @@ install_composer() {
 
   cd ~
   log "  Fetching latest version..."
-  latest_url=$(curl -s $composer_latest_api | jq -r ".assets[] | select(.name|match(\"linux-x64.zip\")) | .browser_download_url")
-  latest_zip=${latest_url##*/}
-  version_base=${latest_url%/$latest_zip}
-  version=${version_base##*/}
+  local latest_url=$(curl -s $composer_latest_api | jq -r ".assets[] | select(.name|match(\"linux-x64.zip\")) | .browser_download_url")
+  local latest_zip=${latest_url##*/}
+  local version_base=${latest_url%/$latest_zip}
+  local version=${version_base##*/}
 
   log "  Latest version found: $version"
   log "  Pulling from: $latest_url"
@@ -134,7 +134,7 @@ configure_cloud_project() {
 #######################################
 write_update_script() {
   cd ~
-  update_file=update_malloy.sh
+  local update_file=update_malloy.sh
 
   echo "#!/bin/bash" > $update_file
   echo "curl -s https://raw.githubusercontent.com/malloydata/malloy/maden/cloud-ide-setup/scripts/cloud/update_malloy.sh | bash" >> $update_file
