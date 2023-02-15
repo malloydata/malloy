@@ -1337,6 +1337,54 @@ describe("expressions", () => {
     }
   });
 });
+describe("unspported fields in schema", () => {
+  test("unsupported reference in result allowed", () => {
+    const uModel = new BetaModel(`query: a->{ group_by: aun }`);
+    expect(uModel).modelCompiled();
+  });
+  test("unsupported reference can be compared to NULL", () => {
+    const uModel = new BetaModel(
+      `query: a->{ where: aun != NULL; project: * }`
+    );
+    expect(uModel).modelCompiled();
+  });
+  test("flag unsupported equality", () => {
+    // because we don't know if the two unsupported types are comparable
+    const uModel = new BetaModel(
+      `query: ab->{ where: aun = b.aun  project: * }`
+    );
+    expect(uModel).compileToFailWith(
+      "Unsupported type not allowed in expression"
+    );
+  });
+  test("flag unsupported compare", () => {
+    // because we don't know if the two unsupported types are comparable
+    const uModel = new BetaModel(
+      `query: ab->{ where: aun > b.aun  project: * }`
+    );
+    expect(uModel).compileToFailWith(
+      "Unsupported type not allowed in expression"
+    );
+  });
+  test("allow unsupported equality when raw types match", () => {
+    const uModel = new BetaModel(
+      `query: ab->{ where: aweird = b.aweird  project: * }`
+    );
+    expect(uModel).modelCompiled();
+  });
+  test("flag not applied to unsupported", () => {
+    const uModel = new BetaModel(
+      `source: x is a { dimension: notUn is not aun }`
+    );
+    expect(uModel).compileToFailWith("'not' Can't use type unsupported");
+  });
+  test("allow unsupported to be cast", () => {
+    const uModel = new BetaModel(
+      `source: x is a { dimension: notUn is aun::string }`
+    );
+    expect(uModel).modelCompiled();
+  });
+});
 
 describe("sql:", () => {
   function makeSchemaResponse(sql: SQLBlockSource): SQLBlockStructDef {

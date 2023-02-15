@@ -247,6 +247,20 @@ function equality(
 ): ExprValue {
   const lhs = left.getExpression(fs);
   const rhs = right.getExpression(fs);
+
+  // Unsupported types can be compare with null
+  const checkUnsupport =
+    lhs.dataType === "unsupported" || rhs.dataType === "unsupported";
+  if (checkUnsupport) {
+    const oneNull = lhs.dataType === "null" || rhs.dataType === "null";
+    const rawMatch = lhs.rawType && lhs.rawType === rhs.rawType;
+    if (!(oneNull || rawMatch)) {
+      const noGo = unsupportError(left, lhs, right, rhs);
+      if (noGo) {
+        return { ...noGo, "dataType": "boolean" };
+      }
+    }
+  }
   let value = timeCompare(lhs, op, rhs) || compose(lhs.value, op, rhs.value);
 
   if (lhs.dataType != "unknown" && rhs.dataType != "unknown") {
@@ -302,6 +316,10 @@ function compare(
     lhs.expressionType,
     rhs.expressionType
   );
+  const noCompare = unsupportError(left, lhs, right, rhs);
+  if (noCompare) {
+    return { ...noCompare, "dataType": "boolean" };
+  }
   const value = timeCompare(lhs, op, rhs) || compose(lhs.value, op, rhs.value);
 
   return {
@@ -332,6 +350,10 @@ function numeric(
 ): ExprValue {
   const lhs = left.getExpression(fs);
   const rhs = right.getExpression(fs);
+  const noGo = unsupportError(left, lhs, right, rhs);
+  if (noGo) {
+    return noGo;
+  }
   const expressionType = maxExpressionType(
     lhs.expressionType,
     rhs.expressionType
@@ -357,6 +379,10 @@ function delta(
 ): ExprValue {
   const lhs = left.getExpression(fs);
   const rhs = right.getExpression(fs);
+  const noGo = unsupportError(left, lhs, right, rhs);
+  if (noGo) {
+    return noGo;
+  }
 
   if (isTimeFieldType(lhs.dataType)) {
     let duration: ExpressionDef = right;
@@ -407,6 +433,11 @@ export function applyBinary(
   if (oneOf(op, "/")) {
     const num = left.getExpression(fs);
     const denom = right.getExpression(fs);
+    const noGo = unsupportError(left, num, right, denom);
+    if (noGo) {
+      left.log("Cannot operate with unsupported type");
+      return noGo;
+    }
 
     if (num.dataType != "number") {
       left.log("Numerator for division must be a number");
@@ -432,4 +463,29 @@ export function applyBinary(
   }
   left.log(`Canot use ${op} operator here`);
   return errorFor("applybinary bad operator");
+}
+
+/**
+ * Return an error if an binary operation includes unsupported types.
+ */
+function unsupportError(
+  l: ExpressionDef,
+  lhs: ExprValue,
+  r: ExpressionDef,
+  rhs: ExprValue
+): ExprValue | undefined {
+  const ret = {
+    "dataType": lhs.dataType,
+    "expressionType": maxExpressionType(lhs.expressionType, rhs.expressionType),
+    "value": ["'unsupported operation'"]
+  };
+  if (lhs.dataType === "unsupported") {
+    l.log("Unsupported type not allowed in expression");
+    return { ...ret, "dataType": rhs.dataType };
+  }
+  if (rhs.dataType === "unsupported") {
+    r.log("Unsupported type not allowed in expression");
+    return ret;
+  }
+  return undefined;
 }

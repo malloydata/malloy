@@ -35,4 +35,5 @@ export type FieldValueType = ExpressionValueType | "turtle" | "struct";
 export interface TypeDesc {
   dataType: FieldValueType;
   expressionType: ExpressionType;
+  rawType?: string;
 }

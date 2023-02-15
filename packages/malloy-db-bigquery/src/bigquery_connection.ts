@@ -518,16 +518,11 @@ export class BigQueryConnection
         this.addFieldsToStructDef(innerStructDef, field);
         structDef.fields.push(innerStructDef);
       } else {
-        const malloyType = this.bqToMalloyTypes[type];
-        if (malloyType) {
-          structDef.fields.push({ name, ...malloyType } as FieldTypeDef);
-        } else {
-          structDef.fields.push({
-            name,
-            "type": "string",
-            "e": [`'BigQuery type "${type}" not supported by Malloy'`]
-          });
-        }
+        const malloyType = this.bqToMalloyTypes[type] || {
+          "type": "unsupported",
+          "rawType": type.toLowerCase()
+        };
+        structDef.fields.push({ name, ...malloyType } as FieldTypeDef);
       }
     }
   }
