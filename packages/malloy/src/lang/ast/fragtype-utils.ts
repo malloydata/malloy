@@ -21,10 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import { ExpressionType } from "../../model";
 import { FieldValueType, TypeDesc } from "./types/type-desc";
 
-function mkFragType(dType: FieldValueType): TypeDesc {
-  return { "dataType": dType, "expressionType": "scalar" };
+function mkFragType(
+  dataType: FieldValueType,
+  expressionType: ExpressionType = "scalar"
+): TypeDesc {
+  return { dataType, expressionType };
 }
 
 /**
@@ -103,4 +107,5 @@ export class FT {
     FT.timestampT,
     FT.boolT
   ];
+  static aggregateBoolT = mkFragType("boolean", "aggregate");
 }

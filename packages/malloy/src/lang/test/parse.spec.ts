@@ -981,6 +981,16 @@ describe("qops", () => {
     )
   );
   test(
+    "compound having still works",
+    modelOK(
+      "query:ab->{ aggregate: acount; having: acount > 10 and acount < 100 }"
+    )
+  );
+  test(
+    "compound aggregate still works",
+    modelOK("query:ab->{ aggregate: thing is acount > 10 and acount < 100 }")
+  );
+  test(
     "where multiple",
     modelOK("query:a->{ group_by: astr; where: af > 10,astr~'a%' }")
   );
