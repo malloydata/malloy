@@ -6,13 +6,14 @@
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../jest.config.js",
     "build": "tsc --build",
+    "clean": "tsc --build --clean",
     "malloyc": "ts-node ../scripts/malloy-to-json"
   },
   "dependencies": {
-    "@malloydata/db-bigquery": "^0.0.22",
-    "@malloydata/db-duckdb": "^0.0.22",
-    "@malloydata/db-postgres": "^0.0.22",
-    "@malloydata/malloy": "^0.0.22"
+    "@malloydata/db-bigquery": "^0.0.24",
+    "@malloydata/db-duckdb": "^0.0.24",
+    "@malloydata/db-postgres": "^0.0.24",
+    "@malloydata/malloy": "^0.0.24"
   },
-  "version": "0.0.22"
+  "version": "0.0.24"
 }

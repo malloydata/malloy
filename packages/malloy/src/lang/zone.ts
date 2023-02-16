@@ -76,9 +76,9 @@ export class Zone<TValue> {
       if (zst.firstReference || !this.location[str]) {
         return zst;
       }
-      return { ...zst, firstReference: this.location[str] };
+      return { ...zst, "firstReference": this.location[str] };
     }
-    return { status: "error", message: "import reference failure" };
+    return { "status": "error", "message": "import reference failure" };
   }
 
   /**
@@ -87,7 +87,7 @@ export class Zone<TValue> {
    * @param val
    */
   define(str: string, val: TValue): void {
-    this.zone.set(str, { status: "present", value: val });
+    this.zone.set(str, { "status": "present", "value": val });
   }
 
   /**
@@ -98,7 +98,7 @@ export class Zone<TValue> {
   reference(str: string, loc: DocumentLocation): void {
     const zst = this.zone.get(str);
     if (zst?.status == undefined) {
-      this.zone.set(str, { status: "reference", firstReference: loc });
+      this.zone.set(str, { "status": "reference", "firstReference": loc });
       this.location[str] = loc;
     }
   }
@@ -134,7 +134,7 @@ export class Zone<TValue> {
     }
     if (errorData) {
       for (const [errorKey, errorMessage] of Object.entries(errorData)) {
-        this.zone.set(errorKey, { status: "error", message: errorMessage });
+        this.zone.set(errorKey, { "status": "error", "message": errorMessage });
       }
     }
   }

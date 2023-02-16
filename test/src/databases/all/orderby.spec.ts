@@ -23,7 +23,7 @@
  */
 
 import * as malloy from "@malloydata/malloy";
-import { allDatabases, RuntimeList } from "../../runtimes";
+import { RuntimeList, allDatabases } from "../../runtimes";
 import { databasesFromEnvironmentOr } from "../../util";
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));

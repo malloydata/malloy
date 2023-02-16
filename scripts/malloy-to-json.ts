@@ -23,14 +23,14 @@
 /* eslint-disable no-console */
 import * as readline from "readline";
 import { inspect } from "util";
-import { Malloy, Connection } from "@malloydata/malloy";
+import { Connection, Malloy } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { readFile } from "fs/promises";
 import { readFileSync } from "fs";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
-  return inspect(thing, { breakLength: 72, depth: Infinity });
+  return inspect(thing, { "breakLength": 72, "depth": Infinity });
 }
 
 /*
@@ -56,7 +56,7 @@ CURRENTLY HAS TWO MODES
 
 async function printTranlsatedMalloy(fileSrc: string, fileURL: string) {
   const url = new URL(fileURL);
-  const parse = Malloy.parse({ source: fileSrc, url });
+  const parse = Malloy.parse({ "source": fileSrc, url });
   const connection = new BigQueryConnection("bigquery");
   const lookupConnection = async function (name: string): Promise<Connection> {
     if (name == "bigquery" || name === undefined) {
@@ -66,14 +66,14 @@ async function printTranlsatedMalloy(fileSrc: string, fileURL: string) {
   };
   const readURL = async function (url: URL): Promise<string> {
     const filePath = url.pathname;
-    const src = await readFile(filePath, { encoding: "utf-8" });
+    const src = await readFile(filePath, { "encoding": "utf-8" });
     return src;
   };
   try {
     const model = await Malloy.compile({
-      urlReader: { readURL },
-      connections: { lookupConnection },
-      parse,
+      "urlReader": { readURL },
+      "connections": { lookupConnection },
+      parse
     });
     console.log(pretty(model._modelDef));
   } catch (e) {
@@ -104,8 +104,8 @@ async function main() {
     }
   } else {
     const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout,
+      "input": process.stdin,
+      "output": process.stdout
     });
     let translating = true;
     while (translating) {

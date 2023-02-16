@@ -204,55 +204,55 @@ export interface MalloyFunctionInfo {
 }
 
 export const malloyFunctions: Record<string, MalloyFunctionInfo> = {
-  row_number: {
-    returnType: "number",
-    parameters: "none",
-    expressionType: "analytic",
+  "row_number": {
+    "returnType": "number",
+    "parameters": "none",
+    "expressionType": "analytic"
   },
-  rank: {
-    returnType: "number",
-    parameters: "none",
-    expressionType: "analytic",
+  "rank": {
+    "returnType": "number",
+    "parameters": "none",
+    "expressionType": "analytic"
   },
-  dense_rank: {
-    returnType: "number",
-    parameters: "none",
-    expressionType: "analytic",
+  "dense_rank": {
+    "returnType": "number",
+    "parameters": "none",
+    "expressionType": "analytic"
   },
-  first_value_in_column: {
-    returnType: "number",
-    parameters: "any",
-    expressionType: "analytic",
-    sqlName: "first_value",
+  "first_value_in_column": {
+    "returnType": "number",
+    "parameters": "any",
+    "expressionType": "analytic",
+    "sqlName": "first_value"
   },
-  last_value_in_column: {
-    returnType: "number",
-    parameters: "any",
-    expressionType: "analytic",
-    sqlName: "last_value",
+  "last_value_in_column": {
+    "returnType": "number",
+    "parameters": "any",
+    "expressionType": "analytic",
+    "sqlName": "last_value"
   },
-  min_in_column: {
-    returnType: "number",
-    parameters: "any",
-    expressionType: "analytic",
-    sqlName: "min",
+  "min_in_column": {
+    "returnType": "number",
+    "parameters": "any",
+    "expressionType": "analytic",
+    "sqlName": "min"
   },
-  max_in_column: {
-    returnType: "number",
-    parameters: "any",
-    expressionType: "analytic",
-    sqlName: "max",
+  "max_in_column": {
+    "returnType": "number",
+    "parameters": "any",
+    "expressionType": "analytic",
+    "sqlName": "max"
   },
-  ntile: {
-    returnType: "number",
-    parameters: ["nconst"],
-    expressionType: "analytic",
+  "ntile": {
+    "returnType": "number",
+    "parameters": ["nconst"],
+    "expressionType": "analytic"
   },
-  lag: {
-    returnType: "number",
-    parameters: ["number", "nconst"],
-    expressionType: "analytic",
-  },
+  "lag": {
+    "returnType": "number",
+    "parameters": ["number", "nconst"],
+    "expressionType": "analytic"
+  }
 };
 
 export interface AnalyticFragment {
@@ -484,11 +484,18 @@ export type AtomicFieldType =
   | "number"
   | TimeFieldType
   | "boolean"
+  | "unsupported"
   | "json";
 export function isAtomicFieldType(s: string): s is AtomicFieldType {
-  return ["string", "number", "date", "timestamp", "boolean", "json"].includes(
-    s
-  );
+  return [
+    "string",
+    "number",
+    "date",
+    "timestamp",
+    "boolean",
+    "json",
+    "unsupported"
+  ].includes(s);
 }
 
 /** All scalars can have an optional expression */
@@ -536,6 +543,11 @@ export interface FieldJSONDef extends FieldAtomicDef {
   type: "json";
 }
 
+/** Scalar unsupported Field */
+export interface FieldUnsupportedDef extends FieldAtomicDef {
+  type: "unsupported";
+  rawType?: string;
+}
 export type DateUnit = "day" | "week" | "month" | "quarter" | "year";
 export function isDateUnit(str: string): str is DateUnit {
   return ["day", "week", "month", "quarter", "year"].includes(str);
@@ -553,7 +565,7 @@ export enum ValueType {
   Date = "date",
   Timestamp = "timestamp",
   Number = "number",
-  String = "string",
+  String = "string"
 }
 
 export type TimeValueType = ValueType.Date | ValueType.Timestamp;
@@ -804,7 +816,8 @@ export type FieldTypeDef =
   | FieldTimestampDef
   | FieldNumberDef
   | FieldBooleanDef
-  | FieldJSONDef;
+  | FieldJSONDef
+  | FieldUnsupportedDef;
 
 export function isFieldTypeDef(f: FieldDef): f is FieldTypeDef {
   return (

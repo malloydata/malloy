@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-duckdb",
-  "version": "0.0.22",
+  "version": "0.0.24",
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -32,12 +32,13 @@
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
     "build": "tsc --build",
+    "clean": "tsc --build --clean",
     "malloyc": "ts-node ../../scripts/malloy-to-json",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.20.0",
-    "@malloydata/malloy": "^0.0.22",
+    "@malloydata/malloy": "^0.0.24",
     "duckdb": "0.6.1",
     "web-worker": "^1.2.0"
   }

@@ -103,7 +103,7 @@ function doDependencies(nodeModulesPath: string, packageJson: any): void {
         pkg.repository?.url,
         pkg.repository?.baseUrl,
         pkg.repo,
-        `https://npmjs.com/package/${dependency}`,
+        `https://npmjs.com/package/${dependency}`
       ].find((el) => el !== undefined);
 
       fs.appendFileSync(
@@ -113,8 +113,8 @@ function doDependencies(nodeModulesPath: string, packageJson: any): void {
 Package: ${dependency}
 Url: ${url}
 License(s): ${licenseType}
-${license ? "License Text:\n" + license + "\n" : ""}
-${notice ? "\nNotice:\n" + notice + "\n" : ""}
+${license ? `License Text:\n${license}\n` : ""}
+${notice ? `\nNotice:\n${notice}\n` : ""}
         `
       );
 

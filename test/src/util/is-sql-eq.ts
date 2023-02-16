@@ -41,13 +41,13 @@ expect.extend({
     const sql = result.sql.replace(/\n/g, "\n    ");
     if (wantEq != "=") {
       return {
-        pass: false,
-        message: () => `${wantEq}\nSQL:\n    ${sql}`,
+        "pass": false,
+        "message": () => `${wantEq}\nSQL:\n    ${sql}`
       };
     }
     return {
-      pass: true,
-      message: () => "SQL expression matched",
+      "pass": true,
+      "message": () => "SQL expression matched"
     };
-  },
+  }
 });

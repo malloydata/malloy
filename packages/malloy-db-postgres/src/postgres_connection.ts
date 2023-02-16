@@ -29,19 +29,19 @@
 
 import * as crypto from "crypto";
 import {
-  PersistSQLResults,
-  RunSQLOptions,
-  StreamingConnection,
-  StructDef,
+  AtomicFieldTypeInner,
+  Connection,
   MalloyQueryData,
   NamedStructDefs,
-  AtomicFieldTypeInner,
-  QueryData,
+  PersistSQLResults,
   PooledConnection,
-  parseTableURI,
-  SQLBlock,
-  Connection,
+  QueryData,
   QueryDataRow,
+  RunSQLOptions,
+  SQLBlock,
+  StreamingConnection,
+  StructDef,
+  parseTableURI
 } from "@malloydata/malloy";
 import { Client, Pool, PoolClient } from "pg";
 import QueryStream from "pg-query-stream";
@@ -49,29 +49,30 @@ import { randomUUID } from "crypto";
 
 const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   "character varying": "string",
-  name: "string",
-  text: "string",
-  date: "date",
-  integer: "number",
-  bigint: "number",
+  "name": "string",
+  "text": "string",
+  "date": "date",
+  "integer": "number",
+  "bigint": "number",
   "double precision": "number",
   "timestamp without time zone": "timestamp", // maybe not
-  oid: "string",
-  boolean: "boolean",
+  "oid": "string",
+  "boolean": "boolean",
   // ARRAY: "string",
   "timestamp with time zone": "timestamp",
-  timestamp: "timestamp",
+  "timestamp": "timestamp",
   '"char"': "string",
-  character: "string",
-  smallint: "number",
-  xid: "string",
-  real: "number",
-  interval: "string",
-  inet: "string",
-  regtype: "string",
-  numeric: "number",
-  bytea: "string",
-  pg_ndistinct: "number",
+  "character": "string",
+  "smallint": "number",
+  "xid": "string",
+  "real": "number",
+  "interval": "string",
+  "inet": "string",
+  "regtype": "string",
+  "numeric": "number",
+  "bytea": "string",
+  "pg_ndistinct": "number",
+  "uuid": "string"
 };
 
 interface PostgresQueryConfiguration {
@@ -169,11 +170,11 @@ export class PostgresConnection
       if (!inCache) {
         try {
           inCache = {
-            schema: await this.getTableSchema(tableURL),
+            "schema": await this.getTableSchema(tableURL)
           };
           this.schemaCache.set(tableURL, inCache);
         } catch (error) {
-          inCache = { error: error.message };
+          inCache = { "error": error.message };
         }
       }
       if (inCache.schema !== undefined) {
@@ -196,10 +197,10 @@ export class PostgresConnection
     if (!inCache) {
       try {
         inCache = {
-          structDef: await this.getSQLBlockSchema(sqlRef),
+          "structDef": await this.getSQLBlockSchema(sqlRef)
         };
       } catch (error) {
-        inCache = { error: error.message };
+        inCache = { "error": error.message };
       }
       this.sqlSchemaCache.set(key, inCache);
     }
@@ -209,11 +210,11 @@ export class PostgresConnection
   protected async getClient(): Promise<Client> {
     const config = await this.readConfig();
     return new Client({
-      user: config.username,
-      password: config.password,
-      database: config.databaseName,
-      port: config.port,
-      host: config.host,
+      "user": config.username,
+      "password": config.password,
+      "database": config.databaseName,
+      "port": config.port,
+      "host": config.host
     });
   }
 
@@ -236,24 +237,27 @@ export class PostgresConnection
       }
     }
     await client.end();
-    return { rows: result.rows as QueryData, totalRows: result.rows.length };
+    return {
+      "rows": result.rows as QueryData,
+      "totalRows": result.rows.length
+    };
   }
 
   private async getSQLBlockSchema(sqlRef: SQLBlock): Promise<StructDef> {
     const structDef: StructDef = {
-      type: "struct",
-      dialect: "postgres",
-      name: sqlRef.name,
-      structSource: {
-        type: "sql",
-        method: "subquery",
-        sqlBlock: sqlRef,
+      "type": "struct",
+      "dialect": "postgres",
+      "name": sqlRef.name,
+      "structSource": {
+        "type": "sql",
+        "method": "subquery",
+        "sqlBlock": sqlRef
       },
-      structRelationship: {
-        type: "basetable",
-        connectionName: this.name,
+      "structRelationship": {
+        "type": "basetable",
+        "connectionName": this.name
       },
-      fields: [],
+      "fields": []
     };
 
     const tempTableName = `tmp${randomUUID()}`.replace(/-/g, "");
@@ -290,26 +294,27 @@ export class PostgresConnection
       if (postgresDataType === "ARRAY") {
         malloyType = postgresToMalloyTypes[row["element_type"] as string];
         s = {
-          type: "struct",
-          name: row["column_name"] as string,
-          dialect: this.dialectName,
-          structRelationship: { type: "nested", field: name, isArray: true },
-          structSource: { type: "nested" },
-          fields: [],
+          "type": "struct",
+          "name": row["column_name"] as string,
+          "dialect": this.dialectName,
+          "structRelationship": {
+            "type": "nested",
+            "field": name,
+            "isArray": true
+          },
+          "structSource": { "type": "nested" },
+          "fields": []
         };
         structDef.fields.push(s);
         name = "value";
       }
-      if (malloyType !== undefined) {
-        s.fields.push({
-          type: malloyType,
-          name,
-        });
+      if (malloyType) {
+        s.fields.push({ "type": malloyType, name });
       } else {
         s.fields.push({
-          name,
-          type: "string",
-          e: [`'Postgres type "${postgresDataType}" not supported by Malloy'`],
+          "type": "unsupported",
+          "rawType": postgresDataType.toLowerCase(),
+          name
         });
       }
     }
@@ -318,15 +323,15 @@ export class PostgresConnection
   private async getTableSchema(tableURL: string): Promise<StructDef> {
     const { tablePath } = parseTableURI(tableURL);
     const structDef: StructDef = {
-      type: "struct",
-      name: tableURL,
-      dialect: "postgres",
-      structSource: { type: "table", tablePath },
-      structRelationship: {
-        type: "basetable",
-        connectionName: this.name,
+      "type": "struct",
+      "name": tableURL,
+      "dialect": "postgres",
+      "structSource": { "type": "table", tablePath },
+      "structRelationship": {
+        "type": "basetable",
+        "connectionName": this.name
       },
-      fields: [],
+      "fields": []
     };
     const [schema, table] = tablePath.split(".");
     if (table === undefined) {
@@ -445,7 +450,10 @@ export class PooledPostgresConnection
         result.rows[i] = result.rows[i].row;
       }
     }
-    return { rows: result.rows as QueryData, totalRows: result.rows.length };
+    return {
+      "rows": result.rows as QueryData,
+      "totalRows": result.rows.length
+    };
   }
 
   private async getClientFromPool(): Promise<[PoolClient, () => void]> {

@@ -54,8 +54,8 @@ export abstract class ContainerRenderer extends RenderTree {
     }
   ): Type {
     const n = new c(document, {
-      isDrillingEnabled: options.isDrillingEnabled,
-      onDrill: options.onDrill,
+      "isDrillingEnabled": options.isDrillingEnabled,
+      "onDrill": options.onDrill
     });
     return n;
   }

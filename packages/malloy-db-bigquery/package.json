@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-bigquery",
-  "version": "0.0.22",
+  "version": "0.0.24",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -14,13 +14,14 @@
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
     "build": "tsc --build",
+    "clean": "tsc --build --clean",
     "malloyc": "ts-node ../../scripts/malloy-to-json",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@google-cloud/bigquery": "^5.5.0",
     "@google-cloud/common": "^3.6.0",
-    "@malloydata/malloy": "^0.0.22",
+    "@malloydata/malloy": "^0.0.24",
     "gaxios": "^4.2.0"
   }
 }

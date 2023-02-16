@@ -35,10 +35,10 @@ describe("db:BigQuery", () => {
   beforeAll(() => {
     bq = new BigQueryConnection("test");
     const files = {
-      readURL: async (url: URL) => {
+      "readURL": async (url: URL) => {
         const filePath = fileURLToPath(url);
         return await util.promisify(fs.readFile)(filePath, "utf8");
-      },
+      }
     };
     runtime = new malloy.Runtime(files, bq);
   });
@@ -56,11 +56,11 @@ describe("db:BigQuery", () => {
   it("gets table schema", async () => {
     const res = await bq.getTableFieldSchema(`malloy-data.faa.carriers`);
     expect(res.schema).toStrictEqual({
-      fields: [
-        { name: "code", type: "STRING" },
-        { name: "name", type: "STRING" },
-        { name: "nickname", type: "STRING" },
-      ],
+      "fields": [
+        { "name": "code", "type": "STRING" },
+        { "name": "name", "type": "STRING" },
+        { "name": "nickname", "type": "STRING" }
+      ]
     });
   });
 
@@ -116,7 +116,7 @@ describe("db:BigQuery", () => {
       const dataset = sdk.dataset(datasetName);
       if ((await dataset.exists())[0]) {
         await dataset.delete({
-          force: true,
+          "force": true
         });
       }
     };
@@ -153,7 +153,7 @@ describe("db:BigQuery", () => {
     it("throws if table exist and overwriteExistingTable=false", async () => {
       const newDatasetResponse = await sdk.createDataset(datasetName);
       const dataset = newDatasetResponse[0];
-      const tableMeta: TableMetadata = { name: tableName };
+      const tableMeta: TableMetadata = { "name": tableName };
       await dataset.createTable(tableName, tableMeta);
 
       await expect(async () => {
@@ -189,7 +189,7 @@ describe("db:BigQuery", () => {
         `SELECT * FROM ${datasetName}.${tableName}`
       );
       const [results] = await queryJob.getQueryResults();
-      expect(results[0]).toStrictEqual({ t: 1 });
+      expect(results[0]).toStrictEqual({ "t": 1 });
     });
   });
 });

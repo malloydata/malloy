@@ -26,7 +26,7 @@ import { AbstractParseTreeVisitor, ParseTree } from "antlr4ts/tree";
 import {
   ExplorePropertiesContext,
   MalloyDocumentContext,
-  QueryPropertiesContext,
+  QueryPropertiesContext
 } from "../lib/Malloy/MalloyParser";
 import { MalloyParserVisitor } from "../lib/Malloy/MalloyParserVisitor";
 
@@ -48,17 +48,17 @@ class HelpContextVisitor
   rangeOf(ctx: ParserRuleContext) {
     const stopToken = ctx.stop || ctx.start;
     return {
-      start: {
-        line: ctx.start.line - 1,
-        character: ctx.start.charPositionInLine,
+      "start": {
+        "line": ctx.start.line - 1,
+        "character": ctx.start.charPositionInLine
       },
-      end: {
-        line: stopToken.line - 1,
-        character:
+      "end": {
+        "line": stopToken.line - 1,
+        "character":
           stopToken.stopIndex -
           (stopToken.startIndex - stopToken.charPositionInLine) +
-          1,
-      },
+          1
+      }
     };
   }
 
@@ -84,8 +84,8 @@ class HelpContextVisitor
     let result = this.defaultResult();
     if (this.inRange(this.rangeOf(ctx))) {
       result = {
-        type: this.type,
-        token: ctx.start.text,
+        "type": this.type,
+        "token": ctx.start.text
       };
       const n = ctx.childCount;
       for (let i = 0; i < n; i++) {

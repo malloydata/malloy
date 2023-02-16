@@ -32,7 +32,7 @@ import { describeIfDatabaseAvailable } from "../../util";
 
 const [describe, databases] = describeIfDatabaseAvailable([
   "bigquery",
-  "duckdb",
+  "duckdb"
 ]);
 
 const modelText = `

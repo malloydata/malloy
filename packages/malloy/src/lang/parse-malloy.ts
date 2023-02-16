@@ -22,52 +22,69 @@
  */
 
 import {
-  ANTLRErrorListener,
-  Token,
   CharStreams,
+  CodePointCharStream,
   CommonTokenStream,
   ParserRuleContext,
-  CodePointCharStream,
+  Token
 } from "antlr4ts";
-import type { ParseTree } from "antlr4ts/tree";
+import { ParseTree } from "antlr4ts/tree";
 import {
-  Query,
-  NamedStructDefs,
-  StructDef,
-  ModelDef,
-  SQLBlockSource,
-  DocumentReference,
-  DocumentPosition,
   DocumentLocation,
+  DocumentPosition,
   DocumentRange,
+  DocumentReference,
+  ModelDef,
+  NamedStructDefs,
+  Query,
   SQLBlockStructDef,
+  StructDef
 } from "../model/malloy_types";
 import { MalloyLexer } from "./lib/Malloy/MalloyLexer";
 import { MalloyParser } from "./lib/Malloy/MalloyParser";
 import * as ast from "./ast";
-import { MalloyToAST } from "./parse-to-ast";
-import { MessageLogger, LogMessage, MessageLog } from "./parse-log";
+import { MalloyToAST } from "./malloy-to-ast";
+import { MessageLog } from "./parse-log";
 import { findReferences } from "./parse-tree-walkers/find-external-references";
 import { Zone, ZoneData } from "./zone";
-import {
-  DocumentSymbol,
-  walkForDocumentSymbols,
-} from "./parse-tree-walkers/document-symbol-walker";
+import { walkForDocumentSymbols } from "./parse-tree-walkers/document-symbol-walker";
 import {
   DocumentHighlight,
-  walkForDocumentHighlights,
   passForHighlights,
   sortHighlights,
+  walkForDocumentHighlights
 } from "./parse-tree-walkers/document-highlight-walker";
 import {
   DocumentCompletion,
-  walkForDocumentCompletions,
+  walkForDocumentCompletions
 } from "./parse-tree-walkers/document-completion-walker";
 import {
   DocumentHelpContext,
-  walkForDocumentHelpContext,
+  walkForDocumentHelpContext
 } from "./parse-tree-walkers/document-help-context-walker";
 import { ReferenceList } from "./reference-list";
+import {
+  ASTResponse,
+  CompletionsResponse,
+  DataRequestResponse,
+  ErrorResponse,
+  FatalResponse,
+  FinalResponse,
+  HelpContextResponse,
+  MetadataResponse,
+  ModelDataRequest,
+  NeedURLData,
+  TranslateResponse,
+  isNeedResponse
+} from "./translate-response";
+import { MalloyParserErrorHandler } from "./parse-error-handler";
+
+export type StepResponses =
+  | DataRequestResponse
+  | ASTResponse
+  | TranslateResponse
+  | ParseResponse
+  | MetadataResponse;
 
 /**
  * This ignores a -> popMode when the mode stack is empty, which is a hack,
@@ -81,105 +98,6 @@ class HandlesOverpoppingLexer extends MalloyLexer {
     return super.popMode();
   }
 }
-
-class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
-  constructor(
-    readonly translator: MalloyTranslation,
-    readonly messages: MessageLogger
-  ) {}
-
-  syntaxError(
-    recognizer: unknown,
-    offendingSymbol: Token | undefined,
-    line: number,
-    charPositionInLine: number,
-    msg: string,
-    _e: unknown
-  ) {
-    const errAt = { line: line - 1, character: charPositionInLine };
-    const range = offendingSymbol
-      ? this.translator.rangeFromToken(offendingSymbol)
-      : { start: errAt, end: errAt };
-    const error: LogMessage = {
-      message: msg,
-      at: { url: this.translator.sourceURL, range },
-    };
-    this.messages.log(error);
-  }
-}
-
-/**
- * The translation interface is essentially a request/respone protocol, and
- * this is the list of all the "protocol" messages.
- */
-interface FinalResponse {
-  final: true; // When final, there is no need to reply, translation is over
-}
-interface ErrorResponse {
-  errors: LogMessage[];
-}
-type FatalResponse = FinalResponse & ErrorResponse;
-
-export interface NeedSchemaData {
-  tables: string[];
-}
-
-export interface NeedURLData {
-  urls: string[];
-}
-
-export interface NeedCompileSQL {
-  compileSQL: SQLBlockSource;
-  partialModel: ModelDef | undefined;
-}
-
-interface NeededData extends NeedURLData, NeedSchemaData, NeedCompileSQL {}
-export type DataRequestResponse = Partial<NeededData> | null;
-function isNeedResponse(dr: DataRequestResponse): dr is NeededData {
-  return !!dr && (dr.tables || dr.urls || dr.compileSQL) != undefined;
-}
-export type ModelDataRequest = NeedCompileSQL | undefined;
-
-interface ASTData extends ErrorResponse, NeededData, FinalResponse {
-  ast: ast.MalloyElement;
-}
-type ASTResponse = Partial<ASTData>;
-
-interface Metadata extends NeededData, ErrorResponse, FinalResponse {
-  symbols: DocumentSymbol[];
-  highlights: DocumentHighlight[];
-}
-type MetadataResponse = Partial<Metadata>;
-
-interface Completions extends NeededData, ErrorResponse, FinalResponse {
-  completions: DocumentCompletion[];
-}
-type CompletionsResponse = Partial<Completions>;
-
-interface HelpContext extends NeededData, ErrorResponse, FinalResponse {
-  helpContext: DocumentHelpContext | undefined;
-}
-type HelpContextResponse = Partial<HelpContext>;
-
-interface TranslatedResponseData
-  extends NeededData,
-    ErrorResponse,
-    FinalResponse {
-  translated: {
-    modelDef: ModelDef;
-    queryList: Query[];
-    sqlBlocks: SQLBlockStructDef[];
-  };
-}
-
-export type TranslateResponse = Partial<TranslatedResponseData>;
-
-type StepResponses =
-  | DataRequestResponse
-  | ASTResponse
-  | TranslateResponse
-  | ParseResponse
-  | MetadataResponse;
 
 /**
  * A Translation is a series of translation steps. Each step can depend
@@ -208,7 +126,7 @@ export interface MalloyParseRoot {
 interface ParseData extends ErrorResponse, NeedURLData, FinalResponse {
   parse: MalloyParseRoot;
 }
-type ParseResponse = Partial<ParseData>;
+export type ParseResponse = Partial<ParseData>;
 
 /**
  * ParseStep -- Parse the source URL
@@ -235,7 +153,7 @@ class ParseStep implements TranslationStep {
         const msg = e instanceof Error ? e.message : "";
         that.urlIsFullPath = false;
         that.root.logger.log({
-          message: `Could not compute full path URL: ${msg}`,
+          "message": `Could not compute full path URL: ${msg}`
         });
       }
     }
@@ -254,7 +172,7 @@ class ParseStep implements TranslationStep {
         this.response = that.fatalErrors();
         return this.response;
       }
-      return { urls: [that.sourceURL] };
+      return { "urls": [that.sourceURL] };
     }
     const source = srcEnt.value == "" ? "\n" : srcEnt.value;
     this.sourceInfo = this.getSourceInfo(source);
@@ -264,7 +182,7 @@ class ParseStep implements TranslationStep {
       parse = this.runParser(source, that);
     } catch (parseException) {
       that.root.logger.log({
-        message: `Malloy internal parser exception [${parseException.message}]`,
+        "message": `Malloy internal parser exception [${parseException.message}]`
       });
       parse = undefined;
     }
@@ -272,7 +190,7 @@ class ParseStep implements TranslationStep {
     if (that.root.logger.hasErrors()) {
       this.response = {
         parse,
-        ...that.fatalErrors(),
+        ...that.fatalErrors()
       };
     } else {
       this.response = { parse };
@@ -287,9 +205,9 @@ class ParseStep implements TranslationStep {
   private getSourceInfo(code: string): SourceInfo {
     const eolRegex = /\r?\n/;
     const info: SourceInfo = {
-      at: [],
-      lines: [],
-      length: code.length,
+      "at": [],
+      "lines": [],
+      "length": code.length
     };
     let src = code;
     let lineStart = 0;
@@ -300,15 +218,15 @@ class ParseStep implements TranslationStep {
         info.lines.push(src.slice(0, eol.index));
         const lineLength = eol.index + eol[0].length;
         info.at.push({
-          begin: lineStart,
-          end: lineStart + lineLength,
+          "begin": lineStart,
+          "end": lineStart + lineLength
         });
         lineStart += lineLength;
         src = src.slice(lineLength);
       } else {
         // last line, does not have a line end
         info.lines.push(src);
-        info.at.push({ begin: lineStart, end: lineStart + src.length });
+        info.at.push({ "begin": lineStart, "end": lineStart + src.length });
         break;
       }
     }
@@ -334,12 +252,12 @@ class ParseStep implements TranslationStep {
     }
 
     return {
-      root: parseFunc.call(malloyParser) as ParseTree,
-      tokenStream: tokenStream,
-      sourceStream: inputStream,
+      "root": parseFunc.call(malloyParser) as ParseTree,
+      "tokenStream": tokenStream,
+      "sourceStream": inputStream,
       // TODO put the real version here
-      malloyVersion: "?.?.?-????",
-      subTranslator: that,
+      "malloyVersion": "?.?.?-????",
+      "subTranslator": that
     };
   }
 }
@@ -365,8 +283,8 @@ class ImportsAndTablesStep implements TranslationStep {
       if (parseRefs?.tables) {
         for (const ref in parseRefs.tables) {
           that.root.schemaZone.reference(ref, {
-            url: that.sourceURL,
-            range: parseRefs.tables[ref],
+            "url": that.sourceURL,
+            "range": parseRefs.tables[ref]
           });
         }
       }
@@ -380,16 +298,16 @@ class ImportsAndTablesStep implements TranslationStep {
             );
             that.addChild(ref);
             that.root.importZone.reference(ref, {
-              url: that.sourceURL,
-              range: firstRef,
+              "url": that.sourceURL,
+              "range": firstRef
             });
           } catch (err) {
             // This import spec is so bad the URL library threw up, this
             // may be impossible, because it will append any garbage
             // to the known good rootURL assuming it is relative
             that.root.logger.log({
-              message: `Malformed URL '${relativeRef}'"`,
-              at: { url: that.sourceURL, range: firstRef },
+              "message": `Malformed URL '${relativeRef}'"`,
+              "at": { "url": that.sourceURL, "range": firstRef }
             });
           }
         }
@@ -405,12 +323,12 @@ class ImportsAndTablesStep implements TranslationStep {
     let allMissing: DataRequestResponse = {};
     const missingTables = that.root.schemaZone.getUndefined();
     if (missingTables) {
-      allMissing = { tables: missingTables };
+      allMissing = { "tables": missingTables };
     }
 
     const missingImports = that.root.importZone.getUndefined();
     if (missingImports) {
-      allMissing = { ...allMissing, urls: missingImports };
+      allMissing = { ...allMissing, "urls": missingImports };
     }
 
     if (isNeedResponse(allMissing)) {
@@ -517,8 +435,8 @@ which has an SQL block ...
     newAst.setTranslator(that);
     this.response = {
       ...that.errors(), // these errors will by definition all be warnings
-      ast: newAst,
-      final: true,
+      "ast": newAst,
+      "final": true
     };
     return this.response;
   }
@@ -559,11 +477,11 @@ class MetadataStep implements TranslationStep {
         }
         this.response = {
           symbols,
-          highlights: sortHighlights([
+          "highlights": sortHighlights([
             ...passForHighlights(tryParse.parse.tokenStream),
-            ...walkHighlights,
+            ...walkHighlights
           ]),
-          final: true,
+          "final": true
         };
       }
     }
@@ -596,7 +514,7 @@ class CompletionsStep implements TranslationStep {
       }
       return {
         ...tryParse,
-        completions,
+        completions
       };
     }
   }
@@ -626,7 +544,7 @@ class HelpContextStep implements TranslationStep {
       }
       return {
         ...tryParse,
-        helpContext,
+        helpContext
       };
     }
   }
@@ -667,8 +585,8 @@ class TranslateStep implements TranslationStep {
         }
       } else {
         that.root.logger.log({
-          message: `'${that.sourceURL}' did not parse to malloy document`,
-          at: that.defaultLocation(),
+          "message": `'${that.sourceURL}' did not parse to malloy document`,
+          "at": that.defaultLocation()
         });
       }
     }
@@ -677,13 +595,13 @@ class TranslateStep implements TranslationStep {
       this.response = that.fatalErrors();
     } else {
       this.response = {
-        translated: {
-          modelDef: that.modelDef,
-          queryList: that.queryList,
-          sqlBlocks: that.sqlBlocks,
+        "translated": {
+          "modelDef": that.modelDef,
+          "queryList": that.queryList,
+          "sqlBlocks": that.sqlBlocks
         },
         ...that.errors(),
-        final: true,
+        "final": true
       };
     }
     return this.response;
@@ -714,9 +632,9 @@ export abstract class MalloyTranslation {
   ) {
     this.childTranslators = new Map<string, MalloyTranslation>();
     this.modelDef = {
-      name: sourceURL,
-      exports: [],
-      contents: {},
+      "name": sourceURL,
+      "exports": [],
+      "contents": {}
     };
     /**
      * This is sort of the makefile for the translation, all the steps
@@ -751,8 +669,8 @@ export abstract class MalloyTranslation {
 
   fatalErrors(): FatalResponse {
     return {
-      final: true,
-      errors: [...this.root.logger.getLog()],
+      "final": true,
+      "errors": [...this.root.logger.getLog()]
     };
   }
 
@@ -762,7 +680,7 @@ export abstract class MalloyTranslation {
    */
   errors(): ErrorResponse {
     const errors = this.root.logger.getLog();
-    return { errors: [...errors] };
+    return { "errors": [...errors] };
   }
 
   getLineMap(url: string): string[] | undefined {
@@ -814,8 +732,8 @@ export abstract class MalloyTranslation {
     const ret = this.childTranslators.get(childURL)?.translate();
     if (ret?.compileSQL) {
       return {
-        compileSQL: ret.compileSQL,
-        partialModel: ret.partialModel,
+        "compileSQL": ret.compileSQL,
+        "partialModel": ret.partialModel
       };
     }
   }
@@ -871,11 +789,11 @@ export abstract class MalloyTranslation {
 
   defaultLocation(): DocumentLocation {
     return {
-      url: this.sourceURL,
-      range: {
-        start: { line: 0, character: 0 },
-        end: { line: 0, character: 0 },
-      },
+      "url": this.sourceURL,
+      "range": {
+        "start": { "line": 0, "character": 0 },
+        "end": { "line": 0, "character": 0 }
+      }
     };
   }
 
@@ -885,8 +803,8 @@ export abstract class MalloyTranslation {
 
   rangeFromTokens(startToken: Token, stopToken: Token): DocumentRange {
     const start = {
-      line: startToken.line - 1,
-      character: startToken.charPositionInLine,
+      "line": startToken.line - 1,
+      "character": startToken.charPositionInLine
     };
     if (this.parseStep.sourceInfo && stopToken.stopIndex != -1) {
       // Find the line which contains the stopIndex
@@ -896,10 +814,10 @@ export abstract class MalloyTranslation {
         if (stopToken.stopIndex >= at.begin && stopToken.stopIndex <= at.end) {
           return {
             start,
-            end: {
-              line: lineNo,
-              character: stopToken.stopIndex - at.begin + 1,
-            },
+            "end": {
+              "line": lineNo,
+              "character": stopToken.stopIndex - at.begin + 1
+            }
           };
         }
       }
@@ -907,13 +825,13 @@ export abstract class MalloyTranslation {
       // character of the last line of the file
       return {
         start,
-        end: {
-          line: lastLine,
-          character: this.parseStep.sourceInfo.lines[lastLine].length,
-        },
+        "end": {
+          "line": lastLine,
+          "character": this.parseStep.sourceInfo.lines[lastLine].length
+        }
       };
     }
-    return { start, end: start };
+    return { start, "end": start };
   }
 
   rangeFromToken(token: Token): DocumentRange {

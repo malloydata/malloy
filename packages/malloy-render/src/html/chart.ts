@@ -55,9 +55,9 @@ export abstract class HTMLChartRenderer implements Renderer {
 
   getSize(): { height: number; width: number } {
     if (this.size === "large") {
-      return { height: 350, width: 500 };
+      return { "height": 350, "width": 500 };
     } else {
-      return { height: 175, width: 250 };
+      return { "height": 175, "width": 250 };
     }
   }
 
@@ -79,7 +79,7 @@ export abstract class HTMLChartRenderer implements Renderer {
     const spec = this.getVegaLiteSpec(table);
 
     const vegaspec = lite.compile(spec, {
-      logger: {
+      "logger": {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         level(newLevel: number) {
@@ -99,11 +99,11 @@ export abstract class HTMLChartRenderer implements Renderer {
         },
         debug() {
           return this;
-        },
-      },
+        }
+      }
     }).spec;
     const view = new vega.View(vega.parse(vegaspec), {
-      renderer: "none",
+      "renderer": "none"
     });
     view.logger().level(-1);
     const element = this.document.createElement("div");
