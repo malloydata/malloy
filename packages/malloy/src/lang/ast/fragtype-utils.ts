@@ -105,7 +105,7 @@ export class FT {
     FT.stringT,
     FT.dateT,
     FT.timestampT,
-    FT.boolT,
+    FT.boolT
   ];
   static aggregateBoolT = mkFragType("boolean", "aggregate");
 }
