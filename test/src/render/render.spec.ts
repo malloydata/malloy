@@ -160,8 +160,21 @@ describe("rendering results", () => {
     await runUnsupportedRenderTest("postgres", runtimes, "12345", "12,345");
   });
 
-  test.skip("can render supported duckdb types", async () => {
-    await runUnsupportedRenderTest("duckdb", runtimes, "12345", "12345");
+  test("can render supported duckdb types", async () => {
+    await runUnsupportedRenderTest("duckdb", runtimes, "12345", "12,345");
+  });
+
+  test("can render unsupported duckdb blob types", async () => {
+    await runUnsupportedRenderTest("duckdb", runtimes, "'\\xAA'::BLOB", `{"type":"Buffer","data":[170]}`);
+  });
+
+  test("can render unsupported duckdb uuid types", async () => {
+    await runUnsupportedRenderTest(
+      "duckdb",
+      runtimes,
+      "'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'::UUID",
+      "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
+    );
   });
 
   test("can render null unsupported types", async () => {
