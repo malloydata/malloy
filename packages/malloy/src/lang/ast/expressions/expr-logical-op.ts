@@ -26,5 +26,5 @@ import { FT } from "../fragtype-utils";
 
 export class ExprLogicalOp extends BinaryBoolean<"and" | "or"> {
   elementType = "logical operator";
-  legalChildTypes = [FT.boolT, { ...FT.boolT, "aggregate": true }];
+  legalChildTypes = [FT.boolT, FT.aggregateBoolT];
 }
