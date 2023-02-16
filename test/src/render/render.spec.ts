@@ -165,7 +165,12 @@ describe("rendering results", () => {
   });
 
   test("can render unsupported duckdb blob types", async () => {
-    await runUnsupportedRenderTest("duckdb", runtimes, "'\\xAA'::BLOB", `{"type":"Buffer","data":[170]}`);
+    await runUnsupportedRenderTest(
+      "duckdb",
+      runtimes,
+      "'\\xAA'::BLOB",
+      `{"type":"Buffer","data":[170]}`
+    );
   });
 
   test("can render unsupported duckdb uuid types", async () => {

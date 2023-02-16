@@ -32,7 +32,7 @@ export class HTMLUnsupportedRenderer implements Renderer {
     const value = data.value;
     if (typeof value === "string") {
       return value;
-    } if (value === null) {
+    } else if (value === null) {
       return null;
     } else {
       const record = data.value as Record<string, unknown>;
