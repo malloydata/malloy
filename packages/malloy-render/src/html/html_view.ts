@@ -49,6 +49,7 @@ import { HTMLVegaSpecRenderer } from "./vega_spec";
 import { ContainerRenderer } from "./container";
 import { createErrorElement } from "./utils";
 import { DrillFunction } from "../drill";
+import { HTMLUnsupportedRenderer } from "./unsupported";
 
 export class HTMLView {
   private readonly document: Document;
@@ -272,6 +273,8 @@ export function makeRenderer(
         isContainer(field),
         options
       );
+    } else if (field.isAtomicField() && field.isUnsupported()) {
+      return new HTMLUnsupportedRenderer(document);
     } else {
       return new HTMLTextRenderer(document);
     }

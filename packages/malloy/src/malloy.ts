@@ -60,7 +60,8 @@ import {
   expressionIsCalculation,
   flattenQuery,
   isSQLBlock,
-  isSQLFragment
+  isSQLFragment,
+  FieldUnsupportedDef
 } from "./model";
 import {
   Connection,
@@ -1337,6 +1338,8 @@ export class Explore extends Entity {
               return [name, new BooleanField(fieldDef, this, sourceField)];
             } else if (fieldDef.type === "json") {
               return [name, new JSONField(fieldDef, this, sourceField)];
+            } else if (fieldDef.type === "unsupported") {
+              return [name, new UnsupportedField(fieldDef, this, sourceField)];
             }
           }
         }) as [string, Field][]
@@ -1526,6 +1529,10 @@ export class AtomicField extends Entity {
     return this instanceof TimestampField;
   }
 
+  public isUnsupported(): this is UnsupportedField {
+    return this instanceof UnsupportedField;
+  }
+
   get parentExplore(): Explore {
     return this.parent;
   }
@@ -1657,6 +1664,18 @@ export class JSONField extends AtomicField {
   ) {
     super(fieldJSONDef, parent, source);
     this.fieldJSONDef = fieldJSONDef;
+  }
+}
+
+export class UnsupportedField extends AtomicField {
+  private fieldUnsupportedDef: FieldUnsupportedDef;
+  constructor(
+    fieldUnsupportedDef: FieldUnsupportedDef,
+    parent: Explore,
+    source?: AtomicField
+  ) {
+    super(fieldUnsupportedDef, parent, source);
+    this.fieldUnsupportedDef = fieldUnsupportedDef;
   }
 }
 
@@ -2649,7 +2668,8 @@ export type DataColumn =
   | DataTimestamp
   | DataNull
   | DataBytes
-  | DataJSON;
+  | DataJSON
+  | DataUnsupported;
 
 export type DataArrayOrRecord = DataArray | DataRecord;
 
@@ -2747,6 +2767,17 @@ abstract class Data<T> {
     throw new Error("Not a record.");
   }
 
+  isUnsupported(): this is DataUnsupported {
+    return this instanceof DataUnsupported;
+  }
+
+  get unsupported(): DataUnsupported {
+    if (this.isUnsupported()) {
+      return this;
+    }
+    throw new Error("Not unsupported.");
+  }
+
   isArray(): this is DataArray {
     return this instanceof DataArray;
   }
@@ -2794,6 +2825,19 @@ class DataString extends ScalarData<string> {
   }
 
   get field(): StringField {
+    return this._field;
+  }
+}
+
+class DataUnsupported extends ScalarData<unknown> {
+  protected _field: UnsupportedField;
+
+  constructor(value: unknown, field: UnsupportedField) {
+    super(value, field);
+    this._field = field;
+  }
+
+  get field(): UnsupportedField {
     return this._field;
   }
 }
@@ -3018,6 +3062,8 @@ export class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
         return new DataNumber(value as number, field);
       } else if (field.isString()) {
         return new DataString(value as string, field);
+      } else if (field.isUnsupported()) {
+        return new DataUnsupported(value as unknown, field);
       }
     } else if (field.isExploreField()) {
       if (Array.isArray(value)) {
