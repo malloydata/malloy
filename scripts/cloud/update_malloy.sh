@@ -6,6 +6,7 @@
 samples_repo=https://github.com/malloydata/malloy-samples.git
 samples_dir=malloy-samples
 composer_latest_api=https://api.github.com/repos/malloydata/malloy-composer/releases/latest
+extension_latest_api=https://api.github.com/repos/malloydata/malloy-vscode-extension/releases/latest
 
 # Save users initial directory
 starting_dir="$(pwd)"
@@ -29,16 +30,26 @@ fatal() {
 # Installs a fresh copy of the Malloy Extension.
 # Arguments:
 #   None
-# TODO(maden): Update this to be dynamic
 #######################################
 install_extension() {
   log "Installing Extension:"
-  local extension_file="malloy-vscode-linux-x64-0.2.0.vsix"
 
-  local extension_url="https://www.scullinsteel.com/$extension_file"
+  log "  Fetching latest version number..."
+  local latest_url
+  latest_url=$(curl -s $extension_latest_api | jq -r ".assets[] | select(.name|match(\".vsix\")) | .browser_download_url")
+  if [ $? -ne 0 ]; then
+    fatal "Error while parsing github api for latest version"
+  fi
+
+  local latest_vsix=${latest_url##*/}
+  local version_base=${latest_url%/$latest_vsix}
+  local version=${version_base##*/}
+
+  log "  Latest version found: $version"
+
   local theia_dir=".theia/extensions"
 
-  local extension_dir=${extension_file%.vsix}
+  local extension_dir=${latest_vsix%.vsix}
 
   log "  Creating directory: ~/$theia_dir/$extension_dir"
   cd ~
@@ -57,13 +68,13 @@ install_extension() {
 
   cd $theia_dir
 
-  log "  Downloading Extension..."
-  if ! curl $extension_url --output $extension_file; then
-    fatal "Error occurred during download"
+  log "  Pulling from: $latest_url"
+  if ! curl -L $latest_url --output $latest_vsix; then
+    fatal "Error downloading latest release package"
   fi
 
   log "  Unpacking Exension..."
-  if ! unzip -d $extension_dir $extension_file; then
+  if ! unzip -d $extension_dir $latest_vsix; then
     fatal "Error occurred while unpacking extension"
   fi
 
