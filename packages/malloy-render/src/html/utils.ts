@@ -142,7 +142,7 @@ export function timeToString(
 /**
  * Use this function to break up expensive computation over multiple tasks.
  *
- * @returns A promise, which when awaited, puts subsequent code in a separate task.
+ * @return A promise, which when awaited, puts subsequent code in a separate task.
  *
  * This is useful for cases when expensive code needs to run "concurrently" with a
  * rendering / UI task. Sprinkling in `yieldTask`s into a long task allows other

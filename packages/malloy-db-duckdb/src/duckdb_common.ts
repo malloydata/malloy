@@ -176,7 +176,7 @@ export abstract class DuckDBCommon
    * (https://github.com/malloydata/malloy/issues/635)
    *
    * @param s struct's column declaration
-   * @returns Array of column type declarations
+   * @return Array of column type declarations
    */
   private splitColumns(s: string) {
     const columns: string[] = [];

@@ -116,7 +116,7 @@ export class Malloy {
    *
    * @param url The URL of the Malloy document to parse.
    * @param urlReader Object capable of fetching URL contents.
-   * @returns A (promise of a) `Parse` result.
+   * @return A (promise of a) `Parse` result.
    */
   public static parse({
     url,
@@ -130,7 +130,7 @@ export class Malloy {
    *
    * @param url The URL of the Malloy document to parse (optional).
    * @param source The contents of the Malloy document to parse.
-   * @returns A `Parse` result.
+   * @return A `Parse` result.
    */
   public static parse({ source, url }: { url?: URL; source: string }): Parse;
   public static parse({
@@ -166,7 +166,7 @@ export class Malloy {
    * @param connections Mapping of connection names to objects capable of reading Malloy schemas.
    * @param parse The parsed Malloy document.
    * @param model A compiled model to build upon (optional).
-   * @returns A (promise of a) compiled `Model`.
+   * @return A (promise of a) compiled `Model`.
    */
   public static async compile({
     urlReader,
@@ -333,7 +333,7 @@ export class Malloy {
    *
    * @param get A mapping from connection names to objects capable of running SQL.
    * @param preparedResult A fully-prepared query which is ready to run (a `PreparedResult`).
-   * @returns Query result data and associated metadata.
+   * @return Query result data and associated metadata.
    */
   public static async run(params: {
     connections: LookupConnection<Connection>;
@@ -567,7 +567,7 @@ export class Model {
    * the document that produced this model.
    *
    * @param position A position within the document.
-   * @returns A `DocumentReference` at that position if one exists.
+   * @return A `DocumentReference` at that position if one exists.
    */
   public getReference(
     position: ModelDocumentPosition
@@ -579,7 +579,7 @@ export class Model {
    * Retrieve a prepared query by the name of a query at the top level of the model.
    *
    * @param queryName Name of the query to retrieve.
-   * @returns A prepared query.
+   * @return A prepared query.
    */
   public getPreparedQueryByName(queryName: string): PreparedQuery {
     const query = this.modelDef.contents[queryName];
@@ -594,7 +594,7 @@ export class Model {
    * Retrieve a prepared query by the index of an unnamed query at the top level of a model.
    *
    * @param index The index of the query to retrieve.
-   * @returns A prepared query.
+   * @return A prepared query.
    */
   public getPreparedQueryByIndex(index: number): PreparedQuery {
     if (index < 0) {
@@ -609,7 +609,7 @@ export class Model {
    * Retrieve a prepared query by the name of a query at the top level of the model.
    *
    * @param queryName Name of the query to retrieve.
-   * @returns A prepared query.
+   * @return A prepared query.
    */
   public getSQLBlockByName(sqlBlockName: string): SQLBlockStructDef {
     const sqlBlock = this.sqlBlocks.find(
@@ -625,7 +625,7 @@ export class Model {
    * Retrieve a prepared query by the name of a query at the top level of the model.
    *
    * @param index Index of the SQL Block to retrieve.
-   * @returns A prepared query.
+   * @return A prepared query.
    */
   public getSQLBlockByIndex(index: number): SQLBlockStructDef {
     const sqlBlock = this.sqlBlocks[index];
@@ -638,7 +638,7 @@ export class Model {
   /**
    * Retrieve a prepared query for the final unnamed query at the top level of a model.
    *
-   * @returns A prepared query.
+   * @return A prepared query.
    */
   public get preparedQuery(): PreparedQuery {
     if (this.queryList.length === 0) {
@@ -654,7 +654,7 @@ export class Model {
    * Retrieve an `Explore` from the model by name.
    *
    * @param name The name of the `Explore` to retrieve.
-   * @returns An `Explore`.
+   * @return An `Explore`.
    */
   public getExploreByName(name: string): Explore {
     const struct = this.modelDef.contents[name];
@@ -667,7 +667,7 @@ export class Model {
   /**
    * Get an array of `Explore`s contained in the model.
    *
-   * @returns An array of `Explore`s contained in the model.
+   * @return An array of `Explore`s contained in the model.
    */
   public get explores(): Explore[] {
     const explores: Explore[] = [];
@@ -708,7 +708,7 @@ export class PreparedQuery {
   /**
    * Generate the SQL for this query.
    *
-   * @returns A fully-prepared query (which contains the generated SQL).
+   * @return A fully-prepared query (which contains the generated SQL).
    */
   public get preparedResult(): PreparedResult {
     const queryModel = new QueryModel(this._modelDef);
@@ -785,7 +785,7 @@ export class Parse {
    * These highlights represent the parsed tokens contained in the document,
    * and may be used for syntax highlighting in an IDE, for example.
    *
-   * @returns An array of document highlights.
+   * @return An array of document highlights.
    */
   public get highlights(): DocumentHighlight[] {
     return (this.translator.metadata().highlights || []).map(
@@ -799,7 +799,7 @@ export class Parse {
    * These symbols represent any object defined (e.g. `Query`s and `Explore`s)
    * in the document.
    *
-   * @returns An array of document symbols.
+   * @return An array of document symbols.
    */
   public get symbols(): DocumentSymbol[] {
     return (this.translator.metadata().symbols || []).map(
@@ -853,14 +853,14 @@ export class DocumentHighlight {
   }
 
   /**
-   * @returns The range of characters this highlight spans within its source document.
+   * @return The range of characters this highlight spans within its source document.
    */
   get range(): DocumentRange {
     return this._range;
   }
 
   /**
-   * @returns The type of highlight, which may be any `HighlightType`.
+   * @return The type of highlight, which may be any `HighlightType`.
    */
   get type(): string {
     return this._type;
@@ -880,21 +880,21 @@ export class DocumentRange {
   }
 
   /**
-   * @returns The position of the first character in the range.
+   * @return The position of the first character in the range.
    */
   public get start(): DocumentPosition {
     return this._start;
   }
 
   /**
-   * @returns The position of the last character in the range.
+   * @return The position of the last character in the range.
    */
   public get end(): DocumentPosition {
     return this._end;
   }
 
   /**
-   * @returns This range in JSON format.
+   * @return This range in JSON format.
    */
   public toJSON(): {
     start: { line: number; character: number };
@@ -920,21 +920,21 @@ export class DocumentPosition {
   }
 
   /**
-   * @returns The line number of the position.
+   * @return The line number of the position.
    */
   public get line(): number {
     return this._line;
   }
 
   /**
-   * @returns The character index on the line `this.getLine()`.
+   * @return The character index on the line `this.getLine()`.
    */
   public get character(): number {
     return this._character;
   }
 
   /**
-   * @returns This position in JSON format.
+   * @return This position in JSON format.
    */
   public toJSON(): { line: number; character: number } {
     return { "line": this.line, "character": this.character };
@@ -971,14 +971,14 @@ export class DocumentSymbol {
   }
 
   /**
-   * @returns The range of characters in the source Malloy document that define this symbol.
+   * @return The range of characters in the source Malloy document that define this symbol.
    */
   public get range(): DocumentRange {
     return this._range;
   }
 
   /**
-   * @returns The type of symbol.
+   * @return The type of symbol.
    *
    * Possible values are: `"explore"`, `"query"`, `"field"`, `"turtle"`, `"join"`, or `"unnamed_query"`.
    */
@@ -987,7 +987,7 @@ export class DocumentSymbol {
   }
 
   /**
-   * @returns The name of this symbol, e.g. the `Explore` name or `Query` name.
+   * @return The name of this symbol, e.g. the `Explore` name or `Query` name.
    *
    * For type `"unnamed_query"`, `getName()` is `"unnamed_query"`.
    */
@@ -996,7 +996,7 @@ export class DocumentSymbol {
   }
 
   /**
-   * @returns An array of document symbols defined inside this document symbol,
+   * @return An array of document symbols defined inside this document symbol,
    * e.g. fields in an `Explore`.
    */
   public get children(): DocumentSymbol[] {
@@ -1027,7 +1027,7 @@ export class PreparedResult {
   }
 
   /**
-   * @returns The name of the connection this query should be run against.
+   * @return The name of the connection this query should be run against.
    */
   public get connectionName(): string {
     return this.inner.connectionName;
@@ -1042,7 +1042,7 @@ export class PreparedResult {
   }
 
   /**
-   * @returns The SQL that should be run against the SQL runner
+   * @return The SQL that should be run against the SQL runner
    * with the connection name `this.getConnectionName()`.
    */
   public get sql(): string {
@@ -1050,7 +1050,7 @@ export class PreparedResult {
   }
 
   /**
-   * @returns The `Explore` representing the data that will be returned by running this query.
+   * @return The `Explore` representing the data that will be returned by running this query.
    */
   public get resultExplore(): Explore {
     if (this.inner.structs.length === 0) {
@@ -1141,7 +1141,7 @@ export class FixedConnectionMap implements LookupConnection<Connection> {
    * Get a connection by name.
    *
    * @param connectionName The name of the connection to look up.
-   * @returns A `Connection`
+   * @return A `Connection`
    * @throws An `Error` if no connection with the given name exists.
    */
   public async getConnection(connectionName?: string): Promise<Connection> {
@@ -1264,7 +1264,7 @@ export class Explore extends Entity {
   }
 
   /**
-   * @returns The name of the entity.
+   * @return The name of the entity.
    */
   public get name(): string {
     return this.structDef.as || this.structDef.name;
@@ -1840,14 +1840,14 @@ export class Runtime {
   }
 
   /**
-   * @returns The `URLReader` for this runtime instance.
+   * @return The `URLReader` for this runtime instance.
    */
   public get urlReader(): URLReader {
     return this._urlReader;
   }
 
   /**
-   * @returns The `LookupConnection<Connection>` for this runtime instance.
+   * @return The `LookupConnection<Connection>` for this runtime instance.
    */
   public get connections(): LookupConnection<Connection> {
     return this._connections;
@@ -1857,7 +1857,7 @@ export class Runtime {
    * Load a Malloy model by URL or contents.
    *
    * @param source The model URL or contents to load and (eventually) compile.
-   * @returns A `ModelMaterializer` capable of materializing the requested model,
+   * @return A `ModelMaterializer` capable of materializing the requested model,
    * or loading further related objects.
    */
   public loadModel(source: ModelURL | ModelString): ModelMaterializer {
@@ -1893,7 +1893,7 @@ export class Runtime {
    * Load a Malloy query by URL or contents.
    *
    * @param query The query URL or contents to load and (eventually) compile.
-   * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
+   * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadQuery(query: QueryURL | QueryString): QueryMaterializer {
@@ -1906,7 +1906,7 @@ export class Runtime {
    *
    * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
    * @param index The index of the query to use within the model.
-   * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
+   * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadQueryByIndex(
@@ -1922,7 +1922,7 @@ export class Runtime {
    *
    * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
    * @param name The name of the query to use within the model.
-   * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
+   * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadQueryByName(
@@ -1938,7 +1938,7 @@ export class Runtime {
    *
    * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
    * @param name The name of the sql block to use within the model.
-   * @returns A `SQLBlockMaterializer` capable of materializing the requested query, running it,
+   * @return A `SQLBlockMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadSQLBlockByName(
@@ -1954,7 +1954,7 @@ export class Runtime {
    *
    * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
    * @param index The index of the SQL block to use within the model. Note: named blocks are indexable, too.
-   * @returns A `SQLBlockMaterializer` capable of materializing the requested query, running it,
+   * @return A `SQLBlockMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadSQLBlockByIndex(
@@ -1969,7 +1969,7 @@ export class Runtime {
    * Compile a Malloy model by URL or contents.
    *
    * @param source The URL or contents of a Malloy model document to compile.
-   * @returns A promise of a compiled `Model`.
+   * @return A promise of a compiled `Model`.
    */
   public getModel(source: ModelURL | ModelString): Promise<Model> {
     return this.loadModel(source).getModel();
@@ -1979,7 +1979,7 @@ export class Runtime {
    * Compile a Malloy query by URL or contents.
    *
    * @param query The URL or contents of a Malloy query document to compile.
-   * @returns A promise of a compiled `PreparedQuery`.
+   * @return A promise of a compiled `PreparedQuery`.
    */
   public getQuery(query: QueryURL | QueryString): Promise<PreparedQuery> {
     return this.loadQuery(query).getPreparedQuery();
@@ -1991,7 +1991,7 @@ export class Runtime {
    *
    * @param model The URL or contents of a Malloy model document to compile.
    * @param index The index of an unnamed query contained within the model.
-   * @returns A promise of a compiled `PreparedQuery`.
+   * @return A promise of a compiled `PreparedQuery`.
    */
   public getQueryByIndex(
     model: ModelURL | ModelString,
@@ -2006,7 +2006,7 @@ export class Runtime {
    *
    * @param model The URL or contents of a Malloy model document to compile.
    * @param name The name of a query contained within the model.
-   * @returns A promise of a compiled `PreparedQuery`.
+   * @return A promise of a compiled `PreparedQuery`.
    */
   public getQueryByName(
     model: ModelURL | ModelString,
@@ -2021,7 +2021,7 @@ export class Runtime {
    *
    * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
    * @param name The name of the sql block to use within the model.
-   * @returns A promise of a `CompiledSQLBlock`.
+   * @return A promise of a `CompiledSQLBlock`.
    */
   public getSQLBlockByName(
     model: ModelURL | ModelString,
@@ -2036,7 +2036,7 @@ export class Runtime {
    *
    * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
    * @param index The index of the SQL block to use within the model. Note: named blocks are indexable, too.
-   * @returns A promise of a `SQLBlock`.
+   * @return A promise of a `SQLBlock`.
    */
   public getSQLBlockByIndex(
     model: ModelURL | ModelString,
@@ -2146,7 +2146,7 @@ export class ModelMaterializer extends FluentState<Model> {
   /**
    * Load the final (unnamed) Malloy query contained within this loaded `Model`.
    *
-   * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
+   * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadFinalQuery(): QueryMaterializer {
@@ -2159,7 +2159,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Load an unnamed query contained within this loaded `Model` by index.
    *
    * @param index The index of the query to load.
-   * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
+   * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadQueryByIndex(index: number): QueryMaterializer {
@@ -2172,7 +2172,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Load a query contained within this loaded `Model` by its name.
    *
    * @param name The name of the query to load.
-   * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
+   * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadQueryByName(name: string): QueryMaterializer {
@@ -2185,7 +2185,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Load a query against this loaded `Model` by its URL or contents.
    *
    * @param query The URL or contents of the query to load and (eventually) compile.
-   * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
+   * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadQuery(query: QueryString | QueryURL): QueryMaterializer {
@@ -2281,7 +2281,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Load a SQL Block by name.
    *
    * @param name The name of the SQL Block to load.
-   * @returns A `SQLBlockMaterializer` capable of materializing the requested sql block, running it,
+   * @return A `SQLBlockMaterializer` capable of materializing the requested sql block, running it,
    * or loading further related objects.
    */
   public loadSQLBlockByName(name: string): SQLBlockMaterializer {
@@ -2294,7 +2294,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Load a SQL Block by index.
    *
    * @param index The index of the SQL Block to load. Note: named SQL blocks are indexable, too.
-   * @returns A `SQLBlockMaterializer` capable of materializing the requested sql block, running it,
+   * @return A `SQLBlockMaterializer` capable of materializing the requested sql block, running it,
    * or loading further related objects.
    *
    * TODO feature-sql-block Should named SQL blocks be indexable? This is not the way unnamed queries work.
@@ -2308,7 +2308,7 @@ export class ModelMaterializer extends FluentState<Model> {
   /**
    * Materialize the final query contained within this loaded `Model`.
    *
-   * @returns A promise to a prepared query.
+   * @return A promise to a prepared query.
    */
   public getFinalQuery(): Promise<PreparedQuery> {
     return this.loadFinalQuery().getPreparedQuery();
@@ -2318,7 +2318,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Materialize an unnamed query contained within this loaded `Model` by index.
    *
    * @param index The index of the query contained within this loaded `Model`.
-   * @returns A promise to a prepared query.
+   * @return A promise to a prepared query.
    */
   public getQueryByIndex(index: number): Promise<PreparedQuery> {
     return this.loadQueryByIndex(index).getPreparedQuery();
@@ -2328,7 +2328,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Materialize a query contained within this loaded `Model` by name.
    *
    * @param name The name of the query contained within this loaded `Model`.
-   * @returns A promise to a prepared query.
+   * @return A promise to a prepared query.
    */
   public getQueryByName(name: string): Promise<PreparedQuery> {
     return this.loadQueryByName(name).getPreparedQuery();
@@ -2338,7 +2338,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Materialize a query against this loaded `Model` by its URL or contents.
    *
    * @param query The URL or contents of a query document to compile.
-   * @returns A promise to a prepared query.
+   * @return A promise to a prepared query.
    */
   public getQuery(query: QueryString | QueryURL): Promise<PreparedQuery> {
     return this.loadQuery(query).getPreparedQuery();
@@ -2348,7 +2348,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Get a SQL Block by name.
    *
    * @param name The name of the SQL Block to load.
-   * @returns A promise of a `SQLBlock`.
+   * @return A promise of a `SQLBlock`.
    */
   public getSQLBlockByName(name: string): Promise<SQLBlockStructDef> {
     return this.loadSQLBlockByName(name).getSQLBlock();
@@ -2358,7 +2358,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Get a SQL Block by index.
    *
    * @param index The index of the SQL Block to load. Note: named SQL blocks are indexable, too.
-   * @returns A promise of a `SQLBlock`.
+   * @return A promise of a `SQLBlock`.
    *
    * TODO feature-sql-block Should named SQL blocks be indexable? This is not the way unnamed queries work.
    */
@@ -2381,7 +2381,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Load an explore contained within this loaded `Model` by name.
    *
    * @param name The name of the explore contained within this loaded `Model`.
-   * @returns An `ExploreMaterializer` capable of materializing the requested explore,
+   * @return An `ExploreMaterializer` capable of materializing the requested explore,
    * or loading further related objects.
    */
   public loadExploreByName(name: string): ExploreMaterializer {
@@ -2394,7 +2394,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Materialize an explore contained within this loaded `Model` by its name.
    *
    * @param query The name of an explore within this loaded `Model`.
-   * @returns A promise to an explore.
+   * @return A promise to an explore.
    */
   public getExploreByName(name: string): Promise<Explore> {
     return this.loadExploreByName(name).getExplore();
@@ -2403,7 +2403,7 @@ export class ModelMaterializer extends FluentState<Model> {
   /**
    * Compile and materialize this loaded `Model`.
    *
-   * @returns A promise to the compiled model that is loaded.
+   * @return A promise to the compiled model that is loaded.
    */
   public getModel(): Promise<Model> {
     return this.materialize();
@@ -2419,7 +2419,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   /**
    * Run this loaded `Query`.
    *
-   * @returns The query results from running this loaded query.
+   * @return The query results from running this loaded query.
    */
   async run(options?: RunSQLOptions): Promise<Result> {
     const connections = this.runtime.connections;
@@ -2441,7 +2441,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   /**
    * Load the prepared result of this loaded query.
    *
-   * @returns A `PreparedResultMaterializer` capable of materializing the requested
+   * @return A `PreparedResultMaterializer` capable of materializing the requested
    * prepared query or running it.
    */
   public loadPreparedResult(): PreparedResultMaterializer {
@@ -2453,7 +2453,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   /**
    * Materialize the prepared result of this loaded query.
    *
-   * @returns A promise of the prepared result of this loaded query.
+   * @return A promise of the prepared result of this loaded query.
    */
   public getPreparedResult(): Promise<PreparedResult> {
     return this.loadPreparedResult().getPreparedResult();
@@ -2462,7 +2462,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   /**
    * Materialize the SQL of this loaded query.
    *
-   * @returns A promise of the SQL string.
+   * @return A promise of the SQL string.
    */
   public async getSQL(): Promise<string> {
     return (await this.getPreparedResult()).sql;
@@ -2471,7 +2471,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   /**
    * Materialize this loaded query.
    *
-   * @returns A promise of the `PreparedQuery`.
+   * @return A promise of the `PreparedQuery`.
    */
   public getPreparedQuery(): Promise<PreparedQuery> {
     return this.materialize();
@@ -2487,7 +2487,7 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
   /**
    * Run this prepared result.
    *
-   * @returns A promise to the query result data.
+   * @return A promise to the query result data.
    */
   async run(options?: RunSQLOptions): Promise<Result> {
     const preparedResult = await this.getPreparedResult();
@@ -2509,7 +2509,7 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
   /**
    * Materialize this loaded prepared result.
    *
-   * @returns A promise of a prepared result.
+   * @return A promise of a prepared result.
    */
   public getPreparedResult(): Promise<PreparedResult> {
     return this.materialize();
@@ -2518,7 +2518,7 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
   /**
    * Materialize the SQL of this loaded prepared result.
    *
-   * @returns A promise to the SQL string.
+   * @return A promise to the SQL string.
    */
   public async getSQL(): Promise<string> {
     return (await this.getPreparedResult()).sql;
@@ -2534,7 +2534,7 @@ export class SQLBlockMaterializer extends FluentState<SQLBlockStructDef> {
   /**
    * Run this SQL block.
    *
-   * @returns A promise to the query result data.
+   * @return A promise to the query result data.
    */
   async run(options?: RunSQLOptions): Promise<Result> {
     const sqlBlock = await this.getSQLBlock();
@@ -2560,7 +2560,7 @@ export class SQLBlockMaterializer extends FluentState<SQLBlockStructDef> {
   /**
    * Materialize this loaded SQL block.
    *
-   * @returns A promise of a SQL block.
+   * @return A promise of a SQL block.
    */
   public getSQLBlock(): Promise<SQLBlockStructDef> {
     return this.materialize();
@@ -2569,7 +2569,7 @@ export class SQLBlockMaterializer extends FluentState<SQLBlockStructDef> {
   /**
    * Materialize the SQL of this loaded SQL block.
    *
-   * @returns A promise to the SQL string.
+   * @return A promise to the SQL string.
    */
   public async getSQL(): Promise<string> {
     const sqlStruct = await this.getSQLBlock();
@@ -2587,7 +2587,7 @@ export class ExploreMaterializer extends FluentState<Explore> {
    * Load a query contained within this loaded explore.
    *
    * @param name The name of the query to load.
-   * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
+   * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadQueryByName(name: string): QueryMaterializer {
@@ -2600,7 +2600,7 @@ export class ExploreMaterializer extends FluentState<Explore> {
    * Materialize a query contained within this loaded explore.
    *
    * @param name The name of the query to materialize.
-   * @returns A promise to the requested prepared query.
+   * @return A promise to the requested prepared query.
    */
   public getQueryByName(name: string): Promise<PreparedQuery> {
     return this.loadQueryByName(name).getPreparedQuery();
@@ -2609,7 +2609,7 @@ export class ExploreMaterializer extends FluentState<Explore> {
   /**
    * Materialize this loaded explore.
    *
-   * @returns A promise to the compiled `Explore`.
+   * @return A promise to the compiled `Explore`.
    */
   public getExplore(): Promise<Explore> {
     return this.materialize();
@@ -2639,7 +2639,7 @@ export class Result extends PreparedResult {
   }
 
   /**
-   * @returns The result data.
+   * @return The result data.
    */
   public get data(): DataArray {
     return new DataArray(this.inner.result, this.resultExplore, undefined);
@@ -2954,14 +2954,14 @@ export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
   }
 
   /**
-   * @returns The `Explore` that describes the structure of this data.
+   * @return The `Explore` that describes the structure of this data.
    */
   public get field(): Explore {
     return this._field;
   }
 
   /**
-   * @returns The raw object form of the data.
+   * @return The raw object form of the data.
    */
   public toObject(): QueryData {
     return this.queryData;

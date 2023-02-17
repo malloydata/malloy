@@ -49,7 +49,7 @@ export class MalloyToAST
    * apparently has changed and now an unexpected element type has appeared.
    * This is a non recoverable error, since the parser and the grammar
    * are not compatible.
-   * @returns an error object to throw.
+   * @return an error object to throw.
    */
   protected internalError(cx: ParserRuleContext, msg: string): Error {
     const tmsg = `Internal Translator Error: ${msg}`;

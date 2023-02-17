@@ -47,7 +47,7 @@ function term(f: Fragment[]): Fragment[] {
  * @param left
  * @param op
  * @param right
- * @returns Fragment list of the composed expression
+ * @return Fragment list of the composed expression
  */
 export function compose(
   left: Fragment[],

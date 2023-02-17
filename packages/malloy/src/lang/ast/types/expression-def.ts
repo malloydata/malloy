@@ -57,7 +57,7 @@ export abstract class ExpressionDef extends MalloyElement {
 
   /**
    * Returns the "translation" or template for SQL generation. When asking
-   * for a tranlsation you may pass the types you can accept, allowing
+   * for a translation you may pass the types you can accept, allowing
    * the translation code a chance to convert to match your expectations
    * @param space Namespace for looking up field references
    */
@@ -69,7 +69,7 @@ export abstract class ExpressionDef extends MalloyElement {
    * rewrite itself. This requests a translation for a rewrite,
    * or returns undefined if that request should be denied.
    * @param fs FieldSpace
-   * @returns Translated expression or undefined
+   * @return Translated expression or undefined
    */
   requestExpression(fs: FieldSpace): ExprValue | undefined {
     return this.getExpression(fs);
@@ -94,13 +94,13 @@ export abstract class ExpressionDef extends MalloyElement {
 
   /**
    * This is the operation which makes partial comparison and value trees work
-   * The default implemention merely constructs LEFT OP RIGHT, but specialized
+   * The default implementation merely constructs LEFT OP RIGHT, but specialized
    * nodes like alternation trees or or partial comparison can control how
    * the appplication gets generated
    * @param fs The symbol table
    * @param op The operator being applied
    * @param expr The "other" (besdies 'this') value
-   * @returns The translated expression
+   * @return The translated expression
    */
   apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
     return applyBinary(fs, left, op, this);
@@ -411,7 +411,7 @@ function delta(
  * @param left Left value
  * @param op The operator
  * @param right Right Value
- * @returns ExprValue of the expression
+ * @return ExprValue of the expression
  */
 export function applyBinary(
   fs: FieldSpace,
@@ -462,12 +462,12 @@ export function applyBinary(
     }
     return errorFor("divide type mismatch");
   }
-  left.log(`Canot use ${op} operator here`);
+  left.log(`Cannot use ${op} operator here`);
   return errorFor("applybinary bad operator");
 }
 
 /**
- * Return an error if an binary operation includes unsupported types.
+ * Return an error if a binary operation includes unsupported types.
  */
 function unsupportError(
   l: ExpressionDef,

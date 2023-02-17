@@ -35,7 +35,7 @@ import { DocumentCompletion } from "./parse-tree-walkers/document-completion-wal
 import { DocumentHelpContext } from "./parse-tree-walkers/document-help-context-walker";
 
 /**
- * The translation interface is essentially a request/respone protocol, and
+ * The translation interface is essentially a request/response protocol, and
  * this is the list of all the "protocol" messages.
  */
 export interface FinalResponse {
