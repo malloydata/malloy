@@ -794,6 +794,7 @@ class QueryFieldString extends QueryAtomicField {}
 class QueryFieldNumber extends QueryAtomicField {}
 class QueryFieldBoolean extends QueryAtomicField {}
 class QueryFieldJSON extends QueryAtomicField {}
+class QueryFieldUnsupported extends QueryAtomicField {}
 
 // in a query a struct can be referenced.  The struct will
 //  emit the primary key field in the actual result set and
@@ -2219,6 +2220,9 @@ class QueryQuery extends QueryField {
                 resultMetadata,
                 location
               });
+              break;
+            case "unsupported":
+              fields.push({ ...fi.f.fieldDef, resultMetadata, location });
               break;
             default:
               throw new Error(
@@ -3734,6 +3738,8 @@ class QueryStruct extends QueryNode {
         return new QueryFieldBoolean(field, this);
       case "json":
         return new QueryFieldJSON(field, this);
+      case "unsupported":
+        return new QueryFieldUnsupported(field, this);
       // case "reduce":
       // case "project":
       // case "index":

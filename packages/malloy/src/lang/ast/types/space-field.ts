@@ -38,6 +38,13 @@ export abstract class SpaceField extends SpaceEntry {
     if (isFieldTypeDef(def) && def.expressionType) {
       ref.expressionType = def.expressionType;
     }
+    if (
+      ref.dataType === "unsupported" &&
+      def.type === "unsupported" &&
+      def.rawType
+    ) {
+      ref.rawType = def.rawType;
+    }
     return ref;
   }
 

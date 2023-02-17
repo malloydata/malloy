@@ -148,7 +148,16 @@ export function timeToString(
  * rendering / UI task. Sprinkling in `yieldTask`s into a long task allows other
  * tasks to run periodically.
  */
+let LAST_YIELD_TIME: number | undefined = undefined;
+const YIELD_DEBOUNCE = 100; // milliseconds
 export async function yieldTask(): Promise<void> {
+  const currentTime = Date.now();
+  // We don't actually yield every time the function is called, because that can add a lot of
+  // overhead in terms of new tasks. Instead, we debounce yielding to once every 100ms.
+  if (LAST_YIELD_TIME && currentTime < LAST_YIELD_TIME + YIELD_DEBOUNCE) {
+    return;
+  }
+  LAST_YIELD_TIME = currentTime;
   return new Promise((resolve) => {
     setTimeout(resolve, 0);
   });
