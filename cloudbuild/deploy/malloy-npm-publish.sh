@@ -5,6 +5,9 @@ export PACKAGES="packages/malloy packages/malloy-db-bigquery packages/malloy-db-
 
 nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --command "$(cat <<NIXCMD
   set -euxo pipefail
+  export PGHOST=127.0.0.1
+  export PGDATABASE=postgres
+  export PGUSER=673673622326@cloudbuild
   cd /workspace
   git branch -m main
   npm --no-audit --no-fund ci --loglevel error
@@ -15,7 +18,7 @@ nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --command "$(cat <<NIXCMD
   npx lerna version \$VERSION --yes --no-push --no-git-tag-version
   for package in \$PACKAGES; do
     echo Publishing \$package \$VERSION
-    npm publish -w \$package --tag next
+    npm publish -w \$package --tag next --dry-run
   done
 NIXCMD
 )"
