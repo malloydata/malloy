@@ -28,7 +28,7 @@ samples_repo=https://github.com/malloydata/malloy-samples.git
 samples_dir=malloy-samples
 composer_latest_api=https://api.github.com/repos/malloydata/malloy-composer/releases/latest
 extension_latest_api=https://api.github.com/repos/malloydata/malloy-vscode-extension/releases/latest
-update_script_location=https://raw.githubusercontent.com/malloydata/malloy/scripts/cloud/update_malloy.sh
+update_script_location=https://github.com/malloydata/malloy/raw/main/scripts/cloud/update_malloy.sh
 
 # Save users initial directory
 starting_dir="$(pwd)"
@@ -201,7 +201,7 @@ write_update_script() {
   local update_file=update_malloy.sh
 
   echo "#!/bin/bash" > $update_file
-  echo "curl -s $update_script_location | bash" >> $update_file
+  echo "curl -sL $update_script_location | bash" >> $update_file
   chmod a+x $update_file
 }
 
