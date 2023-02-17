@@ -57,7 +57,7 @@ export interface URLReader {
    * Read the contents of the given URL.
    *
    * @param url The URL to read.
-   * @returns A promise to the contents of the URL.
+   * @return A promise to the contents of the URL.
    */
   readURL: (url: URL) => Promise<string>;
 }
@@ -72,7 +72,7 @@ export interface InfoConnection {
    * Fetch schemas for multiple tables.
    *
    * @param tables The names of tables to fetch schemas for.
-   * @returns A mapping of table names to schemas.
+   * @return A mapping of table names to schemas.
    */
   fetchSchemaForTables(tables: string[]): Promise<{
     schemas: Record<string, StructDef>;
@@ -83,7 +83,7 @@ export interface InfoConnection {
    * Fetch schemas an SQL blocks
    *
    * @param block The SQL blocks to fetch schemas for.
-   * @returns A mapping of SQL block names to schemas.
+   * @return A mapping of SQL block names to schemas.
    */
 
   fetchSchemaForSQLBlock(
@@ -108,7 +108,7 @@ export interface Connection extends InfoConnection {
    *
    * @param sql The SQL to run.
    * @param options.pageSize Maximum number of results to return at once.
-   * @returns The rows of data resulting from running the given SQL query
+   * @return The rows of data resulting from running the given SQL query
    * and the total number of rows available.
    */
   runSQL(sql: string, options?: RunSQLOptions): Promise<MalloyQueryData>;
@@ -153,7 +153,7 @@ export interface StreamingConnection extends Connection {
 export interface LookupConnection<T extends InfoConnection> {
   /**
    * @param connectionName The name of the connection for which a `Connection` is required.
-   * @returns A promise to a `Connection` for the connection named `connectionName`.
+   * @return A promise to a `Connection` for the connection named `connectionName`.
    */
   lookupConnection(connectionName?: string): Promise<T>;
 }

@@ -38,7 +38,7 @@ import { DuckDBCommon, QueryOptionsReader } from "./duckdb_common";
  * so we need this fairly gross function to unwrap those.
  *
  * @param value Element from an Arrow StructRow.
- * @returns Vanilla Javascript value
+ * @return Vanilla Javascript value
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const unwrapArrow = (value: unknown): any => {

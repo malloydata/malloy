@@ -29,7 +29,7 @@ import { ExprValue } from "./types/expr-value";
  * generated SQL will have a reference to an impossible variable name
  * with the reason embedded in it.
  * @param reason very short phrase, only read by implementers
- * @returns Fragment[] which a debugging humnan will regognize
+ * @return Fragment[] which a debugging humnan will regognize
  */
 export function errorFor(reason: string): ExprValue {
   return {

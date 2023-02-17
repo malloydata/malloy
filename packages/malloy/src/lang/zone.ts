@@ -104,7 +104,7 @@ export class Zone<TValue> {
   }
 
   /**
-   * @returns A list of all symbols which have references but not definitions
+   * @return A list of all symbols which have references but not definitions
    */
   getUndefined(): string[] | undefined {
     const allUndefined: string[] = [];

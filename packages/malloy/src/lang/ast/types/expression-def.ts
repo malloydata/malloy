@@ -69,7 +69,7 @@ export abstract class ExpressionDef extends MalloyElement {
    * rewrite itself. This requests a translation for a rewrite,
    * or returns undefined if that request should be denied.
    * @param fs FieldSpace
-   * @returns Translated expression or undefined
+   * @return Translated expression or undefined
    */
   requestExpression(fs: FieldSpace): ExprValue | undefined {
     return this.getExpression(fs);
@@ -100,7 +100,7 @@ export abstract class ExpressionDef extends MalloyElement {
    * @param fs The symbol table
    * @param op The operator being applied
    * @param expr The "other" (besdies 'this') value
-   * @returns The translated expression
+   * @return The translated expression
    */
   apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
     return applyBinary(fs, left, op, this);
@@ -411,7 +411,7 @@ function delta(
  * @param left Left value
  * @param op The operator
  * @param right Right Value
- * @returns ExprValue of the expression
+ * @return ExprValue of the expression
  */
 export function applyBinary(
   fs: FieldSpace,
