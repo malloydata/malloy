@@ -36,8 +36,8 @@ export class HTMLUnsupportedRenderer implements Renderer {
       return null;
     } else {
       const record = data.value as Record<string, unknown>;
-      if ("value" in record && typeof record.value === "string") {
-        return record.value;
+      if ("value" in record && typeof record["value"] === "string") {
+        return record["value"];
       }
     }
     return JSON.stringify(data.value);
