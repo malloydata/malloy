@@ -42,7 +42,7 @@ module.exports = {
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "warnOnUnsupportedTypeScriptVersion": false,
-    "project": ['./tsconfig.packages.json']
+    "project": ["./tsconfig.packages.json"]
   },
   "plugins": ["@typescript-eslint", "prettier"],
   "rules": {
@@ -52,7 +52,15 @@ module.exports = {
     "no-duplicate-imports": "error",
     "no-restricted-imports": [
       "error",
-      { "patterns": ["@malloydata/malloy/src/*"] }
+      {
+        patterns: ["@malloydata/malloy/src/*"],
+        paths: [
+          {
+            name: "lodash",
+            message: "Import [module] from lodash/[module] instead"
+          }
+        ]
+      }
     ],
     "no-use-before-define": "off",
     "no-throw-literal": "error",

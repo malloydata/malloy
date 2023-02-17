@@ -44,10 +44,8 @@ export class ExprIdReference extends ExpressionDef {
     const def = this.fieldReference.getField(fs);
     if (def.found) {
       const value = [{ "type": def.found.refType, "path": this.refString }];
-      return {
-        ...def.found.typeDesc(),
-        value
-      };
+      const td = def.found.typeDesc();
+      return { ...td, value };
     }
     this.log(def.error);
     return errorFor(def.error);

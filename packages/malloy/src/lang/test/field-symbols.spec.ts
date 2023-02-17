@@ -99,6 +99,18 @@ describe("structdef comprehension", () => {
     expect(oField).toEqual(field);
   });
 
+  test(`import unsupported field`, () => {
+    const field: model.FieldDef = {
+      "name": "t",
+      "type": "unsupported"
+    };
+    const struct = mkStructDef(field);
+    const space = new StaticSpace(struct);
+    expect(space.lookup(fieldRef("t")).found).toBeInstanceOf(ColumnSpaceField);
+    const oField = space.structDef().fields[0];
+    expect(oField).toEqual(field);
+  });
+
   test(`import nested field`, () => {
     const field: model.FieldDef = {
       "name": "t",

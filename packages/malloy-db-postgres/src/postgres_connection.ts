@@ -71,7 +71,8 @@ const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
   "regtype": "string",
   "numeric": "number",
   "bytea": "string",
-  "pg_ndistinct": "number"
+  "pg_ndistinct": "number",
+  "uuid": "string"
 };
 
 interface PostgresQueryConfiguration {
@@ -307,16 +308,13 @@ export class PostgresConnection
         structDef.fields.push(s);
         name = "value";
       }
-      if (malloyType !== undefined) {
-        s.fields.push({
-          "type": malloyType,
-          name
-        });
+      if (malloyType) {
+        s.fields.push({ "type": malloyType, name });
       } else {
         s.fields.push({
-          name,
-          "type": "string",
-          "e": [`'Postgres type "${postgresDataType}" not supported by Malloy'`]
+          "type": "unsupported",
+          "rawType": postgresDataType.toLowerCase(),
+          name
         });
       }
     }

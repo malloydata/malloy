@@ -1025,8 +1025,10 @@ describe("sql injection tests", () => {
     );
     expect(result.data.value[0].test).toBe("foo \\");
   });
+});
 
-  it("passes test which should be deleted when type support improves", async () => {
+describe("unsupported type tests", () => {
+  it("can read unsupported types in schema", async () => {
     const result = await runtime
       .loadQuery(
         `
@@ -1037,8 +1039,6 @@ describe("sql injection tests", () => {
       `
       )
       .run();
-    expect(result.data.value[0].geo).toBe(
-      'BigQuery type "GEOGRAPHY" not supported by Malloy'
-    );
+    expect(result.data.value[0].geo).toBeDefined();
   });
 });

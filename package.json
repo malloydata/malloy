@@ -23,6 +23,7 @@
   "scripts": {
     "clean": "npm run -ws clean",
     "build": "npm run -ws build",
+    "watch": "tsc --watch",
     "lint": "eslint --quiet '**/*.ts{,x}'",
     "lint-fix": "eslint --quiet '**/*.ts{,x}' --fix",
     "test": "jest --runInBand",
