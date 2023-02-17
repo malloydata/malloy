@@ -20,6 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
 import { FieldReference } from "../query-items/field-references";
 import { ExpressionDef } from "../types/expression-def";
 import { ExprAsymmetric } from "./expr-asymmetric";

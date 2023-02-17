@@ -73,7 +73,7 @@ export class ConstantSubExpression extends ExpressionDef {
   elementType = "constantExpression";
   private cfs?: ConstantFieldSpace;
   constructor(readonly expr: ExpressionDef) {
-    super({ expr });
+    super({ "expr": expr });
   }
 
   getExpression(_fs: FieldSpace): ExprValue {

@@ -297,10 +297,8 @@ export function isDocStatement(e: MalloyElement): e is DocStatement {
 
 export class ListOf<ET extends MalloyElement> extends MalloyElement {
   elementType = "genericElementList";
-  protected elements: ET[];
-  constructor(listDesc: string, elements: ET[]) {
+  constructor(listDesc: string, protected elements: ET[]) {
     super();
-    this.elements = elements;
     if (this.elementType === "genericElementList") {
       this.elementType = listDesc;
     }

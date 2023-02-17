@@ -20,6 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
 import {
   isValueParameter,
   paramHasValue,
@@ -118,7 +119,7 @@ export class NamedSource extends Source {
       notFound.dialect = notFound.dialect + err;
       return notFound;
     }
-    const declared = { ...ret.parameters } || {};
+    const declared = { ...ret.parameters };
 
     const makeWith = this.isBlock?.isMap || {};
     for (const [pName, pExpr] of Object.entries(makeWith)) {

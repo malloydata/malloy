@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Parameter, isAtomicFieldType } from "../../../model/malloy_types";
+import { isAtomicFieldType, Parameter } from "../../../model/malloy_types";
 
 import { ConstantSubExpression } from "../expressions/constant-sub-expression";
 import { HasParameter } from "./has-parameter";
@@ -29,7 +29,7 @@ import { HasParameter } from "./has-parameter";
 export class ConstantParameter extends HasParameter {
   constructor(name: string, readonly value: ConstantSubExpression) {
     super({ name, "isCondition": false });
-    this.has({ value });
+    this.has({ "value": value });
   }
 
   parameter(): Parameter {
