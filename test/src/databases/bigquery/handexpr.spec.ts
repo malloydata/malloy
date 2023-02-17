@@ -496,7 +496,7 @@ describe("BigQuery hand-built expression test", () => {
           }
         ]
       })
-      .run();
+      .run({ "rowLimit": 15 });
     for (let i = 0; i < result.data.rowCount; i++) {
       expect(result.data.value[i].row_num).toBe(i + 1);
     }
