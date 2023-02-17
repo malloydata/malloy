@@ -13,7 +13,12 @@
     "@malloydata/db-bigquery": "^0.0.24",
     "@malloydata/db-duckdb": "^0.0.24",
     "@malloydata/db-postgres": "^0.0.24",
-    "@malloydata/malloy": "^0.0.24"
+    "@malloydata/render": "^0.0.24",
+    "@malloydata/malloy": "^0.0.24",
+    "jsdom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^20.0.0"
   },
   "version": "0.0.24"
 }
