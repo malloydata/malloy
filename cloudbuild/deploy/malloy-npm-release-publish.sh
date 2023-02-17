@@ -15,7 +15,8 @@ nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --keep BRANCH_NAME --command "
   git config --global user.name "Malloy CI Bot"
   # Build
   npm --no-audit --no-fund ci --loglevel error
-  npm run build
+  # Sanity check
+  npm run lint && npm run build && npm run build-duckdb-db && npm run test-silent
   # Publish
   echo Publishing \$PACKAGES
   VERSION=\$(jq -r .version ./lerna.json)
