@@ -30,7 +30,7 @@ import {
 } from "@malloydata/malloy";
 import usAtlas from "us-atlas/states-10m.json";
 import { HTMLChartRenderer } from "./chart";
-import { getColorScale, timeToString } from "./utils";
+import { formatTitle, getColorScale, timeToString } from "./utils";
 
 export class HTMLPointMapRenderer extends HTMLChartRenderer {
   getDataValue(data: DataColumn): string | number {
@@ -78,7 +78,7 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
         ? {
             "field": colorField.name,
             "type": colorType,
-            "axis": { "title": colorField.name },
+            "axis": { "title": formatTitle(this.options, colorField.name) },
             "scale": getColorScale(colorType, false)
           }
         : undefined;
@@ -87,7 +87,7 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
       ? {
           "field": sizeField.name,
           "type": sizeType,
-          "axis": { "title": sizeField.name }
+          "axis": { "title": formatTitle(this.options, sizeField.name) }
         }
       : { "value": 5 };
 
@@ -95,7 +95,7 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
       ? {
           "field": shapeField.name,
           "type": shapeType,
-          "axis": { "title": shapeField.name }
+          "axis": { "title": formatTitle(this.options, shapeField.name) }
         }
       : { "value": "circle" };
 

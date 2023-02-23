@@ -26,7 +26,7 @@ import { StyleDefaults } from "../data_styles";
 import { getDrillQuery } from "../drill";
 import { ContainerRenderer } from "./container";
 import { HTMLNumberRenderer } from "./number";
-import { createDrillIcon, yieldTask } from "./utils";
+import { createDrillIcon, formatTitle, yieldTask } from "./utils";
 
 export class HTMLTableRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
@@ -39,7 +39,11 @@ export class HTMLTableRenderer extends ContainerRenderer {
     }
     const header = this.document.createElement("tr");
     table.field.intrinsicFields.forEach((field) => {
-      const name = field.name;
+      const name = formatTitle(
+        this.options,
+        field.name,
+        this.options.dataStyles[field.name]
+      );
       const childRenderer = this.childRenderers[name];
       const isNumeric = childRenderer instanceof HTMLNumberRenderer;
       const headerCell = this.document.createElement("th");

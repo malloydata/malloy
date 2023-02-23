@@ -25,7 +25,7 @@ import * as lite from "vega-lite";
 import { DataArray, DataColumn, Field } from "@malloydata/malloy";
 import usAtlas from "us-atlas/states-10m.json";
 import { HTMLChartRenderer } from "./chart";
-import { getColorScale } from "./utils";
+import { formatTitle, getColorScale } from "./utils";
 
 export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
   getDataValue(data: DataColumn): string | number | null {
@@ -67,7 +67,7 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
         ? {
             "field": colorField.name,
             "type": colorType,
-            "axis": { "title": colorField.name },
+            "axis": { "title": formatTitle(this.options, colorField.name) },
             "scale": getColorScale(colorType, false)
           }
         : undefined;

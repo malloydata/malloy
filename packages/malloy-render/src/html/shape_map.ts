@@ -26,7 +26,7 @@ import { DataColumn, Explore, Field } from "@malloydata/malloy";
 import usAtlas from "us-atlas/states-10m.json";
 import { HTMLChartRenderer } from "./chart";
 import { STATE_CODES } from "./state_codes";
-import { getColorScale } from "./utils";
+import { formatTitle, getColorScale } from "./utils";
 
 export class HTMLShapeMapRenderer extends HTMLChartRenderer {
   private getRegionField(explore: Explore): Field {
@@ -94,7 +94,7 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
         ? {
             "field": colorField.name,
             "type": colorType,
-            "axis": { "title": colorField.name },
+            "axis": { "title": formatTitle(this.options, colorField.name) },
             "scale": getColorScale(colorType, false)
           }
         : undefined;

@@ -24,7 +24,7 @@
 import * as lite from "vega-lite";
 import * as vega from "vega";
 import { DataArray, DataColumn, Field } from "@malloydata/malloy";
-import { Renderer } from "../renderer";
+import { Renderer, RendererOptions } from "../renderer";
 import { ChartRenderOptions, StyleDefaults } from "../data_styles";
 
 type MappedRow = { [p: string]: string | number | Date | undefined | null };
@@ -64,9 +64,10 @@ export abstract class HTMLChartRenderer implements Renderer {
   constructor(
     protected readonly document: Document,
     protected styleDefaults: StyleDefaults,
-    options: ChartRenderOptions = {}
+    protected options: RendererOptions,
+    chartOptions: ChartRenderOptions = {}
   ) {
-    this.size = options.size || this.styleDefaults.size || "medium";
+    this.size = chartOptions.size || this.styleDefaults.size || "medium";
   }
 
   abstract getVegaLiteSpec(data: DataArray): lite.TopLevelSpec;

@@ -26,7 +26,12 @@ import { StyleDefaults } from "../data_styles";
 import { getDrillQuery } from "../drill";
 import { ContainerRenderer } from "./container";
 import { HTMLTextRenderer } from "./text";
-import { createDrillIcon, createErrorElement, yieldTask } from "./utils";
+import {
+  createDrillIcon,
+  createErrorElement,
+  yieldTask,
+  formatTitle
+} from "./utils";
 
 export class HTMLDashboardRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
@@ -64,7 +69,15 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
         renderedDimension.style.cssText = DIMENSION_BOX;
         const dimensionTitle = this.document.createElement("div");
         dimensionTitle.style.cssText = DIMENSION_TITLE;
-        dimensionTitle.appendChild(this.document.createTextNode(field.name));
+        dimensionTitle.appendChild(
+          this.document.createTextNode(
+            formatTitle(
+              this.options,
+              field.name,
+              this.options.dataStyles[field.name]
+            )
+          )
+        );
         const dimensionInner = this.document.createElement("div");
         dimensionInner.style.cssText = VERTICAL_CENTER;
         dimensionInner.appendChild(rendered);
@@ -94,7 +107,15 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
           measureBox.style.cssText = MEASURE_BOX;
           const measureTitle = this.document.createElement("div");
           measureTitle.style.cssText = TITLE;
-          measureTitle.appendChild(this.document.createTextNode(field.name));
+          measureTitle.appendChild(
+            this.document.createTextNode(
+              formatTitle(
+                this.options,
+                field.name,
+                this.options.dataStyles[field.name]
+              )
+            )
+          );
           const measureInner = this.document.createElement("div");
           measureInner.style.cssText = VERTICAL_CENTER;
           const innerInner = this.document.createElement("div");
@@ -109,7 +130,15 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
           measureBox.style.cssText = MEASURE_BOX;
           const measureTitle = this.document.createElement("div");
           measureTitle.style.cssText = TITLE;
-          measureTitle.appendChild(this.document.createTextNode(field.name));
+          measureTitle.appendChild(
+            this.document.createTextNode(
+              formatTitle(
+                this.options,
+                field.name,
+                this.options.dataStyles[field.name]
+              )
+            )
+          );
           const measureInner = this.document.createElement("div");
           measureInner.style.cssText = VERTICAL_CENTER;
           const innerInner = this.document.createElement("div");

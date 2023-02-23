@@ -24,7 +24,7 @@
 import { DataArray } from "@malloydata/malloy";
 import * as lite from "vega-lite";
 import { HTMLChartRenderer } from "./chart";
-import { getColorScale } from "./utils";
+import { formatTitle, getColorScale } from "./utils";
 import { DEFAULT_SPEC } from "./vega_spec";
 
 export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
@@ -51,7 +51,7 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
         ? {
             "field": colorField.name,
             "type": colorType,
-            "axis": { "title": colorField.name },
+            "axis": { "title": formatTitle(this.options, colorField.name) },
             "scale": getColorScale(colorType, mark === "bar")
           }
         : { "value": "#4285F4" };
@@ -60,7 +60,7 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       ? {
           "field": sizeField.name,
           "type": sizeType,
-          "axis": { "title": sizeField.name }
+          "axis": { "title": formatTitle(this.options, sizeField.name) }
         }
       : undefined;
 
@@ -68,7 +68,7 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       ? {
           "field": shapeField.name,
           "type": shapeType,
-          "axis": { "title": shapeField.name }
+          "axis": { "title": formatTitle(this.options, shapeField.name) }
         }
       : undefined;
 
@@ -79,14 +79,14 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       "field": xField.name,
       "type": xType,
       "sort": xSort,
-      "axis": { "title": xField.name }
+      "axis": { "title": formatTitle(this.options, xField.name) }
     };
 
     const yDef = {
       "field": yField.name,
       "type": yType,
       "sort": ySort,
-      "axis": { "title": yField.name }
+      "axis": { "title": formatTitle(this.options, yField.name) }
     };
 
     return {

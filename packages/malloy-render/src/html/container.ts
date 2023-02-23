@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Explore, Field } from "@malloydata/malloy";
+import { Explore } from "@malloydata/malloy";
 import { DataStyles, StyleDefaults } from "../data_styles";
 import { DrillFunction } from "../drill";
-import { ChildRenderers, RenderTree } from "../renderer";
+import { ChildRenderers, RendererOptions, RenderTree } from "../renderer";
 
 export abstract class ContainerRenderer extends RenderTree {
   childRenderers: ChildRenderers = {};
@@ -38,25 +38,12 @@ export abstract class ContainerRenderer extends RenderTree {
   //  we need to be fully constructed before we construct
   //  our children.
   static make<Type extends ContainerRenderer>(
-    c: new (
-      document: Document,
-      options: {
-        isDrillingEnabled?: boolean;
-        onDrill?: DrillFunction;
-      }
-    ) => Type,
+    c: new (document: Document, options: RendererOptions) => Type,
     document: Document,
     exploreField: Explore,
-    options: {
-      dataStyles: DataStyles;
-      isDrillingEnabled?: boolean;
-      onDrill?: DrillFunction;
-    }
+    options: RendererOptions
   ): Type {
-    const n = new c(document, {
-      "isDrillingEnabled": options.isDrillingEnabled,
-      "onDrill": options.onDrill
-    });
+    const n = new c(document, options);
     return n;
   }
 }

@@ -22,6 +22,7 @@
  */
 
 import { DataColumn } from "@malloydata/malloy";
+import { DataStyles } from "./data_styles";
 import { DrillFunction } from "./drill";
 
 export type ChildRenderers = { [fieldName: string]: Renderer };
@@ -30,13 +31,17 @@ export interface Renderer {
   render(value: DataColumn): Promise<HTMLElement>;
 }
 
+export interface RendererOptions {
+  dataStyles: DataStyles;
+  isDrillingEnabled?: boolean;
+  onDrill?: DrillFunction;
+  titleCase?: boolean;
+}
+
 export abstract class RenderTree implements Renderer {
   constructor(
     protected readonly document: Document,
-    protected readonly options: {
-      isDrillingEnabled?: boolean;
-      onDrill?: DrillFunction;
-    }
+    protected readonly options: RendererOptions
   ) {}
 
   protected abstract get childRenderers(): ChildRenderers;
