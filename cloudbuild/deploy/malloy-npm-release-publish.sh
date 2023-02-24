@@ -24,17 +24,17 @@ nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --keep BRANCH_NAME --command "
   VERSION=\$(jq -r .version ./lerna.json)
   for package in \$PACKAGES; do
     echo Publishing \$package \$VERSION
-    npm publish -w \$package --dry-run
+    npm publish -w \$package
   done
   # Tag current version
   git tag v\$VERSION
-  # git push origin v\$VERSION
+  git push origin v\$VERSION
   # Bump version
   npx lerna version patch --yes --no-push --no-git-tag-version
   VERSION=\$(jq -r .version ./lerna.json)
   echo Updating to \$VERSION
   # Push new version to github
   git commit -am "Version \$VERSION-dev"
-  # git push origin \$BRANCH_NAME
+  git push origin \$BRANCH_NAME
 NIXCMD
 )"
