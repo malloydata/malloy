@@ -7,7 +7,7 @@ nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --keep BRANCH_NAME --command "
   set -euxo pipefail
   export PGHOST=127.0.0.1
   export PGDATABASE=postgres
-  export PGUSER=673673622326@cloudbuild
+  export PGUSER=private-cloudbuild@malloy-303216.iam
   cd /workspace
   # Change to actual branch
   git branch \$BRANCH_NAME
