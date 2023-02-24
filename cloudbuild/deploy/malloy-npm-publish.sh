@@ -5,10 +5,13 @@ export PACKAGES="packages/malloy packages/malloy-db-bigquery packages/malloy-db-
 
 nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --command "$(cat <<NIXCMD
   set -euxo pipefail
+  export PGHOST=127.0.0.1
+  export PGDATABASE=postgres
+  export PGUSER=private-cloudbuild@malloy-303216.iam
   cd /workspace
   git branch -m main
   npm --no-audit --no-fund ci --loglevel error
-  npm run build
+  npm run lint && npm run build && npm run build-duckdb-db && npm run test-silent
   echo Publishing \$PACKAGES
   PRERELEASE=\$(date +%y%m%d%H%M%S)
   VERSION=\$(jq -r .version ./lerna.json)-dev\$PRERELEASE
