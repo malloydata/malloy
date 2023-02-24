@@ -11,7 +11,7 @@ nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --command "$(cat <<NIXCMD
   cd /workspace
   git branch -m main
   npm --no-audit --no-fund ci --loglevel error
-  npm run build
+  npm run lint && npm run build && npm run build-duckdb-db && npm run test-silent
   echo Publishing \$PACKAGES
   PRERELEASE=\$(date +%y%m%d%H%M%S)
   VERSION=\$(jq -r .version ./lerna.json)-dev\$PRERELEASE
