@@ -27,6 +27,7 @@ import { HTMLChartRenderer } from "./chart";
 import cloneDeep from "lodash/cloneDeep";
 import { getColorScale } from "./utils";
 import { StyleDefaults } from "../data_styles";
+import { RendererOptions } from "../renderer";
 
 type DataContainer = Array<unknown> | Record<string, unknown>;
 
@@ -451,9 +452,10 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
   constructor(
     document: Document,
     styleDefaults: StyleDefaults,
+    options: RendererOptions,
     spec: lite.TopLevelSpec
   ) {
-    super(document, styleDefaults);
+    super(document, styleDefaults, options);
     this.spec = spec;
   }
 

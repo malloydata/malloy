@@ -37,7 +37,8 @@ module.exports = {
   "ignorePatterns": [
     "*.d.ts",
     "node_modules/",
-    "packages/malloy/src/lang/lib/Malloy"
+    "packages/malloy/src/lang/lib/Malloy",
+    ".eslintrc.cjs"
   ],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
@@ -70,6 +71,9 @@ module.exports = {
     ],
     "quote-props": ["error", "always"],
     "@typescript-eslint/restrict-plus-operands": "error",
-    "@typescript-eslint/parameter-properties": [ "warn" , { "prefer": "parameter-property"}]
+    "@typescript-eslint/parameter-properties": [
+      "warn",
+      { "prefer": "parameter-property" }
+    ]
   }
 };

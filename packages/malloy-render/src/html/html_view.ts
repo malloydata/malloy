@@ -23,8 +23,8 @@
 
 import { AtomicFieldType, DataArray, Explore, Field } from "@malloydata/malloy";
 import { TopLevelSpec } from "vega-lite";
-import { DataStyles, StyleDefaults } from "../data_styles";
-import { ChildRenderers, Renderer } from "../renderer";
+import { DataStyles, RenderDef, StyleDefaults } from "../data_styles";
+import { ChildRenderers, RendererOptions, Renderer } from "../renderer";
 import { HTMLBarChartRenderer } from "./bar_chart";
 import { HTMLBooleanRenderer } from "./boolean";
 import { HTMLJSONRenderer } from "./json";
@@ -52,19 +52,11 @@ import { DrillFunction } from "../drill";
 import { HTMLUnsupportedRenderer } from "./unsupported";
 
 export class HTMLView {
-  private readonly document: Document;
-
-  constructor(document: Document) {
-    this.document = document;
-  }
+  constructor(private document: Document) {}
 
   async render(
     table: DataArray,
-    options: {
-      dataStyles: DataStyles;
-      isDrillingEnabled?: boolean;
-      onDrill?: DrillFunction;
-    }
+    options: RendererOptions
   ): Promise<HTMLElement> {
     const renderer = makeRenderer(table.field, this.document, options, {
       "size": "large"
@@ -91,11 +83,7 @@ export class HTMLView {
 }
 
 export class JSONView {
-  private readonly document: Document;
-
-  constructor(document: Document) {
-    this.document = document;
-  }
+  constructor(private document: Document) {}
 
   async render(table: DataArray): Promise<HTMLElement> {
     const renderer = new HTMLJSONRenderer(this.document);
@@ -114,6 +102,21 @@ export class JSONView {
   }
 }
 
+const suffixMap: Record<string, RenderDef["renderer"]> = {
+  "_shape_map": "shape_map",
+  "_point_map": "point_map",
+  "_bar_chart": "bar_chart",
+  "_image": "image",
+  "_json": "json",
+  "_segment_map": "segment_map",
+  "_dashboard": "dashboard",
+  "_line_chart": "line_chart",
+  "_scatter_chart": "scatter_chart",
+  "_url": "link",
+  "_list": "list",
+  "_list_detail": "list_detail"
+};
+
 function getRendererOptions(field: Field | Explore, dataStyles: DataStyles) {
   let renderer = dataStyles[field.name];
   if (!renderer) {
@@ -123,6 +126,28 @@ function getRendererOptions(field: Field | Explore, dataStyles: DataStyles) {
       }
     }
   }
+
+  for (const suffix in suffixMap) {
+    const { name } = field;
+    if (name.endsWith(suffix)) {
+      const label = name.slice(0, name.length - suffix.length);
+      if (renderer) {
+        renderer.renderer ??= suffixMap[suffix];
+        renderer.data ??= {};
+        renderer.data.label ??= label;
+      } else {
+        renderer = {
+          "renderer": suffixMap[suffix],
+          "data": {
+            label
+          }
+        };
+      }
+
+      break;
+    }
+  }
+
   return renderer;
 }
 
@@ -139,61 +164,72 @@ function isContainer(field: Field | Explore): Explore {
 export function makeRenderer(
   field: Explore | Field,
   document: Document,
-  options: {
-    dataStyles: DataStyles;
-    isDrillingEnabled?: boolean;
-    onDrill?: DrillFunction;
-  },
+  options: RendererOptions,
   styleDefaults: StyleDefaults
 ): Renderer {
   const renderDef = getRendererOptions(field, options.dataStyles) || {};
+  options.dataStyles[field.name] = renderDef;
 
-  if (renderDef.renderer === "shape_map" || field.name.endsWith("_shape_map")) {
-    return new HTMLShapeMapRenderer(document, styleDefaults, renderDef);
-  } else if (
-    renderDef.renderer === "point_map" ||
-    field.name.endsWith("_point_map")
-  ) {
-    return new HTMLPointMapRenderer(document, styleDefaults);
-  } else if (renderDef.renderer === "image" || field.name.endsWith("_image")) {
+  if (renderDef.renderer === "shape_map") {
+    return new HTMLShapeMapRenderer(
+      document,
+      styleDefaults,
+      options,
+      renderDef
+    );
+  } else if (renderDef.renderer === "point_map") {
+    return new HTMLPointMapRenderer(
+      document,
+      styleDefaults,
+      options,
+      renderDef
+    );
+  } else if (renderDef.renderer === "image") {
     return new HTMLImageRenderer(document);
-  } else if (
-    renderDef.renderer === "segment_map" ||
-    field.name.endsWith("_segment_map")
-  ) {
-    return new HTMLSegmentMapRenderer(document, styleDefaults, renderDef);
-  } else if (
-    renderDef.renderer === "dashboard" ||
-    field.name.endsWith("_dashboard")
-  ) {
+  } else if (renderDef.renderer === "segment_map") {
+    return new HTMLSegmentMapRenderer(
+      document,
+      styleDefaults,
+      options,
+      renderDef
+    );
+  } else if (renderDef.renderer === "dashboard") {
     return makeContainerRenderer(
       HTMLDashboardRenderer,
       document,
       isContainer(field),
       options
     );
-  } else if (renderDef.renderer === "json" || field.name.endsWith("_json")) {
+  } else if (renderDef.renderer === "json") {
     return new HTMLJSONRenderer(document);
-  } else if (
-    renderDef.renderer === "line_chart" ||
-    field.name.endsWith("_line_chart")
-  ) {
-    return new HTMLLineChartRenderer(document, styleDefaults, renderDef);
-  } else if (
-    renderDef.renderer === "scatter_chart" ||
-    field.name.endsWith("_scatter_chart")
-  ) {
-    return new HTMLScatterChartRenderer(document, styleDefaults);
+  } else if (renderDef.renderer === "line_chart") {
+    return new HTMLLineChartRenderer(
+      document,
+      styleDefaults,
+      options,
+      renderDef
+    );
+  } else if (renderDef.renderer === "scatter_chart") {
+    return new HTMLScatterChartRenderer(
+      document,
+      styleDefaults,
+      options,
+      renderDef
+    );
   } else if (renderDef.renderer === "bar_chart") {
-    return new HTMLBarChartRenderer(document, styleDefaults, renderDef);
-  } else if (field.name.endsWith("_bar_chart")) {
-    return new HTMLBarChartRenderer(document, styleDefaults, {});
+    return new HTMLBarChartRenderer(
+      document,
+      styleDefaults,
+      options,
+      renderDef
+    );
   } else if (renderDef.renderer === "vega") {
     const spec = renderDef.spec;
     if (spec) {
       return new HTMLVegaSpecRenderer(
         document,
         styleDefaults,
+        options,
         spec as TopLevelSpec
       );
     } else if (renderDef.spec_name) {
@@ -203,6 +239,7 @@ export function makeRenderer(
           return new HTMLVegaSpecRenderer(
             document,
             styleDefaults,
+            options,
             vegaRenderer.spec as TopLevelSpec
           );
         } else {
@@ -243,19 +280,16 @@ export function makeRenderer(
         field.type === AtomicFieldType.Boolean)
     ) {
       return new HTMLBooleanRenderer(document);
-    } else if (renderDef.renderer === "link" || field.name.endsWith("_url")) {
+    } else if (renderDef.renderer === "link") {
       return new HTMLLinkRenderer(document);
-    } else if (renderDef.renderer === "list" || field.name.endsWith("_list")) {
+    } else if (renderDef.renderer === "list") {
       return makeContainerRenderer(
         HTMLListRenderer,
         document,
         isContainer(field),
         options
       );
-    } else if (
-      renderDef.renderer === "list_detail" ||
-      field.name.endsWith("_list_detail")
-    ) {
+    } else if (renderDef.renderer === "list_detail") {
       return makeContainerRenderer(
         HTMLListDetailRenderer,
         document,
@@ -282,17 +316,10 @@ export function makeRenderer(
 }
 
 function makeContainerRenderer<Type extends ContainerRenderer>(
-  cType: new (
-    document: Document,
-    options: { isDrillingEnabled?: boolean; onDrill?: DrillFunction }
-  ) => Type,
+  cType: new (document: Document, options: RendererOptions) => Type,
   document: Document,
   explore: Explore,
-  options: {
-    dataStyles: DataStyles;
-    isDrillingEnabled?: boolean;
-    onDrill?: DrillFunction;
-  }
+  options: RendererOptions
 ): ContainerRenderer {
   const c = ContainerRenderer.make(cType, document, explore, options);
   const result: ChildRenderers = {};

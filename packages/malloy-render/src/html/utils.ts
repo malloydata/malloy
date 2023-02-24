@@ -22,6 +22,9 @@
  */
 
 import { DateTimeframe, TimestampTimeframe } from "@malloydata/malloy";
+import startCase from "lodash/startCase";
+import { RenderDef } from "../data_styles";
+import type { RendererOptions } from "../renderer";
 
 export function getColorScale(
   type: "temporal" | "ordinal" | "quantitative" | "nominal" | undefined,
@@ -201,4 +204,13 @@ export function createDrillIcon(document: Document): HTMLElement {
     drill.appendChild(dot);
   }
   return drill;
+}
+
+export function formatTitle(
+  options: RendererOptions,
+  name: string,
+  renderDef?: RenderDef | undefined
+) {
+  const label = renderDef?.data?.label || name;
+  return options.titleCase ? startCase(label) : label;
 }

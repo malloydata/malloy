@@ -165,7 +165,7 @@ export interface CartesianChartRenderOptions extends ChartRenderOptions {
   };
 }
 
-export interface BarChartRenderOptions {
+export interface BarChartRenderOptions extends DataRenderOptions {
   size?: ChartSize;
 }
 
