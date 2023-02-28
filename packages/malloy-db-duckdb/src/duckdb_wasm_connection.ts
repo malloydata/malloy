@@ -165,6 +165,9 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     sql: string
   ): Promise<{rows: QueryDataRow[]; totalRows: number}> {
     const table = await this.connection?.query(sql);
+    if (table === undefined) {
+      throw new Error('Table is undefined.');
+    }
     if (table?.numRows !== null) {
       const rows = unwrapTable(table);
       // console.log(rows);

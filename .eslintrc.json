@@ -2,7 +2,6 @@
   "extends": "./node_modules/gts/",
   "parserOptions": {
     "warnOnUnsupportedTypeScriptVersion": false
-    // "project": ["./tsconfig.packages.json"]
   },
   "ignorePatterns": [
     "*.d.ts",
@@ -27,7 +26,6 @@
         ]
       }
     ],
-    // "no-use-before-define": "off",
     "no-throw-literal": "error",
     "@typescript-eslint/no-unused-vars": [
       "warn",
