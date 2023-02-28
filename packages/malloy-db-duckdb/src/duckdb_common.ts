@@ -57,6 +57,15 @@ export type QueryOptionsReader =
   | Partial<DuckDBQueryOptions>
   | (() => Partial<DuckDBQueryOptions>);
 
+// This is naive, but not really sure what edge cases we'll hit
+const unquoteName = (name: string) => {
+  const match = /^"(.*)"$/.exec(name);
+  if (match) {
+    return match[1];
+  }
+  return name;
+};
+
 export abstract class DuckDBCommon
   implements Connection, PersistSQLResults, StreamingConnection
 {
@@ -225,8 +234,10 @@ export abstract class DuckDBCommon
     structDef: StructDef,
     typeMap: {[name: string]: string}
   ) {
-    for (const name in typeMap) {
-      let duckDBType = typeMap[name];
+    for (const fieldName in typeMap) {
+      let duckDBType = typeMap[fieldName];
+      // Remove quotes from field name
+      const name = unquoteName(fieldName);
       // Remove DECIMAL(x,y) precision to simplify lookup
       duckDBType = duckDBType.replace(/^DECIMAL\(\d+,\d+\)/g, 'DECIMAL');
       let malloyType = duckDBToMalloyTypes[duckDBType];
