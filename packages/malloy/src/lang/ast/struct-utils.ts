@@ -21,13 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { inspect } from "util";
+import {inspect} from 'util';
 
-import { Segment } from "../../model/malloy_query";
-import { FieldDef, PipeSegment, StructDef } from "../../model/malloy_types";
+import {Segment} from '../../model/malloy_query';
+import {FieldDef, PipeSegment, StructDef} from '../../model/malloy_types';
 
-import { ErrorFactory } from "./error-factory";
-import { MalloyElement } from "./types/malloy-element";
+import {ErrorFactory} from './error-factory';
+import {MalloyElement} from './types/malloy-element';
 
 export function opOutputStruct(
   logTo: MalloyElement,
@@ -42,16 +42,16 @@ export function opOutputStruct(
     } catch (e) {
       logTo.log(
         `INTERNAL ERROR model/Segment.nextStructDef: ${e.message}\n` +
-          `QUERY: ${inspect(opDesc, { "breakLength": 72, "depth": Infinity })}`
+          `QUERY: ${inspect(opDesc, {breakLength: 72, depth: Infinity})}`
       );
     }
   }
-  return { ...ErrorFactory.structDef, "dialect": inputStruct.dialect };
+  return {...ErrorFactory.structDef, dialect: inputStruct.dialect};
 }
 
 export function getStructFieldDef(
   s: StructDef,
   fn: string
 ): FieldDef | undefined {
-  return s.fields.find((fld) => (fld.as || fld.name) === fn);
+  return s.fields.find(fld => (fld.as || fld.name) === fn);
 }

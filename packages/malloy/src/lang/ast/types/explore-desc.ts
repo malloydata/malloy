@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { SourceProperty } from "./source-property";
-import { ListOf } from "./malloy-element";
+import {SourceProperty} from './source-property';
+import {ListOf} from './malloy-element';
 
 export class ExploreDesc extends ListOf<SourceProperty> {
   constructor(props: SourceProperty[]) {
-    super("exploreDesc", props);
+    super('exploreDesc', props);
   }
 }

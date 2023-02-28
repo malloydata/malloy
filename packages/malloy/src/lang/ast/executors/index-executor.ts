@@ -24,19 +24,19 @@
 import {
   FilterExpression,
   PipeSegment,
-  Sampling
-} from "../../../model/malloy_types";
+  Sampling,
+} from '../../../model/malloy_types';
 
-import { ErrorFactory } from "../error-factory";
-import { FieldName, FieldSpace } from "../types/field-space";
-import { Filter } from "../query-properties/filters";
-import { Index } from "../query-properties/indexing";
-import { Limit } from "../query-properties/limit";
-import { SampleProperty } from "../query-properties/sampling";
-import { IndexFieldSpace } from "../field-space/index-field-space";
-import { QueryProperty } from "../types/query-property";
-import { Executor } from "../types/executor";
-import { QueryInputSpace } from "../field-space/query-spaces";
+import {ErrorFactory} from '../error-factory';
+import {FieldName, FieldSpace} from '../types/field-space';
+import {Filter} from '../query-properties/filters';
+import {Index} from '../query-properties/indexing';
+import {Limit} from '../query-properties/limit';
+import {SampleProperty} from '../query-properties/sampling';
+import {IndexFieldSpace} from '../field-space/index-field-space';
+import {QueryProperty} from '../types/query-property';
+import {Executor} from '../types/executor';
+import {QueryInputSpace} from '../field-space/query-spaces';
 
 export class IndexExecutor implements Executor {
   filters: FilterExpression[] = [];
@@ -56,26 +56,26 @@ export class IndexExecutor implements Executor {
       this.filters.push(...qp.getFilterList(this.inputFS));
     } else if (qp instanceof Limit) {
       if (this.limit) {
-        this.limit.log("Ignored, too many limit: statements");
+        this.limit.log('Ignored, too many limit: statements');
       }
       this.limit = qp;
     } else if (qp instanceof Index) {
       this.resultFS.addMembers(qp.fields.list);
       if (qp.weightBy) {
         if (this.indexOn) {
-          this.indexOn.log("Ignoring previous BY");
+          this.indexOn.log('Ignoring previous BY');
         }
         this.indexOn = qp.weightBy;
       }
     } else if (qp instanceof SampleProperty) {
       this.sample = qp.sampling();
     } else {
-      qp.log("Not legal in an index query operation");
+      qp.log('Not legal in an index query operation');
     }
   }
 
   finalize(from: PipeSegment | undefined): PipeSegment {
-    if (from && from.type !== "index") {
+    if (from && from.type !== 'index') {
       this.resultFS.log(`Can't refine index with ${from.type}`);
       return ErrorFactory.indexSegment;
     }

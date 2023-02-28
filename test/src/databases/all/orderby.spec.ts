@@ -22,9 +22,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as malloy from "@malloydata/malloy";
-import { RuntimeList, allDatabases } from "../../runtimes";
-import { databasesFromEnvironmentOr } from "../../util";
+import * as malloy from '@malloydata/malloy';
+import {RuntimeList, allDatabases} from '../../runtimes';
+import {databasesFromEnvironmentOr} from '../../util';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -75,8 +75,8 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(result.data.row(0).cell("big").value).toBe(false);
-    expect(result.data.row(0).cell("model_count").value).toBe(58451);
+    expect(result.data.row(0).cell('big').value).toBe(false);
+    expect(result.data.row(0).cell('model_count').value).toBe(58451);
   });
 
   it(`boolean in pipeline - ${databaseName}`, async () => {
@@ -95,8 +95,8 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(result.data.row(0).cell("big").value).toBe(false);
-    expect(result.data.row(0).cell("model_count").value).toBe(58500);
+    expect(result.data.row(0).cell('big').value).toBe(false);
+    expect(result.data.row(0).cell('model_count').value).toBe(58500);
   });
 
   it(`filtered measures in model are aggregates #352 - ${databaseName}`, async () => {
@@ -112,7 +112,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(result.data.row(0).cell("j_names").value).toBe(1358);
+    expect(result.data.row(0).cell('j_names').value).toBe(1358);
   });
 
   it(`reserved words are quoted - ${databaseName}`, async () => {
@@ -150,7 +150,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
     await validateCompilation(databaseName, sql);
   });
 
-  it.skip("reserved words in structure definitions", async () => {
+  it.skip('reserved words in structure definitions', async () => {
     const sql = await orderByModel
       .loadQuery(
         `
@@ -200,7 +200,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(result.data.row(0).cell("model_count").value).toBe(102);
+    expect(result.data.row(0).cell('model_count').value).toBe(102);
   });
 
   it(`modeled having complex - ${databaseName}`, async () => {
@@ -225,7 +225,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(result.data.row(0).cell("model_count").value).toBe(102);
+    expect(result.data.row(0).cell('model_count').value).toBe(102);
   });
 
   it(`turtle references joined element - ${databaseName}`, async () => {

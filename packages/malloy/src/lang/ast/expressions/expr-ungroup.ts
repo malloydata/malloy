@@ -23,44 +23,44 @@
 
 import {
   expressionIsAggregate,
-  UngroupFragment
-} from "../../../model/malloy_types";
+  UngroupFragment,
+} from '../../../model/malloy_types';
 
-import { errorFor } from "../ast-utils";
-import { QueryInputSpace } from "../field-space/query-spaces";
-import { FT } from "../fragtype-utils";
-import { DefSpace } from "../query-items/field-declaration";
-import { ExprValue } from "../types/expr-value";
-import { ExpressionDef } from "../types/expression-def";
-import { FieldName, FieldSpace } from "../types/field-space";
-import { FieldValueType } from "../types/type-desc";
+import {errorFor} from '../ast-utils';
+import {QueryInputSpace} from '../field-space/query-spaces';
+import {FT} from '../fragtype-utils';
+import {DefSpace} from '../query-items/field-declaration';
+import {ExprValue} from '../types/expr-value';
+import {ExpressionDef} from '../types/expression-def';
+import {FieldName, FieldSpace} from '../types/field-space';
+import {FieldValueType} from '../types/type-desc';
 
 export class ExprUngroup extends ExpressionDef {
   legalChildTypes = FT.anyAtomicT;
-  elementType = "ungroup";
+  elementType = 'ungroup';
   constructor(
-    readonly control: "all" | "exclude",
+    readonly control: 'all' | 'exclude',
     readonly expr: ExpressionDef,
     readonly fields: FieldName[]
   ) {
-    super({ "expr": expr, "fields": fields });
+    super({expr: expr, fields: fields});
   }
 
   returns(_forExpression: ExprValue): FieldValueType {
-    return "number";
+    return 'number';
   }
 
   getExpression(fs: FieldSpace): ExprValue {
     const exprVal = this.expr.getExpression(fs);
     if (!expressionIsAggregate(exprVal.expressionType)) {
       this.expr.log(`${this.control}() expression must be an aggregate`);
-      return errorFor("ungrouped scalar");
+      return errorFor('ungrouped scalar');
     }
     const ungroup: UngroupFragment = {
-      "type": this.control,
-      "e": exprVal.value
+      type: this.control,
+      e: exprVal.value,
     };
-    if (this.typeCheck(this.expr, { ...exprVal, "expressionType": "scalar" })) {
+    if (this.typeCheck(this.expr, {...exprVal, expressionType: 'scalar'})) {
       if (this.fields.length > 0) {
         let qs = fs;
         if (fs instanceof DefSpace) {
@@ -70,11 +70,11 @@ export class ExprUngroup extends ExpressionDef {
           this.log(
             `${this.control}() must be in a query -- weird internal error`
           );
-          return errorFor("ungroup query check");
+          return errorFor('ungroup query check');
         }
         const output = qs.result;
         const dstFields: string[] = [];
-        const isExclude = this.control == "exclude";
+        const isExclude = this.control === 'exclude';
         for (const mustBeInOutput of this.fields) {
           output.whenComplete(() => {
             output.checkUngroup(mustBeInOutput, isExclude);
@@ -84,12 +84,12 @@ export class ExprUngroup extends ExpressionDef {
         ungroup.fields = dstFields;
       }
       return {
-        "dataType": this.returns(exprVal),
-        "expressionType": "analytic",
-        "value": [ungroup]
+        dataType: this.returns(exprVal),
+        expressionType: 'analytic',
+        value: [ungroup],
       };
     }
     this.log(`${this.control}() incompatible type`);
-    return errorFor("ungrouped type check");
+    return errorFor('ungrouped type check');
   }
 }

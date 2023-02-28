@@ -21,5 +21,5 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export { HTMLView, JSONView } from "./html/html_view";
-export type { DataStyles } from "./data_styles";
+export {HTMLView, JSONView} from './html/html_view';
+export type {DataStyles} from './data_styles';

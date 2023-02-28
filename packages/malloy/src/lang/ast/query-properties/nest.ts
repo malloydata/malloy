@@ -21,21 +21,21 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as model from "../../../model/malloy_types";
+import * as model from '../../../model/malloy_types';
 
-import { NestedQuery } from "../types/nested-query";
-import { FieldName, FieldSpace } from "../types/field-space";
-import { MalloyElement } from "../types/malloy-element";
-import { NestReference } from "./nest-reference";
-import { QueryField } from "../field-space/query-space-field";
-import { opOutputStruct } from "../struct-utils";
-import { TurtleHeadedPipe } from "../types/turtle-headed-pipe";
-import { QueryInputSpace } from "../field-space/query-spaces";
-import { StaticSpace } from "../field-space/static-space";
+import {NestedQuery} from '../types/nested-query';
+import {FieldName, FieldSpace} from '../types/field-space';
+import {MalloyElement} from '../types/malloy-element';
+import {NestReference} from './nest-reference';
+import {QueryField} from '../field-space/query-space-field';
+import {opOutputStruct} from '../struct-utils';
+import {TurtleHeadedPipe} from '../types/turtle-headed-pipe';
+import {QueryInputSpace} from '../field-space/query-spaces';
+import {StaticSpace} from '../field-space/static-space';
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
-    fd && typeof fd !== "string" && (fd as model.TurtleDef).type === "turtle";
+    fd && typeof fd !== 'string' && (fd as model.TurtleDef).type === 'turtle';
   return !!ret;
 }
 
@@ -45,7 +45,7 @@ export class TurtleDecl extends TurtleHeadedPipe {
   }
 
   getPipeline(fs: FieldSpace): model.Pipeline {
-    const modelPipe: model.Pipeline = { "pipeline": [] };
+    const modelPipe: model.Pipeline = {pipeline: []};
     if (this.turtleName) {
       const headEnt = this.turtleName.getField(fs);
       let reportWrongType = true;
@@ -91,16 +91,16 @@ export class TurtleDecl extends TurtleHeadedPipe {
     }
     const pipe = this.getPipeline(fs);
     return {
-      "type": "turtle",
-      "name": this.name,
+      type: 'turtle',
+      name: this.name,
       ...pipe,
-      "location": this.location
+      location: this.location,
     };
   }
 }
 
 export class NestRefinement extends TurtleDecl {
-  elementType = "nestRefinement";
+  elementType = 'nestRefinement';
   constructor(turtleName: FieldName) {
     super(turtleName.refString);
     this.turtleName = turtleName;
@@ -108,7 +108,7 @@ export class NestRefinement extends TurtleDecl {
 }
 
 export class NestDefinition extends TurtleDecl {
-  elementType = "nestDefinition";
+  elementType = 'nestDefinition';
   constructor(name: string) {
     super(name);
   }

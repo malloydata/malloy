@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExprValue } from "./types/expr-value";
+import {ExprValue} from './types/expr-value';
 
 /**
  * When a translation hits an error, log and return one of these as a value.
@@ -33,8 +33,8 @@ import { ExprValue } from "./types/expr-value";
  */
 export function errorFor(reason: string): ExprValue {
   return {
-    "dataType": "unknown",
-    "expressionType": "scalar",
-    "value": [`_ERROR_${reason.replace(/ /g, "_")}`]
+    dataType: 'unknown',
+    expressionType: 'scalar',
+    value: [`_ERROR_${reason.replace(/ /g, '_')}`],
   };
 }

@@ -21,21 +21,21 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FT } from "../fragtype-utils";
-import { ExprValue } from "../types/expr-value";
-import { ExpressionDef } from "../types/expression-def";
-import { FieldSpace } from "../types/field-space";
+import {FT} from '../fragtype-utils';
+import {ExprValue} from '../types/expr-value';
+import {ExpressionDef} from '../types/expression-def';
+import {FieldSpace} from '../types/field-space';
 
 export abstract class BinaryNumeric<
   opType extends string
 > extends ExpressionDef {
-  elementType = "numeric binary abstract";
+  elementType = 'numeric binary abstract';
   constructor(
     readonly left: ExpressionDef,
     readonly op: opType,
     readonly right: ExpressionDef
   ) {
-    super({ "left": left, "right": right });
+    super({left: left, right: right});
     this.legalChildTypes = [FT.numberT];
   }
 

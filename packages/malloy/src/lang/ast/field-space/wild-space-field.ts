@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { QueryFieldDef } from "../../../model/malloy_types";
+import {QueryFieldDef} from '../../../model/malloy_types';
 
-import { FieldSpace } from "../types/field-space";
-import { SpaceField } from "../types/space-field";
-import { TypeDesc } from "../types/type-desc";
+import {FieldSpace} from '../types/field-space';
+import {SpaceField} from '../types/space-field';
+import {TypeDesc} from '../types/type-desc';
 
 export class WildSpaceField extends SpaceField {
   constructor(readonly wildText: string) {
@@ -33,7 +33,7 @@ export class WildSpaceField extends SpaceField {
   }
 
   typeDesc(): TypeDesc {
-    throw new Error("should never ask a wild field for its type");
+    throw new Error('should never ask a wild field for its type');
   }
 
   getQueryFieldDef(_fs: FieldSpace): QueryFieldDef {

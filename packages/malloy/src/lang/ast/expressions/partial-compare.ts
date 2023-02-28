@@ -21,16 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { errorFor } from "../ast-utils";
-import { Comparison } from "../types/comparison";
-import { ExprValue } from "../types/expr-value";
-import { ExpressionDef } from "../types/expression-def";
-import { FieldSpace } from "../types/field-space";
+import {errorFor} from '../ast-utils';
+import {Comparison} from '../types/comparison';
+import {ExprValue} from '../types/expr-value';
+import {ExpressionDef} from '../types/expression-def';
+import {FieldSpace} from '../types/field-space';
 
 export class PartialCompare extends ExpressionDef {
-  elementType = "<=> a";
+  elementType = '<=> a';
   constructor(readonly op: Comparison, readonly right: ExpressionDef) {
-    super({ "right": right });
+    super({right: right});
   }
 
   granular(): boolean {
@@ -46,7 +46,7 @@ export class PartialCompare extends ExpressionDef {
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
-    this.log(`Partial comparison does not have a value`);
-    return errorFor("no value for partial compare");
+    this.log('Partial comparison does not have a value');
+    return errorFor('no value for partial compare');
   }
 }

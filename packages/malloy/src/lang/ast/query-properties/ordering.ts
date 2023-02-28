@@ -21,25 +21,25 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { OrderBy as ModelOrderBy } from "../../../model/malloy_types";
+import {OrderBy as ModelOrderBy} from '../../../model/malloy_types';
 
-import { FieldName, FieldSpace } from "../types/field-space";
-import { ListOf, MalloyElement } from "../types/malloy-element";
+import {FieldName, FieldSpace} from '../types/field-space';
+import {ListOf, MalloyElement} from '../types/malloy-element';
 
 export class OrderBy extends MalloyElement {
-  elementType = "orderBy";
+  elementType = 'orderBy';
   constructor(
     readonly field: number | FieldName,
-    readonly dir?: "asc" | "desc"
+    readonly dir?: 'asc' | 'desc'
   ) {
     super();
     if (field instanceof FieldName) {
-      this.has({ "field": field });
+      this.has({field: field});
     }
   }
 
   get modelField(): string | number {
-    return typeof this.field === "number" ? this.field : this.field.refString;
+    return typeof this.field === 'number' ? this.field : this.field.refString;
   }
 
   getOrderBy(_fs: FieldSpace): ModelOrderBy {
@@ -50,7 +50,7 @@ export class OrderBy extends MalloyElement {
     //     this.field.log(entry.error);
     //   }
     // }
-    const orderElement: ModelOrderBy = { "field": this.modelField };
+    const orderElement: ModelOrderBy = {field: this.modelField};
     if (this.dir) {
       orderElement.dir = this.dir;
     }
@@ -60,10 +60,10 @@ export class OrderBy extends MalloyElement {
 
 export class Ordering extends ListOf<OrderBy> {
   constructor(list: OrderBy[]) {
-    super("ordering", list);
+    super('ordering', list);
   }
 
   getOrderBy(fs: FieldSpace): ModelOrderBy[] {
-    return this.list.map((el) => el.getOrderBy(fs));
+    return this.list.map(el => el.getOrderBy(fs));
   }
 }

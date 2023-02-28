@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { indent } from "../model/utils";
+import {indent} from '../model/utils';
 import {
   DateUnit,
   Expr,
@@ -34,60 +34,60 @@ import {
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  mkExpr
-} from "../model/malloy_types";
-import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
+  mkExpr,
+} from '../model/malloy_types';
+import {Dialect, DialectFieldList, FunctionInfo} from './dialect';
 
 const castMap: Record<string, string> = {
-  "number": "double precision",
-  "string": "varchar"
+  number: 'double precision',
+  string: 'varchar',
 };
 
 const pgExtractionMap: Record<string, string> = {
-  "day_of_week": "dow",
-  "day_of_year": "doy"
+  day_of_week: 'dow',
+  day_of_year: 'doy',
 };
 
 const pgMakeIntervalMap: Record<string, string> = {
-  "year": "years",
-  "month": "months",
-  "week": "weeks",
-  "day": "days",
-  "hour": "hours",
-  "minute": "mins",
-  "second": "secs"
+  year: 'years',
+  month: 'months',
+  week: 'weeks',
+  day: 'days',
+  hour: 'hours',
+  minute: 'mins',
+  second: 'secs',
 };
 
 const inSeconds: Record<string, number> = {
-  "second": 1,
-  "minute": 60,
-  "hour": 3600
+  second: 1,
+  minute: 60,
+  hour: 3600,
 };
 
 export class PostgresDialect extends Dialect {
-  name = "postgres";
-  defaultNumberType = "DOUBLE PRECISION";
-  udfPrefix = "pg_temp.__udf";
+  name = 'postgres';
+  defaultNumberType = 'DOUBLE PRECISION';
+  udfPrefix = 'pg_temp.__udf';
   hasFinalStage = true;
-  stringTypeName = "VARCHAR";
+  stringTypeName = 'VARCHAR';
   divisionIsInteger = true;
   supportsSumDistinctFunction = false;
   unnestWithNumbers = false;
-  defaultSampling = { "rows": 50000 };
+  defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
   supportsCTEinCoorelatedSubQueries = true;
   dontUnionIndex = false;
   supportsQualify = false;
 
   functionInfo: Record<string, FunctionInfo> = {
-    "concat": { "returnType": "string" }
+    concat: {returnType: 'string'},
   };
 
   quoteTablePath(tablePath: string): string {
     return tablePath
-      .split(".")
-      .map((part) => `"${part}"`)
-      .join(".");
+      .split('.')
+      .map(part => `"${part}"`)
+      .join('.');
   }
 
   sqlGroupSetTable(groupSetCount: number): string {
@@ -101,13 +101,13 @@ export class PostgresDialect extends Dialect {
   mapFields(fieldList: DialectFieldList): string {
     return fieldList
       .map(
-        (f) =>
+        f =>
           `\n  ${f.sqlExpression}${
-            f.type == "number" ? `::${this.defaultNumberType}` : ""
+            f.type === 'number' ? `::${this.defaultNumberType}` : ''
           } as ${f.sqlOutputName}`
         //`${f.sqlExpression} ${f.type} as ${f.sqlOutputName}`
       )
-      .join(", ");
+      .join(', ');
   }
 
   sqlAggregateTurtle(
@@ -116,7 +116,7 @@ export class PostgresDialect extends Dialect {
     orderBy: string | undefined,
     limit: number | undefined
   ): string {
-    let tail = "";
+    let tail = '';
     if (limit !== undefined) {
       tail += `[1:${limit}]`;
     }
@@ -127,8 +127,8 @@ export class PostgresDialect extends Dialect {
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const fields = fieldList
-      .map((f) => `${f.sqlExpression} as ${f.sqlOutputName}`)
-      .join(", ");
+      .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
+      .join(', ');
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}))`;
   }
 
@@ -210,7 +210,7 @@ export class PostgresDialect extends Dialect {
   }
 
   sqlGenerateUUID(): string {
-    return `GEN_RANDOM_UUID()`;
+    return 'GEN_RANDOM_UUID()';
   }
 
   sqlFieldReference(
@@ -223,12 +223,12 @@ export class PostgresDialect extends Dialect {
     let ret = `${alias}->>'${fieldName}'`;
     if (isNested) {
       switch (fieldType) {
-        case "string":
+        case 'string':
           break;
-        case "number":
+        case 'number':
           ret = `(${ret})::double precision`;
           break;
-        case "struct":
+        case 'struct':
           ret = `(${ret})::jsonb`;
           break;
       }
@@ -275,7 +275,7 @@ export class PostgresDialect extends Dialect {
   //  with the expiration time. https://www.postgresql.org/docs/current/sql-comment.html
   //  and have a reaper that read comments.
   sqlCreateTableAsSelect(_tableName: string, _sql: string): string {
-    throw new Error("Not implemented Yet");
+    throw new Error('Not implemented Yet');
   }
 
   sqlNow(): Expr {
@@ -284,7 +284,7 @@ export class PostgresDialect extends Dialect {
 
   sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {
     // adjusting for monday/sunday weeks
-    const week = units == "week";
+    const week = units === 'week';
     const truncThis = week
       ? mkExpr`${sqlTime.value}+interval'1'day`
       : sqlTime.value;
@@ -295,17 +295,17 @@ export class PostgresDialect extends Dialect {
   sqlExtract(from: TimeValue, units: ExtractUnit): Expr {
     const pgUnits = pgExtractionMap[units] || units;
     const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${from.value})`;
-    return units == "day_of_week" ? mkExpr`(${extracted}+1)` : extracted;
+    return units === 'day_of_week' ? mkExpr`(${extracted}+1)` : extracted;
   }
 
   sqlAlterTime(
-    op: "+" | "-",
+    op: '+' | '-',
     expr: TimeValue,
     n: Expr,
     timeframe: DateUnit
   ): Expr {
-    if (timeframe == "quarter") {
-      timeframe = "month";
+    if (timeframe === 'quarter') {
+      timeframe = 'month';
       n = mkExpr`${n}*3`;
     }
     const interval = mkExpr`make_interval(${pgMakeIntervalMap[timeframe]}=>${n})`;
@@ -328,9 +328,9 @@ export class PostgresDialect extends Dialect {
     type: TimeFieldType,
     _timezone: string
   ): string {
-    if (type == "date") {
+    if (type === 'date') {
       return `DATE('${timeString}')`;
-    } else if (type == "timestamp") {
+    } else if (type === 'timestamp') {
       return `TIMESTAMP '${timeString}'`;
     } else {
       throw new Error(`Unknown Literal time format ${type}`);
@@ -348,26 +348,26 @@ export class PostgresDialect extends Dialect {
       lVal = mkExpr`EXTRACT(EPOCH FROM ${lVal})`;
       rVal = mkExpr`EXTRACT(EPOCH FROM ${rVal})`;
       const duration = mkExpr`(${rVal} - ${lVal})`;
-      return units == "second"
+      return units === 'second'
         ? duration
         : mkExpr`TRUNC(${duration}/${inSeconds[units].toString()})`;
     }
-    if (units === "day") {
+    if (units === 'day') {
       return mkExpr`${rVal}::date - ${lVal}::date`;
     }
     const yearDiff = mkExpr`(DATE_PART('year', ${rVal}) - DATE_PART('year', ${lVal}))`;
-    if (units == "year") {
+    if (units === 'year') {
       return yearDiff;
     }
-    if (units == "week") {
+    if (units === 'week') {
       const dayDiffForWeekStart = mkExpr`(DATE_TRUNC('week', ${rVal} + '1 day'::interval)::date - DATE_TRUNC('week', ${lVal} + '1 day'::interval)::date)`;
       return mkExpr`${dayDiffForWeekStart} / 7`;
     }
-    if (units == "month") {
+    if (units === 'month') {
       const monthDiff = mkExpr`DATE_PART('month', ${rVal}) - DATE_PART('month', ${lVal})`;
       return mkExpr`${yearDiff} * 12 + ${monthDiff}`;
     }
-    if (units == "quarter") {
+    if (units === 'quarter') {
       const qDiff = mkExpr`DATE_PART('quarter', ${rVal}) - DATE_PART('quarter', ${lVal})`;
       return mkExpr`${yearDiff} * 4 + ${qDiff}`;
     }
@@ -399,7 +399,7 @@ export class PostgresDialect extends Dialect {
   }
 
   sqlOrderBy(orderTerms: string[]): string {
-    return `ORDER BY ${orderTerms.map((t) => `${t} NULLS LAST`).join(",")}`;
+    return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
   }
 
   sqlLiteralString(literal: string): string {

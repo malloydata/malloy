@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DocumentLocation } from "../model/malloy_types";
+import {DocumentLocation} from '../model/malloy_types';
 
-export type LogSeverity = "error" | "warn" | "debug";
+export type LogSeverity = 'error' | 'warn' | 'debug';
 
 /**
  * Default severity is "error"
@@ -63,7 +63,7 @@ export class MessageLog implements MessageLogger {
   }
 
   hasErrors(): boolean {
-    const firstError = this.rawLog.find((l) => l.severity !== "warn");
+    const firstError = this.rawLog.find(l => l.severity !== 'warn');
     return firstError !== undefined;
   }
 

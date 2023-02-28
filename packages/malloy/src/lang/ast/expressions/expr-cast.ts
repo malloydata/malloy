@@ -21,33 +21,33 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { castTo } from "../time-utils";
-import { ExprValue } from "../types/expr-value";
-import { ExpressionDef } from "../types/expression-def";
-import { FieldSpace } from "../types/field-space";
-import { compressExpr } from "./utils";
+import {castTo} from '../time-utils';
+import {ExprValue} from '../types/expr-value';
+import {ExpressionDef} from '../types/expression-def';
+import {FieldSpace} from '../types/field-space';
+import {compressExpr} from './utils';
 
-export type CastType = "string" | "number" | "boolean" | "date" | "timestamp";
+export type CastType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp';
 export function isCastType(t: string): t is CastType {
-  return ["string", "number", "boolean", "date", "timestamp"].includes(t);
+  return ['string', 'number', 'boolean', 'date', 'timestamp'].includes(t);
 }
 
 export class ExprCast extends ExpressionDef {
-  elementType = "cast";
+  elementType = 'cast';
   constructor(
     readonly expr: ExpressionDef,
     readonly castType: CastType,
     readonly safe = false
   ) {
-    super({ "expr": expr });
+    super({expr: expr});
   }
 
   getExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
     return {
-      "dataType": this.castType,
-      "expressionType": expr.expressionType,
-      "value": compressExpr(castTo(this.castType, expr.value, this.safe))
+      dataType: this.castType,
+      expressionType: expr.expressionType,
+      value: compressExpr(castTo(this.castType, expr.value, this.safe)),
     };
   }
 }

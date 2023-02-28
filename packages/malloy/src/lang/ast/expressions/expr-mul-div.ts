@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { BinaryNumeric } from "./binary-numeric";
+import {BinaryNumeric} from './binary-numeric';
 
-export class ExprMulDiv extends BinaryNumeric<"*" | "/" | "%"> {
-  elementType = "*/%";
+export class ExprMulDiv extends BinaryNumeric<'*' | '/' | '%'> {
+  elementType = '*/%';
 }

@@ -21,14 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DataArray } from "@malloydata/malloy";
-import * as lite from "vega-lite";
-import { HTMLChartRenderer } from "./chart";
-import { formatTitle, getColorScale } from "./utils";
-import { DEFAULT_SPEC } from "./vega_spec";
+import {DataArray} from '@malloydata/malloy';
+import * as lite from 'vega-lite';
+import {HTMLChartRenderer} from './chart';
+import {formatTitle, getColorScale} from './utils';
+import {DEFAULT_SPEC} from './vega_spec';
 
 export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
-  abstract getMark(): "bar" | "line" | "point";
+  abstract getMark(): 'bar' | 'line' | 'point';
 
   getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
     const fields = data.field.intrinsicFields;
@@ -49,61 +49,61 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
     const colorDef =
       colorField !== undefined
         ? {
-            "field": colorField.name,
-            "type": colorType,
-            "axis": { "title": formatTitle(this.options, colorField.name) },
-            "scale": getColorScale(colorType, mark === "bar")
+            field: colorField.name,
+            type: colorType,
+            axis: {title: formatTitle(this.options, colorField.name)},
+            scale: getColorScale(colorType, mark === 'bar'),
           }
-        : { "value": "#4285F4" };
+        : {value: '#4285F4'};
 
     const sizeDef = sizeField
       ? {
-          "field": sizeField.name,
-          "type": sizeType,
-          "axis": { "title": formatTitle(this.options, sizeField.name) }
+          field: sizeField.name,
+          type: sizeType,
+          axis: {title: formatTitle(this.options, sizeField.name)},
         }
       : undefined;
 
     const shapeDef = shapeField
       ? {
-          "field": shapeField.name,
-          "type": shapeType,
-          "axis": { "title": formatTitle(this.options, shapeField.name) }
+          field: shapeField.name,
+          type: shapeType,
+          axis: {title: formatTitle(this.options, shapeField.name)},
         }
       : undefined;
 
-    const xSort = xType === "nominal" ? null : undefined;
-    const ySort = yType === "nominal" ? null : undefined;
+    const xSort = xType === 'nominal' ? null : undefined;
+    const ySort = yType === 'nominal' ? null : undefined;
 
     const xDef = {
-      "field": xField.name,
-      "type": xType,
-      "sort": xSort,
-      "axis": { "title": formatTitle(this.options, xField.name) }
+      field: xField.name,
+      type: xType,
+      sort: xSort,
+      axis: {title: formatTitle(this.options, xField.name)},
     };
 
     const yDef = {
-      "field": yField.name,
-      "type": yType,
-      "sort": ySort,
-      "axis": { "title": formatTitle(this.options, yField.name) }
+      field: yField.name,
+      type: yType,
+      sort: ySort,
+      axis: {title: formatTitle(this.options, yField.name)},
     };
 
     return {
       ...DEFAULT_SPEC,
       ...this.getSize(),
-      "data": {
-        "values": this.mapData(data)
+      data: {
+        values: this.mapData(data),
       },
       mark,
-      "encoding": {
-        "x": xDef,
-        "y": yDef,
-        "size": sizeDef,
-        "color": colorDef,
-        "shape": shapeDef
+      encoding: {
+        x: xDef,
+        y: yDef,
+        size: sizeDef,
+        color: colorDef,
+        shape: shapeDef,
       },
-      "background": "transparent"
+      background: 'transparent',
     };
   }
 }

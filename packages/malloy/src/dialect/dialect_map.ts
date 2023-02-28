@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DuckDBDialect } from "./duckdb";
-import { Dialect } from "./dialect";
-import { PostgresDialect } from "./postgres";
-import { StandardSQLDialect } from "./standardsql";
+import {DuckDBDialect} from './duckdb';
+import {Dialect} from './dialect';
+import {PostgresDialect} from './postgres';
+import {StandardSQLDialect} from './standardsql';
 
 const dialectMap = new Map<string, Dialect>();
 

@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DataColumn } from "@malloydata/malloy";
-import { HTMLTextRenderer } from "./text";
+import {DataColumn} from '@malloydata/malloy';
+import {HTMLTextRenderer} from './text';
 
 export class HTMLCurrencyRenderer extends HTMLTextRenderer {
   override getText(data: DataColumn): string | null {
@@ -31,11 +31,11 @@ export class HTMLCurrencyRenderer extends HTMLTextRenderer {
     }
 
     // TODO get this from renderer options
-    const unitText = "$";
+    const unitText = '$';
 
-    const numText = data.number.value.toLocaleString("en-US", {
-      "minimumFractionDigits": 2,
-      "maximumFractionDigits": 2
+    const numText = data.number.value.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     });
 
     return `${unitText}${numText}`;

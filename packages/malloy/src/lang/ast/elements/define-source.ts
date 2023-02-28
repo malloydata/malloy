@@ -21,21 +21,21 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ModelDataRequest } from "../../translate-response";
+import {ModelDataRequest} from '../../translate-response';
 
-import { ErrorFactory } from "../error-factory";
-import { HasParameter } from "../parameters/has-parameter";
+import {ErrorFactory} from '../error-factory';
+import {HasParameter} from '../parameters/has-parameter';
 import {
   DocStatement,
   Document,
   MalloyElement,
-  RunList
-} from "../types/malloy-element";
+  RunList,
+} from '../types/malloy-element';
 
-import { Source } from "./source";
+import {Source} from './source';
 
 export class DefineSource extends MalloyElement implements DocStatement {
-  elementType = "defineSource";
+  elementType = 'defineSource';
   readonly parameters?: HasParameter[];
   constructor(
     readonly name: string,
@@ -43,7 +43,7 @@ export class DefineSource extends MalloyElement implements DocStatement {
     readonly exported: boolean,
     params?: MalloyElement[]
   ) {
-    super({ "explore": theSource });
+    super({explore: theSource});
     if (params) {
       this.parameters = [];
       for (const el of params) {
@@ -55,7 +55,7 @@ export class DefineSource extends MalloyElement implements DocStatement {
           );
         }
       }
-      this.has({ "parameters": this.parameters });
+      this.has({parameters: this.parameters});
     }
   }
 
@@ -68,12 +68,12 @@ export class DefineSource extends MalloyElement implements DocStatement {
         return;
       }
       doc.setEntry(this.name, {
-        "entry": {
+        entry: {
           ...structDef,
-          "as": this.name,
-          "location": this.location
+          as: this.name,
+          location: this.location,
         },
-        "exported": this.exported
+        exported: this.exported,
       });
     }
   }
@@ -81,7 +81,7 @@ export class DefineSource extends MalloyElement implements DocStatement {
 
 export class DefineSourceList extends RunList implements DocStatement {
   constructor(sourceList: DefineSource[]) {
-    super("defineSources", sourceList);
+    super('defineSources', sourceList);
   }
 
   execute(doc: Document): ModelDataRequest {

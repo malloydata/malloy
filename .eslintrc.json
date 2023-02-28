@@ -1,0 +1,39 @@
+{
+  "extends": "./node_modules/gts/",
+  "parserOptions": {
+    "warnOnUnsupportedTypeScriptVersion": false
+  },
+  "ignorePatterns": [
+    "*.d.ts",
+    "node_modules/",
+    "packages/malloy/src/lang/lib/Malloy",
+    "dist/"
+  ],
+  "rules": {
+    "no-console": "warn",
+    "prettier/prettier": "error",
+    "sort-keys": "off",
+    "no-duplicate-imports": "error",
+    "no-restricted-imports": [
+      "error",
+      {
+        "patterns": ["@malloydata/malloy/src/*"],
+        "paths": [
+          {
+            "name": "lodash",
+            "message": "Import [module] from lodash/[module] instead"
+          }
+        ]
+      }
+    ],
+    "no-throw-literal": "error",
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
+    ],
+    "@typescript-eslint/parameter-properties": [
+      "warn",
+      { "prefer": "parameter-property" }
+    ]
+  }
+}

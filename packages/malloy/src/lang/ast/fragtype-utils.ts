@@ -21,14 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExpressionType } from "../../model";
-import { FieldValueType, TypeDesc } from "./types/type-desc";
+import {ExpressionType} from '../../model';
+import {FieldValueType, TypeDesc} from './types/type-desc';
 
 function mkFragType(
   dataType: FieldValueType,
-  expressionType: ExpressionType = "scalar"
+  expressionType: ExpressionType = 'scalar'
 ): TypeDesc {
-  return { dataType, expressionType };
+  return {dataType, expressionType};
 }
 
 /**
@@ -42,7 +42,7 @@ export class FT {
    */
   static in(check: TypeDesc | undefined, from: TypeDesc[]): boolean {
     if (check) {
-      const found = from.find((okType) => FT.eq(okType, check));
+      const found = from.find(okType => FT.eq(okType, check));
       return found !== undefined;
     }
     return false;
@@ -70,7 +70,7 @@ export class FT {
   static typeEq(left: TypeDesc, right: TypeDesc, nullOk = false): boolean {
     const maybeEq = left.dataType === right.dataType;
     const nullEq =
-      nullOk && (left.dataType === "null" || right.dataType === "null");
+      nullOk && (left.dataType === 'null' || right.dataType === 'null');
     return maybeEq || nullEq;
   }
 
@@ -81,31 +81,31 @@ export class FT {
    * @param types List of type or objects with types
    */
   static inspect(...types: (TypeDesc | undefined)[]): string {
-    const strings = types.map((type) => {
+    const strings = types.map(type => {
       if (type) {
         let inspected: string = type.dataType;
-        if (type.expressionType != "scalar") {
+        if (type.expressionType !== 'scalar') {
           inspected = `${type.expressionType} ${inspected}`;
         }
         return inspected;
       }
-      return "undefined";
+      return 'undefined';
     });
-    return strings.join(",");
+    return strings.join(',');
   }
 
-  static nullT = mkFragType("null");
-  static numberT = mkFragType("number");
-  static stringT = mkFragType("string");
-  static dateT = mkFragType("date");
-  static timestampT = mkFragType("timestamp");
-  static boolT = mkFragType("boolean");
+  static nullT = mkFragType('null');
+  static numberT = mkFragType('number');
+  static stringT = mkFragType('string');
+  static dateT = mkFragType('date');
+  static timestampT = mkFragType('timestamp');
+  static boolT = mkFragType('boolean');
   static anyAtomicT = [
     FT.numberT,
     FT.stringT,
     FT.dateT,
     FT.timestampT,
-    FT.boolT
+    FT.boolT,
   ];
-  static aggregateBoolT = mkFragType("boolean", "aggregate");
+  static aggregateBoolT = mkFragType('boolean', 'aggregate');
 }

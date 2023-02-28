@@ -21,18 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { StructDef } from "../../../model/malloy_types";
-import { FieldListEdit } from "../source-properties/field-list-edit";
-import { RenameField } from "../source-properties/renames";
-import { Join } from "../query-properties/joins";
-import { DynamicSpace } from "./dynamic-space";
-import { QueryFieldAST, TurtleDecl } from "../query-properties/nest";
-import { FieldDefinitionValue } from "./field-definition-value";
-import { JoinSpaceField } from "./join-space-field";
-import { RenameSpaceField } from "./rename-space-field";
-import { FieldDeclaration } from "../query-items/field-declaration";
-import { SpaceField } from "../types/space-field";
-import { ExploreField } from "../types/explore-field";
+import {StructDef} from '../../../model/malloy_types';
+import {FieldListEdit} from '../source-properties/field-list-edit';
+import {RenameField} from '../source-properties/renames';
+import {Join} from '../query-properties/joins';
+import {DynamicSpace} from './dynamic-space';
+import {QueryFieldAST, TurtleDecl} from '../query-properties/nest';
+import {FieldDefinitionValue} from './field-definition-value';
+import {JoinSpaceField} from './join-space-field';
+import {RenameSpaceField} from './rename-space-field';
+import {FieldDeclaration} from '../query-items/field-declaration';
+import {SpaceField} from '../types/space-field';
+import {ExploreField} from '../types/explore-field';
 
 export class RefinedSpace extends DynamicSpace {
   /**
@@ -47,8 +47,8 @@ export class RefinedSpace extends DynamicSpace {
       const oldMap = edited.entries();
       edited.dropEntries();
       for (const [symbol, value] of oldMap) {
-        const included = !!names.find((f) => f.refString === symbol);
-        const accepting = choose.edit === "accept";
+        const included = !!names.find(f => f.refString === symbol);
+        const accepting = choose.edit === 'accept';
         if (included === accepting) {
           edited.setEntry(symbol, value);
         }

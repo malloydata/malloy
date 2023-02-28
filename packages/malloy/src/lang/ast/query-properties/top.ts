@@ -23,21 +23,21 @@
 
 import {
   By as ModelBy,
-  expressionIsAggregate
-} from "../../../model/malloy_types";
+  expressionIsAggregate,
+} from '../../../model/malloy_types';
 
-import { compressExpr } from "../expressions/utils";
-import { ExpressionDef } from "../types/expression-def";
-import { FieldName, FieldSpace } from "../types/field-space";
-import { MalloyElement } from "../types/malloy-element";
+import {compressExpr} from '../expressions/utils';
+import {ExpressionDef} from '../types/expression-def';
+import {FieldName, FieldSpace} from '../types/field-space';
+import {MalloyElement} from '../types/malloy-element';
 
 type TopInit = FieldName | ExpressionDef;
 
 export class Top extends MalloyElement {
-  elementType = "top";
+  elementType = 'top';
   constructor(readonly limit: number, readonly by?: TopInit) {
     super();
-    this.has({ "by": by });
+    this.has({by: by});
   }
 
   getBy(fs: FieldSpace): ModelBy | undefined {
@@ -48,13 +48,13 @@ export class Top extends MalloyElement {
         // if (entry.error) {
         //   this.by.log(entry.error);
         // }
-        return { "by": "name", "name": this.by.refString };
+        return {by: 'name', name: this.by.refString};
       } else {
         const byExpr = this.by.getExpression(fs);
         if (expressionIsAggregate(byExpr.expressionType)) {
-          this.log("top by expression must be an aggregate");
+          this.log('top by expression must be an aggregate');
         }
-        return { "by": "expression", "e": compressExpr(byExpr.value) };
+        return {by: 'expression', e: compressExpr(byExpr.value)};
       }
     }
     return undefined;

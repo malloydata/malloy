@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldDef, QueryFieldDef } from "../model/malloy_types";
+import {FieldDef, QueryFieldDef} from '../model/malloy_types';
 
 type Field = QueryFieldDef | FieldDef;
 
 export function nameOf(qfd: Field): string {
-  if (typeof qfd == "string") {
+  if (typeof qfd === 'string') {
     return qfd;
   }
   return qfd.as || qfd.name;
@@ -36,11 +36,11 @@ export function mergeFields<T extends Field>(
   older: T[] | undefined,
   newer: T[]
 ): T[] {
-  if (older == undefined) {
+  if (older === undefined) {
     return newer;
   }
-  const redefined = new Set(newer.map((f) => nameOf(f)));
-  const merged = older.filter((f) => !redefined.has(nameOf(f)));
+  const redefined = new Set(newer.map(f => nameOf(f)));
+  const merged = older.filter(f => !redefined.has(nameOf(f)));
   merged.push(...newer);
   return merged;
 }

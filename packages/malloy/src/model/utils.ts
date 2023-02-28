@@ -21,20 +21,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import md5 from "md5";
+import md5 from 'md5';
 
 /** simple indent function */
 export function indent(s: string): string {
   const re = /(^|\n)/g;
   const lastNewline = /\n {2}$/;
-  return s.replace(re, "$1  ").replace(lastNewline, "\n");
+  return s.replace(re, '$1  ').replace(lastNewline, '\n');
 }
 
 /**
  * Generate a SQL string literal from a given `input` string, safe, e.g., to be used in `WHERE` clauses.
  */
 export function generateSQLStringLiteral(input: string): string {
-  const escapedString = input.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
+  const escapedString = input.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   return `'${escapedString}'`;
 }
 
@@ -76,26 +76,26 @@ export class AndChain {
 
   sqlOr(): string {
     if (this.empty()) {
-      return "";
+      return '';
     }
-    return this.clauses.map((c) => `(${c})`).join("OR ") + "\n";
+    return this.clauses.map(c => `(${c})`).join('OR ') + '\n';
   }
 
-  sql(whereOrHaving?: "where" | "having"): string {
+  sql(whereOrHaving?: 'where' | 'having'): string {
     if (this.empty()) {
-      return "";
+      return '';
     }
 
-    let prefix = "";
-    let postfix = "";
+    let prefix = '';
+    let postfix = '';
     if (whereOrHaving) {
-      prefix = whereOrHaving.toUpperCase() + " ";
-      postfix = "\n";
+      prefix = whereOrHaving.toUpperCase() + ' ';
+      postfix = '\n';
     }
     if (this.clauses.length === 1) {
       return prefix + this.clauses[0] + postfix;
     }
-    return prefix + this.clauses.map((c) => `(${c})`).join("\nAND ") + postfix;
+    return prefix + this.clauses.map(c => `(${c})`).join('\nAND ') + postfix;
   }
 }
 

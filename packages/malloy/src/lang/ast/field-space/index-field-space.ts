@@ -21,15 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { IndexSegment, PipeSegment } from "../../../model/malloy_types";
+import {IndexSegment, PipeSegment} from '../../../model/malloy_types';
 import {
   FieldReference,
-  WildcardFieldReference
-} from "../query-items/field-references";
-import { QuerySpace } from "./query-spaces";
+  WildcardFieldReference,
+} from '../query-items/field-references';
+import {QuerySpace} from './query-spaces';
 
 export class IndexFieldSpace extends QuerySpace {
-  readonly segmentType = "index";
+  readonly segmentType = 'index';
   fieldList = new Set<string>();
 
   addReference(ref: FieldReference): void {
@@ -45,15 +45,15 @@ export class IndexFieldSpace extends QuerySpace {
   getPipeSegment(refineIndex?: PipeSegment): IndexSegment {
     if (refineIndex && refineIndex.fields) {
       for (const exists of refineIndex.fields) {
-        if (typeof exists == "string") {
+        if (typeof exists === 'string') {
           this.fieldList.add(exists);
         }
       }
     }
     this.isComplete();
     return {
-      "type": "index",
-      "fields": Array.from(this.fieldList.values())
+      type: 'index',
+      fields: Array.from(this.fieldList.values()),
     };
   }
 }

@@ -24,8 +24,8 @@
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
-import { RuntimeList, allDatabases } from "../../runtimes";
-import { databasesFromEnvironmentOr } from "../../util";
+import {RuntimeList, allDatabases} from '../../runtimes';
+import {databasesFromEnvironmentOr} from '../../util';
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
@@ -43,7 +43,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         }
     `
     );
-    let result = await model.search("airports", "SANTA", 10);
+    let result = await model.search('airports', 'SANTA', 10);
 
     // if (result !== undefined) {
     //   console.log(result);
@@ -52,17 +52,17 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     // }
     expect(result).toBeDefined();
     if (result !== undefined) {
-      expect(result[0].fieldName).toBe("county");
-      expect(result[0].fieldValue).toBe("SANTA ROSA");
+      expect(result[0].fieldName).toBe('county');
+      expect(result[0].fieldValue).toBe('SANTA ROSA');
       expect(result[0].weight).toBe(26);
       expect(result.length).toBe(10);
     }
 
-    result = await model.search("airports", "SANTA A", 100, "city");
+    result = await model.search('airports', 'SANTA A', 100, 'city');
     if (result !== undefined) {
       // console.log(result);
-      expect(result[0].fieldName).toBe("city");
-      expect(result[0].fieldValue).toBe("SANTA ANA");
+      expect(result[0].fieldName).toBe('city');
+      expect(result[0].fieldValue).toBe('SANTA ANA');
     }
   });
 
@@ -73,7 +73,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         }
     `
     );
-    const result = await model.searchValueMap("airports");
+    const result = await model.searchValueMap('airports');
     // if (result !== undefined) {
     //   console.log(result[4].values);
     // } else {
@@ -81,7 +81,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     // }
     expect(result).toBeDefined();
     if (result !== undefined) {
-      expect(result[4].values[0].fieldValue).toBe("WASHINGTON");
+      expect(result[4].values[0].fieldValue).toBe('WASHINGTON');
       expect(result[4].values[0].weight).toBe(214);
     }
   });
@@ -100,12 +100,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     // console.log(result.data.toObject());
-    expect(result.data.path(0, "fieldName").value).toBe("one");
-    expect(result.data.path(0, "weight").value).toBe(51);
+    expect(result.data.path(0, 'fieldName').value).toBe('one');
+    expect(result.data.path(0, 'weight').value).toBe(51);
   });
 
   // bigquery doesn't support row count based sampling.
-  (databaseName === "bigquery" ? it.skip : it)(
+  (databaseName === 'bigquery' ? it.skip : it)(
     `index rows count - ${databaseName}`,
     async () => {
       const result = await runtime
@@ -120,8 +120,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     `
         )
         .run();
-      expect(result.data.path(0, "fieldName").value).toBe("one");
-      expect(result.data.path(0, "weight").value).toBe(10);
+      expect(result.data.path(0, 'fieldName').value).toBe('one');
+      expect(result.data.path(0, 'weight').value).toBe(10);
     }
   );
 
@@ -141,7 +141,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     // console.log(result.sql);
     // Hard to get consistent results here so just check that we get a value back.
     //console.log(result.data.toObject());
-    expect(result.data.path(0, "fieldName").value).toBe("one");
+    expect(result.data.path(0, 'fieldName').value).toBe('one');
   });
 
   // it(`fanned data index  - ${databaseName}`, async () => {

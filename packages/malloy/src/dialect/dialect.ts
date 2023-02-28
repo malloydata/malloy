@@ -32,8 +32,8 @@ import {
   TimeValue,
   TimestampUnit,
   TypecastFragment,
-  mkExpr
-} from "../model/malloy_types";
+  mkExpr,
+} from '../model/malloy_types';
 
 interface DialectField {
   type: string;
@@ -140,7 +140,7 @@ export abstract class Dialect {
   ): string;
 
   sqlFinalStage(_lastStageName: string, _fields: string[]): string {
-    throw new Error("Dialect has no final Stage but called Anyway");
+    throw new Error('Dialect has no final Stage but called Anyway');
   }
 
   // default implementation will probably work most of the time
@@ -159,7 +159,7 @@ export abstract class Dialect {
   ): Expr;
 
   abstract sqlAlterTime(
-    op: "+" | "-",
+    op: '+' | '-',
     expr: TimeValue,
     n: Expr,
     timeframe: TimestampUnit
@@ -189,35 +189,35 @@ export abstract class Dialect {
 
   dialectExpr(df: DialectFragment): Expr {
     switch (df.function) {
-      case "now":
+      case 'now':
         return this.sqlNow();
-      case "timeDiff":
+      case 'timeDiff':
         return this.sqlMeasureTime(df.left, df.right, df.units);
-      case "delta":
+      case 'delta':
         return this.sqlAlterTime(df.op, df.base, df.delta, df.units);
-      case "trunc":
+      case 'trunc':
         return this.sqlTrunc(df.expr, df.units);
-      case "extract":
+      case 'extract':
         return this.sqlExtract(df.expr, df.units);
-      case "cast":
+      case 'cast':
         return this.sqlCast(df);
-      case "regexpMatch":
+      case 'regexpMatch':
         return this.sqlRegexpMatch(df.expr, df.regexp);
-      case "div": {
+      case 'div': {
         if (this.divisionIsInteger) {
           return mkExpr`${df.numerator}*1.0/${df.denominator}`;
         }
         return mkExpr`${df.numerator}/${df.denominator}`;
       }
-      case "timeLiteral":
+      case 'timeLiteral':
         return [this.sqlLiteralTime(df.literal, df.literalType, df.timezone)];
-      case "stringLiteral":
+      case 'stringLiteral':
         return [this.sqlLiteralString(df.literal)];
     }
   }
 
   sqlSumDistinct(_key: string, _value: string): string {
-    return "sqlSumDistinct called bu not implemented";
+    return 'sqlSumDistinct called bu not implemented';
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
@@ -228,6 +228,6 @@ export abstract class Dialect {
   }
 
   sqlOrderBy(orderTerms: string[]): string {
-    return `ORDER BY ${orderTerms.join(",")}`;
+    return `ORDER BY ${orderTerms.join(',')}`;
   }
 }

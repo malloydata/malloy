@@ -27,12 +27,12 @@ import {
   QueryDataRow,
   Result,
   RunSQLOptions,
-  SingleConnectionRuntime
-} from "@malloydata/malloy";
-import { BigQueryConnection } from "@malloydata/db-bigquery";
-import { DuckDBConnection } from "@malloydata/db-duckdb";
-import { DuckDBWASMConnection } from "@malloydata/db-duckdb/wasm";
-import { PooledPostgresConnection } from "@malloydata/db-postgres";
+  SingleConnectionRuntime,
+} from '@malloydata/malloy';
+import {BigQueryConnection} from '@malloydata/db-bigquery';
+import {DuckDBConnection} from '@malloydata/db-duckdb';
+import {DuckDBWASMConnection} from '@malloydata/db-duckdb/wasm';
+import {PooledPostgresConnection} from '@malloydata/db-postgres';
 
 export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.
@@ -72,7 +72,7 @@ export class DuckDBTestConnection extends DuckDBConnection {
   // we probably need a better way to do this.
 
   constructor(name: string) {
-    super(name, "test/data/duckdb/duckdb_test.db");
+    super(name, 'test/data/duckdb/duckdb_test.db');
   }
 
   public async runSQL(
@@ -93,7 +93,7 @@ export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
   // we probably need a better way to do this.
 
   constructor(name: string) {
-    super(name, "test/data/duckdb/duckdb_test.db");
+    super(name, 'test/data/duckdb/duckdb_test.db');
   }
 
   public async runSQL(
@@ -116,7 +116,7 @@ export function rows(qr: Result): QueryDataRow[] {
   return qr.data.value;
 }
 
-export const allDatabases = ["postgres", "bigquery", "duckdb", "duckdb_wasm"];
+export const allDatabases = ['postgres', 'bigquery', 'duckdb', 'duckdb_wasm'];
 type RuntimeDatabaseNames = typeof allDatabases[number];
 
 export class RuntimeList {
@@ -126,20 +126,20 @@ export class RuntimeList {
     for (const dbName of databaseList || allDatabases) {
       let connection;
       switch (dbName) {
-        case "bigquery":
+        case 'bigquery':
           connection = new BigQueryTestConnection(
             dbName,
             {},
-            { "defaultProject": "malloy-data" }
+            {defaultProject: 'malloy-data'}
           );
           break;
-        case "postgres":
+        case 'postgres':
           connection = new PostgresTestConnection(dbName);
           break;
-        case "duckdb":
+        case 'duckdb':
           connection = new DuckDBTestConnection(dbName);
           break;
-        case "duckdb_wasm":
+        case 'duckdb_wasm':
           connection = new DuckDBWASMTestConnection(dbName);
           break;
         default:
@@ -158,6 +158,6 @@ export class RuntimeList {
     }
     // Unfortunate hack to avoid slow to die background threads tripping
     // up jest
-    await new Promise((resolve) => setTimeout(resolve, 10000));
+    await new Promise(resolve => setTimeout(resolve, 10000));
   }
 }

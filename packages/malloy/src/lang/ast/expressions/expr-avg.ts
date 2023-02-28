@@ -21,13 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldReference } from "../query-items/field-references";
-import { ExpressionDef } from "../types/expression-def";
-import { ExprAsymmetric } from "./expr-asymmetric";
+import {FieldReference} from '../query-items/field-references';
+import {ExpressionDef} from '../types/expression-def';
+import {ExprAsymmetric} from './expr-asymmetric';
 
 export class ExprAvg extends ExprAsymmetric {
   constructor(expr: ExpressionDef | undefined, source?: FieldReference) {
-    super("avg", expr, source);
-    this.has({ "source": source });
+    super('avg', expr, source);
+    this.has({source: source});
   }
 }

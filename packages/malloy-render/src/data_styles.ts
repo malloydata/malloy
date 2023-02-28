@@ -21,37 +21,37 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as lite from "vega-lite";
+import * as lite from 'vega-lite';
 
-export type DataStyles = { [fieldName: string]: RenderDef };
-export type ChartSize = "small" | "medium" | "large";
+export type DataStyles = {[fieldName: string]: RenderDef};
+export type ChartSize = 'small' | 'medium' | 'large';
 
 export type RenderDef =
-  | ({ renderer?: undefined } & DataRenderOptions)
-  | ({ renderer: "table" } & TableRenderOptions)
-  | ({ renderer: "dashboard" } & DashboardRenderOptions)
-  | ({ renderer: "text" } & TextRenderOptions)
-  | ({ renderer: "currency" } & CurrencyRenderOptions)
-  | ({ renderer: "image" } & ImageRenderOptions)
-  | ({ renderer: "time" } & TimeRenderOptions)
-  | ({ renderer: "json" } & JSONRenderOptions)
-  | ({ renderer: "single_value" } & SingleValueRenderOptions)
-  | ({ renderer: "list" } & ListRenderOptions)
-  | ({ renderer: "list_detail" } & ListDetailRenderOptions)
-  | ({ renderer: "cartesian_chart" } & CartesianChartRenderOptions)
-  | ({ renderer: "bar_chart" } & BarChartRenderOptions)
-  | ({ renderer: "scatter_chart" } & ScatterChartRenderOptions)
-  | ({ renderer: "line_chart" } & LineChartRenderOptions)
-  | ({ renderer: "point_map" } & PointMapRenderOptions)
-  | ({ renderer: "segment_map" } & SegmentMapRenderOptions)
-  | ({ renderer: "shape_map" } & ShapeMapRenderOptions)
-  | ({ renderer: "number" } & NumberRenderOptions)
-  | ({ renderer: "percent" } & PercentRenderOptions)
-  | ({ renderer: "boolean" } & BooleanRenderOptions)
-  | ({ renderer: "spark_line" } & SparkLineRenderOptions)
-  | ({ renderer: "bytes" } & BytesRenderOptions)
-  | ({ renderer: "link" } & LinkRenderOptions)
-  | ({ renderer: "vega" } & VegaRenderOptions);
+  | ({renderer?: undefined} & DataRenderOptions)
+  | ({renderer: 'table'} & TableRenderOptions)
+  | ({renderer: 'dashboard'} & DashboardRenderOptions)
+  | ({renderer: 'text'} & TextRenderOptions)
+  | ({renderer: 'currency'} & CurrencyRenderOptions)
+  | ({renderer: 'image'} & ImageRenderOptions)
+  | ({renderer: 'time'} & TimeRenderOptions)
+  | ({renderer: 'json'} & JSONRenderOptions)
+  | ({renderer: 'single_value'} & SingleValueRenderOptions)
+  | ({renderer: 'list'} & ListRenderOptions)
+  | ({renderer: 'list_detail'} & ListDetailRenderOptions)
+  | ({renderer: 'cartesian_chart'} & CartesianChartRenderOptions)
+  | ({renderer: 'bar_chart'} & BarChartRenderOptions)
+  | ({renderer: 'scatter_chart'} & ScatterChartRenderOptions)
+  | ({renderer: 'line_chart'} & LineChartRenderOptions)
+  | ({renderer: 'point_map'} & PointMapRenderOptions)
+  | ({renderer: 'segment_map'} & SegmentMapRenderOptions)
+  | ({renderer: 'shape_map'} & ShapeMapRenderOptions)
+  | ({renderer: 'number'} & NumberRenderOptions)
+  | ({renderer: 'percent'} & PercentRenderOptions)
+  | ({renderer: 'boolean'} & BooleanRenderOptions)
+  | ({renderer: 'spark_line'} & SparkLineRenderOptions)
+  | ({renderer: 'bytes'} & BytesRenderOptions)
+  | ({renderer: 'link'} & LinkRenderOptions)
+  | ({renderer: 'vega'} & VegaRenderOptions);
 
 export interface DataRenderOptions {
   data?: {
@@ -87,7 +87,7 @@ export interface BytesRenderOptions extends TextRenderOptions {
 
 export interface CurrencyRenderOptions extends TextRenderOptions {
   currency?: {
-    unit?: "dollars" | "pounds";
+    unit?: 'dollars' | 'pounds';
   };
 }
 

@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DataColumn } from "@malloydata/malloy";
-import { HTMLNumberRenderer } from "./number";
+import {DataColumn} from '@malloydata/malloy';
+import {HTMLNumberRenderer} from './number';
 
 export class HTMLPercentRenderer extends HTMLNumberRenderer {
   override getText(data: DataColumn): string | null {
@@ -30,6 +30,6 @@ export class HTMLPercentRenderer extends HTMLNumberRenderer {
 
     return num === null
       ? num
-      : (num * 100).toLocaleString("en", { "maximumFractionDigits": 2 }) + "%";
+      : (num * 100).toLocaleString('en', {maximumFractionDigits: 2}) + '%';
   }
 }

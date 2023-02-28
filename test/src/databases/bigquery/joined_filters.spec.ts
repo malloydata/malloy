@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { RuntimeList } from "../../runtimes";
-import { describeIfDatabaseAvailable } from "../../util";
+import {RuntimeList} from '../../runtimes';
+import {describeIfDatabaseAvailable} from '../../util';
 
 function sourceCodeWithFilter(filter: string) {
   return `
@@ -43,33 +43,33 @@ function sourceCodeWithFilter(filter: string) {
 `;
 }
 
-const [describe, databases] = describeIfDatabaseAvailable(["bigquery"]);
-describe("Joined filters", () => {
+const [describe, databases] = describeIfDatabaseAvailable(['bigquery']);
+describe('Joined filters', () => {
   const runtimes = new RuntimeList(databases);
 
   afterAll(async () => {
     await runtimes.closeAll();
   });
 
-  test("work with comma", async () => {
-    const runtime = runtimes.runtimeMap.get("bigquery");
+  test('work with comma', async () => {
+    const runtime = runtimes.runtimeMap.get('bigquery');
     expect(runtime).toBeDefined();
     if (runtime) {
-      const src = sourceCodeWithFilter("1 = 1, 2 = 2");
+      const src = sourceCodeWithFilter('1 = 1, 2 = 2');
       const result = await runtime.loadQuery(src).run();
-      expect(result.sql).toContain("1=1");
-      expect(result.sql).toContain("2=2");
+      expect(result.sql).toContain('1=1');
+      expect(result.sql).toContain('2=2');
     }
   });
 
-  test("work with and", async () => {
-    const runtime = runtimes.runtimeMap.get("bigquery");
+  test('work with and', async () => {
+    const runtime = runtimes.runtimeMap.get('bigquery');
     expect(runtime).toBeDefined();
     if (runtime) {
-      const src = sourceCodeWithFilter("1 = 1 and 2 = 2");
+      const src = sourceCodeWithFilter('1 = 1 and 2 = 2');
       const result = await runtime.loadQuery(src).run();
-      expect(result.sql).toContain("1=1");
-      expect(result.sql).toContain("2=2");
+      expect(result.sql).toContain('1=1');
+      expect(result.sql).toContain('2=2');
     }
   });
 });

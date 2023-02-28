@@ -21,19 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldName } from "../types/field-space";
-import { ListOf, MalloyElement } from "../types/malloy-element";
+import {FieldName} from '../types/field-space';
+import {ListOf, MalloyElement} from '../types/malloy-element';
 
 export class RenameField extends MalloyElement {
-  elementType = "renameField";
+  elementType = 'renameField';
   constructor(readonly newName: string, readonly oldName: FieldName) {
     super();
-    this.has({ "oldName": oldName });
+    this.has({oldName: oldName});
   }
 }
 
 export class Renames extends ListOf<RenameField> {
   constructor(renames: RenameField[]) {
-    super("renameField", renames);
+    super('renameField', renames);
   }
 }

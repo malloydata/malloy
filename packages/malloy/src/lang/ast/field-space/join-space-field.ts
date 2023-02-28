@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldSpace } from "../types/field-space";
-import { Join } from "../query-properties/joins";
-import { StructSpaceField } from "./static-space";
+import {FieldSpace} from '../types/field-space';
+import {Join} from '../query-properties/joins';
+import {StructSpaceField} from './static-space';
 
 export class JoinSpaceField extends StructSpaceField {
   constructor(readonly intoFS: FieldSpace, readonly join: Join) {

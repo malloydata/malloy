@@ -23,49 +23,49 @@
 
 import {
   expressionIsCalculation,
-  FilterExpression
-} from "../../../model/malloy_types";
+  FilterExpression,
+} from '../../../model/malloy_types';
 
-import { compressExpr } from "../expressions/utils";
-import { ExpressionDef } from "../types/expression-def";
-import { FieldSpace } from "../types/field-space";
-import { ListOf, MalloyElement } from "../types/malloy-element";
+import {compressExpr} from '../expressions/utils';
+import {ExpressionDef} from '../types/expression-def';
+import {FieldSpace} from '../types/field-space';
+import {ListOf, MalloyElement} from '../types/malloy-element';
 
 export class FilterElement extends MalloyElement {
-  elementType = "filterElement";
+  elementType = 'filterElement';
   constructor(readonly expr: ExpressionDef, readonly exprSrc: string) {
-    super({ "expr": expr });
+    super({expr: expr});
   }
 
   filterExpression(fs: FieldSpace): FilterExpression {
     const exprVal = this.expr.getExpression(fs);
-    if (exprVal.dataType !== "boolean") {
-      this.expr.log("Filter expression must have boolean value");
+    if (exprVal.dataType !== 'boolean') {
+      this.expr.log('Filter expression must have boolean value');
       return {
-        "code": this.exprSrc,
-        "expression": ["_FILTER_MUST_RETURN_BOOLEAN_"],
-        "expressionType": "scalar"
+        code: this.exprSrc,
+        expression: ['_FILTER_MUST_RETURN_BOOLEAN_'],
+        expressionType: 'scalar',
       };
     }
     const exprCond: FilterExpression = {
-      "code": this.exprSrc,
-      "expression": compressExpr(exprVal.value),
-      "expressionType": exprVal.expressionType
+      code: this.exprSrc,
+      expression: compressExpr(exprVal.value),
+      expressionType: exprVal.expressionType,
     };
     return exprCond;
   }
 }
 
 export class Filter extends ListOf<FilterElement> {
-  elementType = "filter";
+  elementType = 'filter';
   // TODO(maden): Check this field usage/need
   private readonly havingClause?: boolean;
   constructor(elements: FilterElement[] = []) {
-    super("filterElements", elements);
+    super('filterElements', elements);
   }
 
   set having(isHaving: boolean) {
-    this.elementType = isHaving ? "having" : "where";
+    this.elementType = isHaving ? 'having' : 'where';
   }
 
   getFilterList(fs: FieldSpace): FilterExpression[] {
@@ -78,14 +78,14 @@ export class Filter extends ListOf<FilterElement> {
         if (this.havingClause) {
           if (expressionIsCalculation(fExpr.expressionType)) {
             oneElement.log(
-              "Aggregate or Analytical expression expected in HAVING filter"
+              'Aggregate or Analytical expression expected in HAVING filter'
             );
             continue;
           }
         } else {
-          if (fExpr.expressionType !== "scalar") {
+          if (fExpr.expressionType !== 'scalar') {
             oneElement.log(
-              "Aggregate or Analytical expressions not allowed in WHERE"
+              'Aggregate or Analytical expressions not allowed in WHERE'
             );
             continue;
           }

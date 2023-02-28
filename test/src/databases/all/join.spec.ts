@@ -23,8 +23,8 @@
 
 /* eslint-disable no-console */
 
-import { RuntimeList, allDatabases } from "../../runtimes";
-import { databasesFromEnvironmentOr } from "../../util";
+import {RuntimeList, allDatabases} from '../../runtimes';
+import {databasesFromEnvironmentOr} from '../../util';
 
 const joinModelText = `
   explore: aircraft_models is table('malloytest.aircraft_models') {
@@ -62,7 +62,7 @@ afterAll(async () => {
 //   models.set(key, runtime.loadModel(joinModelText));
 // });
 
-describe("join expression tests", () => {
+describe('join expression tests', () => {
   runtimes.runtimeMap.forEach((runtime, database) => {
     it(`model explore refine join - ${database}`, async () => {
       const result = await runtime

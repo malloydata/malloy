@@ -21,16 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExprValue } from "../types/expr-value";
-import { FieldValueType } from "../types/type-desc";
-import { FT } from "../fragtype-utils";
-import { ExprAggregateFunction } from "./expr-aggregate-function";
-import { ExpressionDef } from "../types/expression-def";
+import {ExprValue} from '../types/expr-value';
+import {FieldValueType} from '../types/type-desc';
+import {FT} from '../fragtype-utils';
+import {ExprAggregateFunction} from './expr-aggregate-function';
+import {ExpressionDef} from '../types/expression-def';
 
 export class ExprMin extends ExprAggregateFunction {
   legalChildTypes = [FT.numberT, FT.stringT, FT.dateT, FT.timestampT];
   constructor(expr: ExpressionDef) {
-    super("min", expr);
+    super('min', expr);
   }
 
   returns(forExpression: ExprValue): FieldValueType {

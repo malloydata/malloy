@@ -21,19 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { RuntimeList } from "../../runtimes";
-import { describeIfDatabaseAvailable } from "../../util";
+import {RuntimeList} from '../../runtimes';
+import {describeIfDatabaseAvailable} from '../../util';
 
-const [describe, databases] = describeIfDatabaseAvailable(["bigquery"]);
-describe("BigQuery double truncation", () => {
+const [describe, databases] = describeIfDatabaseAvailable(['bigquery']);
+describe('BigQuery double truncation', () => {
   const runtimes = new RuntimeList(databases);
 
   afterAll(async () => {
     await runtimes.closeAll();
   });
 
-  test("check for double truncation", async () => {
-    const runtime = runtimes.runtimeMap.get("bigquery");
+  test('check for double truncation', async () => {
+    const runtime = runtimes.runtimeMap.get('bigquery');
     expect(runtime).toBeDefined();
     if (runtime) {
       const src = `
@@ -43,7 +43,7 @@ describe("BigQuery double truncation", () => {
       `;
       const result = await runtime.loadQuery(src).run();
       const truncs = (result.sql.match(/TIMESTAMP_TRUNC/gi) || []).length;
-      if (truncs != 1) {
+      if (truncs !== 1) {
         fail(`Expected 1 TIMESTAMP_TRUNC, got ${truncs}\n${result.sql}`);
       }
     }

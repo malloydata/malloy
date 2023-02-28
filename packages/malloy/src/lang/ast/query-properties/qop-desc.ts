@@ -21,41 +21,41 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { PipeSegment } from "../../../model/malloy_types";
+import {PipeSegment} from '../../../model/malloy_types';
 
-import { Executor } from "../types/executor";
-import { IndexExecutor } from "../executors/index-executor";
-import { ProjectExecutor } from "../executors/project-executor";
-import { ReduceExecutor } from "../executors/reduce-executor";
-import { FieldSpace } from "../types/field-space";
-import { ListOf } from "../types/malloy-element";
-import { OpDesc } from "../types/op-desc";
-import { PipelineDesc } from "../elements/pipeline-desc";
-import { Aggregate } from "./aggregate";
-import { GroupBy } from "./group-by";
-import { Index } from "./indexing";
-import { Nests } from "./nests";
-import { ProjectStatement } from "./project-statement";
-import { opOutputStruct } from "../struct-utils";
-import { QueryProperty } from "../types/query-property";
+import {Executor} from '../types/executor';
+import {IndexExecutor} from '../executors/index-executor';
+import {ProjectExecutor} from '../executors/project-executor';
+import {ReduceExecutor} from '../executors/reduce-executor';
+import {FieldSpace} from '../types/field-space';
+import {ListOf} from '../types/malloy-element';
+import {OpDesc} from '../types/op-desc';
+import {PipelineDesc} from '../elements/pipeline-desc';
+import {Aggregate} from './aggregate';
+import {GroupBy} from './group-by';
+import {Index} from './indexing';
+import {Nests} from './nests';
+import {ProjectStatement} from './project-statement';
+import {opOutputStruct} from '../struct-utils';
+import {QueryProperty} from '../types/query-property';
 
-import { isNestedQuery } from "./nest";
-import { StaticSpace } from "../field-space/static-space";
+import {isNestedQuery} from './nest';
+import {StaticSpace} from '../field-space/static-space';
 
-type QOPType = "grouping" | "aggregate" | "project" | "index";
+type QOPType = 'grouping' | 'aggregate' | 'project' | 'index';
 
 export class QOPDesc extends ListOf<QueryProperty> {
-  opType: QOPType = "grouping";
+  opType: QOPType = 'grouping';
   private refineThis?: PipeSegment;
   constructor(props: QueryProperty[]) {
-    super("queryOperator", props);
+    super('queryOperator', props);
   }
 
   protected computeType(): QOPType {
     let firstGuess: QOPType | undefined;
     if (this.refineThis) {
-      if (this.refineThis.type == "reduce") {
-        firstGuess = "grouping";
+      if (this.refineThis.type === 'reduce') {
+        firstGuess = 'grouping';
       } else {
         firstGuess = this.refineThis.type;
       }
@@ -63,8 +63,8 @@ export class QOPDesc extends ListOf<QueryProperty> {
     let anyGrouping = false;
     for (const el of this.list) {
       if (el instanceof Index) {
-        firstGuess ||= "index";
-        if (firstGuess !== "index") {
+        firstGuess ||= 'index';
+        if (firstGuess !== 'index') {
           el.log(`index: not legal in ${firstGuess} query`);
         }
       } else if (
@@ -72,32 +72,32 @@ export class QOPDesc extends ListOf<QueryProperty> {
         isNestedQuery(el) ||
         el instanceof GroupBy
       ) {
-        firstGuess ||= "grouping";
+        firstGuess ||= 'grouping';
         anyGrouping = true;
-        if (firstGuess === "project" || firstGuess === "index") {
+        if (firstGuess === 'project' || firstGuess === 'index') {
           el.log(`group_by: not legal in ${firstGuess} query`);
         }
       } else if (el instanceof Aggregate) {
-        firstGuess ||= "aggregate";
-        if (firstGuess === "project" || firstGuess === "index") {
+        firstGuess ||= 'aggregate';
+        if (firstGuess === 'project' || firstGuess === 'index') {
           el.log(`aggregate: not legal in ${firstGuess} query`);
         }
       } else if (el instanceof ProjectStatement) {
-        firstGuess ||= "project";
-        if (firstGuess !== "project") {
+        firstGuess ||= 'project';
+        if (firstGuess !== 'project') {
           el.log(`project: not legal in ${firstGuess} query`);
         }
       }
     }
-    if (firstGuess === "aggregate" && anyGrouping) {
-      firstGuess = "grouping";
+    if (firstGuess === 'aggregate' && anyGrouping) {
+      firstGuess = 'grouping';
     }
     if (!firstGuess) {
       this.log(
         "Can't determine query type (group_by/aggregate/nest,project,index)"
       );
     }
-    const guessType = firstGuess || "grouping";
+    const guessType = firstGuess || 'grouping';
     this.opType = guessType;
     return guessType;
   }
@@ -108,12 +108,12 @@ export class QOPDesc extends ListOf<QueryProperty> {
 
   private getExecutor(baseFS: FieldSpace): Executor {
     switch (this.computeType()) {
-      case "aggregate":
-      case "grouping":
+      case 'aggregate':
+      case 'grouping':
         return new ReduceExecutor(baseFS);
-      case "project":
+      case 'project':
         return new ProjectExecutor(baseFS);
-      case "index":
+      case 'index':
         return new IndexExecutor(baseFS);
     }
   }
@@ -130,8 +130,8 @@ export class QOPDesc extends ListOf<QueryProperty> {
     const segment = qex.finalize(this.refineThis);
     return {
       segment,
-      "outputSpace": () =>
-        new StaticSpace(opOutputStruct(this, inputFS.structDef(), segment))
+      outputSpace: () =>
+        new StaticSpace(opOutputStruct(this, inputFS.structDef(), segment)),
     };
   }
 }

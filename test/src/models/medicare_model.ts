@@ -21,222 +21,218 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { StructDef } from "@malloydata/malloy";
+import {StructDef} from '@malloydata/malloy';
 
 // will it build?
 
 /** Medicare Model */
 export const medicareModel: StructDef = {
-  "as": "medicare_test",
-  "dialect": "standardsql",
-  "fields": [
+  as: 'medicare_test',
+  dialect: 'standardsql',
+  fields: [
     // Fields in the flights table.
-    { "name": "id", "numberType": "integer", "type": "number" },
-    { "name": "drg_definition", "type": "string" },
-    { "name": "provider_id", "numberType": "integer", "type": "number" },
-    { "name": "provider_name", "type": "string" },
-    { "name": "provider_street", "type": "string" },
-    { "name": "provider_city", "type": "string" },
-    { "name": "provider_state", "type": "string" },
-    { "name": "provider_zipcode", "numberType": "integer", "type": "number" },
-    { "name": "hospital_referral_region_description", "type": "string" },
+    {name: 'id', numberType: 'integer', type: 'number'},
+    {name: 'drg_definition', type: 'string'},
+    {name: 'provider_id', numberType: 'integer', type: 'number'},
+    {name: 'provider_name', type: 'string'},
+    {name: 'provider_street', type: 'string'},
+    {name: 'provider_city', type: 'string'},
+    {name: 'provider_state', type: 'string'},
+    {name: 'provider_zipcode', numberType: 'integer', type: 'number'},
+    {name: 'hospital_referral_region_description', type: 'string'},
     {
-      "as": "discharges",
-      "name": "total_discharges",
-      "numberType": "float",
-      "type": "number"
+      as: 'discharges',
+      name: 'total_discharges',
+      numberType: 'float',
+      type: 'number',
     },
     {
-      "name": "average_covered_charges",
-      "numberType": "float",
-      "type": "number"
+      name: 'average_covered_charges',
+      numberType: 'float',
+      type: 'number',
     },
     {
-      "name": "average_total_payments",
-      "numberType": "float",
-      "type": "number"
+      name: 'average_total_payments',
+      numberType: 'float',
+      type: 'number',
     },
     {
-      "name": "average_medicare_payments",
-      "numberType": "float",
-      "type": "number"
+      name: 'average_medicare_payments',
+      numberType: 'float',
+      type: 'number',
     },
     {
-      "type": "number",
-      "name": "count_of_drugs",
-      "expressionType": "aggregate",
-      "e": [{ "type": "aggregate", "function": "count", "e": [] }]
+      type: 'number',
+      name: 'count_of_drugs',
+      expressionType: 'aggregate',
+      e: [{type: 'aggregate', function: 'count', e: []}],
     },
     {
-      "type": "number",
-      "name": "provider_count",
-      "expressionType": "aggregate",
-      "e": ["COUNT(DISTINCT ", { "type": "field", "path": "provider_id" }, ")"]
+      type: 'number',
+      name: 'provider_count',
+      expressionType: 'aggregate',
+      e: ['COUNT(DISTINCT ', {type: 'field', path: 'provider_id'}, ')'],
     },
     {
-      "type": "number",
-      "name": "total_discharges",
-      "expressionType": "aggregate",
-      "e": [
+      type: 'number',
+      name: 'total_discharges',
+      expressionType: 'aggregate',
+      e: [
         {
-          "type": "aggregate",
-          "function": "sum",
-          "e": [{ "type": "field", "path": "discharges" }]
-        }
-      ]
+          type: 'aggregate',
+          function: 'sum',
+          e: [{type: 'field', path: 'discharges'}],
+        },
+      ],
     },
 
     {
-      "type": "turtle",
-      "name": "discharges_by_state",
-      "pipeline": [
+      type: 'turtle',
+      name: 'discharges_by_state',
+      pipeline: [
         {
-          "fields": ["provider_state", "total_discharges"],
-          "orderBy": [{ "dir": "desc", "field": 2 }],
-          "type": "reduce"
-        }
-      ]
+          fields: ['provider_state', 'total_discharges'],
+          orderBy: [{dir: 'desc', field: 2}],
+          type: 'reduce',
+        },
+      ],
     },
     {
-      "type": "turtle",
-      "name": "discharges_by_city",
-      "pipeline": [
+      type: 'turtle',
+      name: 'discharges_by_city',
+      pipeline: [
         {
-          "fields": ["provider_city", "total_discharges"],
-          "orderBy": [{ "dir": "desc", "field": 2 }],
-          "type": "reduce"
-        }
-      ]
+          fields: ['provider_city', 'total_discharges'],
+          orderBy: [{dir: 'desc', field: 2}],
+          type: 'reduce',
+        },
+      ],
     },
     {
-      "type": "turtle",
-      "name": "bigturtle_state",
-      "pipeline": [
+      type: 'turtle',
+      name: 'bigturtle_state',
+      pipeline: [
         {
-          "fields": [
-            "provider_state",
-            "total_discharges",
-            "discharges_by_city",
-            "discharges_by_zip"
+          fields: [
+            'provider_state',
+            'total_discharges',
+            'discharges_by_city',
+            'discharges_by_zip',
           ],
-          "orderBy": [{ "dir": "desc", "field": 1 }],
-          "type": "reduce"
-        }
-      ]
+          orderBy: [{dir: 'desc', field: 1}],
+          type: 'reduce',
+        },
+      ],
     },
     {
-      "type": "turtle",
-      "name": "discharges_by_zip",
-      "pipeline": [
+      type: 'turtle',
+      name: 'discharges_by_zip',
+      pipeline: [
         {
-          "fields": ["provider_zipcode", "total_discharges"],
-          "orderBy": [{ "dir": "desc", "field": 2 }],
-          "type": "reduce"
-        }
-      ]
+          fields: ['provider_zipcode', 'total_discharges'],
+          orderBy: [{dir: 'desc', field: 2}],
+          type: 'reduce',
+        },
+      ],
     },
     {
-      "type": "turtle",
-      "name": "turtle_city_zip",
-      "pipeline": [
+      type: 'turtle',
+      name: 'turtle_city_zip',
+      pipeline: [
         {
-          "fields": ["provider_city", "total_discharges", "discharges_by_zip"],
-          "orderBy": [{ "dir": "desc", "field": 1 }],
-          "type": "reduce"
-        }
-      ]
+          fields: ['provider_city', 'total_discharges', 'discharges_by_zip'],
+          orderBy: [{dir: 'desc', field: 1}],
+          type: 'reduce',
+        },
+      ],
     },
     {
-      "type": "turtle",
-      "name": "triple_turtle",
-      "pipeline": [
+      type: 'turtle',
+      name: 'triple_turtle',
+      pipeline: [
         {
-          "fields": ["provider_state", "total_discharges", "turtle_city_zip"],
-          "orderBy": [{ "dir": "desc", "field": 1 }],
-          "type": "reduce"
-        }
-      ]
+          fields: ['provider_state', 'total_discharges', 'turtle_city_zip'],
+          orderBy: [{dir: 'desc', field: 1}],
+          type: 'reduce',
+        },
+      ],
     },
     {
-      "type": "turtle",
-      "name": "rollup_by_location",
-      "pipeline": [
+      type: 'turtle',
+      name: 'rollup_by_location',
+      pipeline: [
         {
-          "fields": [
-            "provider_state",
-            "total_discharges",
+          fields: [
+            'provider_state',
+            'total_discharges',
             {
-              "type": "turtle",
-              "name": "turtle_city_zip",
-              "pipeline": [
+              type: 'turtle',
+              name: 'turtle_city_zip',
+              pipeline: [
                 {
-                  "fields": [
-                    "provider_city",
-                    "total_discharges",
+                  fields: [
+                    'provider_city',
+                    'total_discharges',
                     {
-                      "type": "turtle",
-                      "name": "discharges_by_zip",
-                      "pipeline": [
+                      type: 'turtle',
+                      name: 'discharges_by_zip',
+                      pipeline: [
                         {
-                          "fields": ["provider_zipcode", "total_discharges"],
-                          "orderBy": [{ "dir": "desc", "field": 2 }],
-                          "type": "reduce"
-                        }
-                      ]
-                    }
+                          fields: ['provider_zipcode', 'total_discharges'],
+                          orderBy: [{dir: 'desc', field: 2}],
+                          type: 'reduce',
+                        },
+                      ],
+                    },
                   ],
-                  "orderBy": [{ "dir": "desc", "field": 1 }],
-                  "type": "reduce"
-                }
-              ]
-            }
+                  orderBy: [{dir: 'desc', field: 1}],
+                  type: 'reduce',
+                },
+              ],
+            },
           ],
-          "orderBy": [{ "dir": "desc", "field": 1 }],
-          "type": "reduce"
-        }
-      ]
-    }
+          orderBy: [{dir: 'desc', field: 1}],
+          type: 'reduce',
+        },
+      ],
+    },
   ],
-  "name": "malloy-data.malloytest.bq_medicare_test",
-  "primaryKey": "id",
-  "structRelationship": { "type": "basetable", "connectionName": "bigquery" },
-  "structSource": {
-    "type": "table",
-    "tablePath": "malloy-data.malloytest.bq_medicare_test"
+  name: 'malloy-data.malloytest.bq_medicare_test',
+  primaryKey: 'id',
+  structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+  structSource: {
+    type: 'table',
+    tablePath: 'malloy-data.malloytest.bq_medicare_test',
   },
-  "type": "struct"
+  type: 'struct',
 };
 
 export const medicareStateFacts: StructDef = {
-  "fields": [],
-  "name": "medicare_state_facts",
-  "dialect": "standardsql",
-  "structRelationship": { "type": "basetable", "connectionName": "bigquery" },
-  "structSource": {
-    "query": {
-      "structRef": "medicare_test",
-      "pipeline": [
+  fields: [],
+  name: 'medicare_state_facts',
+  dialect: 'standardsql',
+  structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+  structSource: {
+    query: {
+      structRef: 'medicare_test',
+      pipeline: [
         {
-          "fields": [
-            "provider_state",
+          fields: [
+            'provider_state',
             {
-              "type": "number",
-              "name": "num_providers",
-              "expressionType": "aggregate",
-              "e": [
-                "COUNT(DISTINCT ",
-                { "type": "field", "path": "provider_id" },
-                ")"
-              ]
-            }
+              type: 'number',
+              name: 'num_providers',
+              expressionType: 'aggregate',
+              e: ['COUNT(DISTINCT ', {type: 'field', path: 'provider_id'}, ')'],
+            },
           ],
-          "type": "reduce"
-        }
-      ]
+          type: 'reduce',
+        },
+      ],
     },
-    "type": "query"
+    type: 'query',
   },
-  "type": "struct"
+  type: 'struct',
 };
 
 // export const medicareStateFacts: StructDef = {

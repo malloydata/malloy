@@ -21,16 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { errorFor } from "../ast-utils";
-import { FT } from "../fragtype-utils";
-import { castDateToTimestamp, resolution, timeOffset } from "../time-utils";
-import { ExprValue } from "../types/expr-value";
-import { ExpressionDef } from "../types/expression-def";
-import { FieldSpace } from "../types/field-space";
-import { isGranularResult } from "../types/granular-result";
-import { ExprTime } from "./expr-time";
-import { Range } from "./range";
-import { Timeframe } from "./time-frame";
+import {errorFor} from '../ast-utils';
+import {FT} from '../fragtype-utils';
+import {castDateToTimestamp, resolution, timeOffset} from '../time-utils';
+import {ExprValue} from '../types/expr-value';
+import {ExpressionDef} from '../types/expression-def';
+import {FieldSpace} from '../types/field-space';
+import {isGranularResult} from '../types/granular-result';
+import {ExprTime} from './expr-time';
+import {Range} from './range';
+import {Timeframe} from './time-frame';
 
 /**
  * TODO: This is sort of a hand clone of the "Range" class, they should
@@ -38,26 +38,26 @@ import { Timeframe } from "./time-frame";
  */
 
 export class ForRange extends ExpressionDef {
-  elementType = "forRange";
+  elementType = 'forRange';
   legalChildTypes = [FT.timestampT, FT.dateT];
   constructor(
     readonly from: ExpressionDef,
     readonly duration: ExpressionDef,
     readonly timeframe: Timeframe
   ) {
-    super({ "from": from, "duration": duration, "timeframe": timeframe });
+    super({from: from, duration: duration, timeframe: timeframe});
   }
 
   apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
     const startV = this.from.getExpression(fs);
     const checkV = expr.getExpression(fs);
     if (!this.typeCheck(expr, checkV)) {
-      return errorFor("no time for range");
+      return errorFor('no time for range');
     }
     const nV = this.duration.getExpression(fs);
-    if (nV.dataType !== "number") {
+    if (nV.dataType !== 'number') {
       this.log(`FOR duration count must be a number, not '${nV.dataType}'`);
-      return errorFor("FOR not number");
+      return errorFor('FOR not number');
     }
     const units = this.timeframe.text;
 
@@ -68,35 +68,35 @@ export class ForRange extends ExpressionDef {
 
     // Next, if the beginning of the range is a timestamp, then we
     // also have to do the computation as a timestamp
-    if (startV.dataType === "timestamp") {
-      rangeType = "timestamp";
+    if (startV.dataType === 'timestamp') {
+      rangeType = 'timestamp';
     }
 
     // everything is dates, do date math
-    if (checkV.dataType === "date" && rangeType === "date") {
+    if (checkV.dataType === 'date' && rangeType === 'date') {
       const rangeStart = this.from;
-      const rangeEndV = timeOffset("date", startV.value, "+", nV.value, units);
-      const rangeEnd = new ExprTime("date", rangeEndV);
+      const rangeEndV = timeOffset('date', startV.value, '+', nV.value, units);
+      const rangeEnd = new ExprTime('date', rangeEndV);
       return new Range(rangeStart, rangeEnd).apply(fs, op, expr);
     }
 
     // Now it doesn't matter if the range is a date or a timestamp,
     // the comparison will be in timestamp space,
-    const applyTo = ExprTime.fromValue("timestamp", checkV);
+    const applyTo = ExprTime.fromValue('timestamp', checkV);
 
     let rangeStart = this.from;
     let from = startV.value;
-    if (startV.dataType === "date") {
+    if (startV.dataType === 'date') {
       // Time literals with timestamp units can also be used as timestamps;
       const alreadyTs = isGranularResult(startV) && startV.alsoTimestamp;
       if (!alreadyTs) {
         // ... not a literal, need a cast
         from = castDateToTimestamp(from);
       }
-      rangeStart = new ExprTime("timestamp", from, startV.expressionType);
+      rangeStart = new ExprTime('timestamp', from, startV.expressionType);
     }
-    const to = timeOffset("timestamp", from, "+", nV.value, units);
-    const rangeEnd = new ExprTime("timestamp", to, startV.expressionType);
+    const to = timeOffset('timestamp', from, '+', nV.value, units);
+    const rangeEnd = new ExprTime('timestamp', to, startV.expressionType);
 
     return new Range(rangeStart, rangeEnd).apply(fs, op, applyTo);
   }
@@ -106,7 +106,7 @@ export class ForRange extends ExpressionDef {
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
-    this.log("A Range is not a value");
-    return errorFor("range has no value");
+    this.log('A Range is not a value');
+    return errorFor('range has no value');
   }
 }

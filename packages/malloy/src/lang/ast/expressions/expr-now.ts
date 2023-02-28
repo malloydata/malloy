@@ -21,23 +21,23 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExprValue } from "../types/expr-value";
-import { FieldSpace } from "../types/field-space";
-import { ExpressionDef } from "../types/expression-def";
+import {ExprValue} from '../types/expr-value';
+import {FieldSpace} from '../types/field-space';
+import {ExpressionDef} from '../types/expression-def';
 
 export class ExprNow extends ExpressionDef {
-  elementType = "timestamp";
+  elementType = 'timestamp';
 
   getExpression(_fs: FieldSpace): ExprValue {
     return {
-      "dataType": "timestamp",
-      "expressionType": "scalar",
-      "value": [
+      dataType: 'timestamp',
+      expressionType: 'scalar',
+      value: [
         {
-          "type": "dialect",
-          "function": "now"
-        }
-      ]
+          type: 'dialect',
+          function: 'now',
+        },
+      ],
     };
   }
 }

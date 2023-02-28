@@ -21,14 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExprValue } from "../types/expr-value";
-import { ExpressionDef } from "../types/expression-def";
-import { FieldSpace } from "../types/field-space";
+import {ExprValue} from '../types/expr-value';
+import {ExpressionDef} from '../types/expression-def';
+import {FieldSpace} from '../types/field-space';
 
 export class ExprParens extends ExpressionDef {
-  elementType = "(expression)";
+  elementType = '(expression)';
   constructor(readonly expr: ExpressionDef) {
-    super({ "expr": expr });
+    super({expr: expr});
   }
 
   requestExpression(fs: FieldSpace): ExprValue | undefined {
@@ -37,6 +37,6 @@ export class ExprParens extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const subExpr = this.expr.getExpression(fs);
-    return { ...subExpr, "value": ["(", ...subExpr.value, ")"] };
+    return {...subExpr, value: ['(', ...subExpr.value, ')']};
   }
 }

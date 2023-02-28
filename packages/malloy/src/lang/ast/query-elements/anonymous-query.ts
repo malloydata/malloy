@@ -21,17 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ModelDataRequest } from "../../translate-response";
+import {ModelDataRequest} from '../../translate-response';
 
-import { DocStatement, Document, MalloyElement } from "../types/malloy-element";
-import { QueryElement } from "../types/query-element";
+import {DocStatement, Document, MalloyElement} from '../types/malloy-element';
+import {QueryElement} from '../types/query-element';
 
 export class AnonymousQuery extends MalloyElement implements DocStatement {
-  elementType = "anonymousQuery";
+  elementType = 'anonymousQuery';
 
   constructor(readonly theQuery: QueryElement) {
     super();
-    this.has({ "query": theQuery });
+    this.has({query: theQuery});
   }
 
   execute(doc: Document): ModelDataRequest {

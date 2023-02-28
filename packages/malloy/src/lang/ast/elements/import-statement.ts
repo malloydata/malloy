@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ModelDataRequest } from "../../translate-response";
-import { DocStatement, Document, MalloyElement } from "../types/malloy-element";
+import {ModelDataRequest} from '../../translate-response';
+import {DocStatement, Document, MalloyElement} from '../types/malloy-element';
 
 export class ImportStatement extends MalloyElement implements DocStatement {
-  elementType = "import statement";
+  elementType = 'import statement';
   fullURL?: string;
 
   /*
@@ -42,17 +42,17 @@ export class ImportStatement extends MalloyElement implements DocStatement {
     try {
       this.fullURL = decodeURI(new URL(url, baseURL).toString());
     } catch (e) {
-      this.log("Invalid URI in import statement");
+      this.log('Invalid URI in import statement');
     }
   }
 
   execute(doc: Document): ModelDataRequest {
     const trans = this.translator();
     if (!trans) {
-      this.log("Cannot import without translation context");
+      this.log('Cannot import without translation context');
     } else if (this.fullURL) {
       const src = trans.root.importZone.getEntry(this.fullURL);
-      if (src.status === "present") {
+      if (src.status === 'present') {
         const childNeeds = trans.childRequest(this.fullURL);
         if (childNeeds) {
           return childNeeds;
@@ -60,11 +60,11 @@ export class ImportStatement extends MalloyElement implements DocStatement {
         const importStructs = trans.getChildExports(this.fullURL);
         for (const importing in importStructs) {
           doc.setEntry(importing, {
-            "entry": importStructs[importing],
-            "exported": false
+            entry: importStructs[importing],
+            exported: false,
           });
         }
-      } else if (src.status === "error") {
+      } else if (src.status === 'error') {
         this.log(`import failed: '${src.message}'`);
       } else {
         this.log(`import failed with status: '${src.status}'`);

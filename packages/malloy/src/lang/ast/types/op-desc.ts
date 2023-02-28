@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { PipeSegment } from "../../../model/malloy_types";
+import {PipeSegment} from '../../../model/malloy_types';
 
-import { FieldSpace } from "./field-space";
+import {FieldSpace} from './field-space';
 
 export interface OpDesc {
   segment: PipeSegment;

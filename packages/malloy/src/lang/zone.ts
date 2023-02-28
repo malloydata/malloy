@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DocumentLocation } from "../model/malloy_types";
+import {DocumentLocation} from '../model/malloy_types';
 
 export type ZoneData<TValue> = Record<string, TValue>;
 
-type EntryStatus = "present" | "reference" | "error";
+type EntryStatus = 'present' | 'reference' | 'error';
 
 interface AllEntries {
   status: EntryStatus;
@@ -33,17 +33,17 @@ interface AllEntries {
 }
 
 interface EntryPresent<T> extends AllEntries {
-  status: "present";
+  status: 'present';
   value: T;
 }
 
 interface ReferenceEntry {
-  status: "reference";
+  status: 'reference';
   firstReference: DocumentLocation;
 }
 
 interface EntryErrored extends AllEntries {
-  status: "error";
+  status: 'error';
   message: string;
 }
 
@@ -65,7 +65,7 @@ export class Zone<TValue> {
 
   get(str: string): TValue | undefined {
     const zst = this.zone.get(str);
-    if (zst?.status === "present") {
+    if (zst?.status === 'present') {
       return zst.value;
     }
   }
@@ -76,9 +76,9 @@ export class Zone<TValue> {
       if (zst.firstReference || !this.location[str]) {
         return zst;
       }
-      return { ...zst, "firstReference": this.location[str] };
+      return {...zst, firstReference: this.location[str]};
     }
-    return { "status": "error", "message": "import reference failure" };
+    return {status: 'error', message: 'import reference failure'};
   }
 
   /**
@@ -87,7 +87,7 @@ export class Zone<TValue> {
    * @param val
    */
   define(str: string, val: TValue): void {
-    this.zone.set(str, { "status": "present", "value": val });
+    this.zone.set(str, {status: 'present', value: val});
   }
 
   /**
@@ -97,8 +97,8 @@ export class Zone<TValue> {
    */
   reference(str: string, loc: DocumentLocation): void {
     const zst = this.zone.get(str);
-    if (zst?.status == undefined) {
-      this.zone.set(str, { "status": "reference", "firstReference": loc });
+    if (zst?.status === undefined) {
+      this.zone.set(str, {status: 'reference', firstReference: loc});
       this.location[str] = loc;
     }
   }
@@ -109,7 +109,7 @@ export class Zone<TValue> {
   getUndefined(): string[] | undefined {
     const allUndefined: string[] = [];
     for (const [name, val] of this.zone) {
-      if (val.status === "reference") {
+      if (val.status === 'reference') {
         allUndefined.push(name);
       }
     }
@@ -134,7 +134,7 @@ export class Zone<TValue> {
     }
     if (errorData) {
       for (const [errorKey, errorMessage] of Object.entries(errorData)) {
-        this.zone.set(errorKey, { "status": "error", "message": errorMessage });
+        this.zone.set(errorKey, {status: 'error', message: errorMessage});
       }
     }
   }

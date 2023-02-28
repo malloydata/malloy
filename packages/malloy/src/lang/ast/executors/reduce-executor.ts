@@ -26,29 +26,29 @@ import {
   PipeSegment,
   QuerySegment,
   ReduceSegment,
-  isReduceSegment
-} from "../../../model/malloy_types";
+  isReduceSegment,
+} from '../../../model/malloy_types';
 
-import { ErrorFactory } from "../error-factory";
-import { FieldSpace } from "../types/field-space";
-import { Aggregate } from "../query-properties/aggregate";
-import { DeclareFields } from "../query-properties/declare-fields";
-import { Filter } from "../query-properties/filters";
-import { GroupBy } from "../query-properties/group-by";
-import { Joins } from "../query-properties/joins";
-import { Limit } from "../query-properties/limit";
-import { Ordering } from "../query-properties/ordering";
-import { Top } from "../query-properties/top";
-import { QueryProperty } from "../types/query-property";
-import { Executor } from "../types/executor";
-import { Nests } from "../query-properties/nests";
-import { isNestedQuery } from "../query-properties/nest";
+import {ErrorFactory} from '../error-factory';
+import {FieldSpace} from '../types/field-space';
+import {Aggregate} from '../query-properties/aggregate';
+import {DeclareFields} from '../query-properties/declare-fields';
+import {Filter} from '../query-properties/filters';
+import {GroupBy} from '../query-properties/group-by';
+import {Joins} from '../query-properties/joins';
+import {Limit} from '../query-properties/limit';
+import {Ordering} from '../query-properties/ordering';
+import {Top} from '../query-properties/top';
+import {QueryProperty} from '../types/query-property';
+import {Executor} from '../types/executor';
+import {Nests} from '../query-properties/nests';
+import {isNestedQuery} from '../query-properties/nest';
 import {
   QueryInputSpace,
   QuerySpace,
-  ReduceFieldSpace
-} from "../field-space/query-spaces";
-import { DynamicSpace } from "../field-space/dynamic-space";
+  ReduceFieldSpace,
+} from '../field-space/query-spaces';
+import {DynamicSpace} from '../field-space/dynamic-space';
 
 export class ReduceExecutor implements Executor {
   inputFS: QueryInputSpace;
@@ -80,26 +80,26 @@ export class ReduceExecutor implements Executor {
       this.filters.push(...qp.getFilterList(this.inputFS));
     } else if (qp instanceof Top) {
       if (this.limit) {
-        qp.log("Query operation already limited");
+        qp.log('Query operation already limited');
       } else {
         this.limit = qp.limit;
       }
       if (qp.by) {
         if (this.order) {
-          qp.log("Query operation is already sorted");
+          qp.log('Query operation is already sorted');
         } else {
           this.order = qp;
         }
       }
     } else if (qp instanceof Limit) {
       if (this.limit) {
-        qp.log("Query operation already limited");
+        qp.log('Query operation already limited');
       } else {
         this.limit = qp.limit;
       }
     } else if (qp instanceof Ordering) {
       if (this.order) {
-        qp.log("Query operation already sorted");
+        qp.log('Query operation already sorted');
       } else {
         this.order = qp;
       }
@@ -111,7 +111,7 @@ export class ReduceExecutor implements Executor {
   }
 
   refineFrom(from: PipeSegment | undefined, to: QuerySegment): void {
-    if (from && from.type !== "index") {
+    if (from && from.type !== 'index') {
       if (!this.order) {
         if (from.orderBy) {
           to.orderBy = from.orderBy;

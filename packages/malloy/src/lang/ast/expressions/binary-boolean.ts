@@ -21,26 +21,26 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { maxExpressionType } from "../../../model/malloy_types";
+import {maxExpressionType} from '../../../model/malloy_types';
 
-import { errorFor } from "../ast-utils";
-import { FT } from "../fragtype-utils";
-import { ExprValue } from "../types/expr-value";
-import { ExpressionDef } from "../types/expression-def";
-import { FieldSpace } from "../types/field-space";
-import { compose } from "./utils";
+import {errorFor} from '../ast-utils';
+import {FT} from '../fragtype-utils';
+import {ExprValue} from '../types/expr-value';
+import {ExpressionDef} from '../types/expression-def';
+import {FieldSpace} from '../types/field-space';
+import {compose} from './utils';
 
 export abstract class BinaryBoolean<
   opType extends string
 > extends ExpressionDef {
-  elementType = "abstract boolean binary";
+  elementType = 'abstract boolean binary';
   legalChildTypes = [FT.boolT];
   constructor(
     readonly left: ExpressionDef,
     readonly op: opType,
     readonly right: ExpressionDef
   ) {
-    super({ "left": left, "right": right });
+    super({left: left, right: right});
   }
 
   getExpression(fs: FieldSpace): ExprValue {
@@ -48,14 +48,14 @@ export abstract class BinaryBoolean<
     const right = this.right.getExpression(fs);
     if (this.typeCheck(this.left, left) && this.typeCheck(this.right, right)) {
       return {
-        "dataType": "boolean",
-        "expressionType": maxExpressionType(
+        dataType: 'boolean',
+        expressionType: maxExpressionType(
           left.expressionType,
           right.expressionType
         ),
-        "value": compose(left.value, this.op, right.value)
+        value: compose(left.value, this.op, right.value),
       };
     }
-    return errorFor("logial required boolean");
+    return errorFor('logial required boolean');
   }
 }

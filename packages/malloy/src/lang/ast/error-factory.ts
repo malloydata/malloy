@@ -32,27 +32,27 @@ import {
   ProjectSegment,
   Query,
   ReduceSegment,
-  StructDef
-} from "../../model/malloy_types";
+  StructDef,
+} from '../../model/malloy_types';
 
 const theErrorStruct: StructDef = {
-  "type": "struct",
-  "name": "~malformed~",
-  "dialect": "~malformed~",
-  "structSource": {
-    "type": "table",
-    "tablePath": "//undefined_error_table_path"
+  type: 'struct',
+  name: '~malformed~',
+  dialect: '~malformed~',
+  structSource: {
+    type: 'table',
+    tablePath: '//undefined_error_table_path',
   },
-  "structRelationship": {
-    "type": "basetable",
-    "connectionName": "//undefined_error_connection"
+  structRelationship: {
+    type: 'basetable',
+    connectionName: '//undefined_error_connection',
   },
-  "fields": []
+  fields: [],
 };
 
 export class ErrorFactory {
   static get structDef(): StructDef {
-    return { ...theErrorStruct };
+    return {...theErrorStruct};
   }
 
   static isErrorStructDef(s: StructDef): boolean {
@@ -61,20 +61,20 @@ export class ErrorFactory {
 
   static get query(): Query {
     return {
-      "structRef": ErrorFactory.structDef,
-      "pipeline": []
+      structRef: ErrorFactory.structDef,
+      pipeline: [],
     };
   }
 
   static get reduceSegment(): ReduceSegment {
-    return { "type": "reduce", "fields": [] };
+    return {type: 'reduce', fields: []};
   }
 
   static get projectSegment(): ProjectSegment {
-    return { "type": "project", "fields": [] };
+    return {type: 'project', fields: []};
   }
 
   static get indexSegment(): IndexSegment {
-    return { "type": "index", "fields": [] };
+    return {type: 'index', fields: []};
   }
 }

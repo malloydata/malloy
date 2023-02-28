@@ -21,40 +21,40 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { AggregateFragment } from "../../../model/malloy_types";
+import {AggregateFragment} from '../../../model/malloy_types';
 
-import { FieldReference } from "../query-items/field-references";
-import { ExprValue } from "../types/expr-value";
-import { FieldSpace } from "../types/field-space";
-import { ExprAggregateFunction } from "./expr-aggregate-function";
+import {FieldReference} from '../query-items/field-references';
+import {ExprValue} from '../types/expr-value';
+import {FieldSpace} from '../types/field-space';
+import {ExprAggregateFunction} from './expr-aggregate-function';
 
 export class ExprCount extends ExprAggregateFunction {
-  elementType = "count";
+  elementType = 'count';
   constructor(readonly source?: FieldReference) {
-    super("count");
-    this.has({ "source": source });
+    super('count');
+    this.has({source: source});
   }
 
   defaultFieldName(): string | undefined {
     if (this.source) {
-      return "count_" + this.source.nameString;
+      return 'count_' + this.source.nameString;
     }
     return undefined;
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
     const ret: AggregateFragment = {
-      "type": "aggregate",
-      "function": "count",
-      "e": []
+      type: 'aggregate',
+      function: 'count',
+      e: [],
     };
     if (this.source) {
       ret.structPath = this.source.refString;
     }
     return {
-      "dataType": "number",
-      "expressionType": "aggregate",
-      "value": [ret]
+      dataType: 'number',
+      expressionType: 'aggregate',
+      value: [ret],
     };
   }
 }
