@@ -57,11 +57,10 @@ export type QueryOptionsReader =
   | Partial<DuckDBQueryOptions>
   | (() => Partial<DuckDBQueryOptions>);
 
-// This is naive, but not really sure what edge cases we'll hit
 const unquoteName = (name: string) => {
   const match = /^"(.*)"$/.exec(name);
   if (match) {
-    return match[1];
+    return match[1].replace('""', '"');
   }
   return name;
 };
