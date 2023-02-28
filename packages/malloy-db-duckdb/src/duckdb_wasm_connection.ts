@@ -249,6 +249,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   }
 
   async registerRemoteTable(tableName: string, url: string): Promise<void> {
+    this.remoteFileStatus[tableName] = true;
     this.database?.registerFileURL(
       tableName,
       url,
