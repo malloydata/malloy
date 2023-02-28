@@ -361,7 +361,7 @@ describe('BigQuery hand-built expression test', () => {
         pipeline: [],
       })
       .run();
-    expect(result.data.value[0].aircraft_count).toBe(3599);
+    expect(result.data.value[0]['aircraft_count']).toBe(3599);
   });
 
   it(`hand turtle malloy - ${databaseName}`, async () => {
@@ -372,7 +372,7 @@ describe('BigQuery hand-built expression test', () => {
   `
       )
       .run();
-    expect(result.data.value[0].aircraft_count).toBe(3599);
+    expect(result.data.value[0]['aircraft_count']).toBe(3599);
   });
 
   it(`default sort order - ${databaseName}`, async () => {
@@ -387,7 +387,7 @@ describe('BigQuery hand-built expression test', () => {
       `
       )
       .run();
-    expect(result.data.value[0].aircraft_count).toBe(367);
+    expect(result.data.value[0]['aircraft_count']).toBe(367);
   });
 
   it(`default sort order by dir - ${databaseName}`, async () => {
@@ -403,7 +403,7 @@ describe('BigQuery hand-built expression test', () => {
       `
       )
       .run();
-    expect(result.data.value[0].aircraft_count).toBe(1);
+    expect(result.data.value[0]['aircraft_count']).toBe(1);
   });
 
   it(`hand turtle2 - ${databaseName}`, async () => {
@@ -498,7 +498,7 @@ describe('BigQuery hand-built expression test', () => {
       })
       .run({rowLimit: 15});
     for (let i = 0; i < result.data.rowCount; i++) {
-      expect(result.data.value[i].row_num).toBe(i + 1);
+      expect(result.data.value[i]['row_num']).toBe(i + 1);
     }
   });
 
@@ -690,12 +690,12 @@ describe('BigQuery hand-built expression test', () => {
       )
       .run();
     // console.log(result.sql);
-    expect(result.data.value[0].total_seats).toBe(18294);
-    expect(result.data.value[0].total_seats2).toBe(31209);
-    expect(result.data.value[0].total_seats3).toBe(18294);
-    expect(result.data.value[0].boeing_seats).toBe(6244);
-    expect(result.data.value[0].boeing_seats2).toBe(6244);
-    expect(result.data.value[0].boeing_seats3).toBe(6244);
+    expect(result.data.value[0]['total_seats']).toBe(18294);
+    expect(result.data.value[0]['total_seats2']).toBe(31209);
+    expect(result.data.value[0]['total_seats3']).toBe(18294);
+    expect(result.data.value[0]['boeing_seats']).toBe(6244);
+    expect(result.data.value[0]['boeing_seats2']).toBe(6244);
+    expect(result.data.value[0]['boeing_seats3']).toBe(6244);
   });
 
   it(`hand: bad root name for pathed sum - ${databaseName}`, async () => {
@@ -709,7 +709,7 @@ describe('BigQuery hand-built expression test', () => {
       )
       .run();
     // console.log(result.sql);
-    expect(result.data.value[0].total_seats3).toBe(18294);
+    expect(result.data.value[0]['total_seats3']).toBe(18294);
   });
 
   // WORKs: (hand coded model):
@@ -726,8 +726,8 @@ describe('BigQuery hand-built expression test', () => {
             `
       )
       .run();
-    expect(result.data.value[0].total_seats).toBe(18294);
-    expect(result.data.value[0].boeing_seats).toBe(6244);
+    expect(result.data.value[0]['total_seats']).toBe(18294);
+    expect(result.data.value[0]['boeing_seats']).toBe(6244);
   });
 
   it(`model: filtered measures - ${databaseName}`, async () => {
@@ -740,7 +740,7 @@ describe('BigQuery hand-built expression test', () => {
             `
       )
       .run();
-    expect(result.data.value[0].boeing_seats).toBe(6244);
+    expect(result.data.value[0]['boeing_seats']).toBe(6244);
   });
 
   // does the filter force a join?
@@ -754,7 +754,7 @@ describe('BigQuery hand-built expression test', () => {
             `
       )
       .run();
-    expect(result.data.value[0].boeing_aircraft).toBe(69);
+    expect(result.data.value[0]['boeing_aircraft']).toBe(69);
   });
 
   // Works: Generate query using named alias.
@@ -803,7 +803,7 @@ describe('BigQuery hand-built expression test', () => {
       })
       .run();
     // console.log(result.sql);
-    expect(result.data.value[0].boeing_seats).toBe(6244);
+    expect(result.data.value[0]['boeing_seats']).toBe(6244);
   });
 
   const joinModelAircraftHandStructDef: StructDef = {
@@ -872,7 +872,7 @@ describe('BigQuery hand-built expression test', () => {
       .run();
     // await bqCompile(databaseName, result.sql);
     // console.log(result.data.value);
-    expect(result.data.value[0].total_seats).toBe(452415);
-    expect(result.data.value[0].aircraft_count).toBe(62644);
+    expect(result.data.value[0]['total_seats']).toBe(452415);
+    expect(result.data.value[0]['aircraft_count']).toBe(62644);
   });
 });

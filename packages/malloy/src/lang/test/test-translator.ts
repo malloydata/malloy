@@ -149,7 +149,7 @@ const mockSchema: Record<string, StructDef> = {
     as: 'airports',
   },
 };
-export const aTableDef = mockSchema.aTable;
+export const aTableDef = mockSchema['aTable'];
 
 /**
  * When translating partial trees, there will not be a document node

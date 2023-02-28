@@ -41,11 +41,11 @@ it.skip('accessors are not too expensive', async () => {
     let withAccessorTime;
     {
       const start = performance.now();
-      const inner = result.data.value[0].inner;
+      const inner = result.data.value[0]['inner'];
       let total = 0;
       let count = 0;
       for (const row of inner as malloy.QueryData) {
-        total += row.distance as number;
+        total += row['distance'] as number;
         count += 1;
       }
       noAccessorTime = performance.now() - start;

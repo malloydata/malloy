@@ -547,7 +547,7 @@ describe('BigQuery expression tests', () => {
       }
     `
     );
-    expect(result.data.value[0].code).toBe('ACV');
+    expect(result.data.value[0]['code']).toBe('ACV');
   });
 
   it('flights.search_index', async () => {
@@ -646,7 +646,7 @@ describe('BigQuery expression tests', () => {
         ],
       })
       .run();
-    expect(result.data.value[0].num_providers).toBe(296);
+    expect(result.data.value[0]['num_providers']).toBe(296);
   });
 
   // const faa2: TestDeclaration[] = [
@@ -685,7 +685,7 @@ describe('BigQuery expression tests', () => {
         pipeline: [],
       })
       .run();
-    expect(result.data.value[0].c).toBe(202656);
+    expect(result.data.value[0]['c']).toBe(202656);
   });
 });
 
@@ -728,7 +728,7 @@ describe('airport_tests', () => {
       }
     `
     );
-    expect(result.data.value[0].a).toBe(19793);
+    expect(result.data.value[0]['a']).toBe(19793);
   });
 
   it('turtle_from_hell', async () => {
@@ -768,7 +768,7 @@ describe('airport_tests', () => {
 
     `
     );
-    expect(result.data.value[0].county).toBe('ZAVALA');
+    expect(result.data.value[0]['county']).toBe('ZAVALA');
   });
 
   it('nested_project', async () => {
@@ -789,7 +789,7 @@ describe('airport_tests', () => {
     }
     `
     );
-    expect(result.data.value[0].elevation).toBe(1836);
+    expect(result.data.value[0]['elevation']).toBe(1836);
   });
 
   it('nested_sums', async () => {
@@ -815,8 +815,8 @@ describe('airport_tests', () => {
     `
     );
     // console.log(result.sql);
-    expect(result.data.value[0].sum_state).toBe(19793);
-    expect(result.data.value[0].sum_fac).toBe(19793);
+    expect(result.data.value[0]['sum_state']).toBe(19793);
+    expect(result.data.value[0]['sum_fac']).toBe(19793);
   });
 
   it('pipeline_as_declared_turtle', async () => {
@@ -833,7 +833,7 @@ describe('airport_tests', () => {
         query: my_airports->pipe_turtle
     `
     );
-    expect(result.data.value[0].a).toBe(19793);
+    expect(result.data.value[0]['a']).toBe(19793);
   });
 
   it('pipeline Turtle', async () => {
@@ -917,7 +917,7 @@ describe('airport_tests', () => {
       }
     `
     );
-    expect(result.data.value[0].lower_state).toBe('wy');
+    expect(result.data.value[0]['lower_state']).toBe('wy');
   });
 
   it('half_count', async () => {
@@ -929,7 +929,7 @@ describe('airport_tests', () => {
       }
     `
     );
-    expect(result.data.value[0].half).toBe(9896.5);
+    expect(result.data.value[0]['half']).toBe(9896.5);
   });
 });
 
@@ -945,7 +945,7 @@ describe('sql injection tests', () => {
       }
     `
     );
-    expect(result.data.value[0].test).toBe("foo'");
+    expect(result.data.value[0]['test']).toBe("foo'");
   });
 
   test('string filter escapes quotes', async () => {
@@ -955,7 +955,7 @@ describe('sql injection tests', () => {
       query: table('malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo\\'' } }
     `
     );
-    expect(result.data.value[0].test).toBe(0);
+    expect(result.data.value[0]['test']).toBe(0);
   });
 
   test('string literal escapes backslashes', async () => {
@@ -966,7 +966,7 @@ describe('sql injection tests', () => {
       }
     `
     );
-    expect(result.data.value[0].test).toBe("foo\\'");
+    expect(result.data.value[0]['test']).toBe("foo\\'");
   });
 
   test('string filter escapes backslashes', async () => {
@@ -976,7 +976,7 @@ describe('sql injection tests', () => {
       query: table('malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo\\\\\\'' }}
     `
     );
-    expect(result.data.value[0].test).toBe(0);
+    expect(result.data.value[0]['test']).toBe(0);
   });
 
   test('comment in string', async () => {
@@ -987,7 +987,7 @@ describe('sql injection tests', () => {
       }
     `
     );
-    expect(result.data.value[0].test).toBe('foo \\');
+    expect(result.data.value[0]['test']).toBe('foo \\');
   });
 
   test('comment in string filter', async () => {
@@ -1015,7 +1015,7 @@ describe('sql injection tests', () => {
       }
     `
     );
-    expect(result.data.value[0].test).toBe('foo \\');
+    expect(result.data.value[0]['test']).toBe('foo \\');
   });
 });
 
@@ -1031,6 +1031,6 @@ describe('unsupported type tests', () => {
       `
       )
       .run();
-    expect(result.data.value[0].geo).toBeDefined();
+    expect(result.data.value[0]['geo']).toBeDefined();
   });
 });

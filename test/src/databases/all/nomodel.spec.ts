@@ -128,8 +128,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].avg_year).toBe(1969);
-    expect(result.data.value[0].avg_seats).toBe(7);
+    expect(result.data.value[0]['avg_year']).toBe(1969);
+    expect(result.data.value[0]['avg_seats']).toBe(7);
   });
 
   it(`join_many condition no primary key - ${databaseName}`, async () => {
@@ -144,7 +144,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].c).toBe(19701);
+    expect(result.data.value[0]['c']).toBe(19701);
   });
 
   it(`join_many filter multiple values - ${databaseName}`, async () => {
@@ -164,12 +164,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].c).toBe(18605);
-    expect(result.data.value[0].state).toBeNull();
-    expect(result.data.value[1].c).toBe(984);
-    expect(result.data.value[1].state).toBe('CA');
-    expect(result.data.value[2].c).toBe(112);
-    expect(result.data.value[2].state).toBe('NH');
+    expect(result.data.value[0]['c']).toBe(18605);
+    expect(result.data.value[0]['state']).toBeNull();
+    expect(result.data.value[1]['c']).toBe(984);
+    expect(result.data.value[1]['state']).toBe('CA');
+    expect(result.data.value[2]['c']).toBe(112);
+    expect(result.data.value[2]['state']).toBe('NH');
   });
 
   it(`join_one condition no primary key - ${databaseName}`, async () => {
@@ -185,7 +185,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].c).toBe(19701);
+    expect(result.data.value[0]['c']).toBe(19701);
   });
 
   it(`join_one filter multiple values - ${databaseName}`, async () => {
@@ -234,9 +234,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].row_count).toBe(51 * 51);
-    expect(result.data.value[0].left_sum).toBe(19701);
-    expect(result.data.value[0].right_sum).toBe(19701);
+    expect(result.data.value[0]['row_count']).toBe(51 * 51);
+    expect(result.data.value[0]['left_sum']).toBe(19701);
+    expect(result.data.value[0]['right_sum']).toBe(19701);
   });
 
   it(`join_one only  - ${databaseName}`, async () => {
@@ -262,10 +262,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].row_count).toBe(51);
-    expect(result.data.value[0].left_sum).toBe(19701);
-    expect(result.data.value[0].right_sum).toBe(19701);
-    expect(result.data.value[0].sum_sum).toBe(19701 + 51 * 19701);
+    expect(result.data.value[0]['row_count']).toBe(51);
+    expect(result.data.value[0]['left_sum']).toBe(19701);
+    expect(result.data.value[0]['right_sum']).toBe(19701);
+    expect(result.data.value[0]['sum_sum']).toBe(19701 + 51 * 19701);
   });
 
   it(`join_many cross ON  - ${databaseName}`, async () => {
@@ -288,9 +288,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].row_count).toBe(51 * 2);
-    expect(result.data.value[0].left_sum).toBe(19701);
-    expect(result.data.value[0].right_sum).toBe(1560);
+    expect(result.data.value[0]['row_count']).toBe(51 * 2);
+    expect(result.data.value[0]['left_sum']).toBe(19701);
+    expect(result.data.value[0]['right_sum']).toBe(1560);
   });
 
   it(`limit - provided - ${databaseName}`, async () => {
@@ -761,7 +761,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].a).toBe(1);
+    expect(result.data.value[0]['a']).toBe(1);
   });
 
   it(`sql_block no explore- ${databaseName}`, async () => {
@@ -773,7 +773,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].a).toBe(1);
+    expect(result.data.value[0]['a']).toBe(1);
   });
 
   it(`sql_block with turducken- ${databaseName}`, async () => {
@@ -797,7 +797,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           project: *; where: popular_name = 'Emma'
         }`;
       const result = await runtime.loadQuery(turduckenQuery).run();
-      expect(result.data.value[0].state_count).toBe(6);
+      expect(result.data.value[0]['state_count']).toBe(6);
     }
   });
 
@@ -829,7 +829,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].c).toBe(2);
+    expect(result.data.value[0]['c']).toBe(2);
   });
 
   it(`local declarations named query - ${databaseName}`, async () => {
@@ -848,7 +848,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].c).toBe(2);
+    expect(result.data.value[0]['c']).toBe(2);
   });
 
   it(`local declarations refined named query - ${databaseName}`, async () => {
@@ -872,7 +872,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].d).toBe(3);
+    expect(result.data.value[0]['d']).toBe(3);
   });
 
   it(`regexp match- ${databaseName}`, async () => {
@@ -891,8 +891,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].llo).toBe(2);
-    expect(result.data.value[0].m2).toBe(1);
+    expect(result.data.value[0]['llo']).toBe(2);
+    expect(result.data.value[0]['m2']).toBe(1);
   });
 
   it(`substitution precidence- ${databaseName}`, async () => {
@@ -911,7 +911,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].x).toBe(30);
+    expect(result.data.value[0]['x']).toBe(30);
   });
 
   it(`array unnest - ${databaseName}`, async () => {
@@ -935,7 +935,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].c).toBe(145);
+    expect(result.data.value[0]['c']).toBe(145);
   });
 
   // make sure we can count the total number of elements when fanning out.
@@ -963,9 +963,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].b).toBe(3552);
-    expect(result.data.value[0].c).toBe(4586);
-    expect(result.data.value[0].a).toBe(6601);
+    expect(result.data.value[0]['b']).toBe(3552);
+    expect(result.data.value[0]['c']).toBe(4586);
+    expect(result.data.value[0]['a']).toBe(6601);
   });
 
   it(`nest null - ${databaseName}`, async () => {
@@ -1030,7 +1030,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         `
         )
         .run();
-      expect(result.data.value[0].tick).toBe(tick);
+      expect(result.data.value[0]['tick']).toBe(tick);
     });
     test('backslash backslash', async () => {
       const result = await runtime
@@ -1042,7 +1042,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         `
         )
         .run();
-      expect(result.data.value[0].back).toBe(back);
+      expect(result.data.value[0]['back']).toBe(back);
     });
   });
 });

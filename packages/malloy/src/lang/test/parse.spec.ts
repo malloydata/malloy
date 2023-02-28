@@ -364,7 +364,7 @@ class BetaExpression extends Testable {
   compile(): void {
     const exprAst = this.ast();
     if (exprAst instanceof ExpressionDef) {
-      const aStruct = this.internalModel.contents.ab;
+      const aStruct = this.internalModel.contents['ab'];
       if (aStruct.type === 'struct') {
         const tstFS = new StaticSpace(aStruct);
         const exprDef = exprAst.getExpression(tstFS);
@@ -1324,7 +1324,7 @@ describe('expressions', () => {
     const modelSrc = 'query: z is a -> { group_by: x is 1+(3/4) }';
     const m = new BetaModel(modelSrc);
     expect(m).modelCompiled();
-    const queryDef = m.translate()?.translated?.modelDef.contents.z;
+    const queryDef = m.translate()?.translated?.modelDef.contents['z'];
     expect(queryDef).toBeDefined();
     expect(queryDef?.type).toBe('query');
     if (queryDef && queryDef.type === 'query') {
