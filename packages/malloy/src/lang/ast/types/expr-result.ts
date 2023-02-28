@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Fragment } from "../../../model/malloy_types";
+import {Fragment} from '../../../model/malloy_types';
 
-import { TypeDesc } from "./type-desc";
+import {TypeDesc} from './type-desc';
 
 export interface ExprResult extends TypeDesc {
   value: Fragment[];

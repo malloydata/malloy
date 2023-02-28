@@ -21,20 +21,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExprValue } from "../types/expr-value";
-import { ExpressionDef } from "../types/expression-def";
+import {ExprValue} from '../types/expr-value';
+import {ExpressionDef} from '../types/expression-def';
 
 export class ExprRegEx extends ExpressionDef {
-  elementType = "regular expression literal";
+  elementType = 'regular expression literal';
   constructor(readonly regex: string) {
     super();
   }
 
   getExpression(): ExprValue {
     return {
-      "dataType": "regular expression",
-      "expressionType": "scalar",
-      "value": [`r'${this.regex}'`]
+      dataType: 'regular expression',
+      expressionType: 'scalar',
+      value: [`r'${this.regex}'`],
     };
   }
 }

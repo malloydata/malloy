@@ -21,19 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as crypto from "crypto";
+import * as crypto from 'crypto';
 import {
   BigQuery as BigQuerySDK,
   Job,
   PagedResponse,
   Query,
   QueryResultsOptions,
-  RowMetadata
-} from "@google-cloud/bigquery";
-import bigquery from "@google-cloud/bigquery/build/src/types";
-import { ResourceStream } from "@google-cloud/paginator";
-import * as googleCommon from "@google-cloud/common";
-import { GaxiosError } from "gaxios";
+  RowMetadata,
+} from '@google-cloud/bigquery';
+import bigquery from '@google-cloud/bigquery/build/src/types';
+import {ResourceStream} from '@google-cloud/paginator';
+import * as googleCommon from '@google-cloud/common';
+import {GaxiosError} from 'gaxios';
 import {
   Connection,
   FieldTypeDef,
@@ -48,8 +48,8 @@ import {
   StreamingConnection,
   StructDef,
   parseTableURI,
-  toAsyncGenerator
-} from "@malloydata/malloy";
+  toAsyncGenerator,
+} from '@malloydata/malloy';
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -88,7 +88,7 @@ type QueryOptionsReader =
 export class BigQueryAuthenticationError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "BigQueryAuthenticationError";
+    this.name = 'BigQueryAuthenticationError';
   }
 }
 
@@ -99,7 +99,7 @@ const maybeRewriteError = (e: Error | unknown): Error => {
 
   if (e instanceof Error) {
     if (
-      (e instanceof GaxiosError && e.code === "400") ||
+      (e instanceof GaxiosError && e.code === '400') ||
       (e instanceof googleCommon.ApiError && e.code === 401)
     ) {
       return new BigQueryAuthenticationError(e.message);
@@ -125,7 +125,7 @@ export class BigQueryConnection
   implements Connection, PersistSQLResults, StreamingConnection
 {
   static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
-    "rowLimit": 10
+    rowLimit: 10,
   };
 
   private bigQuery: BigQuerySDK;
@@ -135,13 +135,12 @@ export class BigQueryConnection
 
   private schemaCache = new Map<
     string,
-    | { schema: StructDef; error?: undefined }
-    | { error: string; schema?: undefined }
+    {schema: StructDef; error?: undefined} | {error: string; schema?: undefined}
   >();
   private sqlSchemaCache = new Map<
     string,
-    | { structDef: StructDef; error?: undefined }
-    | { error: string; structDef?: undefined }
+    | {structDef: StructDef; error?: undefined}
+    | {error: string; structDef?: undefined}
   >();
 
   private queryOptions?: QueryOptionsReader;
@@ -152,19 +151,19 @@ export class BigQueryConnection
 
   public readonly name: string;
 
-  bqToMalloyTypes: { [key: string]: Partial<FieldTypeDef> } = {
-    "DATE": { "type": "date" },
-    "STRING": { "type": "string" },
-    "INTEGER": { "type": "number", "numberType": "integer" },
-    "INT64": { "type": "number", "numberType": "integer" },
-    "FLOAT": { "type": "number", "numberType": "float" },
-    "FLOAT64": { "type": "number", "numberType": "float" },
-    "NUMERIC": { "type": "number", "numberType": "float" },
-    "BIGNUMERIC": { "type": "number", "numberType": "float" },
-    "TIMESTAMP": { "type": "timestamp" },
-    "BOOLEAN": { "type": "boolean" },
-    "BOOL": { "type": "boolean" },
-    "JSON": { "type": "json" }
+  bqToMalloyTypes: {[key: string]: Partial<FieldTypeDef>} = {
+    DATE: {type: 'date'},
+    STRING: {type: 'string'},
+    INTEGER: {type: 'number', numberType: 'integer'},
+    INT64: {type: 'number', numberType: 'integer'},
+    FLOAT: {type: 'number', numberType: 'float'},
+    FLOAT64: {type: 'number', numberType: 'float'},
+    NUMERIC: {type: 'number', numberType: 'float'},
+    BIGNUMERIC: {type: 'number', numberType: 'float'},
+    TIMESTAMP: {type: 'timestamp'},
+    BOOLEAN: {type: 'boolean'},
+    BOOL: {type: 'boolean'},
+    JSON: {type: 'json'},
     // TODO (https://cloud.google.com/bigquery/docs/reference/rest/v2/tables#tablefieldschema):
     // BYTES
     // DATETIME
@@ -179,8 +178,8 @@ export class BigQueryConnection
   ) {
     this.name = name;
     this.bigQuery = new BigQuerySDK({
-      "userAgent": `Malloy/${Malloy.version}`,
-      "keyFilename": config.serviceAccountKeyPath
+      userAgent: `Malloy/${Malloy.version}`,
+      keyFilename: config.serviceAccountKeyPath,
     });
 
     // record project ID because for unclear reasons we have to modify the project ID on the SDK when
@@ -190,20 +189,20 @@ export class BigQueryConnection
 
     this.queryOptions = queryOptions;
     this.config = config;
-    this.location = config.location || "US";
+    this.location = config.location || 'US';
   }
 
   get dialectName(): string {
-    return "standardsql";
+    return 'standardsql';
   }
 
   private readQueryOptions(): BigQueryQueryOptions {
     const options = BigQueryConnection.DEFAULT_QUERY_OPTIONS;
     if (this.queryOptions) {
       if (this.queryOptions instanceof Function) {
-        return { ...options, ...this.queryOptions() };
+        return {...options, ...this.queryOptions()};
       } else {
-        return { ...options, ...this.queryOptions };
+        return {...options, ...this.queryOptions};
       }
     } else {
       return options;
@@ -226,14 +225,14 @@ export class BigQueryConnection
     sqlCommand: string,
     options: Partial<BigQueryQueryOptions> = {},
     rowIndex = 0
-  ): Promise<{ data: MalloyQueryData; schema: bigquery.ITableFieldSchema }> {
+  ): Promise<{data: MalloyQueryData; schema: bigquery.ITableFieldSchema}> {
     const defaultOptions = this.readQueryOptions();
     const pageSize = options.rowLimit ?? defaultOptions.rowLimit;
 
     try {
       const queryResultsOptions = {
-        "maxResults": pageSize,
-        "startIndex": rowIndex.toString()
+        maxResults: pageSize,
+        startIndex: rowIndex.toString(),
       };
 
       const jobResult = await this.createBigQueryJobAndGetResults(
@@ -244,18 +243,18 @@ export class BigQueryConnection
 
       const totalRows = +(jobResult[2]?.totalRows
         ? jobResult[2].totalRows
-        : "0");
+        : '0');
 
       // TODO need to probably surface the cause of the schema not present error
       if (jobResult[2]?.schema === undefined) {
-        throw new Error("Schema not present");
+        throw new Error('Schema not present');
       }
 
       // TODO even though we have 10 minute timeout limit, we still should confirm that resulting metadata has "jobComplete: true"
-      const data = { "rows": jobResult[0], totalRows };
+      const data = {rows: jobResult[0], totalRows};
       const schema = jobResult[2]?.schema;
 
-      return { data, schema };
+      return {data, schema};
     } catch (e) {
       throw maybeRewriteError(e);
     }
@@ -266,27 +265,27 @@ export class BigQueryConnection
     options: Partial<BigQueryQueryOptions> = {},
     rowIndex = 0
   ): Promise<MalloyQueryData> {
-    const { data } = await this._runSQL(sqlCommand, options, rowIndex);
+    const {data} = await this._runSQL(sqlCommand, options, rowIndex);
     return data;
   }
 
   public async runSQLBlockAndFetchResultSchema(
     sqlBlock: SQLBlock,
-    options?: { rowLimit?: number | undefined }
-  ): Promise<{ data: MalloyQueryData; schema: StructDef }> {
-    const { data, "schema": schemaRaw } = await this._runSQL(
+    options?: {rowLimit?: number | undefined}
+  ): Promise<{data: MalloyQueryData; schema: StructDef}> {
+    const {data, schema: schemaRaw} = await this._runSQL(
       sqlBlock.selectStr,
       options
     );
     const schema = this.structDefFromSQLSchema(sqlBlock, schemaRaw);
-    return { data, schema };
+    return {data, schema};
   }
 
   public async downloadMalloyQuery(
     sqlCommand: string
   ): Promise<ResourceStream<RowMetadata>> {
     const job = await this.createBigQueryJob({
-      "query": sqlCommand
+      query: sqlCommand,
     });
 
     return job.getQueryResultsStream();
@@ -295,9 +294,9 @@ export class BigQueryConnection
   private async dryRunSQLQuery(sqlCommand: string): Promise<Job> {
     try {
       const [result] = await this.bigQuery.createQueryJob({
-        "location": this.location,
-        "query": sqlCommand,
-        "dryRun": true
+        location: this.location,
+        query: sqlCommand,
+        dryRun: true,
       });
       return result;
     } catch (e) {
@@ -322,8 +321,8 @@ export class BigQueryConnection
   }
 
   public async getTableFieldSchema(tableURL: string): Promise<SchemaInfo> {
-    const { "tablePath": tableName } = parseTableURI(tableURL);
-    const segments = tableName.split(".");
+    const {tablePath: tableName} = parseTableURI(tableURL);
+    const segments = tableName.split('.');
 
     // paths can have two or three segments
     // if there are only two segments, assume the dataset is "local" to the current billing project
@@ -350,10 +349,10 @@ export class BigQueryConnection
       this.bigQuery.projectId = this.projectId;
       const [metadata] = await metadataPromise;
       return {
-        "schema": metadata.schema,
-        "needsPartitionPsuedoColumn":
+        schema: metadata.schema,
+        needsPartitionPsuedoColumn:
           metadata.timePartitioning?.type !== undefined &&
-          metadata.timePartitioning?.field === undefined
+          metadata.timePartitioning?.field === undefined,
       };
     } catch (e) {
       throw maybeRewriteError(e);
@@ -366,7 +365,7 @@ export class BigQueryConnection
   }
 
   public async test(): Promise<void> {
-    await this.dryRunSQLQuery("SELECT 1");
+    await this.dryRunSQLQuery('SELECT 1');
   }
 
   /*
@@ -388,7 +387,7 @@ export class BigQueryConnection
    *
    */
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
-    const hash = crypto.createHash("md5").update(sqlCommand).digest("hex");
+    const hash = crypto.createHash('md5').update(sqlCommand).digest('hex');
 
     const tempTableName: string | undefined = this.temporaryTables.get(hash);
     if (tempTableName !== undefined) {
@@ -396,8 +395,8 @@ export class BigQueryConnection
     } else {
       try {
         const [job] = await this.bigQuery.createQueryJob({
-          "location": this.location,
-          "query": sqlCommand
+          location: this.location,
+          query: sqlCommand,
         });
 
         let [metaData] = await job.getMetadata();
@@ -406,8 +405,8 @@ export class BigQueryConnection
         // TODO just because a job is "DONE" doesn't mean it ended correctly, should probably also confirm
         // status is successful & that table was created
         // TODO this needs better error handling and a timeout so that issues dont result in infinite looping
-        while (metaData.status.state !== "DONE") {
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+        while (metaData.status.state !== 'DONE') {
+          await new Promise(resolve => setTimeout(resolve, 1000));
           [metaData] = await job.getMetadata();
         }
 
@@ -424,7 +423,7 @@ export class BigQueryConnection
           return fullTableName;
         } else {
           throw new Error(
-            "bigquery.job.getMetadata() - metadata should have configuration but does not"
+            'bigquery.job.getMetadata() - metadata should have configuration but does not'
           );
         }
       } catch (e) {
@@ -462,9 +461,9 @@ export class BigQueryConnection
     }
 
     const [job] = await this.bigQuery.createQueryJob({
-      "query": sqlCommand,
-      "location": this.location,
-      "destination": table
+      query: sqlCommand,
+      location: this.location,
+      destination: table,
     });
 
     // if creating this job didn't throw, there's an ID.
@@ -483,53 +482,51 @@ export class BigQueryConnection
       const name = field.name as string;
 
       // check for an array
-      if (field.mode === "REPEATED" && !["STRUCT", "RECORD"].includes(type)) {
+      if (field.mode === 'REPEATED' && !['STRUCT', 'RECORD'].includes(type)) {
         const malloyType = this.bqToMalloyTypes[type];
         if (malloyType) {
           const innerStructDef: StructDef = {
-            "type": "struct",
+            type: 'struct',
             name,
-            "dialect": this.dialectName,
-            "structSource": { "type": "nested" },
-            "structRelationship": {
-              "type": "nested",
-              "field": name,
-              "isArray": true
+            dialect: this.dialectName,
+            structSource: {type: 'nested'},
+            structRelationship: {
+              type: 'nested',
+              field: name,
+              isArray: true,
             },
-            "fields": [{ ...malloyType, "name": "value" } as FieldTypeDef]
+            fields: [{...malloyType, name: 'value'} as FieldTypeDef],
           };
           structDef.fields.push(innerStructDef);
         }
-      } else if (["STRUCT", "RECORD"].includes(type)) {
+      } else if (['STRUCT', 'RECORD'].includes(type)) {
         const innerStructDef: StructDef = {
-          "type": "struct",
+          type: 'struct',
           name,
-          "dialect": this.dialectName,
-          "structSource":
-            field.mode === "REPEATED"
-              ? { "type": "nested" }
-              : { "type": "inline" },
-          "structRelationship":
-            field.mode === "REPEATED"
-              ? { "type": "nested", "field": name, "isArray": false }
-              : { "type": "inline" },
-          "fields": []
+          dialect: this.dialectName,
+          structSource:
+            field.mode === 'REPEATED' ? {type: 'nested'} : {type: 'inline'},
+          structRelationship:
+            field.mode === 'REPEATED'
+              ? {type: 'nested', field: name, isArray: false}
+              : {type: 'inline'},
+          fields: [],
         };
         this.addFieldsToStructDef(innerStructDef, field);
         structDef.fields.push(innerStructDef);
       } else {
         const malloyType = this.bqToMalloyTypes[type] || {
-          "type": "unsupported",
-          "rawType": type.toLowerCase()
+          type: 'unsupported',
+          rawType: type.toLowerCase(),
         };
-        structDef.fields.push({ name, ...malloyType } as FieldTypeDef);
+        structDef.fields.push({name, ...malloyType} as FieldTypeDef);
       }
     }
   }
 
   private tableURLtoTablePath(tableURL: string): string {
-    const { tablePath } = parseTableURI(tableURL);
-    if (tablePath.split(".").length === 2) {
+    const {tablePath} = parseTableURI(tableURL);
+    if (tablePath.split('.').length === 2) {
       return `${this.defaultProject}.${tablePath}`;
     } else {
       return tablePath;
@@ -541,24 +538,24 @@ export class BigQueryConnection
     schemaInfo: SchemaInfo
   ): StructDef {
     const structDef: StructDef = {
-      "type": "struct",
-      "name": tableURL,
-      "dialect": this.dialectName,
-      "structSource": {
-        "type": "table",
-        "tablePath": this.tableURLtoTablePath(tableURL)
+      type: 'struct',
+      name: tableURL,
+      dialect: this.dialectName,
+      structSource: {
+        type: 'table',
+        tablePath: this.tableURLtoTablePath(tableURL),
       },
-      "structRelationship": {
-        "type": "basetable",
-        "connectionName": this.name
+      structRelationship: {
+        type: 'basetable',
+        connectionName: this.name,
       },
-      "fields": []
+      fields: [],
     };
     this.addFieldsToStructDef(structDef, schemaInfo.schema);
     if (schemaInfo.needsPartitionPsuedoColumn) {
       structDef.fields.push({
-        "type": "timestamp",
-        "name": "_PARTITIONTIME"
+        type: 'timestamp',
+        name: '_PARTITIONTIME',
       });
     }
     return structDef;
@@ -569,19 +566,19 @@ export class BigQueryConnection
     tableFieldSchema: bigquery.ITableFieldSchema
   ): StructDef {
     const structDef: StructDef = {
-      "type": "struct",
-      "name": sqlBlock.name,
-      "dialect": this.dialectName,
-      "structSource": {
-        "type": "sql",
-        "method": "subquery",
-        sqlBlock
+      type: 'struct',
+      name: sqlBlock.name,
+      dialect: this.dialectName,
+      structSource: {
+        type: 'sql',
+        method: 'subquery',
+        sqlBlock,
       },
-      "structRelationship": {
-        "type": "basetable",
-        "connectionName": this.name
+      structRelationship: {
+        type: 'basetable',
+        connectionName: this.name,
       },
-      "fields": []
+      fields: [],
     };
     this.addFieldsToStructDef(structDef, tableFieldSchema);
     return structDef;
@@ -592,7 +589,7 @@ export class BigQueryConnection
     errors: Record<string, string>;
   }> {
     const schemas: NamedStructDefs = {};
-    const errors: { [name: string]: string } = {};
+    const errors: {[name: string]: string} = {};
 
     for (const tableURL of missing) {
       let inCache = this.schemaCache.get(tableURL);
@@ -600,11 +597,11 @@ export class BigQueryConnection
         try {
           const tableFieldSchema = await this.getTableFieldSchema(tableURL);
           inCache = {
-            "schema": this.structDefFromTableSchema(tableURL, tableFieldSchema)
+            schema: this.structDefFromTableSchema(tableURL, tableFieldSchema),
           };
           this.schemaCache.set(tableURL, inCache);
         } catch (error) {
-          inCache = { "error": error.message };
+          inCache = {error: error.message};
         }
       }
       if (inCache.schema !== undefined) {
@@ -613,7 +610,7 @@ export class BigQueryConnection
         errors[tableURL] = inCache.error;
       }
     }
-    return { schemas, errors };
+    return {schemas, errors};
   }
 
   private async getSQLBlockSchema(sqlRef: SQLBlock) {
@@ -626,9 +623,9 @@ export class BigQueryConnection
     for (let retries = 0; retries < 3; retries++) {
       try {
         const [job] = await this.bigQuery.createQueryJob({
-          "location": this.location,
-          "query": sqlRef.selectStr,
-          "dryRun": true
+          location: this.location,
+          query: sqlRef.selectStr,
+          dryRun: true,
         });
 
         return job.metadata.statistics.query.schema;
@@ -642,8 +639,8 @@ export class BigQueryConnection
   public async fetchSchemaForSQLBlock(
     sqlRef: SQLBlock
   ): Promise<
-    | { structDef: StructDef; error?: undefined }
-    | { error: string; structDef?: undefined }
+    | {structDef: StructDef; error?: undefined}
+    | {error: string; structDef?: undefined}
   > {
     const key = sqlRef.name;
     let inCache = this.sqlSchemaCache.get(key);
@@ -651,10 +648,10 @@ export class BigQueryConnection
       try {
         const tableFieldSchema = await this.getSQLBlockSchema(sqlRef);
         inCache = {
-          "structDef": this.structDefFromSQLSchema(sqlRef, tableFieldSchema)
+          structDef: this.structDefFromSQLSchema(sqlRef, tableFieldSchema),
         };
       } catch (error) {
-        inCache = { "error": error.message };
+        inCache = {error: error.message};
       }
       this.sqlSchemaCache.set(key, inCache);
     }
@@ -673,8 +670,8 @@ export class BigQueryConnection
   > {
     try {
       const job = await this.createBigQueryJob({
-        "query": sqlCommand,
-        ...createQueryJobOptions
+        query: sqlCommand,
+        ...createQueryJobOptions,
       });
 
       // TODO we should check if this is still required?
@@ -687,8 +684,8 @@ export class BigQueryConnection
       for (let retries = 0; retries < 3; retries++) {
         try {
           return await job.getQueryResults({
-            "timeoutMs": 1000 * 60 * 2, // TODO - this requires some rethinking, and is a hack to resolve some issues. talk to @bporterfield
-            ...getQueryResultsOptions
+            timeoutMs: 1000 * 60 * 2, // TODO - this requires some rethinking, and is a hack to resolve some issues. talk to @bporterfield
+            ...getQueryResultsOptions,
           });
         } catch (fetchError) {
           lastFetchError = fetchError;
@@ -703,11 +700,11 @@ export class BigQueryConnection
 
   private async createBigQueryJob(createQueryJobOptions?: Query): Promise<Job> {
     const [job] = await this.bigQuery.createQueryJob({
-      "location": this.location,
-      "maximumBytesBilled":
+      location: this.location,
+      maximumBytesBilled:
         this.config.maximumBytesBilled || MAXIMUM_BYTES_BILLED,
-      "jobTimeoutMs": Number(this.config.timeoutMs) || TIMEOUT_MS,
-      ...createQueryJobOptions
+      jobTimeoutMs: Number(this.config.timeoutMs) || TIMEOUT_MS,
+      ...createQueryJobOptions,
     });
     return job;
   }
@@ -735,9 +732,9 @@ export class BigQueryConnection
       }
       bigQuery
         .createQueryStream(sqlCommand)
-        .on("error", onError)
-        .on("data", handleData)
-        .on("end", onEnd);
+        .on('error', onError)
+        .on('data', handleData)
+        .on('end', onEnd);
     }
     return toAsyncGenerator<QueryDataRow>(streamBigQuery);
   }

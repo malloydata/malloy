@@ -21,41 +21,41 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { NamedQuery } from "../../../model/malloy_types";
+import {NamedQuery} from '../../../model/malloy_types';
 
-import { ModelDataRequest } from "../../translate-response";
+import {ModelDataRequest} from '../../translate-response';
 
 import {
   DocStatement,
   Document,
   MalloyElement,
-  RunList
-} from "../types/malloy-element";
-import { QueryElement } from "../types/query-element";
+  RunList,
+} from '../types/malloy-element';
+import {QueryElement} from '../types/query-element';
 
 export class DefineQuery extends MalloyElement implements DocStatement {
-  elementType = "defineQuery";
+  elementType = 'defineQuery';
 
   constructor(readonly name: string, readonly queryDetails: QueryElement) {
-    super({ "queryDetails": queryDetails });
+    super({queryDetails: queryDetails});
   }
 
   execute(doc: Document): ModelDataRequest {
     const entry: NamedQuery = {
       ...this.queryDetails.query(),
-      "type": "query",
-      "name": this.name,
-      "location": this.location
+      type: 'query',
+      name: this.name,
+      location: this.location,
     };
     const exported = false;
-    doc.setEntry(this.name, { entry, exported });
+    doc.setEntry(this.name, {entry, exported});
     return undefined;
   }
 }
 
 export class DefineQueryList extends RunList implements DocStatement {
   constructor(queryList: DefineQuery[]) {
-    super("defineQueries", queryList);
+    super('defineQueries', queryList);
   }
 
   execute(doc: Document): ModelDataRequest {

@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { StructDef, StructRef } from "../../../model/malloy_types";
-import { NamedSource } from "./named-source";
+import {StructDef, StructRef} from '../../../model/malloy_types';
+import {NamedSource} from './named-source';
 
 export class SQLSource extends NamedSource {
-  elementType = "sqlSource";
+  elementType = 'sqlSource';
   structRef(): StructRef {
     return this.structDef();
   }
@@ -36,7 +36,7 @@ export class SQLSource extends NamedSource {
       this.log(`Undefined from_sql source '${this.refName}'`);
       return;
     }
-    if (entry.type === "query") {
+    if (entry.type === 'query') {
       this.log(`Cannot use 'from_sql()' to explore query '${this.refName}'`);
       return;
     } else if (!modelEnt.sqlType) {

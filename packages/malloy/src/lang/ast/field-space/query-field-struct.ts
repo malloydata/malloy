@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { QueryFieldDef, TurtleDef } from "../../../model/malloy_types";
+import {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
 
-import { QueryField } from "./query-space-field";
-import { FieldSpace } from "../types/field-space";
+import {QueryField} from './query-space-field';
+import {FieldSpace} from '../types/field-space';
 
 export class QueryFieldStruct extends QueryField {
   constructor(fs: FieldSpace, protected turtleDef: TurtleDef) {
@@ -34,7 +34,7 @@ export class QueryFieldStruct extends QueryField {
   rename(name: string): void {
     this.turtleDef = {
       ...this.turtleDef,
-      "as": name
+      as: name,
     };
   }
 

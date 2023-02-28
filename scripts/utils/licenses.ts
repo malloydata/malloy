@@ -23,14 +23,14 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable no-console */
-import fs from "fs";
+import fs from 'fs';
 
 export function readPackageJson(path: string): any {
   try {
-    const fileBuffer = fs.readFileSync(path, "utf8");
+    const fileBuffer = fs.readFileSync(path, 'utf8');
     return JSON.parse(fileBuffer);
   } catch (error) {
-    console.error("Could not read package.json", error);
+    console.error('Could not read package.json', error);
     throw error;
   }
 }
@@ -38,7 +38,7 @@ export function readPackageJson(path: string): any {
 export function getDependencies(rootPackageJson: string): string[] {
   const rootPackage = readPackageJson(rootPackageJson);
   // eslint-disable-next-line no-prototype-builtins
-  return rootPackage.hasOwnProperty("dependencies")
+  return rootPackage.hasOwnProperty('dependencies')
     ? Object.keys(rootPackage.dependencies)
     : [];
 }

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ModelEntry } from "./model-entry";
+import {ModelEntry} from './model-entry';
 
 export interface NameSpace {
   getEntry(name: string): ModelEntry | undefined;

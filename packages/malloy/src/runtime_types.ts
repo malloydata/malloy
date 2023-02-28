@@ -21,13 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { RunSQLOptions } from "./run_sql_options";
+import {RunSQLOptions} from './run_sql_options';
 import {
   MalloyQueryData,
   QueryDataRow,
   SQLBlock,
-  StructDef
-} from "./model/malloy_types";
+  StructDef,
+} from './model/malloy_types';
 
 /**
  * The contents of a Malloy query document.
@@ -89,8 +89,8 @@ export interface InfoConnection {
   fetchSchemaForSQLBlock(
     block: SQLBlock
   ): Promise<
-    | { structDef: StructDef; error?: undefined }
-    | { error: string; structDef?: undefined }
+    | {structDef: StructDef; error?: undefined}
+    | {error: string; structDef?: undefined}
   >;
 
   /**
@@ -143,7 +143,7 @@ export interface PersistSQLResults extends Connection {
 export interface StreamingConnection extends Connection {
   runSQLStream(
     sqlCommand: string,
-    options?: { rowLimit?: number }
+    options?: {rowLimit?: number}
   ): AsyncIterableIterator<QueryDataRow>;
 }
 

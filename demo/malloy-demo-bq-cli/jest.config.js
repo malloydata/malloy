@@ -22,13 +22,13 @@
  */
 
 module.exports = {
-  moduleDirectories: ["../../node_modules"],
-  moduleFileExtensions: ["js", "jsx", "ts", "tsx"],
-  modulePathIgnorePatterns: ["<rootDir>/dist/"],
-  setupFilesAfterEnv: ["jest-expect-message"],
-  testMatch: ["**/?(*.)spec.(ts|js)?(x)"],
+  moduleDirectories: ['../../node_modules'],
+  moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx'],
+  modulePathIgnorePatterns: ['<rootDir>/dist/'],
+  setupFilesAfterEnv: ['jest-expect-message'],
+  testMatch: ['**/?(*.)spec.(ts|js)?(x)'],
   transform: {
-    "^.+\\.(ts|tsx)$": "ts-jest",
+    '^.+\\.(ts|tsx)$': 'ts-jest',
   },
   testTimeout: 100000,
   verbose: true,

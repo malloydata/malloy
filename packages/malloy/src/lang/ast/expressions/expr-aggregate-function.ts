@@ -23,17 +23,17 @@
 
 import {
   AggregateFragment,
-  isAtomicFieldType
-} from "../../../model/malloy_types";
+  isAtomicFieldType,
+} from '../../../model/malloy_types';
 
-import { errorFor } from "../ast-utils";
-import { StructSpaceFieldBase } from "../field-space/struct-space-field-base";
-import { FT } from "../fragtype-utils";
-import { FieldReference } from "../query-items/field-references";
-import { ExprValue } from "../types/expr-value";
-import { ExpressionDef } from "../types/expression-def";
-import { FieldSpace } from "../types/field-space";
-import { FieldValueType } from "../types/type-desc";
+import {errorFor} from '../ast-utils';
+import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
+import {FT} from '../fragtype-utils';
+import {FieldReference} from '../query-items/field-references';
+import {ExprValue} from '../types/expr-value';
+import {ExpressionDef} from '../types/expression-def';
+import {FieldSpace} from '../types/field-space';
+import {FieldValueType} from '../types/type-desc';
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
@@ -45,12 +45,12 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     this.elementType = func;
     if (expr) {
       this.expr = expr;
-      this.has({ "expr": expr });
+      this.has({expr: expr});
     }
   }
 
   returns(_forExpression: ExprValue): FieldValueType {
-    return "number";
+    return 'number';
   }
 
   getExpression(fs: FieldSpace): ExprValue {
@@ -62,9 +62,9 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         const footType = sourceFoot.typeDesc();
         if (isAtomicFieldType(footType.dataType)) {
           exprVal = {
-            "dataType": footType.dataType,
-            "expressionType": footType.expressionType,
-            "value": [{ "type": "field", "path": this.source.refString }]
+            dataType: footType.dataType,
+            expressionType: footType.expressionType,
+            value: [{type: 'field', path: this.source.refString}],
           };
           structPath = this.source.sourceString;
         } else {
@@ -83,29 +83,29 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
       }
     }
     if (exprVal === undefined) {
-      this.log("Missing expression for aggregate function");
-      return errorFor("agggregate without expression");
+      this.log('Missing expression for aggregate function');
+      return errorFor('agggregate without expression');
     }
     if (
       this.typeCheck(this.expr || this, {
         ...exprVal,
-        "expressionType": "scalar"
+        expressionType: 'scalar',
       })
     ) {
       const f: AggregateFragment = {
-        "type": "aggregate",
-        "function": this.func,
-        "e": exprVal.value
+        type: 'aggregate',
+        function: this.func,
+        e: exprVal.value,
       };
       if (structPath) {
         f.structPath = structPath;
       }
       return {
-        "dataType": this.returns(exprVal),
-        "expressionType": "aggregate",
-        "value": [f]
+        dataType: this.returns(exprVal),
+        expressionType: 'aggregate',
+        value: [f],
       };
     }
-    return errorFor("aggregate type check");
+    return errorFor('aggregate type check');
   }
 }

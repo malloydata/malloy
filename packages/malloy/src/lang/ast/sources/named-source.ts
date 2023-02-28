@@ -25,17 +25,17 @@ import {
   isValueParameter,
   paramHasValue,
   StructDef,
-  StructRef
-} from "../../../model/malloy_types";
+  StructRef,
+} from '../../../model/malloy_types';
 
-import { Source } from "../elements/source";
-import { ErrorFactory } from "../error-factory";
-import { ConstantSubExpression } from "../expressions/constant-sub-expression";
-import { castTo } from "../time-utils";
-import { MalloyElement, ModelEntryReference } from "../types/malloy-element";
+import {Source} from '../elements/source';
+import {ErrorFactory} from '../error-factory';
+import {ConstantSubExpression} from '../expressions/constant-sub-expression';
+import {castTo} from '../time-utils';
+import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
 
 export class IsValueBlock extends MalloyElement {
-  elementType = "isValueBlock";
+  elementType = 'isValueBlock';
 
   constructor(readonly isMap: Record<string, ConstantSubExpression>) {
     super();
@@ -44,7 +44,7 @@ export class IsValueBlock extends MalloyElement {
 }
 
 export class NamedSource extends Source {
-  elementType = "namedSource";
+  elementType = 'namedSource';
   protected isBlock?: IsValueBlock;
 
   constructor(
@@ -54,10 +54,10 @@ export class NamedSource extends Source {
     super();
     if (paramValues && Object.keys(paramValues).length > 0) {
       this.isBlock = new IsValueBlock(paramValues);
-      this.has({ "parameterValues": this.isBlock });
+      this.has({parameterValues: this.isBlock});
     }
     if (ref instanceof ModelEntryReference) {
-      this.has({ "ref": ref });
+      this.has({ref: ref});
     }
   }
 
@@ -86,14 +86,14 @@ export class NamedSource extends Source {
       (this.ref instanceof ModelEntryReference ? this.ref : this).log(undefMsg);
       return;
     }
-    if (entry.type === "query") {
+    if (entry.type === 'query') {
       this.log(`Must use 'from()' for query source '${this.refName}`);
       return;
     } else if (modelEnt.sqlType) {
       this.log(`Must use 'from_sql()' for sql source '${this.refName}`);
       return;
     }
-    return { ...entry };
+    return {...entry};
   }
 
   structDef(): StructDef {
@@ -119,7 +119,7 @@ export class NamedSource extends Source {
       notFound.dialect = notFound.dialect + err;
       return notFound;
     }
-    const declared = { ...ret.parameters };
+    const declared = {...ret.parameters};
 
     const makeWith = this.isBlock?.isMap || {};
     for (const [pName, pExpr] of Object.entries(makeWith)) {

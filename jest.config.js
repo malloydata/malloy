@@ -22,14 +22,14 @@
  */
 
 module.exports = {
-  moduleFileExtensions: ["js", "jsx", "ts", "tsx"],
-  setupFilesAfterEnv: ["jest-expect-message"],
-  testMatch: ["**/?(*.)spec.(ts|js)?(x)"],
-  testPathIgnorePatterns: ["/node_modules/", "/dist/", "/out/"],
+  moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx'],
+  setupFilesAfterEnv: ['jest-expect-message'],
+  testMatch: ['**/?(*.)spec.(ts|js)?(x)'],
+  testPathIgnorePatterns: ['/node_modules/', '/dist/', '/out/'],
   transform: {
-    "^.+\\.(ts|tsx)$": ["ts-jest", { tsconfig: "<rootDir>/tsconfig.json" }],
+    '^.+\\.(ts|tsx)$': ['ts-jest', {tsconfig: '<rootDir>/tsconfig.json'}],
   },
   testTimeout: 100000,
   verbose: true,
-  testEnvironment: "node",
+  testEnvironment: 'node',
 };

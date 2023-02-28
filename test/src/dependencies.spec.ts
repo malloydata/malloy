@@ -21,13 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { default as madge } from "madge";
+import {default as madge} from 'madge';
 
-describe("dependencies", () => {
+describe('dependencies', () => {
   function getMessage(circles: string[][]): string {
-    let message = "Circular References:\n";
+    let message = 'Circular References:\n';
     for (const circle of circles) {
-      message += "    ";
+      message += '    ';
       for (const dep of circle) {
         message += `${dep} -> `;
       }
@@ -36,8 +36,8 @@ describe("dependencies", () => {
     return message;
   }
 
-  it("should not be circular", () => {
-    return madge("packages/malloy/dist").then((deps) => {
+  it('should not be circular', () => {
+    return madge('packages/malloy/dist').then(deps => {
       expect(deps.circular().length, getMessage(deps.circular())).toBe(0);
     });
   });

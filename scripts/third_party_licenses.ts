@@ -31,11 +31,11 @@
  * It requires one argument, the filename of the CSV. It outputs a CSV with columns described in `outputRow` interface
  */
 
-import { execSync } from "child_process";
-import axios from "axios";
-import https from "https";
-import fs from "fs";
-import stringify from "csv-stringify";
+import {execSync} from 'child_process';
+import axios from 'axios';
+import https from 'https';
+import fs from 'fs';
+import stringify from 'csv-stringify';
 
 interface outputRow {
   name: string;
@@ -48,50 +48,50 @@ interface outputRow {
 }
 
 const outputFile = process.argv[2];
-if (!outputFile) throw new Error("Output file required as argument");
-if (fs.existsSync(outputFile)) throw new Error("Output file exists already");
+if (!outputFile) throw new Error('Output file required as argument');
+if (fs.existsSync(outputFile)) throw new Error('Output file exists already');
 
 axios.defaults.timeout = 500000;
-axios.defaults.httpsAgent = new https.Agent({ "keepAlive": true });
+axios.defaults.httpsAgent = new https.Agent({keepAlive: true});
 
 const malloyPackages = [
-  "@malloydata/malloy",
-  "@malloydata/render",
-  "test",
-  "@malloydata/db-bigquery",
-  "@malloydata/db-postgres",
-  "@malloydata/db-duckdb"
+  '@malloydata/malloy',
+  '@malloydata/render',
+  'test',
+  '@malloydata/db-bigquery',
+  '@malloydata/db-postgres',
+  '@malloydata/db-duckdb',
 ];
 
 // licenses that we would need to mirror source for, if we included (we don't today)
 const sourceMirrorLicenses = [
-  "CDDL-1.0",
-  "CDDL-1.1",
-  "CECILL-C",
-  "CPL-1.0",
-  "EPL-1.0",
-  "EPL-2.0",
-  "IPL-1.0",
-  "MPL-1.0",
-  "MPL-1.1",
-  "MPL-2.0",
-  "APSL-1.0",
-  "APSL-1.1",
-  "APSL-1.2",
-  "APSL-2.0",
-  "Ruby"
+  'CDDL-1.0',
+  'CDDL-1.1',
+  'CECILL-C',
+  'CPL-1.0',
+  'EPL-1.0',
+  'EPL-2.0',
+  'IPL-1.0',
+  'MPL-1.0',
+  'MPL-1.1',
+  'MPL-2.0',
+  'APSL-1.0',
+  'APSL-1.1',
+  'APSL-1.2',
+  'APSL-2.0',
+  'Ruby',
 ];
 
 // packages that don't provide license files in standard places
-const licenseFoundElsewhere: { [id: string]: string } = {
-  "agent-base":
-    "https://github.com/TooTallNate/node-agent-base/blob/master/README.md",
-  "crypt": "https://github.com/pvorb/node-crypt/blob/master/LICENSE.mkd",
-  "http-proxy-agent": "https://github.com/TooTallNate/node-http-proxy-agent",
-  "https-proxy-agent": "https://github.com/TooTallNate/node-https-proxy-agent"
+const licenseFoundElsewhere: {[id: string]: string} = {
+  'agent-base':
+    'https://github.com/TooTallNate/node-agent-base/blob/master/README.md',
+  crypt: 'https://github.com/pvorb/node-crypt/blob/master/LICENSE.mkd',
+  'http-proxy-agent': 'https://github.com/TooTallNate/node-http-proxy-agent',
+  'https-proxy-agent': 'https://github.com/TooTallNate/node-https-proxy-agent',
 };
 
-const packagesWithoutLocationsSpecified: { [id: string]: string } = {};
+const packagesWithoutLocationsSpecified: {[id: string]: string} = {};
 
 const getLicenses = async () => {
   const out: outputRow[] = [];
@@ -99,27 +99,27 @@ const getLicenses = async () => {
 
   // dependencyList.data.head is [ 'Name', 'Version', 'License', 'URL', 'VendorUrl', 'VendorName' ]
   const dependencyList = JSON.parse(
-    execSync("yarn --prod true --no-progress licenses list --json").toString()
+    execSync('yarn --prod true --no-progress licenses list --json').toString()
   );
 
   // if specific versions are required they might be duped in list - de-deup here
   const dedupedDependencies = dependencyList.data.body.filter(
     (arr: any, index: any, self: any) =>
-      self.findIndex((t: any) => t[0] == arr[0]) === index
+      self.findIndex((t: any) => t[0] === arr[0]) === index
   );
 
   for (const dependency of dedupedDependencies) {
     // don't list our own packages
     if (malloyPackages.includes(dependency[0])) continue;
     // ignore top-level workspace
-    if (dependency[0].startsWith("workspace-aggregator")) continue;
+    if (dependency[0].startsWith('workspace-aggregator')) continue;
 
     const name = dependency[0] as string;
 
     const row: Partial<outputRow> = {
       name,
-      "binaryName": "Malloy VSCode Extension",
-      "licenseName": dependency[2]
+      binaryName: 'Malloy VSCode Extension',
+      licenseName: dependency[2],
     };
 
     const url = dependency[3];
@@ -136,48 +136,48 @@ const getLicenses = async () => {
       //  https://github.com/...
 
       let httpURL: string;
-      if (url.startsWith("git+https://")) {
-        httpURL = url.replace("git+", "");
-      } else if (url.startsWith("git://")) {
-        httpURL = url.replace("git", "https");
-      } else if (url.startsWith("git@")) {
-        httpURL = url.replace("git@", "https://");
-      } else if (url.startsWith("git+ssh://git@")) {
-        httpURL = url.replace("git+ssh://git@", "https://");
+      if (url.startsWith('git+https://')) {
+        httpURL = url.replace('git+', '');
+      } else if (url.startsWith('git://')) {
+        httpURL = url.replace('git', 'https');
+      } else if (url.startsWith('git@')) {
+        httpURL = url.replace('git@', 'https://');
+      } else if (url.startsWith('git+ssh://git@')) {
+        httpURL = url.replace('git+ssh://git@', 'https://');
       } else {
-        httpURL = url.replace("http://", "https://");
+        httpURL = url.replace('http://', 'https://');
       }
 
       // deal with git URLs
-      if (httpURL.endsWith(".git")) {
+      if (httpURL.endsWith('.git')) {
         httpURL = httpURL.slice(0, -4);
       }
-      if (httpURL.indexOf(":", 6) != -1) {
-        const index = httpURL.indexOf(":", 6);
-        httpURL = httpURL.substr(0, index) + "/" + httpURL.substr(index + 1);
+      if (httpURL.indexOf(':', 6) !== -1) {
+        const index = httpURL.indexOf(':', 6);
+        httpURL = httpURL.substr(0, index) + '/' + httpURL.substr(index + 1);
       }
 
       // filenames roughly ordered by occurence so we search faster
       const licenseFileNames = [
-        "LICENSE",
-        "License",
-        "LICENCE",
-        "LICENSE-MIT",
-        "license"
+        'LICENSE',
+        'License',
+        'LICENCE',
+        'LICENSE-MIT',
+        'license',
       ];
-      const licenseExtensions = ["", ".md", ".txt"];
-      const defaultBranchNames = ["blob/main/", "blob/master/", ""]; // "" is because some sub-packages already have branch name embedded in package URL
+      const licenseExtensions = ['', '.md', '.txt'];
+      const defaultBranchNames = ['blob/main/', 'blob/master/', '']; // "" is because some sub-packages already have branch name embedded in package URL
 
       // some packages don't include a url
       if (
-        httpURL == "Unknown" &&
+        httpURL === 'Unknown' &&
         Object.keys(packagesWithoutLocationsSpecified).includes(name)
       ) {
         httpURL = packagesWithoutLocationsSpecified[name];
       }
 
-      if (httpURL == "Unknown") {
-        row.licenseLink = "TODO";
+      if (httpURL === 'Unknown') {
+        row.licenseLink = 'TODO';
       } else {
         console.log(`searching for ${row.name} at ${httpURL}`);
 
@@ -188,7 +188,7 @@ const getLicenses = async () => {
 
               try {
                 // stop GH/etc from limiting us
-                await new Promise((resolve) => setTimeout(resolve, 700));
+                await new Promise(resolve => setTimeout(resolve, 700));
 
                 const license = await axios.head(licenseLink);
                 if (license) {
@@ -197,7 +197,7 @@ const getLicenses = async () => {
                 }
               } catch (e) {
                 if (axios.isAxiosError(e)) {
-                  if (!e.response || e.response.status != 404) {
+                  if (!e.response || e.response.status !== 404) {
                     console.warn(`ERROR: ${e.message}`);
                     errors.push([name, e]);
                   }
@@ -209,17 +209,17 @@ const getLicenses = async () => {
       }
 
       if (!row.licenseLink) {
-        console.warn("WARN: could not find license for " + httpURL);
-        row.licenseLink = "TODO";
+        console.warn('WARN: could not find license for ' + httpURL);
+        row.licenseLink = 'TODO';
       }
     }
 
-    row.copyrightIncluded = "true";
+    row.copyrightIncluded = 'true';
 
     // if we happened to add a lib with a mirror-required license, mark a TODO
     if (sourceMirrorLicenses.includes(row.licenseName as string)) {
-      row.sourceCodeIncluded = "TODO";
-    } else row.sourceCodeIncluded = "false";
+      row.sourceCodeIncluded = 'TODO';
+    } else row.sourceCodeIncluded = 'false';
 
     out.push(row as outputRow);
   }
@@ -227,14 +227,14 @@ const getLicenses = async () => {
   stringify(
     out,
     {
-      "columns": [
-        "name",
-        "licenseLink",
-        "licenseName",
-        "binaryName",
-        "copyrightIncluded",
-        "sourceCodeIncluded"
-      ]
+      columns: [
+        'name',
+        'licenseLink',
+        'licenseName',
+        'binaryName',
+        'copyrightIncluded',
+        'sourceCodeIncluded',
+      ],
     },
     (err: any, output: string) => {
       fs.writeFileSync(outputFile, output);

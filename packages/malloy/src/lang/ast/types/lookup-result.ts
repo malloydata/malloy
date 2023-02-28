@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { SpaceEntry } from "./space-entry";
+import {SpaceEntry} from './space-entry';
 
 export interface LookupFound {
   found: SpaceEntry;

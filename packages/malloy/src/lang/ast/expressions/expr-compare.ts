@@ -21,28 +21,28 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FT } from "../fragtype-utils";
-import { Comparison } from "../types/comparison";
-import { ExprValue } from "../types/expr-value";
-import { ExpressionDef } from "../types/expression-def";
-import { FieldSpace } from "../types/field-space";
-import { isGranularResult } from "../types/granular-result";
-import { BinaryBoolean } from "./binary-boolean";
-import { ExprGranularTime } from "./expr-granular-time";
+import {FT} from '../fragtype-utils';
+import {Comparison} from '../types/comparison';
+import {ExprValue} from '../types/expr-value';
+import {ExpressionDef} from '../types/expression-def';
+import {FieldSpace} from '../types/field-space';
+import {isGranularResult} from '../types/granular-result';
+import {BinaryBoolean} from './binary-boolean';
+import {ExprGranularTime} from './expr-granular-time';
 
 const compareTypes = {
-  "~": [FT.stringT],
-  "!~": [FT.stringT],
-  "<": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  "<=": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  "=": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  "!=": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  ">=": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
-  ">": [FT.numberT, FT.stringT, FT.dateT, FT.timestampT]
+  '~': [FT.stringT],
+  '!~': [FT.stringT],
+  '<': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
+  '<=': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
+  '=': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
+  '!=': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
+  '>=': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
+  '>': [FT.numberT, FT.stringT, FT.dateT, FT.timestampT],
 };
 
 export class ExprCompare extends BinaryBoolean<Comparison> {
-  elementType = "a<=>b";
+  elementType = 'a<=>b';
   constructor(left: ExpressionDef, op: Comparison, right: ExpressionDef) {
     super(left, op, right);
     this.legalChildTypes = compareTypes[op];

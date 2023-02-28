@@ -24,39 +24,39 @@
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
-import * as malloy from "@malloydata/malloy";
-import { EmptyURLReader } from "@malloydata/malloy";
-import { BigQueryTestConnection, PostgresTestConnection } from "../../runtimes";
-import { describeIfDatabaseAvailable } from "../../util";
+import * as malloy from '@malloydata/malloy';
+import {EmptyURLReader} from '@malloydata/malloy';
+import {BigQueryTestConnection, PostgresTestConnection} from '../../runtimes';
+import {describeIfDatabaseAvailable} from '../../util';
 
-const res = describeIfDatabaseAvailable(["bigquery", "postgres"]);
+const res = describeIfDatabaseAvailable(['bigquery', 'postgres']);
 let [describe] = res;
 const [, databases] = res;
 
 // *** NOTE ***
 // this is a special case (for now): a test that REQUIRES two databases - bigquery AND postgres
 describe =
-  databases.filter((d) => ["postgres", "bigquery"].includes(d)).length >= 2
+  databases.filter(d => ['postgres', 'bigquery'].includes(d)).length >= 2
     ? describe
     : describe.skip;
 
-describe("Multi-connection", () => {
+describe('Multi-connection', () => {
   const bqConnection = new BigQueryTestConnection(
-    "bigquery",
+    'bigquery',
     {},
-    { "defaultProject": "malloy-data" }
+    {defaultProject: 'malloy-data'}
   );
-  const postgresConnection = new PostgresTestConnection("postgres");
+  const postgresConnection = new PostgresTestConnection('postgres');
   const files = new EmptyURLReader();
 
   const connectionMap = new malloy.FixedConnectionMap(
     new Map(
       Object.entries({
-        "bigquery": bqConnection,
-        "postgres": postgresConnection
+        bigquery: bqConnection,
+        postgres: postgresConnection,
       })
     ),
-    "bigquery"
+    'bigquery'
   );
 
   const runtime = new malloy.Runtime(files, connectionMap);
@@ -81,7 +81,7 @@ explore: postgres_aircraft is table('postgres:malloytest.aircraft'){
 
   const expressionModel = runtime.loadModel(expressionModelText);
 
-  it(`default query`, async () => {
+  it('default query', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -92,10 +92,10 @@ explore: postgres_aircraft is table('postgres:malloytest.aircraft'){
       )
       .run();
     // console.log(result.sql);
-    expect(result.data.path(0, "aircraft_count").value).toBe(3599);
+    expect(result.data.path(0, 'aircraft_count').value).toBe(3599);
   });
 
-  it(`bigquery query`, async () => {
+  it('bigquery query', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -106,10 +106,10 @@ explore: postgres_aircraft is table('postgres:malloytest.aircraft'){
       )
       .run();
     // console.log(result.sql);
-    expect(result.data.path(0, "state_count").value).toBe(53);
+    expect(result.data.path(0, 'state_count').value).toBe(53);
   });
 
-  it(`postgres query`, async () => {
+  it('postgres query', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -119,10 +119,10 @@ explore: postgres_aircraft is table('postgres:malloytest.aircraft'){
     `
       )
       .run();
-    expect(result.data.path(0, "aircraft_count").value).toBe(3603);
+    expect(result.data.path(0, 'aircraft_count').value).toBe(3603);
   });
 
-  it(`postgres raw query`, async () => {
+  it('postgres raw query', async () => {
     const result = await runtime
       .loadQuery(
         `
@@ -136,8 +136,8 @@ explore: postgres_aircraft is table('postgres:malloytest.aircraft'){
     `
       )
       .run();
-    expect(result.data.path(0, "airport_count").value).toBe(19793);
-    expect(result.data.path(0, "version").value).toMatch(/Postgre/);
-    expect(result.data.path(0, "code_count").value).toBe(19793);
+    expect(result.data.path(0, 'airport_count').value).toBe(19793);
+    expect(result.data.path(0, 'version').value).toMatch(/Postgre/);
+    expect(result.data.path(0, 'code_count').value).toBe(19793);
   });
 });

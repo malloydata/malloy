@@ -21,14 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { CommonTokenStream, ParserRuleContext } from "antlr4ts";
-import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
-import { ParseTree } from "antlr4ts/tree";
-import { MalloyParserListener } from "../lib/Malloy/MalloyParserListener";
-import * as parser from "../lib/Malloy/MalloyParser";
-import { MalloyParser } from "../lib/Malloy/MalloyParser";
-import { Token } from "antlr4ts/Token";
-import { DocumentRange } from "../../model/malloy_types";
+import {CommonTokenStream, ParserRuleContext} from 'antlr4ts';
+import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
+import {ParseTree} from 'antlr4ts/tree';
+import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
+import * as parser from '../lib/Malloy/MalloyParser';
+import {MalloyParser} from '../lib/Malloy/MalloyParser';
+import {Token} from 'antlr4ts/Token';
+import {DocumentRange} from '../../model/malloy_types';
 
 export interface DocumentHighlight {
   range: DocumentRange;
@@ -37,80 +37,80 @@ export interface DocumentHighlight {
 
 // TODO maybe this could be an enum like Definition__Field, etc.
 export const HighlightType = {
-  "Identifier": "identifier",
-  "Type": "type",
-  "Literal": {
-    "Date": "literal.date",
-    "Number": "literal.number",
-    "String": "literal.string",
-    "RegularExpression": "literal.regular_expression",
-    "Boolean": "literal.boolean",
-    "Null": "literal.null"
+  Identifier: 'identifier',
+  Type: 'type',
+  Literal: {
+    Date: 'literal.date',
+    Number: 'literal.number',
+    String: 'literal.string',
+    RegularExpression: 'literal.regular_expression',
+    Boolean: 'literal.boolean',
+    Null: 'literal.null',
   },
-  "Call": {
-    "Aggregate": "call.aggregate",
-    "TimeFrame": "call.time_frame",
-    "Cast": "call.cast",
-    "Table": "call.table",
-    "From": "call.from",
-    "Function": "call.function",
-    "FromSQL": "call.from_sql"
+  Call: {
+    Aggregate: 'call.aggregate',
+    TimeFrame: 'call.time_frame',
+    Cast: 'call.cast',
+    Table: 'call.table',
+    From: 'call.from',
+    Function: 'call.function',
+    FromSQL: 'call.from_sql',
   },
   // TODO many of these should probably be categorized further
-  "Keyword": {
-    "AggregateModifier": {
-      "Distinct": "keyword.aggregate_modifier.distinct"
+  Keyword: {
+    AggregateModifier: {
+      Distinct: 'keyword.aggregate_modifier.distinct',
     },
-    "CastModifier": {
-      "As": "keyword.cast_modifier.as"
+    CastModifier: {
+      As: 'keyword.cast_modifier.as',
     },
-    "Is": "keyword.is",
-    "On": "keyword.on",
-    "Desc": "keyword.desc",
-    "Asc": "keyword.asc",
-    "Pick": "keyword.pick",
-    "When": "keyword.when",
-    "Else": "keyword.else",
-    "With": "keyword.with",
+    Is: 'keyword.is',
+    On: 'keyword.on',
+    Desc: 'keyword.desc',
+    Asc: 'keyword.asc',
+    Pick: 'keyword.pick',
+    When: 'keyword.when',
+    Else: 'keyword.else',
+    With: 'keyword.with',
     // TODO or is this a meta type?
-    "JSON": "keyword.json",
+    JSON: 'keyword.json',
     // TODO or is this a meta type?
-    "Turtle": "keyword.turtle",
-    "Import": "keyword.import"
+    Turtle: 'keyword.turtle',
+    Import: 'keyword.import',
   },
-  "Operator": {
-    "Comparison": "operator.comparison",
-    "Boolean": "operator.boolean",
-    "Date": "operator.date"
+  Operator: {
+    Comparison: 'operator.comparison',
+    Boolean: 'operator.boolean',
+    Date: 'operator.date',
   },
-  "Comment": {
-    "Line": "comment.line",
-    "Block": "comment.block"
+  Comment: {
+    Line: 'comment.line',
+    Block: 'comment.block',
   },
-  "Property": {
-    "Accept": "property.accept",
-    "Aggregate": "property.aggregate",
-    "Dimension": "property.dimension",
-    "Except": "property.except",
-    "Source": "property.source",
-    "GroupBy": "property.group_by",
-    "Having": "property.having",
-    "Index": "property.index",
-    "JoinOne": "keyword.join_one",
-    "JoinMany": "keyword.join_many",
-    "JoinCross": "keyword.join_cross",
-    "Limit": "property.limit",
-    "Measure": "property.measure",
-    "Nest": "property.nest",
-    "OrderBy": "property.order_by",
-    "PrimaryKey": "property.primary_key",
-    "Project": "property.project",
-    "Query": "property.query",
-    "Rename": "property.rename",
-    "Top": "property.top",
-    "Where": "property.where",
-    "SQL": "property.sql"
-  }
+  Property: {
+    Accept: 'property.accept',
+    Aggregate: 'property.aggregate',
+    Dimension: 'property.dimension',
+    Except: 'property.except',
+    Source: 'property.source',
+    GroupBy: 'property.group_by',
+    Having: 'property.having',
+    Index: 'property.index',
+    JoinOne: 'keyword.join_one',
+    JoinMany: 'keyword.join_many',
+    JoinCross: 'keyword.join_cross',
+    Limit: 'property.limit',
+    Measure: 'property.measure',
+    Nest: 'property.nest',
+    OrderBy: 'property.order_by',
+    PrimaryKey: 'property.primary_key',
+    Project: 'property.project',
+    Query: 'property.query',
+    Rename: 'property.rename',
+    Top: 'property.top',
+    Where: 'property.where',
+    SQL: 'property.sql',
+  },
 };
 
 export function passForHighlights(
@@ -119,7 +119,7 @@ export function passForHighlights(
   const highlights: DocumentHighlight[] = [];
   const register = (token: Token, type: string, removeColon = false) => {
     const offset = token.startIndex - token.charPositionInLine;
-    const tokenLines = token.text?.split("\n") || [];
+    const tokenLines = token.text?.split('\n') || [];
     const numberOfLines = tokenLines.length;
     const lengthOfAllButLastLine = tokenLines
       .slice(0, -1)
@@ -127,22 +127,22 @@ export function passForHighlights(
     const colonAdjustment = removeColon ? 1 : 0;
     highlights.push({
       type,
-      "range": {
-        "start": {
-          "line": token.line - 1,
-          "character": token.startIndex - offset
+      range: {
+        start: {
+          line: token.line - 1,
+          character: token.startIndex - offset,
         },
-        "end": {
-          "line": token.line - 1 + numberOfLines - 1,
-          "character":
+        end: {
+          line: token.line - 1 + numberOfLines - 1,
+          character:
             token.stopIndex +
             2 -
             (numberOfLines > 1 ? token.startIndex : offset) -
             lengthOfAllButLastLine -
             numberOfLines -
-            colonAdjustment
-        }
-      }
+            colonAdjustment,
+        },
+      },
     });
   };
   for (let i = 0; i < tokens.size; i++) {
@@ -352,17 +352,17 @@ class DocumentHighlightWalker implements MalloyParserListener {
   rangeOf(pcx: ParserRuleContext) {
     const stopToken = pcx.stop || pcx.start;
     return {
-      "start": {
-        "line": pcx.start.line - 1,
-        "character": pcx.start.charPositionInLine
+      start: {
+        line: pcx.start.line - 1,
+        character: pcx.start.charPositionInLine,
       },
-      "end": {
-        "line": stopToken.line - 1,
-        "character":
+      end: {
+        line: stopToken.line - 1,
+        character:
           stopToken.stopIndex -
           (stopToken.startIndex - stopToken.charPositionInLine) +
-          1
-      }
+          1,
+      },
     };
   }
 
@@ -370,8 +370,8 @@ class DocumentHighlightWalker implements MalloyParserListener {
     const id = pcx.id() || pcx.timeframe();
     if (id) {
       this.highlights.push({
-        "range": this.rangeOf(id),
-        "type": HighlightType.Call.Function
+        range: this.rangeOf(id),
+        type: HighlightType.Call.Function,
       });
     }
   }

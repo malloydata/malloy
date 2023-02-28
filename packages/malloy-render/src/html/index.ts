@@ -21,4 +21,4 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export { HTMLView } from "./html_view";
+export {HTMLView} from './html_view';

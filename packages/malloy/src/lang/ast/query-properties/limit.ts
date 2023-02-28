@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { MalloyElement } from "../types/malloy-element";
+import {MalloyElement} from '../types/malloy-element';
 
 export class Limit extends MalloyElement {
-  elementType = "limit";
+  elementType = 'limit';
   constructor(readonly limit: number) {
     super();
   }

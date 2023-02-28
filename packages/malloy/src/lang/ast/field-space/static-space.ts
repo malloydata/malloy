@@ -21,23 +21,23 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Dialect } from "../../../dialect/dialect";
-import { getDialect } from "../../../dialect/dialect_map";
-import { FieldDef, StructDef, isTurtleDef } from "../../../model/malloy_types";
+import {Dialect} from '../../../dialect/dialect';
+import {getDialect} from '../../../dialect/dialect_map';
+import {FieldDef, StructDef, isTurtleDef} from '../../../model/malloy_types';
 
-import { SpaceEntry } from "../types/space-entry";
-import { LookupResult } from "../types/lookup-result";
-import { FieldName, FieldSpace } from "../types/field-space";
-import { DefinedParameter } from "../types/space-param";
-import { SpaceField } from "../types/space-field";
-import { StructSpaceFieldBase } from "./struct-space-field-base";
-import { ColumnSpaceField } from "./column-space-field";
-import { QueryFieldStruct } from "./query-field-struct";
+import {SpaceEntry} from '../types/space-entry';
+import {LookupResult} from '../types/lookup-result';
+import {FieldName, FieldSpace} from '../types/field-space';
+import {DefinedParameter} from '../types/space-param';
+import {SpaceField} from '../types/space-field';
+import {StructSpaceFieldBase} from './struct-space-field-base';
+import {ColumnSpaceField} from './column-space-field';
+import {QueryFieldStruct} from './query-field-struct';
 
 type FieldMap = Record<string, SpaceEntry>;
 
 export class StaticSpace implements FieldSpace {
-  readonly type = "fieldSpace";
+  readonly type = 'fieldSpace';
   private memoMap?: FieldMap;
   protected fromStruct: StructDef;
 
@@ -58,7 +58,7 @@ export class StaticSpace implements FieldSpace {
   }
 
   defToSpaceField(from: FieldDef): SpaceField {
-    if (from.type === "struct") {
+    if (from.type === 'struct') {
       return new StructSpaceField(from);
     } else if (isTurtleDef(from)) {
       return new QueryFieldStruct(this, from);
@@ -115,7 +115,7 @@ export class StaticSpace implements FieldSpace {
   }
 
   emptyStructDef(): StructDef {
-    return { ...this.fromStruct, "fields": [] };
+    return {...this.fromStruct, fields: []};
   }
 
   lookup(path: FieldName[]): LookupResult {
@@ -123,7 +123,7 @@ export class StaticSpace implements FieldSpace {
     const rest = path.slice(1);
     const found = this.entry(head.refString);
     if (!found) {
-      return { "error": `'${head}' is not defined`, found };
+      return {error: `'${head}' is not defined`, found};
     }
     if (found instanceof SpaceField) {
       /*
@@ -145,13 +145,13 @@ export class StaticSpace implements FieldSpace {
       const definition = found.fieldDef();
       if (definition) {
         head.addReference({
-          "type":
+          type:
             found instanceof StructSpaceFieldBase
-              ? "joinReference"
-              : "fieldReference",
+              ? 'joinReference'
+              : 'fieldReference',
           definition,
-          "location": head.location,
-          "text": head.refString
+          location: head.location,
+          text: head.refString,
         });
       }
     }
@@ -160,11 +160,11 @@ export class StaticSpace implements FieldSpace {
         return found.fieldSpace.lookup(rest);
       }
       return {
-        "error": `'${head}' cannot contain a '${rest[0]}'`,
-        "found": undefined
+        error: `'${head}' cannot contain a '${rest[0]}'`,
+        found: undefined,
       };
     }
-    return { found, "error": undefined };
+    return {found, error: undefined};
   }
 }
 

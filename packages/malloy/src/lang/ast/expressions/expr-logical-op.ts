@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { BinaryBoolean } from "./binary-boolean";
-import { FT } from "../fragtype-utils";
+import {BinaryBoolean} from './binary-boolean';
+import {FT} from '../fragtype-utils';
 
-export class ExprLogicalOp extends BinaryBoolean<"and" | "or"> {
-  elementType = "logical operator";
+export class ExprLogicalOp extends BinaryBoolean<'and' | 'or'> {
+  elementType = 'logical operator';
   legalChildTypes = [FT.boolT, FT.aggregateBoolT];
 }

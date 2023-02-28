@@ -21,18 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { SQLPhrase } from "../../../model/malloy_types";
+import {SQLPhrase} from '../../../model/malloy_types';
 
-import { QueryElement, isQueryElement } from "../types/query-element";
-import { MalloyElement } from "../types/malloy-element";
+import {QueryElement, isQueryElement} from '../types/query-element';
+import {MalloyElement} from '../types/malloy-element';
 
 type SQLStringSegment = string | QueryElement;
 export class SQLString extends MalloyElement {
-  elementType = "sqlString";
+  elementType = 'sqlString';
   elements: SQLStringSegment[] = [];
   containsQueries = false;
   push(el: string | MalloyElement): void {
-    if (typeof el == "string") {
+    if (typeof el === 'string') {
       if (el.length > 0) {
         this.elements.push(el);
       }
@@ -41,14 +41,14 @@ export class SQLString extends MalloyElement {
       this.containsQueries = true;
       el.parent = this;
     } else {
-      el.log("This element is not legal inside an SQL string");
+      el.log('This element is not legal inside an SQL string');
     }
   }
 
   sqlPhrases(): SQLPhrase[] {
-    return this.elements.map((el) => {
-      if (typeof el == "string") {
-        return { "sql": el };
+    return this.elements.map(el => {
+      if (typeof el === 'string') {
+        return {sql: el};
       }
       return el.query();
     });

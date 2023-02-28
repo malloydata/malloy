@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { MarkedSource, TestTranslator, markSource } from "./test-translator";
-import { DocumentSymbol } from "../parse-tree-walkers/document-symbol-walker";
+import {MarkedSource, TestTranslator, markSource} from './test-translator';
+import {DocumentSymbol} from '../parse-tree-walkers/document-symbol-walker';
 
 class MalloyExplore extends TestTranslator {
   constructor(src: string) {
@@ -42,136 +42,136 @@ function testSymbol(
   path: number[]
 ) {
   const doc = new MalloyExplore(source.code);
-  let current = { "children": doc.symbols };
-  path.forEach((segment) => {
+  let current = {children: doc.symbols};
+  path.forEach(segment => {
     current = current.children[segment];
   });
   expect(doc.logger.hasErrors()).toBeFalsy();
   expect(current).toMatchObject({
     name,
-    "range": source.locations[0].range,
-    type
+    range: source.locations[0].range,
+    type,
   });
 }
 
-test("explore symbols are included", () => {
+test('explore symbols are included', () => {
   testSymbol(
     markSource`explore: ${"flights is table('my.table.flights')"}`,
-    "flights",
-    "explore",
+    'flights',
+    'explore',
     [0]
   );
 });
 
-test("query symbols are included", () => {
+test('query symbols are included', () => {
   testSymbol(
-    markSource`query: ${"flights_by_carrier is flights -> by_carrier"}`,
-    "flights_by_carrier",
-    "query",
+    markSource`query: ${'flights_by_carrier is flights -> by_carrier'}`,
+    'flights_by_carrier',
+    'query',
     [0]
   );
 });
 
-test("expression field defs are included", () => {
+test('expression field defs are included', () => {
   testSymbol(
     markSource`
       explore: flights is table('my.table.flights') {
-        dimension: ${"one is 1"}
+        dimension: ${'one is 1'}
       }
     `,
-    "one",
-    "field",
+    'one',
+    'field',
     [0, 0]
   );
 });
 
-test("renamed fields are included", () => {
+test('renamed fields are included', () => {
   testSymbol(
     markSource`
       explore: flights is table('my.table.flights') {
-        rename: ${"field_two is field_2"}
+        rename: ${'field_two is field_2'}
       }
     `,
-    "field_two",
-    "field",
+    'field_two',
+    'field',
     [0, 0]
   );
 });
 
-test("name only fields are included", () => {
+test('name only fields are included', () => {
   testSymbol(
     markSource`
       explore: flights is table('my.table.flights') {
-        dimension: ${"field_two is field_2"}
+        dimension: ${'field_two is field_2'}
       }
     `,
-    "field_two",
-    "field",
+    'field_two',
+    'field',
     [0, 0]
   );
 });
 
-test("turtle fields are included", () => {
+test('turtle fields are included', () => {
   testSymbol(
     markSource`
       explore: flights is table('my.table.flights') {
-        query: ${"my_turtle is { group_by: a }"}
+        query: ${'my_turtle is { group_by: a }'}
       }
     `,
-    "my_turtle",
-    "query",
+    'my_turtle',
+    'query',
     [0, 0]
   );
 });
 
-test("turtle children fields are included", () => {
+test('turtle children fields are included', () => {
   testSymbol(
     markSource`
       explore: flights is table('my.table.flights') {
-        query: my_turtle is { group_by: ${"a"} }
+        query: my_turtle is { group_by: ${'a'} }
       }
     `,
-    "a",
-    "field",
+    'a',
+    'field',
     [0, 0, 0]
   );
 });
 
-test("turtle children turtles are included", () => {
+test('turtle children turtles are included', () => {
   testSymbol(
     markSource`
       explore: flights is table('my.table.flights') {
-        query: my_turtle is { nest: ${"inner_turtle is { group_by: a }"} }
+        query: my_turtle is { nest: ${'inner_turtle is { group_by: a }'} }
       }
     `,
-    "inner_turtle",
-    "query",
+    'inner_turtle',
+    'query',
     [0, 0, 0]
   );
 });
 
-test("join withs are included", () => {
+test('join withs are included', () => {
   testSymbol(
     markSource`
       explore: flights is table('my.table.flights') {
-        join_one: ${"a is b with c"}
+        join_one: ${'a is b with c'}
       }
     `,
-    "a",
-    "join",
+    'a',
+    'join',
     [0, 0]
   );
 });
 
-test("join ons are included", () => {
+test('join ons are included', () => {
   testSymbol(
     markSource`
       explore: flights is table('my.table.flights') {
-        join_one: ${"a is b on c"}
+        join_one: ${'a is b on c'}
       }
     `,
-    "a",
-    "join",
+    'a',
+    'join',
     [0, 0]
   );
 });

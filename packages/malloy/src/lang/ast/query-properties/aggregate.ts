@@ -21,13 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldDeclaration } from "../query-items/field-declaration";
-import { ListOf } from "../types/malloy-element";
-import { QueryItem } from "../types/query-item";
+import {FieldDeclaration} from '../query-items/field-declaration';
+import {ListOf} from '../types/malloy-element';
+import {QueryItem} from '../types/query-item';
 
 export class Aggregate extends ListOf<QueryItem> {
   constructor(members: QueryItem[]) {
-    super("aggregate", members);
+    super('aggregate', members);
     for (const el of members) {
       if (el instanceof FieldDeclaration) {
         el.isMeasure = true;

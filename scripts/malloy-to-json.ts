@@ -22,16 +22,16 @@
  */
 
 /* eslint-disable no-console */
-import * as readline from "readline";
-import { inspect } from "util";
-import { Connection, Malloy } from "@malloydata/malloy";
-import { BigQueryConnection } from "@malloydata/db-bigquery";
-import { readFile } from "fs/promises";
-import { readFileSync } from "fs";
+import * as readline from 'readline';
+import {inspect} from 'util';
+import {Connection, Malloy} from '@malloydata/malloy';
+import {BigQueryConnection} from '@malloydata/db-bigquery';
+import {readFile} from 'fs/promises';
+import {readFileSync} from 'fs';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
-  return inspect(thing, { "breakLength": 72, "depth": Infinity });
+  return inspect(thing, {breakLength: 72, depth: Infinity});
 }
 
 /*
@@ -57,24 +57,24 @@ CURRENTLY HAS TWO MODES
 
 async function printTranlsatedMalloy(fileSrc: string, fileURL: string) {
   const url = new URL(fileURL);
-  const parse = Malloy.parse({ "source": fileSrc, url });
-  const connection = new BigQueryConnection("bigquery");
+  const parse = Malloy.parse({source: fileSrc, url});
+  const connection = new BigQueryConnection('bigquery');
   const lookupConnection = async function (name: string): Promise<Connection> {
-    if (name == "bigquery" || name === undefined) {
+    if (name === 'bigquery' || name === undefined) {
       return connection;
     }
     throw new Error(`No connection ${name}`);
   };
   const readURL = async function (url: URL): Promise<string> {
     const filePath = url.pathname;
-    const src = await readFile(filePath, { "encoding": "utf-8" });
+    const src = await readFile(filePath, {encoding: 'utf-8'});
     return src;
   };
   try {
     const model = await Malloy.compile({
-      "urlReader": { readURL },
-      "connections": { lookupConnection },
-      parse
+      urlReader: {readURL},
+      connections: {lookupConnection},
+      parse,
     });
     console.log(pretty(model._modelDef));
   } catch (e) {
@@ -83,13 +83,13 @@ async function printTranlsatedMalloy(fileSrc: string, fileURL: string) {
 }
 
 function ask(rlObj: readline.Interface, prompt: string): Promise<string> {
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     rlObj.question(prompt, resolve);
   });
 }
 
 function fullPath(fn: string): string {
-  if (fn[0] === "/") {
+  if (fn[0] === '/') {
     return fn;
   }
   return `${process.cwd()}/${fn}`;
@@ -99,20 +99,20 @@ async function main() {
   if (process.argv.length > 2) {
     for (const fileArg of process.argv.slice(2)) {
       const filePath = fullPath(fileArg);
-      const src = readFileSync(filePath, "utf-8");
+      const src = readFileSync(filePath, 'utf-8');
       const url = `file:/${filePath}`;
       await printTranlsatedMalloy(src, url);
     }
   } else {
     const rl = readline.createInterface({
-      "input": process.stdin,
-      "output": process.stdout
+      input: process.stdin,
+      output: process.stdout,
     });
     let translating = true;
     while (translating) {
-      const src = await ask(rl, "malloy> ");
+      const src = await ask(rl, 'malloy> ');
       if (src) {
-        await printTranlsatedMalloy(src, "malloy://cli/stdin");
+        await printTranlsatedMalloy(src, 'malloy://cli/stdin');
       } else {
         translating = false;
       }

@@ -21,27 +21,27 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DataColumn, Field } from "@malloydata/malloy";
-import { HTMLCartesianChartRenderer } from "./cartesian_chart";
+import {DataColumn, Field} from '@malloydata/malloy';
+import {HTMLCartesianChartRenderer} from './cartesian_chart';
 
 export class HTMLLineChartRenderer extends HTMLCartesianChartRenderer {
-  getMark(): "line" {
-    return "line";
+  getMark(): 'line' {
+    return 'line';
   }
 
   getDataType(
     field: Field
-  ): "temporal" | "ordinal" | "quantitative" | "nominal" {
+  ): 'temporal' | 'ordinal' | 'quantitative' | 'nominal' {
     if (field.isAtomicField()) {
       if (field.isDate() || field.isTimestamp()) {
-        return "temporal";
+        return 'temporal';
       } else if (field.isString()) {
-        return "nominal";
+        return 'nominal';
       } else if (field.isNumber()) {
-        return "quantitative";
+        return 'quantitative';
       }
     }
-    throw new Error("Invalid field type for line chart.");
+    throw new Error('Invalid field type for line chart.');
   }
 
   getDataValue(data: DataColumn): Date | string | number | null {
@@ -55,7 +55,7 @@ export class HTMLLineChartRenderer extends HTMLCartesianChartRenderer {
     ) {
       return data.value;
     } else {
-      throw new Error("Invalid field type for line chart.");
+      throw new Error('Invalid field type for line chart.');
     }
   }
 }

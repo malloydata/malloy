@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ANTLRErrorListener, Token } from "antlr4ts";
-import { LogMessage, MessageLogger } from "./parse-log";
-import { MalloyTranslation } from "./parse-malloy";
+import {ANTLRErrorListener, Token} from 'antlr4ts';
+import {LogMessage, MessageLogger} from './parse-log';
+import {MalloyTranslation} from './parse-malloy';
 
 export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
   constructor(
@@ -39,13 +39,13 @@ export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
     msg: string,
     _e: unknown
   ): void {
-    const errAt = { "line": line - 1, "character": charPositionInLine };
+    const errAt = {line: line - 1, character: charPositionInLine};
     const range = offendingSymbol
       ? this.translator.rangeFromToken(offendingSymbol)
-      : { "start": errAt, "end": errAt };
+      : {start: errAt, end: errAt};
     const error: LogMessage = {
-      "message": msg,
-      "at": { "url": this.translator.sourceURL, range }
+      message: msg,
+      at: {url: this.translator.sourceURL, range},
     };
     this.messages.log(error);
   }

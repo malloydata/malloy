@@ -1,4 +1,4 @@
-declare module "duckdb" {
+declare module 'duckdb' {
   /**
    * Scalar result value type
    */

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { GranularResult } from "./granular-result";
-import { ExprResult } from "./expr-result";
+import {GranularResult} from './granular-result';
+import {ExprResult} from './expr-result';
 
 export type ExprValue = ExprResult | GranularResult;

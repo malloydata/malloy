@@ -21,16 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { AtomicFieldType, ExpressionType } from "../../../model/malloy_types";
+import {AtomicFieldType, ExpressionType} from '../../../model/malloy_types';
 
 export type ExpressionValueType =
   | AtomicFieldType
-  | "null"
-  | "unknown"
-  | "duration"
-  | "regular expression";
+  | 'null'
+  | 'unknown'
+  | 'duration'
+  | 'regular expression';
 
-export type FieldValueType = ExpressionValueType | "turtle" | "struct";
+export type FieldValueType = ExpressionValueType | 'turtle' | 'struct';
 
 export interface TypeDesc {
   dataType: FieldValueType;

@@ -21,15 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldReferences } from "../query-items/field-references";
-import { MalloyElement } from "../types/malloy-element";
+import {FieldReferences} from '../query-items/field-references';
+import {MalloyElement} from '../types/malloy-element';
 
 export class FieldListEdit extends MalloyElement {
-  elementType = "fieldListEdit";
+  elementType = 'fieldListEdit';
   constructor(
-    readonly edit: "accept" | "except",
+    readonly edit: 'accept' | 'except',
     readonly refs: FieldReferences
   ) {
-    super({ "refs": refs });
+    super({refs: refs});
   }
 }

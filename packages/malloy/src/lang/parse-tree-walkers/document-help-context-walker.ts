@@ -21,14 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ParserRuleContext } from "antlr4ts";
-import { AbstractParseTreeVisitor, ParseTree } from "antlr4ts/tree";
+import {ParserRuleContext} from 'antlr4ts';
+import {AbstractParseTreeVisitor, ParseTree} from 'antlr4ts/tree';
 import {
   ExplorePropertiesContext,
   MalloyDocumentContext,
-  QueryPropertiesContext
-} from "../lib/Malloy/MalloyParser";
-import { MalloyParserVisitor } from "../lib/Malloy/MalloyParserVisitor";
+  QueryPropertiesContext,
+} from '../lib/Malloy/MalloyParser';
+import {MalloyParserVisitor} from '../lib/Malloy/MalloyParserVisitor';
 
 export interface DocumentHelpContext {
   type: string;
@@ -39,32 +39,32 @@ class HelpContextVisitor
   extends AbstractParseTreeVisitor<DocumentHelpContext | undefined>
   implements MalloyParserVisitor<DocumentHelpContext | undefined>
 {
-  type = "";
+  type = '';
 
-  constructor(readonly position: { line: number; character: number }) {
+  constructor(readonly position: {line: number; character: number}) {
     super();
   }
 
   rangeOf(ctx: ParserRuleContext) {
     const stopToken = ctx.stop || ctx.start;
     return {
-      "start": {
-        "line": ctx.start.line - 1,
-        "character": ctx.start.charPositionInLine
+      start: {
+        line: ctx.start.line - 1,
+        character: ctx.start.charPositionInLine,
       },
-      "end": {
-        "line": stopToken.line - 1,
-        "character":
+      end: {
+        line: stopToken.line - 1,
+        character:
           stopToken.stopIndex -
           (stopToken.startIndex - stopToken.charPositionInLine) +
-          1
-      }
+          1,
+      },
     };
   }
 
   inRange(range: {
-    start: { line: number; character: number };
-    end: { line: number; character: number };
+    start: {line: number; character: number};
+    end: {line: number; character: number};
   }): boolean {
     return (
       range.start.line <= this.position.line &&
@@ -84,8 +84,8 @@ class HelpContextVisitor
     let result = this.defaultResult();
     if (this.inRange(this.rangeOf(ctx))) {
       result = {
-        "type": this.type,
-        "token": ctx.start.text
+        type: this.type,
+        token: ctx.start.text,
       };
       const n = ctx.childCount;
       for (let i = 0; i < n; i++) {
@@ -103,7 +103,7 @@ class HelpContextVisitor
     ctx: MalloyDocumentContext
   ): DocumentHelpContext | undefined {
     if (this.inRange(this.rangeOf(ctx))) {
-      this.type = "model_property";
+      this.type = 'model_property';
       return this.visitChildren(ctx);
     }
     return this.defaultResult();
@@ -113,7 +113,7 @@ class HelpContextVisitor
     ctx: ExplorePropertiesContext
   ): DocumentHelpContext | undefined {
     if (this.inRange(this.rangeOf(ctx))) {
-      this.type = "explore_property";
+      this.type = 'explore_property';
       return this.visitChildren(ctx);
     }
     return this.defaultResult();
@@ -123,7 +123,7 @@ class HelpContextVisitor
     ctx: QueryPropertiesContext
   ): DocumentHelpContext | undefined {
     if (this.inRange(this.rangeOf(ctx))) {
-      this.type = "query_property";
+      this.type = 'query_property';
       return this.visitChildren(ctx);
     }
     return this.defaultResult();
@@ -139,7 +139,7 @@ class HelpContextVisitor
 
 export function walkForDocumentHelpContext(
   parseTree: ParseTree,
-  position: { line: number; character: number }
+  position: {line: number; character: number}
 ): DocumentHelpContext | undefined {
   const visitor = new HelpContextVisitor(position);
   return visitor.visit(parseTree);

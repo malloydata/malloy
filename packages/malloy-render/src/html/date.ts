@@ -24,10 +24,10 @@
 import {
   DataColumn,
   DateTimeframe,
-  TimestampTimeframe
-} from "@malloydata/malloy";
-import { Renderer } from "../renderer";
-import { createErrorElement, createNullElement, timeToString } from "./utils";
+  TimestampTimeframe,
+} from '@malloydata/malloy';
+import {Renderer} from '../renderer';
+import {createErrorElement, createNullElement, timeToString} from './utils';
 
 export class HTMLDateRenderer implements Renderer {
   constructor(private readonly document: Document) {}
@@ -40,7 +40,7 @@ export class HTMLDateRenderer implements Renderer {
     if (!data.isDate() && !data.isTimestamp()) {
       return createErrorElement(
         this.document,
-        "Invalid field for date renderer"
+        'Invalid field for date renderer'
       );
     }
 
@@ -50,7 +50,7 @@ export class HTMLDateRenderer implements Renderer {
 
     const timestring = timeToString(data.value, timeframe);
 
-    const element = this.document.createElement("span");
+    const element = this.document.createElement('span');
     element.appendChild(this.document.createTextNode(timestring));
     return element;
   }

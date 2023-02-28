@@ -21,60 +21,60 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DateTimeframe, TimestampTimeframe } from "@malloydata/malloy";
-import startCase from "lodash/startCase";
-import { RenderDef } from "../data_styles";
-import type { RendererOptions } from "../renderer";
+import {DateTimeframe, TimestampTimeframe} from '@malloydata/malloy';
+import startCase from 'lodash/startCase';
+import {RenderDef} from '../data_styles';
+import type {RendererOptions} from '../renderer';
 
 export function getColorScale(
-  type: "temporal" | "ordinal" | "quantitative" | "nominal" | undefined,
+  type: 'temporal' | 'ordinal' | 'quantitative' | 'nominal' | undefined,
   isRectMark: boolean,
   hasOverlappingText = false
-): { range: string[] } | undefined {
+): {range: string[]} | undefined {
   if (type === undefined) {
     return undefined;
   }
   switch (type) {
-    case "ordinal":
-      return { "range": ["#C2D5EE", "#1A73E8"] };
-    case "temporal":
-    case "quantitative":
+    case 'ordinal':
+      return {range: ['#C2D5EE', '#1A73E8']};
+    case 'temporal':
+    case 'quantitative':
       return isRectMark
         ? hasOverlappingText
-          ? { "range": ["#6BA4EE", "#EEA361"] }
-          : { "range": ["#1A73E8", "#E8710A"] }
-        : { "range": ["#C2D5EE", "#1A73E8"] };
-    case "nominal":
+          ? {range: ['#6BA4EE', '#EEA361']}
+          : {range: ['#1A73E8', '#E8710A']}
+        : {range: ['#C2D5EE', '#1A73E8']};
+    case 'nominal':
       return hasOverlappingText
         ? {
-            "range": [
-              "#6BA4EE",
-              "#66CEDC",
-              "#EC72B8",
-              "#EEA361",
-              "#F9C85B",
-              "#AACD85",
-              "#B87CED",
-              "#ACB0B3"
-            ]
+            range: [
+              '#6BA4EE',
+              '#66CEDC',
+              '#EC72B8',
+              '#EEA361',
+              '#F9C85B',
+              '#AACD85',
+              '#B87CED',
+              '#ACB0B3',
+            ],
           }
         : {
-            "range": [
-              "#1A73E8",
-              "#12B5CB",
-              "#E52592",
-              "#E8710A",
-              "#F9AB00",
-              "#7CB342",
-              "#9334E6",
-              "#80868B"
-            ]
+            range: [
+              '#1A73E8',
+              '#12B5CB',
+              '#E52592',
+              '#E8710A',
+              '#F9AB00',
+              '#7CB342',
+              '#9334E6',
+              '#80868B',
+            ],
           };
   }
 }
 
 function numberFixedDigits(value: number, digits: number) {
-  return value.toString().padStart(digits, "0");
+  return value.toString().padStart(digits, '0');
 }
 
 export function timeToString(
@@ -138,7 +138,7 @@ export function timeToString(
       return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
     }
     default:
-      throw new Error("Unknown timeframe.");
+      throw new Error('Unknown timeframe.');
   }
 }
 
@@ -161,7 +161,7 @@ export async function yieldTask(): Promise<void> {
     return;
   }
   LAST_YIELD_TIME = currentTime;
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     setTimeout(resolve, 0);
   });
 }
@@ -170,37 +170,37 @@ export function createErrorElement(
   document: Document,
   error: string | Error
 ): HTMLElement {
-  const element = document.createElement("span");
-  element.classList.add("error");
+  const element = document.createElement('span');
+  element.classList.add('error');
   element.appendChild(
-    document.createTextNode(typeof error === "string" ? error : error.message)
+    document.createTextNode(typeof error === 'string' ? error : error.message)
   );
   return element;
 }
 
 export function createNullElement(document: Document): HTMLElement {
-  const element = document.createElement("span");
-  element.appendChild(document.createTextNode("∅"));
-  element.classList.add("value-null");
+  const element = document.createElement('span');
+  element.appendChild(document.createTextNode('∅'));
+  element.classList.add('value-null');
   return element;
 }
 
 export function createDrillIcon(document: Document): HTMLElement {
-  const drill = document.createElement("div");
-  drill.style.borderRadius = "20px";
-  drill.style.backgroundColor = "var(--malloy-border-color, #efefef)";
-  drill.style.width = "27px";
-  drill.style.height = "14px";
-  drill.style.display = "flex";
-  drill.style.justifyContent = "center";
-  drill.style.alignItems = "center";
-  drill.style.gap = "2px";
+  const drill = document.createElement('div');
+  drill.style.borderRadius = '20px';
+  drill.style.backgroundColor = 'var(--malloy-border-color, #efefef)';
+  drill.style.width = '27px';
+  drill.style.height = '14px';
+  drill.style.display = 'flex';
+  drill.style.justifyContent = 'center';
+  drill.style.alignItems = 'center';
+  drill.style.gap = '2px';
   for (let i = 0; i < 3; i++) {
-    const dot = document.createElement("div");
-    dot.style.backgroundColor = "var(--malloy-title-color, rgb(181 181 181))";
-    dot.style.borderRadius = "5px";
-    dot.style.width = "4px";
-    dot.style.height = "4px";
+    const dot = document.createElement('div');
+    dot.style.backgroundColor = 'var(--malloy-title-color, rgb(181 181 181))';
+    dot.style.borderRadius = '5px';
+    dot.style.width = '4px';
+    dot.style.height = '4px';
     drill.appendChild(dot);
   }
   return drill;

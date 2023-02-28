@@ -21,19 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as lite from "vega-lite";
-import * as vega from "vega";
-import { DataArray, DataColumn, Field } from "@malloydata/malloy";
-import { Renderer, RendererOptions } from "../renderer";
-import { ChartRenderOptions, StyleDefaults } from "../data_styles";
+import * as lite from 'vega-lite';
+import * as vega from 'vega';
+import {DataArray, DataColumn, Field} from '@malloydata/malloy';
+import {Renderer, RendererOptions} from '../renderer';
+import {ChartRenderOptions, StyleDefaults} from '../data_styles';
 
-type MappedRow = { [p: string]: string | number | Date | undefined | null };
+type MappedRow = {[p: string]: string | number | Date | undefined | null};
 
 export abstract class HTMLChartRenderer implements Renderer {
   size: string;
   abstract getDataType(
     field: Field
-  ): "temporal" | "ordinal" | "quantitative" | "nominal";
+  ): 'temporal' | 'ordinal' | 'quantitative' | 'nominal';
 
   abstract getDataValue(
     value: DataColumn
@@ -53,11 +53,11 @@ export abstract class HTMLChartRenderer implements Renderer {
     return mappedRows;
   }
 
-  getSize(): { height: number; width: number } {
-    if (this.size === "large") {
-      return { "height": 350, "width": 500 };
+  getSize(): {height: number; width: number} {
+    if (this.size === 'large') {
+      return {height: 350, width: 500};
     } else {
-      return { "height": 175, "width": 250 };
+      return {height: 175, width: 250};
     }
   }
 
@@ -67,20 +67,20 @@ export abstract class HTMLChartRenderer implements Renderer {
     protected options: RendererOptions,
     chartOptions: ChartRenderOptions = {}
   ) {
-    this.size = chartOptions.size || this.styleDefaults.size || "medium";
+    this.size = chartOptions.size || this.styleDefaults.size || 'medium';
   }
 
   abstract getVegaLiteSpec(data: DataArray): lite.TopLevelSpec;
 
   async render(table: DataColumn): Promise<HTMLElement> {
     if (!table.isArray()) {
-      throw new Error("Invalid type for chart renderer");
+      throw new Error('Invalid type for chart renderer');
     }
 
     const spec = this.getVegaLiteSpec(table);
 
     const vegaspec = lite.compile(spec, {
-      "logger": {
+      logger: {
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         level(newLevel: number) {
@@ -100,14 +100,14 @@ export abstract class HTMLChartRenderer implements Renderer {
         },
         debug() {
           return this;
-        }
-      }
+        },
+      },
     }).spec;
     const view = new vega.View(vega.parse(vegaspec), {
-      "renderer": "none"
+      renderer: 'none',
     });
     view.logger().level(-1);
-    const element = this.document.createElement("div");
+    const element = this.document.createElement('div');
     element.innerHTML = await view.toSVG();
     return element;
   }

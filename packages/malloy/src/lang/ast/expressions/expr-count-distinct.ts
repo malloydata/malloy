@@ -21,13 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FT } from "../fragtype-utils";
-import { ExprAggregateFunction } from "./expr-aggregate-function";
-import { ExpressionDef } from "../types/expression-def";
+import {FT} from '../fragtype-utils';
+import {ExprAggregateFunction} from './expr-aggregate-function';
+import {ExpressionDef} from '../types/expression-def';
 
 export class ExprCountDistinct extends ExprAggregateFunction {
   legalChildTypes = [FT.numberT, FT.stringT, FT.dateT, FT.timestampT];
   constructor(expr: ExpressionDef) {
-    super("count_distinct", expr);
+    super('count_distinct', expr);
   }
 }

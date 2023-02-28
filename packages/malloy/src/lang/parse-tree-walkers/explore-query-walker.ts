@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { CommonTokenStream } from "antlr4ts";
-import { ParseTree } from "antlr4ts/tree";
-import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
-import { MalloyParserListener } from "../lib/Malloy/MalloyParserListener";
+import {CommonTokenStream} from 'antlr4ts';
+import {ParseTree} from 'antlr4ts/tree';
+import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
+import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
 // import {
 //   ExploreContext,
 //   FilterElementContext,
@@ -67,7 +67,7 @@ export class ExploreQueryWalker implements MalloyParserListener {
   }
 
   exploreQueryAtOffset(offset: number): ExploreClauseRef | undefined {
-    return this.exploreClauseRefs.find((ex) => {
+    return this.exploreClauseRefs.find(ex => {
       if (ex.range[0] === undefined || ex.range[1] === undefined) return false;
       return ex.range[0] <= offset && ex.range[1] >= offset;
     });
@@ -76,7 +76,7 @@ export class ExploreQueryWalker implements MalloyParserListener {
   filterAtOffset(offset: number): FilterRef | undefined {
     const exploreRef = this.exploreQueryAtOffset(offset);
     if (!exploreRef) return;
-    return exploreRef.filterRefs.find((filterRef) => {
+    return exploreRef.filterRefs.find(filterRef => {
       if (filterRef.range[0] === undefined || filterRef.range[1] === undefined)
         return false;
       return filterRef.range[0] <= offset && filterRef.range[1] >= offset;
@@ -86,7 +86,7 @@ export class ExploreQueryWalker implements MalloyParserListener {
   hasFilterListAtOffset(offset: number): boolean {
     const exploreRef = this.exploreQueryAtOffset(offset);
     if (!exploreRef) return false;
-    return !!exploreRef.filterLists.find((filterList) => {
+    return !!exploreRef.filterLists.find(filterList => {
       if (
         filterList.range[0] === undefined ||
         filterList.range[1] === undefined

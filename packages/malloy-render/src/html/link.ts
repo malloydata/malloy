@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DataColumn } from "@malloydata/malloy";
-import { Renderer } from "../renderer";
-import { createErrorElement, createNullElement } from "./utils";
+import {DataColumn} from '@malloydata/malloy';
+import {Renderer} from '../renderer';
+import {createErrorElement, createNullElement} from './utils';
 
 export class HTMLLinkRenderer implements Renderer {
   constructor(private readonly document: Document) {}
@@ -36,15 +36,15 @@ export class HTMLLinkRenderer implements Renderer {
     if (!data.isString()) {
       return createErrorElement(
         this.document,
-        "Invalid type for link renderer."
+        'Invalid type for link renderer.'
       );
     }
 
-    const element = document.createElement("a");
+    const element = document.createElement('a');
     element.href = data.value;
-    element.target = "_blank";
+    element.target = '_blank';
     element.appendChild(
-      this.document.createTextNode(data.value.replace(/\//g, "/\u200C"))
+      this.document.createTextNode(data.value.replace(/\//g, '/\u200C'))
     );
     return element;
   }

@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DataColumn } from "@malloydata/malloy";
-import { Renderer } from "../renderer";
-import { createErrorElement, createNullElement } from "./utils";
+import {DataColumn} from '@malloydata/malloy';
+import {Renderer} from '../renderer';
+import {createErrorElement, createNullElement} from './utils';
 
 export class HTMLImageRenderer implements Renderer {
   constructor(private readonly document: Document) {}
@@ -32,7 +32,7 @@ export class HTMLImageRenderer implements Renderer {
     if (!data.isString()) {
       return createErrorElement(
         this.document,
-        "Invalid field for Image renderer"
+        'Invalid field for Image renderer'
       );
     }
 
@@ -40,7 +40,7 @@ export class HTMLImageRenderer implements Renderer {
       return createNullElement(this.document);
     }
 
-    const element = this.document.createElement("img");
+    const element = this.document.createElement('img');
     element.src = data.value;
     return element;
   }

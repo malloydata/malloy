@@ -24,15 +24,15 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 /* eslint-disable no-console */
 
-import "../../util/is-sql-eq";
-import { RuntimeList } from "../../runtimes";
-import { describeIfDatabaseAvailable } from "../../util";
+import '../../util/is-sql-eq';
+import {RuntimeList} from '../../runtimes';
+import {describeIfDatabaseAvailable} from '../../util';
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
 const [describe, databases] = describeIfDatabaseAvailable([
-  "bigquery",
-  "duckdb"
+  'bigquery',
+  'duckdb',
 ]);
 
 const modelText = `
@@ -125,7 +125,7 @@ query: sessions_dashboard is ga_sessions -> {
 }
 `;
 
-describe("Nested Source Table", () => {
+describe('Nested Source Table', () => {
   const runtimes = new RuntimeList(databases);
 
   afterAll(async () => {
@@ -145,7 +145,7 @@ describe("Nested Source Table", () => {
         .run();
       // console.log(result.data.toObject());
       // console.log(result.sql);
-      expect(result.data.path(0, "pageTitle").value).toBe("Shopping Cart");
+      expect(result.data.path(0, 'pageTitle').value).toBe('Shopping Cart');
     });
 
     test(`search_index - ${databaseName}`, async () => {
@@ -162,8 +162,8 @@ describe("Nested Source Table", () => {
         )
         .run();
       // console.log(result.data.toObject());
-      expect(result.data.path(0, "fieldName").value).toBe("channelGrouping");
-      expect(result.data.path(0, "fieldValue").value).toBe("Organic Search");
+      expect(result.data.path(0, 'fieldName').value).toBe('channelGrouping');
+      expect(result.data.path(0, 'fieldValue').value).toBe('Organic Search');
       // expect(result.data.path(0, "weight").value).toBe(18);
     });
   });

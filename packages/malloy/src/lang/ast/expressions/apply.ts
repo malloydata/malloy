@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Comparison } from "../types/comparison";
-import { ExprCompare } from "./expr-compare";
-import { ExpressionDef } from "../types/expression-def";
+import {Comparison} from '../types/comparison';
+import {ExprCompare} from './expr-compare';
+import {ExpressionDef} from '../types/expression-def';
 
 export class Apply extends ExprCompare {
-  elementType = "apply";
+  elementType = 'apply';
   constructor(readonly left: ExpressionDef, readonly right: ExpressionDef) {
     super(left, Comparison.EqualTo, right);
   }

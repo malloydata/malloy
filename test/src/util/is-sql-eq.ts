@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Result } from "@malloydata/malloy";
+import {Result} from '@malloydata/malloy';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -38,17 +38,17 @@ expect.extend({
    * does not find those two expressions to be equal.
    */
   isSqlEq(result: Result) {
-    const wantEq = result.data.path(0, "calc").value;
-    const sql = result.sql.replace(/\n/g, "\n    ");
-    if (wantEq != "=") {
+    const wantEq = result.data.path(0, 'calc').value;
+    const sql = result.sql.replace(/\n/g, '\n    ');
+    if (wantEq !== '=') {
       return {
-        "pass": false,
-        "message": () => `${wantEq}\nSQL:\n    ${sql}`
+        pass: false,
+        message: () => `${wantEq}\nSQL:\n    ${sql}`,
       };
     }
     return {
-      "pass": true,
-      "message": () => "SQL expression matched"
+      pass: true,
+      message: () => 'SQL expression matched',
     };
-  }
+  },
 });

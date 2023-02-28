@@ -21,18 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export { MalloyTranslator } from "./parse-malloy";
+export {MalloyTranslator} from './parse-malloy';
 export type {
   UpdateData,
   SchemaData,
   URLData,
-  SQLBlockData
-} from "./parse-malloy";
-export type { TranslateResponse } from "./translate-response";
-export { exploreQueryWalkerBuilder } from "./parse-tree-walkers/explore-query-walker";
-export type { ExploreClauseRef } from "./parse-tree-walkers/explore-query-walker";
-export { HighlightType } from "./parse-tree-walkers/document-highlight-walker";
-export type { DocumentHighlight } from "./parse-tree-walkers/document-highlight-walker";
-export type { DocumentSymbol } from "./parse-tree-walkers/document-symbol-walker";
-export type { DocumentCompletion } from "./parse-tree-walkers/document-completion-walker";
-export type { LogMessage } from "./parse-log";
+  SQLBlockData,
+} from './parse-malloy';
+export type {TranslateResponse} from './translate-response';
+export {exploreQueryWalkerBuilder} from './parse-tree-walkers/explore-query-walker';
+export type {ExploreClauseRef} from './parse-tree-walkers/explore-query-walker';
+export {HighlightType} from './parse-tree-walkers/document-highlight-walker';
+export type {DocumentHighlight} from './parse-tree-walkers/document-highlight-walker';
+export type {DocumentSymbol} from './parse-tree-walkers/document-symbol-walker';
+export type {DocumentCompletion} from './parse-tree-walkers/document-completion-walker';
+export type {LogMessage} from './parse-log';

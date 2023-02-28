@@ -21,22 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import cloneDeep from "lodash/cloneDeep";
-import * as model from "../../../model/malloy_types";
-import { nameOf } from "../../field-utils";
-import { SpaceEntry } from "../types/space-entry";
-import { ErrorFactory } from "../error-factory";
-import { FieldSpace } from "../types/field-space";
-import { HasParameter } from "../parameters/has-parameter";
-import { MalloyElement } from "../types/malloy-element";
-import { Join } from "../query-properties/joins";
-import { SpaceField } from "../types/space-field";
-import { JoinSpaceField } from "./join-space-field";
-import { QueryField } from "./query-space-field";
-import { AbstractParameter, SpaceParam } from "../types/space-param";
-import { SourceSpec, SpaceSeed } from "../space-seed";
-import { StaticSpace } from "./static-space";
-import { StructSpaceFieldBase } from "./struct-space-field-base";
+import cloneDeep from 'lodash/cloneDeep';
+import * as model from '../../../model/malloy_types';
+import {nameOf} from '../../field-utils';
+import {SpaceEntry} from '../types/space-entry';
+import {ErrorFactory} from '../error-factory';
+import {FieldSpace} from '../types/field-space';
+import {HasParameter} from '../parameters/has-parameter';
+import {MalloyElement} from '../types/malloy-element';
+import {Join} from '../query-properties/joins';
+import {SpaceField} from '../types/space-field';
+import {JoinSpaceField} from './join-space-field';
+import {QueryField} from './query-space-field';
+import {AbstractParameter, SpaceParam} from '../types/space-param';
+import {SourceSpec, SpaceSeed} from '../space-seed';
+import {StaticSpace} from './static-space';
+import {StructSpaceFieldBase} from './struct-space-field-base';
 
 export abstract class DynamicSpace extends StaticSpace {
   protected final: model.StructDef | undefined;
@@ -70,7 +70,7 @@ export abstract class DynamicSpace extends StaticSpace {
 
   protected setEntry(name: string, value: SpaceEntry): void {
     if (this.final) {
-      throw new Error("Space already final");
+      throw new Error('Space already final');
     }
     super.setEntry(name, value);
   }
@@ -99,7 +99,7 @@ export abstract class DynamicSpace extends StaticSpace {
     if (this.final === undefined) {
       this.final = {
         ...this.fromStruct,
-        "fields": []
+        fields: [],
       };
       // Need to process the entities in specific order
       const fields: [string, SpaceField][] = [];

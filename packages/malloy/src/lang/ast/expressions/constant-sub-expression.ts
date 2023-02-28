@@ -21,30 +21,30 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { AtomicFieldType, StructDef } from "../../../model/malloy_types";
+import {AtomicFieldType, StructDef} from '../../../model/malloy_types';
 
-import { Comparison } from "../types/comparison";
-import { ExprValue } from "../types/expr-value";
-import { ExpressionDef } from "../types/expression-def";
-import { FieldSpace } from "../types/field-space";
-import { LookupResult } from "../types/lookup-result";
-import { FieldValueType } from "../types/type-desc";
+import {Comparison} from '../types/comparison';
+import {ExprValue} from '../types/expr-value';
+import {ExpressionDef} from '../types/expression-def';
+import {FieldSpace} from '../types/field-space';
+import {LookupResult} from '../types/lookup-result';
+import {FieldValueType} from '../types/type-desc';
 
-import { ExprCompare } from "./expr-compare";
-import { compressExpr } from "./utils";
+import {ExprCompare} from './expr-compare';
+import {compressExpr} from './utils';
 
 class ConstantFieldSpace implements FieldSpace {
-  readonly type = "fieldSpace";
+  readonly type = 'fieldSpace';
   structDef(): StructDef {
-    throw new Error("ConstantFieldSpace cannot generate a structDef");
+    throw new Error('ConstantFieldSpace cannot generate a structDef');
   }
   emptyStructDef(): StructDef {
-    throw new Error("ConstantFieldSpace cannot generate a structDef");
+    throw new Error('ConstantFieldSpace cannot generate a structDef');
   }
   lookup(_name: unknown): LookupResult {
     return {
-      "error": "Only constants allowed in parameter expressions",
-      "found": undefined
+      error: 'Only constants allowed in parameter expressions',
+      found: undefined,
     };
   }
   dialectObj(): undefined {
@@ -56,24 +56,24 @@ class ConstantFieldSpace implements FieldSpace {
 }
 
 class DollarReference extends ExpressionDef {
-  elementType = "$";
+  elementType = '$';
   constructor(readonly refType: FieldValueType) {
     super();
   }
   getExpression(_fs: FieldSpace): ExprValue {
     return {
-      "dataType": this.refType,
-      "value": [{ "type": "applyVal" }],
-      "expressionType": "scalar"
+      dataType: this.refType,
+      value: [{type: 'applyVal'}],
+      expressionType: 'scalar',
     };
   }
 }
 
 export class ConstantSubExpression extends ExpressionDef {
-  elementType = "constantExpression";
+  elementType = 'constantExpression';
   private cfs?: ConstantFieldSpace;
   constructor(readonly expr: ExpressionDef) {
-    super({ "expr": expr });
+    super({expr: expr});
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
@@ -98,7 +98,7 @@ export class ConstantSubExpression extends ExpressionDef {
       this.expr
     );
     const application = compareAndContrast.getExpression(this.constantFs);
-    return { ...application, "value": compressExpr(application.value) };
+    return {...application, value: compressExpr(application.value)};
   }
 
   apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {

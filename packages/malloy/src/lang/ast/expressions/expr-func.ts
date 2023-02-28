@@ -24,23 +24,23 @@
 import {
   ExpressionType,
   Fragment,
-  maxExpressionType
-} from "../../../model/malloy_types";
+  maxExpressionType,
+} from '../../../model/malloy_types';
 
-import { ExprValue } from "../types/expr-value";
-import { ExpressionDef } from "../types/expression-def";
-import { FieldSpace } from "../types/field-space";
-import { FieldValueType } from "../types/type-desc";
-import { compressExpr } from "./utils";
+import {ExprValue} from '../types/expr-value';
+import {ExpressionDef} from '../types/expression-def';
+import {FieldSpace} from '../types/field-space';
+import {FieldValueType} from '../types/type-desc';
+import {compressExpr} from './utils';
 
 export class ExprFunc extends ExpressionDef {
-  elementType = "function call()";
+  elementType = 'function call()';
   constructor(readonly name: string, readonly args: ExpressionDef[]) {
-    super({ "args": args });
+    super({args: args});
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    let expressionType: ExpressionType = "scalar";
+    let expressionType: ExpressionType = 'scalar';
     let collectType: FieldValueType | undefined;
     const funcCall: Fragment[] = [`${this.name}(`];
     for (const fexpr of this.args) {
@@ -48,23 +48,23 @@ export class ExprFunc extends ExpressionDef {
       expressionType = maxExpressionType(expressionType, expr.expressionType);
 
       if (collectType) {
-        funcCall.push(",");
+        funcCall.push(',');
       } else {
         collectType = expr.dataType;
       }
       funcCall.push(...expr.value);
     }
-    funcCall.push(")");
+    funcCall.push(')');
 
     const dialect = fs.dialectObj();
     const dataType =
       dialect?.getFunctionInfo(this.name)?.returnType ??
       collectType ??
-      "number";
+      'number';
     return {
-      "dataType": dataType,
+      dataType: dataType,
       expressionType,
-      "value": compressExpr(funcCall)
+      value: compressExpr(funcCall),
     };
   }
 }

@@ -24,16 +24,16 @@
 import {
   ExpressionType,
   Fragment,
-  maxExpressionType
-} from "../../../model/malloy_types";
+  maxExpressionType,
+} from '../../../model/malloy_types';
 
-import { errorFor } from "../ast-utils";
-import { FT } from "../fragtype-utils";
-import { ExprValue } from "../types/expr-value";
-import { ExpressionDef } from "../types/expression-def";
-import { FieldSpace } from "../types/field-space";
-import { MalloyElement } from "../types/malloy-element";
-import { compressExpr } from "./utils";
+import {errorFor} from '../ast-utils';
+import {FT} from '../fragtype-utils';
+import {ExprValue} from '../types/expr-value';
+import {ExpressionDef} from '../types/expression-def';
+import {FieldSpace} from '../types/field-space';
+import {MalloyElement} from '../types/malloy-element';
+import {compressExpr} from './utils';
 
 interface Choice {
   pick: ExprValue;
@@ -41,10 +41,10 @@ interface Choice {
 }
 
 export class Pick extends ExpressionDef {
-  elementType = "pick";
+  elementType = 'pick';
   constructor(readonly choices: PickWhen[], readonly elsePick?: ExpressionDef) {
-    super({ choices });
-    this.has({ elsePick });
+    super({choices});
+    this.has({elsePick});
   }
 
   requestExpression(fs: FieldSpace): ExprValue | undefined {
@@ -54,11 +54,11 @@ export class Pick extends ExpressionDef {
       return undefined;
     }
     for (const c of this.choices) {
-      if (c.pick == undefined) {
+      if (c.pick === undefined) {
         return undefined;
       }
       const whenResp = c.when.requestExpression(fs);
-      if (whenResp == undefined || whenResp.dataType != "boolean") {
+      if (whenResp === undefined || whenResp.dataType !== 'boolean') {
         // If when is not a boolean, we'll treat it like a partial compare
         return undefined;
       }
@@ -67,11 +67,11 @@ export class Pick extends ExpressionDef {
   }
 
   apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
-    const caseValue: Fragment[] = ["CASE"];
+    const caseValue: Fragment[] = ['CASE'];
     let returnType: ExprValue | undefined;
-    let anyExpressionType: ExpressionType = "scalar";
+    let anyExpressionType: ExpressionType = 'scalar';
     for (const choice of this.choices) {
-      const whenExpr = choice.when.apply(fs, "=", expr);
+      const whenExpr = choice.when.apply(fs, '=', expr);
       const thenExpr = choice.pick
         ? choice.pick.getExpression(fs)
         : expr.getExpression(fs);
@@ -85,72 +85,72 @@ export class Pick extends ExpressionDef {
           this.log(
             `pick type '${whenType}', expected '${returnType.dataType}'`
           );
-          return errorFor("pick when type");
+          return errorFor('pick when type');
         }
       } else {
         returnType = thenExpr;
       }
-      caseValue.push(" WHEN ", ...whenExpr.value, " THEN ", ...thenExpr.value);
+      caseValue.push(' WHEN ', ...whenExpr.value, ' THEN ', ...thenExpr.value);
     }
     const elsePart = this.elsePick || expr;
     const elseVal = elsePart.getExpression(fs);
     returnType ||= elseVal;
     if (!FT.typeEq(returnType, elseVal, true)) {
-      const errSrc = this.elsePick ? "else" : "pick default";
+      const errSrc = this.elsePick ? 'else' : 'pick default';
       this.log(
         `${errSrc} type '${FT.inspect(elseVal)}', expected '${
           returnType.dataType
         }'`
       );
-      return errorFor("pick else type");
+      return errorFor('pick else type');
     }
     return {
-      "dataType": returnType.dataType,
-      "expressionType": maxExpressionType(
+      dataType: returnType.dataType,
+      expressionType: maxExpressionType(
         anyExpressionType,
         elseVal.expressionType
       ),
-      "value": compressExpr([...caseValue, " ELSE ", ...elseVal.value, " END"])
+      value: compressExpr([...caseValue, ' ELSE ', ...elseVal.value, ' END']),
     };
   }
 
   getExpression(fs: FieldSpace): ExprValue {
     if (this.elsePick === undefined) {
       this.log("pick incomplete, missing 'else'");
-      return errorFor("no value for partial pick");
+      return errorFor('no value for partial pick');
     }
 
     const choiceValues: Choice[] = [];
     for (const c of this.choices) {
       if (c.pick === undefined) {
-        this.log("pick with no value can only be used with apply");
-        return errorFor("no value for partial pick");
+        this.log('pick with no value can only be used with apply');
+        return errorFor('no value for partial pick');
       }
       const pickWhen = c.when.requestExpression(fs);
       if (pickWhen === undefined) {
-        this.log("pick with partial when can only be used with apply");
-        return errorFor("partial when");
+        this.log('pick with partial when can only be used with apply');
+        return errorFor('partial when');
       }
       choiceValues.push({
-        "pick": c.pick.getExpression(fs),
-        "when": c.when.getExpression(fs)
+        pick: c.pick.getExpression(fs),
+        when: c.when.getExpression(fs),
       });
     }
     const returnType = choiceValues[0].pick;
 
-    const caseValue: Fragment[] = ["CASE"];
+    const caseValue: Fragment[] = ['CASE'];
     let anyExpressionType: ExpressionType = returnType.expressionType;
     for (const aChoice of choiceValues) {
       if (!FT.typeEq(aChoice.when, FT.boolT)) {
         this.log(
           `when expression must be boolean, not '${FT.inspect(aChoice.when)}`
         );
-        return errorFor("pick when type");
+        return errorFor('pick when type');
       }
       if (!FT.typeEq(returnType, aChoice.pick, true)) {
         const whenType = FT.inspect(aChoice.pick);
         this.log(`pick type '${whenType}', expected '${returnType.dataType}'`);
-        return errorFor("pick value type");
+        return errorFor('pick value type');
       }
       anyExpressionType = maxExpressionType(
         anyExpressionType,
@@ -160,9 +160,9 @@ export class Pick extends ExpressionDef {
         )
       );
       caseValue.push(
-        " WHEN ",
+        ' WHEN ',
         ...aChoice.when.value,
-        " THEN ",
+        ' THEN ',
         ...aChoice.pick.value
       );
     }
@@ -175,24 +175,24 @@ export class Pick extends ExpressionDef {
       this.elsePick.log(
         `else type '${FT.inspect(defVal)}', expected '${returnType.dataType}'`
       );
-      return errorFor("pick value type mismatch");
+      return errorFor('pick value type mismatch');
     }
-    caseValue.push(" ELSE ", ...defVal.value, " END");
+    caseValue.push(' ELSE ', ...defVal.value, ' END');
     return {
-      "dataType": returnType.dataType,
-      "expressionType": anyExpressionType,
-      "value": compressExpr(caseValue)
+      dataType: returnType.dataType,
+      expressionType: anyExpressionType,
+      value: compressExpr(caseValue),
     };
   }
 }
 
 export class PickWhen extends MalloyElement {
-  elementType = "pickWhen";
+  elementType = 'pickWhen';
   constructor(
     readonly pick: ExpressionDef | undefined,
     readonly when: ExpressionDef
   ) {
-    super({ "when": when });
-    this.has({ "pick": pick });
+    super({when: when});
+    this.has({pick: pick});
   }
 }

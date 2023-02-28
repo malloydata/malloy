@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Sampling } from "../../../model/malloy_types";
+import {Sampling} from '../../../model/malloy_types';
 
-import { MalloyElement } from "../types/malloy-element";
+import {MalloyElement} from '../types/malloy-element';
 
 export class SampleProperty extends MalloyElement {
-  elementType = "sampleProperty";
+  elementType = 'sampleProperty';
   constructor(readonly sample: Sampling) {
     super();
   }

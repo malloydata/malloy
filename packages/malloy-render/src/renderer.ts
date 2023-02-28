@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DataColumn } from "@malloydata/malloy";
-import { DataStyles } from "./data_styles";
-import { DrillFunction } from "./drill";
+import {DataColumn} from '@malloydata/malloy';
+import {DataStyles} from './data_styles';
+import {DrillFunction} from './drill';
 
-export type ChildRenderers = { [fieldName: string]: Renderer };
+export type ChildRenderers = {[fieldName: string]: Renderer};
 
 export interface Renderer {
   render(value: DataColumn): Promise<HTMLElement>;

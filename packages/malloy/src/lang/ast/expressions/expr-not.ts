@@ -21,15 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FT } from "../fragtype-utils";
-import { ExprValue } from "../types/expr-value";
-import { ExpressionDef } from "../types/expression-def";
-import { FieldSpace } from "../types/field-space";
-import { Unary } from "./unary";
-import { nullsafeNot } from "./utils";
+import {FT} from '../fragtype-utils';
+import {ExprValue} from '../types/expr-value';
+import {ExpressionDef} from '../types/expression-def';
+import {FieldSpace} from '../types/field-space';
+import {Unary} from './unary';
+import {nullsafeNot} from './utils';
 
 export class ExprNot extends Unary {
-  elementType = "not";
+  elementType = 'not';
   legalChildTypes = [FT.boolT, FT.nullT];
   constructor(expr: ExpressionDef) {
     super(expr);
@@ -40,8 +40,8 @@ export class ExprNot extends Unary {
     const doNot = this.typeCheck(this.expr, notThis);
     return {
       ...notThis,
-      "dataType": "boolean",
-      "value": doNot ? nullsafeNot(notThis.value) : ["false"]
+      dataType: 'boolean',
+      value: doNot ? nullsafeNot(notThis.value) : ['false'],
     };
   }
 }

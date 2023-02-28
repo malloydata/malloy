@@ -21,16 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as duckdb from "@duckdb/duckdb-wasm";
-import Worker from "web-worker";
+import * as duckdb from '@duckdb/duckdb-wasm';
+import Worker from 'web-worker';
 import {
   QueryDataRow,
   RunSQLOptions,
   StructDef,
-  parseTableURI
-} from "@malloydata/malloy";
-import { StructRow, Table, Vector } from "apache-arrow";
-import { DuckDBCommon, QueryOptionsReader } from "./duckdb_common";
+  parseTableURI,
+} from '@malloydata/malloy';
+import {StructRow, Table, Vector} from 'apache-arrow';
+import {DuckDBCommon, QueryOptionsReader} from './duckdb_common';
 
 /**
  * Arrow's toJSON() doesn't really do what I'd expect, since
@@ -48,9 +48,9 @@ const unwrapArrow = (value: unknown): any => {
     return [...value].map(unwrapArrow);
   } else if (value instanceof Date) {
     return value;
-  } else if (typeof value === "bigint") {
+  } else if (typeof value === 'bigint') {
     return Number(value);
-  } else if (typeof value === "object") {
+  } else if (typeof value === 'object') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const obj = value as Record<string | symbol, any>;
     // DecimalBigNums appear as Uint32Arrays, but can be identified
@@ -91,7 +91,7 @@ const unwrapTable = (table: Table): QueryDataRow[] => {
   return table.toArray().map(unwrapRow);
 };
 
-const isNode = () => typeof navigator === "undefined";
+const isNode = () => typeof navigator === 'undefined';
 
 type RemoteFileCallback = (
   tableName: string
@@ -110,7 +110,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   constructor(
     public readonly name: string,
     private databasePath: string | null = null,
-    private workingDirectory = "/",
+    private workingDirectory = '/',
     queryOptions?: QueryOptionsReader
   ) {
     super(queryOptions);
@@ -126,7 +126,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
         ? bundle.mainWorker
         : URL.createObjectURL(
             new Blob([`importScripts("${bundle.mainWorker}");`], {
-              "type": "text/javascript"
+              type: 'text/javascript',
             })
           );
 
@@ -137,13 +137,13 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
       await this._database.instantiate(bundle.mainModule, bundle.pthreadWorker);
       if (this.databasePath) {
         await this._database.open({
-          "path": this.databasePath
+          path: this.databasePath,
         });
       }
       URL.revokeObjectURL(workerUrl);
       this._connection = await this._database.connect();
     } else {
-      throw new Error("Unable to instantiate duckdb-wasm");
+      throw new Error('Unable to instantiate duckdb-wasm');
     }
   }
 
@@ -163,18 +163,18 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
 
   protected async runDuckDBQuery(
     sql: string
-  ): Promise<{ rows: QueryDataRow[]; totalRows: number }> {
+  ): Promise<{rows: QueryDataRow[]; totalRows: number}> {
     const table = await this.connection?.query(sql);
-    if (table?.numRows != null) {
+    if (table?.numRows !== null) {
       const rows = unwrapTable(table);
       // console.log(rows);
       return {
         // Normalize the data from its default proxied form
         rows,
-        "totalRows": table.numRows
+        totalRows: table.numRows,
       };
     } else {
-      throw new Error("Boom");
+      throw new Error('Boom');
     }
   }
 
@@ -183,10 +183,10 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     _options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
     if (!this.connection) {
-      throw new Error("duckdb-wasm not connected");
+      throw new Error('duckdb-wasm not connected');
     }
     await this.setup();
-    const statements = sql.split("-- hack: split on this");
+    const statements = sql.split('-- hack: split on this');
 
     while (statements.length > 1) {
       await this.runDuckDBQuery(statements[0]);
@@ -207,7 +207,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     await this.setup();
 
     for (const tableUri of tables) {
-      const { tablePath } = parseTableURI(tableUri);
+      const {tablePath} = parseTableURI(tableUri);
       if (tablePath.match(/^https?:\/\//)) {
         continue;
       }

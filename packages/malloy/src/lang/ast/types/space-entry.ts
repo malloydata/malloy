@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { TypeDesc } from "./type-desc";
+import {TypeDesc} from './type-desc';
 
 export abstract class SpaceEntry {
   abstract typeDesc(): TypeDesc;
-  abstract refType: "field" | "parameter";
+  abstract refType: 'field' | 'parameter';
 }

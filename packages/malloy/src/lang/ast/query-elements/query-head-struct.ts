@@ -24,14 +24,14 @@
 import {
   StructDef,
   StructRef,
-  refIsStructDef
-} from "../../../model/malloy_types";
+  refIsStructDef,
+} from '../../../model/malloy_types';
 
-import { Source } from "../elements/source";
-import { NamedSource } from "../sources/named-source";
+import {Source} from '../elements/source';
+import {NamedSource} from '../sources/named-source';
 
 export class QueryHeadStruct extends Source {
-  elementType = "internalOnlyQueryHead";
+  elementType = 'internalOnlyQueryHead';
   constructor(readonly fromRef: StructRef) {
     super();
   }
@@ -45,7 +45,7 @@ export class QueryHeadStruct extends Source {
       return this.fromRef;
     }
     const ns = new NamedSource(this.fromRef);
-    this.has({ "exploreReference": ns });
+    this.has({exploreReference: ns});
     return ns.structDef();
   }
 }

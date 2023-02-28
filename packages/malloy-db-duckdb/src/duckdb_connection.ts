@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import crypto from "crypto";
-import { DuckDBCommon, QueryOptionsReader } from "./duckdb_common";
-import { Connection, Database, OPEN_READWRITE, Row } from "duckdb";
-import { QueryDataRow, RunSQLOptions } from "@malloydata/malloy";
+import crypto from 'crypto';
+import {DuckDBCommon, QueryOptionsReader} from './duckdb_common';
+import {Connection, Database, OPEN_READWRITE, Row} from 'duckdb';
+import {QueryDataRow, RunSQLOptions} from '@malloydata/malloy';
 
 export class DuckDBConnection extends DuckDBCommon {
   connecting: Promise<void>;
@@ -34,8 +34,8 @@ export class DuckDBConnection extends DuckDBCommon {
 
   constructor(
     public readonly name: string,
-    private databasePath = ":memory:",
-    private workingDirectory = ".",
+    private databasePath = ':memory:',
+    private workingDirectory = '.',
     queryOptions?: QueryOptionsReader
   ) {
     super(queryOptions);
@@ -47,7 +47,7 @@ export class DuckDBConnection extends DuckDBCommon {
       this.database = new Database(
         this.databasePath,
         OPEN_READWRITE, // databasePath === ":memory:" ? OPEN_READWRITE : OPEN_READONLY,
-        (err) => {
+        err => {
           if (err) {
             reject(err);
           }
@@ -70,14 +70,14 @@ export class DuckDBConnection extends DuckDBCommon {
         await this.runDuckDBQuery("LOAD 'json'");
       } catch (error) {
         // eslint-disable-next-line no-console
-        console.error("Unable to load json extension", error);
+        console.error('Unable to load json extension', error);
       }
       try {
         await this.runDuckDBQuery("INSTALL 'httpfs'");
         await this.runDuckDBQuery("LOAD 'httpfs'");
       } catch (error) {
         // eslint-disable-next-line no-console
-        console.error("Unable to load httpfs extension", error);
+        console.error('Unable to load httpfs extension', error);
       }
     };
     await this.connecting;
@@ -89,7 +89,7 @@ export class DuckDBConnection extends DuckDBCommon {
 
   protected async runDuckDBQuery(
     sql: string
-  ): Promise<{ rows: Row[]; totalRows: number }> {
+  ): Promise<{rows: Row[]; totalRows: number}> {
     return new Promise((resolve, reject) => {
       if (this.connection) {
         this.connection.all(sql, (err: Error, rows: Row[]) => {
@@ -98,12 +98,12 @@ export class DuckDBConnection extends DuckDBCommon {
           } else {
             resolve({
               rows,
-              "totalRows": rows.length
+              totalRows: rows.length,
             });
           }
         });
       } else {
-        reject(new Error("Connection not open"));
+        reject(new Error('Connection not open'));
       }
     });
   }
@@ -114,10 +114,10 @@ export class DuckDBConnection extends DuckDBCommon {
   ): AsyncIterableIterator<QueryDataRow> {
     await this.setup();
     if (!this.connection) {
-      throw new Error("Connection not open");
+      throw new Error('Connection not open');
     }
 
-    const statements = sql.split("-- hack: split on this");
+    const statements = sql.split('-- hack: split on this');
 
     while (statements.length > 1) {
       await this.runDuckDBQuery(statements[0]);
@@ -130,7 +130,7 @@ export class DuckDBConnection extends DuckDBCommon {
   }
 
   async createHash(sqlCommand: string): Promise<string> {
-    return crypto.createHash("md5").update(sqlCommand).digest("hex");
+    return crypto.createHash('md5').update(sqlCommand).digest('hex');
   }
 
   async close(): Promise<void> {

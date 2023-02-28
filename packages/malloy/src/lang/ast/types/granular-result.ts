@@ -21,16 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { TimestampUnit } from "../../../model/malloy_types";
+import {TimestampUnit} from '../../../model/malloy_types';
 
-import { ExprValue } from "./expr-value";
-import { TimeResult } from "./time-result";
+import {ExprValue} from './expr-value';
+import {TimeResult} from './time-result';
 
 export interface GranularResult extends TimeResult {
   timeframe: TimestampUnit;
 }
 export function isGranularResult(v: ExprValue): v is GranularResult {
-  if (v.dataType !== "date" && v.dataType !== "timestamp") {
+  if (v.dataType !== 'date' && v.dataType !== 'timestamp') {
     return false;
   }
   return (v as GranularResult).timeframe !== undefined;

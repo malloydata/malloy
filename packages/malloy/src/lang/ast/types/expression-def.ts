@@ -26,20 +26,20 @@ import {
   Expr,
   TimestampUnit,
   isTimeFieldType,
-  maxExpressionType
-} from "../../../model/malloy_types";
+  maxExpressionType,
+} from '../../../model/malloy_types';
 
-import { errorFor } from "../ast-utils";
-import { compose, nullsafeNot } from "../expressions/utils";
-import { FT } from "../fragtype-utils";
-import { castTimestampToDate, timeOffset, timeResult } from "../time-utils";
-import { isComparison } from "./comparison";
-import { Equality, isEquality } from "./equality";
-import { ExprValue } from "./expr-value";
-import { FieldSpace } from "./field-space";
-import { FieldValueType } from "./type-desc";
-import { isGranularResult } from "./granular-result";
-import { MalloyElement } from "./malloy-element";
+import {errorFor} from '../ast-utils';
+import {compose, nullsafeNot} from '../expressions/utils';
+import {FT} from '../fragtype-utils';
+import {castTimestampToDate, timeOffset, timeResult} from '../time-utils';
+import {isComparison} from './comparison';
+import {Equality, isEquality} from './equality';
+import {ExprValue} from './expr-value';
+import {FieldSpace} from './field-space';
+import {FieldValueType} from './type-desc';
+import {isGranularResult} from './granular-result';
+import {MalloyElement} from './malloy-element';
 
 class TypeMismatch extends Error {}
 
@@ -108,31 +108,31 @@ export abstract class ExpressionDef extends MalloyElement {
 }
 
 export class ExprDuration extends ExpressionDef {
-  elementType = "duration";
+  elementType = 'duration';
   legalChildTypes = [FT.timestampT, FT.dateT];
   constructor(readonly n: ExpressionDef, readonly timeframe: TimestampUnit) {
-    super({ "n": n });
+    super({n: n});
   }
 
   apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
     const lhs = left.getExpression(fs);
     this.typeCheck(this, lhs);
-    if (isTimeFieldType(lhs.dataType) && (op === "+" || op === "-")) {
+    if (isTimeFieldType(lhs.dataType) && (op === '+' || op === '-')) {
       const num = this.n.getExpression(fs);
       if (!FT.typeEq(num, FT.numberT)) {
         this.log(`Duration units needs number not '${num.dataType}`);
-        return errorFor("illegal unit expression");
+        return errorFor('illegal unit expression');
       }
       let resultGranularity: TimestampUnit | undefined;
       // Only allow the output of this to be granular if the
       // granularities match, this is still an area where
       // more thought is required.
-      if (isGranularResult(lhs) && lhs.timeframe == this.timeframe) {
+      if (isGranularResult(lhs) && lhs.timeframe === this.timeframe) {
         resultGranularity = lhs.timeframe;
       }
-      if (lhs.dataType === "timestamp") {
+      if (lhs.dataType === 'timestamp') {
         const result = timeOffset(
-          "timestamp",
+          'timestamp',
           lhs.value,
           op,
           num.value,
@@ -140,24 +140,24 @@ export class ExprDuration extends ExpressionDef {
         );
         return timeResult(
           {
-            "dataType": "timestamp",
-            "expressionType": maxExpressionType(
+            dataType: 'timestamp',
+            expressionType: maxExpressionType(
               lhs.expressionType,
               num.expressionType
             ),
-            "value": result
+            value: result,
           },
           resultGranularity
         );
       }
       return timeResult(
         {
-          "dataType": "date",
-          "expressionType": maxExpressionType(
+          dataType: 'date',
+          expressionType: maxExpressionType(
             lhs.expressionType,
             num.expressionType
           ),
-          "value": timeOffset("date", lhs.value, op, num.value, this.timeframe)
+          value: timeOffset('date', lhs.value, op, num.value, this.timeframe),
         },
         resultGranularity
       );
@@ -167,9 +167,9 @@ export class ExprDuration extends ExpressionDef {
 
   getExpression(_fs: FieldSpace): ExprValue {
     return {
-      "dataType": "duration",
-      "expressionType": "scalar",
-      "value": ["__ERROR_DURATION_IS_NOT_A_VALUE__"]
+      dataType: 'duration',
+      expressionType: 'scalar',
+      value: ['__ERROR_DURATION_IS_NOT_A_VALUE__'],
     };
   }
 }
@@ -183,7 +183,7 @@ function timeCompare(
     if (lhs.dataType !== rhs.dataType) {
       let lval = lhs.value;
       let rval = rhs.value;
-      if (lhs.dataType === "timestamp") {
+      if (lhs.dataType === 'timestamp') {
         lval = castTimestampToDate(lval);
       } else {
         rval = castTimestampToDate(rval);
@@ -195,26 +195,26 @@ function timeCompare(
 }
 
 function regexEqual(left: ExprValue, right: ExprValue): Expr | undefined {
-  if (left.dataType === "string") {
-    if (right.dataType === "regular expression") {
+  if (left.dataType === 'string') {
+    if (right.dataType === 'regular expression') {
       return [
         {
-          "type": "dialect",
-          "function": "regexpMatch",
-          "expr": left.value,
-          "regexp": (right.value[0] as string).replace(/^r'/, "'")
-        }
+          type: 'dialect',
+          function: 'regexpMatch',
+          expr: left.value,
+          regexp: (right.value[0] as string).replace(/^r'/, "'"),
+        },
       ];
     }
-  } else if (right.dataType === "string") {
-    if (left.dataType === "regular expression") {
+  } else if (right.dataType === 'string') {
+    if (left.dataType === 'regular expression') {
       return [
         {
-          "type": "dialect",
-          "function": "regexpMatch",
-          "expr": right.value,
-          "regexp": (left.value[0] as string).replace(/^r'/, "'")
-        }
+          type: 'dialect',
+          function: 'regexpMatch',
+          expr: right.value,
+          regexp: (left.value[0] as string).replace(/^r'/, "'"),
+        },
       ];
     }
   }
@@ -226,16 +226,16 @@ function nullCompare(
   op: string,
   right: ExprValue
 ): Expr | undefined {
-  const not = op === "!=" || op === "!~";
-  if (left.dataType === "null" || right.dataType === "null") {
-    const maybeNot = not ? " NOT" : "";
-    if (left.dataType !== "null") {
+  const not = op === '!=' || op === '!~';
+  if (left.dataType === 'null' || right.dataType === 'null') {
+    const maybeNot = not ? ' NOT' : '';
+    if (left.dataType !== 'null') {
       return [...left.value, ` IS${maybeNot} NULL`];
     }
-    if (right.dataType !== "null") {
+    if (right.dataType !== 'null') {
       return [...right.value, `IS${maybeNot} NULL`];
     }
-    return [not ? "false" : "true"];
+    return [not ? 'false' : 'true'];
   }
   return undefined;
 }
@@ -251,25 +251,25 @@ function equality(
 
   // Unsupported types can be compare with null
   const checkUnsupport =
-    lhs.dataType === "unsupported" || rhs.dataType === "unsupported";
+    lhs.dataType === 'unsupported' || rhs.dataType === 'unsupported';
   if (checkUnsupport) {
-    const oneNull = lhs.dataType === "null" || rhs.dataType === "null";
+    const oneNull = lhs.dataType === 'null' || rhs.dataType === 'null';
     const rawMatch = lhs.rawType && lhs.rawType === rhs.rawType;
     if (!(oneNull || rawMatch)) {
       const noGo = unsupportError(left, lhs, right, rhs);
       if (noGo) {
-        return { ...noGo, "dataType": "boolean" };
+        return {...noGo, dataType: 'boolean'};
       }
     }
   }
   let value = timeCompare(lhs, op, rhs) || compose(lhs.value, op, rhs.value);
 
-  if (lhs.dataType != "unknown" && rhs.dataType != "unknown") {
+  if (lhs.dataType !== 'unknown' && rhs.dataType !== 'unknown') {
     switch (op) {
-      case "~":
-      case "!~": {
-        if (lhs.dataType === "string" && rhs.dataType === "string") {
-          value = compose(lhs.value, "LIKE", rhs.value);
+      case '~':
+      case '!~': {
+        if (lhs.dataType === 'string' && rhs.dataType === 'string') {
+          value = compose(lhs.value, 'LIKE', rhs.value);
         } else {
           const regexCmp = regexEqual(lhs, rhs);
           if (regexCmp === undefined) {
@@ -282,14 +282,14 @@ function equality(
         value = nullsafeNot(value, op);
         break;
       }
-      case "=":
-      case "!=": {
+      case '=':
+      case '!=': {
         const nullCmp = nullCompare(lhs, op, rhs);
         if (nullCmp) {
           value = nullCmp;
         } else {
           value = nullsafeNot(
-            regexEqual(lhs, rhs) || compose(lhs.value, "=", rhs.value),
+            regexEqual(lhs, rhs) || compose(lhs.value, '=', rhs.value),
             op
           );
         }
@@ -299,9 +299,9 @@ function equality(
   }
 
   return {
-    "dataType": "boolean",
-    "expressionType": maxExpressionType(lhs.expressionType, rhs.expressionType),
-    value
+    dataType: 'boolean',
+    expressionType: maxExpressionType(lhs.expressionType, rhs.expressionType),
+    value,
   };
 }
 
@@ -319,14 +319,14 @@ function compare(
   );
   const noCompare = unsupportError(left, lhs, right, rhs);
   if (noCompare) {
-    return { ...noCompare, "dataType": "boolean" };
+    return {...noCompare, dataType: 'boolean'};
   }
   const value = timeCompare(lhs, op, rhs) || compose(lhs.value, op, rhs.value);
 
   return {
-    "dataType": "boolean",
+    dataType: 'boolean',
     expressionType,
-    "value": value
+    value: value,
   };
 }
 
@@ -360,16 +360,16 @@ function numeric(
     rhs.expressionType
   );
 
-  if (allAre("number", lhs, rhs)) {
+  if (allAre('number', lhs, rhs)) {
     return {
-      "dataType": "number",
+      dataType: 'number',
       expressionType,
-      "value": compose(lhs.value, op, rhs.value)
+      value: compose(lhs.value, op, rhs.value),
     };
   }
 
   left.log(`Non numeric('${lhs.dataType},${rhs.dataType}') value with '${op}'`);
-  return errorFor("numbers required");
+  return errorFor('numbers required');
 }
 
 function delta(
@@ -387,11 +387,11 @@ function delta(
 
   if (isTimeFieldType(lhs.dataType)) {
     let duration: ExpressionDef = right;
-    if (rhs.dataType !== "duration") {
+    if (rhs.dataType !== 'duration') {
       if (isGranularResult(lhs)) {
         duration = new ExprDuration(right, lhs.timeframe);
-      } else if (lhs.dataType === "date") {
-        duration = new ExprDuration(right, "day");
+      } else if (lhs.dataType === 'date') {
+        duration = new ExprDuration(right, 'day');
       } else {
         left.log(`Can not offset time by '${rhs.dataType}'`);
         return errorFor(`time plus ${rhs.dataType}`);
@@ -425,45 +425,45 @@ export function applyBinary(
   if (isComparison(op)) {
     return compare(fs, left, op, right);
   }
-  if (oneOf(op, "+", "-")) {
+  if (oneOf(op, '+', '-')) {
     return delta(fs, left, op, right);
   }
-  if (oneOf(op, "*", "%")) {
+  if (oneOf(op, '*', '%')) {
     return numeric(fs, left, op, right);
   }
-  if (oneOf(op, "/")) {
+  if (oneOf(op, '/')) {
     const num = left.getExpression(fs);
     const denom = right.getExpression(fs);
     const noGo = unsupportError(left, num, right, denom);
     if (noGo) {
-      left.log("Cannot operate with unsupported type");
+      left.log('Cannot operate with unsupported type');
       return noGo;
     }
 
-    if (num.dataType != "number") {
-      left.log("Numerator for division must be a number");
-    } else if (denom.dataType != "number") {
-      right.log("Denominator for division must be a number");
+    if (num.dataType !== 'number') {
+      left.log('Numerator for division must be a number');
+    } else if (denom.dataType !== 'number') {
+      right.log('Denominator for division must be a number');
     } else {
       const div: DivFragment = {
-        "type": "dialect",
-        "function": "div",
-        "numerator": num.value,
-        "denominator": denom.value
+        type: 'dialect',
+        function: 'div',
+        numerator: num.value,
+        denominator: denom.value,
       };
       return {
-        "dataType": "number",
-        "expressionType": maxExpressionType(
+        dataType: 'number',
+        expressionType: maxExpressionType(
           num.expressionType,
           denom.expressionType
         ),
-        "value": [div]
+        value: [div],
       };
     }
-    return errorFor("divide type mismatch");
+    return errorFor('divide type mismatch');
   }
   left.log(`Cannot use ${op} operator here`);
-  return errorFor("applybinary bad operator");
+  return errorFor('applybinary bad operator');
 }
 
 /**
@@ -476,16 +476,16 @@ function unsupportError(
   rhs: ExprValue
 ): ExprValue | undefined {
   const ret = {
-    "dataType": lhs.dataType,
-    "expressionType": maxExpressionType(lhs.expressionType, rhs.expressionType),
-    "value": ["'unsupported operation'"]
+    dataType: lhs.dataType,
+    expressionType: maxExpressionType(lhs.expressionType, rhs.expressionType),
+    value: ["'unsupported operation'"],
   };
-  if (lhs.dataType === "unsupported") {
-    l.log("Unsupported type not allowed in expression");
-    return { ...ret, "dataType": rhs.dataType };
+  if (lhs.dataType === 'unsupported') {
+    l.log('Unsupported type not allowed in expression');
+    return {...ret, dataType: rhs.dataType};
   }
-  if (rhs.dataType === "unsupported") {
-    r.log("Unsupported type not allowed in expression");
+  if (rhs.dataType === 'unsupported') {
+    r.log('Unsupported type not allowed in expression');
     return ret;
   }
   return undefined;
