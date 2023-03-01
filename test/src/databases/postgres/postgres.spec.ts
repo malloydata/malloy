@@ -152,7 +152,7 @@ describe('Postgres tests', () => {
       `
       )
       .run();
-    expect(result.data.value[0].n).toBe(1);
+    expect(result.data.value[0]['n']).toBe(1);
   });
 
   it('quote field name', async () => {
@@ -167,7 +167,7 @@ describe('Postgres tests', () => {
       `
       )
       .run();
-    expect(result.data.value[0].upperLower).toBe(1);
+    expect(result.data.value[0]['upperLower']).toBe(1);
   });
 
   it('quote keyword', async () => {
@@ -186,8 +186,8 @@ describe('Postgres tests', () => {
       `
       )
       .run();
-    expect(result.data.value[0].select).toBe(1);
-    expect(result.data.value[0].create).toBe(2);
+    expect(result.data.value[0]['select']).toBe(1);
+    expect(result.data.value[0]['create']).toBe(2);
   });
 
   // these started failing and I'm not sure why (lloyd, skipping for now)
@@ -199,7 +199,7 @@ describe('Postgres tests', () => {
       `
       )
       .run();
-    expect(result.data.value[0].one).toBe(1);
+    expect(result.data.value[0]['one']).toBe(1);
   });
 
   it.skip('quote schema name', async () => {
@@ -210,7 +210,7 @@ describe('Postgres tests', () => {
       `
       )
       .run();
-    expect(result.data.value[0].one).toBe(1);
+    expect(result.data.value[0]['one']).toBe(1);
   });
 
   it('passes unsupported data', async () => {
@@ -222,6 +222,6 @@ describe('Postgres tests', () => {
       `
       )
       .run();
-    expect(result.data.value[0].ranger).toBeDefined();
+    expect(result.data.value[0]['ranger']).toBeDefined();
   });
 });
