@@ -75,7 +75,8 @@ interface BigQueryConnectionConfiguration {
 
 interface SchemaInfo {
   schema: bigquery.ITableFieldSchema;
-  needsPartitionPsuedoColumn: boolean;
+  needsTableSuffixPseudoColumn: boolean;
+  needsPartitionPseudoColumn: boolean;
 }
 
 type QueryOptionsReader =
@@ -344,13 +345,16 @@ export class BigQueryConnection
       //      set it back _before_ we await the promise, thus avoiding a "concurrency" issue. We've decided
       //      this is better than creating a new BQ instance every time we need to get a table schema.
       if (projectId) this.bigQuery.projectId = projectId;
+      const needTableSuffixPseudoColumn =
+        tableNamePart && tableNamePart[tableNamePart.length - 1] === '*';
       const table = this.bigQuery.dataset(datasetNamePart).table(tableNamePart);
       const metadataPromise = table.getMetadata();
       this.bigQuery.projectId = this.projectId;
       const [metadata] = await metadataPromise;
       return {
         schema: metadata.schema,
-        needsPartitionPsuedoColumn:
+        needsTableSuffixPseudoColumn: needTableSuffixPseudoColumn,
+        needsPartitionPseudoColumn:
           metadata.timePartitioning?.type !== undefined &&
           metadata.timePartitioning?.field === undefined,
       };
@@ -552,7 +556,13 @@ export class BigQueryConnection
       fields: [],
     };
     this.addFieldsToStructDef(structDef, schemaInfo.schema);
-    if (schemaInfo.needsPartitionPsuedoColumn) {
+    if (schemaInfo.needsTableSuffixPseudoColumn) {
+      structDef.fields.push({
+        type: 'string',
+        name: '_TABLE_SUFFIX',
+      });
+    }
+    if (schemaInfo.needsPartitionPseudoColumn) {
       structDef.fields.push({
         type: 'timestamp',
         name: '_PARTITIONTIME',
