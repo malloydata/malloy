@@ -144,9 +144,3 @@ export function getDrillQuery(data: DataArrayOrRecord): {
   const drillQuery = ret + '-> ';
   return {drillQuery, drillFilters: formattedFilters};
 }
-
-export type DrillFunction = (
-  drillQuery: string,
-  target: HTMLElement,
-  drillFilters: string[]
-) => void;

@@ -22,20 +22,12 @@
  */
 
 import {DataColumn} from '@malloydata/malloy';
-import {DataStyles} from './data_styles';
-import {DrillFunction} from './drill';
+import {RendererOptions} from './renderer_types';
 
 export type ChildRenderers = {[fieldName: string]: Renderer};
 
 export interface Renderer {
   render(value: DataColumn): Promise<HTMLElement>;
-}
-
-export interface RendererOptions {
-  dataStyles: DataStyles;
-  isDrillingEnabled?: boolean;
-  onDrill?: DrillFunction;
-  titleCase?: boolean;
 }
 
 export abstract class RenderTree implements Renderer {

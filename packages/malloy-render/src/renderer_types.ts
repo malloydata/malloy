@@ -21,29 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Explore} from '@malloydata/malloy';
-import {StyleDefaults} from '../data_styles';
-import {ChildRenderers, RenderTree} from '../renderer';
-import {RendererOptions} from '../renderer_types';
+import {DataStyles} from './data_styles';
 
-export abstract class ContainerRenderer extends RenderTree {
-  childRenderers: ChildRenderers = {};
-  protected abstract childrenStyleDefaults: StyleDefaults;
-
-  get defaultStylesForChildren(): StyleDefaults {
-    return this.childrenStyleDefaults;
-  }
-
-  // We can't use a normal constructor here because we need
-  //  we need to be fully constructed before we construct
-  //  our children.
-  static make<Type extends ContainerRenderer>(
-    c: new (document: Document, options: RendererOptions) => Type,
-    document: Document,
-    exploreField: Explore,
-    options: RendererOptions
-  ): Type {
-    const n = new c(document, options);
-    return n;
-  }
+export interface RendererOptions {
+  dataStyles: DataStyles;
+  isDrillingEnabled?: boolean;
+  onDrill?: DrillFunction;
+  titleCase?: boolean;
 }
+
+export type DrillFunction = (
+  drillQuery: string,
+  target: HTMLElement,
+  drillFilters: string[]
+) => void;

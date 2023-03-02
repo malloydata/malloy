@@ -24,7 +24,8 @@
 import {AtomicFieldType, DataArray, Explore, Field} from '@malloydata/malloy';
 import {TopLevelSpec} from 'vega-lite';
 import {DataStyles, RenderDef, StyleDefaults} from '../data_styles';
-import {ChildRenderers, RendererOptions, Renderer} from '../renderer';
+import {ChildRenderers, Renderer} from '../renderer';
+import {RendererOptions} from '../renderer_types';
 import {HTMLBarChartRenderer} from './bar_chart';
 import {HTMLBooleanRenderer} from './boolean';
 import {HTMLJSONRenderer} from './json';

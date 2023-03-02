@@ -24,7 +24,8 @@
 import * as lite from 'vega-lite';
 import * as vega from 'vega';
 import {DataArray, DataColumn, Field} from '@malloydata/malloy';
-import {Renderer, RendererOptions} from '../renderer';
+import {Renderer} from '../renderer';
+import {RendererOptions} from '../renderer_types';
 import {ChartRenderOptions, StyleDefaults} from '../data_styles';
 
 type MappedRow = {[p: string]: string | number | Date | undefined | null};
