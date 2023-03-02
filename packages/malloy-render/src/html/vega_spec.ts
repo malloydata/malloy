@@ -27,7 +27,7 @@ import {HTMLChartRenderer} from './chart';
 import cloneDeep from 'lodash/cloneDeep';
 import {getColorScale} from './utils';
 import {StyleDefaults} from '../data_styles';
-import {RendererOptions} from '../renderer';
+import {RendererOptions} from '../renderer_types';
 
 type DataContainer = Array<unknown> | Record<string, unknown>;
 

@@ -36,9 +36,27 @@ describe('dependencies', () => {
     return message;
   }
 
-  it('should not be circular', () => {
-    return madge('packages/malloy/dist').then(deps => {
-      expect(deps.circular().length, getMessage(deps.circular())).toBe(0);
+  it('typescript references should not be circular', async () => {
+    const deps = await madge('.', {
+      fileExtensions: ['ts'],
+      excludeRegExp: [/packages\/malloy\/src\/lang/, /\.d\.ts/],
     });
+    expect(deps.circular().length, getMessage(deps.circular())).toBe(0);
+  });
+
+  it('javascript references should not be circular', async () => {
+    const deps = await madge('.', {
+      fileExtensions: ['js'],
+    });
+    expect(deps.circular().length, getMessage(deps.circular())).toBe(0);
+  });
+
+  // Enable more strict circular checks if we refactor lang again.
+  it.skip('malloy/src/lang typescript should not be circular', async () => {
+    const deps = await madge('.', {
+      fileExtensions: ['ts'],
+      excludeRegExp: [/packages\/malloy\/src\/lang\/lib/, /\.d\.ts/],
+    });
+    expect(deps.circular().length, getMessage(deps.circular())).toBe(0);
   });
 });

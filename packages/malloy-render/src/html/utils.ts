@@ -24,7 +24,7 @@
 import {DateTimeframe, TimestampTimeframe} from '@malloydata/malloy';
 import startCase from 'lodash/startCase';
 import {RenderDef} from '../data_styles';
-import {RendererOptions} from '../renderer';
+import {RendererOptions} from '../renderer_types';
 
 export function getColorScale(
   type: 'temporal' | 'ordinal' | 'quantitative' | 'nominal' | undefined,
