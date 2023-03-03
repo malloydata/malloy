@@ -371,7 +371,7 @@ export class LiteralYear extends DateBasedLiteral {
       next = nextYear.toFormat(fDay);
       parsed = true;
     }
-    super(tm, 'month', next);
+    super(tm, 'year', next);
     if (!parsed) {
       throw this.internalError('Malloy timestamp parser out of spec');
     }
