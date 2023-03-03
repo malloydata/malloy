@@ -119,6 +119,10 @@ export function rows(qr: Result): QueryDataRow[] {
 export const allDatabases = ['postgres', 'bigquery', 'duckdb', 'duckdb_wasm'];
 type RuntimeDatabaseNames = typeof allDatabases[number];
 
+interface RuntimeEntry {
+  dbName: string;
+  runtime: SingleConnectionRuntime;
+}
 export class RuntimeList {
   runtimeMap = new Map<string, SingleConnectionRuntime>();
 
@@ -150,6 +154,14 @@ export class RuntimeList {
         new SingleConnectionRuntime(files, connection)
       );
     }
+  }
+
+  toTest(): RuntimeEntry[] {
+    const all: RuntimeEntry[] = [];
+    for (const [db, rt] of this.runtimeMap) {
+      all.push({dbName: db, runtime: rt});
+    }
+    return all;
   }
 
   async closeAll(): Promise<void> {
