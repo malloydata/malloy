@@ -124,3 +124,7 @@ describe.each(runtimes.toTest())('$dbName: interval extraction', dialect => {
     ).isSqlEq();
   });
 });
+
+afterAll(async () => {
+  await runtimes.closeAll();
+});
