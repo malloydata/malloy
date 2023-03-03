@@ -115,21 +115,6 @@ export function timeResult(
   return t;
 }
 
-export function timeLiteral(
-  literalStr: string,
-  timeType: TimeFieldType,
-  tz: string
-): Expr {
-  const fragment: TimeLiteralFragment = {
-    type: 'dialect',
-    function: 'timeLiteral',
-    literal: literalStr,
-    literalType: timeType,
-    timezone: tz,
-  };
-  return [fragment];
-}
-
 export function timestampOffset(
   from: Fragment[],
   op: '+' | '-',

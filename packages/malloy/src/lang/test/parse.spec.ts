@@ -1123,13 +1123,19 @@ describe('expressions', () => {
       'string with quoted backslash',
       exprOK("'Is " + '\\' + '\\' + " nice'")
     );
-    test('year', exprOK('@1960'));
-    test('quarter', exprOK('@1960-Q1'));
-    test('week', exprOK('@WK1960-06-26'));
-    test('month', exprOK('@1960-06'));
-    test('day', exprOK('@1960-06-30'));
-    test('minute', exprOK('@1960-06-30 10:30'));
-    test('second', exprOK('@1960-06-30 10:30:31'));
+    describe('time literals', () => {
+      test('year', exprOK('@1960'));
+      test('year with offset', exprOK('@1960-07:00'));
+      test('quarter', exprOK('@1960-Q1'));
+      test('week', exprOK('@WK1960-06-26'));
+      test('month', exprOK('@1960-06'));
+      test('day', exprOK('@1960-06-30'));
+      test('minute', exprOK('@1960-06-30 10:30'));
+      test('minute+locale', exprOK('@1960-06-30 10:30[America/Los_Angeles]'));
+      test('second', exprOK('@1960-06-30 10:30:31'));
+      test('second 8601', exprOK('@1960-06-30T10:30:31'));
+      test('subsecond', exprOK('@1960-06-30 10:30:31.123'));
+    });
     test('null', exprOK('null'));
     test('now', exprOK('now'));
     test('true', exprOK('true'));

@@ -1117,37 +1117,34 @@ export class MalloyToAST
     );
   }
 
-  protected getLiteralTime(cx: ParserRuleContext): ast.ExpressionDef {
-    const parsed = ast.GranularLiteral.parse(cx.text);
-    if (parsed === undefined) {
-      this.contextError(cx, `${cx.text} is not a legal day specification`);
-      return new ast.ExprNow();
-    }
-    return parsed;
-  }
-
   visitLiteralTimestamp(pcx: parse.LiteralTimestampContext): ast.ExpressionDef {
-    return this.getLiteralTime(pcx);
+    const parsed = new ast.LiteralTimestamp(pcx.text);
+    return this.astAt(parsed, pcx);
   }
 
   visitLiteralDay(pcx: parse.LiteralDayContext): ast.ExpressionDef {
-    return this.getLiteralTime(pcx);
+    const parsed = new ast.LiteralDay(pcx.text);
+    return this.astAt(parsed, pcx);
   }
 
   visitLiteralWeek(pcx: parse.LiteralWeekContext): ast.ExpressionDef {
-    return this.getLiteralTime(pcx);
+    const parsed = new ast.LiteralWeek(pcx.text);
+    return this.astAt(parsed, pcx);
   }
 
   visitLiteralMonth(pcx: parse.LiteralMonthContext): ast.ExpressionDef {
-    return this.getLiteralTime(pcx);
+    const parsed = new ast.LiteralMonth(pcx.text);
+    return this.astAt(parsed, pcx);
   }
 
   visitLiteralQuarter(pcx: parse.LiteralQuarterContext): ast.ExpressionDef {
-    return this.getLiteralTime(pcx);
+    const parsed = new ast.LiteralQuarter(pcx.text);
+    return this.astAt(parsed, pcx);
   }
 
   visitLiteralYear(pcx: parse.LiteralYearContext): ast.ExpressionDef {
-    return this.getLiteralTime(pcx);
+    const parsed = new ast.LiteralYear(pcx.text);
+    return this.astAt(parsed, pcx);
   }
 
   visitImportStatement(pcx: parse.ImportStatementContext): ast.ImportStatement {
