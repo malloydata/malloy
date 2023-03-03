@@ -70,7 +70,7 @@ const fMonth = `${fYear}-LL`;
 const fDay = `${fMonth}-dd`;
 const fHour = `${fDay} HH`;
 const fMinute = `${fHour}:mm`;
-const fSecond = `${fMinute}:ss`;
+const fTimestamp = `${fMinute}:ss`;
 
 /**
  * Literals specified with an @ in Malloy all become one of these
@@ -161,13 +161,15 @@ export class LiteralTimestamp extends TimeLiteral {
       // subSecs = hasSubsecs[2];
       // TODO mtoy subsecond units not ignored
     }
-    const tss = LuxonDateTime.fromFormat(literalTs, fSecond);
+    const tss = LuxonDateTime.fromFormat(literalTs, fTimestamp);
     if (tss.isValid) {
       validParse = true;
     } else {
       const tsm = LuxonDateTime.fromFormat(literalTs, fMinute);
       if (tsm.isValid) {
         validParse = true;
+        tm.text = tm.text + ':00';
+        // MTOY todo minutes should be granular
       }
     }
     super(tm, undefined, 'timestamp');
@@ -231,7 +233,7 @@ export class LiteralMinute extends GranularLiteral {
     let parsed = false;
     if (minuteParse.isValid) {
       tm.text = tm.text + ':00';
-      nextMinute = minuteParse.plus({minute: 1}).toFormat(fSecond);
+      nextMinute = minuteParse.plus({minute: 1}).toFormat(fTimestamp);
       parsed = true;
     }
     super(tm, 'minute', 'timestamp', nextMinute);
@@ -250,7 +252,7 @@ export class LiteralHour extends GranularLiteral {
     let parsed = false;
     if (hourParse.isValid) {
       tm.text = tm.text + ':00:00';
-      nextHour = hourParse.plus({hour: 1}).toFormat(fSecond);
+      nextHour = hourParse.plus({hour: 1}).toFormat(fTimestamp);
       parsed = true;
     }
     super(tm, 'hour', 'timestamp', nextHour);
@@ -274,9 +276,10 @@ export class LiteralDay extends DateBasedLiteral {
     const dayParse = LuxonDateTime.fromFormat(tm.text, fDay);
     let parsed = false;
     if (dayParse.isValid) {
-      nextDay = dayParse.plus({day: 1}).toFormat(fDay);
+      nextDay = dayParse.plus({day: 1}).toFormat(fTimestamp);
       parsed = true;
     }
+    tm.text = dayParse.toFormat(fTimestamp);
     super(tm, 'day', nextDay);
     if (!parsed) {
       throw this.internalError('Malloy timestamp parser out of spec');
@@ -299,8 +302,8 @@ export class LiteralWeek extends DateBasedLiteral {
       }
       const next = sunday.plus({days: 7});
 
-      tm.text = sunday.toFormat(fDay);
-      nextWeek = next.toFormat(fDay);
+      tm.text = sunday.toFormat(fTimestamp);
+      nextWeek = next.toFormat(fTimestamp);
       parsed = true;
     }
     super(tm, 'week', nextWeek);
