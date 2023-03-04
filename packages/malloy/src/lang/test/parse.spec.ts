@@ -53,6 +53,8 @@ import {
 } from './test-translator';
 import isEqual from 'lodash/isEqual';
 import {inspect} from 'util';
+import {ExprValue} from '../ast/types/expr-value';
+import {isGranularResult} from '../ast/types/granular-result';
 
 const inspectCompile = false;
 
@@ -357,6 +359,7 @@ expect.extend({
 });
 
 class BetaExpression extends Testable {
+  private compiled?: ExprValue;
   constructor(src: string) {
     super(src, 'justExpr');
   }
@@ -368,6 +371,7 @@ class BetaExpression extends Testable {
       if (aStruct.type === 'struct') {
         const tstFS = new StaticSpace(aStruct);
         const exprDef = exprAst.getExpression(tstFS);
+        this.compiled = exprDef;
         if (inspectCompile) {
           console.log('EXPRESSION: ', pretty(exprDef));
         }
@@ -380,6 +384,13 @@ class BetaExpression extends Testable {
       const whatIsIt = exprAst?.toString() || 'NO AST GENERATED';
       throw new Error(`Not an expression: ${whatIsIt}`);
     }
+  }
+
+  generated(): ExprValue {
+    if (!this.compiled) {
+      throw new Error('Must compile expression before fetching generated code');
+    }
+    return this.compiled;
   }
 }
 
@@ -1123,19 +1134,56 @@ describe('expressions', () => {
       'string with quoted backslash',
       exprOK("'Is " + '\\' + '\\' + " nice'")
     );
-    describe('time literals', () => {
-      test('year', exprOK('@1960'));
-      test('year with offset', exprOK('@1960-07:00'));
-      test('quarter', exprOK('@1960-Q1'));
-      test('week', exprOK('@WK1960-06-26'));
-      test('month', exprOK('@1960-06'));
-      test('day', exprOK('@1960-06-30'));
-      test('minute', exprOK('@1960-06-30 10:30'));
-      test('minute+locale', exprOK('@1960-06-30 10:30[America/Los_Angeles]'));
-      test('second', exprOK('@1960-06-30 10:30:31'));
-      test('second 8601', exprOK('@1960-06-30T10:30:31'));
-      test('subsecond', exprOK('@1960-06-30 10:30:31.123'));
+    const literalTimes: [string, string, string | undefined, unknown][] = [
+      ['@1960', 'date', 'year', {literal: '1960-01-01'}],
+      ['@1960-Q2', 'date', 'quarter', {literal: '1960-04-01'}],
+      ['@1960-06', 'date', 'month', {literal: '1960-06-01'}],
+      ['@WK1960-06-26', 'date', 'week', {literal: '1960-06-26'}],
+      ['@WK1960-06-30', 'date', 'week', {literal: '1960-06-26'}],
+      ['@1960-06-30', 'date', 'day', {literal: '1960-06-30'}],
+      // ['@1960-06-30 10', 'timestamp', 'hour', {literal: '1960-06-30 10:00:00'}],
+      [
+        '@1960-06-30 10:30',
+        'timestamp',
+        'minute',
+        {literal: '1960-06-30 10:30:00'},
+      ],
+      [
+        '@1960-06-30 10:30:00',
+        'timestamp',
+        undefined,
+        {literal: '1960-06-30 10:30:00'},
+      ],
+      [
+        '@1960-06-30 10:30:00.123',
+        'timestamp',
+        undefined,
+        {literal: '1960-06-30 10:30:00.123'},
+      ],
+      [
+        '@1960-06-30T10:30:00',
+        'timestamp',
+        undefined,
+        {literal: '1960-06-30 10:30:00'},
+      ],
+    ];
+    test.each(literalTimes)('%s', (expr, timeType, timeframe, result) => {
+      const exprModel = new BetaExpression(expr);
+      expect(exprModel).modelCompiled();
+      const ir = exprModel.generated();
+      expect(ir.dataType).toEqual(timeType);
+      if (timeframe) {
+        expect(isGranularResult(ir)).toBeTruthy();
+        if (isGranularResult(ir)) {
+          expect(ir.timeframe).toEqual(timeframe);
+        }
+      } else {
+        expect(isGranularResult(ir)).toBeFalsy();
+      }
+      expect(ir.value[0]).toEqual(expect.objectContaining(result));
     });
+    test('minute+locale', exprOK('@1960-06-30 10:30[America/Los_Angeles]'));
+    test('second 8601', exprOK('@1960-06-30T10:30:31'));
     test('null', exprOK('null'));
     test('now', exprOK('now'));
     test('true', exprOK('true'));
