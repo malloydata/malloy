@@ -1166,6 +1166,34 @@ describe('expressions', () => {
         undefined,
         {literal: '1960-06-30 10:30:00'},
       ],
+      [
+        '@1960-06-30 10:30:00+0',
+        'timestamp',
+        undefined,
+        {literal: '1960-06-30 10:30:00', timezone: '+0'},
+      ],
+      [
+        '@1960-06-30 10:30:00-7',
+        'timestamp',
+        undefined,
+        {literal: '1960-06-30 10:30:00', timezone: '-7'},
+      ],
+      [
+        '@1960-06-30 10:30:00-00:15',
+        'timestamp',
+        undefined,
+        {literal: '1960-06-30 10:30:00', timezone: '-00:15'},
+      ],
+      [
+        '@1960-06-30 10:30:00[America/Los_Angeles]',
+        'timestamp',
+        undefined,
+        {
+          literal: '1960-06-30 10:30:00',
+          timezone: 'America/Los_Angeles',
+          tzIsLocale: true,
+        },
+      ],
     ];
     test.each(literalTimes)('%s', (expr, timeType, timeframe, result) => {
       const exprModel = new BetaExpression(expr);
