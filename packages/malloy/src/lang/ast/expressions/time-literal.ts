@@ -77,6 +77,7 @@ const fTimestamp = `${fMinute}:ss`;
  */
 abstract class TimeLiteral extends ExpressionDef {
   literalPart: string;
+  nextLit?: string;
   timeZone?: string;
   isLocale?: boolean;
   constructor(
@@ -141,6 +142,29 @@ abstract class TimeLiteral extends ExpressionDef {
   getExpression(_fs: FieldSpace): ExprValue {
     return this.getValue();
   }
+
+  apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
+    if (this.nextLit) {
+      // We have a chance to write our own range comparison will all constants.
+      const lhs = left.getExpression(fs);
+
+      // MTOY todo ... only apply range on ? maybe
+      if (isTimeFieldType(lhs.dataType)) {
+        let rangeType: TimeFieldType = 'timestamp';
+        if (lhs.dataType === 'date' && !this.timeType) {
+          rangeType = 'date';
+        }
+        const rangeStart = this.getLiteral();
+        const rangeEnd = {...rangeStart, literal: this.nextLit};
+        const range = new Range(
+          new ExprTime(rangeType, [rangeStart]),
+          new ExprTime(rangeType, [rangeEnd])
+        );
+        return range.apply(fs, op, left);
+      }
+    }
+    return super.apply(fs, op, left);
+  }
 }
 
 export class LiteralTimestamp extends TimeLiteral {
@@ -149,10 +173,13 @@ export class LiteralTimestamp extends TimeLiteral {
   constructor(literalTs: string) {
     // let subSecs: string | undefined;
     let validParse = false;
+    let units: TimestampUnit | undefined = undefined;
+    let next: string | undefined = undefined;
     const tm = preParse(literalTs);
     literalTs = tm.text;
     if (literalTs[10] === 'T') {
       literalTs = literalTs.slice(0, 10) + ' ' + literalTs.slice(11);
+      tm.text = literalTs;
     }
 
     const hasSubsecs = literalTs.match(/^([^.,]+)[,.](\d+)$/);
@@ -169,14 +196,23 @@ export class LiteralTimestamp extends TimeLiteral {
       if (tsm.isValid) {
         validParse = true;
         tm.text = tm.text + ':00';
+        units = 'minute';
+        next = tss.plus({minute: 1}).toFormat(fTimestamp);
         // MTOY todo minutes should be granular
       }
     }
-    super(tm, undefined, 'timestamp');
+    super(tm, units, 'timestamp');
     // Can't call "this.internalError" until after the call to super
     if (!validParse) {
       throw this.internalError('Malloy timestamp parser out of spec');
     }
+    if (next) {
+      this.nextLit = next;
+    }
+  }
+
+  granular(): boolean {
+    return this.units !== undefined;
   }
 }
 
@@ -196,26 +232,6 @@ abstract class GranularLiteral extends TimeLiteral {
 
   granular(): boolean {
     return true;
-  }
-
-  apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
-    const lhs = left.getExpression(fs);
-
-    // MTOY todo ... only apply range on ? maybe
-    if (isTimeFieldType(lhs.dataType)) {
-      let rangeType: TimeFieldType = 'timestamp';
-      if (lhs.dataType === 'date' && !this.timeType) {
-        rangeType = 'date';
-      }
-      const rangeStart = this.getLiteral();
-      const rangeEnd = {...rangeStart, literal: this.nextLit};
-      const range = new Range(
-        new ExprTime(rangeType, [rangeStart]),
-        new ExprTime(rangeType, [rangeEnd])
-      );
-      return range.apply(fs, op, left);
-    }
-    return super.apply(fs, op, left);
   }
 }
 
@@ -279,7 +295,6 @@ export class LiteralDay extends DateBasedLiteral {
       nextDay = dayParse.plus({day: 1}).toFormat(fTimestamp);
       parsed = true;
     }
-    tm.text = dayParse.toFormat(fTimestamp);
     super(tm, 'day', nextDay);
     if (!parsed) {
       throw this.internalError('Malloy timestamp parser out of spec');
@@ -302,8 +317,8 @@ export class LiteralWeek extends DateBasedLiteral {
       }
       const next = sunday.plus({days: 7});
 
-      tm.text = sunday.toFormat(fTimestamp);
-      nextWeek = next.toFormat(fTimestamp);
+      tm.text = sunday.toFormat(fDay);
+      nextWeek = next.toFormat(fDay);
       parsed = true;
     }
     super(tm, 'week', nextWeek);
