@@ -165,6 +165,10 @@ abstract class TimeLiteral extends ExpressionDef {
     }
     return super.apply(fs, op, left);
   }
+
+  granular(): boolean {
+    return this.nextLit !== undefined;
+  }
 }
 
 export class LiteralTimestamp extends TimeLiteral {
@@ -210,10 +214,6 @@ export class LiteralTimestamp extends TimeLiteral {
       this.nextLit = next;
     }
   }
-
-  granular(): boolean {
-    return this.units !== undefined;
-  }
 }
 
 /**
@@ -228,10 +228,6 @@ abstract class GranularLiteral extends TimeLiteral {
     readonly nextLit: string
   ) {
     super(tm, units, timeType);
-  }
-
-  granular(): boolean {
-    return true;
   }
 }
 
