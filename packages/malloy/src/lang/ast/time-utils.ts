@@ -26,13 +26,11 @@ import {
   Expr,
   Fragment,
   TimeFieldType,
-  TimeLiteralFragment,
   TimestampUnit,
   TypecastFragment,
 } from '../../model/malloy_types';
 
 import {compressExpr} from './expressions/utils';
-import {GranularResult} from './types/granular-result';
 import {TimeResult} from './types/time-result';
 
 export function timeOffset(
@@ -108,26 +106,11 @@ export function resolution(timeframe: string): TimeFieldType {
 export function timeResult(
   t: TimeResult,
   tt: TimestampUnit | undefined
-): TimeResult | GranularResult {
+): TimeResult {
   if (tt) {
     return {...t, timeframe: tt};
   }
   return t;
-}
-
-export function timeLiteral(
-  literalStr: string,
-  timeType: TimeFieldType,
-  tz: string
-): Expr {
-  const fragment: TimeLiteralFragment = {
-    type: 'dialect',
-    function: 'timeLiteral',
-    literal: literalStr,
-    literalType: timeType,
-    timezone: tz,
-  };
-  return [fragment];
 }
 
 export function timestampOffset(

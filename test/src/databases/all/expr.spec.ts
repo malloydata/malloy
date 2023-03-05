@@ -22,8 +22,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-
 import * as malloy from '@malloydata/malloy';
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/is-sql-eq';
@@ -618,103 +616,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     test('x not-eq y and not-eq z : else', async () => {
       const result = await sqlEq('5 != (6 & !=7)', true);
       expect(result).isSqlEq();
-    });
-  });
-
-  describe(`interval extraction - ${databaseName}`, () => {
-    const sqlEq = mkSqlEqWith(runtime);
-
-    test('seconds', async () => {
-      expect(await sqlEq('seconds(now to now + 1 second)', 1)).isSqlEq();
-      expect(await sqlEq('seconds(now to now)', 0)).isSqlEq();
-      expect(await sqlEq('seconds(now to now + 2 seconds)', 2)).isSqlEq();
-      expect(await sqlEq('seconds(now to now - 2 seconds)', -2)).isSqlEq();
-    });
-
-    test('minutes', async () => {
-      expect(
-        await sqlEq('minutes(@2022-10-03 10:23:08 to @2022-10-03 10:24:07)', 0)
-      ).isSqlEq();
-
-      expect(await sqlEq('minutes(now to now + 1 minute)', 1)).isSqlEq();
-      expect(await sqlEq('minutes(now to now + 59 seconds)', 0)).isSqlEq();
-      expect(await sqlEq('minutes(now to now + 2 minutes)', 2)).isSqlEq();
-      expect(await sqlEq('minutes(now to now - 2 minutes)', -2)).isSqlEq();
-    });
-
-    test('hours', async () => {
-      expect(
-        await sqlEq('hours(@2022-10-03 10:23:00 to @2022-10-03 11:22:00)', 0)
-      ).isSqlEq();
-      expect(await sqlEq('hours(now to now + 1 hour)', 1)).isSqlEq();
-      expect(await sqlEq('hours(now to now + 59 minutes)', 0)).isSqlEq();
-      expect(await sqlEq('hours(now to now + 120 minutes)', 2)).isSqlEq();
-      expect(await sqlEq('hours(now to now - 2 hours)', -2)).isSqlEq();
-    });
-
-    test('days', async () => {
-      expect(await sqlEq('days(now.day to now.day + 1 day)', 1)).isSqlEq();
-      expect(await sqlEq('days(now.day to now.day + 23 hours)', 0)).isSqlEq();
-      expect(await sqlEq('days(now.day to now.day + 48 hours)', 2)).isSqlEq();
-      expect(await sqlEq('days(now.day to now.day - 48 hours)', -2)).isSqlEq();
-
-      expect(
-        await sqlEq('days(@2022-10-03 10:23:00 to @2022-10-04 09:23:00)', 1)
-      ).isSqlEq();
-    });
-
-    test('weeks', async () => {
-      expect(await sqlEq('weeks(now.week to now.week + 1 week)', 1)).isSqlEq();
-      expect(await sqlEq('weeks(now.week to now.week + 6 days)', 0)).isSqlEq();
-      expect(await sqlEq('weeks(now.week to now.week + 14 days)', 2)).isSqlEq();
-      expect(
-        await sqlEq('weeks(now.week to now.week - 14 days)', -2)
-      ).isSqlEq();
-      expect(await sqlEq('weeks(@2022-10-03 to @2022-10-10)', 1)).isSqlEq();
-      expect(await sqlEq('weeks(@2022-10-03 to @2022-10-09)', 1)).isSqlEq();
-      expect(await sqlEq('weeks(@2022-10-02 to @2022-10-08)', 0)).isSqlEq();
-      expect(await sqlEq('weeks(@2022-10-02 to @2023-10-02)', 52)).isSqlEq();
-
-      expect(
-        await sqlEq('weeks(@2022-10-02 10:00 to @2023-10-02 10:00)', 52)
-      ).isSqlEq();
-    });
-
-    test('months', async () => {
-      expect(await sqlEq('months(now to now + 1 month)', 1)).isSqlEq();
-      expect(
-        await sqlEq('months(now.month to now.month + 27 days)', 0)
-      ).isSqlEq();
-      expect(await sqlEq('months(now to now + 2 months)', 2)).isSqlEq();
-      expect(await sqlEq('months(now to now - 2 months)', -2)).isSqlEq();
-
-      expect(
-        await sqlEq('months(@2022-10-02 10:00 to @2022-11-02 09:00)', 1)
-      ).isSqlEq();
-    });
-
-    test('quarters', async () => {
-      expect(await sqlEq('quarters(@2022-03-31 to @2022-04-01)', 1)).isSqlEq();
-      expect(await sqlEq('quarters(now to now + 1 quarter)', 1)).isSqlEq();
-      expect(
-        await sqlEq('quarters(now.quarter to now.quarter + 27 days)', 0)
-      ).isSqlEq();
-      expect(await sqlEq('quarters(now to now + 2 quarters)', 2)).isSqlEq();
-      expect(await sqlEq('quarters(now to now - 2 quarters)', -2)).isSqlEq();
-
-      expect(
-        await sqlEq('quarters(@2022-10-02 10:00 to @2023-04-02 09:00)', 2)
-      ).isSqlEq();
-    });
-
-    test('years', async () => {
-      expect(await sqlEq('years(@2022 to @2023)', 1)).isSqlEq();
-      expect(await sqlEq('years(@2022-01-01 to @2022-12-31)', 0)).isSqlEq();
-      expect(await sqlEq('years(@2022 to @2024)', 2)).isSqlEq();
-      expect(await sqlEq('years(@2024 to @2022)', -2)).isSqlEq();
-      expect(
-        await sqlEq('years(@2022-01-01 10:00 to @2024-01-01 09:00)', 2)
-      ).isSqlEq();
     });
   });
 

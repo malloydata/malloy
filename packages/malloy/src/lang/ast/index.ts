@@ -62,7 +62,7 @@ export * from './expressions/expr-sum';
 export * from './expressions/expr-time-extract';
 export * from './expressions/expr-ungroup';
 export * from './expressions/for-range';
-export * from './expressions/granular-literal';
+export * from './expressions/time-literal';
 export * from './expressions/partial-compare';
 export * from './expressions/pick-when';
 export * from './expressions/range';

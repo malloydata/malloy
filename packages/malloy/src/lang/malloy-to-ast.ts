@@ -289,6 +289,23 @@ export class MalloyToAST
     this.astAt(sqlStr, pcx);
   }
 
+  /**
+   * Parse a time string into an AST TimeLiteral, if the string fails
+   * the parse, make sure it highlights properly
+   */
+  protected parseTime(
+    pcx: ParserRuleContext,
+    parse: (s: string) => ast.ExpressionDef | undefined
+  ): ast.ExpressionDef {
+    let def = parse(pcx.text);
+    if (!def) {
+      this.contextError(pcx, 'Time data parse error');
+      // return a value node so the parse can continue
+      def = new ast.LiteralTimestamp({text: pcx.text});
+    }
+    return this.astAt(def, pcx);
+  }
+
   visitMalloyDocument(pcx: parse.MalloyDocumentContext): ast.Document {
     const stmts = this.onlyDocStatements(
       pcx.malloyStatement().map(scx => this.visit(scx))
@@ -1117,37 +1134,32 @@ export class MalloyToAST
     );
   }
 
-  protected getLiteralTime(cx: ParserRuleContext): ast.ExpressionDef {
-    const parsed = ast.GranularLiteral.parse(cx.text);
-    if (parsed === undefined) {
-      this.contextError(cx, `${cx.text} is not a legal day specification`);
-      return new ast.ExprNow();
-    }
-    return parsed;
+  visitLiteralTimestamp(pcx: parse.LiteralTimestampContext): ast.ExpressionDef {
+    return this.parseTime(pcx, ast.LiteralTimestamp.parse);
   }
 
-  visitLiteralTimestamp(pcx: parse.LiteralTimestampContext): ast.ExpressionDef {
-    return this.getLiteralTime(pcx);
+  visitLiteralHour(pcx: parse.LiteralHourContext): ast.ExpressionDef {
+    return this.parseTime(pcx, ast.LiteralHour.parse);
   }
 
   visitLiteralDay(pcx: parse.LiteralDayContext): ast.ExpressionDef {
-    return this.getLiteralTime(pcx);
+    return this.parseTime(pcx, ast.LiteralDay.parse);
   }
 
   visitLiteralWeek(pcx: parse.LiteralWeekContext): ast.ExpressionDef {
-    return this.getLiteralTime(pcx);
+    return this.parseTime(pcx, ast.LiteralWeek.parse);
   }
 
   visitLiteralMonth(pcx: parse.LiteralMonthContext): ast.ExpressionDef {
-    return this.getLiteralTime(pcx);
+    return this.parseTime(pcx, ast.LiteralMonth.parse);
   }
 
   visitLiteralQuarter(pcx: parse.LiteralQuarterContext): ast.ExpressionDef {
-    return this.getLiteralTime(pcx);
+    return this.parseTime(pcx, ast.LiteralQuarter.parse);
   }
 
   visitLiteralYear(pcx: parse.LiteralYearContext): ast.ExpressionDef {
-    return this.getLiteralTime(pcx);
+    return this.parseTime(pcx, ast.LiteralYear.parse);
   }
 
   visitImportStatement(pcx: parse.ImportStatementContext): ast.ImportStatement {

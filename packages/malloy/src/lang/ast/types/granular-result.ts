@@ -30,8 +30,8 @@ export interface GranularResult extends TimeResult {
   timeframe: TimestampUnit;
 }
 export function isGranularResult(v: ExprValue): v is GranularResult {
-  if (v.dataType !== 'date' && v.dataType !== 'timestamp') {
-    return false;
+  if (v.dataType === 'date' || v.dataType === 'timestamp') {
+    return (v as GranularResult).timeframe !== undefined;
   }
-  return (v as GranularResult).timeframe !== undefined;
+  return false;
 }
