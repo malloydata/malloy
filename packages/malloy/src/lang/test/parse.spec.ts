@@ -1206,6 +1206,28 @@ describe('literals', () => {
     }
     expect(ir.value[0]).toEqual(expect.objectContaining(result));
   });
+  const morphicLiterals: [string, string | undefined][] = [
+    ['@1960', '1960-01-01 00:00:00'],
+    ['@1960-Q2', '1960-04-01 00:00:00'],
+    ['@1960-06', '1960-06-01 00:00:00'],
+    ['@1960-06-30-Wk', '1960-06-26 00:00:00'],
+    ['@1960-06-30', '1960-06-30 00:00:00'],
+    ['@1960-06-30 00:00', undefined],
+  ];
+  test.each(morphicLiterals)('morphic value for %s is %s', (expr, morphic) => {
+    const exprModel = new BetaExpression(expr);
+    expect(exprModel).modelCompiled();
+    const ir = exprModel.generated();
+    const morphTo = ir.morphic && ir.morphic['timestamp'];
+    if (morphic) {
+      expect(morphTo).toBeDefined();
+      if (morphTo) {
+        expect(morphTo[0]).toEqual(expect.objectContaining({literal: morphic}));
+      }
+    } else {
+      expect(morphTo).toBeUndefined();
+    }
+  });
   test('minute+locale', exprOK('@1960-06-30 10:30[America/Los_Angeles]'));
   test('second 8601', exprOK('@1960-06-30T10:30:31'));
   test('null', exprOK('null'));
