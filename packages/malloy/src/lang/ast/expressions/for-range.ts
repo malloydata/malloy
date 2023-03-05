@@ -94,6 +94,10 @@ export class ForRange extends ExpressionDef {
     return new Range(rangeStart, rangeEnd).apply(fs, op, applyTo);
   }
 
+  requestExpression(_fs: FieldSpace): undefined {
+    return undefined;
+  }
+
   getExpression(_fs: FieldSpace): ExprValue {
     this.log('A Range is not a value');
     return errorFor('range has no value');

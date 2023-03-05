@@ -75,6 +75,10 @@ export class Range extends ExpressionDef {
     throw new Error('mysterious error in range computation');
   }
 
+  requestExpression(_fs: FieldSpace): undefined {
+    return undefined;
+  }
+
   getExpression(_fs: FieldSpace): ExprValue {
     this.log('A Range is not a value');
     return errorFor('a range is not a value');
