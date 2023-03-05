@@ -27,15 +27,9 @@ import {castDateToTimestamp, resolution, timeOffset} from '../time-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
-import {isGranularResult} from '../types/granular-result';
 import {ExprTime} from './expr-time';
 import {Range} from './range';
 import {Timeframe} from './time-frame';
-
-/**
- * TODO: This is sort of a hand clone of the "Range" class, they should
- * be siblings of a common abstract classs.
- */
 
 export class ForRange extends ExpressionDef {
   elementType = 'forRange';
@@ -63,8 +57,7 @@ export class ForRange extends ExpressionDef {
 
     // If the duration resolution is smaller than date, we have
     // to do the computaion with timestamps.
-    const durationRes = resolution(units);
-    let rangeType = durationRes;
+    let rangeType = resolution(units);
 
     // Next, if the beginning of the range is a timestamp, then we
     // also have to do the computation as a timestamp
@@ -87,10 +80,10 @@ export class ForRange extends ExpressionDef {
     let rangeStart = this.from;
     let from = startV.value;
     if (startV.dataType === 'date') {
-      // Time literals with timestamp units can also be used as timestamps;
-      const alreadyTs = isGranularResult(startV) && startV.alsoTimestamp;
-      if (!alreadyTs) {
-        // ... not a literal, need a cast
+      const tsVersion = startV.morphic && startV.morphic['timestamp'];
+      if (tsVersion) {
+        from = tsVersion;
+      } else {
         from = castDateToTimestamp(from);
       }
       rangeStart = new ExprTime('timestamp', from, startV.expressionType);
@@ -99,10 +92,6 @@ export class ForRange extends ExpressionDef {
     const rangeEnd = new ExprTime('timestamp', to, startV.expressionType);
 
     return new Range(rangeStart, rangeEnd).apply(fs, op, applyTo);
-  }
-
-  requestExpression(_fs: FieldSpace): ExprValue | undefined {
-    return undefined;
   }
 
   getExpression(_fs: FieldSpace): ExprValue {

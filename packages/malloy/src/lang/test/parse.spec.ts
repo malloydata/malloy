@@ -1125,100 +1125,97 @@ describe('qops', () => {
   });
 });
 
-describe('expressions', () => {
-  describe('literals', () => {
-    test('integer', exprOK('42'));
-    test('string', exprOK("'fortywo-two'"));
-    test('string with quoted quote', exprOK("'Isn" + '\\' + "'t this nice'"));
-    test(
-      'string with quoted backslash',
-      exprOK("'Is " + '\\' + '\\' + " nice'")
-    );
-    const literalTimes: [string, string, string | undefined, unknown][] = [
-      ['@1960', 'date', 'year', {literal: '1960-01-01'}],
-      ['@1960-Q2', 'date', 'quarter', {literal: '1960-04-01'}],
-      ['@1960-06', 'date', 'month', {literal: '1960-06-01'}],
-      ['@1960-06-26-WK', 'date', 'week', {literal: '1960-06-26'}],
-      ['@1960-06-30-WK', 'date', 'week', {literal: '1960-06-26'}],
-      ['@1960-06-30', 'date', 'day', {literal: '1960-06-30'}],
-      ['@1960-06-30 10', 'timestamp', 'hour', {literal: '1960-06-30 10:00:00'}],
-      [
-        '@1960-06-30 10:30',
-        'timestamp',
-        'minute',
-        {literal: '1960-06-30 10:30:00'},
-      ],
-      [
-        '@1960-06-30 10:30:00',
-        'timestamp',
-        undefined,
-        {literal: '1960-06-30 10:30:00'},
-      ],
-      [
-        '@1960-06-30 10:30:00.123',
-        'timestamp',
-        undefined,
-        {literal: '1960-06-30 10:30:00.123'},
-      ],
-      [
-        '@1960-06-30T10:30:00',
-        'timestamp',
-        undefined,
-        {literal: '1960-06-30 10:30:00'},
-      ],
-      [
-        '@1960-06-30 10:30:00+0',
-        'timestamp',
-        undefined,
-        {literal: '1960-06-30 10:30:00', timezone: '+0'},
-      ],
-      [
-        '@1960-06-30 10:30:00-7',
-        'timestamp',
-        undefined,
-        {literal: '1960-06-30 10:30:00', timezone: '-7'},
-      ],
-      [
-        '@1960-06-30 10:30:00-00:15',
-        'timestamp',
-        undefined,
-        {literal: '1960-06-30 10:30:00', timezone: '-00:15'},
-      ],
-      [
-        '@1960-06-30 10:30:00[America/Los_Angeles]',
-        'timestamp',
-        undefined,
-        {
-          literal: '1960-06-30 10:30:00',
-          timezone: 'America/Los_Angeles',
-          tzIsLocale: true,
-        },
-      ],
-    ];
-    test.each(literalTimes)('%s', (expr, timeType, timeframe, result) => {
-      const exprModel = new BetaExpression(expr);
-      expect(exprModel).modelCompiled();
-      const ir = exprModel.generated();
-      expect(ir.dataType).toEqual(timeType);
-      if (timeframe) {
-        expect(isGranularResult(ir)).toBeTruthy();
-        if (isGranularResult(ir)) {
-          expect(ir.timeframe).toEqual(timeframe);
-        }
-      } else {
-        expect(isGranularResult(ir)).toBeFalsy();
+describe('literals', () => {
+  test('integer', exprOK('42'));
+  test('string', exprOK("'fortywo-two'"));
+  test('string with quoted quote', exprOK("'Isn" + '\\' + "'t this nice'"));
+  test('string with quoted backslash', exprOK("'Is " + '\\' + '\\' + " nice'"));
+  const literalTimes: [string, string, string | undefined, unknown][] = [
+    ['@1960', 'date', 'year', {literal: '1960-01-01'}],
+    ['@1960-Q2', 'date', 'quarter', {literal: '1960-04-01'}],
+    ['@1960-06', 'date', 'month', {literal: '1960-06-01'}],
+    ['@1960-06-26-WK', 'date', 'week', {literal: '1960-06-26'}],
+    ['@1960-06-30-WK', 'date', 'week', {literal: '1960-06-26'}],
+    ['@1960-06-30', 'date', 'day', {literal: '1960-06-30'}],
+    ['@1960-06-30 10', 'timestamp', 'hour', {literal: '1960-06-30 10:00:00'}],
+    [
+      '@1960-06-30 10:30',
+      'timestamp',
+      'minute',
+      {literal: '1960-06-30 10:30:00'},
+    ],
+    [
+      '@1960-06-30 10:30:00',
+      'timestamp',
+      undefined,
+      {literal: '1960-06-30 10:30:00'},
+    ],
+    [
+      '@1960-06-30 10:30:00.123',
+      'timestamp',
+      undefined,
+      {literal: '1960-06-30 10:30:00.123'},
+    ],
+    [
+      '@1960-06-30T10:30:00',
+      'timestamp',
+      undefined,
+      {literal: '1960-06-30 10:30:00'},
+    ],
+    [
+      '@1960-06-30 10:30:00+0',
+      'timestamp',
+      undefined,
+      {literal: '1960-06-30 10:30:00', timezone: '+0'},
+    ],
+    [
+      '@1960-06-30 10:30:00-7',
+      'timestamp',
+      undefined,
+      {literal: '1960-06-30 10:30:00', timezone: '-7'},
+    ],
+    [
+      '@1960-06-30 10:30:00-00:15',
+      'timestamp',
+      undefined,
+      {literal: '1960-06-30 10:30:00', timezone: '-00:15'},
+    ],
+    [
+      '@1960-06-30 10:30:00[America/Los_Angeles]',
+      'timestamp',
+      undefined,
+      {
+        literal: '1960-06-30 10:30:00',
+        timezone: 'America/Los_Angeles',
+        tzIsLocale: true,
+      },
+    ],
+  ];
+  test.each(literalTimes)('%s', (expr, timeType, timeframe, result) => {
+    const exprModel = new BetaExpression(expr);
+    expect(exprModel).modelCompiled();
+    const ir = exprModel.generated();
+    expect(ir.dataType).toEqual(timeType);
+    if (timeframe) {
+      expect(isGranularResult(ir)).toBeTruthy();
+      if (isGranularResult(ir)) {
+        expect(ir.timeframe).toEqual(timeframe);
       }
-      expect(ir.value[0]).toEqual(expect.objectContaining(result));
-    });
-    test('minute+locale', exprOK('@1960-06-30 10:30[America/Los_Angeles]'));
-    test('second 8601', exprOK('@1960-06-30T10:30:31'));
-    test('null', exprOK('null'));
-    test('now', exprOK('now'));
-    test('true', exprOK('true'));
-    test('false', exprOK('false'));
-    test('regex', exprOK("r'RegularExpression'"));
+    } else {
+      expect(isGranularResult(ir)).toBeFalsy();
+    }
+    expect(ir.value[0]).toEqual(expect.objectContaining(result));
   });
+  test('minute+locale', exprOK('@1960-06-30 10:30[America/Los_Angeles]'));
+  test('second 8601', exprOK('@1960-06-30T10:30:31'));
+  test('null', exprOK('null'));
+  test('now', exprOK('now'));
+  test('true', exprOK('true'));
+  test('false', exprOK('false'));
+  test('regex', exprOK("r'RegularExpression'"));
+});
 
+describe('expressions', () => {
   describe('timeframes', () => {
     const timeframes = [
       'second',

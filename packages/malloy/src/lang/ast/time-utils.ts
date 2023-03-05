@@ -31,7 +31,6 @@ import {
 } from '../../model/malloy_types';
 
 import {compressExpr} from './expressions/utils';
-import {GranularResult} from './types/granular-result';
 import {TimeResult} from './types/time-result';
 
 export function timeOffset(
@@ -107,7 +106,7 @@ export function resolution(timeframe: string): TimeFieldType {
 export function timeResult(
   t: TimeResult,
   tt: TimestampUnit | undefined
-): TimeResult | GranularResult {
+): TimeResult {
   if (tt) {
     return {...t, timeframe: tt};
   }

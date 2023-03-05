@@ -34,8 +34,8 @@ import {ExprValue} from '../types/expr-value';
 import {FieldSpace} from '../types/field-space';
 import {Range} from './range';
 import {ExprTime} from './expr-time';
-import {TimeResult} from '../types/time-result';
 import {ExpressionDef} from '../types/expression-def';
+import {TimeResult} from '../types/time-result';
 
 export class TimeFormatError extends Error {}
 
@@ -104,47 +104,25 @@ abstract class TimeLiteral extends ExpressionDef {
   }
 
   protected getLiteral(): TimeLiteralFragment {
-    if (this.timeZone) {
-      return {
-        type: 'dialect',
-        function: 'timeLiteral',
-        literal: this.literalPart,
-        literalType: this.timeType,
-        timezone: this.timeZone,
-        tzIsLocale: this.isLocale,
-      };
-    } else {
-      return {
-        type: 'dialect',
-        function: 'timeLiteral',
-        literal: this.literalPart,
-        literalType: this.timeType,
-        timezone: 'UTC', // MTOY todo when civil literals are a thing
-      };
-    }
+    return {
+      type: 'dialect',
+      function: 'timeLiteral',
+      literal: this.literalPart,
+      literalType: this.timeType,
+      timezone: this.timeZone || 'UTC',
+      tzIsLocale: this.isLocale,
+    };
   }
 
-  private getValue(): ExprValue {
+  protected getValue(): TimeResult {
     const timeFrag = this.getLiteral();
-    const value: TimeResult = {
-      dataType: timeFrag.literalType,
-      expressionType: 'scalar',
-      value: [timeFrag],
-    };
-    // Literals with date resolution can be used as timestamps or dates,
-    // this is the third attempt to make that work. It still feels like
-    // there should be a better way to make this happen, but the point
-    // at which the data is needed, the handle is gone to the ExpressionDef
-    // which would allow a method call into this class.
-    //
-    // MTOY todo when civil/concrete value matching happens, use it here too
-    if (timeFrag.literalType === 'date') {
-      value.alsoTimestamp = true;
-    }
+    const dataType = timeFrag.literalType;
+    const expressionType = 'scalar';
+    const value = [timeFrag];
     if (this.units) {
-      return {...value, timeframe: this.units};
+      return {dataType, expressionType, value, timeframe: this.units};
     }
-    return value;
+    return {dataType, expressionType, value};
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
@@ -270,6 +248,15 @@ export class LiteralHour extends GranularLiteral {
 abstract class DateBasedLiteral extends GranularLiteral {
   constructor(tm: TimeText, units: TimestampUnit, nextLit: string) {
     super(tm, units, 'date', nextLit);
+  }
+
+  getExpression(_fs: FieldSpace): ExprValue {
+    const morphicValue = this.getValue();
+    const tsLiteral = this.getLiteral();
+    tsLiteral.literalType = 'timestamp';
+    tsLiteral.literal = tsLiteral.literal + ' 00:00:00';
+    morphicValue.morphic = {timestamp: [tsLiteral]};
+    return morphicValue;
   }
 }
 

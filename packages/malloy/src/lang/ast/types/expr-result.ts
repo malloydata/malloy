@@ -25,6 +25,8 @@ import {Fragment} from '../../../model/malloy_types';
 
 import {TypeDesc} from './type-desc';
 
+type MorphicValues = Record<string, Fragment[]>;
 export interface ExprResult extends TypeDesc {
   value: Fragment[];
+  morphic?: MorphicValues;
 }
