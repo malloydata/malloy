@@ -359,6 +359,7 @@ literal
 
 dateLiteral
   : LITERAL_TIMESTAMP      # literalTimestamp
+  | LITERAL_HOUR           # literalHour
   | LITERAL_DAY            # literalDay
   | LITERAL_WEEK           # literalWeek
   | LITERAL_MONTH          # literalMonth

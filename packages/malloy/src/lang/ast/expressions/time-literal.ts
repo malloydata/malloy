@@ -37,6 +37,8 @@ import {ExprTime} from './expr-time';
 import {TimeResult} from '../types/time-result';
 import {ExpressionDef} from '../types/expression-def';
 
+export class TimeFormatError extends Error {}
+
 interface TimeText {
   text: string;
   tzSpec?: string;
@@ -180,7 +182,11 @@ abstract class TimeLiteral extends ExpressionDef {
 export class LiteralTimestamp extends TimeLiteral {
   elementType = 'literal:timestamp';
 
-  constructor(literalTs: string) {
+  constructor(tm: TimeText, units?: TimestampUnit) {
+    super(tm, units, 'timestamp');
+  }
+
+  static parse(literalTs: string): LiteralTimestamp | undefined {
     // let subSecs: string | undefined;
     let validParse = false;
     let units: TimestampUnit | undefined = undefined;
@@ -211,14 +217,14 @@ export class LiteralTimestamp extends TimeLiteral {
         // MTOY todo minutes should be granular
       }
     }
-    super(tm, units, 'timestamp');
-    // Can't call "this.internalError" until after the call to super
-    if (!validParse) {
-      throw this.internalError('Malloy timestamp parser out of spec');
+    if (validParse) {
+      const ts = new LiteralTimestamp(tm, units);
+      if (next) {
+        ts.nextLit = next;
+      }
+      return ts;
     }
-    if (next) {
-      this.nextLit = next;
-    }
+    return undefined;
   }
 }
 
@@ -243,25 +249,23 @@ abstract class GranularLiteral extends TimeLiteral {
 // is defined differently in the DB than in Luxon ... which i don't have
 // the brain space to think about right now
 
-// MTOY todo -- this isn't in the language ATM
-// export class LiteralHour extends GranularLiteral {
-//   elementType = 'literal:hour';
-//   constructor(literalTs: string) {
-//     const tm = preParse(literalTs);
-//     let nextHour = tm.text;
-//     const hourParse = LuxonDateTime.fromFormat(tm.text, fHour);
-//     let parsed = false;
-//     if (hourParse.isValid) {
-//       tm.text = tm.text + ':00:00';
-//       nextHour = hourParse.plus({hour: 1}).toFormat(fTimestamp);
-//       parsed = true;
-//     }
-//     super(tm, 'hour', 'timestamp', nextHour);
-//     if (!parsed) {
-//       throw this.internalError('Malloy timestamp parser out of spec');
-//     }
-//   }
-// }
+export class LiteralHour extends GranularLiteral {
+  elementType = 'literal:hour';
+  constructor(tm: TimeText, next: string) {
+    super(tm, 'hour', 'timestamp', next);
+  }
+
+  static parse(literalTs: string): LiteralHour | undefined {
+    const tm = preParse(literalTs, false);
+    let nextHour = tm.text;
+    const hourParse = LuxonDateTime.fromFormat(tm.text, fHour);
+    if (hourParse.isValid) {
+      tm.text = tm.text + ':00:00';
+      nextHour = hourParse.plus({hour: 1}).toFormat(fTimestamp);
+      return new LiteralHour(tm, nextHour);
+    }
+  }
+}
 
 abstract class DateBasedLiteral extends GranularLiteral {
   constructor(tm: TimeText, units: TimestampUnit, nextLit: string) {
@@ -271,29 +275,34 @@ abstract class DateBasedLiteral extends GranularLiteral {
 
 export class LiteralDay extends DateBasedLiteral {
   elementType = 'literal:day';
-  constructor(literalTs: string) {
+
+  constructor(tm: TimeText, next: string) {
+    super(tm, 'day', next);
+  }
+
+  static parse(literalTs: string): LiteralDay | undefined {
     const tm = preParse(literalTs, false);
     let nextDay = tm.text;
     const dayParse = LuxonDateTime.fromFormat(tm.text, fDay);
-    let parsed = false;
     if (dayParse.isValid) {
       nextDay = dayParse.plus({day: 1}).toFormat(fTimestamp);
-      parsed = true;
-    }
-    super(tm, 'day', nextDay);
-    if (!parsed) {
-      throw this.internalError('Malloy timestamp parser out of spec');
+      return new LiteralDay(tm, nextDay);
     }
   }
 }
 
 export class LiteralWeek extends DateBasedLiteral {
   elementType = 'literal:week';
-  constructor(literalTs: string) {
+
+  constructor(tm: TimeText, next: string) {
+    super(tm, 'week', next);
+  }
+
+  static parse(literalTs: string): LiteralWeek | undefined {
     const tm = preParse(literalTs, false);
     let nextWeek = tm.text;
-    let parsed = false;
-    const yyyymmdd = LuxonDateTime.fromFormat(tm.text.slice(2), fDay);
+    const datePart = tm.text.slice(0, 10);
+    const yyyymmdd = LuxonDateTime.fromFormat(datePart, fDay);
     if (yyyymmdd.isValid) {
       // wonky because luxon uses monday weeks and bigquery uses sunday weeks
       let sunday = yyyymmdd;
@@ -304,41 +313,41 @@ export class LiteralWeek extends DateBasedLiteral {
 
       tm.text = sunday.toFormat(fDay);
       nextWeek = next.toFormat(fDay);
-      parsed = true;
-    }
-    super(tm, 'week', nextWeek);
-    if (!parsed) {
-      throw this.internalError('Malloy timestamp parser out of spec');
+      return new LiteralWeek(tm, nextWeek);
     }
   }
 }
 
 export class LiteralMonth extends DateBasedLiteral {
   elementType = 'literal:month';
-  constructor(literalTs: string) {
+
+  constructor(tm: TimeText, next: string) {
+    super(tm, 'month', next);
+  }
+
+  static parse(literalTs: string) {
     const tm = preParse(literalTs, false);
     let nextMonth = tm.text;
-    let parsed = false;
     const yyyymm = LuxonDateTime.fromFormat(tm.text, fMonth);
     if (yyyymm.isValid) {
       const next = yyyymm.plus({months: 1});
       tm.text = yyyymm.toFormat(fDay);
       nextMonth = next.toFormat(fDay);
-      parsed = true;
-    }
-    super(tm, 'month', nextMonth);
-    if (!parsed) {
-      throw this.internalError('Malloy timestamp parser out of spec');
+      return new LiteralMonth(tm, nextMonth);
     }
   }
 }
 
 export class LiteralQuarter extends DateBasedLiteral {
-  elementType = 'quarterLiteral';
-  constructor(literalTs: string) {
+  elementType = 'literal:quarter';
+
+  constructor(tm: TimeText, next: string) {
+    super(tm, 'quarter', next);
+  }
+
+  static parse(literalTs: string): LiteralQuarter | undefined {
     const tm = preParse(literalTs, false);
     let nextQuarter = tm.text;
-    let parsed = false;
     const quarter = tm.text.match(/(^\d{4})-[qQ](\d)$/);
     if (quarter) {
       const qplus = Number.parseInt(quarter[2]) - 1;
@@ -349,31 +358,27 @@ export class LiteralQuarter extends DateBasedLiteral {
       const qend = qstart.plus({quarter: 1});
       tm.text = qstart.toFormat(fDay);
       nextQuarter = qend.toFormat(fDay);
-      parsed = true;
-    }
-    super(tm, 'quarter', nextQuarter);
-    if (!parsed) {
-      throw this.internalError('Malloy timestamp parser out of spec');
+      return new LiteralQuarter(tm, nextQuarter);
     }
   }
 }
 
 export class LiteralYear extends DateBasedLiteral {
   elementType = 'literal:year';
-  constructor(literalTs: string) {
+
+  constructor(tm: TimeText, next: string) {
+    super(tm, 'year', next);
+  }
+
+  static parse(literalTs: string) {
     const tm = preParse(literalTs, false);
     let next = tm.text;
-    let parsed = false;
     const yyyy = LuxonDateTime.fromFormat(tm.text, fYear);
     if (yyyy.isValid) {
       const nextYear = yyyy.plus({year: 1});
       tm.text = yyyy.toFormat(fDay);
       next = nextYear.toFormat(fDay);
-      parsed = true;
-    }
-    super(tm, 'year', next);
-    if (!parsed) {
-      throw this.internalError('Malloy timestamp parser out of spec');
+      return new LiteralYear(tm, next);
     }
   }
 }

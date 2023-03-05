@@ -33,6 +33,12 @@ describe.each(runtimes.toTest())('$dbName: interval extraction', dialect => {
   // const dbName = dialect.dbName;
   const sqlEq = mkSqlEqWith(runtime);
 
+  // MTOY todo when there is query time zone, check that literals
+  // NOT in the query time zone bin in the query time zone.
+
+  // MTOY todo tests for the moprhing literal ranges to timestamp
+  // or date, depending on LHS of the apply.
+
   test('seconds', async () => {
     expect(await sqlEq('seconds(now to now + 1 second)', 1)).isSqlEq();
     expect(await sqlEq('seconds(now to now)', 0)).isSqlEq();

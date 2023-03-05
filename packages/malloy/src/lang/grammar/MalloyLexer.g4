@@ -171,10 +171,11 @@ LITERAL_TIMESTAMP
     ( ':' F_DD  ( [.,] DIGIT+)? )?
     F_TZ?
   ;
+LITERAL_HOUR:     '@' F_YEAR '-' F_DD '-' F_DD [ T] F_DD;
 LITERAL_DAY:     '@' F_YEAR '-' F_DD '-' F_DD;
 LITERAL_QUARTER: '@' F_YEAR '-' 'Q' ('1'|'2'|'3'|'4');
 LITERAL_MONTH:   '@' F_YEAR '-' F_DD;
-LITERAL_WEEK:    '@' W K F_YEAR '-' F_DD '-' F_DD;
+LITERAL_WEEK:    '@' F_YEAR '-' F_DD '-' F_DD '-' W K;
 LITERAL_YEAR:    '@' F_YEAR;
 
 IDENTIFIER: ID_CHAR ( ID_CHAR | DIGIT )*;
