@@ -1,4 +1,0 @@
-*.gz
-*.parquet
-*.sql
-!build_*.sql

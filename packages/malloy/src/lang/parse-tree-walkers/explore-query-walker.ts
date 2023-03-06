@@ -1,20 +1,30 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { CommonTokenStream } from "antlr4ts";
-import { ParseTree } from "antlr4ts/tree";
-import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
-import { MalloyParserListener } from "../lib/Malloy/MalloyParserListener";
+import {CommonTokenStream} from 'antlr4ts';
+import {ParseTree} from 'antlr4ts/tree';
+import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
+import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
 // import {
 //   ExploreContext,
 //   FilterElementContext,
@@ -57,7 +67,7 @@ export class ExploreQueryWalker implements MalloyParserListener {
   }
 
   exploreQueryAtOffset(offset: number): ExploreClauseRef | undefined {
-    return this.exploreClauseRefs.find((ex) => {
+    return this.exploreClauseRefs.find(ex => {
       if (ex.range[0] === undefined || ex.range[1] === undefined) return false;
       return ex.range[0] <= offset && ex.range[1] >= offset;
     });
@@ -66,7 +76,7 @@ export class ExploreQueryWalker implements MalloyParserListener {
   filterAtOffset(offset: number): FilterRef | undefined {
     const exploreRef = this.exploreQueryAtOffset(offset);
     if (!exploreRef) return;
-    return exploreRef.filterRefs.find((filterRef) => {
+    return exploreRef.filterRefs.find(filterRef => {
       if (filterRef.range[0] === undefined || filterRef.range[1] === undefined)
         return false;
       return filterRef.range[0] <= offset && filterRef.range[1] >= offset;
@@ -76,7 +86,7 @@ export class ExploreQueryWalker implements MalloyParserListener {
   hasFilterListAtOffset(offset: number): boolean {
     const exploreRef = this.exploreQueryAtOffset(offset);
     if (!exploreRef) return false;
-    return !!exploreRef.filterLists.find((filterList) => {
+    return !!exploreRef.filterLists.find(filterList => {
       if (
         filterList.range[0] === undefined ||
         filterList.range[1] === undefined

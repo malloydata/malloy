@@ -1,28 +1,38 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { MarkedSource, markSource, TestTranslator } from "./test-translator";
+import {MarkedSource, TestTranslator, markSource} from './test-translator';
 
 function testHelpContext(
   source: MarkedSource,
-  position: { line: number; character: number },
-  type: "explore_property" | "query_property" | "model_property",
+  position: {line: number; character: number},
+  type: 'explore_property' | 'query_property' | 'model_property',
   token: string
 ) {
   const doc = new TestTranslator(source.code);
   expect(doc.logger.hasErrors()).toBeFalsy();
   const helpContext = doc.helpContext(position).helpContext;
-  expect(helpContext).toEqual({ type, token });
+  expect(helpContext).toEqual({type, token});
 }
 
 const source = `source: foo is table('bar') {
@@ -37,50 +47,50 @@ query: bar {
   group_by: bazz
 }`;
 
-test("Supports model properties", () => {
+test('Supports model properties', () => {
   testHelpContext(
     markSource`${source}`,
-    { line: 0, character: 1 },
-    "model_property",
-    "source:"
+    {line: 0, character: 1},
+    'model_property',
+    'source:'
   );
 
   testHelpContext(
     markSource`${source}`,
-    { line: 8, character: 1 },
-    "model_property",
-    "query:"
-  );
-});
-
-test("Supports explore properties", () => {
-  testHelpContext(
-    markSource`${source}`,
-    { line: 1, character: 3 },
-    "explore_property",
-    "where:"
-  );
-
-  testHelpContext(
-    markSource`${source}`,
-    { line: 2, character: 3 },
-    "explore_property",
-    "query:"
+    {line: 8, character: 1},
+    'model_property',
+    'query:'
   );
 });
 
-test("Supports query properties", () => {
+test('Supports explore properties', () => {
   testHelpContext(
     markSource`${source}`,
-    { line: 3, character: 5 },
-    "query_property",
-    "group_by:"
+    {line: 1, character: 3},
+    'explore_property',
+    'where:'
   );
 
   testHelpContext(
     markSource`${source}`,
-    { line: 4, character: 5 },
-    "query_property",
-    "where:"
+    {line: 2, character: 3},
+    'explore_property',
+    'query:'
+  );
+});
+
+test('Supports query properties', () => {
+  testHelpContext(
+    markSource`${source}`,
+    {line: 3, character: 5},
+    'query_property',
+    'group_by:'
+  );
+
+  testHelpContext(
+    markSource`${source}`,
+    {line: 4, character: 5},
+    'query_property',
+    'where:'
   );
 });

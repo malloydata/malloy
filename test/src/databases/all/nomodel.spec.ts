@@ -1,36 +1,48 @@
 /* eslint-disable no-console */
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
-import { allDatabases, RuntimeList } from "../../runtimes";
-import { databasesFromEnvironmentOr } from "../../util";
+import {RuntimeList, allDatabases} from '../../runtimes';
+import {databasesFromEnvironmentOr} from '../../util';
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 const splitFunction: Record<string, string> = {
-  bigquery: "split",
-  postgres: "string_to_array",
-  duckdb: "string_to_array",
+  bigquery: 'split',
+  postgres: 'string_to_array',
+  duckdb: 'string_to_array',
+  duckdb_wasm: 'string_to_array',
 };
 
 const rootDbPath: Record<string, string> = {
-  bigquery: "malloy-data.",
-  postgres: "",
-  duckdb: "",
+  bigquery: 'malloy-data.',
+  postgres: '',
+  duckdb: '',
+  duckdb_wasm: '',
 };
 
 afterAll(async () => {
@@ -60,7 +72,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     // console.log(result.data.toObject());
-    expect(result.data.path(0, "state").value).toBe("WY");
+    expect(result.data.path(0, 'state').value).toBe('WY');
   });
 
   // Issue #149
@@ -79,7 +91,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     // console.log(result.data.toObject());
-    expect(result.data.path(0, "lower_state").value).toBe("wy");
+    expect(result.data.path(0, 'lower_state').value).toBe('wy');
   });
 
   // issue #157
@@ -98,7 +110,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     } catch (e) {
       error = e;
     }
-    expect(error.toString()).not.toContain("Unknown Dialect");
+    expect(error.toString()).not.toContain('Unknown Dialect');
   });
 
   it(`join_many - ${databaseName}`, async () => {
@@ -116,8 +128,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].avg_year).toBe(1969);
-    expect(result.data.value[0].avg_seats).toBe(7);
+    expect(result.data.value[0]['avg_year']).toBe(1969);
+    expect(result.data.value[0]['avg_seats']).toBe(7);
   });
 
   it(`join_many condition no primary key - ${databaseName}`, async () => {
@@ -132,7 +144,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].c).toBe(19701);
+    expect(result.data.value[0]['c']).toBe(19701);
   });
 
   it(`join_many filter multiple values - ${databaseName}`, async () => {
@@ -152,12 +164,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].c).toBe(18605);
-    expect(result.data.value[0].state).toBeNull();
-    expect(result.data.value[1].c).toBe(984);
-    expect(result.data.value[1].state).toBe("CA");
-    expect(result.data.value[2].c).toBe(112);
-    expect(result.data.value[2].state).toBe("NH");
+    expect(result.data.value[0]['c']).toBe(18605);
+    expect(result.data.value[0]['state']).toBeNull();
+    expect(result.data.value[1]['c']).toBe(984);
+    expect(result.data.value[1]['state']).toBe('CA');
+    expect(result.data.value[2]['c']).toBe(112);
+    expect(result.data.value[2]['state']).toBe('NH');
   });
 
   it(`join_one condition no primary key - ${databaseName}`, async () => {
@@ -173,7 +185,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].c).toBe(19701);
+    expect(result.data.value[0]['c']).toBe(19701);
   });
 
   it(`join_one filter multiple values - ${databaseName}`, async () => {
@@ -193,11 +205,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    // https://github.com/looker-open-source/malloy/pull/501#discussion_r861022857
+    // https://github.com/malloydata/malloy/pull/501#discussion_r861022857
     expect(result.data.value).toHaveLength(3);
-    expect(result.data.value).toContainEqual({ c: 1845, state: "TX" });
-    expect(result.data.value).toContainEqual({ c: 500, state: "LA" });
-    expect(result.data.value).toContainEqual({ c: 0, state: null });
+    expect(result.data.value).toContainEqual({c: 1845, state: 'TX'});
+    expect(result.data.value).toContainEqual({c: 500, state: 'LA'});
+    expect(result.data.value).toContainEqual({c: 0, state: null});
   });
 
   it(`join_many cross from  - ${databaseName}`, async () => {
@@ -222,9 +234,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].row_count).toBe(51 * 51);
-    expect(result.data.value[0].left_sum).toBe(19701);
-    expect(result.data.value[0].right_sum).toBe(19701);
+    expect(result.data.value[0]['row_count']).toBe(51 * 51);
+    expect(result.data.value[0]['left_sum']).toBe(19701);
+    expect(result.data.value[0]['right_sum']).toBe(19701);
   });
 
   it(`join_one only  - ${databaseName}`, async () => {
@@ -250,10 +262,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].row_count).toBe(51);
-    expect(result.data.value[0].left_sum).toBe(19701);
-    expect(result.data.value[0].right_sum).toBe(19701);
-    expect(result.data.value[0].sum_sum).toBe(19701 + 51 * 19701);
+    expect(result.data.value[0]['row_count']).toBe(51);
+    expect(result.data.value[0]['left_sum']).toBe(19701);
+    expect(result.data.value[0]['right_sum']).toBe(19701);
+    expect(result.data.value[0]['sum_sum']).toBe(19701 + 51 * 19701);
   });
 
   it(`join_many cross ON  - ${databaseName}`, async () => {
@@ -276,9 +288,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].row_count).toBe(51 * 2);
-    expect(result.data.value[0].left_sum).toBe(19701);
-    expect(result.data.value[0].right_sum).toBe(1560);
+    expect(result.data.value[0]['row_count']).toBe(51 * 2);
+    expect(result.data.value[0]['left_sum']).toBe(19701);
+    expect(result.data.value[0]['right_sum']).toBe(1560);
   });
 
   it(`limit - provided - ${databaseName}`, async () => {
@@ -376,7 +388,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     // console.log(result.sql);
-    expect(result.data.path(0, "births_per_100k").value).toBe(9742);
+    expect(result.data.path(0, 'births_per_100k').value).toBe(9742);
   });
 
   it(`ungrouped top level with nested  - ${databaseName}`, async () => {
@@ -401,7 +413,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     // console.log(result.sql);
-    expect(result.data.path(0, "births_per_100k").value).toBe(9742);
+    expect(result.data.path(0, 'births_per_100k').value).toBe(9742);
   });
 
   it(`ungrouped - eliminate rows  - ${databaseName}`, async () => {
@@ -445,7 +457,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     // console.log(result.sql);
-    expect(result.data.path(0, "by_name", 0, "births_per_100k").value).toBe(
+    expect(result.data.path(0, 'by_name', 0, 'births_per_100k').value).toBe(
       66703
     );
   });
@@ -483,14 +495,14 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     // console.log(result.sql);
-    expect(result.data.path(0, "fac_type", 0, "all_").value).toBe(1845);
-    expect(result.data.path(0, "fac_type", 0, "all_state_region").value).toBe(
+    expect(result.data.path(0, 'fac_type', 0, 'all_').value).toBe(1845);
+    expect(result.data.path(0, 'fac_type', 0, 'all_state_region').value).toBe(
       1845
     );
-    expect(result.data.path(0, "fac_type", 0, "all_of_this_type").value).toBe(
+    expect(result.data.path(0, 'fac_type', 0, 'all_of_this_type').value).toBe(
       1782
     );
-    expect(result.data.path(0, "fac_type", 0, "all_top").value).toBe(2421);
+    expect(result.data.path(0, 'fac_type', 0, 'all_top').value).toBe(2421);
   });
 
   it(`ungrouped - all nested - ${databaseName}`, async () => {
@@ -524,8 +536,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     // console.log(result.sql);
-    expect(result.data.path(0, "fac_type", 0, "all_").value).toBe(1845);
-    expect(result.data.path(0, "fac_type", 0, "all_major").value).toBe(1819);
+    expect(result.data.path(0, 'fac_type', 0, 'all_').value).toBe(1845);
+    expect(result.data.path(0, 'fac_type', 0, 'all_major').value).toBe(1819);
   });
 
   it(`ungrouped nested  - ${databaseName}`, async () => {
@@ -549,7 +561,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     // console.log(result.sql);
-    expect(result.data.path(0, "by_state", 0, "births_per_100k").value).toBe(
+    expect(result.data.path(0, 'by_state', 0, 'births_per_100k').value).toBe(
       36593
     );
   });
@@ -575,7 +587,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     // console.log(result.sql);
-    expect(result.data.path(0, "by_state", 0, "births_per_100k").value).toBe(
+    expect(result.data.path(0, 'by_state', 0, 'births_per_100k').value).toBe(
       36593
     );
   });
@@ -602,7 +614,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
     // console.log(result.sql);
     // console.log(JSON.stringify(result.data.toObject(), null, 2));
-    expect(result.data.path(0, "by_state", 0, "ug").value).toBe(62742230);
+    expect(result.data.path(0, 'by_state', 0, 'ug').value).toBe(62742230);
   });
 
   it(`all with parameters - basic  - ${databaseName}`, async () => {
@@ -626,8 +638,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
     // console.log(result.sql);
     // console.log(JSON.stringify(result.data.toObject(), null, 2));
-    expect(result.data.path(0, "all_births").value).toBe(295727065);
-    expect(result.data.path(0, "all_name").value).toBe(197260594);
+    expect(result.data.path(0, 'all_births').value).toBe(295727065);
+    expect(result.data.path(0, 'all_name').value).toBe(197260594);
   });
 
   it(`all with parameters - nest  - ${databaseName}`, async () => {
@@ -656,10 +668,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
     // console.log(result.sql);
     // console.log(JSON.stringify(result.data.toObject(), null, 2));
-    expect(result.data.path(0, "by_stuff", 0, "all_births").value).toBe(
+    expect(result.data.path(0, 'by_stuff', 0, 'all_births').value).toBe(
       119809719
     );
-    expect(result.data.path(0, "by_stuff", 0, "all_name").value).toBe(61091215);
+    expect(result.data.path(0, 'by_stuff', 0, 'all_name').value).toBe(61091215);
   });
 
   it(`single value to udf - ${databaseName}`, async () => {
@@ -681,7 +693,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       )
       .run();
     // console.log(result.sql);
-    expect(result.data.path(0, "fun", 0, "t1").value).toBe(52);
+    expect(result.data.path(0, 'fun', 0, 't1').value).toBe(52);
   });
 
   it(`Multi value to udf - ${databaseName}`, async () => {
@@ -705,7 +717,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
     // console.log(result.sql);
     // console.log(result.data.toObject());
-    expect(result.data.path(0, "fun", 0, "t1").value).toBe(52);
+    expect(result.data.path(0, 'fun', 0, 't1').value).toBe(52);
   });
 
   it(`Multi value to udf group by - ${databaseName}`, async () => {
@@ -729,41 +741,64 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
     // console.log(result.sql);
     // console.log(result.data.toObject());
-    expect(result.data.path(0, "fun", 0, "t1").value).toBe(52);
+    expect(result.data.path(0, 'fun', 0, 't1').value).toBe(52);
   });
+
+  const sql1234 = `
+  sql: one is {select: """
+    SELECT 1 as a, 2 as b
+    UNION ALL SELECT 3, 4
+  """}`;
 
   it(`sql_block - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
-        SELECT 1 as a, 2 as b
-        UNION ALL SELECT 3, 4
-      ;;
-
+      ${sql1234}
       explore: eone is  from_sql(one) {}
 
       query: eone -> { project: a }
       `
       )
       .run();
-    expect(result.data.value[0].a).toBe(1);
+    expect(result.data.value[0]['a']).toBe(1);
   });
 
   it(`sql_block no explore- ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
-        SELECT 1 as a, 2 as b
-        UNION ALL SELECT 3, 4
-      ;;
-
-      query: from_sql(one) -> { project: a }
+          ${sql1234}
+          query: from_sql(one) -> { project: a }
       `
       )
       .run();
-    expect(result.data.value[0].a).toBe(1);
+    expect(result.data.value[0]['a']).toBe(1);
+  });
+
+  it(`sql_block with turducken- ${databaseName}`, async () => {
+    if (databaseName !== 'postgres') {
+      const turduckenQuery = `
+        sql: state_as_sql is {
+          select: """
+            SELECT
+              ROW_NUMBER() OVER (ORDER BY state_count) as row_number,
+              *
+            FROM (%{
+              table('malloytest.state_facts')
+              -> {
+                group_by: popular_name
+                aggregate: state_count is count()
+              }
+            }%)
+          """
+        }
+        query: from_sql(state_as_sql) -> {
+          project: *; where: popular_name = 'Emma'
+        }`;
+      const result = await runtime.loadQuery(turduckenQuery).run();
+      expect(result.data.value[0]['state_count']).toBe(6);
+    }
   });
 
   // it(`sql_block version- ${databaseName}`, async () => {
@@ -786,11 +821,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
-        SELECT 1 as a, 2 as b
-        UNION ALL SELECT 3, 4
-      ;;
-
+      ${sql1234}
       query: from_sql(one) -> {
         declare: c is a + 1
         project: c
@@ -798,18 +829,14 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].c).toBe(2);
+    expect(result.data.value[0]['c']).toBe(2);
   });
 
   it(`local declarations named query - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
-        SELECT 1 as a, 2 as b
-        UNION ALL SELECT 3, 4
-      ;;
-
+      ${sql1234}
       source: foo is from_sql(one) + {
         query: bar is {
           declare: c is a + 1
@@ -821,18 +848,14 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].c).toBe(2);
+    expect(result.data.value[0]['c']).toBe(2);
   });
 
   it(`local declarations refined named query - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
-        SELECT 1 as a, 2 as b
-        UNION ALL SELECT 3, 4
-      ;;
-
+      ${sql1234}
       source: foo is from_sql(one) + {
         query: bar is {
           declare: c is a + 1
@@ -849,17 +872,17 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].d).toBe(3);
+    expect(result.data.value[0]['d']).toBe(3);
   });
 
   it(`regexp match- ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
+      sql: one is { select: """
         SELECT 'hello mom' as a, 'cheese tastes good' as b
         UNION ALL SELECT 'lloyd is a bozo', 'michael likes poetry'
-      ;;
+      """}
 
       query: from_sql(one) -> {
         aggregate: llo is count() {? a ~ r'llo'}
@@ -868,18 +891,18 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].llo).toBe(2);
-    expect(result.data.value[0].m2).toBe(1);
+    expect(result.data.value[0]['llo']).toBe(2);
+    expect(result.data.value[0]['m2']).toBe(1);
   });
 
   it(`substitution precidence- ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
-      sql: one is ||
+      sql: one is {select: """
         SELECT 5 as a, 2 as b
         UNION ALL SELECT 3, 4
-      ;;
+      """}
 
       query: from_sql(one) -> {
         declare: c is b + 4
@@ -888,19 +911,19 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].x).toBe(30);
+    expect(result.data.value[0]['x']).toBe(30);
   });
 
   it(`array unnest - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
         `
-        sql: atitle is ||
+        sql: atitle is {select:"""
           SELECT
             city,
             ${splitFunction[databaseName]}(city,' ') as words
           FROM ${rootDbPath[databaseName]}malloytest.aircraft
-        ;;
+          """}
 
         source: title is from_sql(atitle){}
 
@@ -912,7 +935,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].c).toBe(145);
+    expect(result.data.value[0]['c']).toBe(145);
   });
 
   // make sure we can count the total number of elements when fanning out.
@@ -920,14 +943,14 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        sql: atitle is ||
+        sql: atitle is {select: """
           SELECT
             city,
             ${splitFunction[databaseName]}(city,' ') as words,
             ${splitFunction[databaseName]}(city,'A') as abreak
           FROM ${rootDbPath[databaseName]}malloytest.aircraft
           where city IS NOT null
-        ;;
+        """}
 
         source: title is from_sql(atitle){}
 
@@ -940,9 +963,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.value[0].b).toBe(3552);
-    expect(result.data.value[0].c).toBe(4586);
-    expect(result.data.value[0].a).toBe(6601);
+    expect(result.data.value[0]['b']).toBe(3552);
+    expect(result.data.value[0]['c']).toBe(4586);
+    expect(result.data.value[0]['a']).toBe(6601);
   });
 
   it(`nest null - ${databaseName}`, async () => {
@@ -971,8 +994,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const d: any = result.data.toObject();
-    expect(d[0]["by_state"]).not.toBe(null);
-    expect(d[0]["by_state1"]).not.toBe(null);
+    expect(d[0]['by_state']).not.toBe(null);
+    expect(d[0]['by_state1']).not.toBe(null);
   });
 
   it(`number as null- ${databaseName}`, async () => {
@@ -991,6 +1014,35 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    expect(result.data.path(0, "ugly", 0, "foo").value).toBe(null);
+    expect(result.data.path(0, 'ugly', 0, 'foo').value).toBe(null);
+  });
+
+  describe('quoting and strings', () => {
+    const tick = "'";
+    const back = '\\';
+    test('backslash quote', async () => {
+      const result = await runtime
+        .loadQuery(
+          `
+            query: table('malloytest.state_facts') -> {
+              project: tick is '${back}${tick}'
+            }
+        `
+        )
+        .run();
+      expect(result.data.value[0]['tick']).toBe(tick);
+    });
+    test('backslash backslash', async () => {
+      const result = await runtime
+        .loadQuery(
+          `
+            query: table('malloytest.state_facts') -> {
+              project: back is '${back}${back}'
+            }
+        `
+        )
+        .run();
+      expect(result.data.value[0]['back']).toBe(back);
+    });
   });
 });

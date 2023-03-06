@@ -1,38 +1,50 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 import {
-  TimestampUnit,
-  Expr,
-  TimeFieldType,
-  TypecastFragment,
   AtomicFieldType,
-  TimeLiteralFragment,
-} from "../../model/malloy_types";
-import { GranularResult, TimeResult } from "./ast-types";
+  Expr,
+  Fragment,
+  TimeFieldType,
+  TimestampUnit,
+  TypecastFragment,
+} from '../../model/malloy_types';
+
+import {compressExpr} from './expressions/utils';
+import {TimeResult} from './types/time-result';
 
 export function timeOffset(
   timeType: TimeFieldType,
   from: Expr,
-  op: "+" | "-",
+  op: '+' | '-',
   n: Expr,
   timeframe: TimestampUnit
 ): Expr {
   return [
     {
-      type: "dialect",
-      function: "delta",
-      base: { valueType: timeType, value: from },
+      type: 'dialect',
+      function: 'delta',
+      base: {valueType: timeType, value: from},
       op,
       delta: n,
       units: timeframe,
@@ -46,8 +58,8 @@ export function castTo(
   safe = false
 ): Expr {
   const cast: TypecastFragment = {
-    type: "dialect",
-    function: "cast",
+    type: 'dialect',
+    function: 'cast',
     dstType: castType,
     expr: from,
     safe,
@@ -57,10 +69,10 @@ export function castTo(
 
 export function castTimestampToDate(from: Expr, safe = false): Expr {
   const cast: TypecastFragment = {
-    type: "dialect",
-    function: "cast",
-    dstType: "date",
-    srcType: "timestamp",
+    type: 'dialect',
+    function: 'cast',
+    dstType: 'date',
+    srcType: 'timestamp',
     expr: from,
     safe,
   };
@@ -69,10 +81,10 @@ export function castTimestampToDate(from: Expr, safe = false): Expr {
 
 export function castDateToTimestamp(from: Expr, safe = false): Expr {
   const cast: TypecastFragment = {
-    type: "dialect",
-    function: "cast",
-    dstType: "timestamp",
-    srcType: "date",
+    type: 'dialect',
+    function: 'cast',
+    dstType: 'timestamp',
+    srcType: 'date',
     expr: from,
     safe,
   };
@@ -81,37 +93,68 @@ export function castDateToTimestamp(from: Expr, safe = false): Expr {
 
 export function resolution(timeframe: string): TimeFieldType {
   switch (timeframe) {
-    case "hour":
-    case "minute":
-    case "second":
-    case "microsecond":
-    case "millisecond":
-      return "timestamp";
+    case 'hour':
+    case 'minute':
+    case 'second':
+    case 'microsecond':
+    case 'millisecond':
+      return 'timestamp';
   }
-  return "date";
+  return 'date';
 }
 
 export function timeResult(
   t: TimeResult,
   tt: TimestampUnit | undefined
-): TimeResult | GranularResult {
+): TimeResult {
   if (tt) {
-    return { ...t, timeframe: tt };
+    return {...t, timeframe: tt};
   }
   return t;
 }
 
-export function timeLiteral(
-  literalStr: string,
-  timeType: TimeFieldType,
-  tz: string
-): Expr {
-  const fragment: TimeLiteralFragment = {
-    type: "dialect",
-    function: "timeLiteral",
-    literal: literalStr,
-    literalType: timeType,
-    timezone: tz,
-  };
-  return [fragment];
+export function timestampOffset(
+  from: Fragment[],
+  op: '+' | '-',
+  n: Fragment[],
+  timeframe: TimestampUnit,
+  fromNotTimestamp = false
+): Fragment[] {
+  const useDatetime = ['week', 'month', 'quarter', 'year'].includes(timeframe);
+  const add = op === '+' ? '_ADD' : '_SUB';
+  const units = timeframe.toUpperCase();
+  if (useDatetime) {
+    return [
+      `TIMESTAMP(DATETIME${add}(DATETIME(`,
+      ...from,
+      '),INTERVAL ',
+      ...n,
+      ` ${units}))`,
+    ];
+  }
+  const typeFrom = fromNotTimestamp ? ['TIMESTAMP(', ...from, ')'] : from;
+  return compressExpr([
+    `TIMESTAMP${add}(`,
+    ...typeFrom,
+    ',INTERVAL ',
+    ...n,
+    ` ${units})`,
+  ]);
+}
+
+export function dateOffset(
+  from: Fragment[],
+  op: '+' | '-',
+  n: Fragment[],
+  timeframe: TimestampUnit
+): Fragment[] {
+  const add = op === '+' ? '_ADD' : '_SUB';
+  const units = timeframe.toUpperCase();
+  return compressExpr([
+    `DATE${add}(`,
+    ...from,
+    ',INTERVAL ',
+    ...n,
+    ` ${units})`,
+  ]);
 }

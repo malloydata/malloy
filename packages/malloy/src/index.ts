@@ -1,23 +1,31 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 // TODO tighten up exports
 export type {
   QueryDataRow,
   // Currently needed only by tests
-  ModelDef,
   Fragment,
-  Query,
   // Needed for DB
   StructDef,
   StructRelationship,
@@ -44,19 +52,26 @@ export type {
   TurtleDef,
   SearchValueMapResult,
   SearchIndexResult,
-} from "./model";
+  ModelDef,
+  Query,
+  NamedQuery,
+  NamedModelObject,
+  ExpressionType,
+} from './model';
 export {
   // Used in Composer Demo
   Segment,
   isFilteredAliasedName,
-} from "./model";
+  flattenQuery,
+  expressionIsCalculation,
+} from './model';
 export {
   // Neede for VSCode extension
   HighlightType,
   // Needed for tests only
   MalloyTranslator,
-} from "./lang";
-export type { LogMessage, TranslateResponse } from "./lang";
+} from './lang';
+export type {LogMessage, TranslateResponse} from './lang';
 export {
   Malloy,
   Runtime,
@@ -76,8 +91,9 @@ export {
   QueryMaterializer,
   CSVWriter,
   JSONWriter,
+  Parse,
   DataWriter,
-} from "./malloy";
+} from './malloy';
 export type {
   Explore,
   Model,
@@ -95,12 +111,12 @@ export type {
   DocumentSymbol,
   DocumentHighlight,
   ResultJSON,
-  RunSQLOptions,
   PreparedResultMaterializer,
   SQLBlockMaterializer,
   ExploreMaterializer,
   WriteStream,
-} from "./malloy";
+} from './malloy';
+export type {RunSQLOptions} from './run_sql_options';
 export type {
   URLReader,
   InfoConnection,
@@ -113,9 +129,7 @@ export type {
   PooledConnection,
   TestableConnection,
   PersistSQLResults,
-  FetchSchemaAndRunSimultaneously,
   StreamingConnection,
-  FetchSchemaAndRunStreamSimultaneously,
-} from "./runtime_types";
-export type { Loggable } from "./malloy";
-export { toAsyncGenerator } from "./connection_utils";
+} from './runtime_types';
+export type {Loggable} from './malloy';
+export {toAsyncGenerator} from './connection_utils';

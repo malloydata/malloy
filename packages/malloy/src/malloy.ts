@@ -1,58 +1,78 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { InfoConnection } from ".";
+import {RunSQLOptions} from './run_sql_options';
 import {
+  DocumentCompletion as DocumentCompletionDefinition,
   DocumentHighlight as DocumentHighlightDefinition,
   DocumentSymbol as DocumentSymbolDefinition,
-  DocumentCompletion as DocumentCompletionDefinition,
   LogMessage,
   MalloyTranslator,
-} from "./lang";
-import { DocumentHelpContext } from "./lang/parse-tree-walkers/document-help-context-walker";
+} from './lang';
+import {DocumentHelpContext} from './lang/parse-tree-walkers/document-help-context-walker';
 import {
   CompiledQuery,
+  DocumentReference,
   FieldBooleanDef,
   FieldDateDef,
   FieldIsIntrinsic,
+  FieldJSONDef,
   FieldNumberDef,
   FieldStringDef,
   FieldTimestampDef,
   FieldTypeDef,
   FilterExpression,
-  ModelDef,
   Query as InternalQuery,
+  ModelDef,
+  DocumentPosition as ModelDocumentPosition,
+  NamedQuery,
   QueryData,
   QueryDataRow,
   QueryModel,
   QueryResult,
-  StructDef,
-  TurtleDef,
   SQLBlock,
-  DocumentReference,
-  DocumentPosition as ModelDocumentPosition,
+  SQLBlockSource,
+  SQLBlockStructDef,
   SearchIndexResult,
   SearchValueMapResult,
-} from "./model";
+  StructDef,
+  TurtleDef,
+  expressionIsCalculation,
+  flattenQuery,
+  isSQLBlock,
+  isSQLFragment,
+  FieldUnsupportedDef,
+} from './model';
 import {
+  Connection,
+  InfoConnection,
   LookupConnection,
   ModelString,
   ModelURL,
   QueryString,
   QueryURL,
   URLReader,
-  Connection,
-} from "./runtime_types";
+} from './runtime_types';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -65,14 +85,10 @@ export interface Loggable {
   error: (message?: any, ...optionalParams: any[]) => void;
 }
 
-export interface RunSQLOptions {
-  rowLimit?: number;
-}
-
 export class Malloy {
   // TODO load from file built during release
   public static get version(): string {
-    return "0.0.1";
+    return '0.0.1';
   }
 
   private static _log: Loggable;
@@ -87,10 +103,10 @@ export class Malloy {
 
   private static _parse(source: string, url?: URL): Parse {
     if (url === undefined) {
-      url = new URL("internal://internal.malloy");
+      url = new URL('internal://internal.malloy');
     }
     const translator = new MalloyTranslator(url.toString(), {
-      urls: { [url.toString()]: source },
+      urls: {[url.toString()]: source},
     });
     return new Parse(translator);
   }
@@ -100,7 +116,7 @@ export class Malloy {
    *
    * @param url The URL of the Malloy document to parse.
    * @param urlReader Object capable of fetching URL contents.
-   * @returns A (promise of a) `Parse` result.
+   * @return A (promise of a) `Parse` result.
    */
   public static parse({
     url,
@@ -114,9 +130,9 @@ export class Malloy {
    *
    * @param url The URL of the Malloy document to parse (optional).
    * @param source The contents of the Malloy document to parse.
-   * @returns A `Parse` result.
+   * @return A `Parse` result.
    */
-  public static parse({ source, url }: { url?: URL; source: string }): Parse;
+  public static parse({source, url}: {url?: URL; source: string}): Parse;
   public static parse({
     url,
     urlReader,
@@ -130,14 +146,14 @@ export class Malloy {
       return Malloy._parse(source, url);
     } else {
       if (urlReader === undefined) {
-        throw new Error("Internal Error: urlReader is required.");
+        throw new Error('Internal Error: urlReader is required.');
       }
       if (url === undefined) {
         throw new Error(
-          "Internal Error: url is required if source not present."
+          'Internal Error: url is required if source not present.'
         );
       }
-      return urlReader.readURL(url).then((source) => {
+      return urlReader.readURL(url).then(source => {
         return Malloy._parse(source, url);
       });
     }
@@ -150,7 +166,7 @@ export class Malloy {
    * @param connections Mapping of connection names to objects capable of reading Malloy schemas.
    * @param parse The parsed Malloy document.
    * @param model A compiled model to build upon (optional).
-   * @returns A (promise of a) compiled `Model`.
+   * @return A (promise of a) compiled `Model`.
    */
   public static async compile({
     urlReader,
@@ -190,17 +206,17 @@ export class Malloy {
         if (result.urls) {
           for (const neededUrl of result.urls) {
             try {
-              if (neededUrl.startsWith("internal://")) {
+              if (neededUrl.startsWith('internal://')) {
                 throw new Error(
-                  "In order to use relative imports, you must compile a file via a URL."
+                  'In order to use relative imports, you must compile a file via a URL.'
                 );
               }
               const neededText = await urlReader.readURL(new URL(neededUrl));
-              const urls = { [neededUrl]: neededText };
-              translator.update({ urls });
+              const urls = {[neededUrl]: neededText};
+              translator.update({urls});
             } catch (error) {
               translator.update({
-                errors: { urls: { [neededUrl]: error.message } },
+                errors: {urls: {[neededUrl]: error.message}},
               });
             }
           }
@@ -212,7 +228,7 @@ export class Malloy {
             Array<string>
           > = new Map();
           for (const connectionTableString of result.tables) {
-            const { connectionName } = parseTableURI(connectionTableString);
+            const {connectionName} = parseTableURI(connectionTableString);
 
             let connectionToTablesMap = tablesByConnection.get(connectionName);
             if (!connectionToTablesMap) {
@@ -234,93 +250,82 @@ export class Malloy {
               // TODO detect if the union of `Object.keys(tables)` and `Object.keys(errors)` is not the same
               //      as `Object.keys(connectionTableString)`, i.e. that all tables are accounted for. Otherwise
               //      the translator runs into an infinite loop fetching tables.
-              const { schemas: tables, errors } =
+              const {schemas: tables, errors} =
                 await connection.fetchSchemaForTables(connectionTableString);
-              translator.update({ tables, errors: { tables: errors } });
+              translator.update({tables, errors: {tables: errors}});
             } catch (error) {
               // There was an exception getting the connection, associate that error
               // with all its tables
               const tables = {};
-              const errors: { [name: string]: string } = {};
+              const errors: {[name: string]: string} = {};
               for (const table of connectionTableString) {
                 errors[table] = error.toString();
               }
-              translator.update({ tables, errors: { tables: errors } });
+              translator.update({tables, errors: {tables: errors}});
             }
           }
         }
-        if (result.sqlStructs) {
-          // collect sql refs by connection name since there may be multiple connections
-          const sqlRefsByConnection: Map<
-            string | undefined,
-            Array<SQLBlock>
-          > = new Map();
-          for (const missingSQLSchemaRef of result.sqlStructs) {
-            const connectionName = missingSQLSchemaRef.connection;
-            // if (connectionName === undefined) {
-            //   throw new Error("Oops have not made it required here yet...");
-            // }
-
-            let connectionToSQLReferencesMap =
-              sqlRefsByConnection.get(connectionName);
-            if (!connectionToSQLReferencesMap) {
-              connectionToSQLReferencesMap = [missingSQLSchemaRef];
-            } else {
-              connectionToSQLReferencesMap.push(missingSQLSchemaRef);
-            }
-            sqlRefsByConnection.set(
-              connectionName,
-              connectionToSQLReferencesMap
+        if (result.compileSQL) {
+          // Unlike other requests, these do not come in batches
+          const toCompile = result.compileSQL;
+          const connectionName = toCompile.connection;
+          try {
+            const conn = await connections.lookupConnection(connectionName);
+            const expanded = Malloy.compileSQLBlock(
+              result.partialModel,
+              toCompile
             );
-          }
-          for (const [
-            connectionName,
-            connectionToSQLReferencesMap,
-          ] of sqlRefsByConnection) {
-            try {
-              const connection = await connections.lookupConnection(
-                connectionName
-              );
-              // TODO detect if the union of `Object.keys(sqlStructs)` and `Object.keys(errors)` is not the same
-              //      as `Object.keys(connectionToSQLReferencesMap)`, i.e. that all tables are accounted for. Otherwise
-              //      the translator runs into an infinite loop fetching SQL structs.
-              const { schemas: sqlStructs, errors } =
-                await connection.fetchSchemaForSQLBlocks(
-                  connectionToSQLReferencesMap
-                );
-              translator.update({ sqlStructs });
-              translator.update({ sqlStructs, errors: { sqlStructs: errors } });
-            } catch (error) {
-              // There was an exception getting the connection, associate that error
-              // with all its schemas
-              const sqlStructs = {};
-              const errors: { [name: string]: string } = {};
-              for (const sqlRef of connectionToSQLReferencesMap) {
-                errors[sqlRef.name] = error.toString();
-              }
-              translator.update({ sqlStructs, errors: { sqlStructs: errors } });
+            const resolved = await conn.fetchSchemaForSQLBlock(expanded);
+            if (resolved.error) {
+              translator.update({
+                errors: {compileSQL: {[expanded.name]: resolved.error}},
+              });
             }
+            if (resolved.structDef) {
+              if (isSQLBlock(resolved.structDef)) {
+                translator.update({
+                  compileSQL: {[expanded.name]: resolved.structDef},
+                });
+              }
+            }
+          } catch (error) {
+            const errors: {[name: string]: string} = {};
+            errors[toCompile.name] = error.toString();
+            translator.update({errors: {compileSQL: errors}});
           }
         }
       }
     }
   }
 
-  private static async runSQLBlockAndFetchResultSchema(
-    connection: Connection,
-    sqlBlock: SQLBlock,
-    options?: RunSQLOptions
-  ) {
-    if (connection.canFetchSchemaAndRunSimultaneously()) {
-      return connection.runSQLBlockAndFetchResultSchema(sqlBlock, options);
-    }
-    const [schema, data] = await Promise.all([
-      connection
-        .fetchSchemaForSQLBlocks([sqlBlock])
-        .then((result) => result.schemas[sqlBlock.name]),
-      connection.runSQL(sqlBlock.select),
-    ]);
-    return { schema, data };
+  private static compileSQLBlock(
+    partialModel: ModelDef | undefined,
+    toCompile: SQLBlockSource
+  ): SQLBlock {
+    let queryModel: QueryModel;
+    const sqlStrings = toCompile.select.map(segment => {
+      if (isSQLFragment(segment)) {
+        return segment.sql;
+      } else {
+        // TODO catch exceptions and throw errors ...
+        if (!queryModel) {
+          if (!partialModel) {
+            throw new Error(
+              'Internal error: Partial model missing when compiling SQL block'
+            );
+          }
+          queryModel = new QueryModel(partialModel);
+        }
+        return queryModel.compileQuery(segment).sql;
+      }
+    });
+    const {name, connection} = toCompile;
+    return {
+      type: 'sqlBlock',
+      name,
+      connection,
+      selectStr: sqlStrings.join(''),
+    };
   }
 
   /**
@@ -328,7 +333,7 @@ export class Malloy {
    *
    * @param get A mapping from connection names to objects capable of running SQL.
    * @param preparedResult A fully-prepared query which is ready to run (a `PreparedResult`).
-   * @returns Query result data and associated metadata.
+   * @return Query result data and associated metadata.
    */
   public static async run(params: {
     connections: LookupConnection<Connection>;
@@ -342,84 +347,76 @@ export class Malloy {
   }): Promise<Result>;
   public static async run(params: {
     connection: Connection;
-    sqlBlock: SQLBlock;
+    sqlStruct: SQLBlockStructDef;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connections: LookupConnection<Connection>;
-    sqlBlock: SQLBlock;
+    sqlStruct: SQLBlockStructDef;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connection: Connection;
-    sqlBlock: SQLBlock;
+    sqlStruct: SQLBlockStructDef;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run(params: {
     connections: LookupConnection<Connection>;
-    sqlBlock: SQLBlock;
+    sqlStruct: SQLBlockStructDef;
     options?: RunSQLOptions;
   }): Promise<Result>;
   public static async run({
     connections,
     preparedResult,
-    sqlBlock,
+    sqlStruct,
     connection,
     options,
   }: {
     connection?: Connection;
     preparedResult?: PreparedResult;
-    sqlBlock?: SQLBlock;
+    sqlStruct?: SQLBlockStructDef;
     connections?: LookupConnection<Connection>;
     options?: RunSQLOptions;
   }): Promise<Result> {
-    if (sqlBlock === undefined && preparedResult === undefined) {
-      throw new Error(
-        "Internal error: sqlBlock or preparedResult must be provided."
-      );
-    }
-    const connectionName =
-      sqlBlock?.connection || preparedResult?.connectionName;
-    if (connection === undefined) {
-      if (connections === undefined) {
+    const sqlBlock = sqlStruct?.structSource.sqlBlock;
+    if (!connection) {
+      if (!connections) {
         throw new Error(
-          "Internal Error: Connection or LookupConnection<Connection> must be provided."
+          'Internal Error: Connection or LookupConnection<Connection> must be provided.'
         );
       }
+      const connectionName =
+        sqlBlock?.connection || preparedResult?.connectionName;
       connection = await connections.lookupConnection(connectionName);
     }
-    if (sqlBlock !== undefined) {
-      const { schema, data } = await this.runSQLBlockAndFetchResultSchema(
-        connection,
-        sqlBlock,
-        options
-      );
-      if (schema.structRelationship.type !== "basetable") {
+    if (sqlStruct && sqlBlock) {
+      if (sqlStruct.structRelationship.type !== 'basetable') {
         throw new Error(
           "Expected schema's structRelationship type to be 'basetable'."
         );
       }
+      const data = await connection.runSQL(sqlBlock.selectStr);
       return new Result(
         {
-          structs: [schema],
-          sql: sqlBlock.select,
+          structs: [sqlStruct],
+          sql: sqlBlock.selectStr,
           result: data.rows,
           totalRows: data.totalRows,
-          lastStageName: schema.name,
+          lastStageName: sqlBlock.name,
           // TODO feature-sql-block There is no malloy code...
-          malloy: "",
-          connectionName: schema.structRelationship.connectionName,
+          malloy: '',
+          connectionName: sqlStruct.structRelationship.connectionName,
           // TODO feature-sql-block There is no source explore...
-          sourceExplore: "",
+          sourceExplore: '',
           sourceFilters: [],
         },
         {
-          name: "empty_model",
+          name: 'empty_model',
           exports: [],
           contents: {},
         }
       );
-    } else if (preparedResult !== undefined) {
+    } else if (preparedResult) {
       const result = await connection.runSQL(preparedResult.sql, options);
       return new Result(
         {
@@ -431,7 +428,7 @@ export class Malloy {
       );
     } else {
       throw new Error(
-        "Internal error: sqlBlock or preparedResult must be provided."
+        'Internal error: sqlStruct or preparedResult must be provided.'
       );
     }
   }
@@ -448,7 +445,7 @@ export class Malloy {
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
     connection: Connection;
-    sqlBlock: SQLBlock;
+    sqlStruct: SQLBlockStructDef;
     options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
@@ -458,30 +455,31 @@ export class Malloy {
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
     connection: Connection;
-    sqlBlock: SQLBlock;
+    sqlStruct: SQLBlockStructDef;
     options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord>;
   public static runStream(params: {
     connections: LookupConnection<Connection>;
-    sqlBlock: SQLBlock;
+    sqlStruct: SQLBlockStructDef;
     options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord>;
   public static async *runStream({
     connections,
     preparedResult,
-    sqlBlock,
+    sqlStruct,
     connection,
     options,
   }: {
     connection?: Connection;
     preparedResult?: PreparedResult;
-    sqlBlock?: SQLBlock;
+    sqlStruct?: SQLBlockStructDef;
     connections?: LookupConnection<Connection>;
     options?: RunSQLOptions;
   }): AsyncIterableIterator<DataRecord> {
+    const sqlBlock = sqlStruct?.structSource.sqlBlock;
     if (sqlBlock === undefined && preparedResult === undefined) {
       throw new Error(
-        "Internal error: sqlBlock or preparedResult must be provided."
+        'Internal error: sqlBlock or preparedResult must be provided.'
       );
     }
     const connectionName =
@@ -489,7 +487,7 @@ export class Malloy {
     if (connection === undefined) {
       if (connections === undefined) {
         throw new Error(
-          "Internal Error: Connection or LookupConnection<Connection> must be provided."
+          'Internal Error: Connection or LookupConnection<Connection> must be provided.'
         );
       }
       connection = await connections.lookupConnection(connectionName);
@@ -500,22 +498,20 @@ export class Malloy {
     }
     let sql;
     let resultExplore;
-    if (sqlBlock !== undefined) {
-      const schema = (await connection.fetchSchemaForSQLBlocks([sqlBlock]))
-        .schemas[sqlBlock.name];
-      if (schema.structRelationship.type !== "basetable") {
+    if (sqlStruct) {
+      if (sqlStruct.structRelationship.type !== 'basetable') {
         throw new Error(
           "Expected schema's structRelationship type to be 'basetable'."
         );
       }
-      resultExplore = new Explore(schema);
-      sql = sqlBlock.select;
+      resultExplore = new Explore(sqlStruct);
+      sql = sqlStruct.structSource.sqlBlock.selectStr;
     } else if (preparedResult !== undefined) {
       resultExplore = preparedResult.resultExplore;
       sql = preparedResult.sql;
     } else {
       throw new Error(
-        "Internal error: sqlBlock or preparedResult must be provided."
+        'Internal error: sqlStruct or preparedResult must be provided.'
       );
     }
     let index = 0;
@@ -547,7 +543,7 @@ export class MalloyError extends Error {
 export class Model {
   private modelDef: ModelDef;
   private queryList: InternalQuery[];
-  private sqlBlocks: SQLBlock[];
+  private sqlBlocks: SQLBlockStructDef[];
   _referenceAt: (
     location: ModelDocumentPosition
   ) => DocumentReference | undefined;
@@ -555,7 +551,7 @@ export class Model {
   constructor(
     modelDef: ModelDef,
     queryList: InternalQuery[],
-    sqlBlocks: SQLBlock[],
+    sqlBlocks: SQLBlockStructDef[],
     referenceAt: (
       location: ModelDocumentPosition
     ) => DocumentReference | undefined = () => undefined
@@ -571,7 +567,7 @@ export class Model {
    * the document that produced this model.
    *
    * @param position A position within the document.
-   * @returns A `DocumentReference` at that position if one exists.
+   * @return A `DocumentReference` at that position if one exists.
    */
   public getReference(
     position: ModelDocumentPosition
@@ -583,22 +579,22 @@ export class Model {
    * Retrieve a prepared query by the name of a query at the top level of the model.
    *
    * @param queryName Name of the query to retrieve.
-   * @returns A prepared query.
+   * @return A prepared query.
    */
   public getPreparedQueryByName(queryName: string): PreparedQuery {
     const query = this.modelDef.contents[queryName];
-    if (query.type === "query") {
+    if (query.type === 'query') {
       return new PreparedQuery(query, this.modelDef, queryName);
     }
 
-    throw new Error("Given query name does not refer to a named query.");
+    throw new Error('Given query name does not refer to a named query.');
   }
 
   /**
    * Retrieve a prepared query by the index of an unnamed query at the top level of a model.
    *
    * @param index The index of the query to retrieve.
-   * @returns A prepared query.
+   * @return A prepared query.
    */
   public getPreparedQueryByIndex(index: number): PreparedQuery {
     if (index < 0) {
@@ -613,11 +609,11 @@ export class Model {
    * Retrieve a prepared query by the name of a query at the top level of the model.
    *
    * @param queryName Name of the query to retrieve.
-   * @returns A prepared query.
+   * @return A prepared query.
    */
-  public getSQLBlockByName(sqlBlockName: string): SQLBlock {
+  public getSQLBlockByName(sqlBlockName: string): SQLBlockStructDef {
     const sqlBlock = this.sqlBlocks.find(
-      (sqlBlock) => sqlBlock.as === sqlBlockName
+      sqlBlock => sqlBlock.as === sqlBlockName
     );
     if (sqlBlock === undefined) {
       throw new Error(`No SQL Block named '${sqlBlockName}'`);
@@ -629,9 +625,9 @@ export class Model {
    * Retrieve a prepared query by the name of a query at the top level of the model.
    *
    * @param index Index of the SQL Block to retrieve.
-   * @returns A prepared query.
+   * @return A prepared query.
    */
-  public getSQLBlockByIndex(index: number): SQLBlock {
+  public getSQLBlockByIndex(index: number): SQLBlockStructDef {
     const sqlBlock = this.sqlBlocks[index];
     if (sqlBlock === undefined) {
       throw new Error(`No SQL Block at index ${index}`);
@@ -642,11 +638,11 @@ export class Model {
   /**
    * Retrieve a prepared query for the final unnamed query at the top level of a model.
    *
-   * @returns A prepared query.
+   * @return A prepared query.
    */
   public get preparedQuery(): PreparedQuery {
     if (this.queryList.length === 0) {
-      throw new Error("Model has no queries.");
+      throw new Error('Model has no queries.');
     }
     return new PreparedQuery(
       this.queryList[this.queryList.length - 1],
@@ -658,26 +654,26 @@ export class Model {
    * Retrieve an `Explore` from the model by name.
    *
    * @param name The name of the `Explore` to retrieve.
-   * @returns An `Explore`.
+   * @return An `Explore`.
    */
   public getExploreByName(name: string): Explore {
     const struct = this.modelDef.contents[name];
-    if (struct.type === "struct") {
+    if (struct.type === 'struct') {
       return new Explore(struct);
     }
-    throw new Error(`'name' is not an explore`);
+    throw new Error("'name' is not an explore");
   }
 
   /**
    * Get an array of `Explore`s contained in the model.
    *
-   * @returns An array of `Explore`s contained in the model.
+   * @return An array of `Explore`s contained in the model.
    */
   public get explores(): Explore[] {
     const explores: Explore[] = [];
     for (const me in this.modelDef.contents) {
       const ent = this.modelDef.contents[me];
-      if (ent.type === "struct") {
+      if (ent.type === 'struct') {
         explores.push(new Explore(ent));
       }
     }
@@ -685,7 +681,7 @@ export class Model {
   }
 
   public get exportedExplores(): Explore[] {
-    return this.explores.filter((explore) =>
+    return this.explores.filter(explore =>
       this.modelDef.exports.includes(explore.name)
     );
   }
@@ -699,9 +695,9 @@ export class Model {
  * A prepared query which has all the necessary information to produce its SQL.
  */
 export class PreparedQuery {
-  private _modelDef: ModelDef;
-  private _query: InternalQuery;
-  private name?: string;
+  public _modelDef: ModelDef;
+  public _query: InternalQuery | NamedQuery;
+  public name?: string;
 
   constructor(query: InternalQuery, model: ModelDef, name?: string) {
     this._query = query;
@@ -712,7 +708,7 @@ export class PreparedQuery {
   /**
    * Generate the SQL for this query.
    *
-   * @returns A fully-prepared query (which contains the generated SQL).
+   * @return A fully-prepared query (which contains the generated SQL).
    */
   public get preparedResult(): PreparedResult {
     const queryModel = new QueryModel(this._modelDef);
@@ -729,13 +725,34 @@ export class PreparedQuery {
   public get dialect(): string {
     const sourceRef = this._query.structRef;
     const source =
-      typeof sourceRef === "string"
+      typeof sourceRef === 'string'
         ? this._modelDef.contents[sourceRef]
         : sourceRef;
-    if (source.type !== "struct") {
-      throw new Error("Invalid source for query");
+    if (source.type !== 'struct') {
+      throw new Error('Invalid source for query');
     }
     return source.dialect;
+  }
+
+  /**
+   * Get the flattened version of a query -- one that does not have a `pipeHead`.
+   */
+  public getFlattenedQuery(defaultName: string): PreparedQuery {
+    let structRef = this._query.structRef;
+    if (typeof structRef !== 'string') {
+      structRef = structRef.as || structRef.name;
+    }
+    const turtleDef = flattenQuery(this._modelDef, {
+      ...this._query,
+      type: 'query',
+      name:
+        'as' in this._query ? this._query.as || this._query.name : defaultName,
+    });
+    return new PreparedQuery(
+      {...turtleDef, structRef, type: 'query'},
+      this._modelDef,
+      this.name || turtleDef.as || turtleDef.name
+    );
   }
 }
 
@@ -743,11 +760,12 @@ export function parseTableURI(tableURI: string): {
   connectionName?: string;
   tablePath: string;
 } {
-  const [firstPart, secondPart] = tableURI.split(":");
-  if (secondPart) {
-    return { connectionName: firstPart, tablePath: secondPart };
+  const parts = tableURI.match(/^([^:]*):(.*)$/);
+  if (parts) {
+    const [, firstPart, secondPart] = parts;
+    return {connectionName: firstPart, tablePath: secondPart};
   } else {
-    return { tablePath: firstPart };
+    return {tablePath: tableURI};
   }
 }
 
@@ -767,11 +785,11 @@ export class Parse {
    * These highlights represent the parsed tokens contained in the document,
    * and may be used for syntax highlighting in an IDE, for example.
    *
-   * @returns An array of document highlights.
+   * @return An array of document highlights.
    */
   public get highlights(): DocumentHighlight[] {
     return (this.translator.metadata().highlights || []).map(
-      (highlight) => new DocumentHighlight(highlight)
+      highlight => new DocumentHighlight(highlight)
     );
   }
 
@@ -781,11 +799,11 @@ export class Parse {
    * These symbols represent any object defined (e.g. `Query`s and `Explore`s)
    * in the document.
    *
-   * @returns An array of document symbols.
+   * @return An array of document symbols.
    */
   public get symbols(): DocumentSymbol[] {
     return (this.translator.metadata().symbols || []).map(
-      (symbol) => new DocumentSymbol(symbol)
+      symbol => new DocumentSymbol(symbol)
     );
   }
 
@@ -798,7 +816,7 @@ export class Parse {
     character: number;
   }): DocumentCompletion[] {
     return (this.translator.completions(position).completions || []).map(
-      (completion) => new DocumentCompletion(completion)
+      completion => new DocumentCompletion(completion)
     );
   }
 
@@ -835,14 +853,14 @@ export class DocumentHighlight {
   }
 
   /**
-   * @returns The range of characters this highlight spans within its source document.
+   * @return The range of characters this highlight spans within its source document.
    */
   get range(): DocumentRange {
     return this._range;
   }
 
   /**
-   * @returns The type of highlight, which may be any `HighlightType`.
+   * @return The type of highlight, which may be any `HighlightType`.
    */
   get type(): string {
     return this._type;
@@ -862,25 +880,25 @@ export class DocumentRange {
   }
 
   /**
-   * @returns The position of the first character in the range.
+   * @return The position of the first character in the range.
    */
   public get start(): DocumentPosition {
     return this._start;
   }
 
   /**
-   * @returns The position of the last character in the range.
+   * @return The position of the last character in the range.
    */
   public get end(): DocumentPosition {
     return this._end;
   }
 
   /**
-   * @returns This range in JSON format.
+   * @return This range in JSON format.
    */
   public toJSON(): {
-    start: { line: number; character: number };
-    end: { line: number; character: number };
+    start: {line: number; character: number};
+    end: {line: number; character: number};
   } {
     return {
       start: this.start.toJSON(),
@@ -902,24 +920,24 @@ export class DocumentPosition {
   }
 
   /**
-   * @returns The line number of the position.
+   * @return The line number of the position.
    */
   public get line(): number {
     return this._line;
   }
 
   /**
-   * @returns The character index on the line `this.getLine()`.
+   * @return The character index on the line `this.getLine()`.
    */
   public get character(): number {
     return this._character;
   }
 
   /**
-   * @returns This position in JSON format.
+   * @return This position in JSON format.
    */
-  public toJSON(): { line: number; character: number } {
-    return { line: this.line, character: this.character };
+  public toJSON(): {line: number; character: number} {
+    return {line: this.line, character: this.character};
   }
 }
 
@@ -948,19 +966,19 @@ export class DocumentSymbol {
     this._type = documentSymbol.type;
     this._name = documentSymbol.name;
     this._children = documentSymbol.children.map(
-      (child) => new DocumentSymbol(child)
+      child => new DocumentSymbol(child)
     );
   }
 
   /**
-   * @returns The range of characters in the source Malloy document that define this symbol.
+   * @return The range of characters in the source Malloy document that define this symbol.
    */
   public get range(): DocumentRange {
     return this._range;
   }
 
   /**
-   * @returns The type of symbol.
+   * @return The type of symbol.
    *
    * Possible values are: `"explore"`, `"query"`, `"field"`, `"turtle"`, `"join"`, or `"unnamed_query"`.
    */
@@ -969,7 +987,7 @@ export class DocumentSymbol {
   }
 
   /**
-   * @returns The name of this symbol, e.g. the `Explore` name or `Query` name.
+   * @return The name of this symbol, e.g. the `Explore` name or `Query` name.
    *
    * For type `"unnamed_query"`, `getName()` is `"unnamed_query"`.
    */
@@ -978,7 +996,7 @@ export class DocumentSymbol {
   }
 
   /**
-   * @returns An array of document symbols defined inside this document symbol,
+   * @return An array of document symbols defined inside this document symbol,
    * e.g. fields in an `Explore`.
    */
   public get children(): DocumentSymbol[] {
@@ -1009,7 +1027,7 @@ export class PreparedResult {
   }
 
   /**
-   * @returns The name of the connection this query should be run against.
+   * @return The name of the connection this query should be run against.
    */
   public get connectionName(): string {
     return this.inner.connectionName;
@@ -1024,7 +1042,7 @@ export class PreparedResult {
   }
 
   /**
-   * @returns The SQL that should be run against the SQL runner
+   * @return The SQL that should be run against the SQL runner
    * with the connection name `this.getConnectionName()`.
    */
   public get sql(): string {
@@ -1032,11 +1050,11 @@ export class PreparedResult {
   }
 
   /**
-   * @returns The `Explore` representing the data that will be returned by running this query.
+   * @return The `Explore` representing the data that will be returned by running this query.
    */
   public get resultExplore(): Explore {
     if (this.inner.structs.length === 0) {
-      throw new Error("Malformed query result.");
+      throw new Error('Malformed query result.');
     }
     const explore = this.inner.structs[this.inner.structs.length - 1];
     const namedExplore = {
@@ -1057,9 +1075,9 @@ export class PreparedResult {
     const name = this.inner.sourceExplore;
     const explore = this.modelDef.contents[name];
     if (explore === undefined) {
-      throw new Error("Malformed query result.");
+      throw new Error('Malformed query result.');
     }
-    if (explore.type === "struct") {
+    if (explore.type === 'struct') {
       return new Explore(explore);
     }
     throw new Error(`'${name} is not an explore`);
@@ -1081,7 +1099,7 @@ export class PreparedResult {
  */
 export class EmptyURLReader implements URLReader {
   async readURL(_url: URL): Promise<string> {
-    throw new Error("No files.");
+    throw new Error('No files.');
   }
 }
 
@@ -1123,7 +1141,7 @@ export class FixedConnectionMap implements LookupConnection<Connection> {
    * Get a connection by name.
    *
    * @param connectionName The name of the connection to look up.
-   * @returns A `Connection`
+   * @return A `Connection`
    * @throws An `Error` if no connection with the given name exists.
    */
   public async getConnection(connectionName?: string): Promise<Connection> {
@@ -1131,7 +1149,7 @@ export class FixedConnectionMap implements LookupConnection<Connection> {
       if (this.defaultConnectionName !== undefined) {
         connectionName = this.defaultConnectionName;
       } else {
-        throw new Error("No default connection.");
+        throw new Error('No default connection.');
       }
     }
 
@@ -1149,7 +1167,7 @@ export class FixedConnectionMap implements LookupConnection<Connection> {
 
   public static fromArray(connections: Connection[]): FixedConnectionMap {
     return new FixedConnectionMap(
-      new Map(connections.map((connection) => [connection.name, connection]))
+      new Map(connections.map(connection => [connection.name, connection]))
     );
   }
 }
@@ -1161,22 +1179,22 @@ export enum SourceRelationship {
   /**
    * The `Explore` is nested data within the source's rows.
    */
-  Nested = "nested",
+  Nested = 'nested',
 
   /**
    * The `Explore` is the base table.
    */
-  BaseTable = "base_table",
+  BaseTable = 'base_table',
 
   /**
    * The `Explore` is joined to its source
    */
-  Cross = "cross",
-  One = "one",
-  Many = "many",
+  Cross = 'cross',
+  One = 'one',
+  Many = 'many',
 
   // TODO document this
-  Inline = "inline",
+  Inline = 'inline',
 }
 
 abstract class Entity {
@@ -1199,7 +1217,7 @@ abstract class Entity {
   }
 
   public get sourceClasses(): string[] {
-    const sourceClasses = [];
+    const sourceClasses: string[] = [];
     if (this.source) {
       sourceClasses.push(this.source.name);
     }
@@ -1246,7 +1264,7 @@ export class Explore extends Entity {
   }
 
   /**
-   * @returns The name of the entity.
+   * @return The name of the entity.
    */
   public get name(): string {
     return this.structDef.as || this.structDef.name;
@@ -1254,11 +1272,11 @@ export class Explore extends Entity {
 
   public getQueryByName(name: string): PreparedQuery {
     const internalQuery: InternalQuery = {
-      type: "query",
+      type: 'query',
       structRef: this.structDef,
       pipeline: [
         {
-          type: "reduce",
+          type: 'reduce',
           fields: [name],
         },
       ],
@@ -1268,9 +1286,9 @@ export class Explore extends Entity {
 
   private get modelDef(): ModelDef {
     return {
-      name: "generated_model",
+      name: 'generated_model',
       exports: [],
-      contents: { [this.structDef.name]: this.structDef },
+      contents: {[this.structDef.name]: this.structDef},
     };
   }
 
@@ -1282,42 +1300,46 @@ export class Explore extends Entity {
     if (this._fieldMap === undefined) {
       const sourceFields = this.source?.fieldMap || new Map();
       this._fieldMap = new Map(
-        this.structDef.fields.map((fieldDef) => {
+        this.structDef.fields.map(fieldDef => {
           const name = fieldDef.as || fieldDef.name;
           const sourceField = sourceFields.get(fieldDef.name);
-          if (fieldDef.type === "struct") {
+          if (fieldDef.type === 'struct') {
             return [name, new ExploreField(fieldDef, this, sourceField)];
-          } else if (fieldDef.type === "turtle") {
+          } else if (fieldDef.type === 'turtle') {
             return [name, new QueryField(fieldDef, this, sourceField)];
           } else {
-            if (fieldDef.type === "string") {
+            if (fieldDef.type === 'string') {
               return [name, new StringField(fieldDef, this, sourceField)];
-            } else if (fieldDef.type === "number") {
+            } else if (fieldDef.type === 'number') {
               return [name, new NumberField(fieldDef, this, sourceField)];
-            } else if (fieldDef.type === "date") {
+            } else if (fieldDef.type === 'date') {
               // TODO this is a hack
               // Is this a bug? The extraction functions don't seem like they should return a
               // field of type "date". Rather, they should be of type "number".
               if (
                 fieldDef.timeframe &&
-                ["day_of_month", "day_of_week", "day_of_year"].includes(
+                ['day_of_month', 'day_of_week', 'day_of_year'].includes(
                   fieldDef.timeframe
                 )
               ) {
                 return [
                   name,
                   new NumberField(
-                    { ...fieldDef, type: "number" },
+                    {...fieldDef, type: 'number'},
                     this,
                     sourceField
                   ),
                 ];
               }
               return [name, new DateField(fieldDef, this, sourceField)];
-            } else if (fieldDef.type === "timestamp") {
+            } else if (fieldDef.type === 'timestamp') {
               return [name, new TimestampField(fieldDef, this, sourceField)];
-            } else if (fieldDef.type === "boolean") {
+            } else if (fieldDef.type === 'boolean') {
               return [name, new BooleanField(fieldDef, this, sourceField)];
+            } else if (fieldDef.type === 'json') {
+              return [name, new JSONField(fieldDef, this, sourceField)];
+            } else if (fieldDef.type === 'unsupported') {
+              return [name, new UnsupportedField(fieldDef, this, sourceField)];
             }
           }
         }) as [string, Field][]
@@ -1331,7 +1353,7 @@ export class Explore extends Entity {
   }
 
   public get intrinsicFields(): Field[] {
-    return [...this.fieldMap.values()].filter((f) => f.isIntrinsic());
+    return [...this.fieldMap.values()].filter(f => f.isIntrinsic());
   }
 
   public getFieldByName(fieldName: string): Field {
@@ -1356,17 +1378,17 @@ export class Explore extends Entity {
 
   public get sourceRelationship(): SourceRelationship {
     switch (this.structDef.structRelationship.type) {
-      case "many":
+      case 'many':
         return SourceRelationship.Many;
-      case "one":
+      case 'one':
         return SourceRelationship.One;
-      case "cross":
+      case 'cross':
         return SourceRelationship.Cross;
-      case "inline":
+      case 'inline':
         return SourceRelationship.Inline;
-      case "nested":
+      case 'nested':
         return SourceRelationship.Nested;
-      case "basetable":
+      case 'basetable':
         return SourceRelationship.BaseTable;
     }
   }
@@ -1390,11 +1412,13 @@ export class Explore extends Entity {
 }
 
 export enum AtomicFieldType {
-  String = "string",
-  Number = "number",
-  Boolean = "boolean",
-  Date = "date",
-  Timestamp = "timestamp",
+  String = 'string',
+  Number = 'number',
+  Boolean = 'boolean',
+  Date = 'date',
+  Timestamp = 'timestamp',
+  Json = 'json',
+  Unsupported = 'unsupported',
 }
 
 export class AtomicField extends Entity {
@@ -1413,16 +1437,20 @@ export class AtomicField extends Entity {
 
   public get type(): AtomicFieldType {
     switch (this.fieldTypeDef.type) {
-      case "string":
+      case 'string':
         return AtomicFieldType.String;
-      case "boolean":
+      case 'boolean':
         return AtomicFieldType.Boolean;
-      case "date":
+      case 'date':
         return AtomicFieldType.Date;
-      case "timestamp":
+      case 'timestamp':
         return AtomicFieldType.Timestamp;
-      case "number":
+      case 'number':
         return AtomicFieldType.Number;
+      case 'json':
+        return AtomicFieldType.Json;
+      case 'unsupported':
+        return AtomicFieldType.Unsupported;
     }
   }
 
@@ -1442,8 +1470,9 @@ export class AtomicField extends Entity {
     return true;
   }
 
-  public isAggregate(): boolean {
-    return !!this.fieldTypeDef.aggregate;
+  public isCalculation(): boolean {
+    //return !!this.fieldTypeDef.aggregate;
+    return expressionIsCalculation(this.fieldTypeDef.expressionType);
   }
 
   public get sourceField(): Field {
@@ -1458,18 +1487,18 @@ export class AtomicField extends Entity {
 
   // was the field generated from a measure in the previous query
   public sourceWasMeasure(): boolean {
-    return this.fieldTypeDef.resultMetadata?.fieldKind === "measure";
+    return this.fieldTypeDef.resultMetadata?.fieldKind === 'measure';
   }
 
   public sourceWasMeasureLike(): boolean {
     return (
-      this.fieldTypeDef.resultMetadata?.fieldKind === "measure" ||
-      this.fieldTypeDef.resultMetadata?.fieldKind === "struct"
+      this.fieldTypeDef.resultMetadata?.fieldKind === 'measure' ||
+      this.fieldTypeDef.resultMetadata?.fieldKind === 'struct'
     );
   }
 
   public sourceWasDimension(): boolean {
-    return this.fieldTypeDef.resultMetadata?.fieldKind === "dimension";
+    return this.fieldTypeDef.resultMetadata?.fieldKind === 'dimension';
   }
 
   public hasParentExplore(): this is Field {
@@ -1492,8 +1521,16 @@ export class AtomicField extends Entity {
     return this instanceof BooleanField;
   }
 
+  public isJSON(): this is JSONField {
+    return this instanceof JSONField;
+  }
+
   public isTimestamp(): this is TimestampField {
     return this instanceof TimestampField;
+  }
+
+  public isUnsupported(): this is UnsupportedField {
+    return this instanceof UnsupportedField;
   }
 
   get parentExplore(): Explore {
@@ -1510,22 +1547,22 @@ export class AtomicField extends Entity {
 }
 
 export enum DateTimeframe {
-  Day = "day",
-  Week = "week",
-  Month = "month",
-  Quarter = "quarter",
-  Year = "year",
+  Day = 'day',
+  Week = 'week',
+  Month = 'month',
+  Quarter = 'quarter',
+  Year = 'year',
 }
 
 export enum TimestampTimeframe {
-  Day = "day",
-  Week = "week",
-  Month = "month",
-  Quarter = "quarter",
-  Year = "year",
-  Second = "second",
-  Hour = "hour",
-  Minute = "minute",
+  Day = 'day',
+  Week = 'week',
+  Month = 'month',
+  Quarter = 'quarter',
+  Year = 'year',
+  Second = 'second',
+  Hour = 'hour',
+  Minute = 'minute',
 }
 
 export class DateField extends AtomicField {
@@ -1544,15 +1581,15 @@ export class DateField extends AtomicField {
       return undefined;
     }
     switch (this.fieldDateDef.timeframe) {
-      case "day":
+      case 'day':
         return DateTimeframe.Day;
-      case "week":
+      case 'week':
         return DateTimeframe.Week;
-      case "month":
+      case 'month':
         return DateTimeframe.Month;
-      case "quarter":
+      case 'quarter':
         return DateTimeframe.Quarter;
-      case "year":
+      case 'year':
         return DateTimeframe.Year;
     }
   }
@@ -1574,21 +1611,21 @@ export class TimestampField extends AtomicField {
       return undefined;
     }
     switch (this.fieldTimestampDef.timeframe) {
-      case "day":
+      case 'day':
         return TimestampTimeframe.Day;
-      case "week":
+      case 'week':
         return TimestampTimeframe.Week;
-      case "month":
+      case 'month':
         return TimestampTimeframe.Month;
-      case "quarter":
+      case 'quarter':
         return TimestampTimeframe.Quarter;
-      case "year":
+      case 'year':
         return TimestampTimeframe.Year;
-      case "second":
+      case 'second':
         return TimestampTimeframe.Second;
-      case "hour":
+      case 'hour':
         return TimestampTimeframe.Hour;
-      case "minute":
+      case 'minute':
         return TimestampTimeframe.Minute;
     }
   }
@@ -1615,6 +1652,30 @@ export class BooleanField extends AtomicField {
   ) {
     super(fieldBooleanDef, parent, source);
     this.fieldBooleanDef = fieldBooleanDef;
+  }
+}
+
+export class JSONField extends AtomicField {
+  private fieldJSONDef: FieldJSONDef;
+  constructor(
+    fieldJSONDef: FieldJSONDef,
+    parent: Explore,
+    source?: AtomicField
+  ) {
+    super(fieldJSONDef, parent, source);
+    this.fieldJSONDef = fieldJSONDef;
+  }
+}
+
+export class UnsupportedField extends AtomicField {
+  private fieldUnsupportedDef: FieldUnsupportedDef;
+  constructor(
+    fieldUnsupportedDef: FieldUnsupportedDef,
+    parent: Explore,
+    source?: AtomicField
+  ) {
+    super(fieldUnsupportedDef, parent, source);
+    this.fieldUnsupportedDef = fieldUnsupportedDef;
   }
 }
 
@@ -1687,9 +1748,9 @@ export class QueryField extends Query {
 }
 
 export enum JoinRelationship {
-  OneToOne = "one_to_one",
-  OneToMany = "one_to_many",
-  ManyToOne = "many_to_one",
+  OneToOne = 'one_to_one',
+  OneToMany = 'one_to_many',
+  ManyToOne = 'many_to_one',
 }
 
 export class ExploreField extends Explore {
@@ -1702,17 +1763,17 @@ export class ExploreField extends Explore {
 
   public get joinRelationship(): JoinRelationship {
     switch (this.structDef.structRelationship.type) {
-      case "one":
+      case 'one':
         return JoinRelationship.OneToMany;
-      case "many":
-      case "cross":
+      case 'many':
+      case 'cross':
         return JoinRelationship.ManyToOne;
-      case "inline":
+      case 'inline':
         return JoinRelationship.OneToOne;
-      case "nested":
+      case 'nested':
         return JoinRelationship.ManyToOne;
       default:
-        throw new Error("An explore field must have a join relationship.");
+        throw new Error('An explore field must have a join relationship.');
     }
   }
 
@@ -1771,7 +1832,7 @@ export class Runtime {
     }
     if (connections === undefined) {
       throw new Error(
-        "A LookupConnection<Connection> or Connection is required."
+        'A LookupConnection<Connection> or Connection is required.'
       );
     }
     this._urlReader = urlReader;
@@ -1779,14 +1840,14 @@ export class Runtime {
   }
 
   /**
-   * @returns The `URLReader` for this runtime instance.
+   * @return The `URLReader` for this runtime instance.
    */
   public get urlReader(): URLReader {
     return this._urlReader;
   }
 
   /**
-   * @returns The `LookupConnection<Connection>` for this runtime instance.
+   * @return The `LookupConnection<Connection>` for this runtime instance.
    */
   public get connections(): LookupConnection<Connection> {
     return this._connections;
@@ -1796,7 +1857,7 @@ export class Runtime {
    * Load a Malloy model by URL or contents.
    *
    * @param source The model URL or contents to load and (eventually) compile.
-   * @returns A `ModelMaterializer` capable of materializing the requested model,
+   * @return A `ModelMaterializer` capable of materializing the requested model,
    * or loading further related objects.
    */
   public loadModel(source: ModelURL | ModelString): ModelMaterializer {
@@ -1823,7 +1884,7 @@ export class Runtime {
   //      `ModelDef` to the world formally. For now, this should only
   //      be used in tests.
   public _loadModelFromModelDef(modelDef: ModelDef): ModelMaterializer {
-    return new ModelMaterializer(this, async function materialize() {
+    return new ModelMaterializer(this, async () => {
       return new Model(modelDef, [], []);
     });
   }
@@ -1832,7 +1893,7 @@ export class Runtime {
    * Load a Malloy query by URL or contents.
    *
    * @param query The query URL or contents to load and (eventually) compile.
-   * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
+   * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadQuery(query: QueryURL | QueryString): QueryMaterializer {
@@ -1845,7 +1906,7 @@ export class Runtime {
    *
    * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
    * @param index The index of the query to use within the model.
-   * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
+   * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadQueryByIndex(
@@ -1861,7 +1922,7 @@ export class Runtime {
    *
    * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
    * @param name The name of the query to use within the model.
-   * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
+   * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadQueryByName(
@@ -1877,7 +1938,7 @@ export class Runtime {
    *
    * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
    * @param name The name of the sql block to use within the model.
-   * @returns A `SQLBlockMaterializer` capable of materializing the requested query, running it,
+   * @return A `SQLBlockMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadSQLBlockByName(
@@ -1893,7 +1954,7 @@ export class Runtime {
    *
    * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
    * @param index The index of the SQL block to use within the model. Note: named blocks are indexable, too.
-   * @returns A `SQLBlockMaterializer` capable of materializing the requested query, running it,
+   * @return A `SQLBlockMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadSQLBlockByIndex(
@@ -1908,7 +1969,7 @@ export class Runtime {
    * Compile a Malloy model by URL or contents.
    *
    * @param source The URL or contents of a Malloy model document to compile.
-   * @returns A promise of a compiled `Model`.
+   * @return A promise of a compiled `Model`.
    */
   public getModel(source: ModelURL | ModelString): Promise<Model> {
     return this.loadModel(source).getModel();
@@ -1918,7 +1979,7 @@ export class Runtime {
    * Compile a Malloy query by URL or contents.
    *
    * @param query The URL or contents of a Malloy query document to compile.
-   * @returns A promise of a compiled `PreparedQuery`.
+   * @return A promise of a compiled `PreparedQuery`.
    */
   public getQuery(query: QueryURL | QueryString): Promise<PreparedQuery> {
     return this.loadQuery(query).getPreparedQuery();
@@ -1930,7 +1991,7 @@ export class Runtime {
    *
    * @param model The URL or contents of a Malloy model document to compile.
    * @param index The index of an unnamed query contained within the model.
-   * @returns A promise of a compiled `PreparedQuery`.
+   * @return A promise of a compiled `PreparedQuery`.
    */
   public getQueryByIndex(
     model: ModelURL | ModelString,
@@ -1945,7 +2006,7 @@ export class Runtime {
    *
    * @param model The URL or contents of a Malloy model document to compile.
    * @param name The name of a query contained within the model.
-   * @returns A promise of a compiled `PreparedQuery`.
+   * @return A promise of a compiled `PreparedQuery`.
    */
   public getQueryByName(
     model: ModelURL | ModelString,
@@ -1960,12 +2021,12 @@ export class Runtime {
    *
    * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
    * @param name The name of the sql block to use within the model.
-   * @returns A promise of a `SQLBlock`.
+   * @return A promise of a `CompiledSQLBlock`.
    */
   public getSQLBlockByName(
     model: ModelURL | ModelString,
     name: string
-  ): Promise<SQLBlock> {
+  ): Promise<SQLBlockStructDef> {
     return this.loadSQLBlockByName(model, name).getSQLBlock();
   }
 
@@ -1975,12 +2036,12 @@ export class Runtime {
    *
    * @param model The model URL or contents to load and (eventually) compile to retrieve the requested query.
    * @param index The index of the SQL block to use within the model. Note: named blocks are indexable, too.
-   * @returns A promise of a `SQLBlock`.
+   * @return A promise of a `SQLBlock`.
    */
   public getSQLBlockByIndex(
     model: ModelURL | ModelString,
     index: number
-  ): Promise<SQLBlock> {
+  ): Promise<SQLBlockStructDef> {
     return this.loadSQLBlockByIndex(model, index).getSQLBlock();
   }
 }
@@ -2070,7 +2131,7 @@ class FluentState<T> {
   }
 
   protected makeSQLBlockMaterializer(
-    materialize: () => Promise<SQLBlock>
+    materialize: () => Promise<SQLBlockStructDef>
   ): SQLBlockMaterializer {
     return new SQLBlockMaterializer(this.runtime, materialize);
   }
@@ -2085,7 +2146,7 @@ export class ModelMaterializer extends FluentState<Model> {
   /**
    * Load the final (unnamed) Malloy query contained within this loaded `Model`.
    *
-   * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
+   * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadFinalQuery(): QueryMaterializer {
@@ -2098,7 +2159,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Load an unnamed query contained within this loaded `Model` by index.
    *
    * @param index The index of the query to load.
-   * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
+   * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadQueryByIndex(index: number): QueryMaterializer {
@@ -2111,7 +2172,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Load a query contained within this loaded `Model` by its name.
    *
    * @param name The name of the query to load.
-   * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
+   * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadQueryByName(name: string): QueryMaterializer {
@@ -2124,7 +2185,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Load a query against this loaded `Model` by its URL or contents.
    *
    * @param query The URL or contents of the query to load and (eventually) compile.
-   * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
+   * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadQuery(query: QueryString | QueryURL): QueryMaterializer {
@@ -2160,7 +2221,7 @@ export class ModelMaterializer extends FluentState<Model> {
     const model = await this.materialize();
     const queryModel = new QueryModel(model._modelDef);
     const schema = model.getExploreByName(sourceName).structDef;
-    if (schema.structRelationship.type !== "basetable") {
+    if (schema.structRelationship.type !== 'basetable') {
       throw new Error(
         "Expected schema's structRelationship type to be 'basetable'."
       );
@@ -2184,15 +2245,15 @@ export class ModelMaterializer extends FluentState<Model> {
   ): Promise<SearchValueMapResult[] | undefined> {
     const model = await this.materialize();
     const schema = model.getExploreByName(sourceName);
-    if (schema.structDef.structRelationship.type !== "basetable") {
+    if (schema.structDef.structRelationship.type !== 'basetable') {
       throw new Error(
         "Expected schema's structRelationship type to be 'basetable'."
       );
     }
-    let indexQuery = "{index: *}";
+    let indexQuery = '{index: *}';
 
-    if (schema.getFieldByNameIfExists("search_index")) {
-      indexQuery = "search_index";
+    if (schema.getFieldByNameIfExists('search_index')) {
+      indexQuery = 'search_index';
     }
 
     const searchMapMalloy = `
@@ -2220,7 +2281,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Load a SQL Block by name.
    *
    * @param name The name of the SQL Block to load.
-   * @returns A `SQLBlockMaterializer` capable of materializing the requested sql block, running it,
+   * @return A `SQLBlockMaterializer` capable of materializing the requested sql block, running it,
    * or loading further related objects.
    */
   public loadSQLBlockByName(name: string): SQLBlockMaterializer {
@@ -2233,7 +2294,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Load a SQL Block by index.
    *
    * @param index The index of the SQL Block to load. Note: named SQL blocks are indexable, too.
-   * @returns A `SQLBlockMaterializer` capable of materializing the requested sql block, running it,
+   * @return A `SQLBlockMaterializer` capable of materializing the requested sql block, running it,
    * or loading further related objects.
    *
    * TODO feature-sql-block Should named SQL blocks be indexable? This is not the way unnamed queries work.
@@ -2247,7 +2308,7 @@ export class ModelMaterializer extends FluentState<Model> {
   /**
    * Materialize the final query contained within this loaded `Model`.
    *
-   * @returns A promise to a prepared query.
+   * @return A promise to a prepared query.
    */
   public getFinalQuery(): Promise<PreparedQuery> {
     return this.loadFinalQuery().getPreparedQuery();
@@ -2257,7 +2318,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Materialize an unnamed query contained within this loaded `Model` by index.
    *
    * @param index The index of the query contained within this loaded `Model`.
-   * @returns A promise to a prepared query.
+   * @return A promise to a prepared query.
    */
   public getQueryByIndex(index: number): Promise<PreparedQuery> {
     return this.loadQueryByIndex(index).getPreparedQuery();
@@ -2267,7 +2328,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Materialize a query contained within this loaded `Model` by name.
    *
    * @param name The name of the query contained within this loaded `Model`.
-   * @returns A promise to a prepared query.
+   * @return A promise to a prepared query.
    */
   public getQueryByName(name: string): Promise<PreparedQuery> {
     return this.loadQueryByName(name).getPreparedQuery();
@@ -2277,7 +2338,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Materialize a query against this loaded `Model` by its URL or contents.
    *
    * @param query The URL or contents of a query document to compile.
-   * @returns A promise to a prepared query.
+   * @return A promise to a prepared query.
    */
   public getQuery(query: QueryString | QueryURL): Promise<PreparedQuery> {
     return this.loadQuery(query).getPreparedQuery();
@@ -2287,9 +2348,9 @@ export class ModelMaterializer extends FluentState<Model> {
    * Get a SQL Block by name.
    *
    * @param name The name of the SQL Block to load.
-   * @returns A promise of a `SQLBlock`.
+   * @return A promise of a `SQLBlock`.
    */
-  public getSQLBlockByName(name: string): Promise<SQLBlock> {
+  public getSQLBlockByName(name: string): Promise<SQLBlockStructDef> {
     return this.loadSQLBlockByName(name).getSQLBlock();
   }
 
@@ -2297,11 +2358,11 @@ export class ModelMaterializer extends FluentState<Model> {
    * Get a SQL Block by index.
    *
    * @param index The index of the SQL Block to load. Note: named SQL blocks are indexable, too.
-   * @returns A promise of a `SQLBlock`.
+   * @return A promise of a `SQLBlock`.
    *
    * TODO feature-sql-block Should named SQL blocks be indexable? This is not the way unnamed queries work.
    */
-  public getSQLBlockByIndex(index: number): Promise<SQLBlock> {
+  public getSQLBlockByIndex(index: number): Promise<SQLBlockStructDef> {
     return this.loadSQLBlockByIndex(index).getSQLBlock();
   }
 
@@ -2320,7 +2381,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Load an explore contained within this loaded `Model` by name.
    *
    * @param name The name of the explore contained within this loaded `Model`.
-   * @returns An `ExploreMaterializer` capable of materializing the requested explore,
+   * @return An `ExploreMaterializer` capable of materializing the requested explore,
    * or loading further related objects.
    */
   public loadExploreByName(name: string): ExploreMaterializer {
@@ -2333,7 +2394,7 @@ export class ModelMaterializer extends FluentState<Model> {
    * Materialize an explore contained within this loaded `Model` by its name.
    *
    * @param query The name of an explore within this loaded `Model`.
-   * @returns A promise to an explore.
+   * @return A promise to an explore.
    */
   public getExploreByName(name: string): Promise<Explore> {
     return this.loadExploreByName(name).getExplore();
@@ -2342,7 +2403,7 @@ export class ModelMaterializer extends FluentState<Model> {
   /**
    * Compile and materialize this loaded `Model`.
    *
-   * @returns A promise to the compiled model that is loaded.
+   * @return A promise to the compiled model that is loaded.
    */
   public getModel(): Promise<Model> {
     return this.materialize();
@@ -2358,12 +2419,12 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   /**
    * Run this loaded `Query`.
    *
-   * @returns The query results from running this loaded query.
+   * @return The query results from running this loaded query.
    */
   async run(options?: RunSQLOptions): Promise<Result> {
     const connections = this.runtime.connections;
     const preparedResult = await this.getPreparedResult();
-    return Malloy.run({ connections, preparedResult, options });
+    return Malloy.run({connections, preparedResult, options});
   }
 
   async *runStream(options?: {
@@ -2371,7 +2432,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   }): AsyncIterableIterator<DataRecord> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
-    const stream = Malloy.runStream({ connections, preparedResult, options });
+    const stream = Malloy.runStream({connections, preparedResult, options});
     for await (const row of stream) {
       yield row;
     }
@@ -2380,7 +2441,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   /**
    * Load the prepared result of this loaded query.
    *
-   * @returns A `PreparedResultMaterializer` capable of materializing the requested
+   * @return A `PreparedResultMaterializer` capable of materializing the requested
    * prepared query or running it.
    */
   public loadPreparedResult(): PreparedResultMaterializer {
@@ -2392,7 +2453,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   /**
    * Materialize the prepared result of this loaded query.
    *
-   * @returns A promise of the prepared result of this loaded query.
+   * @return A promise of the prepared result of this loaded query.
    */
   public getPreparedResult(): Promise<PreparedResult> {
     return this.loadPreparedResult().getPreparedResult();
@@ -2401,7 +2462,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   /**
    * Materialize the SQL of this loaded query.
    *
-   * @returns A promise of the SQL string.
+   * @return A promise of the SQL string.
    */
   public async getSQL(): Promise<string> {
     return (await this.getPreparedResult()).sql;
@@ -2410,7 +2471,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   /**
    * Materialize this loaded query.
    *
-   * @returns A promise of the `PreparedQuery`.
+   * @return A promise of the `PreparedQuery`.
    */
   public getPreparedQuery(): Promise<PreparedQuery> {
     return this.materialize();
@@ -2426,12 +2487,12 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
   /**
    * Run this prepared result.
    *
-   * @returns A promise to the query result data.
+   * @return A promise to the query result data.
    */
   async run(options?: RunSQLOptions): Promise<Result> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
-    return Malloy.run({ connections, preparedResult, options });
+    return Malloy.run({connections, preparedResult, options});
   }
 
   async *runStream(options?: {
@@ -2439,7 +2500,7 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
   }): AsyncIterableIterator<DataRecord> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
-    const stream = Malloy.runStream({ connections, preparedResult, options });
+    const stream = Malloy.runStream({connections, preparedResult, options});
     for await (const row of stream) {
       yield row;
     }
@@ -2448,7 +2509,7 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
   /**
    * Materialize this loaded prepared result.
    *
-   * @returns A promise of a prepared result.
+   * @return A promise of a prepared result.
    */
   public getPreparedResult(): Promise<PreparedResult> {
     return this.materialize();
@@ -2457,7 +2518,7 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
   /**
    * Materialize the SQL of this loaded prepared result.
    *
-   * @returns A promise to the SQL string.
+   * @return A promise to the SQL string.
    */
   public async getSQL(): Promise<string> {
     return (await this.getPreparedResult()).sql;
@@ -2469,18 +2530,18 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
  * materializing the SQLBlock (via `getSQLBlock()`) or extending the task run
  * the query.
  */
-export class SQLBlockMaterializer extends FluentState<SQLBlock> {
+export class SQLBlockMaterializer extends FluentState<SQLBlockStructDef> {
   /**
    * Run this SQL block.
    *
-   * @returns A promise to the query result data.
+   * @return A promise to the query result data.
    */
   async run(options?: RunSQLOptions): Promise<Result> {
     const sqlBlock = await this.getSQLBlock();
     const connections = this.runtime.connections;
     return Malloy.run({
       connections,
-      sqlBlock,
+      sqlStruct: sqlBlock,
       options,
     });
   }
@@ -2488,9 +2549,9 @@ export class SQLBlockMaterializer extends FluentState<SQLBlock> {
   async *runStream(options?: {
     rowLimit?: number;
   }): AsyncIterableIterator<DataRecord> {
-    const sqlBlock = await this.getSQLBlock();
+    const sqlStruct = await this.getSQLBlock();
     const connections = this.runtime.connections;
-    const stream = Malloy.runStream({ connections, sqlBlock, options });
+    const stream = Malloy.runStream({connections, sqlStruct, options});
     for await (const row of stream) {
       yield row;
     }
@@ -2499,20 +2560,20 @@ export class SQLBlockMaterializer extends FluentState<SQLBlock> {
   /**
    * Materialize this loaded SQL block.
    *
-   * @returns A promise of a SQL block.
+   * @return A promise of a SQL block.
    */
-  public getSQLBlock(): Promise<SQLBlock> {
+  public getSQLBlock(): Promise<SQLBlockStructDef> {
     return this.materialize();
   }
 
   /**
    * Materialize the SQL of this loaded SQL block.
    *
-   * @returns A promise to the SQL string.
+   * @return A promise to the SQL string.
    */
   public async getSQL(): Promise<string> {
-    const sqlBlock = await this.getSQLBlock();
-    return sqlBlock.select;
+    const sqlStruct = await this.getSQLBlock();
+    return sqlStruct.structSource.sqlBlock.selectStr;
   }
 }
 
@@ -2526,7 +2587,7 @@ export class ExploreMaterializer extends FluentState<Explore> {
    * Load a query contained within this loaded explore.
    *
    * @param name The name of the query to load.
-   * @returns A `QueryMaterializer` capable of materializing the requested query, running it,
+   * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
   public loadQueryByName(name: string): QueryMaterializer {
@@ -2539,7 +2600,7 @@ export class ExploreMaterializer extends FluentState<Explore> {
    * Materialize a query contained within this loaded explore.
    *
    * @param name The name of the query to materialize.
-   * @returns A promise to the requested prepared query.
+   * @return A promise to the requested prepared query.
    */
   public getQueryByName(name: string): Promise<PreparedQuery> {
     return this.loadQueryByName(name).getPreparedQuery();
@@ -2548,7 +2609,7 @@ export class ExploreMaterializer extends FluentState<Explore> {
   /**
    * Materialize this loaded explore.
    *
-   * @returns A promise to the compiled `Explore`.
+   * @return A promise to the compiled `Explore`.
    */
   public getExplore(): Promise<Explore> {
     return this.materialize();
@@ -2578,7 +2639,7 @@ export class Result extends PreparedResult {
   }
 
   /**
-   * @returns The result data.
+   * @return The result data.
    */
   public get data(): DataArray {
     return new DataArray(this.inner.result, this.resultExplore, undefined);
@@ -2589,10 +2650,10 @@ export class Result extends PreparedResult {
   }
 
   public toJSON(): ResultJSON {
-    return { queryResult: this.inner, modelDef: this._modelDef };
+    return {queryResult: this.inner, modelDef: this._modelDef};
   }
 
-  public static fromJSON({ queryResult, modelDef }: ResultJSON): Result {
+  public static fromJSON({queryResult, modelDef}: ResultJSON): Result {
     return new Result(queryResult, modelDef);
   }
 }
@@ -2606,7 +2667,9 @@ export type DataColumn =
   | DataDate
   | DataTimestamp
   | DataNull
-  | DataBytes;
+  | DataBytes
+  | DataJSON
+  | DataUnsupported;
 
 export type DataArrayOrRecord = DataArray | DataRecord;
 
@@ -2631,7 +2694,7 @@ abstract class Data<T> {
     if (this.isString()) {
       return this;
     }
-    throw new Error("Not a string.");
+    throw new Error('Not a string.');
   }
 
   isBoolean(): this is DataBoolean {
@@ -2642,7 +2705,7 @@ abstract class Data<T> {
     if (this.isBoolean()) {
       return this;
     }
-    throw new Error("Not a boolean.");
+    throw new Error('Not a boolean.');
   }
 
   isNumber(): this is DataNumber {
@@ -2653,7 +2716,7 @@ abstract class Data<T> {
     if (this.isNumber()) {
       return this;
     }
-    throw new Error("Not a number.");
+    throw new Error('Not a number.');
   }
 
   isTimestamp(): this is DataTimestamp {
@@ -2664,7 +2727,7 @@ abstract class Data<T> {
     if (this.isTimestamp()) {
       return this;
     }
-    throw new Error("Not a timestamp.");
+    throw new Error('Not a timestamp.');
   }
 
   isDate(): this is DataDate {
@@ -2675,7 +2738,7 @@ abstract class Data<T> {
     if (this.isDate()) {
       return this;
     }
-    throw new Error("Not a date.");
+    throw new Error('Not a date.');
   }
 
   isNull(): this is DataNull {
@@ -2690,7 +2753,7 @@ abstract class Data<T> {
     if (this.isBytes()) {
       return this;
     }
-    throw new Error("Not bytes.");
+    throw new Error('Not bytes.');
   }
 
   isRecord(): this is DataRecord {
@@ -2701,7 +2764,18 @@ abstract class Data<T> {
     if (this.isRecord()) {
       return this;
     }
-    throw new Error("Not a record.");
+    throw new Error('Not a record.');
+  }
+
+  isUnsupported(): this is DataUnsupported {
+    return this instanceof DataUnsupported;
+  }
+
+  get unsupported(): DataUnsupported {
+    if (this.isUnsupported()) {
+      return this;
+    }
+    throw new Error('Not unsupported.');
   }
 
   isArray(): this is DataArray {
@@ -2712,14 +2786,14 @@ abstract class Data<T> {
     if (this.isArray()) {
       return this;
     }
-    throw new Error("Not an array.");
+    throw new Error('Not an array.');
   }
 
   isArrayOrRecord(): DataArrayOrRecord {
     if (this instanceof DataArray || this instanceof DataRecord) {
       return this;
     }
-    throw new Error("No Array or Record");
+    throw new Error('No Array or Record');
   }
 }
 
@@ -2755,6 +2829,19 @@ class DataString extends ScalarData<string> {
   }
 }
 
+class DataUnsupported extends ScalarData<unknown> {
+  protected _field: UnsupportedField;
+
+  constructor(value: unknown, field: UnsupportedField) {
+    super(value, field);
+    this._field = field;
+  }
+
+  get field(): UnsupportedField {
+    return this._field;
+  }
+}
+
 class DataBoolean extends ScalarData<boolean> {
   protected _field: BooleanField;
 
@@ -2764,6 +2851,19 @@ class DataBoolean extends ScalarData<boolean> {
   }
 
   get field(): BooleanField {
+    return this._field;
+  }
+}
+
+class DataJSON extends ScalarData<string> {
+  protected _field: JSONField;
+
+  constructor(value: string, field: JSONField) {
+    super(value, field);
+    this._field = field;
+  }
+
+  get field(): JSONField {
     return this._field;
   }
 }
@@ -2793,12 +2893,12 @@ class DataTimestamp extends ScalarData<Date> {
     // TODO properly map the data from BQ/Postgres types
     if (this._value instanceof Date) {
       return this._value;
-    } else if (typeof this._value === "number") {
-      return new Date(super.value);
-    } else if (typeof this._value !== "string") {
-      return new Date((this._value as unknown as { value: string }).value);
+    } else if (typeof this._value === 'number') {
+      return new Date(this._value);
+    } else if (typeof this._value !== 'string') {
+      return new Date((this._value as unknown as {value: string}).value);
     } else {
-      return new Date(super.value);
+      return new Date(this._value);
     }
   }
 
@@ -2819,10 +2919,10 @@ class DataDate extends ScalarData<Date> {
     // TODO properly map the data from BQ/Postgres types
     if (this._value instanceof Date) {
       return this._value;
-    } else if (typeof this._value !== "string") {
-      return new Date((this._value as unknown as { value: string }).value);
+    } else if (typeof this._value !== 'string') {
+      return new Date((this._value as unknown as {value: string}).value);
     } else {
-      return new Date(super.value);
+      return new Date(this._value);
     }
   }
 
@@ -2854,14 +2954,14 @@ export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
   }
 
   /**
-   * @returns The `Explore` that describes the structure of this data.
+   * @return The `Explore` that describes the structure of this data.
    */
   public get field(): Explore {
     return this._field;
   }
 
   /**
-   * @returns The raw object form of the data.
+   * @return The raw object form of the data.
    */
   public toObject(): QueryData {
     return this.queryData;
@@ -2890,9 +2990,9 @@ export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
     return {
       next(): IteratorResult<DataRecord> {
         if (currentIndex < queryData.length) {
-          return { value: getRow(currentIndex++), done: false };
+          return {value: getRow(currentIndex++), done: false};
         } else {
-          return { value: undefined, done: true };
+          return {value: undefined, done: true};
         }
       },
     };
@@ -2907,7 +3007,7 @@ export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
 
 function getPath(data: DataColumn, path: (number | string)[]): DataColumn {
   for (const segment of path) {
-    if (typeof segment === "number") {
+    if (typeof segment === 'number') {
       data = data.array.row(segment);
     } else {
       data = data.record.cell(segment);
@@ -2916,7 +3016,7 @@ function getPath(data: DataColumn, path: (number | string)[]): DataColumn {
   return data;
 }
 
-export class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
+export class DataRecord extends Data<{[fieldName: string]: DataColumn}> {
   private queryDataRow: QueryDataRow;
   protected _field: Explore;
   public readonly index: number | undefined;
@@ -2943,7 +3043,7 @@ export class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
 
   cell(fieldOrName: string | Field): DataColumn {
     const fieldName =
-      typeof fieldOrName === "string" ? fieldOrName : fieldOrName.name;
+      typeof fieldOrName === 'string' ? fieldOrName : fieldOrName.name;
     const field = this._field.getFieldByName(fieldName);
     const value = this.queryDataRow[fieldName];
     if (value === null) {
@@ -2954,12 +3054,16 @@ export class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
         return new DataBoolean(value as boolean, field);
       } else if (field.isDate()) {
         return new DataDate(value as Date, field);
+      } else if (field.isJSON()) {
+        return new DataJSON(value as string, field);
       } else if (field.isTimestamp()) {
         return new DataTimestamp(value as Date, field);
       } else if (field.isNumber()) {
         return new DataNumber(value as number, field);
       } else if (field.isString()) {
         return new DataString(value as string, field);
+      } else if (field.isUnsupported()) {
+        return new DataUnsupported(value as unknown, field);
       }
     } else if (field.isExploreField()) {
       if (Array.isArray(value)) {
@@ -2973,8 +3077,8 @@ export class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
     );
   }
 
-  public get value(): { [fieldName: string]: DataColumn } {
-    throw new Error("Not implemented;");
+  public get value(): {[fieldName: string]: DataColumn} {
+    throw new Error('Not implemented;');
   }
 
   // Non repeating values show up as DataRecords
@@ -2997,7 +3101,7 @@ export class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
             done: false,
           };
         } else {
-          return { value: undefined, done: true };
+          return {value: undefined, done: true};
         }
       },
     };
@@ -3011,7 +3115,7 @@ function isURLReader(
     | LookupConnection<Connection>
     | Connection
 ): thing is URLReader {
-  return "readURL" in thing;
+  return 'readURL' in thing;
 }
 
 function isLookupConnection<T extends InfoConnection = InfoConnection>(
@@ -3021,7 +3125,7 @@ function isLookupConnection<T extends InfoConnection = InfoConnection>(
     | LookupConnection<Connection>
     | Connection
 ): thing is LookupConnection<T> {
-  return "lookupConnection" in thing;
+  return 'lookupConnection' in thing;
 }
 
 export interface WriteStream {
@@ -3037,29 +3141,29 @@ export abstract class DataWriter {
 
 export class JSONWriter extends DataWriter {
   async process(data: AsyncIterableIterator<DataRecord>): Promise<void> {
-    this.stream.write("[\n");
+    this.stream.write('[\n');
     for await (const row of data) {
       if (row.index !== undefined && row.index > 0) {
-        this.stream.write(",\n");
+        this.stream.write(',\n');
       }
       const json = JSON.stringify(row.toObject(), null, 2);
-      const jsonLines = json.split("\n");
+      const jsonLines = json.split('\n');
       for (let i = 0; i < jsonLines.length; i++) {
         const line = jsonLines[i];
         this.stream.write(`  ${line}`);
         if (i < jsonLines.length - 1) {
-          this.stream.write("\n");
+          this.stream.write('\n');
         }
       }
     }
-    this.stream.write("\n]\n");
+    this.stream.write('\n]\n');
     this.stream.close();
   }
 }
 
 export class CSVWriter extends DataWriter {
-  private readonly columnSeparator = ",";
-  private readonly rowSeparator = "\n";
+  private readonly columnSeparator = ',';
+  private readonly rowSeparator = '\n';
   private readonly quoteCharacter = '"';
   private readonly includeHeader = true;
 
@@ -3070,7 +3174,7 @@ export class CSVWriter extends DataWriter {
     const needsQuoting = hasInnerCommas || hasInnerQuote || hasNewline;
     if (hasInnerQuote) {
       value = value.replace(
-        new RegExp(this.quoteCharacter, "g"),
+        new RegExp(this.quoteCharacter, 'g'),
         this.quoteCharacter + this.quoteCharacter
       );
     }
@@ -3084,7 +3188,7 @@ export class CSVWriter extends DataWriter {
 
   private stringify(cell: DataColumn) {
     if (cell.isNull()) {
-      return "";
+      return '';
     } else if (
       cell.isArray() ||
       cell.isRecord() ||

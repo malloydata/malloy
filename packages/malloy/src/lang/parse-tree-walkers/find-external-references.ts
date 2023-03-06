@@ -1,23 +1,33 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { CommonTokenStream } from "antlr4ts";
-import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
-import type { ParseTree } from "antlr4ts/tree";
-import * as parser from "../lib/Malloy/MalloyParser";
-import { MalloyParserListener } from "../lib/Malloy/MalloyParserListener";
-import { DocumentRange } from "../../model/malloy_types";
-import { MalloyTranslation } from "../parse-malloy";
+import {CommonTokenStream} from 'antlr4ts';
+import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
+import {ParseTree} from 'antlr4ts/tree';
+import * as parser from '../lib/Malloy/MalloyParser';
+import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
+import {DocumentRange} from '../../model/malloy_types';
+import {MalloyTranslation} from '../parse-malloy';
 
 type References = Record<string, DocumentRange>;
 
@@ -60,10 +70,10 @@ export function findReferences(
 
   let refs: FinderFound = {};
   if (Object.keys(finder.needTables).length > 0) {
-    refs = { tables: finder.needTables };
+    refs = {tables: finder.needTables};
   }
   if (Object.keys(finder.needImports).length > 0) {
-    refs = { ...refs, urls: finder.needImports };
+    refs = {...refs, urls: finder.needImports};
   }
   return Object.keys(refs).length > 0 ? refs : null;
 }

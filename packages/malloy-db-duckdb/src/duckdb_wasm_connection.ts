@@ -1,19 +1,36 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import { QueryDataRow, RunSQLOptions } from "@malloydata/malloy";
-import * as duckdb from "@duckdb/duckdb-wasm";
-import { StructRow, Table, Vector } from "apache-arrow";
-import { DuckDBCommon, QueryOptionsReader } from "./duckdb_common";
+
+import * as duckdb from '@duckdb/duckdb-wasm';
+import Worker from 'web-worker';
+import {
+  QueryDataRow,
+  RunSQLOptions,
+  StructDef,
+  parseTableURI,
+} from '@malloydata/malloy';
+import {StructRow, Table, Vector} from 'apache-arrow';
+import {DuckDBCommon, QueryOptionsReader} from './duckdb_common';
 
 /**
  * Arrow's toJSON() doesn't really do what I'd expect, since
@@ -21,7 +38,7 @@ import { DuckDBCommon, QueryOptionsReader } from "./duckdb_common";
  * so we need this fairly gross function to unwrap those.
  *
  * @param value Element from an Arrow StructRow.
- * @returns Vanilla Javascript value
+ * @return Vanilla Javascript value
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const unwrapArrow = (value: unknown): any => {
@@ -31,9 +48,9 @@ const unwrapArrow = (value: unknown): any => {
     return [...value].map(unwrapArrow);
   } else if (value instanceof Date) {
     return value;
-  } else if (typeof value === "bigint") {
+  } else if (typeof value === 'bigint') {
     return Number(value);
-  } else if (typeof value === "object") {
+  } else if (typeof value === 'object') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const obj = value as Record<string | symbol, any>;
     // DecimalBigNums appear as Uint32Arrays, but can be identified
@@ -74,16 +91,26 @@ const unwrapTable = (table: Table): QueryDataRow[] => {
   return table.toArray().map(unwrapRow);
 };
 
-export class DuckDBWASMConnection extends DuckDBCommon {
+const isNode = () => typeof navigator === 'undefined';
+
+type RemoteFileCallback = (
+  tableName: string
+) => Promise<Uint8Array | undefined>;
+
+export abstract class DuckDBWASMConnection extends DuckDBCommon {
   connecting: Promise<void>;
   protected _connection: duckdb.AsyncDuckDBConnection | null = null;
   protected _database: duckdb.AsyncDuckDB | null = null;
   protected isSetup = false;
+  private worker: Worker | null = null;
+
+  private remoteFileCallbacks: RemoteFileCallback[] = [];
+  private remoteFileStatus: Record<string, boolean> = {};
 
   constructor(
     public readonly name: string,
-    databasePath = "test/data/duckdb/duckdb_test.db",
-    private workingDirectory = "/",
+    private databasePath: string | null = null,
+    private workingDirectory = '/',
     queryOptions?: QueryOptionsReader
   ) {
     super(queryOptions);
@@ -91,29 +118,36 @@ export class DuckDBWASMConnection extends DuckDBCommon {
   }
 
   private async init(): Promise<void> {
-    const JSDELIVR_BUNDLES = duckdb.getJsDelivrBundles();
-
     // Select a bundle based on browser checks
-    const bundle = await duckdb.selectBundle(JSDELIVR_BUNDLES);
+    const bundle = await duckdb.selectBundle(this.getBundles());
 
     if (bundle.mainWorker) {
-      const workerUrl = URL.createObjectURL(
-        new Blob([`importScripts("${bundle.mainWorker}");`], {
-          type: "text/javascript",
-        })
-      );
+      const workerUrl = isNode()
+        ? bundle.mainWorker
+        : URL.createObjectURL(
+            new Blob([`importScripts("${bundle.mainWorker}");`], {
+              type: 'text/javascript',
+            })
+          );
 
       // Instantiate the asynchronous version of DuckDB-wasm
-      const worker = new Worker(workerUrl);
-      const logger = new duckdb.ConsoleLogger();
-      this._database = new duckdb.AsyncDuckDB(logger, worker);
+      this.worker = new Worker(workerUrl);
+      const logger = new duckdb.VoidLogger();
+      this._database = new duckdb.AsyncDuckDB(logger, this.worker);
       await this._database.instantiate(bundle.mainModule, bundle.pthreadWorker);
+      if (this.databasePath) {
+        await this._database.open({
+          path: this.databasePath,
+        });
+      }
       URL.revokeObjectURL(workerUrl);
       this._connection = await this._database.connect();
     } else {
-      throw new Error("Unable to instantiate duckdb-wasm");
+      throw new Error('Unable to instantiate duckdb-wasm');
     }
   }
+
+  abstract getBundles(): duckdb.DuckDBBundles;
 
   get connection(): duckdb.AsyncDuckDBConnection | null {
     return this._connection;
@@ -129,9 +163,12 @@ export class DuckDBWASMConnection extends DuckDBCommon {
 
   protected async runDuckDBQuery(
     sql: string
-  ): Promise<{ rows: QueryDataRow[]; totalRows: number }> {
+  ): Promise<{rows: QueryDataRow[]; totalRows: number}> {
     const table = await this.connection?.query(sql);
-    if (table?.numRows != null) {
+    if (table === undefined) {
+      throw new Error('Table is undefined.');
+    }
+    if (table?.numRows !== null) {
       const rows = unwrapTable(table);
       // console.log(rows);
       return {
@@ -140,7 +177,7 @@ export class DuckDBWASMConnection extends DuckDBCommon {
         totalRows: table.numRows,
       };
     } else {
-      throw new Error("Boom");
+      throw new Error('Boom');
     }
   }
 
@@ -149,10 +186,10 @@ export class DuckDBWASMConnection extends DuckDBCommon {
     _options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
     if (!this.connection) {
-      throw new Error("duckdb-wasm not connected");
+      throw new Error('duckdb-wasm not connected');
     }
     await this.setup();
-    const statements = sql.split("-- hack: split on this");
+    const statements = sql.split('-- hack: split on this');
 
     while (statements.length > 1) {
       await this.runDuckDBQuery(statements[0]);
@@ -166,13 +203,58 @@ export class DuckDBWASMConnection extends DuckDBCommon {
     }
   }
 
-  protected async createHash(sqlCommand: string): Promise<string> {
-    const msgUint8 = new TextEncoder().encode(sqlCommand);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    return hashHex;
+  async fetchSchemaForTables(tables: string[]): Promise<{
+    schemas: Record<string, StructDef>;
+    errors: Record<string, string>;
+  }> {
+    await this.setup();
+
+    for (const tableUri of tables) {
+      const {tablePath} = parseTableURI(tableUri);
+      if (tablePath.match(/^https?:\/\//)) {
+        continue;
+      }
+      if (this.remoteFileStatus[tablePath]) {
+        continue;
+      }
+      for (const callback of this.remoteFileCallbacks) {
+        this.remoteFileStatus[tablePath] = true;
+        const data = await callback(tablePath);
+        if (data) {
+          await this.database?.registerFileBuffer(tablePath, data);
+          break;
+        }
+      }
+    }
+    return super.fetchSchemaForTables(tables);
+  }
+
+  async close(): Promise<void> {
+    if (this._connection) {
+      await this._connection.close();
+      this._connection = null;
+    }
+    if (this._database) {
+      await this._database.terminate();
+      this._database = null;
+    }
+    if (this.worker) {
+      this.worker.terminate();
+      this.worker = null;
+    }
+  }
+
+  registerRemoteTableCallback(callback: RemoteFileCallback): void {
+    this.remoteFileCallbacks.push(callback);
+  }
+
+  async registerRemoteTable(tableName: string, url: string): Promise<void> {
+    this.remoteFileStatus[tableName] = true;
+    this.database?.registerFileURL(
+      tableName,
+      url,
+      duckdb.DuckDBDataProtocol.HTTP,
+      true
+    );
   }
 }

@@ -1,11 +1,4 @@
-# auto-generated docs
-docs/_includes/generated/
-docs/_site/
-docs/documentation/
-docs/fiddle/
-docs/.jekyll-cache/
-docs/js/generated/
-docs/aux/generated/
+/docs
 
 # Workspace related exclusions
 packages/**/build
@@ -22,7 +15,7 @@ demo/**/node_modules
 demo/**/tsconfig.tsbuildinfo
 demo/**/package-lock.json
 demo/**/.eslintcache
-/node_modules
+node_modules
 demo/malloy-demo-composer/composer_config.json
 demo/malloy-demo-composer/public/js
 demo/malloy-demo-composer/pkg

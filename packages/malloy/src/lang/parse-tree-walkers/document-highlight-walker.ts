@@ -1,24 +1,34 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { CommonTokenStream, ParserRuleContext } from "antlr4ts";
-import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
-import { ParseTree } from "antlr4ts/tree";
-import { MalloyParserListener } from "../lib/Malloy/MalloyParserListener";
-import * as parser from "../lib/Malloy/MalloyParser";
-import { MalloyParser } from "../lib/Malloy/MalloyParser";
-import { Token } from "antlr4ts/Token";
-import { DocumentRange } from "../../model/malloy_types";
+import {CommonTokenStream, ParserRuleContext} from 'antlr4ts';
+import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
+import {ParseTree} from 'antlr4ts/tree';
+import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
+import * as parser from '../lib/Malloy/MalloyParser';
+import {MalloyParser} from '../lib/Malloy/MalloyParser';
+import {Token} from 'antlr4ts/Token';
+import {DocumentRange} from '../../model/malloy_types';
 
 export interface DocumentHighlight {
   range: DocumentRange;
@@ -27,79 +37,79 @@ export interface DocumentHighlight {
 
 // TODO maybe this could be an enum like Definition__Field, etc.
 export const HighlightType = {
-  Identifier: "identifier",
-  Type: "type",
+  Identifier: 'identifier',
+  Type: 'type',
   Literal: {
-    Date: "literal.date",
-    Number: "literal.number",
-    String: "literal.string",
-    RegularExpression: "literal.regular_expression",
-    Boolean: "literal.boolean",
-    Null: "literal.null",
+    Date: 'literal.date',
+    Number: 'literal.number',
+    String: 'literal.string',
+    RegularExpression: 'literal.regular_expression',
+    Boolean: 'literal.boolean',
+    Null: 'literal.null',
   },
   Call: {
-    Aggregate: "call.aggregate",
-    TimeFrame: "call.time_frame",
-    Cast: "call.cast",
-    Table: "call.table",
-    From: "call.from",
-    Function: "call.function",
-    FromSQL: "call.from_sql",
+    Aggregate: 'call.aggregate',
+    TimeFrame: 'call.time_frame',
+    Cast: 'call.cast',
+    Table: 'call.table',
+    From: 'call.from',
+    Function: 'call.function',
+    FromSQL: 'call.from_sql',
   },
   // TODO many of these should probably be categorized further
   Keyword: {
     AggregateModifier: {
-      Distinct: "keyword.aggregate_modifier.distinct",
+      Distinct: 'keyword.aggregate_modifier.distinct',
     },
     CastModifier: {
-      As: "keyword.cast_modifier.as",
+      As: 'keyword.cast_modifier.as',
     },
-    Is: "keyword.is",
-    On: "keyword.on",
-    Desc: "keyword.desc",
-    Asc: "keyword.asc",
-    Pick: "keyword.pick",
-    When: "keyword.when",
-    Else: "keyword.else",
-    With: "keyword.with",
+    Is: 'keyword.is',
+    On: 'keyword.on',
+    Desc: 'keyword.desc',
+    Asc: 'keyword.asc',
+    Pick: 'keyword.pick',
+    When: 'keyword.when',
+    Else: 'keyword.else',
+    With: 'keyword.with',
     // TODO or is this a meta type?
-    JSON: "keyword.json",
+    JSON: 'keyword.json',
     // TODO or is this a meta type?
-    Turtle: "keyword.turtle",
-    Import: "keyword.import",
+    Turtle: 'keyword.turtle',
+    Import: 'keyword.import',
   },
   Operator: {
-    Comparison: "operator.comparison",
-    Boolean: "operator.boolean",
-    Date: "operator.date",
+    Comparison: 'operator.comparison',
+    Boolean: 'operator.boolean',
+    Date: 'operator.date',
   },
   Comment: {
-    Line: "comment.line",
-    Block: "comment.block",
+    Line: 'comment.line',
+    Block: 'comment.block',
   },
   Property: {
-    Accept: "property.accept",
-    Aggregate: "property.aggregate",
-    Dimension: "property.dimension",
-    Except: "property.except",
-    Source: "property.source",
-    GroupBy: "property.group_by",
-    Having: "property.having",
-    Index: "property.index",
-    JoinOne: "keyword.join_one",
-    JoinMany: "keyword.join_many",
-    JoinCross: "keyword.join_cross",
-    Limit: "property.limit",
-    Measure: "property.measure",
-    Nest: "property.nest",
-    OrderBy: "property.order_by",
-    PrimaryKey: "property.primary_key",
-    Project: "property.project",
-    Query: "property.query",
-    Rename: "property.rename",
-    Top: "property.top",
-    Where: "property.where",
-    SQL: "property.sql",
+    Accept: 'property.accept',
+    Aggregate: 'property.aggregate',
+    Dimension: 'property.dimension',
+    Except: 'property.except',
+    Source: 'property.source',
+    GroupBy: 'property.group_by',
+    Having: 'property.having',
+    Index: 'property.index',
+    JoinOne: 'keyword.join_one',
+    JoinMany: 'keyword.join_many',
+    JoinCross: 'keyword.join_cross',
+    Limit: 'property.limit',
+    Measure: 'property.measure',
+    Nest: 'property.nest',
+    OrderBy: 'property.order_by',
+    PrimaryKey: 'property.primary_key',
+    Project: 'property.project',
+    Query: 'property.query',
+    Rename: 'property.rename',
+    Top: 'property.top',
+    Where: 'property.where',
+    SQL: 'property.sql',
   },
 };
 
@@ -109,7 +119,7 @@ export function passForHighlights(
   const highlights: DocumentHighlight[] = [];
   const register = (token: Token, type: string, removeColon = false) => {
     const offset = token.startIndex - token.charPositionInLine;
-    const tokenLines = token.text?.split("\n") || [];
+    const tokenLines = token.text?.split('\n') || [];
     const numberOfLines = tokenLines.length;
     const lengthOfAllButLastLine = tokenLines
       .slice(0, -1)
@@ -118,7 +128,10 @@ export function passForHighlights(
     highlights.push({
       type,
       range: {
-        start: { line: token.line - 1, character: token.startIndex - offset },
+        start: {
+          line: token.line - 1,
+          character: token.startIndex - offset,
+        },
         end: {
           line: token.line - 1 + numberOfLines - 1,
           character:

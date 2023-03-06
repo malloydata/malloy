@@ -1,29 +1,40 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
 parser grammar MalloyParser;
 options { tokenVocab=MalloyLexer; }
 
 malloyDocument: (malloyStatement | SEMI)* EOF;
 
 malloyStatement
-  : defineExploreStatement
+  : defineSourceStatement
   | defineSQLStatement
   | defineQuery
   | importStatement
   ;
 
-defineExploreStatement
-  : exploreKeyword exploreDefinitionList
+defineSourceStatement
+  : exploreKeyword sourcePropertyList
   ;
 
 exploreKeyword
@@ -41,11 +52,24 @@ topLevelAnonQueryDef
   ;
 
 defineSQLStatement
-  : SQL sqlStatementDef
+  : SQL (nameSQLBlock IS)? sqlBlock
   ;
 
-sqlStatementDef
-  : (sqlCommandNameDef IS)? SQL_STRING (ON connectionName)?
+sqlBlock
+  : OCURLY blockSQLDef+ CCURLY
+  ;
+
+blockSQLDef
+  : CONNECTION connectionName
+  | SELECT sqlString
+  ;
+
+sqlString
+  : SQL_BEGIN sqlInterpolation* SQL_END
+  ;
+
+sqlInterpolation
+  : OPEN_CODE query CLOSE_CODE
   ;
 
 importStatement
@@ -100,12 +124,12 @@ filterShortcut
 exploreQueryName : id;
 queryName : id;
 
-exploreDefinitionList
-  : exploreDefinition (COMMA? exploreDefinition)* COMMA?
+sourcePropertyList
+  : sourceDefinition (COMMA? sourceDefinition)* COMMA?
   ;
 
-exploreDefinition
-  : exploreNameDef IS explore
+sourceDefinition
+  : sourceNameDef IS explore
   ;
 
 explore
@@ -113,14 +137,14 @@ explore
   ;
 
 exploreSource
-  : exploreName                                   # NamedSource
+  : sourceID                                      # NamedSource
   | exploreTable                                  # TableSource
   | FROM OPAREN query CPAREN                      # QuerySource
-  | FROM_SQL OPAREN sqlExploreNameRef CPAREN      # SQLSource
+  | FROM_SQL OPAREN sqlExploreNameRef CPAREN      # SQLSourceName
   ;
 
-exploreNameDef: id;
-exploreName: id;
+sourceNameDef: id;
+sourceID: id;
 
 exploreProperties
   : OCURLY (exploreStatement | SEMI)* CCURLY
@@ -297,6 +321,7 @@ topStatement
 indexElement
   : fieldPath (DOT STAR)?
   | STAR
+  | STARSTAR
   ;
 
 indexFields
@@ -334,6 +359,7 @@ literal
 
 dateLiteral
   : LITERAL_TIMESTAMP      # literalTimestamp
+  | LITERAL_HOUR           # literalHour
   | LITERAL_DAY            # literalDay
   | LITERAL_WEEK           # literalWeek
   | LITERAL_MONTH          # literalMonth
@@ -366,7 +392,7 @@ fieldExpr
   | fieldExpr timeframe                                    # exprDuration
   | fieldExpr DOT timeframe                                # exprTimeTrunc
   | fieldExpr DOUBLECOLON malloyType                       # exprSafeCast
-  | fieldExpr ( STAR | SLASH ) fieldExpr                   # exprMulDiv
+  | fieldExpr ( STAR | SLASH | PERCENT ) fieldExpr         # exprMulDiv
   | fieldExpr ( PLUS | MINUS ) fieldExpr                   # exprAddSub
   | fieldExpr TO fieldExpr                                 # exprRange
   | startAt=fieldExpr FOR duration=fieldExpr timeframe     # exprForRange
@@ -387,8 +413,7 @@ fieldExpr
   ;
 
 partialAllowedFieldExpr
-  : compareOp fieldExpr                                    # exprPartialCompare
-  | fieldExpr                                              # exprNotPartial
+  : compareOp? fieldExpr
   ;
 
 pickStatement
@@ -456,5 +481,5 @@ jsonArray
    ;
 
 sqlExploreNameRef: id;
-sqlCommandNameDef: id;
+nameSQLBlock: id;
 connectionName: JSON_STRING;

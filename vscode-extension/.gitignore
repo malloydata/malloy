@@ -1,8 +1,0 @@
-out
-dist
-node_modules
-.vscode-test/
-*.vsix
-third_party_notices.txt
-README.md
-CHANGELOG.md

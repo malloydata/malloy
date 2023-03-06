@@ -1,35 +1,39 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 import {
-  AtomicFieldTypeInner,
-  TimeFieldType,
-  TimestampUnit,
-  ExtractUnit,
+  AtomicFieldType as AtomicFieldTypeInner,
   DialectFragment,
-  TimeValue,
-} from "..";
-// Can't get these from "../model" because model includes this file
-// and that can create a circular reference problem. This is a patch
-// and really indicates a problem in the relationship between
-// dialect and model, it's going to come up again some time.
-import {
-  mkExpr,
   Expr,
+  ExtractUnit,
   Sampling,
   StructDef,
+  TimeFieldType,
+  TimeValue,
+  TimestampUnit,
   TypecastFragment,
-} from "../model/malloy_types";
+  mkExpr,
+} from '../model/malloy_types';
 
 interface DialectField {
   type: string;
@@ -61,6 +65,8 @@ export abstract class Dialect {
   abstract defaultSampling: Sampling;
   abstract supportUnnestArrayAgg: boolean; // won't need UDFs for nested pipelines
   abstract supportsCTEinCoorelatedSubQueries: boolean;
+  abstract dontUnionIndex: boolean;
+  abstract supportsQualify: boolean;
 
   // return a quoted string for use as a table path.
   abstract quoteTablePath(tablePath: string): string;
@@ -134,7 +140,7 @@ export abstract class Dialect {
   ): string;
 
   sqlFinalStage(_lastStageName: string, _fields: string[]): string {
-    throw new Error("Dialect has no final Stage but called Anyway");
+    throw new Error('Dialect has no final Stage but called Anyway');
   }
 
   // default implementation will probably work most of the time
@@ -153,7 +159,7 @@ export abstract class Dialect {
   ): Expr;
 
   abstract sqlAlterTime(
-    op: "+" | "-",
+    op: '+' | '-',
     expr: TimeValue,
     n: Expr,
     timeframe: TimestampUnit
@@ -173,6 +179,8 @@ export abstract class Dialect {
     timezone: string
   ): string;
 
+  abstract sqlLiteralString(literak: string): string;
+
   abstract sqlRegexpMatch(expr: Expr, regex: string): Expr;
 
   getFunctionInfo(functionName: string): FunctionInfo | undefined {
@@ -181,33 +189,35 @@ export abstract class Dialect {
 
   dialectExpr(df: DialectFragment): Expr {
     switch (df.function) {
-      case "now":
+      case 'now':
         return this.sqlNow();
-      case "timeDiff":
+      case 'timeDiff':
         return this.sqlMeasureTime(df.left, df.right, df.units);
-      case "delta":
+      case 'delta':
         return this.sqlAlterTime(df.op, df.base, df.delta, df.units);
-      case "trunc":
+      case 'trunc':
         return this.sqlTrunc(df.expr, df.units);
-      case "extract":
+      case 'extract':
         return this.sqlExtract(df.expr, df.units);
-      case "cast":
+      case 'cast':
         return this.sqlCast(df);
-      case "regexpMatch":
+      case 'regexpMatch':
         return this.sqlRegexpMatch(df.expr, df.regexp);
-      case "div": {
+      case 'div': {
         if (this.divisionIsInteger) {
           return mkExpr`${df.numerator}*1.0/${df.denominator}`;
         }
         return mkExpr`${df.numerator}/${df.denominator}`;
       }
-      case "timeLiteral":
+      case 'timeLiteral':
         return [this.sqlLiteralTime(df.literal, df.literalType, df.timezone)];
+      case 'stringLiteral':
+        return [this.sqlLiteralString(df.literal)];
     }
   }
 
   sqlSumDistinct(_key: string, _value: string): string {
-    return "sqlSumDistinct called bu not implemented";
+    return 'sqlSumDistinct called bu not implemented';
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
@@ -218,6 +228,6 @@ export abstract class Dialect {
   }
 
   sqlOrderBy(orderTerms: string[]): string {
-    return `ORDER BY ${orderTerms.join(",")}`;
+    return `ORDER BY ${orderTerms.join(',')}`;
   }
 }

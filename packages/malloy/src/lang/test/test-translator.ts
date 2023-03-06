@@ -1,154 +1,169 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { inspect } from "util";
+import {inspect} from 'util';
 import {
-  StructDef,
-  NamedModelObject,
+  DocumentLocation,
+  FieldDef,
   ModelDef,
+  NamedModelObject,
+  PipeSegment,
   Query,
   QueryFieldDef,
-  FieldDef,
-  isFilteredAliasedName,
-  PipeSegment,
+  StructDef,
   TurtleDef,
-  DocumentLocation,
-} from "../../model/malloy_types";
-import { MalloyElement, ModelEntry, NameSpace } from "../ast";
-import { MalloyTranslator, TranslateResponse } from "../parse-malloy";
+  isFilteredAliasedName,
+} from '../../model/malloy_types';
+import {MalloyElement} from '../ast';
+import {NameSpace} from '../ast/types/name-space';
+import {ModelEntry} from '../ast/types/model-entry';
+import {MalloyTranslator} from '../parse-malloy';
+import {TranslateResponse} from '../translate-response';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
-  return inspect(thing, { breakLength: 72, depth: Infinity });
+  return inspect(thing, {breakLength: 72, depth: Infinity});
 }
 
 const mockSchema: Record<string, StructDef> = {
   aTable: {
-    type: "struct",
-    name: "aTable",
-    dialect: "standardsql",
-    structSource: { type: "table", tablePath: "aTable" },
-    structRelationship: { type: "basetable", connectionName: "test" },
+    type: 'struct',
+    name: 'aTable',
+    dialect: 'standardsql',
+    structSource: {type: 'table', tablePath: 'aTable'},
+    structRelationship: {type: 'basetable', connectionName: 'test'},
     fields: [
-      { type: "string", name: "astr" },
-      { type: "number", name: "af", numberType: "float" },
-      { type: "number", name: "ai", numberType: "integer" },
-      { type: "date", name: "ad" },
-      { type: "boolean", name: "abool" },
-      { type: "timestamp", name: "ats" },
+      {type: 'string', name: 'astr'},
+      {type: 'number', name: 'af', numberType: 'float'},
+      {type: 'number', name: 'ai', numberType: 'integer'},
+      {type: 'date', name: 'ad'},
+      {type: 'boolean', name: 'abool'},
+      {type: 'timestamp', name: 'ats'},
+      {type: 'unsupported', name: 'aun'},
+      {type: 'unsupported', name: 'aweird', rawType: 'weird'},
     ],
   },
-  "malloytest.carriers": {
-    type: "struct",
-    name: "malloytest.carriers",
-    dialect: "standardsql",
+  'malloytest.carriers': {
+    type: 'struct',
+    name: 'malloytest.carriers',
+    dialect: 'standardsql',
     structSource: {
-      type: "table",
-      tablePath: "malloytest.carriers",
+      type: 'table',
+      tablePath: 'malloytest.carriers',
     },
-    structRelationship: { type: "basetable", connectionName: "bigquery" },
+    structRelationship: {type: 'basetable', connectionName: 'bigquery'},
     fields: [
-      { name: "code", type: "string" },
-      { name: "name", type: "string" },
-      { name: "nickname", type: "string" },
+      {name: 'code', type: 'string'},
+      {name: 'name', type: 'string'},
+      {name: 'nickname', type: 'string'},
     ],
-    as: "carriers",
+    as: 'carriers',
   },
-  "malloytest.flights": {
-    type: "struct",
-    name: "malloytest.flights",
-    dialect: "standardsql",
+  'malloytest.flights': {
+    type: 'struct',
+    name: 'malloytest.flights',
+    dialect: 'standardsql',
     structSource: {
-      type: "table",
-      tablePath: "malloytest.flights",
+      type: 'table',
+      tablePath: 'malloytest.flights',
     },
-    structRelationship: { type: "basetable", connectionName: "bigquery" },
+    structRelationship: {type: 'basetable', connectionName: 'bigquery'},
     fields: [
-      { name: "carrier", type: "string" },
-      { name: "origin", type: "string" },
-      { name: "destination", type: "string" },
-      { name: "flight_num", type: "string" },
-      { name: "flight_time", type: "number", numberType: "integer" },
-      { name: "tail_num", type: "string" },
-      { name: "dep_time", type: "timestamp" },
-      { name: "arr_time", type: "timestamp" },
-      { name: "dep_delay", type: "number", numberType: "integer" },
-      { name: "arr_delay", type: "number", numberType: "integer" },
-      { name: "taxi_out", type: "number", numberType: "integer" },
-      { name: "taxi_in", type: "number", numberType: "integer" },
-      { name: "distance", type: "number", numberType: "integer" },
-      { name: "cancelled", type: "string" },
-      { name: "diverted", type: "string" },
-      { name: "id2", type: "number", numberType: "integer" },
+      {name: 'carrier', type: 'string'},
+      {name: 'origin', type: 'string'},
+      {name: 'destination', type: 'string'},
+      {name: 'flight_num', type: 'string'},
+      {name: 'flight_time', type: 'number', numberType: 'integer'},
+      {name: 'tail_num', type: 'string'},
+      {name: 'dep_time', type: 'timestamp'},
+      {name: 'arr_time', type: 'timestamp'},
+      {name: 'dep_delay', type: 'number', numberType: 'integer'},
+      {name: 'arr_delay', type: 'number', numberType: 'integer'},
+      {name: 'taxi_out', type: 'number', numberType: 'integer'},
+      {name: 'taxi_in', type: 'number', numberType: 'integer'},
+      {name: 'distance', type: 'number', numberType: 'integer'},
+      {name: 'cancelled', type: 'string'},
+      {name: 'diverted', type: 'string'},
+      {name: 'id2', type: 'number', numberType: 'integer'},
     ],
-    as: "flights",
+    as: 'flights',
   },
-  "malloytest.airports": {
-    type: "struct",
-    name: "malloytest.airports",
-    dialect: "standardsql",
+  'malloytest.airports': {
+    type: 'struct',
+    name: 'malloytest.airports',
+    dialect: 'standardsql',
     structSource: {
-      type: "table",
-      tablePath: "malloytest.airports",
+      type: 'table',
+      tablePath: 'malloytest.airports',
     },
-    structRelationship: { type: "basetable", connectionName: "bigquery" },
+    structRelationship: {type: 'basetable', connectionName: 'bigquery'},
     fields: [
-      { name: "id", type: "number", numberType: "integer" },
-      { name: "code", type: "string" },
-      { name: "site_number", type: "string" },
-      { name: "fac_type", type: "string" },
-      { name: "fac_use", type: "string" },
-      { name: "faa_region", type: "string" },
-      { name: "faa_dist", type: "string" },
-      { name: "city", type: "string" },
-      { name: "county", type: "string" },
-      { name: "state", type: "string" },
-      { name: "full_name", type: "string" },
-      { name: "own_type", type: "string" },
-      { name: "longitude", type: "number", numberType: "float" },
-      { name: "latitude", type: "number", numberType: "float" },
-      { name: "elevation", type: "number", numberType: "integer" },
-      { name: "aero_cht", type: "string" },
-      { name: "cbd_dist", type: "number", numberType: "integer" },
-      { name: "cbd_dir", type: "string" },
-      { name: "act_date", type: "string" },
-      { name: "cert", type: "string" },
-      { name: "fed_agree", type: "string" },
-      { name: "cust_intl", type: "string" },
-      { name: "c_ldg_rts", type: "string" },
-      { name: "joint_use", type: "string" },
-      { name: "mil_rts", type: "string" },
-      { name: "cntl_twr", type: "string" },
-      { name: "major", type: "string" },
+      {name: 'id', type: 'number', numberType: 'integer'},
+      {name: 'code', type: 'string'},
+      {name: 'site_number', type: 'string'},
+      {name: 'fac_type', type: 'string'},
+      {name: 'fac_use', type: 'string'},
+      {name: 'faa_region', type: 'string'},
+      {name: 'faa_dist', type: 'string'},
+      {name: 'city', type: 'string'},
+      {name: 'county', type: 'string'},
+      {name: 'state', type: 'string'},
+      {name: 'full_name', type: 'string'},
+      {name: 'own_type', type: 'string'},
+      {name: 'longitude', type: 'number', numberType: 'float'},
+      {name: 'latitude', type: 'number', numberType: 'float'},
+      {name: 'elevation', type: 'number', numberType: 'integer'},
+      {name: 'aero_cht', type: 'string'},
+      {name: 'cbd_dist', type: 'number', numberType: 'integer'},
+      {name: 'cbd_dir', type: 'string'},
+      {name: 'act_date', type: 'string'},
+      {name: 'cert', type: 'string'},
+      {name: 'fed_agree', type: 'string'},
+      {name: 'cust_intl', type: 'string'},
+      {name: 'c_ldg_rts', type: 'string'},
+      {name: 'joint_use', type: 'string'},
+      {name: 'mil_rts', type: 'string'},
+      {name: 'cntl_twr', type: 'string'},
+      {name: 'major', type: 'string'},
     ],
-    as: "airports",
+    as: 'airports',
   },
 };
-export const aTableDef = mockSchema.aTable;
+export const aTableDef = mockSchema['aTable'];
 
 /**
  * When translating partial trees, there will not be a document node
  * to handle namespace requests, this stands in for document in that case.
  */
 class TestRoot extends MalloyElement implements NameSpace {
-  elementType = "test root";
+  elementType = 'test root';
 
   constructor(
     child: MalloyElement,
     forTranslator: MalloyTranslator,
     private modelDef: ModelDef
   ) {
-    super({ child });
+    super({child});
     this.setTranslator(forTranslator);
   }
 
@@ -158,9 +173,9 @@ class TestRoot extends MalloyElement implements NameSpace {
 
   getEntry(name: string): ModelEntry | undefined {
     const struct = this.modelDef.contents[name];
-    if (struct.type == "struct") {
+    if (struct.type === 'struct') {
       const exported = this.modelDef.exports.includes(name);
-      return { entry: struct, exported };
+      return {entry: struct, exported};
     }
   }
 
@@ -169,7 +184,7 @@ class TestRoot extends MalloyElement implements NameSpace {
   }
 }
 
-const testURI = "internal://test/langtests/root.malloy";
+const testURI = 'internal://test/langtests/root.malloy';
 export class TestTranslator extends MalloyTranslator {
   testRoot?: TestRoot;
   /*
@@ -186,41 +201,41 @@ export class TestTranslator extends MalloyTranslator {
     name: testURI,
     exports: [],
     contents: {
-      a: { ...aTableDef, primaryKey: "astr", as: "a" },
-      b: { ...aTableDef, primaryKey: "astr", as: "b" },
+      a: {...aTableDef, primaryKey: 'astr', as: 'a'},
+      b: {...aTableDef, primaryKey: 'astr', as: 'b'},
       ab: {
         ...aTableDef,
-        as: "ab",
-        primaryKey: "astr",
+        as: 'ab',
+        primaryKey: 'astr',
         fields: [
           ...aTableDef.fields,
           {
             ...aTableDef,
-            as: "b",
+            as: 'b',
             structRelationship: {
-              type: "one",
+              type: 'one',
               onExpression: [
-                { type: "field", path: "astr" },
-                "=",
-                { type: "field", path: "b.astr" },
+                {type: 'field', path: 'astr'},
+                '=',
+                {type: 'field', path: 'b.astr'},
               ],
             },
           },
           {
-            type: "number",
-            name: "acount",
-            numberType: "integer",
-            aggregate: true,
-            e: ["COUNT()"],
-            code: "count()",
+            type: 'number',
+            name: 'acount',
+            numberType: 'integer',
+            expressionType: 'aggregate',
+            e: ['COUNT()'],
+            code: 'count()',
           },
           {
-            type: "turtle",
-            name: "aturtle",
+            type: 'turtle',
+            name: 'aturtle',
             pipeline: [
               {
-                type: "reduce",
-                fields: ["astr", "acount"],
+                type: 'reduce',
+                fields: ['astr', 'acount'],
               },
             ],
           },
@@ -229,7 +244,7 @@ export class TestTranslator extends MalloyTranslator {
     },
   };
 
-  constructor(source: string, rootRule = "malloyDocument") {
+  constructor(source: string, rootRule = 'malloyDocument') {
     super(testURI);
     this.grammarRule = rootRule;
     this.importZone.define(testURI, source);
@@ -245,7 +260,7 @@ export class TestTranslator extends MalloyTranslator {
   ast(): MalloyElement | undefined {
     const astAsk = this.astStep.step(this);
     if (astAsk.ast) {
-      if (this.grammarRule !== "malloyDocument") {
+      if (this.grammarRule !== 'malloyDocument') {
         this.testRoot = new TestRoot(astAsk.ast, this, this.internalModel);
       }
       return astAsk.ast;
@@ -261,7 +276,7 @@ export class TestTranslator extends MalloyTranslator {
         mysterious = false;
         this.logger.log({
           at: this.defaultLocation(),
-          message: `Missing imports: ${whatImports.join(",")}`,
+          message: `Missing imports: ${whatImports.join(',')}`,
         });
       }
       const needThese = this.schemaZone.getUndefined();
@@ -269,13 +284,13 @@ export class TestTranslator extends MalloyTranslator {
         mysterious = false;
         this.logger.log({
           at: this.defaultLocation(),
-          message: `Missing schema: ${needThese.join(",")}`,
+          message: `Missing schema: ${needThese.join(',')}`,
         });
       }
       if (mysterious) {
         this.logger.log({
           at: this.defaultLocation(),
-          message: "mysterious translation failure",
+          message: 'mysterious translation failure',
         });
       }
     }
@@ -288,7 +303,7 @@ export class TestTranslator extends MalloyTranslator {
 
   exploreFor(exploreName: string): StructDef {
     const explore = this.nameSpace[exploreName];
-    if (explore && explore.type === "struct") {
+    if (explore && explore.type === 'struct') {
       return explore;
     }
     throw new Error(`Expected model to contain explore '${exploreName}'`);
@@ -309,16 +324,16 @@ export function getField(
 ): FieldDef {
   const result = thing.fields.find(
     (field: QueryFieldDef) =>
-      typeof field !== "string" && (field.as || field.name) === name
+      typeof field !== 'string' && (field.as || field.name) === name
   );
-  if (typeof result === "string") {
-    throw new Error("Expected a def, got a ref.");
+  if (typeof result === 'string') {
+    throw new Error('Expected a def, got a ref.');
   }
   if (result === undefined) {
-    throw new Error("Expected a field, not undefined");
+    throw new Error('Expected a field, not undefined');
   }
   if (isFilteredAliasedName(result)) {
-    throw new Error("Ignoring these for now");
+    throw new Error('Ignoring these for now');
   }
   return result;
 }
@@ -342,17 +357,17 @@ export function markSource(
   unmarked: TemplateStringsArray,
   ...marked: string[]
 ): MarkedSource {
-  let code = "";
+  let code = '';
   const locations: DocumentLocation[] = [];
   for (let index = 0; index < marked.length; index++) {
     const mark = marked[index];
     code += unmarked[index];
-    const lines = code.split("\n");
+    const lines = code.split('\n');
     const start = {
       line: lines.length - 1,
       character: lines[lines.length - 1].length,
     };
-    const bitLines = mark.split("\n");
+    const bitLines = mark.split('\n');
     const location = {
       url: testURI,
       range: {
@@ -368,5 +383,5 @@ export function markSource(
     code += mark;
   }
   code += unmarked[marked.length];
-  return { code, locations };
+  return {code, locations};
 }

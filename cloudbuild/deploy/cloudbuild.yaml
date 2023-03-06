@@ -1,19 +1,51 @@
 steps:
-  - id: deploy-marketplace
+  - id: git-ssh-key
+    name: "gcr.io/cloud-builders/gcloud"
+    secretEnv: ["GITHUB_SSH_KEY"]
+    entrypoint: "bash"
+    args:
+      - -c
+      - |
+        echo "$$GITHUB_SSH_KEY" >> /root/.ssh/id_rsa
+        chmod 400 /root/.ssh/id_rsa
+        cp cloudbuild/known_hosts.github /root/.ssh/known_hosts
+    volumes:
+      - name: "ssh"
+        path: /root/.ssh
+  - id: nix-quiet-install
+    name: gcr.io/cloud-builders/docker
+    args:
+      - pull
+      - "-q"
+      - nixos/nix
+  - id: proxy-install
     name: "nixos/nix"
     entrypoint: sh
     args:
       - -c
-      - "./cloudbuild/deploy/$TRIGGER_NAME.sh"
-    timeout: "1600s"
-    secretEnv: ["VSCE_PAT", "GA_API_SECRET", "GA_MEASUREMENT_ID"]
-logsBucket: "gs://malloy-cloudbuild-logs"
-timeout: "1600s"
+      - "wget -q -O /workspace/cloud_sql_proxy https://dl.google.com/cloudsql/cloud_sql_proxy.linux.386 && chmod +x /workspace/cloud_sql_proxy"
+    waitFor: ["nix-quiet-install"]
+  - id: deploy-npm
+    name: "nixos/nix"
+    entrypoint: sh
+    args:
+      - -c
+      - "(/workspace/cloud_sql_proxy -enable_iam_login -instances=malloy-303216:us-central1:pg-test=tcp:5432 -log_debug_stdout > /dev/null & sleep 2) && (./cloudbuild/deploy/$TRIGGER_NAME.sh)"
+    timeout: "1800s"
+    secretEnv: ["NPM_TOKEN", "GITHUB_SSH_KEY"]
+    env:
+      - "BRANCH_NAME=$BRANCH_NAME"
+    volumes:
+      - name: "ssh"
+        path: /root/.ssh
+    waitFor: ["git-ssh-key", "proxy-install"]
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: "E2_HIGHCPU_8"
+timeout: "1800s"
 availableSecrets:
   secretManager:
-    - versionName: projects/malloy-303216/secrets/marketplace-prerelease-CI/versions/latest
-      env: "VSCE_PAT"
-    - versionName: projects/malloy-303216/secrets/vscode-extension-CI-GA-API-SECRET/versions/latest
-      env: "GA_API_SECRET"
-    - versionName: projects/malloy-303216/secrets/vscode-extension-CI-GA-MEASUREMENT-ID/versions/latest
-      env: "GA_MEASUREMENT_ID"
+    - versionName: projects/malloy-303216/secrets/npm-publish/versions/latest
+      env: "NPM_TOKEN"
+    - versionName: projects/malloy-303216/secrets/github-ssh-key/versions/latest
+      env: "GITHUB_SSH_KEY"

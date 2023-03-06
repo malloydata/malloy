@@ -1,24 +1,34 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DataArray } from "@malloydata/malloy";
-import * as lite from "vega-lite";
-import { HTMLChartRenderer } from "./chart";
-import { getColorScale } from "./utils";
-import { DEFAULT_SPEC } from "./vega_spec";
+import {DataArray} from '@malloydata/malloy';
+import * as lite from 'vega-lite';
+import {HTMLChartRenderer} from './chart';
+import {formatTitle, getColorScale} from './utils';
+import {DEFAULT_SPEC} from './vega_spec';
 
 export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
-  abstract getMark(): "bar" | "line" | "point";
+  abstract getMark(): 'bar' | 'line' | 'point';
 
   getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
     const fields = data.field.intrinsicFields;
@@ -41,16 +51,16 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
         ? {
             field: colorField.name,
             type: colorType,
-            axis: { title: colorField.name },
-            scale: getColorScale(colorType, mark === "bar"),
+            axis: {title: formatTitle(this.options, colorField.name)},
+            scale: getColorScale(colorType, mark === 'bar'),
           }
-        : { value: "#4285F4" };
+        : {value: '#4285F4'};
 
     const sizeDef = sizeField
       ? {
           field: sizeField.name,
           type: sizeType,
-          axis: { title: sizeField.name },
+          axis: {title: formatTitle(this.options, sizeField.name)},
         }
       : undefined;
 
@@ -58,25 +68,25 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       ? {
           field: shapeField.name,
           type: shapeType,
-          axis: { title: shapeField.name },
+          axis: {title: formatTitle(this.options, shapeField.name)},
         }
       : undefined;
 
-    const xSort = xType === "nominal" ? null : undefined;
-    const ySort = yType === "nominal" ? null : undefined;
+    const xSort = xType === 'nominal' ? null : undefined;
+    const ySort = yType === 'nominal' ? null : undefined;
 
     const xDef = {
       field: xField.name,
       type: xType,
       sort: xSort,
-      axis: { title: xField.name },
+      axis: {title: formatTitle(this.options, xField.name)},
     };
 
     const yDef = {
       field: yField.name,
       type: yType,
       sort: ySort,
-      axis: { title: yField.name },
+      axis: {title: formatTitle(this.options, yField.name)},
     };
 
     return {
@@ -93,7 +103,7 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
         color: colorDef,
         shape: shapeDef,
       },
-      background: "transparent",
+      background: 'transparent',
     };
   }
 }

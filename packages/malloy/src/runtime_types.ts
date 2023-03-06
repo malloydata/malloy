@@ -1,18 +1,33 @@
 /*
- * Copyright 2022 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { RunSQLOptions } from "./malloy";
-import { MalloyQueryData, QueryDataRow, SQLBlock, StructDef } from "./model";
+import {RunSQLOptions} from './run_sql_options';
+import {
+  MalloyQueryData,
+  QueryDataRow,
+  SQLBlock,
+  StructDef,
+} from './model/malloy_types';
 
 /**
  * The contents of a Malloy query document.
@@ -42,7 +57,7 @@ export interface URLReader {
    * Read the contents of the given URL.
    *
    * @param url The URL to read.
-   * @returns A promise to the contents of the URL.
+   * @return A promise to the contents of the URL.
    */
   readURL: (url: URL) => Promise<string>;
 }
@@ -57,7 +72,7 @@ export interface InfoConnection {
    * Fetch schemas for multiple tables.
    *
    * @param tables The names of tables to fetch schemas for.
-   * @returns A mapping of table names to schemas.
+   * @return A mapping of table names to schemas.
    */
   fetchSchemaForTables(tables: string[]): Promise<{
     schemas: Record<string, StructDef>;
@@ -65,15 +80,18 @@ export interface InfoConnection {
   }>;
 
   /**
-   * Fetch schemas for multiple SQL blocks.
+   * Fetch schemas an SQL blocks
    *
-   * @param tables The SQL blocks to fetch schemas for.
-   * @returns A mapping of SQL block names to schemas.
+   * @param block The SQL blocks to fetch schemas for.
+   * @return A mapping of SQL block names to schemas.
    */
-  fetchSchemaForSQLBlocks(sqlStructs: SQLBlock[]): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }>;
+
+  fetchSchemaForSQLBlock(
+    block: SQLBlock
+  ): Promise<
+    | {structDef: StructDef; error?: undefined}
+    | {error: string; structDef?: undefined}
+  >;
 
   /**
    * The name of the connection.
@@ -90,7 +108,7 @@ export interface Connection extends InfoConnection {
    *
    * @param sql The SQL to run.
    * @param options.pageSize Maximum number of results to return at once.
-   * @returns The rows of data resulting from running the given SQL query
+   * @return The rows of data resulting from running the given SQL query
    * and the total number of rows available.
    */
   runSQL(sql: string, options?: RunSQLOptions): Promise<MalloyQueryData>;
@@ -100,11 +118,9 @@ export interface Connection extends InfoConnection {
 
   canPersist(): this is PersistSQLResults;
 
-  canFetchSchemaAndRunSimultaneously(): this is FetchSchemaAndRunSimultaneously;
-
   canStream(): this is StreamingConnection;
 
-  canFetchSchemaAndRunStreamSimultaneously(): this is FetchSchemaAndRunStreamSimultaneously;
+  close(): Promise<void>;
 }
 
 // TODO feature-sql-block Comment
@@ -124,30 +140,11 @@ export interface PersistSQLResults extends Connection {
   manifestTemporaryTable(sqlCommand: string): Promise<string>;
 }
 
-export interface FetchSchemaAndRunSimultaneously extends Connection {
-  runSQLBlockAndFetchResultSchema(
-    sqlBlock: SQLBlock,
-    options?: { rowLimit?: number }
-  ): Promise<{ data: MalloyQueryData; schema: StructDef }>;
-}
-
 export interface StreamingConnection extends Connection {
   runSQLStream(
     sqlCommand: string,
-    options?: { rowLimit?: number }
+    options?: {rowLimit?: number}
   ): AsyncIterableIterator<QueryDataRow>;
-}
-
-export interface FetchSchemaAndRunStreamSimultaneously
-  extends StreamingConnection,
-    FetchSchemaAndRunSimultaneously {
-  runSQLBlockStreamAndFetchResultSchema(
-    sqlCommand: string,
-    options?: { rowLimit?: number }
-  ): Promise<{
-    stream: AsyncIterableIterator<QueryDataRow>;
-    schema: StructDef;
-  }>;
 }
 
 /**
@@ -156,7 +153,7 @@ export interface FetchSchemaAndRunStreamSimultaneously
 export interface LookupConnection<T extends InfoConnection> {
   /**
    * @param connectionName The name of the connection for which a `Connection` is required.
-   * @returns A promise to a `Connection` for the connection named `connectionName`.
+   * @return A promise to a `Connection` for the connection named `connectionName`.
    */
   lookupConnection(connectionName?: string): Promise<T>;
 }

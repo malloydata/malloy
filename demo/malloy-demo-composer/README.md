@@ -1,3 +1,7 @@
+| :warning: This Project has Moved                                                                                             |
+| ---------------------------------------------------------------------------------------------------------------------------- |
+| Future updates will appear at [https://github.com/malloydata/malloy-composer](https://github.com/malloydata/malloy-composer) |
+
 # Malloy Composer Demo
 
 The Malloy Composer Demo is provided as a working example of an application built on top of Malloy. If you have any questions about getting it running, please reach out to us for help! If you find bugs or have feature requests, you can submit them as issues in this repo. [Learn how to use the composer](https://docs.google.com/presentation/d/18KUl_rrz2K-hbsiKJYS3rtTcYxZMXKklyPllLmTtIYY/edit#slide=id.g1269816dcbe_0_140)
@@ -12,12 +16,12 @@ https://user-images.githubusercontent.com/7178946/170373869-3cf43dd2-25c4-4ed0-b
 
 ### Install Malloy
 
-If you haven't already done so, you'll need to start by [Building the Malloy repo](https://github.com/looker-open-source/malloy/blob/main/developing.md). Install the dependencies in that link, then in the top-level `malloy/` directory, run:
+If you haven't already done so, you'll need to start by [Building the Malloy repo](https://github.com/malloydata/malloy/blob/main/developing.md). Install the dependencies in that link, then in the top-level `malloy/` directory, run:
 
 1. `npm install` to install dependencies
 2. `npm run build` to build all the libraries Malloy needs
 
-Make sure you have a [database connected](https://looker-open-source.github.io/malloy/documentation/connection_instructions.html), and you'll also likely want to set up the [VS Code Extension](https://github.com/looker-open-source/malloy#installing-the-extension) to view and edit Malloy files.
+Make sure you have a [database connected](https://malloydata.github.io/documentation/connection_instructions.html), and you'll also likely want to set up the [VS Code Extension](https://github.com/malloydata/malloy#installing-the-extension) to view and edit Malloy files.
 
 ### Launch the Composer
 
@@ -26,19 +30,19 @@ In the `malloy/demo/malloy-demo-composer` directory, run:
 1. `npm run build` (you need to do this in addition to the above build in the top-level directory)
 2. `npm run start`
 
-This will start a desktop application. You should see any sources defined in `.malloy` files you place in a the Malloy models directory (by default, this is the samples directory but can be configured, as described below) listed in the "Select analysis..." menu at the top left. If you don't already have Malloy models built you'd like to work with, try making a copy of one of the [samples](https://github.com/looker-open-source/malloy/tree/main/samples); these are all built on public BigQuery datasets!
+This will start a desktop application. You should see any sources defined in `.malloy` files you place in a the Malloy models directory (by default, this is the samples directory but can be configured, as described below) listed in the "Select analysis..." menu at the top left. If you don't already have Malloy models built you'd like to work with, try making a copy of one of the [samples](https://github.com/malloydata/malloy/tree/main/samples); these are all built on public BigQuery datasets!
 
 Troubleshooting notes:
 
 - If you have models in your Malloy models directory and one or all of them are not showing up in the composer menu, you may have an error in your Malloy code. Try opening them up in VS Code with the Malloy Extension installed to find the problem.
-- You'll need to define a [source](https://looker-open-source.github.io/malloy/documentation/language/source.html) for it to be explorable; top-level named queries that are not inside a source are not explorable.
+- You'll need to define a [source](https://malloydata.github.io/documentation/language/source.html) for it to be explorable; top-level named queries that are not inside a source are not explorable.
 
 ### Set up Query Saving
 
 The composer can write saved queries back to `.a.malloy` files in the Malloy models directory (see below).
 
 1. Create a new file with the suffix `.a.malloy` (e.g. `flights.a.malloy`). You'll need separate ones for each source you want to make explorable.
-2. [Import](https://looker-open-source.github.io/malloy/documentation/language/imports.html) the base file in this `.a.malloy` file, then create a refinement of a source named in the base file. For example, if your base file looks like:
+2. [Import](https://malloydata.github.io/documentation/language/imports.html) the base file in this `.a.malloy` file, then create a refinement of a source named in the base file. For example, if your base file looks like:
 
 ```malloy
 source: flights_base is table('malloy-data.faa.flights'){}

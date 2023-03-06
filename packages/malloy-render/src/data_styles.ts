@@ -1,47 +1,57 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as lite from "vega-lite";
+import * as lite from 'vega-lite';
 
-export type DataStyles = { [fieldName: string]: RenderDef };
-export type ChartSize = "small" | "medium" | "large";
+export type DataStyles = {[fieldName: string]: RenderDef};
+export type ChartSize = 'small' | 'medium' | 'large';
 
 export type RenderDef =
-  | ({ renderer?: undefined } & DataRenderOptions)
-  | ({ renderer: "table" } & TableRenderOptions)
-  | ({ renderer: "dashboard" } & DashboardRenderOptions)
-  | ({ renderer: "text" } & TextRenderOptions)
-  | ({ renderer: "currency" } & CurrencyRenderOptions)
-  | ({ renderer: "image" } & ImageRenderOptions)
-  | ({ renderer: "time" } & TimeRenderOptions)
-  | ({ renderer: "json" } & JSONRenderOptions)
-  | ({ renderer: "single_value" } & SingleValueRenderOptions)
-  | ({ renderer: "list" } & ListRenderOptions)
-  | ({ renderer: "list_detail" } & ListDetailRenderOptions)
-  | ({ renderer: "cartesian_chart" } & CartesianChartRenderOptions)
-  | ({ renderer: "bar_chart" } & BarChartRenderOptions)
-  | ({ renderer: "scatter_chart" } & ScatterChartRenderOptions)
-  | ({ renderer: "line_chart" } & LineChartRenderOptions)
-  | ({ renderer: "point_map" } & PointMapRenderOptions)
-  | ({ renderer: "segment_map" } & SegmentMapRenderOptions)
-  | ({ renderer: "shape_map" } & ShapeMapRenderOptions)
-  | ({ renderer: "number" } & NumberRenderOptions)
-  | ({ renderer: "percent" } & PercentRenderOptions)
-  | ({ renderer: "boolean" } & BooleanRenderOptions)
-  | ({ renderer: "spark_line" } & SparkLineRenderOptions)
-  | ({ renderer: "bytes" } & BytesRenderOptions)
-  | ({ renderer: "link" } & LinkRenderOptions)
-  | ({ renderer: "vega" } & VegaRenderOptions);
+  | ({renderer?: undefined} & DataRenderOptions)
+  | ({renderer: 'table'} & TableRenderOptions)
+  | ({renderer: 'dashboard'} & DashboardRenderOptions)
+  | ({renderer: 'text'} & TextRenderOptions)
+  | ({renderer: 'currency'} & CurrencyRenderOptions)
+  | ({renderer: 'image'} & ImageRenderOptions)
+  | ({renderer: 'time'} & TimeRenderOptions)
+  | ({renderer: 'json'} & JSONRenderOptions)
+  | ({renderer: 'single_value'} & SingleValueRenderOptions)
+  | ({renderer: 'list'} & ListRenderOptions)
+  | ({renderer: 'list_detail'} & ListDetailRenderOptions)
+  | ({renderer: 'cartesian_chart'} & CartesianChartRenderOptions)
+  | ({renderer: 'bar_chart'} & BarChartRenderOptions)
+  | ({renderer: 'scatter_chart'} & ScatterChartRenderOptions)
+  | ({renderer: 'line_chart'} & LineChartRenderOptions)
+  | ({renderer: 'point_map'} & PointMapRenderOptions)
+  | ({renderer: 'segment_map'} & SegmentMapRenderOptions)
+  | ({renderer: 'shape_map'} & ShapeMapRenderOptions)
+  | ({renderer: 'number'} & NumberRenderOptions)
+  | ({renderer: 'percent'} & PercentRenderOptions)
+  | ({renderer: 'boolean'} & BooleanRenderOptions)
+  | ({renderer: 'spark_line'} & SparkLineRenderOptions)
+  | ({renderer: 'bytes'} & BytesRenderOptions)
+  | ({renderer: 'link'} & LinkRenderOptions)
+  | ({renderer: 'vega'} & VegaRenderOptions);
 
 export interface DataRenderOptions {
   data?: {
@@ -77,7 +87,7 @@ export interface BytesRenderOptions extends TextRenderOptions {
 
 export interface CurrencyRenderOptions extends TextRenderOptions {
   currency?: {
-    unit?: "dollars" | "pounds";
+    unit?: 'dollars' | 'pounds';
   };
 }
 
@@ -155,7 +165,7 @@ export interface CartesianChartRenderOptions extends ChartRenderOptions {
   };
 }
 
-export interface BarChartRenderOptions {
+export interface BarChartRenderOptions extends DataRenderOptions {
   size?: ChartSize;
 }
 
