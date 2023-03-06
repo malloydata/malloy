@@ -119,12 +119,9 @@ export function rows(qr: Result): QueryDataRow[] {
 export const allDatabases = ['postgres', 'bigquery', 'duckdb', 'duckdb_wasm'];
 type RuntimeDatabaseNames = typeof allDatabases[number];
 
-interface RuntimeEntry {
-  dbName: string;
-  runtime: SingleConnectionRuntime;
-}
 export class RuntimeList {
   runtimeMap = new Map<string, SingleConnectionRuntime>();
+  runtimeList: Array<[string, SingleConnectionRuntime]> = [];
 
   constructor(databaseList: RuntimeDatabaseNames[] | undefined = undefined) {
     for (const dbName of databaseList || allDatabases) {
@@ -154,14 +151,9 @@ export class RuntimeList {
         new SingleConnectionRuntime(files, connection)
       );
     }
-  }
-
-  toTest(): RuntimeEntry[] {
-    const all: RuntimeEntry[] = [];
-    for (const [db, rt] of this.runtimeMap) {
-      all.push({dbName: db, runtime: rt});
-    }
-    return all;
+    this.runtimeMap.forEach((runtime, name) =>
+      this.runtimeList.push([name, runtime])
+    );
   }
 
   async closeAll(): Promise<void> {
