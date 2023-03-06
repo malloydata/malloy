@@ -102,11 +102,9 @@ expressionModels.forEach((expressionModel, databaseName) => {
     // TODO better handle case where concat is called with no arguments...
   });
 
-  // TODO this an interesting thing to decide how to do.
-  // Either stddev specifically takes a SCALAR number, and
-  // so this fails or we detect that you're passing in an aggregate
-  // into a function that returns an aggregate, and so it fails
-  it.skip(`stddev works ? - ${databaseName}`, async () => {
+  // TODO update this test to check for error -- also improve the error
+  // for cases like this when the data type matches but not the expression type
+  it(`stddev works ? - ${databaseName}`, async () => {
     await funcTestAgg("round(stddev(count()))", 39);
   });
 

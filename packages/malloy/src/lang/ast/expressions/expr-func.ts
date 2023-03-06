@@ -22,15 +22,12 @@
  */
 
 import {
-  ExpressionType,
-  Fragment,
+  Expr,
   FunctionDef,
   FunctionOverloadDef,
-  FunctionParameterDef,
   isExpressionTypeLEQ,
   maxOfExpressionTypes
 } from "../../../model/malloy_types";
-import { exprMap } from "../../../model/utils";
 
 import { ExprValue } from "../types/expr-value";
 import { ExpressionDef } from "../types/expression-def";
@@ -61,8 +58,8 @@ export class ExprFunc extends ExpressionDef {
       };
     }
     const argExprs = this.args.map((arg) => arg.getExpression(fs));
-    const result = find_overload(func, argExprs);
-    if (result === undefined) {
+    const overload = findOverload(func, argExprs);
+    if (overload === undefined) {
       this.log(
         `No matching overload for function ${this.name}(${argExprs
           .map((e) => e.dataType)
@@ -74,58 +71,13 @@ export class ExprFunc extends ExpressionDef {
         "value": []
       };
     }
-    const { overload, paramMap } = result;
-    // if (overload.returnType.expressionType === "aggregate") {
-    //   const aggIndex = argExprs.findIndex(
-    //     (arg) => arg.expressionType === "aggregate"
-    //   );
-    //   if (aggIndex !== -1) {
-    //     this.args[aggIndex].log(
-    //       `Cannot use aggregate expression to aggregate function ${}.`
-    //     )
-    //   }
-    // }
-    const funcCall: Fragment[] = exprMap(overload.e, (fragment) => {
-      if (typeof fragment === "string") {
-        return [fragment];
-      } else if (fragment.type == "spread") {
-        const param = fragment.e[0];
-        if (
-          fragment.e.length !== 1 ||
-          typeof param === "string" ||
-          param.type !== "function_parameter"
-        ) {
-          console.log(JSON.stringify(overload));
-          this.log(
-            `Invalid function definition. Argument to spread must be a function parameter.`
-          );
-          return [];
-        }
-        const entry = paramMap.get(param.name);
-        if (entry === undefined) {
-          return [fragment];
-        } else {
-          return joinWith(
-            entry.argIndexes.map((argIndex) => argExprs[argIndex].value),
-            ","
-          );
-        }
-      } else if (fragment.type == "function_parameter") {
-        const entry = paramMap.get(fragment.name);
-        if (entry === undefined) {
-          return [fragment];
-        } else if (entry.param.isVariadic) {
-          const spread = joinWith(
-            entry.argIndexes.map((argIndex) => argExprs[argIndex].value),
-            ","
-          );
-          return ["[", ...spread, "]"];
-        } else {
-          return argExprs[entry.argIndexes[0]].value;
-        }
+    const funcCall: Expr = [
+      {
+        "type": "function_call",
+        overload,
+        "args": argExprs.map((x) => x.value)
       }
-      return [fragment];
-    });
+    ];
 
     const type = overload.returnType;
     const expressionType = maxOfExpressionTypes([
@@ -150,22 +102,13 @@ export class ExprFunc extends ExpressionDef {
   }
 }
 
-function find_overload(
+function findOverload(
   func: FunctionDef,
   args: ExprValue[]
-):
-  | {
-      overload: FunctionOverloadDef;
-      paramMap: Map<
-        string,
-        { argIndexes: number[]; param: FunctionParameterDef }
-      >;
-    }
-  | undefined {
+): FunctionOverloadDef | undefined {
   for (const overload of func.overloads) {
     let paramIndex = 0;
     let ok = true;
-    const paramMap = new Map();
     for (let argIndex = 0; argIndex < args.length; argIndex++) {
       const arg = args[argIndex];
       const param = overload.params[paramIndex];
@@ -175,7 +118,10 @@ function find_overload(
       }
       const argOk = param.allowedTypes.some((param) => {
         const dataTypeMatch =
-          param.dataType == arg.dataType || param.dataType == "any";
+          param.dataType == arg.dataType ||
+          param.dataType == "any" ||
+          // TODO not sure about this -- but prevents cascading errors...
+          arg.dataType == "unknown";
         const expressionTypeMatch = isExpressionTypeLEQ(
           arg.expressionType,
           param.expressionType
@@ -186,12 +132,6 @@ function find_overload(
         ok = false;
         break;
       }
-      const existing = paramMap.get(param.name);
-      if (existing) {
-        existing.argIndexes.push(argIndex);
-      } else {
-        paramMap.set(param.name, { "argIndexes": [argIndex], param });
-      }
       if (param.isVariadic) {
         if (argIndex === args.length - 1) {
           paramIndex = args.length;
@@ -200,29 +140,11 @@ function find_overload(
         paramIndex++;
       }
     }
-    if (overload.params[paramIndex] && overload.params[paramIndex].isVariadic) {
-      const param = overload.params[paramIndex];
-      // Handle case where no arguments matched the variadic param
-      if (!paramMap.has(param.name)) {
-        paramMap.set(param.name, { "argIndexes": [], param });
-      }
-    }
     if (paramIndex !== args.length) {
       continue;
     }
     if (ok) {
-      return { overload, paramMap };
+      return overload;
     }
   }
-}
-
-function joinWith<T>(els: T[][], sep: T): T[] {
-  const result: T[] = [];
-  for (let i = 0; i < els.length; i++) {
-    result.push(...els[i]);
-    if (i < els.length - 1) {
-      result.push(sep);
-    }
-  }
-  return result;
 }

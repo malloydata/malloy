@@ -218,3 +218,18 @@ export function exprMap(expr: Expr, func: (fragment: Fragment) => Expr): Expr {
     });
   });
 }
+
+export function joinWith<T>(els: T[][], sep: T): T[] {
+  const result: T[] = [];
+  for (let i = 0; i < els.length; i++) {
+    result.push(...els[i]);
+    if (i < els.length - 1) {
+      result.push(sep);
+    }
+  }
+  return result;
+}
+
+export function range(start: number, end: number): number[] {
+  return Array.from({ "length": end - start }, (_, index) => index + start);
+}

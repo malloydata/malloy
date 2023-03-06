@@ -277,6 +277,16 @@ export function isFunctionParameterFragment(
   return (f as FunctionParameterFragment)?.type === "function_parameter";
 }
 
+export interface FunctionCallFragment {
+  type: "function_call";
+  overload: FunctionOverloadDef;
+  args: Expr[];
+}
+
+export function isFunctionCallFragment(f: Fragment): f is FunctionCallFragment {
+  return (f as FunctionCallFragment)?.type === "function_call";
+}
+
 export interface SQLExpressionFragment {
   type: "sql_expression";
   e: Expr;
@@ -432,6 +442,7 @@ export type Fragment =
   | AnalyticFragment
   | DialectSwitchFragment
   | FunctionParameterFragment
+  | FunctionCallFragment
   | SQLExpressionFragment
   | SpreadFragment;
 

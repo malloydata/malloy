@@ -41,6 +41,9 @@ import {
   Filtered,
   FilterExpression,
   FilterFragment,
+  FunctionCallFragment,
+  FunctionOverloadDef,
+  FunctionParameterDef,
   getIdentifier,
   getPhysicalFields,
   hasExpression,
@@ -54,6 +57,7 @@ import {
   isDialectSwitchFragment,
   isFieldFragment,
   isFilterFragment,
+  isFunctionCallFragment,
   isFunctionParameterFragment,
   isIndexSegment,
   isJoinOn,
@@ -87,7 +91,14 @@ import {
 } from "./malloy_types";
 
 import { Connection } from "../runtime_types";
-import { AndChain, generateHash, indent } from "./utils";
+import {
+  AndChain,
+  exprMap,
+  generateHash,
+  indent,
+  joinWith,
+  range
+} from "./utils";
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -349,6 +360,72 @@ class QueryField extends QueryNode {
     state: GenerateState
   ): string {
     return this.generateExpressionFromExpr(resultSet, context, frag.e, state);
+  }
+
+  private getParameterMap(
+    overload: FunctionOverloadDef,
+    numArgs: number
+  ): Map<string, { argIndexes: number[]; param: FunctionParameterDef }> {
+    return new Map(
+      overload.params.map((param, paramIndex) => {
+        const argIndexes = param.isVariadic
+          ? range(paramIndex, numArgs - 1)
+          : [paramIndex];
+        return [param.name, { param, argIndexes }];
+      })
+    );
+  }
+
+  generateFunctionCallExpression(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    frag: FunctionCallFragment,
+    state: GenerateState
+  ): string {
+    const overload = frag.overload;
+    const args = frag.args;
+    const paramMap = this.getParameterMap(overload, args.length);
+    const funcCall: Expr = exprMap(overload.e, (fragment) => {
+      if (typeof fragment === "string") {
+        return [fragment];
+      } else if (fragment.type == "spread") {
+        const param = fragment.e[0];
+        if (
+          fragment.e.length !== 1 ||
+          typeof param === "string" ||
+          param.type !== "function_parameter"
+        ) {
+          throw new Error(
+            `Invalid function definition. Argument to spread must be a function parameter.`
+          );
+          return [];
+        }
+        const entry = paramMap.get(param.name);
+        if (entry === undefined) {
+          return [fragment];
+        } else {
+          return joinWith(
+            entry.argIndexes.map((argIndex) => args[argIndex]),
+            ","
+          );
+        }
+      } else if (fragment.type == "function_parameter") {
+        const entry = paramMap.get(fragment.name);
+        if (entry === undefined) {
+          return [fragment];
+        } else if (entry.param.isVariadic) {
+          const spread = joinWith(
+            entry.argIndexes.map((argIndex) => args[argIndex]),
+            ","
+          );
+          return ["[", ...spread, "]"];
+        } else {
+          return args[entry.argIndexes[0]];
+        }
+      }
+      return [fragment];
+    });
+    return this.generateExpressionFromExpr(resultSet, context, funcCall, state);
   }
 
   generateDialectSwitch(
@@ -765,6 +842,13 @@ class QueryField extends QueryNode {
         );
       } else if (isSQLExpressionFragment(expr)) {
         s += this.generateSQLExpression(resultSet, context, expr, state);
+      } else if (isFunctionCallFragment(expr)) {
+        s += this.generateFunctionCallExpression(
+          resultSet,
+          context,
+          expr,
+          state
+        );
       } else if (isDialectSwitchFragment(expr)) {
         s += this.generateDialectSwitch(resultSet, context, expr, state);
       } else if (isSpreadFragment(expr)) {
