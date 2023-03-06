@@ -22,6 +22,7 @@
  */
 
 import md5 from "md5";
+import { Expr, Fragment } from "./malloy_types";
 
 /** simple indent function */
 export function indent(s: string): string {
@@ -101,4 +102,119 @@ export class AndChain {
 
 export function generateHash(input: string): string {
   return md5(input);
+}
+
+export function exprMap(expr: Expr, func: (fragment: Fragment) => Expr): Expr {
+  return expr.flatMap((fragment) => {
+    const mapped = func(fragment);
+    return mapped.map((fragment) => {
+      if (typeof fragment === "string") {
+        return fragment;
+      }
+      switch (fragment.type) {
+        case "aggregate":
+        case "all":
+        case "spread":
+        case "sql_expression":
+        case "exclude":
+          return {
+            ...fragment,
+            "e": exprMap(fragment.e, func)
+          };
+        case "analytic":
+          return {
+            ...fragment,
+            "parameters": fragment.parameters?.map((param) => {
+              if (typeof param == "string" || typeof param == "number") {
+                return param;
+              } else {
+                return exprMap(param, func);
+              }
+            })
+          };
+        case "apply":
+          return {
+            ...fragment,
+            "to": exprMap(fragment.to, func),
+            "value": exprMap(fragment.value, func)
+          };
+        case "dialect_switch":
+          return {
+            ...fragment,
+            "branches": fragment.branches.map((branch) => {
+              return {
+                ...branch,
+                "e": exprMap(branch.e, func)
+              };
+            })
+          };
+        case "applyVal":
+        case "field":
+        case "function_parameter":
+        case "parameter":
+          return fragment;
+        case "filterExpression":
+          return {
+            ...fragment,
+            "e": exprMap(fragment.e, func),
+            "filterList": fragment.filterList.map((filter) => {
+              return {
+                ...filter,
+                "expression": exprMap(filter.expression, func)
+              };
+            })
+          };
+        case "dialect": {
+          switch (fragment.function) {
+            case "cast":
+            case "regexpMatch":
+              return {
+                ...fragment,
+                "expr": exprMap(fragment.expr, func)
+              };
+            case "delta":
+              return {
+                ...fragment,
+                "delta": exprMap(fragment.delta, func)
+              };
+            case "div":
+              return {
+                ...fragment,
+                "denominator": exprMap(fragment.denominator, func),
+                "numerator": exprMap(fragment.numerator, func)
+              };
+            case "now":
+            case "stringLiteral":
+            case "timeLiteral":
+              return fragment;
+            case "extract":
+            case "trunc":
+              return {
+                ...fragment,
+                "expr": {
+                  ...fragment.expr,
+                  "value": exprMap(fragment.expr.value, func)
+                }
+              };
+            case "timeDiff":
+              return {
+                ...fragment,
+                "left": {
+                  ...fragment.left,
+                  "value": exprMap(fragment.left.value, func)
+                },
+                "right": {
+                  ...fragment.left,
+                  "value": exprMap(fragment.left.value, func)
+                }
+              };
+            default:
+              throw new Error("unexpected dialect function");
+          }
+        }
+        default:
+          throw new Error("unexpected");
+      }
+    });
+  });
 }

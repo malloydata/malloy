@@ -21,31 +21,37 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { StructDef, StructRef } from "../../../model/malloy_types";
-import { NamedSource } from "./named-source";
+import { Dialect } from "../../../dialect";
+import { ModelDef, StructDef } from "../../../model";
+import { FieldName, FieldSpace } from "../types/field-space";
+import { LookupResult } from "../types/lookup-result";
 
-export class SQLSource extends NamedSource {
-  elementType = "sqlSource";
-  structRef(): StructRef {
-    return this.structDef();
+export class ModelSpace implements FieldSpace {
+  readonly type = "fieldSpace";
+
+  constructor(readonly modelDef: ModelDef) {}
+
+  structDef(): StructDef {
+    throw new Error("Model space cannot generate a struct Def");
   }
-  modelStruct(): StructDef | undefined {
-    const modelEnt = this.modelEntry(this.ref);
-    const entry = modelEnt?.entry;
-    if (!entry) {
-      this.log(`Undefined from_sql source '${this.refName}'`);
-      return;
+
+  emptyStructDef(): StructDef {
+    throw new Error("Model space cannot generate a struct Def");
+  }
+
+  lookup(symbol: FieldName[]): LookupResult {
+    const firstPart = symbol[0];
+    if (firstPart === undefined) {
+      return { "error": "not found!", "found": undefined };
     }
-    if (entry.type === "function") {
-      this.log(`Cannot construct a source from a function '${this.refName}'`);
-      return;
-    } else if (entry.type === "query") {
-      this.log(`Cannot use 'from_sql()' to explore query '${this.refName}'`);
-      return;
-    } else if (!modelEnt.sqlType) {
-      this.log(`Cannot use 'from_sql()' to explore '${this.refName}'`);
-      return;
-    }
-    return entry;
+    return { "error": "not found!", "found": undefined };
+  }
+
+  dialectObj(): Dialect | undefined {
+    return undefined;
+  }
+
+  whenComplete(_step: () => void): void {
+    // Do nothing
   }
 }

@@ -255,6 +255,48 @@ export const malloyFunctions: Record<string, MalloyFunctionInfo> = {
   }
 };
 
+export interface DialectSwitchFragment {
+  type: "dialect_switch";
+  branches: { dialects: string[]; e: Expr }[];
+}
+
+export function isDialectSwitchFragment(
+  f: Fragment
+): f is DialectSwitchFragment {
+  return (f as DialectSwitchFragment)?.type === "dialect_switch";
+}
+
+export interface FunctionParameterFragment {
+  type: "function_parameter";
+  name: string;
+}
+
+export function isFunctionParameterFragment(
+  f: Fragment
+): f is FunctionParameterFragment {
+  return (f as FunctionParameterFragment)?.type === "function_parameter";
+}
+
+export interface SQLExpressionFragment {
+  type: "sql_expression";
+  e: Expr;
+}
+
+export function isSQLExpressionFragment(
+  f: Fragment
+): f is SQLExpressionFragment {
+  return (f as SQLExpressionFragment)?.type === "sql_expression";
+}
+
+export interface SpreadFragment {
+  type: "spread";
+  e: Expr;
+}
+
+export function isSpreadFragment(f: Fragment): f is SpreadFragment {
+  return (f as SpreadFragment)?.type === "spread";
+}
+
 export interface AnalyticFragment {
   type: "analytic";
   function: string;
@@ -387,7 +429,11 @@ export type Fragment =
   | AggregateFragment
   | UngroupFragment
   | DialectFragment
-  | AnalyticFragment;
+  | AnalyticFragment
+  | DialectSwitchFragment
+  | FunctionParameterFragment
+  | SQLExpressionFragment
+  | SpreadFragment;
 
 export type Expr = Fragment[];
 
@@ -452,6 +498,17 @@ export function expressionIsCalculation(
   return e === "aggregate" || e === "analytic";
 }
 
+function expressionTypeLevel(e: ExpressionType): number {
+  return ["scalar", "aggregate", "analytic"].indexOf(e);
+}
+
+export function isExpressionTypeLEQ(
+  e1: ExpressionType,
+  e2: ExpressionType
+): boolean {
+  return expressionTypeLevel(e1) <= expressionTypeLevel(e2);
+}
+
 export function maxExpressionType(
   e1: ExpressionType,
   e2: ExpressionType
@@ -464,6 +521,10 @@ export function maxExpressionType(
     ret = "analytic";
   }
   return ret;
+}
+
+export function maxOfExpressionTypes(types: ExpressionType[]): ExpressionType {
+  return types.reduce(maxExpressionType, "scalar");
 }
 
 interface JustExpression {
@@ -792,6 +853,50 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
   dialect: string;
 }
 
+// TODO merge this with Michael's stuff in type-desc.ts
+export type ExpressionValueType =
+  | AtomicFieldType
+  | "null"
+  | "unknown"
+  | "duration"
+  | "any"
+  | "regular expression";
+
+export type FieldValueType = ExpressionValueType | "turtle" | "struct";
+
+export interface ExpressionTypeDesc {
+  dataType: FieldValueType;
+  expressionType: ExpressionType;
+  rawType?: string;
+}
+
+export interface TypeDesc {
+  dataType: FieldValueType;
+  expressionType: ExpressionType;
+  rawType?: string;
+}
+
+export interface FunctionParameterDef {
+  name: string;
+  // These expression types are MAXIMUM types -- e.g. if you specify "scalar",
+  // you cannot pass in an "aggregate" and if you specify "aggregate", you can
+  // pass in "scalar" or "aggregate", but not "analytic"
+  allowedTypes: ExpressionTypeDesc[];
+  isVariadic: boolean;
+}
+
+export interface FunctionOverloadDef {
+  // The expression type here is the MINIMUM return type
+  returnType: TypeDesc;
+  params: FunctionParameterDef[];
+  e: Expr;
+}
+
+export interface FunctionDef extends NamedObject {
+  type: "function";
+  overloads: FunctionOverloadDef[];
+}
+
 export interface SQLBlockStructDef extends StructDef {
   structSource: SubquerySource;
 }
@@ -873,7 +978,7 @@ export function getIdentifier(n: AliasedName): string {
   return n.name;
 }
 
-export type NamedModelObject = StructDef | NamedQuery;
+export type NamedModelObject = StructDef | NamedQuery | FunctionDef;
 
 /** Result of parsing a model file */
 export interface ModelDef {
@@ -884,6 +989,7 @@ export interface ModelDef {
 
 /** Very common record type */
 export type NamedStructDefs = Record<string, StructDef>;
+export type NamedModelObjects = Record<string, NamedModelObject>;
 
 export type QueryScalar = string | boolean | number | Date | Buffer | null;
 

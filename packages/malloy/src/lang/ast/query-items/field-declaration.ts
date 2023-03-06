@@ -65,6 +65,14 @@ export class FieldDeclaration extends MalloyElement {
     let exprValue;
 
     try {
+      // const ns = this.namespace();
+      // if (ns === undefined) {
+      //   this.log("AHHHHH");
+      //   return {
+      //     "name": `error_defining_${exprName}`,
+      //     "type": "string"
+      //   };
+      // }
       exprValue = this.expr.getExpression(exprFS);
     } catch (error) {
       this.log(`Cannot define '${exprName}', ${error.message}`);

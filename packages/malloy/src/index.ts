@@ -56,7 +56,14 @@ export type {
   Query,
   NamedQuery,
   NamedModelObject,
-  ExpressionType
+  ExpressionType,
+  FunctionDef,
+  FunctionOverloadDef,
+  FunctionParameterDef,
+  ExpressionValueType,
+  TypeDesc,
+  FieldValueType,
+  ExpressionTypeDesc
 } from "./model";
 export {
   // Used in Composer Demo

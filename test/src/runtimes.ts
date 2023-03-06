@@ -21,18 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import { resolve } from "@malloydata/lib";
 import {
   EmptyURLReader,
   MalloyQueryData,
+  ModelDef,
   QueryDataRow,
   Result,
   RunSQLOptions,
-  SingleConnectionRuntime
+  SingleConnectionRuntime,
+  URLReader
 } from "@malloydata/malloy";
 import { BigQueryConnection } from "@malloydata/db-bigquery";
 import { DuckDBConnection } from "@malloydata/db-duckdb";
 import { DuckDBWASMConnection } from "@malloydata/db-duckdb/wasm";
 import { PooledPostgresConnection } from "@malloydata/db-postgres";
+import { url } from "inspector";
 
 export class BigQueryTestConnection extends BigQueryConnection {
   // we probably need a better way to do this.
@@ -110,7 +114,16 @@ export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
   }
 }
 
-const files = new EmptyURLReader();
+class MalloyLibURLReader implements URLReader {
+  readURL(url: URL): Promise<string> {
+    if (url.protocol === "malloy:") {
+      return Promise.resolve(resolve(url));
+    }
+    throw new Error("No such file");
+  }
+}
+
+const files = new MalloyLibURLReader();
 
 export function rows(qr: Result): QueryDataRow[] {
   return qr.data.value;

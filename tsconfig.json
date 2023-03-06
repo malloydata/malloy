@@ -2,6 +2,7 @@
   "extends": "./tsconfig.packages.json",
   "references": [
     { "path": "packages/malloy" },
+    { "path": "packages/malloy-lib" },
     { "path": "packages/malloy-db-bigquery" },
     { "path": "packages/malloy-db-duckdb" },
     { "path": "packages/malloy-db-postgres" },

@@ -29,6 +29,7 @@ import {
   AnalyticFragment,
   CompiledQuery,
   DialectFragment,
+  DialectSwitchFragment,
   Expr,
   expressionIsCalculation,
   FieldAtomicDef,
@@ -50,13 +51,17 @@ import {
   isApplyValue,
   isAsymmetricFragment,
   isDialectFragment,
+  isDialectSwitchFragment,
   isFieldFragment,
   isFilterFragment,
+  isFunctionParameterFragment,
   isIndexSegment,
   isJoinOn,
   isParameterFragment,
   isPhysical,
   isQuerySegment,
+  isSpreadFragment,
+  isSQLExpressionFragment,
   isUngroupFragment,
   isValueParameter,
   JoinRelationship,
@@ -73,6 +78,8 @@ import {
   ResultMetadataDef,
   ResultStructMetadataDef,
   SearchIndexResult,
+  SpreadFragment,
+  SQLExpressionFragment,
   StructDef,
   StructRef,
   TurtleDef,
@@ -333,6 +340,41 @@ class QueryField extends QueryNode {
       // return field.parent.getIdentifier() + "." + field.fieldDef.name;
       return field.generateExpression(resultSet);
     }
+  }
+
+  generateSQLExpression(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    frag: SQLExpressionFragment,
+    state: GenerateState
+  ): string {
+    return this.generateExpressionFromExpr(resultSet, context, frag.e, state);
+  }
+
+  generateDialectSwitch(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    frag: DialectSwitchFragment,
+    state: GenerateState
+  ): string {
+    const dialect = context.dialect.name;
+    const branch = frag.branches.find((branch) =>
+      branch.dialects.includes(dialect)
+    );
+    if (branch === undefined) {
+      // TODO maybe catch this in the translator somehow?
+      throw new Error(`Dialect switch has no branch for dialect ${dialect}.`);
+    }
+    return this.generateExpressionFromExpr(resultSet, context, branch.e, state);
+  }
+
+  generateSpread(
+    _resultSet: FieldInstanceResult,
+    _context: QueryStruct,
+    _frag: SpreadFragment,
+    _state: GenerateState
+  ): string {
+    throw new Error("Unexpanded spread encountered during SQL generation");
   }
 
   generateParameterFragment(
@@ -717,6 +759,16 @@ class QueryField extends QueryNode {
             `Internal Error: Partial application value referenced but not provided`
           );
         }
+      } else if (isFunctionParameterFragment(expr)) {
+        throw new Error(
+          `Internal Error: Function parameter fragment remaining during SQL generation`
+        );
+      } else if (isSQLExpressionFragment(expr)) {
+        s += this.generateSQLExpression(resultSet, context, expr, state);
+      } else if (isDialectSwitchFragment(expr)) {
+        s += this.generateDialectSwitch(resultSet, context, expr, state);
+      } else if (isSpreadFragment(expr)) {
+        s += this.generateSpread(resultSet, context, expr, state);
       } else if (expr.type == "dialect") {
         s += this.generateDialect(resultSet, context, expr, state);
       } else {

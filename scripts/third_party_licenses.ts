@@ -56,6 +56,7 @@ axios.defaults.httpsAgent = new https.Agent({ "keepAlive": true });
 
 const malloyPackages = [
   "@malloydata/malloy",
+  "@malloydata/lib",
   "@malloydata/render",
   "test",
   "@malloydata/db-bigquery",

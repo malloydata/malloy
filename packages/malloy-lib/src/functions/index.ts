@@ -21,31 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { StructDef, StructRef } from "../../../model/malloy_types";
-import { NamedSource } from "./named-source";
-
-export class SQLSource extends NamedSource {
-  elementType = "sqlSource";
-  structRef(): StructRef {
-    return this.structDef();
-  }
-  modelStruct(): StructDef | undefined {
-    const modelEnt = this.modelEntry(this.ref);
-    const entry = modelEnt?.entry;
-    if (!entry) {
-      this.log(`Undefined from_sql source '${this.refName}'`);
-      return;
-    }
-    if (entry.type === "function") {
-      this.log(`Cannot construct a source from a function '${this.refName}'`);
-      return;
-    } else if (entry.type === "query") {
-      this.log(`Cannot use 'from_sql()' to explore query '${this.refName}'`);
-      return;
-    } else if (!modelEnt.sqlType) {
-      this.log(`Cannot use 'from_sql()' to explore '${this.refName}'`);
-      return;
-    }
-    return entry;
-  }
-}
+export { CONCAT } from "./concat";
+export { STDDEV } from "./stddev";
+export { ROUND } from "./round";

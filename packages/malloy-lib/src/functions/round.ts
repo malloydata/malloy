@@ -21,31 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { StructDef, StructRef } from "../../../model/malloy_types";
-import { NamedSource } from "./named-source";
+import {
+  arg,
+  func,
+  overload,
+  param,
+  minScalar,
+  maxAnalytic,
+  sql
+} from "../util";
 
-export class SQLSource extends NamedSource {
-  elementType = "sqlSource";
-  structRef(): StructRef {
-    return this.structDef();
-  }
-  modelStruct(): StructDef | undefined {
-    const modelEnt = this.modelEntry(this.ref);
-    const entry = modelEnt?.entry;
-    if (!entry) {
-      this.log(`Undefined from_sql source '${this.refName}'`);
-      return;
-    }
-    if (entry.type === "function") {
-      this.log(`Cannot construct a source from a function '${this.refName}'`);
-      return;
-    } else if (entry.type === "query") {
-      this.log(`Cannot use 'from_sql()' to explore query '${this.refName}'`);
-      return;
-    } else if (!modelEnt.sqlType) {
-      this.log(`Cannot use 'from_sql()' to explore '${this.refName}'`);
-      return;
-    }
-    return entry;
-  }
-}
+// TODO second parameter
+export const ROUND = func(
+  "round",
+  overload(
+    minScalar("number"),
+    [param("value", maxAnalytic("number"))],
+    [sql("ROUND(", arg("value"), ")")]
+  )
+);
