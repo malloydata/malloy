@@ -65,19 +65,22 @@ export class DuckDBConnection extends DuckDBCommon {
           `SET FILE_SEARCH_PATH='${this.workingDirectory}'`
         );
       }
-      try {
-        await this.runDuckDBQuery("INSTALL 'json'");
-        await this.runDuckDBQuery("LOAD 'json'");
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Unable to load json extension', error);
-      }
-      try {
-        await this.runDuckDBQuery("INSTALL 'httpfs'");
-        await this.runDuckDBQuery("LOAD 'httpfs'");
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Unable to load httpfs extension', error);
+      const setupCmds = [
+        "INSTALL 'json'",
+        "LOAD 'json'",
+        "INSTALL 'httpfs'",
+        "LOAD 'httpfs'",
+        "INSTALL 'icu'",
+        "LOAD 'icu'",
+        "SET TimeZone='UTC'",
+      ];
+      for (const cmd of setupCmds) {
+        try {
+          await this.runDuckDBQuery(cmd);
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error(`duckdb setup ${cmd} => ${error}`);
+        }
       }
     };
     await this.connecting;

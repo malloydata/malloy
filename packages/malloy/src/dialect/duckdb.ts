@@ -328,12 +328,12 @@ export class DuckDBDialect extends Dialect {
         ? duration
         : mkExpr`FLOOR(${duration}/${inSeconds[units].toString()})`;
     }
-    if (from.valueType !== 'date') {
-      lVal = mkExpr`CAST((${lVal}) AS DATE)`;
-    }
-    if (to.valueType !== 'date') {
-      rVal = mkExpr`CAST((${rVal}) AS DATE)`;
-    }
+    // if (from.valueType !== 'date') {
+    //   lVal = mkExpr`CAST((${lVal}) AS DATE)`;
+    // }
+    // if (to.valueType !== 'date') {
+    //   rVal = mkExpr`CAST((${rVal}) AS DATE)`;
+    // }
     if (units === 'week') {
       // DuckDB's weeks start on Monday, but Malloy's weeks start on Sunday
       lVal = mkExpr`(${lVal} + INTERVAL 1 DAY)`;
@@ -395,12 +395,12 @@ export class DuckDBDialect extends Dialect {
   sqlLiteralTime(
     timeString: string,
     type: TimeFieldType,
-    _timezone: string
+    timezone: string
   ): string {
     if (type === 'date') {
       return `DATE '${timeString}'`;
     } else if (type === 'timestamp') {
-      return `TIMESTAMP '${timeString}'`;
+      return `TIMESTAMPTZ '${timeString} ${timezone}'`;
     } else {
       throw new Error(`Unknown Literal time format ${type}`);
     }

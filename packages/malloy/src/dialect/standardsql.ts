@@ -403,7 +403,7 @@ ${indent(sql)}
     } else if (type === 'timestamp') {
       return `TIMESTAMP('${timeString}', '${timezone}')`;
     } else {
-      throw new Error(`Unknown Liternal time format ${type}`);
+      throw new Error(`Unsupported Literal time format ${type}`);
     }
   }
 

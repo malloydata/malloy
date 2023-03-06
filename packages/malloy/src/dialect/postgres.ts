@@ -326,12 +326,12 @@ export class PostgresDialect extends Dialect {
   sqlLiteralTime(
     timeString: string,
     type: TimeFieldType,
-    _timezone: string
+    timezone: string
   ): string {
     if (type === 'date') {
       return `DATE('${timeString}')`;
     } else if (type === 'timestamp') {
-      return `TIMESTAMP '${timeString}'`;
+      return `TIMESTAMPTZ '${timeString} ${timezone}'`;
     } else {
       throw new Error(`Unknown Literal time format ${type}`);
     }

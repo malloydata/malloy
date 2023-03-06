@@ -176,7 +176,8 @@ export abstract class Dialect {
   abstract sqlLiteralTime(
     timeString: string,
     type: TimeFieldType,
-    timezone: string
+    timezone: string,
+    isLocale?: boolean
   ): string;
 
   abstract sqlLiteralString(literak: string): string;

@@ -102,6 +102,7 @@ const SCHEMA_PAGE_SIZE = 1000;
 export class PostgresConnection
   implements Connection, StreamingConnection, PersistSQLResults
 {
+  private isSetup = false;
   private schemaCache = new Map<
     string,
     {schema: StructDef; error?: undefined} | {error: string; schema?: undefined}
@@ -225,6 +226,7 @@ export class PostgresConnection
   ): Promise<MalloyQueryData> {
     const client = await this.getClient();
     await client.connect();
+    await this.connectionSetup();
 
     let result = await client.query(sqlCommand);
     if (Array.isArray(result)) {
@@ -364,6 +366,12 @@ export class PostgresConnection
     await this.executeSQLRaw('SELECT 1');
   }
 
+  public async connectionSetup(): Promise<void> {
+    if (!this.isSetup) {
+      this.executeSQLRaw("SET TIME ZONE 'UTC'");
+    }
+  }
+
   public async runSQL(
     sql: string,
     {rowLimit}: RunSQLOptions = {},
@@ -371,6 +379,7 @@ export class PostgresConnection
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
 
+    await this.connectionSetup();
     return await this.runPostgresQuery(
       sql,
       rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
