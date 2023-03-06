@@ -30,7 +30,7 @@
     "test-bigquery": "MALLOY_DATABASE=bigquery jest --runInBand",
     "test-postgres": "MALLOY_DATABASE=postgres jest --runInBand",
     "test-duckdb": "MALLOY_DATABASE=duckdb jest --runInBand",
-    "test-silent": "jest --runInBand --reporters jest-silent-reporter",
+    "test-silent": "JEST_SILENT_REPORTER_SHOW_PATHS=true jest --runInBand --reporters jest-silent-reporter",
     "test-deps": "npm run build && npx jest -t dependencies",
     "third-party-licenses": "ts-node scripts/third_party_licenses",
     "malloyc": "ts-node scripts/malloy-to-json",
