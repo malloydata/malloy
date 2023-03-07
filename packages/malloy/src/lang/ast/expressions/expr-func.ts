@@ -25,10 +25,14 @@ import {
   Expr,
   FunctionDef,
   FunctionOverloadDef,
+  isAtomicFieldType,
   isExpressionTypeLEQ,
   maxOfExpressionTypes
 } from "../../../model/malloy_types";
+import { errorFor } from "../ast-utils";
+import { StructSpaceFieldBase } from "../field-space/struct-space-field-base";
 
+import { FieldReference } from "../query-items/field-references";
 import { ExprValue } from "../types/expr-value";
 import { ExpressionDef } from "../types/expression-def";
 import { FieldSpace } from "../types/field-space";
@@ -36,8 +40,13 @@ import { compressExpr } from "./utils";
 
 export class ExprFunc extends ExpressionDef {
   elementType = "function call()";
-  constructor(readonly name: string, readonly args: ExpressionDef[]) {
+  constructor(
+    readonly name: string,
+    readonly args: ExpressionDef[],
+    readonly source?: FieldReference
+  ) {
     super({ "args": args });
+    this.has({ "source": source });
   }
 
   getExpression(fs: FieldSpace): ExprValue {
@@ -57,7 +66,39 @@ export class ExprFunc extends ExpressionDef {
         "value": []
       };
     }
-    const argExprs = this.args.map((arg) => arg.getExpression(fs));
+    let implicitExpr: ExprValue | undefined = undefined;
+    let structPath = this.source?.refString;
+    if (this.source) {
+      const sourceFoot = this.source.getField(fs).found;
+      if (sourceFoot) {
+        const footType = sourceFoot.typeDesc();
+        if (isAtomicFieldType(footType.dataType)) {
+          implicitExpr = {
+            "dataType": footType.dataType,
+            "expressionType": footType.expressionType,
+            "value": [{ "type": "field", "path": this.source.refString }]
+          };
+          structPath = this.source.sourceString;
+        } else {
+          if (!(sourceFoot instanceof StructSpaceFieldBase)) {
+            const message = `Aggregate source cannot be a ${footType.dataType}`;
+            this.log(message);
+            return errorFor(message);
+          }
+        }
+      } else {
+        const message = `Reference to undefined value ${this.source.refString}`;
+        this.log(message);
+        return errorFor(message);
+      }
+    }
+    const argExprsWithoutImplicit = this.args.map((arg) =>
+      arg.getExpression(fs)
+    );
+    const argExprs = [
+      ...(implicitExpr ? [implicitExpr] : []),
+      ...argExprsWithoutImplicit
+    ];
     const overload = findOverload(func, argExprs);
     if (overload === undefined) {
       this.log(
@@ -71,19 +112,35 @@ export class ExprFunc extends ExpressionDef {
         "value": []
       };
     }
-    const funcCall: Expr = [
-      {
-        "type": "function_call",
-        overload,
-        "args": argExprs.map((x) => x.value)
-      }
-    ];
-
     const type = overload.returnType;
     const expressionType = maxOfExpressionTypes([
       type.expressionType,
       ...argExprs.map((e) => e.expressionType)
     ]);
+    if (
+      overload.returnType.expressionType === "scalar" &&
+      this.source !== undefined
+    ) {
+      this.log(
+        `Cannot call function ${this.name}(${argExprs
+          .map((e) => e.dataType)
+          .join(", ")}) with source`
+      );
+      return {
+        "dataType": "unknown",
+        expressionType,
+        "value": []
+      };
+    }
+    const funcCall: Expr = [
+      {
+        "type": "function_call",
+        overload,
+        "args": argExprs.map((x) => x.value),
+        expressionType,
+        structPath
+      }
+    ];
     if (type.dataType == "any") {
       this.log(
         `Invalid return type ${type.dataType} for function '${this.name}'`

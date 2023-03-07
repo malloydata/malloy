@@ -153,6 +153,11 @@ export function exprMap(expr: Expr, func: (fragment: Fragment) => Expr): Expr {
         case "function_parameter":
         case "parameter":
           return fragment;
+        case "function_call":
+          return {
+            ...fragment,
+            "args": fragment.args.map((arg) => exprMap(arg, func))
+          };
         case "filterExpression":
           return {
             ...fragment,

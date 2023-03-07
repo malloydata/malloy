@@ -376,16 +376,9 @@ class QueryField extends QueryNode {
     );
   }
 
-  generateFunctionCallExpression(
-    resultSet: FieldInstanceResult,
-    context: QueryStruct,
-    frag: FunctionCallFragment,
-    state: GenerateState
-  ): string {
-    const overload = frag.overload;
-    const args = frag.args;
+  private expandFunctionCall(overload: FunctionOverloadDef, args: Expr[]) {
     const paramMap = this.getParameterMap(overload, args.length);
-    const funcCall: Expr = exprMap(overload.e, (fragment) => {
+    return exprMap(overload.e, (fragment) => {
       if (typeof fragment === "string") {
         return [fragment];
       } else if (fragment.type == "spread") {
@@ -425,7 +418,55 @@ class QueryField extends QueryNode {
       }
       return [fragment];
     });
-    return this.generateExpressionFromExpr(resultSet, context, funcCall, state);
+  }
+
+  generateFunctionCallExpression(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    frag: FunctionCallFragment,
+    state: GenerateState
+  ): string {
+    const overload = frag.overload;
+    const args = frag.args;
+    const distinctKey = this.generateDistinctKeyIfNecessary(
+      resultSet,
+      context,
+      frag.structPath
+    );
+    if (distinctKey) {
+      if (!context.dialect.supportsAggDistinct) {
+        throw new Error(
+          `Asymmetric aggregates are not supported for custom functions in ${context.dialect.name}.`
+        );
+      }
+      const argsExpressions = args.map((arg) => {
+        return this.generateExpressionFromExpr(resultSet, context, arg, state);
+      });
+      return context.dialect.sqlAggDistinct(
+        distinctKey,
+        argsExpressions,
+        (valNames) => {
+          const funcCall = this.expandFunctionCall(
+            overload,
+            valNames.map((v) => [v])
+          );
+          return this.generateExpressionFromExpr(
+            resultSet,
+            context,
+            funcCall,
+            state
+          );
+        }
+      );
+    } else {
+      const funcCall: Expr = this.expandFunctionCall(overload, args);
+      return this.generateExpressionFromExpr(
+        resultSet,
+        context,
+        funcCall,
+        state
+      );
+    }
   }
 
   generateDialectSwitch(
@@ -2054,6 +2095,20 @@ class QueryQuery extends QueryField {
           }
         }
         this.addDependantExpr(resultStruct, context, expr.e, joinStack);
+      } else if (isFunctionCallFragment(expr)) {
+        if (expr.structPath) {
+          this.addDependantPath(
+            resultStruct,
+            context,
+            expr.structPath,
+            true,
+            joinStack
+          );
+        }
+        // TODO what about mirroring the above "we are doing a sum in the root"
+        for (const e of expr.args) {
+          this.addDependantExpr(resultStruct, context, e, joinStack);
+        }
       } else if (isAnalyticFragment(expr)) {
         resultStruct.root().queryUsesPartitioning = true;
       }

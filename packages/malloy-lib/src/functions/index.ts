@@ -22,5 +22,5 @@
  */
 
 export { CONCAT } from "./concat";
-export { STDDEV } from "./stddev";
+export { STDDEV, CUSTOM_AVG } from "./stddev";
 export { ROUND } from "./round";

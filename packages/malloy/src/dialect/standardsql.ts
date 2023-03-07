@@ -68,6 +68,7 @@ export class StandardSQLDialect extends Dialect {
   unnestWithNumbers = false;
   defaultSampling = { "enable": false };
   supportUnnestArrayAgg = false;
+  supportsAggDistinct = false;
   supportsCTEinCoorelatedSubQueries = false;
   dontUnionIndex = true; // bigquery can't use a sample table more than once in a query.
   supportsQualify = true;

@@ -280,7 +280,9 @@ export function isFunctionParameterFragment(
 export interface FunctionCallFragment {
   type: "function_call";
   overload: FunctionOverloadDef;
+  expressionType: ExpressionType;
   args: Expr[];
+  structPath?: string;
 }
 
 export function isFunctionCallFragment(f: Fragment): f is FunctionCallFragment {

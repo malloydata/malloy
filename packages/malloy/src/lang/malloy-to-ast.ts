@@ -1052,6 +1052,23 @@ export class MalloyToAST
     return new ast.ForRange(begin, duration, units);
   }
 
+  visitExprAggFunc(pcx: parse.ExprAggFuncContext): ast.ExpressionDef {
+    const argsCx = pcx.argumentList();
+    const args = argsCx ? this.allFieldExpressions(argsCx.fieldExpr()) : [];
+
+    const idCx = pcx.id();
+    const fn = this.getIdText(idCx);
+
+    const pathCx = pcx.fieldPath();
+    const path = pathCx ? this.visitFieldPath(pathCx) : undefined;
+    const source = pathCx && path ? this.astAt(path, pathCx) : undefined;
+
+    if (ast.ExprTimeExtract.extractor(fn)) {
+      return this.astAt(new ast.ExprTimeExtract(fn, args), pcx);
+    }
+    return this.astAt(new ast.ExprFunc(fn, args, source), pcx);
+  }
+
   visitExprFunc(pcx: parse.ExprFuncContext): ast.ExpressionDef {
     const argsCx = pcx.argumentList();
     const args = argsCx ? this.allFieldExpressions(argsCx.fieldExpr()) : [];

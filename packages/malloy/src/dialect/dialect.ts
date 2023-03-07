@@ -63,6 +63,7 @@ export abstract class Dialect {
   abstract unnestWithNumbers: boolean;
   protected abstract functionInfo: Record<string, FunctionInfo>;
   abstract defaultSampling: Sampling;
+  abstract supportsAggDistinct: boolean;
   abstract supportUnnestArrayAgg: boolean; // won't need UDFs for nested pipelines
   abstract supportsCTEinCoorelatedSubQueries: boolean;
   abstract dontUnionIndex: boolean;
@@ -217,7 +218,15 @@ export abstract class Dialect {
   }
 
   sqlSumDistinct(_key: string, _value: string): string {
-    return "sqlSumDistinct called bu not implemented";
+    return "sqlSumDistinct called but not implemented";
+  }
+
+  sqlAggDistinct(
+    _key: string,
+    _values: string[],
+    _func: (valNames: string[]) => string
+  ) {
+    return "sqlAggDistinct called but not implemented";
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {

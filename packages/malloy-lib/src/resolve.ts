@@ -22,9 +22,9 @@
  */
 
 import { ModelDef } from "@malloydata/malloy";
-import { CONCAT, ROUND, STDDEV } from "./functions";
+import { CONCAT, ROUND, STDDEV, CUSTOM_AVG } from "./functions";
 
-const funcs = [CONCAT, STDDEV, ROUND];
+const funcs = [CONCAT, STDDEV, ROUND, CUSTOM_AVG];
 
 export const BIGQUERY_FUNCTIONS: ModelDef = {
   "contents": Object.fromEntries(funcs.map((f) => [f.name, f])),

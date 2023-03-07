@@ -57,7 +57,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     const result = await expressionModel
       .loadQuery(`
       import "malloy://bigquery_functions"
-      query: aircraft_models -> { ${type}: f is ${expr} }`)
+      query: aircraft -> { ${type}: f is ${expr} }`)
       .run();
     console.log(result.sql);
     expect(result.data.path(0, "f").value).toBe(expected);
@@ -106,6 +106,25 @@ expressionModels.forEach((expressionModel, databaseName) => {
   // for cases like this when the data type matches but not the expression type
   it(`stddev works ? - ${databaseName}`, async () => {
     await funcTestAgg("round(stddev(count()))", 39);
+  });
+
+  it(`stddev works on join field - ${databaseName}`, async () => {
+    await funcTestAgg("round(aircraft_models.seats.stddev())", 39);
+  });
+
+  it(`custom_avg- ${databaseName}`, async () => {
+    await funcTestAgg("aircraft_models.seats.custom_avg()", 10);
+  });
+
+  it(`avg - ${databaseName}`, async () => {
+    await funcTestAgg("aircraft_models.seats.avg()", 10);
+  });
+
+  it(`custom_avg works on join field - ${databaseName}`, async () => {
+    await funcTestAgg(
+      "aircraft_models.seats.custom_avg() = aircraft_models.seats.avg()",
+      true
+    );
   });
 
   // it(`num_args works - ${databaseName}`, async () => {

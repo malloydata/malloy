@@ -406,6 +406,9 @@ fieldExpr
       aggregate
       OPAREN (fieldExpr | STAR)? CPAREN                    # exprAggregate
   | OPAREN partialAllowedFieldExpr CPAREN                  # exprExpr
+  | (fieldPath DOT)?
+      id
+      OPAREN ( argumentList? ) CPAREN                      # exprAggFunc
   | (id | timeframe) OPAREN ( argumentList? ) CPAREN       # exprFunc
   | pickStatement                                          # exprPick
   | ungroup OPAREN fieldExpr (COMMA fieldName)* CPAREN     # exprUngroup

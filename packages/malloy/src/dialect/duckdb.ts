@@ -149,6 +149,7 @@ export class DuckDBDialect extends Dialect {
   unnestWithNumbers = true;
   defaultSampling = { "rows": 50000 };
   supportUnnestArrayAgg = true;
+  supportsAggDistinct = true;
   supportsCTEinCoorelatedSubQueries = true;
   dontUnionIndex = false;
   supportsQualify = true;
@@ -415,6 +416,22 @@ export class DuckDBDialect extends Dialect {
       )
     )`;
   }
+
+  sqlAggDistinct(
+    key: string,
+    values: string[],
+    func: (valNames: string[]) => string
+  ): string {
+    return `(
+      SELECT ${func(values.map((v, i) => `a.val${i}`))} as value
+      FROM (
+        SELECT UNNEST(list(distinct {key:${key}, ${values
+      .map((v, i) => `val${i}: ${v}`)
+      .join(",")}})) a
+      )
+    )`;
+  }
+
   // sqlSumDistinct(key: string, value: string): string {
   //   const _factor = 32;
   //   const precision = 0.000001;
