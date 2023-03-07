@@ -7,20 +7,13 @@ We've built a Visual Studio Code extension to facilitate building Malloy data mo
 
 ---
 
-## Install the Visual Studio Code Extension locally
+## Installing Malloy
 
-To write your own Malloy models, use the VS Code Extension, currently available for Mac, Linux, and Windows machines.
+The easiest way to try Malloy is with our VS Code Extension, which provides a place to create Malloy models, execute queries, get help, and more. VS Code is a text editor and IDE (integrated development environment) that runs on your desktop or in your browser. A few ways to install the extension:
 
-1. **Download Visual Studio Code**: Download [Visual Studio Code](https://code.visualstudio.com/)
-
-2. **Add the Malloy (pre-release) extension from the Visual Studio Code Marketplace**: Open VS Code and click the Extensions button on the far left (it looks like 4 blocks with one flying away). This will open the Extension Marketplace. Search for "Malloy" and, once found, click "Install"
-
-3. **Download and unzip the [Sample Models](https://malloydata.github.io/malloy/aux/generated/samples.zip)** (models + data).
-
-4. **Open the samples folder in VS Code**. In VS Code, go to File > **Open Folder**... select samples/duckdb > Open. DuckDB is built into the extension so you're ready to run these.
-
-5. **Start with `1_airports.malloy` in the FAA dataset**. This is a sub-sample of the NTSB Flights dataset. In the editor pane, above `source: airports`, click the word "Preview" to run a `SELECT *`, and click the word "Run" above any query object to run it (see gif below for example).
-
+* [I already have VS Code](https://malloydata.github.io/documentation/setup/extension.html#using-the-malloy-extension-on-your-desktop)
+* [I use BigQuery and Google Cloud](https://malloydata.github.io/documentation/setup/extension.html#using-the-malloy-extension-on-google-cloud-shell-editor).
+* [I have a Github account and want to try Malloy on a `.csv` or `.parquet` file in a repository](https://malloydata.github.io/documentation/setup/extension.html#using-the-malloy-extension-on-github-dev).
 
 ![show_run](https://user-images.githubusercontent.com/1093458/182458787-ca228186-c954-4a07-b298-f92dbf91e48d.gif)
 
