@@ -1,8 +1,6 @@
 # Malloy
 Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy currently supports BigQuery, Postgres, and DuckDB. 
 
-We've built a Visual Studio Code extension to facilitate building Malloy data models, querying and transforming data, and creating simple visualizations and dashboards.
-
 ### [Click here](https://github.dev/malloydata/try-malloy/airports.malloy) to try Malloy in your browser!
 
 ---
