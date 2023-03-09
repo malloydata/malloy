@@ -105,7 +105,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   private worker: Worker | null = null;
 
   private remoteFileCallbacks: RemoteFileCallback[] = [];
-  private remoteFileStatus: Record<string, boolean> = {};
+  private remoteFileStatus: Record<string, Promise<boolean>> = {};
 
   constructor(
     public readonly name: string,
@@ -207,24 +207,34 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;
   }> {
-    await this.setup();
-
-    for (const tableUri of tables) {
-      const {tablePath} = parseTableURI(tableUri);
-      if (tablePath.match(/^https?:\/\//)) {
-        continue;
-      }
-      if (this.remoteFileStatus[tablePath]) {
-        continue;
-      }
+    const fetchRemoteFile = async (tablePath: string): Promise<boolean> => {
       for (const callback of this.remoteFileCallbacks) {
-        this.remoteFileStatus[tablePath] = true;
         const data = await callback(tablePath);
         if (data) {
           await this.database?.registerFileBuffer(tablePath, data);
           break;
         }
       }
+      return true;
+    };
+
+    await this.setup();
+
+    for (const tableUri of tables) {
+      const {tablePath} = parseTableURI(tableUri);
+      // http and s3 urls are handled by duckdb-wasm
+      if (tablePath.match(/^https?:\/\//)) {
+        continue;
+      }
+      if (tablePath.match(/^s3:\/\//)) {
+        continue;
+      }
+      // If we're not trying to fetch start trying
+      if (!(tablePath in this.remoteFileStatus)) {
+        this.remoteFileStatus[tablePath] = fetchRemoteFile(tablePath);
+      }
+      // Wait for response
+      await this.remoteFileStatus[tablePath];
     }
     return super.fetchSchemaForTables(tables);
   }
@@ -249,7 +259,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   }
 
   async registerRemoteTable(tableName: string, url: string): Promise<void> {
-    this.remoteFileStatus[tableName] = true;
+    this.remoteFileStatus[tableName] = Promise.resolve(true);
     this.database?.registerFileURL(
       tableName,
       url,
