@@ -97,6 +97,14 @@ expressionModels.forEach((expressionModel, databaseName) => {
     await funcTest("round(1.2)", 1);
   });
 
+  it(`round works with precision - ${databaseName}`, async () => {
+    await funcTest("round(12.2, -1)", 10);
+  });
+
+  it(`round works with precision [error, precision must be int] - ${databaseName}`, async () => {
+    await funcTest("round(12.2, -1.5)", 10);
+  });
+
   it(`stddev works - ${databaseName}`, async () => {
     await funcTestAgg("round(stddev(seats))", 39);
     // TODO better handle case where concat is called with no arguments...
@@ -124,6 +132,40 @@ expressionModels.forEach((expressionModel, databaseName) => {
     await funcTestAgg(
       "aircraft_models.seats.custom_avg() = aircraft_models.seats.avg()",
       true
+    );
+  });
+
+  it(`custom_avg no symmetric, filter - ${databaseName}`, async () => {
+    await funcTestAgg(
+      "custom_avg(aircraft_models.seats) { where: aircraft_models.seats > 3 }",
+      10
+    );
+  });
+
+  it(`custom_avg with filter - ${databaseName}`, async () => {
+    await funcTestAgg(
+      "aircraft_models.seats.custom_avg() { where: 1 = 1 }",
+      10
+    );
+  });
+
+  it(`silly with filter - ${databaseName}`, async () => {
+    await funcTestAgg("silly(aircraft_models.seats, count())", 10);
+  });
+
+  it(`silly symmetric with filter and agg - ${databaseName}`, async () => {
+    await funcTestAgg(
+      "aircraft_models.silly(aircraft_models.seats, count())",
+      10
+    );
+  });
+
+  it(`silly symmetric with filter - ${databaseName}`, async () => {
+    await funcTestAgg(
+      `aircraft_models.silly(aircraft_models.seats, 1) {
+        where: aircraft_models.seats > 3
+      }`,
+      10
     );
   });
 

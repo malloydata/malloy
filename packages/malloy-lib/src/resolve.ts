@@ -23,8 +23,30 @@
 
 import { ModelDef } from "@malloydata/malloy";
 import { CONCAT, ROUND, STDDEV, CUSTOM_AVG } from "./functions";
+import {
+  arg,
+  func,
+  maxAnalytic,
+  maxScalar,
+  minAggregate,
+  overload,
+  param,
+  sql
+} from "./util";
 
-const funcs = [CONCAT, STDDEV, ROUND, CUSTOM_AVG];
+export const SILLY = func(
+  "silly",
+  overload(
+    minAggregate("number"),
+    [
+      param("value1", maxScalar("number")),
+      param("value", maxAnalytic("number"))
+    ],
+    [sql("SUM(", arg("value1"), ") + ", arg("value"))]
+  )
+);
+
+const funcs = [CONCAT, STDDEV, ROUND, CUSTOM_AVG, SILLY];
 
 export const BIGQUERY_FUNCTIONS: ModelDef = {
   "contents": Object.fromEntries(funcs.map((f) => [f.name, f])),

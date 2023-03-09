@@ -38,5 +38,13 @@ export const ROUND = func(
     minScalar("number"),
     [param("value", maxAnalytic("number"))],
     [sql("ROUND(", arg("value"), ")")]
+  ),
+  overload(
+    minScalar("number"),
+    [
+      param("value", maxAnalytic("number")),
+      param("precision", maxAnalytic("number"))
+    ],
+    [sql("ROUND(", arg("value"), ", ", arg("precision"), ")")]
   )
 );

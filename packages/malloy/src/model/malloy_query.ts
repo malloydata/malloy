@@ -428,6 +428,7 @@ class QueryField extends QueryNode {
   ): string {
     const overload = frag.overload;
     const args = frag.args;
+    // TODO only do this part if there even is a structPath to begin with?
     const distinctKey = this.generateDistinctKeyIfNecessary(
       resultSet,
       context,
@@ -440,7 +441,7 @@ class QueryField extends QueryNode {
         );
       }
       const argsExpressions = args.map((arg) => {
-        return this.generateExpressionFromExpr(resultSet, context, arg, state);
+        return this.generateDimFragment(resultSet, context, arg, state);
       });
       return context.dialect.sqlAggDistinct(
         distinctKey,
@@ -459,7 +460,14 @@ class QueryField extends QueryNode {
         }
       );
     } else {
-      const funcCall: Expr = this.expandFunctionCall(overload, args);
+      const mappedArgs =
+        overload.returnType.expressionType === "aggregate"
+          ? args.map((arg) => {
+              // TODO how do I know whether filters need to be applied to a dim argument or not?
+              return [this.generateDimFragment(resultSet, context, arg, state)];
+            })
+          : args;
+      const funcCall: Expr = this.expandFunctionCall(overload, mappedArgs);
       return this.generateExpressionFromExpr(
         resultSet,
         context,
@@ -551,15 +559,10 @@ class QueryField extends QueryNode {
   generateDimFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    expr: AggregateFragment,
+    expr: Expr,
     state: GenerateState
   ): string {
-    let dim = this.generateExpressionFromExpr(
-      resultSet,
-      context,
-      expr.e,
-      state
-    );
+    let dim = this.generateExpressionFromExpr(resultSet, context, expr, state);
     if (state.whereSQL) {
       dim = `CASE WHEN ${state.whereSQL} THEN ${dim} END`;
     }
@@ -629,7 +632,7 @@ class QueryField extends QueryNode {
     expr: AggregateFragment,
     state: GenerateState
   ): string {
-    const dimSQL = this.generateDimFragment(resultSet, context, expr, state);
+    const dimSQL = this.generateDimFragment(resultSet, context, expr.e, state);
     const distinctKeySQL = this.generateDistinctKeyIfNecessary(
       resultSet,
       context,
@@ -654,7 +657,7 @@ class QueryField extends QueryNode {
     expr: AggregateFragment,
     state: GenerateState
   ): string {
-    const dimSQL = this.generateDimFragment(resultSet, context, expr, state);
+    const dimSQL = this.generateDimFragment(resultSet, context, expr.e, state);
     const f =
       expr.function === "count_distinct"
         ? "count(distinct "
@@ -669,7 +672,7 @@ class QueryField extends QueryNode {
     state: GenerateState
   ): string {
     // find the structDef and return the path to the field...
-    const dimSQL = this.generateDimFragment(resultSet, context, expr, state);
+    const dimSQL = this.generateDimFragment(resultSet, context, expr.e, state);
     const distinctKeySQL = this.generateDistinctKeyIfNecessary(
       resultSet,
       context,
@@ -2044,6 +2047,7 @@ class QueryQuery extends QueryField {
             joinStack
           );
         }
+        this.addDependantExpr(resultStruct, context, expr.e, joinStack);
       } else if (isDialectFragment(expr)) {
         const expressions: Expr[] = [];
         switch (expr.function) {
