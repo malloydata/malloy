@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DataColumn } from "@malloydata/malloy";
-import { HTMLTextRenderer } from "./text";
+import {DataColumn} from '@malloydata/malloy';
+import {HTMLTextRenderer} from './text';
 
 export class HTMLNumberRenderer extends HTMLTextRenderer {
   getNumber(data: DataColumn): number | null {

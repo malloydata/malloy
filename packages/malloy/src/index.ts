@@ -70,15 +70,15 @@ export {
   Segment,
   isFilteredAliasedName,
   flattenQuery,
-  expressionIsCalculation
-} from "./model";
+  expressionIsCalculation,
+} from './model';
 export {
   // Neede for VSCode extension
   HighlightType,
   // Needed for tests only
-  MalloyTranslator
-} from "./lang";
-export type { LogMessage, TranslateResponse } from "./lang";
+  MalloyTranslator,
+} from './lang';
+export type {LogMessage, TranslateResponse} from './lang';
 export {
   Malloy,
   Runtime,
@@ -99,8 +99,8 @@ export {
   CSVWriter,
   JSONWriter,
   Parse,
-  DataWriter
-} from "./malloy";
+  DataWriter,
+} from './malloy';
 export type {
   Explore,
   Model,
@@ -121,9 +121,9 @@ export type {
   PreparedResultMaterializer,
   SQLBlockMaterializer,
   ExploreMaterializer,
-  WriteStream
-} from "./malloy";
-export type { RunSQLOptions } from "./run_sql_options";
+  WriteStream,
+} from './malloy';
+export type {RunSQLOptions} from './run_sql_options';
 export type {
   URLReader,
   InfoConnection,
@@ -136,7 +136,7 @@ export type {
   PooledConnection,
   TestableConnection,
   PersistSQLResults,
-  StreamingConnection
-} from "./runtime_types";
-export type { Loggable } from "./malloy";
-export { toAsyncGenerator } from "./connection_utils";
+  StreamingConnection,
+} from './runtime_types';
+export type {Loggable} from './malloy';
+export {toAsyncGenerator} from './connection_utils';

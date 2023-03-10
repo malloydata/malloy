@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { TurtleDecl } from "../query-properties/nest";
-import { Turtles } from "../source-properties/turtles";
-import { FieldDeclaration } from "../query-items/field-declaration";
-import { Join } from "../query-properties/joins";
-import { MalloyElement } from "./malloy-element";
+import {TurtleDecl} from '../query-properties/nest';
+import {Turtles} from '../source-properties/turtles';
+import {FieldDeclaration} from '../query-items/field-declaration';
+import {Join} from '../query-properties/joins';
+import {MalloyElement} from './malloy-element';
 
 export type FieldDecl = FieldDeclaration | Join | TurtleDecl | Turtles;
 export function isFieldDecl(f: MalloyElement): f is FieldDecl {

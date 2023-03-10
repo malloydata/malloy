@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { TurtleDecl } from "../query-properties/nest";
-import { ListOf } from "../types/malloy-element";
+import {TurtleDecl} from '../query-properties/nest';
+import {ListOf} from '../types/malloy-element';
 
 export class Turtles extends ListOf<TurtleDecl> {
   constructor(turtles: TurtleDecl[]) {
-    super("turtleDeclarationList", turtles);
+    super('turtleDeclarationList', turtles);
   }
 }

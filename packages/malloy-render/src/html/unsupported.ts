@@ -21,23 +21,23 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DataColumn } from "@malloydata/malloy";
-import { Renderer } from "../renderer";
-import { createNullElement } from "./utils";
+import {DataColumn} from '@malloydata/malloy';
+import {Renderer} from '../renderer';
+import {createNullElement} from './utils';
 
 export class HTMLUnsupportedRenderer implements Renderer {
   constructor(private readonly document: Document) {}
 
   getText(data: DataColumn): string | null {
     const value = data.value;
-    if (typeof value === "string") {
+    if (typeof value === 'string') {
       return value;
     } else if (value === null) {
       return null;
     } else {
       const record = data.value as Record<string, unknown>;
-      if ("value" in record && typeof record["value"] === "string") {
-        return record["value"];
+      if ('value' in record && typeof record['value'] === 'string') {
+        return record['value'];
       }
     }
     return JSON.stringify(data.value);
@@ -49,7 +49,7 @@ export class HTMLUnsupportedRenderer implements Renderer {
       return createNullElement(this.document);
     }
 
-    const element = this.document.createElement("span");
+    const element = this.document.createElement('span');
     element.appendChild(this.document.createTextNode(text));
     return element;
   }

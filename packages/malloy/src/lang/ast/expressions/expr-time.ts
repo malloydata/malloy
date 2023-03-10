@@ -25,28 +25,28 @@ import {
   ExpressionType,
   Fragment,
   TimeFieldType,
-  isTimeFieldType
-} from "../../../model/malloy_types";
+  isTimeFieldType,
+} from '../../../model/malloy_types';
 
-import { FieldSpace } from "../types/field-space";
-import { compressExpr } from "./utils";
-import { ExprValue } from "../types/expr-value";
-import { ExpressionDef } from "../types/expression-def";
+import {FieldSpace} from '../types/field-space';
+import {compressExpr} from './utils';
+import {ExprValue} from '../types/expr-value';
+import {ExpressionDef} from '../types/expression-def';
 
 export class ExprTime extends ExpressionDef {
-  elementType = "timestampOrDate";
+  elementType = 'timestampOrDate';
   readonly translationValue: ExprValue;
   constructor(
     timeType: TimeFieldType,
     value: Fragment[] | string,
-    expressionType: ExpressionType = "scalar"
+    expressionType: ExpressionType = 'scalar'
   ) {
     super();
     this.elementType = timeType;
     this.translationValue = {
-      "dataType": timeType,
+      dataType: timeType,
       expressionType,
-      "value": typeof value === "string" ? [value] : value
+      value: typeof value === 'string' ? [value] : value,
     };
   }
 
@@ -56,13 +56,13 @@ export class ExprTime extends ExpressionDef {
 
   static fromValue(timeType: TimeFieldType, expr: ExprValue): ExprTime {
     let value = expr.value;
-    if (timeType != expr.dataType) {
+    if (timeType !== expr.dataType) {
       const toTs: Fragment = {
-        "type": "dialect",
-        "function": "cast",
-        "safe": false,
-        "dstType": timeType,
-        "expr": expr.value
+        type: 'dialect',
+        function: 'cast',
+        safe: false,
+        dstType: timeType,
+        expr: expr.value,
       };
       if (isTimeFieldType(expr.dataType)) {
         toTs.srcType = expr.dataType;

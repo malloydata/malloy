@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { indent } from "../model/utils";
+import {indent} from '../model/utils';
 import {
   Expr,
   ExtractUnit,
@@ -34,39 +34,39 @@ import {
   isSamplingPercent,
   isSamplingRows,
   isTimeFieldType,
-  mkExpr
-} from "../model/malloy_types";
-import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
+  mkExpr,
+} from '../model/malloy_types';
+import {Dialect, DialectFieldList, FunctionInfo} from './dialect';
 
 const castMap: Record<string, string> = {
-  "number": "float64"
+  number: 'float64',
 };
 
 // These are the units that "TIMESTAMP_ADD" accepts
 const timestampAddUnits = [
-  "microsecond",
-  "millisecond",
-  "second",
-  "minute",
-  "hour",
-  "day"
+  'microsecond',
+  'millisecond',
+  'second',
+  'minute',
+  'hour',
+  'day',
 ];
 
 const extractMap: Record<string, string> = {
-  "day_of_week": "dayofweek",
-  "day_of_year": "dayofyear"
+  day_of_week: 'dayofweek',
+  day_of_year: 'dayofyear',
 };
 
 export class StandardSQLDialect extends Dialect {
-  name = "standardsql";
-  defaultNumberType = "FLOAT64";
-  udfPrefix = "__udf";
+  name = 'standardsql';
+  defaultNumberType = 'FLOAT64';
+  udfPrefix = '__udf';
   hasFinalStage = false;
-  stringTypeName = "STRING";
+  stringTypeName = 'STRING';
   divisionIsInteger = false;
   supportsSumDistinctFunction = false;
   unnestWithNumbers = false;
-  defaultSampling = { "enable": false };
+  defaultSampling = {enable: false};
   supportUnnestArrayAgg = false;
   supportsAggDistinct = false;
   supportsCTEinCoorelatedSubQueries = false;
@@ -75,10 +75,10 @@ export class StandardSQLDialect extends Dialect {
 
   // I think we want an optional list of parameters types that we force a cast to.
   functionInfo: Record<string, FunctionInfo> = {
-    "timestamp_seconds": {
-      "returnType": "timestamp"
+    timestamp_seconds: {
+      returnType: 'timestamp',
     },
-    "concat": { "returnType": "string" }
+    concat: {returnType: 'string'},
   };
 
   quoteTablePath(tablePath: string): string {
@@ -99,20 +99,20 @@ export class StandardSQLDialect extends Dialect {
     orderBy: string | undefined,
     limit: number | undefined
   ): string {
-    let tail = "";
+    let tail = '';
     if (limit !== undefined) {
       tail += ` LIMIT ${limit}`;
     }
     const fields = fieldList
-      .map((f) => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
-      .join(", ");
+      .map(f => `\n  ${f.sqlExpression} as ${f.sqlOutputName}`)
+      .join(', ');
     return `ARRAY_AGG(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}\n  ) END IGNORE NULLS ${orderBy} ${tail})`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const fields = fieldList
-      .map((f) => `${f.sqlExpression} as ${f.sqlOutputName}`)
-      .join(", ");
+      .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
+      .join(', ');
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}))`;
   }
 
@@ -129,11 +129,11 @@ export class StandardSQLDialect extends Dialect {
     fieldList: DialectFieldList
   ): string {
     const fields = fieldList
-      .map((f) => `${f.sqlExpression} as ${f.sqlOutputName}`)
-      .join(", ");
+      .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
+      .join(', ');
     const nullValues = fieldList
-      .map((f) => `NULL as ${f.sqlOutputName}`)
-      .join(", ");
+      .map(f => `NULL as ${f.sqlOutputName}`)
+      .join(', ');
 
     return `COALESCE(ANY_VALUE(CASE WHEN group_set=${groupSet} THEN STRUCT(${fields}) END), STRUCT(${nullValues}))`;
   }
@@ -170,12 +170,12 @@ export class StandardSQLDialect extends Dialect {
     const upperPart = `cast(cast(concat('0x', substr(to_hex(md5(${sqlDistinctKey})), 1, 15)) as int64) as numeric) * 4294967296`;
     const lowerPart = `cast(cast(concat('0x', substr(to_hex(md5(${sqlDistinctKey})), 16, 8)) as int64) as numeric)`;
     // See the comment below on `sql_sum_distinct` for why we multiply by this decimal
-    const precisionShiftMultiplier = "0.000000001";
+    const precisionShiftMultiplier = '0.000000001';
     return `(${upperPart} + ${lowerPart}) * ${precisionShiftMultiplier}`;
   }
 
   sqlGenerateUUID(): string {
-    return `GENERATE_UUID()`;
+    return 'GENERATE_UUID()';
   }
 
   sqlFieldReference(
@@ -324,7 +324,7 @@ ${indent(sql)}
 
   sqlMaybeQuoteIdentifier(identifier: string): string {
     return this.keywords.indexOf(identifier.toUpperCase()) > 0
-      ? "`" + identifier + "`"
+      ? '`' + identifier + '`'
       : identifier;
   }
 
@@ -333,7 +333,7 @@ ${indent(sql)}
   }
 
   sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {
-    if (sqlTime.valueType == "date") {
+    if (sqlTime.valueType === 'date') {
       if (isDateUnit(units)) {
         return mkExpr`DATE_TRUNC(${sqlTime.value},${units})`;
       }
@@ -348,30 +348,30 @@ ${indent(sql)}
   }
 
   sqlAlterTime(
-    op: "+" | "-",
+    op: '+' | '-',
     expr: TimeValue,
     n: Expr,
     timeframe: TimestampUnit
   ): Expr {
     let theTime = expr.value;
     let computeType: string = expr.valueType;
-    if (timeframe != "day" && timestampAddUnits.includes(timeframe)) {
+    if (timeframe !== 'day' && timestampAddUnits.includes(timeframe)) {
       // The units must be done in timestamp, no matter the input type
-      computeType = "timestamp";
-      if (expr.valueType != "timestamp") {
+      computeType = 'timestamp';
+      if (expr.valueType !== 'timestamp') {
         theTime = mkExpr`TIMESTAMP(${theTime})`;
       }
-    } else if (expr.valueType == "timestamp") {
+    } else if (expr.valueType === 'timestamp') {
       theTime = mkExpr`DATETIME(${theTime})`;
-      computeType = "datetime";
+      computeType = 'datetime';
     }
-    const funcName = computeType.toUpperCase() + (op == "+" ? "_ADD" : "_SUB");
+    const funcName = computeType.toUpperCase() + (op === '+' ? '_ADD' : '_SUB');
     const newTime = mkExpr`${funcName}(${theTime}, INTERVAL ${n} ${timeframe})`;
-    return computeType == "datetime" ? mkExpr`TIMESTAMP(${newTime})` : newTime;
+    return computeType === 'datetime' ? mkExpr`TIMESTAMP(${newTime})` : newTime;
   }
 
   ignoreInProject(fieldName: string): boolean {
-    return fieldName === "_PARTITIONTIME";
+    return fieldName === '_PARTITIONTIME';
   }
 
   sqlCast(cast: TypecastFragment): Expr {
@@ -379,12 +379,12 @@ ${indent(sql)}
       const dstType = castMap[cast.dstType] || cast.dstType;
       // This just makes the code look a little prettier ...
       if (!cast.safe && cast.srcType && isTimeFieldType(cast.srcType)) {
-        if (dstType == "date") {
+        if (dstType === 'date') {
           return mkExpr`DATE(${cast.expr})`;
         }
         return mkExpr`TIMESTAMP(${cast.expr})`;
       }
-      const castFunc = cast.safe ? "SAFE_CAST" : "CAST";
+      const castFunc = cast.safe ? 'SAFE_CAST' : 'CAST';
       return mkExpr`${castFunc}(${cast.expr}  AS ${dstType})`;
     }
     return cast.expr;
@@ -396,12 +396,12 @@ ${indent(sql)}
 
   sqlLiteralTime(
     timeString: string,
-    type: "date" | "timestamp",
+    type: 'date' | 'timestamp',
     timezone: string
   ): string {
-    if (type === "date") {
+    if (type === 'date') {
       return `DATE('${timeString}')`;
-    } else if (type === "timestamp") {
+    } else if (type === 'timestamp') {
       return `TIMESTAMP('${timeString}', '${timezone}')`;
     } else {
       throw new Error(`Unknown Liternal time format ${type}`);
@@ -411,21 +411,21 @@ ${indent(sql)}
   sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
     let lVal = from.value;
     let rVal = to.value;
-    let diffUsing = "TIMESTAMP_DIFF";
+    let diffUsing = 'TIMESTAMP_DIFF';
 
-    if (units == "second" || units == "minute" || units == "hour") {
-      if (from.valueType != "timestamp") {
+    if (units === 'second' || units === 'minute' || units === 'hour') {
+      if (from.valueType !== 'timestamp') {
         lVal = mkExpr`TIMESTAMP(${lVal})`;
       }
-      if (to.valueType != "timestamp") {
+      if (to.valueType !== 'timestamp') {
         rVal = mkExpr`TIMESTAMP(${rVal})`;
       }
     } else {
-      diffUsing = "DATE_DIFF";
-      if (from.valueType != "date") {
+      diffUsing = 'DATE_DIFF';
+      if (from.valueType !== 'date') {
         lVal = mkExpr`DATE(${lVal})`;
       }
-      if (to.valueType != "date") {
+      if (to.valueType !== 'date') {
         rVal = mkExpr`DATE(${rVal})`;
       }
     }
@@ -439,7 +439,7 @@ ${indent(sql)}
       }
       if (isSamplingRows(sample)) {
         throw new Error(
-          `StandardSQL doesn't support sampling by rows only percent`
+          "StandardSQL doesn't support sampling by rows only percent"
         );
       } else if (isSamplingPercent(sample)) {
         return `(SELECT * FROM ${tableSQL}  TABLESAMPLE SYSTEM (${sample.percent} PERCENT))`;
@@ -449,7 +449,7 @@ ${indent(sql)}
   }
 
   sqlLiteralString(literal: string): string {
-    const noVirgule = literal.replace(/\\/g, "\\\\");
+    const noVirgule = literal.replace(/\\/g, '\\\\');
     return "'" + noVirgule.replace(/'/g, "\\'") + "'";
   }
 }

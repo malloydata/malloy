@@ -154,7 +154,7 @@ export class ExprFunc extends ExpressionDef {
     return {
       "dataType": type.dataType,
       expressionType,
-      "value": compressExpr(funcCall)
+      value: compressExpr(funcCall),
     };
   }
 }

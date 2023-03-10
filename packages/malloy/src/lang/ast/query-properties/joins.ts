@@ -21,16 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Expr, isJoinOn, StructDef } from "../../../model/malloy_types";
-import { Source } from "../elements/source";
-import { compressExpr } from "../expressions/utils";
-import { ExpressionDef } from "../types/expression-def";
-import { FieldSpace } from "../types/field-space";
+import {Expr, isJoinOn, StructDef} from '../../../model/malloy_types';
+import {Source} from '../elements/source';
+import {compressExpr} from '../expressions/utils';
+import {ExpressionDef} from '../types/expression-def';
+import {FieldSpace} from '../types/field-space';
 import {
   ListOf,
   MalloyElement,
-  ModelEntryReference
-} from "../types/malloy-element";
+  ModelEntryReference,
+} from '../types/malloy-element';
 
 export abstract class Join extends MalloyElement {
   abstract name: ModelEntryReference;
@@ -39,26 +39,26 @@ export abstract class Join extends MalloyElement {
 }
 
 export class KeyJoin extends Join {
-  elementType = "joinOnKey";
+  elementType = 'joinOnKey';
   constructor(
     readonly name: ModelEntryReference,
     readonly source: Source,
     readonly keyExpr: ExpressionDef
   ) {
-    super({ "name": name, "source": source, "keyExpr": keyExpr });
+    super({name: name, source: source, keyExpr: keyExpr});
   }
 
   structDef(): StructDef {
     const sourceDef = this.source.structDef();
     const joinStruct: StructDef = {
       ...sourceDef,
-      "structRelationship": {
-        "type": "one",
-        "onExpression": ["('join fixup'='not done yet')"]
+      structRelationship: {
+        type: 'one',
+        onExpression: ["('join fixup'='not done yet')"],
       },
-      "location": this.location
+      location: this.location,
     };
-    if (sourceDef.structSource.type === "query") {
+    if (sourceDef.structSource.type === 'query') {
       // the name from query does not need to be preserved
       joinStruct.name = this.name.refString;
     } else {
@@ -72,20 +72,20 @@ export class KeyJoin extends Join {
     const exprX = this.keyExpr.getExpression(outer);
     if (inStruct.primaryKey) {
       const pkey = inStruct.fields.find(
-        (f) => (f.as || f.name) === inStruct.primaryKey
+        f => (f.as || f.name) === inStruct.primaryKey
       );
       if (pkey) {
         if (pkey.type === exprX.dataType) {
           inStruct.structRelationship = {
-            "type": "one",
-            "onExpression": [
+            type: 'one',
+            onExpression: [
               {
-                "type": "field",
-                "path": `${this.name}.${inStruct.primaryKey}`
+                type: 'field',
+                path: `${this.name}.${inStruct.primaryKey}`,
               },
-              "=",
-              ...exprX.value
-            ]
+              '=',
+              ...exprX.value,
+            ],
           };
           return;
         } else {
@@ -97,23 +97,23 @@ export class KeyJoin extends Join {
         this.log(`join_one: Primary key '${pkey}' not found in source`);
       }
     } else {
-      this.log(`join_one: Cannot use with unless source has a primary key`);
+      this.log('join_one: Cannot use with unless source has a primary key');
     }
   }
 }
 
-type ExpressionJoinType = "many" | "one" | "cross";
+type ExpressionJoinType = 'many' | 'one' | 'cross';
 export class ExpressionJoin extends Join {
-  elementType = "joinOnExpr";
-  joinType: ExpressionJoinType = "one";
+  elementType = 'joinOnExpr';
+  joinType: ExpressionJoinType = 'one';
   private expr?: ExpressionDef;
   constructor(readonly name: ModelEntryReference, readonly source: Source) {
-    super({ "name": name, "source": source });
+    super({name: name, source: source});
   }
 
   set joinOn(joinExpr: ExpressionDef | undefined) {
     this.expr = joinExpr;
-    this.has({ "on": joinExpr });
+    this.has({on: joinExpr});
   }
 
   get joinOn(): ExpressionDef | undefined {
@@ -121,12 +121,12 @@ export class ExpressionJoin extends Join {
   }
 
   fixupJoinOn(outer: FieldSpace, inStruct: StructDef): Expr | undefined {
-    if (this.expr == undefined) {
+    if (this.expr === undefined) {
       return;
     }
     const exprX = this.expr.getExpression(outer);
-    if (exprX.dataType !== "boolean") {
-      this.log("join conditions must be boolean expressions");
+    if (exprX.dataType !== 'boolean') {
+      this.log('join conditions must be boolean expressions');
       return;
     }
     const joinRel = inStruct.structRelationship;
@@ -139,10 +139,10 @@ export class ExpressionJoin extends Join {
     const sourceDef = this.source.structDef();
     const joinStruct: StructDef = {
       ...sourceDef,
-      "structRelationship": { "type": this.joinType },
-      "location": this.location
+      structRelationship: {type: this.joinType},
+      location: this.location,
     };
-    if (sourceDef.structSource.type === "query") {
+    if (sourceDef.structSource.type === 'query') {
       // the name from query does not need to be preserved
       joinStruct.name = this.name.refString;
       delete joinStruct.as;
@@ -155,6 +155,6 @@ export class ExpressionJoin extends Join {
 
 export class Joins extends ListOf<Join> {
   constructor(joins: Join[]) {
-    super("joinList", joins);
+    super('joinList', joins);
   }
 }

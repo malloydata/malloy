@@ -21,19 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DataColumn } from "@malloydata/malloy";
-import { Renderer } from "../renderer";
-import { createErrorElement } from "./utils";
+import {DataColumn} from '@malloydata/malloy';
+import {Renderer} from '../renderer';
+import {createErrorElement} from './utils';
 
 export class HTMLJSONRenderer implements Renderer {
   constructor(private readonly document: Document) {}
 
   async render(table: DataColumn): Promise<HTMLElement> {
     if (!table.isArray() && !table.isRecord()) {
-      createErrorElement(this.document, "Invalid data for chart renderer.");
+      createErrorElement(this.document, 'Invalid data for chart renderer.');
     }
 
-    const element = this.document.createElement("pre");
+    const element = this.document.createElement('pre');
     element.appendChild(
       this.document.createTextNode(JSON.stringify(table.value, undefined, 2))
     );

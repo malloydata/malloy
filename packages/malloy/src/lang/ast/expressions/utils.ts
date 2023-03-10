@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Expr, Fragment, mkExpr } from "../../../model/malloy_types";
+import {Expr, Fragment, mkExpr} from '../../../model/malloy_types';
 
-import { Equality } from "../types/equality";
+import {Equality} from '../types/equality';
 
 /**
  * If the passed expresion is not a single term, wrap it in parens
@@ -31,13 +31,13 @@ import { Equality } from "../types/equality";
  */
 function term(f: Fragment[]): Fragment[] {
   if (f.length > 1) {
-    return ["(", ...f, ")"];
+    return ['(', ...f, ')'];
   }
   if (f.length === 0) {
     // Trying to compose a binary expresion with an entity that has no value
     // this should at least cause the generated SQL to error, but likely
     // there has already been a semantic error reported.
-    return ["__MISSING_VALUE__"];
+    return ['__MISSING_VALUE__'];
   }
   return f;
 }
@@ -55,8 +55,8 @@ export function compose(
   right: Fragment[]
 ): Fragment[] {
   const opAlpha = op.match(/^[A-Za-z]/);
-  const leftSpace = left.length === 1 && opAlpha ? " " : "";
-  const rightSpace = right.length === 1 && opAlpha ? " " : "";
+  const leftSpace = left.length === 1 && opAlpha ? ' ' : '';
+  const rightSpace = right.length === 1 && opAlpha ? ' ' : '';
   const newOp = leftSpace + op + rightSpace;
   return [...term(left), newOp, ...term(right)];
 }
@@ -66,7 +66,7 @@ export function compressExpr(expr: Expr): Expr {
   const compressValue: Array<string | Fragment> = [];
   let buildString: string | undefined;
   for (const fragment of expr.flat()) {
-    if (typeof fragment === "string") {
+    if (typeof fragment === 'string') {
       buildString = buildString ? buildString + fragment : fragment;
     } else {
       if (buildString) {
@@ -84,7 +84,7 @@ export function compressExpr(expr: Expr): Expr {
 }
 
 export function nullsafeNot(expr: Expr, op?: Equality): Expr {
-  if (op === undefined || op === "!=" || op === "!~") {
+  if (op === undefined || op === '!=' || op === '!~') {
     return mkExpr`COALESCE(NOT(${expr}),FALSE)`;
   }
   return expr;

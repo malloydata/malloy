@@ -21,26 +21,26 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as model from "../../../model/malloy_types";
-import { mergeFields, nameOf } from "../../field-utils";
-import { FieldDeclaration } from "../query-items/field-declaration";
-import { FieldName, FieldSpace } from "../types/field-space";
-import { MalloyElement } from "../types/malloy-element";
-import { Join } from "../query-properties/joins";
-import { SpaceField } from "../types/space-field";
-import { SourceSpec, SpaceSeed } from "../space-seed";
+import * as model from '../../../model/malloy_types';
+import {mergeFields, nameOf} from '../../field-utils';
+import {FieldDeclaration} from '../query-items/field-declaration';
+import {FieldName, FieldSpace} from '../types/field-space';
+import {MalloyElement} from '../types/malloy-element';
+import {Join} from '../query-properties/joins';
+import {SpaceField} from '../types/space-field';
+import {SourceSpec, SpaceSeed} from '../space-seed';
 
-import { QueryFieldAST, isNestedQuery } from "../query-properties/nest";
-import { NestReference } from "../query-properties/nest-reference";
+import {QueryFieldAST, isNestedQuery} from '../query-properties/nest';
+import {NestReference} from '../query-properties/nest-reference';
 import {
   FieldReference,
-  WildcardFieldReference
-} from "../query-items/field-references";
-import { FieldCollectionMember } from "../types/field-collection-member";
-import { QueryItem } from "../types/query-item";
-import { ReferenceField } from "./reference-field";
-import { WildSpaceField } from "./wild-space-field";
-import { RefinedSpace } from "./refined-space";
+  WildcardFieldReference,
+} from '../query-items/field-references';
+import {FieldCollectionMember} from '../types/field-collection-member';
+import {QueryItem} from '../types/query-item';
+import {ReferenceField} from './reference-field';
+import {WildSpaceField} from './wild-space-field';
+import {RefinedSpace} from './refined-space';
 
 /**
  * Unlike a source, which is a refinement of a namespace, a query
@@ -72,7 +72,7 @@ export class QueryInputSpace extends RefinedSpace {
 export abstract class QuerySpace extends RefinedSpace {
   readonly exprSpace: QueryInputSpace;
   astEl?: MalloyElement | undefined;
-  abstract readonly segmentType: "reduce" | "project" | "index";
+  abstract readonly segmentType: 'reduce' | 'project' | 'index';
   constructor(readonly queryInputSpace: FieldSpace) {
     super(queryInputSpace.emptyStructDef());
     this.exprSpace = new QueryInputSpace(queryInputSpace, this);
@@ -123,7 +123,7 @@ export abstract class QuerySpace extends RefinedSpace {
           parent.result.checkUngroup(fn, isExclude);
         });
       } else {
-        const uName = isExclude ? "exclude()" : "all()";
+        const uName = isExclude ? 'exclude()' : 'all()';
         fn.log(`${uName} '${fn.refString}' is missing from query output`);
       }
     }
@@ -175,15 +175,15 @@ export abstract class QuerySpace extends RefinedSpace {
     if (model.isQuerySegment(p)) {
       return p;
     }
-    throw new Error("TODO NOT POSSIBLE");
+    throw new Error('TODO NOT POSSIBLE');
   }
 
   getPipeSegment(
     refineFrom: model.QuerySegment | undefined
   ): model.PipeSegment {
-    if (this.segmentType == "index") {
+    if (this.segmentType === 'index') {
       // TODO ... should make this go away
-      throw new Error("INDEX FIELD PIPE SEGMENT MIS HANDLED");
+      throw new Error('INDEX FIELD PIPE SEGMENT MIS HANDLED');
     }
 
     if (refineFrom?.extendSource) {
@@ -193,8 +193,8 @@ export abstract class QuerySpace extends RefinedSpace {
     }
 
     const segment: model.QuerySegment = {
-      "type": this.segmentType,
-      "fields": this.queryFieldDefs()
+      type: this.segmentType,
+      fields: this.queryFieldDefs(),
     };
 
     segment.fields = mergeFields(refineFrom?.fields, segment.fields);
@@ -208,7 +208,7 @@ export abstract class QuerySpace extends RefinedSpace {
 
       for (const extendName of this.exprSpace.extendList) {
         const extendEnt = extendedStruct.fields.find(
-          (f) => nameOf(f) == extendName
+          f => nameOf(f) === extendName
         );
         if (extendEnt) {
           newExtends.push(extendEnt);
@@ -222,5 +222,5 @@ export abstract class QuerySpace extends RefinedSpace {
 }
 
 export class ReduceFieldSpace extends QuerySpace {
-  readonly segmentType = "reduce";
+  readonly segmentType = 'reduce';
 }

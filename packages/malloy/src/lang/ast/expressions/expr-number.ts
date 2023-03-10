@@ -21,13 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExprValue } from "../types/expr-value";
-import { FieldSpace } from "../types/field-space";
-import { FT } from "../fragtype-utils";
-import { ExpressionDef } from "../types/expression-def";
+import {ExprValue} from '../types/expr-value';
+import {FieldSpace} from '../types/field-space';
+import {FT} from '../fragtype-utils';
+import {ExpressionDef} from '../types/expression-def';
 
 export class ExprNumber extends ExpressionDef {
-  elementType = "numeric literal";
+  elementType = 'numeric literal';
   constructor(readonly n: string) {
     super();
   }
@@ -37,6 +37,6 @@ export class ExprNumber extends ExpressionDef {
   }
 
   constantExpression(): ExprValue {
-    return { ...FT.numberT, "value": [this.n] };
+    return {...FT.numberT, value: [this.n]};
   }
 }

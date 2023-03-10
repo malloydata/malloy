@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { StructDef, StructRef } from "../../../model/malloy_types";
-import { NamedSource } from "./named-source";
+import {StructDef, StructRef} from '../../../model/malloy_types';
+import {NamedSource} from './named-source';
 
 export class SQLSource extends NamedSource {
-  elementType = "sqlSource";
+  elementType = 'sqlSource';
   structRef(): StructRef {
     return this.structDef();
   }

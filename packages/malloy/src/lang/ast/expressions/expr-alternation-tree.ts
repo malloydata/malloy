@@ -21,17 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { maxExpressionType } from "../../../model/malloy_types";
-import { errorFor } from "../ast-utils";
-import { ExprValue } from "../types/expr-value";
-import { BinaryBoolean } from "./binary-boolean";
-import { FieldSpace } from "../types/field-space";
-import { ExpressionDef } from "../types/expression-def";
-import { compose } from "./utils";
+import {maxExpressionType} from '../../../model/malloy_types';
+import {errorFor} from '../ast-utils';
+import {ExprValue} from '../types/expr-value';
+import {BinaryBoolean} from './binary-boolean';
+import {FieldSpace} from '../types/field-space';
+import {ExpressionDef} from '../types/expression-def';
+import {compose} from './utils';
 
-export class ExprAlternationTree extends BinaryBoolean<"|" | "&"> {
-  elementType = "alternation";
-  constructor(left: ExpressionDef, op: "|" | "&", right: ExpressionDef) {
+export class ExprAlternationTree extends BinaryBoolean<'|' | '&'> {
+  elementType = 'alternation';
+  constructor(left: ExpressionDef, op: '|' | '&', right: ExpressionDef) {
     super(left, op, right);
     this.elementType = `${op}alternation${op}`;
   }
@@ -40,16 +40,16 @@ export class ExprAlternationTree extends BinaryBoolean<"|" | "&"> {
     const choice1 = this.left.apply(fs, applyOp, expr);
     const choice2 = this.right.apply(fs, applyOp, expr);
     return {
-      "dataType": "boolean",
-      "expressionType": maxExpressionType(
+      dataType: 'boolean',
+      expressionType: maxExpressionType(
         choice1.expressionType,
         choice2.expressionType
       ),
-      "value": compose(
+      value: compose(
         choice1.value,
-        this.op === "&" ? "and" : "or",
+        this.op === '&' ? 'and' : 'or',
         choice2.value
-      )
+      ),
     };
   }
 
@@ -58,7 +58,7 @@ export class ExprAlternationTree extends BinaryBoolean<"|" | "&"> {
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
-    this.log(`Alternation tree has no value`);
-    return errorFor("no value from alternation tree");
+    this.log('Alternation tree has no value');
+    return errorFor('no value from alternation tree');
   }
 }

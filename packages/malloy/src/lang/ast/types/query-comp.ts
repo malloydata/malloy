@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Query, StructDef } from "../../../model/malloy_types";
+import {Query, StructDef} from '../../../model/malloy_types';
 
 export interface QueryComp {
   outputStruct: StructDef;

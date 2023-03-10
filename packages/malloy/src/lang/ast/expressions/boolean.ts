@@ -21,17 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExprValue } from "../types/expr-value";
-import { ExpressionDef } from "../types/expression-def";
-import { FT } from "../fragtype-utils";
+import {ExprValue} from '../types/expr-value';
+import {ExpressionDef} from '../types/expression-def';
+import {FT} from '../fragtype-utils';
 
 export class Boolean extends ExpressionDef {
-  elementType = "boolean literal";
-  constructor(readonly value: "true" | "false") {
+  elementType = 'boolean literal';
+  constructor(readonly value: 'true' | 'false') {
     super();
   }
 
   getExpression(): ExprValue {
-    return { ...FT.boolT, "value": [this.value] };
+    return {...FT.boolT, value: [this.value]};
   }
 }

@@ -21,14 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Filter } from "../query-properties/filters";
-import { Joins } from "../query-properties/joins";
-import { DeclareFields } from "../query-properties/declare-fields";
-import { FieldListEdit } from "../source-properties/field-list-edit";
-import { Renames } from "../source-properties/renames";
-import { PrimaryKey } from "../source-properties/primary-key";
-import { Turtles } from "../source-properties/turtles";
-import { MalloyElement } from "./malloy-element";
+import {Filter} from '../query-properties/filters';
+import {Joins} from '../query-properties/joins';
+import {DeclareFields} from '../query-properties/declare-fields';
+import {FieldListEdit} from '../source-properties/field-list-edit';
+import {Renames} from '../source-properties/renames';
+import {PrimaryKey} from '../source-properties/primary-key';
+import {Turtles} from '../source-properties/turtles';
+import {MalloyElement} from './malloy-element';
 
 export type SourceProperty =
   | Filter

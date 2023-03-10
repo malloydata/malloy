@@ -21,13 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { StructDef } from "../../../model/malloy_types";
+import {StructDef} from '../../../model/malloy_types';
 
-import { Source } from "../elements/source";
-import { ErrorFactory } from "../error-factory";
+import {Source} from '../elements/source';
+import {ErrorFactory} from '../error-factory';
 
 export class TableSource extends Source {
-  elementType = "tableSource";
+  elementType = 'tableSource';
   constructor(readonly name: string) {
     super();
   }
@@ -38,21 +38,21 @@ export class TableSource extends Source {
     );
     let msg = `Schema read failure for table '${this.name}'`;
     if (tableDefEntry) {
-      if (tableDefEntry.status == "present") {
+      if (tableDefEntry.status === 'present') {
         tableDefEntry.value.location = this.location;
-        tableDefEntry.value.fields.forEach((field) => {
+        tableDefEntry.value.fields.forEach(field => {
           field.location = this.location;
         });
         return {
           ...tableDefEntry.value,
-          "fields": tableDefEntry.value.fields.map((field) => ({
+          fields: tableDefEntry.value.fields.map(field => ({
             ...field,
-            "location": this.location
+            location: this.location,
           })),
-          "location": this.location
+          location: this.location,
         };
       }
-      if (tableDefEntry.status == "error") {
+      if (tableDefEntry.status === 'error') {
         msg = tableDefEntry.message;
       }
     }

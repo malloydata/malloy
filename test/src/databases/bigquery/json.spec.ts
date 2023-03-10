@@ -23,10 +23,10 @@
 
 /* eslint-disable no-console */
 
-import { describeIfDatabaseAvailable } from "../../util";
-import { RuntimeList } from "../../runtimes";
+import {describeIfDatabaseAvailable} from '../../util';
+import {RuntimeList} from '../../runtimes';
 
-const [describe] = describeIfDatabaseAvailable(["bigquery"]);
+const [describe] = describeIfDatabaseAvailable(['bigquery']);
 
 const modelString = `
   sql: source_sql is {
@@ -47,8 +47,8 @@ const modelString = `
 
 `;
 
-describe("JSON tests", () => {
-  const runtimes = new RuntimeList(["bigquery"]);
+describe('JSON tests', () => {
+  const runtimes = new RuntimeList(['bigquery']);
 
   afterAll(async () => {
     await runtimes.closeAll();
@@ -71,7 +71,7 @@ describe("JSON tests", () => {
         )
         .run();
       // console.log(result.data.toObject());
-      expect(result.data.path(0, "class_name").value).toBe("C");
+      expect(result.data.path(0, 'class_name').value).toBe('C');
     });
 
     it(`Return Json  - ${databaseName}`, async () => {
@@ -89,7 +89,7 @@ describe("JSON tests", () => {
         )
         .run();
       // console.log(result.data.toObject());
-      expect(result.data.path(0, "j").value).toContain("Jamie");
+      expect(result.data.path(0, 'j').value).toContain('Jamie');
     });
   });
 });

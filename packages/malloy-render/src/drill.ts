@@ -27,11 +27,11 @@ import {
   DataRecord,
   DateTimeframe,
   Explore,
-  TimestampTimeframe
-} from "@malloydata/malloy";
-import { timeToString } from "./html/utils";
+  TimestampTimeframe,
+} from '@malloydata/malloy';
+import {timeToString} from './html/utils';
 
-type FilterItem = { key: string; value: string | undefined };
+type FilterItem = {key: string; value: string | undefined};
 
 function filterQuote(s: string): string {
   return `'${s.replace("'", "\\'")}'`;
@@ -46,15 +46,15 @@ function timestampToDateFilter(
     timeframe === TimestampTimeframe.Minute
       ? TimestampTimeframe.Second
       : timeframe || TimestampTimeframe.Second;
-  const filterValue = "@" + timeToString(value, adjustedTimeframe);
-  return { key, "value": filterValue };
+  const filterValue = '@' + timeToString(value, adjustedTimeframe);
+  return {key, value: filterValue};
 }
 
 function getTableFilters(table: DataArray): FilterItem[] {
   const filters: FilterItem[] = [];
   for (const f of table.field.filters || []) {
-    if (f.expressionType === "scalar") {
-      filters.push({ "key": f.code, "value": undefined });
+    if (f.expressionType === 'scalar') {
+      filters.push({key: f.code, value: undefined});
     }
   }
   return filters;
@@ -63,7 +63,7 @@ function getTableFilters(table: DataArray): FilterItem[] {
 function getRowFilters(row: DataRecord): FilterItem[] {
   const filters: FilterItem[] = [];
   const dimensions = row.field.intrinsicFields.filter(
-    (field) => field.isAtomicField() && field.sourceWasDimension()
+    field => field.isAtomicField() && field.sourceWasDimension()
   );
 
   for (const dim of dimensions) {
@@ -73,11 +73,11 @@ function getRowFilters(row: DataRecord): FilterItem[] {
       dim.isAtomicField() || dim.isQueryField() ? dim.expression : undefined;
     if (key && !cell.isArray()) {
       if (cell.isNull()) {
-        filters.push({ key, "value": "null" });
+        filters.push({key, value: 'null'});
       } else if (cell.isString()) {
-        filters.push({ key, "value": filterQuote(cell.value) });
+        filters.push({key, value: filterQuote(cell.value)});
       } else if (cell.isNumber() || cell.isBoolean()) {
-        filters.push({ key, "value": cell.value.toString() });
+        filters.push({key, value: cell.value.toString()});
       } else if (cell.isTimestamp() || cell.isDate()) {
         filters.push(
           timestampToDateFilter(key, cell.value, cell.field.timeframe)
@@ -111,7 +111,7 @@ export function getDrillFilters(data: DataArrayOrRecord): {
   const source = current.field.parentExplore;
 
   const formattedFilters: string[] = [];
-  for (const { key, value } of filters) {
+  for (const {key, value} of filters) {
     if (value !== undefined) {
       formattedFilters.push(`${key}: ${value}`);
     } else {
@@ -129,24 +129,18 @@ export function getDrillFilters(data: DataArrayOrRecord): {
       ) === undefined
   );
 
-  return { "formattedFilters": dedupedFilters, source };
+  return {formattedFilters: dedupedFilters, source};
 }
 
 export function getDrillQuery(data: DataArrayOrRecord): {
   drillQuery: string;
   drillFilters: string[];
 } {
-  const { formattedFilters, source } = getDrillFilters(data);
+  const {formattedFilters, source} = getDrillFilters(data);
   let ret = `query: ${source?.name || '"unable to compute source"'} `;
   if (formattedFilters.length) {
-    ret += `{ \n  where: \n    ${formattedFilters.join(",\n    ")}\n  \n}\n`;
+    ret += `{ \n  where: \n    ${formattedFilters.join(',\n    ')}\n  \n}\n`;
   }
-  const drillQuery = ret + "-> ";
-  return { drillQuery, "drillFilters": formattedFilters };
+  const drillQuery = ret + '-> ';
+  return {drillQuery, drillFilters: formattedFilters};
 }
-
-export type DrillFunction = (
-  drillQuery: string,
-  target: HTMLElement,
-  drillFilters: string[]
-) => void;

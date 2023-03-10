@@ -24,11 +24,11 @@
 import {
   AtomicFieldType,
   Parameter,
-  isAtomicFieldType
-} from "../../../model/malloy_types";
+  isAtomicFieldType,
+} from '../../../model/malloy_types';
 
-import { ConstantSubExpression } from "../expressions/constant-sub-expression";
-import { MalloyElement } from "../types/malloy-element";
+import {ConstantSubExpression} from '../expressions/constant-sub-expression';
+import {MalloyElement} from '../types/malloy-element';
 
 interface HasInit {
   name: string;
@@ -38,7 +38,7 @@ interface HasInit {
 }
 
 export class HasParameter extends MalloyElement {
-  elementType = "hasParameter";
+  elementType = 'hasParameter';
   readonly name: string;
   readonly isCondition: boolean;
   readonly type?: AtomicFieldType;
@@ -53,27 +53,27 @@ export class HasParameter extends MalloyElement {
     }
     if (init.default) {
       this.default = init.default;
-      this.has({ "default": this.default });
+      this.has({default: this.default});
     }
   }
 
   parameter(): Parameter {
     const name = this.name;
-    const type = this.type || "string";
+    const type = this.type || 'string';
     if (this.isCondition) {
       const cCond = this.default?.constantCondition(type).value || null;
       return {
         type,
         name,
-        "condition": cCond
+        condition: cCond,
       };
     }
     const cVal = this.default?.constantValue().value || null;
     return {
-      "value": cVal,
+      value: cVal,
       type,
-      "name": this.name,
-      "constant": false
+      name: this.name,
+      constant: false,
     };
   }
 }

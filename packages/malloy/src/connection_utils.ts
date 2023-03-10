@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-type YieldDone = { done: true; isError: false };
-type YieldError = { done: true; isError: true; error: Error };
+type YieldDone = {done: true; isError: false};
+type YieldError = {done: true; isError: true; error: Error};
 type YieldNext<T> = {
   done: false;
   isError: false;
@@ -48,25 +48,25 @@ export async function* toAsyncGenerator<T>(
     ) => void
   ): Promise<YieldSomething<T>> {
     let resolve: (result: YieldSomething<T>) => void;
-    const promise = new Promise<YieldSomething<T>>((res) => {
+    const promise = new Promise<YieldSomething<T>>(res => {
       resolve = res;
     });
     startStreaming(
-      (error) => {
-        resolve({ "done": true, "isError": true, error });
+      error => {
+        resolve({done: true, isError: true, error});
       },
-      (data) => {
+      data => {
         resolve({
-          "done": false,
-          "value": data,
-          "isError": false,
-          "next": new Promise((res) => {
+          done: false,
+          value: data,
+          isError: false,
+          next: new Promise(res => {
             resolve = res;
-          })
+          }),
         });
       },
       () => {
-        resolve({ "done": true, "isError": false });
+        resolve({done: true, isError: false});
       }
     );
     return promise;

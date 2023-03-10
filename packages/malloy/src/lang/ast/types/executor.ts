@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { PipeSegment } from "../../../model/malloy_types";
+import {PipeSegment} from '../../../model/malloy_types';
 
-import { QueryProperty } from "./query-property";
+import {QueryProperty} from './query-property';
 
-import { QueryInputSpace, QuerySpace } from "../field-space/query-spaces";
+import {QueryInputSpace, QuerySpace} from '../field-space/query-spaces';
 
 export interface Executor {
   inputFS: QueryInputSpace;

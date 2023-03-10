@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { RenameField } from "../source-properties/renames";
-import { FieldDecl, isFieldDecl } from "./field-decl";
-import { MalloyElement } from "./malloy-element";
+import {RenameField} from '../source-properties/renames';
+import {FieldDecl, isFieldDecl} from './field-decl';
+import {MalloyElement} from './malloy-element';
 
 export type ExploreField = FieldDecl | RenameField;
 export function isExploreField(f: MalloyElement): f is ExploreField {

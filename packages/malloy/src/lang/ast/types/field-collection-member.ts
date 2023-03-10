@@ -21,13 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldDeclaration } from "../query-items/field-declaration";
+import {FieldDeclaration} from '../query-items/field-declaration';
 import {
   FieldReference,
   FieldReferenceElement,
-  WildcardFieldReference
-} from "../query-items/field-references";
-import { MalloyElement } from "./malloy-element";
+  WildcardFieldReference,
+} from '../query-items/field-references';
+import {MalloyElement} from './malloy-element';
 
 export type FieldCollectionMember = FieldReferenceElement | FieldDeclaration;
 export function isFieldCollectionMember(

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-declare module "*.woff2" {
+declare module '*.woff2' {
   let _: string;
   export default _;
 }

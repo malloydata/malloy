@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { StructDef, StructRef } from "../../../model/malloy_types";
-import { MalloyElement } from "../types/malloy-element";
-import { HasParameter } from "../parameters/has-parameter";
+import {StructDef, StructRef} from '../../../model/malloy_types';
+import {MalloyElement} from '../types/malloy-element';
+import {HasParameter} from '../parameters/has-parameter';
 
 /**
  * A "Source" is a thing which you can run queries against. The main
@@ -40,14 +40,14 @@ export abstract class Source extends MalloyElement {
     const before = this.structDef();
     // TODO name collisions are flagged where?
     if (pList) {
-      const parameters = { ...(before.parameters || {}) };
+      const parameters = {...(before.parameters || {})};
       for (const hasP of pList) {
         const pVal = hasP.parameter();
         parameters[pVal.name] = pVal;
       }
       return {
         ...before,
-        parameters
+        parameters,
       };
     }
     return before;

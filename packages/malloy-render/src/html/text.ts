@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DataColumn } from "@malloydata/malloy";
-import { Renderer } from "../renderer";
-import { createNullElement } from "./utils";
+import {DataColumn} from '@malloydata/malloy';
+import {Renderer} from '../renderer';
+import {createNullElement} from './utils';
 
 export class HTMLTextRenderer implements Renderer {
   constructor(private readonly document: Document) {}
@@ -38,7 +38,7 @@ export class HTMLTextRenderer implements Renderer {
       return createNullElement(this.document);
     }
 
-    const element = this.document.createElement("span");
+    const element = this.document.createElement('span');
     element.appendChild(this.document.createTextNode(text));
     return element;
   }

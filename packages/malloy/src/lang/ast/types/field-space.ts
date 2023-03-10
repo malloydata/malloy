@@ -21,18 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Dialect } from "../../../dialect/dialect";
-import { StructDef } from "../../../model/malloy_types";
+import {Dialect} from '../../../dialect/dialect';
+import {StructDef} from '../../../model/malloy_types';
 
-import { LookupResult } from "./lookup-result";
-import { MalloyElement } from "./malloy-element";
+import {LookupResult} from './lookup-result';
+import {MalloyElement} from './malloy-element';
 
 /**
  * A FieldSpace is a hierarchy of namespaces, where the leaf nodes
  * are fields. A FieldSpace can lookup fields, and generate a StructDef
  */
 export interface FieldSpace {
-  type: "fieldSpace";
+  type: 'fieldSpace';
   structDef(): StructDef;
   emptyStructDef(): StructDef;
   lookup(symbol: FieldName[]): LookupResult;
@@ -41,7 +41,7 @@ export interface FieldSpace {
 }
 
 export class FieldName extends MalloyElement {
-  elementType = "fieldName";
+  elementType = 'fieldName';
 
   constructor(readonly name: string) {
     super();

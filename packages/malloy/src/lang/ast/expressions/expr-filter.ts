@@ -21,20 +21,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { expressionIsCalculation } from "../../../model/malloy_types";
+import {expressionIsCalculation} from '../../../model/malloy_types';
 
-import { errorFor } from "../ast-utils";
-import { FT } from "../fragtype-utils";
-import { Filter } from "../query-properties/filters";
-import { ExprValue } from "../types/expr-value";
-import { ExpressionDef } from "../types/expression-def";
-import { FieldSpace } from "../types/field-space";
+import {errorFor} from '../ast-utils';
+import {FT} from '../fragtype-utils';
+import {Filter} from '../query-properties/filters';
+import {ExprValue} from '../types/expr-value';
+import {ExpressionDef} from '../types/expression-def';
+import {FieldSpace} from '../types/field-space';
 
 export class ExprFilter extends ExpressionDef {
-  elementType = "filtered expression";
+  elementType = 'filtered expression';
   legalChildTypes = FT.anyAtomicT;
   constructor(readonly expr: ExpressionDef, readonly filter: Filter) {
-    super({ "expr": expr, "filter": filter });
+    super({expr: expr, filter: filter});
   }
 
   getExpression(fs: FieldSpace): ExprValue {
@@ -43,31 +43,29 @@ export class ExprFilter extends ExpressionDef {
     for (const cond of testList) {
       if (expressionIsCalculation(cond.expressionType)) {
         this.filter.log(
-          "Cannot filter a field with an aggregate or analytical computation"
+          'Cannot filter a field with an aggregate or analytical computation'
         );
-        return errorFor("no filter on aggregate");
+        return errorFor('no filter on aggregate');
       }
     }
-    if (resultExpr.expressionType === "scalar") {
+    if (resultExpr.expressionType === 'scalar') {
       // TODO could log a warning, but I have a problem with the
       // idea of warnings, so for now ...
       return resultExpr;
     }
-    if (
-      this.typeCheck(this.expr, { ...resultExpr, "expressionType": "scalar" })
-    ) {
+    if (this.typeCheck(this.expr, {...resultExpr, expressionType: 'scalar'})) {
       return {
         ...resultExpr,
-        "value": [
+        value: [
           {
-            "type": "filterExpression",
-            "e": resultExpr.value,
-            "filterList": testList
-          }
-        ]
+            type: 'filterExpression',
+            e: resultExpr.value,
+            filterList: testList,
+          },
+        ],
       };
     }
     this.expr.log(`Cannot filter '${resultExpr.dataType}' data`);
-    return errorFor("cannot filter type");
+    return errorFor('cannot filter type');
   }
 }

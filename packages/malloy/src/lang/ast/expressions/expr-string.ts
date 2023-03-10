@@ -21,31 +21,31 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ExpressionDef } from "../types/expression-def";
-import { FieldSpace } from "../types/field-space";
-import { ExprValue } from "../types/expr-value";
-import { FT } from "../fragtype-utils";
+import {ExpressionDef} from '../types/expression-def';
+import {FieldSpace} from '../types/field-space';
+import {ExprValue} from '../types/expr-value';
+import {FT} from '../fragtype-utils';
 
 export class ExprString extends ExpressionDef {
-  elementType = "string literal";
+  elementType = 'string literal';
   value: string;
   constructor(src: string) {
     super();
     const bareStr = src.slice(1, -1);
-    const val = bareStr.replace(/\\(.)/g, "$1");
+    const val = bareStr.replace(/\\(.)/g, '$1');
     this.value = val;
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
     return {
       ...FT.stringT,
-      "value": [
+      value: [
         {
-          "type": "dialect",
-          "function": "stringLiteral",
-          "literal": this.value
-        }
-      ]
+          type: 'dialect',
+          function: 'stringLiteral',
+          literal: this.value,
+        },
+      ],
     };
   }
 }

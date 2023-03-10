@@ -21,15 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Runtime } from "@malloydata/malloy";
-import { RuntimeList } from "../../runtimes";
-import { describeIfDatabaseAvailable } from "../../util";
+import {Runtime} from '@malloydata/malloy';
+import {RuntimeList} from '../../runtimes';
+import {describeIfDatabaseAvailable} from '../../util';
 
-const runtimes = ["duckdb", "duckdb_wasm"];
+const runtimes = ['duckdb', 'duckdb_wasm'];
 
 const [describe, databases] = describeIfDatabaseAvailable(runtimes);
 
-describe("duckdb", () => {
+describe('duckdb', () => {
   let runtimeList: RuntimeList;
 
   beforeAll(() => {
@@ -40,8 +40,8 @@ describe("duckdb", () => {
     await runtimeList.closeAll();
   });
 
-  describe.each(databases)("%s tables", (runtimeName) => {
-    it("can open tables with wildcards", async () => {
+  describe.each(databases)('%s tables', runtimeName => {
+    it('can open tables with wildcards', async () => {
       const runtime = runtimeList.runtimeMap.get(runtimeName) as Runtime;
       expect(runtime).not.toBeUndefined();
       const result = await runtime
@@ -54,7 +54,7 @@ describe("duckdb", () => {
         `
         )
         .run();
-      expect(result.data.path(0, "carrier").value).toEqual("AA");
+      expect(result.data.path(0, 'carrier').value).toEqual('AA');
     });
   });
 });

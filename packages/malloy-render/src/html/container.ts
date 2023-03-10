@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Explore } from "@malloydata/malloy";
-import { DataStyles, StyleDefaults } from "../data_styles";
-import { DrillFunction } from "../drill";
-import { ChildRenderers, RendererOptions, RenderTree } from "../renderer";
+import {Explore} from '@malloydata/malloy';
+import {StyleDefaults} from '../data_styles';
+import {ChildRenderers, RenderTree} from '../renderer';
+import {RendererOptions} from '../renderer_types';
 
 export abstract class ContainerRenderer extends RenderTree {
   childRenderers: ChildRenderers = {};

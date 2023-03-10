@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { CommonTokenStream, ParserRuleContext } from "antlr4ts";
-import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
-import { ParseTree } from "antlr4ts/tree";
-import { MalloyParserListener } from "../lib/Malloy/MalloyParserListener";
-import * as parser from "../lib/Malloy/MalloyParser";
+import {CommonTokenStream, ParserRuleContext} from 'antlr4ts';
+import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
+import {ParseTree} from 'antlr4ts/tree';
+import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
+import * as parser from '../lib/Malloy/MalloyParser';
 
 export interface DocumentCompletion {
   type: string;
@@ -33,65 +33,65 @@ export interface DocumentCompletion {
 }
 
 const EXPLORE_PROPERTIES = [
-  "dimension",
-  "measure",
-  "join_one",
-  "join_many",
-  "join_cross",
-  "where",
-  "primary_key",
-  "rename",
-  "accept",
-  "except",
-  "query",
-  "declare"
+  'dimension',
+  'measure',
+  'join_one',
+  'join_many',
+  'join_cross',
+  'where',
+  'primary_key',
+  'rename',
+  'accept',
+  'except',
+  'query',
+  'declare',
 ];
 
 const QUERY_PROPERTIES = [
-  "group_by",
-  "project",
-  "index",
-  "aggregate",
-  "top",
-  "limit",
-  "order_by",
-  "where",
-  "having",
-  "nest",
-  "declare"
+  'group_by',
+  'project',
+  'index',
+  'aggregate',
+  'top',
+  'limit',
+  'order_by',
+  'where',
+  'having',
+  'nest',
+  'declare',
 ];
 
-const MODEL_PROPERTIES = ["source", "explore", "query", "sql"];
+const MODEL_PROPERTIES = ['source', 'explore', 'query', 'sql'];
 
 class DocumentCompletionWalker implements MalloyParserListener {
   constructor(
     readonly tokens: CommonTokenStream,
     readonly completions: DocumentCompletion[],
-    readonly position: { line: number; character: number }
+    readonly position: {line: number; character: number}
   ) {}
 
   rangeOf(pcx: ParserRuleContext) {
     const stopToken = pcx.stop || pcx.start;
     return {
-      "start": {
-        "line": pcx.start.line - 1,
-        "character": pcx.start.charPositionInLine
+      start: {
+        line: pcx.start.line - 1,
+        character: pcx.start.charPositionInLine,
       },
-      "end": {
-        "line": stopToken.line - 1,
-        "character":
+      end: {
+        line: stopToken.line - 1,
+        character:
           stopToken.stopIndex -
           (stopToken.startIndex - stopToken.charPositionInLine) +
-          1
-      }
+          1,
+      },
     };
   }
 
   inRange(range: {
-    start: { line: number; character: number };
-    end: { line: number; character: number };
+    start: {line: number; character: number};
+    end: {line: number; character: number};
   }): boolean {
-    const { start, end } = range;
+    const {start, end} = range;
     const afterStart =
       this.position.line > start.line ||
       (this.position.line === start.line &&
@@ -114,8 +114,8 @@ class DocumentCompletionWalker implements MalloyParserListener {
       if (!insideStatement) {
         for (const property of EXPLORE_PROPERTIES) {
           this.completions.push({
-            "type": "explore_property",
-            "text": `${property}: `
+            type: 'explore_property',
+            text: `${property}: `,
           });
         }
       }
@@ -133,8 +133,8 @@ class DocumentCompletionWalker implements MalloyParserListener {
       if (!insideStatement) {
         for (const property of QUERY_PROPERTIES) {
           this.completions.push({
-            "type": "query_property",
-            "text": `${property}: `
+            type: 'query_property',
+            text: `${property}: `,
           });
         }
       }
@@ -152,8 +152,8 @@ class DocumentCompletionWalker implements MalloyParserListener {
       if (!insideStatement) {
         for (const property of MODEL_PROPERTIES) {
           this.completions.push({
-            "type": "model_property",
-            "text": `${property}: `
+            type: 'model_property',
+            text: `${property}: `,
           });
         }
       }
@@ -164,7 +164,7 @@ class DocumentCompletionWalker implements MalloyParserListener {
 export function walkForDocumentCompletions(
   tokens: CommonTokenStream,
   parseTree: ParseTree,
-  position: { line: number; character: number }
+  position: {line: number; character: number}
 ): DocumentCompletion[] {
   const finder = new DocumentCompletionWalker(tokens, [], position);
   const listener: MalloyParserListener = finder;

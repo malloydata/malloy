@@ -25,14 +25,14 @@ import {
   ModelDef,
   Query,
   SQLBlockSource,
-  SQLBlockStructDef
-} from "../model/malloy_types";
-import { MalloyElement } from "./ast";
-import { LogMessage } from "./parse-log";
-import { DocumentSymbol } from "./parse-tree-walkers/document-symbol-walker";
-import { DocumentHighlight } from "./parse-tree-walkers/document-highlight-walker";
-import { DocumentCompletion } from "./parse-tree-walkers/document-completion-walker";
-import { DocumentHelpContext } from "./parse-tree-walkers/document-help-context-walker";
+  SQLBlockStructDef,
+} from '../model/malloy_types';
+import {MalloyElement} from './ast';
+import {LogMessage} from './parse-log';
+import {DocumentSymbol} from './parse-tree-walkers/document-symbol-walker';
+import {DocumentHighlight} from './parse-tree-walkers/document-highlight-walker';
+import {DocumentCompletion} from './parse-tree-walkers/document-completion-walker';
+import {DocumentHelpContext} from './parse-tree-walkers/document-help-context-walker';
 
 /**
  * The translation interface is essentially a request/response protocol, and
@@ -61,7 +61,7 @@ export interface NeedCompileSQL {
 interface NeededData extends NeedURLData, NeedSchemaData, NeedCompileSQL {}
 export type DataRequestResponse = Partial<NeededData> | null;
 export function isNeedResponse(dr: DataRequestResponse): dr is NeededData {
-  return !!dr && (dr.tables || dr.urls || dr.compileSQL) != undefined;
+  return !!dr && (dr.tables || dr.urls || dr.compileSQL) !== undefined;
 }
 export type ModelDataRequest = NeedCompileSQL | undefined;
 interface ASTData extends ErrorResponse, NeededData, FinalResponse {

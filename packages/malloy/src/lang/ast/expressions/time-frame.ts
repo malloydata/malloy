@@ -21,19 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { TimestampUnit, isTimestampUnit } from "../../../model/malloy_types";
+import {TimestampUnit, isTimestampUnit} from '../../../model/malloy_types';
 
-import { MalloyElement } from "../types/malloy-element";
+import {MalloyElement} from '../types/malloy-element';
 
 export class Timeframe extends MalloyElement {
-  elementType = "timeframe";
+  elementType = 'timeframe';
   readonly text: TimestampUnit;
   constructor(timeframeName: string) {
     super();
     let tf = timeframeName.toLowerCase();
-    if (tf.endsWith("s")) {
+    if (tf.endsWith('s')) {
       tf = tf.slice(0, -1);
     }
-    this.text = isTimestampUnit(tf) ? tf : "second";
+    this.text = isTimestampUnit(tf) ? tf : 'second';
   }
 }

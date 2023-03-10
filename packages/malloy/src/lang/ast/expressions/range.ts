@@ -21,36 +21,36 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { maxExpressionType } from "../../../model/malloy_types";
+import {maxExpressionType} from '../../../model/malloy_types';
 
-import { errorFor } from "../ast-utils";
-import { ExprValue } from "../types/expr-value";
-import { ExpressionDef } from "../types/expression-def";
-import { FieldSpace } from "../types/field-space";
-import { compose } from "./utils";
+import {errorFor} from '../ast-utils';
+import {ExprValue} from '../types/expr-value';
+import {ExpressionDef} from '../types/expression-def';
+import {FieldSpace} from '../types/field-space';
+import {compose} from './utils';
 
 export class Range extends ExpressionDef {
-  elementType = "range";
+  elementType = 'range';
   constructor(readonly first: ExpressionDef, readonly last: ExpressionDef) {
-    super({ "first": first, "last": last });
+    super({first: first, last: last});
   }
 
   apply(fs: FieldSpace, op: string, expr: ExpressionDef): ExprValue {
     switch (op) {
-      case "=":
-      case "!=": {
-        const op1 = op === "=" ? ">=" : "<";
-        const op2 = op === "=" ? "and" : "or";
-        const op3 = op === "=" ? "<" : ">=";
+      case '=':
+      case '!=': {
+        const op1 = op === '=' ? '>=' : '<';
+        const op2 = op === '=' ? 'and' : 'or';
+        const op3 = op === '=' ? '<' : '>=';
         const fromValue = this.first.apply(fs, op1, expr);
         const toValue = this.last.apply(fs, op3, expr);
         return {
-          "dataType": "boolean",
-          "expressionType": maxExpressionType(
+          dataType: 'boolean',
+          expressionType: maxExpressionType(
             fromValue.expressionType,
             toValue.expressionType
           ),
-          "value": compose(fromValue.value, op2, toValue.value)
+          value: compose(fromValue.value, op2, toValue.value),
         };
       }
 
@@ -63,23 +63,24 @@ export class Range extends ExpressionDef {
        * val < begin to end     val < begin
        * val <= begin to end    val < end
        */
-      case ">":
-        return this.last.apply(fs, ">=", expr);
-      case ">=":
-        return this.first.apply(fs, ">=", expr);
-      case "<":
-        return this.first.apply(fs, "<", expr);
-      case "<=":
-        return this.last.apply(fs, "<", expr);
+      case '>':
+        return this.last.apply(fs, '>=', expr);
+      case '>=':
+        return this.first.apply(fs, '>=', expr);
+      case '<':
+        return this.first.apply(fs, '<', expr);
+      case '<=':
+        return this.last.apply(fs, '<', expr);
     }
-    throw new Error("mysterious error in range computation");
+    throw new Error('mysterious error in range computation');
   }
 
-  requestExpression(_fs: FieldSpace): ExprValue | undefined {
+  requestExpression(_fs: FieldSpace): undefined {
     return undefined;
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
-    return errorFor("a range is not a value");
+    this.log('A Range is not a value');
+    return errorFor('a range is not a value');
   }
 }

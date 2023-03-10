@@ -160,16 +160,23 @@ PERCENT: '%';
 
 fragment F_YEAR: DIGIT DIGIT DIGIT DIGIT;
 fragment F_DD: DIGIT DIGIT;
+fragment F_LOCALE: '[' (ID_CHAR | '/')* ']';
+fragment F_OFFSET: [+-] DIGIT+ ( ':' DIGIT+)?;
+fragment F_TZ: F_OFFSET | F_LOCALE;
 fragment LX: '-' 'X' (ID_CHAR | DIGIT)+;
+// @YYYY-MM-DD HH:MM:SS.n
 LITERAL_TIMESTAMP
   : '@' F_YEAR '-' F_DD '-' F_DD
-    ' ' F_DD ':' F_DD ( ':' F_DD )? LX?
+    [ T] F_DD ':' F_DD
+    ( ':' F_DD  ( [.,] DIGIT+)? )?
+    F_TZ?
   ;
-LITERAL_DAY:     '@' F_YEAR '-' F_DD '-' F_DD LX?;
-LITERAL_QUARTER: '@' F_YEAR '-' 'Q' ('1'|'2'|'3'|'4') LX?;
-LITERAL_MONTH:   '@' F_YEAR '-' F_DD LX?;
-LITERAL_WEEK:    '@' W K F_YEAR '-' F_DD '-' F_DD LX?;
-LITERAL_YEAR:    '@' F_YEAR LX?;
+LITERAL_HOUR:     '@' F_YEAR '-' F_DD '-' F_DD [ T] F_DD;
+LITERAL_DAY:     '@' F_YEAR '-' F_DD '-' F_DD;
+LITERAL_QUARTER: '@' F_YEAR '-' 'Q' ('1'|'2'|'3'|'4');
+LITERAL_MONTH:   '@' F_YEAR '-' F_DD;
+LITERAL_WEEK:    '@' F_YEAR '-' F_DD '-' F_DD '-' W K;
+LITERAL_YEAR:    '@' F_YEAR;
 
 IDENTIFIER: ID_CHAR ( ID_CHAR | DIGIT )*;
 

@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { SQLBlockSource, SQLPhrase, isSQLFragment } from "./malloy_types";
-import { generateHash } from "./utils";
+import {SQLBlockSource, SQLPhrase, isSQLFragment} from './malloy_types';
+import {generateHash} from './utils';
 
 /**
  * The factory for SQLBlocks. Exists because the name is computed
@@ -34,8 +34,8 @@ export function makeSQLBlock(
   connection?: string
 ): SQLBlockSource {
   const theBlock: SQLBlockSource = {
-    "name": `md5:/${connection || "$default"}//${nameFor(select)}`,
-    select
+    name: `md5:/${connection || '$default'}//${nameFor(select)}`,
+    select,
   };
   if (connection) {
     theBlock.connection = connection;
@@ -52,8 +52,8 @@ export function makeSQLBlock(
 // here for later, and that the whole "how to determine the name of a query"
 // algorithm needs to change
 function nameFor(select: SQLPhrase[]): string {
-  const phrases = select.map((el) =>
+  const phrases = select.map(el =>
     isSQLFragment(el) ? el.sql : JSON.stringify(el)
   );
-  return generateHash(phrases.join(";"));
+  return generateHash(phrases.join(';'));
 }

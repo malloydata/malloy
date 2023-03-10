@@ -21,15 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { test } from "@jest/globals";
-import * as malloy from "@malloydata/malloy";
-import { Query } from "@malloydata/malloy";
-import { testModel } from "../../models/faa_model";
-import { BigQueryTestConnection, RuntimeList } from "../../runtimes";
-import { describeIfDatabaseAvailable, fStringEq } from "../../util";
+import {test} from '@jest/globals';
+import * as malloy from '@malloydata/malloy';
+import {Query} from '@malloydata/malloy';
+import {testModel} from '../../models/faa_model';
+import {BigQueryTestConnection, RuntimeList} from '../../runtimes';
+import {describeIfDatabaseAvailable, fStringEq} from '../../util';
 
-const runtimeList = new RuntimeList(["bigquery"]);
-const runtime = runtimeList.runtimeMap.get("bigquery");
+const runtimeList = new RuntimeList(['bigquery']);
+const runtime = runtimeList.runtimeMap.get('bigquery');
 if (runtime === undefined) {
   throw new Error("Couldn't build runtime");
 }
@@ -60,16 +60,16 @@ async function bqCompile(sql: string): Promise<boolean> {
   return true;
 }
 
-const [describe] = describeIfDatabaseAvailable(["bigquery"]);
+const [describe] = describeIfDatabaseAvailable(['bigquery']);
 
-describe("BigQuery expression tests", () => {
+describe('BigQuery expression tests', () => {
   const faa = runtime._loadModelFromModelDef(testModel);
 
-  it("simple_pipeline", async () => {
+  it('simple_pipeline', async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      "structRef": "flights",
-      "pipeHead": { "name": "flights_by_carrier" },
-      "pipeline": [{ "fields": ["name", "flight_count"], "type": "reduce" }]
+      structRef: 'flights',
+      pipeHead: {name: 'flights_by_carrier'},
+      pipeline: [{fields: ['name', 'flight_count'], type: 'reduce'}],
     });
     await bqCompile(sql);
   });
@@ -86,450 +86,442 @@ describe("BigQuery expression tests", () => {
   //       routes.origin_code,
   //       routes.route_flights,
   //         flight_count / routes.route_flights as percent_of_carrier_flights
-  it("turtle_requery", async () => {
+  it('turtle_requery', async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      "structRef": "flights",
-      "pipeline": [
+      structRef: 'flights',
+      pipeline: [
         // top 5 routes per carrier
         {
-          "type": "reduce",
-          "fields": [
-            "carrier",
-            "flight_count",
+          type: 'reduce',
+          fields: [
+            'carrier',
+            'flight_count',
             {
-              "type": "turtle",
-              "name": "routes",
-              "pipeline": [
+              type: 'turtle',
+              name: 'routes',
+              pipeline: [
                 {
-                  "type": "reduce",
-                  "fields": [
-                    "origin_code",
-                    "destination_code",
-                    "flight_count",
+                  type: 'reduce',
+                  fields: [
+                    'origin_code',
+                    'destination_code',
+                    'flight_count',
                     {
-                      "type": "number",
-                      "name": "route_flights",
-                      "expressionType": "aggregate",
-                      "e": [
+                      type: 'number',
+                      name: 'route_flights',
+                      expressionType: 'aggregate',
+                      e: [
                         {
-                          "type": "aggregate",
-                          "function": "count",
-                          "e": []
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
+                          type: 'aggregate',
+                          function: 'count',
+                          e: [],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
           ],
-          "limit": 5,
-          "orderBy": [{ "dir": "desc", "field": "carrier" }]
+          limit: 5,
+          orderBy: [{dir: 'desc', field: 'carrier'}],
         },
         // carrier top routes
         {
-          "type": "project",
-          "fields": [
-            "carrier",
-            "flight_count",
-            "routes.origin_code",
-            "routes.route_flights"
-          ]
-        }
-      ]
-    });
-    await bqCompile(sql);
-  });
-
-  it("step_0", async () => {
-    const sql = await compileQueryFromQueryDef(faa, {
-      "structRef": "flights",
-      "pipeline": [
-        { "type": "reduce", "fields": ["carriers.name", "flight_count"] }
-      ]
-    });
-    await bqCompile(sql);
-  });
-
-  it("filtered_measures", async () => {
-    const sql = await compileQueryFromQueryDef(faa, {
-      "structRef": "flights",
-      "filterList": [
-        fStringEq("origin.state", "CA"),
-        fStringEq("destination.state", "NY")
+          type: 'project',
+          fields: [
+            'carrier',
+            'flight_count',
+            'routes.origin_code',
+            'routes.route_flights',
+          ],
+        },
       ],
-      "pipeline": [
-        { "type": "reduce", "fields": ["carriers.name", "flight_count"] }
-      ]
     });
     await bqCompile(sql);
   });
 
-  it("timestamp", async () => {
+  it('step_0', async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      "structRef": "flights",
-      "pipeline": [
-        {
-          "fields": [
-            {
-              "as": "dep_year",
-              "name": "dep_time",
-              "timeframe": "year",
-              "type": "timestamp"
-            },
-            {
-              "as": "dep_month",
-              "name": "dep_time",
-              "timeframe": "month",
-              "type": "timestamp"
-            },
-            {
-              "as": "dep_week",
-              "name": "dep_time",
-              "timeframe": "week",
-              "type": "timestamp"
-            },
-            {
-              "as": "dep_date",
-              "name": "dep_time",
-              "timeframe": "day",
-              "type": "timestamp"
-            },
-            {
-              "as": "dep_hour",
-              "name": "dep_time",
-              "timeframe": "hour",
-              "type": "timestamp"
-            },
-            {
-              "as": "dep_minute",
-              "name": "dep_time",
-              "timeframe": "minute",
-              "type": "timestamp"
-            },
-            {
-              "as": "dep_second",
-              "name": "dep_time",
-              "timeframe": "second",
-              "type": "timestamp"
-            },
-            {
-              "type": "number",
-              "name": "total_distance_ca",
-              "expressionType": "aggregate",
-              "e": [
-                {
-                  "type": "filterExpression",
-                  "filterList": [fStringEq("origin.state", "CA")],
-                  "e": [
-                    {
-                      "type": "aggregate",
-                      "function": "sum",
-                      "e": [{ "type": "field", "path": "distance" }]
-                    }
-                  ]
-                }
-              ]
-            }
-          ],
-          "limit": 20,
-          "type": "reduce"
-        }
-      ]
+      structRef: 'flights',
+      pipeline: [{type: 'reduce', fields: ['carriers.name', 'flight_count']}],
     });
     await bqCompile(sql);
   });
 
-  it("bucket_test", async () => {
+  it('filtered_measures', async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      "pipeline": [
-        {
-          "fields": [
-            {
-              "bucketFilter": "AA,WN,DL",
-              "bucketOther": "Other Carrier",
-              "name": "carrier",
-              "type": "string"
-            },
-            "flight_count"
-          ],
-          "orderBy": [{ "dir": "asc", "field": 2 }],
-          "type": "reduce"
-        }
+      structRef: 'flights',
+      filterList: [
+        fStringEq('origin.state', 'CA'),
+        fStringEq('destination.state', 'NY'),
       ],
-      "structRef": "flights"
+      pipeline: [{type: 'reduce', fields: ['carriers.name', 'flight_count']}],
     });
     await bqCompile(sql);
   });
 
-  it("flights_by_carrier", async () => {
-    const sql = await compileQuery(faa, "query: flights->flights_by_carrier");
-    await bqCompile(sql);
-  });
-
-  it("simple_reduce", async () => {
+  it('timestamp', async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      "structRef": "flights",
-      "pipeline": [{ "type": "reduce", "fields": ["carrier", "flight_count"] }]
-    });
-    await bqCompile(sql);
-  });
-
-  it("two_sums", async () => {
-    const sql = await compileQueryFromQueryDef(faa, {
-      "structRef": "flights",
-      "pipeline": [
+      structRef: 'flights',
+      pipeline: [
         {
-          "type": "reduce",
-          "fields": [
+          fields: [
             {
-              "type": "number",
-              "expressionType": "aggregate",
-              "name": "total_distance",
-              "e": [
-                {
-                  "type": "aggregate",
-                  "function": "sum",
-                  "e": [{ "type": "field", "path": "distance" }]
-                }
-              ]
+              as: 'dep_year',
+              name: 'dep_time',
+              timeframe: 'year',
+              type: 'timestamp',
             },
-            "aircraft.aircraft_models.total_seats"
-          ]
-        }
-      ]
-    });
-    await bqCompile(sql);
-  });
-
-  it("first_fragment", async () => {
-    const sql = await compileQueryFromQueryDef(faa, {
-      "structRef": "flights",
-      "pipeline": [
-        {
-          "type": "reduce",
-          "fields": [
             {
-              "type": "string",
-              "name": "carrier",
-              "e": [
-                "UPPER(",
-                { "type": "field", "path": "carriers.nickname" },
-                ")"
-              ]
+              as: 'dep_month',
+              name: 'dep_time',
+              timeframe: 'month',
+              type: 'timestamp',
             },
-            "flight_count"
-          ]
-        }
-      ]
-    });
-    await bqCompile(sql);
-  });
-
-  it("sum_in_expr", async () => {
-    const sql = await compileQueryFromQueryDef(faa, {
-      "structRef": "flights",
-      "pipeline": [
-        {
-          "fields": [
-            "carriers.name",
             {
-              "type": "number",
-              "expressionType": "aggregate",
-              "name": "total_distance",
-              "e": [
-                {
-                  "type": "aggregate",
-                  "function": "sum",
-                  "e": [{ "type": "field", "path": "distance" }]
-                }
-              ]
-            }
-          ],
-          "type": "reduce"
-        }
-      ]
-    });
-    await bqCompile(sql);
-  });
-
-  it("filtered_sum_in_expr", async () => {
-    const sql = await compileQueryFromQueryDef(faa, {
-      "structRef": "flights",
-      "pipeline": [
-        {
-          "type": "reduce",
-          "fields": [
-            "aircraft.aircraft_models.manufacturer",
+              as: 'dep_week',
+              name: 'dep_time',
+              timeframe: 'week',
+              type: 'timestamp',
+            },
             {
-              "type": "number",
-              "expressionType": "aggregate",
-              "name": "total_distance",
-              "e": [
+              as: 'dep_date',
+              name: 'dep_time',
+              timeframe: 'day',
+              type: 'timestamp',
+            },
+            {
+              as: 'dep_hour',
+              name: 'dep_time',
+              timeframe: 'hour',
+              type: 'timestamp',
+            },
+            {
+              as: 'dep_minute',
+              name: 'dep_time',
+              timeframe: 'minute',
+              type: 'timestamp',
+            },
+            {
+              as: 'dep_second',
+              name: 'dep_time',
+              timeframe: 'second',
+              type: 'timestamp',
+            },
+            {
+              type: 'number',
+              name: 'total_distance_ca',
+              expressionType: 'aggregate',
+              e: [
                 {
-                  "type": "filterExpression",
-                  "filterList": [fStringEq("origin_code", "SFO")],
-                  "e": [
+                  type: 'filterExpression',
+                  filterList: [fStringEq('origin.state', 'CA')],
+                  e: [
                     {
-                      "type": "aggregate",
-                      "function": "sum",
-                      "e": [{ "type": "field", "path": "distance" }]
-                    }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
+                      type: 'aggregate',
+                      function: 'sum',
+                      e: [{type: 'field', path: 'distance'}],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+          limit: 20,
+          type: 'reduce',
+        },
+      ],
     });
     await bqCompile(sql);
   });
 
-  it("dynamic_measure", async () => {
+  it('bucket_test', async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      "structRef": "flights",
-      "pipeline": [
+      pipeline: [
         {
-          "type": "reduce",
-          "fields": [
-            "origin.state",
-            "flight_count",
+          fields: [
             {
-              "type": "number",
-              "expressionType": "aggregate",
-              "name": "total_distance",
-              "e": [
+              bucketFilter: 'AA,WN,DL',
+              bucketOther: 'Other Carrier',
+              name: 'carrier',
+              type: 'string',
+            },
+            'flight_count',
+          ],
+          orderBy: [{dir: 'asc', field: 2}],
+          type: 'reduce',
+        },
+      ],
+      structRef: 'flights',
+    });
+    await bqCompile(sql);
+  });
+
+  it('flights_by_carrier', async () => {
+    const sql = await compileQuery(faa, 'query: flights->flights_by_carrier');
+    await bqCompile(sql);
+  });
+
+  it('simple_reduce', async () => {
+    const sql = await compileQueryFromQueryDef(faa, {
+      structRef: 'flights',
+      pipeline: [{type: 'reduce', fields: ['carrier', 'flight_count']}],
+    });
+    await bqCompile(sql);
+  });
+
+  it('two_sums', async () => {
+    const sql = await compileQueryFromQueryDef(faa, {
+      structRef: 'flights',
+      pipeline: [
+        {
+          type: 'reduce',
+          fields: [
+            {
+              type: 'number',
+              expressionType: 'aggregate',
+              name: 'total_distance',
+              e: [
                 {
-                  "type": "filterExpression",
-                  "filterList": [fStringEq("origin_code", "SFO")],
-                  "e": [
-                    {
-                      "type": "aggregate",
-                      "function": "sum",
-                      "e": [{ "type": "field", "path": "distance" }]
-                    }
-                  ]
-                }
-              ]
-            }
+                  type: 'aggregate',
+                  function: 'sum',
+                  e: [{type: 'field', path: 'distance'}],
+                },
+              ],
+            },
+            'aircraft.aircraft_models.total_seats',
           ],
-          "filterList": [fStringEq("carriers.code", "WN")]
-        }
-      ]
+        },
+      ],
     });
     await bqCompile(sql);
   });
 
-  it("add_filter_to_named_query", async () => {
+  it('first_fragment', async () => {
     const sql = await compileQueryFromQueryDef(faa, {
-      "structRef": "flights",
-      "filterList": [fStringEq("destination_code", "AL")],
-      "pipeHead": { "name": "flights_by_city_top_5" },
-      "pipeline": []
-    });
-    await bqCompile(sql);
-  });
-
-  it("flights.flights_by_model", async () => {
-    const sql = await compileQuery(faa, "query: flights->flights_by_model");
-    await bqCompile(sql);
-  });
-
-  it("flights.aircraft_facts_test", async () => {
-    const sql = await compileQuery(faa, "query: flights->aircraft_facts_test");
-    await bqCompile(sql);
-  });
-
-  it("flights.measures_first", async () => {
-    const sql = await compileQuery(faa, "query:flights->measures_first");
-    await bqCompile(sql);
-  });
-
-  it("flights.carriers_by_total_engines", async () => {
-    const sql = await compileQuery(
-      faa,
-      "query: flights->carriers_by_total_engines"
-    );
-    await bqCompile(sql);
-  });
-
-  it("flights.first_turtle", async () => {
-    const sql = await compileQuery(faa, "query: flights->first_turtle");
-    await bqCompile(sql);
-  });
-
-  it("flights.top_5_routes_carriers", async () => {
-    const sql = await compileQuery(
-      faa,
-      "query: flights->top_5_routes_carriers"
-    );
-    await bqCompile(sql);
-  });
-
-  it("flights.new_york_airports", async () => {
-    const sql = await compileQuery(faa, "query: flights->new_york_airports");
-    await bqCompile(sql);
-  });
-
-  it("flights.flights_by_carrier_with_totals", async () => {
-    const sql = await compileQuery(
-      faa,
-      "query: flights->flights_by_carrier_with_totals"
-    );
-    await bqCompile(sql);
-  });
-
-  it("lotsoturtles", async () => {
-    const sql = await compileQueryFromQueryDef(faa, {
-      "structRef": "flights",
-      "pipeline": [
+      structRef: 'flights',
+      pipeline: [
         {
-          "fields": [
-            "origin.state",
-            "flight_count",
-            "flights_by_model",
-            "flights_by_carrier",
-            "measures_first",
-            "first_turtle"
-          ],
-          "type": "reduce"
-        }
-      ]
-    });
-    await bqCompile(sql);
-  });
-
-  it("add_filter_to_def", async () => {
-    const sql = await compileQueryFromQueryDef(faa, {
-      "structRef": "flights",
-      "filterList": [fStringEq("destination_code", "AL")],
-      "pipeHead": { "name": "flights_by_carrier_with_totals" },
-      "pipeline": [
-        {
-          "type": "reduce",
-          "fields": [
-            "main.name",
-            "main.flight_count",
+          type: 'reduce',
+          fields: [
             {
-              "name": "total_flights",
-              "type": "number",
-              "expressionType": "scalar",
-              "e": [{ "type": "field", "path": "totals.flight_count" }]
-            }
-          ]
-        }
-      ]
+              type: 'string',
+              name: 'carrier',
+              e: ['UPPER(', {type: 'field', path: 'carriers.nickname'}, ')'],
+            },
+            'flight_count',
+          ],
+        },
+      ],
     });
     await bqCompile(sql);
   });
 
-  it("flights.search_index", async () => {
-    const sql = await compileQuery(faa, "query: flights->search_index");
+  it('sum_in_expr', async () => {
+    const sql = await compileQueryFromQueryDef(faa, {
+      structRef: 'flights',
+      pipeline: [
+        {
+          fields: [
+            'carriers.name',
+            {
+              type: 'number',
+              expressionType: 'aggregate',
+              name: 'total_distance',
+              e: [
+                {
+                  type: 'aggregate',
+                  function: 'sum',
+                  e: [{type: 'field', path: 'distance'}],
+                },
+              ],
+            },
+          ],
+          type: 'reduce',
+        },
+      ],
+    });
     await bqCompile(sql);
   });
 
-  it("turtle_turtle_filter", async () => {
+  it('filtered_sum_in_expr', async () => {
+    const sql = await compileQueryFromQueryDef(faa, {
+      structRef: 'flights',
+      pipeline: [
+        {
+          type: 'reduce',
+          fields: [
+            'aircraft.aircraft_models.manufacturer',
+            {
+              type: 'number',
+              expressionType: 'aggregate',
+              name: 'total_distance',
+              e: [
+                {
+                  type: 'filterExpression',
+                  filterList: [fStringEq('origin_code', 'SFO')],
+                  e: [
+                    {
+                      type: 'aggregate',
+                      function: 'sum',
+                      e: [{type: 'field', path: 'distance'}],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    await bqCompile(sql);
+  });
+
+  it('dynamic_measure', async () => {
+    const sql = await compileQueryFromQueryDef(faa, {
+      structRef: 'flights',
+      pipeline: [
+        {
+          type: 'reduce',
+          fields: [
+            'origin.state',
+            'flight_count',
+            {
+              type: 'number',
+              expressionType: 'aggregate',
+              name: 'total_distance',
+              e: [
+                {
+                  type: 'filterExpression',
+                  filterList: [fStringEq('origin_code', 'SFO')],
+                  e: [
+                    {
+                      type: 'aggregate',
+                      function: 'sum',
+                      e: [{type: 'field', path: 'distance'}],
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+          filterList: [fStringEq('carriers.code', 'WN')],
+        },
+      ],
+    });
+    await bqCompile(sql);
+  });
+
+  it('add_filter_to_named_query', async () => {
+    const sql = await compileQueryFromQueryDef(faa, {
+      structRef: 'flights',
+      filterList: [fStringEq('destination_code', 'AL')],
+      pipeHead: {name: 'flights_by_city_top_5'},
+      pipeline: [],
+    });
+    await bqCompile(sql);
+  });
+
+  it('flights.flights_by_model', async () => {
+    const sql = await compileQuery(faa, 'query: flights->flights_by_model');
+    await bqCompile(sql);
+  });
+
+  it('flights.aircraft_facts_test', async () => {
+    const sql = await compileQuery(faa, 'query: flights->aircraft_facts_test');
+    await bqCompile(sql);
+  });
+
+  it('flights.measures_first', async () => {
+    const sql = await compileQuery(faa, 'query:flights->measures_first');
+    await bqCompile(sql);
+  });
+
+  it('flights.carriers_by_total_engines', async () => {
+    const sql = await compileQuery(
+      faa,
+      'query: flights->carriers_by_total_engines'
+    );
+    await bqCompile(sql);
+  });
+
+  it('flights.first_turtle', async () => {
+    const sql = await compileQuery(faa, 'query: flights->first_turtle');
+    await bqCompile(sql);
+  });
+
+  it('flights.top_5_routes_carriers', async () => {
+    const sql = await compileQuery(
+      faa,
+      'query: flights->top_5_routes_carriers'
+    );
+    await bqCompile(sql);
+  });
+
+  it('flights.new_york_airports', async () => {
+    const sql = await compileQuery(faa, 'query: flights->new_york_airports');
+    await bqCompile(sql);
+  });
+
+  it('flights.flights_by_carrier_with_totals', async () => {
+    const sql = await compileQuery(
+      faa,
+      'query: flights->flights_by_carrier_with_totals'
+    );
+    await bqCompile(sql);
+  });
+
+  it('lotsoturtles', async () => {
+    const sql = await compileQueryFromQueryDef(faa, {
+      structRef: 'flights',
+      pipeline: [
+        {
+          fields: [
+            'origin.state',
+            'flight_count',
+            'flights_by_model',
+            'flights_by_carrier',
+            'measures_first',
+            'first_turtle',
+          ],
+          type: 'reduce',
+        },
+      ],
+    });
+    await bqCompile(sql);
+  });
+
+  it('add_filter_to_def', async () => {
+    const sql = await compileQueryFromQueryDef(faa, {
+      structRef: 'flights',
+      filterList: [fStringEq('destination_code', 'AL')],
+      pipeHead: {name: 'flights_by_carrier_with_totals'},
+      pipeline: [
+        {
+          type: 'reduce',
+          fields: [
+            'main.name',
+            'main.flight_count',
+            {
+              name: 'total_flights',
+              type: 'number',
+              expressionType: 'scalar',
+              e: [{type: 'field', path: 'totals.flight_count'}],
+            },
+          ],
+        },
+      ],
+    });
+    await bqCompile(sql);
+  });
+
+  it('flights.search_index', async () => {
+    const sql = await compileQuery(faa, 'query: flights->search_index');
+    await bqCompile(sql);
+  });
+
+  it('turtle_turtle_filter', async () => {
     const result = await runQuery(
       faa,
       `
@@ -555,68 +547,68 @@ describe("BigQuery expression tests", () => {
       }
     `
     );
-    expect(result.data.value[0].code).toBe("ACV");
+    expect(result.data.value[0]['code']).toBe('ACV');
   });
 
-  it("flights.search_index", async () => {
-    const sql = await compileQuery(faa, "query: flights->search_index");
+  it('flights.search_index', async () => {
+    const sql = await compileQuery(faa, 'query: flights->search_index');
     await bqCompile(sql);
   });
 
-  it("medicare_test.turtle_city_zip", async () => {
+  it('medicare_test.turtle_city_zip', async () => {
     const sql = await compileQuery(
       faa,
-      "query: medicare_test->turtle_city_zip"
+      'query: medicare_test->turtle_city_zip'
     );
     await bqCompile(sql);
   });
 
-  it("medicare_test.triple_turtle", async () => {
-    const sql = await compileQuery(faa, "query: medicare_test->triple_turtle");
+  it('medicare_test.triple_turtle', async () => {
+    const sql = await compileQuery(faa, 'query: medicare_test->triple_turtle');
     await bqCompile(sql);
   });
 
-  it("medicare_test.rollup_by_location", async () => {
+  it('medicare_test.rollup_by_location', async () => {
     const sql = await compileQuery(
       faa,
-      "query: medicare_test->rollup_by_location"
+      'query: medicare_test->rollup_by_location'
     );
     await bqCompile(sql);
   });
 
-  it("flights.flights_routes_sessionized", async () => {
+  it('flights.flights_routes_sessionized', async () => {
     const sql = await compileQuery(
       faa,
-      "query: flights->flights_routes_sessionized"
+      'query: flights->flights_routes_sessionized'
     );
     await bqCompile(sql);
   });
 
-  it("flights.flights_aircraft_sessionized", async () => {
+  it('flights.flights_aircraft_sessionized', async () => {
     const sql = await compileQuery(
       faa,
-      "query: flights->flights_aircraft_sessionized"
+      'query: flights->flights_aircraft_sessionized'
     );
     await bqCompile(sql);
   });
 
-  it("flights.flights_by_manufacturer", async () => {
+  it('flights.flights_by_manufacturer', async () => {
     const sql = await compileQuery(
       faa,
-      "query: flights->flights_by_manufacturer"
+      'query: flights->flights_by_manufacturer'
     );
     await bqCompile(sql);
   });
 
-  it("flights.flights_by_carrier_2001_2002", async () => {
+  it('flights.flights_by_carrier_2001_2002', async () => {
     const sql = await compileQuery(
       faa,
-      "query: flights->flights_by_carrier_2001_2002"
+      'query: flights->flights_by_carrier_2001_2002'
     );
     await bqCompile(sql);
   });
 
-  it("timeframes aliased", async () => {
+  it('timeframes aliased', async () => {
     const sql = await compileQuery(
       faa,
       `
@@ -628,7 +620,7 @@ describe("BigQuery expression tests", () => {
     await bqCompile(sql);
   });
 
-  it("count distinct", async () => {
+  it('count distinct', async () => {
     const sql = await compileQuery(
       faa,
       `
@@ -641,59 +633,59 @@ describe("BigQuery expression tests", () => {
     await bqCompile(sql);
   });
 
-  it("table_base_on_query", async () => {
+  it('table_base_on_query', async () => {
     const result = await faa
       ._loadQueryFromQueryDef({
-        "structRef": "medicare_state_facts",
-        "pipeline": [
+        structRef: 'medicare_state_facts',
+        pipeline: [
           {
-            "type": "reduce",
-            "fields": ["provider_state", "num_providers"],
-            "orderBy": [{ "dir": "desc", "field": 2 }]
-          }
-        ]
+            type: 'reduce',
+            fields: ['provider_state', 'num_providers'],
+            orderBy: [{dir: 'desc', field: 2}],
+          },
+        ],
       })
       .run();
-    expect(result.data.value[0].num_providers).toBe(296);
+    expect(result.data.value[0]['num_providers']).toBe(296);
   });
 
   // const faa2: TestDeclaration[] = [
 
-  it("table_base_on_query2", async () => {
+  it('table_base_on_query2', async () => {
     const result = await faa
       ._loadQueryFromQueryDef({
-        "structRef": {
-          "type": "struct",
-          "name": "malloy-data.malloytest.bq_medicare_test",
-          "dialect": "standardsql",
-          "as": "mtest",
-          "structRelationship": {
-            "type": "basetable",
-            "connectionName": "bigquery"
+        structRef: {
+          type: 'struct',
+          name: 'malloy-data.malloytest.bq_medicare_test',
+          dialect: 'standardsql',
+          as: 'mtest',
+          structRelationship: {
+            type: 'basetable',
+            connectionName: 'bigquery',
           },
-          "structSource": {
-            "type": "table",
-            "tablePath": "malloy-data.malloytest.bq_medicare_test"
+          structSource: {
+            type: 'table',
+            tablePath: 'malloy-data.malloytest.bq_medicare_test',
           },
-          "fields": [
+          fields: [
             {
-              "type": "number",
-              "name": "c",
-              "expressionType": "aggregate",
-              "e": [{ "type": "aggregate", "function": "count", "e": [] }]
+              type: 'number',
+              name: 'c',
+              expressionType: 'aggregate',
+              e: [{type: 'aggregate', function: 'count', e: []}],
             },
             {
-              "type": "turtle",
-              "name": "get_count",
-              "pipeline": [{ "type": "reduce", "fields": ["c"] }]
-            }
-          ]
+              type: 'turtle',
+              name: 'get_count',
+              pipeline: [{type: 'reduce', fields: ['c']}],
+            },
+          ],
         },
-        "pipeHead": { "name": "get_count" },
-        "pipeline": []
+        pipeHead: {name: 'get_count'},
+        pipeline: [],
       })
       .run();
-    expect(result.data.value[0].c).toBe(202656);
+    expect(result.data.value[0]['c']).toBe(202656);
   });
 });
 
@@ -721,13 +713,13 @@ explore: airports is table('malloy-data.malloytest.airports'){
 query: ca_airports is airports->by_fac_type{? state ? 'CA' | 'NY'}
 `;
 
-describe("airport_tests", () => {
+describe('airport_tests', () => {
   let model: malloy.ModelMaterializer;
   beforeAll(async () => {
     model = runtime.loadModel(airportModelText);
   });
 
-  it("airport_count", async () => {
+  it('airport_count', async () => {
     const result = await runQuery(
       model,
       `
@@ -736,10 +728,10 @@ describe("airport_tests", () => {
       }
     `
     );
-    expect(result.data.value[0].a).toBe(19793);
+    expect(result.data.value[0]['a']).toBe(19793);
   });
 
-  it("turtle_from_hell", async () => {
+  it('turtle_from_hell', async () => {
     const result = await runQuery(
       model,
       `
@@ -776,10 +768,10 @@ describe("airport_tests", () => {
 
     `
     );
-    expect(result.data.value[0].county).toBe("ZAVALA");
+    expect(result.data.value[0]['county']).toBe('ZAVALA');
   });
 
-  it("nested_project", async () => {
+  it('nested_project', async () => {
     const result = await runQuery(
       model,
       `
@@ -797,10 +789,10 @@ describe("airport_tests", () => {
     }
     `
     );
-    expect(result.data.value[0].elevation).toBe(1836);
+    expect(result.data.value[0]['elevation']).toBe(1836);
   });
 
-  it("nested_sums", async () => {
+  it('nested_sums', async () => {
     const result = await runQuery(
       model,
       `
@@ -823,11 +815,11 @@ describe("airport_tests", () => {
     `
     );
     // console.log(result.sql);
-    expect(result.data.value[0].sum_state).toBe(19793);
-    expect(result.data.value[0].sum_fac).toBe(19793);
+    expect(result.data.value[0]['sum_state']).toBe(19793);
+    expect(result.data.value[0]['sum_fac']).toBe(19793);
   });
 
-  it("pipeline_as_declared_turtle", async () => {
+  it('pipeline_as_declared_turtle', async () => {
     const result = await runQuery(
       model,
       `
@@ -841,10 +833,10 @@ describe("airport_tests", () => {
         query: my_airports->pipe_turtle
     `
     );
-    expect(result.data.value[0].a).toBe(19793);
+    expect(result.data.value[0]['a']).toBe(19793);
   });
 
-  it("pipeline Turtle", async () => {
+  it('pipeline Turtle', async () => {
     const result = await runQuery(
       model,
       `
@@ -873,7 +865,7 @@ describe("airport_tests", () => {
     ).toBe(1845);
   });
 
-  it.skip("crossjoined turtles", async () => {
+  it.skip('crossjoined turtles', async () => {
     // const result = await runQuery(model,`
     //     explore airports
     //    ->{
@@ -892,7 +884,7 @@ describe("airport_tests", () => {
     // expect((result.data.value[0] as any).pipe_turtle[0].total_airports).toBe(1845);
   });
 
-  it.skip("crossjoined turtles as turtle", async () => {
+  it.skip('crossjoined turtles as turtle', async () => {
     // const result = await runQuery(model,`
     //     explore airports
     //    ->{
@@ -914,7 +906,7 @@ describe("airport_tests", () => {
     // expect((result.data.value[0] as any).pipe_turtle[0].total_airports).toBe(1845);
   });
 
-  it("string_expressions", async () => {
+  it('string_expressions', async () => {
     const result = await runQuery(
       model,
       `
@@ -925,10 +917,10 @@ describe("airport_tests", () => {
       }
     `
     );
-    expect(result.data.value[0].lower_state).toBe("wy");
+    expect(result.data.value[0]['lower_state']).toBe('wy');
   });
 
-  it("half_count", async () => {
+  it('half_count', async () => {
     const result = await runQuery(
       model,
       `
@@ -937,15 +929,15 @@ describe("airport_tests", () => {
       }
     `
     );
-    expect(result.data.value[0].half).toBe(9896.5);
+    expect(result.data.value[0]['half']).toBe(9896.5);
   });
 });
 
-describe("sql injection tests", () => {
+describe('sql injection tests', () => {
   const model = runtime._loadModelFromModelDef(testModel);
   jest.setTimeout(100000);
 
-  test("string literal escapes quotes", async () => {
+  test('string literal escapes quotes', async () => {
     const result = await runQuery(
       model,
       `
@@ -953,20 +945,20 @@ describe("sql injection tests", () => {
       }
     `
     );
-    expect(result.data.value[0].test).toBe("foo'");
+    expect(result.data.value[0]['test']).toBe("foo'");
   });
 
-  test("string filter escapes quotes", async () => {
+  test('string filter escapes quotes', async () => {
     const result = await runQuery(
       model,
       `
       query: table('malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo\\'' } }
     `
     );
-    expect(result.data.value[0].test).toBe(0);
+    expect(result.data.value[0]['test']).toBe(0);
   });
 
-  test("string literal escapes backslashes", async () => {
+  test('string literal escapes backslashes', async () => {
     const result = await runQuery(
       model,
       `
@@ -974,20 +966,20 @@ describe("sql injection tests", () => {
       }
     `
     );
-    expect(result.data.value[0].test).toBe("foo\\'");
+    expect(result.data.value[0]['test']).toBe("foo\\'");
   });
 
-  test("string filter escapes backslashes", async () => {
+  test('string filter escapes backslashes', async () => {
     const result = await runQuery(
       model,
       `
       query: table('malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo\\\\\\'' }}
     `
     );
-    expect(result.data.value[0].test).toBe(0);
+    expect(result.data.value[0]['test']).toBe(0);
   });
 
-  test("comment in string", async () => {
+  test('comment in string', async () => {
     const result = await runQuery(
       model,
       `
@@ -995,10 +987,10 @@ describe("sql injection tests", () => {
       }
     `
     );
-    expect(result.data.value[0].test).toBe("foo \\");
+    expect(result.data.value[0]['test']).toBe('foo \\');
   });
 
-  test("comment in string filter", async () => {
+  test('comment in string filter', async () => {
     let error;
     try {
       await runQuery(
@@ -1015,7 +1007,7 @@ describe("sql injection tests", () => {
 
   test.todo("'malloytest\\'.tables' produces the wrong error...");
 
-  test("comment in literal", async () => {
+  test('comment in literal', async () => {
     const result = await runQuery(
       model,
       `
@@ -1023,12 +1015,12 @@ describe("sql injection tests", () => {
       }
     `
     );
-    expect(result.data.value[0].test).toBe("foo \\");
+    expect(result.data.value[0]['test']).toBe('foo \\');
   });
 });
 
-describe("unsupported type tests", () => {
-  it("can read unsupported types in schema", async () => {
+describe('unsupported type tests', () => {
+  it('can read unsupported types in schema', async () => {
     const result = await runtime
       .loadQuery(
         `
@@ -1039,6 +1031,6 @@ describe("unsupported type tests", () => {
       `
       )
       .run();
-    expect(result.data.value[0].geo).toBeDefined();
+    expect(result.data.value[0]['geo']).toBeDefined();
   });
 });

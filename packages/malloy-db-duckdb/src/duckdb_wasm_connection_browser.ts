@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as duckdb from "@duckdb/duckdb-wasm";
-import { DuckDBWASMConnection as DuckDBWASMConnectionBase } from "./duckdb_wasm_connection";
+import * as duckdb from '@duckdb/duckdb-wasm';
+import {DuckDBWASMConnection as DuckDBWASMConnectionBase} from './duckdb_wasm_connection';
 
 export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
   getBundles(): duckdb.DuckDBBundles {
@@ -31,11 +31,11 @@ export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
 
   async createHash(sqlCommand: string): Promise<string> {
     const msgUint8 = new TextEncoder().encode(sqlCommand);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hashHex = hashArray
-      .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
     return hashHex;
   }
 }

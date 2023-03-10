@@ -21,15 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { RunSQLOptions } from "./run_sql_options";
+import {RunSQLOptions} from './run_sql_options';
 import {
   DocumentCompletion as DocumentCompletionDefinition,
   DocumentHighlight as DocumentHighlightDefinition,
   DocumentSymbol as DocumentSymbolDefinition,
   LogMessage,
-  MalloyTranslator
-} from "./lang";
-import { DocumentHelpContext } from "./lang/parse-tree-walkers/document-help-context-walker";
+  MalloyTranslator,
+} from './lang';
+import {DocumentHelpContext} from './lang/parse-tree-walkers/document-help-context-walker';
 import {
   CompiledQuery,
   DocumentReference,
@@ -61,8 +61,8 @@ import {
   flattenQuery,
   isSQLBlock,
   isSQLFragment,
-  FieldUnsupportedDef
-} from "./model";
+  FieldUnsupportedDef,
+} from './model';
 import {
   Connection,
   InfoConnection,
@@ -71,8 +71,8 @@ import {
   ModelURL,
   QueryString,
   QueryURL,
-  URLReader
-} from "./runtime_types";
+  URLReader,
+} from './runtime_types';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -88,7 +88,7 @@ export interface Loggable {
 export class Malloy {
   // TODO load from file built during release
   public static get version(): string {
-    return "0.0.1";
+    return '0.0.1';
   }
 
   private static _log: Loggable;
@@ -103,10 +103,10 @@ export class Malloy {
 
   private static _parse(source: string, url?: URL): Parse {
     if (url === undefined) {
-      url = new URL("internal://internal.malloy");
+      url = new URL('internal://internal.malloy');
     }
     const translator = new MalloyTranslator(url.toString(), {
-      "urls": { [url.toString()]: source }
+      urls: {[url.toString()]: source},
     });
     return new Parse(translator);
   }
@@ -120,7 +120,7 @@ export class Malloy {
    */
   public static parse({
     url,
-    urlReader
+    urlReader,
   }: {
     url: URL;
     urlReader: URLReader;
@@ -132,11 +132,11 @@ export class Malloy {
    * @param source The contents of the Malloy document to parse.
    * @return A `Parse` result.
    */
-  public static parse({ source, url }: { url?: URL; source: string }): Parse;
+  public static parse({source, url}: {url?: URL; source: string}): Parse;
   public static parse({
     url,
     urlReader,
-    source
+    source,
   }: {
     url?: URL;
     source?: string;
@@ -146,14 +146,14 @@ export class Malloy {
       return Malloy._parse(source, url);
     } else {
       if (urlReader === undefined) {
-        throw new Error("Internal Error: urlReader is required.");
+        throw new Error('Internal Error: urlReader is required.');
       }
       if (url === undefined) {
         throw new Error(
-          "Internal Error: url is required if source not present."
+          'Internal Error: url is required if source not present.'
         );
       }
-      return urlReader.readURL(url).then((source) => {
+      return urlReader.readURL(url).then(source => {
         return Malloy._parse(source, url);
       });
     }
@@ -172,7 +172,7 @@ export class Malloy {
     urlReader,
     connections,
     parse,
-    model
+    model,
   }: {
     urlReader: URLReader;
     connections: LookupConnection<InfoConnection>;
@@ -206,17 +206,17 @@ export class Malloy {
         if (result.urls) {
           for (const neededUrl of result.urls) {
             try {
-              if (neededUrl.startsWith("internal://")) {
+              if (neededUrl.startsWith('internal://')) {
                 throw new Error(
-                  "In order to use relative imports, you must compile a file via a URL."
+                  'In order to use relative imports, you must compile a file via a URL.'
                 );
               }
               const neededText = await urlReader.readURL(new URL(neededUrl));
-              const urls = { [neededUrl]: neededText };
-              translator.update({ urls });
+              const urls = {[neededUrl]: neededText};
+              translator.update({urls});
             } catch (error) {
               translator.update({
-                "errors": { "urls": { [neededUrl]: error.message } }
+                errors: {urls: {[neededUrl]: error.message}},
               });
             }
           }
@@ -228,7 +228,7 @@ export class Malloy {
             Array<string>
           > = new Map();
           for (const connectionTableString of result.tables) {
-            const { connectionName } = parseTableURI(connectionTableString);
+            const {connectionName} = parseTableURI(connectionTableString);
 
             let connectionToTablesMap = tablesByConnection.get(connectionName);
             if (!connectionToTablesMap) {
@@ -241,7 +241,7 @@ export class Malloy {
           // iterate over connections, fetching schema for all missing tables
           for (const [
             connectionName,
-            connectionTableString
+            connectionTableString,
           ] of tablesByConnection) {
             try {
               const connection = await connections.lookupConnection(
@@ -250,18 +250,18 @@ export class Malloy {
               // TODO detect if the union of `Object.keys(tables)` and `Object.keys(errors)` is not the same
               //      as `Object.keys(connectionTableString)`, i.e. that all tables are accounted for. Otherwise
               //      the translator runs into an infinite loop fetching tables.
-              const { "schemas": tables, errors } =
+              const {schemas: tables, errors} =
                 await connection.fetchSchemaForTables(connectionTableString);
-              translator.update({ tables, "errors": { "tables": errors } });
+              translator.update({tables, errors: {tables: errors}});
             } catch (error) {
               // There was an exception getting the connection, associate that error
               // with all its tables
               const tables = {};
-              const errors: { [name: string]: string } = {};
+              const errors: {[name: string]: string} = {};
               for (const table of connectionTableString) {
                 errors[table] = error.toString();
               }
-              translator.update({ tables, "errors": { "tables": errors } });
+              translator.update({tables, errors: {tables: errors}});
             }
           }
         }
@@ -278,20 +278,20 @@ export class Malloy {
             const resolved = await conn.fetchSchemaForSQLBlock(expanded);
             if (resolved.error) {
               translator.update({
-                "errors": { "compileSQL": { [expanded.name]: resolved.error } }
+                errors: {compileSQL: {[expanded.name]: resolved.error}},
               });
             }
             if (resolved.structDef) {
               if (isSQLBlock(resolved.structDef)) {
                 translator.update({
-                  "compileSQL": { [expanded.name]: resolved.structDef }
+                  compileSQL: {[expanded.name]: resolved.structDef},
                 });
               }
             }
           } catch (error) {
-            const errors: { [name: string]: string } = {};
+            const errors: {[name: string]: string} = {};
             errors[toCompile.name] = error.toString();
-            translator.update({ "errors": { "compileSQL": errors } });
+            translator.update({errors: {compileSQL: errors}});
           }
         }
       }
@@ -303,7 +303,7 @@ export class Malloy {
     toCompile: SQLBlockSource
   ): SQLBlock {
     let queryModel: QueryModel;
-    const sqlStrings = toCompile.select.map((segment) => {
+    const sqlStrings = toCompile.select.map(segment => {
       if (isSQLFragment(segment)) {
         return segment.sql;
       } else {
@@ -311,7 +311,7 @@ export class Malloy {
         if (!queryModel) {
           if (!partialModel) {
             throw new Error(
-              "Internal error: Partial model missing when compiling SQL block"
+              'Internal error: Partial model missing when compiling SQL block'
             );
           }
           queryModel = new QueryModel(partialModel);
@@ -319,12 +319,12 @@ export class Malloy {
         return queryModel.compileQuery(segment).sql;
       }
     });
-    const { name, connection } = toCompile;
+    const {name, connection} = toCompile;
     return {
-      "type": "sqlBlock",
+      type: 'sqlBlock',
       name,
       connection,
-      "selectStr": sqlStrings.join("")
+      selectStr: sqlStrings.join(''),
     };
   }
 
@@ -370,7 +370,7 @@ export class Malloy {
     preparedResult,
     sqlStruct,
     connection,
-    options
+    options,
   }: {
     connection?: Connection;
     preparedResult?: PreparedResult;
@@ -382,7 +382,7 @@ export class Malloy {
     if (!connection) {
       if (!connections) {
         throw new Error(
-          "Internal Error: Connection or LookupConnection<Connection> must be provided."
+          'Internal Error: Connection or LookupConnection<Connection> must be provided.'
         );
       }
       const connectionName =
@@ -390,7 +390,7 @@ export class Malloy {
       connection = await connections.lookupConnection(connectionName);
     }
     if (sqlStruct && sqlBlock) {
-      if (sqlStruct.structRelationship.type !== "basetable") {
+      if (sqlStruct.structRelationship.type !== 'basetable') {
         throw new Error(
           "Expected schema's structRelationship type to be 'basetable'."
         );
@@ -398,22 +398,22 @@ export class Malloy {
       const data = await connection.runSQL(sqlBlock.selectStr);
       return new Result(
         {
-          "structs": [sqlStruct],
-          "sql": sqlBlock.selectStr,
-          "result": data.rows,
-          "totalRows": data.totalRows,
-          "lastStageName": sqlBlock.name,
+          structs: [sqlStruct],
+          sql: sqlBlock.selectStr,
+          result: data.rows,
+          totalRows: data.totalRows,
+          lastStageName: sqlBlock.name,
           // TODO feature-sql-block There is no malloy code...
-          "malloy": "",
-          "connectionName": sqlStruct.structRelationship.connectionName,
+          malloy: '',
+          connectionName: sqlStruct.structRelationship.connectionName,
           // TODO feature-sql-block There is no source explore...
-          "sourceExplore": "",
-          "sourceFilters": []
+          sourceExplore: '',
+          sourceFilters: [],
         },
         {
-          "name": "empty_model",
-          "exports": [],
-          "contents": {}
+          name: 'empty_model',
+          exports: [],
+          contents: {},
         }
       );
     } else if (preparedResult) {
@@ -421,14 +421,14 @@ export class Malloy {
       return new Result(
         {
           ...preparedResult._rawQuery,
-          "result": result.rows,
-          "totalRows": result.totalRows
+          result: result.rows,
+          totalRows: result.totalRows,
         },
         preparedResult._modelDef
       );
     } else {
       throw new Error(
-        "Internal error: sqlStruct or preparedResult must be provided."
+        'Internal error: sqlStruct or preparedResult must be provided.'
       );
     }
   }
@@ -468,7 +468,7 @@ export class Malloy {
     preparedResult,
     sqlStruct,
     connection,
-    options
+    options,
   }: {
     connection?: Connection;
     preparedResult?: PreparedResult;
@@ -479,7 +479,7 @@ export class Malloy {
     const sqlBlock = sqlStruct?.structSource.sqlBlock;
     if (sqlBlock === undefined && preparedResult === undefined) {
       throw new Error(
-        "Internal error: sqlBlock or preparedResult must be provided."
+        'Internal error: sqlBlock or preparedResult must be provided.'
       );
     }
     const connectionName =
@@ -487,7 +487,7 @@ export class Malloy {
     if (connection === undefined) {
       if (connections === undefined) {
         throw new Error(
-          "Internal Error: Connection or LookupConnection<Connection> must be provided."
+          'Internal Error: Connection or LookupConnection<Connection> must be provided.'
         );
       }
       connection = await connections.lookupConnection(connectionName);
@@ -499,7 +499,7 @@ export class Malloy {
     let sql;
     let resultExplore;
     if (sqlStruct) {
-      if (sqlStruct.structRelationship.type !== "basetable") {
+      if (sqlStruct.structRelationship.type !== 'basetable') {
         throw new Error(
           "Expected schema's structRelationship type to be 'basetable'."
         );
@@ -511,7 +511,7 @@ export class Malloy {
       sql = preparedResult.sql;
     } else {
       throw new Error(
-        "Internal error: sqlStruct or preparedResult must be provided."
+        'Internal error: sqlStruct or preparedResult must be provided.'
       );
     }
     let index = 0;
@@ -583,11 +583,11 @@ export class Model {
    */
   public getPreparedQueryByName(queryName: string): PreparedQuery {
     const query = this.modelDef.contents[queryName];
-    if (query.type === "query") {
+    if (query.type === 'query') {
       return new PreparedQuery(query, this.modelDef, queryName);
     }
 
-    throw new Error("Given query name does not refer to a named query.");
+    throw new Error('Given query name does not refer to a named query.');
   }
 
   /**
@@ -613,7 +613,7 @@ export class Model {
    */
   public getSQLBlockByName(sqlBlockName: string): SQLBlockStructDef {
     const sqlBlock = this.sqlBlocks.find(
-      (sqlBlock) => sqlBlock.as === sqlBlockName
+      sqlBlock => sqlBlock.as === sqlBlockName
     );
     if (sqlBlock === undefined) {
       throw new Error(`No SQL Block named '${sqlBlockName}'`);
@@ -642,7 +642,7 @@ export class Model {
    */
   public get preparedQuery(): PreparedQuery {
     if (this.queryList.length === 0) {
-      throw new Error("Model has no queries.");
+      throw new Error('Model has no queries.');
     }
     return new PreparedQuery(
       this.queryList[this.queryList.length - 1],
@@ -658,10 +658,10 @@ export class Model {
    */
   public getExploreByName(name: string): Explore {
     const struct = this.modelDef.contents[name];
-    if (struct.type === "struct") {
+    if (struct.type === 'struct') {
       return new Explore(struct);
     }
-    throw new Error(`'name' is not an explore`);
+    throw new Error("'name' is not an explore");
   }
 
   /**
@@ -673,7 +673,7 @@ export class Model {
     const explores: Explore[] = [];
     for (const me in this.modelDef.contents) {
       const ent = this.modelDef.contents[me];
-      if (ent.type === "struct") {
+      if (ent.type === 'struct') {
         explores.push(new Explore(ent));
       }
     }
@@ -681,7 +681,7 @@ export class Model {
   }
 
   public get exportedExplores(): Explore[] {
-    return this.explores.filter((explore) =>
+    return this.explores.filter(explore =>
       this.modelDef.exports.includes(explore.name)
     );
   }
@@ -716,7 +716,7 @@ export class PreparedQuery {
     return new PreparedResult(
       {
         ...translatedQuery,
-        "queryName": this.name || translatedQuery.queryName
+        queryName: this.name || translatedQuery.queryName,
       },
       this._modelDef
     );
@@ -725,11 +725,11 @@ export class PreparedQuery {
   public get dialect(): string {
     const sourceRef = this._query.structRef;
     const source =
-      typeof sourceRef === "string"
+      typeof sourceRef === 'string'
         ? this._modelDef.contents[sourceRef]
         : sourceRef;
-    if (source.type !== "struct") {
-      throw new Error("Invalid source for query");
+    if (source.type !== 'struct') {
+      throw new Error('Invalid source for query');
     }
     return source.dialect;
   }
@@ -739,17 +739,17 @@ export class PreparedQuery {
    */
   public getFlattenedQuery(defaultName: string): PreparedQuery {
     let structRef = this._query.structRef;
-    if (typeof structRef !== "string") {
+    if (typeof structRef !== 'string') {
       structRef = structRef.as || structRef.name;
     }
     const turtleDef = flattenQuery(this._modelDef, {
       ...this._query,
-      "type": "query",
-      "name":
-        "as" in this._query ? this._query.as || this._query.name : defaultName
+      type: 'query',
+      name:
+        'as' in this._query ? this._query.as || this._query.name : defaultName,
     });
     return new PreparedQuery(
-      { ...turtleDef, structRef, "type": "query" },
+      {...turtleDef, structRef, type: 'query'},
       this._modelDef,
       this.name || turtleDef.as || turtleDef.name
     );
@@ -763,9 +763,9 @@ export function parseTableURI(tableURI: string): {
   const parts = tableURI.match(/^([^:]*):(.*)$/);
   if (parts) {
     const [, firstPart, secondPart] = parts;
-    return { "connectionName": firstPart, "tablePath": secondPart };
+    return {connectionName: firstPart, tablePath: secondPart};
   } else {
-    return { "tablePath": tableURI };
+    return {tablePath: tableURI};
   }
 }
 
@@ -789,7 +789,7 @@ export class Parse {
    */
   public get highlights(): DocumentHighlight[] {
     return (this.translator.metadata().highlights || []).map(
-      (highlight) => new DocumentHighlight(highlight)
+      highlight => new DocumentHighlight(highlight)
     );
   }
 
@@ -803,7 +803,7 @@ export class Parse {
    */
   public get symbols(): DocumentSymbol[] {
     return (this.translator.metadata().symbols || []).map(
-      (symbol) => new DocumentSymbol(symbol)
+      symbol => new DocumentSymbol(symbol)
     );
   }
 
@@ -816,7 +816,7 @@ export class Parse {
     character: number;
   }): DocumentCompletion[] {
     return (this.translator.completions(position).completions || []).map(
-      (completion) => new DocumentCompletion(completion)
+      completion => new DocumentCompletion(completion)
     );
   }
 
@@ -897,12 +897,12 @@ export class DocumentRange {
    * @return This range in JSON format.
    */
   public toJSON(): {
-    start: { line: number; character: number };
-    end: { line: number; character: number };
+    start: {line: number; character: number};
+    end: {line: number; character: number};
   } {
     return {
-      "start": this.start.toJSON(),
-      "end": this.end.toJSON()
+      start: this.start.toJSON(),
+      end: this.end.toJSON(),
     };
   }
 }
@@ -936,8 +936,8 @@ export class DocumentPosition {
   /**
    * @return This position in JSON format.
    */
-  public toJSON(): { line: number; character: number } {
-    return { "line": this.line, "character": this.character };
+  public toJSON(): {line: number; character: number} {
+    return {line: this.line, character: this.character};
   }
 }
 
@@ -966,7 +966,7 @@ export class DocumentSymbol {
     this._type = documentSymbol.type;
     this._name = documentSymbol.name;
     this._children = documentSymbol.children.map(
-      (child) => new DocumentSymbol(child)
+      child => new DocumentSymbol(child)
     );
   }
 
@@ -1054,12 +1054,12 @@ export class PreparedResult {
    */
   public get resultExplore(): Explore {
     if (this.inner.structs.length === 0) {
-      throw new Error("Malformed query result.");
+      throw new Error('Malformed query result.');
     }
     const explore = this.inner.structs[this.inner.structs.length - 1];
     const namedExplore = {
       ...explore,
-      "name": this.inner.queryName || explore.name
+      name: this.inner.queryName || explore.name,
     };
     // TODO `sourceExplore` is not fully-implemented yet -- it cannot
     //      handle cases where the source of the query is something other than
@@ -1075,9 +1075,9 @@ export class PreparedResult {
     const name = this.inner.sourceExplore;
     const explore = this.modelDef.contents[name];
     if (explore === undefined) {
-      throw new Error("Malformed query result.");
+      throw new Error('Malformed query result.');
     }
-    if (explore.type === "struct") {
+    if (explore.type === 'struct') {
       return new Explore(explore);
     }
     throw new Error(`'${name} is not an explore`);
@@ -1099,7 +1099,7 @@ export class PreparedResult {
  */
 export class EmptyURLReader implements URLReader {
   async readURL(_url: URL): Promise<string> {
-    throw new Error("No files.");
+    throw new Error('No files.');
   }
 }
 
@@ -1149,7 +1149,7 @@ export class FixedConnectionMap implements LookupConnection<Connection> {
       if (this.defaultConnectionName !== undefined) {
         connectionName = this.defaultConnectionName;
       } else {
-        throw new Error("No default connection.");
+        throw new Error('No default connection.');
       }
     }
 
@@ -1167,7 +1167,7 @@ export class FixedConnectionMap implements LookupConnection<Connection> {
 
   public static fromArray(connections: Connection[]): FixedConnectionMap {
     return new FixedConnectionMap(
-      new Map(connections.map((connection) => [connection.name, connection]))
+      new Map(connections.map(connection => [connection.name, connection]))
     );
   }
 }
@@ -1179,22 +1179,22 @@ export enum SourceRelationship {
   /**
    * The `Explore` is nested data within the source's rows.
    */
-  Nested = "nested",
+  Nested = 'nested',
 
   /**
    * The `Explore` is the base table.
    */
-  BaseTable = "base_table",
+  BaseTable = 'base_table',
 
   /**
    * The `Explore` is joined to its source
    */
-  Cross = "cross",
-  One = "one",
-  Many = "many",
+  Cross = 'cross',
+  One = 'one',
+  Many = 'many',
 
   // TODO document this
-  Inline = "inline"
+  Inline = 'inline',
 }
 
 abstract class Entity {
@@ -1272,23 +1272,23 @@ export class Explore extends Entity {
 
   public getQueryByName(name: string): PreparedQuery {
     const internalQuery: InternalQuery = {
-      "type": "query",
-      "structRef": this.structDef,
-      "pipeline": [
+      type: 'query',
+      structRef: this.structDef,
+      pipeline: [
         {
-          "type": "reduce",
-          "fields": [name]
-        }
-      ]
+          type: 'reduce',
+          fields: [name],
+        },
+      ],
     };
     return new PreparedQuery(internalQuery, this.modelDef, name);
   }
 
   private get modelDef(): ModelDef {
     return {
-      "name": "generated_model",
-      "exports": [],
-      "contents": { [this.structDef.name]: this.structDef }
+      name: 'generated_model',
+      exports: [],
+      contents: {[this.structDef.name]: this.structDef},
     };
   }
 
@@ -1300,45 +1300,45 @@ export class Explore extends Entity {
     if (this._fieldMap === undefined) {
       const sourceFields = this.source?.fieldMap || new Map();
       this._fieldMap = new Map(
-        this.structDef.fields.map((fieldDef) => {
+        this.structDef.fields.map(fieldDef => {
           const name = fieldDef.as || fieldDef.name;
           const sourceField = sourceFields.get(fieldDef.name);
-          if (fieldDef.type === "struct") {
+          if (fieldDef.type === 'struct') {
             return [name, new ExploreField(fieldDef, this, sourceField)];
-          } else if (fieldDef.type === "turtle") {
+          } else if (fieldDef.type === 'turtle') {
             return [name, new QueryField(fieldDef, this, sourceField)];
           } else {
-            if (fieldDef.type === "string") {
+            if (fieldDef.type === 'string') {
               return [name, new StringField(fieldDef, this, sourceField)];
-            } else if (fieldDef.type === "number") {
+            } else if (fieldDef.type === 'number') {
               return [name, new NumberField(fieldDef, this, sourceField)];
-            } else if (fieldDef.type === "date") {
+            } else if (fieldDef.type === 'date') {
               // TODO this is a hack
               // Is this a bug? The extraction functions don't seem like they should return a
               // field of type "date". Rather, they should be of type "number".
               if (
                 fieldDef.timeframe &&
-                ["day_of_month", "day_of_week", "day_of_year"].includes(
+                ['day_of_month', 'day_of_week', 'day_of_year'].includes(
                   fieldDef.timeframe
                 )
               ) {
                 return [
                   name,
                   new NumberField(
-                    { ...fieldDef, "type": "number" },
+                    {...fieldDef, type: 'number'},
                     this,
                     sourceField
-                  )
+                  ),
                 ];
               }
               return [name, new DateField(fieldDef, this, sourceField)];
-            } else if (fieldDef.type === "timestamp") {
+            } else if (fieldDef.type === 'timestamp') {
               return [name, new TimestampField(fieldDef, this, sourceField)];
-            } else if (fieldDef.type === "boolean") {
+            } else if (fieldDef.type === 'boolean') {
               return [name, new BooleanField(fieldDef, this, sourceField)];
-            } else if (fieldDef.type === "json") {
+            } else if (fieldDef.type === 'json') {
               return [name, new JSONField(fieldDef, this, sourceField)];
-            } else if (fieldDef.type === "unsupported") {
+            } else if (fieldDef.type === 'unsupported') {
               return [name, new UnsupportedField(fieldDef, this, sourceField)];
             }
           }
@@ -1353,7 +1353,7 @@ export class Explore extends Entity {
   }
 
   public get intrinsicFields(): Field[] {
-    return [...this.fieldMap.values()].filter((f) => f.isIntrinsic());
+    return [...this.fieldMap.values()].filter(f => f.isIntrinsic());
   }
 
   public getFieldByName(fieldName: string): Field {
@@ -1378,17 +1378,17 @@ export class Explore extends Entity {
 
   public get sourceRelationship(): SourceRelationship {
     switch (this.structDef.structRelationship.type) {
-      case "many":
+      case 'many':
         return SourceRelationship.Many;
-      case "one":
+      case 'one':
         return SourceRelationship.One;
-      case "cross":
+      case 'cross':
         return SourceRelationship.Cross;
-      case "inline":
+      case 'inline':
         return SourceRelationship.Inline;
-      case "nested":
+      case 'nested':
         return SourceRelationship.Nested;
-      case "basetable":
+      case 'basetable':
         return SourceRelationship.BaseTable;
     }
   }
@@ -1412,13 +1412,13 @@ export class Explore extends Entity {
 }
 
 export enum AtomicFieldType {
-  String = "string",
-  Number = "number",
-  Boolean = "boolean",
-  Date = "date",
-  Timestamp = "timestamp",
-  Json = "json",
-  Unsupported = "unsupported"
+  String = 'string',
+  Number = 'number',
+  Boolean = 'boolean',
+  Date = 'date',
+  Timestamp = 'timestamp',
+  Json = 'json',
+  Unsupported = 'unsupported',
 }
 
 export class AtomicField extends Entity {
@@ -1437,19 +1437,19 @@ export class AtomicField extends Entity {
 
   public get type(): AtomicFieldType {
     switch (this.fieldTypeDef.type) {
-      case "string":
+      case 'string':
         return AtomicFieldType.String;
-      case "boolean":
+      case 'boolean':
         return AtomicFieldType.Boolean;
-      case "date":
+      case 'date':
         return AtomicFieldType.Date;
-      case "timestamp":
+      case 'timestamp':
         return AtomicFieldType.Timestamp;
-      case "number":
+      case 'number':
         return AtomicFieldType.Number;
-      case "json":
+      case 'json':
         return AtomicFieldType.Json;
-      case "unsupported":
+      case 'unsupported':
         return AtomicFieldType.Unsupported;
     }
   }
@@ -1487,18 +1487,18 @@ export class AtomicField extends Entity {
 
   // was the field generated from a measure in the previous query
   public sourceWasMeasure(): boolean {
-    return this.fieldTypeDef.resultMetadata?.fieldKind === "measure";
+    return this.fieldTypeDef.resultMetadata?.fieldKind === 'measure';
   }
 
   public sourceWasMeasureLike(): boolean {
     return (
-      this.fieldTypeDef.resultMetadata?.fieldKind === "measure" ||
-      this.fieldTypeDef.resultMetadata?.fieldKind === "struct"
+      this.fieldTypeDef.resultMetadata?.fieldKind === 'measure' ||
+      this.fieldTypeDef.resultMetadata?.fieldKind === 'struct'
     );
   }
 
   public sourceWasDimension(): boolean {
-    return this.fieldTypeDef.resultMetadata?.fieldKind === "dimension";
+    return this.fieldTypeDef.resultMetadata?.fieldKind === 'dimension';
   }
 
   public hasParentExplore(): this is Field {
@@ -1547,22 +1547,22 @@ export class AtomicField extends Entity {
 }
 
 export enum DateTimeframe {
-  Day = "day",
-  Week = "week",
-  Month = "month",
-  Quarter = "quarter",
-  Year = "year"
+  Day = 'day',
+  Week = 'week',
+  Month = 'month',
+  Quarter = 'quarter',
+  Year = 'year',
 }
 
 export enum TimestampTimeframe {
-  Day = "day",
-  Week = "week",
-  Month = "month",
-  Quarter = "quarter",
-  Year = "year",
-  Second = "second",
-  Hour = "hour",
-  Minute = "minute"
+  Day = 'day',
+  Week = 'week',
+  Month = 'month',
+  Quarter = 'quarter',
+  Year = 'year',
+  Second = 'second',
+  Hour = 'hour',
+  Minute = 'minute',
 }
 
 export class DateField extends AtomicField {
@@ -1581,15 +1581,15 @@ export class DateField extends AtomicField {
       return undefined;
     }
     switch (this.fieldDateDef.timeframe) {
-      case "day":
+      case 'day':
         return DateTimeframe.Day;
-      case "week":
+      case 'week':
         return DateTimeframe.Week;
-      case "month":
+      case 'month':
         return DateTimeframe.Month;
-      case "quarter":
+      case 'quarter':
         return DateTimeframe.Quarter;
-      case "year":
+      case 'year':
         return DateTimeframe.Year;
     }
   }
@@ -1611,21 +1611,21 @@ export class TimestampField extends AtomicField {
       return undefined;
     }
     switch (this.fieldTimestampDef.timeframe) {
-      case "day":
+      case 'day':
         return TimestampTimeframe.Day;
-      case "week":
+      case 'week':
         return TimestampTimeframe.Week;
-      case "month":
+      case 'month':
         return TimestampTimeframe.Month;
-      case "quarter":
+      case 'quarter':
         return TimestampTimeframe.Quarter;
-      case "year":
+      case 'year':
         return TimestampTimeframe.Year;
-      case "second":
+      case 'second':
         return TimestampTimeframe.Second;
-      case "hour":
+      case 'hour':
         return TimestampTimeframe.Hour;
-      case "minute":
+      case 'minute':
         return TimestampTimeframe.Minute;
     }
   }
@@ -1748,9 +1748,9 @@ export class QueryField extends Query {
 }
 
 export enum JoinRelationship {
-  OneToOne = "one_to_one",
-  OneToMany = "one_to_many",
-  ManyToOne = "many_to_one"
+  OneToOne = 'one_to_one',
+  OneToMany = 'one_to_many',
+  ManyToOne = 'many_to_one',
 }
 
 export class ExploreField extends Explore {
@@ -1763,17 +1763,17 @@ export class ExploreField extends Explore {
 
   public get joinRelationship(): JoinRelationship {
     switch (this.structDef.structRelationship.type) {
-      case "one":
+      case 'one':
         return JoinRelationship.OneToMany;
-      case "many":
-      case "cross":
+      case 'many':
+      case 'cross':
         return JoinRelationship.ManyToOne;
-      case "inline":
+      case 'inline':
         return JoinRelationship.OneToOne;
-      case "nested":
+      case 'nested':
         return JoinRelationship.ManyToOne;
       default:
-        throw new Error("An explore field must have a join relationship.");
+        throw new Error('An explore field must have a join relationship.');
     }
   }
 
@@ -1823,7 +1823,7 @@ export class Runtime {
         connections = arg;
       } else {
         connections = {
-          "lookupConnection": () => Promise.resolve(arg)
+          lookupConnection: () => Promise.resolve(arg),
         };
       }
     }
@@ -1832,7 +1832,7 @@ export class Runtime {
     }
     if (connections === undefined) {
       throw new Error(
-        "A LookupConnection<Connection> or Connection is required."
+        'A LookupConnection<Connection> or Connection is required.'
       );
     }
     this._urlReader = urlReader;
@@ -1865,16 +1865,16 @@ export class Runtime {
       const parse =
         source instanceof URL
           ? await Malloy.parse({
-              "url": source,
-              "urlReader": this.urlReader
+              url: source,
+              urlReader: this.urlReader,
             })
           : Malloy.parse({
-              source
+              source,
             });
       return Malloy.compile({
-        "urlReader": this.urlReader,
-        "connections": this.connections,
-        parse
+        urlReader: this.urlReader,
+        connections: this.connections,
+        parse,
       });
     });
   }
@@ -1884,7 +1884,7 @@ export class Runtime {
   //      `ModelDef` to the world formally. For now, this should only
   //      be used in tests.
   public _loadModelFromModelDef(modelDef: ModelDef): ModelMaterializer {
-    return new ModelMaterializer(this, async function materialize() {
+    return new ModelMaterializer(this, async () => {
       return new Model(modelDef, [], []);
     });
   }
@@ -2195,11 +2195,11 @@ export class ModelMaterializer extends FluentState<Model> {
       const parse =
         query instanceof URL
           ? await Malloy.parse({
-              "url": query,
-              urlReader
+              url: query,
+              urlReader,
             })
           : Malloy.parse({
-              "source": query
+              source: query,
             });
       const model = await this.getModel();
       console.log("model", model);
@@ -2207,9 +2207,40 @@ export class ModelMaterializer extends FluentState<Model> {
         urlReader,
         connections,
         parse,
-        model
+        model,
       });
       return queryModel.preparedQuery;
+    });
+  }
+
+  /**
+   * Extend a Malloy model by URL or contents.
+   *
+   * @param source The model URL or contents to load and (eventually) compile.
+   * @return A `ModelMaterializer` capable of materializing the requested model,
+   * or loading further related objects.
+   */
+  public extendModel(query: QueryString | QueryURL): ModelMaterializer {
+    return new ModelMaterializer(this.runtime, async () => {
+      const urlReader = this.runtime.urlReader;
+      const connections = this.runtime.connections;
+      const parse =
+        query instanceof URL
+          ? await Malloy.parse({
+              url: query,
+              urlReader,
+            })
+          : Malloy.parse({
+              source: query,
+            });
+      const model = await this.getModel();
+      const queryModel = await Malloy.compile({
+        urlReader,
+        connections,
+        parse,
+        model,
+      });
+      return queryModel;
     });
   }
 
@@ -2222,7 +2253,7 @@ export class ModelMaterializer extends FluentState<Model> {
     const model = await this.materialize();
     const queryModel = new QueryModel(model._modelDef);
     const schema = model.getExploreByName(sourceName).structDef;
-    if (schema.structRelationship.type !== "basetable") {
+    if (schema.structRelationship.type !== 'basetable') {
       throw new Error(
         "Expected schema's structRelationship type to be 'basetable'."
       );
@@ -2246,15 +2277,15 @@ export class ModelMaterializer extends FluentState<Model> {
   ): Promise<SearchValueMapResult[] | undefined> {
     const model = await this.materialize();
     const schema = model.getExploreByName(sourceName);
-    if (schema.structDef.structRelationship.type !== "basetable") {
+    if (schema.structDef.structRelationship.type !== 'basetable') {
       throw new Error(
         "Expected schema's structRelationship type to be 'basetable'."
       );
     }
-    let indexQuery = "{index: *}";
+    let indexQuery = '{index: *}';
 
-    if (schema.getFieldByNameIfExists("search_index")) {
-      indexQuery = "search_index";
+    if (schema.getFieldByNameIfExists('search_index')) {
+      indexQuery = 'search_index';
     }
 
     const searchMapMalloy = `
@@ -2273,7 +2304,7 @@ export class ModelMaterializer extends FluentState<Model> {
         }
     `;
     const result = await this.loadQuery(searchMapMalloy).run({
-      "rowLimit": 1000
+      rowLimit: 1000,
     });
     return result._queryResult.result as unknown as SearchValueMapResult[];
   }
@@ -2425,7 +2456,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   async run(options?: RunSQLOptions): Promise<Result> {
     const connections = this.runtime.connections;
     const preparedResult = await this.getPreparedResult();
-    return Malloy.run({ connections, preparedResult, options });
+    return Malloy.run({connections, preparedResult, options});
   }
 
   async *runStream(options?: {
@@ -2433,7 +2464,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   }): AsyncIterableIterator<DataRecord> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
-    const stream = Malloy.runStream({ connections, preparedResult, options });
+    const stream = Malloy.runStream({connections, preparedResult, options});
     for await (const row of stream) {
       yield row;
     }
@@ -2493,7 +2524,7 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
   async run(options?: RunSQLOptions): Promise<Result> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
-    return Malloy.run({ connections, preparedResult, options });
+    return Malloy.run({connections, preparedResult, options});
   }
 
   async *runStream(options?: {
@@ -2501,7 +2532,7 @@ export class PreparedResultMaterializer extends FluentState<PreparedResult> {
   }): AsyncIterableIterator<DataRecord> {
     const preparedResult = await this.getPreparedResult();
     const connections = this.runtime.connections;
-    const stream = Malloy.runStream({ connections, preparedResult, options });
+    const stream = Malloy.runStream({connections, preparedResult, options});
     for await (const row of stream) {
       yield row;
     }
@@ -2542,8 +2573,8 @@ export class SQLBlockMaterializer extends FluentState<SQLBlockStructDef> {
     const connections = this.runtime.connections;
     return Malloy.run({
       connections,
-      "sqlStruct": sqlBlock,
-      options
+      sqlStruct: sqlBlock,
+      options,
     });
   }
 
@@ -2552,7 +2583,7 @@ export class SQLBlockMaterializer extends FluentState<SQLBlockStructDef> {
   }): AsyncIterableIterator<DataRecord> {
     const sqlStruct = await this.getSQLBlock();
     const connections = this.runtime.connections;
-    const stream = Malloy.runStream({ connections, sqlStruct, options });
+    const stream = Malloy.runStream({connections, sqlStruct, options});
     for await (const row of stream) {
       yield row;
     }
@@ -2651,10 +2682,10 @@ export class Result extends PreparedResult {
   }
 
   public toJSON(): ResultJSON {
-    return { "queryResult": this.inner, "modelDef": this._modelDef };
+    return {queryResult: this.inner, modelDef: this._modelDef};
   }
 
-  public static fromJSON({ queryResult, modelDef }: ResultJSON): Result {
+  public static fromJSON({queryResult, modelDef}: ResultJSON): Result {
     return new Result(queryResult, modelDef);
   }
 }
@@ -2695,7 +2726,7 @@ abstract class Data<T> {
     if (this.isString()) {
       return this;
     }
-    throw new Error("Not a string.");
+    throw new Error('Not a string.');
   }
 
   isBoolean(): this is DataBoolean {
@@ -2706,7 +2737,7 @@ abstract class Data<T> {
     if (this.isBoolean()) {
       return this;
     }
-    throw new Error("Not a boolean.");
+    throw new Error('Not a boolean.');
   }
 
   isNumber(): this is DataNumber {
@@ -2717,7 +2748,7 @@ abstract class Data<T> {
     if (this.isNumber()) {
       return this;
     }
-    throw new Error("Not a number.");
+    throw new Error('Not a number.');
   }
 
   isTimestamp(): this is DataTimestamp {
@@ -2728,7 +2759,7 @@ abstract class Data<T> {
     if (this.isTimestamp()) {
       return this;
     }
-    throw new Error("Not a timestamp.");
+    throw new Error('Not a timestamp.');
   }
 
   isDate(): this is DataDate {
@@ -2739,7 +2770,7 @@ abstract class Data<T> {
     if (this.isDate()) {
       return this;
     }
-    throw new Error("Not a date.");
+    throw new Error('Not a date.');
   }
 
   isNull(): this is DataNull {
@@ -2754,7 +2785,7 @@ abstract class Data<T> {
     if (this.isBytes()) {
       return this;
     }
-    throw new Error("Not bytes.");
+    throw new Error('Not bytes.');
   }
 
   isRecord(): this is DataRecord {
@@ -2765,7 +2796,7 @@ abstract class Data<T> {
     if (this.isRecord()) {
       return this;
     }
-    throw new Error("Not a record.");
+    throw new Error('Not a record.');
   }
 
   isUnsupported(): this is DataUnsupported {
@@ -2776,7 +2807,7 @@ abstract class Data<T> {
     if (this.isUnsupported()) {
       return this;
     }
-    throw new Error("Not unsupported.");
+    throw new Error('Not unsupported.');
   }
 
   isArray(): this is DataArray {
@@ -2787,14 +2818,14 @@ abstract class Data<T> {
     if (this.isArray()) {
       return this;
     }
-    throw new Error("Not an array.");
+    throw new Error('Not an array.');
   }
 
   isArrayOrRecord(): DataArrayOrRecord {
     if (this instanceof DataArray || this instanceof DataRecord) {
       return this;
     }
-    throw new Error("No Array or Record");
+    throw new Error('No Array or Record');
   }
 }
 
@@ -2894,10 +2925,10 @@ class DataTimestamp extends ScalarData<Date> {
     // TODO properly map the data from BQ/Postgres types
     if (this._value instanceof Date) {
       return this._value;
-    } else if (typeof this._value === "number") {
+    } else if (typeof this._value === 'number') {
       return new Date(this._value);
-    } else if (typeof this._value !== "string") {
-      return new Date((this._value as unknown as { value: string }).value);
+    } else if (typeof this._value !== 'string') {
+      return new Date((this._value as unknown as {value: string}).value);
     } else {
       return new Date(this._value);
     }
@@ -2920,8 +2951,8 @@ class DataDate extends ScalarData<Date> {
     // TODO properly map the data from BQ/Postgres types
     if (this._value instanceof Date) {
       return this._value;
-    } else if (typeof this._value !== "string") {
-      return new Date((this._value as unknown as { value: string }).value);
+    } else if (typeof this._value !== 'string') {
+      return new Date((this._value as unknown as {value: string}).value);
     } else {
       return new Date(this._value);
     }
@@ -2991,11 +3022,11 @@ export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
     return {
       next(): IteratorResult<DataRecord> {
         if (currentIndex < queryData.length) {
-          return { "value": getRow(currentIndex++), "done": false };
+          return {value: getRow(currentIndex++), done: false};
         } else {
-          return { "value": undefined, "done": true };
+          return {value: undefined, done: true};
         }
-      }
+      },
     };
   }
 
@@ -3008,7 +3039,7 @@ export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
 
 function getPath(data: DataColumn, path: (number | string)[]): DataColumn {
   for (const segment of path) {
-    if (typeof segment === "number") {
+    if (typeof segment === 'number') {
       data = data.array.row(segment);
     } else {
       data = data.record.cell(segment);
@@ -3017,7 +3048,7 @@ function getPath(data: DataColumn, path: (number | string)[]): DataColumn {
   return data;
 }
 
-export class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
+export class DataRecord extends Data<{[fieldName: string]: DataColumn}> {
   private queryDataRow: QueryDataRow;
   protected _field: Explore;
   public readonly index: number | undefined;
@@ -3044,7 +3075,7 @@ export class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
 
   cell(fieldOrName: string | Field): DataColumn {
     const fieldName =
-      typeof fieldOrName === "string" ? fieldOrName : fieldOrName.name;
+      typeof fieldOrName === 'string' ? fieldOrName : fieldOrName.name;
     const field = this._field.getFieldByName(fieldName);
     const value = this.queryDataRow[fieldName];
     if (value === null) {
@@ -3078,8 +3109,8 @@ export class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
     );
   }
 
-  public get value(): { [fieldName: string]: DataColumn } {
-    throw new Error("Not implemented;");
+  public get value(): {[fieldName: string]: DataColumn} {
+    throw new Error('Not implemented;');
   }
 
   // Non repeating values show up as DataRecords
@@ -3098,13 +3129,13 @@ export class DataRecord extends Data<{ [fieldName: string]: DataColumn }> {
         if (!returned) {
           returned = true;
           return {
-            "value": getSelf(),
-            "done": false
+            value: getSelf(),
+            done: false,
           };
         } else {
-          return { "value": undefined, "done": true };
+          return {value: undefined, done: true};
         }
-      }
+      },
     };
   }
 }
@@ -3116,7 +3147,7 @@ function isURLReader(
     | LookupConnection<Connection>
     | Connection
 ): thing is URLReader {
-  return "readURL" in thing;
+  return 'readURL' in thing;
 }
 
 function isLookupConnection<T extends InfoConnection = InfoConnection>(
@@ -3126,7 +3157,7 @@ function isLookupConnection<T extends InfoConnection = InfoConnection>(
     | LookupConnection<Connection>
     | Connection
 ): thing is LookupConnection<T> {
-  return "lookupConnection" in thing;
+  return 'lookupConnection' in thing;
 }
 
 export interface WriteStream {
@@ -3142,29 +3173,29 @@ export abstract class DataWriter {
 
 export class JSONWriter extends DataWriter {
   async process(data: AsyncIterableIterator<DataRecord>): Promise<void> {
-    this.stream.write("[\n");
+    this.stream.write('[\n');
     for await (const row of data) {
       if (row.index !== undefined && row.index > 0) {
-        this.stream.write(",\n");
+        this.stream.write(',\n');
       }
       const json = JSON.stringify(row.toObject(), null, 2);
-      const jsonLines = json.split("\n");
+      const jsonLines = json.split('\n');
       for (let i = 0; i < jsonLines.length; i++) {
         const line = jsonLines[i];
         this.stream.write(`  ${line}`);
         if (i < jsonLines.length - 1) {
-          this.stream.write("\n");
+          this.stream.write('\n');
         }
       }
     }
-    this.stream.write("\n]\n");
+    this.stream.write('\n]\n');
     this.stream.close();
   }
 }
 
 export class CSVWriter extends DataWriter {
-  private readonly columnSeparator = ",";
-  private readonly rowSeparator = "\n";
+  private readonly columnSeparator = ',';
+  private readonly rowSeparator = '\n';
   private readonly quoteCharacter = '"';
   private readonly includeHeader = true;
 
@@ -3175,7 +3206,7 @@ export class CSVWriter extends DataWriter {
     const needsQuoting = hasInnerCommas || hasInnerQuote || hasNewline;
     if (hasInnerQuote) {
       value = value.replace(
-        new RegExp(this.quoteCharacter, "g"),
+        new RegExp(this.quoteCharacter, 'g'),
         this.quoteCharacter + this.quoteCharacter
       );
     }
@@ -3189,7 +3220,7 @@ export class CSVWriter extends DataWriter {
 
   private stringify(cell: DataColumn) {
     if (cell.isNull()) {
-      return "";
+      return '';
     } else if (
       cell.isArray() ||
       cell.isRecord() ||

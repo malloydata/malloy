@@ -21,21 +21,21 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldDef } from "../../../model/malloy_types";
+import {FieldDef} from '../../../model/malloy_types';
 
-import { FieldName, FieldSpace } from "../types/field-space";
-import { LookupResult } from "../types/lookup-result";
-import { ListOf, MalloyElement } from "../types/malloy-element";
+import {FieldName, FieldSpace} from '../types/field-space';
+import {LookupResult} from '../types/lookup-result';
+import {ListOf, MalloyElement} from '../types/malloy-element';
 
 export class FieldReference extends ListOf<FieldName> {
-  elementType = "fieldReference";
+  elementType = 'fieldReference';
 
   constructor(names: FieldName[]) {
-    super("fieldReference", names);
+    super('fieldReference', names);
   }
 
   get refString(): string {
-    return this.list.map((n) => n.refString).join(".");
+    return this.list.map(n => n.refString).join('.');
   }
 
   get outputName(): string {
@@ -47,8 +47,8 @@ export class FieldReference extends ListOf<FieldName> {
     if (this.list.length > 1) {
       return this.list
         .slice(0, -1)
-        .map((n) => n.refString)
-        .join(".");
+        .map(n => n.refString)
+        .join('.');
     }
     return undefined;
   }
@@ -63,17 +63,17 @@ export class FieldReference extends ListOf<FieldName> {
 }
 
 export class WildcardFieldReference extends MalloyElement {
-  elementType = "wildcardFieldReference";
+  elementType = 'wildcardFieldReference';
   constructor(
     readonly joinPath: FieldReference | undefined,
-    readonly star: "*" | "**"
+    readonly star: '*' | '**'
   ) {
     super();
-    this.has({ "joinPath": joinPath });
+    this.has({joinPath: joinPath});
   }
 
   getFieldDef(): FieldDef {
-    throw this.internalError("fielddef request from wildcard reference");
+    throw this.internalError('fielddef request from wildcard reference');
   }
 
   get refString(): string {
@@ -87,6 +87,6 @@ export type FieldReferenceElement = FieldReference | WildcardFieldReference;
 
 export class FieldReferences extends ListOf<FieldReferenceElement> {
   constructor(members: FieldReferenceElement[]) {
-    super("fieldReferenceList", members);
+    super('fieldReferenceList', members);
   }
 }

@@ -26,18 +26,18 @@
 // duckdb node bindings do not come with Typescript types, require is required
 // https://github.com/duckdb/duckdb/tree/master/tools/nodejs
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-import { DuckDBConnection } from "@malloydata/db-duckdb";
+import {DuckDBConnection} from '../packages/malloy-db-duckdb';
 
-import fs from "fs";
+import fs from 'fs';
 
-const cwd = "./test/data/duckdb/";
+const cwd = './test/data/duckdb/';
 const databasePath = `${cwd}duckdb_test.db`;
 if (fs.existsSync(databasePath)) {
   console.log(`Database at ${databasePath} already exists, removing`);
   fs.rmSync(databasePath);
 }
 
-const database = new DuckDBConnection("duckdb", databasePath);
+const database = new DuckDBConnection('duckdb', databasePath);
 
 const run = (sql: string) => {
   return database.runRawSQL(sql);
@@ -47,7 +47,7 @@ console.log(`Creating database at ${databasePath}`);
 
 (async () => {
   try {
-    await run(`CREATE SCHEMA malloytest`);
+    await run('CREATE SCHEMA malloytest');
     await run(
       `CREATE TABLE malloytest.aircraft AS SELECT * FROM parquet_scan('${cwd}aircraft.parquet')`
     );

@@ -21,15 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Parameter } from "../../../model/malloy_types";
+import {Parameter} from '../../../model/malloy_types';
 
-import { SpaceEntry } from "./space-entry";
-import { HasParameter } from "../parameters/has-parameter";
-import { TypeDesc } from "./type-desc";
+import {SpaceEntry} from './space-entry';
+import {HasParameter} from '../parameters/has-parameter';
+import {TypeDesc} from './type-desc';
 
 export abstract class SpaceParam extends SpaceEntry {
   abstract parameter(): Parameter;
-  readonly refType = "parameter";
+  readonly refType = 'parameter';
 }
 
 export class AbstractParameter extends SpaceParam {
@@ -42,8 +42,8 @@ export class AbstractParameter extends SpaceParam {
   }
 
   typeDesc(): TypeDesc {
-    const type = this.astParam.type || "unknown";
-    return { "dataType": type, "expressionType": "scalar" };
+    const type = this.astParam.type || 'unknown';
+    return {dataType: type, expressionType: 'scalar'};
   }
 }
 
@@ -57,6 +57,6 @@ export class DefinedParameter extends SpaceParam {
   }
 
   typeDesc(): TypeDesc {
-    return { "dataType": this.paramDef.type, "expressionType": "scalar" };
+    return {dataType: this.paramDef.type, expressionType: 'scalar'};
   }
 }

@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DataColumn } from "@malloydata/malloy";
-import { HTMLTextRenderer } from "./text";
+import {DataColumn} from '@malloydata/malloy';
+import {HTMLTextRenderer} from './text';
 
 export class HTMLBytesRenderer extends HTMLTextRenderer {
   override getText(data: DataColumn): string | null {
@@ -30,6 +30,6 @@ export class HTMLBytesRenderer extends HTMLTextRenderer {
       return null;
     }
 
-    return data.bytes.value.toString("base64");
+    return data.bytes.value.toString('base64');
   }
 }

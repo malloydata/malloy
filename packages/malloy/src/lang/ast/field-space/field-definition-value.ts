@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as model from "../../../model/malloy_types";
-import { FieldDeclaration } from "../query-items/field-declaration";
-import { FieldSpace } from "../types/field-space";
-import { SpaceField } from "../types/space-field";
-import { TypeDesc } from "../types/type-desc";
+import * as model from '../../../model/malloy_types';
+import {FieldDeclaration} from '../query-items/field-declaration';
+import {FieldSpace} from '../types/field-space';
+import {SpaceField} from '../types/space-field';
+import {TypeDesc} from '../types/type-desc';
 
 export class FieldDefinitionValue extends SpaceField {
   fieldName: string;

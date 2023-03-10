@@ -23,8 +23,8 @@
 
 /* eslint-disable no-console */
 
-import { RuntimeList, allDatabases } from "../../runtimes";
-import { databasesFromEnvironmentOr } from "../../util";
+import {RuntimeList, allDatabases} from '../../runtimes';
+import {databasesFromEnvironmentOr} from '../../util';
 
 const joinModelText = `
   explore: aircraft_models is table('malloytest.aircraft_models') {
@@ -62,7 +62,7 @@ afterAll(async () => {
 //   models.set(key, runtime.loadModel(joinModelText));
 // });
 
-describe("join expression tests", () => {
+describe('join expression tests', () => {
   runtimes.runtimeMap.forEach((runtime, database) => {
     it(`model explore refine join - ${database}`, async () => {
       const result = await runtime
@@ -81,7 +81,7 @@ describe("join expression tests", () => {
       `
         )
         .run();
-      expect(result.data.value[0].model_count).toBe(1416);
+      expect(result.data.value[0]['model_count']).toBe(1416);
     });
 
     it(`model explore refine in query join - ${database}`, async () => {
@@ -99,7 +99,7 @@ describe("join expression tests", () => {
       `
         )
         .run();
-      expect(result.data.value[0].model_count).toBe(1416);
+      expect(result.data.value[0]['model_count']).toBe(1416);
     });
 
     it(`model: join fact table query - ${database}`, async () => {
@@ -123,7 +123,7 @@ describe("join expression tests", () => {
     `
         )
         .run();
-      expect(result.data.value[0].num_models).toBe(1147);
+      expect(result.data.value[0]['num_models']).toBe(1147);
     });
 
     it(`model: explore based on query - ${database}`, async () => {
@@ -146,7 +146,7 @@ describe("join expression tests", () => {
         `
         )
         .run();
-      expect(result.data.value[0].num_models).toBe(1147);
+      expect(result.data.value[0]['num_models']).toBe(1147);
     });
 
     it(`model: funnel - merge two queries - ${database}`, async () => {
@@ -176,8 +176,8 @@ describe("join expression tests", () => {
         `
         )
         .run();
-      expect(result.data.value[0].num_models).toBe(1147);
-      expect(result.data.value[0].total_seats).toBe(252771);
+      expect(result.data.value[0]['num_models']).toBe(1147);
+      expect(result.data.value[0]['total_seats']).toBe(252771);
     });
 
     it(`model: modeled funnel - ${database}`, async () => {
@@ -200,8 +200,8 @@ describe("join expression tests", () => {
         `
         )
         .run();
-      expect(result.data.value[0].num_models).toBe(1147);
-      expect(result.data.value[0].total_seats).toBe(252771);
+      expect(result.data.value[0]['num_models']).toBe(1147);
+      expect(result.data.value[0]['total_seats']).toBe(252771);
     });
 
     it(`model: modeled funnel2 - ${database}`, async () => {
@@ -220,8 +220,8 @@ describe("join expression tests", () => {
         `
         )
         .run();
-      expect(result.data.value[0].num_models).toBe(1147);
-      expect(result.data.value[0].total_seats).toBe(252771);
+      expect(result.data.value[0]['num_models']).toBe(1147);
+      expect(result.data.value[0]['total_seats']).toBe(252771);
     });
 
     it(`model: double_pipe - ${database}`, async () => {
@@ -240,7 +240,7 @@ describe("join expression tests", () => {
     `
         )
         .run();
-      expect(result.data.value[0].f_sum2).toBe(60462);
+      expect(result.data.value[0]['f_sum2']).toBe(60462);
     });
 
     it(`model: unnest is left join - ${database}`, async () => {

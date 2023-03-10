@@ -21,22 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { SQLBlockSource } from "../../../model/malloy_types";
-import { makeSQLBlock } from "../../../model/sql_block";
+import {SQLBlockSource} from '../../../model/malloy_types';
+import {makeSQLBlock} from '../../../model/sql_block';
 
-import { ModelDataRequest } from "../../translate-response";
-import { DocStatement, Document, MalloyElement } from "../types/malloy-element";
-import { SQLString } from "./sql-string";
+import {ModelDataRequest} from '../../translate-response';
+import {DocStatement, Document, MalloyElement} from '../types/malloy-element';
+import {SQLString} from './sql-string';
 
 export class SQLStatement extends MalloyElement implements DocStatement {
-  elementType = "sqlStatement";
+  elementType = 'sqlStatement';
   is?: string;
   connection?: string;
   requestBlock?: SQLBlockSource;
 
   constructor(readonly select: SQLString) {
     super();
-    this.has({ "select": select });
+    this.has({select: select});
   }
 
   sqlBlock(): SQLBlockSource {
@@ -63,17 +63,17 @@ export class SQLStatement extends MalloyElement implements DocStatement {
     const sql = this.sqlBlock();
     sqlDefEntry.reference(sql.name, this.location);
     const lookup = sqlDefEntry.getEntry(sql.name);
-    if (lookup.status == "error") {
+    if (lookup.status === 'error') {
       const msgLines = lookup.message.split(/\r?\n/);
-      this.select.log("Invalid SQL, " + msgLines.join("\n    "));
+      this.select.log('Invalid SQL, ' + msgLines.join('\n    '));
       return undefined;
     }
-    if (lookup.status == "present") {
+    if (lookup.status === 'present') {
       const location = this.select.location;
       const locStruct = {
         ...lookup.value,
-        "fields": lookup.value.fields.map((f) => ({ ...f, location })),
-        "location": this.location
+        fields: lookup.value.fields.map(f => ({...f, location})),
+        location: this.location,
       };
       if (this.is && !doc.defineSQL(locStruct, this.is)) {
         this.log(`'${this.is}' already defined`);
@@ -81,8 +81,8 @@ export class SQLStatement extends MalloyElement implements DocStatement {
       return undefined;
     }
     return {
-      "compileSQL": sql,
-      "partialModel": this.select.containsQueries ? doc.modelDef() : undefined
+      compileSQL: sql,
+      partialModel: this.select.containsQueries ? doc.modelDef() : undefined,
     };
   }
 }

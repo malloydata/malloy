@@ -24,18 +24,18 @@
 import {
   PipeSegment,
   ProjectSegment,
-  isProjectSegment
-} from "../../../model/malloy_types";
+  isProjectSegment,
+} from '../../../model/malloy_types';
 
-import { ErrorFactory } from "../error-factory";
-import { Measures } from "../query-properties/measures";
-import { FieldSpace } from "../types/field-space";
-import { Filter } from "../query-properties/filters";
-import { GroupBy } from "../query-properties/group-by";
-import { ProjectStatement } from "../query-properties/project-statement";
-import { ProjectFieldSpace } from "../field-space/project-field-space";
-import { QueryProperty } from "../types/query-property";
-import { ReduceExecutor } from "./reduce-executor";
+import {ErrorFactory} from '../error-factory';
+import {Measures} from '../query-properties/measures';
+import {FieldSpace} from '../types/field-space';
+import {Filter} from '../query-properties/filters';
+import {GroupBy} from '../query-properties/group-by';
+import {ProjectStatement} from '../query-properties/project-statement';
+import {ProjectFieldSpace} from '../field-space/project-field-space';
+import {QueryProperty} from '../types/query-property';
+import {ReduceExecutor} from './reduce-executor';
 
 export class ProjectExecutor extends ReduceExecutor {
   getResultSpace(fs: FieldSpace): ProjectFieldSpace {
@@ -45,11 +45,11 @@ export class ProjectExecutor extends ReduceExecutor {
     if (qp instanceof ProjectStatement) {
       this.resultFS.addMembers(qp.list);
     } else if (
-      (qp instanceof Filter && qp.elementType === "having") ||
+      (qp instanceof Filter && qp.elementType === 'having') ||
       qp instanceof Measures ||
       qp instanceof GroupBy
     ) {
-      qp.log("Illegal statement in a project query operation");
+      qp.log('Illegal statement in a project query operation');
     } else {
       super.execute(qp);
     }

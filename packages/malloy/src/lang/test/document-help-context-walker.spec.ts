@@ -21,18 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { MarkedSource, TestTranslator, markSource } from "./test-translator";
+import {MarkedSource, TestTranslator, markSource} from './test-translator';
 
 function testHelpContext(
   source: MarkedSource,
-  position: { line: number; character: number },
-  type: "explore_property" | "query_property" | "model_property",
+  position: {line: number; character: number},
+  type: 'explore_property' | 'query_property' | 'model_property',
   token: string
 ) {
   const doc = new TestTranslator(source.code);
   expect(doc.logger.hasErrors()).toBeFalsy();
   const helpContext = doc.helpContext(position).helpContext;
-  expect(helpContext).toEqual({ type, token });
+  expect(helpContext).toEqual({type, token});
 }
 
 const source = `source: foo is table('bar') {
@@ -47,50 +47,50 @@ query: bar {
   group_by: bazz
 }`;
 
-test("Supports model properties", () => {
+test('Supports model properties', () => {
   testHelpContext(
     markSource`${source}`,
-    { "line": 0, "character": 1 },
-    "model_property",
-    "source:"
+    {line: 0, character: 1},
+    'model_property',
+    'source:'
   );
 
   testHelpContext(
     markSource`${source}`,
-    { "line": 8, "character": 1 },
-    "model_property",
-    "query:"
-  );
-});
-
-test("Supports explore properties", () => {
-  testHelpContext(
-    markSource`${source}`,
-    { "line": 1, "character": 3 },
-    "explore_property",
-    "where:"
-  );
-
-  testHelpContext(
-    markSource`${source}`,
-    { "line": 2, "character": 3 },
-    "explore_property",
-    "query:"
+    {line: 8, character: 1},
+    'model_property',
+    'query:'
   );
 });
 
-test("Supports query properties", () => {
+test('Supports explore properties', () => {
   testHelpContext(
     markSource`${source}`,
-    { "line": 3, "character": 5 },
-    "query_property",
-    "group_by:"
+    {line: 1, character: 3},
+    'explore_property',
+    'where:'
   );
 
   testHelpContext(
     markSource`${source}`,
-    { "line": 4, "character": 5 },
-    "query_property",
-    "where:"
+    {line: 2, character: 3},
+    'explore_property',
+    'query:'
+  );
+});
+
+test('Supports query properties', () => {
+  testHelpContext(
+    markSource`${source}`,
+    {line: 3, character: 5},
+    'query_property',
+    'group_by:'
+  );
+
+  testHelpContext(
+    markSource`${source}`,
+    {line: 4, character: 5},
+    'query_property',
+    'where:'
   );
 });

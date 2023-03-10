@@ -21,53 +21,53 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DataArrayOrRecord } from "@malloydata/malloy";
-import { StyleDefaults } from "../data_styles";
-import { getDrillQuery } from "../drill";
-import { ContainerRenderer } from "./container";
-import { HTMLTextRenderer } from "./text";
+import {DataArrayOrRecord} from '@malloydata/malloy';
+import {StyleDefaults} from '../data_styles';
+import {getDrillQuery} from '../drill';
+import {ContainerRenderer} from './container';
+import {HTMLTextRenderer} from './text';
 import {
   createDrillIcon,
   createErrorElement,
   yieldTask,
-  formatTitle
-} from "./utils";
+  formatTitle,
+} from './utils';
 
 export class HTMLDashboardRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
-    "size": "medium"
+    size: 'medium',
   };
 
   async render(table: DataArrayOrRecord): Promise<HTMLElement> {
     if (!table.isArrayOrRecord()) {
       return createErrorElement(
         this.document,
-        "Invalid data for dashboard renderer."
+        'Invalid data for dashboard renderer.'
       );
     }
 
     const fields = table.field.intrinsicFields;
     const dimensions = fields.filter(
-      (field) => field.isAtomicField() && field.sourceWasDimension()
+      field => field.isAtomicField() && field.sourceWasDimension()
     );
     const measures = fields.filter(
-      (field) => !field.isAtomicField() || field.sourceWasMeasureLike()
+      field => !field.isAtomicField() || field.sourceWasMeasureLike()
     );
 
-    const body = this.document.createElement("div");
+    const body = this.document.createElement('div');
     for (const row of table) {
-      const dimensionsContainer = this.document.createElement("div");
-      dimensionsContainer.classList.add("dimensions");
-      dimensionsContainer.style.display = "flex";
-      dimensionsContainer.style.flexWrap = "wrap";
-      const rowElement = this.document.createElement("div");
-      rowElement.style.position = "relative";
+      const dimensionsContainer = this.document.createElement('div');
+      dimensionsContainer.classList.add('dimensions');
+      dimensionsContainer.style.display = 'flex';
+      dimensionsContainer.style.flexWrap = 'wrap';
+      const rowElement = this.document.createElement('div');
+      rowElement.style.position = 'relative';
       for (const field of dimensions) {
         const renderer = this.childRenderers[field.name];
         const rendered = await renderer.render(row.cell(field));
-        const renderedDimension = this.document.createElement("div");
+        const renderedDimension = this.document.createElement('div');
         renderedDimension.style.cssText = DIMENSION_BOX;
-        const dimensionTitle = this.document.createElement("div");
+        const dimensionTitle = this.document.createElement('div');
         dimensionTitle.style.cssText = DIMENSION_TITLE;
         dimensionTitle.appendChild(
           this.document.createTextNode(
@@ -78,7 +78,7 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
             )
           )
         );
-        const dimensionInner = this.document.createElement("div");
+        const dimensionInner = this.document.createElement('div');
         dimensionInner.style.cssText = VERTICAL_CENTER;
         dimensionInner.appendChild(rendered);
         renderedDimension.appendChild(dimensionTitle);
@@ -86,15 +86,15 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
         dimensionsContainer.appendChild(renderedDimension);
       }
       if (dimensions.length > 0) {
-        const rowSeparatorOuter = this.document.createElement("div");
-        rowSeparatorOuter.classList.add("row-separator-outer");
+        const rowSeparatorOuter = this.document.createElement('div');
+        rowSeparatorOuter.classList.add('row-separator-outer');
         rowSeparatorOuter.style.cssText = ROW_SEPARATOR_OUTER;
-        const rowSeparator = this.document.createElement("div");
+        const rowSeparator = this.document.createElement('div');
         rowSeparator.style.cssText = ROW_SEPARATOR;
         rowSeparatorOuter.appendChild(rowSeparator);
         dimensionsContainer.appendChild(rowSeparatorOuter);
       }
-      const measuresContainer = this.document.createElement("div");
+      const measuresContainer = this.document.createElement('div');
       measuresContainer.style.cssText = MEASURE_BOXES;
       for (const field of measures) {
         const childRenderer = this.childRenderers[field.name];
@@ -103,9 +103,9 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
         if (childRenderer instanceof HTMLDashboardRenderer) {
           measuresContainer.appendChild(rendered);
         } else if (childRenderer instanceof HTMLTextRenderer) {
-          const measureBox = this.document.createElement("div");
+          const measureBox = this.document.createElement('div');
           measureBox.style.cssText = MEASURE_BOX;
-          const measureTitle = this.document.createElement("div");
+          const measureTitle = this.document.createElement('div');
           measureTitle.style.cssText = TITLE;
           measureTitle.appendChild(
             this.document.createTextNode(
@@ -116,9 +116,9 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
               )
             )
           );
-          const measureInner = this.document.createElement("div");
+          const measureInner = this.document.createElement('div');
           measureInner.style.cssText = VERTICAL_CENTER;
-          const innerInner = this.document.createElement("div");
+          const innerInner = this.document.createElement('div');
           innerInner.style.cssText = SINGLE_VALUE;
           innerInner.appendChild(rendered);
           measureInner.appendChild(innerInner);
@@ -126,9 +126,9 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
           measureBox.appendChild(measureInner);
           measuresContainer.appendChild(measureBox);
         } else {
-          const measureBox = this.document.createElement("div");
+          const measureBox = this.document.createElement('div');
           measureBox.style.cssText = MEASURE_BOX;
-          const measureTitle = this.document.createElement("div");
+          const measureTitle = this.document.createElement('div');
           measureTitle.style.cssText = TITLE;
           measureTitle.appendChild(
             this.document.createTextNode(
@@ -139,9 +139,9 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
               )
             )
           );
-          const measureInner = this.document.createElement("div");
+          const measureInner = this.document.createElement('div');
           measureInner.style.cssText = VERTICAL_CENTER;
-          const innerInner = this.document.createElement("div");
+          const innerInner = this.document.createElement('div');
           innerInner.style.cssText = HORIZONTAL_CENTER;
           innerInner.appendChild(rendered);
           measureInner.appendChild(innerInner);
@@ -152,23 +152,24 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
       }
       rowElement.appendChild(dimensionsContainer);
       if (dimensions.length > 0 && this.options.isDrillingEnabled) {
-        const drillElement = this.document.createElement("span");
+        const drillElement = this.document.createElement('span');
         const drillIcon = createDrillIcon(this.document);
         drillElement.appendChild(drillIcon);
-        drillElement.style.cssText = `padding: 8px; vertical-align: top; width: 25px; cursor: pointer; position: absolute; top: 5px; right: 5px;`;
+        drillElement.style.cssText =
+          'padding: 8px; vertical-align: top; width: 25px; cursor: pointer; position: absolute; top: 5px; right: 5px;';
         drillElement.onclick = () => {
           if (this.options.onDrill) {
-            const { drillQuery, drillFilters } = getDrillQuery(row);
+            const {drillQuery, drillFilters} = getDrillQuery(row);
             this.options.onDrill(drillQuery, drillIcon, drillFilters);
           }
         };
         rowElement.appendChild(drillElement);
       }
-      const dashboardOuter = this.document.createElement("div");
-      dashboardOuter.classList.add("dashboard-outer");
+      const dashboardOuter = this.document.createElement('div');
+      dashboardOuter.classList.add('dashboard-outer');
       dashboardOuter.style.cssText = DASHBOARD_OUTER;
       if (dimensions.length > 0) {
-        const nestIndicator = this.document.createElement("div");
+        const nestIndicator = this.document.createElement('div');
         nestIndicator.style.cssText = NEST_INDICATOR;
         dashboardOuter.appendChild(nestIndicator);
       }

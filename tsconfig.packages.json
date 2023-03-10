@@ -23,5 +23,6 @@
     "sourceMap": true,
     "useUnknownInCatchVariables": false,
     "forceConsistentCasingInFileNames": true,
+    "noPropertyAccessFromIndexSignature": true
   }
 }

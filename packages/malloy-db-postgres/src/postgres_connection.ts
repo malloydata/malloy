@@ -27,7 +27,7 @@
 //     create extension if not exists tsm_system_rows
 //
 
-import * as crypto from "crypto";
+import * as crypto from 'crypto';
 import {
   AtomicFieldTypeInner,
   Connection,
@@ -41,38 +41,38 @@ import {
   SQLBlock,
   StreamingConnection,
   StructDef,
-  parseTableURI
-} from "@malloydata/malloy";
-import { Client, Pool, PoolClient } from "pg";
-import QueryStream from "pg-query-stream";
-import { randomUUID } from "crypto";
+  parseTableURI,
+} from '@malloydata/malloy';
+import {Client, Pool, PoolClient} from 'pg';
+import QueryStream from 'pg-query-stream';
+import {randomUUID} from 'crypto';
 
-const postgresToMalloyTypes: { [key: string]: AtomicFieldTypeInner } = {
-  "character varying": "string",
-  "name": "string",
-  "text": "string",
-  "date": "date",
-  "integer": "number",
-  "bigint": "number",
-  "double precision": "number",
-  "timestamp without time zone": "timestamp", // maybe not
-  "oid": "string",
-  "boolean": "boolean",
+const postgresToMalloyTypes: {[key: string]: AtomicFieldTypeInner} = {
+  'character varying': 'string',
+  name: 'string',
+  text: 'string',
+  date: 'date',
+  integer: 'number',
+  bigint: 'number',
+  'double precision': 'number',
+  'timestamp without time zone': 'timestamp', // maybe not
+  oid: 'string',
+  boolean: 'boolean',
   // ARRAY: "string",
-  "timestamp with time zone": "timestamp",
-  "timestamp": "timestamp",
-  '"char"': "string",
-  "character": "string",
-  "smallint": "number",
-  "xid": "string",
-  "real": "number",
-  "interval": "string",
-  "inet": "string",
-  "regtype": "string",
-  "numeric": "number",
-  "bytea": "string",
-  "pg_ndistinct": "number",
-  "uuid": "string"
+  'timestamp with time zone': 'timestamp',
+  timestamp: 'timestamp',
+  '"char"': 'string',
+  character: 'string',
+  smallint: 'number',
+  xid: 'string',
+  real: 'number',
+  interval: 'string',
+  inet: 'string',
+  regtype: 'string',
+  numeric: 'number',
+  bytea: 'string',
+  pg_ndistinct: 'number',
+  uuid: 'string',
 };
 
 interface PostgresQueryConfiguration {
@@ -104,13 +104,12 @@ export class PostgresConnection
 {
   private schemaCache = new Map<
     string,
-    | { schema: StructDef; error?: undefined }
-    | { error: string; schema?: undefined }
+    {schema: StructDef; error?: undefined} | {error: string; schema?: undefined}
   >();
   private sqlSchemaCache = new Map<
     string,
-    | { structDef: StructDef; error?: undefined }
-    | { error: string; structDef?: undefined }
+    | {structDef: StructDef; error?: undefined}
+    | {error: string; structDef?: undefined}
   >();
   private queryConfigReader: PostgresQueryConfigurationReader;
   private configReader: PostgresConnectionConfigurationReader;
@@ -143,7 +142,7 @@ export class PostgresConnection
   }
 
   get dialectName(): string {
-    return "postgres";
+    return 'postgres';
   }
 
   public isPool(): this is PooledConnection {
@@ -163,18 +162,18 @@ export class PostgresConnection
     errors: Record<string, string>;
   }> {
     const schemas: NamedStructDefs = {};
-    const errors: { [name: string]: string } = {};
+    const errors: {[name: string]: string} = {};
 
     for (const tableURL of missing) {
       let inCache = this.schemaCache.get(tableURL);
       if (!inCache) {
         try {
           inCache = {
-            "schema": await this.getTableSchema(tableURL)
+            schema: await this.getTableSchema(tableURL),
           };
           this.schemaCache.set(tableURL, inCache);
         } catch (error) {
-          inCache = { "error": error.message };
+          inCache = {error: error.message};
         }
       }
       if (inCache.schema !== undefined) {
@@ -183,24 +182,24 @@ export class PostgresConnection
         errors[tableURL] = inCache.error;
       }
     }
-    return { schemas, errors };
+    return {schemas, errors};
   }
 
   public async fetchSchemaForSQLBlock(
     sqlRef: SQLBlock
   ): Promise<
-    | { structDef: StructDef; error?: undefined }
-    | { error: string; structDef?: undefined }
+    | {structDef: StructDef; error?: undefined}
+    | {error: string; structDef?: undefined}
   > {
     const key = sqlRef.name;
     let inCache = this.sqlSchemaCache.get(key);
     if (!inCache) {
       try {
         inCache = {
-          "structDef": await this.getSQLBlockSchema(sqlRef)
+          structDef: await this.getSQLBlockSchema(sqlRef),
         };
       } catch (error) {
-        inCache = { "error": error.message };
+        inCache = {error: error.message};
       }
       this.sqlSchemaCache.set(key, inCache);
     }
@@ -210,11 +209,11 @@ export class PostgresConnection
   protected async getClient(): Promise<Client> {
     const config = await this.readConfig();
     return new Client({
-      "user": config.username,
-      "password": config.password,
-      "database": config.databaseName,
-      "port": config.port,
-      "host": config.host
+      user: config.username,
+      password: config.password,
+      database: config.databaseName,
+      port: config.port,
+      host: config.host,
     });
   }
 
@@ -238,29 +237,29 @@ export class PostgresConnection
     }
     await client.end();
     return {
-      "rows": result.rows as QueryData,
-      "totalRows": result.rows.length
+      rows: result.rows as QueryData,
+      totalRows: result.rows.length,
     };
   }
 
   private async getSQLBlockSchema(sqlRef: SQLBlock): Promise<StructDef> {
     const structDef: StructDef = {
-      "type": "struct",
-      "dialect": "postgres",
-      "name": sqlRef.name,
-      "structSource": {
-        "type": "sql",
-        "method": "subquery",
-        "sqlBlock": sqlRef
+      type: 'struct',
+      dialect: 'postgres',
+      name: sqlRef.name,
+      structSource: {
+        type: 'sql',
+        method: 'subquery',
+        sqlBlock: sqlRef,
       },
-      "structRelationship": {
-        "type": "basetable",
-        "connectionName": this.name
+      structRelationship: {
+        type: 'basetable',
+        connectionName: this.name,
       },
-      "fields": []
+      fields: [],
     };
 
-    const tempTableName = `tmp${randomUUID()}`.replace(/-/g, "");
+    const tempTableName = `tmp${randomUUID()}`.replace(/-/g, '');
     const infoQuery = `
       drop table if exists ${tempTableName};
       create temp table ${tempTableName} as SELECT * FROM (
@@ -287,55 +286,55 @@ export class PostgresConnection
       false
     );
     for (const row of result.rows) {
-      const postgresDataType = row["data_type"] as string;
+      const postgresDataType = row['data_type'] as string;
       let s = structDef;
       let malloyType = postgresToMalloyTypes[postgresDataType];
-      let name = row["column_name"] as string;
-      if (postgresDataType === "ARRAY") {
-        malloyType = postgresToMalloyTypes[row["element_type"] as string];
+      let name = row['column_name'] as string;
+      if (postgresDataType === 'ARRAY') {
+        malloyType = postgresToMalloyTypes[row['element_type'] as string];
         s = {
-          "type": "struct",
-          "name": row["column_name"] as string,
-          "dialect": this.dialectName,
-          "structRelationship": {
-            "type": "nested",
-            "field": name,
-            "isArray": true
+          type: 'struct',
+          name: row['column_name'] as string,
+          dialect: this.dialectName,
+          structRelationship: {
+            type: 'nested',
+            field: name,
+            isArray: true,
           },
-          "structSource": { "type": "nested" },
-          "fields": []
+          structSource: {type: 'nested'},
+          fields: [],
         };
         structDef.fields.push(s);
-        name = "value";
+        name = 'value';
       }
       if (malloyType) {
-        s.fields.push({ "type": malloyType, name });
+        s.fields.push({type: malloyType, name});
       } else {
         s.fields.push({
-          "type": "unsupported",
-          "rawType": postgresDataType.toLowerCase(),
-          name
+          type: 'unsupported',
+          rawType: postgresDataType.toLowerCase(),
+          name,
         });
       }
     }
   }
 
   private async getTableSchema(tableURL: string): Promise<StructDef> {
-    const { tablePath } = parseTableURI(tableURL);
+    const {tablePath} = parseTableURI(tableURL);
     const structDef: StructDef = {
-      "type": "struct",
-      "name": tableURL,
-      "dialect": "postgres",
-      "structSource": { "type": "table", tablePath },
-      "structRelationship": {
-        "type": "basetable",
-        "connectionName": this.name
+      type: 'struct',
+      name: tableURL,
+      dialect: 'postgres',
+      structSource: {type: 'table', tablePath},
+      structRelationship: {
+        type: 'basetable',
+        connectionName: this.name,
       },
-      "fields": []
+      fields: [],
     };
-    const [schema, table] = tablePath.split(".");
+    const [schema, table] = tablePath.split('.');
     if (table === undefined) {
-      throw new Error("Default schema not yet supported in Postgres");
+      throw new Error('Default schema not yet supported in Postgres');
     }
     const infoQuery = `
       SELECT column_name, c.data_type, e.data_type as element_type
@@ -362,12 +361,12 @@ export class PostgresConnection
   }
 
   public async test(): Promise<void> {
-    await this.executeSQLRaw("SELECT 1");
+    await this.executeSQLRaw('SELECT 1');
   }
 
   public async runSQL(
     sql: string,
-    { rowLimit }: RunSQLOptions = {},
+    {rowLimit}: RunSQLOptions = {},
     rowIndex = 0
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
@@ -382,7 +381,7 @@ export class PostgresConnection
 
   public async *runSQLStream(
     sqlCommand: string,
-    options?: { rowLimit?: number }
+    options?: {rowLimit?: number}
   ): AsyncIterableIterator<QueryDataRow> {
     const query = new QueryStream(sqlCommand);
     const client = await this.getClient();
@@ -401,7 +400,7 @@ export class PostgresConnection
   }
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {
-    const hash = crypto.createHash("md5").update(sqlCommand).digest("hex");
+    const hash = crypto.createHash('md5').update(sqlCommand).digest('hex');
     const tableName = `tt${hash}`;
 
     const cmd = `CREATE TEMPORARY TABLE IF NOT EXISTS ${tableName} AS (${sqlCommand});`;
@@ -451,8 +450,8 @@ export class PooledPostgresConnection
       }
     }
     return {
-      "rows": result.rows as QueryData,
-      "totalRows": result.rows.length
+      rows: result.rows as QueryData,
+      totalRows: result.rows.length,
     };
   }
 
@@ -470,7 +469,7 @@ export class PooledPostgresConnection
 
   public async *runSQLStream(
     sqlCommand: string,
-    options?: { rowLimit?: number }
+    options?: {rowLimit?: number}
   ): AsyncIterableIterator<QueryDataRow> {
     const query = new QueryStream(sqlCommand);
     let index = 0;

@@ -22,14 +22,14 @@
  */
 
 export enum Comparison {
-  Like = "~",
-  NotLike = "!~",
-  LessThan = "<",
-  LessThanOrEqualTo = "<=",
-  EqualTo = "=",
-  GreaterThan = ">",
-  GreaterThanOrEqualTo = ">=",
-  NotEqualTo = "!="
+  Like = '~',
+  NotLike = '!~',
+  LessThan = '<',
+  LessThanOrEqualTo = '<=',
+  EqualTo = '=',
+  GreaterThan = '>',
+  GreaterThanOrEqualTo = '>=',
+  NotEqualTo = '!=',
 }
 
 export function isComparison(s: string): s is Comparison {

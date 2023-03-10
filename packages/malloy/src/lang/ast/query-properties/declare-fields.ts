@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldDeclaration } from "../query-items/field-declaration";
-import { ListOf } from "../types/malloy-element";
+import {FieldDeclaration} from '../query-items/field-declaration';
+import {ListOf} from '../types/malloy-element';
 
 export class DeclareFields extends ListOf<FieldDeclaration> {
-  constructor(fields: FieldDeclaration[], fieldType = "declare") {
+  constructor(fields: FieldDeclaration[], fieldType = 'declare') {
     super(fieldType, fields);
   }
 }

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { DocumentPosition, DocumentReference } from "../model";
+import {DocumentPosition, DocumentReference} from '../model';
 
 export class ReferenceList {
   constructor(private readonly sourceURL: string) {}

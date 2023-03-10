@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldName } from "../types/field-space";
-import { MalloyElement } from "../types/malloy-element";
+import {FieldName} from '../types/field-space';
+import {MalloyElement} from '../types/malloy-element';
 
 export class PrimaryKey extends MalloyElement {
-  elementType = "primary key";
+  elementType = 'primary key';
   constructor(readonly field: FieldName) {
-    super({ "field": field });
+    super({field: field});
   }
 }

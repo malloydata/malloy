@@ -21,14 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { StructDef } from "../../model/malloy_types";
+import {StructDef} from '../../model/malloy_types';
 
-import { FieldSpace } from "./types/field-space";
-import { StaticSpace } from "./field-space/static-space";
+import {FieldSpace} from './types/field-space';
+import {StaticSpace} from './field-space/static-space';
 
 export type SourceSpec = StructDef | FieldSpace;
 function isFieldSpace(x: SourceSpec): x is FieldSpace {
-  return x.type == "fieldSpace";
+  return x.type === 'fieldSpace';
 }
 
 /**

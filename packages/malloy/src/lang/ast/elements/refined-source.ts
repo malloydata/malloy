@@ -21,35 +21,32 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import cloneDeep from "lodash/cloneDeep";
+import cloneDeep from 'lodash/cloneDeep';
 
-import {
-  StructDef,
-  expressionIsCalculation
-} from "../../../model/malloy_types";
+import {StructDef, expressionIsCalculation} from '../../../model/malloy_types';
 
-import { RefinedSpace } from "../field-space/refined-space";
-import { HasParameter } from "../parameters/has-parameter";
-import { DeclareFields } from "../query-properties/declare-fields";
-import { Filter } from "../query-properties/filters";
-import { Joins } from "../query-properties/joins";
-import { FieldListEdit } from "../source-properties/field-list-edit";
-import { PrimaryKey } from "../source-properties/primary-key";
-import { Renames } from "../source-properties/renames";
-import { Turtles } from "../source-properties/turtles";
-import { ExploreDesc } from "../types/explore-desc";
-import { ExploreField } from "../types/explore-field";
+import {RefinedSpace} from '../field-space/refined-space';
+import {HasParameter} from '../parameters/has-parameter';
+import {DeclareFields} from '../query-properties/declare-fields';
+import {Filter} from '../query-properties/filters';
+import {Joins} from '../query-properties/joins';
+import {FieldListEdit} from '../source-properties/field-list-edit';
+import {PrimaryKey} from '../source-properties/primary-key';
+import {Renames} from '../source-properties/renames';
+import {Turtles} from '../source-properties/turtles';
+import {ExploreDesc} from '../types/explore-desc';
+import {ExploreField} from '../types/explore-field';
 
-import { Source } from "./source";
+import {Source} from './source';
 
 /**
  * A Source made from a source reference and a set of refinements
  */
 export class RefinedSource extends Source {
-  elementType = "refinedSource";
+  elementType = 'refinedSource';
 
   constructor(readonly source: Source, readonly refinement: ExploreDesc) {
-    super({ "source": source, "refinement": refinement });
+    super({source: source, refinement: refinement});
   }
 
   structDef(): StructDef {
@@ -66,14 +63,14 @@ export class RefinedSource extends Source {
       const errTo = el;
       if (el instanceof PrimaryKey) {
         if (primaryKey) {
-          primaryKey.log("Primary key already defined");
-          el.log("Primary key redefined");
+          primaryKey.log('Primary key already defined');
+          el.log('Primary key redefined');
         }
         primaryKey = el;
       } else if (el instanceof FieldListEdit) {
         if (fieldListEdit) {
-          fieldListEdit.log("Too many accept/except statements");
-          el.log("Too many accept/except statements");
+          fieldListEdit.log('Too many accept/except statements');
+          el.log('Too many accept/except statements');
         }
         fieldListEdit = el;
       } else if (
@@ -121,7 +118,7 @@ export class RefinedSource extends Source {
       }
     }
     if (moreFilters) {
-      return { ...retStruct, filterList };
+      return {...retStruct, filterList};
     }
     return retStruct;
   }

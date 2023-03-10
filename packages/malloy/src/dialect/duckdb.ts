@@ -35,15 +35,15 @@ import {
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  mkExpr
-} from "../model/malloy_types";
-import { indent } from "../model/utils";
-import { Dialect, DialectFieldList, FunctionInfo } from "./dialect";
+  mkExpr,
+} from '../model/malloy_types';
+import {indent} from '../model/utils';
+import {Dialect, DialectFieldList, FunctionInfo} from './dialect';
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
-const hackSplitComment = "-- hack: split on this";
+const hackSplitComment = '-- hack: split on this';
 
-const keywords = `
+const _keywords = `
 ALL
 ANALYSE
 ANALYZE
@@ -124,30 +124,30 @@ WITH
 `.split(/\s/);
 
 const castMap: Record<string, string> = {
-  "number": "double precision",
-  "string": "varchar"
+  number: 'double precision',
+  string: 'varchar',
 };
 
 const pgExtractionMap: Record<string, string> = {
-  "day_of_week": "dow",
-  "day_of_year": "doy"
+  day_of_week: 'dow',
+  day_of_year: 'doy',
 };
 
 const inSeconds: Record<string, number> = {
-  "second": 1,
-  "minute": 60,
-  "hour": 3600
+  second: 1,
+  minute: 60,
+  hour: 3600,
 };
 
 export class DuckDBDialect extends Dialect {
-  name = "duckdb";
-  defaultNumberType = "DOUBLE";
+  name = 'duckdb';
+  defaultNumberType = 'DOUBLE';
   hasFinalStage = false;
-  stringTypeName = "VARCHAR";
+  stringTypeName = 'VARCHAR';
   divisionIsInteger = true;
   supportsSumDistinctFunction = true;
   unnestWithNumbers = true;
-  defaultSampling = { "rows": 50000 };
+  defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
   supportsAggDistinct = true;
   supportsCTEinCoorelatedSubQueries = true;
@@ -155,7 +155,7 @@ export class DuckDBDialect extends Dialect {
   supportsQualify = true;
 
   functionInfo: Record<string, FunctionInfo> = {
-    "concat": { "returnType": "string" }
+    concat: {returnType: 'string'},
   };
 
   // hack until they support temporary macros.
@@ -176,7 +176,7 @@ export class DuckDBDialect extends Dialect {
   }
 
   mapFields(fieldList: DialectFieldList): string {
-    return fieldList.join(", ");
+    return fieldList.join(', ');
   }
 
   sqlAggregateTurtle(
@@ -185,20 +185,20 @@ export class DuckDBDialect extends Dialect {
     orderBy: string | undefined,
     limit: number | undefined
   ): string {
-    let tail = "";
+    let tail = '';
     if (limit !== undefined) {
       tail += `[1:${limit}]`;
     }
     const fields = fieldList
-      .map((f) => `\n  ${f.sqlOutputName}: ${f.sqlExpression}`)
-      .join(", ");
+      .map(f => `\n  ${f.sqlOutputName}: ${f.sqlExpression}`)
+      .join(', ');
     return `COALESCE(LIST({${fields}} ${orderBy}) FILTER (WHERE group_set=${groupSet})${tail},[])`;
   }
 
   sqlAnyValueTurtle(groupSet: number, fieldList: DialectFieldList): string {
     const fields = fieldList
-      .map((f) => `${f.sqlExpression} as ${f.sqlOutputName}`)
-      .join(", ");
+      .map(f => `${f.sqlExpression} as ${f.sqlOutputName}`)
+      .join(', ');
     return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN ROW(${fields}))`;
   }
 
@@ -215,11 +215,11 @@ export class DuckDBDialect extends Dialect {
     fieldList: DialectFieldList
   ): string {
     const fields = fieldList
-      .map((f) => `${f.sqlOutputName}: ${f.sqlExpression} `)
-      .join(", ");
+      .map(f => `${f.sqlOutputName}: ${f.sqlExpression} `)
+      .join(', ');
     const nullValues = fieldList
-      .map((f) => `${f.sqlOutputName}: NULL`)
-      .join(", ");
+      .map(f => `${f.sqlOutputName}: NULL`)
+      .join(', ');
 
     return `COALESCE(FIRST({${fields}}) FILTER(WHERE group_set=${groupSet}), {${nullValues}})`;
   }
@@ -239,11 +239,11 @@ export class DuckDBDialect extends Dialect {
   }
 
   sqlSumDistinctHashedKey(_sqlDistinctKey: string): string {
-    return "uses sumDistinctFunction, should not be called";
+    return 'uses sumDistinctFunction, should not be called';
   }
 
   sqlGenerateUUID(): string {
-    return `GEN_RANDOM_UUID()`;
+    return 'GEN_RANDOM_UUID()';
   }
 
   sqlDateToString(sqlDateExp: string): string {
@@ -286,14 +286,14 @@ export class DuckDBDialect extends Dialect {
     structDef: StructDef
   ): string {
     return `SELECT LIST(ROW(${structDef.fields
-      .map((fieldDef) => this.sqlMaybeQuoteIdentifier(getIdentifier(fieldDef)))
-      .join(",")})) FROM ${lastStageName}\n`;
+      .map(fieldDef => this.sqlMaybeQuoteIdentifier(getIdentifier(fieldDef)))
+      .join(',')})) FROM ${lastStageName}\n`;
   }
 
   sqlSelectAliasAsStruct(alias: string, physicalFieldNames: string[]): string {
     return `ROW(${physicalFieldNames
-      .map((name) => `${alias}.${name}`)
-      .join(", ")})`;
+      .map(name => `${alias}.${name}`)
+      .join(', ')})`;
   }
   // TODO
   // sqlMaybeQuoteIdentifier(identifier: string): string {
@@ -311,7 +311,7 @@ export class DuckDBDialect extends Dialect {
   //  with the expiration time. https://www.postgresql.org/docs/current/sql-comment.html
   //  and have a reaper that read comments.
   sqlCreateTableAsSelect(_tableName: string, _sql: string): string {
-    throw new Error("Not implemented Yet");
+    throw new Error('Not implemented Yet');
   }
 
   getFunctionInfo(functionName: string): FunctionInfo | undefined {
@@ -325,17 +325,17 @@ export class DuckDBDialect extends Dialect {
       lVal = mkExpr`EXTRACT(EPOCH FROM ${lVal})`;
       rVal = mkExpr`EXTRACT(EPOCH FROM ${rVal})`;
       const duration = mkExpr`(${rVal} - ${lVal})`;
-      return units == "second"
+      return units === 'second'
         ? duration
         : mkExpr`FLOOR(${duration}/${inSeconds[units].toString()})`;
     }
-    if (from.valueType != "date") {
+    if (from.valueType !== 'date') {
       lVal = mkExpr`CAST((${lVal}) AS DATE)`;
     }
-    if (to.valueType != "date") {
+    if (to.valueType !== 'date') {
       rVal = mkExpr`CAST((${rVal}) AS DATE)`;
     }
-    if (units == "week") {
+    if (units === 'week') {
       // DuckDB's weeks start on Monday, but Malloy's weeks start on Sunday
       lVal = mkExpr`(${lVal} + INTERVAL 1 DAY)`;
       rVal = mkExpr`(${rVal} + INTERVAL 1 DAY)`;
@@ -349,7 +349,7 @@ export class DuckDBDialect extends Dialect {
 
   sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {
     // adjusting for monday/sunday weeks
-    const week = units == "week";
+    const week = units === 'week';
     const truncThis = week
       ? mkExpr`${sqlTime.value} + INTERVAL 1 DAY`
       : sqlTime.value;
@@ -360,21 +360,21 @@ export class DuckDBDialect extends Dialect {
   sqlExtract(from: TimeValue, units: ExtractUnit): Expr {
     const pgUnits = pgExtractionMap[units] || units;
     const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${from.value})`;
-    return units == "day_of_week" ? mkExpr`(${extracted}+1)` : extracted;
+    return units === 'day_of_week' ? mkExpr`(${extracted}+1)` : extracted;
   }
 
   sqlAlterTime(
-    op: "+" | "-",
+    op: '+' | '-',
     expr: TimeValue,
     n: Expr,
     timeframe: DateUnit
   ): Expr {
-    if (timeframe == "quarter") {
-      timeframe = "month";
+    if (timeframe === 'quarter') {
+      timeframe = 'month';
       n = mkExpr`${n}*3`;
     }
-    if (timeframe == "week") {
-      timeframe = "day";
+    if (timeframe === 'week') {
+      timeframe = 'day';
       n = mkExpr`${n}*7`;
     }
     const interval = mkExpr`INTERVAL (${n}) ${timeframe}`;
@@ -398,9 +398,9 @@ export class DuckDBDialect extends Dialect {
     type: TimeFieldType,
     _timezone: string
   ): string {
-    if (type == "date") {
+    if (type === 'date') {
       return `DATE '${timeString}'`;
-    } else if (type == "timestamp") {
+    } else if (type === 'timestamp') {
       return `TIMESTAMP '${timeString}'`;
     } else {
       throw new Error(`Unknown Literal time format ${type}`);
@@ -457,7 +457,7 @@ export class DuckDBDialect extends Dialect {
   }
 
   sqlOrderBy(orderTerms: string[]): string {
-    return `ORDER BY ${orderTerms.map((t) => `${t} NULLS LAST`).join(",")}`;
+    return `ORDER BY ${orderTerms.map(t => `${t} NULLS LAST`).join(',')}`;
   }
 
   sqlLiteralString(literal: string): string {

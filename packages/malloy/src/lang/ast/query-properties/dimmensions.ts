@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { FieldDeclaration } from "../query-items/field-declaration";
-import { DeclareFields } from "./declare-fields";
+import {FieldDeclaration} from '../query-items/field-declaration';
+import {DeclareFields} from './declare-fields';
 
 export class Dimensions extends DeclareFields {
   constructor(dimensions: FieldDeclaration[]) {
-    super(dimensions, "dimension");
+    super(dimensions, 'dimension');
     for (const dim of dimensions) {
       dim.isMeasure = false;
     }

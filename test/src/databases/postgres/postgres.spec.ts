@@ -23,14 +23,14 @@
 
 /* eslint-disable no-console */
 
-import { RuntimeList } from "../../runtimes";
-import { describeIfDatabaseAvailable } from "../../util";
+import {RuntimeList} from '../../runtimes';
+import {describeIfDatabaseAvailable} from '../../util';
 
-const [describe] = describeIfDatabaseAvailable(["postgres"]);
+const [describe] = describeIfDatabaseAvailable(['postgres']);
 
-describe("Postgres tests", () => {
-  const runtimeList = new RuntimeList(["postgres"]);
-  const runtime = runtimeList.runtimeMap.get("postgres");
+describe('Postgres tests', () => {
+  const runtimeList = new RuntimeList(['postgres']);
+  const runtime = runtimeList.runtimeMap.get('postgres');
   if (runtime === undefined) {
     throw new Error("Couldn't build runtime");
   }
@@ -46,7 +46,7 @@ describe("Postgres tests", () => {
       ),
       runtime.connection.runSQL(
         'create table if not exists "UpperTablePublic" as select 1 as one;'
-      )
+      ),
     ]);
   });
 
@@ -54,7 +54,7 @@ describe("Postgres tests", () => {
     await runtimeList.closeAll();
   });
 
-  it(`raw date tests`, async () => {
+  it('raw date tests', async () => {
     const result = await runtime
       .loadQuery(
         `
@@ -89,33 +89,33 @@ describe("Postgres tests", () => {
       .run();
     // console.log(result.sql);
     // console.log(result.data.toObject());
-    expect(result.data.path(0, "t_date").value).toEqual(new Date("2020-03-02"));
-    expect(result.data.path(0, "t_date_month").value).toEqual(
-      new Date("2020-03-01")
+    expect(result.data.path(0, 't_date').value).toEqual(new Date('2020-03-02'));
+    expect(result.data.path(0, 't_date_month').value).toEqual(
+      new Date('2020-03-01')
     );
-    expect(result.data.path(0, "t_date_year").value).toEqual(
-      new Date("2020-01-01")
+    expect(result.data.path(0, 't_date_year').value).toEqual(
+      new Date('2020-01-01')
     );
-    expect(result.data.path(0, "t_timestamp_w_tz").value).toEqual(
-      new Date("2020-03-02T12:35:56.000Z")
+    expect(result.data.path(0, 't_timestamp_w_tz').value).toEqual(
+      new Date('2020-03-02T12:35:56.000Z')
     );
-    expect(result.data.path(0, "t_timestamp_w_tz_second").value).toEqual(
-      new Date("2020-03-02T12:35:56.000Z")
+    expect(result.data.path(0, 't_timestamp_w_tz_second').value).toEqual(
+      new Date('2020-03-02T12:35:56.000Z')
     );
-    expect(result.data.path(0, "t_timestamp_w_tz_minute").value).toEqual(
-      new Date("2020-03-02T12:35:00.000Z")
+    expect(result.data.path(0, 't_timestamp_w_tz_minute').value).toEqual(
+      new Date('2020-03-02T12:35:00.000Z')
     );
-    expect(result.data.path(0, "t_timestamp_w_tz_hour").value).toEqual(
-      new Date("2020-03-02T12:00:00.000Z")
+    expect(result.data.path(0, 't_timestamp_w_tz_hour').value).toEqual(
+      new Date('2020-03-02T12:00:00.000Z')
     );
-    expect(result.data.path(0, "t_timestamp_w_tz_date").value).toEqual(
-      new Date("2020-03-02")
+    expect(result.data.path(0, 't_timestamp_w_tz_date').value).toEqual(
+      new Date('2020-03-02')
     );
-    expect(result.data.path(0, "t_timestamp_w_tz_month").value).toEqual(
-      new Date("2020-03-01")
+    expect(result.data.path(0, 't_timestamp_w_tz_month').value).toEqual(
+      new Date('2020-03-01')
     );
-    expect(result.data.path(0, "t_timestamp_w_tz_year").value).toEqual(
-      new Date("2020-01-01")
+    expect(result.data.path(0, 't_timestamp_w_tz_year').value).toEqual(
+      new Date('2020-01-01')
     );
     // expect(result.data.path(0, "t_timestamp_no_tz").value).toEqual(
     //   new Date("2020-03-02T12:35:56.000Z")
@@ -140,7 +140,7 @@ describe("Postgres tests", () => {
     // );
   });
 
-  it(`sql_block`, async () => {
+  it('sql_block', async () => {
     const result = await runtime
       .loadQuery(
         `
@@ -152,10 +152,10 @@ describe("Postgres tests", () => {
       `
       )
       .run();
-    expect(result.data.value[0].n).toBe(1);
+    expect(result.data.value[0]['n']).toBe(1);
   });
 
-  it(`quote field name`, async () => {
+  it('quote field name', async () => {
     const result = await runtime
       .loadQuery(
         `
@@ -167,10 +167,10 @@ describe("Postgres tests", () => {
       `
       )
       .run();
-    expect(result.data.value[0].upperLower).toBe(1);
+    expect(result.data.value[0]['upperLower']).toBe(1);
   });
 
-  it(`quote keyword`, async () => {
+  it('quote keyword', async () => {
     const result = await runtime
       .loadQuery(
         `
@@ -186,12 +186,12 @@ describe("Postgres tests", () => {
       `
       )
       .run();
-    expect(result.data.value[0].select).toBe(1);
-    expect(result.data.value[0].create).toBe(2);
+    expect(result.data.value[0]['select']).toBe(1);
+    expect(result.data.value[0]['create']).toBe(2);
   });
 
   // these started failing and I'm not sure why (lloyd, skipping for now)
-  it.skip(`quote table name`, async () => {
+  it.skip('quote table name', async () => {
     const result = await runtime
       .loadQuery(
         `
@@ -199,10 +199,10 @@ describe("Postgres tests", () => {
       `
       )
       .run();
-    expect(result.data.value[0].one).toBe(1);
+    expect(result.data.value[0]['one']).toBe(1);
   });
 
-  it.skip(`quote schema name`, async () => {
+  it.skip('quote schema name', async () => {
     const result = await runtime
       .loadQuery(
         `
@@ -210,10 +210,10 @@ describe("Postgres tests", () => {
       `
       )
       .run();
-    expect(result.data.value[0].one).toBe(1);
+    expect(result.data.value[0]['one']).toBe(1);
   });
 
-  it("passes unsupported data", async () => {
+  it('passes unsupported data', async () => {
     const result = await runtime
       .loadQuery(
         `
@@ -222,6 +222,6 @@ describe("Postgres tests", () => {
       `
       )
       .run();
-    expect(result.data.value[0].ranger).toBeDefined();
+    expect(result.data.value[0]['ranger']).toBeDefined();
   });
 });

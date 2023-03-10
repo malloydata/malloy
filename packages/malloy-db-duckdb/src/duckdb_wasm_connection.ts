@@ -21,16 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as duckdb from "@duckdb/duckdb-wasm";
-import Worker from "web-worker";
+import * as duckdb from '@duckdb/duckdb-wasm';
+import Worker from 'web-worker';
 import {
   QueryDataRow,
   RunSQLOptions,
   StructDef,
-  parseTableURI
-} from "@malloydata/malloy";
-import { StructRow, Table, Vector } from "apache-arrow";
-import { DuckDBCommon, QueryOptionsReader } from "./duckdb_common";
+  parseTableURI,
+} from '@malloydata/malloy';
+import {StructRow, Table, Vector} from 'apache-arrow';
+import {DuckDBCommon, QueryOptionsReader} from './duckdb_common';
 
 /**
  * Arrow's toJSON() doesn't really do what I'd expect, since
@@ -48,9 +48,9 @@ const unwrapArrow = (value: unknown): any => {
     return [...value].map(unwrapArrow);
   } else if (value instanceof Date) {
     return value;
-  } else if (typeof value === "bigint") {
+  } else if (typeof value === 'bigint') {
     return Number(value);
-  } else if (typeof value === "object") {
+  } else if (typeof value === 'object') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const obj = value as Record<string | symbol, any>;
     // DecimalBigNums appear as Uint32Arrays, but can be identified
@@ -91,7 +91,7 @@ const unwrapTable = (table: Table): QueryDataRow[] => {
   return table.toArray().map(unwrapRow);
 };
 
-const isNode = () => typeof navigator === "undefined";
+const isNode = () => typeof navigator === 'undefined';
 
 type RemoteFileCallback = (
   tableName: string
@@ -105,12 +105,12 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   private worker: Worker | null = null;
 
   private remoteFileCallbacks: RemoteFileCallback[] = [];
-  private remoteFileStatus: Record<string, boolean> = {};
+  private remoteFileStatus: Record<string, Promise<boolean>> = {};
 
   constructor(
     public readonly name: string,
     private databasePath: string | null = null,
-    private workingDirectory = "/",
+    private workingDirectory = '/',
     queryOptions?: QueryOptionsReader
   ) {
     super(queryOptions);
@@ -126,7 +126,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
         ? bundle.mainWorker
         : URL.createObjectURL(
             new Blob([`importScripts("${bundle.mainWorker}");`], {
-              "type": "text/javascript"
+              type: 'text/javascript',
             })
           );
 
@@ -137,13 +137,13 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
       await this._database.instantiate(bundle.mainModule, bundle.pthreadWorker);
       if (this.databasePath) {
         await this._database.open({
-          "path": this.databasePath
+          path: this.databasePath,
         });
       }
       URL.revokeObjectURL(workerUrl);
       this._connection = await this._database.connect();
     } else {
-      throw new Error("Unable to instantiate duckdb-wasm");
+      throw new Error('Unable to instantiate duckdb-wasm');
     }
   }
 
@@ -163,18 +163,21 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
 
   protected async runDuckDBQuery(
     sql: string
-  ): Promise<{ rows: QueryDataRow[]; totalRows: number }> {
+  ): Promise<{rows: QueryDataRow[]; totalRows: number}> {
     const table = await this.connection?.query(sql);
-    if (table?.numRows != null) {
+    if (table === undefined) {
+      throw new Error('Table is undefined.');
+    }
+    if (table?.numRows !== null) {
       const rows = unwrapTable(table);
       // console.log(rows);
       return {
         // Normalize the data from its default proxied form
         rows,
-        "totalRows": table.numRows
+        totalRows: table.numRows,
       };
     } else {
-      throw new Error("Boom");
+      throw new Error('Boom');
     }
   }
 
@@ -183,10 +186,10 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     _options: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
     if (!this.connection) {
-      throw new Error("duckdb-wasm not connected");
+      throw new Error('duckdb-wasm not connected');
     }
     await this.setup();
-    const statements = sql.split("-- hack: split on this");
+    const statements = sql.split('-- hack: split on this');
 
     while (statements.length > 1) {
       await this.runDuckDBQuery(statements[0]);
@@ -204,24 +207,34 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;
   }> {
-    await this.setup();
-
-    for (const tableUri of tables) {
-      const { tablePath } = parseTableURI(tableUri);
-      if (tablePath.match(/^https?:\/\//)) {
-        continue;
-      }
-      if (this.remoteFileStatus[tablePath]) {
-        continue;
-      }
+    const fetchRemoteFile = async (tablePath: string): Promise<boolean> => {
       for (const callback of this.remoteFileCallbacks) {
-        this.remoteFileStatus[tablePath] = true;
         const data = await callback(tablePath);
         if (data) {
           await this.database?.registerFileBuffer(tablePath, data);
           break;
         }
       }
+      return true;
+    };
+
+    await this.setup();
+
+    for (const tableUri of tables) {
+      const {tablePath} = parseTableURI(tableUri);
+      // http and s3 urls are handled by duckdb-wasm
+      if (tablePath.match(/^https?:\/\//)) {
+        continue;
+      }
+      if (tablePath.match(/^s3:\/\//)) {
+        continue;
+      }
+      // If we're not trying to fetch start trying
+      if (!(tablePath in this.remoteFileStatus)) {
+        this.remoteFileStatus[tablePath] = fetchRemoteFile(tablePath);
+      }
+      // Wait for response
+      await this.remoteFileStatus[tablePath];
     }
     return super.fetchSchemaForTables(tables);
   }
@@ -246,6 +259,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   }
 
   async registerRemoteTable(tableName: string, url: string): Promise<void> {
+    this.remoteFileStatus[tableName] = Promise.resolve(true);
     this.database?.registerFileURL(
       tableName,
       url,

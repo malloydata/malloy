@@ -20,7 +20,7 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-import cloneDeep from "lodash/cloneDeep";
+import cloneDeep from 'lodash/cloneDeep';
 
 import {
   DocumentLocation,
@@ -28,15 +28,15 @@ import {
   isSQLBlock,
   ModelDef,
   Query,
-  SQLBlockStructDef
-} from "../../../model/malloy_types";
+  SQLBlockStructDef,
+} from '../../../model/malloy_types';
 
-import { MessageLogger } from "../../parse-log";
-import { MalloyTranslation } from "../../parse-malloy";
-import { ModelDataRequest } from "../../translate-response";
-import { DocumentCompileResult } from "./document-compile-result";
-import { ModelEntry } from "./model-entry";
-import { NameSpace } from "./name-space";
+import {MessageLogger} from '../../parse-log';
+import {MalloyTranslation} from '../../parse-malloy';
+import {ModelDataRequest} from '../../translate-response';
+import {DocumentCompileResult} from './document-compile-result';
+import {ModelEntry} from './model-entry';
+import {NameSpace} from './name-space';
 
 export abstract class MalloyElement {
   abstract elementType: string;
@@ -83,11 +83,11 @@ export abstract class MalloyElement {
       return this.parent.location;
     }
     return {
-      "url": this.sourceURL,
-      "range": {
-        "start": { "line": 0, "character": 0 },
-        "end": { "line": 0, "character": 0 }
-      }
+      url: this.sourceURL,
+      range: {
+        start: {line: 0, character: 0},
+        end: {line: 0, character: 0},
+      },
     };
   }
 
@@ -101,7 +101,7 @@ export abstract class MalloyElement {
     } else if (this.parent) {
       return this.parent.namespace();
     }
-    throw new Error("INTERNAL ERROR: Translation without document scope");
+    throw new Error('INTERNAL ERROR: Translation without document scope');
   }
 
   modelEntry(reference: string | ModelEntryReference): ModelEntry | undefined {
@@ -109,27 +109,27 @@ export abstract class MalloyElement {
       reference instanceof ModelEntryReference ? reference.name : reference;
     const result = this.namespace()?.getEntry(key);
     if (reference instanceof ModelEntryReference) {
-      if (result?.entry.type === "query") {
+      if (result?.entry.type === 'query') {
         this.addReference({
-          "type": "queryReference",
-          "text": key,
-          "definition": result.entry,
-          "location": reference.location
+          type: 'queryReference',
+          text: key,
+          definition: result.entry,
+          location: reference.location,
         });
-      } else if (result?.entry.type === "struct") {
+      } else if (result?.entry.type === 'struct') {
         if (isSQLBlock(result.entry)) {
           this.addReference({
-            "type": "sqlBlockReference",
-            "text": key,
-            "definition": result.entry,
-            "location": reference.location
+            type: 'sqlBlockReference',
+            text: key,
+            definition: result.entry,
+            location: reference.location,
           });
         } else {
           this.addReference({
-            "type": "exploreReference",
-            "text": key,
-            "definition": result.entry,
-            "location": reference.location
+            type: 'exploreReference',
+            text: key,
+            definition: result.entry,
+            location: reference.location,
           });
         }
       }
@@ -159,7 +159,7 @@ export abstract class MalloyElement {
 
   private get sourceURL() {
     const trans = this.translator();
-    return trans?.sourceURL || "(missing)";
+    return trans?.sourceURL || '(missing)';
   }
 
   errorsExist(): boolean {
@@ -183,7 +183,7 @@ export abstract class MalloyElement {
       this.logged.add(message);
     }
     const trans = this.translator();
-    const msg = { "at": this.location, message };
+    const msg = {at: this.location, message};
     const logTo = trans?.root.logger;
     if (logTo) {
       logTo.log(msg);
@@ -205,25 +205,25 @@ export abstract class MalloyElement {
    * @param indent only used for recursion
    */
   toString(): string {
-    return this.stringify("", 0);
+    return this.stringify('', 0);
   }
 
   private stringify(prefix: string, indent: number): string {
-    const left = " ".repeat(indent);
+    const left = ' '.repeat(indent);
     let asString = `${left}${prefix}<${this.elementType}>${this.varInfo()}`;
     for (const kidLabel of Object.keys(this.children)) {
       const kiddle = this.children[kidLabel];
       if (kiddle instanceof MalloyElement) {
-        asString += "\n" + kiddle.stringify(`${kidLabel}: `, indent + 2);
+        asString += '\n' + kiddle.stringify(`${kidLabel}: `, indent + 2);
       } else {
         asString += `\n${left}  ${kidLabel}: [`;
         if (kiddle.length > 0) {
           asString +=
-            "\n" +
-            kiddle.map((k) => k.stringify("", indent + 4)).join("\n") +
+            '\n' +
+            kiddle.map(k => k.stringify('', indent + 4)).join('\n') +
             `\n${left}  `;
         }
-        asString += "]";
+        asString += ']';
       }
     }
     return asString;
@@ -244,12 +244,12 @@ export abstract class MalloyElement {
   }
 
   private varInfo(): string {
-    let extra = "";
+    let extra = '';
     for (const [key, value] of Object.entries(this)) {
-      if (key !== "elementType") {
-        if (typeof value == "boolean") {
+      if (key !== 'elementType') {
+        if (typeof value === 'boolean') {
           extra += value ? ` ${key}` : ` !${key}`;
-        } else if (typeof value === "string" || typeof value === "number") {
+        } else if (typeof value === 'string' || typeof value === 'number') {
           extra += ` ${key}=${value}`;
         }
       }
@@ -264,7 +264,7 @@ export abstract class MalloyElement {
 }
 
 export class Unimplemented extends MalloyElement {
-  elementType = "unimplemented";
+  elementType = 'unimplemented';
   reported = false;
 }
 
@@ -272,7 +272,7 @@ type ChildBody = MalloyElement | MalloyElement[];
 type ElementChildren = Record<string, ChildBody>;
 
 export class ModelEntryReference extends MalloyElement {
-  elementType = "modelEntryReference";
+  elementType = 'modelEntryReference';
 
   constructor(readonly name: string) {
     super();
@@ -296,17 +296,17 @@ export function isDocStatement(e: MalloyElement): e is DocStatement {
 }
 
 export class ListOf<ET extends MalloyElement> extends MalloyElement {
-  elementType = "genericElementList";
+  elementType = 'genericElementList';
   constructor(listDesc: string, protected elements: ET[]) {
     super();
-    if (this.elementType === "genericElementList") {
+    if (this.elementType === 'genericElementList') {
       this.elementType = listDesc;
     }
     this.newContents();
   }
 
   private newContents(): void {
-    this.has({ [this.elementType]: this.elements });
+    this.has({[this.elementType]: this.elements});
   }
 
   get list(): ET[] {
@@ -377,7 +377,7 @@ function makeid(length) {
 }
 
 export class Document extends MalloyElement implements NameSpace {
-  elementType = "document";
+  elementType = 'document';
   documentModel: Record<string, ModelEntry> = {};
   queryList: Query[] = [];
   sqlBlocks: SQLBlockStructDef[] = [];
@@ -404,7 +404,7 @@ export class Document extends MalloyElement implements NameSpace {
         const struct = extendingModelDef.contents[inName];
         if (struct.type == "struct" || struct.type === "function") {
           const exported = extendingModelDef.exports.includes(inName);
-          this.setEntry(inName, { "entry": struct, exported });
+          this.setEntry(inName, {entry: struct, exported});
         }
       }
     }
@@ -414,19 +414,19 @@ export class Document extends MalloyElement implements NameSpace {
   compile(): DocumentCompileResult {
     const needs = this.statements.executeList(this);
     const ret: DocumentCompileResult = {
-      "modelDef": this.modelDef(),
-      "queryList": this.queryList,
-      "sqlBlocks": this.sqlBlocks,
-      needs
+      modelDef: this.modelDef(),
+      queryList: this.queryList,
+      sqlBlocks: this.sqlBlocks,
+      needs,
     };
     return ret;
   }
 
   modelDef(): ModelDef {
-    const def: ModelDef = { "name": "", "exports": [], "contents": {} };
+    const def: ModelDef = {name: '', exports: [], contents: {}};
     for (const entry in this.documentModel) {
       const entryDef = this.documentModel[entry].entry;
-      if (entryDef.type === "struct" || entryDef.type === "query") {
+      if (entryDef.type === 'struct' || entryDef.type === 'query') {
         if (this.documentModel[entry].exported) {
           def.exports.push(entry);
         }
@@ -437,13 +437,13 @@ export class Document extends MalloyElement implements NameSpace {
   }
 
   defineSQL(sql: SQLBlockStructDef, name?: string): boolean {
-    const ret = { ...sql, "as": `$${this.sqlBlocks.length}` };
+    const ret = {...sql, as: `$${this.sqlBlocks.length}`};
     if (name) {
       if (this.getEntry(name)) {
         return false;
       }
       ret.as = name;
-      this.setEntry(name, { "entry": ret, "sqlType": true });
+      this.setEntry(name, {entry: ret, sqlType: true});
     }
     this.sqlBlocks.push(ret);
     return true;

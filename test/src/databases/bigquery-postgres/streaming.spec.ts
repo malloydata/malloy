@@ -25,13 +25,13 @@ import {
   CSVWriter,
   DataRecord,
   JSONWriter,
-  WriteStream
-} from "@malloydata/malloy";
-import { RuntimeList } from "../../runtimes";
-import { describeIfDatabaseAvailable } from "../../util";
+  WriteStream,
+} from '@malloydata/malloy';
+import {RuntimeList} from '../../runtimes';
+import {describeIfDatabaseAvailable} from '../../util';
 
 class StringAccumulator implements WriteStream {
-  public accumulatedValue = "";
+  public accumulatedValue = '';
 
   write(text: string) {
     this.accumulatedValue += text;
@@ -43,11 +43,11 @@ class StringAccumulator implements WriteStream {
 }
 
 const [describe, databases] = describeIfDatabaseAvailable([
-  "bigquery",
-  "postgres"
+  'bigquery',
+  'postgres',
 ]);
 
-describe("Streaming tests", () => {
+describe('Streaming tests', () => {
   const runtimes = new RuntimeList(databases);
 
   afterAll(async () => {
@@ -57,22 +57,22 @@ describe("Streaming tests", () => {
   runtimes.runtimeMap.forEach((runtime, databaseName) => {
     it(`basic stream test  - ${databaseName}`, async () => {
       const stream = runtime
-        .loadModel(`source: airports is table('malloytest.airports') {}`)
-        .loadQuery("query: airports -> { project: code }")
-        .runStream({ "rowLimit": 10 });
+        .loadModel("source: airports is table('malloytest.airports') {}")
+        .loadQuery('query: airports -> { project: code }')
+        .runStream({rowLimit: 10});
       const rows: DataRecord[] = [];
       for await (const row of stream) {
         rows.push(row);
       }
       expect(rows.length).toBe(10);
-      expect(rows[0].cell("code").string.value).toBe("1Q9");
+      expect(rows[0].cell('code').string.value).toBe('1Q9');
     });
 
     it(`stream to JSON - ${databaseName}`, async () => {
       const stream = runtime
-        .loadModel(`source: airports is table('malloytest.airports') {}`)
-        .loadQuery("query: airports -> { project: code }")
-        .runStream({ "rowLimit": 1 });
+        .loadModel("source: airports is table('malloytest.airports') {}")
+        .loadQuery('query: airports -> { project: code }')
+        .runStream({rowLimit: 1});
       const accummulator = new StringAccumulator();
       const jsonWriter = new JSONWriter(accummulator);
       await jsonWriter.process(stream);
@@ -88,13 +88,13 @@ describe("Streaming tests", () => {
 
     it(`stream to CSV - ${databaseName}`, async () => {
       const stream = runtime
-        .loadModel(`source: airports is table('malloytest.airports') {}`)
-        .loadQuery("query: airports -> { project: code }")
-        .runStream({ "rowLimit": 1 });
+        .loadModel("source: airports is table('malloytest.airports') {}")
+        .loadQuery('query: airports -> { project: code }')
+        .runStream({rowLimit: 1});
       const accummulator = new StringAccumulator();
       const csvWriter = new CSVWriter(accummulator);
       await csvWriter.process(stream);
-      expect(accummulator.accumulatedValue).toBe(`code\n1Q9\n`);
+      expect(accummulator.accumulatedValue).toBe('code\n1Q9\n');
     });
   });
 });

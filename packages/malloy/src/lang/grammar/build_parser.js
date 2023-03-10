@@ -27,21 +27,21 @@
 
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-var-requires */
-const { readFileSync, writeFileSync, existsSync, rmSync } = require("fs");
-const md5 = require("md5");
-const path = require("path");
-const { execSync } = require("child_process");
+const {readFileSync, writeFileSync, existsSync, rmSync} = require('fs');
+const md5 = require('md5');
+const path = require('path');
+const {execSync} = require('child_process');
 
 const langSrc = path.dirname(__dirname);
-const libDir = path.join(langSrc, "lib", "Malloy");
-const digestFile = path.join(libDir, "Malloy.md5");
-const digestSrcFiles = [__filename, "MalloyLexer.g4", "MalloyParser.g4"];
-const compilerSrcs = ["MalloyLexer.ts", "MalloyParser.ts"];
+const libDir = path.join(langSrc, 'lib', 'Malloy');
+const digestFile = path.join(libDir, 'Malloy.md5');
+const digestSrcFiles = [__filename, 'MalloyLexer.g4', 'MalloyParser.g4'];
+const compilerSrcs = ['MalloyLexer.ts', 'MalloyParser.ts'];
 
 function oldDigest() {
   return existsSync(digestFile)
-    ? readFileSync(digestFile, "utf-8")
-    : "__DIGEST_FILE_NOT_FOUND__";
+    ? readFileSync(digestFile, 'utf-8')
+    : '__DIGEST_FILE_NOT_FOUND__';
 }
 
 function run(cmd) {
@@ -54,19 +54,19 @@ function run(cmd) {
   return true;
 }
 
-process.chdir(path.join(langSrc, "grammar"));
+process.chdir(path.join(langSrc, 'grammar'));
 const versionDigest = md5(
-  digestSrcFiles.map((fn) => readFileSync(fn, "utf-8")).join("")
+  digestSrcFiles.map(fn => readFileSync(fn, 'utf-8')).join('')
 );
-let rebuild = versionDigest != oldDigest();
+let rebuild = versionDigest !== oldDigest();
 
 for (const fn of compilerSrcs) {
-  rebuild ||= !existsSync(path.join(libDir, fn));
+  rebuild = rebuild || !existsSync(path.join(libDir, fn));
 }
 
 if (rebuild) {
-  console.log(`-- Constructing Malloy parser from antlr specification ...`);
-  const antlr = `antlr4ts -Xexact-output-dir -o ../lib/Malloy`;
+  console.log('-- Constructing Malloy parser from antlr specification ...');
+  const antlr = 'antlr4ts -Xexact-output-dir -o ../lib/Malloy';
   if (
     run(`${antlr} MalloyLexer.g4`) &&
     run(`${antlr} -visitor MalloyParser.g4`)
@@ -76,5 +76,5 @@ if (rebuild) {
     rmSync(digestFile);
   }
 } else {
-  console.log(`-- Using existing Malloy parser`);
+  console.log('-- Using existing Malloy parser');
 }
