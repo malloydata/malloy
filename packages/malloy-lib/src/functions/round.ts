@@ -31,7 +31,6 @@ import {
   sql
 } from "../util";
 
-// TODO second parameter
 export const ROUND = func(
   "round",
   overload(
@@ -43,6 +42,8 @@ export const ROUND = func(
     minScalar("number"),
     [
       param("value", maxAnalytic("number")),
+      // TODO this parameter should only accept integers, but we don't have a good
+      // way of expressing that constraint at the moment
       param("precision", maxAnalytic("number"))
     ],
     [sql("ROUND(", arg("value"), ", ", arg("precision"), ")")]
