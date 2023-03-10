@@ -384,11 +384,10 @@ export class Document extends MalloyElement implements NameSpace {
     this.queryList = [];
     this.sqlBlocks = [];
     if (extendingModelDef) {
-      for (const inName in extendingModelDef.contents) {
-        const modelEntry = extendingModelDef.contents[inName];
-        if (modelEntry.type === 'struct' || modelEntry.type === 'query') {
-          const exported = extendingModelDef.exports.includes(inName);
-          this.setEntry(inName, {entry: modelEntry, exported});
+      for (const [nm, entry] of Object.entries(extendingModelDef.contents)) {
+        if (entry.type === 'struct' || entry.type === 'query') {
+          const exported = extendingModelDef.exports.includes(nm);
+          this.setEntry(nm, {entry, exported});
         }
       }
     }
