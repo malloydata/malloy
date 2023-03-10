@@ -64,4 +64,16 @@ describe('extendModel', () => {
     const twoState = await q2.run();
     expect(twoState.data.path(0, 'state').value).toBe('CA');
   });
+  test('can reference sql from previous section ', async () => {
+    const model = runtime.loadModel(`
+      sql: q1 is { connection: "duckdb" select: """SELECT 'CA' as state""" }
+    `);
+
+    const extended = model.extendModel(
+      'query: q2 is from_sql(q1)->{project: *}'
+    );
+    const q2 = extended.loadQueryByName('q2');
+    const twoState = await q2.run();
+    expect(twoState.data.path(0, 'state').value).toBe('CA');
+  });
 });
