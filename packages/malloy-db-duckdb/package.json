@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-duckdb",
-  "version": "0.0.27",
+  "version": "0.0.28",
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -41,7 +41,7 @@
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "1.24.0",
-    "@malloydata/malloy": "^0.0.27",
+    "@malloydata/malloy": "^0.0.28",
     "apache-arrow": "^11.0.0",
     "duckdb": "0.7.1",
     "web-worker": "^1.2.0"
