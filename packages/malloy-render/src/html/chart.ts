@@ -82,8 +82,6 @@ export abstract class HTMLChartRenderer implements Renderer {
 
     const vegaspec = lite.compile(spec, {
       logger: {
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore
         level(newLevel: number) {
           if (newLevel !== undefined) {
             return this;
@@ -102,7 +100,7 @@ export abstract class HTMLChartRenderer implements Renderer {
         debug() {
           return this;
         },
-      },
+      } as vega.LoggerInterface,
     }).spec;
     const view = new vega.View(vega.parse(vegaspec), {
       renderer: 'none',
