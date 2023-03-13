@@ -10,12 +10,12 @@
     "malloyc": "ts-node ../scripts/malloy-to-json"
   },
   "dependencies": {
-    "@malloydata/db-bigquery": "^0.0.24",
-    "@malloydata/db-duckdb": "^0.0.24",
-    "@malloydata/db-postgres": "^0.0.24",
-    "@malloydata/render": "^0.0.24",
-    "@malloydata/malloy": "^0.0.24",
-    "@malloydata/lib": "^0.0.24",
+    "@malloydata/db-bigquery": "^0.0.27",
+    "@malloydata/db-duckdb": "^0.0.27",
+    "@malloydata/db-postgres": "^0.0.27",
+    "@malloydata/render": "^0.0.27",
+    "@malloydata/malloy": "^0.0.27",
+    "@malloydata/lib": "^0.0.27",
     "jsdom": "^19.0.0"
   },
   "devDependencies": {
