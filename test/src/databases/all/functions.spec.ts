@@ -90,8 +90,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     await funcTestAgg('round(stddev(seats))', 39);
   });
 
-  // TODO update this test to check for error -- also improve the error
-  // for cases like this when the data type matches but not the expression type
+  // TODO update this test to check for error
   it(`stddev works ? - ${databaseName}`, async () => {
     await funcTestAgg('round(stddev(count()))', 39);
   });

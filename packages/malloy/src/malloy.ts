@@ -2202,7 +2202,6 @@ export class ModelMaterializer extends FluentState<Model> {
               source: query,
             });
       const model = await this.getModel();
-      console.log('model', model);
       const queryModel = await Malloy.compile({
         urlReader,
         connections,

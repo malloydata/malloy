@@ -28,6 +28,7 @@ import {
   Fragment,
   FunctionDef,
   FunctionOverloadDef,
+  FunctionParameterDef,
   isAtomicFieldType,
   isExpressionTypeLEQ,
   maxExpressionType,
@@ -129,8 +130,8 @@ export class ExprFunc extends ExpressionDef {
       ...(implicitExpr ? [implicitExpr] : []),
       ...argExprsWithoutImplicit,
     ];
-    const overload = findOverload(func, argExprs);
-    if (overload === undefined) {
+    const result = findOverload(func, argExprs);
+    if (result === undefined) {
       this.log(
         `No matching overload for function ${this.name}(${argExprs
           .map(e => e.dataType)
@@ -141,6 +142,20 @@ export class ExprFunc extends ExpressionDef {
         expressionType: 'scalar',
         value: [],
       };
+    }
+    const {overload, expressionTypeErrors} = result;
+    if (expressionTypeErrors.length > 0) {
+      for (const error of expressionTypeErrors) {
+        const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
+        const allowed =
+          error.maxExpressionType === 'scalar'
+            ? 'scalar'
+            : 'scalar or aggregate';
+        const arg = this.args[adjustedIndex];
+        arg.log(
+          `Parameter ${error.param.name} of ${this.name} must be ${allowed}, but received ${error.actualExpressionType}`
+        );
+      }
     }
     const type = overload.returnType;
     const expressionType = maxOfExpressionTypes([
@@ -189,13 +204,26 @@ export class ExprFunc extends ExpressionDef {
   }
 }
 
+type ExpressionTypeError = {
+  argIndex: number;
+  actualExpressionType: ExpressionType;
+  maxExpressionType: ExpressionType;
+  param: FunctionParameterDef;
+};
+
 function findOverload(
   func: FunctionDef,
   args: ExprValue[]
-): FunctionOverloadDef | undefined {
+):
+  | {
+      overload: FunctionOverloadDef;
+      expressionTypeErrors: ExpressionTypeError[];
+    }
+  | undefined {
   for (const overload of func.overloads) {
     let paramIndex = 0;
     let ok = true;
+    const expressionTypeErrors: ExpressionTypeError[] = [];
     for (let argIndex = 0; argIndex < args.length; argIndex++) {
       const arg = args[argIndex];
       const param = overload.params[paramIndex];
@@ -203,19 +231,27 @@ function findOverload(
         ok = false;
         break;
       }
-      const argOk = param.allowedTypes.some(param => {
+      const argOk = param.allowedTypes.some(paramT => {
         const dataTypeMatch =
-          param.dataType === arg.dataType ||
-          param.dataType === 'any' ||
+          paramT.dataType === arg.dataType ||
+          paramT.dataType === 'any' ||
           // TODO I've included this because it means that errors cascade a bit less...
           // I think we may want to add an `error` type for nodes generated from errors,
           // then make `error` propagate without generating more errors.
           arg.dataType === 'unknown';
         const expressionTypeMatch = isExpressionTypeLEQ(
           arg.expressionType,
-          param.expressionType
+          paramT.expressionType
         );
-        return dataTypeMatch && expressionTypeMatch;
+        if (!expressionTypeMatch) {
+          expressionTypeErrors.push({
+            argIndex,
+            maxExpressionType: paramT.expressionType,
+            actualExpressionType: arg.expressionType,
+            param,
+          });
+        }
+        return dataTypeMatch;
       });
       if (!argOk) {
         ok = false;
@@ -233,7 +269,7 @@ function findOverload(
       continue;
     }
     if (ok) {
-      return overload;
+      return {overload, expressionTypeErrors};
     }
   }
 }

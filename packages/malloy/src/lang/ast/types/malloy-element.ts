@@ -363,19 +363,6 @@ export class RunList extends ListOf<DocStatement> {
  * that can be tomorrow
  */
 
-function makeid(length) {
-  let result = '';
-  const characters =
-    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const charactersLength = characters.length;
-  let counter = 0;
-  while (counter < length) {
-    result += characters.charAt(Math.floor(Math.random() * charactersLength));
-    counter += 1;
-  }
-  return result;
-}
-
 export class Document extends MalloyElement implements NameSpace {
   elementType = 'document';
   documentModel: Record<string, ModelEntry> = {};
@@ -383,13 +370,11 @@ export class Document extends MalloyElement implements NameSpace {
   sqlBlocks: SQLBlockStructDef[] = [];
   statements: RunList;
   didInitModel = false;
-  id: string;
 
   constructor(statements: DocStatement[]) {
     super();
     this.statements = new RunList('topLevelStatements', statements);
     this.has({statements: statements});
-    this.id = makeid(5);
   }
 
   initModelDef(extendingModelDef: ModelDef | undefined): void {
@@ -450,12 +435,10 @@ export class Document extends MalloyElement implements NameSpace {
   }
 
   getEntry(str: string): ModelEntry {
-    console.log(this.id, this.documentModel);
     return this.documentModel[str];
   }
 
   setEntry(str: string, ent: ModelEntry): void {
-    console.log(this.id, 'SET ENTRY ', str, ent);
     this.documentModel[str] = ent;
   }
 }
