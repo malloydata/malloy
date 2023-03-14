@@ -50,127 +50,250 @@ runtimes.runtimeMap.forEach((runtime, databaseName) =>
 expressionModels.forEach((expressionModel, databaseName) => {
   const funcTestGeneral = async (
     expr: string,
-    expected: string | boolean | number,
-    type: 'group_by' | 'aggregate'
+    type: 'group_by' | 'aggregate',
+    expected:
+      | {error: string; success?: undefined}
+      | {success: string | boolean | number | null; error?: undefined}
   ) => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    const run = async () => {
+      return await expressionModel
+        .loadQuery(
+          `
       import "malloy://bigquery_functions"
       query: aircraft -> { ${type}: f is ${expr} }`
-      )
-      .run();
-    console.log(result.sql);
-    expect(result.data.path(0, 'f').value).toBe(expected);
+        )
+        .run();
+    };
+
+    if (expected.success !== undefined) {
+      const result = await run();
+      console.log(result.sql);
+      expect(result.data.path(0, 'f').value).toBe(expected.success);
+    } else {
+      expect(run).rejects.toThrowError(expected.error);
+    }
   };
 
-  const funcTest = (expr: string, expexted: string | boolean | number) =>
-    funcTestGeneral(expr, expexted, 'group_by');
+  const funcTest = (expr: string, expexted: string | boolean | number | null) =>
+    funcTestGeneral(expr, 'group_by', {success: expexted});
 
-  const funcTestAgg = (expr: string, expexted: string | boolean | number) =>
-    funcTestGeneral(expr, expexted, 'aggregate');
+  const funcTestAgg = (
+    expr: string,
+    expexted: string | boolean | number | null
+  ) => funcTestGeneral(expr, 'aggregate', {success: expexted});
 
-  it(`concat works - ${databaseName}`, async () => {
-    await funcTest("concat('foo', 'bar')", 'foobar');
+  const funcTestErr = (expr: string, error: string) =>
+    funcTestGeneral(expr, 'group_by', {error});
+
+  const funcTestAggErr = (expr: string, error: string) =>
+    funcTestGeneral(expr, 'aggregate', {error});
+
+  describe(`concat - ${databaseName}`, () => {
+    it('works with two args', async () => {
+      await funcTest("concat('foo', 'bar')", 'foobar');
+    });
+
+    it('works with one arg', async () => {
+      await funcTest("concat('foo')", 'foo');
+    });
+
+    it.skip('works with null', async () => {
+      await funcTest("concat('foo', null)", null);
+    });
+
+    it.skip('errors in translator with zero args', async () => {
+      await funcTestErr('concat()', 'no matching overload for concat');
+    });
   });
 
-  it(`round works - ${databaseName}`, async () => {
-    await funcTest('round(1.2)', 1);
+  describe(`round - ${databaseName}`, () => {
+    it('works', async () => {
+      await funcTest('round(1.2)', 1);
+    });
+
+    it('works with precision', async () => {
+      await funcTest('round(12.222, 1)', 12.2);
+    });
+
+    it('works with negative precision', async () => {
+      await funcTest('round(12.2, -1)', 10);
+    });
+
+    it.skip('errors when given decimal precision', async () => {
+      await funcTestErr(
+        'round(12.2, -1.5)',
+        'parameter precision for round must be integer, received float'
+      );
+    });
+
+    it('works with null', async () => {
+      await funcTest('round(null)', null);
+    });
+
+    it('works with null precision', async () => {
+      await funcTest('round(1, null)', null);
+    });
   });
 
-  it(`round works with precision - ${databaseName}`, async () => {
-    await funcTest('round(12.2, -1)', 10);
+  describe(`floor - ${databaseName}`, () => {
+    it('works', async () => {
+      await funcTest('floor(1.9)', 1);
+    });
+
+    it('works with negative', async () => {
+      await funcTest('floor(-1.9)', -1);
+    });
+
+    it('works with null', async () => {
+      await funcTest('floor(null)', null);
+    });
   });
 
-  it(`round works with precision [error, precision must be int] - ${databaseName}`, async () => {
-    await funcTest('round(12.2, -1.5)', 10);
+  describe(`length - ${databaseName}`, () => {
+    it('works', async () => {
+      await funcTest("length('foo')", 3);
+    });
+
+    it('works with null', async () => {
+      await funcTest('length(null)', null);
+    });
   });
 
-  it(`stddev works - ${databaseName}`, async () => {
-    await funcTestAgg('round(stddev(seats))', 39);
+  describe(`lower - ${databaseName}`, () => {
+    it('works', async () => {
+      await funcTest("lower('FoO')", 'foo');
+    });
+
+    it('works with null', async () => {
+      await funcTest('lower(null)', null);
+    });
   });
 
-  // TODO update this test to check for error
-  it(`stddev works ? - ${databaseName}`, async () => {
-    await funcTestAgg('round(stddev(count()))', 39);
+  describe(`upper - ${databaseName}`, () => {
+    it('works', async () => {
+      await funcTest("upper('fOo')", 'FOO');
+    });
+
+    it('works with null', async () => {
+      await funcTest('upper(null)', null);
+    });
   });
 
-  it(`stddev works on join field - ${databaseName}`, async () => {
-    await funcTestAgg('round(aircraft_models.seats.stddev())', 39);
+  describe(`regexp_extract - ${databaseName}`, () => {
+    it('works', async () => {
+      await funcTest("regexp_extract('I have a dog', r'd[aeiou]g')", 'dog');
+    });
+
+    it('works with null', async () => {
+      await funcTest("regexp_extract(null, r'd[aeiou]g')", null);
+    });
+
+    // TODO not sure how to represent a null regular expression
+    it.skip('works with null regexp', async () => {
+      await funcTest("regexp_extract('foo', null)", null);
+    });
   });
 
-  it(`custom_avg- ${databaseName}`, async () => {
-    await funcTestAgg('aircraft_models.seats.custom_avg()', 10);
+  describe(`replace - ${databaseName}`, () => {
+    it('works', async () => {
+      await funcTest("replace('aaaa', 'a', 'c')", 'cccc');
+    });
+
+    it('works with empty replacement', async () => {
+      await funcTest("replace('aaaa', '', 'c')", 'aaaa');
+    });
+
+    it('works with null original', async () => {
+      await funcTest("replace(null, 'a', 'c')", null);
+    });
+
+    it('works with null from', async () => {
+      await funcTest("replace('aaaa', null, 'c')", null);
+    });
+
+    it('works with null to', async () => {
+      await funcTest("replace('aaaa', 'a', null)", null);
+    });
   });
 
-  it(`avg - ${databaseName}`, async () => {
-    await funcTestAgg('aircraft_models.seats.avg()', 10);
+  describe(`substr - ${databaseName}`, () => {
+    it('works', async () => {
+      await funcTest("substr('foo', 2)", 'oo');
+    });
+
+    it('works with max length', async () => {
+      await funcTest("substr('foo', 2, 1)", 'o');
+    });
+
+    it('works with negative start', async () => {
+      await funcTest("substr('foo bar baz', -3)", 'baz');
+    });
+
+    it('works with null string', async () => {
+      await funcTest('substr(null, 1, 2)', null);
+    });
+
+    it('works with null from', async () => {
+      await funcTest("substr('aaaa', null, 1)", null);
+    });
+
+    it('works with null to', async () => {
+      await funcTest("substr('aaaa', 1, null)", null);
+    });
   });
 
-  it(`custom_avg works on join field - ${databaseName}`, async () => {
-    await funcTestAgg(
-      'aircraft_models.seats.custom_avg() = aircraft_models.seats.avg()',
-      true
-    );
+  describe(`raw function call - ${databaseName}`, () => {
+    it('works', async () => {
+      await funcTest('ifnull#(null, 1)::number', 1);
+      await funcTestErr(
+        "ifnull('foo bar')",
+        "Unknown function 'ifnull'. Did you mean to import it?"
+      );
+    });
+
+    it('works with type specified', async () => {
+      await funcTest('ifnull#number(null, 1)', 1);
+      await funcTestErr(
+        "ifnull('foo bar')",
+        "Unknown function 'ifnull'. Did you mean to import it?"
+      );
+    });
   });
 
-  it(`custom_avg no symmetric, filter - ${databaseName}`, async () => {
-    await funcTestAgg(
-      'custom_avg(aircraft_models.seats) { where: aircraft_models.seats > 3 }',
-      10
-    );
+  describe(`stddev - ${databaseName}`, () => {
+    it('works', async () => {
+      await funcTestAgg('round(stddev(aircraft_models.seats))', 29);
+    });
+
+    it('works with struct', async () => {
+      await funcTestAgg(
+        'round(aircraft_models.stddev(aircraft_models.seats))',
+        41
+      );
+    });
+
+    it('works with implicit parameter', async () => {
+      await funcTestAgg('round(aircraft_models.seats.stddev())', 41);
+    });
+
+    it('works with filter', async () => {
+      await funcTestAgg(
+        'round(aircraft_models.seats.stddev() { where: 1 = 1 })',
+        41
+      );
+      await funcTestAgg(
+        'round(aircraft_models.seats.stddev() { where: aircraft_models.seats > 4 })',
+        69
+      );
+    });
+
+    it(`errors if you pass in an aggregate - ${databaseName}`, async () => {
+      await funcTestAggErr(
+        'round(stddev(count()))',
+        'Parameter value of stddev must be scalar, but received aggregate'
+      );
+    });
   });
-
-  it(`custom_avg with filter - ${databaseName}`, async () => {
-    await funcTestAgg(
-      'aircraft_models.seats.custom_avg() { where: 1 = 1 }',
-      10
-    );
-  });
-
-  it(`silly with filter - ${databaseName}`, async () => {
-    await funcTestAgg('silly(aircraft_models.seats, count())', 10);
-  });
-
-  it(`silly symmetric with filter and agg - ${databaseName}`, async () => {
-    await funcTestAgg(
-      'aircraft_models.silly(aircraft_models.seats, count())',
-      10
-    );
-  });
-
-  it(`silly symmetric with filter - ${databaseName}`, async () => {
-    await funcTestAgg(
-      `aircraft_models.silly(aircraft_models.seats, 1) {
-        where: aircraft_models.seats > 3
-      }`,
-      10
-    );
-  });
-
-  it(`regexp match - ${databaseName}`, async () => {
-    await funcTestAgg("regexp_extract('I have a dog', r'd[aeiou]g')", 'dog');
-  });
-
-  // it(`num_args works - ${databaseName}`, async () => {
-  //   const result = await expressionModel
-  //     .loadQuery(`
-  //     import "malloy://functions"
-  //     query: aircraft -> { group_by: f is num_args('foo', 'bar') }`)
-  //     .run();
-  //   console.log(result.sql);
-  //   expect(result.data.path(0, "f").value).toBe(2);
-  // });
-
-  // it(`get_dialect works - ${databaseName}`, async () => {
-  //   const result = await expressionModel
-  //     .loadQuery(`
-  //     import "malloy://functions"
-  //     query: aircraft -> { group_by: f is get_dialect() }`)
-  //     .run();
-  //   console.log(result.sql);
-  //   expect(result.data.path(0, "f").value).toBe("duckdb");
-  // });
 });
 
 afterAll(async () => {

@@ -235,6 +235,10 @@ function findOverload(
         const dataTypeMatch =
           paramT.dataType === arg.dataType ||
           paramT.dataType === 'any' ||
+          // TODO We should consider whether `nulls` should always be allowed. It probably
+          // does not make sense to limit function calls to not allow nulls, since have
+          // so little control over nullability.
+          arg.dataType === 'null' ||
           // TODO I've included this because it means that errors cascade a bit less...
           // I think we may want to add an `error` type for nodes generated from errors,
           // then make `error` propagate without generating more errors.

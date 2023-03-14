@@ -34,6 +34,8 @@ import {
 
 export const CONCAT = func(
   'concat',
+  // TODO in DuckDB, nulls are treated like "", but in BigQuery, nulls propagate and the
+  // result becomes null.
   // TODO At least in DuckDB, you can't call `concat()` with no arguments. Should we
   // make the "variadic" parameter type able to specify "at least one" rather than
   // 0 or more?
