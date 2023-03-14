@@ -39,13 +39,3 @@ export const STDDEV = func(
     [sql('STDDEV(', arg('value'), ')')]
   )
 );
-
-// TODO remove
-export const CUSTOM_AVG = func(
-  'custom_avg',
-  overload(
-    minAggregate('number'),
-    [param('value', maxScalar('number'))],
-    [sql('AVG(', arg('value'), ')')]
-  )
-);

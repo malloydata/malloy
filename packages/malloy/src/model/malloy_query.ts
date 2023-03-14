@@ -428,12 +428,9 @@ class QueryField extends QueryNode {
   ): string {
     const overload = frag.overload;
     const args = frag.args;
-    // TODO only do this part if there even is a structPath to begin with?
-    const distinctKey = this.generateDistinctKeyIfNecessary(
-      resultSet,
-      context,
-      frag.structPath
-    );
+    const distinctKey =
+      overload.returnType.expressionType === 'aggregate' &&
+      this.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
     if (distinctKey) {
       if (!context.dialect.supportsAggDistinct) {
         throw new Error(
@@ -463,7 +460,11 @@ class QueryField extends QueryNode {
       const mappedArgs =
         overload.returnType.expressionType === 'aggregate'
           ? args.map(arg => {
-              // TODO how do I know whether filters need to be applied to a dim argument or not?
+              // TODO We assume that all arguments to this aggregate-returning function need to
+              // have filters applied to them. This is not necessarily true in the general case,
+              // e.g. in a function `avg_plus(a, b) = avg(a) + b` -- here, `b` should not be
+              // be filtered. But since there aren't any aggregate functions like this in the
+              // standard library we have planned, we ignore this for now.
               return [this.generateDimFragment(resultSet, context, arg, state)];
             })
           : args;
@@ -488,7 +489,8 @@ class QueryField extends QueryNode {
       branch.dialects.includes(dialect)
     );
     if (branch === undefined) {
-      // TODO maybe catch this in the translator somehow?
+      // TODO Consider checking function overload definitions in the translator
+      // to ensure that the function can be compiled for the given dialect.
       throw new Error(`Dialect switch has no branch for dialect ${dialect}.`);
     }
     return this.generateExpressionFromExpr(resultSet, context, branch.e, state);
@@ -2108,7 +2110,8 @@ class QueryQuery extends QueryField {
             joinStack
           );
         }
-        // TODO what about mirroring the above "we are doing a sum in the root"
+        // TODO Do we need to call `addStructToJoin` here in the case when there is no `structPath`
+        // and the function is an aggregate function?
         for (const e of expr.args) {
           this.addDependantExpr(resultStruct, context, e, joinStack);
         }

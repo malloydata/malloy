@@ -40,4 +40,6 @@ export const ROUND = func(
     ],
     [sql('ROUND(', arg('value'), ', ', arg('precision'), ')')]
   )
+  // TODO Consider adding a third overload for round(x, y, mode), where
+  // "mode" is "ROUND_HALF_AWAY_FROM_ZERO" or "ROUND_HALF_EVEN"
 );

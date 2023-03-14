@@ -22,7 +22,7 @@
  */
 
 export {CONCAT} from './concat';
-export {STDDEV, CUSTOM_AVG} from './stddev';
+export {STDDEV} from './stddev';
 export {ROUND} from './round';
 export {FLOOR} from './floor';
 export {LOWER} from './lower';

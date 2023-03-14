@@ -23,35 +23,11 @@
 
 import {ModelDef} from '@malloydata/malloy';
 import * as fn from './functions';
-import {
-  arg,
-  func,
-  maxAnalytic,
-  maxScalar,
-  minAggregate,
-  overload,
-  param,
-  sql,
-} from './util';
-
-export const SILLY = func(
-  'silly',
-  overload(
-    minAggregate('number'),
-    [
-      param('value1', maxScalar('number')),
-      param('value', maxAnalytic('number')),
-    ],
-    [sql('SUM(', arg('value1'), ') + ', arg('value'))]
-  )
-);
 
 const funcs = [
   fn.CONCAT,
   fn.STDDEV,
   fn.ROUND,
-  fn.CUSTOM_AVG,
-  SILLY,
   fn.FLOOR,
   fn.UPPER,
   fn.LOWER,

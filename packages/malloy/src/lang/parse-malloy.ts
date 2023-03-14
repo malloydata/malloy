@@ -327,7 +327,6 @@ class ImportsAndTablesStep implements TranslationStep {
             const ref = decodeURI(
               new URL(relativeRef, that.sourceURL).toString()
             );
-            console.log('ADDING CHILD', ref);
             that.addChild(ref);
             that.root.importZone.reference(ref, {
               url: that.sourceURL,
@@ -610,7 +609,6 @@ class TranslateStep implements TranslationStep {
     if (urlContentsStep.urlContents === undefined) {
       return urlContentsStep;
     }
-    console.log('URL CONTENTS STEP', urlContentsStep);
 
     const source = urlContentsStep.urlContents;
 
@@ -834,7 +832,6 @@ export abstract class MalloyTranslation implements ImportedTranslation {
     if (child) {
       const did = child.translate();
       if (did.translated) {
-        console.log('Child model def', child.modelDef);
         for (const fromChild of child.modelDef.exports) {
           const modelEntry = child.modelDef.contents[fromChild];
           if (modelEntry.type === 'struct' || modelEntry.type === 'function') {
