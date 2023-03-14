@@ -21,11 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Parameter} from '../../../model/malloy_types';
+import {Parameter, TypeDesc} from '../../../model/malloy_types';
 
 import {SpaceEntry} from './space-entry';
 import {HasParameter} from '../parameters/has-parameter';
-import {TypeDesc} from './type-desc';
 
 export abstract class SpaceParam extends SpaceEntry {
   abstract parameter(): Parameter;

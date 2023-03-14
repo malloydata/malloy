@@ -21,8 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ExpressionType} from '../../model';
-import {FieldValueType, TypeDesc} from './types/type-desc';
+import {ExpressionType, FieldValueType, TypeDesc} from '../../model';
 
 function mkFragType(
   dataType: FieldValueType,

@@ -25,10 +25,10 @@ import {
   FieldDef,
   QueryFieldDef,
   isFieldTypeDef,
+  TypeDesc,
 } from '../../../model/malloy_types';
 import {SpaceEntry} from './space-entry';
 import {FieldSpace} from './field-space';
-import {TypeDesc} from './type-desc';
 
 export abstract class SpaceField extends SpaceEntry {
   readonly refType = 'field';

@@ -27,10 +27,9 @@
 import * as malloy from '@malloydata/malloy';
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/is-sql-eq';
-import {databasesFromEnvironmentOr, mkSqlEqWith} from '../../util';
+import {databasesFromEnvironmentOr} from '../../util';
 
-// TODO all dbs
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb_wasm']));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 const expressionModelText = `
 explore: aircraft_models is table('malloytest.aircraft_models'){
@@ -71,28 +70,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
   const funcTestAgg = (expr: string, expexted: string | boolean | number) =>
     funcTestGeneral(expr, expexted, 'aggregate');
 
-  // it(`functions work - ${databaseName}`, async () => {
-  //   const result = await expressionModel
-  //     .loadQuery(`
-  //     import "malloy://functions"
-  //     query: aircraft -> { group_by: f is cheers() }`)
-  //     .run();
-  //   // console.log(result.data.toObject());
-  //   expect(result.data.path(0, "f").value).toBe("Hooray, functions work!");
-  // });
-
-  // it(`functions work 2 - ${databaseName}`, async () => {
-  //   const result = await expressionModel
-  //     .loadQuery(`
-  //     import "malloy://functions"
-  //     query: aircraft -> { group_by: f is plus(2, 2) }`)
-  //     .run();
-  //   expect(result.data.path(0, "f").value).toBe(4);
-  // });
-
   it(`concat works - ${databaseName}`, async () => {
     await funcTest("concat('foo', 'bar')", 'foobar');
-    // TODO better handle case where concat is called with no arguments...
   });
 
   it(`round works - ${databaseName}`, async () => {
@@ -109,7 +88,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
   it(`stddev works - ${databaseName}`, async () => {
     await funcTestAgg('round(stddev(seats))', 39);
-    // TODO better handle case where concat is called with no arguments...
   });
 
   // TODO update this test to check for error -- also improve the error

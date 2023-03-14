@@ -23,6 +23,7 @@
 
 import {
   AggregateFragment,
+  FieldValueType,
   isAtomicFieldType,
 } from '../../../model/malloy_types';
 
@@ -33,7 +34,6 @@ import {FieldReference} from '../query-items/field-references';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
-import {FieldValueType} from '../types/type-desc';
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;

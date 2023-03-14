@@ -873,7 +873,6 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
   dialect: string;
 }
 
-// TODO merge this with Michael's stuff in type-desc.ts
 export type ExpressionValueType =
   | AtomicFieldType
   | 'null'

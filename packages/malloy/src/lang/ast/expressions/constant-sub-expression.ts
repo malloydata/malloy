@@ -21,14 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicFieldType, StructDef} from '../../../model/malloy_types';
+import {AtomicFieldType, FieldValueType, StructDef} from '../../../model/malloy_types';
 
 import {Comparison} from '../types/comparison';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {LookupResult} from '../types/lookup-result';
-import {FieldValueType} from '../types/type-desc';
 
 import {ExprCompare} from './expr-compare';
 import {compressExpr} from './utils';

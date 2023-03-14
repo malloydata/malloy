@@ -23,6 +23,7 @@
 
 import {
   expressionIsAggregate,
+  FieldValueType,
   UngroupFragment,
 } from '../../../model/malloy_types';
 
@@ -33,7 +34,6 @@ import {DefSpace} from '../query-items/field-declaration';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace} from '../types/field-space';
-import {FieldValueType} from '../types/type-desc';
 
 export class ExprUngroup extends ExpressionDef {
   legalChildTypes = FT.anyAtomicT;

@@ -34,6 +34,9 @@ import {
 
 export const CONCAT = func(
   'concat',
+  // TODO At least in DuckDB, you can't call `concat()` with no arguments. Should we
+  // make the "variadic" parameter type able to specify "at least one" rather than
+  // 0 or more?
   overload(
     minScalar('string'),
     [params('values', maxAnalytic('string'))],
