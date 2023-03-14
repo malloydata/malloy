@@ -1091,7 +1091,7 @@ export class MalloyToAST
     const argsCx = pcx.argumentList();
     const args = argsCx ? this.allFieldExpressions(argsCx.fieldExpr()) : [];
 
-    const isRaw = pcx.HASH() !== undefined;
+    const isRaw = pcx.EXCLAM() !== undefined;
     const rawRawType = pcx.malloyType()?.text;
     let rawType: ast.CastType | undefined = undefined;
     if (rawRawType) {

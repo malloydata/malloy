@@ -21,32 +21,24 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ModelDef} from '@malloydata/malloy';
-import * as fn from './functions';
+import {ExpressionValueType} from '@malloydata/malloy';
+import {arg, func, overload, param, minScalar, maxAnalytic, sql} from '../util';
 
-const funcs = [
-  fn.CONCAT,
-  fn.STDDEV,
-  fn.ROUND,
-  fn.FLOOR,
-  fn.UPPER,
-  fn.LOWER,
-  fn.SUBSTR,
-  fn.REGEXP_EXTRACT,
-  fn.REPLACE,
-  fn.LENGTH,
-  fn.IFNULL,
+const types: ExpressionValueType[] = [
+  'string',
+  'number',
+  'timestamp',
+  'date',
+  'json',
 ];
 
-let BIGQUERY_FUNCTIONS_FILE: string;
-export function resolve(url: URL): string {
-  if (url.toString() === 'malloy://bigquery_functions') {
-    BIGQUERY_FUNCTIONS_FILE ||= JSON.stringify({
-      contents: Object.fromEntries(funcs.map(f => [f.name, f])),
-      exports: funcs.map(f => f.name),
-      name: 'malloy-lib-bigquery-functions',
-    } as ModelDef);
-    return BIGQUERY_FUNCTIONS_FILE;
-  }
-  throw new Error(`No such file '${url}' in malloy standard library.`);
-}
+export const IFNULL = func(
+  'ifnull',
+  ...types.map(type =>
+    overload(
+      minScalar(type),
+      [param('value', maxAnalytic(type)), param('default', maxAnalytic(type))],
+      [sql('IFNULL(', arg('value'), ', ', arg('default'), ')')]
+    )
+  )
+);

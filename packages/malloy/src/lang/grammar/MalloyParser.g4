@@ -410,7 +410,7 @@ fieldExpr
   | (fieldPath DOT)?
       id
       OPAREN ( argumentList? ) CPAREN                      # exprAggFunc
-  | ((id (HASH malloyType?)?) | timeframe)
+  | ((id (EXCLAM malloyType?)?) | timeframe)
     OPAREN ( argumentList? ) CPAREN                        # exprFunc
   | pickStatement                                          # exprPick
   | ungroup OPAREN fieldExpr (COMMA fieldName)* CPAREN     # exprUngroup

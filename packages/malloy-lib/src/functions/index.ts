@@ -31,3 +31,4 @@ export {SUBSTR} from './substr';
 export {REGEXP_EXTRACT} from './regexp_extract';
 export {REPLACE} from './replace';
 export {LENGTH} from './length';
+export {IFNULL} from './ifnull';

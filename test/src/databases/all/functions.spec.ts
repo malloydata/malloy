@@ -244,18 +244,18 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
   describe(`raw function call - ${databaseName}`, () => {
     it('works', async () => {
-      await funcTest('ifnull#(null, 1)::number', 1);
+      await funcTest('nullif!(1, 1)::number', null);
       await funcTestErr(
-        "ifnull('foo bar')",
-        "Unknown function 'ifnull'. Did you mean to import it?"
+        'nullif(1, 1)',
+        "Unknown function 'nullif'. Did you mean to import it?"
       );
     });
 
     it('works with type specified', async () => {
-      await funcTest('ifnull#number(null, 1)', 1);
+      await funcTest('nullif!number(1, 1)', null);
       await funcTestErr(
-        "ifnull('foo bar')",
-        "Unknown function 'ifnull'. Did you mean to import it?"
+        'nullif(1, 1)',
+        "Unknown function 'nullif'. Did you mean to import it?"
       );
     });
   });
