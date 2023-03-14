@@ -168,9 +168,9 @@ class URLContentsStep implements TranslationStep {
       }
       return {urls: [that.sourceURL]};
     }
-    const urlContents = srcEnt.value == "" ? "\n" : srcEnt.value;
-    const isPrecompiledModelDef = urlContents.trimStart().startsWith("{");
-    this.response = { isPrecompiledModelDef, urlContents };
+    const urlContents = srcEnt.value === '' ? '\n' : srcEnt.value;
+    const isPrecompiledModelDef = urlContents.trimStart().startsWith('{');
+    this.response = {isPrecompiledModelDef, urlContents};
     return this.response;
   }
 }
@@ -185,7 +185,7 @@ export type ParseResponse = Partial<ParseData>;
  */
 interface SourceInfo {
   lines: string[];
-  at: { begin: number; end: number }[];
+  at: {begin: number; end: number}[];
   length: number;
 }
 class ParseStep implements TranslationStep {
@@ -200,7 +200,7 @@ class ParseStep implements TranslationStep {
     }
 
     const urlContentsReq = this.urlContentsStep.step(that);
-    if (urlContentsReq.urlContents == undefined) {
+    if (urlContentsReq.urlContents === undefined) {
       return urlContentsReq;
     }
 
@@ -327,7 +327,7 @@ class ImportsAndTablesStep implements TranslationStep {
             const ref = decodeURI(
               new URL(relativeRef, that.sourceURL).toString()
             );
-            console.log("ADDING CHILD", ref);
+            console.log('ADDING CHILD', ref);
             that.addChild(ref);
             that.root.importZone.reference(ref, {
               url: that.sourceURL,
@@ -610,7 +610,7 @@ class TranslateStep implements TranslationStep {
     if (urlContentsStep.urlContents === undefined) {
       return urlContentsStep;
     }
-    console.log("URL CONTENTS STEP", urlContentsStep);
+    console.log('URL CONTENTS STEP', urlContentsStep);
 
     const source = urlContentsStep.urlContents;
 
@@ -618,19 +618,19 @@ class TranslateStep implements TranslationStep {
       try {
         that.modelDef = JSON.parse(source);
         this.response = {
-          "translated": {
-            "modelDef": that.modelDef,
-            "queryList": [],
-            "sqlBlocks": []
-          }
+          translated: {
+            modelDef: that.modelDef,
+            queryList: [],
+            sqlBlocks: [],
+          },
         };
       } catch (error) {
         this.response = {
-          "errors": [
+          errors: [
             {
-              "message": `Error parsing pre-translated model: ${error}.`
-            }
-          ]
+              message: `Error parsing pre-translated model: ${error}.`,
+            },
+          ],
         };
       }
       return this.response;
@@ -834,10 +834,10 @@ export abstract class MalloyTranslation implements ImportedTranslation {
     if (child) {
       const did = child.translate();
       if (did.translated) {
-        console.log("Child model def", child.modelDef);
+        console.log('Child model def', child.modelDef);
         for (const fromChild of child.modelDef.exports) {
           const modelEntry = child.modelDef.contents[fromChild];
-          if (modelEntry.type === "struct" || modelEntry.type === "function") {
+          if (modelEntry.type === 'struct' || modelEntry.type === 'function') {
             exports[fromChild] = modelEntry;
           }
         }

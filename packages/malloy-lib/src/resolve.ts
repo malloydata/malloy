@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ModelDef } from "@malloydata/malloy";
-import { CONCAT, ROUND, STDDEV, CUSTOM_AVG } from "./functions";
+import {ModelDef} from '@malloydata/malloy';
+import * as fn from './functions';
 import {
   arg,
   func,
@@ -31,32 +31,45 @@ import {
   minAggregate,
   overload,
   param,
-  sql
-} from "./util";
+  sql,
+} from './util';
 
 export const SILLY = func(
-  "silly",
+  'silly',
   overload(
-    minAggregate("number"),
+    minAggregate('number'),
     [
-      param("value1", maxScalar("number")),
-      param("value", maxAnalytic("number"))
+      param('value1', maxScalar('number')),
+      param('value', maxAnalytic('number')),
     ],
-    [sql("SUM(", arg("value1"), ") + ", arg("value"))]
+    [sql('SUM(', arg('value1'), ') + ', arg('value'))]
   )
 );
 
-const funcs = [CONCAT, STDDEV, ROUND, CUSTOM_AVG, SILLY];
+const funcs = [
+  fn.CONCAT,
+  fn.STDDEV,
+  fn.ROUND,
+  fn.CUSTOM_AVG,
+  SILLY,
+  fn.FLOOR,
+  fn.UPPER,
+  fn.LOWER,
+  fn.SUBSTR,
+  fn.REGEXP_EXTRACT,
+  fn.REPLACE,
+  fn.LENGTH,
+];
 
-export const BIGQUERY_FUNCTIONS: ModelDef = {
-  "contents": Object.fromEntries(funcs.map((f) => [f.name, f])),
-  "exports": funcs.map((f) => f.name),
-  "name": "malloy-lib-bigquery-functions"
-};
-
+let BIGQUERY_FUNCTIONS_FILE: string;
 export function resolve(url: URL): string {
-  if (url.toString() === "malloy://bigquery_functions") {
-    return JSON.stringify(BIGQUERY_FUNCTIONS);
+  if (url.toString() === 'malloy://bigquery_functions') {
+    BIGQUERY_FUNCTIONS_FILE ||= JSON.stringify({
+      contents: Object.fromEntries(funcs.map(f => [f.name, f])),
+      exports: funcs.map(f => f.name),
+      name: 'malloy-lib-bigquery-functions',
+    } as ModelDef);
+    return BIGQUERY_FUNCTIONS_FILE;
   }
   throw new Error(`No such file '${url}' in malloy standard library.`);
 }

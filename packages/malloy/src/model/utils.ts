@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import md5 from "md5";
-import { Expr, Fragment } from "./malloy_types";
+import md5 from 'md5';
+import {Expr, Fragment} from './malloy_types';
 
 /** simple indent function */
 export function indent(s: string): string {
@@ -105,120 +105,121 @@ export function generateHash(input: string): string {
 }
 
 export function exprMap(expr: Expr, func: (fragment: Fragment) => Expr): Expr {
-  return expr.flatMap((fragment) => {
+  return expr.flatMap(fragment => {
     const mapped = func(fragment);
-    return mapped.map((fragment) => {
-      if (typeof fragment === "string") {
+    return mapped.map(fragment => {
+      if (typeof fragment === 'string') {
         return fragment;
       }
       switch (fragment.type) {
-        case "aggregate":
-        case "all":
-        case "spread":
-        case "sql_expression":
-        case "exclude":
+        case 'aggregate':
+        case 'all':
+        case 'spread':
+        case 'sql_expression':
+        case 'exclude':
           return {
             ...fragment,
-            "e": exprMap(fragment.e, func)
+            e: exprMap(fragment.e, func),
           };
-        case "analytic":
+        case 'analytic':
           return {
             ...fragment,
-            "parameters": fragment.parameters?.map((param) => {
-              if (typeof param == "string" || typeof param == "number") {
+            parameters: fragment.parameters?.map(param => {
+              if (typeof param === 'string' || typeof param === 'number') {
                 return param;
               } else {
                 return exprMap(param, func);
               }
-            })
+            }),
           };
-        case "apply":
+        case 'apply':
           return {
             ...fragment,
-            "to": exprMap(fragment.to, func),
-            "value": exprMap(fragment.value, func)
+            to: exprMap(fragment.to, func),
+            value: exprMap(fragment.value, func),
           };
-        case "dialect_switch":
+        case 'dialect_switch':
           return {
             ...fragment,
-            "branches": fragment.branches.map((branch) => {
+            branches: fragment.branches.map(branch => {
               return {
                 ...branch,
-                "e": exprMap(branch.e, func)
+                e: exprMap(branch.e, func),
               };
-            })
+            }),
           };
-        case "applyVal":
-        case "field":
-        case "function_parameter":
-        case "parameter":
+        case 'applyVal':
+        case 'field':
+        case 'function_parameter':
+        case 'parameter':
           return fragment;
-        case "function_call":
+        case 'function_call':
           return {
             ...fragment,
-            "args": fragment.args.map((arg) => exprMap(arg, func))
+            args: fragment.args.map(arg => exprMap(arg, func)),
           };
-        case "filterExpression":
+        case 'filterExpression':
           return {
             ...fragment,
-            "e": exprMap(fragment.e, func),
-            "filterList": fragment.filterList.map((filter) => {
+            e: exprMap(fragment.e, func),
+            filterList: fragment.filterList.map(filter => {
               return {
                 ...filter,
-                "expression": exprMap(filter.expression, func)
+                expression: exprMap(filter.expression, func),
               };
-            })
+            }),
           };
-        case "dialect": {
+        case 'dialect': {
           switch (fragment.function) {
-            case "cast":
-            case "regexpMatch":
+            case 'cast':
+            case 'regexpMatch':
               return {
                 ...fragment,
-                "expr": exprMap(fragment.expr, func)
+                expr: exprMap(fragment.expr, func),
               };
-            case "delta":
+            case 'delta':
               return {
                 ...fragment,
-                "delta": exprMap(fragment.delta, func)
+                delta: exprMap(fragment.delta, func),
               };
-            case "div":
+            case 'div':
               return {
                 ...fragment,
-                "denominator": exprMap(fragment.denominator, func),
-                "numerator": exprMap(fragment.numerator, func)
+                denominator: exprMap(fragment.denominator, func),
+                numerator: exprMap(fragment.numerator, func),
               };
-            case "now":
-            case "stringLiteral":
-            case "timeLiteral":
+            case 'now':
+            case 'stringLiteral':
+            case 'timeLiteral':
+            case 'regexpLiteral':
               return fragment;
-            case "extract":
-            case "trunc":
+            case 'extract':
+            case 'trunc':
               return {
                 ...fragment,
-                "expr": {
+                expr: {
                   ...fragment.expr,
-                  "value": exprMap(fragment.expr.value, func)
-                }
+                  value: exprMap(fragment.expr.value, func),
+                },
               };
-            case "timeDiff":
+            case 'timeDiff':
               return {
                 ...fragment,
-                "left": {
+                left: {
                   ...fragment.left,
-                  "value": exprMap(fragment.left.value, func)
+                  value: exprMap(fragment.left.value, func),
                 },
-                "right": {
+                right: {
                   ...fragment.left,
-                  "value": exprMap(fragment.left.value, func)
-                }
+                  value: exprMap(fragment.left.value, func),
+                },
               };
             default:
-              throw new Error("unexpected dialect function");
+              throw new Error('unexpected dialect function');
           }
         }
         default:
-          throw new Error("unexpected");
+          throw new Error('unexpected');
       }
     });
   });
@@ -236,5 +237,5 @@ export function joinWith<T>(els: T[][], sep: T): T[] {
 }
 
 export function range(start: number, end: number): number[] {
-  return Array.from({ "length": end - start }, (_, index) => index + start);
+  return Array.from({length: end - start}, (_, index) => index + start);
 }

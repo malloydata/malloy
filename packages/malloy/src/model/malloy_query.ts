@@ -90,15 +90,15 @@ import {
   UngroupFragment,
 } from './malloy_types';
 
-import { Connection } from "../runtime_types";
+import {Connection} from '../runtime_types';
 import {
   AndChain,
   exprMap,
   generateHash,
   indent,
   joinWith,
-  range
-} from "./utils";
+  range,
+} from './utils';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -365,31 +365,31 @@ class QueryField extends QueryNode {
   private getParameterMap(
     overload: FunctionOverloadDef,
     numArgs: number
-  ): Map<string, { argIndexes: number[]; param: FunctionParameterDef }> {
+  ): Map<string, {argIndexes: number[]; param: FunctionParameterDef}> {
     return new Map(
       overload.params.map((param, paramIndex) => {
         const argIndexes = param.isVariadic
-          ? range(paramIndex, numArgs - 1)
+          ? range(paramIndex, numArgs)
           : [paramIndex];
-        return [param.name, { param, argIndexes }];
+        return [param.name, {param, argIndexes}];
       })
     );
   }
 
   private expandFunctionCall(overload: FunctionOverloadDef, args: Expr[]) {
     const paramMap = this.getParameterMap(overload, args.length);
-    return exprMap(overload.e, (fragment) => {
-      if (typeof fragment === "string") {
+    return exprMap(overload.e, fragment => {
+      if (typeof fragment === 'string') {
         return [fragment];
-      } else if (fragment.type == "spread") {
+      } else if (fragment.type === 'spread') {
         const param = fragment.e[0];
         if (
           fragment.e.length !== 1 ||
-          typeof param === "string" ||
-          param.type !== "function_parameter"
+          typeof param === 'string' ||
+          param.type !== 'function_parameter'
         ) {
           throw new Error(
-            `Invalid function definition. Argument to spread must be a function parameter.`
+            'Invalid function definition. Argument to spread must be a function parameter.'
           );
           return [];
         }
@@ -398,20 +398,20 @@ class QueryField extends QueryNode {
           return [fragment];
         } else {
           return joinWith(
-            entry.argIndexes.map((argIndex) => args[argIndex]),
-            ","
+            entry.argIndexes.map(argIndex => args[argIndex]),
+            ','
           );
         }
-      } else if (fragment.type == "function_parameter") {
+      } else if (fragment.type === 'function_parameter') {
         const entry = paramMap.get(fragment.name);
         if (entry === undefined) {
           return [fragment];
         } else if (entry.param.isVariadic) {
           const spread = joinWith(
-            entry.argIndexes.map((argIndex) => args[argIndex]),
-            ","
+            entry.argIndexes.map(argIndex => args[argIndex]),
+            ','
           );
-          return ["[", ...spread, "]"];
+          return ['[', ...spread, ']'];
         } else {
           return args[entry.argIndexes[0]];
         }
@@ -440,16 +440,16 @@ class QueryField extends QueryNode {
           `Asymmetric aggregates are not supported for custom functions in ${context.dialect.name}.`
         );
       }
-      const argsExpressions = args.map((arg) => {
+      const argsExpressions = args.map(arg => {
         return this.generateDimFragment(resultSet, context, arg, state);
       });
       return context.dialect.sqlAggDistinct(
         distinctKey,
         argsExpressions,
-        (valNames) => {
+        valNames => {
           const funcCall = this.expandFunctionCall(
             overload,
-            valNames.map((v) => [v])
+            valNames.map(v => [v])
           );
           return this.generateExpressionFromExpr(
             resultSet,
@@ -461,8 +461,8 @@ class QueryField extends QueryNode {
       );
     } else {
       const mappedArgs =
-        overload.returnType.expressionType === "aggregate"
-          ? args.map((arg) => {
+        overload.returnType.expressionType === 'aggregate'
+          ? args.map(arg => {
               // TODO how do I know whether filters need to be applied to a dim argument or not?
               return [this.generateDimFragment(resultSet, context, arg, state)];
             })
@@ -484,7 +484,7 @@ class QueryField extends QueryNode {
     state: GenerateState
   ): string {
     const dialect = context.dialect.name;
-    const branch = frag.branches.find((branch) =>
+    const branch = frag.branches.find(branch =>
       branch.dialects.includes(dialect)
     );
     if (branch === undefined) {
@@ -500,7 +500,7 @@ class QueryField extends QueryNode {
     _frag: SpreadFragment,
     _state: GenerateState
   ): string {
-    throw new Error("Unexpanded spread encountered during SQL generation");
+    throw new Error('Unexpanded spread encountered during SQL generation');
   }
 
   generateParameterFragment(
@@ -882,7 +882,7 @@ class QueryField extends QueryNode {
         }
       } else if (isFunctionParameterFragment(expr)) {
         throw new Error(
-          `Internal Error: Function parameter fragment remaining during SQL generation`
+          'Internal Error: Function parameter fragment remaining during SQL generation'
         );
       } else if (isSQLExpressionFragment(expr)) {
         s += this.generateSQLExpression(resultSet, context, expr, state);
@@ -897,7 +897,7 @@ class QueryField extends QueryNode {
         s += this.generateDialectSwitch(resultSet, context, expr, state);
       } else if (isSpreadFragment(expr)) {
         s += this.generateSpread(resultSet, context, expr, state);
-      } else if (expr.type == "dialect") {
+      } else if (expr.type === 'dialect') {
         s += this.generateDialect(resultSet, context, expr, state);
       } else {
         throw new Error(
@@ -2057,6 +2057,8 @@ class QueryQuery extends QueryField {
           case 'timeLiteral':
             break;
           case 'stringLiteral':
+            break;
+          case 'regexpLiteral':
             break;
           case 'timeDiff':
             expressions.push(expr.left.value, expr.right.value);

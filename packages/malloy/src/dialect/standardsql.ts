@@ -452,4 +452,9 @@ ${indent(sql)}
     const noVirgule = literal.replace(/\\/g, '\\\\');
     return "'" + noVirgule.replace(/'/g, "\\'") + "'";
   }
+
+  sqlLiteralRegexp(literal: string): string {
+    const noVirgule = literal.replace(/\\/g, '\\\\');
+    return "r'" + noVirgule.replace(/'/g, "\\'") + "'";
+  }
 }

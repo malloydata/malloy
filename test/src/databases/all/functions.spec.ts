@@ -24,13 +24,13 @@
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
-import * as malloy from "@malloydata/malloy";
-import { RuntimeList, allDatabases } from "../../runtimes";
-import "../../util/is-sql-eq";
-import { databasesFromEnvironmentOr, mkSqlEqWith } from "../../util";
+import * as malloy from '@malloydata/malloy';
+import {RuntimeList, allDatabases} from '../../runtimes';
+import '../../util/is-sql-eq';
+import {databasesFromEnvironmentOr, mkSqlEqWith} from '../../util';
 
 // TODO all dbs
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(["duckdb_wasm"]));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(['duckdb_wasm']));
 
 const expressionModelText = `
 explore: aircraft_models is table('malloytest.aircraft_models'){
@@ -52,22 +52,24 @@ expressionModels.forEach((expressionModel, databaseName) => {
   const funcTestGeneral = async (
     expr: string,
     expected: string | boolean | number,
-    type: "group_by" | "aggregate"
+    type: 'group_by' | 'aggregate'
   ) => {
     const result = await expressionModel
-      .loadQuery(`
+      .loadQuery(
+        `
       import "malloy://bigquery_functions"
-      query: aircraft -> { ${type}: f is ${expr} }`)
+      query: aircraft -> { ${type}: f is ${expr} }`
+      )
       .run();
     console.log(result.sql);
-    expect(result.data.path(0, "f").value).toBe(expected);
+    expect(result.data.path(0, 'f').value).toBe(expected);
   };
 
   const funcTest = (expr: string, expexted: string | boolean | number) =>
-    funcTestGeneral(expr, expexted, "group_by");
+    funcTestGeneral(expr, expexted, 'group_by');
 
   const funcTestAgg = (expr: string, expexted: string | boolean | number) =>
-    funcTestGeneral(expr, expexted, "aggregate");
+    funcTestGeneral(expr, expexted, 'aggregate');
 
   // it(`functions work - ${databaseName}`, async () => {
   //   const result = await expressionModel
@@ -89,73 +91,73 @@ expressionModels.forEach((expressionModel, databaseName) => {
   // });
 
   it(`concat works - ${databaseName}`, async () => {
-    await funcTest("concat('foo', 'bar')", "foobar");
+    await funcTest("concat('foo', 'bar')", 'foobar');
     // TODO better handle case where concat is called with no arguments...
   });
 
   it(`round works - ${databaseName}`, async () => {
-    await funcTest("round(1.2)", 1);
+    await funcTest('round(1.2)', 1);
   });
 
   it(`round works with precision - ${databaseName}`, async () => {
-    await funcTest("round(12.2, -1)", 10);
+    await funcTest('round(12.2, -1)', 10);
   });
 
   it(`round works with precision [error, precision must be int] - ${databaseName}`, async () => {
-    await funcTest("round(12.2, -1.5)", 10);
+    await funcTest('round(12.2, -1.5)', 10);
   });
 
   it(`stddev works - ${databaseName}`, async () => {
-    await funcTestAgg("round(stddev(seats))", 39);
+    await funcTestAgg('round(stddev(seats))', 39);
     // TODO better handle case where concat is called with no arguments...
   });
 
   // TODO update this test to check for error -- also improve the error
   // for cases like this when the data type matches but not the expression type
   it(`stddev works ? - ${databaseName}`, async () => {
-    await funcTestAgg("round(stddev(count()))", 39);
+    await funcTestAgg('round(stddev(count()))', 39);
   });
 
   it(`stddev works on join field - ${databaseName}`, async () => {
-    await funcTestAgg("round(aircraft_models.seats.stddev())", 39);
+    await funcTestAgg('round(aircraft_models.seats.stddev())', 39);
   });
 
   it(`custom_avg- ${databaseName}`, async () => {
-    await funcTestAgg("aircraft_models.seats.custom_avg()", 10);
+    await funcTestAgg('aircraft_models.seats.custom_avg()', 10);
   });
 
   it(`avg - ${databaseName}`, async () => {
-    await funcTestAgg("aircraft_models.seats.avg()", 10);
+    await funcTestAgg('aircraft_models.seats.avg()', 10);
   });
 
   it(`custom_avg works on join field - ${databaseName}`, async () => {
     await funcTestAgg(
-      "aircraft_models.seats.custom_avg() = aircraft_models.seats.avg()",
+      'aircraft_models.seats.custom_avg() = aircraft_models.seats.avg()',
       true
     );
   });
 
   it(`custom_avg no symmetric, filter - ${databaseName}`, async () => {
     await funcTestAgg(
-      "custom_avg(aircraft_models.seats) { where: aircraft_models.seats > 3 }",
+      'custom_avg(aircraft_models.seats) { where: aircraft_models.seats > 3 }',
       10
     );
   });
 
   it(`custom_avg with filter - ${databaseName}`, async () => {
     await funcTestAgg(
-      "aircraft_models.seats.custom_avg() { where: 1 = 1 }",
+      'aircraft_models.seats.custom_avg() { where: 1 = 1 }',
       10
     );
   });
 
   it(`silly with filter - ${databaseName}`, async () => {
-    await funcTestAgg("silly(aircraft_models.seats, count())", 10);
+    await funcTestAgg('silly(aircraft_models.seats, count())', 10);
   });
 
   it(`silly symmetric with filter and agg - ${databaseName}`, async () => {
     await funcTestAgg(
-      "aircraft_models.silly(aircraft_models.seats, count())",
+      'aircraft_models.silly(aircraft_models.seats, count())',
       10
     );
   });
@@ -167,6 +169,10 @@ expressionModels.forEach((expressionModel, databaseName) => {
       }`,
       10
     );
+  });
+
+  it(`regexp match - ${databaseName}`, async () => {
+    await funcTestAgg("regexp_extract('I have a dog', r'd[aeiou]g')", 'dog');
   });
 
   // it(`num_args works - ${databaseName}`, async () => {

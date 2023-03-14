@@ -29,14 +29,14 @@ import {
   minScalar,
   maxAnalytic,
   spread,
-  sql
-} from "../util";
+  sql,
+} from '../util';
 
 export const CONCAT = func(
-  "concat",
+  'concat',
   overload(
-    minScalar("string"),
-    [params("values", maxAnalytic("string"))],
-    [sql("CONCAT(", spread(arg("values")), ")")]
+    minScalar('string'),
+    [params('values', maxAnalytic('string'))],
+    [sql('CONCAT(', spread(arg('values')), ')')]
   )
 );

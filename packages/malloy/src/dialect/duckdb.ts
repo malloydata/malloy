@@ -427,7 +427,7 @@ export class DuckDBDialect extends Dialect {
       FROM (
         SELECT UNNEST(list(distinct {key:${key}, ${values
       .map((v, i) => `val${i}: ${v}`)
-      .join(",")}})) a
+      .join(',')}})) a
       )
     )`;
   }
@@ -461,6 +461,10 @@ export class DuckDBDialect extends Dialect {
   }
 
   sqlLiteralString(literal: string): string {
+    return "'" + literal.replace(/'/g, "''") + "'";
+  }
+
+  sqlLiteralRegexp(literal: string): string {
     return "'" + literal.replace(/'/g, "''") + "'";
   }
 }

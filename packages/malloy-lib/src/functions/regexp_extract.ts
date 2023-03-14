@@ -21,13 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export {CONCAT} from './concat';
-export {STDDEV, CUSTOM_AVG} from './stddev';
-export {ROUND} from './round';
-export {FLOOR} from './floor';
-export {LOWER} from './lower';
-export {UPPER} from './upper';
-export {SUBSTR} from './substr';
-export {REGEXP_EXTRACT} from './regexp_extract';
-export {REPLACE} from './replace';
-export {LENGTH} from './length';
+import {arg, func, overload, param, minScalar, maxAnalytic, sql} from '../util';
+
+export const REGEXP_EXTRACT = func(
+  'regexp_extract',
+  overload(
+    minScalar('string'),
+    [
+      param('value', maxAnalytic('string')),
+      param('regexp', maxAnalytic('regular expression')),
+      // TODO consider supporting these parameters
+      // param('position', maxAnalytic('number')),
+      // param('occurrence', maxAnalytic('number')),
+    ],
+    [sql('REGEXP_EXTRACT(', arg('value'), ',', arg('regexp'), ')')]
+  )
+);

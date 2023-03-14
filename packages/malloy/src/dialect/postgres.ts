@@ -406,4 +406,8 @@ export class PostgresDialect extends Dialect {
   sqlLiteralString(literal: string): string {
     return "'" + literal.replace(/'/g, "''") + "'";
   }
+
+  sqlLiteralRegexp(literal: string): string {
+    return "'" + literal.replace(/'/g, "''") + "'";
+  }
 }

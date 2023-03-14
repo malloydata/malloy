@@ -138,6 +138,7 @@ CBRACK: ']' ;
 OCURLY: '{' ;
 CCURLY: '}' ;
 DOUBLECOLON: '::';
+HASH: '#';
 COLON: ':' ;
 COMMA: ',';
 DOT: '.' ;

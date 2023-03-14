@@ -27,6 +27,7 @@ import {
   TimestampUnit,
   isTimeFieldType,
   maxExpressionType,
+  RegexpLiteralFragment,
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
@@ -202,7 +203,10 @@ function regexEqual(left: ExprValue, right: ExprValue): Expr | undefined {
           type: 'dialect',
           function: 'regexpMatch',
           expr: left.value,
-          regexp: (right.value[0] as string).replace(/^r'/, "'"),
+          regexp: (right.value[0] as RegexpLiteralFragment).literal.replace(
+            /^r'/,
+            "'"
+          ),
         },
       ];
     }
@@ -213,7 +217,10 @@ function regexEqual(left: ExprValue, right: ExprValue): Expr | undefined {
           type: 'dialect',
           function: 'regexpMatch',
           expr: right.value,
-          regexp: (left.value[0] as string).replace(/^r'/, "'"),
+          regexp: (left.value[0] as RegexpLiteralFragment).literal.replace(
+            /^r'/,
+            "'"
+          ),
         },
       ];
     }

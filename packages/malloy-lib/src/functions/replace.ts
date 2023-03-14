@@ -21,13 +21,27 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export {CONCAT} from './concat';
-export {STDDEV, CUSTOM_AVG} from './stddev';
-export {ROUND} from './round';
-export {FLOOR} from './floor';
-export {LOWER} from './lower';
-export {UPPER} from './upper';
-export {SUBSTR} from './substr';
-export {REGEXP_EXTRACT} from './regexp_extract';
-export {REPLACE} from './replace';
-export {LENGTH} from './length';
+import {arg, func, overload, param, minScalar, maxAnalytic, sql} from '../util';
+
+export const REPLACE = func(
+  'replace',
+  overload(
+    minScalar('string'),
+    [
+      param('value', maxAnalytic('string')),
+      param('pattern', maxAnalytic('string')),
+      param('replacement', maxAnalytic('string')),
+    ],
+    [
+      sql(
+        'REPLACE(',
+        arg('value'),
+        ',',
+        arg('pattern'),
+        ',',
+        arg('replacement'),
+        ')'
+      ),
+    ]
+  )
+);

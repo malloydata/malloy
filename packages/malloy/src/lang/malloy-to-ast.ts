@@ -1081,12 +1081,30 @@ export class MalloyToAST
     if (ast.ExprTimeExtract.extractor(fn)) {
       return this.astAt(new ast.ExprTimeExtract(fn, args), pcx);
     }
-    return this.astAt(new ast.ExprFunc(fn, args, source), pcx);
+    return this.astAt(
+      new ast.ExprFunc(fn, args, false, undefined, source),
+      pcx
+    );
   }
 
   visitExprFunc(pcx: parse.ExprFuncContext): ast.ExpressionDef {
     const argsCx = pcx.argumentList();
     const args = argsCx ? this.allFieldExpressions(argsCx.fieldExpr()) : [];
+
+    const isRaw = pcx.HASH() !== undefined;
+    const rawRawType = pcx.malloyType()?.text;
+    let rawType: ast.CastType | undefined = undefined;
+    if (rawRawType) {
+      if (ast.isCastType(rawRawType)) {
+        rawType = rawRawType;
+      } else {
+        this.contextError(
+          pcx,
+          `'#' assertion for unknown type '${rawRawType}'`
+        );
+        rawType = undefined;
+      }
+    }
 
     const idCx = pcx.id();
     const dCx = pcx.timeframe();
@@ -1103,7 +1121,7 @@ export class MalloyToAST
     if (ast.ExprTimeExtract.extractor(fn)) {
       return this.astAt(new ast.ExprTimeExtract(fn, args), pcx);
     }
-    return this.astAt(new ast.ExprFunc(fn, args), pcx);
+    return this.astAt(new ast.ExprFunc(fn, args, isRaw, rawType), pcx);
   }
 
   visitExprDuration(pcx: parse.ExprDurationContext): ast.ExprDuration {

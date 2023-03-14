@@ -256,29 +256,29 @@ export const malloyFunctions: Record<string, MalloyFunctionInfo> = {
 };
 
 export interface DialectSwitchFragment {
-  type: "dialect_switch";
-  branches: { dialects: string[]; e: Expr }[];
+  type: 'dialect_switch';
+  branches: {dialects: string[]; e: Expr}[];
 }
 
 export function isDialectSwitchFragment(
   f: Fragment
 ): f is DialectSwitchFragment {
-  return (f as DialectSwitchFragment)?.type === "dialect_switch";
+  return (f as DialectSwitchFragment)?.type === 'dialect_switch';
 }
 
 export interface FunctionParameterFragment {
-  type: "function_parameter";
+  type: 'function_parameter';
   name: string;
 }
 
 export function isFunctionParameterFragment(
   f: Fragment
 ): f is FunctionParameterFragment {
-  return (f as FunctionParameterFragment)?.type === "function_parameter";
+  return (f as FunctionParameterFragment)?.type === 'function_parameter';
 }
 
 export interface FunctionCallFragment {
-  type: "function_call";
+  type: 'function_call';
   overload: FunctionOverloadDef;
   expressionType: ExpressionType;
   args: Expr[];
@@ -286,27 +286,27 @@ export interface FunctionCallFragment {
 }
 
 export function isFunctionCallFragment(f: Fragment): f is FunctionCallFragment {
-  return (f as FunctionCallFragment)?.type === "function_call";
+  return (f as FunctionCallFragment)?.type === 'function_call';
 }
 
 export interface SQLExpressionFragment {
-  type: "sql_expression";
+  type: 'sql_expression';
   e: Expr;
 }
 
 export function isSQLExpressionFragment(
   f: Fragment
 ): f is SQLExpressionFragment {
-  return (f as SQLExpressionFragment)?.type === "sql_expression";
+  return (f as SQLExpressionFragment)?.type === 'sql_expression';
 }
 
 export interface SpreadFragment {
-  type: "spread";
+  type: 'spread';
   e: Expr;
 }
 
 export function isSpreadFragment(f: Fragment): f is SpreadFragment {
-  return (f as SpreadFragment)?.type === "spread";
+  return (f as SpreadFragment)?.type === 'spread';
 }
 
 export interface AnalyticFragment {
@@ -420,6 +420,11 @@ export interface StringLiteralFragment extends DialectFragmentBase {
   literal: string;
 }
 
+export interface RegexpLiteralFragment extends DialectFragmentBase {
+  function: 'regexpLiteral';
+  literal: string;
+}
+
 export type DialectFragment =
   | DivFragment
   | TimeLiteralFragment
@@ -430,6 +435,7 @@ export type DialectFragment =
   | TypecastFragment
   | TimeExtractFragment
   | StringLiteralFragment
+  | RegexpLiteralFragment
   | RegexpMatchFragment;
 
 export type Fragment =
@@ -513,7 +519,7 @@ export function expressionIsCalculation(
 }
 
 function expressionTypeLevel(e: ExpressionType): number {
-  return ["scalar", "aggregate", "analytic"].indexOf(e);
+  return ['scalar', 'aggregate', 'analytic'].indexOf(e);
 }
 
 export function isExpressionTypeLEQ(
@@ -538,7 +544,7 @@ export function maxExpressionType(
 }
 
 export function maxOfExpressionTypes(types: ExpressionType[]): ExpressionType {
-  return types.reduce(maxExpressionType, "scalar");
+  return types.reduce(maxExpressionType, 'scalar');
 }
 
 interface JustExpression {
@@ -870,13 +876,13 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
 // TODO merge this with Michael's stuff in type-desc.ts
 export type ExpressionValueType =
   | AtomicFieldType
-  | "null"
-  | "unknown"
-  | "duration"
-  | "any"
-  | "regular expression";
+  | 'null'
+  | 'unknown'
+  | 'duration'
+  | 'any'
+  | 'regular expression';
 
-export type FieldValueType = ExpressionValueType | "turtle" | "struct";
+export type FieldValueType = ExpressionValueType | 'turtle' | 'struct';
 
 export interface ExpressionTypeDesc {
   dataType: FieldValueType;
@@ -907,7 +913,7 @@ export interface FunctionOverloadDef {
 }
 
 export interface FunctionDef extends NamedObject {
-  type: "function";
+  type: 'function';
   overloads: FunctionOverloadDef[];
 }
 

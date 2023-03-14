@@ -28,24 +28,24 @@ import {
   param,
   minAggregate,
   maxScalar,
-  sql
-} from "../util";
+  sql,
+} from '../util';
 
 export const STDDEV = func(
-  "stddev",
+  'stddev',
   overload(
-    minAggregate("number"),
-    [param("value", maxScalar("number"))],
-    [sql("STDDEV(", arg("value"), ")")]
+    minAggregate('number'),
+    [param('value', maxScalar('number'))],
+    [sql('STDDEV(', arg('value'), ')')]
   )
 );
 
 // TODO remove
 export const CUSTOM_AVG = func(
-  "custom_avg",
+  'custom_avg',
   overload(
-    minAggregate("number"),
-    [param("value", maxScalar("number"))],
-    [sql("AVG(", arg("value"), ")")]
+    minAggregate('number'),
+    [param('value', maxScalar('number'))],
+    [sql('AVG(', arg('value'), ')')]
   )
 );

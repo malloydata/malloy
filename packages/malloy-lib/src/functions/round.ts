@@ -21,31 +21,23 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  arg,
-  func,
-  overload,
-  param,
-  minScalar,
-  maxAnalytic,
-  sql
-} from "../util";
+import {arg, func, overload, param, minScalar, maxAnalytic, sql} from '../util';
 
 export const ROUND = func(
-  "round",
+  'round',
   overload(
-    minScalar("number"),
-    [param("value", maxAnalytic("number"))],
-    [sql("ROUND(", arg("value"), ")")]
+    minScalar('number'),
+    [param('value', maxAnalytic('number'))],
+    [sql('ROUND(', arg('value'), ')')]
   ),
   overload(
-    minScalar("number"),
+    minScalar('number'),
     [
-      param("value", maxAnalytic("number")),
+      param('value', maxAnalytic('number')),
       // TODO this parameter should only accept integers, but we don't have a good
       // way of expressing that constraint at the moment
-      param("precision", maxAnalytic("number"))
+      param('precision', maxAnalytic('number')),
     ],
-    [sql("ROUND(", arg("value"), ", ", arg("precision"), ")")]
+    [sql('ROUND(', arg('value'), ', ', arg('precision'), ')')]
   )
 );
