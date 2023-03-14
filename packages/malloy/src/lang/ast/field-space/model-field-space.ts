@@ -21,30 +21,30 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { Dialect } from "../../../dialect";
-import { ModelDef, StructDef } from "../../../model";
-import { FieldName, FieldSpace } from "../types/field-space";
-import { LookupResult } from "../types/lookup-result";
+import {Dialect} from '../../../dialect';
+import {ModelDef, StructDef} from '../../../model';
+import {FieldName, FieldSpace} from '../types/field-space';
+import {LookupResult} from '../types/lookup-result';
 
 export class ModelSpace implements FieldSpace {
-  readonly type = "fieldSpace";
+  readonly type = 'fieldSpace';
 
   constructor(readonly modelDef: ModelDef) {}
 
   structDef(): StructDef {
-    throw new Error("Model space cannot generate a struct Def");
+    throw new Error('Model space cannot generate a struct Def');
   }
 
   emptyStructDef(): StructDef {
-    throw new Error("Model space cannot generate a struct Def");
+    throw new Error('Model space cannot generate a struct Def');
   }
 
   lookup(symbol: FieldName[]): LookupResult {
     const firstPart = symbol[0];
     if (firstPart === undefined) {
-      return { "error": "not found!", "found": undefined };
+      return {error: 'not found!', found: undefined};
     }
-    return { "error": "not found!", "found": undefined };
+    return {error: 'not found!', found: undefined};
   }
 
   dialectObj(): Dialect | undefined {

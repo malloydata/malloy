@@ -63,8 +63,8 @@ export type {
   ExpressionValueType,
   TypeDesc,
   FieldValueType,
-  ExpressionTypeDesc
-} from "./model";
+  ExpressionTypeDesc,
+} from './model';
 export {
   // Used in Composer Demo
   Segment,

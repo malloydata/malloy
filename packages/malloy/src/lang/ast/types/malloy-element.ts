@@ -364,9 +364,9 @@ export class RunList extends ListOf<DocStatement> {
  */
 
 function makeid(length) {
-  let result = "";
+  let result = '';
   const characters =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   const charactersLength = characters.length;
   let counter = 0;
   while (counter < length) {
@@ -387,8 +387,8 @@ export class Document extends MalloyElement implements NameSpace {
 
   constructor(statements: DocStatement[]) {
     super();
-    this.statements = new RunList("topLevelStatements", statements);
-    this.has({ "statements": statements });
+    this.statements = new RunList('topLevelStatements', statements);
+    this.has({statements: statements});
     this.id = makeid(5);
   }
 
@@ -402,7 +402,7 @@ export class Document extends MalloyElement implements NameSpace {
     if (extendingModelDef) {
       for (const inName in extendingModelDef.contents) {
         const struct = extendingModelDef.contents[inName];
-        if (struct.type == "struct" || struct.type === "function") {
+        if (struct.type === 'struct' || struct.type === 'function') {
           const exported = extendingModelDef.exports.includes(inName);
           this.setEntry(inName, {entry: struct, exported});
         }
@@ -455,7 +455,7 @@ export class Document extends MalloyElement implements NameSpace {
   }
 
   setEntry(str: string, ent: ModelEntry): void {
-    console.log(this.id, "SET ENTRY ", str, ent);
+    console.log(this.id, 'SET ENTRY ', str, ent);
     this.documentModel[str] = ent;
   }
 }

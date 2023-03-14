@@ -222,7 +222,7 @@ export abstract class Dialect {
   }
 
   sqlSumDistinct(_key: string, _value: string): string {
-    return "sqlSumDistinct called but not implemented";
+    return 'sqlSumDistinct called but not implemented';
   }
 
   sqlAggDistinct(
@@ -230,7 +230,7 @@ export abstract class Dialect {
     _values: string[],
     _func: (valNames: string[]) => string
   ) {
-    return "sqlAggDistinct called but not implemented";
+    return 'sqlAggDistinct called but not implemented';
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {

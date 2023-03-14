@@ -30,38 +30,38 @@ import {
   FunctionOverloadDef,
   ExpressionValueType,
   TypeDesc,
-  Expr
-} from "@malloydata/malloy";
+  Expr,
+} from '@malloydata/malloy';
 
 export function func(
   name: string,
   ...overloads: FunctionOverloadDef[]
 ): FunctionDef {
   return {
-    "type": "function",
+    type: 'function',
     name,
-    overloads
+    overloads,
   };
 }
 
 export function arg(name: string): Fragment {
   return {
-    "type": "function_parameter",
-    name
+    type: 'function_parameter',
+    name,
   };
 }
 
 export function spread(f: Fragment): Fragment {
   return {
-    "type": "spread",
-    "e": [f]
+    type: 'spread',
+    e: [f],
   };
 }
 
 export function sql(...e: Expr): Fragment {
   return {
-    "type": "sql_expression",
-    e
+    type: 'sql_expression',
+    e,
   };
 }
 
@@ -71,8 +71,8 @@ export function params(
 ): FunctionParameterDef {
   return {
     name,
-    "isVariadic": true,
-    allowedTypes
+    isVariadic: true,
+    allowedTypes,
   };
 }
 
@@ -82,50 +82,50 @@ export function param(
 ): FunctionParameterDef {
   return {
     name,
-    "isVariadic": false,
-    allowedTypes
+    isVariadic: false,
+    allowedTypes,
   };
 }
 
 export function maxScalar(dataType: FieldValueType): TypeDesc {
   return {
     dataType,
-    "expressionType": "scalar"
+    expressionType: 'scalar',
   };
 }
 
 export function maxAggregate(dataType: FieldValueType): TypeDesc {
   return {
     dataType,
-    "expressionType": "aggregate"
+    expressionType: 'aggregate',
   };
 }
 
 export function maxAnalytic(dataType: FieldValueType): TypeDesc {
   return {
     dataType,
-    "expressionType": "analytic"
+    expressionType: 'analytic',
   };
 }
 
 export function minScalar(dataType: FieldValueType): TypeDesc {
   return {
     dataType,
-    "expressionType": "scalar"
+    expressionType: 'scalar',
   };
 }
 
 export function minAggregate(dataType: FieldValueType): TypeDesc {
   return {
     dataType,
-    "expressionType": "aggregate"
+    expressionType: 'aggregate',
   };
 }
 
 export function minAnalytic(dataType: FieldValueType): TypeDesc {
   return {
     dataType,
-    "expressionType": "analytic"
+    expressionType: 'analytic',
   };
 }
 
@@ -137,6 +137,6 @@ export function overload(
   return {
     returnType,
     params,
-    e
+    e,
   };
 }

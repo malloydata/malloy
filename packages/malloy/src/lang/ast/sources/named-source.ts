@@ -89,7 +89,7 @@ export class NamedSource extends Source {
     if (entry.type === 'query') {
       this.log(`Must use 'from()' for query source '${this.refName}`);
       return;
-    } else if (entry.type === "function") {
+    } else if (entry.type === 'function') {
       this.log(`Cannot construct a source from a function '${this.refName}`);
       return;
     } else if (modelEnt.sqlType) {
