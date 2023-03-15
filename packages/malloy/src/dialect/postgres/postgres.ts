@@ -36,7 +36,7 @@ import {
   isSamplingRows,
   mkExpr,
 } from '../../model/malloy_types';
-import {Dialect, DialectFieldList, FunctionInfo} from '../dialect';
+import {Dialect, DialectFieldList} from '../dialect';
 import {POSTGRES_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
 
@@ -82,10 +82,6 @@ export class PostgresDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   globalFunctions = POSTGRES_FUNCTIONS;
-
-  functionInfo: Record<string, FunctionInfo> = {
-    concat: {returnType: 'string'},
-  };
 
   quoteTablePath(tablePath: string): string {
     return tablePath
@@ -339,10 +335,6 @@ export class PostgresDialect extends Dialect {
     } else {
       throw new Error(`Unknown Literal time format ${type}`);
     }
-  }
-
-  getFunctionInfo(functionName: string): FunctionInfo | undefined {
-    return this.functionInfo[functionName];
   }
 
   sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {

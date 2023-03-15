@@ -38,7 +38,7 @@ import {
   mkExpr,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
-import {Dialect, DialectFieldList, FunctionInfo} from '../dialect';
+import {Dialect, DialectFieldList} from '../dialect';
 import {DialectFunctionOverloadDef} from '../functions';
 import {DUCKDB_FUNCTIONS} from './functions';
 
@@ -155,10 +155,6 @@ export class DuckDBDialect extends Dialect {
   supportsCTEinCoorelatedSubQueries = true;
   dontUnionIndex = false;
   supportsQualify = true;
-
-  functionInfo: Record<string, FunctionInfo> = {
-    concat: {returnType: 'string'},
-  };
 
   // hack until they support temporary macros.
   get udfPrefix(): string {
@@ -314,10 +310,6 @@ export class DuckDBDialect extends Dialect {
   //  and have a reaper that read comments.
   sqlCreateTableAsSelect(_tableName: string, _sql: string): string {
     throw new Error('Not implemented Yet');
-  }
-
-  getFunctionInfo(functionName: string): FunctionInfo | undefined {
-    return this.functionInfo[functionName];
   }
 
   sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {

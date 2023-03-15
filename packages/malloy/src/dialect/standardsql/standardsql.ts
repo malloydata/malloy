@@ -36,7 +36,7 @@ import {
   isTimeFieldType,
   mkExpr,
 } from '../../model/malloy_types';
-import {Dialect, DialectFieldList, FunctionInfo} from '../dialect';
+import {Dialect, DialectFieldList} from '../dialect';
 import {STANDARDSQL_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
 
@@ -74,14 +74,6 @@ export class StandardSQLDialect extends Dialect {
   supportsCTEinCoorelatedSubQueries = false;
   dontUnionIndex = true; // bigquery can't use a sample table more than once in a query.
   supportsQualify = true;
-
-  // I think we want an optional list of parameters types that we force a cast to.
-  functionInfo: Record<string, FunctionInfo> = {
-    timestamp_seconds: {
-      returnType: 'timestamp',
-    },
-    concat: {returnType: 'string'},
-  };
 
   quoteTablePath(tablePath: string): string {
     return `\`${tablePath}\``;

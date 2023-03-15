@@ -22,7 +22,6 @@
  */
 
 import {
-  AtomicFieldType as AtomicFieldTypeInner,
   DialectFragment,
   Expr,
   ExtractUnit,
@@ -42,16 +41,6 @@ interface DialectField {
   sqlOutputName: string;
 }
 
-/**
- * Someday this might be used to control how a function call in malloy is
- * translated into a function call in SQL. Today this is just so that
- * the expression compiler can know the output type of a function.
- */
-// TODO remove
-export interface FunctionInfo {
-  returnType: AtomicFieldTypeInner;
-}
-
 export type DialectFieldList = DialectField[];
 
 export abstract class Dialect {
@@ -63,7 +52,6 @@ export abstract class Dialect {
   abstract divisionIsInteger: boolean;
   abstract supportsSumDistinctFunction: boolean;
   abstract unnestWithNumbers: boolean;
-  protected abstract functionInfo: Record<string, FunctionInfo>;
   abstract defaultSampling: Sampling;
   abstract supportsAggDistinct: boolean;
   abstract supportUnnestArrayAgg: boolean; // won't need UDFs for nested pipelines
@@ -192,10 +180,6 @@ export abstract class Dialect {
   abstract sqlLiteralRegexp(literal: string): string;
 
   abstract sqlRegexpMatch(expr: Expr, regex: string): Expr;
-
-  getFunctionInfo(functionName: string): FunctionInfo | undefined {
-    return this.functionInfo[functionName.toLowerCase()];
-  }
 
   dialectExpr(df: DialectFragment): Expr {
     switch (df.function) {
