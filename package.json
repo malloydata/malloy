@@ -42,7 +42,6 @@
     "@malloydata/db-bigquery": "*",
     "@malloydata/malloy": "*",
     "@malloydata/render": "*",
-    "@malloydata/lib": "*",
     "@types/fs-extra": "^9.0.13",
     "@types/jest-expect-message": "^1.0.3",
     "@types/jsdom": "^20.0.0",

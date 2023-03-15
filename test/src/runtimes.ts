@@ -21,8 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {resolve} from '@malloydata/lib';
 import {
+  EmptyURLReader,
   MalloyQueryData,
   QueryDataRow,
   Result,
@@ -111,16 +111,7 @@ export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
   }
 }
 
-class MalloyLibURLReader implements URLReader {
-  readURL(url: URL): Promise<string> {
-    if (url.protocol === 'malloy:') {
-      return Promise.resolve(resolve(url));
-    }
-    throw new Error('No such file');
-  }
-}
-
-const files = new MalloyLibURLReader();
+const files = new EmptyURLReader();
 
 export function rows(qr: Result): QueryDataRow[] {
   return qr.data.value;
