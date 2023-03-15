@@ -21,9 +21,28 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TypeDesc} from '../../../model';
+import {FunctionDef} from '../..';
+import {arg, func, overload, param, minScalar, maxAnalytic, sql} from './util';
 
-export abstract class SpaceEntry {
-  abstract typeDesc(): TypeDesc;
-  abstract refType: 'field' | 'parameter';
+export function fnRound(): FunctionDef {
+  return func(
+    'round',
+    overload(
+      minScalar('number'),
+      [param('value', maxAnalytic('number'))],
+      [sql('ROUND(', arg('value'), ')')]
+    ),
+    overload(
+      minScalar('number'),
+      [
+        param('value', maxAnalytic('number')),
+        // TODO this parameter should only accept integers, but we don't have a good
+        // way of expressing that constraint at the moment
+        param('precision', maxAnalytic('number')),
+      ],
+      [sql('ROUND(', arg('value'), ', ', arg('precision'), ')')]
+    )
+    // TODO Consider adding a third overload for round(x, y, mode), where
+    // "mode" is "ROUND_HALF_AWAY_FROM_ZERO" or "ROUND_HALF_EVEN"
+  );
 }

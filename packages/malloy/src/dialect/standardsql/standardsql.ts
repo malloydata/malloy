@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {indent} from '../model/utils';
+import {indent} from '../../model/utils';
 import {
   Expr,
   ExtractUnit,
@@ -35,8 +35,10 @@ import {
   isSamplingRows,
   isTimeFieldType,
   mkExpr,
-} from '../model/malloy_types';
-import {Dialect, DialectFieldList, FunctionInfo} from './dialect';
+  FunctionDef,
+} from '../../model/malloy_types';
+import {Dialect, DialectFieldList, FunctionInfo} from '../dialect';
+import {STANDARDSQL_FUNCTIONS} from './functions';
 
 const castMap: Record<string, string> = {
   number: 'float64',
@@ -72,6 +74,7 @@ export class StandardSQLDialect extends Dialect {
   supportsCTEinCoorelatedSubQueries = false;
   dontUnionIndex = true; // bigquery can't use a sample table more than once in a query.
   supportsQualify = true;
+  globalFunctions = STANDARDSQL_FUNCTIONS;
 
   // I think we want an optional list of parameters types that we force a cast to.
   functionInfo: Record<string, FunctionInfo> = {
@@ -456,5 +459,9 @@ ${indent(sql)}
   sqlLiteralRegexp(literal: string): string {
     const noVirgule = literal.replace(/\\/g, '\\\\');
     return "r'" + noVirgule.replace(/'/g, "\\'") + "'";
+  }
+
+  getGlobalFunctionDef(name: string): FunctionDef | undefined {
+    return STANDARDSQL_FUNCTIONS.get(name);
   }
 }

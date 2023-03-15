@@ -21,9 +21,4 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TypeDesc} from '../../../model';
-
-export abstract class SpaceEntry {
-  abstract typeDesc(): TypeDesc;
-  abstract refType: 'field' | 'parameter';
-}
+export * from './duckdb';

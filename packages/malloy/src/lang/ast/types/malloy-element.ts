@@ -35,6 +35,7 @@ import {MessageLogger} from '../../parse-log';
 import {MalloyTranslation} from '../../parse-malloy';
 import {ModelDataRequest} from '../../translate-response';
 import {DocumentCompileResult} from './document-compile-result';
+import {GlobalNameSpace} from './global-name-space';
 import {ModelEntry} from './model-entry';
 import {NameSpace} from './name-space';
 
@@ -365,6 +366,7 @@ export class RunList extends ListOf<DocStatement> {
 
 export class Document extends MalloyElement implements NameSpace {
   elementType = 'document';
+  globalNameSpace: NameSpace = new GlobalNameSpace();
   documentModel: Record<string, ModelEntry> = {};
   queryList: Query[] = [];
   sqlBlocks: SQLBlockStructDef[] = [];
@@ -435,10 +437,14 @@ export class Document extends MalloyElement implements NameSpace {
   }
 
   getEntry(str: string): ModelEntry {
-    return this.documentModel[str];
+    return this.globalNameSpace.getEntry(str) ?? this.documentModel[str];
   }
 
   setEntry(str: string, ent: ModelEntry): void {
+    // TODO this error message is going to be in the wrong place everywhere...
+    if (this.globalNameSpace.getEntry(str) !== undefined) {
+      this.log(`Cannot redefine '${str}', which is in global namespace`);
+    }
     this.documentModel[str] = ent;
   }
 }

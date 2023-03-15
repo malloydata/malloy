@@ -59,7 +59,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
       return await expressionModel
         .loadQuery(
           `
-      import "malloy://bigquery_functions"
       query: aircraft -> { ${type}: f is ${expr} }`
         )
         .run();
@@ -101,8 +100,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTest("concat('foo', null)", null);
     });
 
-    it.skip('errors in translator with zero args', async () => {
-      await funcTestErr('concat()', 'no matching overload for concat');
+    it('works with zero args', async () => {
+      await funcTest('concat()', '');
     });
   });
 
@@ -141,7 +140,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     });
 
     it('works with negative', async () => {
-      await funcTest('floor(-1.9)', -1);
+      await funcTest('floor(-1.9)', -2);
     });
 
     it('works with null', async () => {

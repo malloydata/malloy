@@ -21,9 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TypeDesc} from '../../../model';
-
-export abstract class SpaceEntry {
-  abstract typeDesc(): TypeDesc;
-  abstract refType: 'field' | 'parameter';
-}
+export {fnConcat} from './concat';
+export {fnStddev} from './stddev';
+export {fnRound} from './round';
+export {fnFloor} from './floor';
+export {fnLower} from './lower';
+export {fnUpper} from './upper';
+export {fnSubstr} from './substr';
+export {fnRegexpExtract} from './regexp_extract';
+export {fnReplace} from './replace';
+export {fnLength} from './length';
+export {fnIfnull} from './ifnull';
+export {FUNCTIONS} from './all_functions';

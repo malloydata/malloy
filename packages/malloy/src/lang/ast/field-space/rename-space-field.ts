@@ -21,7 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DocumentLocation, FieldDef, TypeDesc} from '../../../model/malloy_types';
+import {
+  DocumentLocation,
+  FieldDef,
+  TypeDesc,
+} from '../../../model/malloy_types';
 
 import {SpaceField} from '../types/space-field';
 

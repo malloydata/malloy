@@ -36,9 +36,11 @@ import {
   isSamplingPercent,
   isSamplingRows,
   mkExpr,
-} from '../model/malloy_types';
-import {indent} from '../model/utils';
-import {Dialect, DialectFieldList, FunctionInfo} from './dialect';
+  FunctionDef,
+} from '../../model/malloy_types';
+import {indent} from '../../model/utils';
+import {Dialect, DialectFieldList, FunctionInfo} from '../dialect';
+import {DUCKDB_FUNCTIONS} from './functions';
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';
@@ -466,5 +468,9 @@ export class DuckDBDialect extends Dialect {
 
   sqlLiteralRegexp(literal: string): string {
     return "'" + literal.replace(/'/g, "''") + "'";
+  }
+
+  getGlobalFunctionDef(name: string): FunctionDef | undefined {
+    return DUCKDB_FUNCTIONS.get(name);
   }
 }

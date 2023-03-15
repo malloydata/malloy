@@ -21,9 +21,29 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TypeDesc} from '../../../model';
+import {ExpressionValueType, FunctionDef} from '../..';
+import {arg, func, overload, param, minScalar, maxAnalytic, sql} from './util';
 
-export abstract class SpaceEntry {
-  abstract typeDesc(): TypeDesc;
-  abstract refType: 'field' | 'parameter';
+const types: ExpressionValueType[] = [
+  'string',
+  'number',
+  'timestamp',
+  'date',
+  'json',
+];
+
+export function fnIfnull(): FunctionDef {
+  return func(
+    'ifnull',
+    ...types.map(type =>
+      overload(
+        minScalar(type),
+        [
+          param('value', maxAnalytic(type)),
+          param('default', maxAnalytic(type)),
+        ],
+        [sql('IFNULL(', arg('value'), ', ', arg('default'), ')')]
+      )
+    )
+  );
 }

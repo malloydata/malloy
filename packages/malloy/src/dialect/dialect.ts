@@ -33,6 +33,7 @@ import {
   TimestampUnit,
   TypecastFragment,
   mkExpr,
+  FunctionDef,
 } from '../model/malloy_types';
 
 interface DialectField {
@@ -46,6 +47,7 @@ interface DialectField {
  * translated into a function call in SQL. Today this is just so that
  * the expression compiler can know the output type of a function.
  */
+// TODO remove
 export interface FunctionInfo {
   returnType: AtomicFieldTypeInner;
 }
@@ -68,6 +70,9 @@ export abstract class Dialect {
   abstract supportsCTEinCoorelatedSubQueries: boolean;
   abstract dontUnionIndex: boolean;
   abstract supportsQualify: boolean;
+
+  // return the definition of a function with the given name
+  abstract getGlobalFunctionDef(name: string): FunctionDef | undefined;
 
   // return a quoted string for use as a table path.
   abstract quoteTablePath(tablePath: string): string;

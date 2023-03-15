@@ -21,9 +21,30 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TypeDesc} from '../../../model';
+import {FunctionDef} from '../..';
+import {arg, func, overload, param, minScalar, maxAnalytic, sql} from './util';
 
-export abstract class SpaceEntry {
-  abstract typeDesc(): TypeDesc;
-  abstract refType: 'field' | 'parameter';
+export function fnReplace(): FunctionDef {
+  return func(
+    'replace',
+    overload(
+      minScalar('string'),
+      [
+        param('value', maxAnalytic('string')),
+        param('pattern', maxAnalytic('string')),
+        param('replacement', maxAnalytic('string')),
+      ],
+      [
+        sql(
+          'REPLACE(',
+          arg('value'),
+          ',',
+          arg('pattern'),
+          ',',
+          arg('replacement'),
+          ')'
+        ),
+      ]
+    )
+  );
 }

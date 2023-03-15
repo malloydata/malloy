@@ -23,7 +23,7 @@
 
 import cloneDeep from 'lodash/cloneDeep';
 import {Dialect, DialectFieldList, getDialect} from '../dialect';
-import {StandardSQLDialect} from '../dialect/standardsql';
+import {StandardSQLDialect} from '../dialect/standardsql/standardsql';
 import {
   AggregateFragment,
   AnalyticFragment,

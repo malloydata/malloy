@@ -23,8 +23,9 @@
 
 import {DuckDBDialect} from './duckdb';
 import {Dialect} from './dialect';
-import {PostgresDialect} from './postgres';
-import {StandardSQLDialect} from './standardsql';
+import {PostgresDialect} from './postgres/postgres';
+import {StandardSQLDialect} from './standardsql/standardsql';
+import {FunctionDef} from '../model';
 
 const dialectMap = new Map<string, Dialect>();
 
@@ -43,3 +44,8 @@ export function registerDialect(d: Dialect): void {
 registerDialect(new PostgresDialect());
 registerDialect(new StandardSQLDialect());
 registerDialect(new DuckDBDialect());
+
+export function getDialectFunction(name: string): FunctionDef | undefined {
+  // TODO
+  return getDialect('duckdb').getGlobalFunctionDef(name);
+}

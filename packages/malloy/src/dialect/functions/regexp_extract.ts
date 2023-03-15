@@ -21,9 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TypeDesc} from '../../../model';
+import {FunctionDef} from '../..';
+import {arg, func, overload, param, minScalar, maxAnalytic, sql} from './util';
 
-export abstract class SpaceEntry {
-  abstract typeDesc(): TypeDesc;
-  abstract refType: 'field' | 'parameter';
+export function fnRegexpExtract(): FunctionDef {
+  return func(
+    'regexp_extract',
+    overload(
+      minScalar('string'),
+      [
+        param('value', maxAnalytic('string')),
+        param('regexp', maxAnalytic('regular expression')),
+        // TODO consider supporting these parameters
+        // param('position', maxAnalytic('number')),
+        // param('occurrence', maxAnalytic('number')),
+      ],
+      [sql('REGEXP_EXTRACT(', arg('value'), ',', arg('regexp'), ')')]
+    )
+  );
 }

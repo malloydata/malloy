@@ -21,9 +21,29 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TypeDesc} from '../../../model';
+import {getDialectFunction} from '../../../dialect';
+import {ModelEntry} from './model-entry';
+import {NameSpace} from './name-space';
 
-export abstract class SpaceEntry {
-  abstract typeDesc(): TypeDesc;
-  abstract refType: 'field' | 'parameter';
+/**
+ * We may want to remove this in the future...
+ *
+ * This is a global namespace which exists in the root of all Documents
+ * and includes SQL function definitions.
+ */
+export class GlobalNameSpace implements NameSpace {
+  getEntry(name: string): ModelEntry | undefined {
+    const func = getDialectFunction(name);
+    if (func === undefined) {
+      return undefined;
+    }
+    return {
+      entry: func,
+      exported: false,
+    };
+  }
+
+  setEntry(_name: string, _value: ModelEntry, _exported: boolean): void {
+    throw new Error('The global namespace is immutable!');
+  }
 }

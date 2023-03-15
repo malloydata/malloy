@@ -21,9 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TypeDesc} from '../../../model';
+import {FunctionDef} from '../..';
+import {arg, func, overload, param, minAggregate, maxScalar, sql} from './util';
 
-export abstract class SpaceEntry {
-  abstract typeDesc(): TypeDesc;
-  abstract refType: 'field' | 'parameter';
+export function fnStddev(): FunctionDef {
+  return func(
+    'stddev',
+    overload(
+      minAggregate('number'),
+      [param('value', maxScalar('number'))],
+      [sql('STDDEV(', arg('value'), ')')]
+    )
+  );
 }

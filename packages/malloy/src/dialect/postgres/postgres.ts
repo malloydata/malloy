@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {indent} from '../model/utils';
+import {indent} from '../../model/utils';
 import {
   DateUnit,
   Expr,
@@ -35,8 +35,10 @@ import {
   isSamplingPercent,
   isSamplingRows,
   mkExpr,
-} from '../model/malloy_types';
-import {Dialect, DialectFieldList, FunctionInfo} from './dialect';
+  FunctionDef,
+} from '../../model/malloy_types';
+import {Dialect, DialectFieldList, FunctionInfo} from '../dialect';
+import {POSTGRES_FUNCTIONS} from './functions';
 
 const castMap: Record<string, string> = {
   number: 'double precision',
@@ -79,6 +81,7 @@ export class PostgresDialect extends Dialect {
   supportsCTEinCoorelatedSubQueries = true;
   dontUnionIndex = false;
   supportsQualify = false;
+  globalFunctions = POSTGRES_FUNCTIONS;
 
   functionInfo: Record<string, FunctionInfo> = {
     concat: {returnType: 'string'},
@@ -409,5 +412,9 @@ export class PostgresDialect extends Dialect {
 
   sqlLiteralRegexp(literal: string): string {
     return "'" + literal.replace(/'/g, "''") + "'";
+  }
+
+  getGlobalFunctionDef(name: string): FunctionDef | undefined {
+    return POSTGRES_FUNCTIONS.get(name);
   }
 }

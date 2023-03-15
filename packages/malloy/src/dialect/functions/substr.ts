@@ -21,9 +21,38 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TypeDesc} from '../../../model';
+import {FunctionDef} from '../..';
+import {arg, func, overload, param, minScalar, maxAnalytic, sql} from './util';
 
-export abstract class SpaceEntry {
-  abstract typeDesc(): TypeDesc;
-  abstract refType: 'field' | 'parameter';
+export function fnSubstr(): FunctionDef {
+  return func(
+    'substr',
+    overload(
+      minScalar('string'),
+      [
+        param('value', maxAnalytic('string')),
+        param('position', maxAnalytic('number')),
+      ],
+      [sql('SUBSTR(', arg('value'), ',', arg('position'), ')')]
+    ),
+    overload(
+      minScalar('string'),
+      [
+        param('value', maxAnalytic('string')),
+        param('position', maxAnalytic('number')),
+        param('length', maxAnalytic('number')),
+      ],
+      [
+        sql(
+          'SUBSTR(',
+          arg('value'),
+          ',',
+          arg('position'),
+          ',',
+          arg('length'),
+          ')'
+        ),
+      ]
+    )
+  );
 }

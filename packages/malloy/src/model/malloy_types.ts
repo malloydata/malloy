@@ -913,6 +913,10 @@ export interface FunctionOverloadDef {
 
 export interface FunctionDef extends NamedObject {
   type: 'function';
+  // TODO
+  // dialects: {
+  //   [dialect: string]: FunctionOverloadDef[];
+  // };
   overloads: FunctionOverloadDef[];
 }
 

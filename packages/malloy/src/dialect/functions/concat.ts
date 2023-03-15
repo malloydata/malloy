@@ -21,9 +21,32 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TypeDesc} from '../../../model';
+import {FunctionDef} from '../../model';
+import {
+  arg,
+  func,
+  overload,
+  params,
+  minScalar,
+  maxAnalytic,
+  spread,
+  sql,
+} from './util';
 
-export abstract class SpaceEntry {
-  abstract typeDesc(): TypeDesc;
-  abstract refType: 'field' | 'parameter';
+export function fnConcat(): FunctionDef {
+  return func(
+    'concat',
+    // TODO in DuckDB, nulls are treated like "", but in BigQuery, nulls propagate and the
+    // result becomes null
+    overload(
+      minScalar('string'),
+      [],
+      [{type: 'dialect', function: 'stringLiteral', literal: ''}]
+    ),
+    overload(
+      minScalar('string'),
+      [params('values', maxAnalytic('string'))],
+      [sql('CONCAT(', spread(arg('values')), ')')]
+    )
+  );
 }

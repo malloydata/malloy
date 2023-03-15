@@ -21,7 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicFieldType, FieldValueType, StructDef} from '../../../model/malloy_types';
+import {
+  AtomicFieldType,
+  FieldValueType,
+  StructDef,
+} from '../../../model/malloy_types';
 
 import {Comparison} from '../types/comparison';
 import {ExprValue} from '../types/expr-value';
