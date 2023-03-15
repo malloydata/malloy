@@ -25,22 +25,16 @@ import {
   FunctionParameterDef,
   Fragment,
   FieldValueType,
-  FunctionDef,
   ExpressionTypeDesc,
-  FunctionOverloadDef,
   TypeDesc,
   Expr,
 } from '../..';
 
-export function func(
-  name: string,
-  ...overloads: FunctionOverloadDef[]
-): FunctionDef {
-  return {
-    type: 'function',
-    name,
-    overloads,
-  };
+export interface DialectFunctionOverloadDef {
+  // The expression type here is the MINIMUM return type
+  returnType: TypeDesc;
+  params: FunctionParameterDef[];
+  e: Expr;
 }
 
 export function arg(name: string): Fragment {
@@ -132,7 +126,7 @@ export function overload(
   returnType: TypeDesc,
   params: FunctionParameterDef[],
   e: Expr
-): FunctionOverloadDef {
+): DialectFunctionOverloadDef {
   return {
     returnType,
     params,

@@ -33,8 +33,8 @@ import {
   TimestampUnit,
   TypecastFragment,
   mkExpr,
-  FunctionDef,
 } from '../model/malloy_types';
+import {DialectFunctionOverloadDef} from './functions';
 
 interface DialectField {
   type: string;
@@ -72,7 +72,9 @@ export abstract class Dialect {
   abstract supportsQualify: boolean;
 
   // return the definition of a function with the given name
-  abstract getGlobalFunctionDef(name: string): FunctionDef | undefined;
+  abstract getGlobalFunctionDef(
+    name: string
+  ): DialectFunctionOverloadDef[] | undefined;
 
   // return a quoted string for use as a table path.
   abstract quoteTablePath(tablePath: string): string;

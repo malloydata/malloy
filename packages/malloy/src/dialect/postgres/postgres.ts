@@ -35,10 +35,10 @@ import {
   isSamplingPercent,
   isSamplingRows,
   mkExpr,
-  FunctionDef,
 } from '../../model/malloy_types';
 import {Dialect, DialectFieldList, FunctionInfo} from '../dialect';
 import {POSTGRES_FUNCTIONS} from './functions';
+import {DialectFunctionOverloadDef} from '../functions';
 
 const castMap: Record<string, string> = {
   number: 'double precision',
@@ -414,7 +414,7 @@ export class PostgresDialect extends Dialect {
     return "'" + literal.replace(/'/g, "''") + "'";
   }
 
-  getGlobalFunctionDef(name: string): FunctionDef | undefined {
+  getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
     return POSTGRES_FUNCTIONS.get(name);
   }
 }

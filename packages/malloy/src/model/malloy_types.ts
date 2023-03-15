@@ -255,17 +255,6 @@ export const malloyFunctions: Record<string, MalloyFunctionInfo> = {
   },
 };
 
-export interface DialectSwitchFragment {
-  type: 'dialect_switch';
-  branches: {dialects: string[]; e: Expr}[];
-}
-
-export function isDialectSwitchFragment(
-  f: Fragment
-): f is DialectSwitchFragment {
-  return (f as DialectSwitchFragment)?.type === 'dialect_switch';
-}
-
 export interface FunctionParameterFragment {
   type: 'function_parameter';
   name: string;
@@ -449,7 +438,6 @@ export type Fragment =
   | UngroupFragment
   | DialectFragment
   | AnalyticFragment
-  | DialectSwitchFragment
   | FunctionParameterFragment
   | FunctionCallFragment
   | SQLExpressionFragment
@@ -908,15 +896,14 @@ export interface FunctionOverloadDef {
   // The expression type here is the MINIMUM return type
   returnType: TypeDesc;
   params: FunctionParameterDef[];
-  e: Expr;
+  dialect: {
+    [dialect: string]: Expr;
+  };
 }
 
 export interface FunctionDef extends NamedObject {
   type: 'function';
   // TODO
-  // dialects: {
-  //   [dialect: string]: FunctionOverloadDef[];
-  // };
   overloads: FunctionOverloadDef[];
 }
 

@@ -138,16 +138,6 @@ export function exprMap(expr: Expr, func: (fragment: Fragment) => Expr): Expr {
             to: exprMap(fragment.to, func),
             value: exprMap(fragment.value, func),
           };
-        case 'dialect_switch':
-          return {
-            ...fragment,
-            branches: fragment.branches.map(branch => {
-              return {
-                ...branch,
-                e: exprMap(branch.e, func),
-              };
-            }),
-          };
         case 'applyVal':
         case 'field':
         case 'function_parameter':

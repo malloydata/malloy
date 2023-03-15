@@ -21,8 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ExpressionValueType, FunctionDef} from '../..';
-import {arg, func, overload, param, minScalar, maxAnalytic, sql} from './util';
+import {ExpressionValueType} from '../..';
+import {
+  arg,
+  overload,
+  param,
+  minScalar,
+  maxAnalytic,
+  sql,
+  DialectFunctionOverloadDef,
+} from './util';
 
 const types: ExpressionValueType[] = [
   'string',
@@ -32,18 +40,12 @@ const types: ExpressionValueType[] = [
   'json',
 ];
 
-export function fnIfnull(): FunctionDef {
-  return func(
-    'ifnull',
-    ...types.map(type =>
-      overload(
-        minScalar(type),
-        [
-          param('value', maxAnalytic(type)),
-          param('default', maxAnalytic(type)),
-        ],
-        [sql('IFNULL(', arg('value'), ', ', arg('default'), ')')]
-      )
+export function fnIfnull(): DialectFunctionOverloadDef[] {
+  return types.map(type =>
+    overload(
+      minScalar(type),
+      [param('value', maxAnalytic(type)), param('default', maxAnalytic(type))],
+      [sql('IFNULL(', arg('value'), ', ', arg('default'), ')')]
     )
   );
 }

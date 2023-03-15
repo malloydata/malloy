@@ -21,12 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FunctionDef} from '../..';
-import {arg, func, overload, param, minScalar, maxAnalytic, sql} from './util';
+import {
+  arg,
+  overload,
+  param,
+  minScalar,
+  maxAnalytic,
+  sql,
+  DialectFunctionOverloadDef,
+} from './util';
 
-export function fnRound(): FunctionDef {
-  return func(
-    'round',
+export function fnRound(): DialectFunctionOverloadDef[] {
+  return [
     overload(
       minScalar('number'),
       [param('value', maxAnalytic('number'))],
@@ -41,8 +47,8 @@ export function fnRound(): FunctionDef {
         param('precision', maxAnalytic('number')),
       ],
       [sql('ROUND(', arg('value'), ', ', arg('precision'), ')')]
-    )
+    ),
     // TODO Consider adding a third overload for round(x, y, mode), where
     // "mode" is "ROUND_HALF_AWAY_FROM_ZERO" or "ROUND_HALF_EVEN"
-  );
+  ];
 }

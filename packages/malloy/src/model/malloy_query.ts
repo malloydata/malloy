@@ -29,7 +29,6 @@ import {
   AnalyticFragment,
   CompiledQuery,
   DialectFragment,
-  DialectSwitchFragment,
   Expr,
   expressionIsCalculation,
   FieldAtomicDef,
@@ -54,7 +53,6 @@ import {
   isApplyValue,
   isAsymmetricFragment,
   isDialectFragment,
-  isDialectSwitchFragment,
   isFieldFragment,
   isFilterFragment,
   isFunctionCallFragment,
@@ -376,9 +374,16 @@ class QueryField extends QueryNode {
     );
   }
 
-  private expandFunctionCall(overload: FunctionOverloadDef, args: Expr[]) {
+  private expandFunctionCall(
+    dialect: string,
+    overload: FunctionOverloadDef,
+    args: Expr[]
+  ) {
     const paramMap = this.getParameterMap(overload, args.length);
-    return exprMap(overload.e, fragment => {
+    if (overload.dialect[dialect] === undefined) {
+      throw new Error(`Function is not defined for dialect ${dialect}`);
+    }
+    return exprMap(overload.dialect[dialect], fragment => {
       if (typeof fragment === 'string') {
         return [fragment];
       } else if (fragment.type === 'spread') {
@@ -445,6 +450,7 @@ class QueryField extends QueryNode {
         argsExpressions,
         valNames => {
           const funcCall = this.expandFunctionCall(
+            context.dialect.name,
             overload,
             valNames.map(v => [v])
           );
@@ -468,7 +474,11 @@ class QueryField extends QueryNode {
               return [this.generateDimFragment(resultSet, context, arg, state)];
             })
           : args;
-      const funcCall: Expr = this.expandFunctionCall(overload, mappedArgs);
+      const funcCall: Expr = this.expandFunctionCall(
+        context.dialect.name,
+        overload,
+        mappedArgs
+      );
       return this.generateExpressionFromExpr(
         resultSet,
         context,
@@ -476,24 +486,6 @@ class QueryField extends QueryNode {
         state
       );
     }
-  }
-
-  generateDialectSwitch(
-    resultSet: FieldInstanceResult,
-    context: QueryStruct,
-    frag: DialectSwitchFragment,
-    state: GenerateState
-  ): string {
-    const dialect = context.dialect.name;
-    const branch = frag.branches.find(branch =>
-      branch.dialects.includes(dialect)
-    );
-    if (branch === undefined) {
-      // TODO Consider checking function overload definitions in the translator
-      // to ensure that the function can be compiled for the given dialect.
-      throw new Error(`Dialect switch has no branch for dialect ${dialect}.`);
-    }
-    return this.generateExpressionFromExpr(resultSet, context, branch.e, state);
   }
 
   generateSpread(
@@ -895,8 +887,6 @@ class QueryField extends QueryNode {
           expr,
           state
         );
-      } else if (isDialectSwitchFragment(expr)) {
-        s += this.generateDialectSwitch(resultSet, context, expr, state);
       } else if (isSpreadFragment(expr)) {
         s += this.generateSpread(resultSet, context, expr, state);
       } else if (expr.type === 'dialect') {

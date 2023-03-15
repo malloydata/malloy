@@ -21,21 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FunctionDef} from '../../model';
 import {
   arg,
-  func,
   overload,
   params,
   minScalar,
   maxAnalytic,
   spread,
   sql,
+  DialectFunctionOverloadDef,
 } from './util';
 
-export function fnConcat(): FunctionDef {
-  return func(
-    'concat',
+export function fnConcat(): DialectFunctionOverloadDef[] {
+  return [
     // TODO in DuckDB, nulls are treated like "", but in BigQuery, nulls propagate and the
     // result becomes null
     overload(
@@ -47,6 +45,6 @@ export function fnConcat(): FunctionDef {
       minScalar('string'),
       [params('values', maxAnalytic('string'))],
       [sql('CONCAT(', spread(arg('values')), ')')]
-    )
-  );
+    ),
+  ];
 }

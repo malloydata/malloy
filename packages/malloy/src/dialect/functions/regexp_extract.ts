@@ -21,12 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FunctionDef} from '../..';
-import {arg, func, overload, param, minScalar, maxAnalytic, sql} from './util';
+import {
+  arg,
+  overload,
+  param,
+  minScalar,
+  maxAnalytic,
+  sql,
+  DialectFunctionOverloadDef,
+} from './util';
 
-export function fnRegexpExtract(): FunctionDef {
-  return func(
-    'regexp_extract',
+export function fnRegexpExtract(): DialectFunctionOverloadDef[] {
+  return [
     overload(
       minScalar('string'),
       [
@@ -37,6 +43,6 @@ export function fnRegexpExtract(): FunctionDef {
         // param('occurrence', maxAnalytic('number')),
       ],
       [sql('REGEXP_EXTRACT(', arg('value'), ',', arg('regexp'), ')')]
-    )
-  );
+    ),
+  ];
 }

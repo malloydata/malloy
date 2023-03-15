@@ -36,7 +36,6 @@ import {
   DocumentReference,
   ModelDef,
   NamedModelObjects,
-  NamedStructDefs,
   Query,
   SQLBlockStructDef,
   StructDef,

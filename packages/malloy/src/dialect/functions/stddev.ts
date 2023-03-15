@@ -21,16 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FunctionDef} from '../..';
-import {arg, func, overload, param, minAggregate, maxScalar, sql} from './util';
+import {
+  arg,
+  overload,
+  param,
+  minAggregate,
+  maxScalar,
+  sql,
+  DialectFunctionOverloadDef,
+} from './util';
 
-export function fnStddev(): FunctionDef {
-  return func(
-    'stddev',
+export function fnStddev(): DialectFunctionOverloadDef[] {
+  return [
     overload(
       minAggregate('number'),
       [param('value', maxScalar('number'))],
       [sql('STDDEV(', arg('value'), ')')]
-    )
-  );
+    ),
+  ];
 }

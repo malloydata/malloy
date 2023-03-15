@@ -36,10 +36,10 @@ import {
   isSamplingPercent,
   isSamplingRows,
   mkExpr,
-  FunctionDef,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
 import {Dialect, DialectFieldList, FunctionInfo} from '../dialect';
+import {DialectFunctionOverloadDef} from '../functions';
 import {DUCKDB_FUNCTIONS} from './functions';
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
@@ -470,7 +470,7 @@ export class DuckDBDialect extends Dialect {
     return "'" + literal.replace(/'/g, "''") + "'";
   }
 
-  getGlobalFunctionDef(name: string): FunctionDef | undefined {
+  getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
     return DUCKDB_FUNCTIONS.get(name);
   }
 }

@@ -28,7 +28,6 @@ import {
   Result,
   RunSQLOptions,
   SingleConnectionRuntime,
-  URLReader,
 } from '@malloydata/malloy';
 import {BigQueryConnection} from '@malloydata/db-bigquery';
 import {DuckDBConnection} from '@malloydata/db-duckdb';

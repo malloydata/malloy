@@ -21,16 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FunctionDef} from '../..';
-import {arg, func, overload, param, minScalar, maxAnalytic, sql} from './util';
+import {
+  arg,
+  overload,
+  param,
+  minScalar,
+  maxAnalytic,
+  sql,
+  DialectFunctionOverloadDef,
+} from './util';
 
-export function fnFloor(): FunctionDef {
-  return func(
-    'floor',
+export function fnFloor(): DialectFunctionOverloadDef[] {
+  return [
     overload(
       minScalar('number'),
       [param('value', maxAnalytic('number'))],
       [sql('FLOOR(', arg('value'), ')')]
-    )
-  );
+    ),
+  ];
 }

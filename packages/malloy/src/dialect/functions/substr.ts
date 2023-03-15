@@ -21,12 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FunctionDef} from '../..';
-import {arg, func, overload, param, minScalar, maxAnalytic, sql} from './util';
+import {
+  arg,
+  overload,
+  param,
+  minScalar,
+  maxAnalytic,
+  sql,
+  DialectFunctionOverloadDef,
+} from './util';
 
-export function fnSubstr(): FunctionDef {
-  return func(
-    'substr',
+export function fnSubstr(): DialectFunctionOverloadDef[] {
+  return [
     overload(
       minScalar('string'),
       [
@@ -53,6 +59,6 @@ export function fnSubstr(): FunctionDef {
           ')'
         ),
       ]
-    )
-  );
+    ),
+  ];
 }

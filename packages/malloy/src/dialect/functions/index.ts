@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+export type {DialectFunctionOverloadDef} from './util';
 export {fnConcat} from './concat';
 export {fnStddev} from './stddev';
 export {fnRound} from './round';

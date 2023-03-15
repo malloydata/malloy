@@ -76,8 +76,7 @@ export class ExprFunc extends ExpressionDef {
 
       const dataType = this.rawType ?? collectType ?? 'number';
       return {
-        // TODO
-        dataType: dataType as any,
+        dataType,
         expressionType,
         value: compressExpr(funcCall),
       };
