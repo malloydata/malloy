@@ -16,9 +16,6 @@
       "path": "../packages/malloy-db-postgres"
     },
     {
-      "path": "../packages/malloy-lib"
-    },
-    {
       "path": "../packages/malloy-db-duckdb"
     }
   ]

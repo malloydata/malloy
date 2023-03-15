@@ -10,7 +10,6 @@
       "packages/malloy-db-duckdb",
       "packages/malloy-db-postgres",
       "packages/malloy-render",
-      "packages/malloy-lib",
       "test"
     ]
   },
