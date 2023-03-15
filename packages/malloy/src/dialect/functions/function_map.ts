@@ -21,6 +21,7 @@ export class FunctionMap {
   }
 
   get(name: string): DialectFunctionOverloadDef[] | undefined {
+    this.ensureSealed();
     const ready = this.functions.get(name);
     if (ready) return ready;
     const getter = this.getters.get(name);
@@ -45,6 +46,12 @@ export class FunctionMap {
   private ensureNotSealed() {
     if (this.sealed) {
       throw new Error('Cannot update sealed FunctionMap');
+    }
+  }
+
+  private ensureSealed() {
+    if (!this.sealed) {
+      throw new Error('Cannot get from unsealed FunctionMap');
     }
   }
 }

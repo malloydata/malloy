@@ -24,3 +24,4 @@
 import {FUNCTIONS} from '../../functions';
 
 export const STANDARDSQL_FUNCTIONS = FUNCTIONS;
+STANDARDSQL_FUNCTIONS.seal();

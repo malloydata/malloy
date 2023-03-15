@@ -24,3 +24,4 @@
 import {FUNCTIONS} from '../../functions';
 
 export const POSTGRES_FUNCTIONS = FUNCTIONS.clone();
+POSTGRES_FUNCTIONS.seal();

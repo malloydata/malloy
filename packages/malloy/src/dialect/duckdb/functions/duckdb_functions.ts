@@ -24,3 +24,4 @@
 import {FUNCTIONS} from '../../functions';
 
 export const DUCKDB_FUNCTIONS = FUNCTIONS.clone();
+DUCKDB_FUNCTIONS.seal();
