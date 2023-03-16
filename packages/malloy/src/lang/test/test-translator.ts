@@ -356,7 +356,7 @@ export class TestTranslator extends MalloyTranslator {
   getSourceDef(srcName: string): StructDef | undefined {
     const t = this.translate().translated;
     const s = t?.modelDef?.contents[srcName];
-    if (s  && s.type === 'struct') {
+    if (s && s.type === 'struct') {
       return s;
     }
     return undefined;
