@@ -39,6 +39,7 @@ explore: aircraft_models is table('malloytest.aircraft_models'){
 explore: aircraft is table('malloytest.aircraft'){
   primary_key: tail_num
   join_one: aircraft_models with aircraft_model_code
+  measure: aircraft_count is count()
 }
 `;
 
@@ -87,162 +88,162 @@ expressionModels.forEach((expressionModel, databaseName) => {
   const funcTestAggErr = (expr: string, error: string) =>
     funcTestGeneral(expr, 'aggregate', {error});
 
-  describe(`concat - ${databaseName}`, () => {
-    it('works with two args', async () => {
+  describe('concat', () => {
+    it(`works with two args - ${databaseName}`, async () => {
       await funcTest("concat('foo', 'bar')", 'foobar');
     });
 
-    it('works with one arg', async () => {
+    it(`works with one arg - ${databaseName}`, async () => {
       await funcTest("concat('foo')", 'foo');
     });
 
-    it.skip('works with null', async () => {
+    it.skip(`works with null - ${databaseName}`, async () => {
       await funcTest("concat('foo', null)", null);
     });
 
-    it('works with zero args', async () => {
+    it(`works with zero args - ${databaseName}`, async () => {
       await funcTest('concat()', '');
     });
   });
 
-  describe(`round - ${databaseName}`, () => {
-    it('works', async () => {
+  describe('round', () => {
+    it(`works - ${databaseName}`, async () => {
       await funcTest('round(1.2)', 1);
     });
 
-    it('works with precision', async () => {
+    it(`works with precision - ${databaseName}`, async () => {
       await funcTest('round(12.222, 1)', 12.2);
     });
 
-    it('works with negative precision', async () => {
+    it(`works with negative precision - ${databaseName}`, async () => {
       await funcTest('round(12.2, -1)', 10);
     });
 
-    it.skip('errors when given decimal precision', async () => {
+    it.skip(`errors when given decimal precision - ${databaseName}`, async () => {
       await funcTestErr(
         'round(12.2, -1.5)',
         'parameter precision for round must be integer, received float'
       );
     });
 
-    it('works with null', async () => {
+    it(`works with null - ${databaseName}`, async () => {
       await funcTest('round(null)', null);
     });
 
-    it('works with null precision', async () => {
+    it(`works with null precision - ${databaseName}`, async () => {
       await funcTest('round(1, null)', null);
     });
   });
 
-  describe(`floor - ${databaseName}`, () => {
-    it('works', async () => {
+  describe('floor', () => {
+    it(`works - ${databaseName}`, async () => {
       await funcTest('floor(1.9)', 1);
     });
 
-    it('works with negative', async () => {
+    it(`works with negative - ${databaseName}`, async () => {
       await funcTest('floor(-1.9)', -2);
     });
 
-    it('works with null', async () => {
+    it(`works with null - ${databaseName}`, async () => {
       await funcTest('floor(null)', null);
     });
   });
 
-  describe(`length - ${databaseName}`, () => {
-    it('works', async () => {
+  describe('length', () => {
+    it(`works - ${databaseName}`, async () => {
       await funcTest("length('foo')", 3);
     });
 
-    it('works with null', async () => {
+    it(`works with null - ${databaseName}`, async () => {
       await funcTest('length(null)', null);
     });
   });
 
-  describe(`lower - ${databaseName}`, () => {
-    it('works', async () => {
+  describe('lower', () => {
+    it(`works - ${databaseName}`, async () => {
       await funcTest("lower('FoO')", 'foo');
     });
 
-    it('works with null', async () => {
+    it(`works with null - ${databaseName}`, async () => {
       await funcTest('lower(null)', null);
     });
   });
 
-  describe(`upper - ${databaseName}`, () => {
-    it('works', async () => {
+  describe('upper', () => {
+    it(`works - ${databaseName}`, async () => {
       await funcTest("upper('fOo')", 'FOO');
     });
 
-    it('works with null', async () => {
+    it(`works with null - ${databaseName}`, async () => {
       await funcTest('upper(null)', null);
     });
   });
 
-  describe(`regexp_extract - ${databaseName}`, () => {
-    it('works', async () => {
+  describe('regexp_extract', () => {
+    it(`works - ${databaseName}`, async () => {
       await funcTest("regexp_extract('I have a dog', r'd[aeiou]g')", 'dog');
     });
 
-    it('works with null', async () => {
+    it(`works with null - ${databaseName}`, async () => {
       await funcTest("regexp_extract(null, r'd[aeiou]g')", null);
     });
 
     // TODO not sure how to represent a null regular expression
-    it.skip('works with null regexp', async () => {
+    it.skip(`works with null regexp  - ${databaseName}`, async () => {
       await funcTest("regexp_extract('foo', null)", null);
     });
   });
 
-  describe(`replace - ${databaseName}`, () => {
-    it('works', async () => {
+  describe('replace', () => {
+    it(`works - ${databaseName}`, async () => {
       await funcTest("replace('aaaa', 'a', 'c')", 'cccc');
     });
 
-    it('works with empty replacement', async () => {
+    it(`works with empty replacement - ${databaseName}`, async () => {
       await funcTest("replace('aaaa', '', 'c')", 'aaaa');
     });
 
-    it('works with null original', async () => {
+    it(`works with null original - ${databaseName}`, async () => {
       await funcTest("replace(null, 'a', 'c')", null);
     });
 
-    it('works with null from', async () => {
+    it(`works with null from - ${databaseName}`, async () => {
       await funcTest("replace('aaaa', null, 'c')", null);
     });
 
-    it('works with null to', async () => {
+    it(`works with null to - ${databaseName}`, async () => {
       await funcTest("replace('aaaa', 'a', null)", null);
     });
   });
 
-  describe(`substr - ${databaseName}`, () => {
-    it('works', async () => {
+  describe('substr', () => {
+    it(`works - ${databaseName}`, async () => {
       await funcTest("substr('foo', 2)", 'oo');
     });
 
-    it('works with max length', async () => {
+    it(`works with max length - ${databaseName}`, async () => {
       await funcTest("substr('foo', 2, 1)", 'o');
     });
 
-    it('works with negative start', async () => {
+    it(`works with negative start - ${databaseName}`, async () => {
       await funcTest("substr('foo bar baz', -3)", 'baz');
     });
 
-    it('works with null string', async () => {
+    it(`works with null string - ${databaseName}`, async () => {
       await funcTest('substr(null, 1, 2)', null);
     });
 
-    it('works with null from', async () => {
+    it(`works with null from - ${databaseName}`, async () => {
       await funcTest("substr('aaaa', null, 1)", null);
     });
 
-    it('works with null to', async () => {
+    it(`works with null to - ${databaseName}`, async () => {
       await funcTest("substr('aaaa', 1, null)", null);
     });
   });
 
-  describe(`raw function call - ${databaseName}`, () => {
-    it('works', async () => {
+  describe('raw function call', () => {
+    it(`works - ${databaseName}`, async () => {
       await funcTest('nullif!(1, 1)::number', null);
       await funcTestErr(
         'nullif(1, 1)',
@@ -250,7 +251,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       );
     });
 
-    it('works with type specified', async () => {
+    it(`works with type specified - ${databaseName}`, async () => {
       await funcTest('nullif!number(1, 1)', null);
       await funcTestErr(
         'nullif(1, 1)',
@@ -259,23 +260,27 @@ expressionModels.forEach((expressionModel, databaseName) => {
     });
   });
 
-  describe(`stddev - ${databaseName}`, () => {
-    it('works', async () => {
+  describe('stddev', () => {
+    it(`works - ${databaseName}`, async () => {
       await funcTestAgg('round(stddev(aircraft_models.seats))', 29);
     });
 
-    it('works with struct', async () => {
+    it(`works with struct - ${databaseName}`, async () => {
       await funcTestAgg(
         'round(aircraft_models.stddev(aircraft_models.seats))',
         41
       );
     });
 
-    it('works with implicit parameter', async () => {
+    it(`works with implicit parameter - ${databaseName}`, async () => {
       await funcTestAgg('round(aircraft_models.seats.stddev())', 41);
     });
 
-    it('works with filter', async () => {
+    it(`errors with zero args - ${databaseName}`, async () => {
+      await funcTestAggErr('stddev()', 'No matching overload');
+    });
+
+    it(`works with filter - ${databaseName}`, async () => {
       await funcTestAgg(
         'round(aircraft_models.seats.stddev() { where: 1 = 1 })',
         41
@@ -291,6 +296,341 @@ expressionModels.forEach((expressionModel, databaseName) => {
         'round(stddev(count()))',
         'Parameter value of stddev must be scalar, but received aggregate'
       );
+    });
+  });
+
+  describe('row_number', () => {
+    it(`works when the order by is a measure - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `
+   query: aircraft -> {
+     group_by: state,
+     aggregate: aircraft_count
+     group_by: row_num is row_number()
+   }`
+        )
+        .run();
+      console.log(result.sql);
+      expect(result.data.path(0, 'row_num').value).toBe(1);
+      expect(result.data.path(1, 'row_num').value).toBe(2);
+    });
+
+    it(`works when the order by is a measure but there is no group by - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `
+   query: aircraft -> {
+     aggregate: aircraft_count
+     group_by: row_num is row_number()
+   }`
+        )
+        .run();
+      console.log(result.sql);
+      expect(result.data.path(0, 'row_num').value).toBe(1);
+    });
+  });
+
+  describe('misc analytic functions', () => {
+    it(`1 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: tail_num,
+            group_by: n is row_number()
+            order_by: 1
+            nest: foo is {
+              group_by: tail_num
+            }
+          }`
+        )
+        .run();
+    });
+
+    it(`2 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: tail_num
+            group_by: n is row_number()
+          }`
+        )
+        .run();
+    });
+
+    it(`3 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: n is row_number()
+            group_by: tail_num
+          }`
+        )
+        .run();
+    });
+
+    it(`4 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: state,
+            aggregate: aircraft_count
+            group_by: row_num is row_number()
+          }`
+        )
+        .run();
+    });
+
+    it(`5 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            aggregate: aircraft_count
+            group_by: row_num is row_number()
+          }`
+        )
+        .run();
+    });
+
+    it(`6 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: state,
+            group_by: row_num is row_number()
+          }`
+        )
+        .run();
+    });
+
+    it(`7 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: row_num is row_number()
+          }`
+        )
+        .run();
+    });
+
+    it(`8 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: row_num is row_number()
+            order_by: row_num desc
+          }`
+        )
+        .run();
+    });
+
+    it(`9 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: state,
+            aggregate: aircraft_count
+            group_by: row_num is row_number()
+            group_by: r is rank()
+          }`
+        )
+        .run();
+    });
+
+    it(`10 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          // Copy of "hand turtle analytic"
+          query: aircraft -> {
+            group_by: state
+            aggregate: aircraft_count
+            nest: my_turtle is {
+              limit: 4
+              group_by: county
+              aggregate: aircraft_count
+              group_by: row_num is row_number()
+            }
+          }`
+        )
+        .run();
+    });
+
+    it(`11 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: state
+            aggregate: aircraft_count
+            nest: my_turtle is {
+              limit: 4
+              group_by: county
+              aggregate: aircraft_count
+              group_by: row_num is row_number()
+              group_by: first_state is first_value(state)
+            }
+          }`
+        )
+        .run();
+    });
+
+    it(`12 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: state
+            aggregate: aircraft_count
+            nest: my_turtle is {
+              limit: 4
+              group_by: county
+              aggregate: aircraft_count
+              group_by: row_num is row_number()
+              group_by: first_count is first_value(count())
+            }
+          }`
+        )
+        .run();
+    });
+
+    it(`13 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: state
+            aggregate: aircraft_count
+            nest: my_turtle is {
+              limit: 4
+              group_by: county
+              aggregate: aircraft_count
+              group_by: row_num is row_number()
+              group_by: first_stddev is first_value(stddev(id))
+            }
+          }`
+        )
+        .run();
+    });
+
+    it(`14 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: state,
+            aggregate: aircraft_count
+            declare: prev_state_count is lag(aircraft_count)
+            group_by: percent_less_than_prev is
+              (prev_state_count - aircraft_count) / prev_state_count
+          }`
+        )
+        .run();
+    });
+
+    it(`15 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: state,
+            aggregate: aircraft_count
+            declare: two_prev_state_count is lag(aircraft_count, 2)
+            group_by: percent_less_than_two_prev is
+              (two_prev_state_count - aircraft_count) / two_prev_state_count
+          }`
+        )
+        .run();
+    });
+
+    it(`16 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: state,
+            aggregate: aircraft_count
+            declare: prev_state_count is lag(aircraft_count, 1, aircraft_count)
+            group_by: increse_from_prev is
+              (prev_state_count - aircraft_count)
+          }`
+        )
+        .run();
+    });
+
+    it(`17 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: state,
+            aggregate: aircraft_count
+            group_by: prev_state is lag(state, 2, 'None')
+          }`
+        )
+        .run();
+    });
+
+    it(`18 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: aircraft_models.seats,
+            aggregate: aircraft_count
+            group_by: prev_state is lag(aircraft_models.seats, 1)
+          }`
+        )
+        .run();
+    });
+
+    it(`19 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: aircraft_models.seats,
+            aggregate: aircraft_count
+            order_by: seats
+            group_by: rn is row_number()
+          }`
+        )
+        .run();
+    });
+
+    it(`20 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: aircraft_models.seats,
+            aggregate: aircraft_count
+            group_by: prev_state is lag(aircraft_models.seats.sum(), 1)
+          }`
+        )
+        .run();
+    });
+
+    it(`21 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: aircraft_models.seats,
+            aggregate: aircraft_count
+            group_by: prev_state is lag(aircraft_models.seats.stddev(), 1)
+          }`
+        )
+        .run();
     });
   });
 });

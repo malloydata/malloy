@@ -481,17 +481,17 @@ describe('BigQuery hand-built expression test', () => {
                   },
                 ],
               },
-              {
-                name: '_rank',
-                type: 'number',
-                expressionType: 'analytic',
-                e: [
-                  {
-                    type: 'analytic',
-                    function: 'rank',
-                  },
-                ],
-              },
+              // {
+              //   name: '_rank',
+              //   type: 'number',
+              //   expressionType: 'analytic',
+              //   e: [
+              //     {
+              //       type: 'analytic',
+              //       function: 'rank',
+              //     },
+              //   ],
+              // },
             ],
           },
         ],

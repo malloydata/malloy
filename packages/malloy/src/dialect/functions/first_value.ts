@@ -21,20 +21,31 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {DialectFunctionOverloadDef} from './util';
-export {fnConcat} from './concat';
-export {fnStddev} from './stddev';
-export {fnRound} from './round';
-export {fnFloor} from './floor';
-export {fnLower} from './lower';
-export {fnUpper} from './upper';
-export {fnSubstr} from './substr';
-export {fnRegexpExtract} from './regexp_extract';
-export {fnReplace} from './replace';
-export {fnLength} from './length';
-export {fnIfnull} from './ifnull';
-export {fnRowNumber} from './row_number';
-export {fnLag} from './lag';
-export {fnRank} from './rank';
-export {fnFirstValue} from './first_value';
-export {FUNCTIONS} from './all_functions';
+import {ExpressionValueType} from '../..';
+import {
+  arg,
+  overload,
+  param,
+  sql,
+  DialectFunctionOverloadDef,
+  minAnalytic,
+  maxAggregate,
+} from './util';
+
+const types: ExpressionValueType[] = [
+  'string',
+  'number',
+  'timestamp',
+  'date',
+  'json',
+];
+
+export function fnFirstValue(): DialectFunctionOverloadDef[] {
+  return types.flatMap(type => [
+    overload(
+      minAnalytic(type),
+      [param('value', maxAggregate(type))],
+      [sql('FIRST_VALUE(', arg('value'), ')')]
+    ),
+  ]);
+}

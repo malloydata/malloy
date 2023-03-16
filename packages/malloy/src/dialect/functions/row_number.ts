@@ -21,20 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {DialectFunctionOverloadDef} from './util';
-export {fnConcat} from './concat';
-export {fnStddev} from './stddev';
-export {fnRound} from './round';
-export {fnFloor} from './floor';
-export {fnLower} from './lower';
-export {fnUpper} from './upper';
-export {fnSubstr} from './substr';
-export {fnRegexpExtract} from './regexp_extract';
-export {fnReplace} from './replace';
-export {fnLength} from './length';
-export {fnIfnull} from './ifnull';
-export {fnRowNumber} from './row_number';
-export {fnLag} from './lag';
-export {fnRank} from './rank';
-export {fnFirstValue} from './first_value';
-export {FUNCTIONS} from './all_functions';
+import {overload, sql, DialectFunctionOverloadDef, minAnalytic} from './util';
+
+export function fnRowNumber(): DialectFunctionOverloadDef[] {
+  return [overload(minAnalytic('number'), [], [sql('ROW_NUMBER()')])];
+}

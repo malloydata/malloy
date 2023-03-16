@@ -30,6 +30,7 @@ import {
   CompiledQuery,
   DialectFragment,
   Expr,
+  expressionIsAggregate,
   expressionIsCalculation,
   FieldAtomicDef,
   FieldDateDef,
@@ -479,6 +480,15 @@ class QueryField extends QueryNode {
         overload,
         mappedArgs
       );
+
+      if (overload.returnType.expressionType === 'analytic') {
+        return this.generateAnalyticFragment2(
+          resultSet,
+          context,
+          funcCall,
+          state
+        );
+      }
       return this.generateExpressionFromExpr(
         resultSet,
         context,
@@ -736,6 +746,70 @@ class QueryField extends QueryNode {
     );
   }
 
+  generateAnalyticFragment2(
+    resultStruct: FieldInstanceResult,
+    context: QueryStruct,
+    expr: Expr,
+    state: GenerateState
+  ): string {
+    const fields = resultStruct.getUngroupPartitions(undefined);
+    let partitionBy = '';
+    const fieldsString = fields.map(f => f.getPartitionSQL()).join(', ');
+    if (fieldsString.length > 0) {
+      partitionBy = `PARTITION BY ${fieldsString}`;
+    }
+
+    let orderBy = '';
+
+    // calculate the ordering.
+    const obSQL: string[] = [];
+    let orderingField;
+    const orderByDef =
+      (resultStruct.firstSegment as QuerySegment).orderBy ||
+      resultStruct.calculateDefaultOrderBy();
+    for (const ordering of orderByDef) {
+      if (typeof ordering.field === 'string') {
+        orderingField = {
+          name: ordering.field,
+          fif: resultStruct.getField(ordering.field),
+        };
+      } else {
+        orderingField = resultStruct.getFieldByNumber(ordering.field);
+      }
+      if (orderingField.fif.f.fieldDef.expressionType === 'analytic') {
+        continue;
+      }
+      if (resultStruct.firstSegment.type === 'reduce') {
+        obSQL.push(
+          ` ${orderingField.fif.getSQL()}` +
+            // this.parent.dialect.sqlMaybeQuoteIdentifier(
+            //   `${orderingField.name}__${resultStruct.groupSet}`
+            // ) +
+            ` ${ordering.dir || 'ASC'}`
+        );
+      } else if (resultStruct.firstSegment.type === 'project') {
+        obSQL.push(
+          ` ${orderingField.fif.f.generateExpression(resultStruct)} ${
+            ordering.dir || 'ASC'
+          }`
+        );
+      }
+    }
+
+    if (obSQL.length > 0) {
+      orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL);
+    }
+
+    const funcSQL = this.generateExpressionFromExpr(
+      resultStruct,
+      context,
+      expr,
+      state
+    );
+
+    return `${funcSQL} OVER(${partitionBy} ${orderBy})`;
+  }
+
   generateAnalyticFragment(
     resultStruct: FieldInstanceResult,
     context: QueryStruct,
@@ -936,6 +1010,10 @@ function isCalculatedField(f: QueryField): f is QueryAtomicField {
   return f instanceof QueryAtomicField && f.isCalculated();
 }
 
+function isAggregateField(f: QueryField): f is QueryAtomicField {
+  return f instanceof QueryAtomicField && f.isAggregate();
+}
+
 function isScalarField(f: QueryField): f is QueryAtomicField {
   return f instanceof QueryAtomicField && !f.isCalculated();
 }
@@ -947,6 +1025,12 @@ class QueryAtomicField extends QueryField {
 
   isCalculated(): boolean {
     return expressionIsCalculation(
+      (this.fieldDef as FieldAtomicDef).expressionType
+    );
+  }
+
+  isAggregate(): boolean {
+    return expressionIsAggregate(
       (this.fieldDef as FieldAtomicDef).expressionType
     );
   }
@@ -1138,8 +1222,9 @@ class FieldInstanceField implements FieldInstance {
     let exp = this.f.generateExpression(this.parent);
     if (isScalarField(this.f)) {
       exp = this.f.caseGroup(
-        this.parent.childGroups.concat(this.additionalGroupSets),
-        // this.parent.groupSet > 0 ? this.parent.childGroups : [],
+        this.parent.groupSet > 0
+          ? this.parent.childGroups.concat(this.additionalGroupSets)
+          : [],
         exp
       );
     }
@@ -1375,7 +1460,7 @@ class FieldInstanceResult implements FieldInstance {
           firstField ||= fi.fieldUsage.resultIndex;
           if (['date', 'timestamp'].indexOf(fi.f.fieldDef.type) > -1) {
             return [{dir: 'desc', field: fi.fieldUsage.resultIndex}];
-          } else if (isCalculatedField(fi.f)) {
+          } else if (isAggregateField(fi.f)) {
             return [{dir: 'desc', field: fi.fieldUsage.resultIndex}];
           }
         }
@@ -2104,6 +2189,9 @@ class QueryQuery extends QueryField {
         // and the function is an aggregate function?
         for (const e of expr.args) {
           this.addDependantExpr(resultStruct, context, e, joinStack);
+        }
+        if (expr.overload.returnType.expressionType === 'analytic') {
+          resultStruct.root().queryUsesPartitioning = true;
         }
       } else if (isAnalyticFragment(expr)) {
         resultStruct.root().queryUsesPartitioning = true;

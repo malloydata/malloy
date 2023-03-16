@@ -222,6 +222,7 @@ function findOverload(
   for (const overload of func.overloads) {
     let paramIndex = 0;
     let ok = true;
+    let matchedVariadic = false;
     const expressionTypeErrors: ExpressionTypeError[] = [];
     for (let argIndex = 0; argIndex < args.length; argIndex++) {
       const arg = args[argIndex];
@@ -262,13 +263,16 @@ function findOverload(
       }
       if (param.isVariadic) {
         if (argIndex === args.length - 1) {
-          paramIndex = args.length;
+          matchedVariadic = true;
         }
       } else {
         paramIndex++;
       }
     }
-    if (paramIndex !== args.length) {
+    if (
+      !matchedVariadic &&
+      (paramIndex !== args.length || paramIndex !== overload.params.length)
+    ) {
       continue;
     }
     if (ok) {
