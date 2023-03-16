@@ -34,8 +34,10 @@ export class FullQuery extends TurtleHeadedPipe {
     super({explore: explore});
   }
 
-  queryComp(): QueryComp {
-    const structRef = this.explore.structRef();
+  queryComp(isRefOk: boolean): QueryComp {
+    const structRef = isRefOk
+      ? this.explore.structRef()
+      : this.explore.structDef();
     const destQuery: Query = {
       type: 'query',
       structRef,
@@ -80,6 +82,6 @@ export class FullQuery extends TurtleHeadedPipe {
   }
 
   query(): Query {
-    return this.queryComp().query;
+    return this.queryComp(true).query;
   }
 }

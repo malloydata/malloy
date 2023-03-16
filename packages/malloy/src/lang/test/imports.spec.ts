@@ -24,7 +24,7 @@ import './parse-expects';
 import {TestTranslator} from './test-translator';
 
 describe('import:', () => {
-  test('source import', () => {
+  test('simple source', () => {
     const docParse = new TestTranslator('import "child"');
     const xr = docParse.unresolved();
     expect(docParse).toBeErrorless();
@@ -36,7 +36,7 @@ describe('import:', () => {
     const aa = docParse.getSourceDef('aa');
     expect(aa).toBeDefined();
   });
-  test('query import', () => {
+  test('simple query', () => {
     const docParse = new TestTranslator('import "child"');
     const xr = docParse.unresolved();
     expect(docParse).toBeErrorless();
@@ -49,6 +49,37 @@ describe('import:', () => {
     expect(docParse).modelCompiled();
     const aq = docParse.getQuery('aq');
     expect(aq).toBeDefined();
+  });
+  test('query based source with named structref', () => {
+    const docParse = new TestTranslator(`
+import "child"
+source: newSrc is a {
+  join_one: b is botProjQSrc on b.astr = astr
+}
+`);
+    const xr = docParse.unresolved();
+    expect(docParse).toBeErrorless();
+    expect(xr).toEqual({urls: ['internal://test/langtests/child']});
+    docParse.update({
+      urls: {
+        'internal://test/langtests/child': `
+source: bottomSrc is a
+query: botProjQ is bottomSrc -> { project: * }
+source: botProjQSrc is from(->botProjQ)
+`,
+      },
+    });
+    expect(docParse).modelCompiled();
+    const newSrc = docParse.getSourceDef('newSrc');
+    const f = newSrc?.fields.find(f => f.name === 'b');
+    expect(f?.type).toBe('struct');
+    if (f?.type === 'struct') {
+      const ss = f.structSource;
+      expect(ss.type).toBe('query');
+      if (ss.type === 'query') {
+        expect(typeof ss.query.structRef).not.toBe('string');
+      }
+    }
   });
   test('missing import', () => {
     const docParse = new TestTranslator('import "child"');
