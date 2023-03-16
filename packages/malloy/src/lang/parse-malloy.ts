@@ -839,7 +839,7 @@ export abstract class MalloyTranslation {
   }
 }
 
-class MalloyChildTranslator extends MalloyTranslation {
+export class MalloyChildTranslator extends MalloyTranslation {
   constructor(rootURL: string, readonly root: MalloyTranslator) {
     super(rootURL);
   }

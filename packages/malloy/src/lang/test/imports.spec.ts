@@ -32,8 +32,7 @@ describe('import:', () => {
     docParse.update({
       urls: {'internal://test/langtests/child': 'source: aa is a'},
     });
-    const yr = docParse.unresolved();
-    expect(yr).toBeNull();
+    expect(docParse).modelCompiled();
   });
   test('query import', () => {
     const docParse = new TestTranslator('import "child"');

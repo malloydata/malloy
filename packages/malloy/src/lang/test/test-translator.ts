@@ -38,7 +38,7 @@ import {
 import {ExpressionDef, MalloyElement} from '../ast';
 import {NameSpace} from '../ast/types/name-space';
 import {ModelEntry} from '../ast/types/model-entry';
-import {MalloyTranslator} from '../parse-malloy';
+import {MalloyChildTranslator, MalloyTranslator} from '../parse-malloy';
 import {DataRequestResponse, TranslateResponse} from '../translate-response';
 import {StaticSpace} from '../ast/field-space/static-space';
 import {ExprValue} from '../ast/types/expr-value';
@@ -186,6 +186,24 @@ class TestRoot extends MalloyElement implements NameSpace {
     throw new Error("Can't add entries to test model def");
   }
 }
+
+export class TestChildTranslator extends MalloyChildTranslator {
+  translate(): TranslateResponse {
+    if (this.root instanceof TestTranslator) {
+      return super.translate(this.root.internalModel);
+    } else {
+      return super.translate();
+    }
+  }
+
+  addChild(url: string): void {
+    if (!this.childTranslators.get(url)) {
+      const child = new TestChildTranslator(url, this.root);
+      this.childTranslators.set(url, child);
+    }
+  }
+}
+
 const testURI = 'internal://test/langtests/root.malloy';
 export class TestTranslator extends MalloyTranslator {
   testRoot?: TestRoot;
@@ -257,6 +275,13 @@ export class TestTranslator extends MalloyTranslator {
 
   translate(): TranslateResponse {
     return super.translate(this.internalModel);
+  }
+
+  addChild(url: string): void {
+    if (!this.childTranslators.get(url)) {
+      const child = new TestChildTranslator(url, this);
+      this.childTranslators.set(url, child);
+    }
   }
 
   ast(): MalloyElement | undefined {
