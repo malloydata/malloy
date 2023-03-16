@@ -47,7 +47,7 @@ export class DefineQuery extends MalloyElement implements DocStatement {
       name: this.name,
       location: this.location,
     };
-    const exported = false;
+    const exported = true;
     doc.setEntry(this.name, {entry, exported});
     return undefined;
   }

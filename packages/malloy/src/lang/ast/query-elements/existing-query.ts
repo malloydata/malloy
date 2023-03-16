@@ -42,7 +42,7 @@ export class ExistingQuery extends PipelineDesc {
     return this._head;
   }
 
-  queryComp(): QueryComp {
+  queryComp(isRefOk: boolean): QueryComp {
     if (!this.head) {
       throw this.internalError("can't make query from nameless query");
     }
@@ -76,13 +76,13 @@ export class ExistingQuery extends PipelineDesc {
     const query: Query = {
       type: 'query',
       ...destPipe,
-      structRef: queryHead.structRef(),
+      structRef: isRefOk ? queryHead.structRef() : queryHead.structDef(),
       location: this.location,
     };
     return {outputStruct: appended.structDef, query};
   }
 
   query(): Query {
-    return this.queryComp().query;
+    return this.queryComp(true).query;
   }
 }
