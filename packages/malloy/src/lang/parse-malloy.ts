@@ -35,7 +35,7 @@ import {
   DocumentRange,
   DocumentReference,
   ModelDef,
-  NamedStructDefs,
+  NamedModelObject,
   Query,
   SQLBlockStructDef,
   StructDef,
@@ -738,8 +738,8 @@ export abstract class MalloyTranslation {
     }
   }
 
-  getChildExports(importURL: string): NamedStructDefs {
-    const exports: NamedStructDefs = {};
+  getChildExports(importURL: string): Record<string, NamedModelObject> {
+    const exports: Record<string, NamedModelObject> = {};
     const childURL = decodeURI(new URL(importURL, this.sourceURL).toString());
     const child = this.childTranslators.get(childURL);
     if (child) {
@@ -747,7 +747,7 @@ export abstract class MalloyTranslation {
       if (did.translated) {
         for (const fromChild of child.modelDef.exports) {
           const modelEntry = child.modelDef.contents[fromChild];
-          if (modelEntry.type === 'struct') {
+          if (modelEntry.type === 'struct' || modelEntry.type === 'query') {
             exports[fromChild] = modelEntry;
           }
         }

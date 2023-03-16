@@ -57,12 +57,10 @@ export class ImportStatement extends MalloyElement implements DocStatement {
         if (childNeeds) {
           return childNeeds;
         }
-        const importStructs = trans.getChildExports(this.fullURL);
-        for (const importing in importStructs) {
-          doc.setEntry(importing, {
-            entry: importStructs[importing],
-            exported: false,
-          });
+        for (const [importing, entry] of Object.entries(
+          trans.getChildExports(this.fullURL)
+        )) {
+          doc.setEntry(importing, {entry, exported: false});
         }
       } else if (src.status === 'error') {
         this.log(`import failed: '${src.message}'`);

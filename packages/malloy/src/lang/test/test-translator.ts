@@ -208,14 +208,17 @@ const testURI = 'internal://test/langtests/root.malloy';
 export class TestTranslator extends MalloyTranslator {
   testRoot?: TestRoot;
   /*
-   * Tests can assume this model exists:
-   *   explore: a is table('aTable') { primary_key: astr }
-   *   explore: b is a
-   *   explore: ab is a {
+   * All test source files can assume that an import of this
+   * model has already happened.
+   *   source: a is table('aTable') { primary_key: astr }
+   *   source: b is a
+   *   source: ab is a {
    *     join_one: b with astr
    *     measure: acount is count()
    *     query: aturtle is { group_by: astr; aggregate: acount }
    *   }
+   * Also the following tables will be available
+   *   'aTable', 'malloytest.carriers'
    */
   internalModel: ModelDef = {
     name: testURI,
@@ -352,11 +355,9 @@ export class TestTranslator extends MalloyTranslator {
 
   getSourceDef(srcName: string): StructDef | undefined {
     const t = this.translate().translated;
-    if (t) {
-      const s = t.modelDef.contents[srcName];
-      if (s.type === 'struct') {
-        return s;
-      }
+    const s = t?.modelDef?.contents[srcName];
+    if (s  && s.type === 'struct') {
+      return s;
     }
     return undefined;
   }

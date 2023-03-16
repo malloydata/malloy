@@ -33,6 +33,8 @@ describe('import:', () => {
       urls: {'internal://test/langtests/child': 'source: aa is a'},
     });
     expect(docParse).modelCompiled();
+    const aa = docParse.getSourceDef('aa');
+    expect(aa).toBeDefined();
   });
   test('query import', () => {
     const docParse = new TestTranslator('import "child"');
@@ -44,8 +46,9 @@ describe('import:', () => {
         'internal://test/langtests/child': 'query: aq is a->{ project: * }',
       },
     });
-    const yr = docParse.unresolved();
-    expect(yr).toBeNull();
+    expect(docParse).modelCompiled();
+    const aq = docParse.getQuery('aq');
+    expect(aq).toBeDefined();
   });
   test('missing import', () => {
     const docParse = new TestTranslator('import "child"');
