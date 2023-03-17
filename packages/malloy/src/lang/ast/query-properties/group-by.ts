@@ -31,6 +31,7 @@ export class GroupBy extends ListOf<QueryItem> {
     for (const el of members) {
       if (el instanceof FieldDeclaration) {
         el.isMeasure = false;
+        // el.declarationType = 'scalar';
       }
     }
   }

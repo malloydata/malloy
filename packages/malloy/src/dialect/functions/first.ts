@@ -21,18 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDeclaration} from '../query-items/field-declaration';
-import {ListOf} from '../types/malloy-element';
-import {QueryItem} from '../types/query-item';
+import {
+  arg,
+  overload,
+  param,
+  minAggregate,
+  maxScalar,
+  sql,
+  DialectFunctionOverloadDef,
+} from './util';
 
-export class Aggregate extends ListOf<QueryItem> {
-  constructor(members: QueryItem[]) {
-    super('aggregate', members);
-    for (const el of members) {
-      if (el instanceof FieldDeclaration) {
-        el.isMeasure = true;
-        // el.declarationType = 'aggregate';
-      }
-    }
-  }
+export function fnFirst(): DialectFunctionOverloadDef[] {
+  return [
+    overload(
+      minAggregate('number'),
+      [param('value', maxScalar('number'))],
+      [sql('FIRST(', arg('value'), ')')]
+    ),
+  ];
 }

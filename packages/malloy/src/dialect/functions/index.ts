@@ -37,4 +37,5 @@ export {fnRowNumber} from './row_number';
 export {fnLag} from './lag';
 export {fnRank} from './rank';
 export {fnFirstValue} from './first_value';
+export {fnFirst} from './first';
 export {FUNCTIONS} from './all_functions';

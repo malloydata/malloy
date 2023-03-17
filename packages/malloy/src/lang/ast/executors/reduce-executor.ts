@@ -49,6 +49,7 @@ import {
   ReduceFieldSpace,
 } from '../field-space/query-spaces';
 import {DynamicSpace} from '../field-space/dynamic-space';
+import {Calculate} from '../query-properties/calculate';
 
 export class ReduceExecutor implements Executor {
   inputFS: QueryInputSpace;
@@ -71,6 +72,7 @@ export class ReduceExecutor implements Executor {
     if (
       qp instanceof GroupBy ||
       qp instanceof Aggregate ||
+      qp instanceof Calculate ||
       qp instanceof Nests
     ) {
       this.resultFS.addQueryItems(...qp.list);

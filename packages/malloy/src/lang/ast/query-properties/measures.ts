@@ -29,6 +29,7 @@ export class Measures extends DeclareFields {
     super(measures, 'measure');
     for (const dim of measures) {
       dim.isMeasure = true;
+      // dim.declarationType = 'aggregate';
     }
   }
 }

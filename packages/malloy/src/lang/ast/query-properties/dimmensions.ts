@@ -29,6 +29,7 @@ export class Dimensions extends DeclareFields {
     super(dimensions, 'dimension');
     for (const dim of dimensions) {
       dim.isMeasure = false;
+      // dim.declarationType = 'scalar';
     }
   }
 }

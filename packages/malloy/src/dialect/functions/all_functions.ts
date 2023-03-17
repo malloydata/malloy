@@ -14,6 +14,7 @@ import {
   fnStddev,
   fnSubstr,
   fnUpper,
+  fnFirst,
 } from '.';
 import {FunctionMap} from './function_map';
 
@@ -33,6 +34,7 @@ FUNCTIONS.add('ifnull', fnIfnull);
 
 // Aggregate functions
 FUNCTIONS.add('stddev', fnStddev);
+FUNCTIONS.add('first', fnFirst);
 
 // Analytic functions
 FUNCTIONS.add('row_number', fnRowNumber);

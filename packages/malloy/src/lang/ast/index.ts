@@ -79,6 +79,7 @@ export * from './query-elements/full-query';
 export * from './query-items/field-declaration';
 export * from './query-items/field-references';
 export * from './query-properties/aggregate';
+export * from './query-properties/calculate';
 export * from './query-properties/declare-fields';
 export * from './query-properties/dimmensions';
 export * from './query-properties/filters';

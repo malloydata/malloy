@@ -622,6 +622,10 @@ export class MalloyToAST
     return new ast.GroupBy(this.getQueryItems(pcx.queryFieldList()));
   }
 
+  visitCalculateStatement(pcx: parse.CalculateStatementContext): ast.Calculate {
+    return new ast.Calculate(this.getQueryItems(pcx.queryFieldList()));
+  }
+
   visitFieldCollection(
     pcx: parse.FieldCollectionContext
   ): ast.ProjectStatement {

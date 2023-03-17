@@ -65,14 +65,6 @@ export class FieldDeclaration extends MalloyElement {
     let exprValue;
 
     try {
-      // const ns = this.namespace();
-      // if (ns === undefined) {
-      //   this.log("AHHHHH");
-      //   return {
-      //     "name": `error_defining_${exprName}`,
-      //     "type": "string"
-      //   };
-      // }
       exprValue = this.expr.getExpression(exprFS);
     } catch (error) {
       this.log(`Cannot define '${exprName}', ${error.message}`);
@@ -95,6 +87,14 @@ export class FieldDeclaration extends MalloyElement {
       if (exprValue.expressionType) {
         template.expressionType = exprValue.expressionType;
       }
+      // if (
+      //   this.declarationType &&
+      //   this.declarationType !== exprValue.expressionType
+      // ) {
+      //   this.log(
+      //     `invalid field definition: expected a ${this.declarationType} expression but got a ${exprValue.expressionType} expression instead.`
+      //   );
+      // }
       if (this.exprSrc) {
         template.code = this.exprSrc;
       }

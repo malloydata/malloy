@@ -2229,7 +2229,7 @@ class QueryQuery extends QueryField {
         });
         this.addDependancies(resultStruct, field);
 
-        if (isCalculatedField(field)) {
+        if (isAggregateField(field)) {
           if (this.firstSegment.type === 'project') {
             throw new Error(
               `Aggregate Fields cannot be used in PROJECT - '${field.fieldDef.name}'`

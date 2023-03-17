@@ -25,13 +25,13 @@ import {FieldDeclaration} from '../query-items/field-declaration';
 import {ListOf} from '../types/malloy-element';
 import {QueryItem} from '../types/query-item';
 
-export class Aggregate extends ListOf<QueryItem> {
+export class Calculate extends ListOf<QueryItem> {
   constructor(members: QueryItem[]) {
-    super('aggregate', members);
+    super('calculate', members);
     for (const el of members) {
       if (el instanceof FieldDeclaration) {
-        el.isMeasure = true;
-        // el.declarationType = 'aggregate';
+        // el.isCalculation = true;
+        // el.declarationType = 'analytic';
       }
     }
   }

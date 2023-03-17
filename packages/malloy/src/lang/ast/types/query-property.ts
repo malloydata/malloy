@@ -36,6 +36,7 @@ import {Ordering} from '../query-properties/ordering';
 import {ProjectStatement} from '../query-properties/project-statement';
 import {SampleProperty} from '../query-properties/sampling';
 import {Top} from '../query-properties/top';
+import {Calculate} from '../query-properties/calculate';
 
 export type QueryProperty =
   | Ordering
@@ -52,6 +53,7 @@ export type QueryProperty =
   | NestReference
   | Nests
   | Aggregate
+  | Calculate
   | GroupBy;
 export function isQueryProperty(q: MalloyElement): q is QueryProperty {
   return (
@@ -65,6 +67,7 @@ export function isQueryProperty(q: MalloyElement): q is QueryProperty {
     q instanceof DeclareFields ||
     q instanceof ProjectStatement ||
     q instanceof Aggregate ||
+    q instanceof Calculate ||
     q instanceof Nests ||
     isNestedQuery(q) ||
     q instanceof GroupBy

@@ -248,6 +248,7 @@ queryStatement
   | projectStatement
   | indexStatement
   | aggregateStatement
+  | calculateStatement
   | topStatement
   | limitStatement
   | orderByStatement
@@ -287,6 +288,10 @@ nestEntry
 
 aggregateStatement
   : AGGREGATE queryFieldList
+  ;
+
+calculateStatement
+  : CALCULATE queryFieldList
   ;
 
 projectStatement
