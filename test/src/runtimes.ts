@@ -116,6 +116,31 @@ export function rows(qr: Result): QueryDataRow[] {
   return qr.data.value;
 }
 
+export function runtimeFor(dbName: string): SingleConnectionRuntime {
+  let connection;
+  switch (dbName) {
+    case 'bigquery':
+      connection = new BigQueryTestConnection(
+        dbName,
+        {},
+        {defaultProject: 'malloy-data'}
+      );
+      break;
+    case 'postgres':
+      connection = new PostgresTestConnection(dbName);
+      break;
+    case 'duckdb':
+      connection = new DuckDBTestConnection(dbName);
+      break;
+    case 'duckdb_wasm':
+      connection = new DuckDBWASMTestConnection(dbName);
+      break;
+    default:
+      throw new Error(`Unknown runtime "${dbName}`);
+  }
+  return new SingleConnectionRuntime(files, connection);
+}
+
 export const allDatabases = ['postgres', 'bigquery', 'duckdb', 'duckdb_wasm'];
 type RuntimeDatabaseNames = typeof allDatabases[number];
 
@@ -125,35 +150,10 @@ export class RuntimeList {
 
   constructor(databaseList: RuntimeDatabaseNames[] | undefined = undefined) {
     for (const dbName of databaseList || allDatabases) {
-      let connection;
-      switch (dbName) {
-        case 'bigquery':
-          connection = new BigQueryTestConnection(
-            dbName,
-            {},
-            {defaultProject: 'malloy-data'}
-          );
-          break;
-        case 'postgres':
-          connection = new PostgresTestConnection(dbName);
-          break;
-        case 'duckdb':
-          connection = new DuckDBTestConnection(dbName);
-          break;
-        case 'duckdb_wasm':
-          connection = new DuckDBWASMTestConnection(dbName);
-          break;
-        default:
-          throw new Error(`Unknown runtime "${dbName}`);
-      }
-      this.runtimeMap.set(
-        dbName,
-        new SingleConnectionRuntime(files, connection)
-      );
+      const rt = runtimeFor(dbName);
+      this.runtimeMap.set(dbName, rt);
+      this.runtimeList.push([dbName, rt]);
     }
-    this.runtimeMap.forEach((runtime, name) =>
-      this.runtimeList.push([name, runtime])
-    );
   }
 
   async closeAll(): Promise<void> {

@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /*
  * Copyright 2023 Google LLC
  *
@@ -34,11 +35,13 @@ import {
   TurtleDef,
   isFilteredAliasedName,
 } from '../../model/malloy_types';
-import {MalloyElement} from '../ast';
+import {ExpressionDef, MalloyElement} from '../ast';
 import {NameSpace} from '../ast/types/name-space';
 import {ModelEntry} from '../ast/types/model-entry';
-import {MalloyTranslator} from '../parse-malloy';
-import {TranslateResponse} from '../translate-response';
+import {MalloyChildTranslator, MalloyTranslator} from '../parse-malloy';
+import {DataRequestResponse, TranslateResponse} from '../translate-response';
+import {StaticSpace} from '../ast/field-space/static-space';
+import {ExprValue} from '../ast/types/expr-value';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
@@ -184,18 +187,38 @@ class TestRoot extends MalloyElement implements NameSpace {
   }
 }
 
+export class TestChildTranslator extends MalloyChildTranslator {
+  translate(): TranslateResponse {
+    if (this.root instanceof TestTranslator) {
+      return super.translate(this.root.internalModel);
+    } else {
+      return super.translate();
+    }
+  }
+
+  addChild(url: string): void {
+    if (!this.childTranslators.get(url)) {
+      const child = new TestChildTranslator(url, this.root);
+      this.childTranslators.set(url, child);
+    }
+  }
+}
+
 const testURI = 'internal://test/langtests/root.malloy';
 export class TestTranslator extends MalloyTranslator {
   testRoot?: TestRoot;
   /*
-   * Tests can assume this model exists:
-   *   explore: a is table('aTable') { primary_key: astr }
-   *   explore: b is a
-   *   explore: ab is a {
+   * All test source files can assume that an import of this
+   * model has already happened.
+   *   source: a is table('aTable') { primary_key: astr }
+   *   source: b is a
+   *   source: ab is a {
    *     join_one: b with astr
    *     measure: acount is count()
    *     query: aturtle is { group_by: astr; aggregate: acount }
    *   }
+   * Also the following tables will be available
+   *   'aTable', 'malloytest.carriers'
    */
   internalModel: ModelDef = {
     name: testURI,
@@ -244,10 +267,10 @@ export class TestTranslator extends MalloyTranslator {
     },
   };
 
-  constructor(source: string, rootRule = 'malloyDocument') {
+  constructor(readonly testSrc: string, rootRule = 'malloyDocument') {
     super(testURI);
     this.grammarRule = rootRule;
-    this.importZone.define(testURI, source);
+    this.importZone.define(testURI, testSrc);
     for (const tableName in mockSchema) {
       this.schemaZone.define(tableName, mockSchema[tableName]);
     }
@@ -255,6 +278,13 @@ export class TestTranslator extends MalloyTranslator {
 
   translate(): TranslateResponse {
     return super.translate(this.internalModel);
+  }
+
+  addChild(url: string): void {
+    if (!this.childTranslators.get(url)) {
+      const child = new TestChildTranslator(url, this);
+      this.childTranslators.set(url, child);
+    }
   }
 
   ast(): MalloyElement | undefined {
@@ -307,6 +337,79 @@ export class TestTranslator extends MalloyTranslator {
       return explore;
     }
     throw new Error(`Expected model to contain explore '${exploreName}'`);
+  }
+
+  static inspectCompile = false;
+  compile(): void {
+    const compileTo = this.translate();
+    if (compileTo.translated && TestTranslator.inspectCompile) {
+      console.log('MODEL: ', pretty(compileTo.translated.modelDef));
+      console.log('QUERIES: ', pretty(compileTo.translated.queryList));
+    }
+    // All the stuff to ask the ast for a translation is already in TestTranslator
+  }
+
+  unresolved(): DataRequestResponse {
+    return this.importsAndTablesStep.step(this);
+  }
+
+  getSourceDef(srcName: string): StructDef | undefined {
+    const t = this.translate().translated;
+    const s = t?.modelDef?.contents[srcName];
+    if (s && s.type === 'struct') {
+      return s;
+    }
+    return undefined;
+  }
+
+  getQuery(queryName: string | number): Query | undefined {
+    const t = this.translate().translated;
+    if (t) {
+      const s =
+        typeof queryName === 'string'
+          ? t.modelDef.contents[queryName]
+          : t.queryList[queryName];
+      if (s?.type === 'query') {
+        return s;
+      }
+    }
+    return undefined;
+  }
+}
+
+export class BetaExpression extends TestTranslator {
+  private compiled?: ExprValue;
+  constructor(src: string) {
+    super(src, 'justExpr');
+  }
+
+  compile(): void {
+    const exprAst = this.ast();
+    if (exprAst instanceof ExpressionDef) {
+      const aStruct = this.internalModel.contents['ab'];
+      if (aStruct.type === 'struct') {
+        const tstFS = new StaticSpace(aStruct);
+        const exprDef = exprAst.getExpression(tstFS);
+        this.compiled = exprDef;
+        if (TestTranslator.inspectCompile) {
+          console.log('EXPRESSION: ', pretty(exprDef));
+        }
+      } else {
+        throw new Error("Can't get simple namespace for expression tests");
+      }
+    } else if (this.logger.hasErrors()) {
+      return;
+    } else {
+      const whatIsIt = exprAst?.toString() || 'NO AST GENERATED';
+      throw new Error(`Not an expression: ${whatIsIt}`);
+    }
+  }
+
+  generated(): ExprValue {
+    if (!this.compiled) {
+      throw new Error('Must compile expression before fetching generated code');
+    }
+    return this.compiled;
   }
 }
 

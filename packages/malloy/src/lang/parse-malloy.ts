@@ -35,7 +35,7 @@ import {
   DocumentRange,
   DocumentReference,
   ModelDef,
-  NamedModelObjects,
+  NamedModelObject,
   Query,
   SQLBlockStructDef,
   StructDef,
@@ -824,8 +824,8 @@ export abstract class MalloyTranslation implements ImportedTranslation {
     }
   }
 
-  getChildExports(importURL: string): NamedModelObjects {
-    const exports: NamedModelObjects = {};
+  getChildExports(importURL: string): Record<string, NamedModelObject> {
+    const exports: Record<string, NamedModelObject> = {};
     const childURL = decodeURI(new URL(importURL, this.sourceURL).toString());
     const child = this.childTranslators.get(childURL);
     if (child) {
@@ -833,7 +833,11 @@ export abstract class MalloyTranslation implements ImportedTranslation {
       if (did.translated) {
         for (const fromChild of child.modelDef.exports) {
           const modelEntry = child.modelDef.contents[fromChild];
-          if (modelEntry.type === 'struct' || modelEntry.type === 'function') {
+          if (
+            modelEntry.type === 'struct' ||
+            modelEntry.type === 'query' ||
+            modelEntry.type === 'function'
+          ) {
             exports[fromChild] = modelEntry;
           }
         }
@@ -925,7 +929,7 @@ export abstract class MalloyTranslation implements ImportedTranslation {
   }
 }
 
-class MalloyChildTranslator extends MalloyTranslation {
+export class MalloyChildTranslator extends MalloyTranslation {
   constructor(rootURL: string, readonly root: MalloyTranslator) {
     super(rootURL);
   }
