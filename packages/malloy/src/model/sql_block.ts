@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {SQLBlockSource, SQLPhrase, isSQLFragment} from './malloy_types';
+import {SQLBlockSource, SQLPhrase, phraseIsSQLFragment} from './malloy_types';
 import {generateHash} from './utils';
 
 /**
@@ -53,7 +53,7 @@ export function makeSQLBlock(
 // algorithm needs to change
 function nameFor(select: SQLPhrase[]): string {
   const phrases = select.map(el =>
-    isSQLFragment(el) ? el.sql : JSON.stringify(el)
+    phraseIsSQLFragment(el) ? el.sql : JSON.stringify(el)
   );
   return generateHash(phrases.join(';'));
 }

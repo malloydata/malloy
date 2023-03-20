@@ -21,7 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {SQLBlockSource} from '../../../model/malloy_types';
+import {
+  phraseIsQuery,
+  refIsStructDef,
+  SQLBlockSource,
+  StructRef,
+} from '../../../model/malloy_types';
 import {makeSQLBlock} from '../../../model/sql_block';
 
 import {ModelDataRequest} from '../../translate-response';
@@ -39,12 +44,33 @@ export class SQLStatement extends MalloyElement implements DocStatement {
     this.has({select: select});
   }
 
+  connectionFromStructRef(ref: StructRef): string | undefined {
+    if (typeof ref === 'string') {
+      const ent = this.modelEntry(ref)?.entry;
+      if (ent?.type === 'struct') {
+        ref = ent;
+      } else {
+        return;
+      }
+    }
+    if (refIsStructDef(ref) && ref.structRelationship.type === 'basetable') {
+      return ref.structRelationship.connectionName;
+    }
+  }
+
   sqlBlock(): SQLBlockSource {
     if (!this.requestBlock) {
-      this.requestBlock = makeSQLBlock(
-        this.select.sqlPhrases(),
-        this.connection
-      );
+      let connection = this.connection;
+      const bits = this.select.sqlPhrases();
+      if (!connection) {
+        for (const bit of bits) {
+          if (phraseIsQuery(bit)) {
+            connection = this.connectionFromStructRef(bit.structRef);
+            break;
+          }
+        }
+      }
+      this.requestBlock = makeSQLBlock(bits, connection);
     }
     return this.requestBlock;
   }

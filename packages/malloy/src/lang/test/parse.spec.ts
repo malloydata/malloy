@@ -31,7 +31,7 @@ import {
   expressionIsCalculation,
   isFieldTypeDef,
   isFilteredAliasedName,
-  isSQLFragment,
+  phraseIsSQLFragment,
 } from '../../model';
 import {makeSQLBlock} from '../../model/sql_block';
 import {
@@ -1181,7 +1181,7 @@ describe('sql:', () => {
       const star = compileSql.select[1];
       const where = compileSql.select[2];
       expect(select).toEqual({sql: 'SELECT * FROM '});
-      expect(isSQLFragment(star)).toBeFalsy();
+      expect(phraseIsSQLFragment(star)).toBeFalsy();
       expect(where).toEqual({sql: ' WHERE 1=1'});
     }
   });
@@ -1358,7 +1358,7 @@ describe('error handling', () => {
 
 function getSelectOneStruct(sqlBlock: SQLBlockSource): SQLBlockStructDef {
   const selectThis = sqlBlock.select[0];
-  if (!isSQLFragment(selectThis)) {
+  if (!phraseIsSQLFragment(selectThis)) {
     throw new Error('weird test support error sorry');
   }
   return {

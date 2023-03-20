@@ -60,7 +60,7 @@ import {
   expressionIsCalculation,
   flattenQuery,
   isSQLBlock,
-  isSQLFragment,
+  phraseIsSQLFragment,
   FieldUnsupportedDef,
 } from './model';
 import {
@@ -304,7 +304,7 @@ export class Malloy {
   ): SQLBlock {
     let queryModel: QueryModel;
     const sqlStrings = toCompile.select.map(segment => {
-      if (isSQLFragment(segment)) {
+      if (phraseIsSQLFragment(segment)) {
         return segment.sql;
       } else {
         // TODO catch exceptions and throw errors ...

@@ -743,8 +743,11 @@ export interface SQLFragment {
   sql: string;
 }
 export type SQLPhrase = Query | SQLFragment;
-export function isSQLFragment(f: SQLPhrase): f is SQLFragment {
+export function phraseIsSQLFragment(f: SQLPhrase): f is SQLFragment {
   return (f as SQLFragment).sql !== undefined;
+}
+export function phraseIsQuery(f: SQLPhrase): f is Query {
+  return (f as Query).type === 'query';
 }
 /**
  * A source reference to an SQL block. The compiler uses these to request
