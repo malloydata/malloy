@@ -64,7 +64,7 @@ describe('JSON tests', () => {
             ${modelString}
 
             query: s-> {
-              group_by: class_name is JSON_EXTRACT_SCALAR(j, '$.class_name')
+              group_by: class_name is json_extract_scalar!(j, '$.class_name')
               order_by: 1 desc
             }
               `

@@ -407,13 +407,13 @@ describe.each(expressionModels)('%s', (databaseName, expressionModel) => {
       .loadQuery(
         `
         query: aircraft->{
-          group_by: first is substring(city,1,1)
+          group_by: first is substr(city,1,1)
           aggregate: aircraft_count is count()
           nest: aircraft is {
-            group_by: first_two is substring(city,1,2)
+            group_by: first_two is substr(city,1,2)
             aggregate: aircraft_count is count()
             nest: aircraft is {
-              group_by: first_three is substring(city,1,3)
+              group_by: first_three is substr(city,1,3)
               aggregate: aircraft_count is count()
             }
           }

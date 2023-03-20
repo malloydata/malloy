@@ -27,7 +27,6 @@ import {
   TimestampUnit,
   isTimeFieldType,
   maxExpressionType,
-  RegexpLiteralFragment,
   FieldValueType,
 } from '../../../model/malloy_types';
 
@@ -203,10 +202,7 @@ function regexEqual(left: ExprValue, right: ExprValue): Expr | undefined {
           type: 'dialect',
           function: 'regexpMatch',
           expr: left.value,
-          regexp: (right.value[0] as RegexpLiteralFragment).literal.replace(
-            /^r'/,
-            "'"
-          ),
+          regexp: right.value,
         },
       ];
     }
@@ -217,10 +213,7 @@ function regexEqual(left: ExprValue, right: ExprValue): Expr | undefined {
           type: 'dialect',
           function: 'regexpMatch',
           expr: right.value,
-          regexp: (left.value[0] as RegexpLiteralFragment).literal.replace(
-            /^r'/,
-            "'"
-          ),
+          regexp: left.value,
         },
       ];
     }

@@ -21,10 +21,5 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FUNCTIONS} from '../../functions';
-import {fnRegexpExtract, fnStddev} from './functions_index';
-
-export const POSTGRES_FUNCTIONS = FUNCTIONS.clone();
-POSTGRES_FUNCTIONS.add('regexp_extract', fnRegexpExtract);
-POSTGRES_FUNCTIONS.add('stddev', fnStddev);
-POSTGRES_FUNCTIONS.seal();
+export {fnRegexpExtract} from './regexp_extract';
+export {fnStddev} from './stddev';

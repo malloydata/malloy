@@ -85,7 +85,8 @@ export class ExprUngroup extends ExpressionDef {
       }
       return {
         dataType: this.returns(exprVal),
-        expressionType: 'analytic',
+        // TODO crs
+        expressionType: 'aggregate',
         value: [ungroup],
       };
     }

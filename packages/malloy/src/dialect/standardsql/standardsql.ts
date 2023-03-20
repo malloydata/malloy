@@ -384,8 +384,8 @@ ${indent(sql)}
     return cast.expr;
   }
 
-  sqlRegexpMatch(expr: Expr, regexp: string): Expr {
-    return mkExpr`REGEXP_CONTAINS(${expr}, r${regexp})`;
+  sqlRegexpMatch(expr: Expr, regexp: Expr): Expr {
+    return mkExpr`REGEXP_CONTAINS(${expr}, ${regexp})`;
   }
 
   sqlLiteralTime(

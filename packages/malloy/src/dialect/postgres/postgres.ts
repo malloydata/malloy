@@ -77,7 +77,7 @@ export class PostgresDialect extends Dialect {
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
-  supportsAggDistinct = false;
+  supportsAggDistinct = true;
   supportsCTEinCoorelatedSubQueries = true;
   dontUnionIndex = false;
   supportsQualify = false;
@@ -320,7 +320,7 @@ export class PostgresDialect extends Dialect {
     return cast.expr;
   }
 
-  sqlRegexpMatch(expr: Expr, regexp: string): Expr {
+  sqlRegexpMatch(expr: Expr, regexp: Expr): Expr {
     return mkExpr`(${expr} ~ ${regexp})`;
   }
   sqlLiteralTime(
@@ -376,6 +376,21 @@ export class PostgresDialect extends Dialect {
       SELECT sum((a::json->>'f2')::DOUBLE PRECISION) as value
       FROM (
         SELECT UNNEST(array_agg(distinct row_to_json(row(${key},${value}))::text)) a
+      ) a
+    )`;
+  }
+
+  sqlAggDistinct(
+    key: string,
+    values: string[],
+    func: (valNames: string[]) => string
+  ): string {
+    return `(
+      SELECT ${func(values.map((v, i) => `(a::json->>'f${i + 2}')`))} as value
+      FROM (
+        SELECT UNNEST(array_agg(distinct row_to_json(row(${key},${values.join(
+      ','
+    )}))::text)) a
       ) a
     )`;
   }

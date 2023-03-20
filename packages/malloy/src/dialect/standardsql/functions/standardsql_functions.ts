@@ -23,5 +23,5 @@
 
 import {FUNCTIONS} from '../../functions';
 
-export const STANDARDSQL_FUNCTIONS = FUNCTIONS;
+export const STANDARDSQL_FUNCTIONS = FUNCTIONS.clone();
 STANDARDSQL_FUNCTIONS.seal();

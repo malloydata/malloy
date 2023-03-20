@@ -15,7 +15,9 @@ import {
   fnSubstr,
   fnUpper,
   fnFirst,
-} from '.';
+  fnChr,
+  fnNullif,
+} from './functions_index';
 import {FunctionMap} from './function_map';
 
 export const FUNCTIONS = new FunctionMap();
@@ -31,6 +33,8 @@ FUNCTIONS.add('regexp_extract', fnRegexpExtract);
 FUNCTIONS.add('replace', fnReplace);
 FUNCTIONS.add('length', fnLength);
 FUNCTIONS.add('ifnull', fnIfnull);
+FUNCTIONS.add('nullif', fnNullif);
+FUNCTIONS.add('chr', fnChr);
 
 // Aggregate functions
 FUNCTIONS.add('stddev', fnStddev);

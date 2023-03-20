@@ -21,10 +21,31 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FUNCTIONS} from '../../functions';
-import {fnRegexpExtract, fnStddev} from './functions_index';
+import {ExpressionValueType} from '../..';
+import {
+  arg,
+  overload,
+  param,
+  minScalar,
+  maxAnalytic,
+  sql,
+  DialectFunctionOverloadDef,
+} from './util';
 
-export const POSTGRES_FUNCTIONS = FUNCTIONS.clone();
-POSTGRES_FUNCTIONS.add('regexp_extract', fnRegexpExtract);
-POSTGRES_FUNCTIONS.add('stddev', fnStddev);
-POSTGRES_FUNCTIONS.seal();
+const types: ExpressionValueType[] = [
+  'string',
+  'number',
+  'timestamp',
+  'date',
+  'json',
+];
+
+export function fnNullif(): DialectFunctionOverloadDef[] {
+  return types.map(type =>
+    overload(
+      minScalar(type),
+      [param('value1', maxAnalytic(type)), param('value2', maxAnalytic(type))],
+      [sql('NULLIF(', arg('value1'), ', ', arg('value2'), ')')]
+    )
+  );
+}

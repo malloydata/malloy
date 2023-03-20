@@ -383,7 +383,7 @@ export class DuckDBDialect extends Dialect {
     return cast.expr;
   }
 
-  sqlRegexpMatch(expr: Expr, regexp: string): Expr {
+  sqlRegexpMatch(expr: Expr, regexp: Expr): Expr {
     return mkExpr`REGEXP_MATCHES(${expr}, ${regexp})`;
   }
 

@@ -21,10 +21,21 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FUNCTIONS} from '../../functions';
-import {fnRegexpExtract, fnStddev} from './functions_index';
-
-export const POSTGRES_FUNCTIONS = FUNCTIONS.clone();
-POSTGRES_FUNCTIONS.add('regexp_extract', fnRegexpExtract);
-POSTGRES_FUNCTIONS.add('stddev', fnStddev);
-POSTGRES_FUNCTIONS.seal();
+export {fnConcat} from './concat';
+export {fnStddev} from './stddev';
+export {fnRound} from './round';
+export {fnFloor} from './floor';
+export {fnLower} from './lower';
+export {fnChr} from './chr';
+export {fnUpper} from './upper';
+export {fnSubstr} from './substr';
+export {fnRegexpExtract} from './regexp_extract';
+export {fnReplace} from './replace';
+export {fnLength} from './length';
+export {fnIfnull} from './ifnull';
+export {fnNullif} from './nullif';
+export {fnRowNumber} from './row_number';
+export {fnLag} from './lag';
+export {fnRank} from './rank';
+export {fnFirstValue} from './first_value';
+export {fnFirst} from './first';

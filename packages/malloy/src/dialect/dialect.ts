@@ -179,7 +179,7 @@ export abstract class Dialect {
 
   abstract sqlLiteralRegexp(literal: string): string;
 
-  abstract sqlRegexpMatch(expr: Expr, regex: string): Expr;
+  abstract sqlRegexpMatch(expr: Expr, regex: Expr): Expr;
 
   dialectExpr(df: DialectFragment): Expr {
     switch (df.function) {

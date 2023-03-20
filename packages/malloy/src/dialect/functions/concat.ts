@@ -43,7 +43,16 @@ export function fnConcat(): DialectFunctionOverloadDef[] {
     ),
     overload(
       minScalar('string'),
-      [params('values', maxAnalytic('string'))],
+      [
+        params(
+          'values',
+          maxAnalytic('string'),
+          maxAnalytic('number'),
+          maxAnalytic('date'),
+          maxAnalytic('timestamp'),
+          maxAnalytic('boolean')
+        ),
+      ],
       [sql('CONCAT(', spread(arg('values')), ')')]
     ),
   ];

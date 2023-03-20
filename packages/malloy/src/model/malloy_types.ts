@@ -387,7 +387,7 @@ export interface TypecastFragment extends DialectFragmentBase {
 export interface RegexpMatchFragment extends DialectFragmentBase {
   function: 'regexpMatch';
   expr: Expr;
-  regexp: string;
+  regexp: Expr;
 }
 
 export interface DivFragment extends DialectFragmentBase {

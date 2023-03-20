@@ -846,7 +846,7 @@ describe('expressions', () => {
   });
 
   test('field name', exprOK('astr'));
-  test('function call', exprOK('CURRENT_TIMESTAMP()'));
+  test('function call', exprOK("concat('foo')"));
 
   describe('operators', () => {
     test('addition', exprOK('42 + 7'));
@@ -2287,8 +2287,8 @@ describe('pipeline comprehension', () => {
   });
 });
 
-describe('standard sql function return types', () => {
+describe('raw function call with type specified', () => {
   test('timestamp_seconds', () => {
-    expect('timestamp_seconds(0)').toReturnType('timestamp');
+    expect('timestamp_seconds!timestamp(0)').toReturnType('timestamp');
   });
 });

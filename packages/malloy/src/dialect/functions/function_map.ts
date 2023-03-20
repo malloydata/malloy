@@ -12,7 +12,7 @@ export class FunctionMap {
   }
 
   clone(): FunctionMap {
-    return new FunctionMap(this.getters);
+    return new FunctionMap(new Map(this.getters));
   }
 
   add(name: string, getter: Thunk<DialectFunctionOverloadDef[]>) {

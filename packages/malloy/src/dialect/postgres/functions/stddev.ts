@@ -21,10 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FUNCTIONS} from '../../functions';
-import {fnRegexpExtract, fnStddev} from './functions_index';
+import {
+  arg,
+  overload,
+  param,
+  minAggregate,
+  maxScalar,
+  sql,
+  DialectFunctionOverloadDef,
+} from '../../functions/util';
 
-export const POSTGRES_FUNCTIONS = FUNCTIONS.clone();
-POSTGRES_FUNCTIONS.add('regexp_extract', fnRegexpExtract);
-POSTGRES_FUNCTIONS.add('stddev', fnStddev);
-POSTGRES_FUNCTIONS.seal();
+export function fnStddev(): DialectFunctionOverloadDef[] {
+  return [
+    overload(
+      minAggregate('number'),
+      [param('value', maxScalar('number'))],
+      [sql('STDDEV(', arg('value'), '::DOUBLE PRECISION)')]
+    ),
+  ];
+}

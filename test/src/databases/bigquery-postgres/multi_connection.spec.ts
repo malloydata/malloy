@@ -128,7 +128,7 @@ explore: postgres_aircraft is table('postgres:malloytest.aircraft'){
         `
       query: table('postgres:malloytest.airports')->{
         group_by:
-          version is version()
+          version is version!()
         aggregate:
           code_count is count(distinct code)
           airport_count is count()
