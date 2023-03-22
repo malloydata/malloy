@@ -156,6 +156,20 @@ export interface ResultStructMetadata {
   resultMetadata?: ResultStructMetadataDef;
 }
 
+export interface OutputFieldFragment {
+  type: 'outputField';
+  name: string;
+}
+
+export function isOutputFieldFragment(f: Fragment): f is OutputFieldFragment {
+  return (f as OutputFieldFragment)?.type === 'outputField';
+}
+
+// can generate output field fragment
+// or aggregate expression (referenced from output field fragment)
+// or aggregate expression raw
+// or expression based on constants and/or output field fragments
+
 export interface FilterFragment {
   type: 'filterExpression';
   filterList: FilterExpression[];
@@ -434,6 +448,7 @@ export type Fragment =
   | FieldFragment
   | ParameterFragment
   | FilterFragment
+  | OutputFieldFragment
   | AggregateFragment
   | UngroupFragment
   | DialectFragment
@@ -875,12 +890,25 @@ export interface ExpressionTypeDesc {
   dataType: FieldValueType;
   expressionType: ExpressionType;
   rawType?: string;
+  evalSpace: EvalSpace;
+}
+
+export type EvalSpace = 'constant' | 'input' | 'output';
+
+export function mergeEvalSpaces(...evalSpaces: EvalSpace[]): EvalSpace {
+  if (evalSpaces.every(e => e === 'constant')) {
+    return 'constant';
+  } else if (evalSpaces.every(e => e === 'output' || e === 'constant')) {
+    return 'output';
+  }
+  return 'input';
 }
 
 export interface TypeDesc {
   dataType: FieldValueType;
   expressionType: ExpressionType;
   rawType?: string;
+  evalSpace: EvalSpace;
 }
 
 export interface FunctionParameterDef {

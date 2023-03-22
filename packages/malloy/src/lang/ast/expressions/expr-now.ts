@@ -32,6 +32,7 @@ export class ExprNow extends ExpressionDef {
     return {
       dataType: 'timestamp',
       expressionType: 'scalar',
+      evalSpace: 'constant', // TODO unsure about this
       value: [
         {
           type: 'dialect',

@@ -28,7 +28,7 @@ import {
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
-import {QueryInputSpace} from '../field-space/query-spaces';
+import {QueryInputSpace, QuerySpace} from '../field-space/query-spaces';
 import {FT} from '../fragtype-utils';
 import {DefSpace} from '../query-items/field-declaration';
 import {ExprValue} from '../types/expr-value';
@@ -62,17 +62,20 @@ export class ExprUngroup extends ExpressionDef {
     };
     if (this.typeCheck(this.expr, {...exprVal, expressionType: 'scalar'})) {
       if (this.fields.length > 0) {
-        let qs = fs;
-        if (fs instanceof DefSpace) {
-          qs = fs.realFS;
-        }
-        if (!(qs instanceof QueryInputSpace)) {
+        if (!fs.isQueryFieldSpace()) {
           this.log(
             `${this.control}() must be in a query -- weird internal error`
           );
           return errorFor('ungroup query check');
         }
-        const output = qs.result;
+        const output = fs.outputSpace();
+        if (!(output instanceof QuerySpace)) {
+          // TODO maybe make OutputSpace return an interface which has checkUngroup
+          this.log(
+            `${this.control}() must be in a query -- weird internal error`
+          );
+          return errorFor('ungroup query check');
+        }
         const dstFields: string[] = [];
         const isExclude = this.control === 'exclude';
         for (const mustBeInOutput of this.fields) {
@@ -85,9 +88,9 @@ export class ExprUngroup extends ExpressionDef {
       }
       return {
         dataType: this.returns(exprVal),
-        // TODO crs
-        expressionType: 'aggregate',
+        expressionType: 'analytic',
         value: [ungroup],
+        evalSpace: 'input',
       };
     }
     this.log(`${this.control}() incompatible type`);

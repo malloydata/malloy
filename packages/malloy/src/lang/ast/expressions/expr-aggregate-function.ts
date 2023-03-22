@@ -65,6 +65,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
             dataType: footType.dataType,
             expressionType: footType.expressionType,
             value: [{type: 'field', path: this.source.refString}],
+            evalSpace: footType.evalSpace, // TODO
           };
           structPath = this.source.sourceString;
         } else {
@@ -104,6 +105,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         dataType: this.returns(exprVal),
         expressionType: 'aggregate',
         value: [f],
+        evalSpace: 'output',
       };
     }
     return errorFor('aggregate type check');

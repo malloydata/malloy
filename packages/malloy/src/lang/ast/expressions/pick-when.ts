@@ -22,9 +22,11 @@
  */
 
 import {
+  EvalSpace,
   ExpressionType,
   Fragment,
   maxExpressionType,
+  mergeEvalSpaces,
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
@@ -70,6 +72,7 @@ export class Pick extends ExpressionDef {
     const caseValue: Fragment[] = ['CASE'];
     let returnType: ExprValue | undefined;
     let anyExpressionType: ExpressionType = 'scalar';
+    let anyEvalSpace: EvalSpace = 'constant';
     for (const choice of this.choices) {
       const whenExpr = choice.when.apply(fs, '=', expr);
       const thenExpr = choice.pick
@@ -78,6 +81,11 @@ export class Pick extends ExpressionDef {
       anyExpressionType = maxExpressionType(
         anyExpressionType,
         maxExpressionType(whenExpr.expressionType, thenExpr.expressionType)
+      );
+      anyEvalSpace = mergeEvalSpaces(
+        anyEvalSpace,
+        whenExpr.evalSpace,
+        thenExpr.evalSpace
       );
       if (returnType) {
         if (!FT.typeEq(returnType, thenExpr, true)) {
@@ -110,6 +118,7 @@ export class Pick extends ExpressionDef {
         anyExpressionType,
         elseVal.expressionType
       ),
+      evalSpace: mergeEvalSpaces(anyEvalSpace, elseVal.evalSpace),
       value: compressExpr([...caseValue, ' ELSE ', ...elseVal.value, ' END']),
     };
   }
@@ -140,6 +149,7 @@ export class Pick extends ExpressionDef {
 
     const caseValue: Fragment[] = ['CASE'];
     let anyExpressionType: ExpressionType = returnType.expressionType;
+    let anyEvalSpace: EvalSpace = returnType.evalSpace;
     for (const aChoice of choiceValues) {
       if (!FT.typeEq(aChoice.when, FT.boolT)) {
         this.log(
@@ -158,6 +168,11 @@ export class Pick extends ExpressionDef {
           aChoice.pick.expressionType,
           aChoice.when.expressionType
         )
+      );
+      anyEvalSpace = mergeEvalSpaces(
+        anyEvalSpace,
+        aChoice.pick.evalSpace,
+        aChoice.when.evalSpace
       );
       caseValue.push(
         ' WHEN ',
@@ -182,6 +197,7 @@ export class Pick extends ExpressionDef {
       dataType: returnType.dataType,
       expressionType: anyExpressionType,
       value: compressExpr(caseValue),
+      evalSpace: anyEvalSpace,
     };
   }
 }

@@ -30,7 +30,7 @@ export class Calculate extends ListOf<QueryItem> {
     super('calculate', members);
     for (const el of members) {
       if (el instanceof FieldDeclaration) {
-        // el.isCalculation = true;
+        el.isCalculation = true;
         // el.declarationType = 'analytic';
       }
     }

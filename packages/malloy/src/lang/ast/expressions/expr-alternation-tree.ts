@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {maxExpressionType} from '../../../model/malloy_types';
+import {maxExpressionType, mergeEvalSpaces} from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
 import {ExprValue} from '../types/expr-value';
 import {BinaryBoolean} from './binary-boolean';
@@ -45,6 +45,7 @@ export class ExprAlternationTree extends BinaryBoolean<'|' | '&'> {
         choice1.expressionType,
         choice2.expressionType
       ),
+      evalSpace: mergeEvalSpaces(choice1.evalSpace, choice2.evalSpace),
       value: compose(
         choice1.value,
         this.op === '&' ? 'and' : 'or',

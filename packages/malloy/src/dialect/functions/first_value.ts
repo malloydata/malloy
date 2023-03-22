@@ -30,6 +30,7 @@ import {
   DialectFunctionOverloadDef,
   minAnalytic,
   maxAggregate,
+  output,
 } from './util';
 
 const types: ExpressionValueType[] = [
@@ -44,7 +45,7 @@ export function fnFirstValue(): DialectFunctionOverloadDef[] {
   return types.flatMap(type => [
     overload(
       minAnalytic(type),
-      [param('value', maxAggregate(type))],
+      [param('value', output(maxAggregate(type)))],
       [sql('FIRST_VALUE(', arg('value'), ')')]
     ),
   ]);

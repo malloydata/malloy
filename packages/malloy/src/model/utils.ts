@@ -142,6 +142,7 @@ export function exprMap(expr: Expr, func: (fragment: Fragment) => Expr): Expr {
         case 'field':
         case 'function_parameter':
         case 'parameter':
+        case 'outputField':
           return fragment;
         case 'function_call':
           return {

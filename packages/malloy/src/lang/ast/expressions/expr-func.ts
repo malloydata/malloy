@@ -22,6 +22,7 @@
  */
 
 import {
+  EvalSpace,
   Expr,
   ExpressionType,
   FieldValueType,
@@ -33,6 +34,7 @@ import {
   isExpressionTypeLEQ,
   maxExpressionType,
   maxOfExpressionTypes,
+  mergeEvalSpaces,
 } from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
@@ -57,12 +59,12 @@ export class ExprFunc extends ExpressionDef {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
+    const argExprsWithoutImplicit = this.args.map(arg => arg.getExpression(fs));
     if (this.isRaw) {
       let expressionType: ExpressionType = 'scalar';
       let collectType: FieldValueType | undefined;
       const funcCall: Fragment[] = [`${this.name}(`];
-      for (const fexpr of this.args) {
-        const expr = fexpr.getExpression(fs);
+      for (const expr of argExprsWithoutImplicit) {
         expressionType = maxExpressionType(expressionType, expr.expressionType);
 
         if (collectType) {
@@ -79,6 +81,9 @@ export class ExprFunc extends ExpressionDef {
         dataType,
         expressionType,
         value: compressExpr(funcCall),
+        evalSpace: mergeEvalSpaces(
+          ...argExprsWithoutImplicit.map(e => e.evalSpace)
+        ),
       };
     }
 
@@ -89,6 +94,7 @@ export class ExprFunc extends ExpressionDef {
         dataType: 'unknown',
         expressionType: 'scalar',
         value: [],
+        evalSpace: 'constant',
       };
     } else if (func.type !== 'function') {
       this.log(`Cannot call '${this.name}', which is of type ${func.type}`);
@@ -96,6 +102,7 @@ export class ExprFunc extends ExpressionDef {
         dataType: 'unknown',
         expressionType: 'scalar',
         value: [],
+        evalSpace: 'constant',
       };
     }
     let implicitExpr: ExprValue | undefined = undefined;
@@ -109,6 +116,7 @@ export class ExprFunc extends ExpressionDef {
             dataType: footType.dataType,
             expressionType: footType.expressionType,
             value: [{type: 'field', path: this.source.refString}],
+            evalSpace: footType.evalSpace,
           };
           structPath = this.source.sourceString;
         } else {
@@ -124,7 +132,6 @@ export class ExprFunc extends ExpressionDef {
         return errorFor(message);
       }
     }
-    const argExprsWithoutImplicit = this.args.map(arg => arg.getExpression(fs));
     const argExprs = [
       ...(implicitExpr ? [implicitExpr] : []),
       ...argExprsWithoutImplicit,
@@ -140,21 +147,27 @@ export class ExprFunc extends ExpressionDef {
         dataType: 'unknown',
         expressionType: 'scalar',
         value: [],
+        evalSpace: 'constant',
       };
     }
-    const {overload, expressionTypeErrors} = result;
-    if (expressionTypeErrors.length > 0) {
-      for (const error of expressionTypeErrors) {
-        const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
-        const allowed =
-          error.maxExpressionType === 'scalar'
-            ? 'scalar'
-            : 'scalar or aggregate';
-        const arg = this.args[adjustedIndex];
-        arg.log(
-          `Parameter ${error.param.name} of ${this.name} must be ${allowed}, but received ${error.actualExpressionType}`
-        );
-      }
+    const {overload, expressionTypeErrors, evalSpaceErrors} = result;
+    for (const error of expressionTypeErrors) {
+      const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
+      const allowed =
+        error.maxExpressionType === 'scalar' ? 'scalar' : 'scalar or aggregate';
+      const arg = this.args[adjustedIndex];
+      arg.log(
+        `Parameter ${error.param.name} of ${this.name} must be ${allowed}, but received ${error.actualExpressionType}`
+      );
+    }
+    for (const error of evalSpaceErrors) {
+      const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
+      const allowed =
+        error.maxEvalSpace === 'constant' ? 'constant' : 'constant or output';
+      const arg = this.args[adjustedIndex];
+      arg.log(
+        `Parameter ${error.param.name} of ${this.name} must be ${allowed}, but received ${error.actualEvalSpace}`
+      );
     }
     const type = overload.returnType;
     const expressionType = maxOfExpressionTypes([
@@ -174,6 +187,7 @@ export class ExprFunc extends ExpressionDef {
         dataType: 'unknown',
         expressionType,
         value: [],
+        evalSpace: 'constant',
       };
     }
     const funcCall: Expr = [
@@ -193,12 +207,21 @@ export class ExprFunc extends ExpressionDef {
         dataType: 'unknown',
         expressionType,
         value: [],
+        evalSpace: 'constant',
       };
     }
+    const maxEvalSpace = mergeEvalSpaces(...argExprs.map(e => e.evalSpace));
+    const evalSpace =
+      maxEvalSpace === 'constant'
+        ? 'constant'
+        : expressionType === 'scalar'
+        ? maxEvalSpace
+        : 'output';
     return {
       dataType: type.dataType,
       expressionType,
       value: compressExpr(funcCall),
+      evalSpace,
     };
   }
 }
@@ -210,6 +233,13 @@ type ExpressionTypeError = {
   param: FunctionParameterDef;
 };
 
+type EvalSpaceError = {
+  argIndex: number;
+  param: FunctionParameterDef;
+  actualEvalSpace: EvalSpace;
+  maxEvalSpace: EvalSpace;
+};
+
 function findOverload(
   func: FunctionDef,
   args: ExprValue[]
@@ -217,6 +247,7 @@ function findOverload(
   | {
       overload: FunctionOverloadDef;
       expressionTypeErrors: ExpressionTypeError[];
+      evalSpaceErrors: EvalSpaceError[];
     }
   | undefined {
   for (const overload of func.overloads) {
@@ -224,6 +255,7 @@ function findOverload(
     let ok = true;
     let matchedVariadic = false;
     const expressionTypeErrors: ExpressionTypeError[] = [];
+    const evalSpaceErrors: EvalSpaceError[] = [];
     for (let argIndex = 0; argIndex < args.length; argIndex++) {
       const arg = args[argIndex];
       const param = overload.params[paramIndex];
@@ -255,6 +287,18 @@ function findOverload(
             param,
           });
         }
+        if (
+          (paramT.evalSpace === 'constant' &&
+            (arg.evalSpace === 'input' || arg.evalSpace === 'output')) ||
+          (paramT.evalSpace === 'output' && arg.evalSpace === 'input')
+        ) {
+          evalSpaceErrors.push({
+            argIndex,
+            param,
+            maxEvalSpace: paramT.evalSpace,
+            actualEvalSpace: arg.evalSpace,
+          });
+        }
         return dataTypeMatch;
       });
       if (!argOk) {
@@ -276,7 +320,7 @@ function findOverload(
       continue;
     }
     if (ok) {
-      return {overload, expressionTypeErrors};
+      return {overload, expressionTypeErrors, evalSpaceErrors};
     }
   }
 }

@@ -58,6 +58,20 @@ export function sql(...e: Expr): Fragment {
   };
 }
 
+export function constant(type: TypeDesc): TypeDesc {
+  return {
+    ...type,
+    evalSpace: 'constant',
+  };
+}
+
+export function output(type: TypeDesc): TypeDesc {
+  return {
+    ...type,
+    evalSpace: 'output',
+  };
+}
+
 export function params(
   name: string,
   ...allowedTypes: ExpressionTypeDesc[]
@@ -84,6 +98,7 @@ export function maxScalar(dataType: FieldValueType): TypeDesc {
   return {
     dataType,
     expressionType: 'scalar',
+    evalSpace: 'input',
   };
 }
 
@@ -91,6 +106,7 @@ export function maxAggregate(dataType: FieldValueType): TypeDesc {
   return {
     dataType,
     expressionType: 'aggregate',
+    evalSpace: 'input',
   };
 }
 
@@ -98,6 +114,7 @@ export function maxAnalytic(dataType: FieldValueType): TypeDesc {
   return {
     dataType,
     expressionType: 'analytic',
+    evalSpace: 'input',
   };
 }
 
@@ -105,6 +122,7 @@ export function minScalar(dataType: FieldValueType): TypeDesc {
   return {
     dataType,
     expressionType: 'scalar',
+    evalSpace: 'input',
   };
 }
 
@@ -112,6 +130,7 @@ export function minAggregate(dataType: FieldValueType): TypeDesc {
   return {
     dataType,
     expressionType: 'aggregate',
+    evalSpace: 'input',
   };
 }
 
@@ -119,6 +138,7 @@ export function minAnalytic(dataType: FieldValueType): TypeDesc {
   return {
     dataType,
     expressionType: 'analytic',
+    evalSpace: 'input',
   };
 }
 

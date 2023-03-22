@@ -60,6 +60,7 @@ import {
   isFunctionParameterFragment,
   isIndexSegment,
   isJoinOn,
+  isOutputFieldFragment,
   isParameterFragment,
   isPhysical,
   isQuerySegment,
@@ -72,6 +73,7 @@ import {
   ModelDef,
   NamedQuery,
   OrderBy,
+  OutputFieldFragment,
   Parameter,
   ParameterFragment,
   PipeSegment,
@@ -352,6 +354,30 @@ class QueryField extends QueryNode {
     }
   }
 
+  generateOutputFieldFragment(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    frag: OutputFieldFragment,
+    _state: GenerateState
+  ): string {
+    const root = resultSet.root();
+    return resultSet.getField(frag.name).getPartitionSQL();
+    // if (root.isComplexQuery) {
+    //   const outputName = this.parent.dialect.sqlMaybeQuoteIdentifier(
+    //     `${frag.name}__${resultSet.groupSet}`
+    //   );
+    //   if (
+    //     this.parent.dialect.name === 'standardsql' &&
+    //     root.queryUsesPartitioning
+    //   ) {
+    //     return `__lateral_join_bag.${outputName}`;
+    //   } else {
+    //     return outputName;
+    //   }
+    // }
+    // return frag.name;
+  }
+
   generateSQLExpression(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
@@ -482,6 +508,8 @@ class QueryField extends QueryNode {
       );
 
       if (overload.returnType.expressionType === 'analytic') {
+        // TODO probably need to pass in the function and arguments separately
+        // in order to generate parameter SQL correctly in BQ re: partition
         return this.generateAnalyticFragment2(
           resultSet,
           context,
@@ -754,10 +782,21 @@ class QueryField extends QueryNode {
   ): string {
     const fields = resultStruct.getUngroupPartitions(undefined);
     let partitionBy = '';
+    const isComplex = resultStruct.root().isComplexQuery;
+    // TODO listy generate partition by
     const fieldsString = fields.map(f => f.getPartitionSQL()).join(', ');
-    if (fieldsString.length > 0) {
-      partitionBy = `PARTITION BY ${fieldsString}`;
+    if (isComplex || fieldsString.length > 0) {
+      partitionBy = 'PARTITION BY ';
+      if (isComplex) {
+        partitionBy += 'group_set';
+      }
+      if (fieldsString.length > 0) {
+        partitionBy += `, ${fieldsString}`;
+      }
     }
+
+    // TODO: so order by and arguments need to generate partitionSQL if
+    // the partitionSQL exists and the parameter is an "output"
 
     let orderBy = '';
 
@@ -781,7 +820,7 @@ class QueryField extends QueryNode {
       }
       if (resultStruct.firstSegment.type === 'reduce') {
         obSQL.push(
-          ` ${orderingField.fif.getSQL()}` +
+          ` ${orderingField.fif.getPartitionSQL()}` +
             // this.parent.dialect.sqlMaybeQuoteIdentifier(
             //   `${orderingField.name}__${resultStruct.groupSet}`
             // ) +
@@ -952,6 +991,8 @@ class QueryField extends QueryNode {
         throw new Error(
           'Internal Error: Function parameter fragment remaining during SQL generation'
         );
+      } else if (isOutputFieldFragment(expr)) {
+        s += this.generateOutputFieldFragment(resultSet, context, expr, state);
       } else if (isSQLExpressionFragment(expr)) {
         s += this.generateSQLExpression(resultSet, context, expr, state);
       } else if (isFunctionCallFragment(expr)) {
@@ -2759,6 +2800,9 @@ class QueryQuery extends QueryField {
     output: StageOutputContext,
     stageWriter: StageWriter
   ) {
+    // nest has FI result
+    // when see field name in output fragment, it's
+    // field_name + __ + FIR.groupSet
     for (const [name, fi] of resultSet.allFields) {
       const outputName = this.parent.dialect.sqlMaybeQuoteIdentifier(
         `${name}__${resultSet.groupSet}`

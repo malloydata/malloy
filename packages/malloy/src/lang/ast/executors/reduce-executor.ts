@@ -72,9 +72,10 @@ export class ReduceExecutor implements Executor {
     if (
       qp instanceof GroupBy ||
       qp instanceof Aggregate ||
-      qp instanceof Calculate ||
       qp instanceof Nests
     ) {
+      this.resultFS.addQueryItems(...qp.list);
+    } else if (qp instanceof Calculate) {
       this.resultFS.addQueryItems(...qp.list);
     } else if (isNestedQuery(qp)) {
       this.resultFS.addQueryItems(qp);

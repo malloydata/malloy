@@ -23,7 +23,7 @@
 
 import {Dialect} from '../../../dialect';
 import {ModelDef, StructDef} from '../../../model';
-import {FieldName, FieldSpace} from '../types/field-space';
+import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {LookupResult} from '../types/lookup-result';
 
 export class ModelSpace implements FieldSpace {
@@ -53,5 +53,9 @@ export class ModelSpace implements FieldSpace {
 
   whenComplete(_step: () => void): void {
     // Do nothing
+  }
+
+  isQueryFieldSpace(): this is QueryFieldSpace {
+    return false;
   }
 }

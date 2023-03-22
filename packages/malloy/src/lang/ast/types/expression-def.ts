@@ -28,6 +28,7 @@ import {
   isTimeFieldType,
   maxExpressionType,
   FieldValueType,
+  mergeEvalSpaces,
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
@@ -145,6 +146,7 @@ export class ExprDuration extends ExpressionDef {
               lhs.expressionType,
               num.expressionType
             ),
+            evalSpace: mergeEvalSpaces(lhs.evalSpace, num.evalSpace),
             value: result,
           },
           resultGranularity
@@ -157,6 +159,7 @@ export class ExprDuration extends ExpressionDef {
             lhs.expressionType,
             num.expressionType
           ),
+          evalSpace: mergeEvalSpaces(lhs.evalSpace, num.evalSpace),
           value: timeOffset('date', lhs.value, op, num.value, this.timeframe),
         },
         resultGranularity
@@ -170,6 +173,7 @@ export class ExprDuration extends ExpressionDef {
       dataType: 'duration',
       expressionType: 'scalar',
       value: ['__ERROR_DURATION_IS_NOT_A_VALUE__'],
+      evalSpace: 'constant',
     };
   }
 }
@@ -301,6 +305,7 @@ function equality(
   return {
     dataType: 'boolean',
     expressionType: maxExpressionType(lhs.expressionType, rhs.expressionType),
+    evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
     value,
   };
 }
@@ -326,6 +331,7 @@ function compare(
   return {
     dataType: 'boolean',
     expressionType,
+    evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
     value: value,
   };
 }
@@ -365,6 +371,7 @@ function numeric(
       dataType: 'number',
       expressionType,
       value: compose(lhs.value, op, rhs.value),
+      evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
     };
   }
 
@@ -457,6 +464,7 @@ export function applyBinary(
           num.expressionType,
           denom.expressionType
         ),
+        evalSpace: mergeEvalSpaces(num.evalSpace, denom.evalSpace),
         value: [div],
       };
     }
@@ -479,6 +487,7 @@ function unsupportError(
     dataType: lhs.dataType,
     expressionType: maxExpressionType(lhs.expressionType, rhs.expressionType),
     value: ["'unsupported operation'"],
+    evalSpace: mergeEvalSpaces(lhs.evalSpace, rhs.evalSpace),
   };
   if (lhs.dataType === 'unsupported') {
     l.log('Unsupported type not allowed in expression');

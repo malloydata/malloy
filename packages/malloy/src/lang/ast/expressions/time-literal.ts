@@ -120,9 +120,15 @@ abstract class TimeLiteral extends ExpressionDef {
     const expressionType = 'scalar';
     const value = [timeFrag];
     if (this.units) {
-      return {dataType, expressionType, value, timeframe: this.units};
+      return {
+        dataType,
+        expressionType,
+        value,
+        timeframe: this.units,
+        evalSpace: 'constant',
+      };
     }
-    return {dataType, expressionType, value};
+    return {dataType, expressionType, value, evalSpace: 'constant'};
   }
 
   getExpression(_fs: FieldSpace): ExprValue {

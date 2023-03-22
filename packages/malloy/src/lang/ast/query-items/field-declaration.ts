@@ -31,7 +31,7 @@ import {
 import {compressExpr} from '../expressions/utils';
 import {FT} from '../fragtype-utils';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldName, FieldSpace} from '../types/field-space';
+import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {isGranularResult} from '../types/granular-result';
 import {LookupResult} from '../types/lookup-result';
 import {MalloyElement} from '../types/malloy-element';
@@ -39,6 +39,7 @@ import {MalloyElement} from '../types/malloy-element';
 export class FieldDeclaration extends MalloyElement {
   elementType = 'fieldDeclaration';
   isMeasure?: boolean;
+  isCalculation?: boolean;
 
   constructor(
     readonly expr: ExpressionDef,
@@ -64,8 +65,16 @@ export class FieldDeclaration extends MalloyElement {
   queryFieldDef(exprFS: FieldSpace, exprName: string): FieldTypeDef {
     let exprValue;
 
+    function getOutputFS() {
+      if (exprFS.isQueryFieldSpace()) {
+        return exprFS.outputSpace();
+      }
+      throw new Error('must be in a query -- weird internal error');
+    }
+
     try {
-      exprValue = this.expr.getExpression(exprFS);
+      const fs = this.isCalculation ? getOutputFS() : exprFS;
+      exprValue = this.expr.getExpression(fs);
     } catch (error) {
       this.log(`Cannot define '${exprName}', ${error.message}`);
       return {
@@ -151,5 +160,16 @@ export class DefSpace implements FieldSpace {
   }
   whenComplete(step: () => void): void {
     this.realFS.whenComplete(step);
+  }
+
+  isQueryFieldSpace(): this is QueryFieldSpace {
+    return this.realFS.isQueryFieldSpace();
+  }
+
+  outputSpace() {
+    if (this.realFS.isQueryFieldSpace()) {
+      return this.realFS.outputSpace();
+    }
+    throw new Error('Not a query field space');
   }
 }

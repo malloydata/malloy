@@ -30,7 +30,7 @@ import {
 import {Comparison} from '../types/comparison';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
+import {FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {LookupResult} from '../types/lookup-result';
 
 import {ExprCompare} from './expr-compare';
@@ -56,6 +56,9 @@ class ConstantFieldSpace implements FieldSpace {
   whenComplete(step: () => void): void {
     step();
   }
+  isQueryFieldSpace(): this is QueryFieldSpace {
+    return false;
+  }
 }
 
 class DollarReference extends ExpressionDef {
@@ -68,6 +71,7 @@ class DollarReference extends ExpressionDef {
       dataType: this.refType,
       value: [{type: 'applyVal'}],
       expressionType: 'scalar',
+      evalSpace: 'constant', // TODO NO CLUE
     };
   }
 }

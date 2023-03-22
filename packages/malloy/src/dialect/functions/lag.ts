@@ -30,6 +30,9 @@ import {
   DialectFunctionOverloadDef,
   minAnalytic,
   maxAggregate,
+  maxScalar,
+  output,
+  constant,
 } from './util';
 
 const types: ExpressionValueType[] = [
@@ -47,23 +50,26 @@ export function fnLag(): DialectFunctionOverloadDef[] {
   return types.flatMap(type => [
     overload(
       minAnalytic(type),
-      [param('value', maxAggregate(type))],
+      [param('value', output(maxAggregate(type)))],
       [sql('LAG(', arg('value'), ')')]
     ),
     overload(
       minAnalytic(type),
       [
-        param('value', maxAggregate(type)),
-        param('offset', maxAggregate('number')),
+        param('value', output(maxAggregate(type))),
+        param('offset', constant(maxScalar('number'))),
       ],
       [sql('LAG(', arg('value'), ', ', arg('offset'), ')')]
     ),
     overload(
       minAnalytic(type),
       [
-        param('value', maxAggregate(type)),
-        param('offset', maxAggregate('number')),
-        param('default', maxAggregate(type)),
+        param('value', output(maxAggregate(type))),
+        param('offset', constant(maxScalar('number'))),
+        // TODO In BigQuery I think this is even a stronger limitation
+        // that it needs to be a CONSTANT, not just a scalar.
+        // DuckDB has no problem with this being even an aggregate
+        param('default', constant(maxAggregate(type))),
       ],
       [
         sql(

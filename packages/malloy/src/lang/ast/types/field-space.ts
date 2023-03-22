@@ -38,6 +38,11 @@ export interface FieldSpace {
   lookup(symbol: FieldName[]): LookupResult;
   dialectObj(): Dialect | undefined;
   whenComplete: (step: () => void) => void;
+  isQueryFieldSpace(): this is QueryFieldSpace;
+}
+
+export interface QueryFieldSpace extends FieldSpace {
+  outputSpace(): FieldSpace;
 }
 
 export class FieldName extends MalloyElement {

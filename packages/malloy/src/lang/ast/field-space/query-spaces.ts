@@ -41,6 +41,8 @@ import {QueryItem} from '../types/query-item';
 import {ReferenceField} from './reference-field';
 import {WildSpaceField} from './wild-space-field';
 import {RefinedSpace} from './refined-space';
+import {LookupResult} from '../types/lookup-result';
+import {SpaceEntry} from '../types/space-entry';
 
 /**
  * Unlike a source, which is a refinement of a namespace, a query
@@ -67,8 +69,17 @@ export class QueryInputSpace extends RefinedSpace {
       this.extendList.push(extendField.defineName);
     }
   }
+
+  isQueryFieldSpace() {
+    return true;
+  }
+
+  outputSpace() {
+    return this.result;
+  }
 }
 
+// TODO maybe rename QueryOutputSpace
 export abstract class QuerySpace extends RefinedSpace {
   readonly exprSpace: QueryInputSpace;
   astEl?: MalloyElement | undefined;
@@ -219,8 +230,43 @@ export abstract class QuerySpace extends RefinedSpace {
     this.isComplete();
     return segment;
   }
+
+  lookup(path: FieldName[]): LookupResult {
+    const result = super.lookup(path);
+    if (result.found) {
+      return {
+        error: undefined,
+        found: new OutputSpaceEntry(result.found),
+      };
+    }
+    return this.exprSpace.lookup(path);
+  }
+
+  isQueryFieldSpace() {
+    return true;
+  }
+
+  outputSpace() {
+    return this;
+  }
 }
 
 export class ReduceFieldSpace extends QuerySpace {
   readonly segmentType = 'reduce';
+}
+
+export class OutputSpaceEntry extends SpaceEntry {
+  refType: 'field' | 'parameter';
+  constructor(readonly inputSpaceEntry: SpaceEntry) {
+    super();
+    this.refType = inputSpaceEntry.refType;
+  }
+
+  typeDesc(): model.TypeDesc {
+    const type = this.inputSpaceEntry.typeDesc();
+    return {
+      ...type,
+      evalSpace: type.evalSpace === 'constant' ? 'constant' : 'output',
+    };
+  }
 }

@@ -34,7 +34,7 @@ import {
 export function fnLength(): DialectFunctionOverloadDef[] {
   return [
     overload(
-      minScalar('string'),
+      minScalar('number'),
       [param('value', maxAnalytic('string'))],
       [sql('LENGTH(', arg('value'), ')')]
     ),

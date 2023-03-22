@@ -27,7 +27,7 @@ function mkFragType(
   dataType: FieldValueType,
   expressionType: ExpressionType = 'scalar'
 ): TypeDesc {
-  return {dataType, expressionType};
+  return {dataType, expressionType, evalSpace: 'constant'}; // TODO hmm
 }
 
 /**

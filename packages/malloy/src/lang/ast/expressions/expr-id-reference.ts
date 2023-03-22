@@ -43,6 +43,12 @@ export class ExprIdReference extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const def = this.fieldReference.getField(fs);
     if (def.found) {
+      if (def.found.typeDesc().evalSpace === 'output') {
+        return {
+          ...def.found.typeDesc(),
+          value: [{type: 'outputField', name: this.refString}],
+        };
+      }
       const value = [{type: def.found.refType, path: this.refString}];
       const td = def.found.typeDesc();
       return {...td, value};
@@ -60,6 +66,7 @@ export class ExprIdReference extends ExpressionDef {
         return {
           dataType: 'boolean',
           expressionType: lval.expressionType,
+          evalSpace: lval.evalSpace, // TODO unsure about this
           value: [
             {
               type: 'apply',

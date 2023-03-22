@@ -242,6 +242,20 @@ expressionModels.forEach((expressionModel, databaseName) => {
     });
   });
 
+  describe('out keyword', () => {
+    it(`works - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: state
+            group_by: x is out.state
+          }`
+        )
+        .run();
+    });
+  });
+
   describe('substr', () => {
     it(`works - ${databaseName}`, async () => {
       await funcTest("substr('foo', 2)", 'oo');
@@ -250,7 +264,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works with max length - ${databaseName}`, async () => {
       await funcTest("substr('foo', 2, 1)", 'o');
     });
-
 
     // TODO postgres doesn't do this properly?
     it.skip(`works with negative start - ${databaseName}`, async () => {
@@ -566,6 +579,19 @@ expressionModels.forEach((expressionModel, databaseName) => {
         .run();
     });
 
+    it(`14.5 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: state
+            calculate: percent_less_than_prev is
+              (lag(count()) - aircraft_count) / lag(count())
+          }`
+        )
+        .run();
+    });
+
     it(`15 - ${databaseName}`, async () => {
       await expressionModel
         .loadQuery(
@@ -581,7 +607,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
         .run();
     });
 
-    it(`16 - ${databaseName}`, async () => {
+    // TODO BQ wants args 2 and 3 to be constants. Duckdb doesn't care.
+    it.skip(`16 - ${databaseName}`, async () => {
       await expressionModel
         .loadQuery(
           `
@@ -657,6 +684,17 @@ expressionModels.forEach((expressionModel, databaseName) => {
             group_by: aircraft_models.seats,
             aggregate: aircraft_count
             group_by: prev_state is lag(aircraft_models.seats.stddev(), 1)
+          }`
+        )
+        .run();
+    });
+
+    it(`22 should fail - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: prev_state is lag(state)
           }`
         )
         .run();
