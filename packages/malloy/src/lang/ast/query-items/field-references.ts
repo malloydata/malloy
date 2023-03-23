@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDef} from '../../../model/malloy_types';
+import {ExpressionType, FieldDef} from '../../../model/malloy_types';
 
 import {FieldName, FieldSpace} from '../types/field-space';
 import {LookupResult} from '../types/lookup-result';
@@ -29,6 +29,7 @@ import {ListOf, MalloyElement} from '../types/malloy-element';
 
 export class FieldReference extends ListOf<FieldName> {
   elementType = 'fieldReference';
+  allowedExpressionTypes: ExpressionType[] | undefined;
 
   constructor(names: FieldName[]) {
     super('fieldReference', names);
@@ -58,7 +59,23 @@ export class FieldReference extends ListOf<FieldName> {
   }
 
   getField(fs: FieldSpace): LookupResult {
-    return fs.lookup(this.list);
+    const result = fs.lookup(this.list);
+
+    if (result.found) {
+      const actualType = result.found.typeDesc().expressionType;
+      if (
+        this.allowedExpressionTypes &&
+        !this.allowedExpressionTypes.includes(actualType)
+      ) {
+        this.log(
+          `invalid field definition: expected a ${this.allowedExpressionTypes.join(
+            ' or '
+          )} expression but got a ${actualType} expression instead.`
+        );
+      }
+    }
+
+    return result;
   }
 }
 

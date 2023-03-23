@@ -27,7 +27,7 @@ import {
   overload,
   param,
   minScalar,
-  maxAnalytic,
+  anyExprType,
   sql,
   DialectFunctionOverloadDef,
 } from './util';
@@ -44,7 +44,7 @@ export function fnNullif(): DialectFunctionOverloadDef[] {
   return types.map(type =>
     overload(
       minScalar(type),
-      [param('value1', maxAnalytic(type)), param('value2', maxAnalytic(type))],
+      [param('value1', anyExprType(type)), param('value2', anyExprType(type))],
       [sql('NULLIF(', arg('value1'), ', ', arg('value2'), ')')]
     )
   );

@@ -26,7 +26,7 @@ import {
   overload,
   param,
   minScalar,
-  maxAnalytic,
+  anyExprType,
   sql,
   DialectFunctionOverloadDef,
 } from './util';
@@ -36,17 +36,17 @@ export function fnSubstr(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('string'),
       [
-        param('value', maxAnalytic('string')),
-        param('position', maxAnalytic('number')),
+        param('value', anyExprType('string')),
+        param('position', anyExprType('number')),
       ],
       [sql('SUBSTR(', arg('value'), ',', arg('position'), ')')]
     ),
     overload(
       minScalar('string'),
       [
-        param('value', maxAnalytic('string')),
-        param('position', maxAnalytic('number')),
-        param('length', maxAnalytic('number')),
+        param('value', anyExprType('string')),
+        param('position', anyExprType('number')),
+        param('length', anyExprType('number')),
       ],
       [
         sql(

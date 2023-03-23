@@ -26,7 +26,7 @@ import {
   overload,
   params,
   minScalar,
-  maxAnalytic,
+  anyExprType,
   spread,
   sql,
   DialectFunctionOverloadDef,
@@ -46,11 +46,11 @@ export function fnConcat(): DialectFunctionOverloadDef[] {
       [
         params(
           'values',
-          maxAnalytic('string'),
-          maxAnalytic('number'),
-          maxAnalytic('date'),
-          maxAnalytic('timestamp'),
-          maxAnalytic('boolean')
+          anyExprType('string'),
+          anyExprType('number'),
+          anyExprType('date'),
+          anyExprType('timestamp'),
+          anyExprType('boolean')
         ),
       ],
       [sql('CONCAT(', spread(arg('values')), ')')]

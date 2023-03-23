@@ -42,14 +42,22 @@ export class OrderBy extends MalloyElement {
     return typeof this.field === 'number' ? this.field : this.field.refString;
   }
 
-  getOrderBy(_fs: FieldSpace): ModelOrderBy {
-    // TODO jump-to-definition `fs` cannot currently `lookup` fields in the output space
-    // if (this.field instanceof FieldName) {
-    //   const entry = this.field.getField(_fs);
-    //   if (entry.error) {
-    //     this.field.log(entry.error);
-    //   }
-    // }
+  getOrderBy(fs: FieldSpace): ModelOrderBy {
+    // TODO jump-to-definition now that we can lookup fields in the output space,
+    // we need to actually add the reference when we do so.
+    if (this.field instanceof FieldName && fs.isQueryFieldSpace()) {
+      const output = fs.outputSpace();
+      const entry = this.field.getField(output);
+      if (entry.error) {
+        this.field.log(entry.error);
+      }
+      if (entry.found?.typeDesc().evalSpace === 'input') {
+        this.log(`Unknown field ${this.field.refString} in output space`);
+      }
+      if (entry.found?.typeDesc().expressionType === 'analytic') {
+        this.log(`Illegal order by of analytic field ${this.field.refString}`);
+      }
+    }
     const orderElement: ModelOrderBy = {field: this.modelField};
     if (this.dir) {
       orderElement.dir = this.dir;

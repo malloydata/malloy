@@ -28,8 +28,7 @@ export class Measures extends DeclareFields {
   constructor(measures: FieldDeclaration[]) {
     super(measures, 'measure');
     for (const dim of measures) {
-      dim.isMeasure = true;
-      // dim.declarationType = 'aggregate';
+      dim.allowedExpressionTypes = ['aggregate', 'ungrouped_aggregate'];
     }
   }
 }

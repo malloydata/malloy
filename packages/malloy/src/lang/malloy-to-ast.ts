@@ -30,6 +30,7 @@ import * as ast from './ast';
 import {LogSeverity, MessageLogger} from './parse-log';
 import {MalloyParseRoot} from './parse-malloy';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
+import {ExpressionType} from '../model';
 
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
@@ -224,7 +225,7 @@ export class MalloyToAST
 
   protected getFieldDefs(
     cxList: ParserRuleContext[],
-    isAgg?: boolean
+    allowedExpressionTypes: ExpressionType[] = []
   ): ast.FieldDeclaration[] {
     const visited: ast.FieldDeclaration[] = [];
     for (const cx of cxList) {
@@ -232,9 +233,7 @@ export class MalloyToAST
       if (v instanceof ast.FieldDeclaration) {
         this.astAt(v, cx);
         visited.push(v);
-        if (isAgg !== undefined) {
-          v.isMeasure = isAgg;
-        }
+        v.allowedExpressionTypes = allowedExpressionTypes;
       } else {
         this.contextError(cx, 'Expected field definition');
       }
@@ -478,22 +477,35 @@ export class MalloyToAST
   visitDefExploreDimension(
     pcx: parse.DefExploreDimensionContext
   ): ast.Dimensions {
+    const allowedExpressionTypes: ExpressionType[] = ['scalar'];
     const defs = this.getFieldDefs(
       pcx.dimensionDefList().dimensionDef(),
-      false
+      allowedExpressionTypes
     );
     const stmt = new ast.Dimensions(defs);
     return this.astAt(stmt, pcx);
   }
 
   visitDefExploreMeasure(pcx: parse.DefExploreMeasureContext): ast.Measures {
-    const defs = this.getFieldDefs(pcx.measureDefList().measureDef(), true);
+    const allowedExpressionTypes: ExpressionType[] = [
+      'aggregate',
+      'ungrouped_aggregate',
+    ];
+    const defs = this.getFieldDefs(
+      pcx.measureDefList().measureDef(),
+      allowedExpressionTypes
+    );
     const stmt = new ast.Measures(defs);
     return this.astAt(stmt, pcx);
   }
 
   visitDeclareStatement(pcx: parse.DeclareStatementContext): ast.DeclareFields {
-    const defs = this.getFieldDefs(pcx.fieldDef(), true);
+    const allowedExpressionTypes: ExpressionType[] = [
+      'scalar',
+      'aggregate',
+      'ungrouped_aggregate',
+    ];
+    const defs = this.getFieldDefs(pcx.fieldDef(), allowedExpressionTypes);
     const stmt = new ast.DeclareFields(defs);
     return this.astAt(stmt, pcx);
   }

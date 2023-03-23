@@ -26,7 +26,7 @@ import {
   overload,
   param,
   minScalar,
-  maxAnalytic,
+  anyExprType,
   sql,
   DialectFunctionOverloadDef,
 } from './util';
@@ -35,7 +35,7 @@ export function fnUpper(): DialectFunctionOverloadDef[] {
   return [
     overload(
       minScalar('string'),
-      [param('value', maxAnalytic('string'))],
+      [param('value', anyExprType('string'))],
       [sql('UPPER(', arg('value'), ')')]
     ),
   ];

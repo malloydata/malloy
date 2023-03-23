@@ -27,9 +27,9 @@ import {
   overload,
   param,
   minScalar,
-  maxAnalytic,
   sql,
   DialectFunctionOverloadDef,
+  anyExprType,
 } from './util';
 
 const types: ExpressionValueType[] = [
@@ -44,7 +44,7 @@ export function fnIfnull(): DialectFunctionOverloadDef[] {
   return types.map(type =>
     overload(
       minScalar(type),
-      [param('value', maxAnalytic(type)), param('default', maxAnalytic(type))],
+      [param('value', anyExprType(type)), param('default', anyExprType(type))],
       [sql('IFNULL(', arg('value'), ', ', arg('default'), ')')]
     )
   );

@@ -23,6 +23,7 @@
 
 import {Dialect} from '../../../dialect/dialect';
 import {
+  ExpressionType,
   FieldTypeDef,
   isAtomicFieldType,
   StructDef,
@@ -38,8 +39,8 @@ import {MalloyElement} from '../types/malloy-element';
 
 export class FieldDeclaration extends MalloyElement {
   elementType = 'fieldDeclaration';
-  isMeasure?: boolean;
-  isCalculation?: boolean;
+  allowedExpressionTypes: ExpressionType[] | undefined;
+  executesInOutputSpace: boolean = false;
 
   constructor(
     readonly expr: ExpressionDef,
@@ -73,7 +74,7 @@ export class FieldDeclaration extends MalloyElement {
     }
 
     try {
-      const fs = this.isCalculation ? getOutputFS() : exprFS;
+      const fs = this.executesInOutputSpace ? getOutputFS() : exprFS;
       exprValue = this.expr.getExpression(fs);
     } catch (error) {
       this.log(`Cannot define '${exprName}', ${error.message}`);
@@ -96,14 +97,18 @@ export class FieldDeclaration extends MalloyElement {
       if (exprValue.expressionType) {
         template.expressionType = exprValue.expressionType;
       }
-      // if (
-      //   this.declarationType &&
-      //   this.declarationType !== exprValue.expressionType
-      // ) {
-      //   this.log(
-      //     `invalid field definition: expected a ${this.declarationType} expression but got a ${exprValue.expressionType} expression instead.`
-      //   );
-      // }
+      if (
+        this.allowedExpressionTypes &&
+        !this.allowedExpressionTypes.includes(exprValue.expressionType)
+      ) {
+        this.log(
+          `invalid field definition: expected a ${this.allowedExpressionTypes.join(
+            ' or '
+          )} expression but got a ${
+            exprValue.expressionType
+          } expression instead.`
+        );
+      }
       if (this.exprSrc) {
         template.code = this.exprSrc;
       }

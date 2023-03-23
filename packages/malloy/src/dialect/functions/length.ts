@@ -26,7 +26,7 @@ import {
   overload,
   param,
   minScalar,
-  maxAnalytic,
+  anyExprType,
   sql,
   DialectFunctionOverloadDef,
 } from './util';
@@ -35,7 +35,7 @@ export function fnLength(): DialectFunctionOverloadDef[] {
   return [
     overload(
       minScalar('number'),
-      [param('value', maxAnalytic('string'))],
+      [param('value', anyExprType('string'))],
       [sql('LENGTH(', arg('value'), ')')]
     ),
   ];

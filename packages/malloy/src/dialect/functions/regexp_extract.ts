@@ -26,7 +26,7 @@ import {
   overload,
   param,
   minScalar,
-  maxAnalytic,
+  anyExprType,
   sql,
   DialectFunctionOverloadDef,
 } from './util';
@@ -36,11 +36,11 @@ export function fnRegexpExtract(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('string'),
       [
-        param('value', maxAnalytic('string')),
-        param('regexp', maxAnalytic('regular expression')),
+        param('value', anyExprType('string')),
+        param('regexp', anyExprType('regular expression')),
         // TODO consider supporting these parameters
-        // param('position', maxAnalytic('number')),
-        // param('occurrence', maxAnalytic('number')),
+        // param('position', anyExprType('number')),
+        // param('occurrence', anyExprType('number')),
       ],
       [sql('REGEXP_EXTRACT(', arg('value'), ',', arg('regexp'), ')')]
     ),

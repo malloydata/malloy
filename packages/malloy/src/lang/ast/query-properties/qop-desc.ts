@@ -41,7 +41,6 @@ import {QueryProperty} from '../types/query-property';
 
 import {isNestedQuery} from './nest';
 import {StaticSpace} from '../field-space/static-space';
-import {Calculate} from './calculate';
 
 type QOPType = 'grouping' | 'aggregate' | 'project' | 'index';
 
@@ -83,8 +82,6 @@ export class QOPDesc extends ListOf<QueryProperty> {
         if (firstGuess === 'project' || firstGuess === 'index') {
           el.log(`aggregate: not legal in ${firstGuess} query`);
         }
-      } else if (el instanceof Calculate) {
-        firstGuess ||= 'grouping';
       } else if (el instanceof ProjectStatement) {
         firstGuess ||= 'project';
         if (firstGuess !== 'project') {

@@ -503,7 +503,11 @@ export function mkExpr(
   return ret;
 }
 
-export type ExpressionType = 'scalar' | 'aggregate' | 'analytic';
+export type ExpressionType =
+  | 'scalar'
+  | 'aggregate'
+  | 'analytic'
+  | 'ungrouped_aggregate';
 
 export interface Expression {
   e?: Expr;
@@ -518,27 +522,36 @@ export function expressionIsAggregate(e: ExpressionType | undefined): boolean {
 export function expressionIsCalculation(
   e: ExpressionType | undefined
 ): boolean {
-  return e === 'aggregate' || e === 'analytic';
+  return e === 'aggregate' || e === 'analytic' || e === 'ungrouped_aggregate';
 }
 
 function expressionTypeLevel(e: ExpressionType): number {
-  return ['scalar', 'aggregate', 'analytic'].indexOf(e);
+  return {
+    scalar: 0,
+    aggregate: 1,
+    ungrouped_aggregate: 2,
+    analytic: 2,
+  }[e];
 }
 
 export function isExpressionTypeLEQ(
   e1: ExpressionType,
   e2: ExpressionType
 ): boolean {
-  return expressionTypeLevel(e1) <= expressionTypeLevel(e2);
+  return e1 === e2 || expressionTypeLevel(e1) < expressionTypeLevel(e2);
 }
 
 export function maxExpressionType(
   e1: ExpressionType,
   e2: ExpressionType
 ): ExpressionType {
+  // TODO handle the case where e1 is analytic and e2 is ungrouped_aggregate
   let ret: ExpressionType = 'scalar';
   if (e1 === 'aggregate' || e2 === 'aggregate') {
     ret = 'aggregate';
+  }
+  if (e1 === 'ungrouped_aggregate' || e2 === 'ungrouped_aggregate') {
+    ret = 'ungrouped_aggregate';
   }
   if (e1 === 'analytic' || e2 === 'analytic') {
     ret = 'analytic';
@@ -893,6 +906,12 @@ export interface ExpressionTypeDesc {
   evalSpace: EvalSpace;
 }
 
+export interface FunctionParamTypeDesc {
+  dataType: FieldValueType;
+  expressionType: ExpressionType | undefined;
+  evalSpace: EvalSpace;
+}
+
 export type EvalSpace = 'constant' | 'input' | 'output';
 
 export function mergeEvalSpaces(...evalSpaces: EvalSpace[]): EvalSpace {
@@ -916,7 +935,7 @@ export interface FunctionParameterDef {
   // These expression types are MAXIMUM types -- e.g. if you specify "scalar",
   // you cannot pass in an "aggregate" and if you specify "aggregate", you can
   // pass in "scalar" or "aggregate", but not "analytic"
-  allowedTypes: ExpressionTypeDesc[];
+  allowedTypes: FunctionParamTypeDesc[];
   isVariadic: boolean;
 }
 

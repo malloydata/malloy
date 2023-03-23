@@ -25,9 +25,9 @@ import {
   FunctionParameterDef,
   Fragment,
   FieldValueType,
-  ExpressionTypeDesc,
   TypeDesc,
   Expr,
+  FunctionParamTypeDesc,
 } from '../..';
 
 export interface DialectFunctionOverloadDef {
@@ -74,7 +74,7 @@ export function output(type: TypeDesc): TypeDesc {
 
 export function params(
   name: string,
-  ...allowedTypes: ExpressionTypeDesc[]
+  ...allowedTypes: FunctionParamTypeDesc[]
 ): FunctionParameterDef {
   return {
     name,
@@ -85,7 +85,7 @@ export function params(
 
 export function param(
   name: string,
-  ...allowedTypes: ExpressionTypeDesc[]
+  ...allowedTypes: FunctionParamTypeDesc[]
 ): FunctionParameterDef {
   return {
     name,
@@ -110,7 +110,25 @@ export function maxAggregate(dataType: FieldValueType): TypeDesc {
   };
 }
 
-export function maxAnalytic(dataType: FieldValueType): TypeDesc {
+export function anyExprType(dataType: FieldValueType): FunctionParamTypeDesc {
+  return {
+    dataType,
+    expressionType: undefined,
+    evalSpace: 'input',
+  };
+}
+
+export function maxUngroupedAggregate(
+  dataType: FieldValueType
+): FunctionParamTypeDesc {
+  return {
+    dataType,
+    expressionType: 'ungrouped_aggregate',
+    evalSpace: 'input',
+  };
+}
+
+export function maxAnalytic(dataType: FieldValueType): FunctionParamTypeDesc {
   return {
     dataType,
     expressionType: 'analytic',

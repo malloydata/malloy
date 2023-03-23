@@ -275,17 +275,19 @@ function findOverload(
           // I think we may want to add an `error` type for nodes generated from errors,
           // then make `error` propagate without generating more errors.
           arg.dataType === 'unknown';
-        const expressionTypeMatch = isExpressionTypeLEQ(
-          arg.expressionType,
-          paramT.expressionType
-        );
-        if (!expressionTypeMatch) {
-          expressionTypeErrors.push({
-            argIndex,
-            maxExpressionType: paramT.expressionType,
-            actualExpressionType: arg.expressionType,
-            param,
-          });
+        if (paramT.expressionType) {
+          const expressionTypeMatch = isExpressionTypeLEQ(
+            arg.expressionType,
+            paramT.expressionType
+          );
+          if (!expressionTypeMatch) {
+            expressionTypeErrors.push({
+              argIndex,
+              maxExpressionType: paramT.expressionType,
+              actualExpressionType: arg.expressionType,
+              param,
+            });
+          }
         }
         if (
           (paramT.evalSpace === 'constant' &&

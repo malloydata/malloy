@@ -26,7 +26,7 @@ import {
   overload,
   param,
   minScalar,
-  maxAnalytic,
+  anyExprType,
   sql,
   DialectFunctionOverloadDef,
 } from './util';
@@ -35,7 +35,7 @@ export function fnFloor(): DialectFunctionOverloadDef[] {
   return [
     overload(
       minScalar('number'),
-      [param('value', maxAnalytic('number'))],
+      [param('value', anyExprType('number'))],
       [sql('FLOOR(', arg('value'), ')')]
     ),
   ];

@@ -22,6 +22,7 @@
  */
 
 import {FieldDeclaration} from '../query-items/field-declaration';
+import {FieldReference} from '../query-items/field-references';
 import {ListOf} from '../types/malloy-element';
 import {QueryItem} from '../types/query-item';
 
@@ -29,9 +30,11 @@ export class Calculate extends ListOf<QueryItem> {
   constructor(members: QueryItem[]) {
     super('calculate', members);
     for (const el of members) {
+      if (el instanceof FieldDeclaration || el instanceof FieldReference) {
+        el.allowedExpressionTypes = ['analytic'];
+      }
       if (el instanceof FieldDeclaration) {
-        el.isCalculation = true;
-        // el.declarationType = 'analytic';
+        el.executesInOutputSpace = true;
       }
     }
   }

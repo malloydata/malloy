@@ -26,7 +26,7 @@ import {
   overload,
   param,
   minScalar,
-  maxAnalytic,
+  anyExprType,
   sql,
   DialectFunctionOverloadDef,
 } from './util';
@@ -36,9 +36,9 @@ export function fnReplace(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('string'),
       [
-        param('value', maxAnalytic('string')),
-        param('pattern', maxAnalytic('string')),
-        param('replacement', maxAnalytic('string')),
+        param('value', anyExprType('string')),
+        param('pattern', anyExprType('string')),
+        param('replacement', anyExprType('string')),
       ],
       [
         sql(

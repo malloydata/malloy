@@ -26,7 +26,7 @@ import {
   overload,
   param,
   minScalar,
-  maxAnalytic,
+  anyExprType,
   sql,
   DialectFunctionOverloadDef,
 } from './util';
@@ -35,16 +35,16 @@ export function fnRound(): DialectFunctionOverloadDef[] {
   return [
     overload(
       minScalar('number'),
-      [param('value', maxAnalytic('number'))],
+      [param('value', anyExprType('number'))],
       [sql('ROUND(', arg('value'), ')')]
     ),
     overload(
       minScalar('number'),
       [
-        param('value', maxAnalytic('number')),
+        param('value', anyExprType('number')),
         // TODO this parameter should only accept integers, but we don't have a good
         // way of expressing that constraint at the moment
-        param('precision', maxAnalytic('number')),
+        param('precision', anyExprType('number')),
       ],
       [sql('ROUND(', arg('value'), ', ', arg('precision'), ')')]
     ),

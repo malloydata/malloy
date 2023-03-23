@@ -26,7 +26,7 @@ import {
   overload,
   param,
   minScalar,
-  maxAnalytic,
+  anyExprType,
   sql,
   DialectFunctionOverloadDef,
 } from './util';
@@ -35,7 +35,7 @@ export function fnChr(): DialectFunctionOverloadDef[] {
   return [
     overload(
       minScalar('string'),
-      [param('value', maxAnalytic('number'))],
+      [param('value', anyExprType('number'))],
       [sql('CHR(', arg('value'), ')')]
     ),
   ];

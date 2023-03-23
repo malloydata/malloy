@@ -88,7 +88,7 @@ export class ExprUngroup extends ExpressionDef {
       }
       return {
         dataType: this.returns(exprVal),
-        expressionType: 'analytic',
+        expressionType: 'ungrouped_aggregate',
         value: [ungroup],
         evalSpace: 'input',
       };

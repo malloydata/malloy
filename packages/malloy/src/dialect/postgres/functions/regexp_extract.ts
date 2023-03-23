@@ -26,7 +26,7 @@ import {
   overload,
   param,
   minScalar,
-  maxAnalytic,
+  anyExprType,
   sql,
   DialectFunctionOverloadDef,
 } from '../../functions/util';
@@ -36,8 +36,8 @@ export function fnRegexpExtract(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('string'),
       [
-        param('value', maxAnalytic('string')),
-        param('regexp', maxAnalytic('regular expression')),
+        param('value', anyExprType('string')),
+        param('regexp', anyExprType('regular expression')),
       ],
       [sql('SUBSTRING(', arg('value'), ',', arg('regexp'), ')')]
     ),

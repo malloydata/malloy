@@ -360,22 +360,7 @@ class QueryField extends QueryNode {
     frag: OutputFieldFragment,
     _state: GenerateState
   ): string {
-    const root = resultSet.root();
     return resultSet.getField(frag.name).getPartitionSQL();
-    // if (root.isComplexQuery) {
-    //   const outputName = this.parent.dialect.sqlMaybeQuoteIdentifier(
-    //     `${frag.name}__${resultSet.groupSet}`
-    //   );
-    //   if (
-    //     this.parent.dialect.name === 'standardsql' &&
-    //     root.queryUsesPartitioning
-    //   ) {
-    //     return `__lateral_join_bag.${outputName}`;
-    //   } else {
-    //     return outputName;
-    //   }
-    // }
-    // return frag.name;
   }
 
   generateSQLExpression(
@@ -774,17 +759,36 @@ class QueryField extends QueryNode {
     );
   }
 
+  // TODO
+  getAnalyticPartitions(resultStruct: FieldInstanceResult) {
+    const ret: string[] = [];
+    let p = resultStruct.parent;
+    while (p !== undefined) {
+      const scalars = p.fields(
+        fi => isScalarField(fi.f) && fi.fieldUsage.type === 'result'
+      );
+      const partitionSQLs = scalars.map(fi => fi.getPartitionSQL());
+      ret.push(...partitionSQLs);
+      p = p.parent;
+    }
+    return ret.join(', ');
+  }
+
   generateAnalyticFragment2(
     resultStruct: FieldInstanceResult,
     context: QueryStruct,
     expr: Expr,
     state: GenerateState
   ): string {
-    const fields = resultStruct.getUngroupPartitions(undefined);
+    // const fields = resultStruct.getUngroupPartitions({
+    //   type: 'all',
+    //   fields: [],
+    //   groupSet: resultStruct.groupSet,
+    // });
     let partitionBy = '';
     const isComplex = resultStruct.root().isComplexQuery;
     // TODO listy generate partition by
-    const fieldsString = fields.map(f => f.getPartitionSQL()).join(', ');
+    const fieldsString = this.getAnalyticPartitions(resultStruct);
     if (isComplex || fieldsString.length > 0) {
       partitionBy = 'PARTITION BY ';
       if (isComplex) {

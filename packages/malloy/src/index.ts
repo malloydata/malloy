@@ -64,6 +64,7 @@ export type {
   TypeDesc,
   FieldValueType,
   ExpressionTypeDesc,
+  FunctionParamTypeDesc,
 } from './model';
 export {
   // Used in Composer Demo
