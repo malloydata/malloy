@@ -2891,11 +2891,16 @@ class DataTimestamp extends ScalarData<Date> {
 
   public get value(): Date {
     // TODO properly map the data from BQ/Postgres types
-    if (this._value.constructor.name === 'Date') {
-      return this._value as Date;
-    } else if (this._value instanceof Date) {
+    if (this._value instanceof Date) {
       return this._value;
-    } else  if (typeof this._value === 'number') {
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const valAsAny = this._value as any;
+    if (valAsAny.constructor.name === 'Date') {
+      // For some reason duckdb TSTZ values come back as objects which do not
+      // pass "instance of" but do seem date like.
+      return new Date(this._value as Date);
+    } else if (typeof this._value === 'number') {
       return new Date(this._value);
     } else if (typeof this._value !== 'string') {
       return new Date((this._value as unknown as {value: string}).value);
