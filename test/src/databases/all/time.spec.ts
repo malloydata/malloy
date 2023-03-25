@@ -24,10 +24,13 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/is-sql-eq';
-import {databasesFromEnvironmentOr, mkSqlEqWith} from '../../util';
+import {mkSqlEqWith} from '../../util';
+import {DateTime as LuxonDateTime} from 'luxon';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+// MTOY todo really test all databases
+const runtimes = new RuntimeList(['duckdb', 'bigquery'] || allDatabases);
 
+// MTOY todo look at this list for timezone problems, I know there are some
 describe.each(runtimes.runtimeList)(
   '%s: interval extraction',
   (_db, runtime) => {
@@ -133,6 +136,100 @@ describe.each(runtimes.runtimeList)(
     });
   }
 );
+
+/*
+  not entirely sure what to test here so i am going to free-wheel a bit
+
+  1) All of the extraction and truncation functions need to work
+      in the query timezone.
+  2) All rendering needs to happen in the query time zone
+  3) If we feed rendered data back into a query, it needs to retain
+      offsets on all timestamps. Worried that rendering it in the query
+      time zone would somehow confuse bigquery which is always in UTC
+  4)  when we filter on a binned time, that we generate a filter between
+      the edges of the bin, instead of computing the bin and use '='
+  5) connection, model, and query time zone setting
+  6) piping a query in one time zone into a query in another
+*/
+
+describe.each(runtimes.runtimeList)('%s: time zones', (dbName, runtime) => {
+  const zone = 'America/Mexico_City'; // -06:00 no DST
+  const zone_2020 = LuxonDateTime.fromObject({
+    year: 2020,
+    month: 2,
+    day: 20,
+    hour: 0,
+    minute: 0,
+    second: 0,
+    zone,
+  });
+
+  test(`${dbName} NOT in tz ${zone} by default`, async () => {
+    // this makes sure that the tests which use the test timezome
+    // are actually testing something ... file this under
+    // "abundance of caution"
+    const query = runtime.loadQuery(
+      `
+        sql: tzTest is { connection: "${dbName}" select: """SELECT 1 as one""" }
+        query: from_sql(tzTest) -> {
+          group_by: literalTime is @2020-02-20 00:00:00
+        }
+`
+    );
+    const result = await query.run();
+    const literal = result.data.path(0, 'literalTime').value as Date;
+    const have = LuxonDateTime.fromJSDate(literal);
+    expect(zone_2020.valueOf()).not.toBeNaN();
+    expect(have.valueOf()).not.toEqual(zone_2020.valueOf());
+  });
+
+  test('literal with offset timezone', async () => {
+    const query = runtime.loadQuery(
+      `
+        sql: tzTest is { connection: "${dbName}" select: """SELECT 1 as one""" }
+        query: from_sql(tzTest) -> {
+          group_by: literalTime is @2020-02-20 00:00:00-06:00
+        }
+`
+    );
+    const result = await query.run();
+    const literal = result.data.path(0, 'literalTime').value as Date;
+    const have = LuxonDateTime.fromJSDate(literal);
+    expect(have.valueOf()).toEqual(zone_2020.valueOf());
+  });
+
+  test('literal with zone name', async () => {
+    const query = runtime.loadQuery(
+      `
+        sql: tzTest is { connection: "${dbName}" select: """SELECT 1 as one""" }
+        query: from_sql(tzTest) -> {
+          group_by: literalTime is @2020-02-20 00:00:00[America/Mexico_City]
+        }
+`
+    );
+    const result = await query.run();
+    const literal = result.data.path(0, 'literalTime').value as Date;
+    const have = LuxonDateTime.fromJSDate(literal);
+    expect(have.valueOf()).toEqual(zone_2020.valueOf());
+  });
+
+  // skipped because we don't implement query time zone yet ...
+  test.skip('partial literal timestamps are in query time zone', async () => {
+    const query = runtime.loadQuery(
+      `
+        //timezone: ${zone}
+        sql: tzTest is { connection: "${dbName}" select: """SELECT 1 as one""" }
+        query: from_sql(tzTest) -> {
+          group_by: literalTime is @2020-02-20 00:00:00
+        }
+`
+    );
+    const result = await query.run();
+    const literal = result.data.path(0, 'literalTime').value as Date;
+    const have = LuxonDateTime.fromJSDate(literal);
+    expect(have.valueOf()).toEqual(zone_2020.valueOf());
+  });
+});
 
 afterAll(async () => {
   await runtimes.closeAll();

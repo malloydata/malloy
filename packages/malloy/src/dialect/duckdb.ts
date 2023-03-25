@@ -400,7 +400,9 @@ export class DuckDBDialect extends Dialect {
     if (type === 'date') {
       return `DATE '${timeString}'`;
     } else if (type === 'timestamp') {
-      return `TIMESTAMPTZ '${timeString} ${timezone}'`;
+      return timezone[0] === '+' || timezone[0] === '-'
+        ? `TIMESTAMPTZ '${timeString}${timezone}'`
+        : `TIMESTAMPTZ '${timeString} ${timezone}'`;
     } else {
       throw new Error(`Unknown Literal time format ${type}`);
     }

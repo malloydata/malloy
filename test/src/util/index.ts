@@ -77,6 +77,7 @@ export function describeIfDatabaseAvailable(
 interface InitValues {
   sql?: string;
   malloy?: string;
+  connection?: string;
 }
 
 function sqlSafe(str: string): string {
@@ -91,8 +92,11 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
     const qExpr = expr.replace(/'/g, '`');
     const sqlV = initV?.sql || 'SELECT 1 as one';
     const malloyV = initV?.malloy || '';
+    const select = initV?.connection
+      ? ` connection: "${initV.connection}" select`
+      : 'select';
     const sourceDef = `
-      sql: sqlData is { select: """${sqlV}""" }
+      sql: sqlData is {${select}: """${sqlV}""" }
       source: basicTypes is from_sql(sqlData) ${malloyV}
     `;
     let query: string;
