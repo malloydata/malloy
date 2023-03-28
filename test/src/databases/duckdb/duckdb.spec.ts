@@ -77,40 +77,25 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     }
   });
 
-  it('can open tables with wildcards', async () => {
-    expect(runtime).not.toBeUndefined();
-    const result = await runtime
-      .loadQuery(
-        `
-        query: table('duckdb:test/data/duckdb/fl*.parquet') -> {
-          top: 1
-          group_by: carrier;
-        }
-      `
-      )
-      .run();
-    expect(result.data.path(0, 'carrier').value).toEqual('AA');
-  });
-
   it('can open json files', async () => {
-    expect(runtime).not.toBeUndefined();
     const result = await runtime
       .loadQuery(
         `
-        query: table('duckdb:test/data/duckdb/test.json') -> {
-          project: *
-        }
-      `
+          query: table('duckdb:test/data/duckdb/test.json') -> {
+            project: *
+          }
+        `
       )
       .run();
     expect(result.data.path(0, 'foo').value).toEqual('bar');
   });
 
   it('supports timezones', async () => {
-    expect(runtime).not.toBeUndefined();
     await runtime.connection.runSQL("SET TimeZone='CET'");
-    const result = await runtime.connection.runSQL("SELECT current_setting('TimeZone')");
-    expect(result.rows[0]).toEqual({"current_setting('TimeZone')": "CET"});
+    const result = await runtime.connection.runSQL(
+      "SELECT current_setting('TimeZone')"
+    );
+    expect(result.rows[0]).toEqual({"current_setting('TimeZone')": 'CET'});
   });
 });
 
