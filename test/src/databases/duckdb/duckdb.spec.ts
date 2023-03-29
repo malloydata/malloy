@@ -21,76 +21,63 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Runtime} from '@malloydata/malloy';
 import {RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
 
 const runtimes = ['duckdb', 'duckdb_wasm'];
 
-const [describe, databases] = describeIfDatabaseAvailable(runtimes);
+const [_describe, databases] = describeIfDatabaseAvailable(runtimes);
+const allDucks = new RuntimeList(databases);
 
-describe('duckdb specific tests', () => {
-  let runtimeList: RuntimeList;
-
-  beforeAll(() => {
-    runtimeList = new RuntimeList(databases);
-  });
-
-  afterAll(async () => {
-    await runtimeList.closeAll();
-  });
-
-  describe.each(databases)('%s', runtimeName => {
-    const runtime = runtimeList.runtimeMap.get(runtimeName) as Runtime;
-
-    test('can open tables with wildcards', async () => {
-      const result = await runtime
-        .loadQuery(
-          `
-          query: table('duckdb:test/data/duckdb/fl*.parquet') -> {
-            top: 1
-            group_by: carrier;
-          }
+describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
+  test('can open tables with wildcards', async () => {
+    const result = await runtime
+      .loadQuery(
         `
-        )
-        .run();
-      expect(result.data.path(0, 'carrier').value).toEqual('AA');
-    });
-
-    test('accepts all schema numbers', async () => {
-      const allInts = [
-        'BIGINT',
-        'INTEGER',
-        'TINYINT',
-        'SMALLINT',
-        'UBIGINT',
-        'UINTEGER',
-        'UTINYINT',
-        'USMALLINT',
-        'HUGEINT',
-      ];
-      expect(runtime).not.toBeUndefined();
-      await runtime
-        .loadQuery(
-          `
-        sql: allInts is { connection: "${runtimeName}" select: """
-          SELECT
-            ${allInts
-              .map(intType => `1::${intType} as a${intType.toLowerCase()}`)
-              .join(',')}
-          """
+        query: table('duckdb:test/data/duckdb/fl*.parquet') -> {
+          top: 1
+          group_by: carrier;
         }
-        query: from_sql(allInts) -> {
-          ${allInts
-            .map(
-              intType =>
-                `aggregate: sum${intType} is sum(a${intType.toLowerCase()})`
-            )
-            .join('\n')}
-        }
-  `
-        )
-        .run();
-    });
+      `
+      )
+      .run();
+    expect(result.data.path(0, 'carrier').value).toEqual('AA');
   });
+
+  test('accepts all schema numbers', async () => {
+    const allInts = [
+      'BIGINT',
+      'INTEGER',
+      'TINYINT',
+      'SMALLINT',
+      'UBIGINT',
+      'UINTEGER',
+      'UTINYINT',
+      'USMALLINT',
+      'HUGEINT',
+    ];
+    const allFields = allInts.map(intType => `a${intType.toLowerCase()}`);
+    const query = `
+      sql: allInts is { connection: "${dbName}" select: """
+        SELECT
+        ${allInts
+          .map(intType => `1::${intType} as a${intType.toLowerCase()}`)
+          .join(',\n')}
+      """}
+      query: from_sql(allInts) -> {
+        aggregate:
+        ${allFields
+          .map(fieldType => `sum_${fieldType} is sum(${fieldType})`)
+          .join('\n')}
+      }
+    `;
+    const result = await runtime.loadQuery(query).run();
+    for (const fieldType of allFields) {
+      expect(result.data.path(0, `sum_${fieldType}`).value).toEqual(1);
+    }
+  });
+});
+
+afterAll(async () => {
+  await allDucks.closeAll();
 });
