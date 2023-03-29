@@ -29,7 +29,7 @@ const runtimes = ['duckdb', 'duckdb_wasm'];
 
 const [describe, databases] = describeIfDatabaseAvailable(runtimes);
 
-describe('duckdb', () => {
+describe('duckdb specific tests', () => {
   let runtimeList: RuntimeList;
 
   beforeAll(() => {
@@ -40,10 +40,10 @@ describe('duckdb', () => {
     await runtimeList.closeAll();
   });
 
-  describe.each(databases)('%s tables', runtimeName => {
-    it('can open tables with wildcards', async () => {
-      const runtime = runtimeList.runtimeMap.get(runtimeName) as Runtime;
-      expect(runtime).not.toBeUndefined();
+  describe.each(databases)('%s', runtimeName => {
+    const runtime = runtimeList.runtimeMap.get(runtimeName) as Runtime;
+
+    test('can open tables with wildcards', async () => {
       const result = await runtime
         .loadQuery(
           `
@@ -55,6 +55,42 @@ describe('duckdb', () => {
         )
         .run();
       expect(result.data.path(0, 'carrier').value).toEqual('AA');
+    });
+
+    test('accepts all schema numbers', async () => {
+      const allInts = [
+        'BIGINT',
+        'INTEGER',
+        'TINYINT',
+        'SMALLINT',
+        'UBIGINT',
+        'UINTEGER',
+        'UTINYINT',
+        'USMALLINT',
+        'HUGEINT',
+      ];
+      expect(runtime).not.toBeUndefined();
+      await runtime
+        .loadQuery(
+          `
+        sql: allInts is { connection: "${runtimeName}" select: """
+          SELECT
+            ${allInts
+              .map(intType => `1::${intType} as a${intType.toLowerCase()}`)
+              .join(',')}
+          """
+        }
+        query: from_sql(allInts) -> {
+          ${allInts
+            .map(
+              intType =>
+                `aggregate: sum${intType} is sum(a${intType.toLowerCase()})`
+            )
+            .join('\n')}
+        }
+  `
+        )
+        .run();
     });
   });
 });

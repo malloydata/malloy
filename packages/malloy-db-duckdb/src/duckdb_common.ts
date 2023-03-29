@@ -39,6 +39,14 @@ import {
 
 const duckDBToMalloyTypes: {[key: string]: AtomicFieldTypeInner} = {
   BIGINT: 'number',
+  INTEGER: 'number',
+  TINYINT: 'number',
+  SMALLINT: 'number',
+  UBIGINT: 'number',
+  UINTEGER: 'number',
+  UTINYINT: 'number',
+  USMALLINT: 'number',
+  HUGEINT: 'number',
   DOUBLE: 'number',
   VARCHAR: 'string',
   DATE: 'date',
@@ -46,7 +54,6 @@ const duckDBToMalloyTypes: {[key: string]: AtomicFieldTypeInner} = {
   TIME: 'string',
   DECIMAL: 'number',
   BOOLEAN: 'boolean',
-  INTEGER: 'number',
 };
 
 export interface DuckDBQueryOptions {
