@@ -37,4 +37,4 @@ In practice, much of this loop is handled by various database plugins:
 
 You can find a (very) simple example of writing a CLI for executing Malloy queries [here](https://github.com/malloydata/malloy/tree/main/demo/malloy-demo-bq-cli)
 
-A more realistic and complex use case - we use these libraries to power our VSCode Extension. Some examples can be found [here](https://github.com/malloydata/malloy/tree/main/vscode-extension/src/extension/commands)
+A more realistic and complex use case - we use these libraries to power our VSCode Extension. Some examples can be found [here](https://github.com/malloydata/malloy-vscode-extension/tree/main/src/extension/commands)
