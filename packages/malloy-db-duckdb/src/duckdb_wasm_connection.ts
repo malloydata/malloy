@@ -28,9 +28,12 @@ import {
   RunSQLOptions,
   StructDef,
   parseTableURI,
+  SQLBlock,
 } from '@malloydata/malloy';
 import {StructRow, Table, Vector} from 'apache-arrow';
 import {DuckDBCommon, QueryOptionsReader} from './duckdb_common';
+
+const TABLE_MATCH = /FROM\s*'(.*)'/gi;
 
 /**
  * Arrow's toJSON() doesn't really do what I'd expect, since
@@ -203,10 +206,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     }
   }
 
-  async fetchSchemaForTables(tables: string[]): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }> {
+  private async findTables(tables: string[]): Promise<void> {
     const fetchRemoteFile = async (tablePath: string): Promise<boolean> => {
       for (const callback of this.remoteFileCallbacks) {
         const data = await callback(tablePath);
@@ -220,8 +220,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
 
     await this.setup();
 
-    for (const tableUri of tables) {
-      const {tablePath} = parseTableURI(tableUri);
+    for (const tablePath of tables) {
       // http and s3 urls are handled by duckdb-wasm
       if (tablePath.match(/^https?:\/\//)) {
         continue;
@@ -236,7 +235,32 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
       // Wait for response
       await this.remoteFileStatus[tablePath];
     }
-    return super.fetchSchemaForTables(tables);
+  }
+
+  public async fetchSchemaForSQLBlock(
+    sqlRef: SQLBlock
+  ): Promise<
+    | {structDef: StructDef; error?: undefined}
+    | {error: string; structDef?: undefined}
+  > {
+    const tables: string[] = [];
+    for (const match of sqlRef.selectStr.matchAll(TABLE_MATCH)) {
+      tables.push(match[1]);
+    }
+    await this.findTables(tables);
+    return super.fetchSchemaForSQLBlock(sqlRef);
+  }
+
+  async fetchSchemaForTables(tableUris: string[]): Promise<{
+    schemas: Record<string, StructDef>;
+    errors: Record<string, string>;
+  }> {
+    const tables = tableUris.map(tableUri => {
+      const {tablePath} = parseTableURI(tableUri);
+      return tablePath;
+    });
+    await this.findTables(tables);
+    return super.fetchSchemaForTables(tableUris);
   }
 
   async close(): Promise<void> {
