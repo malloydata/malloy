@@ -30,7 +30,7 @@ const [_describe, databases] = describeIfDatabaseAvailable(runtimes);
 const allDucks = new RuntimeList(databases);
 
 describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
-  test('can open tables with wildcards', async () => {
+  it('can open tables with wildcards', async () => {
     const result = await runtime
       .loadQuery(
         `
@@ -44,7 +44,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     expect(result.data.path(0, 'carrier').value).toEqual('AA');
   });
 
-  test('accepts all schema numbers', async () => {
+  it('accepts all schema numbers', async () => {
     const allInts = [
       'BIGINT',
       'INTEGER',
@@ -75,6 +75,27 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     for (const fieldType of allFields) {
       expect(result.data.path(0, `sum_${fieldType}`).value).toEqual(1);
     }
+  });
+
+  it('can open json files', async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+          query: table('duckdb:test/data/duckdb/test.json') -> {
+            project: *
+          }
+        `
+      )
+      .run();
+    expect(result.data.path(0, 'foo').value).toEqual('bar');
+  });
+
+  it('supports timezones', async () => {
+    await runtime.connection.runSQL("SET TimeZone='CET'");
+    const result = await runtime.connection.runSQL(
+      "SELECT current_setting('TimeZone')"
+    );
+    expect(result.rows[0]).toEqual({"current_setting('TimeZone')": 'CET'});
   });
 });
 

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as duckdb from '@duckdb/duckdb-wasm';
+import * as duckdb from '@malloydata/duckdb-wasm';
 import {DuckDBWASMConnection as DuckDBWASMConnectionBase} from './duckdb_wasm_connection';
 
 export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {

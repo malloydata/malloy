@@ -58,6 +58,16 @@ export class DuckDBConnection extends DuckDBCommon {
     });
   }
 
+  async loadExtension(ext: string) {
+    try {
+      await this.runDuckDBQuery(`INSTALL '${ext}'`);
+      await this.runDuckDBQuery(`LOAD '${ext}'`);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Unable to load ${ext} extension', error);
+    }
+  }
+
   protected async setup(): Promise<void> {
     const doSetup = async () => {
       if (this.workingDirectory) {
@@ -65,19 +75,8 @@ export class DuckDBConnection extends DuckDBCommon {
           `SET FILE_SEARCH_PATH='${this.workingDirectory}'`
         );
       }
-      try {
-        await this.runDuckDBQuery("INSTALL 'json'");
-        await this.runDuckDBQuery("LOAD 'json'");
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Unable to load json extension', error);
-      }
-      try {
-        await this.runDuckDBQuery("INSTALL 'httpfs'");
-        await this.runDuckDBQuery("LOAD 'httpfs'");
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Unable to load httpfs extension', error);
+      for (const ext of ['json', 'httpfs', 'icu']) {
+        await this.loadExtension(ext);
       }
     };
     await this.connecting;
