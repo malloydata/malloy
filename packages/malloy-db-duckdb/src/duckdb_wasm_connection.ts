@@ -260,7 +260,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
       return tablePath;
     });
     await this.findTables(tables);
-    return super.fetchSchemaForTables(tables);
+    return super.fetchSchemaForTables(tableUris);
   }
 
   async close(): Promise<void> {
