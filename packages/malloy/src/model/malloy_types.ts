@@ -795,7 +795,11 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
 
 export interface SQLBlockStructDef extends StructDef {
   structSource: SubquerySource;
-  declaredSQLBlock?: boolean; // This is kind of a hack and should go
+  // This was added to that errors for structdefs created in sql: but NOT used in
+  // from_sql could error properly. This is kind of non-sensical, and once
+  // we decide if SQL blocks are StructDefs or Queries or Something Else
+  // this should go away.
+  declaredSQLBlock?: boolean;
 }
 
 export function isSQLBlockStruct(sd: StructDef): sd is SQLBlockStructDef {

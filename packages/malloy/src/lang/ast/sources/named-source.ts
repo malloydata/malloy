@@ -22,6 +22,7 @@
  */
 
 import {
+  isSQLBlockStruct,
   isValueParameter,
   paramHasValue,
   StructDef,
@@ -89,7 +90,7 @@ export class NamedSource extends Source {
     if (entry.type === 'query') {
       this.log(`Must use 'from()' for query source '${this.refName}`);
       return;
-    } else if (modelEnt.sqlType) {
+    } else if (isSQLBlockStruct(entry) && entry.declaredSQLBlock) {
       this.log(`Must use 'from_sql()' for sql source '${this.refName}`);
       return;
     }

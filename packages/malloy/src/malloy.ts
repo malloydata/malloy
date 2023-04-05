@@ -59,7 +59,7 @@ import {
   TurtleDef,
   expressionIsCalculation,
   flattenQuery,
-  isSQLBlock,
+  isSQLBlockStruct,
   isSQLFragment,
   FieldUnsupportedDef,
 } from './model';
@@ -282,7 +282,7 @@ export class Malloy {
               });
             }
             if (resolved.structDef) {
-              if (isSQLBlock(resolved.structDef)) {
+              if (isSQLBlockStruct(resolved.structDef)) {
                 translator.update({
                   compileSQL: {[expanded.name]: resolved.structDef},
                 });

@@ -26,6 +26,7 @@ import {
   SQLBlockSource,
   SQLBlockStructDef,
   StructDef,
+  isSQLBlockStruct,
   isSQLFragment,
 } from '../../model';
 import {makeSQLBlock} from '../../model/sql_block';
@@ -86,9 +87,11 @@ describe('sql:', () => {
         const sr = makeSchemaResponse(sql);
         model.update({compileSQL: {[refKey]: sr}});
         expect(model).modelCompiled();
-        expect(unlocatedStructDef(model.sqlBlocks[0])).toEqual(
-          unlocatedStructDef({...sr, as: 'users'})
-        );
+        const expectThis = unlocatedStructDef({...sr, as: 'users'});
+        if (isSQLBlockStruct(expectThis)) {
+          expectThis.declaredSQLBlock = true;
+        }
+        expect(unlocatedStructDef(model.sqlBlocks[0])).toEqual(expectThis);
       }
     }
   });
@@ -109,6 +112,9 @@ describe('sql:', () => {
       expect(model).modelCompiled();
       const users = model.getSourceDef('malloyUsers');
       expect(users).toBeDefined();
+      if (users && isSQLBlockStruct(users)) {
+        expect(users.declaredSQLBlock).toBeUndefined();
+      }
     }
   });
 
