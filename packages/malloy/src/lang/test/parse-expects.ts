@@ -22,7 +22,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TranslateResponse} from '..';
+import {MalloyTranslator, TranslateResponse} from '..';
 import {DocumentLocation} from '../../model';
 import {MarkedSource, pretty, TestTranslator} from './test-translator';
 import {inspect} from 'util';
@@ -42,7 +42,7 @@ declare global {
   }
 }
 
-function checkForErrors(trans: TestTranslator) {
+function checkForErrors(trans: MalloyTranslator) {
   if (trans.logger === undefined) {
     throw new Error('JESTERY BROKEN, CANT FIND ERORR LOG');
   }
@@ -138,7 +138,7 @@ expect.extend({
     x.translate();
     return checkForNeededs(x);
   },
-  toBeErrorless: function (trans: TestTranslator) {
+  toBeErrorless: function (trans: MalloyTranslator) {
     return checkForErrors(trans);
   },
   toReturnType: function (functionCall: string, returnType: string) {
