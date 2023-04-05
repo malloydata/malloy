@@ -117,7 +117,7 @@ export abstract class MalloyElement {
           location: reference.location,
         });
       } else if (result?.entry.type === 'struct') {
-        if (isSQLBlockStruct(result.entry)) {
+        if (isSQLBlockStruct(result.entry) && result.entry.declaredSQLBlock) {
           this.addReference({
             type: 'sqlBlockReference',
             text: key,
