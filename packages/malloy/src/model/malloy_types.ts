@@ -795,9 +795,10 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
 
 export interface SQLBlockStructDef extends StructDef {
   structSource: SubquerySource;
+  declaredSQLBlock?: boolean; // This is kind of a hack and should go
 }
 
-export function isSQLBlock(sd: StructDef): sd is SQLBlockStructDef {
+export function isSQLBlockStruct(sd: StructDef): sd is SQLBlockStructDef {
   const src = sd.structSource;
   return src.type === 'sql' && src.method === 'subquery';
 }
