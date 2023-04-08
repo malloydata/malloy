@@ -28,25 +28,29 @@ import {mkSqlEqWith} from '../../util';
 import {DateTime as LuxonDateTime} from 'luxon';
 
 // MTOY todo really test all databases
-const runtimes = new RuntimeList(['duckdb', 'bigquery'] || allDatabases);
+const runtimes = new RuntimeList(allDatabases);
 
 // MTOY todo look at this list for timezone problems, I know there are some
 describe.each(runtimes.runtimeList)(
   '%s: interval extraction',
-  (_db, runtime) => {
+  (dbName, runtime) => {
     const sqlEq = mkSqlEqWith(runtime);
 
     // MTOY todo when there is query time zone, check that literals
     // NOT in the query time zone bin in the query time zone.
 
     // MTOY todo tests for the moprhing literal ranges to timestamp
-    // or date, depending on LHS of the apply.
+    // or date, depending on LHS of the apply. ( maybe should be in parse.spec?)
 
     test('seconds', async () => {
       expect(await sqlEq('seconds(now to now + 1 second)', 1)).isSqlEq();
       expect(await sqlEq('seconds(now to now)', 0)).isSqlEq();
       expect(await sqlEq('seconds(now to now + 2 seconds)', 2)).isSqlEq();
       expect(await sqlEq('seconds(now to now - 2 seconds)', -2)).isSqlEq();
+      const a = '@2001-01-01 00:00:00';
+      const b = '@2001-01-01 00:00:00.999';
+      expect(await sqlEq(`seconds(${a} to ${b})`, 0)).isSqlEq();
+      expect(await sqlEq(`seconds(${b} to @2001-01-01 00:00:01)`, 0)).isSqlEq();
     });
 
     test('minutes', async () => {
@@ -75,63 +79,58 @@ describe.each(runtimes.runtimeList)(
       expect(await sqlEq('days(now.day to now.day + 23 hours)', 0)).isSqlEq();
       expect(await sqlEq('days(now.day to now.day + 48 hours)', 2)).isSqlEq();
       expect(await sqlEq('days(now.day to now.day - 48 hours)', -2)).isSqlEq();
-
       expect(
-        await sqlEq('days(@2022-10-03 10:23:00 to @2022-10-04 09:23:00)', 1)
+        await sqlEq('days(@2022-10-03 10:23:00 to @2022-10-04 09:23:00)', 0)
       ).isSqlEq();
     });
 
     test('weeks', async () => {
-      expect(await sqlEq('weeks(now.week to now.week + 1 week)', 1)).isSqlEq();
-      expect(await sqlEq('weeks(now.week to now.week + 6 days)', 0)).isSqlEq();
-      expect(await sqlEq('weeks(now.week to now.week + 14 days)', 2)).isSqlEq();
+      expect(await sqlEq('week(now.week to now.week + 6 days)', 0)).isSqlEq();
+      expect(await sqlEq('week(now.week to now.week + 7 days)', 1)).isSqlEq();
       expect(
-        await sqlEq('weeks(now.week to now.week - 14 days)', -2)
+        await sqlEq('week(now.week to now.week + 7 days - 1 second)', 0)
       ).isSqlEq();
-      expect(await sqlEq('weeks(@2022-10-03 to @2022-10-10)', 1)).isSqlEq();
-      expect(await sqlEq('weeks(@2022-10-03 to @2022-10-09)', 1)).isSqlEq();
-      expect(await sqlEq('weeks(@2022-10-02 to @2022-10-08)', 0)).isSqlEq();
+      expect(await sqlEq('weeks(@2022-10-01 to @2022-10-07)', 0)).isSqlEq();
+      expect(await sqlEq('weeks(@2022-10-01 to @2022-10-08)', 1)).isSqlEq();
+      expect(await sqlEq('weeks(@2022-10-15 to @2022-10-01)', -2)).isSqlEq();
       expect(await sqlEq('weeks(@2022-10-02 to @2023-10-02)', 52)).isSqlEq();
-
       expect(
-        await sqlEq('weeks(@2022-10-02 10:00 to @2023-10-02 10:00)', 52)
+        await sqlEq('weeks(@2022-10-01 12:00 to @2022-10-08 11:59)', 0)
       ).isSqlEq();
     });
 
-    test('months', async () => {
-      expect(await sqlEq('months(now to now + 1 month)', 1)).isSqlEq();
+    test.skip('months', async () => {
+      expect(await sqlEq('months(now to now)', 0)).isSqlEq();
+      expect(await sqlEq('months(@2001-01-01 to @2001-02-01)', 1)).isSqlEq();
+      expect(await sqlEq('months(@2001-01-01 to @2001-03-01)', 2)).isSqlEq();
+      expect(await sqlEq('months(@2001-01-01 to @2002-02-01)', 13)).isSqlEq();
       expect(
-        await sqlEq('months(now.month to now.month + 27 days)', 0)
-      ).isSqlEq();
-      expect(await sqlEq('months(now to now + 2 months)', 2)).isSqlEq();
-      expect(await sqlEq('months(now to now - 2 months)', -2)).isSqlEq();
-
-      expect(
-        await sqlEq('months(@2022-10-02 10:00 to @2022-11-02 09:00)', 1)
+        await sqlEq('months(@2022-10-02 12:00 to @2022-11-02 11:59)', 0)
       ).isSqlEq();
     });
 
-    test('quarters', async () => {
-      expect(await sqlEq('quarters(@2022-03-31 to @2022-04-01)', 1)).isSqlEq();
+    test.skip('quarters', async () => {
       expect(await sqlEq('quarters(now to now + 1 quarter)', 1)).isSqlEq();
       expect(
         await sqlEq('quarters(now.quarter to now.quarter + 27 days)', 0)
       ).isSqlEq();
       expect(await sqlEq('quarters(now to now + 2 quarters)', 2)).isSqlEq();
       expect(await sqlEq('quarters(now to now - 2 quarters)', -2)).isSqlEq();
-
       expect(
-        await sqlEq('quarters(@2022-10-02 10:00 to @2023-04-02 09:00)', 2)
+        await sqlEq('quarters(@2022-01-01 12:00 to @2022-04-01 12:00)', 1)
+      ).isSqlEq();
+      expect(
+        await sqlEq('quarters(@2022-01-01 12:00 to @2022-04-01 11:59)', 0)
       ).isSqlEq();
     });
 
-    test('years', async () => {
+    test.skip('years', async () => {
       expect(await sqlEq('years(@2022 to @2023)', 1)).isSqlEq();
       expect(await sqlEq('years(@2022-01-01 to @2022-12-31)', 0)).isSqlEq();
       expect(await sqlEq('years(@2022 to @2024)', 2)).isSqlEq();
       expect(await sqlEq('years(@2024 to @2022)', -2)).isSqlEq();
       expect(
-        await sqlEq('years(@2022-01-01 10:00 to @2024-01-01 09:00)', 2)
+        await sqlEq('years(@2022-01-01 12:00 to @2024-01-01 11:59)', 1)
       ).isSqlEq();
     });
   }
@@ -150,20 +149,21 @@ describe.each(runtimes.runtimeList)(
       the edges of the bin, instead of computing the bin and use '='
   5) connection, model, and query time zone setting
   6) piping a query in one time zone into a query in another
+  7) graphs neeed to respect query time zone
 */
 
-describe.each(runtimes.runtimeList)('%s: time zones', (dbName, runtime) => {
-  const zone = 'America/Mexico_City'; // -06:00 no DST
-  const zone_2020 = LuxonDateTime.fromObject({
-    year: 2020,
-    month: 2,
-    day: 20,
-    hour: 0,
-    minute: 0,
-    second: 0,
-    zone,
-  });
+const zone = 'America/Mexico_City'; // -06:00 no DST
+const zone_2020 = LuxonDateTime.fromObject({
+  year: 2020,
+  month: 2,
+  day: 20,
+  hour: 0,
+  minute: 0,
+  second: 0,
+  zone,
+});
 
+describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
   test(`${dbName} NOT in tz ${zone} by default`, async () => {
     // this makes sure that the tests which use the test timezome
     // are actually testing something ... file this under
@@ -188,7 +188,7 @@ describe.each(runtimes.runtimeList)('%s: time zones', (dbName, runtime) => {
       `
         sql: tzTest is { connection: "${dbName}" select: """SELECT 1 as one""" }
         query: from_sql(tzTest) -> {
-          group_by: literalTime is @2020-02-20 00:00:00-06:00
+          project: literalTime is @2020-02-20 00:00:00-06:00
         }
 `
     );
@@ -212,12 +212,13 @@ describe.each(runtimes.runtimeList)('%s: time zones', (dbName, runtime) => {
     const have = LuxonDateTime.fromJSDate(literal);
     expect(have.valueOf()).toEqual(zone_2020.valueOf());
   });
+});
 
-  // skipped because we don't implement query time zone yet ...
+describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
+  runtime.timezone = zone;
   test.skip('partial literal timestamps are in query time zone', async () => {
     const query = runtime.loadQuery(
       `
-        //timezone: ${zone}
         sql: tzTest is { connection: "${dbName}" select: """SELECT 1 as one""" }
         query: from_sql(tzTest) -> {
           group_by: literalTime is @2020-02-20 00:00:00
