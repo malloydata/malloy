@@ -26,7 +26,6 @@ import {
   StructRef,
   isSQLBlockStruct,
 } from '../../../model/malloy_types';
-import {isSQLBlock, StructDef, StructRef} from '../../../model/malloy_types';
 import {NamedSource} from './named-source';
 
 export class SQLSource extends NamedSource {
@@ -49,7 +48,7 @@ export class SQLSource extends NamedSource {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const {declaredSQLBlock, ...newEntry} = entry;
       return newEntry;
-    } else if (!isSQLBlock(entry)) {
+    } else if (!isSQLBlockStruct(entry)) {
       this.log(`Cannot use 'from_sql()' to explore '${this.refName}'`);
       return;
     }
