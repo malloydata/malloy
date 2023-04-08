@@ -25,7 +25,7 @@ import cloneDeep from 'lodash/cloneDeep';
 import {
   DocumentLocation,
   DocumentReference,
-  isSQLBlock,
+  isSQLBlockStruct,
   ModelDef,
   Query,
   SQLBlockStructDef,
@@ -117,7 +117,7 @@ export abstract class MalloyElement {
           location: reference.location,
         });
       } else if (result?.entry.type === 'struct') {
-        if (isSQLBlock(result.entry)) {
+        if (isSQLBlockStruct(result.entry) && result.entry.declaredSQLBlock) {
           this.addReference({
             type: 'sqlBlockReference',
             text: key,
@@ -384,11 +384,11 @@ export class Document extends MalloyElement implements NameSpace {
     this.queryList = [];
     this.sqlBlocks = [];
     if (extendingModelDef) {
-      for (const inName in extendingModelDef.contents) {
-        const struct = extendingModelDef.contents[inName];
-        if (struct.type === 'struct') {
-          const exported = extendingModelDef.exports.includes(inName);
-          this.setEntry(inName, {entry: struct, exported});
+      for (const [nm, orig] of Object.entries(extendingModelDef.contents)) {
+        const entry = cloneDeep(orig);
+        if (entry.type === 'struct' || entry.type === 'query') {
+          const exported = extendingModelDef.exports.includes(nm);
+          this.setEntry(nm, {entry, exported});
         }
       }
     }
@@ -421,13 +421,17 @@ export class Document extends MalloyElement implements NameSpace {
   }
 
   defineSQL(sql: SQLBlockStructDef, name?: string): boolean {
-    const ret = {...sql, as: `$${this.sqlBlocks.length}`};
+    const ret = {
+      ...sql,
+      as: `$${this.sqlBlocks.length}`,
+      declaredSQLBlock: true,
+    };
     if (name) {
       if (this.getEntry(name)) {
         return false;
       }
       ret.as = name;
-      this.setEntry(name, {entry: ret, sqlType: true});
+      this.setEntry(name, {entry: ret});
     }
     this.sqlBlocks.push(ret);
     return true;

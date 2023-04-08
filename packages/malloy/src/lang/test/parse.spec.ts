@@ -22,377 +22,30 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TranslateResponse} from '..';
 import {
   DocumentLocation,
   DocumentPosition,
-  Query,
   SQLBlockSource,
   SQLBlockStructDef,
-  StructDef,
   expressionIsCalculation,
   isFieldTypeDef,
   isFilteredAliasedName,
   isSQLFragment,
 } from '../../model';
-import {makeSQLBlock} from '../../model/sql_block';
-import {StaticSpace} from '../ast/field-space/static-space';
-import {ExpressionDef} from '../ast/types/expression-def';
-import {DataRequestResponse} from '../translate-response';
 import {
   MarkedSource,
   TestTranslator,
-  aTableDef,
   getExplore,
   getField,
   getJoinField,
   getModelQuery,
   getQueryField,
   markSource,
-  pretty,
+  BetaExpression,
 } from './test-translator';
 import isEqual from 'lodash/isEqual';
-import {inspect} from 'util';
-import {ExprValue} from '../ast/types/expr-value';
 import {isGranularResult} from '../ast/types/granular-result';
-
-const inspectCompile = false;
-
-/*
- * Thinking of these tests as just "do things parse", there should maybe
- * be additional tests for, "does the correct code get generated", but
- * the first step should be to write all the phrases in the grammar
- * and make sure they parse to ast and the ast generates something
- */
-
-abstract class Testable extends TestTranslator {
-  abstract compile(): void;
-}
-
-class BetaModel extends Testable {
-  constructor(readonly testSrc: string) {
-    super(testSrc);
-  }
-
-  compile(): void {
-    const compileTo = this.translate();
-    if (compileTo.translated && inspectCompile) {
-      console.log('MODEL: ', pretty(compileTo.translated.modelDef));
-      console.log('QUERIES: ', pretty(compileTo.translated.queryList));
-    }
-    // All the stuff to ask the ast for a translation is already in TestTranslator
-  }
-
-  unresolved(): DataRequestResponse {
-    return this.importsAndTablesStep.step(this);
-  }
-
-  getSourceDef(srcName: string): StructDef | undefined {
-    const t = this.translate().translated;
-    if (t) {
-      const s = t.modelDef.contents[srcName];
-      if (s.type === 'struct') {
-        return s;
-      }
-    }
-    return undefined;
-  }
-
-  getQuery(queryName: string | number): Query | undefined {
-    const t = this.translate().translated;
-    if (t) {
-      const s =
-        typeof queryName === 'string'
-          ? t.modelDef.contents[queryName]
-          : t.queryList[queryName];
-      if (s?.type === 'query') {
-        return s;
-      }
-    }
-    return undefined;
-  }
-}
-
-declare global {
-  // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace jest {
-    interface Matchers<R> {
-      modelParsed(): R;
-      toBeErrorless(): R;
-      toCompile(): R;
-      modelCompiled(): R;
-      toReturnType(tp: string): R;
-      compileToFailWith(...expectedErrors: string[]): R;
-      isLocationIn(at: DocumentLocation, txt: string): R;
-    }
-  }
-}
-
-function checkForErrors(trans: Testable) {
-  if (trans.logger === undefined) {
-    throw new Error('JESTERY BROKEN, CANT FIND ERORR LOG');
-  }
-  if (trans.logger.hasErrors()) {
-    return {
-      message: () => `Translation Errors:\n${trans.prettyErrors()}`,
-      pass: false,
-    };
-  }
-  return {
-    message: () => 'Unexpected error free translation',
-    pass: true,
-  };
-}
-
-function prettyNeeds(response: TranslateResponse) {
-  let needString = '';
-  if (response.tables) {
-    needString += 'Tables:\n';
-    response.tables.forEach(table => (needString += `  - ${table}`));
-  }
-  if (response.compileSQL) {
-    needString += `Compile SQL: ${response.compileSQL.name}`;
-  }
-  if (response.urls) {
-    needString += 'URLs:\n';
-    response.urls.forEach(url => (needString += `  - ${url}`));
-  }
-  return needString;
-}
-
-function checkForNeededs(trans: Testable) {
-  const response = trans.translateStep.step(trans);
-  if (!response.final) {
-    return {
-      message: () =>
-        `Translation is not complete, needs:\n${prettyNeeds(response)}`,
-      pass: false,
-    };
-  }
-  return {
-    message: () => 'Unexpected complete translation',
-    pass: true,
-  };
-}
-
-function highlightError(dl: DocumentLocation, txt: string): string {
-  if (dl === undefined) {
-    return '~Location Undefined~';
-  }
-  const {start, end} = dl.range;
-  const output = [
-    `${start.line}:${start.character}-${end.line}:${end.character}`,
-  ];
-  let errStart = start.character;
-  const doc = txt.split('\n');
-  for (let line = start.line; line <= end.line; line += 1) {
-    const lineText = doc[line];
-    const lineStr = `     ${line}`.slice(-5);
-    output.push(`${lineStr}| ${lineText}`);
-    const upToError = '     | ' + ' '.repeat(errStart);
-    let errLen = end.character - errStart;
-    if (line < end.line) {
-      errLen = lineText.length - errStart;
-      errStart = 0;
-    }
-    output.push(upToError + '-'.repeat(errLen));
-  }
-  return output.join('\n');
-}
-
-function unlocatedStructDef(sd: StructDef): StructDef {
-  const ret = {...sd};
-  ret.fields = sd.fields.map(f => {
-    const nf = {...f};
-    delete nf.location;
-    return nf;
-  });
-  delete ret.location;
-  return ret;
-}
-
-expect.extend({
-  toCompile: function (s: string) {
-    const x = new BetaModel(s);
-    x.compile();
-    const errorCheck = checkForErrors(x);
-    if (!errorCheck.pass) {
-      return errorCheck;
-    }
-    x.translate();
-    return checkForNeededs(x);
-  },
-  modelParsed: function (x: Testable) {
-    x.compile();
-    return checkForErrors(x);
-  },
-  modelCompiled: function (x: Testable) {
-    x.compile();
-    const errorCheck = checkForErrors(x);
-    if (!errorCheck.pass) {
-      return errorCheck;
-    }
-    x.translate();
-    return checkForNeededs(x);
-  },
-  toBeErrorless: function (trans: Testable) {
-    return checkForErrors(trans);
-  },
-  toReturnType: function (functionCall: string, returnType: string) {
-    const exprModel = new BetaModel(
-      `explore: x is a { dimension: d is ${functionCall} }`
-    );
-    expect(exprModel).modelCompiled();
-    const x = exprModel.getSourceDef('x');
-    expect(x).toBeDefined();
-    if (x) {
-      const d = x.fields.find(f => f.name === 'd');
-      expect(d?.type).toBe(returnType);
-    }
-    return {
-      pass: true,
-      message: () => '',
-    };
-  },
-  compileToFailWith: function (
-    s: MarkedSource | string | BetaModel,
-    ...msgs: string[]
-  ) {
-    let emsg = 'Compile Error expectation not met\nExpected error';
-    let mSrc: MarkedSource | undefined;
-    const qmsgs = msgs.map(s => `error '${s}'`);
-    if (msgs.length === 1) {
-      emsg += ` ${qmsgs[0]}`;
-    } else {
-      emsg += `s [\n${qmsgs.join('\n')}\n]`;
-    }
-    let m: BetaModel;
-    let src: string;
-    if (s instanceof BetaModel) {
-      m = s;
-      src = m.testSrc;
-    } else {
-      if (typeof s === 'string') {
-        src = s;
-      } else {
-        src = s.code;
-        mSrc = s;
-      }
-      m = new BetaModel(src);
-    }
-    emsg += `\nSource:\n${src}`;
-    const t = m.translate();
-    if (t.translated) {
-      return {pass: false, message: () => emsg};
-    } else if (t.errors === undefined) {
-      return {
-        pass: false,
-        message: () =>
-          'TEST ERROR, not all objects resolved in source\n' +
-          pretty(t) +
-          '\n' +
-          emsg,
-      };
-    } else {
-      const explain: string[] = [];
-      const errList = m.errors().errors;
-      let i;
-      for (i = 0; i < msgs.length && errList[i]; i += 1) {
-        const msg = msgs[i];
-        const err = errList[i];
-        if (msg !== err.message) {
-          explain.push(`Expected: ${msg}\nGot: ${err.message}`);
-        } else {
-          if (mSrc?.locations[i]) {
-            const have = err.at?.range;
-            const want = mSrc.locations[i].range;
-            if (!this.equals(have, want)) {
-              explain.push(
-                `Expected '${msg}' at location: ${inspect(want)}\n` +
-                  `Actual location: ${inspect(have)}`
-              );
-            }
-          }
-        }
-      }
-      if (i !== msgs.length) {
-        explain.push(...msgs.slice(i).map(m => `Missing: ${m}`));
-      }
-      if (i !== errList.length) {
-        explain.push(
-          ...errList.slice(i).map(m => `Unexpected Error: ${m.message}`)
-        );
-      }
-      if (explain.length === 0) {
-        return {
-          pass: true,
-          message: () => `All expected errors found: ${pretty(msgs)}`,
-        };
-      }
-      return {
-        pass: false,
-        message: () =>
-          `Compiler did not generated expected errors\n${explain.join('\n')}`,
-      };
-    }
-  },
-  isLocationIn: function (
-    checkAt: DocumentLocation,
-    at: DocumentLocation,
-    text: string
-  ) {
-    if (this.equals(at, checkAt)) {
-      return {
-        pass: true,
-        message: () => 'Locations match',
-      };
-    }
-    const errMsg =
-      'Locations do not match\n' +
-      `Expected: ${highlightError(at, text)}\n` +
-      `Received: ${highlightError(checkAt, text)}\n`;
-    return {
-      pass: false,
-      message: () => errMsg,
-    };
-  },
-});
-
-class BetaExpression extends Testable {
-  private compiled?: ExprValue;
-  constructor(src: string) {
-    super(src, 'justExpr');
-  }
-
-  compile(): void {
-    const exprAst = this.ast();
-    if (exprAst instanceof ExpressionDef) {
-      const aStruct = this.internalModel.contents['ab'];
-      if (aStruct.type === 'struct') {
-        const tstFS = new StaticSpace(aStruct);
-        const exprDef = exprAst.getExpression(tstFS);
-        this.compiled = exprDef;
-        if (inspectCompile) {
-          console.log('EXPRESSION: ', pretty(exprDef));
-        }
-      } else {
-        throw new Error("Can't get simple namespace for expression tests");
-      }
-    } else if (this.logger.hasErrors()) {
-      return;
-    } else {
-      const whatIsIt = exprAst?.toString() || 'NO AST GENERATED';
-      throw new Error(`Not an expression: ${whatIsIt}`);
-    }
-  }
-
-  generated(): ExprValue {
-    if (!this.compiled) {
-      throw new Error('Must compile expression before fetching generated code');
-    }
-    return this.compiled;
-  }
-}
+import './parse-expects';
 
 type TestFunc = () => undefined;
 
@@ -405,7 +58,7 @@ function exprOK(s: string): TestFunc {
 
 function modelOK(s: string): TestFunc {
   return () => {
-    const m = new BetaModel(s);
+    const m = new TestTranslator(s);
     expect(m).modelCompiled();
     return undefined;
   };
@@ -415,7 +68,7 @@ function badModel(s: MarkedSource | string, msg: string): TestFunc {
   return () => {
     const src = typeof s === 'string' ? s : s.code;
     const emsg = `Error expectation not met\nExpected error: '${msg}'\nSource:\n${src}`;
-    const m = new BetaModel(src);
+    const m = new TestTranslator(src);
     const t = m.translate();
     if (t.translated) {
       fail(emsg);
@@ -460,7 +113,7 @@ describe('model statements', () => {
       modelOK('explore: aa is a { dimension: a is astr }')
     );
     test('source refinement preserves original', () => {
-      const x = new BetaModel('source: na is a + { dimension: one is 1 }');
+      const x = new TestTranslator('source: na is a + { dimension: one is 1 }');
       expect(x).modelCompiled();
       const a = x.getSourceDef('a');
       if (a) {
@@ -544,7 +197,7 @@ describe('model statements', () => {
       `)
     );
     test('query refinement preserves original', () => {
-      const x = new BetaModel(`
+      const x = new TestTranslator(`
         query: q is a -> { aggregate: acount is count() }
         query: nq is -> q + { group_by: astr }
       `);
@@ -557,7 +210,7 @@ describe('model statements', () => {
       }
     });
     test('query composition preserves original', () => {
-      const x = new BetaModel(`
+      const x = new TestTranslator(`
         query: q is ab -> { aggregate: acount }
         query: nq is -> q -> { project: * }
       `);
@@ -641,94 +294,6 @@ describe('model statements', () => {
         }
       `)
     );
-  });
-  describe('import:', () => {
-    test('simple import', () => {
-      const docParse = new BetaModel('import "child"');
-      const xr = docParse.unresolved();
-      expect(docParse).toBeErrorless();
-      expect(xr).toEqual({urls: ['internal://test/langtests/child']});
-      docParse.update({
-        urls: {'internal://test/langtests/child': 'explore: aa is a'},
-      });
-      const yr = docParse.unresolved();
-      expect(yr).toBeNull();
-    });
-    test('missing import', () => {
-      const docParse = new BetaModel('import "child"');
-      const xr = docParse.unresolved();
-      expect(docParse).toBeErrorless();
-      expect(xr).toEqual({urls: ['internal://test/langtests/child']});
-      const reportedError = 'ENOWAY: No way to find your child';
-      docParse.update({
-        errors: {
-          urls: {'internal://test/langtests/child': reportedError},
-        },
-      });
-      docParse.translate();
-      expect(docParse).not.toBeErrorless();
-      expect(docParse.prettyErrors()).toContain(reportedError);
-    });
-    test('chained imports', () => {
-      const docParse = new BetaModel('import "child"');
-      docParse.update({
-        urls: {'internal://test/langtests/child': 'import "grandChild"'},
-      });
-      const xr = docParse.unresolved();
-      expect(docParse).toBeErrorless();
-      expect(xr).toEqual({urls: ['internal://test/langtests/grandChild']});
-    });
-    test('relative imports', () => {
-      const docParse = new BetaModel('import "../parent.malloy"');
-      expect(docParse).modelParsed();
-      const xr = docParse.unresolved();
-      expect(xr).toEqual({urls: ['internal://test/parent.malloy']});
-      docParse.update({
-        urls: {
-          'internal://test/parent.malloy': "source: aa is table('aTable')",
-        },
-      });
-      expect(docParse).modelCompiled();
-    });
-    test('relative imports with errors', () => {
-      const docParse = new BetaModel('import "../parent.malloy"');
-      expect(docParse).modelParsed();
-      const xr = docParse.unresolved();
-      expect(xr).toEqual({urls: ['internal://test/parent.malloy']});
-      docParse.update({
-        urls: {
-          'internal://test/parent.malloy': `
-            source: aa is table('aTable') {
-              dimension: astr is 'not legal beause astr exists'
-            }`,
-        },
-      });
-      expect(docParse).compileToFailWith("Cannot redefine 'astr'");
-    });
-    test('source references expanded when not exported', () => {
-      const srcFiles = {
-        'internal://test/langtests/middle': `
-          import "bottom"
-          source: midSrc is from(bottomSrc -> { group_by: astr })
-        `,
-        'internal://test/langtests/bottom':
-          "source: bottomSrc is table('aTable')",
-      };
-      const fullModel = new BetaModel(`
-        import "middle"
-      `);
-      fullModel.update({urls: srcFiles});
-      expect(fullModel).modelCompiled();
-      const ms = fullModel.getSourceDef('midSrc');
-      expect(ms).toBeDefined();
-      if (ms) {
-        expect(ms.structSource.type).toBe('query');
-        if (ms.structSource.type === 'query') {
-          const qs = ms.structSource.query.structRef;
-          expect(typeof qs).not.toBe('string');
-        }
-      }
-    });
   });
 });
 
@@ -837,7 +402,7 @@ describe('explore properties', () => {
   test('primary_key', modelOK('explore: c is a { primary_key: ai }'));
   test('rename', modelOK('explore: c is a { rename: nn is ai }'));
   test('accept single', () => {
-    const onlyAstr = new BetaModel('explore: c is a { accept: astr }');
+    const onlyAstr = new TestTranslator('explore: c is a { accept: astr }');
     expect(onlyAstr).modelCompiled();
     const c = onlyAstr.getSourceDef('c');
     if (c) {
@@ -846,7 +411,7 @@ describe('explore properties', () => {
   });
   test('accept multi', modelOK('explore: c is a { accept: astr, af }'));
   test('except single', () => {
-    const noAstr = new BetaModel('explore: c is a { except: astr }');
+    const noAstr = new TestTranslator('explore: c is a { except: astr }');
     expect(noAstr).modelCompiled();
     const c = noAstr.getSourceDef('c');
     if (c) {
@@ -921,7 +486,7 @@ describe('qops', () => {
   test('index unique on path', modelOK('query:ab->{index: b.astr, ab.astr}'));
   test('index join.*', modelOK('query:ab->{index: ab.*}'));
   test('index multiple', () => {
-    const model = new BetaModel('query:a->{index: af, astr}');
+    const model = new TestTranslator('query:a->{index: af, astr}');
     expect(model).modelCompiled();
     const q = model.getQuery(0);
     expect(q).toBeDefined();
@@ -932,7 +497,7 @@ describe('qops', () => {
     }
   });
   test('index star', () => {
-    const model = new BetaModel('query:a->{index: *, astr}');
+    const model = new TestTranslator('query:a->{index: *, astr}');
     expect(model).modelCompiled();
     const q = model.getQuery(0);
     expect(q).toBeDefined();
@@ -946,7 +511,7 @@ describe('qops', () => {
   test('index sampled', modelOK('query:a->{index: *; sample: true}'));
   test('index unsampled', modelOK('query:a->{index: *; sample: false}'));
   test('index sample-percent', () => {
-    const model = new BetaModel('query:a->{index: *; sample: 42%}');
+    const model = new TestTranslator('query:a->{index: *; sample: 42%}');
     expect(model).modelCompiled();
     const q = model.getQuery(0);
     expect(q).toBeDefined();
@@ -1007,7 +572,9 @@ describe('qops', () => {
     modelOK("query:a->{ group_by: astr; where: af > 10,astr~'a%' }")
   );
   test('filters preserve source formatting in code:', () => {
-    const model = new BetaModel("source: notb is a + { where: astr  !=  'b' }");
+    const model = new TestTranslator(
+      "source: notb is a + { where: astr  !=  'b' }"
+    );
     expect(model).modelCompiled();
     const notb = model.getSourceDef('notb');
     expect(notb).toBeDefined();
@@ -1020,7 +587,7 @@ describe('qops', () => {
     }
   });
   test('field expressions preserve source formatting in code:', () => {
-    const model = new BetaModel(
+    const model = new TestTranslator(
       'source: notb is a + { dimension: d is 1 +   2 }'
     );
     expect(model).modelCompiled();
@@ -1057,7 +624,7 @@ describe('qops', () => {
   );
   test('nest ref', modelOK('query: ab->{group_by: ai; nest: aturtle}'));
   test('refine query with extended source', () => {
-    const m = new BetaModel(`
+    const m = new TestTranslator(`
       source: nab is ab {
         query: xturtle is aturtle + {
           declare: aratio is ai / acount
@@ -1082,7 +649,7 @@ describe('qops', () => {
     }
   });
   test('refine query source with field', () => {
-    const m = new BetaModel(`
+    const m = new TestTranslator(`
       query: ab -> aturtle + {
         declare: aratio is ai / acount
         aggregate: aratio
@@ -1105,7 +672,7 @@ describe('qops', () => {
     }
   });
   test('refine query source with join', () => {
-    const m = new BetaModel(`
+    const m = new TestTranslator(`
       query: ab -> aturtle + {
         join_one: bb is b on bb.astr = astr
         group_by: foo is bb.astr
@@ -1423,7 +990,7 @@ describe('expressions', () => {
   });
   test('paren and applied div', () => {
     const modelSrc = 'query: z is a -> { group_by: x is 1+(3/4) }';
-    const m = new BetaModel(modelSrc);
+    const m = new TestTranslator(modelSrc);
     expect(m).modelCompiled();
     const queryDef = m.translate()?.translated?.modelDef.contents['z'];
     expect(queryDef).toBeDefined();
@@ -1451,18 +1018,18 @@ describe('expressions', () => {
 });
 describe('unspported fields in schema', () => {
   test('unsupported reference in result allowed', () => {
-    const uModel = new BetaModel('query: a->{ group_by: aun }');
+    const uModel = new TestTranslator('query: a->{ group_by: aun }');
     expect(uModel).modelCompiled();
   });
   test('unsupported reference can be compared to NULL', () => {
-    const uModel = new BetaModel(
+    const uModel = new TestTranslator(
       'query: a->{ where: aun != NULL; project: * }'
     );
     expect(uModel).modelCompiled();
   });
   test('flag unsupported equality', () => {
     // because we don't know if the two unsupported types are comparable
-    const uModel = new BetaModel(
+    const uModel = new TestTranslator(
       'query: ab->{ where: aun = b.aun  project: * }'
     );
     expect(uModel).compileToFailWith(
@@ -1471,7 +1038,7 @@ describe('unspported fields in schema', () => {
   });
   test('flag unsupported compare', () => {
     // because we don't know if the two unsupported types are comparable
-    const uModel = new BetaModel(
+    const uModel = new TestTranslator(
       'query: ab->{ where: aun > b.aun  project: * }'
     );
     expect(uModel).compileToFailWith(
@@ -1479,146 +1046,22 @@ describe('unspported fields in schema', () => {
     );
   });
   test('allow unsupported equality when raw types match', () => {
-    const uModel = new BetaModel(
+    const uModel = new TestTranslator(
       'query: ab->{ where: aweird = b.aweird  project: * }'
     );
     expect(uModel).modelCompiled();
   });
   test('flag not applied to unsupported', () => {
-    const uModel = new BetaModel(
+    const uModel = new TestTranslator(
       'source: x is a { dimension: notUn is not aun }'
     );
     expect(uModel).compileToFailWith("'not' Can't use type unsupported");
   });
   test('allow unsupported to be cast', () => {
-    const uModel = new BetaModel(
+    const uModel = new TestTranslator(
       'source: x is a { dimension: notUn is aun::string }'
     );
     expect(uModel).modelCompiled();
-  });
-});
-
-describe('sql:', () => {
-  function makeSchemaResponse(sql: SQLBlockSource): SQLBlockStructDef {
-    const cname = sql.connection || 'bigquery';
-    return {
-      type: 'struct',
-      name: sql.name,
-      dialect: "standardsql'",
-      structSource: {
-        type: 'sql',
-        method: 'subquery',
-        sqlBlock: {
-          type: 'sqlBlock',
-          ...sql,
-          selectStr: sql.select.filter(s => typeof s === 'string').join(''),
-        },
-      },
-      structRelationship: {type: 'basetable', connectionName: cname},
-      fields: aTableDef.fields,
-    };
-  }
-  test('definition', () => {
-    const selStmt = 'SELECT * FROM aTable';
-    const model = new BetaModel(`
-      sql: users IS {
-        select: """${selStmt}"""
-        connection: "aConnection"
-      }
-    `);
-    const needReq = model.translate();
-    expect(model).modelParsed();
-    const needs = needReq?.compileSQL;
-    expect(needs).toBeDefined();
-    if (needs) {
-      const sql = makeSQLBlock([{sql: selStmt}], 'aConnection');
-      expect(needs).toMatchObject(sql);
-      const refKey = needs.name;
-      expect(refKey).toBeDefined();
-      if (refKey) {
-        const sr = makeSchemaResponse(sql);
-        model.update({compileSQL: {[refKey]: sr}});
-        expect(model).modelCompiled();
-        expect(unlocatedStructDef(model.sqlBlocks[0])).toEqual(
-          unlocatedStructDef({...sr, as: 'users'})
-        );
-      }
-    }
-  });
-  test('source from sql', () => {
-    const selStmt = 'SELECT * FROM aTable';
-    const model = new BetaModel(`
-      sql: users IS { select: """${selStmt}""" }
-      source: malloyUsers is from_sql(users) { primary_key: ai }
-    `);
-    expect(model).modelParsed();
-    const needReq = model.translate();
-    const needs = needReq?.compileSQL;
-    expect(needs).toBeDefined();
-    if (needs) {
-      const sql = makeSQLBlock([{sql: selStmt}], 'aConnection');
-      const refKey = needs.name;
-      model.update({compileSQL: {[refKey]: makeSchemaResponse(sql)}});
-      expect(model).modelCompiled();
-      const users = model.getSourceDef('malloyUsers');
-      expect(users).toBeDefined();
-    }
-  });
-  test('explore from imported sql-based-source', () => {
-    const selStmt = 'SELECT * FROM aTable';
-    const createModel = `
-      sql: users IS { select: """${selStmt}""" }
-      source: malloyUsers is from_sql(users) { primary_key: ai }
-    `;
-    const model = new BetaModel(`
-      import "createModel.malloy"
-      source: importUsers is malloyUsers
-    `);
-    model.importZone.define(
-      'internal://test/langtests/createModel.malloy',
-      createModel
-    );
-    expect(model).modelParsed();
-    const needReq = model.translate();
-    const needs = needReq?.compileSQL;
-    expect(needs).toBeDefined();
-    const sql = makeSQLBlock([{sql: selStmt}]);
-    model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});
-    expect(model).modelCompiled();
-  });
-  it('turducken', () => {
-    const m = new BetaModel(`
-      sql: someSql is {
-        select: """SELECT * FROM %{ a -> { group_by: astr } }% WHERE 1=1"""
-      }
-    `);
-    expect(m).modelParsed();
-    const compileSql = m.translate().compileSQL;
-    expect(compileSql).toBeDefined();
-    if (compileSql) {
-      const select = compileSql.select[0];
-      const star = compileSql.select[1];
-      const where = compileSql.select[2];
-      expect(select).toEqual({sql: 'SELECT * FROM '});
-      expect(isSQLFragment(star)).toBeFalsy();
-      expect(where).toEqual({sql: ' WHERE 1=1'});
-    }
-  });
-  it('model preserved', () => {
-    const selStmt = 'SELECT * FROM aTable';
-    const shouldBeOK = `
-      source: newa is a
-      sql: someSql is { select: """${selStmt}""" }
-      source: newaa is newa
-    `;
-    const model = new BetaModel(shouldBeOK);
-    expect(model).modelParsed();
-    const needReq = model.translate();
-    const needs = needReq?.compileSQL;
-    expect(needs).toBeDefined();
-    const sql = makeSQLBlock([{sql: selStmt}]);
-    model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});
-    expect(model).modelCompiled();
   });
 });
 
@@ -1695,7 +1138,7 @@ describe('error handling', () => {
     badModel('query: ab -> { aggregate: xyzzy }', "'xyzzy' is not defined")
   );
   // test("queries with anonymous expressions", () => {
-  //   const m = new BetaModel("query: a->{\n group_by: a+1\n}");
+  //   const m = new TestTranslator("query: a->{\n group_by: a+1\n}");
   //   expect(m).not.modelParsed();
   //   const errList = m.errors().errors;
   //   const firstError = errList[0];
@@ -1758,7 +1201,7 @@ describe('error handling', () => {
   });
 
   test('bad sql in sql block', () => {
-    const badModel = new BetaModel('sql: { select: """)""" }');
+    const badModel = new TestTranslator('sql: { select: """)""" }');
     expect(badModel).modelParsed();
     const needSchema = badModel.translate();
     expect(needSchema.compileSQL).toBeDefined();
@@ -1801,7 +1244,7 @@ function getSelectOneStruct(sqlBlock: SQLBlockSource): SQLBlockStructDef {
 describe('source locations', () => {
   test('renamed explore location', () => {
     const source = markSource`explore: ${'na is a'}`;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelParsed();
     expect(getExplore(m.modelDef, 'na').location).toMatchObject(
       source.locations[0]
@@ -1810,7 +1253,7 @@ describe('source locations', () => {
 
   test('refined explore location', () => {
     const source = markSource`explore: ${'na is a {}'}`;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelParsed();
     expect(getExplore(m.modelDef, 'na').location).toMatchObject(
       source.locations[0]
@@ -1819,7 +1262,7 @@ describe('source locations', () => {
 
   test('location of defined dimension', () => {
     const source = markSource`explore: na is a { dimension: ${'x is 1'} }`;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     const na = getExplore(m.modelDef, 'na');
     const x = getField(na, 'x');
@@ -1828,7 +1271,7 @@ describe('source locations', () => {
 
   test('location of defined measure', () => {
     const source = markSource`explore: na is a { measure: ${'x is count()'} }`;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     const na = getExplore(m.modelDef, 'na');
     const x = getField(na, 'x');
@@ -1837,7 +1280,7 @@ describe('source locations', () => {
 
   test('location of defined query', () => {
     const source = markSource`explore: na is a { query: ${'x is { group_by: y is 1 }'} }`;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     const na = getExplore(m.modelDef, 'na');
     const x = getField(na, 'x');
@@ -1852,7 +1295,7 @@ describe('source locations', () => {
         }
       }`;
 
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     const na = getExplore(m.modelDef, 'na');
     const x = getQueryField(na, 'x');
@@ -1869,7 +1312,7 @@ describe('source locations', () => {
         }
       }`;
 
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     const na = getExplore(m.modelDef, 'na');
     const x = getQueryField(na, 'x');
@@ -1879,7 +1322,7 @@ describe('source locations', () => {
 
   test('location of field inherited from table', () => {
     const source = markSource`explore: na is ${"table('aTable')"}`;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     const na = getExplore(m.modelDef, 'na');
     const abool = getField(na, 'abool');
@@ -1891,7 +1334,7 @@ describe('source locations', () => {
       sql: s is { select: ${'"""SELECT 1 as one """'} }
       explore: na is from_sql(s)
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelParsed();
     const compileSql = m.translate().compileSQL;
     expect(compileSql).toBeDefined();
@@ -1916,7 +1359,7 @@ describe('source locations', () => {
         }
       )
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     const na = getExplore(m.modelDef, 'na');
     const abool = getField(na, 'abool');
@@ -1927,7 +1370,7 @@ describe('source locations', () => {
 
   test('location of named query', () => {
     const source = markSource`query: ${'q is a -> { project: * }'}`;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     const q = getExplore(m.modelDef, 'q');
     expect(q.location).toMatchObject(source.locations[0]);
@@ -1935,7 +1378,7 @@ describe('source locations', () => {
 
   test('location of field in named query', () => {
     const source = markSource`query: q is a -> { group_by: ${'b is 1'} }`;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     const q = getModelQuery(m.modelDef, 'q');
     const a = getField(q.pipeline[0], 'b');
@@ -1944,7 +1387,7 @@ describe('source locations', () => {
 
   test('location of named SQL block', () => {
     const source = markSource`${'sql: s is { select: """SELECT 1 as one""" }'}`;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelParsed();
     const compileSql = m.translate().compileSQL;
     expect(compileSql).toBeDefined();
@@ -1964,7 +1407,7 @@ describe('source locations', () => {
         rename: ${'bbool is abool'}
       }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     const na = getExplore(m.modelDef, 'na');
     const bbool = getField(na, 'bbool');
@@ -1977,7 +1420,7 @@ describe('source locations', () => {
         join_one: ${'x is a { primary_key: abool } on abool'}
       }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     const na = getExplore(m.modelDef, 'na');
     const x = getField(na, 'x');
@@ -1990,7 +1433,7 @@ describe('source locations', () => {
         join_one: ${'x is a { primary_key: astr } with astr'}
       }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     const na = getExplore(m.modelDef, 'na');
     const x = getField(na, 'x');
@@ -2006,7 +1449,7 @@ describe('source locations', () => {
         } on abool
       }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     const na = getExplore(m.modelDef, 'na');
     const x = getJoinField(na, 'x');
@@ -2017,7 +1460,7 @@ describe('source locations', () => {
   // Since """ strings are not single tokens, I don't know how to do this.
   // test("multi line sql block token span is correct", () => {
   //   const sqlSource = `sql: { select: """// line 0\n//line 1\n// line 2""" }`;
-  //   const m = new BetaModel(sqlSource);
+  //   const m = new TestTranslator(sqlSource);
   //   expect(m).not.modelParsed();
   //   const errList = m.errors().errors;
   //   expect(errList[0].at?.range.end).toEqual({ line: 2, character: 11 });
@@ -2068,7 +1511,7 @@ describe('source references', () => {
       explore: ${'na is a'}
       query: ${'na'} -> { project: * }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2087,7 +1530,7 @@ describe('source references', () => {
       }
       query: t -> ${'q'}
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2104,7 +1547,7 @@ describe('source references', () => {
       explore: na is a { query: ${'x is { group_by: y is 1 }'} }
       query: na -> ${'x'}
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2121,7 +1564,7 @@ describe('source references', () => {
       ${'sql: s is {select:"""SELECT 1 as one"""}'}
       explore: na is from_sql(${'s'})
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelParsed();
     const compileSql = m.translate().compileSQL;
     expect(compileSql).toBeDefined();
@@ -2148,7 +1591,7 @@ describe('source references', () => {
       query: ${'q is a -> { project: * }'}
       explore: na is from(-> ${'q'})
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2165,7 +1608,7 @@ describe('source references', () => {
       query: ${'q is a -> { project: * }'}
       query: q2 is -> ${'q'} -> { project: * }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2182,7 +1625,7 @@ describe('source references', () => {
       query: ${'q is a -> { project: * }'}
       query: q2 is -> ${'q'} { limit: 10 }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2199,7 +1642,7 @@ describe('source references', () => {
       explore: na is ${"table('aTable')"}
       query: na -> { project: bbool is not ${'abool'} }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2218,7 +1661,7 @@ describe('source references', () => {
       }
       query: na -> { project: ${'`name`'} }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2238,7 +1681,7 @@ describe('source references', () => {
       }
       query: na -> { project: bstr is self.${'astr'} }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2257,7 +1700,7 @@ describe('source references', () => {
       }
       query: na -> { project: bstr is ${'self'}.astr }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2273,7 +1716,7 @@ describe('source references', () => {
     const source = markSource`
       query: ${"table('aTable')"} -> { group_by: ${'abool'} }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2290,7 +1733,7 @@ describe('source references', () => {
       explore: na is ${"table('aTable')"}
       query: na -> { project: ${'abool'} }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2309,7 +1752,7 @@ describe('source references', () => {
         order_by: ${'abool'}
       }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2328,7 +1771,7 @@ describe('source references', () => {
         order_by: ${'one'}
       }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2347,7 +1790,7 @@ describe('source references', () => {
         aggregate: ${'c'}
       }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2366,7 +1809,7 @@ describe('source references', () => {
         measure: c2 is ${'c'}
       }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2385,7 +1828,7 @@ describe('source references', () => {
         top: 10 by ${'abool'}
       }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2404,7 +1847,7 @@ describe('source references', () => {
         top: 10 by ${'one'}
       }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2423,7 +1866,7 @@ describe('source references', () => {
         where: ${'abool'}
       }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2440,7 +1883,7 @@ describe('source references', () => {
       explore: na is ${"table('aTable')"}
       query: na -> { aggregate: ai_sum is ${'ai'}.sum() }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2463,7 +1906,7 @@ describe('source references', () => {
       }
       query: na -> { aggregate: ai_sum is ${'self'}.sum(self.ai) }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2482,7 +1925,7 @@ describe('source references', () => {
       }
       query: na -> { aggregate: ai_sum is self.sum(${'self'}.ai) }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2501,7 +1944,7 @@ describe('source references', () => {
         join_one: ${'exp1'} on astr = exp1.astr
       }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2518,7 +1961,7 @@ describe('source references', () => {
       explore: na is ${"table('aTable')"}
       query: na -> { aggregate: ai_sum is sum(${'ai'}) }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2536,7 +1979,7 @@ describe('source references', () => {
         rename: bbool is ${'abool'}
       }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2555,7 +1998,7 @@ describe('source references', () => {
         join_one: exp1 with ${'astr'}
       }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
@@ -2571,7 +2014,7 @@ describe('source references', () => {
 describe('translation need error locations', () => {
   test('import error location', () => {
     const source = markSource`import ${'"badfile"'}`;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     const result = m.translate();
     m.update({
       errors: {urls: {[(result.urls || [])[0]]: 'Bad file!'}},
@@ -2587,7 +2030,7 @@ describe('translation need error locations', () => {
       sql: bad_sql is {select: ${'"""BAD_SQL"""'}}
       query: from_sql(bad_sql) -> { project: * }
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     expect(m).modelParsed();
     const req = m.translate().compileSQL;
     expect(req).toBeDefined();
@@ -2603,7 +2046,7 @@ describe('translation need error locations', () => {
     const source = markSource`
       explore: bad_explore is ${"table('malloy-data.bad.table')"}
     `;
-    const m = new BetaModel(source.code);
+    const m = new TestTranslator(source.code);
     const result = m.translate();
     m.update({
       errors: {
@@ -2699,7 +2142,7 @@ describe('pipeline comprehension', () => {
         group_by: destination
       }
     `;
-    const m = new BetaModel(src);
+    const m = new TestTranslator(src);
     expect(m).modelCompiled();
     const s2 = m.getQuery('s2');
     expect(s2?.pipeline.length).toBe(2);

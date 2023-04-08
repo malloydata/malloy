@@ -76,7 +76,8 @@ interface BigQueryConnectionConfiguration {
 interface SchemaInfo {
   schema: bigquery.ITableFieldSchema;
   needsTableSuffixPseudoColumn: boolean;
-  needsPartitionPseudoColumn: boolean;
+  needsPartitionTimePseudoColumn: boolean;
+  needsPartitionDatePseudoColumn: boolean;
 }
 
 type QueryOptionsReader =
@@ -354,9 +355,13 @@ export class BigQueryConnection
       return {
         schema: metadata.schema,
         needsTableSuffixPseudoColumn: needTableSuffixPseudoColumn,
-        needsPartitionPseudoColumn:
+        needsPartitionTimePseudoColumn:
           metadata.timePartitioning?.type !== undefined &&
           metadata.timePartitioning?.field === undefined,
+        needsPartitionDatePseudoColumn:
+          metadata.timePartitioning?.type !== undefined &&
+          metadata.timePartitioning?.field === undefined &&
+          metadata.timePartitioning!.type === 'DAY',
       };
     } catch (e) {
       throw maybeRewriteError(e);
@@ -562,10 +567,16 @@ export class BigQueryConnection
         name: '_TABLE_SUFFIX',
       });
     }
-    if (schemaInfo.needsPartitionPseudoColumn) {
+    if (schemaInfo.needsPartitionTimePseudoColumn) {
       structDef.fields.push({
         type: 'timestamp',
         name: '_PARTITIONTIME',
+      });
+    }
+    if (schemaInfo.needsPartitionDatePseudoColumn) {
+      structDef.fields.push({
+        type: 'date',
+        name: '_PARTITIONDATE',
       });
     }
     return structDef;

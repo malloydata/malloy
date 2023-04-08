@@ -21,16 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as duckdb from '@duckdb/duckdb-wasm';
+import * as duckdb from '@malloydata/duckdb-wasm';
 import Worker from 'web-worker';
 import {
   QueryDataRow,
   RunSQLOptions,
   StructDef,
   parseTableURI,
+  SQLBlock,
 } from '@malloydata/malloy';
 import {StructRow, Table, Vector} from 'apache-arrow';
 import {DuckDBCommon, QueryOptionsReader} from './duckdb_common';
+
+const TABLE_MATCH = /FROM\s*'(.*)'/gi;
 
 /**
  * Arrow's toJSON() doesn't really do what I'd expect, since
@@ -105,7 +108,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   private worker: Worker | null = null;
 
   private remoteFileCallbacks: RemoteFileCallback[] = [];
-  private remoteFileStatus: Record<string, boolean> = {};
+  private remoteFileStatus: Record<string, Promise<boolean>> = {};
 
   constructor(
     public readonly name: string,
@@ -203,30 +206,61 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     }
   }
 
-  async fetchSchemaForTables(tables: string[]): Promise<{
-    schemas: Record<string, StructDef>;
-    errors: Record<string, string>;
-  }> {
-    await this.setup();
-
-    for (const tableUri of tables) {
-      const {tablePath} = parseTableURI(tableUri);
-      if (tablePath.match(/^https?:\/\//)) {
-        continue;
-      }
-      if (this.remoteFileStatus[tablePath]) {
-        continue;
-      }
+  private async findTables(tables: string[]): Promise<void> {
+    const fetchRemoteFile = async (tablePath: string): Promise<boolean> => {
       for (const callback of this.remoteFileCallbacks) {
-        this.remoteFileStatus[tablePath] = true;
         const data = await callback(tablePath);
         if (data) {
           await this.database?.registerFileBuffer(tablePath, data);
           break;
         }
       }
+      return true;
+    };
+
+    await this.setup();
+
+    for (const tablePath of tables) {
+      // http and s3 urls are handled by duckdb-wasm
+      if (tablePath.match(/^https?:\/\//)) {
+        continue;
+      }
+      if (tablePath.match(/^s3:\/\//)) {
+        continue;
+      }
+      // If we're not trying to fetch start trying
+      if (!(tablePath in this.remoteFileStatus)) {
+        this.remoteFileStatus[tablePath] = fetchRemoteFile(tablePath);
+      }
+      // Wait for response
+      await this.remoteFileStatus[tablePath];
     }
-    return super.fetchSchemaForTables(tables);
+  }
+
+  public async fetchSchemaForSQLBlock(
+    sqlRef: SQLBlock
+  ): Promise<
+    | {structDef: StructDef; error?: undefined}
+    | {error: string; structDef?: undefined}
+  > {
+    const tables: string[] = [];
+    for (const match of sqlRef.selectStr.matchAll(TABLE_MATCH)) {
+      tables.push(match[1]);
+    }
+    await this.findTables(tables);
+    return super.fetchSchemaForSQLBlock(sqlRef);
+  }
+
+  async fetchSchemaForTables(tableUris: string[]): Promise<{
+    schemas: Record<string, StructDef>;
+    errors: Record<string, string>;
+  }> {
+    const tables = tableUris.map(tableUri => {
+      const {tablePath} = parseTableURI(tableUri);
+      return tablePath;
+    });
+    await this.findTables(tables);
+    return super.fetchSchemaForTables(tableUris);
   }
 
   async close(): Promise<void> {
@@ -249,7 +283,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   }
 
   async registerRemoteTable(tableName: string, url: string): Promise<void> {
-    this.remoteFileStatus[tableName] = true;
+    this.remoteFileStatus[tableName] = Promise.resolve(true);
     this.database?.registerFileURL(
       tableName,
       url,

@@ -59,7 +59,7 @@ import {
   TurtleDef,
   expressionIsCalculation,
   flattenQuery,
-  isSQLBlock,
+  isSQLBlockStruct,
   isSQLFragment,
   FieldUnsupportedDef,
 } from './model';
@@ -282,7 +282,7 @@ export class Malloy {
               });
             }
             if (resolved.structDef) {
-              if (isSQLBlock(resolved.structDef)) {
+              if (isSQLBlockStruct(resolved.structDef)) {
                 translator.update({
                   compileSQL: {[expanded.name]: resolved.structDef},
                 });
@@ -2218,6 +2218,37 @@ export class ModelMaterializer extends FluentState<Model> {
         model,
       });
       return queryModel.preparedQuery;
+    });
+  }
+
+  /**
+   * Extend a Malloy model by URL or contents.
+   *
+   * @param source The model URL or contents to load and (eventually) compile.
+   * @return A `ModelMaterializer` capable of materializing the requested model,
+   * or loading further related objects.
+   */
+  public extendModel(query: QueryString | QueryURL): ModelMaterializer {
+    return new ModelMaterializer(this.runtime, async () => {
+      const urlReader = this.runtime.urlReader;
+      const connections = this.runtime.connections;
+      const parse =
+        query instanceof URL
+          ? await Malloy.parse({
+              url: query,
+              urlReader,
+            })
+          : Malloy.parse({
+              source: query,
+            });
+      const model = await this.getModel();
+      const queryModel = await Malloy.compile({
+        urlReader,
+        connections,
+        parse,
+        model,
+      });
+      return queryModel;
     });
   }
 

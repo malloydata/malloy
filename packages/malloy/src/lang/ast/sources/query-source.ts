@@ -22,7 +22,6 @@
  */
 
 import {StructDef} from '../../../model/malloy_types';
-
 import {Source} from '../elements/source';
 import {QueryElement} from '../types/query-element';
 
@@ -33,7 +32,7 @@ export class QuerySource extends Source {
   }
 
   structDef(): StructDef {
-    const comp = this.query.queryComp();
+    const comp = this.query.queryComp(false);
     const queryStruct = comp.outputStruct;
     queryStruct.structSource = {type: 'query', query: comp.query};
     return queryStruct;

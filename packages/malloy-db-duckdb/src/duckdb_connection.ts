@@ -58,6 +58,16 @@ export class DuckDBConnection extends DuckDBCommon {
     });
   }
 
+  async loadExtension(ext: string) {
+    try {
+      await this.runDuckDBQuery(`INSTALL '${ext}'`);
+      await this.runDuckDBQuery(`LOAD '${ext}'`);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Unable to load ${ext} extension', error);
+    }
+  }
+
   protected async setup(): Promise<void> {
     const doSetup = async () => {
       if (this.workingDirectory) {
