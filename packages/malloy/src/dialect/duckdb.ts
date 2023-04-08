@@ -38,90 +38,17 @@ import {
   mkExpr,
 } from '../model/malloy_types';
 import {indent} from '../model/utils';
-import {Dialect, DialectFieldList, FunctionInfo} from './dialect';
+import {
+  Dialect,
+  DialectFieldList,
+  FunctionInfo,
+  QueryInfo,
+  inDays,
+  qtz,
+} from './dialect';
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';
-
-const _keywords = `
-ALL
-ANALYSE
-ANALYZE
-AND
-ANY
-ARRAY
-AS
-ASC_P
-ASYMMETRIC
-BOTH
-CASE
-CAST
-CHECK_P
-COLLATE
-COLUMN
-CONSTRAINT
-CREATE_P
-CURRENT_CATALOG
-CURRENT_DATE
-CURRENT_ROLE
-CURRENT_TIME
-CURRENT_TIMESTAMP
-CURRENT_USER
-DEFAULT
-DEFERRABLE
-DESC_P
-DISTINCT
-DO
-ELSE
-END_P
-EXCEPT
-FALSE_P
-FETCH
-FOR
-FOREIGN
-FROM
-GRANT
-GROUP_P
-HAVING
-IN_P
-INITIALLY
-INTERSECT
-INTO
-LATERAL_P
-LEADING
-LIMIT
-LOCALTIME
-LOCALTIMESTAMP
-NOT
-NULL_P
-OFFSET
-ON
-ONLY
-OR
-ORDER
-PLACING
-PRIMARY
-REFERENCES
-RETURNING
-SELECT
-SESSION_USER
-SOME
-SYMMETRIC
-TABLE
-THEN
-TO
-TRAILING
-TRUE_P
-UNION
-UNIQUE
-USER
-USING
-VARIADIC
-WHEN
-WHERE
-WINDOW
-WITH
-`.split(/\s/);
 
 const castMap: Record<string, string> = {
   number: 'double precision',
@@ -131,12 +58,6 @@ const castMap: Record<string, string> = {
 const pgExtractionMap: Record<string, string> = {
   day_of_week: 'dow',
   day_of_year: 'doy',
-};
-
-const inSeconds: Record<string, number> = {
-  second: 1,
-  minute: 60,
-  hour: 3600,
 };
 
 export class DuckDBDialect extends Dialect {
@@ -320,45 +241,56 @@ export class DuckDBDialect extends Dialect {
   sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
     let lVal = from.value;
     let rVal = to.value;
-    if (inSeconds[units]) {
-      lVal = mkExpr`EXTRACT(EPOCH FROM ${lVal})`;
-      rVal = mkExpr`EXTRACT(EPOCH FROM ${rVal})`;
-      const duration = mkExpr`(${rVal} - ${lVal})`;
-      return units === 'second'
-        ? duration
-        : mkExpr`FLOOR(${duration}/${inSeconds[units].toString()})`;
+    if (!inDays(units)) {
+      if (from.valueType === 'date') {
+        lVal = mkExpr`(${lVal})::TIMESTAMP`;
+      }
+      if (to.valueType === 'date') {
+        rVal = mkExpr`(${rVal})::TIMESTAMP`;
+      }
     }
-    // if (from.valueType !== 'date') {
-    //   lVal = mkExpr`CAST((${lVal}) AS DATE)`;
-    // }
-    // if (to.valueType !== 'date') {
-    //   rVal = mkExpr`CAST((${rVal}) AS DATE)`;
-    // }
-    if (units === 'week') {
-      // DuckDB's weeks start on Monday, but Malloy's weeks start on Sunday
-      lVal = mkExpr`(${lVal} + INTERVAL 1 DAY)`;
-      rVal = mkExpr`(${rVal} + INTERVAL 1 DAY)`;
-    }
-    return mkExpr`DATE_DIFF('${units}', ${lVal}, ${rVal})`;
+    // mtoy TODO make sure compiler won't mix date and timestamp types
+    return mkExpr`DATE_SUB('${units}',${lVal},${rVal})`;
   }
 
   sqlNow(): Expr {
-    return mkExpr`CURRENT_TIMESTAMP::TIMESTAMP`;
+    return mkExpr`LOCALTIMESTAMP`;
   }
 
-  sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {
+  sqlTrunc(qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {
     // adjusting for monday/sunday weeks
     const week = units === 'week';
-    const truncThis = week
+    let truncThis = week
       ? mkExpr`${sqlTime.value} + INTERVAL 1 DAY`
       : sqlTime.value;
-    const trunced = mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
-    return week ? mkExpr`(${trunced} - INTERVAL 1 DAY)` : trunced;
+    let convertBack = false;
+    if (sqlTime.valueType === 'timestamp') {
+      const tz = qtz(qi);
+      if (tz) {
+        truncThis = mkExpr`(${truncThis} AT TIME ZONE '${tz}')`;
+        convertBack = true;
+      }
+    }
+    let result = mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
+    if (week) {
+      result = mkExpr`(${result} - INTERVAL 1 DAY)`;
+    }
+    if (convertBack) {
+      return mkExpr`(${result}::TIMESTAMP)`;
+    }
+    return result;
   }
 
-  sqlExtract(from: TimeValue, units: ExtractUnit): Expr {
+  sqlExtract(qi: QueryInfo, from: TimeValue, units: ExtractUnit): Expr {
     const pgUnits = pgExtractionMap[units] || units;
-    const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${from.value})`;
+    let extractFrom = from.value;
+    if (from.valueType === 'timestamp') {
+      const tz = qtz(qi);
+      if (tz) {
+        extractFrom = mkExpr`(${extractFrom} AT TIME ZONE '${tz}')`;
+      }
+    }
+    const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${extractFrom})`;
     return units === 'day_of_week' ? mkExpr`(${extracted}+1)` : extracted;
   }
 
@@ -377,7 +309,7 @@ export class DuckDBDialect extends Dialect {
       n = mkExpr`${n}*7`;
     }
     const interval = mkExpr`INTERVAL (${n}) ${timeframe}`;
-    return mkExpr`((${expr.value})) ${op} ${interval}`;
+    return mkExpr`${expr.value} ${op} ${interval}`;
   }
 
   sqlCast(cast: TypecastFragment): Expr {
@@ -393,19 +325,23 @@ export class DuckDBDialect extends Dialect {
   }
 
   sqlLiteralTime(
+    qi: QueryInfo,
     timeString: string,
     type: TimeFieldType,
-    timezone: string
+    timezone: string | undefined
   ): string {
     if (type === 'date') {
       return `DATE '${timeString}'`;
-    } else if (type === 'timestamp') {
-      return timezone[0] === '+' || timezone[0] === '-'
-        ? `TIMESTAMPTZ '${timeString}${timezone}'`
-        : `TIMESTAMPTZ '${timeString} ${timezone}'`;
-    } else {
-      throw new Error(`Unknown Literal time format ${type}`);
     }
+    const tz = timezone || qtz(qi);
+    if (tz) {
+      const inTz =
+        tz[0] === '+' || tz[0] === '-'
+          ? `TIMESTAMPTZ '${timeString}${tz}'`
+          : `TIMESTAMPTZ '${timeString} ${tz}'`;
+      return `${inTz}::TIMESTAMP`;
+    }
+    return `TIMESTAMP '${timeString}'`;
   }
 
   sqlSumDistinct(key: string, value: string): string {

@@ -42,7 +42,6 @@ export class TimeFormatError extends Error {}
 interface TimeText {
   text: string;
   tzSpec?: string;
-  isLocale?: boolean;
 }
 
 /**
@@ -59,7 +58,6 @@ function preParse(literal: string, checkTz: boolean): TimeText {
       return {
         tzSpec,
         text: text.slice(0, -hasLocale[0].length),
-        isLocale: true,
       };
     }
 
@@ -87,7 +85,6 @@ abstract class TimeLiteral extends ExpressionDef {
   literalPart: string;
   nextLit?: string;
   timeZone?: string;
-  isLocale?: boolean;
   constructor(
     tm: TimeText,
     readonly units: TimestampUnit | undefined,
@@ -97,9 +94,6 @@ abstract class TimeLiteral extends ExpressionDef {
     this.literalPart = tm.text;
     if (tm.tzSpec) {
       this.timeZone = tm.tzSpec;
-      if (tm.isLocale) {
-        this.isLocale = true;
-      }
     }
   }
 
@@ -109,8 +103,7 @@ abstract class TimeLiteral extends ExpressionDef {
       function: 'timeLiteral',
       literal: this.literalPart,
       literalType: this.timeType,
-      timezone: this.timeZone || 'UTC',
-      tzIsLocale: this.isLocale,
+      timezone: this.timeZone,
     };
   }
 

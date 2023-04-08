@@ -698,6 +698,7 @@ export class PreparedQuery {
   public _modelDef: ModelDef;
   public _query: InternalQuery | NamedQuery;
   public name?: string;
+  public queryTimeZone = 'UTC';
 
   constructor(query: InternalQuery, model: ModelDef, name?: string) {
     this._query = query;
@@ -1805,6 +1806,7 @@ export class ExploreField extends Explore {
 export class Runtime {
   private _urlReader: URLReader;
   private _connections: LookupConnection<Connection>;
+  private queryTimeZone = 'UTC';
 
   constructor(runtime: LookupConnection<Connection> & URLReader);
   constructor(urls: URLReader, connections: LookupConnection<Connection>);
@@ -1837,6 +1839,13 @@ export class Runtime {
     }
     this._urlReader = urlReader;
     this._connections = connections;
+  }
+
+  public set timezone(tzStr: string) {
+    this.queryTimeZone = tzStr;
+  }
+  public get timezone(): string {
+    return this.queryTimeZone;
   }
 
   /**

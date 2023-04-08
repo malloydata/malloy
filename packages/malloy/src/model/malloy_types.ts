@@ -357,8 +357,7 @@ export interface TimeLiteralFragment extends DialectFragmentBase {
   function: 'timeLiteral';
   literal: string;
   literalType: TimeFieldType;
-  timezone: string;
-  tzIsLocale?: boolean;
+  timezone?: string;
 }
 
 export interface StringLiteralFragment extends DialectFragmentBase {

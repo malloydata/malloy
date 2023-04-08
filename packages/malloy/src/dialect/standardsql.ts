@@ -29,33 +29,49 @@ import {
   TimeValue,
   TimestampUnit,
   TypecastFragment,
-  isDateUnit,
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
   isTimeFieldType,
   mkExpr,
 } from '../model/malloy_types';
-import {Dialect, DialectFieldList, FunctionInfo} from './dialect';
+import {Dialect, DialectFieldList, FunctionInfo, QueryInfo} from './dialect';
 
 const castMap: Record<string, string> = {
   number: 'float64',
 };
 
-// These are the units that "TIMESTAMP_ADD" accepts
-const timestampAddUnits = [
-  'microsecond',
-  'millisecond',
-  'second',
-  'minute',
-  'hour',
-  'day',
-];
+// These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
+function timestampMeasureable(units: string): boolean {
+  return [
+    'microsecond',
+    'millisecond',
+    'second',
+    'minute',
+    'hour',
+    'day',
+  ].includes(units);
+}
+
+function dateMeasureable(units: string): boolean {
+  return ['day', 'week', 'month', 'quarter', 'year'].includes(units);
+}
 
 const extractMap: Record<string, string> = {
   day_of_week: 'dayofweek',
   day_of_year: 'dayofyear',
 };
+
+/**
+ * Return a non UTC timezone, if one was specificed.
+ */
+function qtz(qi: QueryInfo): string | undefined {
+  const tz = qi.queryTimezone;
+  if (tz === undefined || tz === 'UTC' || tz.match(/^[+]0+(:0+)?$/)) {
+    return undefined;
+  }
+  return tz;
+}
 
 export class StandardSQLDialect extends Dialect {
   name = 'standardsql';
@@ -331,19 +347,24 @@ ${indent(sql)}
     return mkExpr`CURRENT_TIMESTAMP()`;
   }
 
-  sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {
+  // MTOY TODO --- write tests for all this too
+  sqlTrunc(qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {
+    const tz = qtz(qi);
+    const tzAdd = tz ? `, "${tz}"` : '';
     if (sqlTime.valueType === 'date') {
-      if (isDateUnit(units)) {
+      if (dateMeasureable(units)) {
         return mkExpr`DATE_TRUNC(${sqlTime.value},${units})`;
       }
-      return mkExpr`TIMESTAMP(${sqlTime.value})`;
+      return mkExpr`TIMESTAMP(${sqlTime.value}${tzAdd})`;
     }
-    return mkExpr`TIMESTAMP_TRUNC(${sqlTime.value},${units})`;
+    return mkExpr`TIMESTAMP_TRUNC(${sqlTime.value},${units}${tzAdd})`;
   }
 
-  sqlExtract(expr: TimeValue, units: ExtractUnit): Expr {
+  sqlExtract(qi, expr: TimeValue, units: ExtractUnit): Expr {
+    const tz = qtz(qi);
+    const tzAdd = tz ? ` AT TIME ZONE ${tz}` : '';
     const extractTo = extractMap[units] || units;
-    return mkExpr`EXTRACT(${extractTo} FROM ${expr.value})`;
+    return mkExpr`EXTRACT(${extractTo} FROM ${expr.value}${tzAdd})`;
   }
 
   sqlAlterTime(
@@ -354,7 +375,7 @@ ${indent(sql)}
   ): Expr {
     let theTime = expr.value;
     let computeType: string = expr.valueType;
-    if (timeframe !== 'day' && timestampAddUnits.includes(timeframe)) {
+    if (timeframe !== 'day' && timestampMeasureable(timeframe)) {
       // The units must be done in timestamp, no matter the input type
       computeType = 'timestamp';
       if (expr.valueType !== 'timestamp') {
@@ -366,7 +387,10 @@ ${indent(sql)}
     }
     const funcName = computeType.toUpperCase() + (op === '+' ? '_ADD' : '_SUB');
     const newTime = mkExpr`${funcName}(${theTime}, INTERVAL ${n} ${timeframe})`;
-    return computeType === 'datetime' ? mkExpr`TIMESTAMP(${newTime})` : newTime;
+    if (computeType === expr.valueType) {
+      return newTime;
+    }
+    return mkExpr`${expr.valueType.toUpperCase()}(${newTime})`;
   }
 
   ignoreInProject(fieldName: string): boolean {
@@ -394,41 +418,53 @@ ${indent(sql)}
   }
 
   sqlLiteralTime(
+    qi: QueryInfo,
     timeString: string,
     type: 'date' | 'timestamp',
-    timezone: string
+    timezone: string | undefined
   ): string {
     if (type === 'date') {
       return `DATE('${timeString}')`;
     } else if (type === 'timestamp') {
-      return `TIMESTAMP('${timeString}', '${timezone}')`;
+      const tz = timezone || qtz(qi);
+      const tzAdd = tz ? `, '${tz}'` : '';
+      return `TIMESTAMP('${timeString}'${tzAdd})`;
     } else {
       throw new Error(`Unsupported Literal time format ${type}`);
     }
   }
 
   sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
+    const measureMap = {
+      microsecond: {use: 'microsecond', ratio: 1},
+      millisecond: {use: 'microsecond', ratio: 1000},
+      second: {use: 'millisecond', ratio: 1000},
+      minute: {use: 'second', ratio: 60},
+      hour: {use: 'minute', ratio: 60},
+      day: {use: 'hour', ratio: 24},
+      week: {use: 'day', ratio: 7},
+    };
     let lVal = from.value;
     let rVal = to.value;
-    let diffUsing = 'TIMESTAMP_DIFF';
-
-    if (units === 'second' || units === 'minute' || units === 'hour') {
-      if (from.valueType !== 'timestamp') {
-        lVal = mkExpr`TIMESTAMP(${lVal})`;
+    if (measureMap[units]) {
+      const {use: measureIn, ratio} = measureMap[units];
+      if (!timestampMeasureable(measureIn)) {
+        throw new Error(`Measure in '${measureIn} not implemented`);
       }
-      if (to.valueType !== 'timestamp') {
+      if (from.valueType !== to.valueType) {
+        throw new Error("Can't measure difference between different types");
+      }
+      if (from.valueType === 'date') {
+        lVal = mkExpr`TIMESTAMP(${lVal})`;
         rVal = mkExpr`TIMESTAMP(${rVal})`;
       }
-    } else {
-      diffUsing = 'DATE_DIFF';
-      if (from.valueType !== 'date') {
-        lVal = mkExpr`DATE(${lVal})`;
+      let measured = mkExpr`TIMESTAMP_DIFF(${rVal},${lVal},${measureIn})`;
+      if (ratio !== 1) {
+        measured = mkExpr`FLOOR(${measured}/${ratio.toString()}.0)`;
       }
-      if (to.valueType !== 'date') {
-        rVal = mkExpr`DATE(${rVal})`;
-      }
+      return measured;
     }
-    return mkExpr`${diffUsing}(${rVal}, ${lVal}, ${units})`;
+    throw new Error(`Measure '${units} not implemented`);
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {

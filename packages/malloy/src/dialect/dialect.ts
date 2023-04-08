@@ -42,6 +42,52 @@ interface DialectField {
 }
 
 /**
+ * Data from the query which might be useful to the compiler of a dialect
+ * fragment. Did this instead of simply passing the timezone in case
+ * there was a future piece of information which would like
+ * to ride the same path from the query to the dialect.
+ *
+ * The name of this is wrong, plan on changing it
+ * once I understand this piece of data better.
+ *
+ * If we go with a "database timezone", for pg derived dialects
+ * that info would go in here also, allowing the writer code to
+ * generate better fragments
+ */
+export interface QueryInfo {
+  queryTimezone?: string;
+  systemTimezone?: string;
+}
+
+const allUnits = [
+  'microsecond',
+  'millisecond',
+  'second',
+  'minute',
+  'hour',
+  'day',
+  'week',
+  'month',
+  'quarter',
+  'year',
+];
+export const dayIndex = allUnits.indexOf('day');
+
+export function inDays(units: string): boolean {
+  return allUnits.indexOf(units) >= dayIndex;
+}
+
+// Return the active query timezone, if it different than the
+// "native" timezone for timestamps.
+export function qtz(qi: QueryInfo): string | undefined {
+  const tz = qi.queryTimezone;
+  if (tz === undefined || tz === qi.systemTimezone) {
+    return undefined;
+  }
+  return tz;
+}
+
+/**
  * Someday this might be used to control how a function call in malloy is
  * translated into a function call in SQL. Today this is just so that
  * the expression compiler can know the output type of a function.
@@ -150,8 +196,16 @@ export abstract class Dialect {
   abstract sqlMaybeQuoteIdentifier(identifier: string): string;
 
   abstract sqlNow(): Expr;
-  abstract sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr;
-  abstract sqlExtract(sqlTime: TimeValue, units: ExtractUnit): Expr;
+  abstract sqlTrunc(
+    qi: QueryInfo,
+    sqlTime: TimeValue,
+    units: TimestampUnit
+  ): Expr;
+  abstract sqlExtract(
+    qi: QueryInfo,
+    sqlTime: TimeValue,
+    units: ExtractUnit
+  ): Expr;
   abstract sqlMeasureTime(
     from: TimeValue,
     to: TimeValue,
@@ -174,10 +228,10 @@ export abstract class Dialect {
   abstract sqlCast(cast: TypecastFragment): Expr;
 
   abstract sqlLiteralTime(
+    qi: QueryInfo,
     timeString: string,
     type: TimeFieldType,
-    timezone: string,
-    isLocale?: boolean
+    timezone?: string
   ): string;
 
   abstract sqlLiteralString(literak: string): string;
@@ -188,7 +242,7 @@ export abstract class Dialect {
     return this.functionInfo[functionName.toLowerCase()];
   }
 
-  dialectExpr(df: DialectFragment): Expr {
+  dialectExpr(qi: QueryInfo, df: DialectFragment): Expr {
     switch (df.function) {
       case 'now':
         return this.sqlNow();
@@ -196,10 +250,11 @@ export abstract class Dialect {
         return this.sqlMeasureTime(df.left, df.right, df.units);
       case 'delta':
         return this.sqlAlterTime(df.op, df.base, df.delta, df.units);
-      case 'trunc':
-        return this.sqlTrunc(df.expr, df.units);
+      case 'trunc': {
+        return this.sqlTrunc(qi, df.expr, df.units);
+      }
       case 'extract':
-        return this.sqlExtract(df.expr, df.units);
+        return this.sqlExtract(qi, df.expr, df.units);
       case 'cast':
         return this.sqlCast(df);
       case 'regexpMatch':
@@ -210,8 +265,11 @@ export abstract class Dialect {
         }
         return mkExpr`${df.numerator}/${df.denominator}`;
       }
-      case 'timeLiteral':
-        return [this.sqlLiteralTime(df.literal, df.literalType, df.timezone)];
+      case 'timeLiteral': {
+        return [
+          this.sqlLiteralTime(qi, df.literal, df.literalType, df.timezone),
+        ];
+      }
       case 'stringLiteral':
         return [this.sqlLiteralString(df.literal)];
     }
@@ -230,5 +288,9 @@ export abstract class Dialect {
 
   sqlOrderBy(orderTerms: string[]): string {
     return `ORDER BY ${orderTerms.join(',')}`;
+  }
+
+  sqlTzStr(qi: QueryInfo): string {
+    return `"${qi.queryTimezone}"`;
   }
 }

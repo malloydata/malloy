@@ -81,6 +81,7 @@ import {
 
 import {Connection} from '../runtime_types';
 import {AndChain, generateHash, indent} from './utils';
+import {QueryInfo} from '../dialect/dialect';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -265,6 +266,8 @@ abstract class QueryNode {
   getChildByName(_name: string): QuerySomething | undefined {
     return undefined;
   }
+
+  abstract getQueryInfo(): QueryInfo;
 }
 
 class QueryField extends QueryNode {
@@ -275,6 +278,10 @@ class QueryField extends QueryNode {
     super(fieldDef);
     this.parent = parent;
     this.fieldDef = fieldDef;
+  }
+
+  getQueryInfo() {
+    return {};
   }
 
   mayNeedUniqueKey(): boolean {
@@ -574,7 +581,7 @@ class QueryField extends QueryNode {
     return this.generateExpressionFromExpr(
       resultSet,
       context,
-      context.dialect.dialectExpr(expr),
+      context.dialect.dialectExpr(this.getQueryInfo(), expr),
       state
     );
   }
@@ -837,6 +844,7 @@ class QueryFieldDate extends QueryAtomicField {
       return super.generateExpression(resultSet);
     } else {
       const truncated = this.parent.dialect.sqlTrunc(
+        this.getQueryInfo(),
         {value: this.getExpr(), valueType: 'date'},
         fd.timeframe
       );
@@ -3464,6 +3472,10 @@ class QueryStruct extends QueryNode {
     this.dialect = getDialect(this.fieldDef.dialect);
 
     this.addFieldsFromFieldList(this.fieldDef.fields);
+  }
+
+  getQueryInfo(): QueryInfo {
+    return {};
   }
 
   parameters(): Record<string, Parameter> {
