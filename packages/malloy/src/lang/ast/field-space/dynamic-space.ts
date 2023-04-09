@@ -68,7 +68,8 @@ export abstract class DynamicSpace extends StaticSpace {
     this.completions = [];
   }
 
-  protected setEntry(name: string, value: SpaceEntry): void {
+  // TODO this was protected
+  setEntry(name: string, value: SpaceEntry): void {
     if (this.final) {
       throw new Error('Space already final');
     }

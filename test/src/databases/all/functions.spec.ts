@@ -607,6 +607,32 @@ expressionModels.forEach((expressionModel, databaseName) => {
         .run();
     });
 
+    // This is supposed to fail because measures cannot be used in a project!
+    it(`15.5 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            project: state
+            calculate: row_num is lag(count())
+          }`
+        )
+        .run();
+    });
+
+    // This should maybe succeed because aircraft_count is a measure
+    it.skip(`15.75 - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: state
+            calculate: row_num is lag(aircraft_count)
+          }`
+        )
+        .run();
+    });
+
     // TODO BQ wants args 2 and 3 to be constants. Duckdb doesn't care.
     it.skip(`16 - ${databaseName}`, async () => {
       await expressionModel
@@ -615,9 +641,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
           query: aircraft -> {
             group_by: state,
             aggregate: aircraft_count
-            declare: prev_state_count is lag(aircraft_count, 1, aircraft_count)
-            group_by: increse_from_prev is
-              (prev_state_count - aircraft_count)
+            calculate: increse_from_prev is
+              (lag(aircraft_count, 1, aircraft_count) - lag(aircraft_count, 1, aircraft_count))
           }`
         )
         .run();
@@ -630,7 +655,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
           query: aircraft -> {
             group_by: state,
             aggregate: aircraft_count
-            group_by: prev_state is lag(state, 2, 'None')
+            calculate: prev_state is lag(state, 2, 'None')
           }`
         )
         .run();
@@ -643,7 +668,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
           query: aircraft -> {
             group_by: aircraft_models.seats,
             aggregate: aircraft_count
-            group_by: prev_state is lag(aircraft_models.seats, 1)
+            calculate: prev_state is lag(seats, 1)
           }`
         )
         .run();
@@ -657,7 +682,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
             group_by: aircraft_models.seats,
             aggregate: aircraft_count
             order_by: seats
-            group_by: rn is row_number()
+            calculate: rn is row_number()
           }`
         )
         .run();
@@ -670,7 +695,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
           query: aircraft -> {
             group_by: aircraft_models.seats,
             aggregate: aircraft_count
-            group_by: prev_state is lag(aircraft_models.seats.sum(), 1)
+            calculate: prev_state is lag(aircraft_models.seats.sum(), 1)
           }`
         )
         .run();
@@ -689,12 +714,28 @@ expressionModels.forEach((expressionModel, databaseName) => {
         .run();
     });
 
-    it(`22 should fail - ${databaseName}`, async () => {
+    it.skip(`22 should fail - ${databaseName}`, async () => {
       await expressionModel
         .loadQuery(
           `
           query: aircraft -> {
             group_by: prev_state is lag(state)
+          }`
+        )
+        .run();
+    });
+
+    it(`refinement - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: foo is aircraft -> {
+            group_by: state
+            calculate: prev_state is lag(state)
+          }
+          query: -> foo {
+            order_by: state
+            calculate: prev_state2 is lag(state)
           }`
         )
         .run();

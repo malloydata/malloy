@@ -98,7 +98,8 @@ export class StaticSpace implements FieldSpace {
     delete this.map[name];
   }
 
-  protected entry(name: string): SpaceEntry | undefined {
+  // TODO this was protected
+  entry(name: string): SpaceEntry | undefined {
     return this.map[name];
   }
 

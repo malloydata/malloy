@@ -119,7 +119,29 @@ export class QOPDesc extends ListOf<QueryProperty> {
   }
 
   getOp(inputFS: FieldSpace, forPipeline: PipelineDesc | null): OpDesc {
+    // Unfortunately opOutputStruct gives the whole structDef without saying
+    // which things were defined in the query itself, so we can't just throw
+    // everything into the output space.
     const qex = this.getExecutor(inputFS);
+    if (this.refineThis) {
+      const sd = inputFS.structDef();
+      const s = new StaticSpace(opOutputStruct(this, sd, this.refineThis));
+      // TODO this is not totally right anyway, because we need to
+      // be sure to exclude anything that's in the output space.
+      // but I'm not sure how we know that just from looking at the
+      // output struct...
+      for (const f of this.refineThis.fields) {
+        if (typeof f === 'string') {
+          const ent = s.entry(f);
+          if (ent) {
+            qex.resultFS.setEntry(f, ent);
+          }
+        } else {
+          // TODO add these fields to the output space too
+          console.log(f);
+        }
+      }
+    }
     if (forPipeline?.nestedInQuerySpace) {
       qex.inputFS.nestParent = forPipeline.nestedInQuerySpace;
     }
@@ -131,6 +153,9 @@ export class QOPDesc extends ListOf<QueryProperty> {
     return {
       segment,
       outputSpace: () =>
+        // TODO someday we'd like to get rid of the call to opOutputStruct here.
+        // If the `qex.resultFS` is correct, then we should be able to just use that
+        // in a more direct way.
         new StaticSpace(opOutputStruct(this, inputFS.structDef(), segment)),
     };
   }

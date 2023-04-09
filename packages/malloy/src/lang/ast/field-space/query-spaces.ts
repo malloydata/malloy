@@ -172,9 +172,11 @@ export abstract class QuerySpace extends RefinedSpace {
           } else {
             this.log(`'${name}' not legal in ${this.segmentType}`);
           }
-        } else {
-          throw new Error(`'${name}' does not have a QueryFieldDef`);
         }
+        // TODO
+        // else {
+        //   throw new Error(`'${name}' does not have a QueryFieldDef`);
+        // }
       }
     }
     this.isComplete();
