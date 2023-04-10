@@ -81,6 +81,8 @@ import {
 
 import {Connection} from '../runtime_types';
 import {AndChain, generateHash, indent} from './utils';
+import { isReduceSegment } from './malloy_types';
+import { isProjectSegment } from './malloy_types';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
@@ -1055,7 +1057,7 @@ class FieldInstanceResult implements FieldInstance {
   getField(name: string): FieldInstanceField {
     const fi = this.allFields.get(name);
     if (fi === undefined) {
-      throw new Error(`Internal Error, field Not defined ${name}`);
+      throw new Error(`Internal Error, field not defined ${name}`);
     } else if (fi instanceof FieldInstanceField) {
       return fi;
     }
@@ -1929,7 +1931,18 @@ class QueryQuery extends QueryField {
 
   expandFields(resultStruct: FieldInstanceResult) {
     let resultIndex = 1;
-    for (const f of this.expandWildCards(resultStruct.firstSegment.fields)) {
+    let fields: QueryFieldDef[] = resultStruct.firstSegment.fields;
+    // only QuerySegment has Order Bys
+    if (isQuerySegment(resultStruct.firstSegment) && resultStruct.firstSegment.orderBy) {
+      // by filtering to orderBy with string fields, we find cases where the sort field should be expanded
+      // if the sortField is not in the segment's fields, it will be missed
+      // if the sort uses a number to ref a field, it is already in the select list
+      const possiblyUnselectedSorts: OrderBy[] = resultStruct.firstSegment.orderBy.filter(x => typeof x.field === "string")
+      const stringFields = possiblyUnselectedSorts.map(x => x.field) as QueryFieldDef[]
+      fields = fields.concat(stringFields)
+    }
+
+    for (const f of this.expandWildCards(fields)) {
       const {as, field} = this.expandField(f);
 
       if (field instanceof QueryTurtle || field instanceof QueryQuery) {
