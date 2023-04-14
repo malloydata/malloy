@@ -31,22 +31,28 @@ import {
   DialectFunctionOverloadDef,
 } from './util';
 
-export function fnLength(): DialectFunctionOverloadDef[] {
+export function fnStartsWith(): DialectFunctionOverloadDef[] {
   return [
     overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      [sql('LENGTH(', arg('value'), ')')]
+      minScalar('boolean'),
+      [
+        param('value', anyExprType('string')),
+        param('prefix', anyExprType('string')),
+      ],
+      [sql('STARTS_WITH(', arg('value'), ',', arg('prefix'), ')')]
     ),
   ];
 }
 
-export function fnByteLength(): DialectFunctionOverloadDef[] {
+export function fnEndsWith(): DialectFunctionOverloadDef[] {
   return [
     overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      [sql('BYTE_LENGTH(', arg('value'), ')')]
+      minScalar('boolean'),
+      [
+        param('value', anyExprType('string')),
+        param('suffix', anyExprType('string')),
+      ],
+      [sql('STARTS_WITH(', arg('value'), ',', arg('suffix'), ')')]
     ),
   ];
 }

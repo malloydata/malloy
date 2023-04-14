@@ -119,12 +119,12 @@ export class QOPDesc extends ListOf<QueryProperty> {
   }
 
   getOp(inputFS: FieldSpace, forPipeline: PipelineDesc | null): OpDesc {
-    // Unfortunately opOutputStruct gives the whole structDef without saying
-    // which things were defined in the query itself, so we can't just throw
-    // everything into the output space.
     const qex = this.getExecutor(inputFS);
     if (this.refineThis) {
       const sd = inputFS.structDef();
+      // Unfortunately opOutputStruct gives the whole structDef without saying
+      // which things were defined in the query itself, so we can't just throw
+      // everything into the output space.
       const s = new StaticSpace(opOutputStruct(this, sd, this.refineThis));
       // TODO this is not totally right anyway, because we need to
       // be sure to exclude anything that's in the output space.

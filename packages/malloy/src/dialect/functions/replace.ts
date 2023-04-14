@@ -52,5 +52,27 @@ export function fnReplace(): DialectFunctionOverloadDef[] {
         ),
       ]
     ),
+    // TODO perhaps this should be a separate `regexp_replace` function.
+    // Which would better match BQ, but I think it should be just a different
+    // overload of `replace` (how it is here):
+    overload(
+      minScalar('string'),
+      [
+        param('value', anyExprType('string')),
+        param('pattern', anyExprType('regular expression')),
+        param('replacement', anyExprType('string')),
+      ],
+      [
+        sql(
+          'REGEXP_REPLACE(',
+          arg('value'),
+          ',',
+          arg('pattern'),
+          ',',
+          arg('replacement'),
+          ')'
+        ),
+      ]
+    ),
   ];
 }

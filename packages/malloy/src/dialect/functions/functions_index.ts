@@ -22,20 +22,58 @@
  */
 
 export {fnConcat} from './concat';
+export {fnTrunc} from './trunc';
 export {fnStddev} from './stddev';
+export {fnFormat} from './format';
 export {fnRound} from './round';
-export {fnFloor} from './floor';
 export {fnLower} from './lower';
-export {fnChr} from './chr';
+export {fnChr, fnAscii, fnUnicode} from './chr';
 export {fnUpper} from './upper';
 export {fnSubstr} from './substr';
 export {fnRegexpExtract} from './regexp_extract';
 export {fnReplace} from './replace';
-export {fnLength} from './length';
+export {fnLength, fnByteLength} from './length';
 export {fnIfnull} from './ifnull';
 export {fnNullif} from './nullif';
 export {fnRowNumber} from './row_number';
 export {fnLag} from './lag';
 export {fnRank} from './rank';
 export {fnFirstValue} from './first_value';
+export {fnStartsWith, fnEndsWith} from './starts_ends_with';
 export {fnFirst} from './first';
+export {fnIsInf} from './is_inf';
+export {fnIsNan} from './is_nan';
+export {fnAtan2} from './atan2';
+export {fnPow} from './pow';
+export {fnLog} from './log';
+export {fnStrpos} from './strpos';
+export {fnDiv} from './div';
+export {fnGreatest, fnLeast} from './greatest_and_least';
+export {fnTrim, fnLtrim, fnRtrim} from './trim_functions';
+export {fnNumNulls, fnNumNonNulls} from './num_nulls_and_nonnulls';
+export {fnRand} from './rand';
+export {fnPi} from './pi';
+export {fnRepeat} from './repeat';
+export {fnReverse} from './reverse';
+export {fnToHex} from './to_hex';
+export {
+  fnCos,
+  fnCosh,
+  fnAcos,
+  fnAcosh,
+  fnSin,
+  fnSinh,
+  fnAsin,
+  fnAsinh,
+  fnTan,
+  fnTanh,
+  fnAtan,
+  fnAtanh,
+  fnAbs,
+  fnSign,
+  fnCeil,
+  fnFloor,
+  fnSqrt,
+  fnLn,
+  fnLog10,
+} from './simple_numeric_functions';

@@ -31,12 +31,15 @@ import {
   DialectFunctionOverloadDef,
 } from './util';
 
-export function fnFloor(): DialectFunctionOverloadDef[] {
+export function fnPow(): DialectFunctionOverloadDef[] {
   return [
     overload(
       minScalar('number'),
-      [param('value', anyExprType('number'))],
-      [sql('FLOOR(', arg('value'), ')')]
+      [
+        param('base', anyExprType('number')),
+        param('exponent', anyExprType('number')),
+      ],
+      [sql('POW(', arg('base'), ',', arg('exponent'), ')')]
     ),
   ];
 }

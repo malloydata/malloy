@@ -24,29 +24,50 @@
 import {
   arg,
   overload,
-  param,
+  params,
   minScalar,
   anyExprType,
+  spread,
   sql,
   DialectFunctionOverloadDef,
+  param,
 } from './util';
 
-export function fnLength(): DialectFunctionOverloadDef[] {
+export function fnFormat(): DialectFunctionOverloadDef[] {
   return [
     overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      [sql('LENGTH(', arg('value'), ')')]
+      minScalar('string'),
+      [param('format_string', anyExprType('string'))],
+      [sql('FORMAT(', arg('format_string'), ')')]
     ),
-  ];
-}
-
-export function fnByteLength(): DialectFunctionOverloadDef[] {
-  return [
     overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      [sql('BYTE_LENGTH(', arg('value'), ')')]
+      minScalar('string'),
+      [
+        param('format_string', anyExprType('string')),
+        param(
+          'value',
+          anyExprType('string'),
+          anyExprType('number'),
+          anyExprType('date'),
+          anyExprType('timestamp'),
+          anyExprType('boolean')
+        ),
+      ],
+      [sql('FORMAT(', arg('format_string'), ',', arg('value'), ')')]
+    ),
+    overload(
+      minScalar('string'),
+      [
+        params(
+          'values',
+          anyExprType('string'),
+          anyExprType('number'),
+          anyExprType('date'),
+          anyExprType('timestamp'),
+          anyExprType('boolean')
+        ),
+      ],
+      [sql('FORMAT(', arg('format_string'), ',', spread(arg('values')), ')')]
     ),
   ];
 }

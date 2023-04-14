@@ -21,32 +21,37 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {ExpressionValueType} from '../..';
 import {
   arg,
   overload,
-  param,
+  params,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
+  spread,
 } from './util';
 
-export function fnLength(): DialectFunctionOverloadDef[] {
-  return [
+const types: ExpressionValueType[] = [
+  'string',
+  'number',
+  'timestamp',
+  'date',
+  'json',
+];
+
+function greatestOrLeast(
+  fn: 'GREATEST' | 'LEAST'
+): DialectFunctionOverloadDef[] {
+  return types.map(type =>
     overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      [sql('LENGTH(', arg('value'), ')')]
-    ),
-  ];
+      minScalar(type),
+      [params('values', anyExprType(type))],
+      [sql(`${fn}(`, spread(arg('values')), ')')]
+    )
+  );
 }
 
-export function fnByteLength(): DialectFunctionOverloadDef[] {
-  return [
-    overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      [sql('BYTE_LENGTH(', arg('value'), ')')]
-    ),
-  ];
-}
+export const fnGreatest = () => greatestOrLeast('GREATEST');
+export const fnLeast = () => greatestOrLeast('LEAST');

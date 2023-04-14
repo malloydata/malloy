@@ -31,22 +31,22 @@ import {
   DialectFunctionOverloadDef,
 } from './util';
 
-export function fnLength(): DialectFunctionOverloadDef[] {
+export function fnTrunc(): DialectFunctionOverloadDef[] {
   return [
     overload(
       minScalar('number'),
-      [param('value', anyExprType('string'))],
-      [sql('LENGTH(', arg('value'), ')')]
+      [param('value', anyExprType('number'))],
+      [sql('TRUNC(', arg('value'), ')')]
     ),
-  ];
-}
-
-export function fnByteLength(): DialectFunctionOverloadDef[] {
-  return [
     overload(
       minScalar('number'),
-      [param('value', anyExprType('string'))],
-      [sql('BYTE_LENGTH(', arg('value'), ')')]
+      [
+        param('value', anyExprType('number')),
+        // TODO this parameter should only accept integers, but we don't have a good
+        // way of expressing that constraint at the moment
+        param('precision', anyExprType('number')),
+      ],
+      [sql('TRUNC(', arg('value'), ', ', arg('precision'), ')')]
     ),
   ];
 }

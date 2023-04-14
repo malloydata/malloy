@@ -31,22 +31,12 @@ import {
   DialectFunctionOverloadDef,
 } from './util';
 
-export function fnLength(): DialectFunctionOverloadDef[] {
+export function fnAtan2(): DialectFunctionOverloadDef[] {
   return [
     overload(
       minScalar('number'),
-      [param('value', anyExprType('string'))],
-      [sql('LENGTH(', arg('value'), ')')]
-    ),
-  ];
-}
-
-export function fnByteLength(): DialectFunctionOverloadDef[] {
-  return [
-    overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      [sql('BYTE_LENGTH(', arg('value'), ')')]
+      [param('y', anyExprType('number')), param('x', anyExprType('number'))],
+      [sql('ATAN2(', arg('y'), ',', arg('x'), ')')]
     ),
   ];
 }

@@ -31,22 +31,12 @@ import {
   DialectFunctionOverloadDef,
 } from './util';
 
-export function fnLength(): DialectFunctionOverloadDef[] {
+export function fnToHex(): DialectFunctionOverloadDef[] {
   return [
     overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      [sql('LENGTH(', arg('value'), ')')]
-    ),
-  ];
-}
-
-export function fnByteLength(): DialectFunctionOverloadDef[] {
-  return [
-    overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      [sql('BYTE_LENGTH(', arg('value'), ')')]
+      minScalar('string'),
+      [param('value', anyExprType('number'))],
+      [sql('TO_HEX(', arg('value'), ')')]
     ),
   ];
 }

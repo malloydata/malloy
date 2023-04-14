@@ -40,3 +40,23 @@ export function fnChr(): DialectFunctionOverloadDef[] {
     ),
   ];
 }
+
+export function fnAscii(): DialectFunctionOverloadDef[] {
+  return [
+    overload(
+      minScalar('number'),
+      [param('value', anyExprType('string'))],
+      [sql('ASCII(', arg('value'), ')')]
+    ),
+  ];
+}
+
+export function fnUnicode(): DialectFunctionOverloadDef[] {
+  return [
+    overload(
+      minScalar('number'),
+      [param('value', anyExprType('string'))],
+      [sql('UNICODE(', arg('value'), ')')]
+    ),
+  ];
+}

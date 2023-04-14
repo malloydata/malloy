@@ -31,22 +31,24 @@ import {
   DialectFunctionOverloadDef,
 } from './util';
 
-export function fnLength(): DialectFunctionOverloadDef[] {
+function trimFn(fn: string): DialectFunctionOverloadDef[] {
   return [
     overload(
       minScalar('number'),
       [param('value', anyExprType('string'))],
-      [sql('LENGTH(', arg('value'), ')')]
+      [sql(`${fn}(`, arg('value'), ')')]
+    ),
+    overload(
+      minScalar('number'),
+      [
+        param('value', anyExprType('string')),
+        param('trim_characters', anyExprType('string')),
+      ],
+      [sql(`${fn}(`, arg('value'), ',', arg('trim_characters'), ')')]
     ),
   ];
 }
 
-export function fnByteLength(): DialectFunctionOverloadDef[] {
-  return [
-    overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      [sql('BYTE_LENGTH(', arg('value'), ')')]
-    ),
-  ];
-}
+export const fnTrim = () => trimFn('TRIM');
+export const fnLtrim = () => trimFn('LTRIM');
+export const fnRtrim = () => trimFn('RTRIM');

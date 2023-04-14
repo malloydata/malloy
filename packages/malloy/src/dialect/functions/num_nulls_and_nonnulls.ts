@@ -24,29 +24,33 @@
 import {
   arg,
   overload,
-  param,
+  params,
   minScalar,
   anyExprType,
+  spread,
   sql,
   DialectFunctionOverloadDef,
 } from './util';
 
-export function fnLength(): DialectFunctionOverloadDef[] {
+function make(fn: 'NUM_NULLS' | 'NUM_NONNULLS'): DialectFunctionOverloadDef[] {
   return [
     overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      [sql('LENGTH(', arg('value'), ')')]
+      minScalar('string'),
+      [
+        params(
+          'values',
+          anyExprType('string'),
+          anyExprType('number'),
+          anyExprType('date'),
+          anyExprType('timestamp'),
+          anyExprType('boolean'),
+          anyExprType('json')
+        ),
+      ],
+      [sql(`${fn}(`, spread(arg('values')), ')')]
     ),
   ];
 }
 
-export function fnByteLength(): DialectFunctionOverloadDef[] {
-  return [
-    overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      [sql('BYTE_LENGTH(', arg('value'), ')')]
-    ),
-  ];
-}
+export const fnNumNulls = () => make('NUM_NULLS');
+export const fnNumNonNulls = () => make('NUM_NONNULLS');
