@@ -725,7 +725,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         .run();
     });
 
-    it(`refinement - ${databaseName}`, async () => {
+    it(`refinement field ref - ${databaseName}`, async () => {
       await expressionModel
         .loadQuery(
           `
@@ -736,6 +736,42 @@ expressionModels.forEach((expressionModel, databaseName) => {
           query: -> foo {
             order_by: state
             calculate: prev_state2 is lag(state)
+          }`
+        )
+        .run();
+    });
+
+    it(`refinement field def - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: foo is aircraft -> {
+            group_by: state is '1'
+          }
+          query: -> foo {
+            order_by: state
+            calculate: prev_state is lag(state)
+          }`
+        )
+        .run();
+    });
+
+    // Expect this to fail
+    it(`refinement preserves expr type - ${databaseName}`, async () => {
+      // Should get error: invalid field definition: expected a analytic expression but got an aggregate expression instead.
+      // Should also get error: Parameter value of lag must be scalar or aggregate, but received analytic
+      await expressionModel
+        .loadQuery(
+          `
+          query: foo is aircraft -> {
+            group_by: state
+            aggregate: aircraft_count
+            calculate: prev_state is lag(state)
+          }
+          query: -> foo {
+            order_by: state
+            calculate: a is aircraft_count
+            calculate: prev_state2 is lag(prev_state)
           }`
         )
         .run();

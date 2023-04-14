@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment} from '../../../model/malloy_types';
+import {isFilteredAliasedName, PipeSegment} from '../../../model/malloy_types';
 
 import {Executor} from '../types/executor';
 import {IndexExecutor} from '../executors/index-executor';
@@ -41,6 +41,8 @@ import {QueryProperty} from '../types/query-property';
 
 import {isNestedQuery} from './nest';
 import {StaticSpace} from '../field-space/static-space';
+import {RefineSpaceField} from '../field-space/RefineSpaceField';
+import {ColumnSpaceField} from '../field-space/column-space-field';
 
 type QOPType = 'grouping' | 'aggregate' | 'project' | 'index';
 
@@ -126,19 +128,27 @@ export class QOPDesc extends ListOf<QueryProperty> {
       // which things were defined in the query itself, so we can't just throw
       // everything into the output space.
       const s = new StaticSpace(opOutputStruct(this, sd, this.refineThis));
-      // TODO this is not totally right anyway, because we need to
-      // be sure to exclude anything that's in the output space.
-      // but I'm not sure how we know that just from looking at the
-      // output struct...
+      // TODO make the expressionType carry over correctly from `f` to `ent`.
       for (const f of this.refineThis.fields) {
-        if (typeof f === 'string') {
-          const ent = s.entry(f);
-          if (ent) {
-            qex.resultFS.setEntry(f, ent);
-          }
-        } else {
-          // TODO add these fields to the output space too
-          console.log(f);
+        const fname = typeof f === 'string' ? f : f.as || f.name;
+        // TODO ooh boy this is ugly.
+        const fieldInSD = sd.fields.find(field => field.name === f);
+        const expressionType =
+          typeof f === 'string'
+            ? fieldInSD &&
+              fieldInSD.type !== 'struct' &&
+              fieldInSD.type !== 'turtle'
+              ? fieldInSD.expressionType ?? 'scalar'
+              : 'scalar'
+            : isFilteredAliasedName(f)
+            ? 'scalar'
+            : f.type === 'turtle'
+            ? 'scalar'
+            : f.expressionType ?? 'scalar';
+        const ent = s.entry(fname);
+        if (ent && ent instanceof ColumnSpaceField) {
+          const refEnt = new RefineSpaceField(ent, expressionType);
+          qex.resultFS.setEntry(fname, refEnt);
         }
       }
     }
