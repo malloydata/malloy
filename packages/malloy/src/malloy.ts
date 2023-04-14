@@ -1241,6 +1241,11 @@ abstract class Entity {
 }
 
 export type Field = AtomicField | QueryField | ExploreField;
+export type SerializedExplore = {
+  _structDef: StructDef;
+  sourceExplore?: SerializedExplore;
+  _parentExplore?: SerializedExplore;
+};
 
 export class Explore extends Entity {
   protected readonly _structDef: StructDef;
@@ -1408,6 +1413,26 @@ export class Explore extends Entity {
 
   public get structDef(): StructDef {
     return this._structDef;
+  }
+
+  public toJSON(): SerializedExplore {
+    return {
+      _structDef: this._structDef,
+      sourceExplore: this.sourceExplore?.toJSON(),
+      _parentExplore: this._parentExplore?.toJSON(),
+    };
+  }
+
+  public static fromJSON(main_explore: SerializedExplore): Explore {
+    const parentExplore =
+      main_explore._parentExplore !== undefined
+        ? Explore.fromJSON(main_explore._parentExplore)
+        : undefined;
+    const sourceExplore =
+      main_explore.sourceExplore !== undefined
+        ? Explore.fromJSON(main_explore.sourceExplore)
+        : undefined;
+    return new Explore(main_explore._structDef, parentExplore, sourceExplore);
   }
 }
 
