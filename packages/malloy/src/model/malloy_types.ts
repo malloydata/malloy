@@ -312,16 +312,6 @@ export function isSpreadFragment(f: Fragment): f is SpreadFragment {
   return (f as SpreadFragment)?.type === 'spread';
 }
 
-export interface AnalyticFragment {
-  type: 'analytic';
-  function: string;
-  parameters?: (string | number | Expr)[]; // output field name or expression
-}
-
-export function isAnalyticFragment(f: Fragment): f is AnalyticFragment {
-  return (f as AnalyticFragment)?.type === 'analytic';
-}
-
 export interface FieldFragment {
   type: 'field';
   path: string;
@@ -452,7 +442,6 @@ export type Fragment =
   | AggregateFragment
   | UngroupFragment
   | DialectFragment
-  | AnalyticFragment
   | FunctionParameterFragment
   | FunctionCallFragment
   | SQLExpressionFragment

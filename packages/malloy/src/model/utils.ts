@@ -121,17 +121,6 @@ export function exprMap(expr: Expr, func: (fragment: Fragment) => Expr): Expr {
             ...fragment,
             e: exprMap(fragment.e, func),
           };
-        case 'analytic':
-          return {
-            ...fragment,
-            parameters: fragment.parameters?.map(param => {
-              if (typeof param === 'string' || typeof param === 'number') {
-                return param;
-              } else {
-                return exprMap(param, func);
-              }
-            }),
-          };
         case 'apply':
           return {
             ...fragment,

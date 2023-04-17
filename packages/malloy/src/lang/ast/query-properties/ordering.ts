@@ -21,7 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {expressionIsAnalytic, OrderBy as ModelOrderBy} from '../../../model/malloy_types';
+import {
+  expressionIsAnalytic,
+  OrderBy as ModelOrderBy,
+} from '../../../model/malloy_types';
 
 import {FieldName, FieldSpace} from '../types/field-space';
 import {ListOf, MalloyElement} from '../types/malloy-element';
