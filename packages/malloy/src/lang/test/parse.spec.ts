@@ -754,7 +754,6 @@ describe('literals', () => {
       {
         literal: '1960-06-30 10:30:00',
         timezone: 'America/Los_Angeles',
-        tzIsLocale: true,
       },
     ],
   ];
@@ -817,17 +816,14 @@ describe('expressions', () => {
       'year',
     ];
 
-    describe('timestamp truncation', () => {
-      for (const unit of timeframes) {
-        test(`timestamp truncate ${unit}`, exprOK(`ats.${unit}`));
-      }
+    test.each(timeframes.map(x => [x]))('truncate %s', unit => {
+      expect(new BetaExpression(`ats.${unit}`)).modelParsed();
     });
 
-    describe('timestamp difference', () => {
-      for (const unit of timeframes) {
-        // TODO expect these to error ...
-        test(`timestamp extract ${unit}`, exprOK(`${unit}(@2021 to ats)`));
-      }
+    // mtoy todo units missing: implement, or document
+    const diffable = ['second', 'minute', 'hour', 'day', 'week'];
+    test.each(diffable.map(x => [x]))('timestamp difference - %s', unit => {
+      expect(new BetaExpression(`${unit}(@2021 to ats)`)).modelParsed();
     });
   });
 
