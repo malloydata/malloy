@@ -158,6 +158,7 @@ query: foo is -> {
   }
   ```
   - Maybe we could just say: you can't shadow fields in the source inside of a query... `state is 1` is illegal. If we did that, then you'd never get a different type for looking up a field in the input vs. output space, which would mean the chosen overload would never be wrong.
+  - But how would we propagate "input"/"output"-ness up the tree?
 
 - Can window functions return whether they are "scalar_analytic" or "aggregate_analytic"?
 

@@ -175,7 +175,7 @@ export class ExprFunc extends ExpressionDef {
       ...argExprs.map(e => e.expressionType),
     ]);
     if (
-      overload.returnType.expressionType === 'scalar' &&
+      overload.returnType.expressionType !== 'aggregate' &&
       this.source !== undefined
     ) {
       this.log(

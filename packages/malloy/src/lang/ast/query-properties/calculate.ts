@@ -31,7 +31,7 @@ export class Calculate extends ListOf<QueryItem> {
     super('calculate', members);
     for (const el of members) {
       if (el instanceof FieldDeclaration || el instanceof FieldReference) {
-        el.allowedExpressionTypes = ['analytic'];
+        el.allowedExpressionTypes = ['scalar_analytic', 'aggregate_analytic'];
       }
       if (el instanceof FieldDeclaration) {
         el.executesInOutputSpace = true;

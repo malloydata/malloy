@@ -45,6 +45,11 @@ export class ProjectFieldSpace extends QuerySpace {
         this.log('Cannot add aggregate measures to project');
         return false;
       }
+      // TODO it would be really nice to attach this error message to the specific field,
+      // rather than the whole query.
+      if (qd.expressionType === 'aggregate_analytic') {
+        this.log('Cannot add aggregate analyics to project');
+      }
     }
     return true;
   }

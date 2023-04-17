@@ -506,7 +506,8 @@ export function mkExpr(
 export type ExpressionType =
   | 'scalar'
   | 'aggregate'
-  | 'analytic'
+  | 'scalar_analytic'
+  | 'aggregate_analytic'
   | 'ungrouped_aggregate';
 
 export interface Expression {
@@ -522,7 +523,16 @@ export function expressionIsAggregate(e: ExpressionType | undefined): boolean {
 export function expressionIsCalculation(
   e: ExpressionType | undefined
 ): boolean {
-  return e === 'aggregate' || e === 'analytic' || e === 'ungrouped_aggregate';
+  return (
+    e === 'aggregate' ||
+    e === 'scalar_analytic' ||
+    e === 'aggregate_analytic' ||
+    e === 'ungrouped_aggregate'
+  );
+}
+
+export function expressionIsAnalytic(e: ExpressionType | undefined): boolean {
+  return e === 'aggregate_analytic' || e === 'scalar_analytic';
 }
 
 function expressionTypeLevel(e: ExpressionType): number {
@@ -530,7 +540,8 @@ function expressionTypeLevel(e: ExpressionType): number {
     scalar: 0,
     aggregate: 1,
     ungrouped_aggregate: 2,
-    analytic: 2,
+    scalar_analytic: 2,
+    aggregate_analytic: 3,
   }[e];
 }
 
@@ -541,6 +552,7 @@ export function isExpressionTypeLEQ(
   return e1 === e2 || expressionTypeLevel(e1) < expressionTypeLevel(e2);
 }
 
+// TODO rename this to be like `combineExpressionTypes`
 export function maxExpressionType(
   e1: ExpressionType,
   e2: ExpressionType
@@ -553,8 +565,16 @@ export function maxExpressionType(
   if (e1 === 'ungrouped_aggregate' || e2 === 'ungrouped_aggregate') {
     ret = 'ungrouped_aggregate';
   }
-  if (e1 === 'analytic' || e2 === 'analytic') {
-    ret = 'analytic';
+  if (e1 === 'scalar_analytic' || e2 === 'scalar_analytic') {
+    ret = 'scalar_analytic';
+  }
+  if (e1 === 'aggregate_analytic' || e2 === 'aggregate_analytic') {
+    ret = 'aggregate_analytic';
+  }
+  if (e1 === 'scalar_analytic' && e2 === 'aggregate') {
+    ret = 'aggregate_analytic';
+  } else if (e1 === 'aggregate' && e2 === 'scalar_analytic') {
+    ret = 'aggregate_analytic';
   }
   return ret;
 }

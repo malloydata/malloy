@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {OrderBy as ModelOrderBy} from '../../../model/malloy_types';
+import {expressionIsAnalytic, OrderBy as ModelOrderBy} from '../../../model/malloy_types';
 
 import {FieldName, FieldSpace} from '../types/field-space';
 import {ListOf, MalloyElement} from '../types/malloy-element';
@@ -54,7 +54,7 @@ export class OrderBy extends MalloyElement {
       if (entry.found?.typeDesc().evalSpace === 'input') {
         this.log(`Unknown field ${this.field.refString} in output space`);
       }
-      if (entry.found?.typeDesc().expressionType === 'analytic') {
+      if (expressionIsAnalytic(entry.found?.typeDesc().expressionType)) {
         this.log(`Illegal order by of analytic field ${this.field.refString}`);
       }
     }

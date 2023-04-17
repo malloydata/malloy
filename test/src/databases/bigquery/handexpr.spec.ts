@@ -473,7 +473,7 @@ describe('BigQuery hand-built expression test', () => {
               {
                 name: 'row_num',
                 type: 'number',
-                expressionType: 'analytic',
+                expressionType: 'scalar_analytic',
                 e: [
                   {
                     type: 'analytic',
@@ -582,7 +582,7 @@ describe('BigQuery hand-built expression test', () => {
                       {
                         name: 'row_num',
                         type: 'number',
-                        expressionType: 'analytic',
+                        expressionType: 'scalar_analytic',
                         e: [
                           {
                             type: 'analytic',

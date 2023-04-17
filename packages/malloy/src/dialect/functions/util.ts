@@ -131,7 +131,7 @@ export function maxUngroupedAggregate(
 export function maxAnalytic(dataType: FieldValueType): FunctionParamTypeDesc {
   return {
     dataType,
-    expressionType: 'analytic',
+    expressionType: 'aggregate_analytic',
     evalSpace: 'input',
   };
 }
@@ -155,7 +155,7 @@ export function minAggregate(dataType: FieldValueType): TypeDesc {
 export function minAnalytic(dataType: FieldValueType): TypeDesc {
   return {
     dataType,
-    expressionType: 'analytic',
+    expressionType: 'scalar_analytic',
     evalSpace: 'input',
   };
 }
