@@ -308,6 +308,58 @@ describe('model statements', () => {
         }
       `)
     );
+    describe('query operation typechecking', () => {
+      test('cannot aggregate in group_by', () => {
+        expect('query: a -> { group_by: s is count()}').compileToFailWith(
+          'No matching overload for function floor(string, string)',
+          "Cannot define 's', value has unknown type"
+        );
+      });
+    });
+    describe('function typechecking', () => {
+      test(
+        'use function correctly',
+        modelOK(`query: a -> {
+          group_by: s is concat('a', 'b')
+        }`)
+      );
+      test('function no matching overload', () => {
+        expect(`query: a -> {
+          group_by: s is floor('a', 'b')
+        }`).compileToFailWith(
+          'No matching overload for function floor(string, string)',
+          "Cannot define 's', value has unknown type"
+        );
+      });
+      test(
+        'can select different overload',
+        modelOK('query: a -> { group_by: s is concat() }')
+      );
+      test(
+        'can pass different expression types',
+        modelOK(`query: a -> {
+          group_by: f1 is sqrt(1)
+          aggregate: f2 is sqrt(count())
+          aggregate: f3 is sqrt(all(count()))
+          calculate: f4 is sqrt(lag(f1))
+          calculate: f5 is sqrt(lag(count()))
+        }`)
+      );
+      test(
+        'function return type correct',
+        modelOK(`query: a -> {
+          group_by: s is floor(1.2) + 1
+        }`)
+      );
+      test('function return type incorrect', () => {
+        expect(`query: a -> {
+            group_by: s is floor(1.2) + 'a'
+        }`).compileToFailWith(
+          "Non numeric('number,string') value with '+'",
+          "Cannot define 's', value has unknown type"
+        );
+      });
+    });
   });
 });
 

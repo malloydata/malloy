@@ -29,8 +29,8 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/is-sql-eq';
 import {databasesFromEnvironmentOr} from '../../util';
 
-// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(['bigquery']));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+// const runtimes = new RuntimeList(databasesFromEnvironmentOr(['bigquery']));
 
 const expressionModelText = `
 explore: aircraft_models is table('malloytest.aircraft_models'){
