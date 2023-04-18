@@ -43,6 +43,7 @@ import {WildSpaceField} from './wild-space-field';
 import {RefinedSpace} from './refined-space';
 import {LookupResult} from '../types/lookup-result';
 import {SpaceEntry} from '../types/space-entry';
+import { ColumnSpaceField } from './column-space-field';
 
 /**
  * Unlike a source, which is a refinement of a namespace, a query
@@ -84,9 +85,34 @@ export abstract class QuerySpace extends RefinedSpace {
   readonly exprSpace: QueryInputSpace;
   astEl?: MalloyElement | undefined;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
-  constructor(readonly queryInputSpace: FieldSpace) {
+  constructor(
+    readonly queryInputSpace: FieldSpace,
+    refineThis: model.PipeSegment | undefined
+  ) {
     super(queryInputSpace.emptyStructDef());
     this.exprSpace = new QueryInputSpace(queryInputSpace, this);
+    if (refineThis) this.addRefineFromFields(refineThis);
+  }
+
+  private addRefineFromFields(refineThis: model.PipeSegment) {
+    for (const field of refineThis.fields) {
+      if (typeof field === 'string') {
+        const ent = this.exprSpace.entry(field);
+        if (ent) {
+          this.setEntry(field, ent);
+        }
+      } else if (model.isFilteredAliasedName(field)) {
+        const name = field.as ?? field.name;
+        const ent = this.exprSpace.entry(name);
+        if (ent) {
+          this.setEntry(name, ent);
+        }
+      } else {
+        if (field.type !== 'turtle') {
+          this.setEntry(field.as ?? field.name, new ColumnSpaceField(field));
+        }
+      }
+    }
   }
 
   log(s: string): void {

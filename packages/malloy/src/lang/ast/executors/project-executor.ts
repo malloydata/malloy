@@ -38,8 +38,11 @@ import {QueryProperty} from '../types/query-property';
 import {ReduceExecutor} from './reduce-executor';
 
 export class ProjectExecutor extends ReduceExecutor {
-  getResultSpace(fs: FieldSpace): ProjectFieldSpace {
-    return new ProjectFieldSpace(fs);
+  getResultSpace(
+    fs: FieldSpace,
+    refineThis: PipeSegment | undefined
+  ): ProjectFieldSpace {
+    return new ProjectFieldSpace(fs, refineThis);
   }
   execute(qp: QueryProperty): void {
     if (qp instanceof ProjectStatement) {

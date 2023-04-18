@@ -112,46 +112,16 @@ export class QOPDesc extends ListOf<QueryProperty> {
     switch (this.computeType()) {
       case 'aggregate':
       case 'grouping':
-        return new ReduceExecutor(baseFS);
+        return new ReduceExecutor(baseFS, this.refineThis);
       case 'project':
-        return new ProjectExecutor(baseFS);
+        return new ProjectExecutor(baseFS, this.refineThis);
       case 'index':
-        return new IndexExecutor(baseFS);
+        return new IndexExecutor(baseFS, this.refineThis);
     }
   }
 
   getOp(inputFS: FieldSpace, forPipeline: PipelineDesc | null): OpDesc {
     const qex = this.getExecutor(inputFS);
-    if (this.refineThis) {
-      const sd = inputFS.structDef();
-      // Unfortunately opOutputStruct gives the whole structDef without saying
-      // which things were defined in the query itself, so we can't just throw
-      // everything into the output space.
-      const s = new StaticSpace(opOutputStruct(this, sd, this.refineThis));
-      // TODO make the expressionType carry over correctly from `f` to `ent`.
-      for (const f of this.refineThis.fields) {
-        const fname = typeof f === 'string' ? f : f.as || f.name;
-        // TODO ooh boy this is ugly.
-        const fieldInSD = sd.fields.find(field => field.name === f);
-        const expressionType =
-          typeof f === 'string'
-            ? fieldInSD &&
-              fieldInSD.type !== 'struct' &&
-              fieldInSD.type !== 'turtle'
-              ? fieldInSD.expressionType ?? 'scalar'
-              : 'scalar'
-            : isFilteredAliasedName(f)
-            ? 'scalar'
-            : f.type === 'turtle'
-            ? 'scalar'
-            : f.expressionType ?? 'scalar';
-        const ent = s.entry(fname);
-        if (ent && ent instanceof ColumnSpaceField) {
-          const refEnt = new RefineSpaceField(ent, expressionType);
-          qex.resultFS.setEntry(fname, refEnt);
-        }
-      }
-    }
     if (forPipeline?.nestedInQuerySpace) {
       qex.inputFS.nestParent = forPipeline.nestedInQuerySpace;
     }
@@ -167,6 +137,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
         // If the `qex.resultFS` is correct, then we should be able to just use that
         // in a more direct way.
         new StaticSpace(opOutputStruct(this, inputFS.structDef(), segment)),
+      // qex.resultFS,
     };
   }
 }

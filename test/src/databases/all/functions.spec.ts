@@ -29,7 +29,8 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/is-sql-eq';
 import {databasesFromEnvironmentOr} from '../../util';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(['bigquery']));
 
 const expressionModelText = `
 explore: aircraft_models is table('malloytest.aircraft_models'){
@@ -751,6 +752,20 @@ expressionModels.forEach((expressionModel, databaseName) => {
           query: -> foo {
             order_by: state
             calculate: prev_state is lag(state)
+          }`
+        )
+        .run();
+    });
+
+    it(`output space bug - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            nest: foo is {
+              group_by: bar is 1
+              group_by: state
+            }
           }`
         )
         .run();

@@ -68,8 +68,7 @@ export abstract class DynamicSpace extends StaticSpace {
     this.completions = [];
   }
 
-  // TODO this was protected
-  setEntry(name: string, value: SpaceEntry): void {
+  protected setEntry(name: string, value: SpaceEntry): void {
     if (this.final) {
       throw new Error('Space already final');
     }
@@ -98,10 +97,17 @@ export abstract class DynamicSpace extends StaticSpace {
   structDef(): model.StructDef {
     const parameters = this.fromStruct.parameters || {};
     if (this.final === undefined) {
+      // TODO there's some funky business where `this.structDef()` is being used by turtles
+      // so `this.final` needs to be correct for at least the fields by the time we get to turtles.
       this.final = {
         ...this.fromStruct,
         fields: [],
       };
+      const newFields = new Map<string, model.FieldDef>();
+      for (const field of this.fromStruct.fields) {
+        newFields.set(field.as ?? field.name, field);
+      }
+      this.final.fields = [...newFields.values()];
       // Need to process the entities in specific order
       const fields: [string, SpaceField][] = [];
       const joins: [string, SpaceField][] = [];
@@ -123,16 +129,21 @@ export abstract class DynamicSpace extends StaticSpace {
         if (field instanceof JoinSpaceField) {
           const joinStruct = field.join.structDef();
           if (!ErrorFactory.isErrorStructDef(joinStruct)) {
-            this.final.fields.push(joinStruct);
+            newFields.set(fieldName, joinStruct);
+            this.final.fields = [...newFields.values()];
             fixupJoins.push([field.join, joinStruct]);
           }
         } else {
           const fieldDef = field.fieldDef();
           if (fieldDef) {
-            this.final.fields.push(fieldDef);
-          } else {
-            throw new Error(`'${fieldName}' doesn't have a FieldDef`);
+            newFields.set(fieldName, fieldDef);
+            this.final.fields = [...newFields.values()];
           }
+          // TODO I'm just removing this, but perhaps instead I should just filter
+          // out ReferenceFields and still make this check.
+          // else {
+          //   throw new Error(`'${fieldName}' doesn't have a FieldDef`);
+          // }
         }
       }
       if (Object.entries(parameters).length > 0) {

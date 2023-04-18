@@ -48,7 +48,6 @@ import {
   QuerySpace,
   ReduceFieldSpace,
 } from '../field-space/query-spaces';
-import {DynamicSpace} from '../field-space/dynamic-space';
 import {Calculate} from '../query-properties/calculate';
 
 export class ReduceExecutor implements Executor {
@@ -57,15 +56,17 @@ export class ReduceExecutor implements Executor {
   filters: FilterExpression[] = [];
   order?: Top | Ordering;
   limit?: number;
-  refinedInputFS?: DynamicSpace;
 
-  constructor(baseFS: FieldSpace) {
-    this.resultFS = this.getResultSpace(baseFS);
+  constructor(baseFS: FieldSpace, refineThis: PipeSegment | undefined) {
+    this.resultFS = this.getResultSpace(baseFS, refineThis);
     this.inputFS = this.resultFS.exprSpace;
   }
 
-  getResultSpace(fs: FieldSpace): QuerySpace {
-    return new ReduceFieldSpace(fs);
+  getResultSpace(
+    fs: FieldSpace,
+    refineThis: PipeSegment | undefined
+  ): QuerySpace {
+    return new ReduceFieldSpace(fs, refineThis);
   }
 
   execute(qp: QueryProperty): void {
