@@ -757,6 +757,18 @@ expressionModels.forEach((expressionModel, databaseName) => {
         .run();
     });
 
+    it(`infinte recursion bug - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            calculate: n is row_number()
+            group_by: tail_num
+          }`
+        )
+        .run();
+    });
+
     it(`output space bug - ${databaseName}`, async () => {
       await expressionModel
         .loadQuery(

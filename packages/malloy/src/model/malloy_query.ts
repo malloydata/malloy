@@ -817,7 +817,10 @@ class QueryField extends QueryNode {
       } else {
         orderingField = resultStruct.getFieldByNumber(ordering.field);
       }
-      if (orderingField.fif.f.fieldDef.expressionType === 'analytic') {
+      // TODO today we do not support ordering by analytic functions at all, so this works
+      // but eventually we will, and this check will just want to ensure that the order field
+      // isn't the same as the field we're currently compiling (otherwise we will loop infintely)
+      if (expressionIsAnalytic(orderingField.fif.f.fieldDef.expressionType)) {
         continue;
       }
       if (resultStruct.firstSegment.type === 'reduce') {
