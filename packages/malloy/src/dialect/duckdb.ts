@@ -163,6 +163,11 @@ export class DuckDBDialect extends Dialect {
   }
 
   quoteTablePath(tableName: string): string {
+    // If this looks like a function call, don't quote, this lets you
+    // specify read_json_auto(...) for example, as if it were a table name
+    if (tableName.match(/^[a-z_]+\(.*\)$)/)) {
+      return tableName;
+    }
     return tableName.match(/\//) ? `'${tableName}'` : tableName;
   }
 
