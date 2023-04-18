@@ -309,10 +309,45 @@ describe('model statements', () => {
       `)
     );
     describe('query operation typechecking', () => {
-      test('cannot aggregate in group_by', () => {
+      test('cannot use aggregate in group_by', () => {
         expect('query: a -> { group_by: s is count()}').compileToFailWith(
-          'No matching overload for function floor(string, string)',
-          "Cannot define 's', value has unknown type"
+          // TODO improve this error message -- it should say
+          // "Cannot use an aggregate field in group_by operation, did you mean to use an aggregate operation?"
+          'invalid field definition: expected a scalar expression but got a aggregate expression instead.'
+        );
+      });
+      test('cannot use ungrouped_aggregate in group_by', () => {
+        expect('query: a -> { group_by: s is all(count())}').compileToFailWith(
+          'invalid field definition: expected a scalar expression but got a ungrouped_aggregate expression instead.'
+        );
+      });
+      test('cannot use analytic in group_by', () => {
+        expect('query: a -> { group_by: s is row_number()}').compileToFailWith(
+          'invalid field definition: expected a scalar expression but got a scalar_analytic expression instead.'
+        );
+      });
+      test('cannot use scalar in aggregate', () => {
+        expect('query: a -> { aggregate: s is 1}').compileToFailWith(
+          'invalid field definition: expected a aggregate or ungrouped_aggregate expression but got a scalar expression instead.'
+        );
+      });
+      test('cannot use analytic in aggregate', () => {
+        expect('query: a -> { aggregate: s is lag(count())}').compileToFailWith(
+          'invalid field definition: expected a aggregate or ungrouped_aggregate expression but got a aggregate_analytic expression instead.'
+        );
+      });
+      test('cannot use scalar in calculate', () => {
+        expect(
+          'query: a -> { group_by: a is 1; calculate: s is 1 }'
+        ).compileToFailWith(
+          'invalid field definition: expected a scalar_analytic or aggregate_analytic expression but got a scalar expression instead.'
+        );
+      });
+      test('cannot use aggregate in calculate', () => {
+        expect(
+          'query: a -> { group_by: a is 1; calculate: s is count() }'
+        ).compileToFailWith(
+          'invalid field definition: expected a scalar_analytic or aggregate_analytic expression but got a aggregate expression instead.'
         );
       });
     });
@@ -359,6 +394,38 @@ describe('model statements', () => {
           "Cannot define 's', value has unknown type"
         );
       });
+      test(
+        'can use output value in calculate',
+        modelOK(`query: a -> {
+          group_by: x is 1
+          calculate: s is lag(x)
+        }`)
+      );
+      test('cannot use output value in group_by', () => {
+        expect(`query: a -> {
+          group_by: x is 1
+          group_by: y is x
+        }`).compileToFailWith(
+          "'x' is not defined",
+          "Cannot define 'y', value has unknown type"
+        );
+      });
+      test('lag can check that other args are constant', () => {
+        expect(`query: a -> {
+          group_by: x is 1
+          calculate: s is lag(x, x)
+        }`).compileToFailWith(
+          // TODO improve this error message
+          "Parameter 2 ('offset') of lag must be constant, but received output"
+        );
+      });
+      test(
+        'lag can use constant values for other args',
+        modelOK(`query: a -> {
+          group_by: x is 1
+          calculate: s is lag(x, 2)
+        }`)
+      );
     });
   });
 });

@@ -157,7 +157,9 @@ export class ExprFunc extends ExpressionDef {
         error.maxExpressionType === 'scalar' ? 'scalar' : 'scalar or aggregate';
       const arg = this.args[adjustedIndex];
       arg.log(
-        `Parameter ${error.param.name} of ${this.name} must be ${allowed}, but received ${error.actualExpressionType}`
+        `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
+          this.name
+        } must be ${allowed}, but received ${error.actualExpressionType}`
       );
     }
     for (const error of evalSpaceErrors) {
@@ -166,7 +168,9 @@ export class ExprFunc extends ExpressionDef {
         error.maxEvalSpace === 'constant' ? 'constant' : 'constant or output';
       const arg = this.args[adjustedIndex];
       arg.log(
-        `Parameter ${error.param.name} of ${this.name} must be ${allowed}, but received ${error.actualEvalSpace}`
+        `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
+          this.name
+        } must be ${allowed}, but received ${error.actualEvalSpace}`
       );
     }
     const type = overload.returnType;
