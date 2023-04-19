@@ -165,11 +165,6 @@ export function isOutputFieldFragment(f: Fragment): f is OutputFieldFragment {
   return (f as OutputFieldFragment)?.type === 'outputField';
 }
 
-// can generate output field fragment
-// or aggregate expression (referenced from output field fragment)
-// or aggregate expression raw
-// or expression based on constants and/or output field fragments
-
 export interface FilterFragment {
   type: 'filterExpression';
   filterList: FilterExpression[];
@@ -207,67 +202,6 @@ export function isUngroupFragment(f: Fragment): f is UngroupFragment {
   const ftype = (f as UngroupFragment)?.type;
   return ftype === 'all' || ftype === 'exclude';
 }
-
-export type MalloyFunctionParam = AtomicFieldType | 'any' | 'nconst' | 'regexp';
-
-export interface MalloyFunctionInfo {
-  returnType: AtomicFieldType;
-  parameters: 'any' | 'none' | MalloyFunctionParam[];
-  expressionType?: 'aggregate' | 'analytic'; // forces expression type
-  sqlName?: string;
-}
-
-export const malloyFunctions: Record<string, MalloyFunctionInfo> = {
-  row_number: {
-    returnType: 'number',
-    parameters: 'none',
-    expressionType: 'analytic',
-  },
-  rank: {
-    returnType: 'number',
-    parameters: 'none',
-    expressionType: 'analytic',
-  },
-  dense_rank: {
-    returnType: 'number',
-    parameters: 'none',
-    expressionType: 'analytic',
-  },
-  first_value_in_column: {
-    returnType: 'number',
-    parameters: 'any',
-    expressionType: 'analytic',
-    sqlName: 'first_value',
-  },
-  last_value_in_column: {
-    returnType: 'number',
-    parameters: 'any',
-    expressionType: 'analytic',
-    sqlName: 'last_value',
-  },
-  min_in_column: {
-    returnType: 'number',
-    parameters: 'any',
-    expressionType: 'analytic',
-    sqlName: 'min',
-  },
-  max_in_column: {
-    returnType: 'number',
-    parameters: 'any',
-    expressionType: 'analytic',
-    sqlName: 'max',
-  },
-  ntile: {
-    returnType: 'number',
-    parameters: ['nconst'],
-    expressionType: 'analytic',
-  },
-  lag: {
-    returnType: 'number',
-    parameters: ['number', 'nconst'],
-    expressionType: 'analytic',
-  },
-};
 
 export interface FunctionParameterFragment {
   type: 'function_parameter';
@@ -511,6 +445,16 @@ export function expressionIsScalar(e: ExpressionType | undefined): boolean {
 
 export function expressionIsAggregate(e: ExpressionType | undefined): boolean {
   return e === 'aggregate' || e === 'ungrouped_aggregate';
+}
+
+export function expressionInvolvesAggregate(
+  e: ExpressionType | undefined
+): boolean {
+  return (
+    e === 'aggregate' ||
+    e === 'ungrouped_aggregate' ||
+    e === 'aggregate_analytic'
+  );
 }
 
 export function expressionIsCalculation(

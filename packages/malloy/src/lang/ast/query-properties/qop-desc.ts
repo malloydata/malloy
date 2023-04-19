@@ -41,8 +41,6 @@ import {QueryProperty} from '../types/query-property';
 
 import {isNestedQuery} from './nest';
 import {StaticSpace} from '../field-space/static-space';
-import {RefineSpaceField} from '../field-space/RefineSpaceField';
-import {ColumnSpaceField} from '../field-space/column-space-field';
 
 type QOPType = 'grouping' | 'aggregate' | 'project' | 'index';
 

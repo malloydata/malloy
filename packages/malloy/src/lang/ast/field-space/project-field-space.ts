@@ -27,6 +27,8 @@ import {
   isFilteredAliasedName,
   FieldValueType,
   ExpressionType,
+  expressionInvolvesAggregate,
+  expressionIsAnalytic,
 } from '../../../model/malloy_types';
 
 import {QuerySpace} from './query-spaces';
@@ -57,7 +59,10 @@ export class ProjectFieldSpace extends QuerySpace {
     }
     // TODO it would be really nice to attach this error message to the specific field,
     // rather than the whole query.
-    if (expressionType === 'aggregate_analytic') {
+    if (
+      expressionInvolvesAggregate(expressionType) &&
+      expressionIsAnalytic(expressionType)
+    ) {
       this.log('Cannot add aggregate analyics to project');
       return false;
     }

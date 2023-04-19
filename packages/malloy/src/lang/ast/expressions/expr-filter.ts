@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {expressionIsCalculation} from '../../../model/malloy_types';
+import {expressionIsCalculation, expressionIsScalar} from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
 import {FT} from '../fragtype-utils';
@@ -48,7 +48,7 @@ export class ExprFilter extends ExpressionDef {
         return errorFor('no filter on aggregate');
       }
     }
-    if (resultExpr.expressionType === 'scalar') {
+    if (expressionIsScalar(resultExpr.expressionType)) {
       // TODO could log a warning, but I have a problem with the
       // idea of warnings, so for now ...
       return resultExpr;

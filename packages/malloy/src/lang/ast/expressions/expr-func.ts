@@ -24,6 +24,8 @@
 import {
   EvalSpace,
   Expr,
+  expressionIsAggregate,
+  expressionIsScalar,
   ExpressionType,
   FieldValueType,
   Fragment,
@@ -153,8 +155,9 @@ export class ExprFunc extends ExpressionDef {
     const {overload, expressionTypeErrors, evalSpaceErrors} = result;
     for (const error of expressionTypeErrors) {
       const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
-      const allowed =
-        error.maxExpressionType === 'scalar' ? 'scalar' : 'scalar or aggregate';
+      const allowed = expressionIsScalar(error.maxExpressionType)
+        ? 'scalar'
+        : 'scalar or aggregate';
       const arg = this.args[adjustedIndex];
       arg.log(
         `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
@@ -179,7 +182,7 @@ export class ExprFunc extends ExpressionDef {
       ...argExprs.map(e => e.expressionType),
     ]);
     if (
-      overload.returnType.expressionType !== 'aggregate' &&
+      !expressionIsAggregate(overload.returnType.expressionType) &&
       this.source !== undefined
     ) {
       this.log(
@@ -218,7 +221,7 @@ export class ExprFunc extends ExpressionDef {
     const evalSpace =
       maxEvalSpace === 'constant'
         ? 'constant'
-        : expressionType === 'scalar'
+        : expressionIsScalar(expressionType)
         ? maxEvalSpace
         : 'output';
     return {

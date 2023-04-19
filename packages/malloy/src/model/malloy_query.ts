@@ -32,6 +32,7 @@ import {
   expressionIsAggregate,
   expressionIsAnalytic,
   expressionIsCalculation,
+  expressionIsScalar,
   FieldAtomicDef,
   FieldDateDef,
   FieldDef,
@@ -354,7 +355,7 @@ class QueryField extends QueryNode {
 
   generateOutputFieldFragment(
     resultSet: FieldInstanceResult,
-    context: QueryStruct,
+    _context: QueryStruct,
     frag: OutputFieldFragment,
     _state: GenerateState
   ): string {
@@ -444,7 +445,7 @@ class QueryField extends QueryNode {
     const overload = frag.overload;
     const args = frag.args;
     const distinctKey =
-      overload.returnType.expressionType === 'aggregate' &&
+      expressionIsAggregate(overload.returnType.expressionType) &&
       this.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
     if (distinctKey) {
       if (!context.dialect.supportsAggDistinct) {
@@ -473,17 +474,18 @@ class QueryField extends QueryNode {
         }
       );
     } else {
-      const mappedArgs =
-        overload.returnType.expressionType === 'aggregate'
-          ? args.map(arg => {
-              // TODO We assume that all arguments to this aggregate-returning function need to
-              // have filters applied to them. This is not necessarily true in the general case,
-              // e.g. in a function `avg_plus(a, b) = avg(a) + b` -- here, `b` should not be
-              // be filtered. But since there aren't any aggregate functions like this in the
-              // standard library we have planned, we ignore this for now.
-              return [this.generateDimFragment(resultSet, context, arg, state)];
-            })
-          : args;
+      const mappedArgs = expressionIsAggregate(
+        overload.returnType.expressionType
+      )
+        ? args.map(arg => {
+            // TODO We assume that all arguments to this aggregate-returning function need to
+            // have filters applied to them. This is not necessarily true in the general case,
+            // e.g. in a function `avg_plus(a, b) = avg(a) + b` -- here, `b` should not be
+            // be filtered. But since there aren't any aggregate functions like this in the
+            // standard library we have planned, we ignore this for now.
+            return [this.generateDimFragment(resultSet, context, arg, state)];
+          })
+        : args;
       const funcCall: Expr = this.expandFunctionCall(
         context.dialect.name,
         overload,
@@ -2267,7 +2269,7 @@ class QueryQuery extends QueryField {
 
       if (
         (which === 'having' && expressionIsCalculation(cond.expressionType)) ||
-        (which === 'where' && cond.expressionType === 'scalar')
+        (which === 'where' && expressionIsScalar(cond.expressionType))
       ) {
         const sqlClause = this.generateExpressionFromExpr(
           resultStruct,

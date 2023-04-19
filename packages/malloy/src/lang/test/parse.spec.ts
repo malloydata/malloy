@@ -569,6 +569,13 @@ describe('model statements', () => {
           "Cannot redefine 'concat'"
         );
       });
+      test(
+        '`now` is considered constant`',
+        modelOK(`query: a -> {
+          group_by: n is now
+          calculate: l is lag(n, 1, now)
+        }`)
+      );
     });
   });
 });

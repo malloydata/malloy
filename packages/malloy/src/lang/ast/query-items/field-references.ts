@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ExpressionType, FieldDef, TypeDesc} from '../../../model/malloy_types';
+import {FieldDef, TypeDesc} from '../../../model/malloy_types';
 
 import {FieldName, FieldSpace} from '../types/field-space';
 import {LookupResult} from '../types/lookup-result';
@@ -43,7 +43,6 @@ export type FieldReferenceConstructor = new (
 
 export abstract class FieldReference extends ListOf<FieldName> {
   elementType = 'fieldReference';
-  allowedExpressionTypes: ExpressionType[] | undefined;
 
   constructor(names: FieldName[]) {
     super('fieldReference', names);

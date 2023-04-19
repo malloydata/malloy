@@ -21,13 +21,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ExpressionType, FieldValueType, TypeDesc} from '../../model';
+import {
+  EvalSpace,
+  expressionIsScalar,
+  ExpressionType,
+  FieldValueType,
+  TypeDesc,
+} from '../../model';
 
 function mkFragType(
   dataType: FieldValueType,
-  expressionType: ExpressionType = 'scalar'
+  expressionType: ExpressionType = 'scalar',
+  evalSpace: EvalSpace = 'constant'
 ): TypeDesc {
-  return {dataType, expressionType, evalSpace: 'constant'}; // TODO hmm
+  return {dataType, expressionType, evalSpace};
 }
 
 /**
@@ -83,7 +90,7 @@ export class FT {
     const strings = types.map(type => {
       if (type) {
         let inspected: string = type.dataType;
-        if (type.expressionType !== 'scalar') {
+        if (!expressionIsScalar(type.expressionType)) {
           inspected = `${type.expressionType} ${inspected}`;
         }
         return inspected;

@@ -21,18 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDeclaration} from '../query-items/field-declaration';
-import {FieldReference} from '../query-items/field-references';
 import {ListOf} from '../types/malloy-element';
 import {QueryItem} from '../types/query-item';
 
 export class GroupBy extends ListOf<QueryItem> {
   constructor(members: QueryItem[]) {
     super('groupBy', members);
-    for (const el of members) {
-      if (el instanceof FieldDeclaration || el instanceof FieldReference) {
-        el.allowedExpressionTypes = ['scalar'];
-      }
-    }
   }
 }

@@ -71,7 +71,7 @@ class DollarReference extends ExpressionDef {
       dataType: this.refType,
       value: [{type: 'applyVal'}],
       expressionType: 'scalar',
-      evalSpace: 'constant', // TODO NO CLUE
+      evalSpace: 'constant',
     };
   }
 }

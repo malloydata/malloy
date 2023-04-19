@@ -23,7 +23,6 @@
 
 import {Dialect} from '../../../dialect/dialect';
 import {
-  ExpressionType,
   FieldTypeDef,
   isAtomicFieldType,
   StructDef,
@@ -54,9 +53,6 @@ export type FieldDeclarationConstructor = new (
 ) => FieldDeclaration;
 
 export abstract class FieldDeclaration extends MalloyElement {
-  allowedExpressionTypes: ExpressionType[] | undefined;
-  executesInOutputSpace: boolean = false;
-
   constructor(
     readonly expr: ExpressionDef,
     readonly defineName: string,
@@ -80,6 +76,10 @@ export abstract class FieldDeclaration extends MalloyElement {
 
   abstract typecheckExprValue(expr: ExprValue): void;
 
+  executesInOutputSpace(): boolean {
+    return false;
+  }
+
   queryFieldDef(exprFS: FieldSpace, exprName: string): FieldTypeDef {
     let exprValue;
 
@@ -91,7 +91,7 @@ export abstract class FieldDeclaration extends MalloyElement {
     }
 
     try {
-      const fs = this.executesInOutputSpace ? getOutputFS() : exprFS;
+      const fs = this.executesInOutputSpace() ? getOutputFS() : exprFS;
       exprValue = this.expr.getExpression(fs);
     } catch (error) {
       this.log(`Cannot define '${exprName}', ${error.message}`);
@@ -144,6 +144,9 @@ export class CalculateFieldDeclaration extends FieldDeclaration {
   elementType = 'calculateFieldDeclaration';
   typecheckExprValue(expr: ExprValue) {
     typecheckCalculate(expr, this);
+  }
+  executesInOutputSpace(): boolean {
+    return true;
   }
 }
 

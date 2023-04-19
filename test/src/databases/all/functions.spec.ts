@@ -375,6 +375,17 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
 
   describe('misc analytic functions', () => {
+    it(`now eval space - ${databaseName}`, async () => {
+      await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: n is now
+            calculate: l is lag(n, 1, now)
+          }`
+        )
+        .run();
+    });
     it(`1 - ${databaseName}`, async () => {
       await expressionModel
         .loadQuery(
