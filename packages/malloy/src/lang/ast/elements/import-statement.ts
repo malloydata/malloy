@@ -60,7 +60,11 @@ export class ImportStatement extends MalloyElement implements DocStatement {
         for (const [importing, entry] of Object.entries(
           trans.getChildExports(this.fullURL)
         )) {
-          doc.setEntry(importing, {entry, exported: false});
+          if (doc.getEntry(importing)) {
+            this.log(`Cannot redefine '${importing}'`);
+          } else {
+            doc.setEntry(importing, {entry, exported: false});
+          }
         }
       } else if (src.status === 'error') {
         this.log(`import failed: '${src.message}'`);

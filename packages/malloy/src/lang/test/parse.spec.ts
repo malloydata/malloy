@@ -561,6 +561,14 @@ describe('model statements', () => {
           calculate: s is lag(x, 2)
         }`)
       );
+      test('cannot name top level objects same as functions', () => {
+        expect(`query: concat is a -> {
+          group_by: x is 1
+        }`).compileToFailWith(
+          // TODO improve this error message
+          "Cannot redefine 'concat'"
+        );
+      });
     });
   });
 });
