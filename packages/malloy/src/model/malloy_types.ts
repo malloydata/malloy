@@ -505,8 +505,12 @@ export interface Expression {
   code?: string;
 }
 
+export function expressionIsScalar(e: ExpressionType | undefined): boolean {
+  return e === undefined || e === 'scalar';
+}
+
 export function expressionIsAggregate(e: ExpressionType | undefined): boolean {
-  return e === 'aggregate';
+  return e === 'aggregate' || e === 'ungrouped_aggregate';
 }
 
 export function expressionIsCalculation(

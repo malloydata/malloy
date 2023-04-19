@@ -43,7 +43,7 @@ import {WildSpaceField} from './wild-space-field';
 import {RefinedSpace} from './refined-space';
 import {LookupResult} from '../types/lookup-result';
 import {SpaceEntry} from '../types/space-entry';
-import { ColumnSpaceField } from './column-space-field';
+import {ColumnSpaceField} from './column-space-field';
 
 /**
  * Unlike a source, which is a refinement of a namespace, a query
@@ -108,6 +108,8 @@ export abstract class QuerySpace extends RefinedSpace {
           this.setEntry(name, ent);
         }
       } else {
+        // TODO can you reference fields in a turtle as fields in the output space,
+        // e.g. order_by: my_turtle.foo, or lag(my_turtle.foo)
         if (field.type !== 'turtle') {
           this.setEntry(field.as ?? field.name, new ColumnSpaceField(field));
         }
@@ -189,17 +191,21 @@ export abstract class QuerySpace extends RefinedSpace {
 
   protected queryFieldDefs(): model.QueryFieldDef[] {
     const fields: model.QueryFieldDef[] = [];
+    // TODO if don't need name, then remove it
     for (const [name, field] of this.entries()) {
+      // TODO maybe extend spacefield to add a logger
       if (field instanceof SpaceField) {
         const fieldQueryDef = field.getQueryFieldDef(this.exprSpace);
         if (fieldQueryDef) {
           if (this.canContain(fieldQueryDef)) {
             fields.push(fieldQueryDef);
-          } else {
-            this.log(`'${name}' not legal in ${this.segmentType}`);
           }
+          // TODO I've removed this because canContain already logs...
+          //  else {
+          //   this.log(`'${name}' not legal in ${this.segmentType}`);
+          // }
         }
-        // TODO
+        // TODO I removed this for a reason I can't exactly remember.
         // else {
         //   throw new Error(`'${name}' does not have a QueryFieldDef`);
         // }

@@ -309,46 +309,127 @@ describe('model statements', () => {
       `)
     );
     describe('query operation typechecking', () => {
-      test('cannot use aggregate in group_by', () => {
-        expect('query: a -> { group_by: s is count()}').compileToFailWith(
-          // TODO improve this error message -- it should say
-          // "Cannot use an aggregate field in group_by operation, did you mean to use an aggregate operation?"
-          'invalid field definition: expected a scalar expression but got a aggregate expression instead.'
+      describe('field declarations', () => {
+        test('cannot use aggregate in group_by', () => {
+          expect('query: a -> { group_by: s is count()}').compileToFailWith(
+            'Cannot use an aggregate field in a group_by operation, did you mean to use an aggregate operation instead?'
+          );
+        });
+        test('cannot use ungrouped_aggregate in group_by', () => {
+          expect(
+            'query: a -> { group_by: s is all(count())}'
+          ).compileToFailWith(
+            'Cannot use an aggregate field in a group_by operation, did you mean to use an aggregate operation instead?'
+          );
+        });
+        test('cannot use analytic in group_by', () => {
+          expect(
+            'query: a -> { group_by: s is row_number()}'
+          ).compileToFailWith(
+            'Cannot use an analytic field in a group_by operation, did you mean to use a calculate operation instead?'
+          );
+        });
+        test('cannot use scalar in aggregate', () => {
+          expect('query: a -> { aggregate: s is 1}').compileToFailWith(
+            'Cannot use a scalar field in an aggregate operation, did you mean to use a group_by or project operation instead?'
+          );
+        });
+        test('cannot use analytic in aggregate', () => {
+          expect(
+            'query: a -> { aggregate: s is lag(count())}'
+          ).compileToFailWith(
+            'Cannot use an analytic field in an aggregate operation, did you mean to use a calculate operation instead?'
+          );
+        });
+        test('cannot use scalar in calculate', () => {
+          expect(
+            'query: a -> { group_by: a is 1; calculate: s is 1 }'
+          ).compileToFailWith(
+            'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or project operation instead?'
+          );
+        });
+        test('cannot use aggregate in calculate', () => {
+          expect(
+            'query: a -> { group_by: a is 1; calculate: s is count() }'
+          ).compileToFailWith(
+            'Cannot use an aggregate field in a calculate operation, did you mean to use an aggregate operation instead?'
+          );
+        });
+        test('cannot use aggregate in project', () => {
+          expect('query: a -> { project: s is count() }').compileToFailWith(
+            'Cannot use an aggregate field in a project operation, did you mean to use an aggregate operation instead?'
+          );
+        });
+        test('cannot use analytic in project', () => {
+          expect(
+            'query: a -> { project: s is row_number() }'
+          ).compileToFailWith(
+            'Cannot use an analytic field in a project operation, did you mean to use a calculate operation instead?'
+          );
+        });
+        test('cannot use analytic in declare', () => {
+          expect(
+            'query: a -> { group_by: a is 1; declare: s is row_number() }'
+          ).compileToFailWith(
+            'Analytic expressions can not be used in a declare block'
+          );
+        });
+        test('cannot use aggregate in index', () => {
+          expect(
+            'query: a { measure: acount is count() } -> { index: acount }'
+          ).compileToFailWith(
+            'Cannot use an aggregate field in an index operation'
+          );
+        });
+        test(
+          'can use aggregate in except',
+          modelOK(`
+            source: b1 is a { measure: acount is count() }
+            source: c1 is b1 { except: acount }
+          `)
         );
       });
-      test('cannot use ungrouped_aggregate in group_by', () => {
-        expect('query: a -> { group_by: s is all(count())}').compileToFailWith(
-          'invalid field definition: expected a scalar expression but got a ungrouped_aggregate expression instead.'
-        );
-      });
-      test('cannot use analytic in group_by', () => {
-        expect('query: a -> { group_by: s is row_number()}').compileToFailWith(
-          'invalid field definition: expected a scalar expression but got a scalar_analytic expression instead.'
-        );
-      });
-      test('cannot use scalar in aggregate', () => {
-        expect('query: a -> { aggregate: s is 1}').compileToFailWith(
-          'invalid field definition: expected a aggregate or ungrouped_aggregate expression but got a scalar expression instead.'
-        );
-      });
-      test('cannot use analytic in aggregate', () => {
-        expect('query: a -> { aggregate: s is lag(count())}').compileToFailWith(
-          'invalid field definition: expected a aggregate or ungrouped_aggregate expression but got a aggregate_analytic expression instead.'
-        );
-      });
-      test('cannot use scalar in calculate', () => {
-        expect(
-          'query: a -> { group_by: a is 1; calculate: s is 1 }'
-        ).compileToFailWith(
-          'invalid field definition: expected a scalar_analytic or aggregate_analytic expression but got a scalar expression instead.'
-        );
-      });
-      test('cannot use aggregate in calculate', () => {
-        expect(
-          'query: a -> { group_by: a is 1; calculate: s is count() }'
-        ).compileToFailWith(
-          'invalid field definition: expected a scalar_analytic or aggregate_analytic expression but got a aggregate expression instead.'
-        );
+      describe('field references', () => {
+        test('cannot use aggregate in group_by', () => {
+          expect(
+            'query: a -> { declare: acount is count(); group_by: acount }'
+          ).compileToFailWith(
+            'Cannot use an aggregate field in a group_by operation, did you mean to use an aggregate operation instead?'
+          );
+        });
+        test('cannot use query in group_by', () => {
+          expect(
+            'query: a { query: q is { group_by: x is 1 } } -> { group_by: q }'
+          ).compileToFailWith(
+            'Cannot use a query field in a group_by operation, did you mean to use a nest operation instead?'
+          );
+        });
+        test('cannot use query in project', () => {
+          expect(
+            'query: a { query: q is { group_by: x is 1 } } -> { project: q }'
+          ).compileToFailWith(
+            'Cannot use a query field in a project operation, did you mean to use a nest operation instead?'
+          );
+        });
+        test('cannot use query in index', () => {
+          expect(
+            'query: a { query: q is { group_by: x is 1 } } -> { index: q }'
+          ).compileToFailWith('Cannot use a query field in an index operation');
+        });
+        test('cannot use query in calculate', () => {
+          expect(
+            'query: a { query: q is { group_by: x is 1 } } -> { group_by: x is 1; calculate: q }'
+          ).compileToFailWith(
+            'Cannot use a query field in a calculate operation, did you mean to use a nest operation instead?'
+          );
+        });
+        test('cannot use query in aggregate', () => {
+          expect(
+            'query: a { query: q is { group_by: x is 1 } } -> { aggregate: q }'
+          ).compileToFailWith(
+            'Cannot use a query field in an aggregate operation, did you mean to use a nest operation instead?'
+          );
+        });
       });
     });
     describe('function typechecking', () => {

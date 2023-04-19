@@ -31,14 +31,29 @@ import {
 
 import {compressExpr} from '../expressions/utils';
 import {FT} from '../fragtype-utils';
+import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {isGranularResult} from '../types/granular-result';
 import {LookupResult} from '../types/lookup-result';
 import {MalloyElement} from '../types/malloy-element';
+import {
+  typecheckAggregate,
+  typecheckCalculate,
+  typecheckDeclare,
+  typecheckDimension,
+  typecheckGroupBy,
+  typecheckMeasure,
+  typecheckProject,
+} from './typecheck_utils';
 
-export class FieldDeclaration extends MalloyElement {
-  elementType = 'fieldDeclaration';
+export type FieldDeclarationConstructor = new (
+  expr: ExpressionDef,
+  defineName: string,
+  exprSrc?: string
+) => FieldDeclaration;
+
+export abstract class FieldDeclaration extends MalloyElement {
   allowedExpressionTypes: ExpressionType[] | undefined;
   executesInOutputSpace: boolean = false;
 
@@ -62,6 +77,8 @@ export class FieldDeclaration extends MalloyElement {
      */
     return this.queryFieldDef(new DefSpace(fs, this), exprName);
   }
+
+  abstract typecheckExprValue(expr: ExprValue): void;
 
   queryFieldDef(exprFS: FieldSpace, exprName: string): FieldTypeDef {
     let exprValue;
@@ -97,18 +114,7 @@ export class FieldDeclaration extends MalloyElement {
       if (exprValue.expressionType) {
         template.expressionType = exprValue.expressionType;
       }
-      if (
-        this.allowedExpressionTypes &&
-        !this.allowedExpressionTypes.includes(exprValue.expressionType)
-      ) {
-        this.log(
-          `invalid field definition: expected a ${this.allowedExpressionTypes.join(
-            ' or '
-          )} expression but got a ${
-            exprValue.expressionType
-          } expression instead.`
-        );
-      }
+      this.typecheckExprValue(exprValue);
       if (this.exprSrc) {
         template.code = this.exprSrc;
       }
@@ -131,6 +137,55 @@ export class FieldDeclaration extends MalloyElement {
       name: `error_defining_${exprName}`,
       type: 'string',
     };
+  }
+}
+
+export class CalculateFieldDeclaration extends FieldDeclaration {
+  elementType = 'calculateFieldDeclaration';
+  typecheckExprValue(expr: ExprValue) {
+    typecheckCalculate(expr, this);
+  }
+}
+
+export class AggregateFieldDeclaration extends FieldDeclaration {
+  elementType = 'aggregateFieldDeclaration';
+  typecheckExprValue(expr: ExprValue) {
+    typecheckAggregate(expr, this);
+  }
+}
+
+export class GroupByFieldDeclaration extends FieldDeclaration {
+  elementType = 'groupByFieldDeclaration';
+  typecheckExprValue(expr: ExprValue) {
+    typecheckGroupBy(expr, this);
+  }
+}
+
+export class ProjectFieldDeclaration extends FieldDeclaration {
+  elementType = 'projectFieldDeclaration';
+  typecheckExprValue(expr: ExprValue) {
+    typecheckProject(expr, this);
+  }
+}
+
+export class DeclareFieldDeclaration extends FieldDeclaration {
+  elementType = 'declareFieldDeclaration';
+  typecheckExprValue(expr: ExprValue) {
+    typecheckDeclare(expr, this);
+  }
+}
+
+export class MeasureFieldDeclaration extends FieldDeclaration {
+  elementType = 'measureFieldDeclaration';
+  typecheckExprValue(expr: ExprValue) {
+    typecheckMeasure(expr, this);
+  }
+}
+
+export class DimensionFieldDeclaration extends FieldDeclaration {
+  elementType = 'dimensionFieldDeclaration';
+  typecheckExprValue(expr: ExprValue) {
+    typecheckDimension(expr, this);
   }
 }
 

@@ -25,6 +25,8 @@ import {
   QueryFieldDef,
   expressionIsAggregate,
   isFilteredAliasedName,
+  FieldValueType,
+  ExpressionType,
 } from '../../../model/malloy_types';
 
 import {QuerySpace} from './query-spaces';
@@ -33,23 +35,31 @@ export class ProjectFieldSpace extends QuerySpace {
   readonly segmentType = 'project';
 
   canContain(qd: QueryFieldDef): boolean {
-    if (typeof qd !== 'string') {
-      if (isFilteredAliasedName(qd)) {
-        return true;
+    let type: FieldValueType;
+    let expressionType: ExpressionType | undefined;
+    if (typeof qd === 'string' || isFilteredAliasedName(qd)) {
+      const name = typeof qd === 'string' ? qd : qd.as ?? qd.name;
+      const ent = this.entry(name);
+      if (ent) {
+        const td = ent.typeDesc();
+        type = td.dataType;
+        expressionType = td.expressionType;
+      } else {
+        throw new Error('Expected to have an field entry here.');
       }
-      if (qd.type === 'turtle') {
-        this.log('Cannot nest queries in project');
-        return false;
-      }
-      if (expressionIsAggregate(qd.expressionType)) {
-        this.log('Cannot add aggregate measures to project');
-        return false;
-      }
-      // TODO it would be really nice to attach this error message to the specific field,
-      // rather than the whole query.
-      if (qd.expressionType === 'aggregate_analytic') {
-        this.log('Cannot add aggregate analyics to project');
-      }
+    } else {
+      type = qd.type;
+      expressionType = qd.type === 'turtle' ? undefined : qd.expressionType;
+    }
+    if (type === 'turtle' || expressionIsAggregate(expressionType)) {
+      // We don't need to log here, because an error should have already been logged.
+      return false;
+    }
+    // TODO it would be really nice to attach this error message to the specific field,
+    // rather than the whole query.
+    if (expressionType === 'aggregate_analytic') {
+      this.log('Cannot add aggregate analyics to project');
+      return false;
     }
     return true;
   }

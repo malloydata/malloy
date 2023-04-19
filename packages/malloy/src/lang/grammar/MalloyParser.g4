@@ -152,8 +152,8 @@ exploreProperties
   ;
 
 exploreStatement
-  : DIMENSION dimensionDefList         # defExploreDimension
-  | MEASURE measureDefList             # defExploreMeasure
+  : DIMENSION defList                  # defExploreDimension
+  | MEASURE defList                    # defExploreMeasure
   | declareStatement                   # defDeclare_stub
   | joinStatement                      # defJoin_stub
   | whereStatement                     # defExploreWhere
@@ -171,12 +171,8 @@ exploreRenameDef
   : fieldName IS fieldName
   ;
 
-dimensionDefList
-  : dimensionDef (COMMA? dimensionDef)* COMMA?
-  ;
-
-measureDefList
-  : measureDef (COMMA? measureDef)* COMMA?
+defList
+  : fieldDef (COMMA? fieldDef)* COMMA?
   ;
 
 fieldDef
@@ -186,10 +182,8 @@ fieldDef
 fieldNameDef: id;
 joinNameDef: id;
 
-measureDef: fieldDef;
-
 declareStatement
-  : DECLARE fieldDef (COMMA? fieldDef)* COMMA?
+  : DECLARE defList
   ;
 
 joinStatement
@@ -266,11 +260,10 @@ queryFieldList
   : queryFieldEntry (COMMA? queryFieldEntry)* COMMA?
   ;
 
-dimensionDef: fieldDef;
 
 queryFieldEntry
-  : fieldPath      # queryFieldRef
-  | dimensionDef   # queryFieldDef
+  : fieldPath
+  | fieldDef
   ;
 
 nestStatement
@@ -445,10 +438,14 @@ fieldCollection
   : collectionMember (COMMA? collectionMember)* COMMA?
   ;
 
+collectionWildCard
+  : (fieldPath DOT)? (STAR|STARSTAR)
+  ;
+
 collectionMember
-  : fieldPath                         # nameMember
-  | (fieldPath DOT)? (STAR|STARSTAR)  # wildMember
-  | fieldDef                          # newMember
+  : fieldPath
+  | collectionWildCard
+  | fieldDef
   ;
 
 fieldPath

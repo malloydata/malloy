@@ -30,7 +30,7 @@ import * as ast from './ast';
 import {LogSeverity, MessageLogger} from './parse-log';
 import {MalloyParseRoot} from './parse-malloy';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
-import {ExpressionType} from '../model';
+import {FieldDeclarationConstructor} from './ast';
 
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
@@ -224,21 +224,10 @@ export class MalloyToAST
   }
 
   protected getFieldDefs(
-    cxList: ParserRuleContext[],
-    allowedExpressionTypes: ExpressionType[] = []
+    cxList: parse.FieldDefContext[],
+    makeFieldDef: ast.FieldDeclarationConstructor
   ): ast.FieldDeclaration[] {
-    const visited: ast.FieldDeclaration[] = [];
-    for (const cx of cxList) {
-      const v = this.visit(cx);
-      if (v instanceof ast.FieldDeclaration) {
-        this.astAt(v, cx);
-        visited.push(v);
-        v.allowedExpressionTypes = allowedExpressionTypes;
-      } else {
-        this.contextError(cx, 'Expected field definition');
-      }
-    }
-    return visited;
+    return cxList.map(cx => this.getFieldDef(cx, makeFieldDef));
   }
 
   protected getFieldExpr(cx: parse.FieldExprContext): ast.ExpressionDef {
@@ -462,50 +451,42 @@ export class MalloyToAST
     return this.astAt(join, pcx);
   }
 
-  visitFieldDef(pcx: parse.FieldDefContext): ast.FieldDeclaration {
+  getFieldDef(
+    pcx: parse.FieldDefContext,
+    makeFieldDef: ast.FieldDeclarationConstructor
+  ): ast.FieldDeclaration {
     const defCx = pcx.fieldExpr();
     const fieldName = this.getIdText(pcx.fieldNameDef());
     const valExpr = this.getFieldExpr(defCx);
-    const def = new ast.FieldDeclaration(
-      valExpr,
-      fieldName,
-      this.getSourceCode(defCx)
-    );
+    const def = new makeFieldDef(valExpr, fieldName, this.getSourceCode(defCx));
     return this.astAt(def, pcx);
   }
 
   visitDefExploreDimension(
     pcx: parse.DefExploreDimensionContext
   ): ast.Dimensions {
-    const allowedExpressionTypes: ExpressionType[] = ['scalar'];
     const defs = this.getFieldDefs(
-      pcx.dimensionDefList().dimensionDef(),
-      allowedExpressionTypes
+      pcx.defList().fieldDef(),
+      ast.DimensionFieldDeclaration
     );
     const stmt = new ast.Dimensions(defs);
     return this.astAt(stmt, pcx);
   }
 
   visitDefExploreMeasure(pcx: parse.DefExploreMeasureContext): ast.Measures {
-    const allowedExpressionTypes: ExpressionType[] = [
-      'aggregate',
-      'ungrouped_aggregate',
-    ];
     const defs = this.getFieldDefs(
-      pcx.measureDefList().measureDef(),
-      allowedExpressionTypes
+      pcx.defList().fieldDef(),
+      ast.MeasureFieldDeclaration
     );
     const stmt = new ast.Measures(defs);
     return this.astAt(stmt, pcx);
   }
 
   visitDeclareStatement(pcx: parse.DeclareStatementContext): ast.DeclareFields {
-    const allowedExpressionTypes: ExpressionType[] = [
-      'scalar',
-      'aggregate',
-      'ungrouped_aggregate',
-    ];
-    const defs = this.getFieldDefs(pcx.fieldDef(), allowedExpressionTypes);
+    const defs = this.getFieldDefs(
+      pcx.defList().fieldDef(),
+      ast.DeclareFieldDeclaration
+    );
     const stmt = new ast.DeclareFields(defs);
     return this.astAt(stmt, pcx);
   }
@@ -565,7 +546,7 @@ export class MalloyToAST
   visitFieldNameList(pcx: parse.FieldNameListContext): ast.FieldReferences {
     const members = pcx
       .fieldName()
-      .map(cx => new ast.FieldReference([this.getFieldName(cx)]));
+      .map(cx => new ast.AcceptExceptFieldReference([this.getFieldName(cx)]));
     return new ast.FieldReferences(members);
   }
 
@@ -597,19 +578,20 @@ export class MalloyToAST
     return new ast.QOPDesc(qProps);
   }
 
-  visitFieldPath(pcx: parse.FieldPathContext): ast.FieldReference {
+  getFieldPath(
+    pcx: parse.FieldPathContext,
+    makeFieldRef: ast.FieldReferenceConstructor
+  ): ast.FieldReference {
     const names = pcx.fieldName().map(nameCx => this.getFieldName(nameCx));
-    return this.astAt(new ast.FieldReference(names), pcx);
+    return this.astAt(new makeFieldRef(names), pcx);
   }
 
-  visitQueryFieldDef(pcx: parse.QueryFieldDefContext): ast.QueryItem {
-    const defCx = pcx.dimensionDef().fieldDef();
-    const dim = this.visitFieldDef(defCx);
-    return this.astAt(dim, defCx);
-  }
-
-  visitQueryFieldRef(pcx: parse.QueryFieldRefContext): ast.QueryItem {
-    return this.visitFieldPath(pcx.fieldPath());
+  getQueryFieldDef(
+    pcx: parse.FieldDefContext,
+    makeFieldDef: ast.FieldDeclarationConstructor
+  ): ast.QueryItem {
+    const dim = this.getFieldDef(pcx, makeFieldDef);
+    return this.astAt(dim, pcx);
   }
 
   // visitQueryFieldNameless(
@@ -621,45 +603,112 @@ export class MalloyToAST
   //   return noItem;
   // }
 
-  protected getQueryItems(pcx: parse.QueryFieldListContext): ast.QueryItem[] {
-    const itemList = pcx.queryFieldEntry().map(e => this.visit(e));
+  getQueryFieldEntry(
+    ctx: parse.QueryFieldEntryContext,
+    makeFieldDef: ast.FieldDeclarationConstructor,
+    makeFieldRef: ast.FieldReferenceConstructor
+  ): ast.QueryItem {
+    const fieldPath = ctx.fieldPath();
+    if (fieldPath) {
+      return this.getFieldPath(fieldPath, makeFieldRef);
+    }
+    const def = ctx.fieldDef();
+    if (def) {
+      return this.getQueryFieldDef(def, makeFieldDef);
+    }
+    throw new Error(
+      'Expected query field entry to be a field reference or definition'
+    );
+  }
+
+  protected getQueryItems(
+    pcx: parse.QueryFieldListContext,
+    makeFieldDef: ast.FieldDeclarationConstructor,
+    makeFieldRef: ast.FieldReferenceConstructor
+  ): ast.QueryItem[] {
+    const itemList = pcx
+      .queryFieldEntry()
+      .map(e => this.getQueryFieldEntry(e, makeFieldDef, makeFieldRef));
     return this.onlyQueryRefs(itemList);
   }
 
   visitAggregateStatement(pcx: parse.AggregateStatementContext): ast.Aggregate {
-    return new ast.Aggregate(this.getQueryItems(pcx.queryFieldList()));
+    return new ast.Aggregate(
+      this.getQueryItems(
+        pcx.queryFieldList(),
+        ast.AggregateFieldDeclaration,
+        ast.AggregateFieldReference
+      )
+    );
   }
 
   visitGroupByStatement(pcx: parse.GroupByStatementContext): ast.GroupBy {
-    return new ast.GroupBy(this.getQueryItems(pcx.queryFieldList()));
+    return new ast.GroupBy(
+      this.getQueryItems(
+        pcx.queryFieldList(),
+        ast.GroupByFieldDeclaration,
+        ast.GroupByFieldReference
+      )
+    );
   }
 
   visitCalculateStatement(pcx: parse.CalculateStatementContext): ast.Calculate {
-    return new ast.Calculate(this.getQueryItems(pcx.queryFieldList()));
+    return new ast.Calculate(
+      this.getQueryItems(
+        pcx.queryFieldList(),
+        ast.CalculateFieldDeclaration,
+        ast.CalculateFieldReference
+      )
+    );
   }
 
+  getFieldCollectionMember(
+    pcx: parse.CollectionMemberContext,
+    makeFieldDef: FieldDeclarationConstructor,
+    makeFieldRef: ast.FieldReferenceConstructor
+  ): ast.FieldCollectionMember {
+    const fieldDef = pcx.fieldDef();
+    if (fieldDef) {
+      return this.getFieldDef(fieldDef, makeFieldDef);
+    }
+    const fieldPath = pcx.fieldPath();
+    if (fieldPath) {
+      return this.getFieldPath(fieldPath, makeFieldRef);
+    }
+    const collectionWildcard = pcx.collectionWildCard();
+    if (collectionWildcard) {
+      return this.visitCollectionWildCard(collectionWildcard);
+    }
+    throw this.internalError(
+      pcx,
+      'Unexpected element in fieldCollectionMember'
+    );
+  }
+
+  // "FieldCollection" can only mean a project statement today
   visitFieldCollection(
     pcx: parse.FieldCollectionContext
   ): ast.ProjectStatement {
-    const fields: ast.FieldCollectionMember[] = [];
-    for (const elCx of pcx.collectionMember()) {
-      const el = this.visit(elCx);
-      if (ast.isFieldCollectionMember(el)) {
-        fields.push(el);
-      } else {
-        throw this.internalError(
-          elCx,
-          `${el.elementType} is not a query field`
-        );
-      }
-    }
+    const fields = pcx
+      .collectionMember()
+      .map(c =>
+        this.getFieldCollectionMember(
+          c,
+          ast.ProjectFieldDeclaration,
+          ast.ProjectFieldReference
+        )
+      );
     return this.astAt(new ast.ProjectStatement(fields), pcx);
   }
 
-  visitWildMember(pcx: parse.WildMemberContext): ast.FieldReferenceElement {
+  visitCollectionWildCard(
+    pcx: parse.CollectionWildCardContext
+  ): ast.FieldReferenceElement {
     const nameCx = pcx.fieldPath();
     const stars = pcx.STAR() ? '*' : '**';
-    const join = nameCx ? this.visitFieldPath(nameCx) : undefined;
+    const join = nameCx
+      ? this.getFieldPath(nameCx, ast.ProjectFieldReference)
+      : undefined;
     return new ast.WildcardFieldReference(join, stars);
   }
 
@@ -670,7 +719,7 @@ export class MalloyToAST
       if (!pathCx) {
         return new ast.WildcardFieldReference(undefined, '*');
       }
-      const path = this.visitFieldPath(pathCx);
+      const path = this.getFieldPath(pathCx, ast.IndexFieldReference);
       if (!hasStar) {
         return this.astAt(path, pcx);
       }
@@ -917,7 +966,9 @@ export class MalloyToAST
   }
 
   visitExprFieldPath(pcx: parse.ExprFieldPathContext): ast.ExprIdReference {
-    const idRef = new ast.ExprIdReference(this.visitFieldPath(pcx.fieldPath()));
+    const idRef = new ast.ExprIdReference(
+      this.getFieldPath(pcx.fieldPath(), ast.ExpressionFieldReference)
+    );
     return this.astAt(idRef, pcx);
   }
 
@@ -985,7 +1036,9 @@ export class MalloyToAST
 
   visitExprAggregate(pcx: parse.ExprAggregateContext): ast.ExpressionDef {
     const pathCx = pcx.fieldPath();
-    const path = pathCx ? this.visitFieldPath(pathCx) : undefined;
+    const path = pathCx
+      ? this.getFieldPath(pathCx, ast.ExpressionFieldReference)
+      : undefined;
     const source = pathCx && path ? this.astAt(path, pathCx) : undefined;
 
     const exprDef = pcx.fieldExpr();
@@ -1091,7 +1144,9 @@ export class MalloyToAST
     const fn = this.getIdText(idCx);
 
     const pathCx = pcx.fieldPath();
-    const path = pathCx ? this.visitFieldPath(pathCx) : undefined;
+    const path = pathCx
+      ? this.getFieldPath(pathCx, ast.ExpressionFieldReference)
+      : undefined;
     const source = pathCx && path ? this.astAt(path, pathCx) : undefined;
 
     if (ast.ExprTimeExtract.extractor(fn)) {
