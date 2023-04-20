@@ -24,6 +24,7 @@
 import {
   By as ModelBy,
   expressionIsAggregate,
+  expressionIsAnalytic,
 } from '../../../model/malloy_types';
 
 import {compressExpr} from '../expressions/utils';
@@ -43,16 +44,31 @@ export class Top extends MalloyElement {
   getBy(fs: FieldSpace): ModelBy | undefined {
     if (this.by) {
       if (this.by instanceof FieldName) {
-        // TODO jump-to-definition `fs` cannot currently `lookup` fields in the output space
-        // const entry = this.by.getField(fs);
-        // if (entry.error) {
-        //   this.by.log(entry.error);
-        // }
+        if (fs.isQueryFieldSpace()) {
+          // TODO jump-to-definition now that we can lookup fields in the output space,
+          // we need to actually add the reference when we do so.
+          const output = fs.outputSpace();
+          const entry = this.by.getField(output);
+          if (entry.error) {
+            this.by.log(entry.error);
+          }
+          if (entry.found?.typeDesc().evalSpace === 'input') {
+            this.by.log(`Unknown field ${this.by.refString} in output space`);
+          }
+          if (expressionIsAnalytic(entry.found?.typeDesc().expressionType)) {
+            this.by.log(
+              `Illegal order by of analytic field ${this.by.refString}`
+            );
+          }
+        }
         return {by: 'name', name: this.by.refString};
       } else {
         const byExpr = this.by.getExpression(fs);
         if (expressionIsAggregate(byExpr.expressionType)) {
-          this.log('top by expression must be an aggregate');
+          this.by.log('top by expression must be an aggregate');
+        }
+        if (byExpr.evalSpace === 'output') {
+          this.by.log('top by expression must be an output expression');
         }
         return {by: 'expression', e: compressExpr(byExpr.value)};
       }

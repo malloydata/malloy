@@ -25,6 +25,7 @@ import {Dialect} from '../../../dialect';
 import {ModelDef, StructDef} from '../../../model';
 import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {LookupResult} from '../types/lookup-result';
+import {SpaceEntry} from '../types/space-entry';
 
 export class ModelSpace implements FieldSpace {
   readonly type = 'fieldSpace';
@@ -45,6 +46,14 @@ export class ModelSpace implements FieldSpace {
       return {error: 'not found!', found: undefined};
     }
     return {error: 'not found!', found: undefined};
+  }
+
+  entries(): [string, SpaceEntry][] {
+    return [];
+  }
+
+  entry(): undefined {
+    throw new Error('Model field space cannot have fields');
   }
 
   dialectObj(): Dialect | undefined {

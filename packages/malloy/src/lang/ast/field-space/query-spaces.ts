@@ -44,6 +44,8 @@ import {RefinedSpace} from './refined-space';
 import {LookupResult} from '../types/lookup-result';
 import {SpaceEntry} from '../types/space-entry';
 import {ColumnSpaceField} from './column-space-field';
+import {StructSpaceField} from './static-space';
+import {JoinSpaceField} from './join-space-field';
 
 /**
  * Unlike a source, which is a refinement of a namespace, a query
@@ -145,7 +147,93 @@ export abstract class QuerySpace extends RefinedSpace {
   }
 
   addWild(wild: WildcardFieldReference): void {
-    this.setEntry(wild.refString, new WildSpaceField(wild.refString));
+    let success = true;
+    // TODO actually handle join_path.* and **
+    let current = this.exprSpace as FieldSpace;
+    const parts = wild.refString.split('.');
+    const conflictMap = {};
+    function logConflict(name: string, parentRef: string | undefined) {
+      const conflict = conflictMap[name];
+      wild.log(
+        `Cannot expand '${name}'${
+          parentRef ? ` in ${parentRef}` : ''
+        } because a field with that name already exists${
+          conflict ? ` (conflicts with ${conflict})` : ''
+        }`
+      );
+      success = false;
+    }
+    for (let pi = 0; pi < parts.length; pi++) {
+      const part = parts[pi];
+      const prevParts = parts.slice(0, pi);
+      const parentRef = pi > 0 ? prevParts.join('.') : undefined;
+      const fullName = [...prevParts.join('.'), part].join('.');
+      if (part === '*') {
+        for (const [name, entry] of current.entries()) {
+          if (this.entry(name)) {
+            logConflict(name, parentRef);
+            success = false;
+          }
+          if (model.expressionIsScalar(entry.typeDesc().expressionType)) {
+            this.setEntry(name, entry);
+            conflictMap[name] = fullName;
+          }
+        }
+      } else if (part === '**') {
+        wild.log('** is currently broken');
+        success = false;
+        // const spaces: {space: FieldSpace; ref: string | undefined}[] = [
+        //   {space: current, ref: undefined},
+        // ];
+        // let toExpand: {space: FieldSpace; ref: string | undefined} | undefined;
+        // while ((toExpand = spaces.pop())) {
+        //   for (const [name, entry] of toExpand.space.entries()) {
+        //     if (this.entry(name)) {
+        //       logConflict(name, toExpand.ref);
+        //       success = false;
+        //     }
+        //     if (model.expressionIsScalar(entry.typeDesc().expressionType)) {
+        //       this.setEntry(name, entry);
+        //       conflictMap[name] = toExpand.ref
+        //         ? `${toExpand.ref}.${name}`
+        //         : name;
+        //     }
+        //     if (entry instanceof StructSpaceField) {
+        //       spaces.push({
+        //         space: entry.fieldSpace,
+        //         ref: [
+        //           ...(parentRef ? [parentRef] : []),
+        //           ...(toExpand.ref ? [toExpand.ref] : []),
+        //           name,
+        //         ].join('.'),
+        //       });
+        //     }
+        //   }
+        // }
+      } else {
+        const ent = current.entry(part);
+        if (ent) {
+          if (ent instanceof StructSpaceField) {
+            current = ent.fieldSpace;
+          } else {
+            wild.log(
+              `Field '${part}'${
+                parentRef ? ` in ${parentRef}` : ''
+              } is not a struct`
+            );
+            success = false;
+          }
+        } else {
+          wild.log(
+            `No such field '${part}'${parentRef ? ` in ${parentRef}` : ''}`
+          );
+          success = false;
+        }
+      }
+    }
+    if (success) {
+      this.setEntry(wild.refString, new WildSpaceField(wild.refString));
+    }
   }
 
   /**

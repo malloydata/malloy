@@ -83,12 +83,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expexted: string | boolean | number | null
   ) => funcTestGeneral(expr, 'aggregate', {success: expexted});
 
-  const funcTestErr = (expr: string, error: string) =>
-    funcTestGeneral(expr, 'group_by', {error});
-
-  const funcTestAggErr = (expr: string, error: string) =>
-    funcTestGeneral(expr, 'aggregate', {error});
-
   describe('concat', () => {
     it(`works with two args - ${databaseName}`, async () => {
       await funcTest("concat('foo', 'bar')", 'foobar');
@@ -143,13 +137,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
     it(`works with negative precision - ${databaseName}`, async () => {
       await funcTest('round(12.2, -1)', 10);
-    });
-
-    it.skip(`errors when given decimal precision - ${databaseName}`, async () => {
-      await funcTestErr(
-        'round(12.2, -1.5)',
-        'parameter precision for round must be integer, received float'
-      );
     });
 
     it(`works with null - ${databaseName}`, async () => {
@@ -288,18 +275,10 @@ expressionModels.forEach((expressionModel, databaseName) => {
   describe('raw function call', () => {
     it(`works - ${databaseName}`, async () => {
       await funcTest('floor(cbrt!(27)::number)', 3);
-      await funcTestErr(
-        'cbrt(27)',
-        "Unknown function 'cbrt'. Did you mean to import it?"
-      );
     });
 
     it(`works with type specified - ${databaseName}`, async () => {
       await funcTest('floor(cbrt!number(27))', 3);
-      await funcTestErr(
-        'cbrt(27)',
-        "Unknown function 'cbrt'. Did you mean to import it?"
-      );
     });
   });
 
@@ -319,10 +298,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTestAgg('round(aircraft_models.seats.stddev())', 41);
     });
 
-    it(`errors with zero args - ${databaseName}`, async () => {
-      await funcTestAggErr('stddev()', 'No matching overload');
-    });
-
     it(`works with filter - ${databaseName}`, async () => {
       await funcTestAgg(
         'round(aircraft_models.seats.stddev() { where: 1 = 1 })',
@@ -331,13 +306,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTestAgg(
         'round(aircraft_models.seats.stddev() { where: aircraft_models.seats > 4 })',
         69
-      );
-    });
-
-    it(`errors if you pass in an aggregate - ${databaseName}`, async () => {
-      await funcTestAggErr(
-        'round(stddev(count()))',
-        'Parameter value of stddev must be scalar, but received aggregate'
       );
     });
   });
@@ -392,7 +360,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
           `
           query: aircraft -> {
             group_by: tail_num,
-            group_by: n is row_number()
+            calculate: n is row_number()
             order_by: 1
             nest: foo is {
               group_by: tail_num
@@ -408,7 +376,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
           `
           query: aircraft -> {
             group_by: tail_num
-            group_by: n is row_number()
+            calculate: n is row_number()
           }`
         )
         .run();
@@ -419,7 +387,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         .loadQuery(
           `
           query: aircraft -> {
-            group_by: n is row_number()
+            calculate: n is row_number()
             group_by: tail_num
           }`
         )
@@ -433,7 +401,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
           query: aircraft -> {
             group_by: state,
             aggregate: aircraft_count
-            group_by: row_num is row_number()
+            calculate: row_num is row_number()
           }`
         )
         .run();
@@ -445,7 +413,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
           `
           query: aircraft -> {
             aggregate: aircraft_count
-            group_by: row_num is row_number()
+            calculate: row_num is row_number()
           }`
         )
         .run();
@@ -457,18 +425,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
           `
           query: aircraft -> {
             group_by: state,
-            group_by: row_num is row_number()
-          }`
-        )
-        .run();
-    });
-
-    it(`7 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: row_num is row_number()
+            calculate: row_num is row_number()
           }`
         )
         .run();
@@ -493,8 +450,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
           query: aircraft -> {
             group_by: state,
             aggregate: aircraft_count
-            group_by: row_num is row_number()
-            group_by: r is rank()
+            calculate: row_num is row_number()
+            calculate: r is rank()
           }`
         )
         .run();
@@ -512,7 +469,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
               limit: 4
               group_by: county
               aggregate: aircraft_count
-              group_by: row_num is row_number()
+              calculate: row_num is row_number()
             }
           }`
         )
@@ -530,8 +487,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
               limit: 4
               group_by: county
               aggregate: aircraft_count
-              group_by: row_num is row_number()
-              group_by: first_state is first_value(state)
+              calculate: row_num is row_number()
+              calculate: first_state is first_value(state)
             }
           }`
         )
@@ -549,8 +506,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
               limit: 4
               group_by: county
               aggregate: aircraft_count
-              group_by: row_num is row_number()
-              group_by: first_count is first_value(count())
+              calculate: row_num is row_number()
+              calculate: first_count is first_value(count())
             }
           }`
         )
@@ -568,24 +525,9 @@ expressionModels.forEach((expressionModel, databaseName) => {
               limit: 4
               group_by: county
               aggregate: aircraft_count
-              group_by: row_num is row_number()
-              group_by: first_stddev is first_value(stddev(id))
+              calculate: row_num is row_number()
+              calculate: first_stddev is first_value(stddev(id))
             }
-          }`
-        )
-        .run();
-    });
-
-    it(`14 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: state,
-            aggregate: aircraft_count
-            declare: prev_state_count is lag(aircraft_count)
-            group_by: percent_less_than_prev is
-              (prev_state_count - aircraft_count) / prev_state_count
           }`
         )
         .run();
@@ -599,21 +541,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
             group_by: state
             calculate: percent_less_than_prev is
               (lag(count()) - aircraft_count) / lag(count())
-          }`
-        )
-        .run();
-    });
-
-    it(`15 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: state,
-            aggregate: aircraft_count
-            declare: two_prev_state_count is lag(aircraft_count, 2)
-            group_by: percent_less_than_two_prev is
-              (two_prev_state_count - aircraft_count) / two_prev_state_count
           }`
         )
         .run();

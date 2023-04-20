@@ -36,7 +36,7 @@ export class NestReference extends FieldReference {
     super([name]);
   }
   typecheck(type: TypeDesc) {
-    if (type.dataType === 'turtle') {
+    if (type.dataType !== 'turtle') {
       let useInstead: string;
       let kind: string;
       if (expressionIsAnalytic(type.expressionType)) {

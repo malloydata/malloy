@@ -484,6 +484,16 @@ describe('model statements', () => {
             'Cannot use a query field in an aggregate operation, did you mean to use a nest operation instead?'
           );
         });
+        test('cannot use aggregate in calculate, preserved over refinement', () => {
+          expect(`query: a1 is a -> {
+            aggregate: c is count()
+          }
+          query: -> a1 {
+            calculate: b is c
+          }`).compileToFailWith(
+            'Cannot use an aggregate field in a calculate operation, did you mean to use an aggregate operation instead?'
+          );
+        });
       });
     });
     describe('function typechecking', () => {
@@ -562,9 +572,9 @@ describe('model statements', () => {
         }`)
       );
       test('cannot name top level objects same as functions', () => {
-        expect(`query: concat is a -> {
-          group_by: x is 1
-        }`).compileToFailWith(
+        expect(
+          markSource`query: ${'concat is a -> { group_by: x is 1 }'}`
+        ).compileToFailWith(
           // TODO improve this error message
           "Cannot redefine 'concat'"
         );
@@ -574,6 +584,109 @@ describe('model statements', () => {
         modelOK(`query: a -> {
           group_by: n is now
           calculate: l is lag(n, 1, now)
+        }`)
+      );
+      // TODO this doesn't work today, we're not rigorous enough with integer
+      // subtypes. But we should probably make this typecheck properly.
+      test.skip('cannot use float in round precision', () => {
+        expect(`query: a -> {
+          group_by: x is round(1.5, 1.6)
+        }`).compileToFailWith(
+          // TODO improve this error message
+          "Parameter 2 ('precision') for round must be integer, received float"
+        );
+      });
+      test('cannot use stddev with no arguments', () => {
+        expect(`query: a -> {
+          aggregate: x is stddev()
+        }`).compileToFailWith(
+          'No matching overload for function stddev()',
+          "Cannot define 'x', value has unknown type"
+        );
+      });
+      test(
+        'can use stddev with postfix syntax',
+        modelOK(`query: a -> {
+          declare: y is 1
+          aggregate: x is y.stddev()
+        }`)
+      );
+      test(
+        'can use stddev with postfix syntax on join',
+        modelOK(`query: a -> {
+          join_one: b with astr
+          aggregate: x is b.ai.stddev()
+        }`)
+      );
+      test('cannot use agregate as argument to agg function', () => {
+        expect(`query: a -> {
+          aggregate: x is stddev(count())
+        }`).compileToFailWith(
+          "Parameter 1 ('value') of stddev must be scalar, but received aggregate"
+        );
+      });
+      test('cannot use calculate with no other fields', () => {
+        expect(`query: a -> {
+          calculate: x is row_number()
+        }`).compileToFailWith(
+          "Can't determine query type (group_by/aggregate/nest,project,index)"
+        );
+      });
+      // TODO someday make it so we can order by an analytic function
+      test('today: cannot order by analytic function', () => {
+        expect(`query: a -> {
+          group_by: astr
+          calculate: row_num is row_number()
+          order_by: row_num desc
+        }`).compileToFailWith('Illegal order by of analytic field row_num');
+      });
+      test('cannot use aggregate in aggregate -- and preserved over refinement', () => {
+        expect(`query: a1 is a -> {
+          group_by: astr
+          calculate: p is lag(astr)
+        }
+        query: -> a1 {
+          calculate: p1 is lag(p)
+        }`).compileToFailWith(
+          "Parameter 1 ('value') of lag must be scalar or aggregate, but received scalar_analytic"
+        );
+      });
+      test(
+        'reference field in join',
+        modelOK(`query: a -> {
+          join_one: b with astr
+          group_by: b.ai
+        }`)
+      );
+      // TODO why does this work? How can I group_by `b`?
+      test(
+        'reference field in join',
+        modelOK(`query: a -> {
+          join_one: b with astr
+          group_by: b
+        }`)
+      );
+      test(
+        'can reference project: inline join.* field in calculate',
+        modelOK(`query: a -> {
+          join_one: b with astr
+          project: b.*
+          calculate: s is lag(ai)
+        }`)
+      );
+      test(
+        'can reference project: join.* field in calculate',
+        modelOK(`query: a { join_one: b with astr } -> {
+          project: b.*
+          calculate: s is lag(ai)
+        }`)
+      );
+      test(
+        'can reference project: ** field in calculate',
+        modelOK(`query: a -> {
+          join_one: b with astr
+          project: **
+          calculate: s is lag(ai)
         }`)
       );
     });
@@ -608,7 +721,7 @@ describe('explore properties', () => {
     'multiple measures',
     modelOK(`
       explore: aa is a {
-        dimension:
+        measure:
           x is count()
           y is x * x
       }
@@ -808,20 +921,35 @@ describe('qops', () => {
   });
   test('index sample-rows', modelOK('query:a->{index: *; sample: 100000}'));
   test('top N', modelOK('query: a->{ top: 5; group_by: astr }'));
-  test('top N by field', modelOK('query: a->{top: 5 by af; group_by: astr}'));
+  test('top N by field', modelOK('query: a->{top: 5 by astr; group_by: astr}'));
   test(
     'top N by expression',
-    modelOK('query: ab->{top: 5 by acount; group_by: astr}')
+    modelOK('query: ab->{top: 5 by ai + 1; group_by: ai}')
   );
+  test('top N by field must be in the output space', () =>
+    expect('query: a->{top: 5 by af; group_by: astr}').compileToFailWith(
+      'Unknown field af in output space'
+    ));
   test('limit N', modelOK('query: a->{ limit: 5; group_by: astr }'));
-  test('order by', modelOK('query: a->{ order_by: af; group_by: astr }'));
+  test('order by', modelOK('query: a->{ order_by: astr; group_by: astr }'));
+  test(
+    'order by preserved over refinement',
+    modelOK(`
+      query: a1 is a -> { group_by: astr }
+      query: -> a1 { order_by: astr }
+    `)
+  );
+  test('order by must be in the output space', () =>
+    expect('query: a -> { order_by: af; group_by: astr }').compileToFailWith(
+      'Unknown field af in output space'
+    ));
   test(
     'order by asc',
-    modelOK('query: a->{ order_by: af asc; group_by: astr }')
+    modelOK('query: a->{ order_by: astr asc; group_by: astr }')
   );
   test(
     'order by desc',
-    modelOK('query: a->{ order_by: af desc; group_by: astr }')
+    modelOK('query: a->{ order_by: astr desc; group_by: astr }')
   );
   test('order by N', modelOK('query: a->{ order_by: 1 asc; group_by: astr }'));
   test(
@@ -1715,7 +1843,7 @@ describe('source locations', () => {
       explore: na is a {
         measure: y is count()
         query: x is {
-          group_by: ${'z is y { where: true }'}
+          aggregate: ${'z is y { where: true }'}
         }
       }`;
 

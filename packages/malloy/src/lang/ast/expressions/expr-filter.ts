@@ -21,7 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {expressionIsCalculation, expressionIsScalar} from '../../../model/malloy_types';
+import {
+  expressionIsCalculation,
+  expressionIsScalar,
+} from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
 import {FT} from '../fragtype-utils';

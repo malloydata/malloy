@@ -107,7 +107,7 @@ export class StaticSpace implements FieldSpace {
     this.map[name] = value;
   }
 
-  protected entries(): [string, SpaceEntry][] {
+  entries(): [string, SpaceEntry][] {
     return Object.entries(this.map);
   }
 

@@ -32,6 +32,7 @@ import {
 } from '../../../model/malloy_types';
 
 import {QuerySpace} from './query-spaces';
+import {WildSpaceField} from './wild-space-field';
 
 export class ProjectFieldSpace extends QuerySpace {
   readonly segmentType = 'project';
@@ -41,13 +42,15 @@ export class ProjectFieldSpace extends QuerySpace {
     let expressionType: ExpressionType | undefined;
     if (typeof qd === 'string' || isFilteredAliasedName(qd)) {
       const name = typeof qd === 'string' ? qd : qd.as ?? qd.name;
+      // TODO need to handle dotted names here....
       const ent = this.entry(name);
+      if (ent instanceof WildSpaceField) return true;
       if (ent) {
         const td = ent.typeDesc();
         type = td.dataType;
         expressionType = td.expressionType;
       } else {
-        throw new Error('Expected to have an field entry here.');
+        throw new Error(`Expected to have an field entry for ${qd} here.`);
       }
     } else {
       type = qd.type;

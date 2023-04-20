@@ -36,6 +36,7 @@ import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {isGranularResult} from '../types/granular-result';
 import {LookupResult} from '../types/lookup-result';
 import {MalloyElement} from '../types/malloy-element';
+import {SpaceEntry} from '../types/space-entry';
 import {
   typecheckAggregate,
   typecheckCalculate,
@@ -208,6 +209,9 @@ export class DefSpace implements FieldSpace {
   emptyStructDef(): StructDef {
     return this.realFS.emptyStructDef();
   }
+  entry(name: string): SpaceEntry | undefined {
+    return this.realFS.entry(name);
+  }
   lookup(symbol: FieldName[]): LookupResult {
     if (symbol[0] && symbol[0].refString === this.circular.defineName) {
       this.foundCircle = true;
@@ -217,6 +221,9 @@ export class DefSpace implements FieldSpace {
       };
     }
     return this.realFS.lookup(symbol);
+  }
+  entries(): [string, SpaceEntry][] {
+    return this.realFS.entries();
   }
   dialectObj(): Dialect | undefined {
     return this.realFS.dialectObj();

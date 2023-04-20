@@ -32,6 +32,7 @@ import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {LookupResult} from '../types/lookup-result';
+import {SpaceEntry} from '../types/space-entry';
 
 import {ExprCompare} from './expr-compare';
 import {compressExpr} from './utils';
@@ -49,6 +50,12 @@ class ConstantFieldSpace implements FieldSpace {
       error: 'Only constants allowed in parameter expressions',
       found: undefined,
     };
+  }
+  entries(): [string, SpaceEntry][] {
+    return [];
+  }
+  entry(): undefined {
+    return undefined;
   }
   dialectObj(): undefined {
     return undefined;
