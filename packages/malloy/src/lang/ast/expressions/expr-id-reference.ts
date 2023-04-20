@@ -21,7 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {isConditionParameter} from '../../../model/malloy_types';
+import {
+  expressionIsAggregate,
+  isConditionParameter,
+} from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
 import {ExprValue} from '../types/expr-value';
 import {FieldReference} from '../query-items/field-references';
@@ -51,6 +54,12 @@ export class ExprIdReference extends ExpressionDef {
       }
       const value = [{type: def.found.refType, path: this.refString}];
       const td = def.found.typeDesc();
+      // TODO We think that aggregates are really more 'input' like, but for now,
+      // we consider them to always be 'output'. Once we better understand the input
+      // output thing we can reconsider this.
+      if (expressionIsAggregate(td.expressionType)) {
+        td.evalSpace = 'output';
+      }
       return {...td, value};
     }
     this.log(def.error);

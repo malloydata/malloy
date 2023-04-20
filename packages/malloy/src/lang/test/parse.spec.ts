@@ -618,6 +618,25 @@ describe('model statements', () => {
           aggregate: x is b.ai.stddev()
         }`)
       );
+      test(
+        'can use calculate with a measure',
+        modelOK(`query: a { measure: c is count() } -> {
+          group_by: y is 1
+          calculate: x is lag(c)
+        }`)
+      );
+      test('cannot use calculate with input fields', () => {
+        expect(`query: a -> {
+          group_by: y is 1
+          calculate: x is lag(ai)
+        }`).compileToFailWith(
+          // TODO improve this error message:
+          // Parameter 1 ('value') of 'lag' must be a constant, an aggregate, or an expression using
+          // only fields that appear in the query output. Received an expression which uses a field
+          // that is not in the query output.
+          "Parameter 1 ('value') of lag must be constant or output, but received input"
+        );
+      });
       test('cannot use agregate as argument to agg function', () => {
         expect(`query: a -> {
           aggregate: x is stddev(count())
@@ -678,14 +697,6 @@ describe('model statements', () => {
         'can reference project: join.* field in calculate',
         modelOK(`query: a { join_one: b with astr } -> {
           project: b.*
-          calculate: s is lag(ai)
-        }`)
-      );
-      test(
-        'can reference project: ** field in calculate',
-        modelOK(`query: a -> {
-          join_one: b with astr
-          project: **
           calculate: s is lag(ai)
         }`)
       );

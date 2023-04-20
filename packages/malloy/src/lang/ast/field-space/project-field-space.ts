@@ -22,49 +22,30 @@
  */
 
 import {
-  QueryFieldDef,
   expressionIsAggregate,
-  isFilteredAliasedName,
-  FieldValueType,
-  ExpressionType,
   expressionInvolvesAggregate,
   expressionIsAnalytic,
+  TypeDesc,
 } from '../../../model/malloy_types';
 
 import {QuerySpace} from './query-spaces';
-import {WildSpaceField} from './wild-space-field';
 
 export class ProjectFieldSpace extends QuerySpace {
   readonly segmentType = 'project';
 
-  canContain(qd: QueryFieldDef): boolean {
-    let type: FieldValueType;
-    let expressionType: ExpressionType | undefined;
-    if (typeof qd === 'string' || isFilteredAliasedName(qd)) {
-      const name = typeof qd === 'string' ? qd : qd.as ?? qd.name;
-      // TODO need to handle dotted names here....
-      const ent = this.entry(name);
-      if (ent instanceof WildSpaceField) return true;
-      if (ent) {
-        const td = ent.typeDesc();
-        type = td.dataType;
-        expressionType = td.expressionType;
-      } else {
-        throw new Error(`Expected to have an field entry for ${qd} here.`);
-      }
-    } else {
-      type = qd.type;
-      expressionType = qd.type === 'turtle' ? undefined : qd.expressionType;
-    }
-    if (type === 'turtle' || expressionIsAggregate(expressionType)) {
+  canContain(typeDesc: TypeDesc): boolean {
+    if (
+      typeDesc.dataType === 'turtle' ||
+      expressionIsAggregate(typeDesc.expressionType)
+    ) {
       // We don't need to log here, because an error should have already been logged.
       return false;
     }
     // TODO it would be really nice to attach this error message to the specific field,
     // rather than the whole query.
     if (
-      expressionInvolvesAggregate(expressionType) &&
-      expressionIsAnalytic(expressionType)
+      expressionInvolvesAggregate(typeDesc.expressionType) &&
+      expressionIsAnalytic(typeDesc.expressionType)
     ) {
       this.log('Cannot add aggregate analyics to project');
       return false;
