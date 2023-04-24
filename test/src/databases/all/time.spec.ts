@@ -32,7 +32,7 @@ const runtimes = new RuntimeList(allDatabases);
 
 // MTOY todo look at this list for timezone problems, I know there are some
 describe.each(runtimes.runtimeList)(
-  '%s: interval extraction',
+  '%s: interval measurement',
   (dbName, runtime) => {
     const sqlEq = mkSqlEqWith(runtime);
 
@@ -84,7 +84,7 @@ describe.each(runtimes.runtimeList)(
       ).isSqlEq();
     });
 
-    test('weeks', async () => {
+    test.skip('weeks', async () => {
       expect(await sqlEq('week(now.week to now.week + 6 days)', 0)).isSqlEq();
       expect(await sqlEq('week(now.week to now.week + 7 days)', 1)).isSqlEq();
       expect(
@@ -165,9 +165,9 @@ const zone_2020 = LuxonDateTime.fromObject({
 
 describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
   test(`${dbName} NOT in tz ${zone} by default`, async () => {
-    // this makes sure that the tests which use the test timezome
-    // are actually testing something ... file this under
-    // "abundance of caution"
+    // this makes sure that the tests which use the test timezome are actually
+    // testing something ... file this under "abundance of caution". It
+    // really tests nothing, but I feel calmer with this here.
     const query = runtime.loadQuery(
       `
         sql: tzTest is { connection: "${dbName}" select: """SELECT 1 as one""" }
@@ -186,11 +186,12 @@ describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
   test('literal with offset timezone', async () => {
     const query = runtime.loadQuery(
       `
-        sql: tzTest is { connection: "${dbName}" select: """SELECT 1 as one""" }
-        query: from_sql(tzTest) -> {
-          project: literalTime is @2020-02-20 00:00:00-06:00
-        }
-`
+sql: tzTest is { connection: "${dbName}" select: """
+  SELECT 1 as one
+"""}
+query: from_sql(tzTest) -> {
+  project: literalTime is @2020-02-20 00:00:00-06:00
+}`
     );
     const result = await query.run();
     const literal = result.data.path(0, 'literalTime').value as Date;

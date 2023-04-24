@@ -1133,19 +1133,11 @@ describe('error handling', () => {
     'undefined field ref in query',
     badModel('query: ab -> { aggregate: xyzzy }', "'xyzzy' is not defined")
   );
-  // test("queries with anonymous expressions", () => {
-  //   const m = new TestTranslator("query: a->{\n group_by: a+1\n}");
-  //   expect(m).not.modelParsed();
-  //   const errList = m.errors().errors;
-  //   const firstError = errList[0];
-  //   expect(firstError.message).toBe("Expressions in queries must have names");
-  // });
   test('query on source with errors', () => {
     expect(markSource`
         explore: na is a { join_one: ${'n'} on astr }
       `).compileToFailWith("Undefined source 'n'");
   });
-
   test('detect duplicate output field names', () => {
     expect(
       markSource`query: ab -> { group_by: astr, ${'astr'} }`

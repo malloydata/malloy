@@ -55,10 +55,11 @@ const postgresToMalloyTypes: {[key: string]: AtomicFieldTypeInner} = {
   integer: 'number',
   bigint: 'number',
   'double precision': 'number',
-  'timestamp without time zone': 'timestamp', // maybe not
   oid: 'string',
   boolean: 'boolean',
   // ARRAY: "string",
+  'timestamp without time zone': 'timestamp',
+  // mtoy TODO timestamptz is a concern because we can't "AT TIME ZONE"
   'timestamp with time zone': 'timestamp',
   timestamp: 'timestamp',
   '"char"': 'string',
@@ -368,6 +369,7 @@ export class PostgresConnection
   public async connectionSetup(): Promise<void> {
     if (!this.isSetup) {
       this.executeSQLRaw("SET TIME ZONE 'UTC'");
+      this.isSetup = true;
     }
   }
 
@@ -378,13 +380,13 @@ export class PostgresConnection
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
 
-    await this.connectionSetup();
-    return await this.runPostgresQuery(
+    const the_return = await this.runPostgresQuery(
       sql,
       rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
       true
     );
+    return the_return;
   }
 
   public async *runSQLStream(
@@ -431,6 +433,9 @@ export class PooledPostgresConnection
   constructor(name: string) {
     super(name);
     this.pool = new Pool();
+    // mtoy TODO make sure this is acquire
+    // it might just be 'connect', but this is safer for now
+    this.pool.on('acquire', client => client.query("SET TIME ZONE 'UTC'"));
   }
 
   public isPool(): true {

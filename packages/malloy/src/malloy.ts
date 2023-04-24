@@ -73,6 +73,7 @@ import {
   QueryURL,
   URLReader,
 } from './runtime_types';
+import {DateTime} from 'luxon';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2945,7 +2946,13 @@ class DataTimestamp extends ScalarData<Date> {
     } else if (typeof this._value !== 'string') {
       return new Date((this._value as unknown as {value: string}).value);
     } else {
-      return new Date(this._value);
+      // Postgres timestamps end up here, and ideally we would know the system
+      // timezone of the postgres instance to correctly create a Date() object
+      // which represents the same instant in time, but we don't have the data
+      // flow to implement that. This may be a problem at some future day,
+      // so here is a comment, for that day.
+      const parsed = DateTime.fromISO(this._value, {zone: 'UTC'});
+      return parsed.toJSDate();
     }
   }
 
