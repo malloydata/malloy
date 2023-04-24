@@ -41,12 +41,24 @@ const types: ExpressionValueType[] = [
   'json',
 ];
 
-export function fnFirstValue(): DialectFunctionOverloadDef[] {
+export function fnFirstValueWindow(): DialectFunctionOverloadDef[] {
   return types.flatMap(type => [
     overload(
       minAnalytic(type),
       [param('value', output(maxAggregate(type)))],
-      [sql('FIRST_VALUE(', arg('value'), ')')]
+      [sql('FIRST_VALUE(', arg('value'), ')')],
+      {needsWindowOrderBy: true}
+    ),
+  ]);
+}
+
+export function fnLastValueWindow(): DialectFunctionOverloadDef[] {
+  return types.flatMap(type => [
+    overload(
+      minAnalytic(type),
+      [param('value', output(maxAggregate(type)))],
+      [sql('LAST_VALUE(', arg('value'), ')')],
+      {needsWindowOrderBy: true}
     ),
   ]);
 }

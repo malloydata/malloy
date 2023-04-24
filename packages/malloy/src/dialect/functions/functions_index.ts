@@ -37,8 +37,17 @@ export {fnIfnull} from './ifnull';
 export {fnNullif} from './nullif';
 export {fnRowNumber} from './row_number';
 export {fnLag} from './lag';
+export {fnLead} from './lead';
 export {fnRank} from './rank';
-export {fnFirstValue} from './first_value';
+export {fnFirstValueWindow, fnLastValueWindow} from './first_value_window';
+export {
+  fnMinWindow,
+  fnMaxWindow,
+  fnSumWindow,
+  fnMinCumulative,
+  fnMaxCumulative,
+  fnSumCumulative,
+} from './sum_min_max_window';
 export {fnStartsWith, fnEndsWith} from './starts_ends_with';
 export {fnFirst} from './first';
 export {fnIsInf} from './is_inf';

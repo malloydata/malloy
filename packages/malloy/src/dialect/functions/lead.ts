@@ -43,15 +43,12 @@ const types: ExpressionValueType[] = [
   'json',
 ];
 
-export function fnLag(): DialectFunctionOverloadDef[] {
-  // TODO implement better "generics" -- an overload specifies names of types
-  // and allowed types for that type name, then "params" and "returnType" can
-  // refer to that named type...
+export function fnLead(): DialectFunctionOverloadDef[] {
   return types.flatMap(type => [
     overload(
       minAnalytic(type),
       [param('value', output(maxAggregate(type)))],
-      [sql('LAG(', arg('value'), ')')],
+      [sql('LEAD(', arg('value'), ')')],
       {needsWindowOrderBy: true}
     ),
     overload(
@@ -60,7 +57,7 @@ export function fnLag(): DialectFunctionOverloadDef[] {
         param('value', output(maxAggregate(type))),
         param('offset', constant(maxScalar('number'))),
       ],
-      [sql('LAG(', arg('value'), ', ', arg('offset'), ')')],
+      [sql('LEAD(', arg('value'), ', ', arg('offset'), ')')],
       {needsWindowOrderBy: true}
     ),
     overload(
@@ -68,14 +65,11 @@ export function fnLag(): DialectFunctionOverloadDef[] {
       [
         param('value', output(maxAggregate(type))),
         param('offset', constant(maxScalar('number'))),
-        // TODO In BigQuery I think this is even a stronger limitation
-        // that it needs to be a CONSTANT, not just a scalar.
-        // DuckDB has no problem with this being even an aggregate
         param('default', constant(maxAggregate(type))),
       ],
       [
         sql(
-          'LAG(',
+          'LEAD(',
           arg('value'),
           ', ',
           arg('offset'),

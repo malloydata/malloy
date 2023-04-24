@@ -24,5 +24,9 @@
 import {overload, sql, DialectFunctionOverloadDef, minAnalytic} from './util';
 
 export function fnRank(): DialectFunctionOverloadDef[] {
-  return [overload(minAnalytic('number'), [], [sql('RANK()')])];
+  return [
+    overload(minAnalytic('number'), [], [sql('RANK()')], {
+      needsWindowOrderBy: true,
+    }),
+  ];
 }

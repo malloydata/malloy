@@ -35,6 +35,7 @@ export interface DialectFunctionOverloadDef {
   returnType: TypeDesc;
   params: FunctionParameterDef[];
   e: Expr;
+  needsWindowOrderBy?: boolean;
 }
 
 export function arg(name: string): Fragment {
@@ -163,11 +164,13 @@ export function minAnalytic(dataType: FieldValueType): TypeDesc {
 export function overload(
   returnType: TypeDesc,
   params: FunctionParameterDef[],
-  e: Expr
+  e: Expr,
+  options?: {needsWindowOrderBy?: boolean}
 ): DialectFunctionOverloadDef {
   return {
     returnType,
     params,
     e,
+    needsWindowOrderBy: options?.needsWindowOrderBy,
   };
 }

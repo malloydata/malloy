@@ -495,10 +495,11 @@ class QueryField extends QueryNode {
       if (expressionIsAnalytic(overload.returnType.expressionType)) {
         // TODO probably need to pass in the function and arguments separately
         // in order to generate parameter SQL correctly in BQ re: partition
-        return this.generateAnalyticFragment2(
+        return this.generateAnalyticFragment(
           resultSet,
           context,
           funcCall,
+          overload,
           state
         );
       }
@@ -774,10 +775,11 @@ class QueryField extends QueryNode {
     return ret.join(', ');
   }
 
-  generateAnalyticFragment2(
+  generateAnalyticFragment(
     resultStruct: FieldInstanceResult,
     context: QueryStruct,
     expr: Expr,
+    overload: FunctionOverloadDef,
     state: GenerateState
   ): string {
     // const fields = resultStruct.getUngroupPartitions({
@@ -803,47 +805,48 @@ class QueryField extends QueryNode {
     // the partitionSQL exists and the parameter is an "output"
 
     let orderBy = '';
+    if (overload.needsWindowOrderBy) {
+      // calculate the ordering.
+      const obSQL: string[] = [];
+      let orderingField;
+      const orderByDef =
+        (resultStruct.firstSegment as QuerySegment).orderBy ||
+        resultStruct.calculateDefaultOrderBy();
+      for (const ordering of orderByDef) {
+        if (typeof ordering.field === 'string') {
+          orderingField = {
+            name: ordering.field,
+            fif: resultStruct.getField(ordering.field),
+          };
+        } else {
+          orderingField = resultStruct.getFieldByNumber(ordering.field);
+        }
+        // TODO today we do not support ordering by analytic functions at all, so this works
+        // but eventually we will, and this check will just want to ensure that the order field
+        // isn't the same as the field we're currently compiling (otherwise we will loop infintely)
+        if (expressionIsAnalytic(orderingField.fif.f.fieldDef.expressionType)) {
+          continue;
+        }
+        if (resultStruct.firstSegment.type === 'reduce') {
+          obSQL.push(
+            ` ${orderingField.fif.getPartitionSQL()}` +
+              // this.parent.dialect.sqlMaybeQuoteIdentifier(
+              //   `${orderingField.name}__${resultStruct.groupSet}`
+              // ) +
+              ` ${ordering.dir || 'ASC'}`
+          );
+        } else if (resultStruct.firstSegment.type === 'project') {
+          obSQL.push(
+            ` ${orderingField.fif.f.generateExpression(resultStruct)} ${
+              ordering.dir || 'ASC'
+            }`
+          );
+        }
+      }
 
-    // calculate the ordering.
-    const obSQL: string[] = [];
-    let orderingField;
-    const orderByDef =
-      (resultStruct.firstSegment as QuerySegment).orderBy ||
-      resultStruct.calculateDefaultOrderBy();
-    for (const ordering of orderByDef) {
-      if (typeof ordering.field === 'string') {
-        orderingField = {
-          name: ordering.field,
-          fif: resultStruct.getField(ordering.field),
-        };
-      } else {
-        orderingField = resultStruct.getFieldByNumber(ordering.field);
+      if (obSQL.length > 0) {
+        orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL);
       }
-      // TODO today we do not support ordering by analytic functions at all, so this works
-      // but eventually we will, and this check will just want to ensure that the order field
-      // isn't the same as the field we're currently compiling (otherwise we will loop infintely)
-      if (expressionIsAnalytic(orderingField.fif.f.fieldDef.expressionType)) {
-        continue;
-      }
-      if (resultStruct.firstSegment.type === 'reduce') {
-        obSQL.push(
-          ` ${orderingField.fif.getPartitionSQL()}` +
-            // this.parent.dialect.sqlMaybeQuoteIdentifier(
-            //   `${orderingField.name}__${resultStruct.groupSet}`
-            // ) +
-            ` ${ordering.dir || 'ASC'}`
-        );
-      } else if (resultStruct.firstSegment.type === 'project') {
-        obSQL.push(
-          ` ${orderingField.fif.f.generateExpression(resultStruct)} ${
-            ordering.dir || 'ASC'
-          }`
-        );
-      }
-    }
-
-    if (obSQL.length > 0) {
-      orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL);
     }
 
     const funcSQL = this.generateExpressionFromExpr(

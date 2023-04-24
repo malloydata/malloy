@@ -24,5 +24,9 @@
 import {overload, sql, DialectFunctionOverloadDef, minAnalytic} from './util';
 
 export function fnRowNumber(): DialectFunctionOverloadDef[] {
-  return [overload(minAnalytic('number'), [], [sql('ROW_NUMBER()')])];
+  return [
+    overload(minAnalytic('number'), [], [sql('ROW_NUMBER()')], {
+      needsWindowOrderBy: true,
+    }),
+  ];
 }

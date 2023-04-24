@@ -1,6 +1,7 @@
 import {
   fnConcat,
-  fnFirstValue,
+  fnFirstValueWindow,
+  fnLastValueWindow,
   fnFloor,
   fnIfnull,
   fnLag,
@@ -58,6 +59,13 @@ import {
   fnRepeat,
   fnUnicode,
   fnToHex,
+  fnMinWindow,
+  fnSumWindow,
+  fnMaxWindow,
+  fnMinCumulative,
+  fnSumCumulative,
+  fnMaxCumulative,
+  fnLead,
 } from './functions_index';
 import {FunctionMap} from './function_map';
 
@@ -125,7 +133,15 @@ FUNCTIONS.add('first', fnFirst);
 // Analytic functions
 FUNCTIONS.add('row_number', fnRowNumber);
 FUNCTIONS.add('lag', fnLag);
+FUNCTIONS.add('lead', fnLead);
 FUNCTIONS.add('rank', fnRank);
-FUNCTIONS.add('first_value', fnFirstValue);
+FUNCTIONS.add('first_value', fnFirstValueWindow);
+FUNCTIONS.add('last_value', fnLastValueWindow);
+FUNCTIONS.add('min_cumulative', fnMinCumulative);
+FUNCTIONS.add('max_cumulative', fnMaxCumulative);
+FUNCTIONS.add('sum_cumulative', fnSumCumulative);
+FUNCTIONS.add('min_window', fnMinWindow);
+FUNCTIONS.add('max_window', fnMaxWindow);
+FUNCTIONS.add('sum_window', fnSumWindow);
 
 FUNCTIONS.seal();

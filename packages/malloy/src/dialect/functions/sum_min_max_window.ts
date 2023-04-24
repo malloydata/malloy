@@ -30,61 +30,73 @@ import {
   DialectFunctionOverloadDef,
   minAnalytic,
   maxAggregate,
-  maxScalar,
   output,
-  constant,
 } from './util';
 
-const types: ExpressionValueType[] = [
-  'string',
-  'number',
-  'timestamp',
-  'date',
-  'json',
-];
+const types: ExpressionValueType[] = ['string', 'number', 'timestamp', 'date'];
 
-export function fnLag(): DialectFunctionOverloadDef[] {
-  // TODO implement better "generics" -- an overload specifies names of types
-  // and allowed types for that type name, then "params" and "returnType" can
-  // refer to that named type...
+export function fnMinCumulative(): DialectFunctionOverloadDef[] {
   return types.flatMap(type => [
     overload(
       minAnalytic(type),
       [param('value', output(maxAggregate(type)))],
-      [sql('LAG(', arg('value'), ')')],
+      [sql('MIN(', arg('value'), ')')],
       {needsWindowOrderBy: true}
     ),
+  ]);
+}
+
+export function fnMaxCumulative(): DialectFunctionOverloadDef[] {
+  return types.flatMap(type => [
     overload(
       minAnalytic(type),
-      [
-        param('value', output(maxAggregate(type))),
-        param('offset', constant(maxScalar('number'))),
-      ],
-      [sql('LAG(', arg('value'), ', ', arg('offset'), ')')],
+      [param('value', output(maxAggregate(type)))],
+      [sql('MAX(', arg('value'), ')')],
       {needsWindowOrderBy: true}
     ),
+  ]);
+}
+
+export function fnSumCumulative(): DialectFunctionOverloadDef[] {
+  return types.flatMap(type => [
     overload(
       minAnalytic(type),
-      [
-        param('value', output(maxAggregate(type))),
-        param('offset', constant(maxScalar('number'))),
-        // TODO In BigQuery I think this is even a stronger limitation
-        // that it needs to be a CONSTANT, not just a scalar.
-        // DuckDB has no problem with this being even an aggregate
-        param('default', constant(maxAggregate(type))),
-      ],
-      [
-        sql(
-          'LAG(',
-          arg('value'),
-          ', ',
-          arg('offset'),
-          ', ',
-          arg('default'),
-          ')'
-        ),
-      ],
+      [param('value', output(maxAggregate(type)))],
+      [sql('SUM(', arg('value'), ')')],
       {needsWindowOrderBy: true}
+    ),
+  ]);
+}
+
+export function fnMinWindow(): DialectFunctionOverloadDef[] {
+  return types.flatMap(type => [
+    overload(
+      minAnalytic(type),
+      [param('value', output(maxAggregate(type)))],
+      [sql('MIN(', arg('value'), ')')],
+      {needsWindowOrderBy: false}
+    ),
+  ]);
+}
+
+export function fnMaxWindow(): DialectFunctionOverloadDef[] {
+  return types.flatMap(type => [
+    overload(
+      minAnalytic(type),
+      [param('value', output(maxAggregate(type)))],
+      [sql('MAX(', arg('value'), ')')],
+      {needsWindowOrderBy: false}
+    ),
+  ]);
+}
+
+export function fnSumWindow(): DialectFunctionOverloadDef[] {
+  return types.flatMap(type => [
+    overload(
+      minAnalytic(type),
+      [param('value', output(maxAggregate(type)))],
+      [sql('SUM(', arg('value'), ')')],
+      {needsWindowOrderBy: false}
     ),
   ]);
 }

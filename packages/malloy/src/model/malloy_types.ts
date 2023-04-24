@@ -899,6 +899,7 @@ export interface FunctionParameterDef {
 export interface FunctionOverloadDef {
   // The expression type here is the MINIMUM return type
   returnType: TypeDesc;
+  needsWindowOrderBy?: boolean;
   params: FunctionParameterDef[];
   dialect: {
     [dialect: string]: Expr;
