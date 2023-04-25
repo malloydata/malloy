@@ -266,8 +266,6 @@ abstract class QueryNode {
   getChildByName(_name: string): QuerySomething | undefined {
     return undefined;
   }
-
-  abstract getQueryInfo(): QueryInfo;
 }
 
 class QueryField extends QueryNode {
@@ -278,10 +276,6 @@ class QueryField extends QueryNode {
     super(fieldDef);
     this.parent = parent;
     this.fieldDef = fieldDef;
-  }
-
-  getQueryInfo() {
-    return {};
   }
 
   mayNeedUniqueKey(): boolean {
@@ -581,7 +575,7 @@ class QueryField extends QueryNode {
     return this.generateExpressionFromExpr(
       resultSet,
       context,
-      context.dialect.dialectExpr(this.getQueryInfo(), expr),
+      context.dialect.dialectExpr(resultSet.getQueryInfo(), expr),
       state
     );
   }
@@ -844,7 +838,7 @@ class QueryFieldDate extends QueryAtomicField {
       return super.generateExpression(resultSet);
     } else {
       const truncated = this.parent.dialect.sqlTrunc(
-        this.getQueryInfo(),
+        resultSet.getQueryInfo(),
         {value: this.getExpr(), valueType: 'date'},
         fd.timeframe
       );
@@ -1020,9 +1014,19 @@ class FieldInstanceResult implements FieldInstance {
     this.firstSegment = turtleDef.pipeline[0];
   }
 
+  getQueryInfo(): QueryInfo {
+    if (!isIndexSegment(this.firstSegment)) {
+      const {queryTimezone} = this.firstSegment;
+      if (queryTimezone) {
+        return {queryTimezone};
+      }
+    }
+    return {};
+  }
+
   addField(as: string, field: QueryField, usage: FieldUsage) {
-    let fi;
-    if ((fi = this.allFields.get(as))) {
+    const fi = this.allFields.get(as);
+    if (fi) {
       if (fi.type === 'query') {
         throw new Error(
           `Redefinition of field ${field.fieldDef.name} as struct`
@@ -1529,7 +1533,6 @@ class QueryTurtle extends QueryField {}
  * half translated to the new world of types ..
  */
 export class Segment {
-  // static nextStructDef(s: StructDef, q: AnonymousQueryDef): StructDef
   static nextStructDef(structDef: StructDef, segment: PipeSegment): StructDef {
     const qs = new QueryStruct(structDef, {
       model: new QueryModel(undefined),
@@ -1593,6 +1596,7 @@ class QueryQuery extends QueryField {
     let parent = parentStruct;
 
     const firstStage = flatTurtleDef.pipeline[0];
+    const sourceDef = parentStruct.fieldDef;
 
     // if we are generating code
     //  and have extended declaration, we need to make a new QueryStruct
@@ -1605,8 +1609,8 @@ class QueryQuery extends QueryField {
     ) {
       parent = new QueryStruct(
         {
-          ...parentStruct.fieldDef,
-          fields: [...parentStruct.fieldDef.fields, ...firstStage.extendSource],
+          ...sourceDef,
+          fields: [...sourceDef.fields, ...firstStage.extendSource],
         },
         parent.parent ? {struct: parent} : {model: parent.model}
       );
@@ -1620,6 +1624,14 @@ class QueryQuery extends QueryField {
           ...flatTurtleDef.pipeline.slice(1),
         ],
       };
+    }
+
+    if (
+      sourceDef.queryTimezone &&
+      isQuerySegment(firstStage) &&
+      firstStage.queryTimezone === undefined
+    ) {
+      firstStage.queryTimezone = sourceDef.queryTimezone;
     }
 
     switch (firstStage.type) {
@@ -2237,7 +2249,7 @@ class QueryQuery extends QueryField {
         }
       }
     }
-    return {
+    const outputStruct: StructDef = {
       fields,
       name: this.resultStage || 'result',
       dialect: this.parent.dialect.name,
@@ -2250,6 +2262,10 @@ class QueryQuery extends QueryField {
       resultMetadata: this.getResultMetadata(this.rootResult),
       type: 'struct',
     };
+    if (isQuerySegment(this.firstSegment) && this.firstSegment.queryTimezone) {
+      outputStruct.queryTimezone = this.firstSegment.queryTimezone;
+    }
+    return outputStruct;
   }
 
   generateSQLJoinBlock(stageWriter: StageWriter, ji: JoinInstance): string {
@@ -3472,10 +3488,6 @@ class QueryStruct extends QueryNode {
     this.dialect = getDialect(this.fieldDef.dialect);
 
     this.addFieldsFromFieldList(this.fieldDef.fields);
-  }
-
-  getQueryInfo(): QueryInfo {
-    return {};
   }
 
   parameters(): Record<string, Parameter> {
