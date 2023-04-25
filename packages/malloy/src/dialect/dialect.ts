@@ -42,17 +42,11 @@ interface DialectField {
 }
 
 /**
- * Data from the query which might be useful to the compiler of a dialect
- * fragment. Did this instead of simply passing the timezone in case
- * there was a future piece of information which would like
- * to ride the same path from the query to the dialect.
- *
- * The name of this is wrong, plan on changing it
- * once I understand this piece of data better.
- *
- * If we go with a "database timezone", for pg derived dialects
- * that info would go in here also, allowing the writer code to
- * generate better fragments
+ * Data which dialect methods need in order to correctly generate SQL.
+ * Initially this is just timezone related, but I made this an interface
+ * so it would be extensible with other useful information which might not be
+ * available until runtime (e.g. version number of db)
+ * mtoy TODO rename this interface to something other than "QueryInfo"
  */
 export interface QueryInfo {
   queryTimezone?: string;
