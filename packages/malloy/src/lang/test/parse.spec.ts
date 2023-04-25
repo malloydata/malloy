@@ -494,6 +494,38 @@ describe('model statements', () => {
             'Cannot use an aggregate field in a calculate operation, did you mean to use an aggregate operation instead?'
           );
         });
+        test('cannot use scalar in calculate, preserved over refinement', () => {
+          expect(`query: a1 is a -> {
+            group_by: c is 1
+          }
+          query: -> a1 {
+            calculate: b is c
+          }`).compileToFailWith(
+            'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or project operation instead?'
+          );
+        });
+        test('cannot use analytic in group_by, preserved over refinement', () => {
+          expect(`query: a1 is a -> {
+            group_by: c is 1
+            calculate: c2 is lag(c)
+          }
+          query: -> a1 {
+            group_by: b is c2
+          }`).compileToFailWith(
+            // c2 is not defined because group_by doesn't know to look in the output space
+            "'c2' is not defined",
+            "Cannot define 'b', value has unknown type"
+          );
+        });
+        test('cannot use analytic in order_by, preserved over refinement', () => {
+          expect(`query: a1 is a -> {
+            group_by: c is 1
+            calculate: c2 is lag(c)
+          }
+          query: -> a1 {
+            order_by: c2
+          }`).compileToFailWith('Illegal order by of analytic field c2');
+        });
       });
     });
     describe('function typechecking', () => {
@@ -659,7 +691,7 @@ describe('model statements', () => {
           order_by: row_num desc
         }`).compileToFailWith('Illegal order by of analytic field row_num');
       });
-      test('cannot use aggregate in aggregate -- and preserved over refinement', () => {
+      test('cannot use analytic in calculate -- and preserved over refinement', () => {
         expect(`query: a1 is a -> {
           group_by: astr
           calculate: p is lag(astr)
