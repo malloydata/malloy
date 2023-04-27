@@ -38,14 +38,14 @@ import {Range} from './range';
 export class ExprTimeExtract extends ExpressionDef {
   elementType = 'timeExtract';
   static pluralMap: Record<string, ExtractUnit> = {
-    years: 'year',
-    quarters: 'quarter',
-    months: 'month',
-    weeks: 'week',
-    days: 'day',
-    hours: 'hour',
-    minutes: 'minute',
-    seconds: 'second',
+    'years': 'year',
+    'quarters': 'quarter',
+    'months': 'month',
+    'weeks': 'week',
+    'days': 'day',
+    'hours': 'hour',
+    'minutes': 'minute',
+    'seconds': 'second',
   };
 
   static extractor(funcName: string): ExtractUnit | undefined {
