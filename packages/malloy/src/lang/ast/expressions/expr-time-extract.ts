@@ -81,6 +81,10 @@ export class ExprTimeExtract extends ExpressionDef {
           from.last.log(`Cannot extract ${extractTo} from '${last.dataType}'`);
           return errorFor(`${extractTo} bad type ${last.dataType}`);
         }
+        if (['week', 'month', 'quarter', 'year'].includes(extractTo)) {
+          this.log(`Cannot measure interval using '${extractTo}'`);
+          return errorFor(`${extractTo} civil extraction`);
+        }
         if (!isTimestampUnit(extractTo)) {
           this.log(`Cannot extract ${extractTo} from a range`);
           return errorFor(`${extractTo} bad extraction`);

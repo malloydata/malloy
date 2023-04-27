@@ -1099,9 +1099,6 @@ export class MalloyToAST
     }
 
     if (ast.ExprTimeExtract.extractor(fn)) {
-      if (['week', 'month', 'quarter', 'year'].includes(fn)) {
-        this.contextError(pcx, `Cannot measure interval using '${fn}'`);
-      }
       return this.astAt(new ast.ExprTimeExtract(fn, args), pcx);
     }
     return this.astAt(new ast.ExprFunc(fn, args), pcx);
