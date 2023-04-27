@@ -730,6 +730,18 @@ export class BigQueryConnection
     return job;
   }
 
+  public async initiateJobAndGetLinkToConsole(
+    sqlCommand: string,
+    dryRun = false
+  ): Promise<string> {
+    const job = await this.createBigQueryJob({
+      query: sqlCommand,
+      dryRun,
+    });
+    const url = `https://console.cloud.google.com/bigquery?project=${this.projectId}&j=bq:${this.location}:${job.id}&page=queryresults`;
+    return url;
+  }
+
   public runSQLStream(
     sqlCommand: string,
     options: Partial<BigQueryQueryOptions> = {}
