@@ -294,7 +294,7 @@ export class PostgresDialect extends Dialect {
     // adjusting for monday/sunday weeks
     const week = units === 'week';
     const truncThis = week
-      ? mkExpr`${sqlTime.value} + INTERVAL 1 DAY`
+      ? mkExpr`${sqlTime.value} + INTERVAL '1' DAY`
       : sqlTime.value;
     if (sqlTime.valueType === 'timestamp') {
       const tz = qtz(qi);
@@ -309,7 +309,7 @@ export class PostgresDialect extends Dialect {
     }
     let result = mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
     if (week) {
-      result = mkExpr`(${result} - INTERVAL 1 DAY)`;
+      result = mkExpr`(${result} - INTERVAL '1' DAY)`;
     }
     return result;
   }
