@@ -24,7 +24,7 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 /* eslint-disable no-console */
 
-import '../../util/is-sql-eq';
+import '../../util/db-jest-matchers';
 import {RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable, mkSqlEqWith} from '../../util';
 

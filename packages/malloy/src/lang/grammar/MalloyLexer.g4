@@ -160,9 +160,7 @@ PERCENT: '%';
 
 fragment F_YEAR: DIGIT DIGIT DIGIT DIGIT;
 fragment F_DD: DIGIT DIGIT;
-fragment F_LOCALE: '[' (ID_CHAR | '/')* ']';
-fragment F_OFFSET: [+-] DIGIT+ ( ':' DIGIT+)?;
-fragment F_TZ: F_OFFSET | F_LOCALE;
+fragment F_TZ: '[' (ID_CHAR | '/')* ']';
 fragment LX: '-' 'X' (ID_CHAR | DIGIT)+;
 // @YYYY-MM-DD HH:MM:SS.n
 LITERAL_TIMESTAMP

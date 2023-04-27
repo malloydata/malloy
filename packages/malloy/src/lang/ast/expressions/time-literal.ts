@@ -60,14 +60,7 @@ function preParse(literal: string, checkTz: boolean): TimeText {
         text: text.slice(0, -hasLocale[0].length),
       };
     }
-
-    const hasOffsetTz = text.match(/[+-]\d+(:\d+)?$/);
-    if (hasOffsetTz) {
-      const tzSpec = hasOffsetTz[0];
-      return {tzSpec, text: text.slice(0, -tzSpec.length)};
-    }
   }
-
   return {text};
 }
 

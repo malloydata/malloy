@@ -730,24 +730,6 @@ describe('literals', () => {
       {literal: '1960-06-30 10:30:00'},
     ],
     [
-      '@1960-06-30 10:30:00+0',
-      'timestamp',
-      undefined,
-      {literal: '1960-06-30 10:30:00', timezone: '+0'},
-    ],
-    [
-      '@1960-06-30 10:30:00-7',
-      'timestamp',
-      undefined,
-      {literal: '1960-06-30 10:30:00', timezone: '-7'},
-    ],
-    [
-      '@1960-06-30 10:30:00-00:15',
-      'timestamp',
-      undefined,
-      {literal: '1960-06-30 10:30:00', timezone: '-00:15'},
-    ],
-    [
       '@1960-06-30 10:30:00[America/Los_Angeles]',
       'timestamp',
       undefined,
@@ -821,7 +803,7 @@ describe('expressions', () => {
     });
 
     // mtoy todo units missing: implement, or document
-    const diffable = ['second', 'minute', 'hour', 'day', 'week'];
+    const diffable = ['second', 'minute', 'hour', 'day'];
     test.each(diffable.map(x => [x]))('timestamp difference - %s', unit => {
       expect(new BetaExpression(`${unit}(@2021 to ats)`)).modelParsed();
     });

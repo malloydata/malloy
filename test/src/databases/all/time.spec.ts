@@ -23,7 +23,7 @@
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import '../../util/is-sql-eq';
+import '../../util/db-jest-matchers';
 import {mkSqlEqWith} from '../../util';
 import {DateTime as LuxonDateTime} from 'luxon';
 
@@ -162,9 +162,18 @@ const zone_2020 = LuxonDateTime.fromObject({
   second: 0,
   zone,
 });
+const utc_2020 = LuxonDateTime.fromObject({
+  year: 2020,
+  month: 2,
+  day: 20,
+  hour: 0,
+  minute: 0,
+  second: 0,
+  zone: 'UTC',
+});
 
 describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
-  test(`${dbName} NOT in tz ${zone} by default`, async () => {
+  test(`${dbName} - default timezone is UTC`, async () => {
     // this makes sure that the tests which use the test timezome are actually
     // testing something ... file this under "abundance of caution". It
     // really tests nothing, but I feel calmer with this here.
@@ -179,24 +188,7 @@ describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
     const result = await query.run();
     const literal = result.data.path(0, 'literalTime').value as Date;
     const have = LuxonDateTime.fromJSDate(literal);
-    expect(zone_2020.valueOf()).not.toBeNaN();
-    expect(have.valueOf()).not.toEqual(zone_2020.valueOf());
-  });
-
-  test('literal with offset timezone', async () => {
-    const query = runtime.loadQuery(
-      `
-sql: tzTest is { connection: "${dbName}" select: """
-  SELECT 1 as one
-"""}
-query: from_sql(tzTest) -> {
-  project: literalTime is @2020-02-20 00:00:00-06:00
-}`
-    );
-    const result = await query.run();
-    const literal = result.data.path(0, 'literalTime').value as Date;
-    const have = LuxonDateTime.fromJSDate(literal);
-    expect(have.valueOf()).toEqual(zone_2020.valueOf());
+    expect(have.valueOf()).toEqual(utc_2020.valueOf());
   });
 
   test('literal with zone name', async () => {
@@ -216,18 +208,7 @@ query: from_sql(tzTest) -> {
 });
 
 describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
-  test('partial literal timestamps are in query time zone', async () => {
-    const zone = 'America/Mexico_City'; // -06:00 no DST
-    const zone_2020 = LuxonDateTime.fromObject({
-      year: 2020,
-      month: 2,
-      day: 20,
-      hour: 0,
-      minute: 0,
-      second: 0,
-      zone,
-    });
-
+  test('literal timestamps', async () => {
     const query = runtime.loadQuery(
       `
         sql: tzTest is { connection: "${dbName}" select: """SELECT 1 as one""" }
@@ -241,6 +222,36 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
     const literal = result.data.path(0, 'literalTime').value as Date;
     const have = LuxonDateTime.fromJSDate(literal);
     expect(have.valueOf()).toEqual(zone_2020.valueOf());
+  });
+
+  test('extract', async () => {
+    await expect(runtime).queryMatches(
+      `sql: tzTest is { connection: "${dbName}" select: """SELECT 1 as one""" }
+      query: from_sql(tzTest) -> {
+        timezone: '${zone}'
+        declare: utc_midnight is @2020-02-20 00:00:00[UTC]
+        project:
+          mex_midnight is hour(utc_midnight)
+          mex_day is day(utc_midnight)
+      }`,
+      {mex_midnight: 18, mex_day: 19}
+    );
+  });
+
+  test('truncate day', async () => {
+    // At midnight in london it the 19th in Mexico, so that truncates to
+    // midnight on the 19th
+    const mex_19 = LuxonDateTime.fromISO('2020-02-19T00:00:00', {zone});
+    await expect(runtime).queryMatches(
+      `sql: tzTest is { connection: "${dbName}" select: """SELECT 1 as one""" }
+      query: from_sql(tzTest) -> {
+        timezone: '${zone}'
+        declare: utc_midnight is @2020-02-20 00:00:00[UTC]
+        project:
+          mex_day is utc_midnight.day
+      }`,
+      {mex_day: mex_19.toJSDate()}
+    );
   });
 });
 
