@@ -260,23 +260,23 @@ export class DuckDBDialect extends Dialect {
   sqlTrunc(qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {
     // adjusting for monday/sunday weeks
     const week = units === 'week';
-    let truncThis = week
+    const truncThis = week
       ? mkExpr`${sqlTime.value} + INTERVAL 1 DAY`
       : sqlTime.value;
-    let convertBack = false;
     if (sqlTime.valueType === 'timestamp') {
       const tz = qtz(qi);
       if (tz) {
-        truncThis = mkExpr`(${truncThis} AT TIME ZONE '${tz}')`;
-        convertBack = true;
+        const civilSource = mkExpr`(${truncThis}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
+        let civilTrunc = mkExpr`DATE_TRUNC('${units}', ${civilSource})`;
+        // MTOY todo ... only need to do this if this is a date ...
+        civilTrunc = mkExpr`${civilTrunc}::TIMESTAMP`;
+        const truncTsTz = mkExpr`${civilTrunc} AT TIME ZONE '${tz}'`;
+        return mkExpr`(${truncTsTz})::TIMESTAMP`;
       }
     }
     let result = mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
     if (week) {
       result = mkExpr`(${result} - INTERVAL 1 DAY)`;
-    }
-    if (convertBack) {
-      return mkExpr`(${result}::TIMESTAMP)`;
     }
     return result;
   }
@@ -287,7 +287,7 @@ export class DuckDBDialect extends Dialect {
     if (from.valueType === 'timestamp') {
       const tz = qtz(qi);
       if (tz) {
-        extractFrom = mkExpr`(${extractFrom} AT TIME ZONE '${tz}')`;
+        extractFrom = mkExpr`(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
       }
     }
     const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${extractFrom})`;
@@ -335,11 +335,7 @@ export class DuckDBDialect extends Dialect {
     }
     const tz = timezone || qtz(qi);
     if (tz) {
-      const inTz =
-        tz[0] === '+' || tz[0] === '-'
-          ? `TIMESTAMPTZ '${timeString}${tz}'`
-          : `TIMESTAMPTZ '${timeString} ${tz}'`;
-      return `${inTz}::TIMESTAMP`;
+      return `TIMESTAMPTZ '${timeString} ${tz}'::TIMESTAMP`;
     }
     return `TIMESTAMP '${timeString}'`;
   }

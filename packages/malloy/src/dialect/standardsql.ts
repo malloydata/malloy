@@ -362,7 +362,7 @@ ${indent(sql)}
 
   sqlExtract(qi, expr: TimeValue, units: ExtractUnit): Expr {
     const tz = qtz(qi);
-    const tzAdd = tz ? ` AT TIME ZONE ${tz}` : '';
+    const tzAdd = tz ? ` AT TIME ZONE '${tz}'` : '';
     const extractTo = extractMap[units] || units;
     return mkExpr`EXTRACT(${extractTo} FROM ${expr.value}${tzAdd})`;
   }
@@ -426,9 +426,12 @@ ${indent(sql)}
     if (type === 'date') {
       return `DATE('${timeString}')`;
     } else if (type === 'timestamp') {
+      let timestampArgs = `'${timeString}'`;
       const tz = timezone || qtz(qi);
-      const tzAdd = tz ? `, '${tz}'` : '';
-      return `TIMESTAMP('${timeString}'${tzAdd})`;
+      if (tz) {
+        timestampArgs += `,'${tz}'`;
+      }
+      return `TIMESTAMP(${timestampArgs})`;
     } else {
       throw new Error(`Unsupported Literal time format ${type}`);
     }

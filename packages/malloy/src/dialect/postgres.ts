@@ -290,19 +290,40 @@ export class PostgresDialect extends Dialect {
     return mkExpr`CURRENT_TIMESTAMP`;
   }
 
-  sqlTrunc(_qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {
+  sqlTrunc(qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {
     // adjusting for monday/sunday weeks
     const week = units === 'week';
     const truncThis = week
-      ? mkExpr`${sqlTime.value}+interval'1'day`
+      ? mkExpr`${sqlTime.value} + INTERVAL 1 DAY`
       : sqlTime.value;
-    const trunced = mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
-    return week ? mkExpr`(${trunced}-interval'1'day)` : trunced;
+    if (sqlTime.valueType === 'timestamp') {
+      const tz = qtz(qi);
+      if (tz) {
+        const civilSource = mkExpr`(${truncThis}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
+        let civilTrunc = mkExpr`DATE_TRUNC('${units}', ${civilSource})`;
+        // MTOY todo ... only need to do this if this is a date ...
+        civilTrunc = mkExpr`${civilTrunc}::TIMESTAMP`;
+        const truncTsTz = mkExpr`${civilTrunc} AT TIME ZONE '${tz}'`;
+        return mkExpr`(${truncTsTz})::TIMESTAMP`;
+      }
+    }
+    let result = mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
+    if (week) {
+      result = mkExpr`(${result} - INTERVAL 1 DAY)`;
+    }
+    return result;
   }
 
-  sqlExtract(_qi: QueryInfo, from: TimeValue, units: ExtractUnit): Expr {
+  sqlExtract(qi: QueryInfo, from: TimeValue, units: ExtractUnit): Expr {
     const pgUnits = pgExtractionMap[units] || units;
-    const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${from.value})`;
+    let extractFrom = from.value;
+    if (from.valueType === 'timestamp') {
+      const tz = qtz(qi);
+      if (tz) {
+        extractFrom = mkExpr`(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
+      }
+    }
+    const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${extractFrom})`;
     return units === 'day_of_week' ? mkExpr`(${extracted}+1)` : extracted;
   }
 
@@ -343,11 +364,7 @@ export class PostgresDialect extends Dialect {
     }
     const tz = timezone || qtz(qi);
     if (tz) {
-      const inTz =
-        tz[0] === '+' || tz[0] === '-'
-          ? `TIMESTAMPTZ '${timeString}${tz}'`
-          : `TIMESTAMPTZ '${timeString} ${tz}'`;
-      return `${inTz}::TIMESTAMP`;
+      return `TIMESTAMPTZ '${timeString} ${tz}'::TIMESTAMP`;
     }
     return `TIMESTAMP '${timeString}'`;
   }
