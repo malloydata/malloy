@@ -39,7 +39,7 @@ import {
 import {Dialect, DialectFieldList, FunctionInfo} from './dialect';
 
 const castMap: Record<string, string> = {
-  number: 'float64',
+  'number': 'float64',
 };
 
 // These are the units that "TIMESTAMP_ADD" accepts
@@ -53,8 +53,8 @@ const timestampAddUnits = [
 ];
 
 const extractMap: Record<string, string> = {
-  day_of_week: 'dayofweek',
-  day_of_year: 'dayofyear',
+  'day_of_week': 'dayofweek',
+  'day_of_year': 'dayofyear',
 };
 
 export class StandardSQLDialect extends Dialect {
@@ -74,10 +74,10 @@ export class StandardSQLDialect extends Dialect {
 
   // I think we want an optional list of parameters types that we force a cast to.
   functionInfo: Record<string, FunctionInfo> = {
-    timestamp_seconds: {
+    'timestamp_seconds': {
       returnType: 'timestamp',
     },
-    concat: {returnType: 'string'},
+    'concat': {returnType: 'string'},
   };
 
   quoteTablePath(tablePath: string): string {
