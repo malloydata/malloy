@@ -27,14 +27,13 @@ import '../../util/db-jest-matchers';
 import {mkSqlEqWith} from '../../util';
 import {DateTime as LuxonDateTime} from 'luxon';
 
-// MTOY todo really test all databases
 const runtimes = new RuntimeList(allDatabases);
+const timeSQL =
+  "SELECT DATE '2021-02-24' as t_date, TIMESTAMP '2021-02-24 03:05:06' as t_timestamp";
 
 // MTOY todo look at this list for timezone problems, I know there are some
-describe.each(runtimes.runtimeList)('%s date and time', (_dbName, runtime) => {
-  const sqlEq = mkSqlEqWith(runtime, {
-    sql: "SELECT DATE '2021-02-24' as t_date, TIMESTAMP '2021-02-24 03:05:06' as t_timestamp",
-  });
+describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
+  const sqlEq = mkSqlEqWith(runtime, {sql: timeSQL});
 
   describe('interval measurement', () => {
     test('forwards is positive', async () => {
@@ -425,6 +424,100 @@ describe.each(runtimes.runtimeList)('%s date and time', (_dbName, runtime) => {
         expect(await eq).isSqlEq();
       });
     });
+  });
+
+  test('date in sql_block no explore', async () => {
+    const eq = sqlEq('t_date', '@2021-02-24');
+    expect(await eq).isSqlEq();
+  });
+
+  test('timestamp in sql_block no explore', async () => {
+    const eq = sqlEq('t_timestamp', '@2021-02-24 03:05:06');
+    expect(await eq).isSqlEq();
+  });
+
+  test('valid timestamp without seconds', async () => {
+    // discovered this writing tests ...
+    const eq = sqlEq('year(@2000-01-01 00:00)', '2000');
+    expect(await eq).isSqlEq();
+  });
+
+  // mtoy todo catch these in the compiler ... or implement
+  // describe(`time operations `, () => {
+  //   describe(`time difference `, () => {
+  //     test('DATE to TIMESTAMP', async () => {
+  //       const eq = sqlEq('day((@1999)::date to @2000-01-01 00:00:00)', '365');
+  //       expect(await eq).isSqlEq();
+  //     });
+  //     test('TIMESTAMP to DATE', async () => {
+  //       const eq = sqlEq('month(@2000-01-01 to (@1999)::date)', '-12');
+  //       expect(await eq).isSqlEq();
+  //     });
+  //   });
+  // });
+
+  describe('granular time range checks', () => {
+    test('date = timestamp.ymd', async () => {
+      const eq = sqlEq('t_date ? t_timestamp.month', true);
+      expect(await eq).isSqlEq();
+    });
+    test('date = timestamp.hms', async () => {
+      const eq = sqlEq('t_date ? t_timestamp.hour', false);
+      expect(await eq).isSqlEq();
+    });
+
+    test('date = literal.ymd', async () => {
+      const eq = sqlEq('t_date ? @2021-02-24.week', true);
+      expect(await eq).isSqlEq();
+    });
+
+    test('date = literal.hms', async () => {
+      const eq = sqlEq('t_date ? @2021-02-24.hour', false);
+      expect(await eq).isSqlEq();
+    });
+    /*
+     * Here is the matrix of all possible tests, I don't know that we need
+     * this entire list, there may be coverage of all code with fewer tests.
+     *
+     * I also don't know how to test these. As I was writing the code I
+     * had worried and wanted tests to cover my worry, but now I don't
+     * even know what I was worried about
+     *
+     * I think the general worry is that we generate the correct expression
+     * given the large matrix of possible type combinations.
+     *
+     * So the first question is, what combinations require casting that
+     * would fail if the casting didn't happen, make sure those
+     * tests exist.
+     *
+     */
+    for (const checkType of ['date', 'timestamp', 'literal']) {
+      for (const beginType of ['date', 'timestamp', 'literal']) {
+        for (const unitType of ['date', 'timestasmp']) {
+          if (checkType !== unitType) {
+            test.todo(`granular ${checkType} ? ${beginType}.${unitType}`);
+            test.todo(`granular ${checkType} ? ${beginType} for ${unitType}`);
+          }
+        }
+        for (const endType of ['date', 'timestasmp', 'literal']) {
+          if (checkType !== beginType || beginType !== endType) {
+            test.todo(`granular ${checkType} ? ${beginType} to ${endType}`);
+          }
+        }
+      }
+    }
+  });
+  test('dependant join dialect fragments', async () => {
+    await expect(runtime).queryMatches(
+      `
+        sql: timeData is { connection: "${dbName}" select: """${timeSQL}""" }
+        query: from_sql(timeData) -> {
+          join_one: joined is from_sql(timeData) on t_date = joined.t_date
+          group_by: t_month is joined.t_timestamp.month
+        }
+    `,
+      {t_month: new Date('2021-02-01')}
+    );
   });
 });
 
