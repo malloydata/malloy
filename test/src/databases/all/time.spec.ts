@@ -31,13 +31,20 @@ import {DateTime as LuxonDateTime} from 'luxon';
 const runtimes = new RuntimeList(allDatabases);
 
 // MTOY todo look at this list for timezone problems, I know there are some
-describe.each(runtimes.runtimeList)(
-  '%s: interval measurement',
-  (dbName, runtime) => {
-    const sqlEq = mkSqlEqWith(runtime);
+describe.each(runtimes.runtimeList)('%s date and time', (_dbName, runtime) => {
+  const sqlEq = mkSqlEqWith(runtime, {
+    sql: "SELECT DATE '2021-02-24' as t_date, TIMESTAMP '2021-02-24 03:05:06' as t_timestamp",
+  });
 
-    // MTOY todo when there is query time zone, check that literals
-    // NOT in the query time zone bin in the query time zone.
+  describe('interval measurement', () => {
+    test('forwards is positive', async () => {
+      const eq = sqlEq('day(@2000-01-01 to @2000-01-02)', '1');
+      expect(await eq).isSqlEq();
+    });
+    test('reverse is negative', async () => {
+      const eq = sqlEq('day(@2000-01-02 to @2000-01-01)', '-1');
+      expect(await eq).isSqlEq();
+    });
 
     // MTOY todo tests for the moprhing literal ranges to timestamp
     // or date, depending on LHS of the apply. ( maybe should be in parse.spec?)
@@ -84,57 +91,342 @@ describe.each(runtimes.runtimeList)(
       ).isSqlEq();
     });
 
-    test.skip('weeks', async () => {
-      expect(await sqlEq('week(now.week to now.week + 6 days)', 0)).isSqlEq();
-      expect(await sqlEq('week(now.week to now.week + 7 days)', 1)).isSqlEq();
-      expect(
-        await sqlEq('week(now.week to now.week + 7 days - 1 second)', 0)
-      ).isSqlEq();
-      expect(await sqlEq('weeks(@2022-10-01 to @2022-10-07)', 0)).isSqlEq();
-      expect(await sqlEq('weeks(@2022-10-01 to @2022-10-08)', 1)).isSqlEq();
-      expect(await sqlEq('weeks(@2022-10-15 to @2022-10-01)', -2)).isSqlEq();
-      expect(await sqlEq('weeks(@2022-10-02 to @2023-10-02)', 52)).isSqlEq();
-      expect(
-        await sqlEq('weeks(@2022-10-01 12:00 to @2022-10-08 11:59)', 0)
-      ).isSqlEq();
+    // MTOY TODO remove or implment
+    // These all are complicated by civul time issues, skipping for now
+    // test.skip('weeks', async () => {
+    //   expect(await sqlEq('week(now.week to now.week + 6 days)', 0)).isSqlEq();
+    //   expect(await sqlEq('week(now.week to now.week + 7 days)', 1)).isSqlEq();
+    //   expect(
+    //     await sqlEq('week(now.week to now.week + 7 days - 1 second)', 0)
+    //   ).isSqlEq();
+    //   expect(await sqlEq('weeks(@2022-10-01 to @2022-10-07)', 0)).isSqlEq();
+    //   expect(await sqlEq('weeks(@2022-10-01 to @2022-10-08)', 1)).isSqlEq();
+    //   expect(await sqlEq('weeks(@2022-10-15 to @2022-10-01)', -2)).isSqlEq();
+    //   expect(await sqlEq('weeks(@2022-10-02 to @2023-10-02)', 52)).isSqlEq();
+    //   expect(
+    //     await sqlEq('weeks(@2022-10-01 12:00 to @2022-10-08 11:59)', 0)
+    //   ).isSqlEq();
+    // });
+
+    // test.skip('months', async () => {
+    //   expect(await sqlEq('months(now to now)', 0)).isSqlEq();
+    //   expect(await sqlEq('months(@2001-01-01 to @2001-02-01)', 1)).isSqlEq();
+    //   expect(await sqlEq('months(@2001-01-01 to @2001-03-01)', 2)).isSqlEq();
+    //   expect(await sqlEq('months(@2001-01-01 to @2002-02-01)', 13)).isSqlEq();
+    //   expect(
+    //     await sqlEq('months(@2022-10-02 12:00 to @2022-11-02 11:59)', 0)
+    //   ).isSqlEq();
+    // });
+
+    // test.skip('quarters', async () => {
+    //   expect(await sqlEq('quarters(now to now + 1 quarter)', 1)).isSqlEq();
+    //   expect(
+    //     await sqlEq('quarters(now.quarter to now.quarter + 27 days)', 0)
+    //   ).isSqlEq();
+    //   expect(await sqlEq('quarters(now to now + 2 quarters)', 2)).isSqlEq();
+    //   expect(await sqlEq('quarters(now to now - 2 quarters)', -2)).isSqlEq();
+    //   expect(
+    //     await sqlEq('quarters(@2022-01-01 12:00 to @2022-04-01 12:00)', 1)
+    //   ).isSqlEq();
+    //   expect(
+    //     await sqlEq('quarters(@2022-01-01 12:00 to @2022-04-01 11:59)', 0)
+    //   ).isSqlEq();
+    // });
+
+    // test.skip('years', async () => {
+    //   expect(await sqlEq('years(@2022 to @2023)', 1)).isSqlEq();
+    //   expect(await sqlEq('years(@2022-01-01 to @2022-12-31)', 0)).isSqlEq();
+    //   expect(await sqlEq('years(@2022 to @2024)', 2)).isSqlEq();
+    //   expect(await sqlEq('years(@2024 to @2022)', -2)).isSqlEq();
+    //   expect(
+    //     await sqlEq('years(@2022-01-01 12:00 to @2024-01-01 11:59)', 1)
+    //   ).isSqlEq();
+    // });
+  });
+
+  describe('timestamp truncation', () => {
+    // 2021-02-24 03:05:06
+    test('trunc second', async () => {
+      const eq = sqlEq('t_timestamp.second', '@2021-02-24 03:05:06');
+      expect(await eq).isSqlEq();
     });
 
-    test.skip('months', async () => {
-      expect(await sqlEq('months(now to now)', 0)).isSqlEq();
-      expect(await sqlEq('months(@2001-01-01 to @2001-02-01)', 1)).isSqlEq();
-      expect(await sqlEq('months(@2001-01-01 to @2001-03-01)', 2)).isSqlEq();
-      expect(await sqlEq('months(@2001-01-01 to @2002-02-01)', 13)).isSqlEq();
-      expect(
-        await sqlEq('months(@2022-10-02 12:00 to @2022-11-02 11:59)', 0)
-      ).isSqlEq();
+    test('trunc minute', async () => {
+      const eq = sqlEq('t_timestamp.minute', '@2021-02-24 03:05:00');
+      expect(await eq).isSqlEq();
     });
 
-    test.skip('quarters', async () => {
-      expect(await sqlEq('quarters(now to now + 1 quarter)', 1)).isSqlEq();
-      expect(
-        await sqlEq('quarters(now.quarter to now.quarter + 27 days)', 0)
-      ).isSqlEq();
-      expect(await sqlEq('quarters(now to now + 2 quarters)', 2)).isSqlEq();
-      expect(await sqlEq('quarters(now to now - 2 quarters)', -2)).isSqlEq();
-      expect(
-        await sqlEq('quarters(@2022-01-01 12:00 to @2022-04-01 12:00)', 1)
-      ).isSqlEq();
-      expect(
-        await sqlEq('quarters(@2022-01-01 12:00 to @2022-04-01 11:59)', 0)
-      ).isSqlEq();
+    test('trunc hour', async () => {
+      const eq = sqlEq('t_timestamp.hour', '@2021-02-24 03:00:00');
+      expect(await eq).isSqlEq();
     });
 
-    test.skip('years', async () => {
-      expect(await sqlEq('years(@2022 to @2023)', 1)).isSqlEq();
-      expect(await sqlEq('years(@2022-01-01 to @2022-12-31)', 0)).isSqlEq();
-      expect(await sqlEq('years(@2022 to @2024)', 2)).isSqlEq();
-      expect(await sqlEq('years(@2024 to @2022)', -2)).isSqlEq();
-      expect(
-        await sqlEq('years(@2022-01-01 12:00 to @2024-01-01 11:59)', 1)
-      ).isSqlEq();
+    test('trunc day', async () => {
+      const eq = sqlEq('t_timestamp.day', '@2021-02-24 00:00:00');
+      expect(await eq).isSqlEq();
     });
-  }
-);
+
+    test('trunc week', async () => {
+      const eq = sqlEq('t_timestamp.week', '@2021-02-21 00:00:00');
+      expect(await eq).isSqlEq();
+    });
+
+    test('trunc month', async () => {
+      const eq = sqlEq('t_timestamp.month', '@2021-02-01 00:00:00');
+      expect(await eq).isSqlEq();
+    });
+
+    test('trunc quarter', async () => {
+      const eq = sqlEq('t_timestamp.quarter', '@2021-01-01 00:00:00');
+      expect(await eq).isSqlEq();
+    });
+
+    test('trunc year', async () => {
+      const eq = sqlEq('t_timestamp.year', '@2021-01-01 00:00:00');
+      expect(await eq).isSqlEq();
+    });
+  });
+
+  describe('timestamp extraction', () => {
+    // 2021-02-24 03:05:06
+    test('extract second', async () => {
+      const eq = sqlEq('second(t_timestamp)', '6');
+      expect(await eq).isSqlEq();
+    });
+    test('extract minute', async () => {
+      const eq = sqlEq('minute(t_timestamp)', '5');
+      expect(await eq).isSqlEq();
+    });
+    test('extract hour', async () => {
+      const eq = sqlEq('hour(t_timestamp)', '3');
+      expect(await eq).isSqlEq();
+    });
+    test('extract day', async () => {
+      const eq = sqlEq('day(t_timestamp)', '24');
+      expect(await eq).isSqlEq();
+    });
+    test('extract day_of_week', async () => {
+      const eq = sqlEq('day_of_week(t_timestamp)', '4');
+      expect(await eq).isSqlEq();
+    });
+    test('first week day is one ', async () => {
+      const eq = sqlEq('day_of_week(t_timestamp.week)', '1');
+      expect(await eq).isSqlEq();
+    });
+    test('extract day_of_year', async () => {
+      const eq = sqlEq('day_of_year(t_timestamp)', '55');
+      expect(await eq).isSqlEq();
+    });
+    test('extract week', async () => {
+      const eq = sqlEq('week(t_timestamp)', '8');
+      expect(await eq).isSqlEq();
+    });
+    test('extract month', async () => {
+      const eq = sqlEq('month(t_timestamp)', '2');
+      expect(await eq).isSqlEq();
+    });
+    test('extract quarter', async () => {
+      const eq = sqlEq('quarter(t_timestamp)', '1');
+      expect(await eq).isSqlEq();
+    });
+    test('extract year', async () => {
+      const eq = sqlEq('year(t_timestamp)', '2021');
+      expect(await eq).isSqlEq();
+    });
+  });
+  describe('date truncation', () => {
+    test('date trunc day', async () => {
+      const eq = sqlEq('t_date.day', '@2021-02-24');
+      expect(await eq).isSqlEq();
+    });
+
+    test('date trunc week', async () => {
+      const eq = sqlEq('t_date.week', '@2021-02-21');
+      expect(await eq).isSqlEq();
+    });
+
+    test('date trunc month', async () => {
+      const eq = sqlEq('t_date.month', '@2021-02-01');
+      expect(await eq).isSqlEq();
+    });
+
+    test('date trunc quarter', async () => {
+      const eq = sqlEq('t_date.quarter', '@2021-01-01');
+      expect(await eq).isSqlEq();
+    });
+
+    test('date trunc year', async () => {
+      const eq = sqlEq('t_date.year', '@2021');
+      expect(await eq).isSqlEq();
+    });
+  });
+
+  describe('date extraction', () => {
+    test('date extract day', async () => {
+      const eq = sqlEq('day(t_date)', '24');
+      expect(await eq).isSqlEq();
+    });
+    test('date extract day_of_week', async () => {
+      const eq = sqlEq('day_of_week(t_date)', '4');
+      expect(await eq).isSqlEq();
+    });
+    test('date extract day_of_year', async () => {
+      const eq = sqlEq('day_of_year(t_date)', '55');
+      expect(await eq).isSqlEq();
+    });
+    test('date extract week', async () => {
+      const eq = sqlEq('week(t_date)', '8');
+      expect(await eq).isSqlEq();
+    });
+    test('date extract month', async () => {
+      const eq = sqlEq('month(t_date)', '2');
+      expect(await eq).isSqlEq();
+    });
+    test('date extract quarter', async () => {
+      const eq = sqlEq('quarter(t_date)', '1');
+      expect(await eq).isSqlEq();
+    });
+    test('date extract year', async () => {
+      const eq = sqlEq('year(t_date)', '2021');
+      expect(await eq).isSqlEq();
+    });
+  });
+
+  describe('delta computations', () => {
+    test('timestamp delta second', async () => {
+      const eq = sqlEq('t_timestamp + 10 seconds', '@2021-02-24 03:05:16');
+      expect(await eq).isSqlEq();
+    });
+    test('timestamp delta negative second', async () => {
+      const eq = sqlEq('t_timestamp - 6 seconds', '@2021-02-24 03:05:00');
+      expect(await eq).isSqlEq();
+    });
+    test('timestamp delta minute', async () => {
+      const eq = sqlEq('t_timestamp + 10 minutes', '@2021-02-24 03:15:06');
+      expect(await eq).isSqlEq();
+    });
+    test('timestamp delta hours', async () => {
+      const eq = await sqlEq('t_timestamp + 10 hours', '@2021-02-24 13:05:06');
+      expect(eq).isSqlEq();
+    });
+    test('timestamp delta week', async () => {
+      const eq = sqlEq('(t_timestamp - 2 weeks)::date', '@2021-02-10');
+      expect(await eq).isSqlEq();
+    });
+    test('timestamp delta month', async () => {
+      const eq = sqlEq('(t_timestamp + 9 months)::date', '@2021-11-24');
+      expect(await eq).isSqlEq();
+    });
+    test('timestamp delta quarter', async () => {
+      const eq = sqlEq('(t_timestamp + 2 quarters)::date', '@2021-08-24');
+      expect(await eq).isSqlEq();
+    });
+    test('timestamp delta year', async () => {
+      const eq = sqlEq('(t_timestamp + 10 years)::date', '@2031-02-24');
+      expect(await eq).isSqlEq();
+    });
+    // mtoy todo make these compiler errrors
+    // test('date delta second', async () => {
+    //   const eq = sqlEq('t_date + 10 seconds', '@2021-02-24 00:00:10');
+    //   expect(await eq).isSqlEq();
+    // });
+    // test('date delta minute', async () => {
+    //   const eq = sqlEq('t_date + 10 minutes', '@2021-02-24 00:10:00');
+    //   expect(await eq).isSqlEq();
+    // });
+    // test('date delta hours', async () => {
+    //   const eq = sqlEq('t_date + 10 hours', '@2021-02-24 10:00:00');
+    //   expect(await eq).isSqlEq();
+    // });
+    test('date delta week', async () => {
+      const eq = sqlEq('t_date - 2 weeks', '@2021-02-10');
+      expect(await eq).isSqlEq();
+    });
+    test('date delta month', async () => {
+      const eq = sqlEq('t_date + 9 months', '@2021-11-24');
+      expect(await eq).isSqlEq();
+    });
+    test('date delta quarter', async () => {
+      const eq = sqlEq('t_date + 2 quarters', '@2021-08-24');
+      expect(await eq).isSqlEq();
+    });
+    test('date delta year', async () => {
+      const eq = sqlEq('t_date + 10 years', '@2031-02-24');
+      expect(await eq).isSqlEq();
+    });
+  });
+
+  describe('for range edge tests', () => {
+    describe('date', () => {
+      test('before for-range is outside', async () => {
+        const eq = sqlEq('t_date ? @2021-02-25 for 1 day', false);
+        expect(await eq).isSqlEq();
+      });
+      test('first for-range is inside', async () => {
+        const eq = sqlEq('t_date ? @2021-02-24 for 1 day', true);
+        expect(await eq).isSqlEq();
+      });
+      test('last for-range is outside', async () => {
+        const eq = sqlEq('t_date ? @2021-02-23 for 1 day', false);
+        expect(await eq).isSqlEq();
+      });
+    });
+    describe('timestamp', () => {
+      test('before for-range is outside', async () => {
+        const eq = sqlEq('t_timestamp ? @2021-02-25 00:00:00 for 1 day', false);
+        expect(await eq).isSqlEq();
+      });
+      test('first for-range is inside', async () => {
+        const eq = sqlEq('t_timestamp ? @2021-02-24 03:04:05 for 1 day', true);
+        expect(await eq).isSqlEq();
+      });
+      test('last for-range is outside', async () => {
+        const eq = sqlEq('t_timestamp ? @2021-02-23 03:05:06 for 1 day', false);
+        expect(await eq).isSqlEq();
+      });
+    });
+  });
+
+  describe('to range edge tests', () => {
+    describe('date', () => {
+      test('before to is outside', async () => {
+        const eq = sqlEq('t_date ? @2021-02-25 to @2021-03-01', false);
+        expect(await eq).isSqlEq();
+      });
+      test('first to is inside', async () => {
+        const eq = sqlEq('t_date ? @2021-02-24 to @2021-03-01', true);
+        expect(await eq).isSqlEq();
+      });
+      test('last to is outside', async () => {
+        const eq = sqlEq('t_date ? @2021-02-01 to @2021-02-24', false);
+        expect(await eq).isSqlEq();
+      });
+    });
+    describe('timestamp', () => {
+      test('before to is outside', async () => {
+        const eq = sqlEq(
+          't_timestamp ? @2021-02-25 00:00:00 to @2021-02-26 00:00:00',
+          false
+        );
+        expect(await eq).isSqlEq();
+      });
+      test('first to is inside', async () => {
+        const eq = sqlEq(
+          't_timestamp ? @2021-02-24 03:04:05 to @2021-02-26 00:00:00',
+          true
+        );
+        expect(await eq).isSqlEq();
+      });
+      test('last to is outside', async () => {
+        const eq = sqlEq(
+          't_timestamp ? @2021-02-24 00:00:00 to @2021-02-24 03:05:06',
+          false
+        );
+        expect(await eq).isSqlEq();
+      });
+    });
+  });
+});
 
 /*
   not entirely sure what to test here so i am going to free-wheel a bit
