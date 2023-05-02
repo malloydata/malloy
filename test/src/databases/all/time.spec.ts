@@ -519,6 +519,30 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
       {t_month: new Date('2021-02-01')}
     );
   });
+
+  test('can use unsupported types', async () => {
+    if (dbName === 'bigquery') {
+      await expect(runtime).queryMatches(
+        `sql: timeData is { connection: "${dbName}" select: """
+          SELECT DATETIME '2020-02-20 00:00:00' as t_datetime
+          """}
+        query: from_sql(timeData) -> {
+          project: mex_220 is t_datetime::timestamp
+        }`,
+        {mex_220: utc_2020.toJSDate()}
+      );
+    } else {
+      await expect(runtime).queryMatches(
+        `sql: timeData is { connection: "${dbName}"  select: """
+            SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
+          """}
+        query: from_sql(timeData) -> {
+          project: mex_220 is t_tstz::timestamp
+        }`,
+        {mex_220: zone_2020.toJSDate()}
+      );
+    }
+  });
 });
 
 /*

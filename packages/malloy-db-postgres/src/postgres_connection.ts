@@ -59,8 +59,6 @@ const postgresToMalloyTypes: {[key: string]: AtomicFieldTypeInner} = {
   boolean: 'boolean',
   // ARRAY: "string",
   'timestamp without time zone': 'timestamp',
-  // mtoy TODO timestamptz is a concern because we can't "AT TIME ZONE"
-  'timestamp with time zone': 'timestamp',
   timestamp: 'timestamp',
   '"char"': 'string',
   character: 'string',
