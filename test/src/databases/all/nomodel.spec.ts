@@ -32,17 +32,17 @@ import {databasesFromEnvironmentOr} from '../../util';
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 const splitFunction: Record<string, string> = {
-  bigquery: 'split',
-  postgres: 'string_to_array',
-  duckdb: 'string_to_array',
-  duckdb_wasm: 'string_to_array',
+  'bigquery': 'split',
+  'postgres': 'string_to_array',
+  'duckdb': 'string_to_array',
+  'duckdb_wasm': 'string_to_array',
 };
 
 const rootDbPath: Record<string, string> = {
-  bigquery: 'malloy-data.',
-  postgres: '',
-  duckdb: '',
-  duckdb_wasm: '',
+  'bigquery': 'malloy-data.',
+  'postgres': '',
+  'duckdb': '',
+  'duckdb_wasm': '',
 };
 
 afterAll(async () => {

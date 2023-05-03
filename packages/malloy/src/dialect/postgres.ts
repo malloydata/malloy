@@ -45,23 +45,23 @@ import {
 } from './dialect';
 
 const castMap: Record<string, string> = {
-  number: 'double precision',
-  string: 'varchar',
+  'number': 'double precision',
+  'string': 'varchar',
 };
 
 const pgExtractionMap: Record<string, string> = {
-  day_of_week: 'dow',
-  day_of_year: 'doy',
+  'day_of_week': 'dow',
+  'day_of_year': 'doy',
 };
 
 const pgMakeIntervalMap: Record<string, string> = {
-  year: 'years',
-  month: 'months',
-  week: 'weeks',
-  day: 'days',
-  hour: 'hours',
-  minute: 'mins',
-  second: 'secs',
+  'year': 'years',
+  'month': 'months',
+  'week': 'weeks',
+  'day': 'days',
+  'hour': 'hours',
+  'minute': 'mins',
+  'second': 'secs',
 };
 
 const inSeconds: Record<string, number> = {
