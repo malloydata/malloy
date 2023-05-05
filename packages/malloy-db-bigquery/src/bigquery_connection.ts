@@ -65,12 +65,20 @@ export interface BigQueryQueryOptions {
   rowLimit: number;
 }
 
+// From BigQuery/Google Auth SDK
+interface CredentialBody {
+  client_email?: string;
+  private_key?: string;
+}
+
 interface BigQueryConnectionConfiguration {
   defaultProject?: string;
   serviceAccountKeyPath?: string;
   location?: string;
   maximumBytesBilled?: string;
   timeoutMs?: string;
+  projectId?: string;
+  credentials?: CredentialBody;
 }
 
 interface SchemaInfo {
@@ -182,6 +190,8 @@ export class BigQueryConnection
     this.bigQuery = new BigQuerySDK({
       userAgent: `Malloy/${Malloy.version}`,
       keyFilename: config.serviceAccountKeyPath,
+      credentials: config.credentials,
+      projectId: config.projectId,
     });
 
     // record project ID because for unclear reasons we have to modify the project ID on the SDK when
