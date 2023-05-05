@@ -479,7 +479,7 @@ class QueryField extends QueryNode {
     let ret;
     if (distinctKeySQL) {
       if (this.parent.dialect.supportsSumDistinctFunction) {
-        ret = this.parent.dialect.sqlSumDistinct(distinctKeySQL, dimSQL);
+        ret = this.parent.dialect.sqlSumDistinct(distinctKeySQL, dimSQL, 'SUM');
       } else {
         ret = sqlSumDistinct(this.parent.dialect, dimSQL, distinctKeySQL);
       }
@@ -522,10 +522,12 @@ class QueryField extends QueryNode {
         countDistinctKeySQL = `CASE WHEN ${state.whereSQL} THEN ${distinctKeySQL} END`;
       }
       let sumDistinctSQL;
+      let avgDistinctSQL;
       if (this.parent.dialect.supportsSumDistinctFunction) {
-        sumDistinctSQL = this.parent.dialect.sqlSumDistinct(
+        avgDistinctSQL = this.parent.dialect.sqlSumDistinct(
           distinctKeySQL,
-          dimSQL
+          dimSQL,
+          'AVG'
         );
       } else {
         sumDistinctSQL = sqlSumDistinct(
@@ -533,8 +535,9 @@ class QueryField extends QueryNode {
           dimSQL,
           distinctKeySQL
         );
+        avgDistinctSQL = `(${sumDistinctSQL})/NULLIF(COUNT(DISTINCT CASE WHEN ${dimSQL} IS NOT NULL THEN ${countDistinctKeySQL} END),0)`;
       }
-      return `(${sumDistinctSQL})/NULLIF(COUNT(DISTINCT ${countDistinctKeySQL}),0)`;
+      return avgDistinctSQL;
     } else {
       return `AVG(${dimSQL})`;
     }
@@ -2257,7 +2260,7 @@ class QueryQuery extends QueryField {
     let structSQL = qs.structSourceSQL(stageWriter);
     if (isJoinOn(structRelationship)) {
       if (ji.makeUniqueKey) {
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL} as x)`;
       }
       let onCondition = '';
       if (qs.parent === undefined) {

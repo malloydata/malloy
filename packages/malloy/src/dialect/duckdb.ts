@@ -339,10 +339,10 @@ export class DuckDBDialect extends Dialect {
     return `TIMESTAMP '${timeString}'`;
   }
 
-  sqlSumDistinct(key: string, value: string): string {
+  sqlSumDistinct(key: string, value: string, funcName: string): string {
     // return `sum_distinct(list({key:${key}, val: ${value}}))`;
     return `(
-      SELECT sum(a.val) as value
+      SELECT ${funcName}(a.val) as value
       FROM (
         SELECT UNNEST(list(distinct {key:${key}, val: ${value}})) a
       )

@@ -11,7 +11,7 @@
   ],
   "rules": {
     "no-console": "warn",
-    "prettier/prettier": "error",
+    "prettier/prettier": ["error", {"quoteProps": "preserve"}],
     "sort-keys": "off",
     "no-duplicate-imports": "error",
     "no-restricted-imports": [
@@ -38,6 +38,10 @@
     "@typescript-eslint/parameter-properties": [
       "warn",
       {"prefer": "parameter-property"}
+    ],
+    "quote-props": [
+      "error",
+      "consistent"
     ]
   }
 }

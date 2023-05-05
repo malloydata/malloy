@@ -269,7 +269,7 @@ export abstract class Dialect {
     }
   }
 
-  sqlSumDistinct(_key: string, _value: string): string {
+  sqlSumDistinct(_key: string, _value: string, _funcName: string): string {
     return 'sqlSumDistinct called bu not implemented';
   }
 
