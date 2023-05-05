@@ -45,9 +45,6 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
       expect(await eq).isSqlEq();
     });
 
-    // MTOY todo tests for the moprhing literal ranges to timestamp
-    // or date, depending on LHS of the apply. ( maybe should be in parse.spec?)
-
     test('seconds', async () => {
       expect(await sqlEq('seconds(now to now + 1 second)', 1)).isSqlEq();
       expect(await sqlEq('seconds(now to now)', 0)).isSqlEq();
@@ -324,11 +321,10 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
       const eq = sqlEq('(t_timestamp + 10 years)::date', '@2031-02-24');
       expect(await eq).isSqlEq();
     });
-    // mtoy todo make these compiler errrors
-    // test('date delta second', async () => {
-    //   const eq = sqlEq('t_date + 10 seconds', '@2021-02-24 00:00:10');
-    //   expect(await eq).isSqlEq();
-    // });
+    test('date delta second', async () => {
+      const eq = sqlEq('t_date + 10 seconds', '@2021-02-24 00:00:10');
+      expect(await eq).isSqlEq();
+    });
     // test('date delta minute', async () => {
     //   const eq = sqlEq('t_date + 10 minutes', '@2021-02-24 00:10:00');
     //   expect(await eq).isSqlEq();

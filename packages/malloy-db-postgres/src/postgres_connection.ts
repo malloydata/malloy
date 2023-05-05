@@ -431,8 +431,6 @@ export class PooledPostgresConnection
   constructor(name: string) {
     super(name);
     this.pool = new Pool();
-    // mtoy TODO make sure this is acquire
-    // it might just be 'connect', but this is safer for now
     this.pool.on('acquire', client => client.query("SET TIME ZONE 'UTC'"));
   }
 
