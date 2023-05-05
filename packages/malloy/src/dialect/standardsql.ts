@@ -347,7 +347,6 @@ ${indent(sql)}
     return mkExpr`CURRENT_TIMESTAMP()`;
   }
 
-  // MTOY TODO --- write tests for all this too
   sqlTrunc(qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {
     const tz = qtz(qi);
     const tzAdd = tz ? `, "${tz}"` : '';
@@ -360,7 +359,7 @@ ${indent(sql)}
     return mkExpr`TIMESTAMP_TRUNC(${sqlTime.value},${units}${tzAdd})`;
   }
 
-  sqlExtract(qi, expr: TimeValue, units: ExtractUnit): Expr {
+  sqlExtract(qi: QueryInfo, expr: TimeValue, units: ExtractUnit): Expr {
     const tz = qtz(qi);
     const tzAdd = tz ? ` AT TIME ZONE '${tz}'` : '';
     const extractTo = extractMap[units] || units;
