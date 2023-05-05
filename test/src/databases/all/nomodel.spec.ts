@@ -333,6 +333,29 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   //   expect(result.data.path(0, "ugly", 0, "foo").value).toBe(null);
   // });
 
+  // average should only include non-null values in the denominator
+  it(`avg ignore null- ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      sql: one is { select: """
+        SELECT 2 as a,
+        UNION ALL SELECT 4
+        UNION ALL SELECT null
+      """}
+
+      query: from_sql(one) -> {
+        join_cross: b is from_sql(one)
+        aggregate:
+          avg_a is a.avg()
+          avg_b is b.a.avg()
+      }
+      `
+      )
+      .run();
+    expect(result.data.value[0]['avg_a']).toBe(3);
+  });
+
   it(`limit - not provided - ${databaseName}`, async () => {
     // a cross join produces a Many to Many result.
     // symmetric aggregate are needed on both sides of the join
