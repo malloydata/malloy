@@ -438,20 +438,6 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
     expect(await eq).isSqlEq();
   });
 
-  // mtoy todo catch these in the compiler ... or implement
-  // describe(`time operations `, () => {
-  //   describe(`time difference `, () => {
-  //     test('DATE to TIMESTAMP', async () => {
-  //       const eq = sqlEq('day((@1999)::date to @2000-01-01 00:00:00)', '365');
-  //       expect(await eq).isSqlEq();
-  //     });
-  //     test('TIMESTAMP to DATE', async () => {
-  //       const eq = sqlEq('month(@2000-01-01 to (@1999)::date)', '-12');
-  //       expect(await eq).isSqlEq();
-  //     });
-  //   });
-  // });
-
   describe('granular time range checks', () => {
     const tsMoment = '@2021-02-24 03:05:06';
     test('minute implied truncated range', async () => {
