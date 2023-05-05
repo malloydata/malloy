@@ -25,6 +25,7 @@ import {
   DivFragment,
   Expr,
   TimestampUnit,
+  isDateUnit,
   isTimeFieldType,
   maxExpressionType,
 } from '../../../model/malloy_types';
@@ -150,17 +151,22 @@ export class ExprDuration extends ExpressionDef {
           resultGranularity
         );
       }
-      return timeResult(
-        {
-          dataType: 'date',
-          expressionType: maxExpressionType(
-            lhs.expressionType,
-            num.expressionType
-          ),
-          value: timeOffset('date', lhs.value, op, num.value, this.timeframe),
-        },
-        resultGranularity
-      );
+      if (isDateUnit(this.timeframe)) {
+        return timeResult(
+          {
+            dataType: 'date',
+            expressionType: maxExpressionType(
+              lhs.expressionType,
+              num.expressionType
+            ),
+            value: timeOffset('date', lhs.value, op, num.value, this.timeframe),
+          },
+          resultGranularity
+        );
+      } else {
+        this.log(`Cannot offset date by ${this.timeframe}`);
+        return errorFor('ofsset date error');
+      }
     }
     return super.apply(fs, op, left);
   }

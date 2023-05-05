@@ -852,6 +852,13 @@ describe('expressions', () => {
     test('can apply range to date', () => {
       expect('ad ? @2001 for 1 day').expressionCompiled();
     });
+    const noOffset = ['second', 'minute', 'hour'];
+
+    test.each(noOffset.map(x => [x]))('disallow date delta %s', unit => {
+      expect(new BetaExpression(`ad + 10 ${unit}s`)).compileToFailWith(
+        `Cannot offset date by ${unit}`
+      );
+    });
   });
 
   test('filtered measure', exprOK("acount {? astr = 'why?' }"));
