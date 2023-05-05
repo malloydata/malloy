@@ -457,56 +457,35 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
   // });
 
   describe('granular time range checks', () => {
-    test('date = timestamp.ymd', async () => {
-      const eq = sqlEq('t_date ? t_timestamp.month', true);
-      expect(await eq).isSqlEq();
+    const tsMoment = '@2021-02-24 03:05:06';
+    test('minute implied truncated range', async () => {
+      const tsBefore = '@2021-03-24 03:04:59';
+      expect(await sqlEq(`${tsMoment} ? t_timestamp.minute`, true)).isSqlEq();
+      expect(await sqlEq(`${tsBefore} ? t_timestamp.minute`, false)).isSqlEq();
     });
-    test('date = timestamp.hms', async () => {
-      const eq = sqlEq('t_date ? t_timestamp.hour', false);
-      expect(await eq).isSqlEq();
+    test('day implied truncated range', async () => {
+      expect(await sqlEq(`${tsMoment} ? t_timestamp.day`, true)).isSqlEq();
     });
-
-    test('date = literal.ymd', async () => {
-      const eq = sqlEq('t_date ? @2021-02-24.week', true);
-      expect(await eq).isSqlEq();
+    test('year implied truncated range', async () => {
+      expect(await sqlEq(`${tsMoment} ? t_timestamp.year`, true)).isSqlEq();
     });
-
-    test('date = literal.hms', async () => {
-      const eq = sqlEq('t_date ? @2021-02-24.hour', false);
-      expect(await eq).isSqlEq();
+    test('timestamp in literal minute', async () => {
+      expect(await sqlEq('t_timestamp ? @2021-02-24 03:05', true)).isSqlEq();
     });
-    /*
-     * Here is the matrix of all possible tests, I don't know that we need
-     * this entire list, there may be coverage of all code with fewer tests.
-     *
-     * I also don't know how to test these. As I was writing the code I
-     * had worried and wanted tests to cover my worry, but now I don't
-     * even know what I was worried about
-     *
-     * I think the general worry is that we generate the correct expression
-     * given the large matrix of possible type combinations.
-     *
-     * So the first question is, what combinations require casting that
-     * would fail if the casting didn't happen, make sure those
-     * tests exist.
-     *
-     */
-    for (const checkType of ['date', 'timestamp', 'literal']) {
-      for (const beginType of ['date', 'timestamp', 'literal']) {
-        for (const unitType of ['date', 'timestasmp']) {
-          if (checkType !== unitType) {
-            test.todo(`granular ${checkType} ? ${beginType}.${unitType}`);
-            test.todo(`granular ${checkType} ? ${beginType} for ${unitType}`);
-          }
-        }
-        for (const endType of ['date', 'timestasmp', 'literal']) {
-          if (checkType !== beginType || beginType !== endType) {
-            test.todo(`granular ${checkType} ? ${beginType} to ${endType}`);
-          }
-        }
-      }
-    }
+    test('timestamp in literal day', async () => {
+      expect(await sqlEq('t_timestamp ? @2021-02-24', true)).isSqlEq();
+    });
+    test('date in literal month', async () => {
+      expect(await sqlEq('t_date ? @2021-02', true)).isSqlEq();
+    });
+    test('timestamp in literal month', async () => {
+      expect(await sqlEq('t_timestamp ? @2021-02', true)).isSqlEq();
+    });
+    test('timestamp in literal year', async () => {
+      expect(await sqlEq('t_timestamp ? @2021', true)).isSqlEq();
+    });
   });
+
   test('dependant join dialect fragments', async () => {
     await expect(runtime).queryMatches(
       `

@@ -831,6 +831,22 @@ describe('expressions', () => {
     test('not', exprOK('not true'));
     test('and', exprOK('true and false'));
     test('or', exprOK('true or false'));
+    test('disallow date OP number', () => {
+      expect(new BetaExpression('@2001 = 7')).compileToFailWith(
+        'Cannot compare a date to a number'
+      );
+    });
+    test('disallow date OP timestamp', () => {
+      expect(new BetaExpression('ad = ats')).compileToFailWith(
+        'Cannot compare a date to a timestamp'
+      );
+    });
+    test('comparison promotes date literal to timestamp', () => {
+      expect('@2001 = ats').expressionCompiled();
+    });
+    test('can apply range to date', () => {
+      expect('ad ? @2001 for 1 day').expressionCompiled();
+    });
   });
 
   test('filtered measure', exprOK("acount {? astr = 'why?' }"));

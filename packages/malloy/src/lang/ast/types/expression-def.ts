@@ -32,7 +32,7 @@ import {
 import {errorFor} from '../ast-utils';
 import {compose, nullsafeNot} from '../expressions/utils';
 import {FT} from '../fragtype-utils';
-import {castTimestampToDate, timeOffset, timeResult} from '../time-utils';
+import {timeOffset, timeResult} from '../time-utils';
 import {isComparison} from './comparison';
 import {Equality, isEquality} from './equality';
 import {ExprValue} from './expr-value';
@@ -174,22 +174,51 @@ export class ExprDuration extends ExpressionDef {
   }
 }
 
+function willMorphTo(ev: ExprValue, t: string): Expr | undefined {
+  if (ev.dataType === t) {
+    return ev.value;
+  }
+  return ev.morphic && ev.morphic[t];
+}
+
+export function getMorphicValue(
+  mv: ExprValue,
+  mt: FieldValueType
+): ExprValue | undefined {
+  if (mv.dataType === mt) {
+    return mv;
+  }
+  if (mv.morphic && mv.morphic[mt]) {
+    return {
+      ...mv,
+      dataType: mt,
+      value: mv.morphic[mt],
+    };
+  }
+}
+
 function timeCompare(
+  left: ExpressionDef,
   lhs: ExprValue,
   op: string,
   rhs: ExprValue
 ): Expr | undefined {
-  if (isTimeFieldType(lhs.dataType) && isTimeFieldType(rhs.dataType)) {
+  const leftIsTime = isTimeFieldType(lhs.dataType);
+  const rightIsTime = isTimeFieldType(rhs.dataType);
+  if (leftIsTime && rightIsTime) {
     if (lhs.dataType !== rhs.dataType) {
-      let lval = lhs.value;
-      let rval = rhs.value;
-      if (lhs.dataType === 'timestamp') {
-        lval = castTimestampToDate(lval);
-      } else {
-        rval = castTimestampToDate(rval);
+      const lval = willMorphTo(lhs, 'timestamp');
+      const rval = willMorphTo(rhs, 'timestamp');
+      if (lval && rval) {
+        return compose(lval, op, rval);
       }
-      return compose(lval, op, rval);
+    } else {
+      return compose(lhs.value, op, rhs.value);
     }
+  }
+  if (leftIsTime || rightIsTime) {
+    left.log(`Cannot compare a ${lhs.dataType} to a ${rhs.dataType}`);
+    return ['false'];
   }
   return undefined;
 }
@@ -262,7 +291,8 @@ function equality(
       }
     }
   }
-  let value = timeCompare(lhs, op, rhs) || compose(lhs.value, op, rhs.value);
+  let value =
+    timeCompare(left, lhs, op, rhs) || compose(lhs.value, op, rhs.value);
 
   if (lhs.dataType !== 'unknown' && rhs.dataType !== 'unknown') {
     switch (op) {
@@ -321,7 +351,8 @@ function compare(
   if (noCompare) {
     return {...noCompare, dataType: 'boolean'};
   }
-  const value = timeCompare(lhs, op, rhs) || compose(lhs.value, op, rhs.value);
+  const value =
+    timeCompare(left, lhs, op, rhs) || compose(lhs.value, op, rhs.value);
 
   return {
     dataType: 'boolean',

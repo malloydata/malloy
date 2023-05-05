@@ -22,7 +22,6 @@
  */
 
 import {
-  isDateUnit,
   isTimeFieldType,
   mkExpr,
   TimestampUnit,
@@ -87,14 +86,7 @@ export class ExprGranularTime extends ExpressionDef {
   }
 
   apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
-    const rangeType = this.getExpression(fs).dataType;
-    const _valueType = left.getExpression(fs).dataType;
-    const granularityType = isDateUnit(this.units) ? 'date' : 'timestamp';
-
-    if (rangeType === 'date' && granularityType === 'date') {
-      return this.dateRange(fs, op, left);
-    }
-    return this.timestampRange(fs, op, left);
+    return this.getRange(fs).apply(fs, op, left);
 
     /*
       write tests for each of these cases ....
@@ -113,32 +105,20 @@ export class ExprGranularTime extends ExpressionDef {
     */
   }
 
-  protected timestampRange(
-    fs: FieldSpace,
-    op: string,
-    expr: ExpressionDef
-  ): ExprValue {
+  protected getRange(fs: FieldSpace): Range {
     const begin = this.getExpression(fs);
-    const beginTime = ExprTime.fromValue('timestamp', begin);
-    const endTime = new ExprTime(
-      'timestamp',
-      timeOffset('timestamp', begin.value, '+', mkExpr`1`, this.units),
-      begin.expressionType
-    );
-    const range = new Range(beginTime, endTime);
-    return range.apply(fs, op, expr);
-  }
-
-  protected dateRange(
-    fs: FieldSpace,
-    op: string,
-    expr: ExpressionDef
-  ): ExprValue {
-    const begin = this.getExpression(fs);
-    const beginTime = new ExprTime('date', begin.value, begin.expressionType);
+    if (begin.dataType === 'timestamp') {
+      const beginTS = ExprTime.fromValue('timestamp', begin);
+      const endTS = new ExprTime(
+        'timestamp',
+        timeOffset('timestamp', begin.value, '+', mkExpr`1`, this.units),
+        begin.expressionType
+      );
+      return new Range(beginTS, endTS);
+    }
+    const beginDate = new ExprTime('date', begin.value, begin.expressionType);
     const endAt = timeOffset('date', begin.value, '+', ['1'], this.units);
-    const end = new ExprTime('date', endAt, begin.expressionType);
-    const range = new Range(beginTime, end);
-    return range.apply(fs, op, expr);
+    const endDate = new ExprTime('date', endAt, begin.expressionType);
+    return new Range(beginDate, endDate);
   }
 }

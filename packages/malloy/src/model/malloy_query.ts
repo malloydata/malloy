@@ -2183,39 +2183,21 @@ class QueryQuery extends QueryField {
               break;
             case 'timestamp': {
               const timeframe = fi.f.fieldDef.timeframe;
-              switch (timeframe) {
-                case 'year':
-                case 'month':
-                case 'week':
-                case 'quarter':
-                case 'day':
-                  fields.push({
-                    name,
-                    type: 'date',
-                    timeframe,
-                    resultMetadata,
-                    location,
-                  });
-                  break;
-                case 'second':
-                case 'minute':
-                case 'hour':
-                  fields.push({
-                    name,
-                    type: 'timestamp',
-                    timeframe,
-                    resultMetadata,
-                    location,
-                  });
-                  break;
-                default:
-                  fields.push({
-                    name,
-                    type: 'timestamp',
-                    resultMetadata,
-                    location,
-                  });
-                  break;
+              if (timeframe) {
+                fields.push({
+                  name,
+                  type: 'timestamp',
+                  timeframe,
+                  resultMetadata,
+                  location,
+                });
+              } else {
+                fields.push({
+                  name,
+                  type: 'timestamp',
+                  resultMetadata,
+                  location,
+                });
               }
               break;
             }

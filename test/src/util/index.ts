@@ -109,17 +109,16 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
       const elsePick = result ? notEq : "'='";
       query = `${sourceDef}
           query: basicTypes
-          -> { project: ${varName} is ${expr} }
           -> {
+            declare: ${varName} is ${expr}
             project: calc is pick ${whenPick} else ${elsePick}
           }`;
     } else if (typeof result === 'number') {
       query = `${sourceDef}
           query: basicTypes
           -> {
-            project: expect is ${result}
-            project: got is ${expr}
-          } -> {
+            declare: expect is ${result}
+            declare: got is ${expr}
             project: calc is
               pick '=' when expect = got
               else concat('sqlEq failed', CHR(10), '    Expected: ${qExpr} == ${result}', CHR(10), '    Received: ', got::string)
