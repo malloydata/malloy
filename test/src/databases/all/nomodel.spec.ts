@@ -339,7 +339,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .loadQuery(
         `
       sql: one is { select: """
-        SELECT 2 as a,
+        SELECT 2 as a
         UNION ALL SELECT 4
         UNION ALL SELECT null
       """}
