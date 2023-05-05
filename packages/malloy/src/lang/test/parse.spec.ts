@@ -807,6 +807,9 @@ describe('expressions', () => {
     test.each(diffable.map(x => [x]))('timestamp difference - %s', unit => {
       expect(new BetaExpression(`${unit}(@2021 to ats)`)).modelParsed();
     });
+    test.each(diffable.map(x => [x]))('timestamp difference - %s', unit => {
+      expect(new BetaExpression(`${unit}(ats to @2030)`)).modelParsed();
+    });
   });
 
   test('field name', exprOK('astr'));
