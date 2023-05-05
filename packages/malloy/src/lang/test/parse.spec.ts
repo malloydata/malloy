@@ -841,6 +841,11 @@ describe('expressions', () => {
         'Cannot compare a date to a timestamp'
       );
     });
+    test('disallow interval from date to timestamp', () => {
+      expect(new BetaExpression('days(ad to ats)')).compileToFailWith(
+        'Cannot measure from date to timestamp'
+      );
+    });
     test('comparison promotes date literal to timestamp', () => {
       expect('@2001 = ats').expressionCompiled();
     });

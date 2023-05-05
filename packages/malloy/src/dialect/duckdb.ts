@@ -249,7 +249,6 @@ export class DuckDBDialect extends Dialect {
         rVal = mkExpr`(${rVal})::TIMESTAMP`;
       }
     }
-    // mtoy TODO make sure compiler won't mix date and timestamp types
     return mkExpr`DATE_SUB('${units}',${lVal},${rVal})`;
   }
 
