@@ -1866,6 +1866,7 @@ class QueryQuery extends QueryField {
             filterCond.expression,
             joinStack
           );
+          this.addDependantExpr(resultStruct, context, expr.e, joinStack);
         }
       } else if (isDialectFragment(expr)) {
         const expressions: Expr[] = [];
