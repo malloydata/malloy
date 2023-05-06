@@ -57,3 +57,4 @@ logfile
 demo/malloy-demo-composer/env
 .env
 test/data/duckdb/duckdb_test.db.wal
+.direnv/

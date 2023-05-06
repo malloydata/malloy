@@ -4,6 +4,9 @@ Building the Malloy repo requires [node.js](https://nodejs.org/en/download/) and
 
 Alternatively, you can use [nix](https://nixos.org/) to install these dependencies. To use nix, install it with `curl -L https://nixos.org/nix/install | sh` and then run `nix-shell` from the `malloy/` directory. Nix is what _CI_ uses to run builds.
 
+If you want a _smoother_ development experience consider installing [direnv](https://direnv.net/). You need only `cd` into the directory and all the packages will be loaded automatically into your shell.
+No need to write `nix-shell` yourself anymore and you can stay in your shell of choice (i.e. zsh).
+
 The following will install dependencies for the entire set of packages and compile the Malloy language and associated packages.
 
 ```bash
@@ -28,3 +31,14 @@ See `test/README.md` for infomration about running tests.
 ## Malloy VSCode Extension
 
 The Malloy VSCode extension's source is now in the [malloy-vscode-extension](https://github.com/malloydata/malloy-vscode-extension) repository.
+
+## Nix
+
+### Updating Nixpkgs
+
+Many of the dependencies (or all) are hydrated via [Nix](https://nixos.org), specifically [nixpkgs](https://github.com/NixOS/nixpkgs).
+You can see the version of nixpkgs in use by going to [./nix/sources.json](./nix/sources.json).
+
+```console
+> niv update nixpkgs -b <release branch>
+```
