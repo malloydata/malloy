@@ -147,12 +147,11 @@ export class DuckDBDialect extends Dialect {
   divisionIsInteger = true;
   supportsSumDistinctFunction = true;
   unnestWithNumbers = false;
-  defaultSampling = { rows: 50000 };
+  defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
   supportsCTEinCoorelatedSubQueries = true;
   dontUnionIndex = true;
   supportsQualify = true;
-
 
   functionInfo: Record<string, FunctionInfo> = {
     concat: {returnType: 'string'},
@@ -246,7 +245,7 @@ export class DuckDBDialect extends Dialect {
   ): string {
     //Simulate left joins by guarenteeing there is at least one row.
     if (!needDistinctKey) {
-     return `LEFT JOIN LATERAL (SELECT UNNEST(${source}), 1 as ignoreme) as ${alias}_outer(${alias},ignoreme) ON ${alias}_outer.ignoreme=1`;
+      return `LEFT JOIN LATERAL (SELECT UNNEST(${source}), 1 as ignoreme) as ${alias}_outer(${alias},ignoreme) ON ${alias}_outer.ignoreme=1`;
     } else {
       return `LEFT JOIN LATERAL (SELECT UNNEST(GENERATE_SERIES(1, length(${source}),1)) as __row_id, UNNEST(${source}), 1 as ignoreme) as ${alias}_outer(__row_id, ${alias},ignoreme) ON  ${alias}_outer.ignoreme=1`;
     }
@@ -272,7 +271,7 @@ export class DuckDBDialect extends Dialect {
     isArray: boolean
   ): string {
     // LTNOTE: hack, in duckdb we can't have structs as tables so we kind of simulate it.
-    if (fieldName === "__row_id") {
+    if (fieldName === '__row_id') {
       return `${alias}_outer.__row_id`;
     } else if (isArray) {
       return alias;

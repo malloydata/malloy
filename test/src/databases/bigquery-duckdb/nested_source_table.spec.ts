@@ -168,11 +168,11 @@ describe('Nested Source Table', () => {
     });
 
     test(`manual index - ${databaseName}`, async () => {
-      let sampleSize = '10'
+      let sampleSize = '10';
       if (databaseName === 'bigquery') {
-        sampleSize = 'false'
+        sampleSize = 'false';
       }
-      const result = await runtime
+      const _result = await runtime
         .loadQuery(
           `
         query: table('malloytest.ga_sample')-> {
