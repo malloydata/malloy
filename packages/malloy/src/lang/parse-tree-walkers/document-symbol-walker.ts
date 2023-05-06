@@ -1,23 +1,33 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { CommonTokenStream } from "antlr4ts";
-import { ParseTreeWalker } from "antlr4ts/tree/ParseTreeWalker";
-import { ParseTree } from "antlr4ts/tree";
-import { MalloyParserListener } from "../lib/Malloy/MalloyParserListener";
-import * as parser from "../lib/Malloy/MalloyParser";
-import { DocumentRange } from "../../model/malloy_types";
-import { MalloyTranslation } from "../parse-malloy";
+import {CommonTokenStream} from 'antlr4ts';
+import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
+import {ParseTree} from 'antlr4ts/tree';
+import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
+import * as parser from '../lib/Malloy/MalloyParser';
+import {DocumentRange} from '../../model/malloy_types';
+import {MalloyTranslation} from '../parse-malloy';
 
 export interface DocumentSymbol {
   range: DocumentRange;
@@ -46,7 +56,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
     this.symbols.push({
       range: this.translator.rangeFromContext(pcx),
       name: pcx.queryName().text,
-      type: "query",
+      type: 'query',
       children: [],
     });
   }
@@ -54,22 +64,22 @@ class DocumentSymbolWalker implements MalloyParserListener {
   enterTopLevelAnonQueryDef(pcx: parser.TopLevelAnonQueryDefContext) {
     this.symbols.push({
       range: this.translator.rangeFromContext(pcx),
-      name: "unnamed_query",
-      type: "unnamed_query",
+      name: 'unnamed_query',
+      type: 'unnamed_query',
       children: [],
     });
   }
 
-  enterExploreDefinition(pcx: parser.ExploreDefinitionContext) {
+  enterSourceDefinition(pcx: parser.SourceDefinitionContext) {
     this.scopes.push({
       range: this.translator.rangeFromContext(pcx),
-      name: pcx.exploreNameDef().id().text,
-      type: "explore",
+      name: pcx.sourceNameDef().id().text,
+      type: 'explore',
       children: [],
     });
   }
 
-  exitExploreDefinition(_pcx: parser.ExploreDefinitionContext) {
+  exitSourceDefinition(_pcx: parser.SourceDefinitionContext) {
     const scope = this.popScope();
     if (scope) {
       this.symbols.push(scope);
@@ -80,7 +90,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
       name: pcx.exploreQueryNameDef().id().text,
-      type: "query",
+      type: 'query',
       children: [],
     };
     const parent = this.peekScope();
@@ -98,7 +108,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
       name: pcx.queryName().id().text,
-      type: "query",
+      type: 'query',
       children: [],
     };
     const parent = this.peekScope();
@@ -125,7 +135,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
       name: pcx.fieldNameDef().id().text,
-      type: "field",
+      type: 'field',
       children: [],
     };
     const parent = this.peekScope();
@@ -138,7 +148,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
       name: pcx.fieldPath().text,
-      type: "field",
+      type: 'field',
       children: [],
     };
     const parent = this.peekScope();
@@ -151,7 +161,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
       name: pcx.fieldName()[0].text,
-      type: "field",
+      type: 'field',
       children: [],
     };
     const parent = this.peekScope();
@@ -172,7 +182,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
       name: pcx.joinNameDef().id().text,
-      type: "join",
+      type: 'join',
       children: [],
     };
     const parent = this.peekScope();
@@ -185,8 +195,8 @@ class DocumentSymbolWalker implements MalloyParserListener {
     const name = pcx.nameSQLBlock()?.text;
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
-      name: name || "unnamed_sql",
-      type: name === undefined ? "unnamed_sql" : "sql",
+      name: name || 'unnamed_sql',
+      type: name === undefined ? 'unnamed_sql' : 'sql',
       children: [],
     };
     this.symbols.push(symbol);

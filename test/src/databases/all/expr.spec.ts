@@ -1,23 +1,31 @@
 /* eslint-disable no-console */
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-
-import * as malloy from "@malloydata/malloy";
-import { allDatabases, RuntimeList } from "../../runtimes";
-import "../../util/is-sql-eq";
-import { databasesFromEnvironmentOr, mkSqlEqWith } from "../../util";
+import * as malloy from '@malloydata/malloy';
+import {RuntimeList, allDatabases} from '../../runtimes';
+import '../../util/is-sql-eq';
+import {databasesFromEnvironmentOr, mkSqlEqWith} from '../../util';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -46,14 +54,16 @@ explore: aircraft is table('malloytest.aircraft'){
 }
 `;
 
-const expressionModels = new Map<string, malloy.ModelMaterializer>();
+const expressionModels: Array<
+  [name: string, expressionModel: malloy.ModelMaterializer]
+> = [];
 runtimes.runtimeMap.forEach((runtime, databaseName) =>
-  expressionModels.set(databaseName, runtime.loadModel(expressionModelText))
+  expressionModels.push([databaseName, runtime.loadModel(expressionModelText)])
 );
 
-expressionModels.forEach((expressionModel, databaseName) => {
+describe.each(expressionModels)('%s', (databaseName, expressionModel) => {
   // basic calculations for sum, filtered sum, without a join.
-  it(`basic calculations - ${databaseName}`, async () => {
+  it('basic calculations', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -72,22 +82,23 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       )
       .run();
-    expect(result.data.path(0, "total_seats").value).toBe(452415);
-    expect(result.data.path(0, "total_seats2").value).toBe(452415);
-    expect(result.data.path(0, "boeing_seats").value).toBe(252771);
-    expect(result.data.path(0, "boeing_seats2").value).toBe(252771);
-    expect(result.data.path(0, "boeing_seats3").value).toBe(252771);
-    expect(Math.floor(result.data.path(0, "percent_boeing").number.value)).toBe(
+    expect(result.data.path(0, 'total_seats').value).toBe(452415);
+    expect(result.data.path(0, 'total_seats2').value).toBe(452415);
+    expect(result.data.path(0, 'boeing_seats').value).toBe(252771);
+    expect(result.data.path(0, 'boeing_seats2').value).toBe(252771);
+    expect(result.data.path(0, 'boeing_seats3').value).toBe(252771);
+    expect(Math.floor(result.data.path(0, 'percent_boeing').number.value)).toBe(
       55
     );
     expect(
-      Math.floor(result.data.path(0, "percent_boeing2").number.value)
+      Math.floor(result.data.path(0, 'percent_boeing2').number.value)
     ).toBe(55);
     // expect(result.data.path(0, "percent_boeing_floor").value).toBe(55);
     // expect(result.data.path(0, "percent_boeing_floor2").value).toBe(55);
   });
+
   // Floor is broken (doesn't compile because the expression returned isn't an aggregate.)
-  it(`Floor() -or any function bustage with aggregates - ${databaseName}`, async () => {
+  it('Floor() -or any function bustage with aggregates', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -99,12 +110,12 @@ expressionModels.forEach((expressionModel, databaseName) => {
       `
       )
       .run();
-    expect(result.data.path(0, "percent_boeing_floor").value).toBe(55);
-    expect(result.data.path(0, "percent_boeing_floor2").value).toBe(55);
+    expect(result.data.path(0, 'percent_boeing_floor').value).toBe(55);
+    expect(result.data.path(0, 'percent_boeing_floor2').value).toBe(55);
   });
 
   // Model based version of sums.
-  it(`model: expression fixups. - ${databaseName}`, async () => {
+  it('model: expression fixups.', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -116,12 +127,12 @@ expressionModels.forEach((expressionModel, databaseName) => {
           `
       )
       .run();
-    expect(result.data.path(0, "total_seats").value).toBe(18294);
-    expect(result.data.path(0, "boeing_seats").value).toBe(6244);
+    expect(result.data.path(0, 'total_seats').value).toBe(18294);
+    expect(result.data.path(0, 'boeing_seats').value).toBe(6244);
   });
 
   // turtle expressions
-  it(`model: turtle - ${databaseName}`, async () => {
+  it('model: turtle', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -129,11 +140,11 @@ expressionModels.forEach((expressionModel, databaseName) => {
           `
       )
       .run();
-    expect(result.data.path(0, "manufacturer").value).toBe("CESSNA");
+    expect(result.data.path(0, 'manufacturer').value).toBe('CESSNA');
   });
 
   // filtered turtle expressions
-  it(`model: filtered turtle - ${databaseName}`, async () => {
+  it('model: filtered turtle', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -143,11 +154,11 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       )
       .run();
-    expect(result.data.path(0, "b", 0, "manufacturer").value).toBe("BEECH");
+    expect(result.data.path(0, 'b', 0, 'manufacturer').value).toBe('BEECH');
   });
 
   // having.
-  it(`model: simple having - ${databaseName}`, async () => {
+  it('model: simple having', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -160,10 +171,10 @@ expressionModels.forEach((expressionModel, databaseName) => {
           `
       )
       .run();
-    expect(result.data.path(0, "aircraft_count").value).toBe(91);
+    expect(result.data.path(0, 'aircraft_count').value).toBe(91);
   });
 
-  it(`model: turtle having2 - ${databaseName}`, async () => {
+  it('model: turtle having2', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -184,10 +195,10 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       )
       .run();
-    expect(result.data.path(0, "by_state", 0, "state").value).toBe("VA");
+    expect(result.data.path(0, 'by_state', 0, 'state').value).toBe('VA');
   });
 
-  it(`model: turtle having on main - ${databaseName}`, async () => {
+  it('model: turtle having on main', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -212,13 +223,13 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       )
       .run();
-    expect(result.data.path(0, "by_state", 0, "by_city", 0, "city").value).toBe(
-      "ALBUQUERQUE"
+    expect(result.data.path(0, 'by_state', 0, 'by_city', 0, 'city').value).toBe(
+      'ALBUQUERQUE'
     );
   });
 
   // bigquery doesn't like to partition by floats,
-  it(`model: having float group by partition - ${databaseName}`, async () => {
+  it('model: having float group by partition', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -235,10 +246,10 @@ expressionModels.forEach((expressionModel, databaseName) => {
       `
       )
       .run();
-    expect(result.data.path(0, "aircraft_model_count").value).toBe(448);
+    expect(result.data.path(0, 'aircraft_model_count').value).toBe(448);
   });
 
-  it(`model: aggregate functions distinct min max - ${databaseName}`, async () => {
+  it('model: aggregate functions distinct min max', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -258,20 +269,20 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       )
       .run();
-    expect(result.data.path(0, "distinct_seats").value).toBe(187);
-    expect(result.data.path(0, "boeing_distinct_seats").value).toBe(85);
-    expect(result.data.path(0, "min_seats").value).toBe(0);
-    expect(result.data.path(0, "cessna_min_seats").value).toBe(1);
-    expect(result.data.path(0, "max_seats").value).toBe(660);
-    expect(result.data.path(0, "min_code").value).toBe("0030109");
-    expect(result.data.path(0, "cessna_max_seats").value).toBe(14);
-    expect(result.data.path(0, "boeing_min_model").value).toBe("100");
-    expect(result.data.path(0, "max_model").value).toBe("ZWEIFEL PA18");
-    expect(result.data.path(0, "boeing_max_model").value).toBe("YL-15");
+    expect(result.data.path(0, 'distinct_seats').value).toBe(187);
+    expect(result.data.path(0, 'boeing_distinct_seats').value).toBe(85);
+    expect(result.data.path(0, 'min_seats').value).toBe(0);
+    expect(result.data.path(0, 'cessna_min_seats').value).toBe(1);
+    expect(result.data.path(0, 'max_seats').value).toBe(660);
+    expect(result.data.path(0, 'min_code').value).toBe('0030109');
+    expect(result.data.path(0, 'cessna_max_seats').value).toBe(14);
+    expect(result.data.path(0, 'boeing_min_model').value).toBe('100');
+    expect(result.data.path(0, 'max_model').value).toBe('ZWEIFEL PA18');
+    expect(result.data.path(0, 'boeing_max_model').value).toBe('YL-15');
   });
 
-  (databaseName !== "bigquery" ? it.skip : it)(
-    `model: dates named - ${databaseName}`,
+  (databaseName !== 'bigquery' ? it.skip : it)(
+    'model: dates named',
     async () => {
       const result = await expressionModel
         .loadQuery(
@@ -293,40 +304,40 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
         )
         .run();
-      expect(result.data.path(0, "t_date").value).toEqual(
-        new Date("2020-03-02")
+      expect(result.data.path(0, 't_date').value).toEqual(
+        new Date('2020-03-02')
       );
-      expect(result.data.path(0, "t_date_month").value).toEqual(
-        new Date("2020-03-01")
+      expect(result.data.path(0, 't_date_month').value).toEqual(
+        new Date('2020-03-01')
       );
-      expect(result.data.path(0, "t_date_year").value).toEqual(
-        new Date("2020-01-01")
+      expect(result.data.path(0, 't_date_year').value).toEqual(
+        new Date('2020-01-01')
       );
-      expect(result.data.path(0, "t_timestamp").value).toEqual(
-        new Date("2020-03-02T12:35:56.000Z")
+      expect(result.data.path(0, 't_timestamp').value).toEqual(
+        new Date('2020-03-02T12:35:56.000Z')
       );
-      expect(result.data.path(0, "t_timestamp_second").value).toEqual(
-        new Date("2020-03-02T12:35:56.000Z")
+      expect(result.data.path(0, 't_timestamp_second').value).toEqual(
+        new Date('2020-03-02T12:35:56.000Z')
       );
-      expect(result.data.path(0, "t_timestamp_minute").value).toEqual(
-        new Date("2020-03-02T12:35:00.000Z")
+      expect(result.data.path(0, 't_timestamp_minute').value).toEqual(
+        new Date('2020-03-02T12:35:00.000Z')
       );
-      expect(result.data.path(0, "t_timestamp_hour").value).toEqual(
-        new Date("2020-03-02T12:00:00.000Z")
+      expect(result.data.path(0, 't_timestamp_hour').value).toEqual(
+        new Date('2020-03-02T12:00:00.000Z')
       );
-      expect(result.data.path(0, "t_timestamp_date").value).toEqual(
-        new Date("2020-03-02")
+      expect(result.data.path(0, 't_timestamp_date').value).toEqual(
+        new Date('2020-03-02')
       );
-      expect(result.data.path(0, "t_timestamp_month").value).toEqual(
-        new Date("2020-03-01")
+      expect(result.data.path(0, 't_timestamp_month').value).toEqual(
+        new Date('2020-03-01')
       );
-      expect(result.data.path(0, "t_timestamp_year").value).toEqual(
-        new Date("2020-01-01")
+      expect(result.data.path(0, 't_timestamp_year').value).toEqual(
+        new Date('2020-01-01')
       );
     }
   );
 
-  it.skip("defines in model", async () => {
+  it.skip('defines in model', async () => {
     // const result1 = await model.makeQuery(`
     //   define a is ('malloytest.alltypes');
     //   explore a | reduce x is count(*)
@@ -337,7 +348,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     //     `);
   });
 
-  it(`named query metadata undefined - ${databaseName}`, async () => {
+  it('named query metadata undefined', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -354,7 +365,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result._queryResult.queryName).toBe(undefined);
   });
 
-  it(`named query metadata named - ${databaseName}`, async () => {
+  it('named query metadata named', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -362,10 +373,10 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       )
       .run();
-    expect(result.resultExplore.name).toBe("by_manufacturer");
+    expect(result.resultExplore.name).toBe('by_manufacturer');
   });
 
-  it(`named query metadata named head of pipeline - ${databaseName}`, async () => {
+  it('named query metadata named head of pipeline', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -378,7 +389,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expect(result._queryResult.queryName).toBe(undefined);
   });
 
-  it(`filtered explores basic - ${databaseName}`, async () => {
+  it('filtered explores basic', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -388,10 +399,10 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       )
       .run();
-    expect(result.data.path(0, "m_count").value).toBe(63);
+    expect(result.data.path(0, 'm_count').value).toBe(63);
   });
 
-  it(`query with aliasname used twice - ${databaseName}`, async () => {
+  it('query with aliasname used twice', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -415,10 +426,10 @@ expressionModels.forEach((expressionModel, databaseName) => {
       `
       )
       .run();
-    expect(result.data.path(0, "first_three").value).toBe("SAB");
+    expect(result.data.path(0, 'first_three').value).toBe('SAB');
   });
 
-  it.skip("join foreign_key reverse", async () => {
+  it.skip('join foreign_key reverse', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -438,10 +449,10 @@ expressionModels.forEach((expressionModel, databaseName) => {
     `
       )
       .run();
-    expect(result.data.path(0, "first_three").value).toBe("SAN");
+    expect(result.data.path(0, 'first_three').value).toBe('SAN');
   });
 
-  it(`joined filtered explores - ${databaseName}`, async () => {
+  it('joined filtered explores', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -464,11 +475,11 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       )
       .run();
-    expect(result.data.path(0, "model_count").value).toBe(244);
-    expect(result.data.path(0, "aircraft_count").value).toBe(3599);
+    expect(result.data.path(0, 'model_count').value).toBe(244);
+    expect(result.data.path(0, 'aircraft_count').value).toBe(3599);
   });
 
-  it(`joined filtered explores with dependancies - ${databaseName}`, async () => {
+  it('joined filtered explores with dependancies', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -505,11 +516,11 @@ expressionModels.forEach((expressionModel, databaseName) => {
         `
       )
       .run();
-    expect(result.data.path(0, "model_count").value).toBe(60461);
-    expect(result.data.path(0, "b_count").value).toBe(355);
+    expect(result.data.path(0, 'model_count').value).toBe(60461);
+    expect(result.data.path(0, 'b_count').value).toBe(355);
   });
 
-  it(`group by explore - simple group by - ${databaseName}`, async () => {
+  it('group by explore - simple group by', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -520,11 +531,11 @@ expressionModels.forEach((expressionModel, databaseName) => {
     `
       )
       .run();
-    expect(result.data.path(0, "aircraft_count").value).toBe(58);
-    expect(result.data.path(0, "aircraft_models_id").value).toBe("7102802");
+    expect(result.data.path(0, 'aircraft_count').value).toBe(58);
+    expect(result.data.path(0, 'aircraft_models_id').value).toBe('7102802');
   });
 
-  it(`group by explore - pipeline - ${databaseName}`, async () => {
+  it('group by explore - pipeline', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -538,11 +549,11 @@ expressionModels.forEach((expressionModel, databaseName) => {
     `
       )
       .run();
-    expect(result.data.path(0, "aircraft_count").value).toBe(1048);
-    expect(result.data.path(0, "manufacturer").value).toBe("CESSNA");
+    expect(result.data.path(0, 'aircraft_count').value).toBe(1048);
+    expect(result.data.path(0, 'manufacturer').value).toBe('CESSNA');
   });
 
-  it(`group by explore - pipeline 2 levels - ${databaseName}`, async () => {
+  it('group by explore - pipeline 2 levels', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -563,15 +574,22 @@ expressionModels.forEach((expressionModel, databaseName) => {
       )
       .run();
     // console.log(result.data.toObject());
-    expect(result.data.path(0, "flight_count").value).toBe(199726);
-    expect(result.data.path(0, "popular_name").value).toBe("Isabella");
+    expect(result.data.path(0, 'flight_count').value).toBe(199726);
+    expect(result.data.path(0, 'popular_name').value).toBe('Isabella');
   });
 });
 
-runtimes.runtimeMap.forEach((runtime, databaseName) => {
-  const sqlEq = mkSqlEqWith(runtime);
+describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
+  const sqlEq = mkSqlEqWith(runtime, {
+    malloy: `+ {
+      dimension: friName is 'friday'
+      dimension: friDay is 5
+      dimension: satName is 'saturday'
+      dimension: satDay is 6
+    }`,
+  });
 
-  describe.skip(`alternations with not-eq - ${databaseName}`, () => {
+  describe.skip('alternations with not-eq', () => {
     /*
      Here's the desired truth table ...
 
@@ -581,143 +599,46 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
      z      false
      ^[yz]  true
      */
-    test("x not-eq y or z : x eq y", async () => {
-      const result = await sqlEq("6 != (6|7)", false);
+    test('x not-eq y or z : x eq y', async () => {
+      const result = await sqlEq('6 != (6|7)', false);
       expect(result).isSqlEq();
     });
-    test("x not-eq y or z : x eq z", async () => {
-      const result = await sqlEq("7 != (6|7)", false);
+    test('x not-eq y or z : x eq z', async () => {
+      const result = await sqlEq('7 != (6|7)', false);
       expect(result).isSqlEq();
     });
-    test("x not-eq y or z : else", async () => {
-      const result = await sqlEq("5 != (6|7)", true);
+    test('x not-eq y or z : else', async () => {
+      const result = await sqlEq('5 != (6|7)', true);
       expect(result).isSqlEq();
     });
     /*
       Writing this the old way, should have the same truth table ...
         x != y & != z
     */
-    test("x not-eq y and not-eq z : x eq y", async () => {
-      const result = await sqlEq("6 != (6 & !=7)", false);
+    test('x not-eq y and not-eq z : x eq y', async () => {
+      const result = await sqlEq('6 != (6 & !=7)', false);
       expect(result).isSqlEq();
     });
-    test("x not-eq y and not-eq z : x eq z", async () => {
-      const result = await sqlEq("7 != (6 & != 7)", false);
+    test('x not-eq y and not-eq z : x eq z', async () => {
+      const result = await sqlEq('7 != (6 & != 7)', false);
       expect(result).isSqlEq();
     });
-    test("x not-eq y and not-eq z : else", async () => {
-      const result = await sqlEq("5 != (6 & !=7)", true);
+    test('x not-eq y and not-eq z : else', async () => {
+      const result = await sqlEq('5 != (6 & !=7)', true);
       expect(result).isSqlEq();
     });
   });
 
-  describe(`interval extraction - ${databaseName}`, () => {
-    const sqlEq = mkSqlEqWith(runtime);
-
-    test("seconds", async () => {
-      expect(await sqlEq("seconds(now to now + 1 second)", 1)).isSqlEq();
-      expect(await sqlEq("seconds(now to now)", 0)).isSqlEq();
-      expect(await sqlEq("seconds(now to now + 2 seconds)", 2)).isSqlEq();
-      expect(await sqlEq("seconds(now to now - 2 seconds)", -2)).isSqlEq();
-    });
-
-    test("minutes", async () => {
-      expect(
-        await sqlEq("minutes(@2022-10-03 10:23:08 to @2022-10-03 10:24:07)", 0)
-      ).isSqlEq();
-
-      expect(await sqlEq("minutes(now to now + 1 minute)", 1)).isSqlEq();
-      expect(await sqlEq("minutes(now to now + 59 seconds)", 0)).isSqlEq();
-      expect(await sqlEq("minutes(now to now + 2 minutes)", 2)).isSqlEq();
-      expect(await sqlEq("minutes(now to now - 2 minutes)", -2)).isSqlEq();
-    });
-
-    test("hours", async () => {
-      expect(
-        await sqlEq("hours(@2022-10-03 10:23:00 to @2022-10-03 11:22:00)", 0)
-      ).isSqlEq();
-      expect(await sqlEq("hours(now to now + 1 hour)", 1)).isSqlEq();
-      expect(await sqlEq("hours(now to now + 59 minutes)", 0)).isSqlEq();
-      expect(await sqlEq("hours(now to now + 120 minutes)", 2)).isSqlEq();
-      expect(await sqlEq("hours(now to now - 2 hours)", -2)).isSqlEq();
-    });
-
-    test("days", async () => {
-      expect(await sqlEq("days(now.day to now.day + 1 day)", 1)).isSqlEq();
-      expect(await sqlEq("days(now.day to now.day + 23 hours)", 0)).isSqlEq();
-      expect(await sqlEq("days(now.day to now.day + 48 hours)", 2)).isSqlEq();
-      expect(await sqlEq("days(now.day to now.day - 48 hours)", -2)).isSqlEq();
-
-      expect(
-        await sqlEq("days(@2022-10-03 10:23:00 to @2022-10-04 09:23:00)", 1)
-      ).isSqlEq();
-    });
-
-    test("weeks", async () => {
-      expect(await sqlEq("weeks(now.week to now.week + 1 week)", 1)).isSqlEq();
-      expect(await sqlEq("weeks(now.week to now.week + 6 days)", 0)).isSqlEq();
-      expect(await sqlEq("weeks(now.week to now.week + 14 days)", 2)).isSqlEq();
-      expect(
-        await sqlEq("weeks(now.week to now.week - 14 days)", -2)
-      ).isSqlEq();
-      expect(await sqlEq("weeks(@2022-10-03 to @2022-10-10)", 1)).isSqlEq();
-      expect(await sqlEq("weeks(@2022-10-03 to @2022-10-09)", 1)).isSqlEq();
-      expect(await sqlEq("weeks(@2022-10-02 to @2022-10-08)", 0)).isSqlEq();
-      expect(await sqlEq("weeks(@2022-10-02 to @2023-10-02)", 52)).isSqlEq();
-
-      expect(
-        await sqlEq("weeks(@2022-10-02 10:00 to @2023-10-02 10:00)", 52)
-      ).isSqlEq();
-    });
-
-    test("months", async () => {
-      expect(await sqlEq("months(now to now + 1 month)", 1)).isSqlEq();
-      expect(
-        await sqlEq("months(now.month to now.month + 27 days)", 0)
-      ).isSqlEq();
-      expect(await sqlEq("months(now to now + 2 months)", 2)).isSqlEq();
-      expect(await sqlEq("months(now to now - 2 months)", -2)).isSqlEq();
-
-      expect(
-        await sqlEq("months(@2022-10-02 10:00 to @2022-11-02 09:00)", 1)
-      ).isSqlEq();
-    });
-
-    test("quarters", async () => {
-      expect(await sqlEq("quarters(@2022-03-31 to @2022-04-01)", 1)).isSqlEq();
-      expect(await sqlEq("quarters(now to now + 1 quarter)", 1)).isSqlEq();
-      expect(
-        await sqlEq("quarters(now.quarter to now.quarter + 27 days)", 0)
-      ).isSqlEq();
-      expect(await sqlEq("quarters(now to now + 2 quarters)", 2)).isSqlEq();
-      expect(await sqlEq("quarters(now to now - 2 quarters)", -2)).isSqlEq();
-
-      expect(
-        await sqlEq("quarters(@2022-10-02 10:00 to @2023-04-02 09:00)", 2)
-      ).isSqlEq();
-    });
-
-    test("years", async () => {
-      expect(await sqlEq("years(@2022 to @2023)", 1)).isSqlEq();
-      expect(await sqlEq("years(@2022-01-01 to @2022-12-31)", 0)).isSqlEq();
-      expect(await sqlEq("years(@2022 to @2024)", 2)).isSqlEq();
-      expect(await sqlEq("years(@2024 to @2022)", -2)).isSqlEq();
-      expect(
-        await sqlEq("years(@2022-01-01 10:00 to @2024-01-01 09:00)", 2)
-      ).isSqlEq();
-    });
-  });
-
-  describe("string literal quoting", () => {
+  describe('string literal quoting', () => {
     const tick = "'";
-    const back = "\\";
-    test("quote single character", async () => {
-      expect(await sqlEq(`'${back}x'`, "x")).isSqlEq();
+    const back = '\\';
+    test('quote single character', async () => {
+      expect(await sqlEq(`'${back}x'`, 'x')).isSqlEq();
     });
-    test("quote single quote", async () => {
+    test('quote single quote', async () => {
       expect(await sqlEq(`'${back}${tick}'`, tick)).isSqlEq();
     });
-    test("quote backslash", async () => {
+    test('quote backslash', async () => {
       expect(await sqlEq(`'${back}${back}'`, back)).isSqlEq();
     });
   });

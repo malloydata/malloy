@@ -4,11 +4,11 @@ Building the Malloy repo requires [node.js](https://nodejs.org/en/download/) and
 
 Alternatively, you can use [nix](https://nixos.org/) to install these dependencies. To use nix, install it with `curl -L https://nixos.org/nix/install | sh` and then run `nix-shell` from the `malloy/` directory. Nix is what _CI_ uses to run builds.
 
-The following will install dependencies for the entire set of packages and compile both the Malloy language and the VSCode extension.
+The following will install dependencies for the entire set of packages and compile the Malloy language and associated packages.
 
 ```bash
 npm install
-npm run package-extension
+npm run build
 ```
 
 Use the [VS Code ESLint extension](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) for code formatting, or run `npm run lint --fix`.

@@ -4,6 +4,7 @@
     "declaration": true,
     "composite": true,
     "strict": true,
+    "noImplicitAny": false,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "lib": [
@@ -22,5 +23,6 @@
     "sourceMap": true,
     "useUnknownInCatchVariables": false,
     "forceConsistentCasingInFileNames": true,
+    "noPropertyAccessFromIndexSignature": true
   }
 }

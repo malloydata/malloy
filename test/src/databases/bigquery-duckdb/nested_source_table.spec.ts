@@ -1,28 +1,38 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 /* eslint-disable no-console */
 
-import "../../util/is-sql-eq";
-import { RuntimeList } from "../../runtimes";
-import { describeIfDatabaseAvailable } from "../../util";
+import '../../util/is-sql-eq';
+import {RuntimeList} from '../../runtimes';
+import {describeIfDatabaseAvailable} from '../../util';
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
 const [describe, databases] = describeIfDatabaseAvailable([
-  "bigquery",
-  "duckdb",
+  'bigquery',
+  'duckdb',
 ]);
 
 const modelText = `
@@ -115,7 +125,7 @@ query: sessions_dashboard is ga_sessions -> {
 }
 `;
 
-describe("Nested Source Table", () => {
+describe('Nested Source Table', () => {
   const runtimes = new RuntimeList(databases);
 
   afterAll(async () => {
@@ -134,7 +144,7 @@ describe("Nested Source Table", () => {
         .run();
       // console.log(result.data.toObject());
       // console.log(result.sql);
-      expect(result.data.path(0, "pageTitle").value).toBe("Shopping Cart");
+      expect(result.data.path(0, 'pageTitle').value).toBe('Shopping Cart');
     });
 
     test(`search_index - ${databaseName}`, async () => {
@@ -151,34 +161,39 @@ describe("Nested Source Table", () => {
         `
         )
         .run();
-      console.log(result.data.toObject());
-      expect(result.data.path(0, "fieldName").value).toBe("channelGrouping");
-      expect(result.data.path(0, "fieldValue").value).toBe("Organic Search");
+      // console.log(result.data.toObject());
+      expect(result.data.path(0, 'fieldName').value).toBe('channelGrouping');
+      expect(result.data.path(0, 'fieldValue').value).toBe('Organic Search');
       // expect(result.data.path(0, "weight").value).toBe(18);
     });
 
-    // test(`manual index - ${databaseName}`, async () => {
-    //   const result = await runtime
-    //     .loadQuery(
-    //       `
-    //     query: table('malloytest.ga_sample')-> {
-    //       index: everything
-    //     }
-    //     -> {
-    //       aggregate: field_count is count(DISTINCT fieldName)
-    //       nest: top_fields is {
-    //         group_by: fieldName
-    //         aggregate: row_count is count()
-    //         limit: 100
-    //       }
-    //     }
-    //     `
-    //     )
-    //     .run();
-    //   // console.log(JSON.stringify(result.data.toObject(), null, 2));
-    //   // expect(result.data.path(0, "fieldName").value).toBe("channelGrouping");
-    //   // expect(result.data.path(0, "fieldValue").value).toBe("Organic Search");
-    //   // expect(result.data.path(0, "weight").value).toBe(18);
-    // });
+    test(`manual index - ${databaseName}`, async () => {
+      let sampleSize = '10'
+      if (databaseName === 'bigquery') {
+        sampleSize = 'false'
+      }
+      const result = await runtime
+        .loadQuery(
+          `
+        query: table('malloytest.ga_sample')-> {
+          index: everything
+          sample: ${sampleSize}
+        }
+        -> {
+          aggregate: field_count is count(DISTINCT fieldName)
+          nest: top_fields is {
+            group_by: fieldName
+            aggregate: row_count is count()
+            limit: 100
+          }
+        }
+        `
+        )
+        .run();
+      // console.log(JSON.stringify(result.data.toObject(), null, 2));
+      // expect(result.data.path(0, "fieldName").value).toBe("channelGrouping");
+      // expect(result.data.path(0, "fieldValue").value).toBe("Organic Search");
+      // expect(result.data.path(0, "weight").value).toBe(18);
+    });
   });
 });

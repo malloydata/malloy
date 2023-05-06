@@ -1,24 +1,34 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import path from "path";
-import { readPackageJson } from "./utils/licenses";
-import fs from "fs";
+import path from 'path';
+import {readPackageJson} from './utils/licenses';
+import fs from 'fs';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable no-console */
 let filePath: string;
-const seen: { [id: string]: boolean } = {};
+const seen: {[id: string]: boolean} = {};
 
 /*
  * Required components:
@@ -44,16 +54,16 @@ export function generateDisclaimer(
 
 function doDependencies(nodeModulesPath: string, packageJson: any): void {
   // eslint-disable-next-line no-prototype-builtins
-  if (packageJson.hasOwnProperty("dependencies")) {
+  if (packageJson.hasOwnProperty('dependencies')) {
     const dependencies = packageJson.dependencies;
 
     for (const dependency of Object.keys(dependencies)) {
-      if (seen[dependency] == true || !(typeof dependency == "string")) {
+      if (seen[dependency] === true || !(typeof dependency === 'string')) {
         continue;
       }
 
       const pkg = readPackageJson(
-        path.join(nodeModulesPath, dependency, "package.json")
+        path.join(nodeModulesPath, dependency, 'package.json')
       );
 
       // look for notice & license text
@@ -62,31 +72,31 @@ function doDependencies(nodeModulesPath: string, packageJson: any): void {
       const packageFiles = fs.readdirSync(
         path.join(nodeModulesPath, dependency)
       );
-      packageFiles.find((fileName) => {
-        const base = fileName.split(".")[0].toLowerCase();
+      packageFiles.find(fileName => {
+        const base = fileName.split('.')[0].toLowerCase();
 
-        if (base == "notice" || base == "notices") {
+        if (base === 'notice' || base === 'notices') {
           notice = fs.readFileSync(
             path.join(nodeModulesPath, dependency, fileName),
-            "utf-8"
+            'utf-8'
           );
         }
 
-        if (base == "license" || base == "licenses") {
+        if (base === 'license' || base === 'licenses') {
           license = fs.readFileSync(
             path.join(nodeModulesPath, dependency, fileName),
-            "utf-8"
+            'utf-8'
           );
         }
       });
 
-      if (license == undefined && pkg.license == undefined) {
+      if (license === undefined && pkg.license === undefined) {
         throw new Error(
           `${dependency}: license type undefined in package.json and license file cannot be found`
         );
       }
 
-      const licenseType = pkg.license ? pkg.license : "see license text below";
+      const licenseType = pkg.license ? pkg.license : 'see license text below';
 
       const url = [
         pkg.homepage,
@@ -94,7 +104,7 @@ function doDependencies(nodeModulesPath: string, packageJson: any): void {
         pkg.repository?.baseUrl,
         pkg.repo,
         `https://npmjs.com/package/${dependency}`,
-      ].find((el) => el !== undefined);
+      ].find(el => el !== undefined);
 
       fs.appendFileSync(
         filePath,
@@ -103,8 +113,8 @@ function doDependencies(nodeModulesPath: string, packageJson: any): void {
 Package: ${dependency}
 Url: ${url}
 License(s): ${licenseType}
-${license ? "License Text:\n" + license + "\n" : ""}
-${notice ? "\nNotice:\n" + notice + "\n" : ""}
+${license ? `License Text:\n${license}\n` : ''}
+${notice ? `\nNotice:\n${notice}\n` : ''}
         `
       );
 

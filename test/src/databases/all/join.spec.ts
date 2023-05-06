@@ -1,19 +1,30 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+
 /* eslint-disable no-console */
 
-import { allDatabases, RuntimeList } from "../../runtimes";
-import { databasesFromEnvironmentOr } from "../../util";
+import {RuntimeList, allDatabases} from '../../runtimes';
+import {databasesFromEnvironmentOr} from '../../util';
 
 const joinModelText = `
   explore: aircraft_models is table('malloytest.aircraft_models') {
@@ -51,7 +62,7 @@ afterAll(async () => {
 //   models.set(key, runtime.loadModel(joinModelText));
 // });
 
-describe("join expression tests", () => {
+describe('join expression tests', () => {
   runtimes.runtimeMap.forEach((runtime, database) => {
     it(`model explore refine join - ${database}`, async () => {
       const result = await runtime
@@ -70,7 +81,7 @@ describe("join expression tests", () => {
       `
         )
         .run();
-      expect(result.data.value[0].model_count).toBe(1416);
+      expect(result.data.value[0]['model_count']).toBe(1416);
     });
 
     it(`model explore refine in query join - ${database}`, async () => {
@@ -88,7 +99,7 @@ describe("join expression tests", () => {
       `
         )
         .run();
-      expect(result.data.value[0].model_count).toBe(1416);
+      expect(result.data.value[0]['model_count']).toBe(1416);
     });
 
     it(`model: join fact table query - ${database}`, async () => {
@@ -112,7 +123,7 @@ describe("join expression tests", () => {
     `
         )
         .run();
-      expect(result.data.value[0].num_models).toBe(1147);
+      expect(result.data.value[0]['num_models']).toBe(1147);
     });
 
     it(`model: explore based on query - ${database}`, async () => {
@@ -135,7 +146,7 @@ describe("join expression tests", () => {
         `
         )
         .run();
-      expect(result.data.value[0].num_models).toBe(1147);
+      expect(result.data.value[0]['num_models']).toBe(1147);
     });
 
     it(`model: funnel - merge two queries - ${database}`, async () => {
@@ -165,8 +176,8 @@ describe("join expression tests", () => {
         `
         )
         .run();
-      expect(result.data.value[0].num_models).toBe(1147);
-      expect(result.data.value[0].total_seats).toBe(252771);
+      expect(result.data.value[0]['num_models']).toBe(1147);
+      expect(result.data.value[0]['total_seats']).toBe(252771);
     });
 
     it(`model: modeled funnel - ${database}`, async () => {
@@ -189,8 +200,8 @@ describe("join expression tests", () => {
         `
         )
         .run();
-      expect(result.data.value[0].num_models).toBe(1147);
-      expect(result.data.value[0].total_seats).toBe(252771);
+      expect(result.data.value[0]['num_models']).toBe(1147);
+      expect(result.data.value[0]['total_seats']).toBe(252771);
     });
 
     it(`model: modeled funnel2 - ${database}`, async () => {
@@ -209,8 +220,8 @@ describe("join expression tests", () => {
         `
         )
         .run();
-      expect(result.data.value[0].num_models).toBe(1147);
-      expect(result.data.value[0].total_seats).toBe(252771);
+      expect(result.data.value[0]['num_models']).toBe(1147);
+      expect(result.data.value[0]['total_seats']).toBe(252771);
     });
 
     it(`model: double_pipe - ${database}`, async () => {
@@ -229,7 +240,7 @@ describe("join expression tests", () => {
     `
         )
         .run();
-      expect(result.data.value[0].f_sum2).toBe(60462);
+      expect(result.data.value[0]['f_sum2']).toBe(60462);
     });
 
     it(`model: unnest is left join - ${database}`, async () => {

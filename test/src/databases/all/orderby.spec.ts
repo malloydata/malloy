@@ -1,20 +1,30 @@
 /* eslint-disable no-console */
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as malloy from "@malloydata/malloy";
-import { allDatabases, RuntimeList } from "../../runtimes";
-import { databasesFromEnvironmentOr } from "../../util";
+import * as malloy from '@malloydata/malloy';
+import {RuntimeList, allDatabases} from '../../runtimes';
+import {databasesFromEnvironmentOr} from '../../util';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -65,8 +75,8 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(result.data.row(0).cell("big").value).toBe(false);
-    expect(result.data.row(0).cell("model_count").value).toBe(58451);
+    expect(result.data.row(0).cell('big').value).toBe(false);
+    expect(result.data.row(0).cell('model_count').value).toBe(58451);
   });
 
   it(`boolean in pipeline - ${databaseName}`, async () => {
@@ -85,8 +95,8 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(result.data.row(0).cell("big").value).toBe(false);
-    expect(result.data.row(0).cell("model_count").value).toBe(58500);
+    expect(result.data.row(0).cell('big').value).toBe(false);
+    expect(result.data.row(0).cell('model_count').value).toBe(58500);
   });
 
   it(`filtered measures in model are aggregates #352 - ${databaseName}`, async () => {
@@ -102,7 +112,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(result.data.row(0).cell("j_names").value).toBe(1358);
+    expect(result.data.row(0).cell('j_names').value).toBe(1358);
   });
 
   it(`reserved words are quoted - ${databaseName}`, async () => {
@@ -140,7 +150,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
     await validateCompilation(databaseName, sql);
   });
 
-  it.skip("reserved words in structure definitions", async () => {
+  it.skip('reserved words in structure definitions', async () => {
     const sql = await orderByModel
       .loadQuery(
         `
@@ -190,7 +200,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(result.data.row(0).cell("model_count").value).toBe(102);
+    expect(result.data.row(0).cell('model_count').value).toBe(102);
   });
 
   it(`modeled having complex - ${databaseName}`, async () => {
@@ -215,7 +225,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       )
       .run();
-    expect(result.data.row(0).cell("model_count").value).toBe(102);
+    expect(result.data.row(0).cell('model_count').value).toBe(102);
   });
 
   it(`turtle references joined element - ${databaseName}`, async () => {

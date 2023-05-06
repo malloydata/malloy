@@ -1,27 +1,37 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 import {
-  DateTimeframe,
-  TimestampTimeframe,
-  DataRecord,
-  DataArrayOrRecord,
-  Explore,
   DataArray,
-} from "@malloydata/malloy";
-import { timeToString } from "./html/utils";
+  DataArrayOrRecord,
+  DataRecord,
+  DateTimeframe,
+  Explore,
+  TimestampTimeframe,
+} from '@malloydata/malloy';
+import {timeToString} from './html/utils';
 
-type FilterItem = { key: string; value: string | undefined };
+type FilterItem = {key: string; value: string | undefined};
 
 function filterQuote(s: string): string {
   return `'${s.replace("'", "\\'")}'`;
@@ -36,24 +46,24 @@ function timestampToDateFilter(
     timeframe === TimestampTimeframe.Minute
       ? TimestampTimeframe.Second
       : timeframe || TimestampTimeframe.Second;
-  const filterValue = "@" + timeToString(value, adjustedTimeframe);
-  return { key, value: filterValue };
+  const filterValue = '@' + timeToString(value, adjustedTimeframe);
+  return {key, value: filterValue};
 }
 
 function getTableFilters(table: DataArray): FilterItem[] {
-  const filters = [];
+  const filters: FilterItem[] = [];
   for (const f of table.field.filters || []) {
-    if (!f.aggregate) {
-      filters.push({ key: f.code, value: undefined });
+    if (f.expressionType === 'scalar') {
+      filters.push({key: f.code, value: undefined});
     }
   }
   return filters;
 }
 
 function getRowFilters(row: DataRecord): FilterItem[] {
-  const filters = [];
+  const filters: FilterItem[] = [];
   const dimensions = row.field.intrinsicFields.filter(
-    (field) => field.isAtomicField() && field.sourceWasDimension()
+    field => field.isAtomicField() && field.sourceWasDimension()
   );
 
   for (const dim of dimensions) {
@@ -63,11 +73,11 @@ function getRowFilters(row: DataRecord): FilterItem[] {
       dim.isAtomicField() || dim.isQueryField() ? dim.expression : undefined;
     if (key && !cell.isArray()) {
       if (cell.isNull()) {
-        filters.push({ key, value: "null" });
+        filters.push({key, value: 'null'});
       } else if (cell.isString()) {
-        filters.push({ key, value: filterQuote(cell.value) });
+        filters.push({key, value: filterQuote(cell.value)});
       } else if (cell.isNumber() || cell.isBoolean()) {
-        filters.push({ key, value: cell.value.toString() });
+        filters.push({key, value: cell.value.toString()});
       } else if (cell.isTimestamp() || cell.isDate()) {
         filters.push(
           timestampToDateFilter(key, cell.value, cell.field.timeframe)
@@ -101,7 +111,7 @@ export function getDrillFilters(data: DataArrayOrRecord): {
   const source = current.field.parentExplore;
 
   const formattedFilters: string[] = [];
-  for (const { key, value } of filters) {
+  for (const {key, value} of filters) {
     if (value !== undefined) {
       formattedFilters.push(`${key}: ${value}`);
     } else {
@@ -119,24 +129,18 @@ export function getDrillFilters(data: DataArrayOrRecord): {
       ) === undefined
   );
 
-  return { formattedFilters: dedupedFilters, source };
+  return {formattedFilters: dedupedFilters, source};
 }
 
 export function getDrillQuery(data: DataArrayOrRecord): {
   drillQuery: string;
   drillFilters: string[];
 } {
-  const { formattedFilters, source } = getDrillFilters(data);
+  const {formattedFilters, source} = getDrillFilters(data);
   let ret = `query: ${source?.name || '"unable to compute source"'} `;
   if (formattedFilters.length) {
-    ret += `{ \n  where: \n    ${formattedFilters.join(",\n    ")}\n  \n}\n`;
+    ret += `{ \n  where: \n    ${formattedFilters.join(',\n    ')}\n  \n}\n`;
   }
-  const drillQuery = ret + "-> ";
-  return { drillQuery, drillFilters: formattedFilters };
+  const drillQuery = ret + '-> ';
+  return {drillQuery, drillFilters: formattedFilters};
 }
-
-export type DrillFunction = (
-  drillQuery: string,
-  target: HTMLElement,
-  drillFilters: string[]
-) => void;

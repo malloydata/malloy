@@ -1,14 +1,24 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 // clang-format off
@@ -59,27 +69,27 @@ interface DocumentReferenceBase {
 }
 
 export interface DocumentExploreReference extends DocumentReferenceBase {
-  type: "exploreReference";
+  type: 'exploreReference';
   definition: StructDef;
 }
 
 export interface DocumentJoinReference extends DocumentReferenceBase {
-  type: "joinReference";
+  type: 'joinReference';
   definition: FieldDef;
 }
 
 export interface DocumentSQLBlockReference extends DocumentReferenceBase {
-  type: "sqlBlockReference";
+  type: 'sqlBlockReference';
   definition: SQLBlockStructDef;
 }
 
 export interface DocumentQueryReference extends DocumentReferenceBase {
-  type: "queryReference";
+  type: 'queryReference';
   definition: Query;
 }
 
 export interface DocumentFieldReference extends DocumentReferenceBase {
-  type: "fieldReference";
+  type: 'fieldReference';
   definition: FieldDef;
 }
 
@@ -112,7 +122,7 @@ export function isFilteredAliasedName(
   f: FieldTypeRef
 ): f is FilteredAliasedName {
   for (const prop of Object.keys(f)) {
-    if (!["name", "as", "filterList"].includes(prop)) {
+    if (!['name', 'as', 'filterList'].includes(prop)) {
       return false;
     }
   }
@@ -130,7 +140,7 @@ export interface ResultMetadataDef {
   sourceExpression?: string;
   sourceClasses: string[];
   filterList?: FilterExpression[];
-  fieldKind: "measure" | "dimension" | "struct";
+  fieldKind: 'measure' | 'dimension' | 'struct';
 }
 
 // struct specific metadta
@@ -147,113 +157,184 @@ export interface ResultStructMetadata {
 }
 
 export interface FilterFragment {
-  type: "filterExpression";
+  type: 'filterExpression';
   filterList: FilterExpression[];
   e: Expr;
 }
 
 export function isFilterFragment(f: Fragment): f is FilterFragment {
-  return (f as FilterFragment)?.type === "filterExpression";
+  return (f as FilterFragment)?.type === 'filterExpression';
 }
 
 export function isDialectFragment(f: Fragment): f is DialectFragment {
-  return (f as DialectFragment)?.type === "dialect";
+  return (f as DialectFragment)?.type === 'dialect';
 }
 
 export interface AggregateFragment {
-  type: "aggregate";
+  type: 'aggregate';
   function: string;
   e: Expr;
   structPath?: string;
 }
 export function isAggregateFragment(f: Fragment): f is AggregateFragment {
-  return (f as AggregateFragment)?.type === "aggregate";
+  return (f as AggregateFragment)?.type === 'aggregate';
 }
 export function isAsymmetricFragment(f: Fragment): f is AggregateFragment {
-  return isAggregateFragment(f) && ["sum", "avg", "count"].includes(f.function);
+  return isAggregateFragment(f) && ['sum', 'avg', 'count'].includes(f.function);
 }
 
 export interface UngroupFragment {
-  type: "all" | "exclude";
+  type: 'all' | 'exclude';
   e: Expr;
   fields?: string[];
 }
 
 export function isUngroupFragment(f: Fragment): f is UngroupFragment {
   const ftype = (f as UngroupFragment)?.type;
-  return ftype == "all" || ftype == "exclude";
+  return ftype === 'all' || ftype === 'exclude';
+}
+
+export type MalloyFunctionParam = AtomicFieldType | 'any' | 'nconst' | 'regexp';
+
+export interface MalloyFunctionInfo {
+  returnType: AtomicFieldType;
+  parameters: 'any' | 'none' | MalloyFunctionParam[];
+  expressionType?: 'aggregate' | 'analytic'; // forces expression type
+  sqlName?: string;
+}
+
+export const malloyFunctions: Record<string, MalloyFunctionInfo> = {
+  'row_number': {
+    returnType: 'number',
+    parameters: 'none',
+    expressionType: 'analytic',
+  },
+  'rank': {
+    returnType: 'number',
+    parameters: 'none',
+    expressionType: 'analytic',
+  },
+  'dense_rank': {
+    returnType: 'number',
+    parameters: 'none',
+    expressionType: 'analytic',
+  },
+  'first_value_in_column': {
+    returnType: 'number',
+    parameters: 'any',
+    expressionType: 'analytic',
+    sqlName: 'first_value',
+  },
+  'last_value_in_column': {
+    returnType: 'number',
+    parameters: 'any',
+    expressionType: 'analytic',
+    sqlName: 'last_value',
+  },
+  'min_in_column': {
+    returnType: 'number',
+    parameters: 'any',
+    expressionType: 'analytic',
+    sqlName: 'min',
+  },
+  'max_in_column': {
+    returnType: 'number',
+    parameters: 'any',
+    expressionType: 'analytic',
+    sqlName: 'max',
+  },
+  'ntile': {
+    returnType: 'number',
+    parameters: ['nconst'],
+    expressionType: 'analytic',
+  },
+  'lag': {
+    returnType: 'number',
+    parameters: ['number', 'nconst'],
+    expressionType: 'analytic',
+  },
+};
+
+export interface AnalyticFragment {
+  type: 'analytic';
+  function: string;
+  parameters?: (string | number | Expr)[]; // output field name or expression
+}
+
+export function isAnalyticFragment(f: Fragment): f is AnalyticFragment {
+  return (f as AnalyticFragment)?.type === 'analytic';
 }
 
 export interface FieldFragment {
-  type: "field";
+  type: 'field';
   path: string;
 }
 export function isFieldFragment(f: Fragment): f is FieldFragment {
-  return (f as FieldFragment)?.type === "field";
+  return (f as FieldFragment)?.type === 'field';
 }
 
 export interface ParameterFragment {
-  type: "parameter";
+  type: 'parameter';
   path: string;
 }
 export function isParameterFragment(f: Fragment): f is ParameterFragment {
-  return (f as ParameterFragment)?.type === "parameter";
+  return (f as ParameterFragment)?.type === 'parameter';
 }
 
 export interface ApplyValueFragment {
-  type: "applyVal";
+  type: 'applyVal';
 }
 export function isApplyValue(f: Fragment): f is ApplyValueFragment {
-  return (f as ApplyValueFragment)?.type === "applyVal";
+  return (f as ApplyValueFragment)?.type === 'applyVal';
 }
 
 export interface ApplyFragment {
-  type: "apply";
+  type: 'apply';
   value: Expr;
   to: Expr;
 }
 export function isApplyFragment(f: Fragment): f is ApplyFragment {
-  return (f as ApplyFragment)?.type === "apply";
+  return (f as ApplyFragment)?.type === 'apply';
 }
 
 interface DialectFragmentBase {
-  type: "dialect";
+  type: 'dialect';
   function: string;
 }
 
 export interface NowFragment extends DialectFragmentBase {
-  function: "now";
+  function: 'now';
 }
 
 export interface TimeDiffFragment extends DialectFragmentBase {
-  function: "timeDiff";
+  function: 'timeDiff';
   units: TimestampUnit;
   left: TimeValue;
   right: TimeValue;
 }
 
 export interface TimeDeltaFragment extends DialectFragmentBase {
-  function: "delta";
+  function: 'delta';
   base: TimeValue;
-  op: "+" | "-";
+  op: '+' | '-';
   delta: Expr;
   units: TimestampUnit;
 }
 
 export interface TimeTruncFragment extends DialectFragmentBase {
-  function: "trunc";
+  function: 'trunc';
   expr: TimeValue;
   units: TimestampUnit;
 }
 
 export interface TimeExtractFragment extends DialectFragmentBase {
-  function: "extract";
+  function: 'extract';
   expr: TimeValue;
   units: ExtractUnit;
 }
 
 export interface TypecastFragment extends DialectFragmentBase {
-  function: "cast";
+  function: 'cast';
   safe: boolean;
   expr: Expr;
   dstType: AtomicFieldType;
@@ -261,26 +342,27 @@ export interface TypecastFragment extends DialectFragmentBase {
 }
 
 export interface RegexpMatchFragment extends DialectFragmentBase {
-  function: "regexpMatch";
+  function: 'regexpMatch';
   expr: Expr;
   regexp: string;
 }
 
 export interface DivFragment extends DialectFragmentBase {
-  function: "div";
+  function: 'div';
   numerator: Expr;
   denominator: Expr;
 }
 
 export interface TimeLiteralFragment extends DialectFragmentBase {
-  function: "timeLiteral";
+  function: 'timeLiteral';
   literal: string;
   literalType: TimeFieldType;
   timezone: string;
+  tzIsLocale?: boolean;
 }
 
 export interface StringLiteralFragment extends DialectFragmentBase {
-  function: "stringLiteral";
+  function: 'stringLiteral';
   literal: string;
 }
 
@@ -305,7 +387,8 @@ export type Fragment =
   | FilterFragment
   | AggregateFragment
   | UngroupFragment
-  | DialectFragment;
+  | DialectFragment
+  | AnalyticFragment;
 
 export type Expr = Fragment[];
 
@@ -340,7 +423,7 @@ export function mkExpr(
     if (src[index].length > 0) {
       ret.push(src[index]);
     }
-    if (typeof el == "string") {
+    if (typeof el === 'string') {
       ret.push(el);
     } else {
       ret.push(...el);
@@ -352,10 +435,36 @@ export function mkExpr(
   return ret;
 }
 
+export type ExpressionType = 'scalar' | 'aggregate' | 'analytic';
+
 export interface Expression {
   e?: Expr;
-  aggregate?: boolean;
+  expressionType?: ExpressionType;
   code?: string;
+}
+
+export function expressionIsAggregate(e: ExpressionType | undefined): boolean {
+  return e === 'aggregate';
+}
+
+export function expressionIsCalculation(
+  e: ExpressionType | undefined
+): boolean {
+  return e === 'aggregate' || e === 'analytic';
+}
+
+export function maxExpressionType(
+  e1: ExpressionType,
+  e2: ExpressionType
+): ExpressionType {
+  let ret: ExpressionType = 'scalar';
+  if (e1 === 'aggregate' || e2 === 'aggregate') {
+    ret = 'aggregate';
+  }
+  if (e1 === 'analytic' || e2 === 'analytic') {
+    ret = 'analytic';
+  }
+  return ret;
 }
 
 interface JustExpression {
@@ -367,13 +476,27 @@ export function hasExpression(f: FieldDef): f is HasExpression {
   return (f as JustExpression).e !== undefined;
 }
 
-export type TimeFieldType = "date" | "timestamp";
+export type TimeFieldType = 'date' | 'timestamp';
 export function isTimeFieldType(s: string): s is TimeFieldType {
-  return s == "date" || s == "timestamp";
+  return s === 'date' || s === 'timestamp';
 }
-export type AtomicFieldType = "string" | "number" | TimeFieldType | "boolean";
+export type AtomicFieldType =
+  | 'string'
+  | 'number'
+  | TimeFieldType
+  | 'boolean'
+  | 'unsupported'
+  | 'json';
 export function isAtomicFieldType(s: string): s is AtomicFieldType {
-  return ["string", "number", "date", "timestamp", "boolean"].includes(s);
+  return [
+    'string',
+    'number',
+    'date',
+    'timestamp',
+    'boolean',
+    'json',
+    'unsupported',
+  ].includes(s);
 }
 
 /** All scalars can have an optional expression */
@@ -389,8 +512,8 @@ export function FieldIsIntrinsic(f: FieldDef): boolean {
   if (isAtomicFieldType(f.type) && !hasExpression(f)) {
     return true;
   } else if (
-    f.type === "struct" &&
-    (f.structSource.type === "inline" || f.structSource.type === "nested")
+    f.type === 'struct' &&
+    (f.structSource.type === 'inline' || f.structSource.type === 'nested')
   ) {
     return true;
   } else {
@@ -400,68 +523,78 @@ export function FieldIsIntrinsic(f: FieldDef): boolean {
 
 /** Scalar String Field */
 export interface FieldStringDef extends FieldAtomicDef {
-  type: "string";
+  type: 'string';
   bucketFilter?: string;
   bucketOther?: string;
 }
 
 /** Scalar Numeric String Field */
 export interface FieldNumberDef extends FieldAtomicDef {
-  type: "number";
-  numberType?: "integer" | "float";
+  type: 'number';
+  numberType?: 'integer' | 'float';
 }
 
 /** Scalar Boolean Field */
 export interface FieldBooleanDef extends FieldAtomicDef {
-  type: "boolean";
+  type: 'boolean';
 }
 
-export type DateUnit = "day" | "week" | "month" | "quarter" | "year";
+/** Scalar JSON Field */
+export interface FieldJSONDef extends FieldAtomicDef {
+  type: 'json';
+}
+
+/** Scalar unsupported Field */
+export interface FieldUnsupportedDef extends FieldAtomicDef {
+  type: 'unsupported';
+  rawType?: string;
+}
+export type DateUnit = 'day' | 'week' | 'month' | 'quarter' | 'year';
 export function isDateUnit(str: string): str is DateUnit {
-  return ["day", "week", "month", "quarter", "year"].includes(str);
+  return ['day', 'week', 'month', 'quarter', 'year'].includes(str);
 }
-export type TimestampUnit = DateUnit | "hour" | "minute" | "second";
+export type TimestampUnit = DateUnit | 'hour' | 'minute' | 'second';
 export function isTimestampUnit(s: string): s is TimestampUnit {
-  return isDateUnit(s) || ["hour", "minute", "second"].includes(s);
+  return isDateUnit(s) || ['hour', 'minute', 'second'].includes(s);
 }
-export type ExtractUnit = TimestampUnit | "day_of_week" | "day_of_year";
+export type ExtractUnit = TimestampUnit | 'day_of_week' | 'day_of_year';
 export function isExtractUnit(s: string): s is ExtractUnit {
-  return isTimestampUnit(s) || s == "day_of_week" || s == "day_of_year";
+  return isTimestampUnit(s) || s === 'day_of_week' || s === 'day_of_year';
 }
 /** Value types distinguished by their usage in generated SQL, particularly with respect to filters. */
 export enum ValueType {
-  Date = "date",
-  Timestamp = "timestamp",
-  Number = "number",
-  String = "string",
+  Date = 'date',
+  Timestamp = 'timestamp',
+  Number = 'number',
+  String = 'string',
 }
 
 export type TimeValueType = ValueType.Date | ValueType.Timestamp;
 
 /** Scalar Date Field. */
 export interface FieldDateDef extends FieldAtomicDef {
-  type: "date";
+  type: 'date';
   timeframe?: DateUnit;
 }
 
 /** Scalar Timestamp Field */
 export interface FieldTimestampDef extends FieldAtomicDef {
-  type: "timestamp";
+  type: 'timestamp';
   timeframe?: TimestampUnit;
 }
 
 /** parameter to order a query */
 export interface OrderBy {
   field: string | number;
-  dir?: "asc" | "desc";
+  dir?: 'asc' | 'desc';
 }
 
 export interface ByName {
-  by: "name";
+  by: 'name';
   name: string;
 }
 export interface ByExpression {
-  by: "expression";
+  by: 'expression';
   e: Expr;
 }
 export type By = ByName | ByExpression;
@@ -470,20 +603,20 @@ export function isByName(by: By | undefined): by is ByName {
   if (by === undefined) {
     return false;
   }
-  return by.by === "name";
+  return by.by === 'name';
 }
 
 export function isByExpression(by: By | undefined): by is ByExpression {
   if (by === undefined) {
     return false;
   }
-  return by.by === "name";
+  return by.by === 'name';
 }
 
 /** reference to a data source */
 export type StructRef = string | StructDef;
 export function refIsStructDef(ref: StructRef): ref is StructDef {
-  return typeof ref !== "string" && ref.type === "struct";
+  return typeof ref !== 'string' && ref.type === 'struct';
 }
 
 /** join pattern structs is a struct. */
@@ -509,7 +642,7 @@ export interface Pipeline {
 }
 
 export interface Query extends Pipeline, Filtered, HasLocation {
-  type?: "query";
+  type?: 'query';
   structRef: StructRef;
 }
 
@@ -518,17 +651,17 @@ export type NamedQuery = Query & NamedObject;
 export type PipeSegment = QuerySegment | IndexSegment;
 
 export interface ReduceSegment extends QuerySegment {
-  type: "reduce";
+  type: 'reduce';
 }
 export function isReduceSegment(pe: PipeSegment): pe is ReduceSegment {
-  return pe.type === "reduce";
+  return pe.type === 'reduce';
 }
 
 export interface ProjectSegment extends QuerySegment {
-  type: "project";
+  type: 'project';
 }
 export function isProjectSegment(pe: PipeSegment): pe is ProjectSegment {
-  return pe.type === "project";
+  return pe.type === 'project';
 }
 
 export function isQuerySegment(pe: PipeSegment): pe is QuerySegment {
@@ -562,18 +695,18 @@ export function isSamplingEnable(s: Sampling): s is SamplingEnable {
 }
 
 export interface IndexSegment extends Filtered {
-  type: "index";
+  type: 'index';
   fields: string[];
   limit?: number;
   weightMeasure?: string; // only allow the name of the field to use for weights
   sample?: Sampling;
 }
 export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
-  return (pe as IndexSegment).type === "index";
+  return (pe as IndexSegment).type === 'index';
 }
 
 export interface QuerySegment extends Filtered {
-  type: "reduce" | "project";
+  type: 'reduce' | 'project';
   fields: QueryFieldDef[];
   extendSource?: FieldDef[];
   limit?: number;
@@ -582,29 +715,29 @@ export interface QuerySegment extends Filtered {
 }
 
 export interface TurtleDef extends NamedObject, Pipeline {
-  type: "turtle";
+  type: 'turtle';
 }
 
 export type JoinRelationship =
-  | "one_to_one"
-  | "one_to_many"
-  | "many_to_one"
-  | "many_to_many";
+  | 'one_to_one'
+  | 'one_to_many'
+  | 'many_to_one'
+  | 'many_to_many';
 
 export interface JoinOn {
-  type: "one" | "many" | "cross";
+  type: 'one' | 'many' | 'cross';
   onExpression?: Expr;
 }
 
 export function isJoinOn(sr: StructRelationship): sr is JoinOn {
-  return ["one", "many", "cross"].includes(sr.type);
+  return ['one', 'many', 'cross'].includes(sr.type);
 }
 /** types of joins. */
 export type StructRelationship =
-  | { type: "basetable"; connectionName: string }
+  | {type: 'basetable'; connectionName: string}
   | JoinOn
-  | { type: "inline" }
-  | { type: "nested"; field: FieldRef; isArray: boolean };
+  | {type: 'inline'}
+  | {type: 'nested'; field: FieldRef; isArray: boolean};
 
 export interface SQLFragment {
   sql: string;
@@ -625,25 +758,25 @@ export interface SQLBlockSource {
 }
 
 export interface SQLBlock extends NamedObject {
-  type: "sqlBlock";
+  type: 'sqlBlock';
   connection?: string;
   selectStr: string;
 }
 
 interface SubquerySource {
-  type: "sql";
-  method: "subquery";
+  type: 'sql';
+  method: 'subquery';
   sqlBlock: SQLBlock;
 }
 
 /** where does the struct come from? */
 export type StructSource =
-  | { type: "table"; tablePath: string }
-  | { type: "nested" }
-  | { type: "inline" }
-  | { type: "query"; query: Query }
-  | { type: "sql"; method: "nested" | "lastStage" }
-  | { type: "query_result" }
+  | {type: 'table'; tablePath: string}
+  | {type: 'nested'}
+  | {type: 'inline'}
+  | {type: 'query'; query: Query}
+  | {type: 'sql'; method: 'nested' | 'lastStage'}
+  | {type: 'query_result'}
   | SubquerySource;
 
 // Inline and nested tables, cannot have a StructRelationship
@@ -651,7 +784,7 @@ export type StructSource =
 
 /** struct that is intrinsic to the table */
 export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
-  type: "struct";
+  type: 'struct';
   structSource: StructSource;
   structRelationship: StructRelationship;
   fields: FieldDef[];
@@ -662,11 +795,16 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
 
 export interface SQLBlockStructDef extends StructDef {
   structSource: SubquerySource;
+  // This was added to that errors for structdefs created in sql: but NOT used in
+  // from_sql could error properly. This is kind of non-sensical, and once
+  // we decide if SQL blocks are StructDefs or Queries or Something Else
+  // this should go away.
+  declaredSQLBlock?: boolean;
 }
 
-export function isSQLBlock(sd: StructDef): sd is SQLBlockStructDef {
+export function isSQLBlockStruct(sd: StructDef): sd is SQLBlockStructDef {
   const src = sd.structSource;
-  return src.type == "sql" && src.method == "subquery";
+  return src.type === 'sql' && src.method === 'subquery';
 }
 
 // /** the resulting structure of the query (and it's source) */
@@ -683,26 +821,29 @@ export type FieldTypeDef =
   | FieldDateDef
   | FieldTimestampDef
   | FieldNumberDef
-  | FieldBooleanDef;
+  | FieldBooleanDef
+  | FieldJSONDef
+  | FieldUnsupportedDef;
 
 export function isFieldTypeDef(f: FieldDef): f is FieldTypeDef {
   return (
-    f.type === "string" ||
-    f.type === "date" ||
-    f.type === "number" ||
-    f.type === "timestamp" ||
-    f.type === "boolean"
+    f.type === 'string' ||
+    f.type === 'date' ||
+    f.type === 'number' ||
+    f.type === 'timestamp' ||
+    f.type === 'boolean' ||
+    f.type === 'json'
   );
 }
 
 export function isFieldTimeBased(
   f: FieldDef
 ): f is FieldTimestampDef | FieldDateDef {
-  return f.type === "date" || f.type === "timestamp";
+  return f.type === 'date' || f.type === 'timestamp';
 }
 
 export function isFieldStructDef(f: FieldDef): f is StructDef {
-  return f.type === "struct";
+  return f.type === 'struct';
 }
 
 // Queries
@@ -727,7 +868,7 @@ export type PrimaryKeyRef = string;
 export interface FilterExpression {
   expression: Expr;
   code: string;
-  aggregate?: boolean;
+  expressionType: ExpressionType;
 }
 
 /** Get the output name for a NamedObject */
@@ -756,7 +897,7 @@ export type QueryScalar = string | boolean | number | Date | Buffer | null;
 export type QueryValue = QueryScalar | QueryData | QueryDataRow;
 
 /** A row of returned data. */
-export type QueryDataRow = { [columnName: string]: QueryValue };
+export type QueryDataRow = {[columnName: string]: QueryValue};
 
 /** Returned query data. */
 export type QueryData = QueryDataRow[];
@@ -789,7 +930,7 @@ export interface QueryResult extends CompiledQuery {
 }
 
 export function isTurtleDef(def: FieldDef): def is TurtleDef {
-  return def.type === "turtle";
+  return def.type === 'turtle';
 }
 
 export interface SearchResultRow {
@@ -801,8 +942,8 @@ export interface SearchResultRow {
 export type SearchResult = SearchResultRow[];
 
 export function isDimensional(field: FieldDef): boolean {
-  if ("resultMetadata" in field) {
-    return field.resultMetadata?.fieldKind === "dimension";
+  if ('resultMetadata' in field) {
+    return field.resultMetadata?.fieldKind === 'dimension';
   }
   return false;
 }
@@ -811,8 +952,8 @@ export function isPhysical(field: FieldDef): boolean {
   return (
     (isFieldTypeDef(field) && field.e === undefined) ||
     (isFieldStructDef(field) &&
-      (field.structSource.type === "nested" ||
-        field.structSource.type == "inline"))
+      (field.structSource.type === 'nested' ||
+        field.structSource.type === 'inline'))
   );
 }
 
@@ -825,10 +966,10 @@ export function getPhysicalFields(structDef: StructDef): FieldDef[] {
 }
 
 export function isMeasureLike(field: FieldDef): boolean {
-  if ("resultMetadata" in field) {
+  if ('resultMetadata' in field) {
     return (
-      field.resultMetadata?.fieldKind === "measure" ||
-      field.resultMetadata?.fieldKind === "struct"
+      field.resultMetadata?.fieldKind === 'measure' ||
+      field.resultMetadata?.fieldKind === 'struct'
     );
   }
   return false;
@@ -838,35 +979,35 @@ export function isValueString(
   value: QueryValue,
   field: FieldDef
 ): value is string | null {
-  return field.type === "string";
+  return field.type === 'string';
 }
 
 export function isValueNumber(
   value: QueryValue,
   field: FieldDef
 ): value is number | null {
-  return field.type === "number";
+  return field.type === 'number';
 }
 
 export function isValueBoolean(
   value: QueryValue,
   field: FieldDef
 ): value is boolean | null {
-  return field.type === "boolean";
+  return field.type === 'boolean';
 }
 
 export function isValueTimestamp(
   value: QueryValue,
   field: FieldDef
-): value is { value: string } | null {
-  return field.type === "timestamp";
+): value is {value: string} | null {
+  return field.type === 'timestamp';
 }
 
 export function isValueDate(
   value: QueryValue,
   field: FieldDef
-): value is { value: string } | null {
-  return field.type === "date";
+): value is {value: string} | null {
+  return field.type === 'date';
 }
 
 export interface SearchIndexResult {
@@ -879,7 +1020,7 @@ export interface SearchIndexResult {
 export interface SearchValueMapResult {
   fieldName: string;
   cardinality: number;
-  values: { fieldValue: string; weight: number }[];
+  values: {fieldValue: string; weight: number}[];
 }
 
 // clang-format on

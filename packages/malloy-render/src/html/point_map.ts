@@ -1,26 +1,36 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as lite from "vega-lite";
+import * as lite from 'vega-lite';
 import {
   DataArray,
   DataColumn,
   Field,
   TimestampTimeframe,
-} from "@malloydata/malloy";
-import usAtlas from "us-atlas/states-10m.json";
-import { HTMLChartRenderer } from "./chart";
-import { getColorScale, timeToString } from "./utils";
+} from '@malloydata/malloy';
+import usAtlas from 'us-atlas/states-10m.json';
+import {HTMLChartRenderer} from './chart';
+import {formatTitle, getColorScale, timeToString} from './utils';
 
 export class HTMLPointMapRenderer extends HTMLChartRenderer {
   getDataValue(data: DataColumn): string | number {
@@ -32,23 +42,23 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
         data.field.timeframe || TimestampTimeframe.Second
       );
     }
-    throw new Error("Invalid field type for point map chart.");
+    throw new Error('Invalid field type for point map chart.');
   }
 
-  getDataType(field: Field): "ordinal" | "quantitative" | "nominal" {
+  getDataType(field: Field): 'ordinal' | 'quantitative' | 'nominal' {
     if (field.isAtomicField()) {
       if (field.isDate() || field.isTimestamp() || field.isString()) {
-        return "nominal";
+        return 'nominal';
       } else if (field.isNumber()) {
-        return "quantitative";
+        return 'quantitative';
       }
     }
-    throw new Error("Invalid field type for point map.");
+    throw new Error('Invalid field type for point map.');
   }
 
   getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
     if (data.isNull()) {
-      throw new Error("Expected struct value not to be null.");
+      throw new Error('Expected struct value not to be null.');
     }
 
     const fields = data.field.intrinsicFields;
@@ -68,7 +78,7 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
         ? {
             field: colorField.name,
             type: colorType,
-            axis: { title: colorField.name },
+            axis: {title: formatTitle(this.options, colorField.name)},
             scale: getColorScale(colorType, false),
           }
         : undefined;
@@ -77,17 +87,17 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
       ? {
           field: sizeField.name,
           type: sizeType,
-          axis: { title: sizeField.name },
+          axis: {title: formatTitle(this.options, sizeField.name)},
         }
-      : { value: 5 };
+      : {value: 5};
 
     const shapeDef = shapeField
       ? {
           field: shapeField.name,
           type: shapeType,
-          axis: { title: shapeField.name },
+          axis: {title: formatTitle(this.options, shapeField.name)},
         }
-      : { value: "circle" };
+      : {value: 'circle'};
 
     return {
       ...this.getSize(),
@@ -95,61 +105,61 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
         values: this.mapData(data),
       },
       projection: {
-        type: "albersUsa",
+        type: 'albersUsa',
       },
       layer: [
         {
           data: {
             values: usAtlas,
             format: {
-              type: "topojson",
-              feature: "states",
+              type: 'topojson',
+              feature: 'states',
             },
           },
           mark: {
-            type: "geoshape",
-            fill: "#efefef",
-            stroke: "white",
+            type: 'geoshape',
+            fill: '#efefef',
+            stroke: 'white',
           },
         },
         {
-          mark: "point",
+          mark: 'point',
           encoding: {
-            latitude: { field: latField.name, type: "quantitative" },
-            longitude: { field: lonField.name, type: "quantitative" },
+            latitude: {field: latField.name, type: 'quantitative'},
+            longitude: {field: lonField.name, type: 'quantitative'},
             size: sizeDef,
             color: colorDef,
             shape: shapeDef,
           },
         },
       ],
-      background: "transparent",
+      background: 'transparent',
       config: {
         axis: {
-          labelFont: "var(--malloy-font-family, Roboto)",
-          titleFont: "var(--malloy-font-family, Roboto)",
+          labelFont: 'var(--malloy-font-family, Roboto)',
+          titleFont: 'var(--malloy-font-family, Roboto)',
           titleFontWeight: 500,
-          titleColor: "var(--malloy-title-color, #505050)",
-          labelColor: "var(--malloy-label-color, #000000)",
+          titleColor: 'var(--malloy-title-color, #505050)',
+          labelColor: 'var(--malloy-label-color, #000000)',
           titleFontSize: 12,
         },
         legend: {
-          labelFont: "var(--malloy-font-family, Roboto)",
-          titleFont: "var(--malloy-font-family, Roboto)",
+          labelFont: 'var(--malloy-font-family, Roboto)',
+          titleFont: 'var(--malloy-font-family, Roboto)',
           titleFontWeight: 500,
-          titleColor: "var(--malloy-title-color, #505050)",
-          labelColor: "var(--malloy-label-color, #000000)",
+          titleColor: 'var(--malloy-title-color, #505050)',
+          labelColor: 'var(--malloy-label-color, #000000)',
           titleFontSize: 12,
         },
         header: {
-          labelFont: "var(--malloy-font-family, Roboto)",
-          titleFont: "var(--malloy-font-family, Roboto)",
+          labelFont: 'var(--malloy-font-family, Roboto)',
+          titleFont: 'var(--malloy-font-family, Roboto)',
           titleFontWeight: 500,
         },
-        mark: { font: "var(--malloy-Roboto" },
+        mark: {font: 'var(--malloy-Roboto'},
         title: {
-          font: "var(--malloy-font-family, Roboto)",
-          subtitleFont: "var(--malloy-font-family, Roboto)",
+          font: 'var(--malloy-font-family, Roboto)',
+          subtitleFont: 'var(--malloy-font-family, Roboto)',
           fontWeight: 500,
         },
       },

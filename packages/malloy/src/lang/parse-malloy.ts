@@ -1,63 +1,90 @@
 /*
- * Copyright 2021 Google LLC
+ * Copyright 2023 Google LLC
  *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * version 2 as published by the Free Software Foundation.
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files
+ * (the "Software"), to deal in the Software without restriction,
+ * including without limitation the rights to use, copy, modify, merge,
+ * publish, distribute, sublicense, and/or sell copies of the Software,
+ * and to permit persons to whom the Software is furnished to do so,
+ * subject to the following conditions:
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
+ * The above copyright notice and this permission notice shall be
+ * included in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+ * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
 import {
-  ANTLRErrorListener,
-  Token,
   CharStreams,
+  CodePointCharStream,
   CommonTokenStream,
   ParserRuleContext,
-  CodePointCharStream,
-} from "antlr4ts";
-import type { ParseTree } from "antlr4ts/tree";
+  Token,
+} from 'antlr4ts';
+import {ParseTree} from 'antlr4ts/tree';
 import {
-  Query,
-  NamedStructDefs,
-  StructDef,
-  ModelDef,
-  SQLBlockSource,
-  DocumentReference,
-  DocumentPosition,
   DocumentLocation,
+  DocumentPosition,
   DocumentRange,
+  DocumentReference,
+  ModelDef,
+  NamedModelObject,
+  Query,
   SQLBlockStructDef,
-} from "../model/malloy_types";
-import { MalloyLexer } from "./lib/Malloy/MalloyLexer";
-import { MalloyParser } from "./lib/Malloy/MalloyParser";
-import * as ast from "./ast";
-import { MalloyToAST } from "./parse-to-ast";
-import { MessageLogger, LogMessage, MessageLog } from "./parse-log";
-import { findReferences } from "./parse-tree-walkers/find-external-references";
-import { Zone, ZoneData } from "./zone";
-import {
-  DocumentSymbol,
-  walkForDocumentSymbols,
-} from "./parse-tree-walkers/document-symbol-walker";
+  StructDef,
+} from '../model/malloy_types';
+import {MalloyLexer} from './lib/Malloy/MalloyLexer';
+import {MalloyParser} from './lib/Malloy/MalloyParser';
+import * as ast from './ast';
+import {MalloyToAST} from './malloy-to-ast';
+import {MessageLog} from './parse-log';
+import {findReferences} from './parse-tree-walkers/find-external-references';
+import {Zone, ZoneData} from './zone';
+import {walkForDocumentSymbols} from './parse-tree-walkers/document-symbol-walker';
 import {
   DocumentHighlight,
-  walkForDocumentHighlights,
   passForHighlights,
   sortHighlights,
-} from "./parse-tree-walkers/document-highlight-walker";
+  walkForDocumentHighlights,
+} from './parse-tree-walkers/document-highlight-walker';
 import {
   DocumentCompletion,
   walkForDocumentCompletions,
-} from "./parse-tree-walkers/document-completion-walker";
+} from './parse-tree-walkers/document-completion-walker';
 import {
   DocumentHelpContext,
   walkForDocumentHelpContext,
-} from "./parse-tree-walkers/document-help-context-walker";
-import { ReferenceList } from "./reference-list";
+} from './parse-tree-walkers/document-help-context-walker';
+import {ReferenceList} from './reference-list';
+import {
+  ASTResponse,
+  CompletionsResponse,
+  DataRequestResponse,
+  ErrorResponse,
+  FatalResponse,
+  FinalResponse,
+  HelpContextResponse,
+  MetadataResponse,
+  ModelDataRequest,
+  NeedURLData,
+  TranslateResponse,
+  isNeedResponse,
+} from './translate-response';
+import {MalloyParserErrorHandler} from './parse-error-handler';
+
+export type StepResponses =
+  | DataRequestResponse
+  | ASTResponse
+  | TranslateResponse
+  | ParseResponse
+  | MetadataResponse;
 
 /**
  * This ignores a -> popMode when the mode stack is empty, which is a hack,
@@ -71,105 +98,6 @@ class HandlesOverpoppingLexer extends MalloyLexer {
     return super.popMode();
   }
 }
-
-class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
-  constructor(
-    readonly translator: MalloyTranslation,
-    readonly messages: MessageLogger
-  ) {}
-
-  syntaxError(
-    recognizer: unknown,
-    offendingSymbol: Token | undefined,
-    line: number,
-    charPositionInLine: number,
-    msg: string,
-    _e: unknown
-  ) {
-    const errAt = { line: line - 1, character: charPositionInLine };
-    const range = offendingSymbol
-      ? this.translator.rangeFromToken(offendingSymbol)
-      : { start: errAt, end: errAt };
-    const error: LogMessage = {
-      message: msg,
-      at: { url: this.translator.sourceURL, range },
-    };
-    this.messages.log(error);
-  }
-}
-
-/**
- * The translation interface is essentially a request/respone protocol, and
- * this is the list of all the "protocol" messages.
- */
-interface FinalResponse {
-  final: true; // When final, there is no need to reply, translation is over
-}
-interface ErrorResponse {
-  errors: LogMessage[];
-}
-type FatalResponse = FinalResponse & ErrorResponse;
-
-export interface NeedSchemaData {
-  tables: string[];
-}
-
-export interface NeedURLData {
-  urls: string[];
-}
-
-export interface NeedCompileSQL {
-  compileSQL: SQLBlockSource;
-  partialModel: ModelDef | undefined;
-}
-
-interface NeededData extends NeedURLData, NeedSchemaData, NeedCompileSQL {}
-export type DataRequestResponse = Partial<NeededData> | null;
-function isNeedResponse(dr: DataRequestResponse): dr is NeededData {
-  return !!dr && (dr.tables || dr.urls || dr.compileSQL) != undefined;
-}
-export type ModelDataRequest = NeedCompileSQL | undefined;
-
-interface ASTData extends ErrorResponse, NeededData, FinalResponse {
-  ast: ast.MalloyElement;
-}
-type ASTResponse = Partial<ASTData>;
-
-interface Metadata extends NeededData, ErrorResponse, FinalResponse {
-  symbols: DocumentSymbol[];
-  highlights: DocumentHighlight[];
-}
-type MetadataResponse = Partial<Metadata>;
-
-interface Completions extends NeededData, ErrorResponse, FinalResponse {
-  completions: DocumentCompletion[];
-}
-type CompletionsResponse = Partial<Completions>;
-
-interface HelpContext extends NeededData, ErrorResponse, FinalResponse {
-  helpContext: DocumentHelpContext | undefined;
-}
-type HelpContextResponse = Partial<HelpContext>;
-
-interface TranslatedResponseData
-  extends NeededData,
-    ErrorResponse,
-    FinalResponse {
-  translated: {
-    modelDef: ModelDef;
-    queryList: Query[];
-    sqlBlocks: SQLBlockStructDef[];
-  };
-}
-
-export type TranslateResponse = Partial<TranslatedResponseData>;
-
-type StepResponses =
-  | DataRequestResponse
-  | ASTResponse
-  | TranslateResponse
-  | ParseResponse
-  | MetadataResponse;
 
 /**
  * A Translation is a series of translation steps. Each step can depend
@@ -198,14 +126,14 @@ export interface MalloyParseRoot {
 interface ParseData extends ErrorResponse, NeedURLData, FinalResponse {
   parse: MalloyParseRoot;
 }
-type ParseResponse = Partial<ParseData>;
+export type ParseResponse = Partial<ParseData>;
 
 /**
  * ParseStep -- Parse the source URL
  */
 interface SourceInfo {
   lines: string[];
-  at: { begin: number; end: number }[];
+  at: {begin: number; end: number}[];
   length: number;
 }
 class ParseStep implements TranslationStep {
@@ -222,7 +150,7 @@ class ParseStep implements TranslationStep {
         const _checkFull = new URL(that.sourceURL);
         that.urlIsFullPath = true;
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "";
+        const msg = e instanceof Error ? e.message : '';
         that.urlIsFullPath = false;
         that.root.logger.log({
           message: `Could not compute full path URL: ${msg}`,
@@ -234,19 +162,19 @@ class ParseStep implements TranslationStep {
     }
 
     const srcEnt = that.root.importZone.getEntry(that.sourceURL);
-    if (srcEnt.status !== "present") {
-      if (srcEnt.status === "error") {
+    if (srcEnt.status !== 'present') {
+      if (srcEnt.status === 'error') {
         const message = srcEnt.message.includes(that.sourceURL)
           ? `import error: ${srcEnt.message}`
           : `import '${that.sourceURL}' error: ${srcEnt.message}`;
         const at = srcEnt.firstReference || that.defaultLocation();
-        that.root.logger.log({ message, at });
+        that.root.logger.log({message, at});
         this.response = that.fatalErrors();
         return this.response;
       }
-      return { urls: [that.sourceURL] };
+      return {urls: [that.sourceURL]};
     }
-    const source = srcEnt.value == "" ? "\n" : srcEnt.value;
+    const source = srcEnt.value === '' ? '\n' : srcEnt.value;
     this.sourceInfo = this.getSourceInfo(source);
 
     let parse: MalloyParseRoot | undefined;
@@ -265,7 +193,7 @@ class ParseStep implements TranslationStep {
         ...that.fatalErrors(),
       };
     } else {
-      this.response = { parse };
+      this.response = {parse};
     }
     return this.response;
   }
@@ -283,9 +211,9 @@ class ParseStep implements TranslationStep {
     };
     let src = code;
     let lineStart = 0;
-    while (src !== "") {
+    while (src !== '') {
       const eol = src.match(eolRegex);
-      if (eol && eol.index != undefined) {
+      if (eol && eol.index !== undefined) {
         // line text DOES NOT include the EOL
         info.lines.push(src.slice(0, eol.index));
         const lineLength = eol.index + eol[0].length;
@@ -298,7 +226,7 @@ class ParseStep implements TranslationStep {
       } else {
         // last line, does not have a line end
         info.lines.push(src);
-        info.at.push({ begin: lineStart, end: lineStart + src.length });
+        info.at.push({begin: lineStart, end: lineStart + src.length});
         break;
       }
     }
@@ -328,7 +256,7 @@ class ParseStep implements TranslationStep {
       tokenStream: tokenStream,
       sourceStream: inputStream,
       // TODO put the real version here
-      malloyVersion: "?.?.?-????",
+      malloyVersion: '?.?.?-????',
       subTranslator: that,
     };
   }
@@ -340,7 +268,7 @@ class ImportsAndTablesStep implements TranslationStep {
 
   step(that: MalloyTranslation): DataRequestResponse | ParseResponse {
     const parseReq = this.parseStep.step(that);
-    if (parseReq.parse == undefined) {
+    if (parseReq.parse === undefined) {
       return parseReq;
     }
 
@@ -379,7 +307,7 @@ class ImportsAndTablesStep implements TranslationStep {
             // to the known good rootURL assuming it is relative
             that.root.logger.log({
               message: `Malformed URL '${relativeRef}'"`,
-              at: { url: that.sourceURL, range: firstRef },
+              at: {url: that.sourceURL, range: firstRef},
             });
           }
         }
@@ -395,12 +323,12 @@ class ImportsAndTablesStep implements TranslationStep {
     let allMissing: DataRequestResponse = {};
     const missingTables = that.root.schemaZone.getUndefined();
     if (missingTables) {
-      allMissing = { tables: missingTables };
+      allMissing = {tables: missingTables};
     }
 
     const missingImports = that.root.importZone.getUndefined();
     if (missingImports) {
-      allMissing = { ...allMissing, urls: missingImports };
+      allMissing = {...allMissing, urls: missingImports};
     }
 
     if (isNeedResponse(allMissing)) {
@@ -447,7 +375,7 @@ class ASTStep implements TranslationStep {
     const parse = parseResponse?.parse;
     if (!parse) {
       throw new Error(
-        "TRANSLATOR INTERNAL ERROR: Translator parse response had no errors, but also no parser"
+        'TRANSLATOR INTERNAL ERROR: Translator parse response had no errors, but also no parser'
       );
     }
     const secondPass = new MalloyToAST(parse, that.root.logger);
@@ -457,8 +385,8 @@ class ASTStep implements TranslationStep {
       return this.response;
     }
 
-    if (newAst.elementType === "unimplemented") {
-      throw new Error("TRANSLATOR INTERNAL ERROR: Unimplemented AST node");
+    if (newAst.elementType === 'unimplemented') {
+      throw new Error('TRANSLATOR INTERNAL ERROR: Unimplemented AST node');
     }
 
     // I kind of think table refs should probably also be collected here
@@ -477,7 +405,7 @@ class ASTStep implements TranslationStep {
           }
           sqlExplores[walkedTo.is].def = walkedTo;
         } else if (walkedTo instanceof ast.Unimplemented) {
-          walkedTo.log("INTERNAL COMPILER ERROR: Untranslated parse node");
+          walkedTo.log('INTERNAL COMPILER ERROR: Untranslated parse node');
         }
       });
       this.walked = true;
@@ -566,7 +494,7 @@ class CompletionsStep implements TranslationStep {
 
   step(
     that: MalloyTranslation,
-    position?: { line: number; character: number }
+    position?: {line: number; character: number}
   ): CompletionsResponse {
     const tryParse = this.parseStep.step(that);
     if (!tryParse.parse) {
@@ -597,7 +525,7 @@ class HelpContextStep implements TranslationStep {
 
   step(
     that: MalloyTranslation,
-    position?: { line: number; character: number }
+    position?: {line: number; character: number}
   ): HelpContextResponse {
     const tryParse = this.parseStep.step(that);
     if (!tryParse.parse) {
@@ -640,7 +568,7 @@ class TranslateStep implements TranslationStep {
       return this.response;
     }
 
-    if (that.grammarRule === "malloyDocument") {
+    if (that.grammarRule === 'malloyDocument') {
       if (astResponse.ast instanceof ast.Document) {
         const doc = astResponse.ast;
         doc.initModelDef(extendingModel);
@@ -700,7 +628,7 @@ export abstract class MalloyTranslation {
 
   constructor(
     readonly sourceURL: string,
-    public grammarRule = "malloyDocument"
+    public grammarRule = 'malloyDocument'
   ) {
     this.childTranslators = new Map<string, MalloyTranslation>();
     this.modelDef = {
@@ -752,11 +680,11 @@ export abstract class MalloyTranslation {
    */
   errors(): ErrorResponse {
     const errors = this.root.logger.getLog();
-    return { errors: [...errors] };
+    return {errors: [...errors]};
   }
 
   getLineMap(url: string): string[] | undefined {
-    if (url == this.sourceURL) {
+    if (url === this.sourceURL) {
       return this.parseStep.sourceInfo?.lines;
     }
     const theChild = this.childTranslators.get(url);
@@ -766,8 +694,8 @@ export abstract class MalloyTranslation {
   }
 
   prettyErrors(): string {
-    let lovely = "";
-    let inFile = "";
+    let lovely = '';
+    let inFile = '';
     for (const entry of this.root.logger.getLog()) {
       let cooked = entry.message;
       let errorURL = this.sourceURL;
@@ -780,7 +708,7 @@ export abstract class MalloyTranslation {
           const errorLine = lines[lineNo];
           cooked = `line ${lineNo + 1}: ${entry.message}\n  | ${errorLine}`;
           if (charFrom > 0) {
-            cooked = cooked + `\n  | ${" ".repeat(charFrom)}^`;
+            cooked = cooked + `\n  | ${' '.repeat(charFrom)}^`;
           }
         } else {
           cooked = `line ${lineNo + 1}: char ${charFrom}: ${entry.message}`;
@@ -790,7 +718,7 @@ export abstract class MalloyTranslation {
         cooked = `FILE: ${errorURL}\n` + cooked;
         inFile = errorURL;
       }
-      if (lovely !== "") {
+      if (lovely !== '') {
         lovely = `${lovely}\n${cooked}`;
       } else {
         lovely = cooked;
@@ -810,8 +738,8 @@ export abstract class MalloyTranslation {
     }
   }
 
-  getChildExports(importURL: string): NamedStructDefs {
-    const exports: NamedStructDefs = {};
+  getChildExports(importURL: string): Record<string, NamedModelObject> {
+    const exports: Record<string, NamedModelObject> = {};
     const childURL = decodeURI(new URL(importURL, this.sourceURL).toString());
     const child = this.childTranslators.get(childURL);
     if (child) {
@@ -819,7 +747,7 @@ export abstract class MalloyTranslation {
       if (did.translated) {
         for (const fromChild of child.modelDef.exports) {
           const modelEntry = child.modelDef.contents[fromChild];
-          if (modelEntry.type === "struct") {
+          if (modelEntry.type === 'struct' || modelEntry.type === 'query') {
             exports[fromChild] = modelEntry;
           }
         }
@@ -863,8 +791,8 @@ export abstract class MalloyTranslation {
     return {
       url: this.sourceURL,
       range: {
-        start: { line: 0, character: 0 },
-        end: { line: 0, character: 0 },
+        start: {line: 0, character: 0},
+        end: {line: 0, character: 0},
       },
     };
   }
@@ -878,7 +806,7 @@ export abstract class MalloyTranslation {
       line: startToken.line - 1,
       character: startToken.charPositionInLine,
     };
-    if (this.parseStep.sourceInfo && stopToken.stopIndex != -1) {
+    if (this.parseStep.sourceInfo && stopToken.stopIndex !== -1) {
       // Find the line which contains the stopIndex
       const lastLine = this.parseStep.sourceInfo.lines.length - 1;
       for (let lineNo = startToken.line - 1; lineNo <= lastLine; lineNo++) {
@@ -903,7 +831,7 @@ export abstract class MalloyTranslation {
         },
       };
     }
-    return { start, end: start };
+    return {start, end: start};
   }
 
   rangeFromToken(token: Token): DocumentRange {
@@ -911,7 +839,7 @@ export abstract class MalloyTranslation {
   }
 }
 
-class MalloyChildTranslator extends MalloyTranslation {
+export class MalloyChildTranslator extends MalloyTranslation {
   constructor(rootURL: string, readonly root: MalloyTranslator) {
     super(rootURL);
   }

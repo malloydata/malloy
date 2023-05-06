@@ -1,9 +1,30 @@
 {
   "name": "@malloydata/db-duckdb",
-  "version": "0.0.16",
-  "license": "GPL-2.0",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "version": "0.0.32",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "engines": {
+    "node": ">=11"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./package.json": "./package.json",
+    "./wasm": {
+      "browser": "./dist/duckdb_wasm_connection_browser.js",
+      "node": "./dist/duckdb_wasm_connection_node.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "index": [
+        "./dist/index.d.ts"
+      ],
+      "wasm": [
+        "./dist/duckdb_wasm_connection_browser.d.ts"
+      ]
+    }
+  },
   "homepage": "https://github.com/malloydata/malloy#readme",
   "repository": {
     "type": "git",
@@ -14,12 +35,15 @@
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
     "build": "tsc --build",
+    "clean": "tsc --build --clean",
     "malloyc": "ts-node ../../scripts/malloy-to-json",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@duckdb/duckdb-wasm": "^1.17.0",
-    "@malloydata/malloy": "^0.0.16",
-    "duckdb": "^0.6.2-dev416.0"
+    "@malloydata/duckdb-wasm": "0.0.1",
+    "@malloydata/malloy": "^0.0.32",
+    "apache-arrow": "^11.0.0",
+    "duckdb": "0.7.1",
+    "web-worker": "^1.2.0"
   }
 }

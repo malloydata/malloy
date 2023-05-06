@@ -1,0 +1,10 @@
+# git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+# Add gts for linting
+ca96d181fa7d8d213e09584e4b39117e5ed1538e
+
+# Update linter to more closely match style guide.
+5cb3bee78e00306dc7ad08ac3123fc11048a8d84
+
+# Lint fixes, add rule for quoted properties. 
+e9d421fcc9cf1db27ebd1039ecef87fd507ba0f9

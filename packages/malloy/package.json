@@ -1,10 +1,13 @@
 {
   "name": "@malloydata/malloy",
-  "version": "0.0.16",
-  "license": "GPL-2.0",
+  "version": "0.0.32",
+  "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "homepage": "https://github.com/malloydata/malloy#readme",
+  "engines": {
+    "node": ">=10"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/malloydata/malloy"
@@ -13,7 +16,7 @@
     "test": "jest --config=../../jest.config.js",
     "build-parser": "node src/lang/grammar/build_parser.js",
     "testLang": "npm run test --testPathPattern=packages/malloy/src/lang",
-    "clean": "rm -rf src/lang/lib",
+    "clean": "tsc --build --clean && rm -rf src/lang/lib dist",
     "build": "npm run build-parser && tsc --build",
     "malloyc": "ts-node ../../scripts/malloy-to-json",
     "prepublishOnly": "npm run clean && npm run build"
@@ -28,6 +31,7 @@
   "devDependencies": {
     "@types/lodash": "^4.14.165",
     "@types/luxon": "^1.26.4",
+    "@types/md5": "^2.3.1",
     "antlr4ts-cli": "^0.5.0-alpha.4"
   }
 }
