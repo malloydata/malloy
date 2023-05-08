@@ -244,9 +244,8 @@ export abstract class Dialect {
         return this.sqlMeasureTime(df.left, df.right, df.units);
       case 'delta':
         return this.sqlAlterTime(df.op, df.base, df.delta, df.units);
-      case 'trunc': {
+      case 'trunc':
         return this.sqlTrunc(qi, df.expr, df.units);
-      }
       case 'extract':
         return this.sqlExtract(qi, df.expr, df.units);
       case 'cast':
