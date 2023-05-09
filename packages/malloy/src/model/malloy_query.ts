@@ -89,6 +89,16 @@ function generateSQLStringLiteral(sourceString: string): string {
   return `'${sourceString}'`;
 }
 
+/** Parent from QueryStruct. */
+export declare interface ParentQueryStruct {
+  struct: QueryStruct;
+}
+
+/** Parent from QueryModel. */
+export declare interface ParentQueryModel {
+  model: QueryModel;
+}
+
 // Storage for SQL code for multi stage turtle pipelines that don't support UNNEST(ARRAY_AGG)
 interface OutputPipelinedSQL {
   sqlFieldName: string;
@@ -3439,11 +3449,7 @@ class QueryStruct extends QueryNode {
 
   constructor(
     fieldDef: StructDef,
-    parent:
-      | {struct: QueryStruct}
-      | {
-          model: QueryModel;
-        }
+    parent: ParentQueryStruct | ParentQueryModel
   ) {
     super(fieldDef);
     this.setParent(parent);
@@ -3710,7 +3716,7 @@ class QueryStruct extends QueryNode {
     }
   }
 
-  setParent(parent: {struct: QueryStruct} | {model: QueryModel}) {
+  setParent(parent: ParentQueryStruct | ParentQueryModel) {
     if ('struct' in parent) {
       this.parent = parent.struct;
     }
