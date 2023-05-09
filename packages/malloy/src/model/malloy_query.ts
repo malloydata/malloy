@@ -3449,9 +3449,7 @@ class QueryStruct extends QueryNode {
 
   constructor(
     fieldDef: StructDef,
-    parent:
-      | ParentQueryStruct
-      | ParentQueryModel
+    parent: ParentQueryStruct | ParentQueryModel
   ) {
     super(fieldDef);
     this.setParent(parent);
