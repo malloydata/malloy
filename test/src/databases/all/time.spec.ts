@@ -611,6 +611,20 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
       {mex_day: mex_19.toJSDate()}
     );
   });
+
+  test('cast to date', async () => {
+    // At midnight in london it the 19th in Mexico, so when we cast that
+    // to a date, it should be the 19th.
+    await expect(runtime).queryMatches(
+      `sql: tzTest is { connection: "${dbName}" select: """SELECT 1 as one""" }
+      query: from_sql(tzTest) -> {
+        timezone: '${zone}'
+        declare: utc_midnight is @2020-02-20 00:00:00[UTC]
+        project: mex_day is day(utc_midnight::date)
+      }`,
+      {mex_day: 19}
+    );
+  });
 });
 
 afterAll(async () => {

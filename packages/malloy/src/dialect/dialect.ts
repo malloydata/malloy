@@ -219,7 +219,7 @@ export abstract class Dialect {
     return false;
   }
 
-  abstract sqlCast(cast: TypecastFragment): Expr;
+  abstract sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr;
 
   abstract sqlLiteralTime(
     qi: QueryInfo,
@@ -249,7 +249,7 @@ export abstract class Dialect {
       case 'extract':
         return this.sqlExtract(qi, df.expr, df.units);
       case 'cast':
-        return this.sqlCast(df);
+        return this.sqlCast(qi, df);
       case 'regexpMatch':
         return this.sqlRegexpMatch(df.expr, df.regexp);
       case 'div': {

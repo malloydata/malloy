@@ -311,10 +311,17 @@ export class DuckDBDialect extends Dialect {
     return mkExpr`${expr.value} ${op} ${interval}`;
   }
 
-  sqlCast(cast: TypecastFragment): Expr {
+  sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr {
     if (cast.dstType !== cast.srcType) {
       const castTo = castMap[cast.dstType] || cast.dstType;
-      return mkExpr`cast(${cast.expr} as ${castTo})`;
+      if (castTo === 'date' && cast.srcType === 'timestamp') {
+        const tz = qtz(qi);
+        if (tz) {
+          const tstz = mkExpr`${cast.expr}::TIMESTAMPTZ`;
+          return mkExpr`CAST((${tstz}) AT TIME ZONE '${tz}' AS ${castTo.toUpperCase()})`;
+        }
+      }
+      return mkExpr`CAST(${cast.expr} AS ${castTo})`;
     }
     return cast.expr;
   }

@@ -67,10 +67,9 @@ const extractMap: Record<string, string> = {
  */
 function qtz(qi: QueryInfo): string | undefined {
   const tz = qi.queryTimezone;
-  if (tz === undefined || tz === 'UTC' || tz.match(/^[+]0+(:0+)?$/)) {
-    return undefined;
+  if (tz && tz !== 'UTC') {
+    return tz;
   }
-  return tz;
 }
 
 export class StandardSQLDialect extends Dialect {
@@ -360,9 +359,9 @@ ${indent(sql)}
   }
 
   sqlExtract(qi: QueryInfo, expr: TimeValue, units: ExtractUnit): Expr {
-    const tz = qtz(qi);
-    const tzAdd = tz ? ` AT TIME ZONE '${tz}'` : '';
     const extractTo = extractMap[units] || units;
+    const tz = expr.valueType === 'timestamp' && qtz(qi);
+    const tzAdd = tz ? ` AT TIME ZONE '${tz}'` : '';
     return mkExpr`EXTRACT(${extractTo} FROM ${expr.value}${tzAdd})`;
   }
 
@@ -396,15 +395,19 @@ ${indent(sql)}
     return fieldName === '_PARTITIONTIME';
   }
 
-  sqlCast(cast: TypecastFragment): Expr {
+  sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr {
     if (cast.srcType !== cast.dstType) {
       const dstType = castMap[cast.dstType] || cast.dstType;
-      // This just makes the code look a little prettier ...
-      if (!cast.safe && cast.srcType && isTimeFieldType(cast.srcType)) {
+      if (cast.srcType && isTimeFieldType(cast.srcType)) {
         if (dstType === 'date') {
+          const tz = qtz(qi);
+          if (tz) {
+            return mkExpr`DATE(${cast.expr},'${tz}')`;
+          }
           return mkExpr`DATE(${cast.expr})`;
+        } else if (dstType === 'timestamp') {
+          return mkExpr`TIMESTAMP(${cast.expr})`;
         }
-        return mkExpr`TIMESTAMP(${cast.expr})`;
       }
       const castFunc = cast.safe ? 'SAFE_CAST' : 'CAST';
       return mkExpr`${castFunc}(${cast.expr}  AS ${dstType})`;
@@ -427,7 +430,7 @@ ${indent(sql)}
     } else if (type === 'timestamp') {
       let timestampArgs = `'${timeString}'`;
       const tz = timezone || qtz(qi);
-      if (tz) {
+      if (tz && tz !== 'UTC') {
         timestampArgs += `,'${tz}'`;
       }
       return `TIMESTAMP(${timestampArgs})`;
