@@ -1,0 +1,28 @@
+{
+  "name": "@malloydata/malloy-sql",
+  "version": "0.0.32",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "homepage": "https://github.com/malloydata/malloy#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
+  "scripts": {
+    "build-grammar": "peggy -o src/grammar/malloySQL.js src/grammar/malloySQL.pegjs",
+    "lint": "eslint '**/*.ts{,x}'",
+    "lint-fix": "eslint '**/*.ts{,x}' --fix",
+    "test": "npm run build-grammar && jest --config=../../jest.config.js",
+    "build": "npm run build-grammar && tsc --build",
+    "clean": "tsc --build --clean",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@malloydata/malloy": "^0.0.32"
+  },
+  "devDependencies": {
+    "md5": "^2.3.0",
+    "peggy": "^3.0.2"
+  }
+}
