@@ -95,7 +95,7 @@ expect.extend({
       } catch (e) {
         const failMsg =
           `query.run failed: ${e.message}\n` + `SQL: ${await query.getSQL()}`;
-        return { pass: false, message: () => failMsg};
+        return {pass: false, message: () => failMsg};
       }
     } catch (e) {
       return {pass: false, message: () => `loadQuery failed: ${e.message}`};
