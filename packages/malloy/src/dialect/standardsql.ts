@@ -32,7 +32,6 @@ import {
   isSamplingEnable,
   isSamplingPercent,
   isSamplingRows,
-  isTimeFieldType,
   mkExpr,
 } from '../model/malloy_types';
 import {Dialect, DialectFieldList, FunctionInfo, QueryInfo} from './dialect';
@@ -396,19 +395,16 @@ ${indent(sql)}
   }
 
   sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr {
+    const op = `${cast.srcType}::${cast.dstType}`;
+    const tz = qtz(qi);
+    if (op === 'timestamp::date' && tz) {
+      return mkExpr`DATE(${cast.expr},'${tz}')`;
+    }
+    if (op === 'date::timestamp' && tz) {
+      return mkExpr`TIMESTAMP(${cast.expr}, '${tz}')`;
+    }
     if (cast.srcType !== cast.dstType) {
       const dstType = castMap[cast.dstType] || cast.dstType;
-      if (cast.srcType && isTimeFieldType(cast.srcType)) {
-        if (dstType === 'date') {
-          const tz = qtz(qi);
-          if (tz) {
-            return mkExpr`DATE(${cast.expr},'${tz}')`;
-          }
-          return mkExpr`DATE(${cast.expr})`;
-        } else if (dstType === 'timestamp') {
-          return mkExpr`TIMESTAMP(${cast.expr})`;
-        }
-      }
       const castFunc = cast.safe ? 'SAFE_CAST' : 'CAST';
       return mkExpr`${castFunc}(${cast.expr}  AS ${dstType})`;
     }

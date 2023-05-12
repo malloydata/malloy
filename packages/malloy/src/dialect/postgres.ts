@@ -342,15 +342,16 @@ export class PostgresDialect extends Dialect {
   }
 
   sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr {
+    const op = `${cast.srcType}::${cast.dstType}`;
+    const castTo = castMap[cast.dstType] || cast.dstType;
+    const tz = qtz(qi);
+    if (op === 'timestamp::date' && tz) {
+      const tstz = mkExpr`${cast.expr}::TIMESTAMPTZ`;
+      return mkExpr`CAST((${tstz}) AT TIME ZONE '${tz}' AS DATE)`;
+    } else if (op === 'date::timestamp' && tz) {
+      return mkExpr`CAST((${cast.expr})::TIMESTAMP AT TIME ZONE '${tz}' AS TIMESTAMP)`;
+    }
     if (cast.dstType !== cast.srcType) {
-      const castTo = castMap[cast.dstType] || cast.dstType;
-      if (castTo === 'date' && cast.srcType === 'timestamp') {
-        const tz = qtz(qi);
-        if (tz) {
-          const tstz = mkExpr`${cast.expr}::TIMESTAMPTZ`;
-          return mkExpr`CAST((${tstz}) AT TIME ZONE '${tz}' AS ${castTo.toUpperCase()})`;
-        }
-      }
       return mkExpr`CAST(${cast.expr} AS ${castTo})`;
     }
     return cast.expr;

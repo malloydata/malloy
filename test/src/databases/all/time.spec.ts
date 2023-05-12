@@ -612,7 +612,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
     );
   });
 
-  test('cast to date', async () => {
+  test('cast timestamp to date', async () => {
     // At midnight in london it the 19th in Mexico, so when we cast that
     // to a date, it should be the 19th.
     await expect(runtime).queryMatches(
@@ -623,6 +623,19 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
         project: mex_day is day(utc_midnight::date)
       }`,
       {mex_day: 19}
+    );
+  });
+
+  test('cast date to timestamp', async () => {
+    await expect(runtime).queryMatches(
+      `sql: tzTest is { connection: "${dbName}" select: """
+          SELECT DATE '2020-02-20'  AS mex_20
+      """ }
+      query: from_sql(tzTest) -> {
+        timezone: '${zone}'
+        project: mex_ts is mex_20::timestamp
+      }`,
+      {mex_ts: zone_2020.toJSDate()}
     );
   });
 });
