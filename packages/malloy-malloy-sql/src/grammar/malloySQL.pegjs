@@ -3,6 +3,7 @@ start = initial_comments control_and_statement*
 control_and_statement = c:control s:statement {
   s["statementType"] = c.type;
   s["config"] = c.config
+  s["controlLineLocation"] = c.location
   return s
 }
 

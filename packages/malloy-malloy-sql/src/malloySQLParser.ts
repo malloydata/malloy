@@ -39,72 +39,120 @@ export interface MalloySQLParseRange {
   end: MalloySQLParseLocation;
 }
 
-interface MalloySQLStatement {
+interface ParsedMalloySQLStatement {
   parts: MalloySQLStatementPart[];
   location: MalloySQLParseRange;
+  controlLineLocation: MalloySQLParseRange;
   statementText: string;
   statementType: 'sql' | 'malloy';
   config: string;
 }
 
-interface MalloySQLMalloyStatementPart {
+interface ParsedMalloySQLMalloyStatementPart {
   type: 'malloy';
   text: string;
   location: MalloySQLParseLocation;
   parenthized: boolean;
 }
 
-interface MalloySQLOtherStatementPart {
+interface ParsedMalloySQLOtherStatementPart {
   type: 'comment' | 'other';
   text: string;
   location: MalloySQLParseLocation;
 }
 
 type MalloySQLStatementPart =
-  | MalloySQLMalloyStatementPart
-  | MalloySQLOtherStatementPart;
+  | ParsedMalloySQLMalloyStatementPart
+  | ParsedMalloySQLOtherStatementPart;
 
-interface MalloySQLStatementParseResults {
+interface MalloySQLParseResults {
   initialComments: string;
-  statements: MalloySQLStatement[];
+  statements: ParsedMalloySQLStatement[];
+}
+
+export interface MalloySQLStatmentConfig {
+  connection: string;
 }
 
 export class MalloySQLParseError extends Error {
-  public expected: MalloySQLParseErrorExpected[];
-  public found: string;
   public location: MalloySQLParseRange;
 
-  constructor(message: string | undefined, expected, found, location) {
+  constructor(message: string | undefined, location) {
     super(message);
-    this.expected = expected;
-    this.found = found;
     this.location = location;
   }
 }
 
-export class MalloySQLConfigurationError extends Error {}
+export class MalloySQLSyntaxError extends MalloySQLParseError {
+  public expected: MalloySQLParseErrorExpected[];
+  public found: string;
 
+  constructor(message: string | undefined, expected, found, location) {
+    super(message, location);
+    this.expected = expected;
+    this.found = found;
+  }
+}
+
+export class MalloySQLConfigurationError extends MalloySQLParseError {}
+
+// TODO do we even need a class?
 export class MalloySQLParser {
   constructor() {}
 
   public parse(document: string) {
-    let parsed: [MalloySQLStatementParseResults[]];
+    let parsed: MalloySQLParseResults;
     try {
-      parsed = parser.parse(document);
+      const p = parser.parse(document);
+      parsed = {
+        initialComments: p[0],
+        statements: p[1],
+      };
     } catch (e) {
-      throw new MalloySQLParseError(e.message, e.expected, e.found, e.location);
+      throw new MalloySQLSyntaxError(
+        e.message,
+        e.expected,
+        e.found,
+        e.location
+      );
     }
 
     const totalLines = document.split(/\r\n|\r|\n/).length;
-    const initialComments = parsed.shift();
-    const statements = parsed.shift();
 
-    if (!statements) return; // TODO
+    if (!parsed.statements) return; // TODO
 
-    for (const statement of statements) {
-      console.log(statement);
+    let previousConnection = '';
+    for (const statement of parsed.statements) {
+      let config: MalloySQLStatmentConfig;
+      if (statement.config.startsWith('connection:')) {
+        const splitConfig = statement.config.split('connection:');
+        if (splitConfig.length > 0)
+          config = {connection: splitConfig[1].trim()};
+        else
+          throw new MalloySQLConfigurationError(
+            '"connection:" found but no connection value provided',
+            statement.controlLineLocation
+          );
+      } else {
+        config = JSON.parse(statement.config);
+      }
+
+      if (!config.connection) {
+        if (!previousConnection)
+          throw new MalloySQLConfigurationError(
+            'No connection configuration specified, add "connection: my_connection_name" to the >>> line',
+            statement.controlLineLocation
+          );
+        config.connection = previousConnection;
+      }
+
+      previousConnection = config.connection;
     }
 
     return parsed;
   }
 }
+
+// MalloySQLStatement
+// MalloySQLSQLStatement malloyStatements(), amendErrorLocation(), generateSQLError?
+// MalloySQLMalloyStatement

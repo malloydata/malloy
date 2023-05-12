@@ -86,5 +86,14 @@ describe('MalloySQL parse', () => {
       getParser().parse(`>>>sql\nSELECT 1 FROM %{ malloy }% /*test*/`);
       getParser().parse(`>>>malloy\nquery -> source -> banana/*test*/`);
     });
+
+    test('Should parse statements', () => {
+      getParser().parse(
+        `>>>sql\nSELECT 1 FROM %{ malloy }% /*test*/\n>>>malloy>>>sql`
+      );
+      getParser().parse(
+        `>>>malloy\nquery -> source -> banana/*test*/\n\r>>>sql \nSELECT 1 >>>malloy xx\n\n`
+      );
+    });
   });
 });
