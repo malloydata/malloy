@@ -40,7 +40,7 @@ export interface MalloySQLParseRange {
 }
 
 interface ParsedMalloySQLStatement {
-  parts: MalloySQLStatementPart[];
+  parts: ParsedMalloySQLStatementPart[];
   location: MalloySQLParseRange;
   controlLineLocation: MalloySQLParseRange;
   statementText: string;
@@ -61,7 +61,7 @@ interface ParsedMalloySQLOtherStatementPart {
   location: MalloySQLParseLocation;
 }
 
-type MalloySQLStatementPart =
+type ParsedMalloySQLStatementPart =
   | ParsedMalloySQLMalloyStatementPart
   | ParsedMalloySQLOtherStatementPart;
 
@@ -96,11 +96,41 @@ export class MalloySQLSyntaxError extends MalloySQLParseError {
 
 export class MalloySQLConfigurationError extends MalloySQLParseError {}
 
-// TODO do we even need a class?
+// TODO record initial non-comment part, don't want to add "Run" button to comments
+export class MalloySQLStatement {
+  constructor(
+    public statementText: string,
+    public config: MalloySQLStatmentConfig,
+    public location: MalloySQLParseRange
+  ) {}
+}
+
+interface EmbeddedMalloyQuery {
+  query: string;
+  //location:
+  parenthized: boolean;
+}
+
+export class MalloySQLSQLStatement extends MalloySQLStatement {
+  public embeddedMalloyQueries: EmbeddedMalloyQuery[];
+
+  constructor(
+    public statementText: string,
+    public config: MalloySQLStatmentConfig,
+    public location: MalloySQLParseRange,
+    embeddedMalloyQueries: EmbeddedMalloyQuery[]
+  ) {
+    super(statementText, config, location);
+    this.embeddedMalloyQueries = embeddedMalloyQueries;
+  }
+}
+
+export class MalloySQLMalloyStatement extends MalloySQLStatement {}
+
 export class MalloySQLParser {
   constructor() {}
 
-  public parse(document: string) {
+  public parse(document: string): MalloySQLStatement[] {
     let parsed: MalloySQLParseResults;
     try {
       const p = parser.parse(document);
@@ -119,40 +149,59 @@ export class MalloySQLParser {
 
     const totalLines = document.split(/\r\n|\r|\n/).length;
 
-    if (!parsed.statements) return; // TODO
+    if (!parsed.statements) return [];
 
     let previousConnection = '';
-    for (const statement of parsed.statements) {
+    const statements = parsed.statements.map(parsedStatement => {
       let config: MalloySQLStatmentConfig;
-      if (statement.config.startsWith('connection:')) {
-        const splitConfig = statement.config.split('connection:');
+      if (parsedStatement.config.startsWith('connection:')) {
+        const splitConfig = parsedStatement.config.split('connection:');
         if (splitConfig.length > 0)
           config = {connection: splitConfig[1].trim()};
         else
           throw new MalloySQLConfigurationError(
             '"connection:" found but no connection value provided',
-            statement.controlLineLocation
+            parsedStatement.controlLineLocation
           );
       } else {
-        config = JSON.parse(statement.config);
+        config = JSON.parse(parsedStatement.config);
       }
 
       if (!config.connection) {
         if (!previousConnection)
           throw new MalloySQLConfigurationError(
             'No connection configuration specified, add "connection: my_connection_name" to the >>> line',
-            statement.controlLineLocation
+            parsedStatement.controlLineLocation
           );
         config.connection = previousConnection;
       }
 
       previousConnection = config.connection;
-    }
 
-    return parsed;
+      if (parsedStatement.statementType == 'malloy') {
+        return new MalloySQLMalloyStatement(
+          parsedStatement.statementText,
+          config,
+          parsedStatement.location
+        );
+      } else {
+        const embeddedMalloyQueries = parsedStatement.parts
+          .filter((part): part is ParsedMalloySQLMalloyStatementPart => {
+            return part.type === 'malloy';
+          })
+          .map(part => {
+            return {query: part.text, parenthized: part.parenthized};
+          });
+
+        return new MalloySQLSQLStatement(
+          parsedStatement.statementText,
+          config,
+          parsedStatement.location,
+          embeddedMalloyQueries
+        );
+      }
+    });
+
+    return statements;
   }
 }
-
-// MalloySQLStatement
-// MalloySQLSQLStatement malloyStatements(), amendErrorLocation(), generateSQLError?
-// MalloySQLMalloyStatement
