@@ -22,57 +22,16 @@
  */
 
 import * as parser from './grammar/malloySQL';
-
-export interface MalloySQLParseErrorExpected {
-  type: string;
-  description: string;
-}
-
-export interface MalloySQLParseLocation {
-  column: number;
-  line: number;
-  offset: number;
-}
-
-export interface MalloySQLParseRange {
-  start: MalloySQLParseLocation;
-  end: MalloySQLParseLocation;
-}
-
-interface ParsedMalloySQLStatement {
-  parts: ParsedMalloySQLStatementPart[];
-  location: MalloySQLParseRange;
-  controlLineLocation: MalloySQLParseRange;
-  statementText: string;
-  statementType: 'sql' | 'malloy';
-  config: string;
-}
-
-interface ParsedMalloySQLMalloyStatementPart {
-  type: 'malloy';
-  text: string;
-  location: MalloySQLParseLocation;
-  parenthized: boolean;
-}
-
-interface ParsedMalloySQLOtherStatementPart {
-  type: 'comment' | 'other';
-  text: string;
-  location: MalloySQLParseLocation;
-}
-
-type ParsedMalloySQLStatementPart =
-  | ParsedMalloySQLMalloyStatementPart
-  | ParsedMalloySQLOtherStatementPart;
-
-interface MalloySQLParseResults {
-  initialComments: string;
-  statements: ParsedMalloySQLStatement[];
-}
-
-export interface MalloySQLStatmentConfig {
-  connection: string;
-}
+import {
+  MalloySQLStatmentConfig,
+  MalloySQLStatementBase,
+  MalloySQLStatement,
+  MalloySQLParseResults,
+  MalloySQLStatementType,
+  ParsedMalloySQLMalloyStatementPart,
+  MalloySQLParseRange,
+  MalloySQLParseErrorExpected,
+} from './types';
 
 export class MalloySQLParseError extends Error {
   public location: MalloySQLParseRange;
@@ -96,37 +55,6 @@ export class MalloySQLSyntaxError extends MalloySQLParseError {
 
 export class MalloySQLConfigurationError extends MalloySQLParseError {}
 
-// TODO record initial non-comment part, don't want to add "Run" button to comments
-export class MalloySQLStatement {
-  constructor(
-    public statementText: string,
-    public config: MalloySQLStatmentConfig,
-    public location: MalloySQLParseRange
-  ) {}
-}
-
-interface EmbeddedMalloyQuery {
-  query: string;
-  //location:
-  parenthized: boolean;
-}
-
-export class MalloySQLSQLStatement extends MalloySQLStatement {
-  public embeddedMalloyQueries: EmbeddedMalloyQuery[];
-
-  constructor(
-    public statementText: string,
-    public config: MalloySQLStatmentConfig,
-    public location: MalloySQLParseRange,
-    embeddedMalloyQueries: EmbeddedMalloyQuery[]
-  ) {
-    super(statementText, config, location);
-    this.embeddedMalloyQueries = embeddedMalloyQueries;
-  }
-}
-
-export class MalloySQLMalloyStatement extends MalloySQLStatement {}
-
 export class MalloySQLParser {
   constructor() {}
 
@@ -147,12 +75,15 @@ export class MalloySQLParser {
       );
     }
 
-    const totalLines = document.split(/\r\n|\r|\n/).length;
+    //const totalLines = document.split(/\r\n|\r|\n/).length;
 
     if (!parsed.statements) return [];
 
     let previousConnection = '';
-    const statements = parsed.statements.map(parsedStatement => {
+    const statements: MalloySQLStatement[] = [];
+    let sqlStatementIndex = 0;
+
+    for (const parsedStatement of parsed.statements) {
       let config: MalloySQLStatmentConfig;
       if (parsedStatement.config.startsWith('connection:')) {
         const splitConfig = parsedStatement.config.split('connection:');
@@ -164,7 +95,17 @@ export class MalloySQLParser {
             parsedStatement.controlLineLocation
           );
       } else {
-        config = JSON.parse(parsedStatement.config);
+        try {
+          config = JSON.parse(parsedStatement.config);
+        } catch (e) {
+          throw new MalloySQLConfigurationError(
+            `no simple "connection: myconnection" string found after
+            ">>>${parsedStatement.statementType}", trying to parse
+            everything after ">>>${parsedStatement.statementType} as JSON and
+            failed with ${e.message}`,
+            parsedStatement.controlLineLocation
+          );
+        }
       }
 
       if (!config.connection) {
@@ -177,30 +118,46 @@ export class MalloySQLParser {
       }
 
       previousConnection = config.connection;
+      const firstNonCommentPart = parsedStatement.parts.find(part => {
+        part.type !== 'comment';
+      });
 
-      if (parsedStatement.statementType == 'malloy') {
-        return new MalloySQLMalloyStatement(
-          parsedStatement.statementText,
-          config,
-          parsedStatement.location
-        );
+      const base: MalloySQLStatementBase = {
+        statementText: parsedStatement.statementText,
+        config,
+        location: parsedStatement.location,
+        firstNonCommentToken: firstNonCommentPart
+          ? firstNonCommentPart.location.start
+          : undefined,
+      };
+
+      if (parsedStatement.statementType === 'malloy') {
+        statements.push({
+          ...base,
+          type: MalloySQLStatementType.MALLOY,
+        });
       } else {
         const embeddedMalloyQueries = parsedStatement.parts
           .filter((part): part is ParsedMalloySQLMalloyStatementPart => {
             return part.type === 'malloy';
           })
           .map(part => {
-            return {query: part.text, parenthized: part.parenthized};
+            return {
+              query: part.text,
+              parenthized: part.parenthized,
+              location: part.location,
+            };
           });
 
-        return new MalloySQLSQLStatement(
-          parsedStatement.statementText,
-          config,
-          parsedStatement.location,
-          embeddedMalloyQueries
-        );
+        statements.push({
+          ...base,
+          statementIndex: sqlStatementIndex,
+          type: MalloySQLStatementType.SQL,
+          embeddedMalloyQueries,
+        });
+        sqlStatementIndex += 1;
       }
-    });
+    }
 
     return statements;
   }

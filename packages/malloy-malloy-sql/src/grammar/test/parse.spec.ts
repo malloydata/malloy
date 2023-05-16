@@ -55,44 +55,48 @@ describe('MalloySQL parse', () => {
   describe('Should parse control statement', () => {
     test('Should parse immediate delimiter', () => {
       [
-        '>>>sql',
-        '>>>malloy',
-        '>>>sql a',
-        '>>>sql a\n',
-        '>>>sql a  //x\n\n',
-        '>>>sql {"x":"y"} // test',
+        '>>>sql connection:x',
+        '>>>malloy connection:x',
+        '>>>sql connection: a',
+        '>>>sql connection:  a\n',
+        '>>>sql connection:a  //x\n\n',
+        '>>>sql {"connection":"y"} // test',
       ].forEach(x => getParser().parse(x));
     });
 
     test('Should parse initial comments and delimiter', () => {
       [
-        '// hey\n>>>sql',
-        '/* test */\n\n\n>>>malloy',
+        '// hey\n>>>sql connection:x',
+        '/* test */\n\n\n>>>malloy connection:x',
         '--info\t>>>sql a',
       ].forEach(x => getParser().parse(x));
     });
 
     test('Should parse multiple empty control statements', () => {
       [
-        '// hey\n>>>sql\n>>>sql\n>>>malloy\n\n',
-        '// hey\n>>>sql {xyz}  \n>>>sql\n>>>malloy\n\n',
-        '\n>>>sql {xyz}  \n   /* test */\n\n>>>sql\n--hey\n>>>malloy\n\n',
+        '// hey\n>>>sql {"connection":"X"}\n>>>sql {"connection":"X"}\n>>>malloy connection:x\n\n',
+        '// hey\n>>>sql {"connection":"X"}  \n>>>sql\n>>>malloy connection:x\n\n',
+        '\n>>>sql {"connection":"X"}  \n   /* test */\n\n>>>sql\n--hey\n>>>malloy connection:x\n\n',
       ].forEach(x => getParser().parse(x));
     });
   });
 
   describe('Should parse statement', () => {
     test('Should parse statement with comments', () => {
-      getParser().parse(`>>>sql\nSELECT 1 FROM %{ malloy }% /*test*/`);
-      getParser().parse(`>>>malloy\nquery -> source -> banana/*test*/`);
+      getParser().parse(
+        `>>>sql connection:y\nSELECT 1 FROM %{ malloy }% /*test*/`
+      );
+      getParser().parse(
+        `>>>malloy connection: y\nquery -> source -> banana/*test*/`
+      );
     });
 
     test('Should parse statements', () => {
       getParser().parse(
-        `>>>sql\nSELECT 1 FROM %{ malloy }% /*test*/\n>>>malloy>>>sql`
+        `>>>sql connection:x\nSELECT 1 FROM %{ malloy }% /*test*/\n>>>malloy\n>>>sql`
       );
       getParser().parse(
-        `>>>malloy\nquery -> source -> banana/*test*/\n\r>>>sql \nSELECT 1 >>>malloy xx\n\n`
+        `>>>malloy connection: x\nquery -> source -> banana/*test*/\n\r>>>sql \nSELECT 1 >>>malloy\n\n`
       );
     });
   });

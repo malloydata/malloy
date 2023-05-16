@@ -11,7 +11,7 @@ statement = p:(comment / embedded_malloy / other)* {
   return {parts: p, location: location(), statementText: p.map((s) => { return s.text }).join('')}
 }
 
-other = s:$(!control !comment !embedded_malloy .)+ {
+other "query string" = s:$(!delimiter !comment !embedded_malloy .)+ {
   return {type: "other", text: s, location:location()}
 }
 
@@ -24,21 +24,21 @@ plain_embedded_malloy = t:$('%{' (!'}%' .)* '}%') {
 }
 
 control =
-  delimiter t:statement_type c:(_ oc:optional_config {return oc})? __ (single_comment / line_ending / EOF) {
-    return {type: t, config: c ? c.trim() : {}, location:location()}
+  delimiter t:statement_type c:(_ oc:optional_config {return oc})? __ (comment / EOL / EOF) {
+    return {type: t, config: c ? c.trim() : '{}', location:location()}
   }
 delimiter = '>>>'
 statement_type = 'sql' / 'malloy'
-optional_config = $(!single_comment !line_ending .)*
+optional_config = $(!comment !EOL .)*
 
-initial_comments "initial comments" = $(_ / line_ending+ / comment)*
+initial_comments "initial comments" = $(_ / EOL / comment)*
 comment "comment" = c:(single_comment / multi_comment) {
   return {type: "comment", text:c, location:location()}
 }
-single_comment = $(('//' / '--') (!line_ending .)* __? (line_ending / EOF))
+single_comment = $(('//' / '--') (!EOL .)* __ (EOL / EOF))
 multi_comment = $("/*" (!"*/" .)* "*/")
 
 __ = _*
 _ = [ \t]
-line_ending "end of line" = [\n\r]
+EOL "end of line" = [\n\r]
 EOF = !.

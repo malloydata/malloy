@@ -20,5 +20,17 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
-export {MalloySQLParser} from './malloySQLParser';
+export {
+  MalloySQLParser,
+  MalloySQLConfigurationError,
+  MalloySQLParseError,
+} from './malloySQLParser';
+export {MalloySQLStatementType} from './types';
+export type {
+  MalloySQLMalloyStatement,
+  MalloySQLSQLStatement,
+  MalloySQLStatement,
+  MalloySQLParseRange,
+  MalloySQLParseLocation,
+  MalloySQLParseErrorExpected,
+} from './types';
