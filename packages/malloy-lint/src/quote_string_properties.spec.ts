@@ -1,9 +1,14 @@
 import {ESLintUtils} from '@typescript-eslint/utils';
 import rule from './quote_string_properties';
+import {join} from 'path';
 
 // create a new tester with a typescript parser
 const ruleTester = new ESLintUtils.RuleTester({
   parser: '@typescript-eslint/parser',
+  parserOptions: {
+    tsconfigRootDir: join(__dirname, '..', '..', '..'),
+    project: './tsconfig.packages.json',
+  },
 });
 
 // pass in test cases
