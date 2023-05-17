@@ -64,14 +64,13 @@ export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
       field: xField.name,
       type: xType,
       sort: xSort,
-      tickCount: 0,
       axis: {
         title: null,
         domain: false,
-        ticks: false,
         grid: false,
         lables: false,
-        values: [],
+        ticks: false,
+        tickCount: 2,
       },
     };
 
@@ -79,14 +78,13 @@ export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
       field: yField.name,
       type: yType,
       sort: ySort,
-      tickCount: 0,
       axis: {
         title: null,
         domain: false,
         ticks: false,
         grid: false,
         lables: false,
-        values: [],
+        tickCount: 1,
       },
     };
 
