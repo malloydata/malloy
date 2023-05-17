@@ -49,6 +49,7 @@ export interface ParsedMalloySQLStatement {
 export interface ParsedMalloySQLMalloyStatementPart {
   type: 'malloy';
   text: string;
+  malloy: string;
   location: MalloySQLParseRange;
   parenthized: boolean;
 }
@@ -78,10 +79,11 @@ export enum MalloySQLStatementType {
 }
 
 export interface MalloySQLStatementBase {
+  statementIndex: number;
   statementText: string;
   config: MalloySQLStatmentConfig;
   location: MalloySQLParseRange;
-  firstNonCommentToken: MalloySQLParseLocation | undefined;
+  controlLineLocation: MalloySQLParseRange;
 }
 
 export interface EmbeddedMalloyQuery {

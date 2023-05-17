@@ -81,7 +81,7 @@ export class MalloySQLParser {
 
     let previousConnection = '';
     const statements: MalloySQLStatement[] = [];
-    let sqlStatementIndex = 0;
+    let statementIndex = 0;
 
     for (const parsedStatement of parsed.statements) {
       let config: MalloySQLStatmentConfig;
@@ -118,18 +118,15 @@ export class MalloySQLParser {
       }
 
       previousConnection = config.connection;
-      const firstNonCommentPart = parsedStatement.parts.find(part => {
-        part.type !== 'comment';
-      });
 
       const base: MalloySQLStatementBase = {
+        statementIndex,
         statementText: parsedStatement.statementText,
         config,
         location: parsedStatement.location,
-        firstNonCommentToken: firstNonCommentPart
-          ? firstNonCommentPart.location.start
-          : undefined,
+        controlLineLocation: parsedStatement.controlLineLocation,
       };
+      statementIndex += 1;
 
       if (parsedStatement.statementType === 'malloy') {
         statements.push({
@@ -143,7 +140,7 @@ export class MalloySQLParser {
           })
           .map(part => {
             return {
-              query: part.text,
+              query: part.malloy,
               parenthized: part.parenthized,
               location: part.location,
             };
@@ -151,11 +148,9 @@ export class MalloySQLParser {
 
         statements.push({
           ...base,
-          statementIndex: sqlStatementIndex,
           type: MalloySQLStatementType.SQL,
           embeddedMalloyQueries,
         });
-        sqlStatementIndex += 1;
       }
     }
 
