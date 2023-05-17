@@ -25,6 +25,7 @@ import {DataArray} from '@malloydata/malloy';
 import * as lite from 'vega-lite';
 import {HTMLLineChartRenderer} from './line_chart';
 import {getColorScale} from './utils';
+import {DEFAULT_SPEC} from './vega_spec';
 
 export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
   override getSize(): {height: number; width: number} {
@@ -89,6 +90,7 @@ export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
     };
 
     return {
+      ...DEFAULT_SPEC,
       ...this.getSize(),
       data: {
         values: this.mapData(data),
