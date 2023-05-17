@@ -44,6 +44,7 @@ import {HTMLPointMapRenderer} from './point_map';
 import {HTMLScatterChartRenderer} from './scatter_chart';
 import {HTMLSegmentMapRenderer} from './segment_map';
 import {HTMLShapeMapRenderer} from './shape_map';
+import {HTMLSparkLineRenderer} from './spark_line';
 import {HTMLTableRenderer} from './table';
 import {HTMLTextRenderer} from './text';
 import {HTMLVegaSpecRenderer} from './vega_spec';
@@ -112,6 +113,7 @@ const suffixMap: Record<string, RenderDef['renderer']> = {
   _dashboard: 'dashboard',
   _line_chart: 'line_chart',
   _scatter_chart: 'scatter_chart',
+  _spark_line: 'spark_line',
   _url: 'link',
   _list: 'list',
   _list_detail: 'list_detail',
@@ -204,6 +206,13 @@ export function makeRenderer(
     return new HTMLJSONRenderer(document);
   } else if (renderDef.renderer === 'line_chart') {
     return new HTMLLineChartRenderer(
+      document,
+      styleDefaults,
+      options,
+      renderDef
+    );
+  } else if (renderDef.renderer === 'spark_line') {
+    return new HTMLSparkLineRenderer(
       document,
       styleDefaults,
       options,
