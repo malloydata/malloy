@@ -527,11 +527,11 @@ export class Malloy {
   public static async estimateCost(params: {
     connections: LookupConnection<Connection>;
     preparedResult: PreparedResult;
-  }): Promise<QueryCostEstimate>;
+  }): Promise<QueryRunStats>;
   public static async estimateCost(params: {
     connections: LookupConnection<Connection>;
     sqlStruct: SQLBlockStructDef;
-  }): Promise<QueryCostEstimate>;
+  }): Promise<QueryRunStats>;
   public static async estimateCost({
     connections,
     preparedResult,
@@ -540,7 +540,7 @@ export class Malloy {
     preparedResult?: PreparedResult;
     sqlStruct?: SQLBlockStructDef;
     connections: LookupConnection<Connection>;
-  }): Promise<QueryCostEstimate> {
+  }): Promise<QueryRunStats> {
     const sqlBlock = sqlStruct?.structSource.sqlBlock;
     if (!connections) {
       throw new Error(
@@ -2578,7 +2578,7 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
    *
    * @return The estimated cost of running this loaded query.
    */
-  public async estimateCost(): Promise<QueryCostEstimate> {
+  public async estimateCost(): Promise<QueryRunStats> {
     const connections = this.runtime.connections;
     const preparedResult = await this.getPreparedResult();
     return Malloy.estimateCost({connections, preparedResult});
@@ -2683,7 +2683,7 @@ export class SQLBlockMaterializer extends FluentState<SQLBlockStructDef> {
     return sqlStruct.structSource.sqlBlock.selectStr;
   }
 
-  public async estimateCost(): Promise<QueryCostEstimate> {
+  public async estimateCost(): Promise<QueryRunStats> {
     const connections = this.runtime.connections;
     const sqlStruct = await this.getSQLBlock();
     return Malloy.estimateCost({connections, sqlStruct});
