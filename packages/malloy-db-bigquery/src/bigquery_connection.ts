@@ -262,8 +262,16 @@ export class BigQueryConnection
         throw new Error('Schema not present');
       }
 
+
       // TODO even though we have 10 minute timeout limit, we still should confirm that resulting metadata has "jobComplete: true"
-      const data = {rows: jobResult[0], totalRows};
+      const queryCostBytes = jobResult[2]?.totalBytesProcessed;
+      const data: MalloyQueryData = {
+        rows: jobResult[0],
+        totalRows,
+        runStats: {
+          queryCostBytes: queryCostBytes ? +queryCostBytes : undefined,
+        },
+      };
       const schema = jobResult[2]?.schema;
 
       return {data, schema};
