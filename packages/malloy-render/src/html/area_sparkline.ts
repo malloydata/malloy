@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {HTMLSparkLineRenderer} from './spark_line';
+import {HTMLSparkLineRenderer} from './sparkline';
 
-export class HTMLSparkLineAreaRenderer extends HTMLSparkLineRenderer {
+export class HTMLAreaSparkLineRenderer extends HTMLSparkLineRenderer {
   override getMark() {
     return {
       type: 'area',

@@ -44,7 +44,7 @@ import {HTMLPointMapRenderer} from './point_map';
 import {HTMLScatterChartRenderer} from './scatter_chart';
 import {HTMLSegmentMapRenderer} from './segment_map';
 import {HTMLShapeMapRenderer} from './shape_map';
-import {HTMLSparkLineRenderer} from './spark_line';
+import {HTMLSparkLineRenderer} from './sparkline';
 import {HTMLTableRenderer} from './table';
 import {HTMLTextRenderer} from './text';
 import {HTMLVegaSpecRenderer} from './vega_spec';
@@ -53,7 +53,7 @@ import {createErrorElement} from './utils';
 import {HTMLUnsupportedRenderer} from './unsupported';
 import {HTMLColumnSparkLineRenderer} from './column_sparkline';
 import {HTMLBarSparkLineRenderer} from './bar_sparkline';
-import {HTMLSparkLineAreaRenderer} from './sparkline_area';
+import {HTMLAreaSparkLineRenderer} from './area_sparkline';
 
 export class HTMLView {
   constructor(private document: Document) {}
@@ -233,7 +233,7 @@ export function makeRenderer(
         renderDef
       );
     } else if (field.name.endsWith('area')) {
-      return new HTMLSparkLineAreaRenderer(
+      return new HTMLAreaSparkLineRenderer(
         document,
         styleDefaults,
         options,
