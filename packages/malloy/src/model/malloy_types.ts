@@ -902,10 +902,16 @@ export type QueryDataRow = {[columnName: string]: QueryValue};
 /** Returned query data. */
 export type QueryData = QueryDataRow[];
 
+/** Query execution stats. */
+export type QueryRunStats = {
+  queryCostBytes?: number;
+};
+
 /** Returned Malloy query data */
 export type MalloyQueryData = {
   rows: QueryDataRow[];
   totalRows: number;
+  runStats?: QueryRunStats;
 };
 
 export interface DrillSource {
@@ -927,6 +933,7 @@ export interface QueryResult extends CompiledQuery {
   result: QueryData;
   totalRows: number;
   error?: string;
+  runStats?: QueryRunStats;
 }
 
 export function isTurtleDef(def: FieldDef): def is TurtleDef {

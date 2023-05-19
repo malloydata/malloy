@@ -62,6 +62,7 @@ import {
   isSQLBlockStruct,
   isSQLFragment,
   FieldUnsupportedDef,
+  QueryRunStats,
 } from './model';
 import {
   Connection,
@@ -402,6 +403,7 @@ export class Malloy {
           sql: sqlBlock.selectStr,
           result: data.rows,
           totalRows: data.totalRows,
+          runStats: data.runStats,
           lastStageName: sqlBlock.name,
           // TODO feature-sql-block There is no malloy code...
           malloy: '',
@@ -423,6 +425,7 @@ export class Malloy {
           ...preparedResult._rawQuery,
           result: result.rows,
           totalRows: result.totalRows,
+          runStats: result.runStats,
         },
         preparedResult._modelDef
       );
@@ -2703,6 +2706,10 @@ export class Result extends PreparedResult {
 
   public get totalRows(): number {
     return this.inner.totalRows;
+  }
+
+  public get runStats(): QueryRunStats | undefined {
+    return this.inner.runStats;
   }
 
   public toJSON(): ResultJSON {
