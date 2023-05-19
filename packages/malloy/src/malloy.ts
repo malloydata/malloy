@@ -62,6 +62,7 @@ import {
   isSQLBlockStruct,
   isSQLFragment,
   FieldUnsupportedDef,
+  QueryCostEstimate,
 } from './model';
 import {
   Connection,
@@ -518,6 +519,43 @@ export class Malloy {
     for await (const row of connection.runSQLStream(sql, options)) {
       yield new DataRecord(row, index, resultExplore, undefined);
       index += 1;
+    }
+  }
+
+  public static async estimateCost(params: {
+    connections: LookupConnection<Connection>;
+    preparedResult: PreparedResult;
+  }): Promise<QueryCostEstimate>;
+  public static async estimateCost(params: {
+    connections: LookupConnection<Connection>;
+    sqlStruct: SQLBlockStructDef;
+  }): Promise<QueryCostEstimate>;
+  public static async estimateCost({
+    connections,
+    preparedResult,
+    sqlStruct,
+  }: {
+    preparedResult?: PreparedResult;
+    sqlStruct?: SQLBlockStructDef;
+    connections: LookupConnection<Connection>;
+  }): Promise<QueryCostEstimate> {
+    const sqlBlock = sqlStruct?.structSource.sqlBlock;
+    if (!connections) {
+      throw new Error(
+        'Internal Error: Connection or LookupConnection<Connection> must be provided.'
+      );
+    }
+
+    const connectionName =
+      sqlBlock?.connection || preparedResult?.connectionName;
+    const connection = await connections.lookupConnection(connectionName);
+
+    if (sqlBlock) {
+      return await connection.estimateQueryCost(sqlBlock?.selectStr);
+    } else if (preparedResult) {
+      return await connection.estimateQueryCost(preparedResult?.sql);
+    } else {
+      throw new Error('Internal error: preparedResult must be provided.');
     }
   }
 }
@@ -2532,6 +2570,17 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   public getPreparedQuery(): Promise<PreparedQuery> {
     return this.materialize();
   }
+
+  /**
+   * Estimates the cost of this loaded `Query`.
+   *
+   * @return The estimated cost of running this loaded query.
+   */
+  public async estimateCost(): Promise<QueryCostEstimate> {
+    const connections = this.runtime.connections;
+    const preparedResult = await this.getPreparedResult();
+    return Malloy.estimateCost({connections, preparedResult});
+  }
 }
 
 /**
@@ -2630,6 +2679,12 @@ export class SQLBlockMaterializer extends FluentState<SQLBlockStructDef> {
   public async getSQL(): Promise<string> {
     const sqlStruct = await this.getSQLBlock();
     return sqlStruct.structSource.sqlBlock.selectStr;
+  }
+
+  public async estimateCost(): Promise<QueryCostEstimate> {
+    const connections = this.runtime.connections;
+    const sqlStruct = await this.getSQLBlock();
+    return Malloy.estimateCost({connections, sqlStruct});
   }
 }
 

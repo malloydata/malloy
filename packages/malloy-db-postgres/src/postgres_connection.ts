@@ -39,6 +39,7 @@ import {
   QueryDataRow,
   RunSQLOptions,
   SQLBlock,
+  QueryCostEstimate,
   StreamingConnection,
   StructDef,
   parseTableURI,
@@ -396,6 +397,10 @@ export class PostgresConnection
       }
     }
     await client.end();
+  }
+
+  public async estimateQueryCost(_: string): Promise<QueryCostEstimate> {
+    return {};
   }
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {

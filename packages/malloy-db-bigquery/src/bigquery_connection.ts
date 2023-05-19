@@ -48,6 +48,7 @@ import {
   StreamingConnection,
   StructDef,
   parseTableURI,
+  QueryCostEstimate,
   toAsyncGenerator,
 } from '@malloydata/malloy';
 
@@ -316,9 +317,15 @@ export class BigQueryConnection
     }
   }
 
-  public async costQuery(sqlCommand: string): Promise<number> {
+  public async estimateQueryCost(
+    sqlCommand: string
+  ): Promise<QueryCostEstimate> {
     const dryRunResults = await this.dryRunSQLQuery(sqlCommand);
-    return Number(dryRunResults.metadata.statistics.totalBytesProcessed);
+    return {
+      queryCostBytes: Number(
+        dryRunResults.metadata.statistics.totalBytesProcessed
+      ),
+    };
   }
 
   public async structDefFromSQL(sqlCommand: string): Promise<StructDef> {

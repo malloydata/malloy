@@ -49,7 +49,7 @@ describe('db:BigQuery', () => {
   });
 
   it('costs a SQL query', async () => {
-    const res = await bq.costQuery('SELECT * FROM malloy-data.faa.airports');
+    const res = await bq.estimateQueryCost('SELECT * FROM malloy-data.faa.airports');
     expect(res).toBe(3029200);
   });
 
