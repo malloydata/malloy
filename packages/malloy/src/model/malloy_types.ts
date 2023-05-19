@@ -933,6 +933,7 @@ export interface QueryResult extends CompiledQuery {
   result: QueryData;
   totalRows: number;
   error?: string;
+  runStats?: QueryRunStats;
 }
 
 export function isTurtleDef(def: FieldDef): def is TurtleDef {
