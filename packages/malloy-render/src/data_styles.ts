@@ -49,6 +49,8 @@ export type RenderDef =
   | ({renderer: 'percent'} & PercentRenderOptions)
   | ({renderer: 'boolean'} & BooleanRenderOptions)
   | ({renderer: 'spark_line'} & SparkLineRenderOptions)
+  | ({renderer: 'bar_sparkline'} & BarSparkLineRenderOptions)
+  | ({renderer: 'column_sparkline'} & ColumnSparkLineRenderOptions)
   | ({renderer: 'bytes'} & BytesRenderOptions)
   | ({renderer: 'link'} & LinkRenderOptions)
   | ({renderer: 'vega'} & VegaRenderOptions);
@@ -166,6 +168,14 @@ export interface CartesianChartRenderOptions extends ChartRenderOptions {
 }
 
 export interface BarChartRenderOptions extends DataRenderOptions {
+  size?: ChartSize;
+}
+
+export interface BarSparkLineRenderOptions extends BarChartRenderOptions {
+  size?: ChartSize;
+}
+
+export interface ColumnSparkLineRenderOptions extends BarChartRenderOptions {
   size?: ChartSize;
 }
 

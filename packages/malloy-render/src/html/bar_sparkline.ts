@@ -23,16 +23,16 @@
 
 import {DataArray} from '@malloydata/malloy';
 import * as lite from 'vega-lite';
-import {HTMLLineChartRenderer} from './line_chart';
 import {getColorScale} from './utils';
 import {DEFAULT_SPEC} from './vega_spec';
+import {HTMLBarChartRenderer} from './bar_chart';
 
-export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
+export class HTMLBarSparkLineRenderer extends HTMLBarChartRenderer {
   override getSize(): {height: number; width: number} {
     if (this.size === 'large') {
-      return {height: 100, width: 250};
+      return {height: 250, width: 100};
     } else {
-      return {height: 50, width: 125};
+      return {height: 125, width: 50};
     }
   }
 
@@ -46,6 +46,7 @@ export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
     const yType = this.getDataType(yField);
     const colorType = colorField ? this.getDataType(colorField) : undefined;
 
+    // const mark = this.getMark();
     const mark = {type: this.getMark(), tooltip: true};
 
     const colorDef =
@@ -54,7 +55,7 @@ export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
             field: colorField.name,
             type: colorType,
             axis: {title: null},
-            scale: getColorScale(colorType, false),
+            scale: getColorScale(colorType, true),
           }
         : {value: '#4285F4'};
 
@@ -69,7 +70,6 @@ export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
         title: null,
         domain: false,
         grid: false,
-        lables: false,
         ticks: false,
         values: [],
       },
@@ -84,7 +84,6 @@ export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
         domain: false,
         ticks: false,
         grid: false,
-        lables: false,
         values: [],
       },
     };
@@ -102,8 +101,8 @@ export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
       },
       mark,
       encoding: {
-        x: xDef,
-        y: yDef,
+        y: xDef,
+        x: yDef,
         color: colorDef,
       },
       background: 'transparent',

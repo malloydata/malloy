@@ -51,6 +51,8 @@ import {HTMLVegaSpecRenderer} from './vega_spec';
 import {ContainerRenderer} from './container';
 import {createErrorElement} from './utils';
 import {HTMLUnsupportedRenderer} from './unsupported';
+import {HTMLColumnSparkLineRenderer} from './column_sparkline';
+import {HTMLBarSparkLineRenderer} from './bar_sparkline';
 
 export class HTMLView {
   constructor(private document: Document) {}
@@ -114,6 +116,8 @@ const suffixMap: Record<string, RenderDef['renderer']> = {
   _line_chart: 'line_chart',
   _scatter_chart: 'scatter_chart',
   _spark_line: 'spark_line',
+  _column_sparkline: 'column_sparkline',
+  _bar_sparkline: 'bar_sparkline',
   _url: 'link',
   _list: 'list',
   _list_detail: 'list_detail',
@@ -206,6 +210,20 @@ export function makeRenderer(
     return new HTMLJSONRenderer(document);
   } else if (renderDef.renderer === 'line_chart') {
     return new HTMLLineChartRenderer(
+      document,
+      styleDefaults,
+      options,
+      renderDef
+    );
+  } else if (renderDef.renderer === 'bar_sparkline') {
+    return new HTMLBarSparkLineRenderer(
+      document,
+      styleDefaults,
+      options,
+      renderDef
+    );
+  } else if (renderDef.renderer === 'column_sparkline') {
+    return new HTMLColumnSparkLineRenderer(
       document,
       styleDefaults,
       options,
