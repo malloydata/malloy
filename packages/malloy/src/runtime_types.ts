@@ -27,6 +27,7 @@ import {
   QueryDataRow,
   SQLBlock,
   StructDef,
+  QueryCostEstimate,
 } from './model/malloy_types';
 
 /**
@@ -121,6 +122,8 @@ export interface Connection extends InfoConnection {
   canStream(): this is StreamingConnection;
 
   close(): Promise<void>;
+
+  estimateQueryCost(sqlCommand: string): Promise<QueryCostEstimate>;
 }
 
 // TODO feature-sql-block Comment

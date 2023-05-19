@@ -34,6 +34,7 @@ import {
   SQLBlock,
   StreamingConnection,
   StructDef,
+  QueryCostEstimate,
   parseTableURI,
 } from '@malloydata/malloy';
 
@@ -180,6 +181,12 @@ export abstract class DuckDBCommon
       structDef
     );
     return structDef;
+  }
+
+  public async estimateQueryCost(
+    _: string
+  ): Promise<QueryCostEstimate> {
+    return {};
   }
 
   /**

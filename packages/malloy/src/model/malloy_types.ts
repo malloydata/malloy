@@ -914,6 +914,11 @@ export type MalloyQueryData = {
   runStats?: QueryRunStats;
 };
 
+// TODO: Merge with Query Run Stats in other cl.
+export type QueryCostEstimate = {
+  queryCostBytes?: number;
+};
+
 export interface DrillSource {
   sourceExplore: string;
   sourceFilters?: FilterExpression[];
@@ -1029,5 +1034,4 @@ export interface SearchValueMapResult {
   cardinality: number;
   values: {fieldValue: string; weight: number}[];
 }
-
 // clang-format on

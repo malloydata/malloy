@@ -27,6 +27,7 @@ export type {
   // Currently needed only by tests
   Fragment,
   // Needed for DB
+  QueryCostEstimate,
   StructDef,
   StructRelationship,
   NamedStructDefs,
