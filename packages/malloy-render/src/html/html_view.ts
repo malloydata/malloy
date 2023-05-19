@@ -53,6 +53,7 @@ import {createErrorElement} from './utils';
 import {HTMLUnsupportedRenderer} from './unsupported';
 import {HTMLColumnSparkLineRenderer} from './column_sparkline';
 import {HTMLBarSparkLineRenderer} from './bar_sparkline';
+import {HTMLSparkLineAreaRenderer} from './sparkline_area';
 
 export class HTMLView {
   constructor(private document: Document) {}
@@ -119,6 +120,7 @@ const suffixMap: Record<string, RenderDef['renderer']> = {
   _list: 'list',
   _list_detail: 'list_detail',
   _sparkline: 'sparkline',
+  _sparkline_area: 'sparkline',
   _sparkline_column: 'sparkline',
   _sparkline_bar: 'sparkline',
 };
@@ -225,6 +227,13 @@ export function makeRenderer(
       );
     } else if (field.name.endsWith('_bar')) {
       return new HTMLBarSparkLineRenderer(
+        document,
+        styleDefaults,
+        options,
+        renderDef
+      );
+    } else if (field.name.endsWith('area')) {
+      return new HTMLSparkLineAreaRenderer(
         document,
         styleDefaults,
         options,
