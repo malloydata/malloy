@@ -115,12 +115,12 @@ const suffixMap: Record<string, RenderDef['renderer']> = {
   _dashboard: 'dashboard',
   _line_chart: 'line_chart',
   _scatter_chart: 'scatter_chart',
-  _spark_line: 'spark_line',
-  _column_sparkline: 'column_sparkline',
-  _bar_sparkline: 'bar_sparkline',
   _url: 'link',
   _list: 'list',
   _list_detail: 'list_detail',
+  _sparkline: 'sparkline',
+  _sparkline_column: 'sparkline',
+  _sparkline_bar: 'sparkline',
 };
 
 function getRendererOptions(field: Field | Explore, dataStyles: DataStyles) {
@@ -215,21 +215,22 @@ export function makeRenderer(
       options,
       renderDef
     );
-  } else if (renderDef.renderer === 'bar_sparkline') {
-    return new HTMLBarSparkLineRenderer(
-      document,
-      styleDefaults,
-      options,
-      renderDef
-    );
-  } else if (renderDef.renderer === 'column_sparkline') {
-    return new HTMLColumnSparkLineRenderer(
-      document,
-      styleDefaults,
-      options,
-      renderDef
-    );
-  } else if (renderDef.renderer === 'spark_line') {
+  } else if (renderDef.renderer === 'sparkline') {
+    if (field.name.endsWith('_column')) {
+      return new HTMLColumnSparkLineRenderer(
+        document,
+        styleDefaults,
+        options,
+        renderDef
+      );
+    } else if (field.name.endsWith('_bar')) {
+      return new HTMLBarSparkLineRenderer(
+        document,
+        styleDefaults,
+        options,
+        renderDef
+      );
+    }
     return new HTMLSparkLineRenderer(
       document,
       styleDefaults,
