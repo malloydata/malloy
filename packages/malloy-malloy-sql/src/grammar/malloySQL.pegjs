@@ -24,7 +24,7 @@ plain_embedded_malloy = t:$('%{' (!'}%' .)* '}%') {
 }
 
 control =
-  delimiter t:statement_type c:(_ oc:optional_config {return oc})? __ (comment / EOL / EOF) {
+  delimiter t:statement_type c:(_ oc:optional_config {return oc})? __ (single_comment / EOL / EOF) {
     return {type: t, config: c ? c.trim() : '{}', location:location()}
   }
 delimiter = '>>>'
