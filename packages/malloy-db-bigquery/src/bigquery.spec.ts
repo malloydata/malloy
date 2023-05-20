@@ -46,7 +46,11 @@ describe('db:BigQuery', () => {
   it('runs a SQL query', async () => {
     const res = await bq.runSQL('SELECT 1 as t');
     expect(res.rows[0]['t']).toBe(1);
-    expect(res.runStats?.queryCostBytes).toBe(1234);
+  });
+
+  it('runs an calcluates SQL query cost', async () => {
+    const res = await bq.runSQL('SELECT * FROM malloy-data.faa.airports');
+    expect(res.runStats?.queryCostBytes).toBe(3029200);
   });
 
   it('costs a SQL query', async () => {
