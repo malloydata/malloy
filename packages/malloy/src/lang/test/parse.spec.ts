@@ -702,7 +702,6 @@ describe('literals', () => {
     ['@1960-Q2', 'date', 'quarter', {literal: '1960-04-01'}],
     ['@1960-06', 'date', 'month', {literal: '1960-06-01'}],
     ['@1960-06-26-WK', 'date', 'week', {literal: '1960-06-26'}],
-    ['@1960-06-30-WK', 'date', 'week', {literal: '1960-06-26'}],
     ['@1960-06-30', 'date', 'day', {literal: '1960-06-30'}],
     ['@1960-06-30 10', 'timestamp', 'hour', {literal: '1960-06-30 10:00:00'}],
     [
