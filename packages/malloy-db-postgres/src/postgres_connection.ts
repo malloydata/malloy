@@ -37,9 +37,9 @@ import {
   PooledConnection,
   QueryData,
   QueryDataRow,
+  QueryRunStats,
   RunSQLOptions,
   SQLBlock,
-  QueryCostEstimate,
   StreamingConnection,
   StructDef,
   parseTableURI,
@@ -399,7 +399,7 @@ export class PostgresConnection
     await client.end();
   }
 
-  public async estimateQueryCost(_: string): Promise<QueryCostEstimate> {
+  public async estimateQueryCost(_: string): Promise<QueryRunStats> {
     return {};
   }
 

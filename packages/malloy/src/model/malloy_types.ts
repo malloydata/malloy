@@ -914,16 +914,6 @@ export type MalloyQueryData = {
   runStats?: QueryRunStats;
 };
 
-// TODO: Merge with Query Run Stats in other cl.
-export type QueryCostEstimate = {
-  queryCostBytes?: number;
-};
-
-// TODO: Merge with Query Run Stats in other cl.
-export type QueryCostEstimate = {
-  queryCostBytes?: number;
-};
-
 export interface DrillSource {
   sourceExplore: string;
   sourceFilters?: FilterExpression[];

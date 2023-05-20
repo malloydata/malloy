@@ -46,11 +46,14 @@ describe('db:BigQuery', () => {
   it('runs a SQL query', async () => {
     const res = await bq.runSQL('SELECT 1 as t');
     expect(res.rows[0]['t']).toBe(1);
+    expect(res.runStats?.queryCostBytes).toBe(1234);
   });
 
   it('costs a SQL query', async () => {
-    const res = await bq.estimateQueryCost('SELECT * FROM malloy-data.faa.airports');
-    expect(res).toBe(3029200);
+    const res = await bq.estimateQueryCost(
+      'SELECT * FROM malloy-data.faa.airports'
+    );
+    expect(res.queryCostBytes).toBe(3029200);
   });
 
   it('gets table schema', async () => {

@@ -44,11 +44,11 @@ import {
   PooledConnection,
   QueryData,
   QueryDataRow,
+  QueryRunStats,
   SQLBlock,
   StreamingConnection,
   StructDef,
   parseTableURI,
-  QueryCostEstimate,
   toAsyncGenerator,
 } from '@malloydata/malloy';
 
@@ -323,9 +323,7 @@ export class BigQueryConnection
     }
   }
 
-  public async estimateQueryCost(
-    sqlCommand: string
-  ): Promise<QueryCostEstimate> {
+  public async estimateQueryCost(sqlCommand: string): Promise<QueryRunStats> {
     const dryRunResults = await this.dryRunSQLQuery(sqlCommand);
     return {
       queryCostBytes: Number(

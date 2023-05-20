@@ -30,11 +30,11 @@ import {
   PersistSQLResults,
   PooledConnection,
   QueryDataRow,
+  QueryRunStats,
   RunSQLOptions,
   SQLBlock,
   StreamingConnection,
   StructDef,
-  QueryCostEstimate,
   parseTableURI,
 } from '@malloydata/malloy';
 
@@ -183,9 +183,7 @@ export abstract class DuckDBCommon
     return structDef;
   }
 
-  public async estimateQueryCost(
-    _: string
-  ): Promise<QueryCostEstimate> {
+  public async estimateQueryCost(_: string): Promise<QueryRunStats> {
     return {};
   }
 
