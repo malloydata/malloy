@@ -557,7 +557,9 @@ export class Malloy {
     } else if (preparedResult) {
       return await connection.estimateQueryCost(preparedResult?.sql);
     } else {
-      throw new Error('Internal error: preparedResult must be provided.');
+      throw new Error(
+        'Internal error: sqlStruct or preparedResult must be provided.'
+      );
     }
   }
 }
