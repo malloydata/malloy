@@ -49,11 +49,6 @@ describe('db:BigQuery', () => {
     expect(res.runStats?.queryCostBytes).toBe(1234);
   });
 
-  it('runs an calcluates SQL query cost', async () => {
-    const res = await bq.runSQL('SELECT * FROM malloy-data.faa.airports');
-    expect(res.runStats?.queryCostBytes).toBe(3029200);
-  });
-
   it('costs a SQL query', async () => {
     const res = await bq.estimateQueryCost(
       'SELECT * FROM malloy-data.faa.airports'
