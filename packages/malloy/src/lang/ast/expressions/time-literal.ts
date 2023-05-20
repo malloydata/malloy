@@ -297,16 +297,16 @@ export class LiteralWeek extends DateBasedLiteral {
     const datePart = tm.text.slice(0, 10);
     const yyyymmdd = LuxonDateTime.fromFormat(datePart, fDay);
     if (yyyymmdd.isValid) {
-      // wonky because luxon uses monday weeks and bigquery uses sunday weeks
-      let sunday = yyyymmdd;
-      if (yyyymmdd.weekday !== 7) {
-        sunday = yyyymmdd.startOf('week').minus({day: 1});
-      }
-      const next = sunday.plus({days: 7});
+      const luxonDay = yyyymmdd.weekday;
+      if (luxonDay === 7) {
+        // Weeks must start on a sunday. If you don't know when the
+        // week starts use @YYYY-MM-DD.week to truncate
+        const next = yyyymmdd.plus({days: 7});
 
-      tm.text = sunday.toFormat(fDay);
-      nextWeek = next.toFormat(fDay);
-      return new LiteralWeek(tm, nextWeek);
+        tm.text = yyyymmdd.toFormat(fDay);
+        nextWeek = next.toFormat(fDay);
+        return new LiteralWeek(tm, nextWeek);
+      }
     }
   }
 }
