@@ -254,4 +254,19 @@ expressionModels.forEach((orderByModel, databaseName) => {
       .getSQL();
     await validateCompilation(databaseName, sql);
   });
+
+  it (`order by measure not specified as aggregate`, async () => {
+    const result = await orderByModel
+        .loadQuery(
+          `
+          query: models -> {
+           group_by: manufacturer
+           order_by: model_count desc
+           limit: 1
+          }
+          `
+        )
+        .run();
+      expect(result.data.row(0).cell('model_count').value).toBe(1147)
+  });
 });
