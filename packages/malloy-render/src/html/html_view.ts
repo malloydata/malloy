@@ -44,12 +44,16 @@ import {HTMLPointMapRenderer} from './point_map';
 import {HTMLScatterChartRenderer} from './scatter_chart';
 import {HTMLSegmentMapRenderer} from './segment_map';
 import {HTMLShapeMapRenderer} from './shape_map';
+import {HTMLSparkLineRenderer} from './sparkline';
 import {HTMLTableRenderer} from './table';
 import {HTMLTextRenderer} from './text';
 import {HTMLVegaSpecRenderer} from './vega_spec';
 import {ContainerRenderer} from './container';
 import {createErrorElement} from './utils';
 import {HTMLUnsupportedRenderer} from './unsupported';
+import {HTMLColumnSparkLineRenderer} from './column_sparkline';
+import {HTMLBarSparkLineRenderer} from './bar_sparkline';
+import {HTMLAreaSparkLineRenderer} from './area_sparkline';
 
 export class HTMLView {
   constructor(private document: Document) {}
@@ -115,6 +119,10 @@ const suffixMap: Record<string, RenderDef['renderer']> = {
   _url: 'link',
   _list: 'list',
   _list_detail: 'list_detail',
+  _sparkline: 'sparkline',
+  _sparkline_area: 'sparkline',
+  _sparkline_column: 'sparkline',
+  _sparkline_bar: 'sparkline',
 };
 
 function getRendererOptions(field: Field | Explore, dataStyles: DataStyles) {
@@ -204,6 +212,35 @@ export function makeRenderer(
     return new HTMLJSONRenderer(document);
   } else if (renderDef.renderer === 'line_chart') {
     return new HTMLLineChartRenderer(
+      document,
+      styleDefaults,
+      options,
+      renderDef
+    );
+  } else if (renderDef.renderer === 'sparkline') {
+    if (field.name.endsWith('_column')) {
+      return new HTMLColumnSparkLineRenderer(
+        document,
+        styleDefaults,
+        options,
+        renderDef
+      );
+    } else if (field.name.endsWith('_bar')) {
+      return new HTMLBarSparkLineRenderer(
+        document,
+        styleDefaults,
+        options,
+        renderDef
+      );
+    } else if (field.name.endsWith('area')) {
+      return new HTMLAreaSparkLineRenderer(
+        document,
+        styleDefaults,
+        options,
+        renderDef
+      );
+    }
+    return new HTMLSparkLineRenderer(
       document,
       styleDefaults,
       options,
