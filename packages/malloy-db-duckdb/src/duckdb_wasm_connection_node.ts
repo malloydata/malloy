@@ -22,20 +22,21 @@
  */
 
 import crypto from 'crypto';
-import {DuckDBBundles} from '@malloydata/duckdb-wasm';
+import {DuckDBBundles} from '@carlop/duckdb-wasm';
 import {DuckDBWASMConnection as DuckDBWASMConnectionBase} from './duckdb_wasm_connection';
 
 export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
   getBundles(): DuckDBBundles {
-    const resolvePath = require.resolve('@malloydata/duckdb-wasm');
+    const resolvePath = require.resolve('@carlop/duckdb-wasm');
     if (!resolvePath) {
-      throw new Error('Unable to resolve @malloydata/duckdb-wasm path');
+      throw new Error('Unable to resolve @carlop/duckdb-wasm path');
     }
     const distMatch = resolvePath.match(/^.*\/dist\//);
     if (!distMatch) {
-      throw new Error('Unable to resolve @malloydata/duckdb-wasm dist path');
+      throw new Error('Unable to resolve @carlop/duckdb-wasm dist path');
     }
     const dist = distMatch[0];
+
     return {
       mvp: {
         mainModule: `${dist}/duckdb-mvp.wasm`,

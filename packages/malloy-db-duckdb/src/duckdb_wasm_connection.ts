@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as duckdb from '@malloydata/duckdb-wasm';
+import * as duckdb from '@carlop/duckdb-wasm';
 import Worker from 'web-worker';
 import {
   QueryDataRow,
@@ -104,7 +104,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   connecting: Promise<void>;
   protected _connection: duckdb.AsyncDuckDBConnection | null = null;
   protected _database: duckdb.AsyncDuckDB | null = null;
-  protected isSetup = false;
+  protected isSetup: Promise<void> | undefined;
   private worker: Worker | null = null;
 
   private remoteFileCallbacks: RemoteFileCallback[] = [];
@@ -160,8 +160,32 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     return this._database;
   }
 
+  async loadExtension(ext: string) {
+    try {
+      // await this.runDuckDBQuery(`INSTALL '${ext}'`);
+      await this.runDuckDBQuery(`LOAD '${ext}'`);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Unable to load ${ext} extension', error);
+    }
+  }
+
   protected async setup(): Promise<void> {
+    const doSetup = async () => {
+      // if (this.workingDirectory) {
+      //   await this.runDuckDBQuery(
+      //     `SET FILE_SEARCH_PATH='${this.workingDirectory}'`
+      //   );
+      // }
+      for (const ext of ['json', 'httpfs', 'icu']) {
+        await this.loadExtension(ext);
+      }
+    };
     await this.connecting;
+    if (!this.isSetup) {
+      this.isSetup = doSetup();
+    }
+    await this.isSetup;
   }
 
   protected async runDuckDBQuery(
