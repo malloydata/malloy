@@ -95,7 +95,7 @@ export class HTMLAreaSparkLineRenderer extends HTMLSparkLineRenderer {
         line: {
           color: '#4285F4',
         },
-        point: true,
+        point: false,
       },
       encoding: {
         x: xDef,
