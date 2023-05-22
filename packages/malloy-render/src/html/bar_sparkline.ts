@@ -46,7 +46,6 @@ export class HTMLBarSparkLineRenderer extends HTMLBarChartRenderer {
     const yType = this.getDataType(yField);
     const colorType = colorField ? this.getDataType(colorField) : undefined;
 
-    // const mark = this.getMark();
     const mark = {type: this.getMark(), tooltip: true};
 
     const colorDef =

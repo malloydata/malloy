@@ -22,15 +22,88 @@
  */
 
 import {HTMLSparkLineRenderer} from './sparkline';
+import {DataArray} from '@malloydata/malloy';
+import * as lite from 'vega-lite';
+import {getColorScale} from './utils';
+import {DEFAULT_SPEC} from './vega_spec';
 
 export class HTMLAreaSparkLineRenderer extends HTMLSparkLineRenderer {
-  override getMark() {
-    return {
-      type: 'area',
-      line: {
-        color: '#4285F4',
+  override getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
+    const fields = data.field.intrinsicFields;
+    const xField = fields[0];
+    const yField = fields[1];
+    const colorField = fields[2];
+
+    const xType = this.getDataType(xField);
+    const yType = this.getDataType(yField);
+    const colorType = colorField ? this.getDataType(colorField) : undefined;
+
+    const colorDef =
+      colorField !== undefined
+        ? {
+            field: colorField.name,
+            type: colorType,
+            axis: {title: null},
+            scale: getColorScale(colorType, false),
+          }
+        : {value: '#4285F4'};
+
+    const xSort = xType === 'nominal' ? null : undefined;
+    const ySort = yType === 'nominal' ? null : undefined;
+
+    const xDef = {
+      field: xField.name,
+      type: xType,
+      sort: xSort,
+      axis: {
+        title: null,
+        domain: false,
+        grid: false,
+        lables: false,
+        ticks: false,
+        values: [],
       },
-      point: true,
+    };
+
+    const yDef = {
+      field: yField.name,
+      type: yType,
+      sort: ySort,
+      axis: {
+        title: null,
+        domain: false,
+        ticks: false,
+        grid: false,
+        lables: false,
+        values: [],
+      },
+    };
+
+    return {
+      ...DEFAULT_SPEC,
+      ...this.getSize(),
+      data: {
+        values: this.mapData(data),
+      },
+      config: {
+        view: {
+          stroke: 'transparent',
+        },
+      },
+      mark: {
+        type: 'area',
+        line: {
+          color: '#4285F4',
+        },
+        point: true,
+      },
+      encoding: {
+        x: xDef,
+        y: yDef,
+        color: colorDef,
+      },
+      background: 'transparent',
     };
   }
+
 }

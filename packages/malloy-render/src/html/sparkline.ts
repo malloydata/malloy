@@ -36,10 +36,6 @@ export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
     }
   }
 
-  override getMark() {
-    return {type: this.getMark(), tooltip: true};
-  }
-
   override getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
     const fields = data.field.intrinsicFields;
     const xField = fields[0];
@@ -49,8 +45,6 @@ export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
     const xType = this.getDataType(xField);
     const yType = this.getDataType(yField);
     const colorType = colorField ? this.getDataType(colorField) : undefined;
-
-    const mark = this.getMark();
 
     const colorDef =
       colorField !== undefined
@@ -104,7 +98,10 @@ export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
           stroke: 'transparent',
         },
       },
-      mark,
+      mark: {
+        type: 'line',
+        tooltip: true,
+      },
       encoding: {
         x: xDef,
         y: yDef,
