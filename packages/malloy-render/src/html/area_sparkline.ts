@@ -105,5 +105,4 @@ export class HTMLAreaSparkLineRenderer extends HTMLSparkLineRenderer {
       background: 'transparent',
     };
   }
-
 }
