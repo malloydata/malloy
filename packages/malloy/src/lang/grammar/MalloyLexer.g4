@@ -57,9 +57,9 @@ SAMPLE: S A M P L E SPACE_CHAR* ':';
 SELECT: S E L E C T SPACE_CHAR* ':';
 SOURCE: S O U R C E SPACE_CHAR* ':';
 SQL: S Q L SPACE_CHAR* ':';
-FANCYSQL: T U R D U C K SPACE_CHAR* ':';
 TOP: T O P SPACE_CHAR* ':';
 WHERE: W H E R E SPACE_CHAR* ':';
+TIMEZONE: T I M E Z O N E SPACE_CHAR* ':';
 
 // bare keywords
 ALL: A L L;
@@ -160,9 +160,7 @@ PERCENT: '%';
 
 fragment F_YEAR: DIGIT DIGIT DIGIT DIGIT;
 fragment F_DD: DIGIT DIGIT;
-fragment F_LOCALE: '[' (ID_CHAR | '/')* ']';
-fragment F_OFFSET: [+-] DIGIT+ ( ':' DIGIT+)?;
-fragment F_TZ: F_OFFSET | F_LOCALE;
+fragment F_TZ: '[' (ID_CHAR | '/')* ']';
 fragment LX: '-' 'X' (ID_CHAR | DIGIT)+;
 // @YYYY-MM-DD HH:MM:SS.n
 LITERAL_TIMESTAMP

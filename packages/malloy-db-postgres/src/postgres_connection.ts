@@ -59,7 +59,6 @@ const postgresToMalloyTypes: {[key: string]: AtomicFieldTypeInner} = {
   'oid': 'string',
   'boolean': 'boolean',
   // ARRAY: "string",
-  'timestamp with time zone': 'timestamp',
   'timestamp': 'timestamp',
   '"char"': 'string',
   'character': 'string',
@@ -101,6 +100,7 @@ const SCHEMA_PAGE_SIZE = 1000;
 export class PostgresConnection
   implements Connection, StreamingConnection, PersistSQLResults
 {
+  private isSetup = false;
   private schemaCache = new Map<
     string,
     {schema: StructDef; error?: undefined} | {error: string; schema?: undefined}
@@ -224,6 +224,7 @@ export class PostgresConnection
   ): Promise<MalloyQueryData> {
     const client = await this.getClient();
     await client.connect();
+    await this.connectionSetup();
 
     let result = await client.query(sqlCommand);
     if (Array.isArray(result)) {
@@ -363,6 +364,13 @@ export class PostgresConnection
     await this.executeSQLRaw('SELECT 1');
   }
 
+  public async connectionSetup(): Promise<void> {
+    if (!this.isSetup) {
+      this.executeSQLRaw("SET TIME ZONE 'UTC'");
+      this.isSetup = true;
+    }
+  }
+
   public async runSQL(
     sql: string,
     {rowLimit}: RunSQLOptions = {},
@@ -370,12 +378,13 @@ export class PostgresConnection
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
 
-    return await this.runPostgresQuery(
+    const the_return = await this.runPostgresQuery(
       sql,
       rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
       true
     );
+    return the_return;
   }
 
   public async *runSQLStream(
@@ -422,6 +431,7 @@ export class PooledPostgresConnection
   constructor(name: string) {
     super(name);
     this.pool = new Pool();
+    this.pool.on('acquire', client => client.query("SET TIME ZONE 'UTC'"));
   }
 
   public isPool(): true {

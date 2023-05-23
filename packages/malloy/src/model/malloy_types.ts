@@ -357,8 +357,7 @@ export interface TimeLiteralFragment extends DialectFragmentBase {
   function: 'timeLiteral';
   literal: string;
   literalType: TimeFieldType;
-  timezone: string;
-  tzIsLocale?: boolean;
+  timezone?: string;
 }
 
 export interface StringLiteralFragment extends DialectFragmentBase {
@@ -712,6 +711,7 @@ export interface QuerySegment extends Filtered {
   limit?: number;
   by?: By;
   orderBy?: OrderBy[]; // uses output field name or index.
+  queryTimezone?: string;
 }
 
 export interface TurtleDef extends NamedObject, Pipeline {
@@ -790,6 +790,7 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
   fields: FieldDef[];
   primaryKey?: PrimaryKeyRef;
   parameters?: Record<string, Parameter>;
+  queryTimezone?: string;
   dialect: string;
 }
 

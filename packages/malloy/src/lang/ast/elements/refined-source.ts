@@ -38,6 +38,7 @@ import {ExploreDesc} from '../types/explore-desc';
 import {ExploreField} from '../types/explore-field';
 
 import {Source} from './source';
+import {TimezoneStatement} from '../source-properties/timezone-statement';
 
 /**
  * A Source made from a source reference and a set of refinements
@@ -58,6 +59,7 @@ export class RefinedSource extends Source {
     let fieldListEdit: FieldListEdit | undefined;
     const fields: ExploreField[] = [];
     const filters: Filter[] = [];
+    let newTimezone: string | undefined;
 
     for (const el of this.refinement.list) {
       const errTo = el;
@@ -82,6 +84,8 @@ export class RefinedSource extends Source {
         fields.push(...el.list);
       } else if (el instanceof Filter) {
         filters.push(el);
+      } else if (el instanceof TimezoneStatement) {
+        newTimezone = el.tz;
       } else {
         errTo.log(`Unexpected explore property: '${errTo.elementType}'`);
       }
@@ -92,6 +96,9 @@ export class RefinedSource extends Source {
       from.primaryKey = primaryKey.field.name;
     }
     const fs = RefinedSpace.filteredFrom(from, fieldListEdit);
+    if (newTimezone) {
+      fs.setTimezone(newTimezone);
+    }
     fs.addField(...fields);
     if (pList) {
       fs.addParameters(pList);

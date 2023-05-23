@@ -567,6 +567,21 @@ export class MalloyToAST
     );
   }
 
+  visitDefExploreTimezone(
+    cx: parse.DefExploreTimezoneContext
+  ): ast.TimezoneStatement {
+    return this.visitTimezoneStatement(cx.timezoneStatement());
+  }
+
+  visitTimezoneStatement(
+    cx: parse.TimezoneStatementContext
+  ): ast.TimezoneStatement {
+    return this.astAt(
+      new ast.TimezoneStatement(this.stripQuotes(cx.STRING_LITERAL().text)),
+      cx
+    );
+  }
+
   visitQueryProperties(pcx: parse.QueryPropertiesContext): ast.QOPDesc {
     const qProps = pcx
       .queryStatement()

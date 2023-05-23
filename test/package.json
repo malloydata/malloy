@@ -17,9 +17,11 @@
     "@malloydata/malloy": "^0.0.34",
     "@malloydata/render": "^0.0.34",
     "jsdom": "^19.0.0",
+    "luxon": "^1.26.4",
     "madge": "^6.0.0"
   },
   "devDependencies": {
+    "@types/luxon": "^1.26.4",
     "@types/jsdom": "^20.0.0"
   },
   "version": "0.0.34"

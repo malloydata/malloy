@@ -161,6 +161,7 @@ exploreStatement
   | RENAME renameList                  # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList    # defExploreEditField
   | QUERY subQueryDefList              # defExploreQuery
+  | timezoneStatement                  # defExploreTimezone
   ;
 
 renameList
@@ -255,6 +256,7 @@ queryStatement
   | havingStatement
   | nestStatement
   | sampleStatement
+  | timezoneStatement
   ;
 
 groupByStatement
@@ -334,6 +336,10 @@ indexStatement
 
 sampleStatement
   : SAMPLE sampleSpec
+  ;
+
+timezoneStatement
+  : TIMEZONE STRING_LITERAL
   ;
 
 sampleSpec

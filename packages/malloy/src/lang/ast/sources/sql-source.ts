@@ -48,6 +48,9 @@ export class SQLSource extends NamedSource {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const {declaredSQLBlock, ...newEntry} = entry;
       return newEntry;
+    } else if (!isSQLBlockStruct(entry)) {
+      this.log(`Cannot use 'from_sql()' to explore '${this.refName}'`);
+      return;
     }
     this.log(`Cannot use 'from_sql()' to explore '${this.refName}'`);
   }

@@ -36,7 +36,13 @@ import {
   isSamplingRows,
   mkExpr,
 } from '../model/malloy_types';
-import {Dialect, DialectFieldList, FunctionInfo} from './dialect';
+import {
+  Dialect,
+  DialectFieldList,
+  FunctionInfo,
+  QueryInfo,
+  qtz,
+} from './dialect';
 
 const castMap: Record<string, string> = {
   number: 'double precision',
@@ -62,6 +68,8 @@ const inSeconds: Record<string, number> = {
   second: 1,
   minute: 60,
   hour: 3600,
+  day: 24 * 3600,
+  week: 7 * 24 * 3600,
 };
 
 export class PostgresDialect extends Dialect {
@@ -282,19 +290,40 @@ export class PostgresDialect extends Dialect {
     return mkExpr`CURRENT_TIMESTAMP`;
   }
 
-  sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr {
+  sqlTrunc(qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {
     // adjusting for monday/sunday weeks
     const week = units === 'week';
     const truncThis = week
-      ? mkExpr`${sqlTime.value}+interval'1'day`
+      ? mkExpr`${sqlTime.value} + INTERVAL '1' DAY`
       : sqlTime.value;
-    const trunced = mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
-    return week ? mkExpr`(${trunced}-interval'1'day)` : trunced;
+    if (sqlTime.valueType === 'timestamp') {
+      const tz = qtz(qi);
+      if (tz) {
+        const civilSource = mkExpr`(${truncThis}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
+        let civilTrunc = mkExpr`DATE_TRUNC('${units}', ${civilSource})`;
+        // MTOY todo ... only need to do this if this is a date ...
+        civilTrunc = mkExpr`${civilTrunc}::TIMESTAMP`;
+        const truncTsTz = mkExpr`${civilTrunc} AT TIME ZONE '${tz}'`;
+        return mkExpr`(${truncTsTz})::TIMESTAMP`;
+      }
+    }
+    let result = mkExpr`DATE_TRUNC('${units}', ${truncThis})`;
+    if (week) {
+      result = mkExpr`(${result} - INTERVAL '1' DAY)`;
+    }
+    return result;
   }
 
-  sqlExtract(from: TimeValue, units: ExtractUnit): Expr {
+  sqlExtract(qi: QueryInfo, from: TimeValue, units: ExtractUnit): Expr {
     const pgUnits = pgExtractionMap[units] || units;
-    const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${from.value})`;
+    let extractFrom = from.value;
+    if (from.valueType === 'timestamp') {
+      const tz = qtz(qi);
+      if (tz) {
+        extractFrom = mkExpr`(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
+      }
+    }
+    const extracted = mkExpr`EXTRACT(${pgUnits} FROM ${extractFrom})`;
     return units === 'day_of_week' ? mkExpr`(${extracted}+1)` : extracted;
   }
 
@@ -312,10 +341,18 @@ export class PostgresDialect extends Dialect {
     return mkExpr`((${expr.value})${op}${interval})`;
   }
 
-  sqlCast(cast: TypecastFragment): Expr {
+  sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr {
+    const op = `${cast.srcType}::${cast.dstType}`;
+    const castTo = castMap[cast.dstType] || cast.dstType;
+    const tz = qtz(qi);
+    if (op === 'timestamp::date' && tz) {
+      const tstz = mkExpr`${cast.expr}::TIMESTAMPTZ`;
+      return mkExpr`CAST((${tstz}) AT TIME ZONE '${tz}' AS DATE)`;
+    } else if (op === 'date::timestamp' && tz) {
+      return mkExpr`CAST((${cast.expr})::TIMESTAMP AT TIME ZONE '${tz}' AS TIMESTAMP)`;
+    }
     if (cast.dstType !== cast.srcType) {
-      const castTo = castMap[cast.dstType] || cast.dstType;
-      return mkExpr`cast(${cast.expr} as ${castTo})`;
+      return mkExpr`CAST(${cast.expr} AS ${castTo})`;
     }
     return cast.expr;
   }
@@ -323,18 +360,21 @@ export class PostgresDialect extends Dialect {
   sqlRegexpMatch(expr: Expr, regexp: string): Expr {
     return mkExpr`(${expr} ~ ${regexp})`;
   }
+
   sqlLiteralTime(
+    qi: QueryInfo,
     timeString: string,
     type: TimeFieldType,
-    _timezone: string
+    timezone: string | undefined
   ): string {
     if (type === 'date') {
-      return `DATE('${timeString}')`;
-    } else if (type === 'timestamp') {
-      return `TIMESTAMP '${timeString}'`;
-    } else {
-      throw new Error(`Unknown Literal time format ${type}`);
+      return `DATE '${timeString}'`;
     }
+    const tz = timezone || qtz(qi);
+    if (tz) {
+      return `TIMESTAMPTZ '${timeString} ${tz}'::TIMESTAMP`;
+    }
+    return `TIMESTAMP '${timeString}'`;
   }
 
   getFunctionInfo(functionName: string): FunctionInfo | undefined {
@@ -347,29 +387,10 @@ export class PostgresDialect extends Dialect {
     if (inSeconds[units]) {
       lVal = mkExpr`EXTRACT(EPOCH FROM ${lVal})`;
       rVal = mkExpr`EXTRACT(EPOCH FROM ${rVal})`;
-      const duration = mkExpr`(${rVal} - ${lVal})`;
+      const duration = mkExpr`${rVal}-${lVal}`;
       return units === 'second'
-        ? duration
-        : mkExpr`TRUNC(${duration}/${inSeconds[units].toString()})`;
-    }
-    if (units === 'day') {
-      return mkExpr`${rVal}::date - ${lVal}::date`;
-    }
-    const yearDiff = mkExpr`(DATE_PART('year', ${rVal}) - DATE_PART('year', ${lVal}))`;
-    if (units === 'year') {
-      return yearDiff;
-    }
-    if (units === 'week') {
-      const dayDiffForWeekStart = mkExpr`(DATE_TRUNC('week', ${rVal} + '1 day'::interval)::date - DATE_TRUNC('week', ${lVal} + '1 day'::interval)::date)`;
-      return mkExpr`${dayDiffForWeekStart} / 7`;
-    }
-    if (units === 'month') {
-      const monthDiff = mkExpr`DATE_PART('month', ${rVal}) - DATE_PART('month', ${lVal})`;
-      return mkExpr`${yearDiff} * 12 + ${monthDiff}`;
-    }
-    if (units === 'quarter') {
-      const qDiff = mkExpr`DATE_PART('quarter', ${rVal}) - DATE_PART('quarter', ${lVal})`;
-      return mkExpr`${yearDiff} * 4 + ${qDiff}`;
+        ? mkExpr`FLOOR(${duration})`
+        : mkExpr`FLOOR((${duration})/${inSeconds[units].toString()}.0)`;
     }
     throw new Error(`Unknown or unhandled postgres time unit: ${units}`);
   }
