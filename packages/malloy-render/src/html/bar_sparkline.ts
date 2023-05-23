@@ -72,6 +72,7 @@ export class HTMLBarSparkLineRenderer extends HTMLBarChartRenderer {
         ticks: false,
         values: [],
       },
+      scale: {zero: false},
     };
 
     const yDef = {
@@ -85,6 +86,7 @@ export class HTMLBarSparkLineRenderer extends HTMLBarChartRenderer {
         grid: false,
         values: [],
       },
+      scale: {zero: false},
     };
 
     return {

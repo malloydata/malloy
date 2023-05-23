@@ -71,6 +71,7 @@ export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
         ticks: false,
         values: [],
       },
+      scale: {zero: false},
     };
 
     const yDef = {
@@ -85,6 +86,7 @@ export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
         lables: false,
         values: [],
       },
+      scale: {zero: false},
     };
 
     return {
