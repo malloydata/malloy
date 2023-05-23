@@ -80,6 +80,7 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       type: xType,
       sort: xSort,
       axis: {title: formatTitle(this.options, xField.name)},
+      scale: {zero: false},
     };
 
     const yDef = {
@@ -87,6 +88,7 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       type: yType,
       sort: ySort,
       axis: {title: formatTitle(this.options, yField.name)},
+      scale: {zero: false},
     };
 
     return {

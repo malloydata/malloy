@@ -63,6 +63,7 @@ export class HTMLAreaSparkLineRenderer extends HTMLSparkLineRenderer {
         ticks: false,
         values: [],
       },
+      scale: {zero: false},
     };
 
     const yDef = {
@@ -77,6 +78,7 @@ export class HTMLAreaSparkLineRenderer extends HTMLSparkLineRenderer {
         lables: false,
         values: [],
       },
+      scale: {zero: false},
     };
 
     return {
