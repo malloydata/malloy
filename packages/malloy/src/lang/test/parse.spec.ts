@@ -864,6 +864,13 @@ describe('expressions', () => {
   });
 
   test('filtered measure', exprOK("acount {? astr = 'why?' }"));
+  test('correctly flags filtered scalar', () => {
+    const e = new BetaExpression('ai { where: true }');
+    expect(e).compileToFailWith(
+      'Filtered expression requires an aggregate computation'
+    );
+  });
+
   describe('aggregate forms', () => {
     test('count', exprOK('count()'));
     test('count distinct', exprOK('count(distinct astr)'));
