@@ -25,7 +25,7 @@ plain_embedded_malloy = t:$('%{' (!'}%' .)* '}%') {
 
 delimiter =
   delimiter_start t:statement_type c:(_ oc:optional_config {return oc})? __ (single_comment / EOL / EOF) {
-    return {type: t, config: c ? c.trim() : '{}', range:location()}
+    return {type: t, config: c ? c.trim() : '', range:location()}
   }
 delimiter_start = '>>>'
 statement_type = 'sql' / 'malloy'

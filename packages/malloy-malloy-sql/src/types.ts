@@ -85,7 +85,7 @@ export interface MalloySQLStatementBase {
   statementText: string;
   config?: MalloySQLStatmentConfig;
   range: MalloySQLParseRange;
-  controlLineLocation: MalloySQLParseRange;
+  delimiterLocation: MalloySQLParseRange;
 }
 
 export interface EmbeddedMalloyQuery {

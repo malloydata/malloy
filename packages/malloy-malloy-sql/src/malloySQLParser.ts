@@ -111,6 +111,19 @@ export class MalloySQLParser {
     if (!parsed.statements) return {statements: []};
 
     for (const parsedStatement of parsed.statements) {
+      if (
+        parsedStatement.statementType === 'malloy' &&
+        parsedStatement.config !== ''
+      ) {
+        return {
+          statements,
+          error: new MalloySQLConfigurationError(
+            'only comments allowed after ">>>malloy"',
+            this.zeroBasedRange(parsedStatement.delimiterRange)
+          ),
+        };
+      }
+
       if (parsedStatement.config.startsWith('connection:')) {
         const splitConfig = parsedStatement.config.split('connection:');
         if (splitConfig.length > 0)
@@ -128,8 +141,8 @@ export class MalloySQLParser {
       const base: MalloySQLStatementBase = {
         statementIndex,
         statementText: parsedStatement.statementText,
-        range: parsedStatement.range,
-        controlLineLocation: parsedStatement.delimiterRange,
+        range: this.zeroBasedRange(parsedStatement.range),
+        delimiterLocation: this.zeroBasedRange(parsedStatement.delimiterRange),
       };
       statementIndex += 1;
 
