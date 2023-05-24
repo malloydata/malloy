@@ -295,6 +295,11 @@ describe('model statements', () => {
       `)
     );
   });
+  test('errors on redefinition of query', () => {
+    expect(
+      'query: q1 is a -> { project: * }, q1 is a -> { project: * }'
+    ).compileToFailWith("Query 'q1' is already defined, cannot redefine");
+  });
 });
 
 describe('explore properties', () => {
