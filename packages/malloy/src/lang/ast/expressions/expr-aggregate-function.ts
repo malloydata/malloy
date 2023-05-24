@@ -23,6 +23,7 @@
 
 import {
   AggregateFragment,
+  expressionIsAggregate,
   FieldValueType,
   isAtomicFieldType,
 } from '../../../model/malloy_types';
@@ -86,6 +87,10 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     if (exprVal === undefined) {
       this.log('Missing expression for aggregate function');
       return errorFor('agggregate without expression');
+    }
+    if (expressionIsAggregate(exprVal.expressionType)) {
+      this.log('Aggregate expression cannot be aggregate');
+      return errorFor('reagggregate');
     }
     if (
       this.typeCheck(this.expr || this, {

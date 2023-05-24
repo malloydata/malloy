@@ -58,6 +58,8 @@ export abstract class Dialect {
   abstract supportsCTEinCoorelatedSubQueries: boolean;
   abstract dontUnionIndex: boolean;
   abstract supportsQualify: boolean;
+  // In `OVER (ORDER_BY x)`, whether `x` needs to be in the GROUP BY.
+  abstract requiresWindowOrderByToBeGrouped: boolean;
 
   // return the definition of a function with the given name
   abstract getGlobalFunctionDef(

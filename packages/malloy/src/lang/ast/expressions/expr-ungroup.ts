@@ -23,14 +23,14 @@
 
 import {
   expressionIsAggregate,
+  expressionIsUngroupedAggregate,
   FieldValueType,
   UngroupFragment,
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
-import {QueryInputSpace, QuerySpace} from '../field-space/query-spaces';
+import {QuerySpace} from '../field-space/query-spaces';
 import {FT} from '../fragtype-utils';
-import {DefSpace} from '../query-items/field-declaration';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace} from '../types/field-space';
@@ -55,6 +55,12 @@ export class ExprUngroup extends ExpressionDef {
     if (!expressionIsAggregate(exprVal.expressionType)) {
       this.expr.log(`${this.control}() expression must be an aggregate`);
       return errorFor('ungrouped scalar');
+    }
+    if (expressionIsUngroupedAggregate(exprVal.expressionType)) {
+      this.expr.log(
+        `${this.control}() expression must not already be ungrouped`
+      );
+      return errorFor('doubly-ungrouped aggregate');
     }
     const ungroup: UngroupFragment = {
       type: this.control,

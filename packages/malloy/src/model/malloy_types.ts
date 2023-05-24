@@ -447,6 +447,12 @@ export function expressionIsAggregate(e: ExpressionType | undefined): boolean {
   return e === 'aggregate' || e === 'ungrouped_aggregate';
 }
 
+export function expressionIsUngroupedAggregate(
+  e: ExpressionType | undefined
+): boolean {
+  return e === 'ungrouped_aggregate';
+}
+
 export function expressionInvolvesAggregate(
   e: ExpressionType | undefined
 ): boolean {

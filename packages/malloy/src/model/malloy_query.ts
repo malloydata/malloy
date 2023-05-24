@@ -821,20 +821,29 @@ class QueryField extends QueryNode {
         } else {
           orderingField = resultStruct.getFieldByNumber(ordering.field);
         }
+        const exprType = orderingField.fif.f.fieldDef.expressionType;
         // TODO today we do not support ordering by analytic functions at all, so this works
         // but eventually we will, and this check will just want to ensure that the order field
         // isn't the same as the field we're currently compiling (otherwise we will loop infintely)
-        if (expressionIsAnalytic(orderingField.fif.f.fieldDef.expressionType)) {
+        if (expressionIsAnalytic(exprType)) {
           continue;
         }
         if (resultStruct.firstSegment.type === 'reduce') {
-          obSQL.push(
-            ` ${orderingField.fif.getPartitionSQL()}` +
-              // this.parent.dialect.sqlMaybeQuoteIdentifier(
-              //   `${orderingField.name}__${resultStruct.groupSet}`
-              // ) +
-              ` ${ordering.dir || 'ASC'}`
-          );
+          let orderSQL = orderingField.fif.getPartitionSQL();
+          if (
+            context.dialect.requiresWindowOrderByToBeGrouped &&
+            expressionIsScalar(exprType)
+          ) {
+            // ANY_VALUE here is a no-op which turns the expression into an aggregate, which allows
+            // BigQuery to use a field which is not in the group_by directly (this happens when the
+            // order_by of the window function (from the query's order_by) is on a field which is an
+            // expression rather than a column -- therefore the group_by contains an expression based
+            // on a field and not the field itself, causing an error when it's referenced in the window
+            // order_by.
+            // TODO decide if there's a better way to do this
+            orderSQL = `ANY_VALUE(${orderSQL})`;
+          }
+          obSQL.push(` ${orderSQL} ${ordering.dir || 'ASC'}`);
         } else if (resultStruct.firstSegment.type === 'project') {
           obSQL.push(
             ` ${orderingField.fif.f.generateExpression(resultStruct)} ${

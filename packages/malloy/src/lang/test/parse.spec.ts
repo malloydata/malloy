@@ -526,6 +526,51 @@ describe('model statements', () => {
             order_by: c2
           }`).compileToFailWith('Illegal order by of analytic field c2');
         });
+        test('cannot ungroup an ungrouped', () => {
+          expect(`query: a1 is a -> {
+            group_by: c is 1
+            aggregate: c2 is all(all(sum(ai)))
+          }`).compileToFailWith(
+            'all() expression must not already be ungrouped',
+            "Cannot define 'c2', value has unknown type"
+          );
+        });
+        test('cannot aggregate an ungrouped', () => {
+          expect(`query: a1 is a -> {
+            group_by: c is 1
+            aggregate: c2 is sum(all(sum(ai)))
+          }`).compileToFailWith(
+            'Aggregate expression cannot be aggregate',
+            "Cannot define 'c2', value has unknown type"
+          );
+        });
+        test('cannot aggregate an aggregate', () => {
+          expect(`query: a1 is a -> {
+            group_by: c is 1
+            aggregate: c2 is sum(sum(ai))
+          }`).compileToFailWith(
+            'Aggregate expression cannot be aggregate',
+            "Cannot define 'c2', value has unknown type"
+          );
+        });
+        test(
+          'can use field def in group_by, preserved over refinement',
+          modelOK(`query: a1 is a -> {
+            group_by: c is 1
+          }
+          query: -> a1 {
+            order_by: c
+          }`)
+        );
+        test(
+          'can use field ref in group_by, preserved over refinement',
+          modelOK(`query: a1 is a -> {
+            group_by: c is astr
+          }
+          query: -> a1 {
+            order_by: c
+          }`)
+        );
       });
     });
     describe('function typechecking', () => {

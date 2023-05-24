@@ -82,6 +82,7 @@ export class PostgresDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   globalFunctions = POSTGRES_FUNCTIONS;
+  requiresWindowOrderByToBeGrouped = false;
 
   quoteTablePath(tablePath: string): string {
     return tablePath

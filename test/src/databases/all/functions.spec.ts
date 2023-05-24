@@ -29,8 +29,8 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/is-sql-eq';
 import {databasesFromEnvironmentOr} from '../../util';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
-// const runtimes = new RuntimeList(databasesFromEnvironmentOr(['bigquery']));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases)); // TODO
+// const runtimes = new RuntimeList(databasesFromEnvironmentOr(['bigquery', 'duckdb']));
 
 const expressionModelText = `
 explore: aircraft_models is table('malloytest.aircraft_models'){
@@ -42,6 +42,10 @@ explore: aircraft is table('malloytest.aircraft'){
   join_one: aircraft_models with aircraft_model_code
   measure: aircraft_count is count()
 }
+
+explore: airports is table('malloytest.airports') {}
+
+source: state_facts is table('malloytest.state_facts') {}
 `;
 
 const expressionModels = new Map<string, malloy.ModelMaterializer>();
@@ -311,18 +315,42 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
 
   describe('row_number', () => {
+    it(`works when the order by is a dimension  - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `query: state_facts -> {
+          group_by: state
+          calculate: row_num is row_number()
+        }`
+        )
+        .run();
+      expect(result.data.path(0, 'row_num').value).toBe(1);
+      expect(result.data.path(1, 'row_num').value).toBe(2);
+    });
+
+    it(`works when the order by is a dimension in the other order  - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `query: state_facts -> {
+            calculate: row_num is row_number()
+            group_by: state
+        }`
+        )
+        .run();
+      expect(result.data.path(0, 'row_num').value).toBe(1);
+      expect(result.data.path(1, 'row_num').value).toBe(2);
+    });
+
     it(`works when the order by is a measure - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `
-   query: aircraft -> {
-     group_by: state,
-     aggregate: aircraft_count
-     group_by: row_num is row_number()
-   }`
+          `query: state_facts -> {
+          group_by: state
+          aggregate: c is count()
+          calculate: row_num is row_number()
+        }`
         )
         .run();
-      // console.log(result.sql);
       expect(result.data.path(0, 'row_num').value).toBe(1);
       expect(result.data.path(1, 'row_num').value).toBe(2);
     });
@@ -330,170 +358,181 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works when the order by is a measure but there is no group by - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `
-   query: aircraft -> {
-     aggregate: aircraft_count
-     group_by: row_num is row_number()
-   }`
+          `query: state_facts -> {
+            aggregate: c is count()
+            calculate: row_num is row_number()
+          }`
         )
         .run();
       console.log(result.sql);
       expect(result.data.path(0, 'row_num').value).toBe(1);
     });
-  });
 
-  describe('misc analytic functions', () => {
-    it(`now eval space - ${databaseName}`, async () => {
-      await expressionModel
+    it(`works inside nest - ${databaseName}`, async () => {
+      const result = await expressionModel
         .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: n is now
-            calculate: l is lag(n, 1, now)
-          }`
-        )
-        .run();
-    });
-    it(`1 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: tail_num,
-            calculate: n is row_number()
-            order_by: 1
-            nest: foo is {
-              group_by: tail_num
+          `query: state_facts { join_one: airports on airports.state = state } -> {
+            group_by: state
+            nest: q is {
+              group_by: airports.county
+              calculate: row_num is row_number()
             }
           }`
         )
         .run();
+      console.log(result.sql);
+      expect(result.data.path(0, 'q', 0, 'row_num').value).toBe(1);
+      expect(result.data.path(0, 'q', 1, 'row_num').value).toBe(2);
+      expect(result.data.path(1, 'q', 0, 'row_num').value).toBe(1);
+      expect(result.data.path(1, 'q', 1, 'row_num').value).toBe(2);
     });
 
-    it(`2 - ${databaseName}`, async () => {
-      await expressionModel
+    it(`works outside nest, but with a nest nearby - ${databaseName}`, async () => {
+      const result = await expressionModel
         .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: tail_num
-            calculate: n is row_number()
-          }`
-        )
-        .run();
-    });
-
-    it(`3 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            calculate: n is row_number()
-            group_by: tail_num
-          }`
-        )
-        .run();
-    });
-
-    it(`4 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: state,
-            aggregate: aircraft_count
+          `query: state_facts -> {
+            group_by: state
             calculate: row_num is row_number()
+            nest: nested is {
+              group_by: state
+            }
           }`
         )
         .run();
+      console.log(result.sql);
+      expect(result.data.path(0, 'row_num').value).toBe(1);
+      expect(result.data.path(1, 'row_num').value).toBe(2);
     });
+  });
 
-    it(`5 - ${databaseName}`, async () => {
-      await expressionModel
+  describe('rank', () => {
+    it(`works ordered by dimension - ${databaseName}`, async () => {
+      const result = await expressionModel
         .loadQuery(
-          `
-          query: aircraft -> {
-            aggregate: aircraft_count
-            calculate: row_num is row_number()
+          `query: state_facts -> {
+            group_by:
+              state,
+              births_ballpark is ceil(births / 1000000) * 1000000
+            order_by: births_ballpark desc
+            calculate: births_ballpark_rank is rank()
+            limit: 20
           }`
         )
-        .run();
+        .run({rowLimit: 20});
+      expect(result.data.path(0, 'births_ballpark_rank').value).toBe(1);
+      expect(result.data.path(1, 'births_ballpark_rank').value).toBe(2);
+      expect(result.data.path(8, 'births_ballpark_rank').value).toBe(9);
+      expect(result.data.path(9, 'births_ballpark_rank').value).toBe(9);
+      expect(result.data.path(10, 'births_ballpark_rank').value).toBe(9);
+      expect(result.data.path(11, 'births_ballpark_rank').value).toBe(12);
     });
 
-    it(`6 - ${databaseName}`, async () => {
-      await expressionModel
+    it(`works ordered by aggregate - ${databaseName}`, async () => {
+      const result = await expressionModel
         .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: state,
-            calculate: row_num is row_number()
-          }`
-        )
-        .run();
-    });
-
-    it(`8 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: row_num is row_number()
-            order_by: row_num desc
-          }`
-        )
-        .run();
-    });
-
-    it(`9 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: state,
-            aggregate: aircraft_count
-            calculate: row_num is row_number()
+          `query: state_facts -> {
+            group_by: first_letter is substr(state, 1, 1)
+            aggregate: states_with_first_letter_ish is round(count() / 2) * 2
             calculate: r is rank()
           }`
         )
         .run();
+      expect(result.data.path(0, 'r').value).toBe(1);
+      expect(result.data.path(1, 'r').value).toBe(1);
+      expect(result.data.path(2, 'r').value).toBe(3);
+      expect(result.data.path(3, 'r').value).toBe(3);
+    });
+  });
+
+  describe('lag', () => {
+    it(`works with one param - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `query: state_facts -> {
+          group_by: state
+          calculate: prev_state is lag(state)
+        }`
+        )
+        .run();
+      expect(result.data.path(0, 'state').value).toBe('AK');
+      expect(result.data.path(0, 'prev_state').value).toBe(null);
+      expect(result.data.path(1, 'prev_state').value).toBe('AK');
+      expect(result.data.path(1, 'state').value).toBe('AL');
+      expect(result.data.path(2, 'prev_state').value).toBe('AL');
     });
 
-    it(`10 - ${databaseName}`, async () => {
-      await expressionModel
+    it(`works with offset - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `query: state_facts -> {
+          group_by: state
+          calculate: prev_prev_state is lag(state, 2)
+        }`
+        )
+        .run();
+      expect(result.data.path(0, 'state').value).toBe('AK');
+      expect(result.data.path(0, 'prev_prev_state').value).toBe(null);
+      expect(result.data.path(1, 'prev_prev_state').value).toBe(null);
+      expect(result.data.path(2, 'prev_prev_state').value).toBe('AK');
+      expect(result.data.path(1, 'state').value).toBe('AL');
+      expect(result.data.path(3, 'prev_prev_state').value).toBe('AL');
+    });
+
+    it(`works with default value - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `query: state_facts -> {
+          group_by: state
+          calculate: prev_state is lag(state, 1, 'NONE')
+        }`
+        )
+        .run();
+      expect(result.data.path(0, 'prev_state').value).toBe('NONE');
+    });
+
+    it(`works with now as the default value - ${databaseName}`, async () => {
+      const result = await expressionModel
         .loadQuery(
           `
-          // Copy of "hand turtle analytic"
+          query: state_facts -> {
+            group_by: state
+            calculate: lag_val is lag(@2011-11-11 11:11:11, 1, now).year = now.year
+          }`
+        )
+        .run();
+      expect(result.data.path(0, 'lag_val').value).toBe(true);
+      expect(result.data.path(1, 'lag_val').value).toBe(false);
+    });
+  });
+
+  describe('first_value', () => {
+    it(`works in nest - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `
           query: aircraft -> {
             group_by: state
-            aggregate: aircraft_count
-            nest: my_turtle is {
-              limit: 4
+            where: state != null
+            nest: by_county is {
+              limit: 2
               group_by: county
               aggregate: aircraft_count
-              calculate: row_num is row_number()
+              calculate: first_count is first_value(count())
             }
           }`
         )
         .run();
+      console.log(result.data.toObject());
+      expect(result.data.path(0, 'by_county', 1, 'first_count').value).toBe(
+        result.data.path(0, 'by_county', 0, 'aircraft_count').value
+      );
+      expect(result.data.path(1, 'by_county', 1, 'first_count').value).toBe(
+        result.data.path(1, 'by_county', 0, 'aircraft_count').value
+      );
     });
+  });
 
-    it(`11 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: state
-            aggregate: aircraft_count
-            nest: my_turtle is {
-              limit: 4
-              group_by: county
-              aggregate: aircraft_count
-              calculate: row_num is row_number()
-              calculate: first_state is first_value(state)
-            }
-          }`
-        )
-        .run();
-    });
+  describe('misc analytic functions', () => {
 
     it(`12 - ${databaseName}`, async () => {
       await expressionModel
@@ -648,95 +687,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
             group_by: aircraft_models.seats,
             aggregate: aircraft_count
             group_by: prev_state is lag(aircraft_models.seats.stddev(), 1)
-          }`
-        )
-        .run();
-    });
-
-    it.skip(`22 should fail - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: prev_state is lag(state)
-          }`
-        )
-        .run();
-    });
-
-    it(`refinement field ref - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: foo is aircraft -> {
-            group_by: state
-            calculate: prev_state is lag(state)
-          }
-          query: -> foo {
-            order_by: state
-            calculate: prev_state2 is lag(state)
-          }`
-        )
-        .run();
-    });
-
-    it(`refinement field def - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: foo is aircraft -> {
-            group_by: state is '1'
-          }
-          query: -> foo {
-            order_by: state
-            calculate: prev_state is lag(state)
-          }`
-        )
-        .run();
-    });
-
-    it(`infinte recursion bug - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            calculate: n is row_number()
-            group_by: tail_num
-          }`
-        )
-        .run();
-    });
-
-    it(`output space bug - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            nest: foo is {
-              group_by: bar is 1
-              group_by: state
-            }
-          }`
-        )
-        .run();
-    });
-
-    // Expect this to fail
-    it(`refinement preserves expr type - ${databaseName}`, async () => {
-      // Should get error: invalid field definition: expected a analytic expression but got an aggregate expression instead.
-      // Should also get error: Parameter value of lag must be scalar or aggregate, but received analytic
-      await expressionModel
-        .loadQuery(
-          `
-          query: foo is aircraft -> {
-            group_by: state
-            aggregate: aircraft_count
-            calculate: prev_state is lag(state)
-          }
-          query: -> foo {
-            order_by: state
-            calculate: a is aircraft_count
-            calculate: prev_state2 is lag(prev_state)
           }`
         )
         .run();
