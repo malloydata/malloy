@@ -24,31 +24,27 @@
 import {MalloySQLParser} from '../../malloySQLParser';
 
 describe('MalloySQL parse', () => {
-  const getParser = () => {
-    return new MalloySQLParser();
-  };
-
   describe('Should parse inital comments', () => {
     test('initial single-line forward-slash comment', () => {
       ['//hello', '  //hello', '//hello\n', '\n //hello\n'].forEach(x =>
-        getParser().parse(x)
+        MalloySQLParser.parse(x)
       );
     });
 
     test('initial single-line double-dash comment', () => {
       ['--hello', '  --hello', '--hello\n', '\n --hello\n'].forEach(x =>
-        getParser().parse(x)
+        MalloySQLParser.parse(x)
       );
     });
 
     test('initial multi-line comment', () => {
       ['/* hi */', ' /* hi */ ', '/* hi */\n', '\n /* hi */\n'].forEach(x =>
-        getParser().parse(x)
+        MalloySQLParser.parse(x)
       );
     });
 
     test('initial comments mixed', () => {
-      getParser().parse('\n   //hey -- hey \n\t --hay\n/* hi */');
+      MalloySQLParser.parse('\n   //hey -- hey \n\t --hay\n/* hi */');
     });
   });
 
@@ -61,7 +57,7 @@ describe('MalloySQL parse', () => {
         '>>>sql connection:  a\n',
         '>>>sql connection:a  //x\n\n',
         '>>>sql {"connection":"y"} // test',
-      ].forEach(x => getParser().parse(x));
+      ].forEach(x => MalloySQLParser.parse(x));
     });
 
     test('Should parse initial comments and delimiter', () => {
@@ -69,7 +65,7 @@ describe('MalloySQL parse', () => {
         '// hey\n>>>sql connection:x',
         '/* test */\n\n\n>>>malloy connection:x',
         '--info\t>>>sql a',
-      ].forEach(x => getParser().parse(x));
+      ].forEach(x => MalloySQLParser.parse(x));
     });
 
     test('Should parse multiple empty control statements', () => {
@@ -77,25 +73,25 @@ describe('MalloySQL parse', () => {
         '// hey\n>>>sql {"connection":"X"}\n>>>sql {"connection":"X"}\n>>>malloy connection:x\n\n',
         '// hey\n>>>sql {"connection":"X"}  \n>>>sql\n>>>malloy connection:x\n\n',
         '\n>>>sql {"connection":"X"}  \n   /* test */\n\n>>>sql\n--hey\n>>>malloy connection:x\n\n',
-      ].forEach(x => getParser().parse(x));
+      ].forEach(x => MalloySQLParser.parse(x));
     });
   });
 
   describe('Should parse statement', () => {
     test('Should parse statement with comments', () => {
-      getParser().parse(
+      MalloySQLParser.parse(
         `>>>sql connection:y\nSELECT 1 FROM %{ malloy }% /*test*/`
       );
-      getParser().parse(
+      MalloySQLParser.parse(
         `>>>malloy connection: y\nquery -> source -> banana/*test*/`
       );
     });
 
     test('Should parse statements', () => {
-      getParser().parse(
+      MalloySQLParser.parse(
         `>>>sql connection:x\nSELECT 1 FROM %{ malloy }% /*test*/\n>>>malloy\n>>>sql`
       );
-      getParser().parse(
+      MalloySQLParser.parse(
         `>>>malloy connection: x\nquery -> source -> banana/*test*/\n\r>>>sql \nSELECT 1 >>>malloy\n\n`
       );
     });

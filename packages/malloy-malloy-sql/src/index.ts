@@ -30,6 +30,7 @@ export type {
   MalloySQLMalloyStatement,
   MalloySQLSQLStatement,
   MalloySQLStatement,
+  MalloySQLParse,
   MalloySQLParseRange,
   MalloySQLParseLocation,
   MalloySQLParseErrorExpected,

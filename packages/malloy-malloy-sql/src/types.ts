@@ -21,6 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {MalloySQLParseError} from './malloySQLParser';
+
 export interface MalloySQLParseErrorExpected {
   type: string;
   description: string;
@@ -39,8 +41,8 @@ export interface MalloySQLParseRange {
 
 export interface ParsedMalloySQLStatement {
   parts: ParsedMalloySQLStatementPart[];
-  location: MalloySQLParseRange;
-  controlLineLocation: MalloySQLParseRange;
+  range: MalloySQLParseRange;
+  delimiterRange: MalloySQLParseRange;
   statementText: string;
   statementType: 'sql' | 'malloy';
   config: string;
@@ -50,14 +52,14 @@ export interface ParsedMalloySQLMalloyStatementPart {
   type: 'malloy';
   text: string;
   malloy: string;
-  location: MalloySQLParseRange;
+  range: MalloySQLParseRange;
   parenthized: boolean;
 }
 
 export interface ParsedMalloySQLOtherStatementPart {
   type: 'comment' | 'other';
   text: string;
-  location: MalloySQLParseRange;
+  range: MalloySQLParseRange;
 }
 
 export type ParsedMalloySQLStatementPart =
@@ -70,7 +72,7 @@ export interface MalloySQLParseResults {
 }
 
 export interface MalloySQLStatmentConfig {
-  connection: string;
+  connection?: string;
 }
 
 export enum MalloySQLStatementType {
@@ -81,14 +83,14 @@ export enum MalloySQLStatementType {
 export interface MalloySQLStatementBase {
   statementIndex: number;
   statementText: string;
-  config: MalloySQLStatmentConfig;
-  location: MalloySQLParseRange;
+  config?: MalloySQLStatmentConfig;
+  range: MalloySQLParseRange;
   controlLineLocation: MalloySQLParseRange;
 }
 
 export interface EmbeddedMalloyQuery {
   query: string;
-  location: MalloySQLParseRange;
+  range: MalloySQLParseRange;
   parenthized: boolean;
 }
 
@@ -105,3 +107,8 @@ export interface MalloySQLMalloyStatement extends MalloySQLStatementBase {
 export type MalloySQLStatement =
   | MalloySQLSQLStatement
   | MalloySQLMalloyStatement;
+
+export interface MalloySQLParse {
+  statements: MalloySQLStatement[];
+  error?: MalloySQLParseError;
+}

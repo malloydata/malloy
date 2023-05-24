@@ -31,14 +31,16 @@ import {
   ParsedMalloySQLMalloyStatementPart,
   MalloySQLParseRange,
   MalloySQLParseErrorExpected,
+  MalloySQLParse,
+  MalloySQLParseLocation,
 } from './types';
 
 export class MalloySQLParseError extends Error {
-  public location: MalloySQLParseRange;
+  public range: MalloySQLParseRange;
 
-  constructor(message: string | undefined, location) {
+  constructor(message: string | undefined, range: MalloySQLParseRange) {
     super(message);
-    this.location = location;
+    this.range = range;
   }
 }
 
@@ -46,8 +48,13 @@ export class MalloySQLSyntaxError extends MalloySQLParseError {
   public expected: MalloySQLParseErrorExpected[];
   public found: string;
 
-  constructor(message: string | undefined, expected, found, location) {
-    super(message, location);
+  constructor(
+    message: string | undefined,
+    expected: MalloySQLParseErrorExpected[],
+    found: string,
+    range: MalloySQLParseRange
+  ) {
+    super(message, range);
     this.expected = expected;
     this.found = found;
   }
@@ -56,10 +63,27 @@ export class MalloySQLSyntaxError extends MalloySQLParseError {
 export class MalloySQLConfigurationError extends MalloySQLParseError {}
 
 export class MalloySQLParser {
-  constructor() {}
+  private static zeroBasedLocation(
+    location: MalloySQLParseLocation
+  ): MalloySQLParseLocation {
+    return {
+      column: location.column,
+      line: location.line - 1,
+      offset: location.offset,
+    };
+  }
+  private static zeroBasedRange(
+    range: MalloySQLParseRange
+  ): MalloySQLParseRange {
+    return {
+      start: this.zeroBasedLocation(range.start),
+      end: this.zeroBasedLocation(range.end),
+    };
+  }
 
-  public parse(document: string): MalloySQLStatement[] {
+  public static parse(document: string): MalloySQLParse {
     let parsed: MalloySQLParseResults;
+
     try {
       const p = parser.parse(document);
       parsed = {
@@ -67,73 +91,68 @@ export class MalloySQLParser {
         statements: p[1],
       };
     } catch (e) {
-      throw new MalloySQLSyntaxError(
-        e.message,
-        e.expected,
-        e.found,
-        e.location
-      );
+      return {
+        statements: [],
+        error: new MalloySQLSyntaxError(
+          e.message,
+          e.expected,
+          e.found,
+          this.zeroBasedRange(e.location)
+        ),
+      };
     }
 
     //const totalLines = document.split(/\r\n|\r|\n/).length;
-
-    if (!parsed.statements) return [];
-
     let previousConnection = '';
     const statements: MalloySQLStatement[] = [];
     let statementIndex = 0;
+    let config: MalloySQLStatmentConfig = {};
+
+    if (!parsed.statements) return {statements: []};
 
     for (const parsedStatement of parsed.statements) {
-      let config: MalloySQLStatmentConfig;
       if (parsedStatement.config.startsWith('connection:')) {
         const splitConfig = parsedStatement.config.split('connection:');
         if (splitConfig.length > 0)
           config = {connection: splitConfig[1].trim()};
         else
-          throw new MalloySQLConfigurationError(
-            '"connection:" found but no connection value provided',
-            parsedStatement.controlLineLocation
-          );
-      } else {
-        try {
-          config = JSON.parse(parsedStatement.config);
-        } catch (e) {
-          throw new MalloySQLConfigurationError(
-            `no simple "connection: myconnection" string found after
-            ">>>${parsedStatement.statementType}", trying to parse
-            everything after ">>>${parsedStatement.statementType} as JSON and
-            failed with ${e.message}`,
-            parsedStatement.controlLineLocation
-          );
-        }
+          return {
+            statements,
+            error: new MalloySQLConfigurationError(
+              '"connection:" found but no connection value provided',
+              this.zeroBasedRange(parsedStatement.delimiterRange)
+            ),
+          };
       }
-
-      if (!config.connection) {
-        if (!previousConnection)
-          throw new MalloySQLConfigurationError(
-            'No connection configuration specified, add "connection: my_connection_name" to the >>> line',
-            parsedStatement.controlLineLocation
-          );
-        config.connection = previousConnection;
-      }
-
-      previousConnection = config.connection;
 
       const base: MalloySQLStatementBase = {
         statementIndex,
         statementText: parsedStatement.statementText,
-        config,
-        location: parsedStatement.location,
-        controlLineLocation: parsedStatement.controlLineLocation,
+        range: parsedStatement.range,
+        controlLineLocation: parsedStatement.delimiterRange,
       };
       statementIndex += 1;
 
       if (parsedStatement.statementType === 'malloy') {
         statements.push({
           ...base,
+          config,
           type: MalloySQLStatementType.MALLOY,
         });
       } else {
+        if (!config.connection) {
+          if (!previousConnection)
+            return {
+              statements,
+              error: new MalloySQLConfigurationError(
+                'No connection configuration specified, add "connection: my_connection_name" to this >>>sql line or to an above one',
+                this.zeroBasedRange(parsedStatement.delimiterRange)
+              ),
+            };
+          config.connection = previousConnection;
+        }
+
+        previousConnection = config.connection;
         const embeddedMalloyQueries = parsedStatement.parts
           .filter((part): part is ParsedMalloySQLMalloyStatementPart => {
             return part.type === 'malloy';
@@ -142,18 +161,19 @@ export class MalloySQLParser {
             return {
               query: part.malloy,
               parenthized: part.parenthized,
-              location: part.location,
+              range: this.zeroBasedRange(part.range),
             };
           });
 
         statements.push({
           ...base,
+          config,
           type: MalloySQLStatementType.SQL,
           embeddedMalloyQueries,
         });
       }
     }
 
-    return statements;
+    return {statements};
   }
 }
