@@ -40,17 +40,14 @@ export class ExprFilter extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const testList = this.filter.getFilterList(fs);
     const resultExpr = this.expr.getExpression(fs);
-    for (const cond of testList) {
-      if (expressionIsCalculation(cond.expressionType)) {
-        this.filter.log(
-          'Cannot filter a field with an aggregate or analytical computation'
-        );
-        return errorFor('no filter on aggregate');
-      }
-    }
     if (resultExpr.expressionType === 'scalar') {
-      // TODO could log a warning, but I have a problem with the
-      // idea of warnings, so for now ...
+      this.expr.log('Filtered expression requires an aggregate computation');
+      return resultExpr;
+    }
+    if (testList.find(cond => expressionIsCalculation(cond.expressionType))) {
+      this.filter.log(
+        'Cannot filter an expresion with an aggregate or analytical computation'
+      );
       return resultExpr;
     }
     if (this.typeCheck(this.expr, {...resultExpr, expressionType: 'scalar'})) {
