@@ -22,18 +22,19 @@
  */
 
 import crypto from 'crypto';
-import {DuckDBBundles} from '@carlop/duckdb-wasm';
+import os from 'os';
+import {DuckDBBundles} from '@duckdb/duckdb-wasm';
 import {DuckDBWASMConnection as DuckDBWASMConnectionBase} from './duckdb_wasm_connection';
 
 export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
   getBundles(): DuckDBBundles {
-    const resolvePath = require.resolve('@carlop/duckdb-wasm');
+    const resolvePath = require.resolve('@duckdb/duckdb-wasm');
     if (!resolvePath) {
-      throw new Error('Unable to resolve @carlop/duckdb-wasm path');
+      throw new Error('Unable to resolve @duckdb/duckdb-wasm path');
     }
     const distMatch = resolvePath.match(/^.*\/dist\//);
     if (!distMatch) {
-      throw new Error('Unable to resolve @carlop/duckdb-wasm dist path');
+      throw new Error('Unable to resolve @duckdb/duckdb-wasm dist path');
     }
     const dist = distMatch[0];
 
@@ -51,5 +52,24 @@ export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
 
   async createHash(sqlCommand: string): Promise<string> {
     return crypto.createHash('md5').update(sqlCommand).digest('hex');
+  }
+
+  protected async setup(): Promise<void> {
+    const doSetup = async () => {
+      if (this.workingDirectory) {
+        await this.runDuckDBQuery(
+          `SET FILE_SEARCH_PATH='${this.workingDirectory}'`
+        );
+      }
+      await this.runDuckDBQuery(`SET home_directory='${os.homedir()}'`);
+      for (const ext of ['json', 'httpfs', 'icu']) {
+        await this.loadExtension(ext);
+      }
+    };
+    await this.connecting;
+    if (!this.isSetup) {
+      this.isSetup = doSetup();
+    }
+    await this.isSetup;
   }
 }

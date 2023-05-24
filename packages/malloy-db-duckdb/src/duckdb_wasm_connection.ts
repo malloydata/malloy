@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as duckdb from '@carlop/duckdb-wasm';
+import * as duckdb from '@duckdb/duckdb-wasm';
 import Worker from 'web-worker';
 import {
   QueryDataRow,
@@ -113,7 +113,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   constructor(
     public readonly name: string,
     private databasePath: string | null = null,
-    private workingDirectory = '/',
+    protected workingDirectory = '/',
     queryOptions?: QueryOptionsReader
   ) {
     super(queryOptions);
@@ -162,11 +162,11 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
 
   async loadExtension(ext: string) {
     try {
-      // await this.runDuckDBQuery(`INSTALL '${ext}'`);
+      await this.runDuckDBQuery(`INSTALL '${ext}'`);
       await this.runDuckDBQuery(`LOAD '${ext}'`);
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Unable to load ${ext} extension', error);
+      console.error(`Unable to load ${ext} extension`, error);
     }
   }
 
