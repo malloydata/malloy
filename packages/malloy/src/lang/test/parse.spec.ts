@@ -1023,6 +1023,15 @@ describe('expressions', () => {
       }
     }
   });
+  test.each([
+    ['ats', 'timestamp'],
+    ['ad', 'date'],
+    ['ai', 'number'],
+    ['astr', 'string'],
+    ['abool', 'boolean'],
+  ])('Can compare field %s (type %s) to NULL', (name, _datatype) => {
+    expect(`${name} = NULL`).expressionCompiled();
+  });
 });
 describe('unspported fields in schema', () => {
   test('unsupported reference in result allowed', () => {

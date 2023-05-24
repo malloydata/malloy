@@ -222,7 +222,11 @@ function timeCompare(
       return compose(lhs.value, op, rhs.value);
     }
   }
-  if (leftIsTime || rightIsTime) {
+  if (
+    (leftIsTime || rightIsTime) &&
+    lhs.dataType !== 'null' &&
+    rhs.dataType !== 'null'
+  ) {
     left.log(`Cannot compare a ${lhs.dataType} to a ${rhs.dataType}`);
     return ['false'];
   }
