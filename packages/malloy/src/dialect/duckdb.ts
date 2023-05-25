@@ -75,7 +75,7 @@ export class DuckDBDialect extends Dialect {
   supportsQualify = true;
 
   functionInfo: Record<string, FunctionInfo> = {
-    concat: {returnType: 'string'},
+    'concat': {returnType: 'string'},
   };
 
   // hack until they support temporary macros.

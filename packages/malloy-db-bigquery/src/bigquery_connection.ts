@@ -162,18 +162,18 @@ export class BigQueryConnection
   public readonly name: string;
 
   bqToMalloyTypes: {[key: string]: Partial<FieldTypeDef>} = {
-    DATE: {type: 'date'},
-    STRING: {type: 'string'},
-    INTEGER: {type: 'number', numberType: 'integer'},
-    INT64: {type: 'number', numberType: 'integer'},
-    FLOAT: {type: 'number', numberType: 'float'},
-    FLOAT64: {type: 'number', numberType: 'float'},
-    NUMERIC: {type: 'number', numberType: 'float'},
-    BIGNUMERIC: {type: 'number', numberType: 'float'},
-    TIMESTAMP: {type: 'timestamp'},
-    BOOLEAN: {type: 'boolean'},
-    BOOL: {type: 'boolean'},
-    JSON: {type: 'json'},
+    'DATE': {type: 'date'},
+    'STRING': {type: 'string'},
+    'INTEGER': {type: 'number', numberType: 'integer'},
+    'INT64': {type: 'number', numberType: 'integer'},
+    'FLOAT': {type: 'number', numberType: 'float'},
+    'FLOAT64': {type: 'number', numberType: 'float'},
+    'NUMERIC': {type: 'number', numberType: 'float'},
+    'BIGNUMERIC': {type: 'number', numberType: 'float'},
+    'TIMESTAMP': {type: 'timestamp'},
+    'BOOLEAN': {type: 'boolean'},
+    'BOOL': {type: 'boolean'},
+    'JSON': {type: 'json'},
     // TODO (https://cloud.google.com/bigquery/docs/reference/rest/v2/tables#tablefieldschema):
     // BYTES
     // DATETIME

@@ -107,22 +107,22 @@ export class JSONView {
 }
 
 const suffixMap: Record<string, RenderDef['renderer']> = {
-  _shape_map: 'shape_map',
-  _point_map: 'point_map',
-  _bar_chart: 'bar_chart',
-  _image: 'image',
-  _json: 'json',
-  _segment_map: 'segment_map',
-  _dashboard: 'dashboard',
-  _line_chart: 'line_chart',
-  _scatter_chart: 'scatter_chart',
-  _url: 'link',
-  _list: 'list',
-  _list_detail: 'list_detail',
-  _sparkline: 'sparkline',
-  _sparkline_area: 'sparkline',
-  _sparkline_column: 'sparkline',
-  _sparkline_bar: 'sparkline',
+  '_shape_map': 'shape_map',
+  '_point_map': 'point_map',
+  '_bar_chart': 'bar_chart',
+  '_image': 'image',
+  '_json': 'json',
+  '_segment_map': 'segment_map',
+  '_dashboard': 'dashboard',
+  '_line_chart': 'line_chart',
+  '_scatter_chart': 'scatter_chart',
+  '_url': 'link',
+  '_list': 'list',
+  '_list_detail': 'list_detail',
+  '_sparkline': 'sparkline',
+  '_sparkline_area': 'sparkline',
+  '_sparkline_column': 'sparkline',
+  '_sparkline_bar': 'sparkline',
 };
 
 function getRendererOptions(field: Field | Explore, dataStyles: DataStyles) {
