@@ -9,6 +9,7 @@
       "packages/malloy-db-bigquery",
       "packages/malloy-db-duckdb",
       "packages/malloy-db-postgres",
+      "packages/malloy-lint",
       "packages/malloy-render",
       "test"
     ]
@@ -24,8 +25,9 @@
     "clean": "npm run -ws clean",
     "build": "npm run -ws build",
     "watch": "tsc --watch",
-    "lint": "gts lint",
-    "lint-fix": "gts fix",
+    "lint-build": "npm run build -w packages/malloy -w packages/malloy-lint",
+    "lint": "npm run lint-build && gts lint",
+    "lint-fix": "npm run lint-build && gts fix",
     "test": "jest --runInBand",
     "test-bigquery": "MALLOY_DATABASE=bigquery jest --runInBand",
     "test-postgres": "MALLOY_DATABASE=postgres jest --runInBand",

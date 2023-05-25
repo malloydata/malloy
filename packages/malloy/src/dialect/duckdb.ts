@@ -51,13 +51,13 @@ import {
 const hackSplitComment = '-- hack: split on this';
 
 const castMap: Record<string, string> = {
-  number: 'double precision',
-  string: 'varchar',
+  'number': 'double precision',
+  'string': 'varchar',
 };
 
 const pgExtractionMap: Record<string, string> = {
-  day_of_week: 'dow',
-  day_of_year: 'doy',
+  'day_of_week': 'dow',
+  'day_of_year': 'doy',
 };
 
 export class DuckDBDialect extends Dialect {
@@ -75,7 +75,7 @@ export class DuckDBDialect extends Dialect {
   supportsQualify = true;
 
   functionInfo: Record<string, FunctionInfo> = {
-    concat: {returnType: 'string'},
+    'concat': {returnType: 'string'},
   };
 
   // hack until they support temporary macros.
