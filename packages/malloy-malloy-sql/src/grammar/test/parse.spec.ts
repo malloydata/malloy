@@ -22,6 +22,7 @@
  */
 
 import {MalloySQLParser} from '../../malloySQLParser';
+import {MalloySQLStatementType} from '../../types';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -106,29 +107,48 @@ describe('MalloySQL parse', () => {
 
   describe('Should parse statement', () => {
     test('Should parse statement with comments', () => {
-      MalloySQLParser.parse(
+      expect(
         `>>>sql connection:y\nSELECT 1 FROM %{ malloy }% /*test*/`
-      );
-      MalloySQLParser.parse(`>>>malloy \nquery -> source -> banana/*test*/`);
+      ).toBeErrorFreeMalloySQLParse();
+      expect(
+        `>>>malloy \nquery -> source -> banana/*test*/`
+      ).toBeErrorFreeMalloySQLParse();
     });
 
     test('Should parse statements', () => {
-      MalloySQLParser.parse(
-        `>>>sql connection:x\nSELECT 1 FROM %{ malloy }% /*test*/\n>>>malloy\n>>>sql`
-      );
       expect(
-        MalloySQLParser.parse(
-          `>>>malloy\nquery -> source -> banana/*test*/\n\r>>>sql connection:x\nSELECT 1 >>>malloy\n\n`
-        ).errors
-      ).toHaveLength(0);
+        `>>>sql connection:x\nSELECT 1 FROM %{ malloy }% /*test*/\n>>>malloy\n>>>sql`
+      ).toBeErrorFreeMalloySQLParse();
+      expect(
+        `>>>malloy\nquery -> source -> banana/*test*/\n\r>>>sql connection:x\nSELECT 1 >>>malloy\n\n`
+      ).toBeErrorFreeMalloySQLParse();
     });
   });
 
   describe('connection: config', () => {
-    test('Should not allow config in >>>malloy line', () => {
+    test('Should not allow connection in >>>malloy line', () => {
       expect(MalloySQLParser.parse(`>>>malloy connection`).errors).toHaveLength(
         1
       );
+    });
+
+    test('Should not allow anything besides comments in >>>malloy line', () => {
+      expect(MalloySQLParser.parse(`>>>malloy a //test`).errors).toHaveLength(
+        1
+      );
+    });
+  });
+
+  describe('Parse output', () => {
+    test('Should provide correct output', () => {
+      const parse = MalloySQLParser.parse(
+        '>>>sql connection:bigquery\nSELECT 1'
+      );
+      expect(parse.statements).toHaveLength(1);
+      expect(parse.statements[0].type).toBe(MalloySQLStatementType.SQL);
+      expect(parse.statements[0].statementText).toBe('SELECT 1');
+      expect(parse.statements[0].config?.connection).toBe('bigquery');
+      expect(parse.statements[0].statementIndex).toBe(0);
     });
   });
 });

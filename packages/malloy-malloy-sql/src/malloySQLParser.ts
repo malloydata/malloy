@@ -21,6 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {
+  LogMessage,
+  MalloyError,
+  DocumentRange,
+  DocumentPosition,
+} from '@malloydata/malloy';
 import * as parser from './grammar/malloySQL';
 import {
   MalloySQLStatmentConfig,
@@ -35,12 +41,9 @@ import {
   MalloySQLParseLocation,
 } from './types';
 
-export class MalloySQLParseError extends Error {
-  public range: MalloySQLParseRange;
-
-  constructor(message: string | undefined, range: MalloySQLParseRange) {
-    super(message);
-    this.range = range;
+export class MalloySQLParseError extends MalloyError {
+  constructor(message: string, log: LogMessage[] = []) {
+    super(message, log);
   }
 }
 
@@ -49,39 +52,49 @@ export class MalloySQLSyntaxError extends MalloySQLParseError {
   public found: string;
 
   constructor(
-    message: string | undefined,
+    message: string,
+    log: LogMessage[],
     expected: MalloySQLParseErrorExpected[],
-    found: string,
-    range: MalloySQLParseRange
+    found: string
   ) {
-    super(message, range);
+    super(message, log);
     this.expected = expected;
     this.found = found;
   }
 }
 
-export class MalloySQLConfigurationError extends MalloySQLParseError {}
-
 export class MalloySQLParser {
-  private static zeroBasedLocation(
+  private static convertLocation(
     location: MalloySQLParseLocation
-  ): MalloySQLParseLocation {
+  ): DocumentPosition {
     return {
-      column: location.column,
+      character: location.column,
       line: location.line - 1,
-      offset: location.offset,
     };
   }
-  private static zeroBasedRange(
-    range: MalloySQLParseRange
-  ): MalloySQLParseRange {
+  private static convertRange(range: MalloySQLParseRange): DocumentRange {
     return {
-      start: this.zeroBasedLocation(range.start),
-      end: this.zeroBasedLocation(range.end),
+      start: this.convertLocation(range.start),
+      end: this.convertLocation(range.end),
     };
+  }
+  private static createParseError(
+    message: string,
+    range: MalloySQLParseRange,
+    url = '.'
+  ): MalloySQLParseError {
+    const log: LogMessage = {
+      message,
+      at: {
+        url,
+        range: this.convertRange(range),
+      },
+    };
+    return new MalloySQLParseError(message, [log]);
   }
 
-  public static parse(document: string): MalloySQLParse {
+  // passing a URL returns the URL in MalloyError.log entries
+  public static parse(document: string, url = '.'): MalloySQLParse {
     let parsed: MalloySQLParseResults;
 
     try {
@@ -96,9 +109,14 @@ export class MalloySQLParser {
         errors: [
           new MalloySQLSyntaxError(
             e.message,
+            [
+              {
+                message: e.message,
+                at: {url, range: this.convertRange(e.location)},
+              },
+            ],
             e.expected,
-            e.found,
-            this.zeroBasedRange(e.location)
+            e.found
           ),
         ],
       };
@@ -120,9 +138,9 @@ export class MalloySQLParser {
         parsedStatement.config !== ''
       ) {
         errors.push(
-          new MalloySQLConfigurationError(
+          this.createParseError(
             'Only comments are allowed after ">>>malloy"',
-            this.zeroBasedRange(parsedStatement.delimiterRange)
+            parsedStatement.delimiterRange
           )
         );
       }
@@ -133,9 +151,9 @@ export class MalloySQLParser {
           config = {connection: splitConfig[1].trim()};
         else
           errors.push(
-            new MalloySQLConfigurationError(
+            this.createParseError(
               '"connection:" found but no connection value was provided',
-              this.zeroBasedRange(parsedStatement.delimiterRange)
+              parsedStatement.delimiterRange
             )
           );
       }
@@ -143,8 +161,8 @@ export class MalloySQLParser {
       const base: MalloySQLStatementBase = {
         statementIndex,
         statementText: parsedStatement.statementText,
-        range: this.zeroBasedRange(parsedStatement.range),
-        delimiterLocation: this.zeroBasedRange(parsedStatement.delimiterRange),
+        range: this.convertRange(parsedStatement.range),
+        delimiterRange: this.convertRange(parsedStatement.delimiterRange),
       };
       statementIndex += 1;
 
@@ -158,9 +176,9 @@ export class MalloySQLParser {
         if (!config.connection) {
           if (!previousConnection)
             errors.push(
-              new MalloySQLConfigurationError(
+              this.createParseError(
                 'No connection configuration specified, add "connection: my_connection_name" to this >>>sql line or to an above one',
-                this.zeroBasedRange(parsedStatement.delimiterRange)
+                parsedStatement.delimiterRange
               )
             );
           config.connection = previousConnection;
@@ -175,7 +193,7 @@ export class MalloySQLParser {
             return {
               query: part.malloy,
               parenthized: part.parenthized,
-              range: this.zeroBasedRange(part.range),
+              range: this.convertRange(part.range),
             };
           });
 

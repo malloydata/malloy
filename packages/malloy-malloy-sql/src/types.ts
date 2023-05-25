@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {DocumentRange} from '@malloydata/malloy';
 import {MalloySQLParseError} from './malloySQLParser';
 
 export interface MalloySQLParseErrorExpected {
@@ -84,13 +85,13 @@ export interface MalloySQLStatementBase {
   statementIndex: number;
   statementText: string;
   config?: MalloySQLStatmentConfig;
-  range: MalloySQLParseRange;
-  delimiterLocation: MalloySQLParseRange;
+  range: DocumentRange;
+  delimiterRange: DocumentRange;
 }
 
 export interface EmbeddedMalloyQuery {
   query: string;
-  range: MalloySQLParseRange;
+  range: DocumentRange;
   parenthized: boolean;
 }
 
