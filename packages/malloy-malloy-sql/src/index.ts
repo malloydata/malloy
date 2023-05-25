@@ -21,11 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 export {MalloySQLParser, MalloySQLParseError} from './malloySQLParser';
-export {MalloySQLStatementType} from './types';
+export type {MalloySQLParse} from './malloySQLParser';
 export type {
   MalloySQLMalloyStatement,
+  MalloySQLStatementType,
   MalloySQLSQLStatement,
   MalloySQLStatement,
-  MalloySQLParse,
   MalloySQLParseErrorExpected,
 } from './types';

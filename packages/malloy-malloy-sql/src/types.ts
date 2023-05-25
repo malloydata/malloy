@@ -22,7 +22,6 @@
  */
 
 import {DocumentRange} from '@malloydata/malloy';
-import {MalloySQLParseError} from './malloySQLParser';
 
 export interface MalloySQLParseErrorExpected {
   type: string;
@@ -108,9 +107,3 @@ export interface MalloySQLSQLStatement extends MalloySQLStatementBase {
 export type MalloySQLStatement =
   | MalloySQLSQLStatement
   | MalloySQLMalloyStatement;
-
-export interface MalloySQLParse {
-  statements: MalloySQLStatement[];
-  errors: MalloySQLParseError[];
-  initialCommentsLineCount?: number;
-}

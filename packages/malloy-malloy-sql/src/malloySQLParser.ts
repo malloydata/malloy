@@ -37,7 +37,6 @@ import {
   ParsedMalloySQLMalloyStatementPart,
   MalloySQLParseRange,
   MalloySQLParseErrorExpected,
-  MalloySQLParse,
   MalloySQLParseLocation,
 } from './types';
 
@@ -212,4 +211,10 @@ export class MalloySQLParser {
       initialCommentsLineCount,
     };
   }
+}
+
+export interface MalloySQLParse {
+  statements: MalloySQLStatement[];
+  errors: MalloySQLParseError[];
+  initialCommentsLineCount?: number;
 }
