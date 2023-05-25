@@ -1,4 +1,9 @@
-import {ESLintUtils, AST_NODE_TYPES, TSESTree} from '@typescript-eslint/utils';
+import {
+  ESLintUtils,
+  AST_NODE_TYPES,
+  TSESTree,
+  ParserServices,
+} from '@typescript-eslint/utils';
 import ts from 'typescript';
 import * as tsutils from 'tsutils';
 
@@ -12,8 +17,15 @@ const rule: ReturnType<typeof createRule> = createRule({
 
     return {
       ObjectExpression(node) {
-        const parserServices = ESLintUtils.getParserServices(context);
-        const checker = parserServices.program.getTypeChecker();
+        let parserServices: ParserServices;
+        let checker: ts.TypeChecker;
+        try {
+          parserServices = ESLintUtils.getParserServices(context);
+          checker = parserServices.program.getTypeChecker();
+        } catch {
+          // Parser services are not available, probably JS
+          return;
+        }
 
         function getQuotedKey(key: TSESTree.Literal | TSESTree.Identifier) {
           if (key.type === 'Literal' && typeof key.value === 'string') {
