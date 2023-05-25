@@ -18,7 +18,7 @@ nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --command "$(cat <<NIXCMD
   npx lerna version \$VERSION --yes --no-push --no-git-tag-version
   for package in \$PACKAGES; do
     echo Publishing \$package \$VERSION
-    npm publish -w \$package --tag next
+    npm publish -w \$package --access=public --tag next
   done
 NIXCMD
 )"
