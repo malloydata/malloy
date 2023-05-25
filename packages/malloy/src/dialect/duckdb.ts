@@ -67,7 +67,7 @@ export class DuckDBDialect extends Dialect {
   stringTypeName = 'VARCHAR';
   divisionIsInteger = true;
   supportsSumDistinctFunction = true;
-  unnestWithNumbers = false;
+  unnestWithNumbers = true;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
   supportsCTEinCoorelatedSubQueries = true;
@@ -164,6 +164,12 @@ export class DuckDBDialect extends Dialect {
     _fieldList: DialectFieldList,
     needDistinctKey: boolean
   ): string {
+    if (this.unnestWithNumbers) {
+      return `LEFT JOIN (select UNNEST(generate_series(1,
+        100000,
+        -- array_length(${source}),
+        1)) as __row_id) as ${alias} ON  ${alias}.__row_id <= array_length(${source})`;
+    }
     //Simulate left joins by guarenteeing there is at least one row.
     if (!needDistinctKey) {
       return `LEFT JOIN LATERAL (SELECT UNNEST(${source}), 1 as ignoreme) as ${alias}_outer(${alias},ignoreme) ON ${alias}_outer.ignoreme=1`;
@@ -192,7 +198,7 @@ export class DuckDBDialect extends Dialect {
     isArray: boolean
   ): string {
     // LTNOTE: hack, in duckdb we can't have structs as tables so we kind of simulate it.
-    if (fieldName === '__row_id') {
+    if (!this.unnestWithNumbers && fieldName === '__row_id') {
       return `${alias}_outer.__row_id`;
     } else if (isArray) {
       return alias;
