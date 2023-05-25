@@ -14,7 +14,7 @@
     "editor.insertSpaces": true,
     "editor.tabSize": 4
   },
-  "cSpell.words": ["antlr", "TSES"],
+  "cSpell.words": ["antlr"],
   "typescript.tsdk": "node_modules/typescript/lib",
-  "task.allowAutomaticTasks": "on"
+  "task.allowAutomaticTasks": "on",
 }
