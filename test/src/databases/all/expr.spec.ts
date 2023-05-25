@@ -24,7 +24,7 @@
 
 import * as malloy from '@malloydata/malloy';
 import {RuntimeList, allDatabases} from '../../runtimes';
-import '../../util/is-sql-eq';
+import '../../util/db-jest-matchers';
 import {databasesFromEnvironmentOr, mkSqlEqWith} from '../../util';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -641,6 +641,23 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     test('quote backslash', async () => {
       expect(await sqlEq(`'${back}${back}'`, back)).isSqlEq();
     });
+  });
+
+  test('nullish ?? operator', async () => {
+    await expect(runtime).queryMatches(
+      `sql: nullTest is { connection: "${databaseName}" select: """
+          SELECT '' as null_value, '' as string_value
+          UNION ALL SELECT null, 'correct'
+      """ }
+      query: from_sql(nullTest) -> {
+        where: null_value = null
+        project:
+          found_null is  null_value ?? 'correct',
+          else_pass is string_value ?? 'incorrect'
+          literal_null is null ?? 'correct'
+      }`,
+      {found_null: 'correct', else_pass: 'correct', literal_null: 'correct'}
+    );
   });
 });
 

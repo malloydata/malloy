@@ -29,6 +29,7 @@ import {Renames} from '../source-properties/renames';
 import {PrimaryKey} from '../source-properties/primary-key';
 import {Turtles} from '../source-properties/turtles';
 import {MalloyElement} from './malloy-element';
+import {TimezoneStatement} from '../source-properties/timezone-statement';
 
 export type SourceProperty =
   | Filter
@@ -37,7 +38,8 @@ export type SourceProperty =
   | FieldListEdit
   | Renames
   | PrimaryKey
-  | Turtles;
+  | Turtles
+  | TimezoneStatement;
 export function isSourceProperty(p: MalloyElement): p is SourceProperty {
   return (
     p instanceof Filter ||
@@ -46,6 +48,7 @@ export function isSourceProperty(p: MalloyElement): p is SourceProperty {
     p instanceof FieldListEdit ||
     p instanceof Renames ||
     p instanceof PrimaryKey ||
-    p instanceof Turtles
+    p instanceof Turtles ||
+    p instanceof TimezoneStatement
   );
 }

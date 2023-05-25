@@ -23,54 +23,38 @@
 
 import {DataArray} from '@malloydata/malloy';
 import * as lite from 'vega-lite';
-import {HTMLChartRenderer} from './chart';
-import {formatTitle, getColorScale} from './utils';
+import {HTMLLineChartRenderer} from './line_chart';
+import {getColorScale} from './utils';
 import {DEFAULT_SPEC} from './vega_spec';
 
-export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
-  abstract getMark(): 'bar' | 'line' | 'point';
+export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
+  override getSize(): {height: number; width: number} {
+    if (this.size === 'large') {
+      return {height: 100, width: 250};
+    } else {
+      return {height: 50, width: 125};
+    }
+  }
 
-  getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
+  override getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
     const fields = data.field.intrinsicFields;
     const xField = fields[0];
     const yField = fields[1];
     const colorField = fields[2];
-    const sizeField = fields[3];
-    const shapeField = fields[4];
 
     const xType = this.getDataType(xField);
     const yType = this.getDataType(yField);
     const colorType = colorField ? this.getDataType(colorField) : undefined;
-    const sizeType = sizeField ? this.getDataType(sizeField) : undefined;
-    const shapeType = shapeField ? this.getDataType(shapeField) : undefined;
-
-    const mark = this.getMark();
 
     const colorDef =
       colorField !== undefined
         ? {
             field: colorField.name,
             type: colorType,
-            axis: {title: formatTitle(this.options, colorField.name)},
-            scale: getColorScale(colorType, mark === 'bar'),
+            axis: {title: null},
+            scale: getColorScale(colorType, false),
           }
         : {value: '#4285F4'};
-
-    const sizeDef = sizeField
-      ? {
-          field: sizeField.name,
-          type: sizeType,
-          axis: {title: formatTitle(this.options, sizeField.name)},
-        }
-      : undefined;
-
-    const shapeDef = shapeField
-      ? {
-          field: shapeField.name,
-          type: shapeType,
-          axis: {title: formatTitle(this.options, shapeField.name)},
-        }
-      : undefined;
 
     const xSort = xType === 'nominal' ? null : undefined;
     const ySort = yType === 'nominal' ? null : undefined;
@@ -79,7 +63,14 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       field: xField.name,
       type: xType,
       sort: xSort,
-      axis: {title: formatTitle(this.options, xField.name)},
+      axis: {
+        title: null,
+        domain: false,
+        grid: false,
+        lables: false,
+        ticks: false,
+        values: [],
+      },
       scale: {zero: false},
     };
 
@@ -87,7 +78,14 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       field: yField.name,
       type: yType,
       sort: ySort,
-      axis: {title: formatTitle(this.options, yField.name)},
+      axis: {
+        title: null,
+        domain: false,
+        ticks: false,
+        grid: false,
+        lables: false,
+        values: [],
+      },
       scale: {zero: false},
     };
 
@@ -97,13 +95,19 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       data: {
         values: this.mapData(data),
       },
-      mark,
+      config: {
+        view: {
+          stroke: 'transparent',
+        },
+      },
+      mark: {
+        type: 'line',
+        tooltip: true,
+      },
       encoding: {
         x: xDef,
         y: yDef,
-        size: sizeDef,
         color: colorDef,
-        shape: shapeDef,
       },
       background: 'transparent',
     };

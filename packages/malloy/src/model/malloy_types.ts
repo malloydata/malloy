@@ -204,51 +204,51 @@ export interface MalloyFunctionInfo {
 }
 
 export const malloyFunctions: Record<string, MalloyFunctionInfo> = {
-  row_number: {
+  'row_number': {
     returnType: 'number',
     parameters: 'none',
     expressionType: 'analytic',
   },
-  rank: {
+  'rank': {
     returnType: 'number',
     parameters: 'none',
     expressionType: 'analytic',
   },
-  dense_rank: {
+  'dense_rank': {
     returnType: 'number',
     parameters: 'none',
     expressionType: 'analytic',
   },
-  first_value_in_column: {
+  'first_value_in_column': {
     returnType: 'number',
     parameters: 'any',
     expressionType: 'analytic',
     sqlName: 'first_value',
   },
-  last_value_in_column: {
+  'last_value_in_column': {
     returnType: 'number',
     parameters: 'any',
     expressionType: 'analytic',
     sqlName: 'last_value',
   },
-  min_in_column: {
+  'min_in_column': {
     returnType: 'number',
     parameters: 'any',
     expressionType: 'analytic',
     sqlName: 'min',
   },
-  max_in_column: {
+  'max_in_column': {
     returnType: 'number',
     parameters: 'any',
     expressionType: 'analytic',
     sqlName: 'max',
   },
-  ntile: {
+  'ntile': {
     returnType: 'number',
     parameters: ['nconst'],
     expressionType: 'analytic',
   },
-  lag: {
+  'lag': {
     returnType: 'number',
     parameters: ['number', 'nconst'],
     expressionType: 'analytic',
@@ -357,8 +357,7 @@ export interface TimeLiteralFragment extends DialectFragmentBase {
   function: 'timeLiteral';
   literal: string;
   literalType: TimeFieldType;
-  timezone: string;
-  tzIsLocale?: boolean;
+  timezone?: string;
 }
 
 export interface StringLiteralFragment extends DialectFragmentBase {
@@ -712,6 +711,7 @@ export interface QuerySegment extends Filtered {
   limit?: number;
   by?: By;
   orderBy?: OrderBy[]; // uses output field name or index.
+  queryTimezone?: string;
 }
 
 export interface TurtleDef extends NamedObject, Pipeline {
@@ -790,6 +790,7 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
   fields: FieldDef[];
   primaryKey?: PrimaryKeyRef;
   parameters?: Record<string, Parameter>;
+  queryTimezone?: string;
   dialect: string;
 }
 
@@ -902,10 +903,16 @@ export type QueryDataRow = {[columnName: string]: QueryValue};
 /** Returned query data. */
 export type QueryData = QueryDataRow[];
 
+/** Query execution stats. */
+export type QueryRunStats = {
+  queryCostBytes?: number;
+};
+
 /** Returned Malloy query data */
 export type MalloyQueryData = {
   rows: QueryDataRow[];
   totalRows: number;
+  runStats?: QueryRunStats;
 };
 
 export interface DrillSource {
@@ -927,6 +934,7 @@ export interface QueryResult extends CompiledQuery {
   result: QueryData;
   totalRows: number;
   error?: string;
+  runStats?: QueryRunStats;
 }
 
 export function isTurtleDef(def: FieldDef): def is TurtleDef {

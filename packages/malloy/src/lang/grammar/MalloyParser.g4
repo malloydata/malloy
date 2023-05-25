@@ -161,6 +161,7 @@ exploreStatement
   | RENAME renameList                  # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList    # defExploreEditField
   | QUERY subQueryDefList              # defExploreQuery
+  | timezoneStatement                  # defExploreTimezone
   ;
 
 renameList
@@ -255,6 +256,7 @@ queryStatement
   | havingStatement
   | nestStatement
   | sampleStatement
+  | timezoneStatement
   ;
 
 groupByStatement
@@ -336,6 +338,10 @@ sampleStatement
   : SAMPLE sampleSpec
   ;
 
+timezoneStatement
+  : TIMEZONE STRING_LITERAL
+  ;
+
 sampleSpec
   : PERCENT_LITERAL
   | INTEGER_LITERAL
@@ -388,19 +394,22 @@ fieldExpr
   : fieldPath                                              # exprFieldPath
   | fieldExpr OCURLY filteredBy CCURLY                     # exprFilter
   | literal                                                # exprLiteral
-  | MINUS fieldExpr                                        # exprMinus
   | fieldExpr timeframe                                    # exprDuration
   | fieldExpr DOT timeframe                                # exprTimeTrunc
   | fieldExpr DOUBLECOLON malloyType                       # exprSafeCast
+  | MINUS fieldExpr                                        # exprMinus
   | fieldExpr ( STAR | SLASH | PERCENT ) fieldExpr         # exprMulDiv
   | fieldExpr ( PLUS | MINUS ) fieldExpr                   # exprAddSub
   | fieldExpr TO fieldExpr                                 # exprRange
   | startAt=fieldExpr FOR duration=fieldExpr timeframe     # exprForRange
-  | fieldExpr (AMPER | BAR) partialAllowedFieldExpr        # exprLogicalTree
+  | fieldExpr AMPER partialAllowedFieldExpr                # exprAndTree
+  | fieldExpr BAR partialAllowedFieldExpr                  # exprOrTree
   | fieldExpr compareOp fieldExpr                          # exprCompare
-  | fieldExpr (COLON | QMARK) partialAllowedFieldExpr      # exprApply
+  | fieldExpr QMARK partialAllowedFieldExpr                # exprApply
   | NOT fieldExpr                                          # exprNot
-  | fieldExpr (AND | OR) fieldExpr                         # exprLogical
+  | fieldExpr AND fieldExpr                                # exprLogicalAnd
+  | fieldExpr OR fieldExpr                                 # exprLogicalOr
+  | fieldExpr DOUBLE_QMARK fieldExpr                       # exprCoalesce
   | CAST OPAREN fieldExpr AS malloyType CPAREN             # exprCast
   | COUNT OPAREN DISTINCT fieldExpr CPAREN                 # exprCountDisinct
   | (fieldPath DOT)?

@@ -75,8 +75,22 @@ export class DuckDBConnection extends DuckDBCommon {
           `SET FILE_SEARCH_PATH='${this.workingDirectory}'`
         );
       }
-      for (const ext of ['json', 'httpfs', 'icu']) {
-        await this.loadExtension(ext);
+      const setupCmds = [
+        "INSTALL 'json'",
+        "LOAD 'json'",
+        "INSTALL 'httpfs'",
+        "LOAD 'httpfs'",
+        "INSTALL 'icu'",
+        "LOAD 'icu'",
+        "SET TimeZone='UTC'",
+      ];
+      for (const cmd of setupCmds) {
+        try {
+          await this.runDuckDBQuery(cmd);
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error(`duckdb setup ${cmd} => ${error}`);
+        }
       }
     };
     await this.connecting;

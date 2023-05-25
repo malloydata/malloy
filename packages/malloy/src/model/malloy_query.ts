@@ -81,12 +81,23 @@ import {
 
 import {Connection} from '../runtime_types';
 import {AndChain, generateHash, indent} from './utils';
+import {QueryInfo} from '../dialect/dialect';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 
 // quote a string for SQL use.  Perhaps should be in dialect.
 function generateSQLStringLiteral(sourceString: string): string {
   return `'${sourceString}'`;
+}
+
+/** Parent from QueryStruct. */
+export declare interface ParentQueryStruct {
+  struct: QueryStruct;
+}
+
+/** Parent from QueryModel. */
+export declare interface ParentQueryModel {
+  model: QueryModel;
 }
 
 // Storage for SQL code for multi stage turtle pipelines that don't support UNNEST(ARRAY_AGG)
@@ -478,7 +489,7 @@ class QueryField extends QueryNode {
     let ret;
     if (distinctKeySQL) {
       if (this.parent.dialect.supportsSumDistinctFunction) {
-        ret = this.parent.dialect.sqlSumDistinct(distinctKeySQL, dimSQL);
+        ret = this.parent.dialect.sqlSumDistinct(distinctKeySQL, dimSQL, 'SUM');
       } else {
         ret = sqlSumDistinct(this.parent.dialect, dimSQL, distinctKeySQL);
       }
@@ -521,10 +532,12 @@ class QueryField extends QueryNode {
         countDistinctKeySQL = `CASE WHEN ${state.whereSQL} THEN ${distinctKeySQL} END`;
       }
       let sumDistinctSQL;
+      let avgDistinctSQL;
       if (this.parent.dialect.supportsSumDistinctFunction) {
-        sumDistinctSQL = this.parent.dialect.sqlSumDistinct(
+        avgDistinctSQL = this.parent.dialect.sqlSumDistinct(
           distinctKeySQL,
-          dimSQL
+          dimSQL,
+          'AVG'
         );
       } else {
         sumDistinctSQL = sqlSumDistinct(
@@ -532,8 +545,9 @@ class QueryField extends QueryNode {
           dimSQL,
           distinctKeySQL
         );
+        avgDistinctSQL = `(${sumDistinctSQL})/NULLIF(COUNT(DISTINCT CASE WHEN ${dimSQL} IS NOT NULL THEN ${countDistinctKeySQL} END),0)`;
       }
-      return `(${sumDistinctSQL})/NULLIF(COUNT(DISTINCT ${countDistinctKeySQL}),0)`;
+      return avgDistinctSQL;
     } else {
       return `AVG(${dimSQL})`;
     }
@@ -574,7 +588,7 @@ class QueryField extends QueryNode {
     return this.generateExpressionFromExpr(
       resultSet,
       context,
-      context.dialect.dialectExpr(expr),
+      context.dialect.dialectExpr(resultSet.getQueryInfo(), expr),
       state
     );
   }
@@ -837,6 +851,7 @@ class QueryFieldDate extends QueryAtomicField {
       return super.generateExpression(resultSet);
     } else {
       const truncated = this.parent.dialect.sqlTrunc(
+        resultSet.getQueryInfo(),
         {value: this.getExpr(), valueType: 'date'},
         fd.timeframe
       );
@@ -1012,9 +1027,19 @@ class FieldInstanceResult implements FieldInstance {
     this.firstSegment = turtleDef.pipeline[0];
   }
 
+  getQueryInfo(): QueryInfo {
+    if (!isIndexSegment(this.firstSegment)) {
+      const {queryTimezone} = this.firstSegment;
+      if (queryTimezone) {
+        return {queryTimezone};
+      }
+    }
+    return {};
+  }
+
   addField(as: string, field: QueryField, usage: FieldUsage) {
-    let fi;
-    if ((fi = this.allFields.get(as))) {
+    const fi = this.allFields.get(as);
+    if (fi) {
       if (fi.type === 'query') {
         throw new Error(
           `Redefinition of field ${field.fieldDef.name} as struct`
@@ -1521,7 +1546,6 @@ class QueryTurtle extends QueryField {}
  * half translated to the new world of types ..
  */
 export class Segment {
-  // static nextStructDef(s: StructDef, q: AnonymousQueryDef): StructDef
   static nextStructDef(structDef: StructDef, segment: PipeSegment): StructDef {
     const qs = new QueryStruct(structDef, {
       model: new QueryModel(undefined),
@@ -1585,6 +1609,7 @@ class QueryQuery extends QueryField {
     let parent = parentStruct;
 
     const firstStage = flatTurtleDef.pipeline[0];
+    const sourceDef = parentStruct.fieldDef;
 
     // if we are generating code
     //  and have extended declaration, we need to make a new QueryStruct
@@ -1597,8 +1622,8 @@ class QueryQuery extends QueryField {
     ) {
       parent = new QueryStruct(
         {
-          ...parentStruct.fieldDef,
-          fields: [...parentStruct.fieldDef.fields, ...firstStage.extendSource],
+          ...sourceDef,
+          fields: [...sourceDef.fields, ...firstStage.extendSource],
         },
         parent.parent ? {struct: parent} : {model: parent.model}
       );
@@ -1612,6 +1637,14 @@ class QueryQuery extends QueryField {
           ...flatTurtleDef.pipeline.slice(1),
         ],
       };
+    }
+
+    if (
+      sourceDef.queryTimezone &&
+      isQuerySegment(firstStage) &&
+      firstStage.queryTimezone === undefined
+    ) {
+      firstStage.queryTimezone = sourceDef.queryTimezone;
     }
 
     switch (firstStage.type) {
@@ -1863,6 +1896,7 @@ class QueryQuery extends QueryField {
             filterCond.expression,
             joinStack
           );
+          this.addDependantExpr(resultStruct, context, expr.e, joinStack);
         }
       } else if (isDialectFragment(expr)) {
         const expressions: Expr[] = [];
@@ -2163,39 +2197,21 @@ class QueryQuery extends QueryField {
               break;
             case 'timestamp': {
               const timeframe = fi.f.fieldDef.timeframe;
-              switch (timeframe) {
-                case 'year':
-                case 'month':
-                case 'week':
-                case 'quarter':
-                case 'day':
-                  fields.push({
-                    name,
-                    type: 'date',
-                    timeframe,
-                    resultMetadata,
-                    location,
-                  });
-                  break;
-                case 'second':
-                case 'minute':
-                case 'hour':
-                  fields.push({
-                    name,
-                    type: 'timestamp',
-                    timeframe,
-                    resultMetadata,
-                    location,
-                  });
-                  break;
-                default:
-                  fields.push({
-                    name,
-                    type: 'timestamp',
-                    resultMetadata,
-                    location,
-                  });
-                  break;
+              if (timeframe) {
+                fields.push({
+                  name,
+                  type: 'timestamp',
+                  timeframe,
+                  resultMetadata,
+                  location,
+                });
+              } else {
+                fields.push({
+                  name,
+                  type: 'timestamp',
+                  resultMetadata,
+                  location,
+                });
               }
               break;
             }
@@ -2229,7 +2245,7 @@ class QueryQuery extends QueryField {
         }
       }
     }
-    return {
+    const outputStruct: StructDef = {
       fields,
       name: this.resultStage || 'result',
       dialect: this.parent.dialect.name,
@@ -2242,6 +2258,10 @@ class QueryQuery extends QueryField {
       resultMetadata: this.getResultMetadata(this.rootResult),
       type: 'struct',
     };
+    if (isQuerySegment(this.firstSegment) && this.firstSegment.queryTimezone) {
+      outputStruct.queryTimezone = this.firstSegment.queryTimezone;
+    }
+    return outputStruct;
   }
 
   generateSQLJoinBlock(stageWriter: StageWriter, ji: JoinInstance): string {
@@ -2251,7 +2271,7 @@ class QueryQuery extends QueryField {
     let structSQL = qs.structSourceSQL(stageWriter);
     if (isJoinOn(structRelationship)) {
       if (ji.makeUniqueKey) {
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL})`;
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL} as x)`;
       }
       let onCondition = '';
       if (qs.parent === undefined) {
@@ -3435,11 +3455,7 @@ class QueryStruct extends QueryNode {
 
   constructor(
     fieldDef: StructDef,
-    parent:
-      | {struct: QueryStruct}
-      | {
-          model: QueryModel;
-        }
+    parent: ParentQueryStruct | ParentQueryModel
   ) {
     super(fieldDef);
     this.setParent(parent);
@@ -3706,7 +3722,7 @@ class QueryStruct extends QueryNode {
     }
   }
 
-  setParent(parent: {struct: QueryStruct} | {model: QueryModel}) {
+  setParent(parent: ParentQueryStruct | ParentQueryModel) {
     if ('struct' in parent) {
       this.parent = parent.struct;
     }

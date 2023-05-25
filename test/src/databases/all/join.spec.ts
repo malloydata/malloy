@@ -320,5 +320,20 @@ describe('join expression tests', () => {
       // console.log(result.data.toObject());
       expect(result.data.rowCount).toBeGreaterThan(4);
     });
+
+    it(`join issue1092 - ${database}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
+          query: table('malloytest.state_facts') -> {
+            join_one: sf is table('malloytest.state_facts') on sf.state = state
+            aggregate: x is sf.births.sum() { ? state = 'CA' }
+          }
+          `
+        )
+        .run();
+      // console.log(result.data.toObject());
+      expect(result.data.rowCount).toBe(1);
+    });
   });
 });

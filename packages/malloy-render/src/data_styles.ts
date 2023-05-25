@@ -48,7 +48,7 @@ export type RenderDef =
   | ({renderer: 'number'} & NumberRenderOptions)
   | ({renderer: 'percent'} & PercentRenderOptions)
   | ({renderer: 'boolean'} & BooleanRenderOptions)
-  | ({renderer: 'spark_line'} & SparkLineRenderOptions)
+  | ({renderer: 'sparkline'} & SparkLineRenderOptions)
   | ({renderer: 'bytes'} & BytesRenderOptions)
   | ({renderer: 'link'} & LinkRenderOptions)
   | ({renderer: 'vega'} & VegaRenderOptions);
@@ -169,6 +169,14 @@ export interface BarChartRenderOptions extends DataRenderOptions {
   size?: ChartSize;
 }
 
+export interface BarSparkLineRenderOptions extends BarChartRenderOptions {
+  size?: ChartSize;
+}
+
+export interface ColumnSparkLineRenderOptions extends BarChartRenderOptions {
+  size?: ChartSize;
+}
+
 export interface ScatterChartRenderOptions extends CartesianChartRenderOptions {
   // eslint-disable-next-line camelcase
   scatter_chart?: Record<string, unknown>;
@@ -179,9 +187,8 @@ export interface LineChartRenderOptions extends CartesianChartRenderOptions {
   line_chart?: Record<string, unknown>;
 }
 
-export interface SparkLineRenderOptions extends LineChartRenderOptions {
-  // eslint-disable-next-line camelcase
-  spark_line?: Record<string, unknown>;
+export interface SparkLineRenderOptions extends DataRenderOptions {
+  size?: ChartSize;
 }
 
 export interface PointMapRenderOptions extends ChartRenderOptions {

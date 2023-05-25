@@ -136,7 +136,7 @@ export class NamedSource extends Source {
             const pVal = pExpr.constantValue();
             let value = pVal.value;
             if (pVal.dataType !== decl.type) {
-              value = castTo(decl.type, pVal.value, true);
+              value = castTo(decl.type, pVal.value, pVal.dataType, true);
             }
             decl.value = value;
           }

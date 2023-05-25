@@ -21,15 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-module.exports = {
-  moduleDirectories: ['../../node_modules'],
-  moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx'],
-  modulePathIgnorePatterns: ['<rootDir>/dist/'],
-  setupFilesAfterEnv: ['jest-expect-message'],
-  testMatch: ['**/?(*.)spec.(ts|js)?(x)'],
-  transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest',
-  },
-  testTimeout: 100000,
-  verbose: true,
-};
+import {MalloyElement} from '../types/malloy-element';
+
+export class TimezoneStatement extends MalloyElement {
+  elementType = 'timezone';
+  constructor(readonly tz: string) {
+    super();
+  }
+}

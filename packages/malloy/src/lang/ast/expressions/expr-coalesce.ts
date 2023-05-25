@@ -21,48 +21,40 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {expressionIsCalculation} from '../../../model/malloy_types';
-
-import {errorFor} from '../ast-utils';
+import {maxExpressionType, mkExpr} from '../../../model';
 import {FT} from '../fragtype-utils';
-import {Filter} from '../query-properties/filters';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 
-export class ExprFilter extends ExpressionDef {
-  elementType = 'filtered expression';
+export class ExprCoalesce extends ExpressionDef {
+  elementType = 'coalesce expression';
   legalChildTypes = FT.anyAtomicT;
-  constructor(readonly expr: ExpressionDef, readonly filter: Filter) {
-    super({expr: expr, filter: filter});
+  constructor(readonly expr: ExpressionDef, readonly altExpr: ExpressionDef) {
+    super({expr, altExpr});
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    const testList = this.filter.getFilterList(fs);
-    const resultExpr = this.expr.getExpression(fs);
-    if (resultExpr.expressionType === 'scalar') {
-      this.expr.log('Filtered expression requires an aggregate computation');
-      return resultExpr;
+    const maybeNull = this.expr.getExpression(fs);
+    const whenNull = this.altExpr.getExpression(fs);
+    if (maybeNull.dataType === 'null') {
+      return whenNull;
     }
-    if (testList.find(cond => expressionIsCalculation(cond.expressionType))) {
-      this.filter.log(
-        'Cannot filter an expresion with an aggregate or analytical computation'
-      );
-      return resultExpr;
-    }
-    if (this.typeCheck(this.expr, {...resultExpr, expressionType: 'scalar'})) {
-      return {
-        ...resultExpr,
-        value: [
-          {
-            type: 'filterExpression',
-            e: resultExpr.value,
-            filterList: testList,
-          },
-        ],
-      };
-    }
-    this.expr.log(`Cannot filter '${resultExpr.dataType}' data`);
-    return errorFor('cannot filter type');
+    /**
+     * Could maybe walk altExpr to combine all the times that altExpr
+     * is also an ExprCoalesce into a single fragment. Not doing that now.
+     *
+     * Also this should maybe generate a dialect fragment and not write
+     * SQL, but I decided that is will happen when the "expressions are true
+     * trees" rewrite happens.
+     */
+    return {
+      ...whenNull,
+      expressionType: maxExpressionType(
+        maybeNull.expressionType,
+        whenNull.expressionType
+      ),
+      value: mkExpr`COALESCE(${maybeNull.value},${whenNull.value})`,
+    };
   }
 }

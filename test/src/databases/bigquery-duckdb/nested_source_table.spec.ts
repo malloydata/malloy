@@ -24,7 +24,7 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 /* eslint-disable no-console */
 
-import '../../util/is-sql-eq';
+import '../../util/db-jest-matchers';
 import {RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
 
@@ -125,18 +125,13 @@ query: sessions_dashboard is ga_sessions -> {
 }
 `;
 
-describe('Nested Source Table', () => {
-  const runtimes = new RuntimeList(databases);
-
-  afterAll(async () => {
-    await runtimes.closeAll();
-  });
-
-  runtimes.runtimeMap.forEach((runtime, databaseName) => {
-    const model = runtime.loadModel(modelText);
-
+const runtimes = new RuntimeList(databases);
+describe.each(runtimes.runtimeList)(
+  'Nested Source Table - %s',
+  (databaseName, runtime) => {
     test(`repeated child of record - ${databaseName}`, async () => {
-      const result = await model
+      const result = await runtime
+        .loadModel(modelText)
         .loadQuery(
           `
         query: ga_sessions->by_page_title
@@ -148,8 +143,21 @@ describe('Nested Source Table', () => {
       expect(result.data.path(0, 'pageTitle').value).toBe('Shopping Cart');
     });
 
-    test(`search_index - ${databaseName}`, async () => {
-      const result = await model
+    // SKIPPED because the tests intermittently fail and lloyd said
+    // "I bet it has to do with my sampling test on indexing. Intermittently
+    //  getting different results. I'd comment out the test and I'll take a
+    //  look at it when I get back." and that seems reasonable.
+    // "search_index" is the test that failed, but a skipped both
+    // this one and "manual index". Here's the errror:
+    //   * Nested Source Table › search_index - duckdb
+    //
+    //      expect(received).toBe(expected) // Object.is equality
+    //
+    //      Expected: "Organic Search"
+    //      Received: "Referral"
+    test.skip(`search_index - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadModel(modelText)
         .loadQuery(
           `
         query: ga_sessions->search_index -> {
@@ -166,5 +174,38 @@ describe('Nested Source Table', () => {
       expect(result.data.path(0, 'fieldValue').value).toBe('Organic Search');
       // expect(result.data.path(0, "weight").value).toBe(18);
     });
-  });
+
+    test.skip(`manual index - ${databaseName}`, async () => {
+      let sampleSize = '10';
+      if (databaseName === 'bigquery') {
+        sampleSize = 'false';
+      }
+      const _result = await runtime
+        .loadQuery(
+          `
+        query: table('malloytest.ga_sample')-> {
+          index: everything
+          sample: ${sampleSize}
+        }
+        -> {
+          aggregate: field_count is count(DISTINCT fieldName)
+          nest: top_fields is {
+            group_by: fieldName
+            aggregate: row_count is count()
+            limit: 100
+          }
+        }
+        `
+        )
+        .run();
+      // console.log(JSON.stringify(result.data.toObject(), null, 2));
+      // expect(result.data.path(0, "fieldName").value).toBe("channelGrouping");
+      // expect(result.data.path(0, "fieldValue").value).toBe("Organic Search");
+      // expect(result.data.path(0, "weight").value).toBe(18);
+    });
+  }
+);
+
+afterAll(async () => {
+  await runtimes.closeAll();
 });
