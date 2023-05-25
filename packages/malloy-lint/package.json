@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/eslint-plugin-lint",
-  "version": "0.0.35",
+  "version": "0.0.37",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
