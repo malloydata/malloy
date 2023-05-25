@@ -94,11 +94,11 @@ export interface EmbeddedMalloyQuery {
   parenthized: boolean;
 }
 
-export interface MalloySQLSQLStatement extends MalloySQLStatementBase {
+export interface MalloySQLMalloyStatement extends MalloySQLStatementBase {
   type: MalloySQLStatementType.MALLOY;
 }
 
-export interface MalloySQLMalloyStatement extends MalloySQLStatementBase {
+export interface MalloySQLSQLStatement extends MalloySQLStatementBase {
   type: MalloySQLStatementType.SQL;
   statementIndex: number;
   embeddedMalloyQueries: EmbeddedMalloyQuery[];
