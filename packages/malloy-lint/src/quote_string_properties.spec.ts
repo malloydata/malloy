@@ -1,6 +1,16 @@
 import {ESLintUtils} from '@typescript-eslint/utils';
 import rule from './quote_string_properties';
 import {join} from 'path';
+import fs from 'fs';
+
+beforeAll(() => {
+  // Somewhat oddly, RuleTester needs a file named 'file.ts' to exist
+  fs.closeSync(fs.openSync('file.ts', 'w'));
+});
+
+afterAll(() => {
+  fs.unlinkSync('file.ts');
+});
 
 // create a new tester with a typescript parser
 const ruleTester = new ESLintUtils.RuleTester({
