@@ -25,7 +25,7 @@
     "clean": "npm run -ws clean",
     "build": "npm run -ws build",
     "watch": "tsc --watch",
-    "lint-build": "npm run build -w packages/malloy-lint",
+    "lint-build": "npm run build -w packages/malloy -w packages/malloy-lint",
     "lint": "npm run lint-build && gts lint",
     "lint-fix": "npm run lint-build && gts fix",
     "test": "jest --runInBand",
