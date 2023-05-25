@@ -9,6 +9,7 @@
       "packages/malloy-db-bigquery",
       "packages/malloy-db-duckdb",
       "packages/malloy-db-postgres",
+      "packages/malloy-malloy-sql",
       "packages/malloy-lint",
       "packages/malloy-render",
       "test"

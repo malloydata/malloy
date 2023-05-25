@@ -57,6 +57,10 @@ export type {
   NamedQuery,
   NamedModelObject,
   ExpressionType,
+  // used in MalloyError.log
+  DocumentLocation,
+  DocumentRange,
+  DocumentPosition,
 } from './model';
 export {
   // Used in Composer Demo
