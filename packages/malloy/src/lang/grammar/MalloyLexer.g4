@@ -101,7 +101,6 @@ NUMBER: N U M B E R;
 ON: O N ;
 OR: O R ;
 PICK: P I C K ;
-QMARK: '?';
 QUARTER: Q U A R T E R S?;
 SECOND: S E C O N D S?;
 STRING: S T R I N G;
@@ -157,6 +156,8 @@ SEMI: ';' ;
 NOT_MATCH: '!~' ;
 MATCH: '~' ;
 PERCENT: '%';
+DOUBLE_QMARK: '??';
+QMARK: '?';
 
 fragment F_YEAR: DIGIT DIGIT DIGIT DIGIT;
 fragment F_DD: DIGIT DIGIT;

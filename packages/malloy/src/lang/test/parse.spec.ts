@@ -838,6 +838,7 @@ describe('expressions', () => {
     test('not', exprOK('not true'));
     test('and', exprOK('true and false'));
     test('or', exprOK('true or false'));
+    test('null-check (??)', exprOK('ai ?? 7'));
     test('disallow date OP number', () => {
       expect(new BetaExpression('@2001 = 7')).compileToFailWith(
         'Cannot compare a date to a number'
