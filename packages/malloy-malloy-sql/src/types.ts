@@ -110,5 +110,6 @@ export type MalloySQLStatement =
 
 export interface MalloySQLParse {
   statements: MalloySQLStatement[];
-  error?: MalloySQLParseError;
+  errors: MalloySQLParseError[];
+  initialCommentsLineCount?: number;
 }

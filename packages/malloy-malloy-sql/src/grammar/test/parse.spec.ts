@@ -35,9 +35,12 @@ declare global {
 expect.extend({
   toBeErrorFreeMalloySQLParse: function (document: string) {
     const parse = MalloySQLParser.parse(document);
-    if (parse.error) {
+    if (parse.errors.length > 0) {
       return {
-        message: () => `unexpected parse error: ${parse.error?.message}`,
+        message: () =>
+          `unexpected parse errors: ${parse.errors
+            .map(m => m.message)
+            .join('\n')}`,
         pass: false,
       };
     } else return {pass: true, message: () => ''};
@@ -116,14 +119,16 @@ describe('MalloySQL parse', () => {
       expect(
         MalloySQLParser.parse(
           `>>>malloy\nquery -> source -> banana/*test*/\n\r>>>sql connection:x\nSELECT 1 >>>malloy\n\n`
-        ).error
-      ).toBeFalsy();
+        ).errors
+      ).toHaveLength(0);
     });
   });
 
   describe('connection: config', () => {
     test('Should not allow config in >>>malloy line', () => {
-      expect(MalloySQLParser.parse(`>>>malloy connection`).error).toBeTruthy();
+      expect(MalloySQLParser.parse(`>>>malloy connection`).errors).toHaveLength(
+        1
+      );
     });
   });
 });

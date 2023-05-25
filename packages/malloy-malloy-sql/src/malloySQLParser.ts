@@ -93,35 +93,38 @@ export class MalloySQLParser {
     } catch (e) {
       return {
         statements: [],
-        error: new MalloySQLSyntaxError(
-          e.message,
-          e.expected,
-          e.found,
-          this.zeroBasedRange(e.location)
-        ),
+        errors: [
+          new MalloySQLSyntaxError(
+            e.message,
+            e.expected,
+            e.found,
+            this.zeroBasedRange(e.location)
+          ),
+        ],
       };
     }
 
-    //const totalLines = document.split(/\r\n|\r|\n/).length;
     let previousConnection = '';
     const statements: MalloySQLStatement[] = [];
+    const initialCommentsLineCount =
+      parsed.initialComments.split(/\r\n|\r|\n/).length - 1;
     let statementIndex = 0;
     let config: MalloySQLStatmentConfig = {};
+    const errors: MalloySQLParseError[] = [];
 
-    if (!parsed.statements) return {statements: []};
+    if (!parsed.statements) return {statements, errors};
 
     for (const parsedStatement of parsed.statements) {
       if (
         parsedStatement.statementType === 'malloy' &&
         parsedStatement.config !== ''
       ) {
-        return {
-          statements,
-          error: new MalloySQLConfigurationError(
-            'only comments allowed after ">>>malloy"',
+        errors.push(
+          new MalloySQLConfigurationError(
+            'Only comments are allowed after ">>>malloy"',
             this.zeroBasedRange(parsedStatement.delimiterRange)
-          ),
-        };
+          )
+        );
       }
 
       if (parsedStatement.config.startsWith('connection:')) {
@@ -129,13 +132,12 @@ export class MalloySQLParser {
         if (splitConfig.length > 0)
           config = {connection: splitConfig[1].trim()};
         else
-          return {
-            statements,
-            error: new MalloySQLConfigurationError(
-              '"connection:" found but no connection value provided',
+          errors.push(
+            new MalloySQLConfigurationError(
+              '"connection:" found but no connection value was provided',
               this.zeroBasedRange(parsedStatement.delimiterRange)
-            ),
-          };
+            )
+          );
       }
 
       const base: MalloySQLStatementBase = {
@@ -155,13 +157,12 @@ export class MalloySQLParser {
       } else {
         if (!config.connection) {
           if (!previousConnection)
-            return {
-              statements,
-              error: new MalloySQLConfigurationError(
+            errors.push(
+              new MalloySQLConfigurationError(
                 'No connection configuration specified, add "connection: my_connection_name" to this >>>sql line or to an above one',
                 this.zeroBasedRange(parsedStatement.delimiterRange)
-              ),
-            };
+              )
+            );
           config.connection = previousConnection;
         }
 
@@ -187,6 +188,10 @@ export class MalloySQLParser {
       }
     }
 
-    return {statements};
+    return {
+      statements,
+      errors,
+      initialCommentsLineCount,
+    };
   }
 }
