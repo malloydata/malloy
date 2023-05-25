@@ -24,8 +24,8 @@ export {MalloySQLParser, MalloySQLParseError} from './malloySQLParser';
 export type {MalloySQLParse} from './malloySQLParser';
 export type {
   MalloySQLMalloyStatement,
-  MalloySQLStatementType,
   MalloySQLSQLStatement,
   MalloySQLStatement,
   MalloySQLParseErrorExpected,
 } from './types';
+export {MalloySQLStatementType} from './types';
