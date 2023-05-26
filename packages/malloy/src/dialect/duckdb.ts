@@ -162,12 +162,17 @@ export class DuckDBDialect extends Dialect {
     source: string,
     alias: string,
     _fieldList: DialectFieldList,
-    needDistinctKey: boolean
+    needDistinctKey: boolean,
+    _isArray: boolean,
+    isInNestedPipeline: boolean
   ): string {
     if (this.unnestWithNumbers) {
+      // Duckdb can't unnest in a coorelated subquery at the moment so we hack it.
+      const arrayLen = isInNestedPipeline
+        ? '100000'
+        : `array_length(${source})`;
       return `LEFT JOIN (select UNNEST(generate_series(1,
-        100000,
-        -- array_length(${source}),
+        ${arrayLen},
         1)) as __row_id) as ${alias} ON  ${alias}.__row_id <= array_length(${source})`;
     }
     //Simulate left joins by guarenteeing there is at least one row.

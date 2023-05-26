@@ -205,7 +205,7 @@ describe.each(runtimes.runtimeList)(
     });
 
     test(`autobin - ${databaseName}`, async () => {
-      const result = await runtime
+      const _result = await runtime
         .loadQuery(
           `
           source: airports is table('malloytest.airports') + {
@@ -233,6 +233,7 @@ describe.each(runtimes.runtimeList)(
         `
         )
         .run();
+      // console.log(result.sql);
       // console.log(result.data.toObject());
       // expect(result.data.path(0, 'fieldName').value).toBe('channelGrouping');
       // expect(result.data.path(0, 'fieldValue').value).toBe('Organic Search');
