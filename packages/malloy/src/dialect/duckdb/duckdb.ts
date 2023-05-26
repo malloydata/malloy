@@ -40,13 +40,7 @@ import {
 import {indent} from '../../model/utils';
 import {DialectFunctionOverloadDef} from '../functions';
 import {DUCKDB_FUNCTIONS} from './functions';
-import {
-  Dialect,
-  DialectFieldList,
-  QueryInfo,
-  inDays,
-  qtz,
-} from '../dialect';
+import {Dialect, DialectFieldList, QueryInfo, inDays, qtz} from '../dialect';
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';

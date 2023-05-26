@@ -38,12 +38,7 @@ import {
 } from '../../model/malloy_types';
 import {POSTGRES_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
-import {
-  Dialect,
-  DialectFieldList,
-  QueryInfo,
-  qtz,
-} from '../dialect';
+import {Dialect, DialectFieldList, QueryInfo, qtz} from '../dialect';
 
 const castMap: Record<string, string> = {
   'number': 'double precision',
