@@ -163,7 +163,8 @@ export class StandardSQLDialect extends Dialect {
     alias: string,
     fieldList: DialectFieldList,
     needDistinctKey: boolean,
-    isArray: boolean
+    isArray: boolean,
+    _isInNestedPipeline: boolean
   ): string {
     if (isArray) {
       if (needDistinctKey) {

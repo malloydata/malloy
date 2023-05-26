@@ -146,7 +146,8 @@ export abstract class Dialect {
     alias: string,
     fieldList: DialectFieldList,
     needDistinctKey: boolean,
-    isArray: boolean
+    isArray: boolean,
+    isInNestedPipeline: boolean
   ): string;
 
   abstract sqlSumDistinctHashedKey(sqlDistinctKey: string): string;
