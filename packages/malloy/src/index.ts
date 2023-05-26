@@ -65,6 +65,10 @@ export type {
   FieldValueType,
   ExpressionTypeDesc,
   FunctionParamTypeDesc,
+  // used in MalloyError.log
+  DocumentLocation,
+  DocumentRange,
+  DocumentPosition,
 } from './model';
 export {
   // Used in Composer Demo
@@ -101,9 +105,9 @@ export {
   JSONWriter,
   Parse,
   DataWriter,
+  Explore,
 } from './malloy';
 export type {
-  Explore,
   Model,
   PreparedQuery,
   PreparedResult,
@@ -123,6 +127,7 @@ export type {
   SQLBlockMaterializer,
   ExploreMaterializer,
   WriteStream,
+  SerializedExplore,
 } from './malloy';
 export type {RunSQLOptions} from './run_sql_options';
 export type {

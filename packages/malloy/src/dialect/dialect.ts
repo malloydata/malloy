@@ -41,6 +41,46 @@ interface DialectField {
   sqlOutputName: string;
 }
 
+/**
+ * Data which dialect methods need in order to correctly generate SQL.
+ * Initially this is just timezone related, but I made this an interface
+ * so it would be extensible with other useful information which might not be
+ * available until runtime (e.g. version number of db)
+ * mtoy TODO rename this interface to something other than "QueryInfo"
+ */
+export interface QueryInfo {
+  queryTimezone?: string;
+  systemTimezone?: string;
+}
+
+const allUnits = [
+  'microsecond',
+  'millisecond',
+  'second',
+  'minute',
+  'hour',
+  'day',
+  'week',
+  'month',
+  'quarter',
+  'year',
+];
+export const dayIndex = allUnits.indexOf('day');
+
+export function inDays(units: string): boolean {
+  return allUnits.indexOf(units) >= dayIndex;
+}
+
+// Return the active query timezone, if it different than the
+// "native" timezone for timestamps.
+export function qtz(qi: QueryInfo): string | undefined {
+  const tz = qi.queryTimezone;
+  if (tz === undefined || tz === qi.systemTimezone) {
+    return undefined;
+  }
+  return tz;
+}
+
 export type DialectFieldList = DialectField[];
 
 export abstract class Dialect {
@@ -148,8 +188,16 @@ export abstract class Dialect {
   abstract sqlMaybeQuoteIdentifier(identifier: string): string;
 
   abstract sqlNow(): Expr;
-  abstract sqlTrunc(sqlTime: TimeValue, units: TimestampUnit): Expr;
-  abstract sqlExtract(sqlTime: TimeValue, units: ExtractUnit): Expr;
+  abstract sqlTrunc(
+    qi: QueryInfo,
+    sqlTime: TimeValue,
+    units: TimestampUnit
+  ): Expr;
+  abstract sqlExtract(
+    qi: QueryInfo,
+    sqlTime: TimeValue,
+    units: ExtractUnit
+  ): Expr;
   abstract sqlMeasureTime(
     from: TimeValue,
     to: TimeValue,
@@ -169,12 +217,13 @@ export abstract class Dialect {
     return false;
   }
 
-  abstract sqlCast(cast: TypecastFragment): Expr;
+  abstract sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr;
 
   abstract sqlLiteralTime(
+    qi: QueryInfo,
     timeString: string,
     type: TimeFieldType,
-    timezone: string
+    timezone?: string
   ): string;
 
   abstract sqlLiteralString(literal: string): string;
@@ -183,7 +232,7 @@ export abstract class Dialect {
 
   abstract sqlRegexpMatch(expr: Expr, regex: Expr): Expr;
 
-  dialectExpr(df: DialectFragment): Expr {
+  dialectExpr(qi: QueryInfo, df: DialectFragment): Expr {
     switch (df.function) {
       case 'now':
         return this.sqlNow();
@@ -192,11 +241,11 @@ export abstract class Dialect {
       case 'delta':
         return this.sqlAlterTime(df.op, df.base, df.delta, df.units);
       case 'trunc':
-        return this.sqlTrunc(df.expr, df.units);
+        return this.sqlTrunc(qi, df.expr, df.units);
       case 'extract':
-        return this.sqlExtract(df.expr, df.units);
+        return this.sqlExtract(qi, df.expr, df.units);
       case 'cast':
-        return this.sqlCast(df);
+        return this.sqlCast(qi, df);
       case 'regexpMatch':
         return this.sqlRegexpMatch(df.expr, df.regexp);
       case 'div': {
@@ -205,8 +254,11 @@ export abstract class Dialect {
         }
         return mkExpr`${df.numerator}/${df.denominator}`;
       }
-      case 'timeLiteral':
-        return [this.sqlLiteralTime(df.literal, df.literalType, df.timezone)];
+      case 'timeLiteral': {
+        return [
+          this.sqlLiteralTime(qi, df.literal, df.literalType, df.timezone),
+        ];
+      }
       case 'stringLiteral':
         return [this.sqlLiteralString(df.literal)];
       case 'regexpLiteral':
@@ -214,7 +266,7 @@ export abstract class Dialect {
     }
   }
 
-  sqlSumDistinct(_key: string, _value: string): string {
+  sqlSumDistinct(_key: string, _value: string, _funcName: string): string {
     return 'sqlSumDistinct called but not implemented';
   }
 
@@ -235,5 +287,9 @@ export abstract class Dialect {
 
   sqlOrderBy(orderTerms: string[]): string {
     return `ORDER BY ${orderTerms.join(',')}`;
+  }
+
+  sqlTzStr(qi: QueryInfo): string {
+    return `"${qi.queryTimezone}"`;
   }
 }

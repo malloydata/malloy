@@ -21,7 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef, StructRef} from '../../../model/malloy_types';
+import {
+  StructDef,
+  StructRef,
+  isSQLBlockStruct,
+} from '../../../model/malloy_types';
 import {NamedSource} from './named-source';
 
 export class SQLSource extends NamedSource {
@@ -29,6 +33,7 @@ export class SQLSource extends NamedSource {
   structRef(): StructRef {
     return this.structDef();
   }
+
   modelStruct(): StructDef | undefined {
     const modelEnt = this.modelEntry(this.ref);
     const entry = modelEnt?.entry;
@@ -42,10 +47,14 @@ export class SQLSource extends NamedSource {
     } else if (entry.type === 'query') {
       this.log(`Cannot use 'from_sql()' to explore query '${this.refName}'`);
       return;
-    } else if (!modelEnt.sqlType) {
+    } else if (isSQLBlockStruct(entry) && entry.declaredSQLBlock) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const {declaredSQLBlock, ...newEntry} = entry;
+      return newEntry;
+    } else if (!isSQLBlockStruct(entry)) {
       this.log(`Cannot use 'from_sql()' to explore '${this.refName}'`);
       return;
     }
-    return entry;
+    this.log(`Cannot use 'from_sql()' to explore '${this.refName}'`);
   }
 }

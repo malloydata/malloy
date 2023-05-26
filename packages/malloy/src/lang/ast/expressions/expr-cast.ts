@@ -47,7 +47,9 @@ export class ExprCast extends ExpressionDef {
     return {
       dataType: this.castType,
       expressionType: expr.expressionType,
-      value: compressExpr(castTo(this.castType, expr.value, this.safe)),
+      value: compressExpr(
+        castTo(this.castType, expr.value, expr.dataType, this.safe)
+      ),
       evalSpace: expr.evalSpace,
     };
   }

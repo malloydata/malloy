@@ -77,6 +77,7 @@ export function describeIfDatabaseAvailable(
 interface InitValues {
   sql?: string;
   malloy?: string;
+  connection?: string;
 }
 
 function sqlSafe(str: string): string {
@@ -91,8 +92,11 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
     const qExpr = expr.replace(/'/g, '`');
     const sqlV = initV?.sql || 'SELECT 1 as one';
     const malloyV = initV?.malloy || '';
+    const select = initV?.connection
+      ? ` connection: "${initV.connection}" select`
+      : 'select';
     const sourceDef = `
-      sql: sqlData is { select: """${sqlV}""" }
+      sql: sqlData is {${select}: """${sqlV}""" }
       source: basicTypes is from_sql(sqlData) ${malloyV}
     `;
     let query: string;
@@ -105,17 +109,16 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
       const elsePick = result ? notEq : "'='";
       query = `${sourceDef}
           query: basicTypes
-          -> { project: ${varName} is ${expr} }
           -> {
+            declare: ${varName} is ${expr}
             project: calc is pick ${whenPick} else ${elsePick}
           }`;
     } else if (typeof result === 'number') {
       query = `${sourceDef}
           query: basicTypes
           -> {
-            project: expect is ${result}
-            project: got is ${expr}
-          } -> {
+            declare: expect is ${result}
+            declare: got is ${expr}
             project: calc is
               pick '=' when expect = got
               else concat('sqlEq failed', CHR(10), '    Expected: ${qExpr} == ${result}', CHR(10), '    Received: ', got::string)

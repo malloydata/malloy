@@ -338,8 +338,7 @@ export interface TimeLiteralFragment extends DialectFragmentBase {
   function: 'timeLiteral';
   literal: string;
   literalType: TimeFieldType;
-  timezone: string;
-  tzIsLocale?: boolean;
+  timezone?: string;
 }
 
 export interface StringLiteralFragment extends DialectFragmentBase {
@@ -771,6 +770,7 @@ export interface QuerySegment extends Filtered {
   limit?: number;
   by?: By;
   orderBy?: OrderBy[]; // uses output field name or index.
+  queryTimezone?: string;
 }
 
 export interface TurtleDef extends NamedObject, Pipeline {
@@ -849,6 +849,7 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
   fields: FieldDef[];
   primaryKey?: PrimaryKeyRef;
   parameters?: Record<string, Parameter>;
+  queryTimezone?: string;
   dialect: string;
 }
 
@@ -920,9 +921,14 @@ export interface FunctionDef extends NamedObject {
 
 export interface SQLBlockStructDef extends StructDef {
   structSource: SubquerySource;
+  // This was added to that errors for structdefs created in sql: but NOT used in
+  // from_sql could error properly. This is kind of non-sensical, and once
+  // we decide if SQL blocks are StructDefs or Queries or Something Else
+  // this should go away.
+  declaredSQLBlock?: boolean;
 }
 
-export function isSQLBlock(sd: StructDef): sd is SQLBlockStructDef {
+export function isSQLBlockStruct(sd: StructDef): sd is SQLBlockStructDef {
   const src = sd.structSource;
   return src.type === 'sql' && src.method === 'subquery';
 }
@@ -1023,10 +1029,16 @@ export type QueryDataRow = {[columnName: string]: QueryValue};
 /** Returned query data. */
 export type QueryData = QueryDataRow[];
 
+/** Query execution stats. */
+export type QueryRunStats = {
+  queryCostBytes?: number;
+};
+
 /** Returned Malloy query data */
 export type MalloyQueryData = {
   rows: QueryDataRow[];
   totalRows: number;
+  runStats?: QueryRunStats;
 };
 
 export interface DrillSource {
@@ -1048,6 +1060,7 @@ export interface QueryResult extends CompiledQuery {
   result: QueryData;
   totalRows: number;
   error?: string;
+  runStats?: QueryRunStats;
 }
 
 export function isTurtleDef(def: FieldDef): def is TurtleDef {

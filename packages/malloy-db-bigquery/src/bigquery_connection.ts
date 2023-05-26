@@ -65,12 +65,20 @@ export interface BigQueryQueryOptions {
   rowLimit: number;
 }
 
+// From BigQuery/Google Auth SDK
+interface CredentialBody {
+  client_email?: string;
+  private_key?: string;
+}
+
 interface BigQueryConnectionConfiguration {
   defaultProject?: string;
   serviceAccountKeyPath?: string;
   location?: string;
   maximumBytesBilled?: string;
   timeoutMs?: string;
+  projectId?: string;
+  credentials?: CredentialBody;
 }
 
 interface SchemaInfo {
@@ -154,18 +162,18 @@ export class BigQueryConnection
   public readonly name: string;
 
   bqToMalloyTypes: {[key: string]: Partial<FieldTypeDef>} = {
-    DATE: {type: 'date'},
-    STRING: {type: 'string'},
-    INTEGER: {type: 'number', numberType: 'integer'},
-    INT64: {type: 'number', numberType: 'integer'},
-    FLOAT: {type: 'number', numberType: 'float'},
-    FLOAT64: {type: 'number', numberType: 'float'},
-    NUMERIC: {type: 'number', numberType: 'float'},
-    BIGNUMERIC: {type: 'number', numberType: 'float'},
-    TIMESTAMP: {type: 'timestamp'},
-    BOOLEAN: {type: 'boolean'},
-    BOOL: {type: 'boolean'},
-    JSON: {type: 'json'},
+    'DATE': {type: 'date'},
+    'STRING': {type: 'string'},
+    'INTEGER': {type: 'number', numberType: 'integer'},
+    'INT64': {type: 'number', numberType: 'integer'},
+    'FLOAT': {type: 'number', numberType: 'float'},
+    'FLOAT64': {type: 'number', numberType: 'float'},
+    'NUMERIC': {type: 'number', numberType: 'float'},
+    'BIGNUMERIC': {type: 'number', numberType: 'float'},
+    'TIMESTAMP': {type: 'timestamp'},
+    'BOOLEAN': {type: 'boolean'},
+    'BOOL': {type: 'boolean'},
+    'JSON': {type: 'json'},
     // TODO (https://cloud.google.com/bigquery/docs/reference/rest/v2/tables#tablefieldschema):
     // BYTES
     // DATETIME
@@ -182,6 +190,8 @@ export class BigQueryConnection
     this.bigQuery = new BigQuerySDK({
       userAgent: `Malloy/${Malloy.version}`,
       keyFilename: config.serviceAccountKeyPath,
+      credentials: config.credentials,
+      projectId: config.projectId,
     });
 
     // record project ID because for unclear reasons we have to modify the project ID on the SDK when
@@ -251,9 +261,15 @@ export class BigQueryConnection
       if (jobResult[2]?.schema === undefined) {
         throw new Error('Schema not present');
       }
-
       // TODO even though we have 10 minute timeout limit, we still should confirm that resulting metadata has "jobComplete: true"
-      const data = {rows: jobResult[0], totalRows};
+      const queryCostBytes = jobResult[2]?.totalBytesProcessed;
+      const data: MalloyQueryData = {
+        rows: jobResult[0],
+        totalRows,
+        runStats: {
+          queryCostBytes: queryCostBytes ? +queryCostBytes : undefined,
+        },
+      };
       const schema = jobResult[2]?.schema;
 
       return {data, schema};
@@ -728,6 +744,18 @@ export class BigQueryConnection
       ...createQueryJobOptions,
     });
     return job;
+  }
+
+  public async initiateJobAndGetLinkToConsole(
+    sqlCommand: string,
+    dryRun = false
+  ): Promise<string> {
+    const job = await this.createBigQueryJob({
+      query: sqlCommand,
+      dryRun,
+    });
+    const url = `https://console.cloud.google.com/bigquery?project=${this.projectId}&j=bq:${this.location}:${job.id}&page=queryresults`;
+    return url;
   }
 
   public runSQLStream(

@@ -22,9 +22,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TranslateResponse} from '..';
+import {MalloyTranslator, TranslateResponse} from '..';
 import {DocumentLocation} from '../../model';
-import {MarkedSource, pretty, TestTranslator} from './test-translator';
+import {
+  BetaExpression,
+  MarkedSource,
+  pretty,
+  TestTranslator,
+} from './test-translator';
 import {inspect} from 'util';
 
 declare global {
@@ -35,6 +40,7 @@ declare global {
       toBeErrorless(): R;
       toCompile(): R;
       modelCompiled(): R;
+      expressionCompiled(): R;
       toReturnType(tp: string): R;
       compileToFailWith(...expectedErrors: string[]): R;
       isLocationIn(at: DocumentLocation, txt: string): R;
@@ -42,7 +48,7 @@ declare global {
   }
 }
 
-function checkForErrors(trans: TestTranslator) {
+function checkForErrors(trans: MalloyTranslator) {
   if (trans.logger === undefined) {
     throw new Error('JESTERY BROKEN, CANT FIND ERORR LOG');
   }
@@ -138,7 +144,16 @@ expect.extend({
     x.translate();
     return checkForNeededs(x);
   },
-  toBeErrorless: function (trans: TestTranslator) {
+  expressionCompiled: function (src: string) {
+    const x = new BetaExpression(src);
+    x.compile();
+    const errorCheck = checkForErrors(x);
+    if (!errorCheck.pass) {
+      return errorCheck;
+    }
+    return checkForNeededs(x);
+  },
+  toBeErrorless: function (trans: MalloyTranslator) {
     return checkForErrors(trans);
   },
   toReturnType: function (functionCall: string, returnType: string) {
@@ -161,7 +176,7 @@ expect.extend({
     s: MarkedSource | string | TestTranslator,
     ...msgs: string[]
   ) {
-    let emsg = 'Compile Error expectation not met\nExpected error';
+    let emsg = 'Compile Error expectation not met\nExpected message';
     let mSrc: MarkedSource | undefined;
     const qmsgs = msgs.map(s => `error '${s}'`);
     if (msgs.length === 1) {
@@ -184,6 +199,7 @@ expect.extend({
       m = new TestTranslator(src);
     }
     emsg += `\nSource:\n${src}`;
+    m.compile();
     const t = m.translate();
     if (t.translated) {
       return {pass: false, message: () => emsg};

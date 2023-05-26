@@ -32,17 +32,17 @@ import {databasesFromEnvironmentOr} from '../../util';
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 const splitFunction: Record<string, string> = {
-  bigquery: 'split',
-  postgres: 'string_to_array',
-  duckdb: 'string_to_array',
-  duckdb_wasm: 'string_to_array',
+  'bigquery': 'split',
+  'postgres': 'string_to_array',
+  'duckdb': 'string_to_array',
+  'duckdb_wasm': 'string_to_array',
 };
 
 const rootDbPath: Record<string, string> = {
-  bigquery: 'malloy-data.',
-  postgres: '',
-  duckdb: '',
-  duckdb_wasm: '',
+  'bigquery': 'malloy-data.',
+  'postgres': '',
+  'duckdb': '',
+  'duckdb_wasm': '',
 };
 
 afterAll(async () => {
@@ -332,6 +332,29 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   //     .run();
   //   expect(result.data.path(0, "ugly", 0, "foo").value).toBe(null);
   // });
+
+  // average should only include non-null values in the denominator
+  it(`avg ignore null- ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      sql: one is { select: """
+        SELECT 2 as a
+        UNION ALL SELECT 4
+        UNION ALL SELECT null
+      """}
+
+      query: from_sql(one) -> {
+        join_cross: b is from_sql(one)
+        aggregate:
+          avg_a is a.avg()
+          avg_b is b.a.avg()
+      }
+      `
+      )
+      .run();
+    expect(result.data.value[0]['avg_a']).toBe(3);
+  });
 
   it(`limit - not provided - ${databaseName}`, async () => {
     // a cross join produces a Many to Many result.

@@ -32,21 +32,21 @@ import {
 
 import {errorFor} from '../ast-utils';
 import {ExprValue} from '../types/expr-value';
-import {ExpressionDef} from '../types/expression-def';
+import {ExpressionDef, getMorphicValue} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {Range} from './range';
 
 export class ExprTimeExtract extends ExpressionDef {
   elementType = 'timeExtract';
   static pluralMap: Record<string, ExtractUnit> = {
-    years: 'year',
-    quarters: 'quarter',
-    months: 'month',
-    weeks: 'week',
-    days: 'day',
-    hours: 'hour',
-    minutes: 'minute',
-    seconds: 'second',
+    'years': 'year',
+    'quarters': 'quarter',
+    'months': 'month',
+    'weeks': 'week',
+    'days': 'day',
+    'hours': 'hour',
+    'minutes': 'minute',
+    'seconds': 'second',
   };
 
   static extractor(funcName: string): ExtractUnit | undefined {
@@ -72,8 +72,8 @@ export class ExprTimeExtract extends ExpressionDef {
       }
       const from = this.args[0];
       if (from instanceof Range) {
-        const first = from.first.getExpression(fs);
-        const last = from.last.getExpression(fs);
+        let first = from.first.getExpression(fs);
+        let last = from.last.getExpression(fs);
         if (!isTimeFieldType(first.dataType)) {
           from.first.log(`Can't extract ${extractTo} from '${first.dataType}'`);
           return errorFor(`${extractTo} bad type ${first.dataType}`);
@@ -81,6 +81,34 @@ export class ExprTimeExtract extends ExpressionDef {
         if (!isTimeFieldType(last.dataType)) {
           from.last.log(`Cannot extract ${extractTo} from '${last.dataType}'`);
           return errorFor(`${extractTo} bad type ${last.dataType}`);
+        }
+        let valueType = first.dataType;
+        if (first.dataType !== last.dataType) {
+          let cannotMeasure = true;
+          valueType = 'timestamp';
+          if (first.dataType === 'date') {
+            const newFirst = getMorphicValue(first, 'timestamp');
+            if (newFirst) {
+              first = newFirst;
+              cannotMeasure = false;
+            }
+          } else {
+            const newLast = getMorphicValue(last, 'timestamp');
+            if (newLast) {
+              last = newLast;
+              cannotMeasure = false;
+            }
+          }
+          if (cannotMeasure) {
+            from.first.log(
+              `Cannot measure from ${first.dataType} to ${last.dataType}`
+            );
+            return errorFor(`${extractTo} range mismatch`);
+          }
+        }
+        if (['week', 'month', 'quarter', 'year'].includes(extractTo)) {
+          this.log(`Cannot measure interval using '${extractTo}'`);
+          return errorFor(`${extractTo} civil extraction`);
         }
         if (!isTimestampUnit(extractTo)) {
           this.log(`Cannot extract ${extractTo} from a range`);
@@ -98,8 +126,8 @@ export class ExprTimeExtract extends ExpressionDef {
               type: 'dialect',
               function: 'timeDiff',
               units: extractTo,
-              left: {valueType: first.dataType, value: first.value},
-              right: {valueType: last.dataType, value: last.value},
+              left: {valueType, value: first.value},
+              right: {valueType, value: last.value},
             },
           ],
         };

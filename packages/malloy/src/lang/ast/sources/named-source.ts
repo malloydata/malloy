@@ -22,6 +22,7 @@
  */
 
 import {
+  isSQLBlockStruct,
   isValueParameter,
   paramHasValue,
   StructDef,
@@ -92,7 +93,7 @@ export class NamedSource extends Source {
     } else if (entry.type === 'function') {
       this.log(`Cannot construct a source from a function '${this.refName}`);
       return;
-    } else if (modelEnt.sqlType) {
+    } else if (isSQLBlockStruct(entry) && entry.declaredSQLBlock) {
       this.log(`Must use 'from_sql()' for sql source '${this.refName}`);
       return;
     }
@@ -138,7 +139,7 @@ export class NamedSource extends Source {
             const pVal = pExpr.constantValue();
             let value = pVal.value;
             if (pVal.dataType !== decl.type) {
-              value = castTo(decl.type, pVal.value, true);
+              value = castTo(decl.type, pVal.value, pVal.dataType, true);
             }
             decl.value = value;
           }

@@ -4,7 +4,7 @@ Malloy is an experimental language for describing data relationships and transfo
 
 ## Building applications or products in javascript with @malloydata/malloy
 
-This package facilitates building the Malloy language - or the usage of data models or queries written in the Malloy language - into your product, data application, or website. The `@malloydata/malloy` library translates complex data operations written into the Malloy language into 1) SQL and 2) metadata. The SQL can be run against a database, and then combined with results and rendered or used in a varitey of ways.
+This package facilitates building the Malloy language - or the usage of data models or queries written in the Malloy language - into your product, data application, or website. The `@malloydata/malloy` library translates complex data operations written in the Malloy language into 1) SQL and 2) metadata. The SQL can be run against a database, and then combined with results and rendered or used in a varitey of ways.
 
 ## Show me an example!
 
@@ -37,4 +37,4 @@ In practice, much of this loop is handled by various database plugins:
 
 You can find a (very) simple example of writing a CLI for executing Malloy queries [here](https://github.com/malloydata/malloy/tree/main/demo/malloy-demo-bq-cli)
 
-A more realistic and complex use case - we use these libraries to power our VSCode Extension. Some examples can be found [here](https://github.com/malloydata/malloy/tree/main/vscode-extension/src/extension/commands)
+A more realistic and complex use case - we use these libraries to power our VSCode Extension. Some examples can be found [here](https://github.com/malloydata/malloy-vscode-extension/tree/main/src/extension/commands)

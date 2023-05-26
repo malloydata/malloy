@@ -59,9 +59,10 @@ import {
   TurtleDef,
   expressionIsCalculation,
   flattenQuery,
-  isSQLBlock,
+  isSQLBlockStruct,
   isSQLFragment,
   FieldUnsupportedDef,
+  QueryRunStats,
 } from './model';
 import {
   Connection,
@@ -73,6 +74,7 @@ import {
   QueryURL,
   URLReader,
 } from './runtime_types';
+import {DateTime} from 'luxon';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -282,7 +284,7 @@ export class Malloy {
               });
             }
             if (resolved.structDef) {
-              if (isSQLBlock(resolved.structDef)) {
+              if (isSQLBlockStruct(resolved.structDef)) {
                 translator.update({
                   compileSQL: {[expanded.name]: resolved.structDef},
                 });
@@ -402,6 +404,7 @@ export class Malloy {
           sql: sqlBlock.selectStr,
           result: data.rows,
           totalRows: data.totalRows,
+          runStats: data.runStats,
           lastStageName: sqlBlock.name,
           // TODO feature-sql-block There is no malloy code...
           malloy: '',
@@ -423,6 +426,7 @@ export class Malloy {
           ...preparedResult._rawQuery,
           result: result.rows,
           totalRows: result.totalRows,
+          runStats: result.runStats,
         },
         preparedResult._modelDef
       );
@@ -1241,6 +1245,11 @@ abstract class Entity {
 }
 
 export type Field = AtomicField | QueryField | ExploreField;
+export type SerializedExplore = {
+  _structDef: StructDef;
+  sourceExplore?: SerializedExplore;
+  _parentExplore?: SerializedExplore;
+};
 
 export class Explore extends Entity {
   protected readonly _structDef: StructDef;
@@ -1408,6 +1417,26 @@ export class Explore extends Entity {
 
   public get structDef(): StructDef {
     return this._structDef;
+  }
+
+  public toJSON(): SerializedExplore {
+    return {
+      _structDef: this._structDef,
+      sourceExplore: this.sourceExplore?.toJSON(),
+      _parentExplore: this._parentExplore?.toJSON(),
+    };
+  }
+
+  public static fromJSON(main_explore: SerializedExplore): Explore {
+    const parentExplore =
+      main_explore._parentExplore !== undefined
+        ? Explore.fromJSON(main_explore._parentExplore)
+        : undefined;
+    const sourceExplore =
+      main_explore.sourceExplore !== undefined
+        ? Explore.fromJSON(main_explore.sourceExplore)
+        : undefined;
+    return new Explore(main_explore._structDef, parentExplore, sourceExplore);
   }
 }
 
@@ -2680,6 +2709,10 @@ export class Result extends PreparedResult {
     return this.inner.totalRows;
   }
 
+  public get runStats(): QueryRunStats | undefined {
+    return this.inner.runStats;
+  }
+
   public toJSON(): ResultJSON {
     return {queryResult: this.inner, modelDef: this._modelDef};
   }
@@ -2912,6 +2945,32 @@ class DataNumber extends ScalarData<number> {
   }
 }
 
+function valueToDate(value: Date): Date {
+  // TODO properly map the data from BQ/Postgres types
+  if (value instanceof Date) {
+    return value;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const valAsAny = value as any;
+  if (valAsAny.constructor.name === 'Date') {
+    // For some reason duckdb TSTZ values come back as objects which do not
+    // pass "instance of" but do seem date like.
+    return new Date(value as Date);
+  } else if (typeof value === 'number') {
+    return new Date(value);
+  } else if (typeof value !== 'string') {
+    return new Date((value as unknown as {value: string}).value);
+  } else {
+    // Postgres timestamps end up here, and ideally we would know the system
+    // timezone of the postgres instance to correctly create a Date() object
+    // which represents the same instant in time, but we don't have the data
+    // flow to implement that. This may be a problem at some future day,
+    // so here is a comment, for that day.
+    const parsed = DateTime.fromISO(value, {zone: 'UTC'});
+    return parsed.toJSDate();
+  }
+}
+
 class DataTimestamp extends ScalarData<Date> {
   protected _field: TimestampField;
 
@@ -2921,16 +2980,7 @@ class DataTimestamp extends ScalarData<Date> {
   }
 
   public get value(): Date {
-    // TODO properly map the data from BQ/Postgres types
-    if (this._value instanceof Date) {
-      return this._value;
-    } else if (typeof this._value === 'number') {
-      return new Date(this._value);
-    } else if (typeof this._value !== 'string') {
-      return new Date((this._value as unknown as {value: string}).value);
-    } else {
-      return new Date(this._value);
-    }
+    return valueToDate(this._value);
   }
 
   get field(): TimestampField {
@@ -2947,14 +2997,7 @@ class DataDate extends ScalarData<Date> {
   }
 
   public get value(): Date {
-    // TODO properly map the data from BQ/Postgres types
-    if (this._value instanceof Date) {
-      return this._value;
-    } else if (typeof this._value !== 'string') {
-      return new Date((this._value as unknown as {value: string}).value);
-    } else {
-      return new Date(this._value);
-    }
+    return valueToDate(this._value);
   }
 
   get field(): DateField {

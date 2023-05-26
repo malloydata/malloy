@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.packages.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "composite": true,
+    "target": "ES2015"
+  },
+  "references": [
+    {
+      "path": "../malloy"
+    }
+  ]
+}

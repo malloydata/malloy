@@ -34,7 +34,7 @@ import {ExprValue} from '../types/expr-value';
 import {FieldSpace} from '../types/field-space';
 import {Range} from './range';
 import {ExprTime} from './expr-time';
-import {ExpressionDef} from '../types/expression-def';
+import {ExpressionDef, getMorphicValue} from '../types/expression-def';
 import {TimeResult} from '../types/time-result';
 
 export class TimeFormatError extends Error {}
@@ -42,7 +42,6 @@ export class TimeFormatError extends Error {}
 interface TimeText {
   text: string;
   tzSpec?: string;
-  isLocale?: boolean;
 }
 
 /**
@@ -59,17 +58,9 @@ function preParse(literal: string, checkTz: boolean): TimeText {
       return {
         tzSpec,
         text: text.slice(0, -hasLocale[0].length),
-        isLocale: true,
       };
     }
-
-    const hasOffsetTz = text.match(/[+-]\d+(:\d+)?$/);
-    if (hasOffsetTz) {
-      const tzSpec = hasOffsetTz[0];
-      return {tzSpec, text: text.slice(0, -tzSpec.length)};
-    }
   }
-
   return {text};
 }
 
@@ -87,7 +78,6 @@ abstract class TimeLiteral extends ExpressionDef {
   literalPart: string;
   nextLit?: string;
   timeZone?: string;
-  isLocale?: boolean;
   constructor(
     tm: TimeText,
     readonly units: TimestampUnit | undefined,
@@ -97,26 +87,24 @@ abstract class TimeLiteral extends ExpressionDef {
     this.literalPart = tm.text;
     if (tm.tzSpec) {
       this.timeZone = tm.tzSpec;
-      if (tm.isLocale) {
-        this.isLocale = true;
-      }
     }
   }
 
-  protected getLiteral(): TimeLiteralFragment {
-    return {
+  protected makeLiteral(val: string, typ: TimeFieldType): TimeLiteralFragment {
+    const timeFrag: TimeLiteralFragment = {
       type: 'dialect',
       function: 'timeLiteral',
-      literal: this.literalPart,
-      literalType: this.timeType,
-      timezone: this.timeZone || 'UTC',
-      tzIsLocale: this.isLocale,
+      literal: val,
+      literalType: typ,
     };
+    if (this.timeZone) {
+      timeFrag.timezone = this.timeZone;
+    }
+    return timeFrag;
   }
 
-  protected getValue(): TimeResult {
-    const timeFrag = this.getLiteral();
-    const dataType = timeFrag.literalType;
+  protected makeValue(val: string, dataType: TimeFieldType): TimeResult {
+    const timeFrag = this.makeLiteral(val, dataType);
     const expressionType = 'scalar';
     const value = [timeFrag];
     if (this.units) {
@@ -132,30 +120,13 @@ abstract class TimeLiteral extends ExpressionDef {
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
-    return this.getValue();
+    return this.makeValue(this.literalPart, this.timeType);
   }
 
-  apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
+  getNext(): ExprValue | undefined {
     if (this.nextLit) {
-      // We have a chance to write our own range comparison will all constants.
-      const lhs = left.getExpression(fs);
-
-      // MTOY todo ... only apply range on ? maybe
-      if (isTimeFieldType(lhs.dataType)) {
-        let rangeType: TimeFieldType = 'timestamp';
-        if (lhs.dataType === 'date' && !this.timeType) {
-          rangeType = 'date';
-        }
-        const rangeStart = this.getLiteral();
-        const rangeEnd = {...rangeStart, literal: this.nextLit};
-        const range = new Range(
-          new ExprTime(rangeType, [rangeStart]),
-          new ExprTime(rangeType, [rangeEnd])
-        );
-        return range.apply(fs, op, left);
-      }
+      return this.makeValue(this.nextLit, this.timeType);
     }
-    return super.apply(fs, op, left);
   }
 
   granular(): boolean {
@@ -172,9 +143,7 @@ export class LiteralTimestamp extends TimeLiteral {
 
   static parse(literalTs: string): LiteralTimestamp | undefined {
     // let subSecs: string | undefined;
-    let validParse = false;
     let units: TimestampUnit | undefined = undefined;
-    let next: string | undefined = undefined;
     const tm = preParse(literalTs, true);
     literalTs = tm.text;
     if (literalTs[10] === 'T') {
@@ -186,27 +155,20 @@ export class LiteralTimestamp extends TimeLiteral {
     if (hasSubsecs) {
       literalTs = hasSubsecs[1];
       // subSecs = hasSubsecs[2];
-      // TODO mtoy subsecond units not ignored
+      // mtoy TODO subsecond units not ignored
     }
-    const tss = LuxonDateTime.fromFormat(literalTs, fTimestamp);
-    if (tss.isValid) {
-      validParse = true;
+    let ts = LuxonDateTime.fromFormat(literalTs, fTimestamp);
+    if (ts.isValid) {
+      return new LiteralTimestamp(tm, units);
     } else {
-      const tsm = LuxonDateTime.fromFormat(literalTs, fMinute);
-      if (tsm.isValid) {
-        validParse = true;
+      ts = LuxonDateTime.fromFormat(literalTs, fMinute);
+      if (ts.isValid) {
         tm.text = tm.text + ':00';
         units = 'minute';
-        next = tss.plus({minute: 1}).toFormat(fTimestamp);
-        // MTOY todo minutes should be granular
+        const next = ts.plus({minute: 1}).toFormat(fTimestamp);
+        const astMinute = new GranularLiteral(tm, units, 'timestamp', next);
+        return astMinute;
       }
-    }
-    if (validParse) {
-      const ts = new LiteralTimestamp(tm, units);
-      if (next) {
-        ts.nextLit = next;
-      }
-      return ts;
     }
     return undefined;
   }
@@ -216,7 +178,8 @@ export class LiteralTimestamp extends TimeLiteral {
  * Granular literals imply a range. The end of that range is a constant
  * in the generated expression, computed at compile time, to make filters faster.
  */
-abstract class GranularLiteral extends TimeLiteral {
+class GranularLiteral extends TimeLiteral {
+  elementType = 'granularTimeLiteral';
   constructor(
     tm: TimeText,
     units: TimestampUnit | undefined,
@@ -224,6 +187,37 @@ abstract class GranularLiteral extends TimeLiteral {
     readonly nextLit: string
   ) {
     super(tm, units, timeType);
+  }
+
+  apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {
+    // We have a chance to write our own range comparison will all constants.
+    let rangeStart = this.getExpression(fs);
+    let rangeEnd = this.getNext();
+
+    if (rangeEnd) {
+      const testValue = left.getExpression(fs);
+
+      if (testValue.dataType === 'timestamp') {
+        const newStart = getMorphicValue(rangeStart, 'timestamp');
+        const newEnd = getMorphicValue(rangeEnd, 'timestamp');
+        if (newStart && newEnd) {
+          rangeStart = newStart;
+          rangeEnd = newEnd;
+        } else {
+          return super.apply(fs, op, left);
+        }
+      }
+
+      if (isTimeFieldType(testValue.dataType)) {
+        const rangeType = testValue.dataType;
+        const range = new Range(
+          new ExprTime(rangeType, rangeStart.value),
+          new ExprTime(rangeType, rangeEnd.value)
+        );
+        return range.apply(fs, op, left);
+      }
+    }
+    return super.apply(fs, op, left);
   }
 }
 
@@ -251,18 +245,30 @@ export class LiteralHour extends GranularLiteral {
   }
 }
 
+/**
+ * DateBasedLiteral and all of the children are special because a literal
+ * of this type (e.g. @2003) can be used in expressions with Date or
+ * Timestamp data, and the correct literal will be used based on context.
+ */
 abstract class DateBasedLiteral extends GranularLiteral {
   constructor(tm: TimeText, units: TimestampUnit, nextLit: string) {
     super(tm, units, 'date', nextLit);
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
-    const morphicValue = this.getValue();
-    const tsLiteral = this.getLiteral();
-    tsLiteral.literalType = 'timestamp';
-    tsLiteral.literal = tsLiteral.literal + ' 00:00:00';
-    morphicValue.morphic = {timestamp: [tsLiteral]};
-    return morphicValue;
+    const dateValue = this.makeValue(this.literalPart, 'date');
+    const timestamp = [
+      this.makeLiteral(`${this.literalPart} 00:00:00`, 'timestamp'),
+    ];
+    return {...dateValue, morphic: {timestamp}};
+  }
+
+  getNext(): ExprValue | undefined {
+    const dateValue = this.makeValue(this.nextLit, 'date');
+    const timestamp = [
+      this.makeLiteral(`${this.nextLit} 00:00:00`, 'timestamp'),
+    ];
+    return {...dateValue, morphic: {timestamp}};
   }
 }
 
@@ -278,7 +284,7 @@ export class LiteralDay extends DateBasedLiteral {
     let nextDay = tm.text;
     const dayParse = LuxonDateTime.fromFormat(tm.text, fDay);
     if (dayParse.isValid) {
-      nextDay = dayParse.plus({day: 1}).toFormat(fTimestamp);
+      nextDay = dayParse.plus({day: 1}).toFormat(fDay);
       return new LiteralDay(tm, nextDay);
     }
   }
@@ -297,16 +303,16 @@ export class LiteralWeek extends DateBasedLiteral {
     const datePart = tm.text.slice(0, 10);
     const yyyymmdd = LuxonDateTime.fromFormat(datePart, fDay);
     if (yyyymmdd.isValid) {
-      // wonky because luxon uses monday weeks and bigquery uses sunday weeks
-      let sunday = yyyymmdd;
-      if (yyyymmdd.weekday !== 7) {
-        sunday = yyyymmdd.startOf('week').minus({day: 1});
-      }
-      const next = sunday.plus({days: 7});
+      const luxonDay = yyyymmdd.weekday;
+      if (luxonDay === 7) {
+        // Weeks must start on a sunday. If you don't know when the
+        // week starts use @YYYY-MM-DD.week to truncate
+        const next = yyyymmdd.plus({days: 7});
 
-      tm.text = sunday.toFormat(fDay);
-      nextWeek = next.toFormat(fDay);
-      return new LiteralWeek(tm, nextWeek);
+        tm.text = yyyymmdd.toFormat(fDay);
+        nextWeek = next.toFormat(fDay);
+        return new LiteralWeek(tm, nextWeek);
+      }
     }
   }
 }

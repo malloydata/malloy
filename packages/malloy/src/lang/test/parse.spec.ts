@@ -27,17 +27,14 @@ import {
   DocumentPosition,
   SQLBlockSource,
   SQLBlockStructDef,
-  StructDef,
   expressionIsCalculation,
   isFieldTypeDef,
   isFilteredAliasedName,
   isSQLFragment,
 } from '../../model';
-import {makeSQLBlock} from '../../model/sql_block';
 import {
   MarkedSource,
   TestTranslator,
-  aTableDef,
   getExplore,
   getField,
   getJoinField,
@@ -49,17 +46,6 @@ import {
 import isEqual from 'lodash/isEqual';
 import {isGranularResult} from '../ast/types/granular-result';
 import './parse-expects';
-
-function unlocatedStructDef(sd: StructDef): StructDef {
-  const ret = {...sd};
-  ret.fields = sd.fields.map(f => {
-    const nf = {...f};
-    delete nf.location;
-    return nf;
-  });
-  delete ret.location;
-  return ret;
-}
 
 type TestFunc = () => undefined;
 
@@ -792,6 +778,11 @@ describe('model statements', () => {
       );
     });
   });
+  test('errors on redefinition of query', () => {
+    expect(
+      'query: q1 is a -> { project: * }, q1 is a -> { project: * }'
+    ).compileToFailWith("Query 'q1' is already defined, cannot redefine");
+  });
 });
 
 describe('explore properties', () => {
@@ -1214,7 +1205,6 @@ describe('literals', () => {
     ['@1960-Q2', 'date', 'quarter', {literal: '1960-04-01'}],
     ['@1960-06', 'date', 'month', {literal: '1960-06-01'}],
     ['@1960-06-26-WK', 'date', 'week', {literal: '1960-06-26'}],
-    ['@1960-06-30-WK', 'date', 'week', {literal: '1960-06-26'}],
     ['@1960-06-30', 'date', 'day', {literal: '1960-06-30'}],
     ['@1960-06-30 10', 'timestamp', 'hour', {literal: '1960-06-30 10:00:00'}],
     [
@@ -1242,31 +1232,12 @@ describe('literals', () => {
       {literal: '1960-06-30 10:30:00'},
     ],
     [
-      '@1960-06-30 10:30:00+0',
-      'timestamp',
-      undefined,
-      {literal: '1960-06-30 10:30:00', timezone: '+0'},
-    ],
-    [
-      '@1960-06-30 10:30:00-7',
-      'timestamp',
-      undefined,
-      {literal: '1960-06-30 10:30:00', timezone: '-7'},
-    ],
-    [
-      '@1960-06-30 10:30:00-00:15',
-      'timestamp',
-      undefined,
-      {literal: '1960-06-30 10:30:00', timezone: '-00:15'},
-    ],
-    [
       '@1960-06-30 10:30:00[America/Los_Angeles]',
       'timestamp',
       undefined,
       {
         literal: '1960-06-30 10:30:00',
         timezone: 'America/Los_Angeles',
-        tzIsLocale: true,
       },
     ],
   ];
@@ -1289,7 +1260,7 @@ describe('literals', () => {
     ['@1960', '1960-01-01 00:00:00'],
     ['@1960-Q2', '1960-04-01 00:00:00'],
     ['@1960-06', '1960-06-01 00:00:00'],
-    ['@1960-06-30-Wk', '1960-06-26 00:00:00'],
+    ['@1960-06-26-Wk', '1960-06-26 00:00:00'],
     ['@1960-06-30', '1960-06-30 00:00:00'],
     ['@1960-06-30 00:00', undefined],
   ];
@@ -1329,17 +1300,17 @@ describe('expressions', () => {
       'year',
     ];
 
-    describe('timestamp truncation', () => {
-      for (const unit of timeframes) {
-        test(`timestamp truncate ${unit}`, exprOK(`ats.${unit}`));
-      }
+    test.each(timeframes.map(x => [x]))('truncate %s', unit => {
+      expect(new BetaExpression(`ats.${unit}`)).modelParsed();
     });
 
-    describe('timestamp difference', () => {
-      for (const unit of timeframes) {
-        // TODO expect these to error ...
-        test(`timestamp extract ${unit}`, exprOK(`${unit}(@2021 to ats)`));
-      }
+    // mtoy todo units missing: implement, or document
+    const diffable = ['second', 'minute', 'hour', 'day'];
+    test.each(diffable.map(x => [x]))('timestamp difference - %s', unit => {
+      expect(new BetaExpression(`${unit}(@2021 to ats)`)).modelParsed();
+    });
+    test.each(diffable.map(x => [x]))('timestamp difference - %s', unit => {
+      expect(new BetaExpression(`${unit}(ats to @2030)`)).modelParsed();
     });
   });
 
@@ -1365,9 +1336,45 @@ describe('expressions', () => {
     test('not', exprOK('not true'));
     test('and', exprOK('true and false'));
     test('or', exprOK('true or false'));
+    test('null-check (??)', exprOK('ai ?? 7'));
+    test('disallow date OP number', () => {
+      expect(new BetaExpression('@2001 = 7')).compileToFailWith(
+        'Cannot compare a date to a number'
+      );
+    });
+    test('disallow date OP timestamp', () => {
+      expect(new BetaExpression('ad = ats')).compileToFailWith(
+        'Cannot compare a date to a timestamp'
+      );
+    });
+    test('disallow interval from date to timestamp', () => {
+      expect(new BetaExpression('days(ad to ats)')).compileToFailWith(
+        'Cannot measure from date to timestamp'
+      );
+    });
+    test('comparison promotes date literal to timestamp', () => {
+      expect('@2001 = ats').expressionCompiled();
+    });
+    test('can apply range to date', () => {
+      expect('ad ? @2001 for 1 day').expressionCompiled();
+    });
+    const noOffset = ['second', 'minute', 'hour'];
+
+    test.each(noOffset.map(x => [x]))('disallow date delta %s', unit => {
+      expect(new BetaExpression(`ad + 10 ${unit}s`)).compileToFailWith(
+        `Cannot offset date by ${unit}`
+      );
+    });
   });
 
   test('filtered measure', exprOK("acount {? astr = 'why?' }"));
+  test('correctly flags filtered scalar', () => {
+    const e = new BetaExpression('ai { where: true }');
+    expect(e).compileToFailWith(
+      'Filtered expression requires an aggregate computation'
+    );
+  });
+
   describe('aggregate forms', () => {
     test('count', exprOK('count()'));
     test('count distinct', exprOK('count(distinct astr)'));
@@ -1527,6 +1534,15 @@ describe('expressions', () => {
       }
     }
   });
+  test.each([
+    ['ats', 'timestamp'],
+    ['ad', 'date'],
+    ['ai', 'number'],
+    ['astr', 'string'],
+    ['abool', 'boolean'],
+  ])('Can compare field %s (type %s) to NULL', (name, _datatype) => {
+    expect(`${name} = NULL`).expressionCompiled();
+  });
 });
 describe('unspported fields in schema', () => {
   test('unsupported reference in result allowed', () => {
@@ -1574,130 +1590,6 @@ describe('unspported fields in schema', () => {
       'source: x is a { dimension: notUn is aun::string }'
     );
     expect(uModel).modelCompiled();
-  });
-});
-
-describe('sql:', () => {
-  function makeSchemaResponse(sql: SQLBlockSource): SQLBlockStructDef {
-    const cname = sql.connection || 'bigquery';
-    return {
-      type: 'struct',
-      name: sql.name,
-      dialect: "standardsql'",
-      structSource: {
-        type: 'sql',
-        method: 'subquery',
-        sqlBlock: {
-          type: 'sqlBlock',
-          ...sql,
-          selectStr: sql.select.filter(s => typeof s === 'string').join(''),
-        },
-      },
-      structRelationship: {type: 'basetable', connectionName: cname},
-      fields: aTableDef.fields,
-    };
-  }
-  test('definition', () => {
-    const selStmt = 'SELECT * FROM aTable';
-    const model = new TestTranslator(`
-      sql: users IS {
-        select: """${selStmt}"""
-        connection: "aConnection"
-      }
-    `);
-    const needReq = model.translate();
-    expect(model).modelParsed();
-    const needs = needReq?.compileSQL;
-    expect(needs).toBeDefined();
-    if (needs) {
-      const sql = makeSQLBlock([{sql: selStmt}], 'aConnection');
-      expect(needs).toMatchObject(sql);
-      const refKey = needs.name;
-      expect(refKey).toBeDefined();
-      if (refKey) {
-        const sr = makeSchemaResponse(sql);
-        model.update({compileSQL: {[refKey]: sr}});
-        expect(model).modelCompiled();
-        expect(unlocatedStructDef(model.sqlBlocks[0])).toEqual(
-          unlocatedStructDef({...sr, as: 'users'})
-        );
-      }
-    }
-  });
-  test('source from sql', () => {
-    const selStmt = 'SELECT * FROM aTable';
-    const model = new TestTranslator(`
-      sql: users IS { select: """${selStmt}""" }
-      source: malloyUsers is from_sql(users) { primary_key: ai }
-    `);
-    expect(model).modelParsed();
-    const needReq = model.translate();
-    const needs = needReq?.compileSQL;
-    expect(needs).toBeDefined();
-    if (needs) {
-      const sql = makeSQLBlock([{sql: selStmt}], 'aConnection');
-      const refKey = needs.name;
-      model.update({compileSQL: {[refKey]: makeSchemaResponse(sql)}});
-      expect(model).modelCompiled();
-      const users = model.getSourceDef('malloyUsers');
-      expect(users).toBeDefined();
-    }
-  });
-  test('explore from imported sql-based-source', () => {
-    const selStmt = 'SELECT * FROM aTable';
-    const createModel = `
-      sql: users IS { select: """${selStmt}""" }
-      source: malloyUsers is from_sql(users) { primary_key: ai }
-    `;
-    const model = new TestTranslator(`
-      import "createModel.malloy"
-      source: importUsers is malloyUsers
-    `);
-    model.importZone.define(
-      'internal://test/langtests/createModel.malloy',
-      createModel
-    );
-    expect(model).modelParsed();
-    const needReq = model.translate();
-    const needs = needReq?.compileSQL;
-    expect(needs).toBeDefined();
-    const sql = makeSQLBlock([{sql: selStmt}]);
-    model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});
-    expect(model).modelCompiled();
-  });
-  it('turducken', () => {
-    const m = new TestTranslator(`
-      sql: someSql is {
-        select: """SELECT * FROM %{ a -> { group_by: astr } }% WHERE 1=1"""
-      }
-    `);
-    expect(m).modelParsed();
-    const compileSql = m.translate().compileSQL;
-    expect(compileSql).toBeDefined();
-    if (compileSql) {
-      const select = compileSql.select[0];
-      const star = compileSql.select[1];
-      const where = compileSql.select[2];
-      expect(select).toEqual({sql: 'SELECT * FROM '});
-      expect(isSQLFragment(star)).toBeFalsy();
-      expect(where).toEqual({sql: ' WHERE 1=1'});
-    }
-  });
-  it('model preserved', () => {
-    const selStmt = 'SELECT * FROM aTable';
-    const shouldBeOK = `
-      source: newa is a
-      sql: someSql is { select: """${selStmt}""" }
-      source: newaa is newa
-    `;
-    const model = new TestTranslator(shouldBeOK);
-    expect(model).modelParsed();
-    const needReq = model.translate();
-    const needs = needReq?.compileSQL;
-    expect(needs).toBeDefined();
-    const sql = makeSQLBlock([{sql: selStmt}]);
-    model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});
-    expect(model).modelCompiled();
   });
 });
 
@@ -1773,19 +1665,11 @@ describe('error handling', () => {
     'undefined field ref in query',
     badModel('query: ab -> { aggregate: xyzzy }', "'xyzzy' is not defined")
   );
-  // test("queries with anonymous expressions", () => {
-  //   const m = new TestTranslator("query: a->{\n group_by: a+1\n}");
-  //   expect(m).not.modelParsed();
-  //   const errList = m.errors().errors;
-  //   const firstError = errList[0];
-  //   expect(firstError.message).toBe("Expressions in queries must have names");
-  // });
   test('query on source with errors', () => {
     expect(markSource`
         explore: na is a { join_one: ${'n'} on astr }
       `).compileToFailWith("Undefined source 'n'");
   });
-
   test('detect duplicate output field names', () => {
     expect(
       markSource`query: ab -> { group_by: astr, ${'astr'} }`

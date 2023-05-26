@@ -28,6 +28,8 @@ import {
   TimeFieldType,
   TimestampUnit,
   TypecastFragment,
+  isAtomicFieldType,
+  FieldValueType,
 } from '../../model/malloy_types';
 
 import {compressExpr} from './expressions/utils';
@@ -55,6 +57,7 @@ export function timeOffset(
 export function castTo(
   castType: AtomicFieldType,
   from: Expr,
+  fromType: FieldValueType,
   safe = false
 ): Expr {
   const cast: TypecastFragment = {
@@ -64,6 +67,9 @@ export function castTo(
     expr: from,
     safe,
   };
+  if (isAtomicFieldType(fromType)) {
+    cast.srcType = fromType;
+  }
   return [cast];
 }
 

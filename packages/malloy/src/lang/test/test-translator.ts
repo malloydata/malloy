@@ -50,7 +50,7 @@ export function pretty(thing: any): string {
 }
 
 const mockSchema: Record<string, StructDef> = {
-  aTable: {
+  'aTable': {
     type: 'struct',
     name: 'aTable',
     dialect: 'standardsql',

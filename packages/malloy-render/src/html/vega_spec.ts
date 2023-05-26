@@ -241,36 +241,36 @@ const bar_NMM: lite.TopLevelSpec = {
 
 export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
   bar_SM,
-  bar_SM_small: {...bar_SM, ...sizeSmallStep},
-  bar_SM_medium: {...bar_SM, ...sizeMediumStep}, // just use the default runs long
+  'bar_SM_small': {...bar_SM, ...sizeSmallStep},
+  'bar_SM_medium': {...bar_SM, ...sizeMediumStep}, // just use the default runs long
   bar_SM_large,
 
   bar_SMS,
-  bar_SMS_small: {...bar_SMS, ...sizeSmallStep},
-  bar_SMS_medium: {...bar_SMS, ...sizeMediumStep},
+  'bar_SMS_small': {...bar_SMS, ...sizeSmallStep},
+  'bar_SMS_medium': {...bar_SMS, ...sizeMediumStep},
   bar_SMS_large,
 
   bar_SMM,
-  bar_SMM_small: {...bar_SMM, ...sizeSmallStep},
-  bar_SMM_medium: {...bar_SMM, ...sizeMediumStep},
+  'bar_SMM_small': {...bar_SMM, ...sizeSmallStep},
+  'bar_SMM_medium': {...bar_SMM, ...sizeMediumStep},
   bar_SMM_large,
 
   bar_NM,
-  bar_NM_small: {...bar_NM, ...sizeSmall},
-  bar_NM_medium: {...bar_NM, ...sizeMedium}, // just use the default runs long
-  bar_NM_large: {...bar_NM},
+  'bar_NM_small': {...bar_NM, ...sizeSmall},
+  'bar_NM_medium': {...bar_NM, ...sizeMedium}, // just use the default runs long
+  'bar_NM_large': {...bar_NM},
 
   bar_NMS,
-  bar_NMS_small: {...bar_NMS, ...sizeSmall},
-  bar_NMS_medium: {...bar_NMS, ...sizeMedium},
-  bar_NMS_large: {...bar_NMS, ...sizeLarge},
+  'bar_NMS_small': {...bar_NMS, ...sizeSmall},
+  'bar_NMS_medium': {...bar_NMS, ...sizeMedium},
+  'bar_NMS_large': {...bar_NMS, ...sizeLarge},
 
   bar_NMM,
-  bar_NMM_small: {...bar_NMM, ...sizeSmall},
-  bar_NMM_medium: {...bar_NMM, ...sizeMedium},
-  bar_NMM_large: {...bar_NMM, ...sizeLarge},
+  'bar_NMM_small': {...bar_NMM, ...sizeSmall},
+  'bar_NMM_medium': {...bar_NMM, ...sizeMedium},
+  'bar_NMM_large': {...bar_NMM, ...sizeLarge},
 
-  bar_SSMMM: {
+  'bar_SSMMM': {
     ...DEFAULT_SPEC,
     repeat: ['#{3}', '#{4}', '#{5}'],
     spec: {
@@ -305,7 +305,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
       ],
     },
   },
-  bubble_NNM: {
+  'bubble_NNM': {
     ...DEFAULT_SPEC,
     data: [],
     mark: 'circle',
@@ -328,7 +328,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
       color: {value: '#4285F4'},
     },
   },
-  heat_NNM: {
+  'heat_NNM': {
     ...DEFAULT_SPEC,
     data: [],
     mark: 'bar',
@@ -351,7 +351,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
       },
     },
   },
-  heat_SNM: {
+  'heat_SNM': {
     ...DEFAULT_SPEC,
     data: [],
     mark: 'bar',
@@ -374,7 +374,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
       },
     },
   },
-  stacked_line_STM: {
+  'stacked_line_STM': {
     ...DEFAULT_SPEC,
     height: 50,
     data: [],
@@ -405,7 +405,7 @@ export const vegaSpecs: Record<string, lite.TopLevelSpec> = {
       },
     },
   },
-  grid_line_SSTM: {
+  'grid_line_SSTM': {
     ...DEFAULT_SPEC,
     height: 50,
     data: [],

@@ -26,5 +26,4 @@ import {NamedModelObject} from '../../../model/malloy_types';
 export interface ModelEntry {
   entry: NamedModelObject;
   exported?: boolean;
-  sqlType?: boolean;
 }

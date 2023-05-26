@@ -41,19 +41,18 @@ export class DefineQuery extends MalloyElement implements DocStatement {
   }
 
   execute(doc: Document): ModelDataRequest {
-    if (doc.getEntry(this.name)) {
-      this.log(`Cannot redefine '${this.name}'`);
-    } else {
-      const entry: NamedQuery = {
-        ...this.queryDetails.query(),
-        type: 'query',
-        name: this.name,
-        location: this.location,
-      };
-      const exported = true;
-      doc.setEntry(this.name, {entry, exported});
+    const existing = doc.getEntry(this.name);
+    if (existing) {
+      this.log(`Query '${this.name}' is already defined, cannot redefine`);
+      return;
     }
-    return undefined;
+    const entry: NamedQuery = {
+      ...this.queryDetails.query(),
+      type: 'query',
+      name: this.name,
+      location: this.location,
+    };
+    doc.setEntry(this.name, {entry, exported: true});
   }
 }
 

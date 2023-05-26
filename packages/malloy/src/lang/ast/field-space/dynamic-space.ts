@@ -44,6 +44,7 @@ export abstract class DynamicSpace extends StaticSpace {
   outputFS?: FieldSpace;
   completions: (() => void)[] = [];
   private complete = false;
+  protected newTimezone?: string;
 
   constructor(extending: SourceSpec) {
     const source = new SpaceSeed(extending);
@@ -92,6 +93,10 @@ export abstract class DynamicSpace extends StaticSpace {
 
   addFieldDef(fd: model.FieldDef): void {
     this.setEntry(nameOf(fd), this.defToSpaceField(fd));
+  }
+
+  setTimezone(tz: string): void {
+    this.newTimezone = tz;
   }
 
   structDef(): model.StructDef {
@@ -144,6 +149,9 @@ export abstract class DynamicSpace extends StaticSpace {
       for (const [join, missingOn] of fixupJoins) {
         join.fixupJoinOn(this, missingOn);
       }
+    }
+    if (this.newTimezone) {
+      this.final.queryTimezone = this.newTimezone;
     }
     this.isComplete();
     return this.final;
