@@ -28,10 +28,10 @@ import * as malloy from '@malloydata/malloy';
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 
-// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases)); // TODO
-const runtimes = new RuntimeList(
-  databasesFromEnvironmentOr(['bigquery', 'duckdb'])
-);
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+// const runtimes = new RuntimeList(
+//   databasesFromEnvironmentOr(['bigquery', 'duckdb'])
+// );
 
 const expressionModelText = `
 explore: aircraft_models is table('malloytest.aircraft_models'){
@@ -73,7 +73,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
     if (expected.success !== undefined) {
       const result = await run();
-      console.log(result.sql);
       expect(result.data.path(0, 'f').value).toBe(expected.success);
     } else {
       expect(run).rejects.toThrowError(expected.error);
@@ -362,7 +361,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
           }`
         )
         .run();
-      console.log(result.sql);
       expect(result.data.path(0, 'row_num').value).toBe(1);
     });
 
@@ -378,7 +376,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
           }`
         )
         .run();
-      console.log(result.sql);
       expect(result.data.path(0, 'q', 0, 'row_num').value).toBe(1);
       expect(result.data.path(0, 'q', 1, 'row_num').value).toBe(2);
       expect(result.data.path(1, 'q', 0, 'row_num').value).toBe(1);
@@ -397,7 +394,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
           }`
         )
         .run();
-      console.log(result.sql);
       expect(result.data.path(0, 'row_num').value).toBe(1);
       expect(result.data.path(1, 'row_num').value).toBe(2);
     });

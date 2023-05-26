@@ -96,7 +96,7 @@ source:ga_sessions is table('malloytest.ga_sample'){
   query: by_page_title is { where: totals.transactionRevenue > 0
     group_by: hits.page.pageTitle
     aggregate: hits_count
-    nest: sold_count
+    aggregate: sold_count
   }
 
   query: by_all is {
