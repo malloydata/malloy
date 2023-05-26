@@ -139,7 +139,8 @@ export class MalloySQLParser {
         errors.push(
           this.createParseError(
             'Only comments are allowed after ">>>malloy"',
-            parsedStatement.delimiterRange
+            parsedStatement.delimiterRange,
+            url
           )
         );
       }
@@ -152,7 +153,8 @@ export class MalloySQLParser {
           errors.push(
             this.createParseError(
               '"connection:" found but no connection value was provided',
-              parsedStatement.delimiterRange
+              parsedStatement.delimiterRange,
+              url
             )
           );
       }
@@ -177,7 +179,8 @@ export class MalloySQLParser {
             errors.push(
               this.createParseError(
                 'No connection configuration specified, add "connection: my_connection_name" to this >>>sql line or to an above one',
-                parsedStatement.delimiterRange
+                parsedStatement.delimiterRange,
+                url
               )
             );
           config.connection = previousConnection;
