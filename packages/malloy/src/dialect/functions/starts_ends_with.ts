@@ -22,37 +22,34 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
+  makeParam,
 } from './util';
 
 export function fnStartsWith(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('string'));
+  const prefix = makeParam('prefix', anyExprType('string'));
   return [
     overload(
       minScalar('boolean'),
-      [
-        param('value', anyExprType('string')),
-        param('prefix', anyExprType('string')),
-      ],
-      [sql('STARTS_WITH(', arg('value'), ',', arg('prefix'), ')')]
+      [value.param, prefix.param],
+      sql`STARTS_WITH(${value.arg}, ${prefix.arg})`
     ),
   ];
 }
 
 export function fnEndsWith(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('string'));
+  const suffix = makeParam('suffix', anyExprType('string'));
   return [
     overload(
       minScalar('boolean'),
-      [
-        param('value', anyExprType('string')),
-        param('suffix', anyExprType('string')),
-      ],
-      [sql('STARTS_WITH(', arg('value'), ',', arg('suffix'), ')')]
+      [value.param, suffix.param],
+      sql`ENDS_WITH(${value.arg}, ${suffix.arg})`
     ),
   ];
 }

@@ -22,27 +22,28 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
+  makeParam,
 } from './util';
 
 export function fnRegexpExtract(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('string'));
+  const pattern = makeParam('pattern', anyExprType('regular expression'));
   return [
     overload(
       minScalar('string'),
       [
-        param('value', anyExprType('string')),
-        param('regexp', anyExprType('regular expression')),
+        value.param,
+        pattern.param,
         // TODO consider supporting these parameters
         // param('position', anyExprType('number')),
         // param('occurrence', anyExprType('number')),
       ],
-      [sql('REGEXP_EXTRACT(', arg('value'), ',', arg('regexp'), ')')]
+      sql`REGEXP_EXTRACT(${value.arg}, ${pattern.arg})`
     ),
   ];
 }

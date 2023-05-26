@@ -22,57 +22,32 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
+  makeParam,
 } from './util';
 
 export function fnReplace(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('string'));
+  const stringPattern = makeParam('pattern', anyExprType('string'));
+  const regexPattern = makeParam('pattern', anyExprType('regular expression'));
+  const replacement = makeParam('replacement', anyExprType('string'));
   return [
     overload(
       minScalar('string'),
-      [
-        param('value', anyExprType('string')),
-        param('pattern', anyExprType('string')),
-        param('replacement', anyExprType('string')),
-      ],
-      [
-        sql(
-          'REPLACE(',
-          arg('value'),
-          ',',
-          arg('pattern'),
-          ',',
-          arg('replacement'),
-          ')'
-        ),
-      ]
+      [value.param, stringPattern.param, replacement.param],
+      sql`REPLACE(${value.arg}, ${stringPattern.arg}, ${replacement.arg})`
     ),
     // TODO perhaps this should be a separate `regexp_replace` function.
     // Which would better match BQ, but I think it should be just a different
     // overload of `replace` (how it is here):
     overload(
       minScalar('string'),
-      [
-        param('value', anyExprType('string')),
-        param('pattern', anyExprType('regular expression')),
-        param('replacement', anyExprType('string')),
-      ],
-      [
-        sql(
-          'REGEXP_REPLACE(',
-          arg('value'),
-          ',',
-          arg('pattern'),
-          ',',
-          arg('replacement'),
-          ')'
-        ),
-      ]
+      [value.param, regexPattern.param, replacement.param],
+      sql`REPLACE(${value.arg}, ${regexPattern.arg}, ${replacement.arg})`
     ),
   ];
 }

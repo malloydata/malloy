@@ -29,24 +29,20 @@ import {
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
+  makeParam,
 } from './util';
 
 export function fnTrunc(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('number'));
+  // TODO this parameter should only accept integers, but we don't have a good
+  // way of expressing that constraint at the moment
+  const precision = makeParam('precision', anyExprType('number'));
   return [
+    overload(minScalar('number'), [value.param], sql`TRUNC(${value.arg})`),
     overload(
       minScalar('number'),
-      [param('value', anyExprType('number'))],
-      [sql('TRUNC(', arg('value'), ')')]
-    ),
-    overload(
-      minScalar('number'),
-      [
-        param('value', anyExprType('number')),
-        // TODO this parameter should only accept integers, but we don't have a good
-        // way of expressing that constraint at the moment
-        param('precision', anyExprType('number')),
-      ],
-      [sql('TRUNC(', arg('value'), ', ', arg('precision'), ')')]
+      [value.param, precision.param],
+      sql`TRUNC(${value.arg}, ${precision.arg})`
     ),
   ];
 }

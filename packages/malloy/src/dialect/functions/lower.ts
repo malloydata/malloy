@@ -22,21 +22,17 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
+  makeParam,
 } from './util';
 
 export function fnLower(): DialectFunctionOverloadDef[] {
+  const value = makeParam('base', anyExprType('string'));
   return [
-    overload(
-      minScalar('string'),
-      [param('value', anyExprType('string'))],
-      [sql('LOWER(', arg('value'), ')')]
-    ),
+    overload(minScalar('string'), [value.param], sql`LOWER(${value.arg})`),
   ];
 }

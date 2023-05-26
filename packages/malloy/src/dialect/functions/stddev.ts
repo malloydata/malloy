@@ -22,21 +22,17 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minAggregate,
   maxScalar,
   sql,
   DialectFunctionOverloadDef,
+  makeParam,
 } from './util';
 
 export function fnStddev(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', maxScalar('number'));
   return [
-    overload(
-      minAggregate('number'),
-      [param('value', maxScalar('number'))],
-      [sql('STDDEV(', arg('value'), ')')]
-    ),
+    overload(minAggregate('number'), [value.param], sql`STDDEV(${value.arg})`),
   ];
 }

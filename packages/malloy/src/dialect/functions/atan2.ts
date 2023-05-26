@@ -36,7 +36,7 @@ export function fnAtan2(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('number'),
       [param('y', anyExprType('number')), param('x', anyExprType('number'))],
-      [sql('ATAN2(', arg('y'), ',', arg('x'), ')')]
+      sql`ATAN2(${arg('y')}, ${arg('x')})`
     ),
   ];
 }

@@ -53,7 +53,7 @@ export function fnConcat(): DialectFunctionOverloadDef[] {
           anyExprType('boolean')
         ),
       ],
-      [sql('CONCAT(', spread(arg('values')), ')')]
+      sql`CONCAT(${spread(arg('values'))})`
     ),
   ];
 }

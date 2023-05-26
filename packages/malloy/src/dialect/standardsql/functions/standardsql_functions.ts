@@ -22,6 +22,8 @@
  */
 
 import {FUNCTIONS} from '../../functions';
+import {fnPi} from './pi';
 
 export const STANDARDSQL_FUNCTIONS = FUNCTIONS.clone();
+STANDARDSQL_FUNCTIONS.add('pi', fnPi);
 STANDARDSQL_FUNCTIONS.seal();

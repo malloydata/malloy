@@ -22,24 +22,22 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
+  makeParam,
 } from './util';
 
 export function fnStrpos(): DialectFunctionOverloadDef[] {
+  const testString = makeParam('test_string', anyExprType('string'));
+  const searchString = makeParam('search_string', anyExprType('string'));
   return [
     overload(
       minScalar('number'),
-      [
-        param('test_string', anyExprType('string')),
-        param('search_string', anyExprType('string')),
-      ],
-      [sql('STRPOS(', arg('test_string'), ',', arg('search_string'), ')')]
+      [testString.param, searchString.param],
+      sql`STRPOS(${testString.arg}, ${searchString.arg})`
     ),
   ];
 }

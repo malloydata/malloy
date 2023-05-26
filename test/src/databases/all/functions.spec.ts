@@ -29,8 +29,10 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/is-sql-eq';
 import {databasesFromEnvironmentOr} from '../../util';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases)); // TODO
-// const runtimes = new RuntimeList(databasesFromEnvironmentOr(['bigquery', 'duckdb']));
+// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases)); // TODO
+const runtimes = new RuntimeList(
+  databasesFromEnvironmentOr(['bigquery', 'duckdb'])
+);
 
 const expressionModelText = `
 explore: aircraft_models is table('malloytest.aircraft_models'){
@@ -134,7 +136,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTest('round(1.2)', 1);
     });
 
-    // TODO duckdb doesn't do this properly?
     it(`works with precision - ${databaseName}`, async () => {
       await funcTest('round(12.222, 1)', 12.2);
     });
@@ -157,13 +158,26 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTest('floor(1.9)', 1);
     });
 
-    // TODO duckdb doesn't do this properly?
-    it.skip(`works with negative - ${databaseName}`, async () => {
+    it(`works with negative - ${databaseName}`, async () => {
       await funcTest('floor(-1.9)', -2);
     });
 
     it(`works with null - ${databaseName}`, async () => {
       await funcTest('floor(null)', null);
+    });
+  });
+
+  describe('ceil', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest('ceil(1.9)', 2);
+    });
+
+    it(`works with negative - ${databaseName}`, async () => {
+      await funcTest('ceil(-1.9)', -1);
+    });
+
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('ceil(null)', null);
     });
   });
 
@@ -206,8 +220,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTest("regexp_extract(null, r'd[aeiou]g')", null);
     });
 
-    // TODO not sure how to represent a null regular expression
-    it.skip(`works with null regexp  - ${databaseName}`, async () => {
+    it(`works with null regexp  - ${databaseName}`, async () => {
       await funcTest("regexp_extract('foo', null)", null);
     });
   });
@@ -522,7 +535,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
           }`
         )
         .run();
-      console.log(result.data.toObject());
       expect(result.data.path(0, 'by_county', 1, 'first_count').value).toBe(
         result.data.path(0, 'by_county', 0, 'aircraft_count').value
       );
@@ -530,168 +542,400 @@ expressionModels.forEach((expressionModel, databaseName) => {
         result.data.path(1, 'by_county', 0, 'aircraft_count').value
       );
     });
+    it(`works outside nest - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `
+          query: state_facts -> {
+            group_by: state, births
+            order_by: births desc
+            calculate: most_births is first_value(births)
+          }`
+        )
+        .run();
+      const firstBirths = result.data.path(0, 'births').value;
+      expect(result.data.path(0, 'most_births').value).toBe(firstBirths);
+      expect(result.data.path(1, 'most_births').value).toBe(firstBirths);
+    });
+    it(`works with an aggregate which is not in the query - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `
+          query: airports { measure: airport_count is count() } -> {
+            group_by: state
+            where: state != null
+            calculate: prev_airport_count is lag(airport_count)
+          }`
+        )
+        .run();
+      expect(result.data.path(0, 'prev_airport_count').value).toBe(null);
+      expect(result.data.path(1, 'prev_airport_count').value).toBe(608);
+      expect(result.data.path(2, 'prev_airport_count').value).toBe(260);
+    });
+    it(`works with a localized aggregate - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: aircraft_models.seats,
+            calculate: prev_sum_of_seats is lag(aircraft_models.seats.sum())
+          }`
+        )
+        .run();
+      expect(result.data.path(0, 'prev_sum_of_seats').value).toBe(null);
+      expect(result.data.path(1, 'prev_sum_of_seats').value).toBe(0);
+      expect(result.data.path(2, 'prev_sum_of_seats').value).toBe(230);
+    });
   });
 
-  describe('misc analytic functions', () => {
-
-    it(`12 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: state
-            aggregate: aircraft_count
-            nest: my_turtle is {
-              limit: 4
-              group_by: county
-              aggregate: aircraft_count
-              calculate: row_num is row_number()
-              calculate: first_count is first_value(count())
-            }
-          }`
-        )
-        .run();
+  describe('trunc', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest('trunc(1.9)', 1);
     });
 
-    it(`13 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: state
-            aggregate: aircraft_count
-            nest: my_turtle is {
-              limit: 4
-              group_by: county
-              aggregate: aircraft_count
-              calculate: row_num is row_number()
-              calculate: first_stddev is first_value(stddev(id))
-            }
-          }`
-        )
-        .run();
+    it(`works with negative number (truncating toward zero) - ${databaseName}`, async () => {
+      await funcTest('trunc(-1.9)', -1);
     });
 
-    it(`14.5 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: state
-            calculate: percent_less_than_prev is
-              (lag(count()) - aircraft_count) / lag(count())
-          }`
-        )
-        .run();
+    it(`works with precision - ${databaseName}`, async () => {
+      await funcTest('trunc(12.29, 1)', 12.2);
     });
 
-    // This is supposed to fail because measures cannot be used in a project!
-    it(`15.5 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            project: state
-            calculate: row_num is lag(count())
-          }`
-        )
-        .run();
+    it(`works with negative precision - ${databaseName}`, async () => {
+      await funcTest('trunc(19.2, -1)', 10);
     });
 
-    // This should maybe succeed because aircraft_count is a measure
-    it.skip(`15.75 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: state
-            calculate: row_num is lag(aircraft_count)
-          }`
-        )
-        .run();
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('trunc(null)', null);
     });
 
-    // TODO BQ wants args 2 and 3 to be constants. Duckdb doesn't care.
-    it.skip(`16 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: state,
-            aggregate: aircraft_count
-            calculate: increse_from_prev is
-              (lag(aircraft_count, 1, aircraft_count) - lag(aircraft_count, 1, aircraft_count))
-          }`
-        )
-        .run();
-    });
-
-    it(`17 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: state,
-            aggregate: aircraft_count
-            calculate: prev_state is lag(state, 2, 'None')
-          }`
-        )
-        .run();
-    });
-
-    it(`18 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: aircraft_models.seats,
-            aggregate: aircraft_count
-            calculate: prev_state is lag(seats, 1)
-          }`
-        )
-        .run();
-    });
-
-    it(`19 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: aircraft_models.seats,
-            aggregate: aircraft_count
-            order_by: seats
-            calculate: rn is row_number()
-          }`
-        )
-        .run();
-    });
-
-    it(`20 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: aircraft_models.seats,
-            aggregate: aircraft_count
-            calculate: prev_state is lag(aircraft_models.seats.sum(), 1)
-          }`
-        )
-        .run();
-    });
-
-    it(`21 - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: aircraft_models.seats,
-            aggregate: aircraft_count
-            group_by: prev_state is lag(aircraft_models.seats.stddev(), 1)
-          }`
-        )
-        .run();
+    it(`works with null precision - ${databaseName}`, async () => {
+      await funcTest('trunc(1, null)', null);
     });
   });
+
+  // TODO trig functions could have more exhaustive tests -- these are mostly just here to
+  // ensure they exist
+  describe('cos', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest('cos(0)', 1);
+    });
+
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('cos(null)', null);
+    });
+  });
+
+  describe('cosh', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest('cosh(0)', 1);
+    });
+
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('cosh(null)', null);
+    });
+  });
+  describe('acos', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest('acos(1)', 0);
+    });
+
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('acos(null)', null);
+    });
+  });
+  describe('acosh', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest('acosh(1)', 0);
+    });
+
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('acosh(null)', null);
+    });
+  });
+
+  describe('sin', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest('sin(0)', 0);
+    });
+
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('sin(null)', null);
+    });
+  });
+
+  describe('sinh', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest('sinh(0)', 0);
+    });
+
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('sinh(null)', null);
+    });
+  });
+  describe('asin', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest('asin(0)', 0);
+    });
+
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('asin(null)', null);
+    });
+  });
+  describe('asinh', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest('asinh(0)', 0);
+    });
+
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('asinh(null)', null);
+    });
+  });
+
+  describe('tan', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest('tan(0)', 0);
+    });
+
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('tan(null)', null);
+    });
+  });
+
+  describe('tanh', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest('tanh(0)', 0);
+    });
+
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('tanh(null)', null);
+    });
+  });
+  describe('atan', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest('atan(0)', 0);
+    });
+
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('atan(null)', null);
+    });
+  });
+  describe('atanh', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest('atanh(0)', 0);
+    });
+
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('atanh(null)', null);
+    });
+  });
+  describe('atan2', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest('atan2(0, 1)', 0);
+    });
+
+    it(`works with null y - ${databaseName}`, async () => {
+      await funcTest('atan2(null, 1)', null);
+    });
+
+    it(`works with null x - ${databaseName}`, async () => {
+      await funcTest('atan2(1, null)', null);
+    });
+  });
+  describe('sqrt', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest('sqrt(9)', 3);
+    });
+
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('sqrt(null)', null);
+    });
+  });
+  describe('pow', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest('pow(2, 3)', 8);
+    });
+
+    it(`works with null base - ${databaseName}`, async () => {
+      await funcTest('pow(null, 3)', null);
+    });
+
+    it(`works with null exponent - ${databaseName}`, async () => {
+      await funcTest('pow(2, null)', null);
+    });
+  });
+  describe('abs', () => {
+    it(`works positive - ${databaseName}`, async () => {
+      await funcTest('abs(-3)', 3);
+    });
+    it(`works negative - ${databaseName}`, async () => {
+      await funcTest('abs(3)', 3);
+    });
+
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('abs(null)', null);
+    });
+  });
+  describe('sign', () => {
+    it(`works positive - ${databaseName}`, async () => {
+      await funcTest('sign(100)', 1);
+    });
+    it(`works negative - ${databaseName}`, async () => {
+      await funcTest('sign(-2)', -1);
+    });
+    it(`works zero - ${databaseName}`, async () => {
+      await funcTest('sign(0)', 0);
+    });
+
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('sign(null)', null);
+    });
+  });
+  describe('is_inf', () => {
+    // TODO not sure how to generate infinity
+    it.skip(`works infinite - ${databaseName}`, async () => {
+      await funcTest('is_inf(1 / 0)', true);
+    });
+    it(`works finite - ${databaseName}`, async () => {
+      await funcTest('is_inf(100)', false);
+    });
+    it(`works null - ${databaseName}`, async () => {
+      await funcTest('is_inf(null)', null);
+    });
+  });
+  describe('is_nan', () => {
+    // TODO not sure how to generate nan
+    it.skip(`works nan - ${databaseName}`, async () => {
+      await funcTest('is_nan(cos(1 / 0))', true);
+    });
+    it(`works an - ${databaseName}`, async () => {
+      await funcTest('is_nan(100)', false);
+    });
+    it(`works null - ${databaseName}`, async () => {
+      await funcTest('is_nan(null)', null);
+    });
+  });
+  describe('greatest', () => {
+    it(`works with numbers - ${databaseName}`, async () => {
+      await funcTest('greatest(1, 10, -100)', 10);
+    });
+    it(`works with dates - ${databaseName}`, async () => {
+      await funcTest('greatest(@2003, @2004, @1994) = @2004', true);
+    });
+    it(`works with timestamps - ${databaseName}`, async () => {
+      await funcTest(
+        'greatest(@2023-05-26 11:58:00, @2023-05-26 11:59:00) = @2023-05-26 11:59:00',
+        true
+      );
+    });
+    it(`works with strings - ${databaseName}`, async () => {
+      await funcTest("greatest('a', 'b')", 'b');
+    });
+    it(`works with nulls intermixed - ${databaseName}`, async () => {
+      await funcTest('greatest(1, null, 0)', null);
+    });
+    it(`works with only null - ${databaseName}`, async () => {
+      await funcTest('greatest(null, null)', null);
+    });
+  });
+  describe('least', () => {
+    it(`works with numbers - ${databaseName}`, async () => {
+      await funcTest('least(1, 10, -100)', -100);
+    });
+    it(`works with dates - ${databaseName}`, async () => {
+      await funcTest('least(@2003, @2004, @1994) = @1994', true);
+    });
+    it(`works with timestamps - ${databaseName}`, async () => {
+      await funcTest(
+        'least(@2023-05-26 11:58:00, @2023-05-26 11:59:00) = @2023-05-26 11:58:00',
+        true
+      );
+    });
+    it(`works with strings - ${databaseName}`, async () => {
+      await funcTest("least('a', 'b')", 'a');
+    });
+    it(`works with nulls intermixed - ${databaseName}`, async () => {
+      await funcTest('least(1, null, 0)', null);
+    });
+    it(`works with only null - ${databaseName}`, async () => {
+      await funcTest('least(null, null)', null);
+    });
+  });
+  describe('div', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest('div(3, 2)', 1);
+    });
+    it(`works with null numerator - ${databaseName}`, async () => {
+      await funcTest('div(null, 2)', null);
+    });
+    it(`works with null denominator - ${databaseName}`, async () => {
+      await funcTest('div(2, null)', null);
+    });
+  });
+  describe('strpos', () => {});
+  describe('starts_with', () => {});
+  describe('ends_with', () => {});
+  describe('trim', () => {});
+  describe('ltrim', () => {});
+  describe('rtrim', () => {});
+  // TODO neither BQ or DDB have this function, only PG, maybe we skip...
+  describe.skip('num_nulls', () => {
+    it(`works with zero args - ${databaseName}`, async () => {
+      await funcTest('num_nulls()', 0);
+    });
+
+    it(`works with one null arg - ${databaseName}`, async () => {
+      await funcTest('num_nulls(null)', 1);
+    });
+
+    it(`works with one nonnull arg - ${databaseName}`, async () => {
+      await funcTest('num_nulls(1)', 0);
+    });
+
+    it(`works with multiple args - ${databaseName}`, async () => {
+      await funcTest('num_nulls(1, null)', 1);
+    });
+
+    it(`works with multiple args of different types - ${databaseName}`, async () => {
+      await funcTest('num_nulls(1, @2009)', 0);
+    });
+  });
+  describe('num_nonnulls', () => {});
+  describe('rand', () => {
+    it(`is usually not the same value - ${databaseName}`, async () => {
+      // There are around a billion values that rand() can be, so if this
+      // test fails, most likely something is broken. Otherwise, you're the lucky
+      // one in a billion!
+      await funcTest('rand() = rand()', false);
+    });
+  });
+  describe('pi', () => {
+    it(`is pi - ${databaseName}`, async () => {
+      await funcTest('round(pi(), 15)', 3.141592653589793);
+    });
+  });
+  describe('substr', () => {});
+  describe('byte_length', () => {});
+  describe('ifnull', () => {});
+  describe('nullif', () => {});
+  describe('chr', () => {});
+  describe('ascii', () => {});
+  describe('unicode', () => {});
+  describe('format', () => {});
+  describe('repeat', () => {});
+  describe('reverse', () => {});
+  describe('to_hex', () => {});
+
+  describe('first', () => {});
+
+  describe('lead', () => {});
+  describe('last_value', () => {});
+  describe('min_cumulative', () => {});
+  describe('max_cumulative', () => {});
+  describe('sum_cumulative', () => {});
+  describe('min_window', () => {});
+  describe('max_window', () => {});
+  describe('sum_window', () => {});
 });
 
 afterAll(async () => {

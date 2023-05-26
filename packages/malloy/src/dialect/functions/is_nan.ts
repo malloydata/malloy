@@ -36,7 +36,7 @@ export function fnIsNan(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('boolean'),
       [param('value', anyExprType('number'))],
-      [sql('IS_NAN(', arg('value'), ')')]
+      sql`IS_NAN(${arg('value')})`
     ),
   ];
 }

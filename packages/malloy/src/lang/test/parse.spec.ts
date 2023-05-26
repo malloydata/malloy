@@ -714,6 +714,13 @@ describe('model statements', () => {
           "Parameter 1 ('value') of lag must be constant or output, but received input"
         );
       });
+      test(
+        'can use calculate with aggregate field which is not in query',
+        modelOK(`query: a { measure: acount is count() } -> {
+          group_by: astr
+          calculate: pc is lag(acount)
+        }`)
+      );
       test('cannot use agregate as argument to agg function', () => {
         expect(`query: a -> {
           aggregate: x is stddev(count())
@@ -747,6 +754,12 @@ describe('model statements', () => {
           "Parameter 1 ('value') of lag must be scalar or aggregate, but received scalar_analytic"
         );
       });
+      test('cannot use aggregate analytic in project', () => {
+        expect(`query: a -> {
+          project: astr
+          calculate: p is lag(count())
+        }`).compileToFailWith('Cannot add aggregate analyics to project');
+      });
       test(
         'reference field in join',
         modelOK(`query: a -> {
@@ -754,9 +767,9 @@ describe('model statements', () => {
           group_by: b.ai
         }`)
       );
-      // TODO why does this work? How can I group_by `b`?
+      // TODO decide whether this syntax should be legal, really...
       test(
-        'reference field in join',
+        'reference join name in group_by',
         modelOK(`query: a -> {
           join_one: b with astr
           group_by: b

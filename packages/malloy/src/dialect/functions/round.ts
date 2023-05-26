@@ -29,24 +29,20 @@ import {
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
+  makeParam,
 } from './util';
 
 export function fnRound(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('number'));
+  // TODO this parameter should only accept integers, but we don't have a good
+  // way of expressing that constraint at the moment
+  const precision = makeParam('precision', anyExprType('number'));
   return [
+    overload(minScalar('number'), [value.param], sql`ROUND(${value.arg})`),
     overload(
       minScalar('number'),
-      [param('value', anyExprType('number'))],
-      [sql('ROUND(', arg('value'), ')')]
-    ),
-    overload(
-      minScalar('number'),
-      [
-        param('value', anyExprType('number')),
-        // TODO this parameter should only accept integers, but we don't have a good
-        // way of expressing that constraint at the moment
-        param('precision', anyExprType('number')),
-      ],
-      [sql('ROUND(', arg('value'), ', ', arg('precision'), ')')]
+      [value.param, precision.param],
+      sql`ROUND(${value.arg}, ${precision.arg})`
     ),
     // TODO Consider adding a third overload for round(x, y, mode), where
     // "mode" is "ROUND_HALF_AWAY_FROM_ZERO" or "ROUND_HALF_EVEN"

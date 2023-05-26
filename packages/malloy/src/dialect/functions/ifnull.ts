@@ -45,7 +45,7 @@ export function fnIfnull(): DialectFunctionOverloadDef[] {
     overload(
       minScalar(type),
       [param('value', anyExprType(type)), param('default', anyExprType(type))],
-      [sql('IFNULL(', arg('value'), ', ', arg('default'), ')')]
+      sql`IFNULL(${arg('value')}, ${arg('default')})`
     )
   );
 }

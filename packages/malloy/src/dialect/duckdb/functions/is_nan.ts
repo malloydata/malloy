@@ -27,38 +27,16 @@ import {
   param,
   minScalar,
   anyExprType,
+  sql,
   DialectFunctionOverloadDef,
-  sqlFragment,
-} from './util';
+} from '../../functions/util';
 
-export function simple(fn: string): DialectFunctionOverloadDef[] {
+export function fnIsNan(): DialectFunctionOverloadDef[] {
   return [
     overload(
-      minScalar('number'),
+      minScalar('boolean'),
       [param('value', anyExprType('number'))],
-      [sqlFragment(`${fn}(`, arg('value'), ')')]
+      sql`ISNAN(${arg('value')})`
     ),
   ];
 }
-
-// Trig functions
-export const fnCos = () => simple('COS');
-export const fnCosh = () => simple('COSH');
-export const fnAcos = () => simple('ACOS');
-export const fnAcosh = () => simple('ACOSH');
-export const fnSin = () => simple('SIN');
-export const fnSinh = () => simple('SINH');
-export const fnAsin = () => simple('ASIN');
-export const fnAsinh = () => simple('ASINH');
-export const fnTan = () => simple('TAN');
-export const fnTanh = () => simple('TANH');
-export const fnAtan = () => simple('ATAN');
-export const fnAtanh = () => simple('ATANH');
-
-export const fnSign = () => simple('SIGN');
-export const fnCeil = () => simple('CEIL');
-export const fnFloor = () => simple('FLOOR');
-export const fnAbs = () => simple('ABS');
-export const fnSqrt = () => simple('SQRT');
-export const fnLn = () => simple('LN');
-export const fnLog10 = () => simple('LOG10');

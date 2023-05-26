@@ -20,11 +20,11 @@ If no values are given, `concat` returns the empty string.
 
 #### `lower(value)`
 
-Returns the a string like `value` but with all alphabetic characters in lowercase.
+Returns a string like `value` but with all alphabetic characters in lowercase.
 
 #### `upper(value)`
 
-Returns the a string like `value` but with all alphabetic characters in uppercase.
+Returns a string like `value` but with all alphabetic characters in uppercase.
 
 #### `strpos(test_string, search_string)`
 
@@ -52,9 +52,6 @@ Like `trim(value, trim_characters)` but only removes trailing characters.
 
 #### `substr(value, position, length?)`
 
-
-
-
 `regexp_extract`
 `replace`
 `length`
@@ -66,7 +63,6 @@ Like `trim(value, trim_characters)` but only removes trailing characters.
 `repeat`
 `reverse`
 `to_hex`
-
 
 ### Numeric Functions
 
@@ -120,78 +116,3 @@ Like `trim(value, trim_characters)` but only removes trailing characters.
 `lag`
 `rank`
 `first_value`
-
-
-### Notes from Carlin
-
-Can analytics just be in an `aggregate:` block?
-
-- Aggregate over a window:
-
-```
-query: foo is -> {
-  group_by: date
-  aggregate: rolling_avg is avg(earnings) {
-    limit: 10
-  }
-}
-```
-
-- Specified window
-```
-query: foo is -> {
-  // I don't really know what this means.... need to figure that out
-  aggregate: a is lag(state) {
-    order_by: foo
-    group_by: bar
-  }
-}
-```
-
-- Can we just say when resolving a field "this is available in the output space and in the input space"
-  - Not really, because the input and output interpretation of the same name could be a different type, as in
-
-  ```
-  query: foo is -> {
-    group_by: state is 1 // normally string
-    aggregate: a is lag(state)
-  }
-  ```
-  - Maybe we could just say: you can't shadow fields in the source inside of a query... `state is 1` is illegal. If we did that, then you'd never get a different type for looking up a field in the input vs. output space, which would mean the chosen overload would never be wrong.
-  - But how would we propagate "input"/"output"-ness up the tree?
-
-- Can window functions return whether they are "scalar_analytic" or "aggregate_analytic"?
-
-
-Syntax for Carlin:
-
-Normal syntax where the window function is partitioned over the same `group_by` as the query, and with the same `order_by`
-
-```
-query: airports -> {
-    group_by: state
-    calculate: prev_state is lag(state)
-}
-```
-
-Imagined syntax for a rolling average (not sure if "limit" is confuisng here / whether it's obvious that the limit is over rows of the query, and not rows within the group).
-```
-query: revenue_by_day -> {
-    group_by: day
-    aggregate: rolling_revenue is avg(revenue) {
-        limit: 30
-    }
-}
-```
-
-Imagined syntax for specifying partition or ordering for a particular window function:
-within the group).
-```
-query: stuff -> {
-    group_by: day
-    calculate: some_thing is some_window_fn(thing) {
-        group_by: foo
-        order_by: bar
-    }
-}
-```

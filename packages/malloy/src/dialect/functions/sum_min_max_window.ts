@@ -31,72 +31,73 @@ import {
   minAnalytic,
   maxAggregate,
   output,
+  makeParam,
 } from './util';
 
 const types: ExpressionValueType[] = ['string', 'number', 'timestamp', 'date'];
 
 export function fnMinCumulative(): DialectFunctionOverloadDef[] {
-  return types.flatMap(type => [
-    overload(
-      minAnalytic(type),
-      [param('value', output(maxAggregate(type)))],
-      [sql('MIN(', arg('value'), ')')],
-      {needsWindowOrderBy: true}
-    ),
-  ]);
+  return types.flatMap(type => {
+    const value = makeParam('value', output(maxAggregate(type)));
+    return [
+      overload(minAnalytic(type), [value.param], sql`MIN(${value.arg})`, {
+        needsWindowOrderBy: true,
+      }),
+    ];
+  });
 }
 
 export function fnMaxCumulative(): DialectFunctionOverloadDef[] {
-  return types.flatMap(type => [
-    overload(
-      minAnalytic(type),
-      [param('value', output(maxAggregate(type)))],
-      [sql('MAX(', arg('value'), ')')],
-      {needsWindowOrderBy: true}
-    ),
-  ]);
+  return types.flatMap(type => {
+    const value = makeParam('value', output(maxAggregate(type)));
+    return [
+      overload(minAnalytic(type), [value.param], sql`MAX(${value.arg})`, {
+        needsWindowOrderBy: true,
+      }),
+    ];
+  });
 }
 
 export function fnSumCumulative(): DialectFunctionOverloadDef[] {
-  return types.flatMap(type => [
-    overload(
-      minAnalytic(type),
-      [param('value', output(maxAggregate(type)))],
-      [sql('SUM(', arg('value'), ')')],
-      {needsWindowOrderBy: true}
-    ),
-  ]);
+  return types.flatMap(type => {
+    const value = makeParam('value', output(maxAggregate(type)));
+    return [
+      overload(minAnalytic(type), [value.param], sql`SUM(${value.arg})`, {
+        needsWindowOrderBy: true,
+      }),
+    ];
+  });
 }
 
 export function fnMinWindow(): DialectFunctionOverloadDef[] {
-  return types.flatMap(type => [
-    overload(
-      minAnalytic(type),
-      [param('value', output(maxAggregate(type)))],
-      [sql('MIN(', arg('value'), ')')],
-      {needsWindowOrderBy: false}
-    ),
-  ]);
+  return types.flatMap(type => {
+    const value = makeParam('value', output(maxAggregate(type)));
+    return [
+      overload(minAnalytic(type), [value.param], sql`MIN(${value.arg})`, {
+        needsWindowOrderBy: false,
+      }),
+    ];
+  });
 }
 
 export function fnMaxWindow(): DialectFunctionOverloadDef[] {
-  return types.flatMap(type => [
-    overload(
-      minAnalytic(type),
-      [param('value', output(maxAggregate(type)))],
-      [sql('MAX(', arg('value'), ')')],
-      {needsWindowOrderBy: false}
-    ),
-  ]);
+  return types.flatMap(type => {
+    const value = makeParam('value', output(maxAggregate(type)));
+    return [
+      overload(minAnalytic(type), [value.param], sql`MAX(${value.arg})`, {
+        needsWindowOrderBy: false,
+      }),
+    ];
+  });
 }
 
 export function fnSumWindow(): DialectFunctionOverloadDef[] {
-  return types.flatMap(type => [
-    overload(
-      minAnalytic(type),
-      [param('value', output(maxAggregate(type)))],
-      [sql('SUM(', arg('value'), ')')],
-      {needsWindowOrderBy: false}
-    ),
-  ]);
+  return types.flatMap(type => {
+    const value = makeParam('value', output(maxAggregate(type)));
+    return [
+      overload(minAnalytic(type), [value.param], sql`SUM(${value.arg})`, {
+        needsWindowOrderBy: false,
+      }),
+    ];
+  });
 }

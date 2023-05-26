@@ -52,11 +52,34 @@ export function spread(f: Fragment): Fragment {
   };
 }
 
-export function sql(...e: Expr): Fragment {
+export function sqlFragment(...e: Expr): Fragment {
   return {
     type: 'sql_expression',
     e,
   };
+}
+
+export function sql(
+  strings: TemplateStringsArray,
+  ...expr: (Fragment | string)[]
+): Expr {
+  return [
+    {
+      type: 'sql_expression',
+      e: interpolate<Fragment>([...strings], expr),
+    },
+  ];
+}
+
+function interpolate<T>(outer: T[], inner: T[]): T[] {
+  const result: T[] = [];
+  for (let i = 0; i < outer.length; i++) {
+    result.push(outer[i]);
+    if (i < inner.length) {
+      result.push(inner[i]);
+    }
+  }
+  return result;
 }
 
 export function constant(type: TypeDesc): TypeDesc {
@@ -93,6 +116,13 @@ export function param(
     isVariadic: false,
     allowedTypes,
   };
+}
+
+export function makeParam(
+  name: string,
+  ...allowedTypes: FunctionParamTypeDesc[]
+): {param: FunctionParameterDef; arg: Fragment} {
+  return {param: param(name, ...allowedTypes), arg: arg(name)};
 }
 
 export function maxScalar(dataType: FieldValueType): TypeDesc {

@@ -28,7 +28,7 @@ import {
   params,
   minScalar,
   anyExprType,
-  sql,
+  sqlFragment,
   DialectFunctionOverloadDef,
   spread,
 } from './util';
@@ -48,7 +48,7 @@ function greatestOrLeast(
     overload(
       minScalar(type),
       [params('values', anyExprType(type))],
-      [sql(`${fn}(`, spread(arg('values')), ')')]
+      [sqlFragment(`${fn}(`, spread(arg('values')), ')')]
     )
   );
 }

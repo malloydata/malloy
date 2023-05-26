@@ -24,5 +24,5 @@
 import {overload, minScalar, sql, DialectFunctionOverloadDef} from './util';
 
 export function fnRand(): DialectFunctionOverloadDef[] {
-  return [overload(minScalar('number'), [], [sql('RAND()')])];
+  return [overload(minScalar('number'), [], sql`RAND()`)];
 }

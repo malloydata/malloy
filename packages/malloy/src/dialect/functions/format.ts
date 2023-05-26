@@ -35,10 +35,12 @@ import {
 
 export function fnFormat(): DialectFunctionOverloadDef[] {
   return [
+    // TODO maybe make a way to spread with a leading comma (when there are any args)
+    // in order to avoid having to split this into three overloads...
     overload(
       minScalar('string'),
       [param('format_string', anyExprType('string'))],
-      [sql('FORMAT(', arg('format_string'), ')')]
+      sql`FORMAT(${arg('format_string')})`
     ),
     overload(
       minScalar('string'),
@@ -53,7 +55,7 @@ export function fnFormat(): DialectFunctionOverloadDef[] {
           anyExprType('boolean')
         ),
       ],
-      [sql('FORMAT(', arg('format_string'), ',', arg('value'), ')')]
+      sql`FORMAT(${arg('format_string')}, ${arg('value')})`
     ),
     overload(
       minScalar('string'),
@@ -67,7 +69,7 @@ export function fnFormat(): DialectFunctionOverloadDef[] {
           anyExprType('boolean')
         ),
       ],
-      [sql('FORMAT(', arg('format_string'), ',', spread(arg('values')), ')')]
+      sql`FORMAT(${arg('format_string')}, ${spread(arg('values'))})`
     ),
   ];
 }

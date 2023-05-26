@@ -22,21 +22,23 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minAggregate,
   maxScalar,
   sql,
   DialectFunctionOverloadDef,
+  makeParam,
 } from '../../functions/util';
 
 export function fnStddev(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', maxScalar('number'));
   return [
     overload(
       minAggregate('number'),
-      [param('value', maxScalar('number'))],
-      [sql('STDDEV(', arg('value'), '::DOUBLE PRECISION)')]
+      [value.param],
+      // TODO this is a bit of a hack in order to make the arrayAggUnnest work for Postgres,
+      // as we don't currently have a good way of doing this while preserving types
+      sql`STDDEV(${value.arg}::DOUBLE PRECISION)`
     ),
   ];
 }

@@ -36,7 +36,7 @@ export function fnFirst(): DialectFunctionOverloadDef[] {
     overload(
       minAggregate('number'),
       [param('value', maxScalar('number'))],
-      [sql('FIRST(', arg('value'), ')')]
+      sql`FIRST(${arg('value')})`
     ),
   ];
 }

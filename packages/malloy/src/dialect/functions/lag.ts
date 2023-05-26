@@ -51,7 +51,7 @@ export function fnLag(): DialectFunctionOverloadDef[] {
     overload(
       minAnalytic(type),
       [param('value', output(maxAggregate(type)))],
-      [sql('LAG(', arg('value'), ')')],
+      sql`LAG(${arg('value')})`,
       {needsWindowOrderBy: true}
     ),
     overload(
@@ -60,7 +60,7 @@ export function fnLag(): DialectFunctionOverloadDef[] {
         param('value', output(maxAggregate(type))),
         param('offset', constant(maxScalar('number'))),
       ],
-      [sql('LAG(', arg('value'), ', ', arg('offset'), ')')],
+      sql`LAG(${arg('value')}, ${arg('offset')})`,
       {needsWindowOrderBy: true}
     ),
     overload(
@@ -73,17 +73,7 @@ export function fnLag(): DialectFunctionOverloadDef[] {
         // DuckDB has no problem with this being even an aggregate
         param('default', constant(maxAggregate(type))),
       ],
-      [
-        sql(
-          'LAG(',
-          arg('value'),
-          ', ',
-          arg('offset'),
-          ', ',
-          arg('default'),
-          ')'
-        ),
-      ],
+      sql`LAG(${arg('value')}, ${arg('offset')}, ${arg('default')})`,
       {needsWindowOrderBy: true}
     ),
   ]);

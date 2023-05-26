@@ -22,24 +22,22 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
+  makeParam,
 } from './util';
 
 export function fnRepeat(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('string'));
+  const count = makeParam('count', anyExprType('number'));
   return [
     overload(
       minScalar('string'),
-      [
-        param('value', anyExprType('string')),
-        param('count', anyExprType('number')),
-      ],
-      [sql('REPEAT(', arg('value'), ',', arg('count'), ')')]
+      [value.param, count.param],
+      sql`REPEAT(${value.arg}, ${count.arg})`
     ),
   ];
 }

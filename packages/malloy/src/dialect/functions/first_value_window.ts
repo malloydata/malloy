@@ -46,7 +46,7 @@ export function fnFirstValueWindow(): DialectFunctionOverloadDef[] {
     overload(
       minAnalytic(type),
       [param('value', output(maxAggregate(type)))],
-      [sql('FIRST_VALUE(', arg('value'), ')')],
+      sql`FIRST_VALUE(${arg('value')})`,
       {needsWindowOrderBy: true}
     ),
   ]);
@@ -57,7 +57,7 @@ export function fnLastValueWindow(): DialectFunctionOverloadDef[] {
     overload(
       minAnalytic(type),
       [param('value', output(maxAggregate(type)))],
-      [sql('LAST_VALUE(', arg('value'), ')')],
+      sql`LAST_VALUE(${arg('value')})`,
       {needsWindowOrderBy: true}
     ),
   ]);

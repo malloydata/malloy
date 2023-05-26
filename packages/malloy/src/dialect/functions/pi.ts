@@ -24,5 +24,5 @@
 import {overload, minScalar, sql, DialectFunctionOverloadDef} from './util';
 
 export function fnPi(): DialectFunctionOverloadDef[] {
-  return [overload(minScalar('number'), [], [sql('PI()')])];
+  return [overload(minScalar('number'), [], sql`PI()`)];
 }

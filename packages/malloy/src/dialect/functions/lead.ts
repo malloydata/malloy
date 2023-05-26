@@ -48,7 +48,7 @@ export function fnLead(): DialectFunctionOverloadDef[] {
     overload(
       minAnalytic(type),
       [param('value', output(maxAggregate(type)))],
-      [sql('LEAD(', arg('value'), ')')],
+      sql`LEAD(${arg('value')})`,
       {needsWindowOrderBy: true}
     ),
     overload(
@@ -57,7 +57,7 @@ export function fnLead(): DialectFunctionOverloadDef[] {
         param('value', output(maxAggregate(type))),
         param('offset', constant(maxScalar('number'))),
       ],
-      [sql('LEAD(', arg('value'), ', ', arg('offset'), ')')],
+      sql`LEAD(${arg('value')}, ${arg('offset')})`,
       {needsWindowOrderBy: true}
     ),
     overload(
@@ -67,17 +67,7 @@ export function fnLead(): DialectFunctionOverloadDef[] {
         param('offset', constant(maxScalar('number'))),
         param('default', constant(maxAggregate(type))),
       ],
-      [
-        sql(
-          'LEAD(',
-          arg('value'),
-          ', ',
-          arg('offset'),
-          ', ',
-          arg('default'),
-          ')'
-        ),
-      ],
+      sql`LEAD(${arg('value')}, ${arg('offset')}, ${arg('default')})`,
       {needsWindowOrderBy: true}
     ),
   ]);

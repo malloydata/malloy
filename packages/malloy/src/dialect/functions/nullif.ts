@@ -23,13 +23,12 @@
 
 import {ExpressionValueType} from '../..';
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
+  makeParam,
 } from './util';
 
 const types: ExpressionValueType[] = [
@@ -41,11 +40,13 @@ const types: ExpressionValueType[] = [
 ];
 
 export function fnNullif(): DialectFunctionOverloadDef[] {
-  return types.map(type =>
-    overload(
+  return types.map(type => {
+    const value1 = makeParam('value1', anyExprType(type));
+    const value2 = makeParam('value2', anyExprType(type));
+    return overload(
       minScalar(type),
-      [param('value1', anyExprType(type)), param('value2', anyExprType(type))],
-      [sql('NULLIF(', arg('value1'), ', ', arg('value2'), ')')]
-    )
-  );
+      [value1.param, value2.param],
+      sql`NULLIF(${value1.arg}, ${value2.arg})`
+    );
+  });
 }

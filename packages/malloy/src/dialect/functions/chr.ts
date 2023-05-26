@@ -36,7 +36,7 @@ export function fnChr(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('string'),
       [param('value', anyExprType('number'))],
-      [sql('CHR(', arg('value'), ')')]
+      sql`CHR(${arg('value')})`
     ),
   ];
 }
@@ -46,7 +46,7 @@ export function fnAscii(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('number'),
       [param('value', anyExprType('string'))],
-      [sql('ASCII(', arg('value'), ')')]
+      sql`ASCII(${arg('value')})`
     ),
   ];
 }
@@ -56,7 +56,7 @@ export function fnUnicode(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('number'),
       [param('value', anyExprType('string'))],
-      [sql('UNICODE(', arg('value'), ')')]
+      sql`UNICODE(${arg('value')})`
     ),
   ];
 }

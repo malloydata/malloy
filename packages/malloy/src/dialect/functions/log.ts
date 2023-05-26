@@ -22,24 +22,22 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,
+  makeParam,
   DialectFunctionOverloadDef,
 } from './util';
 
 export function fnLog(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('number'));
+  const base = makeParam('base', anyExprType('number'));
   return [
     overload(
       minScalar('number'),
-      [
-        param('value', anyExprType('number')),
-        param('base', anyExprType('number')),
-      ],
-      [sql('LOG(', arg('value'), ',', arg('base'), ')')]
+      [value.param, base.param],
+      sql`LOG(${value.arg}, ${base.arg})`
     ),
   ];
 }

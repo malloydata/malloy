@@ -29,14 +29,12 @@ import {
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
+  makeParam,
 } from './util';
 
 export function fnToHex(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('number'));
   return [
-    overload(
-      minScalar('string'),
-      [param('value', anyExprType('number'))],
-      [sql('TO_HEX(', arg('value'), ')')]
-    ),
+    overload(minScalar('string'), [value.param], sql`TO_HEX(${value.arg})`),
   ];
 }

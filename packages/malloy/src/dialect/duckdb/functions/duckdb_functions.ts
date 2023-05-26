@@ -22,6 +22,19 @@
  */
 
 import {FUNCTIONS} from '../../functions';
+import {fnDiv} from './div';
+import {fnGreatest, fnLeast} from './greatest_and_least';
+import {fnIsInf} from './is_inf';
+import {fnIsNan} from './is_nan';
+import {fnRand} from './rand';
+import {fnTrunc} from './trunc';
 
 export const DUCKDB_FUNCTIONS = FUNCTIONS.clone();
+DUCKDB_FUNCTIONS.add('trunc', fnTrunc);
+DUCKDB_FUNCTIONS.add('rand', fnRand);
+DUCKDB_FUNCTIONS.add('is_nan', fnIsNan);
+DUCKDB_FUNCTIONS.add('is_inf', fnIsInf);
+DUCKDB_FUNCTIONS.add('greatest', fnGreatest);
+DUCKDB_FUNCTIONS.add('least', fnLeast);
+DUCKDB_FUNCTIONS.add('div', fnDiv);
 DUCKDB_FUNCTIONS.seal();

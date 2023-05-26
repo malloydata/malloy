@@ -26,7 +26,7 @@ import {overload, sql, DialectFunctionOverloadDef, minAnalytic} from './util';
 // TODO would you ever want to rank by a different thing than the order by?
 export function fnRank(): DialectFunctionOverloadDef[] {
   return [
-    overload(minAnalytic('number'), [], [sql('RANK()')], {
+    overload(minAnalytic('number'), [], sql`RANK()`, {
       needsWindowOrderBy: true,
     }),
   ];

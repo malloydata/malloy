@@ -22,43 +22,28 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
+  makeParam,
 } from './util';
 
 export function fnSubstr(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('string'));
+  const position = makeParam('position', anyExprType('number'));
+  const length = makeParam('length', anyExprType('number'));
   return [
     overload(
       minScalar('string'),
-      [
-        param('value', anyExprType('string')),
-        param('position', anyExprType('number')),
-      ],
-      [sql('SUBSTR(', arg('value'), ',', arg('position'), ')')]
+      [value.param, position.param],
+      sql`SUBSTR(${value.arg}, ${position.arg})`
     ),
     overload(
       minScalar('string'),
-      [
-        param('value', anyExprType('string')),
-        param('position', anyExprType('number')),
-        param('length', anyExprType('number')),
-      ],
-      [
-        sql(
-          'SUBSTR(',
-          arg('value'),
-          ',',
-          arg('position'),
-          ',',
-          arg('length'),
-          ')'
-        ),
-      ]
+      [value.param, position.param, length.param],
+      sql`SUBSTR(${value.arg}, ${position.arg}, ${length.arg})`
     ),
   ];
 }

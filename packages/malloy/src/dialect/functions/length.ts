@@ -36,7 +36,7 @@ export function fnLength(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('number'),
       [param('value', anyExprType('string'))],
-      [sql('LENGTH(', arg('value'), ')')]
+      sql`LENGTH(${arg('value')})`
     ),
   ];
 }
@@ -46,7 +46,7 @@ export function fnByteLength(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('number'),
       [param('value', anyExprType('string'))],
-      [sql('BYTE_LENGTH(', arg('value'), ')')]
+      sql`BYTE_LENGTH(${arg('value')})`
     ),
   ];
 }

@@ -22,21 +22,17 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
+  makeParam,
 } from './util';
 
 export function fnReverse(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('string'));
   return [
-    overload(
-      minScalar('string'),
-      [param('value', anyExprType('string'))],
-      [sql('REPEAT(', arg('value'), ')')]
-    ),
+    overload(minScalar('string'), [value.param], sql`REVERSE(${value.arg})`),
   ];
 }

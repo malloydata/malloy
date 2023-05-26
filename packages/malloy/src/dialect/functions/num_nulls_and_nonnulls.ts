@@ -28,8 +28,8 @@ import {
   minScalar,
   anyExprType,
   spread,
-  sql,
   DialectFunctionOverloadDef,
+  sqlFragment,
 } from './util';
 
 function make(fn: 'NUM_NULLS' | 'NUM_NONNULLS'): DialectFunctionOverloadDef[] {
@@ -47,7 +47,7 @@ function make(fn: 'NUM_NULLS' | 'NUM_NONNULLS'): DialectFunctionOverloadDef[] {
           anyExprType('json')
         ),
       ],
-      [sql(`${fn}(`, spread(arg('values')), ')')]
+      [sqlFragment(`${fn}(`, spread(arg('values')), ')')]
     ),
   ];
 }

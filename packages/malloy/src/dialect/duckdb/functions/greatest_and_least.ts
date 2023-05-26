@@ -21,44 +21,45 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {ExpressionValueType} from '../../../model';
 import {
   arg,
   overload,
-  param,
+  params,
   minScalar,
   anyExprType,
-  DialectFunctionOverloadDef,
   sqlFragment,
-} from './util';
+  DialectFunctionOverloadDef,
+  spread,
+} from '../../functions/util';
 
-export function simple(fn: string): DialectFunctionOverloadDef[] {
-  return [
+const types: ExpressionValueType[] = [
+  'string',
+  'number',
+  'timestamp',
+  'date',
+  'json',
+];
+
+function greatestOrLeast(
+  fn: 'GREATEST' | 'LEAST'
+): DialectFunctionOverloadDef[] {
+  return types.map(type =>
     overload(
-      minScalar('number'),
-      [param('value', anyExprType('number'))],
-      [sqlFragment(`${fn}(`, arg('value'), ')')]
-    ),
-  ];
+      minScalar(type),
+      [params('values', anyExprType(type))],
+      [
+        sqlFragment(
+          'CASE WHEN LIST_AGGREGATE(LIST_TRANSFORM([',
+          spread(arg('values')),
+          `], x -> CASE WHEN x IS NULL THEN 1 ELSE 0 END), 'sum') > 0 THEN NULL ELSE ${fn}(`,
+          spread(arg('values')),
+          ') END'
+        ),
+      ]
+    )
+  );
 }
 
-// Trig functions
-export const fnCos = () => simple('COS');
-export const fnCosh = () => simple('COSH');
-export const fnAcos = () => simple('ACOS');
-export const fnAcosh = () => simple('ACOSH');
-export const fnSin = () => simple('SIN');
-export const fnSinh = () => simple('SINH');
-export const fnAsin = () => simple('ASIN');
-export const fnAsinh = () => simple('ASINH');
-export const fnTan = () => simple('TAN');
-export const fnTanh = () => simple('TANH');
-export const fnAtan = () => simple('ATAN');
-export const fnAtanh = () => simple('ATANH');
-
-export const fnSign = () => simple('SIGN');
-export const fnCeil = () => simple('CEIL');
-export const fnFloor = () => simple('FLOOR');
-export const fnAbs = () => simple('ABS');
-export const fnSqrt = () => simple('SQRT');
-export const fnLn = () => simple('LN');
-export const fnLog10 = () => simple('LOG10');
+export const fnGreatest = () => greatestOrLeast('GREATEST');
+export const fnLeast = () => greatestOrLeast('LEAST');

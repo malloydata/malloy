@@ -22,24 +22,22 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
+  makeParam,
 } from './util';
 
 export function fnPow(): DialectFunctionOverloadDef[] {
+  const base = makeParam('base', anyExprType('number'));
+  const exponent = makeParam('exponent', anyExprType('number'));
   return [
     overload(
       minScalar('number'),
-      [
-        param('base', anyExprType('number')),
-        param('exponent', anyExprType('number')),
-      ],
-      [sql('POW(', arg('base'), ',', arg('exponent'), ')')]
+      [base.param, exponent.param],
+      sql`POW(${base.arg}, ${exponent.arg})`
     ),
   ];
 }

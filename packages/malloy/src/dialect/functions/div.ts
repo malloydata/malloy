@@ -39,7 +39,7 @@ export function fnDiv(): DialectFunctionOverloadDef[] {
         param('numerator', anyExprType('number')),
         param('denominator', anyExprType('number')),
       ],
-      [sql('DIV(', arg('numerator'), ',', arg('denominator'), ')')]
+      sql`DIV(${arg('numerator')}, ${arg('denominator')})`
     ),
   ];
 }

@@ -23,9 +23,14 @@
 
 import {overload, sql, DialectFunctionOverloadDef, minAnalytic} from './util';
 
+// TODO here we just assume that the OVER clause just goes right after the
+// generated expression, which isn't necessarily true given the way these overloads
+// work... Theoretically you could write sql`ROW_NUMBER() + 1` and then the OVER would
+// be in the wrong place... It feels like there should be a fragment 'window function'
+// to handle this in a better way...
 export function fnRowNumber(): DialectFunctionOverloadDef[] {
   return [
-    overload(minAnalytic('number'), [], [sql('ROW_NUMBER()')], {
+    overload(minAnalytic('number'), [], sql`ROW_NUMBER()`, {
       needsWindowOrderBy: true,
     }),
   ];
