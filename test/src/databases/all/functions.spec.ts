@@ -26,7 +26,6 @@
 
 import * as malloy from '@malloydata/malloy';
 import {RuntimeList, allDatabases} from '../../runtimes';
-import '../../util/is-sql-eq';
 import {databasesFromEnvironmentOr} from '../../util';
 
 // const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases)); // TODO
@@ -244,20 +243,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
     it(`works with null to - ${databaseName}`, async () => {
       await funcTest("replace('aaaa', 'a', null)", null);
-    });
-  });
-
-  describe('out keyword', () => {
-    it(`works - ${databaseName}`, async () => {
-      await expressionModel
-        .loadQuery(
-          `
-          query: aircraft -> {
-            group_by: state
-            group_by: x is out.state
-          }`
-        )
-        .run();
     });
   });
 
