@@ -297,7 +297,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
   describe('stddev', () => {
     // TODO symmetric aggregates don't work with custom aggregate functions in BQ currently
-    if (databaseName === "bigquery") return;
+    if (databaseName === 'bigquery') return;
     it(`works - ${databaseName}`, async () => {
       await funcTestAgg('round(stddev(aircraft_models.seats))', 29);
     });

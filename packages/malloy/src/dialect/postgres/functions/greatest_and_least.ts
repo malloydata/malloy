@@ -50,7 +50,9 @@ function greatestOrLeast(
       [params('values', anyExprType(type))],
       [
         sqlFragment(
-          'CASE WHEN NUM_NULLS(', spread(arg('values')), `) > 0 THEN NULL ELSE ${fn}(`,
+          'CASE WHEN NUM_NULLS(',
+          spread(arg('values')),
+          `) > 0 THEN NULL ELSE ${fn}(`,
           spread(arg('values')),
           ') END'
         ),

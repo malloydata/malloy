@@ -34,7 +34,11 @@ export function fnRound(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', anyExprType('number'));
   const precision = makeParam('precision', anyExprType('number'));
   return [
-    overload(minScalar('number'), [value.param], sql`ROUND((${value.arg})::NUMERIC)`),
+    overload(
+      minScalar('number'),
+      [value.param],
+      sql`ROUND((${value.arg})::NUMERIC)`
+    ),
     // Postgres doesn't let you ROUND a FLOAT to a particular number of decimal places,
     // so we cast to NUMERIC first...
     // TODO it would be nice not to have to do this cast if it was already NUMERIC type...

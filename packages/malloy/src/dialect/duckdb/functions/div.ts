@@ -32,7 +32,7 @@ import {
 
 export function fnDiv(): DialectFunctionOverloadDef[] {
   const numerator = makeParam('numerator', anyExprType('number'));
-  const denominator = makeParam('denominator', anyExprType('number'))
+  const denominator = makeParam('denominator', anyExprType('number'));
   return [
     overload(
       minScalar('number'),

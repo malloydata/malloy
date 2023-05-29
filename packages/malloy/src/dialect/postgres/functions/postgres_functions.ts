@@ -22,13 +22,13 @@
  */
 
 import {FUNCTIONS} from '../../functions';
-import { fnGreatest, fnLeast } from './greatest_and_least';
-import { fnIsInf } from './is_inf';
-import { fnIsNan } from './is_nan';
-import { fnRand } from './rand';
-import { fnRegexpExtract } from './regexp_extract';
-import { fnRound } from './round';
-import { fnStddev } from './stddev';
+import {fnGreatest, fnLeast} from './greatest_and_least';
+import {fnIsInf} from './is_inf';
+import {fnIsNan} from './is_nan';
+import {fnRand} from './rand';
+import {fnRegexpExtract} from './regexp_extract';
+import {fnRound} from './round';
+import {fnStddev} from './stddev';
 
 export const POSTGRES_FUNCTIONS = FUNCTIONS.clone();
 POSTGRES_FUNCTIONS.add('regexp_extract', fnRegexpExtract);
