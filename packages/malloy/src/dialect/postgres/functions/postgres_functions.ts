@@ -27,6 +27,7 @@ import { fnIsInf } from './is_inf';
 import { fnIsNan } from './is_nan';
 import { fnRand } from './rand';
 import { fnRegexpExtract } from './regexp_extract';
+import { fnRound } from './round';
 import { fnStddev } from './stddev';
 
 export const POSTGRES_FUNCTIONS = FUNCTIONS.clone();
@@ -37,4 +38,5 @@ POSTGRES_FUNCTIONS.add('greatest', fnGreatest);
 POSTGRES_FUNCTIONS.add('least', fnLeast);
 POSTGRES_FUNCTIONS.add('is_nan', fnIsNan);
 POSTGRES_FUNCTIONS.add('is_inf', fnIsInf);
+POSTGRES_FUNCTIONS.add('round', fnRound);
 POSTGRES_FUNCTIONS.seal();

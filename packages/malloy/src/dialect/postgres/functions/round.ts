@@ -30,22 +30,18 @@ import {
   makeParam,
 } from '../../functions/util';
 
-export function fnTrunc(): DialectFunctionOverloadDef[] {
+export function fnRound(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', anyExprType('number'));
   const precision = makeParam('precision', anyExprType('number'));
-  // Postgres gives an error when executing `TRUNC(NULL)` because it doesn't know what type to
-  // return; here we work arround this so `trunc(null) = null::number`.
   return [
-    overload(
-      minScalar('number'),
-      [value.param],
-      sql`CASE WHEN ${value.arg} IS NULL THEN NULL ELSE TRUNC(${value.arg}) END`
-    ),
-    // Postgres doesn't let you TRUNC a FLOAT with a precision, so we cast to NUMERIC first
+    overload(minScalar('number'), [value.param], sql`ROUND((${value.arg})::NUMERIC)`),
+    // Postgres doesn't let you ROUND a FLOAT to a particular number of decimal places,
+    // so we cast to NUMERIC first...
+    // TODO it would be nice not to have to do this cast if it was already NUMERIC type...
     overload(
       minScalar('number'),
       [value.param, precision.param],
-      sql`CASE WHEN ${value.arg} IS NULL THEN NULL ELSE TRUNC((${value.arg}::NUMERIC), ${precision.arg}) END`
+      sql`ROUND((${value.arg})::NUMERIC, ${precision.arg})`
     ),
   ];
 }
