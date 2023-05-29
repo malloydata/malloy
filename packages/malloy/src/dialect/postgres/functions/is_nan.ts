@@ -22,27 +22,21 @@
  */
 
 import {
+  arg,
   overload,
+  param,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
-  makeParam,
 } from '../../functions/util';
 
-export function fnTrunc(): DialectFunctionOverloadDef[] {
-  const value = makeParam('value', anyExprType('number'));
-  const precision = makeParam('precision', anyExprType('number'));
+export function fnIsNan(): DialectFunctionOverloadDef[] {
   return [
     overload(
-      minScalar('number'),
-      [value.param],
-      sql`CASE WHEN ${value.arg} < 0 THEN CEIL(${value.arg}) ELSE FLOOR(${value.arg}) END`
-    ),
-    overload(
-      minScalar('number'),
-      [value.param, precision.param],
-      sql`CASE WHEN ${value.arg} < 0 THEN CEIL(${value.arg} * POW(10, ${precision.arg})) / POW(10, ${precision.arg}) ELSE FLOOR(${value.arg} * POW(10, ${precision.arg})) / POW(10, ${precision.arg}) END`
+      minScalar('boolean'),
+      [param('value', anyExprType('number'))],
+      sql`(${arg('value')} = NUMERIC 'NaN')`
     ),
   ];
 }

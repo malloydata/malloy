@@ -23,6 +23,8 @@
 
 import {FUNCTIONS} from '../../functions';
 import { fnGreatest, fnLeast } from './greatest_and_least';
+import { fnIsInf } from './is_inf';
+import { fnIsNan } from './is_nan';
 import { fnRand } from './rand';
 import { fnRegexpExtract } from './regexp_extract';
 import { fnStddev } from './stddev';
@@ -33,4 +35,6 @@ POSTGRES_FUNCTIONS.add('stddev', fnStddev);
 POSTGRES_FUNCTIONS.add('rand', fnRand);
 POSTGRES_FUNCTIONS.add('greatest', fnGreatest);
 POSTGRES_FUNCTIONS.add('least', fnLeast);
+POSTGRES_FUNCTIONS.add('is_nan', fnIsNan);
+POSTGRES_FUNCTIONS.add('is_inf', fnIsInf);
 POSTGRES_FUNCTIONS.seal();
