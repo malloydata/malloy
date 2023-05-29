@@ -21,17 +21,11 @@ import {
   fnTrunc,
   fnCeil,
   fnCos,
-  fnCosh,
   fnAcos,
-  fnAcosh,
   fnSin,
-  fnSinh,
   fnAsin,
-  fnAsinh,
   fnTan,
-  fnTanh,
   fnAtan,
-  fnAtanh,
   fnAtan2,
   fnAbs,
   fnSign,
@@ -78,17 +72,11 @@ FUNCTIONS.add('trunc', fnTrunc);
 FUNCTIONS.add('floor', fnFloor);
 FUNCTIONS.add('ceil', fnCeil);
 FUNCTIONS.add('cos', fnCos);
-FUNCTIONS.add('cosh', fnCosh);
 FUNCTIONS.add('acos', fnAcos);
-FUNCTIONS.add('acosh', fnAcosh);
 FUNCTIONS.add('sin', fnSin);
-FUNCTIONS.add('sinh', fnSinh);
 FUNCTIONS.add('asin', fnAsin);
-FUNCTIONS.add('asinh', fnAsinh);
 FUNCTIONS.add('tan', fnTan);
-FUNCTIONS.add('tanh', fnTanh);
 FUNCTIONS.add('atan', fnAtan);
-FUNCTIONS.add('atanh', fnAtanh);
 FUNCTIONS.add('atan2', fnAtan2);
 FUNCTIONS.add('lower', fnLower);
 FUNCTIONS.add('upper', fnUpper);

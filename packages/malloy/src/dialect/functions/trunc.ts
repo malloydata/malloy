@@ -22,9 +22,7 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,

@@ -606,16 +606,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTest('cos(null)', null);
     });
   });
-
-  describe('cosh', () => {
-    it(`works - ${databaseName}`, async () => {
-      await funcTest('cosh(0)', 1);
-    });
-
-    it(`works with null - ${databaseName}`, async () => {
-      await funcTest('cosh(null)', null);
-    });
-  });
   describe('acos', () => {
     it(`works - ${databaseName}`, async () => {
       await funcTest('acos(1)', 0);
@@ -623,15 +613,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
     it(`works with null - ${databaseName}`, async () => {
       await funcTest('acos(null)', null);
-    });
-  });
-  describe('acosh', () => {
-    it(`works - ${databaseName}`, async () => {
-      await funcTest('acosh(1)', 0);
-    });
-
-    it(`works with null - ${databaseName}`, async () => {
-      await funcTest('acosh(null)', null);
     });
   });
 
@@ -644,16 +625,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTest('sin(null)', null);
     });
   });
-
-  describe('sinh', () => {
-    it(`works - ${databaseName}`, async () => {
-      await funcTest('sinh(0)', 0);
-    });
-
-    it(`works with null - ${databaseName}`, async () => {
-      await funcTest('sinh(null)', null);
-    });
-  });
   describe('asin', () => {
     it(`works - ${databaseName}`, async () => {
       await funcTest('asin(0)', 0);
@@ -661,15 +632,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
     it(`works with null - ${databaseName}`, async () => {
       await funcTest('asin(null)', null);
-    });
-  });
-  describe('asinh', () => {
-    it(`works - ${databaseName}`, async () => {
-      await funcTest('asinh(0)', 0);
-    });
-
-    it(`works with null - ${databaseName}`, async () => {
-      await funcTest('asinh(null)', null);
     });
   });
 
@@ -682,16 +644,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTest('tan(null)', null);
     });
   });
-
-  describe('tanh', () => {
-    it(`works - ${databaseName}`, async () => {
-      await funcTest('tanh(0)', 0);
-    });
-
-    it(`works with null - ${databaseName}`, async () => {
-      await funcTest('tanh(null)', null);
-    });
-  });
   describe('atan', () => {
     it(`works - ${databaseName}`, async () => {
       await funcTest('atan(0)', 0);
@@ -699,15 +651,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
 
     it(`works with null - ${databaseName}`, async () => {
       await funcTest('atan(null)', null);
-    });
-  });
-  describe('atanh', () => {
-    it(`works - ${databaseName}`, async () => {
-      await funcTest('atanh(0)', 0);
-    });
-
-    it(`works with null - ${databaseName}`, async () => {
-      await funcTest('atanh(null)', null);
     });
   });
   describe('atan2', () => {

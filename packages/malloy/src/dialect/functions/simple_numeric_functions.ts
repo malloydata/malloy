@@ -43,17 +43,11 @@ export function simple(fn: string): DialectFunctionOverloadDef[] {
 
 // Trig functions
 export const fnCos = () => simple('COS');
-export const fnCosh = () => simple('COSH');
 export const fnAcos = () => simple('ACOS');
-export const fnAcosh = () => simple('ACOSH');
 export const fnSin = () => simple('SIN');
-export const fnSinh = () => simple('SINH');
 export const fnAsin = () => simple('ASIN');
-export const fnAsinh = () => simple('ASINH');
 export const fnTan = () => simple('TAN');
-export const fnTanh = () => simple('TANH');
 export const fnAtan = () => simple('ATAN');
-export const fnAtanh = () => simple('ATANH');
 
 export const fnSign = () => simple('SIGN');
 export const fnCeil = () => simple('CEIL');

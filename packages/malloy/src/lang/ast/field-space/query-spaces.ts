@@ -45,7 +45,6 @@ import {LookupResult} from '../types/lookup-result';
 import {SpaceEntry} from '../types/space-entry';
 import {ColumnSpaceField} from './column-space-field';
 import {StructSpaceField} from './static-space';
-import {JoinSpaceField} from './join-space-field';
 
 /**
  * Unlike a source, which is a refinement of a namespace, a query

@@ -67,17 +67,11 @@ export {fnReverse} from './reverse';
 export {fnToHex} from './to_hex';
 export {
   fnCos,
-  fnCosh,
   fnAcos,
-  fnAcosh,
   fnSin,
-  fnSinh,
   fnAsin,
-  fnAsinh,
   fnTan,
-  fnTanh,
   fnAtan,
-  fnAtanh,
   fnAbs,
   fnSign,
   fnCeil,

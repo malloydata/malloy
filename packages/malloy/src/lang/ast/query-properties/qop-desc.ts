@@ -21,8 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {isFilteredAliasedName, PipeSegment} from '../../../model/malloy_types';
-
+import {PipeSegment} from '../../../model/malloy_types';
 import {Executor} from '../types/executor';
 import {IndexExecutor} from '../executors/index-executor';
 import {ProjectExecutor} from '../executors/project-executor';
@@ -38,7 +37,6 @@ import {Nests} from './nests';
 import {ProjectStatement} from './project-statement';
 import {opOutputStruct} from '../struct-utils';
 import {QueryProperty} from '../types/query-property';
-
 import {isNestedQuery} from './nest';
 import {StaticSpace} from '../field-space/static-space';
 

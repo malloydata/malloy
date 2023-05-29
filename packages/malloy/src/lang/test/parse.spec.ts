@@ -639,7 +639,7 @@ describe('model statements', () => {
           markSource`query: ${'concat is a -> { group_by: x is 1 }'}`
         ).compileToFailWith(
           // TODO improve this error message
-          "Cannot redefine 'concat'"
+          "'concat' is already defined, cannot redefine"
         );
       });
       test(
@@ -781,7 +781,7 @@ describe('model statements', () => {
   test('errors on redefinition of query', () => {
     expect(
       'query: q1 is a -> { project: * }, q1 is a -> { project: * }'
-    ).compileToFailWith("Query 'q1' is already defined, cannot redefine");
+    ).compileToFailWith("'q1' is already defined, cannot redefine");
   });
 });
 

@@ -23,9 +23,7 @@
 
 import {ExpressionValueType} from '../..';
 import {
-  arg,
   overload,
-  param,
   sql,
   DialectFunctionOverloadDef,
   minAnalytic,
