@@ -21,16 +21,43 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FUNCTIONS} from '../../functions';
-import { fnGreatest, fnLeast } from './greatest_and_least';
-import { fnRand } from './rand';
-import { fnRegexpExtract } from './regexp_extract';
-import { fnStddev } from './stddev';
+import {ExpressionValueType} from '../../../model';
+import {
+  arg,
+  overload,
+  params,
+  minScalar,
+  anyExprType,
+  sqlFragment,
+  DialectFunctionOverloadDef,
+  spread,
+} from '../../functions/util';
 
-export const POSTGRES_FUNCTIONS = FUNCTIONS.clone();
-POSTGRES_FUNCTIONS.add('regexp_extract', fnRegexpExtract);
-POSTGRES_FUNCTIONS.add('stddev', fnStddev);
-POSTGRES_FUNCTIONS.add('rand', fnRand);
-POSTGRES_FUNCTIONS.add('greatest', fnGreatest);
-POSTGRES_FUNCTIONS.add('least', fnLeast);
-POSTGRES_FUNCTIONS.seal();
+const types: ExpressionValueType[] = [
+  'string',
+  'number',
+  'timestamp',
+  'date',
+  'json',
+];
+
+function greatestOrLeast(
+  fn: 'GREATEST' | 'LEAST'
+): DialectFunctionOverloadDef[] {
+  return types.map(type =>
+    overload(
+      minScalar(type),
+      [params('values', anyExprType(type))],
+      [
+        sqlFragment(
+          'CASE WHEN NUM_NULLS(', spread(arg('values')), `) > 0 THEN NULL ELSE ${fn}(`,
+          spread(arg('values')),
+          ') END'
+        ),
+      ]
+    )
+  );
+}
+
+export const fnGreatest = () => greatestOrLeast('GREATEST');
+export const fnLeast = () => greatestOrLeast('LEAST');
