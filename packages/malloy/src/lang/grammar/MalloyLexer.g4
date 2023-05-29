@@ -126,6 +126,8 @@ STRING_ESCAPE
 
 HACKY_REGEX: ('/' | [rR]) '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
 STRING_LITERAL: '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
+fragment F_TO_EOL: ~[\r\n]* (('\r'? '\n') | EOF);
+ANNOTATION: '#' F_TO_EOL;
 
 AMPER: '&';
 ARROW: '->';
@@ -200,7 +202,7 @@ fragment U: [uU] ; fragment V: [vV] ; fragment W: [wW] ; fragment X: [xX] ;
 fragment Y: [yY] ; fragment Z: [zZ] ;
 
 BLOCK_COMMENT: '/*' .*? '*/' -> channel(HIDDEN);
-COMMENT_TO_EOL: ('--' | '//') ~[\r\n]* (('\r'? '\n') | EOF) -> channel(HIDDEN) ;
+COMMENT_TO_EOL: ('--' | '//') F_TO_EOL -> channel(HIDDEN) ;
 WHITE_SPACE: SPACE_CHAR -> skip ;
 
 SQL_BEGIN: '"""' -> pushMode(SQL_MODE);

@@ -31,7 +31,9 @@ malloyStatement
   | defineSQLStatement
   | defineQuery
   | importStatement
+  | docAnnotation
   ;
+
 
 defineSourceStatement
   : exploreKeyword sourcePropertyList
@@ -78,6 +80,10 @@ importStatement
 
 importURL
   : JSON_STRING
+  ;
+
+docAnnotation
+  : ANNOTATION
   ;
 
 topLevelQueryDefs
@@ -162,6 +168,7 @@ exploreStatement
   | (ACCEPT | EXCEPT) fieldNameList    # defExploreEditField
   | QUERY subQueryDefList              # defExploreQuery
   | timezoneStatement                  # defExploreTimezone
+  | ANNOTATION                         # defExploreAnnotation
   ;
 
 renameList
@@ -257,6 +264,7 @@ queryStatement
   | nestStatement
   | sampleStatement
   | timezoneStatement
+  | queryAnnotation
   ;
 
 groupByStatement
@@ -340,6 +348,10 @@ sampleStatement
 
 timezoneStatement
   : TIMEZONE STRING_LITERAL
+  ;
+
+queryAnnotation
+  : ANNOTATION
   ;
 
 sampleSpec

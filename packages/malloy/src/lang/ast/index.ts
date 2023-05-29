@@ -22,6 +22,7 @@
  */
 
 export * from './query-properties/nest';
+export * from './elements/annotation';
 export * from './elements/define-source';
 export * from './elements/define-query';
 export * from './elements/source';
