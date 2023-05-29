@@ -21,5 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export {fnRegexpExtract} from './regexp_extract';
-export {fnStddev} from './stddev';
+import {
+  overload,
+  minScalar,
+  sql,
+  DialectFunctionOverloadDef,
+} from '../../functions/util';
+
+export function fnRand(): DialectFunctionOverloadDef[] {
+  return [overload(minScalar('number'), [], sql`RANDOM()`)];
+}

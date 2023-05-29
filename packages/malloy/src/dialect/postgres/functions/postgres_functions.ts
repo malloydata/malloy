@@ -22,9 +22,12 @@
  */
 
 import {FUNCTIONS} from '../../functions';
-import {fnRegexpExtract, fnStddev} from './functions_index';
+import { fnRand } from './rand';
+import { fnRegexpExtract } from './regexp_extract';
+import { fnStddev } from './stddev';
 
 export const POSTGRES_FUNCTIONS = FUNCTIONS.clone();
 POSTGRES_FUNCTIONS.add('regexp_extract', fnRegexpExtract);
 POSTGRES_FUNCTIONS.add('stddev', fnStddev);
+POSTGRES_FUNCTIONS.add('rand', fnRand);
 POSTGRES_FUNCTIONS.seal();

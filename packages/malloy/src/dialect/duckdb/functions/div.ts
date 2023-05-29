@@ -22,24 +22,24 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
+  makeParam,
 } from '../../functions/util';
 
 export function fnDiv(): DialectFunctionOverloadDef[] {
+  const numerator = makeParam('numerator', anyExprType('number'));
+  const denominator = makeParam('denominator', anyExprType('number'))
   return [
     overload(
       minScalar('number'),
-      [
-        param('numerator', anyExprType('number')),
-        param('denominator', anyExprType('number')),
-      ],
-      sql`(${arg('numerator')} // ${arg('denominator')})`
+      [numerator.param, denominator.param],
+      // TODO In DuckDB 0.8 there is a new // operator which does integer division.
+      // When we upgrade, we should switch this to use that instead.
+      sql`CASE WHEN ${numerator.arg} / ${denominator.arg} < 0 THEN CEIL(${numerator.arg} / ${denominator.arg}) ELSE FLOOR(${numerator.arg} / ${denominator.arg}) END`
     ),
   ];
 }

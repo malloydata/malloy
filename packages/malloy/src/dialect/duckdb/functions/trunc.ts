@@ -29,24 +29,22 @@ import {
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
+  makeParam,
 } from '../../functions/util';
 
-const value = arg('value');
-const precision = arg('precision');
 export function fnTrunc(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('number'));
+  const precision = makeParam('precision', anyExprType('number'));
   return [
     overload(
       minScalar('number'),
-      [param('value', anyExprType('number'))],
-      sql`CASE WHEN ${value} < 0 THEN CEIL(${value}) ELSE FLOOR(${value}) END`
+      [value.param],
+      sql`CASE WHEN ${value.arg} < 0 THEN CEIL(${value.arg}) ELSE FLOOR(${value.arg}) END`
     ),
     overload(
       minScalar('number'),
-      [
-        param('value', anyExprType('number')),
-        param('precision', anyExprType('number')),
-      ],
-      sql`CASE WHEN ${value} < 0 THEN CEIL(${value} * POW(10, ${precision})) / POW(10, ${precision}) ELSE FLOOR(${value} * POW(10, ${precision})) / POW(10, ${precision}) END`
+      [value.param, precision.param],
+      sql`CASE WHEN ${value.arg} < 0 THEN CEIL(${value.arg} * POW(10, ${precision.arg})) / POW(10, ${precision.arg}) ELSE FLOOR(${value.arg} * POW(10, ${precision.arg})) / POW(10, ${precision.arg}) END`
     ),
   ];
 }
