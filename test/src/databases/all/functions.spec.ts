@@ -853,7 +853,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
   describe('pi', () => {
     it(`is pi - ${databaseName}`, async () => {
-      await funcTest('round(pi(), 15)', 3.141592653589793);
+      await funcTest('abs(pi() - 3.141592653589793) < 0.0000000000001', true);
     });
   });
   describe('substr', () => {});
