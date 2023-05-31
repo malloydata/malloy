@@ -1116,12 +1116,43 @@ expressionModels.forEach((expressionModel, databaseName) => {
       expect(result.data.path(2, 'rolling_avg').number.value).toBe(births2);
     });
   });
-  describe('min_cumulative', () => {});
-  describe('max_cumulative', () => {});
-  describe('sum_cumulative', () => {});
-  describe('min_window', () => {});
-  describe('max_window', () => {});
-  describe('sum_window', () => {});
+  describe('min, max, sum / window, cumulative', () => {
+    it(`works - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `
+          query: state_facts -> { project: *; limit: 5 } -> {
+            group_by: state, births
+            order_by: births asc
+            calculate: min_c is min_cumulative(births)
+            calculate: max_c is max_cumulative(births)
+            calculate: sum_c is sum_cumulative(births)
+            calculate: min_w is min_window(births)
+            calculate: max_w is max_window(births)
+            calculate: sum_w is sum_window(births)
+          }`
+        )
+        .run({rowLimit: 100});
+      const births0 = result.data.path(0, 'births').number.value;
+      const births1 = result.data.path(1, 'births').number.value;
+      const births2 = result.data.path(2, 'births').number.value;
+      const births3 = result.data.path(3, 'births').number.value;
+      const births4 = result.data.path(4, 'births').number.value;
+      const births = [births0, births1, births2, births3, births4];
+      for (let r = 0; r < 5; r++) {
+        expect(result.data.path(r, 'min_c').number.value).toBe(births0);
+        expect(result.data.path(r, 'max_c').number.value).toBe(births[r]);
+        expect(result.data.path(r, 'sum_c').number.value).toBe(
+          births.slice(0, r + 1).reduce((a, b) => a + b)
+        );
+        expect(result.data.path(r, 'min_w').number.value).toBe(births0);
+        expect(result.data.path(r, 'max_w').number.value).toBe(births4);
+        expect(result.data.path(r, 'sum_w').number.value).toBe(
+          births.reduce((a, b) => a + b)
+        );
+      }
+    });
+  });
 });
 
 afterAll(async () => {
