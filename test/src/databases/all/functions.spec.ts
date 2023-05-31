@@ -873,21 +873,180 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTest('abs(pi() - 3.141592653589793) < 0.0000000000001', true);
     });
   });
-  describe('substr', () => {});
-  describe('byte_length', () => {});
-  describe('ifnull', () => {});
-  describe('nullif', () => {});
-  describe('chr', () => {});
-  describe('ascii', () => {});
-  describe('unicode', () => {});
+
+  describe('byte_length', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest("byte_length('©')", 2);
+    });
+
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('byte_length(null)', null);
+    });
+  });
+  describe('ifnull', () => {
+    it(`works with non-null - ${databaseName}`, async () => {
+      await funcTest("ifnull('a', 'b')", 'a');
+    });
+
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest("ifnull(null, 'b')", 'b');
+    });
+
+    it(`works with null default - ${databaseName}`, async () => {
+      await funcTest("ifnull('a', null)", 'a');
+    });
+
+    it(`works with two nulls - ${databaseName}`, async () => {
+      await funcTest('ifnull(null, null)', null);
+    });
+  });
+  describe('nullif', () => {
+    it(`works with equal - ${databaseName}`, async () => {
+      await funcTest("nullif('a', 'a')", null);
+    });
+
+    it(`works with non-equal - ${databaseName}`, async () => {
+      await funcTest("nullif('a', 'b')", 'a');
+    });
+
+    it(`works with null check - ${databaseName}`, async () => {
+      await funcTest("nullif('a', null)", 'a');
+    });
+
+    it(`works with two nulls - ${databaseName}`, async () => {
+      await funcTest('nullif(null, null)', null);
+    });
+
+    it(`works with null value - ${databaseName}`, async () => {
+      await funcTest('nullif(null, 2)', null);
+    });
+  });
+  describe('chr', () => {
+    it(`works with ascii - ${databaseName}`, async () => {
+      await funcTest('chr(65)', 'A');
+    });
+    it(`works with unicode - ${databaseName}`, async () => {
+      await funcTest('chr(255)', 'ÿ');
+    });
+    it(`works with null - ${databaseName}`, async () => {
+      await funcTest('chr(null)', null);
+    });
+    // BigQuery's documentation says that `chr(0)` returns the empty string, but it doesn't,
+    // it actually returns the null character, which makes more sense anyway.
+    it(`works with 0 - ${databaseName}`, async () => {
+      await funcTest('chr(0)', String.fromCharCode(0));
+    });
+  });
+  describe('ascii', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest("ascii('A')", 65);
+    });
+    it(`works (first letter) - ${databaseName}`, async () => {
+      await funcTest("ascii('ABC')", 65);
+    });
+    it(`works empty string - ${databaseName}`, async () => {
+      await funcTest("ascii('')", 0);
+    });
+    it(`works null - ${databaseName}`, async () => {
+      await funcTest('ascii(null)', null);
+    });
+  });
+  describe('unicode', () => {
+    it(`works ascii - ${databaseName}`, async () => {
+      await funcTest("unicode('A')", 65);
+    });
+    it(`works unicode - ${databaseName}`, async () => {
+      await funcTest("unicode('â')", 226);
+    });
+    it(`works (first letter) - ${databaseName}`, async () => {
+      await funcTest("unicode('âBC')", 226);
+    });
+    it(`works empty string - ${databaseName}`, async () => {
+      await funcTest("unicode('')", 0);
+    });
+    it(`works null - ${databaseName}`, async () => {
+      await funcTest('unicode(null)', null);
+    });
+  });
   describe('format', () => {});
-  describe('repeat', () => {});
-  describe('reverse', () => {});
-  describe('to_hex', () => {});
+  describe('repeat', () => {
+    it(`works 0 - ${databaseName}`, async () => {
+      await funcTest("repeat('foo', 0)", '');
+    });
+    it(`works 1 - ${databaseName}`, async () => {
+      await funcTest("repeat('foo', 1)", 'foo');
+    });
+    it(`works multiple - ${databaseName}`, async () => {
+      await funcTest("repeat('foo', 2)", 'foofoo');
+    });
+    it(`works null string - ${databaseName}`, async () => {
+      await funcTest('repeat(null, 2)', null);
+    });
+    it(`works null count - ${databaseName}`, async () => {
+      await funcTest("repeat('foo', null)", null);
+    });
+    // TODO how does a user do this: the second argument needs to be an integer, but floor doesn't cast to "integer" type.
+    it.skip(`works floor decimal - ${databaseName}`, async () => {
+      await funcTest("repeat('foo', floor(2.5))", 'foofoo');
+    });
+    // undefined behavior when negative, undefined behavior (likely error) when non-integer
+  });
+  describe('reverse', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTest("reverse('foo')", 'oof');
+    });
+    it(`works empty - ${databaseName}`, async () => {
+      await funcTest("reverse('')", '');
+    });
+    it(`works null - ${databaseName}`, async () => {
+      await funcTest('reverse(null)', null);
+    });
+  });
 
-  describe('first', () => {});
+  describe('lead', () => {
+    it(`works with one param - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `query: state_facts -> {
+          group_by: state
+          calculate: next_state is lead(state)
+        }`
+        )
+        .run();
+      expect(result.data.path(0, 'state').value).toBe('AK');
+      expect(result.data.path(0, 'next_state').value).toBe('AL');
+      expect(result.data.path(1, 'state').value).toBe('AL');
+    });
 
-  describe('lead', () => {});
+    it(`works with offset - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `query: state_facts -> {
+          group_by: state
+          calculate: next_next_state is lead(state, 2)
+        }`
+        )
+        .run();
+      expect(result.data.path(0, 'state').value).toBe('AK');
+      expect(result.data.path(0, 'next_next_state').value).toBe('AR');
+      expect(result.data.path(1, 'next_next_state').value).toBe('AZ');
+      expect(result.data.path(1, 'state').value).toBe('AL');
+      expect(result.data.path(2, 'state').value).toBe('AR');
+      expect(result.data.path(3, 'state').value).toBe('AZ');
+    });
+
+    it(`works with default value - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `query: state_facts -> { project: *; limit: 10 } -> {
+          group_by: state
+          calculate: next_state is lead(state, 1, 'NONE')
+        }`
+        )
+        .run();
+      expect(result.data.path(9, 'next_state').value).toBe('NONE');
+    });
+  });
   describe('last_value', () => {});
   describe('min_cumulative', () => {});
   describe('max_cumulative', () => {});

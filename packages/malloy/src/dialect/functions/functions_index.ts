@@ -49,7 +49,6 @@ export {
   fnSumCumulative,
 } from './sum_min_max_window';
 export {fnStartsWith, fnEndsWith} from './starts_ends_with';
-export {fnFirst} from './first';
 export {fnIsInf} from './is_inf';
 export {fnIsNan} from './is_nan';
 export {fnAtan2} from './atan2';
@@ -64,7 +63,6 @@ export {fnRand} from './rand';
 export {fnPi} from './pi';
 export {fnRepeat} from './repeat';
 export {fnReverse} from './reverse';
-export {fnToHex} from './to_hex';
 export {
   fnCos,
   fnAcos,

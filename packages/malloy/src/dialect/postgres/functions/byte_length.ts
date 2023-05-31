@@ -25,18 +25,18 @@ import {
   arg,
   overload,
   param,
-  minAggregate,
-  maxScalar,
+  minScalar,
+  anyExprType,
   sql,
   DialectFunctionOverloadDef,
-} from './util';
+} from '../../functions/util';
 
-export function fnFirst(): DialectFunctionOverloadDef[] {
+export function fnByteLength(): DialectFunctionOverloadDef[] {
   return [
     overload(
-      minAggregate('number'),
-      [param('value', maxScalar('number'))],
-      sql`FIRST(${arg('value')})`
+      minScalar('number'),
+      [param('value', anyExprType('string'))],
+      sql`OCTET_LENGTH(${arg('value')})`
     ),
   ];
 }

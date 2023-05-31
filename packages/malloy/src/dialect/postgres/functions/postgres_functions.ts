@@ -22,6 +22,7 @@
  */
 
 import {FUNCTIONS} from '../../functions';
+import {fnByteLength} from './byte_length';
 import {fnGreatest, fnLeast} from './greatest_and_least';
 import {fnIsInf} from './is_inf';
 import {fnIsNan} from './is_nan';
@@ -39,4 +40,5 @@ POSTGRES_FUNCTIONS.add('least', fnLeast);
 POSTGRES_FUNCTIONS.add('is_nan', fnIsNan);
 POSTGRES_FUNCTIONS.add('is_inf', fnIsInf);
 POSTGRES_FUNCTIONS.add('round', fnRound);
+POSTGRES_FUNCTIONS.add('byte_length', fnByteLength);
 POSTGRES_FUNCTIONS.seal();

@@ -22,17 +22,21 @@
  */
 
 import {
+  arg,
   overload,
+  param,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
-  makeParam,
-} from './util';
+} from '../../functions/util';
 
-export function fnToHex(): DialectFunctionOverloadDef[] {
-  const value = makeParam('value', anyExprType('number'));
+export function fnByteLength(): DialectFunctionOverloadDef[] {
   return [
-    overload(minScalar('string'), [value.param], sql`TO_HEX(${value.arg})`),
+    overload(
+      minScalar('number'),
+      [param('value', anyExprType('string'))],
+      sql`(BIT_LENGTH(${arg('value')}) / 8)`
+    ),
   ];
 }

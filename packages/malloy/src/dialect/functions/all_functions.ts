@@ -15,7 +15,6 @@ import {
   fnStddev,
   fnSubstr,
   fnUpper,
-  fnFirst,
   fnChr,
   fnNullif,
   fnTrunc,
@@ -52,7 +51,6 @@ import {
   fnReverse,
   fnRepeat,
   fnUnicode,
-  fnToHex,
   fnMinWindow,
   fnSumWindow,
   fnMaxWindow,
@@ -112,11 +110,9 @@ FUNCTIONS.add('unicode', fnUnicode);
 FUNCTIONS.add('format', fnFormat);
 FUNCTIONS.add('repeat', fnRepeat);
 FUNCTIONS.add('reverse', fnReverse);
-FUNCTIONS.add('to_hex', fnToHex);
 
 // Aggregate functions
 FUNCTIONS.add('stddev', fnStddev);
-FUNCTIONS.add('first', fnFirst);
 
 // Analytic functions
 FUNCTIONS.add('row_number', fnRowNumber);
