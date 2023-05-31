@@ -66,8 +66,9 @@ export class MalloySQLParser {
   private static convertLocation(
     location: MalloySQLParseLocation
   ): DocumentPosition {
+    // VSCode expects line/character numbers to be zero-based
     return {
-      character: location.column,
+      character: location.column - 1,
       line: location.line - 1,
     };
   }

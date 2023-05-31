@@ -148,8 +148,8 @@ describe('MalloySQL parse', () => {
       const embeddedMalloy = stmt.embeddedMalloyQueries[0];
       expect(embeddedMalloy.query).toBe(' malloy ');
       expect(embeddedMalloy.parenthized).toBeTruthy();
-      expect(embeddedMalloy.range.start.character).toBe(8);
-      expect(embeddedMalloy.malloyRange.start.character).toBe(13);
+      expect(embeddedMalloy.range.start.character).toBe(7);
+      expect(embeddedMalloy.malloyRange.start.character).toBe(12);
     });
 
     test('Non-parenthized embedded malloy', () => {
@@ -160,8 +160,8 @@ describe('MalloySQL parse', () => {
       const embeddedMalloy = stmt.embeddedMalloyQueries[0];
       expect(embeddedMalloy.query).toBe(' malloy ');
       expect(embeddedMalloy.parenthized).toBeFalsy();
-      expect(embeddedMalloy.range.start.character).toBe(8);
-      expect(embeddedMalloy.malloyRange.start.character).toBe(10);
+      expect(embeddedMalloy.range.start.character).toBe(7);
+      expect(embeddedMalloy.malloyRange.start.character).toBe(9);
     });
   });
 
@@ -176,8 +176,8 @@ describe('MalloySQL parse', () => {
       expect(parse.statements[0].config?.connection).toBe('bigquery');
       expect(parse.statements[0].statementIndex).toBe(0);
       expect(parse.statements[0].range.start.line).toBe(1);
-      expect(parse.statements[0].range.start.character).toBe(1);
-      expect(parse.statements[0].range.end.character).toBe(9);
+      expect(parse.statements[0].range.start.character).toBe(0);
+      expect(parse.statements[0].range.end.character).toBe(8);
     });
 
     test('Should provide correct output for mulitple statements', () => {
@@ -190,8 +190,8 @@ describe('MalloySQL parse', () => {
       expect(parse.statements[0].config?.connection).toBe('bigquery');
       expect(parse.statements[0].statementIndex).toBe(0);
       expect(parse.statements[0].range.start.line).toBe(1);
-      expect(parse.statements[0].range.start.character).toBe(1);
-      expect(parse.statements[0].range.end.character).toBe(1);
+      expect(parse.statements[0].range.start.character).toBe(0);
+      expect(parse.statements[0].range.end.character).toBe(0);
 
       expect(parse.statements[1].type).toBe(MalloySQLStatementType.MALLOY);
       expect(parse.statements[1].statementText).toBe(
@@ -199,8 +199,8 @@ describe('MalloySQL parse', () => {
       );
       expect(parse.statements[1].statementIndex).toBe(1);
       expect(parse.statements[1].range.start.line).toBe(3);
-      expect(parse.statements[1].range.start.character).toBe(1);
-      expect(parse.statements[1].range.end.character).toBe(25);
+      expect(parse.statements[1].range.start.character).toBe(0);
+      expect(parse.statements[1].range.end.character).toBe(24);
     });
 
     test('Should provide correct output for mulitple statements with embedded malloy', () => {
@@ -215,8 +215,8 @@ describe('MalloySQL parse', () => {
       expect(parse.statements[0].config?.connection).toBe('bigquery');
       expect(parse.statements[0].statementIndex).toBe(0);
       expect(parse.statements[0].range.start.line).toBe(1);
-      expect(parse.statements[0].range.start.character).toBe(1);
-      expect(parse.statements[0].range.end.character).toBe(1);
+      expect(parse.statements[0].range.start.character).toBe(0);
+      expect(parse.statements[0].range.end.character).toBe(0);
 
       const embeddedMalloy = (parse.statements[0] as MalloySQLSQLStatement)
         .embeddedMalloyQueries;
@@ -224,7 +224,7 @@ describe('MalloySQL parse', () => {
       expect(embeddedMalloy[0].parenthized).toBeFalsy();
       expect(embeddedMalloy[0].query).toBe(' malloy-here ');
       expect(embeddedMalloy[0].range.start.line).toBe(1);
-      expect(embeddedMalloy[0].range.start.character).toBe(15);
+      expect(embeddedMalloy[0].range.start.character).toBe(14);
 
       expect(parse.statements[1].type).toBe(MalloySQLStatementType.MALLOY);
       expect(parse.statements[1].statementText).toBe(
@@ -232,8 +232,8 @@ describe('MalloySQL parse', () => {
       );
       expect(parse.statements[1].statementIndex).toBe(1);
       expect(parse.statements[1].range.start.line).toBe(3);
-      expect(parse.statements[1].range.start.character).toBe(1);
-      expect(parse.statements[1].range.end.character).toBe(25);
+      expect(parse.statements[1].range.start.character).toBe(0);
+      expect(parse.statements[1].range.end.character).toBe(24);
     });
   });
 });
