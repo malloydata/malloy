@@ -22,41 +22,22 @@
  */
 
 import {
-  arg,
   overload,
-  param,
   minScalar,
   anyExprType,
   sql,
   DialectFunctionOverloadDef,
-} from './util';
-
-export function fnChr(): DialectFunctionOverloadDef[] {
-  return [
-    overload(
-      minScalar('string'),
-      [param('value', anyExprType('number'))],
-      sql`CASE WHEN ${arg('value')} = 0 THEN '' ELSE CHR(${arg('value')}) END`
-    ),
-  ];
-}
-
-export function fnAscii(): DialectFunctionOverloadDef[] {
-  return [
-    overload(
-      minScalar('number'),
-      [param('value', anyExprType('string'))],
-      sql`ASCII(${arg('value')})`
-    ),
-  ];
-}
+  makeParam,
+} from '../../functions/util';
 
 export function fnUnicode(): DialectFunctionOverloadDef[] {
+  // In DuckDB, `UNICODE('')` gives -1, rather than 0.
+  const value = makeParam('value', anyExprType('string'));
   return [
     overload(
       minScalar('number'),
-      [param('value', anyExprType('string'))],
-      sql`UNICODE(${arg('value')})`
+      [value.param],
+      sql`CASE WHEN ${value.arg} = '' THEN 0 ELSE UNICODE(${value.arg}) END`
     ),
   ];
 }

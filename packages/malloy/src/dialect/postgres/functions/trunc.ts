@@ -40,12 +40,12 @@ export function fnTrunc(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('number'),
       [value.param],
-      sql`CASE WHEN ${value.arg} IS NULL THEN NULL ELSE TRUNC(${value.arg}::NUMERIC) END`
+      sql`TRUNC(${value.arg}::NUMERIC)`
     ),
     overload(
       minScalar('number'),
       [value.param, precision.param],
-      sql`CASE WHEN ${value.arg} IS NULL THEN NULL ELSE TRUNC((${value.arg}::NUMERIC), ${precision.arg}) END`
+      sql`TRUNC((${value.arg}::NUMERIC), ${precision.arg})`
     ),
   ];
 }

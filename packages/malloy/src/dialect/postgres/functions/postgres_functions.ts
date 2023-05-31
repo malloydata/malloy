@@ -31,6 +31,7 @@ import {fnRand} from './rand';
 import {fnRegexpExtract} from './regexp_extract';
 import {fnRound} from './round';
 import {fnStddev} from './stddev';
+import {fnTrunc} from './trunc';
 import {fnUnicode} from './unicode';
 
 export const POSTGRES_FUNCTIONS = FUNCTIONS.clone();
@@ -45,4 +46,5 @@ POSTGRES_FUNCTIONS.add('round', fnRound);
 POSTGRES_FUNCTIONS.add('byte_length', fnByteLength);
 POSTGRES_FUNCTIONS.add('unicode', fnUnicode);
 POSTGRES_FUNCTIONS.add('ifnull', fnIfnull);
+POSTGRES_FUNCTIONS.add('trunc', fnTrunc);
 POSTGRES_FUNCTIONS.seal();

@@ -29,6 +29,7 @@ import {fnIsInf} from './is_inf';
 import {fnIsNan} from './is_nan';
 import {fnRand} from './rand';
 import {fnTrunc} from './trunc';
+import {fnUnicode} from './unicode';
 
 export const DUCKDB_FUNCTIONS = FUNCTIONS.clone();
 DUCKDB_FUNCTIONS.add('trunc', fnTrunc);
@@ -39,4 +40,5 @@ DUCKDB_FUNCTIONS.add('greatest', fnGreatest);
 DUCKDB_FUNCTIONS.add('least', fnLeast);
 DUCKDB_FUNCTIONS.add('div', fnDiv);
 DUCKDB_FUNCTIONS.add('byte_length', fnByteLength);
+DUCKDB_FUNCTIONS.add('unicode', fnUnicode);
 DUCKDB_FUNCTIONS.seal();
