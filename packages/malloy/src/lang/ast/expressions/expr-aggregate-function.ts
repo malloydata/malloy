@@ -29,6 +29,8 @@ import {
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
+import {OutputSpaceEntry} from '../field-space/query-spaces';
+import {ReferenceField} from '../field-space/reference-field';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 import {FT} from '../fragtype-utils';
 import {FieldReference} from '../query-items/field-references';
@@ -65,10 +67,27 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           exprVal = {
             dataType: footType.dataType,
             expressionType: footType.expressionType,
-            value: [{type: 'field', path: this.source.refString}],
-            evalSpace: footType.evalSpace, // TODO
+            value: [
+              footType.evalSpace === 'output'
+                ? {
+                    type: 'outputField',
+                    name: this.source.refString,
+                  }
+                : {
+                    type: 'field',
+                    path: this.source.refString,
+                  },
+            ],
+            evalSpace: footType.evalSpace,
           };
-          structPath = this.source.sourceString;
+          if (
+            sourceFoot instanceof OutputSpaceEntry &&
+            sourceFoot.inputSpaceEntry instanceof ReferenceField
+          ) {
+            structPath = sourceFoot.inputSpaceEntry.fieldRef.sourceString;
+          } else {
+            structPath = this.source.sourceString;
+          }
         } else {
           if (!(sourceFoot instanceof StructSpaceFieldBase)) {
             this.log(`Aggregate source cannot be a ${footType.dataType}`);
