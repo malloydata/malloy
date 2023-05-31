@@ -169,6 +169,7 @@ export function exprMap(expr: Expr, func: (fragment: Fragment) => Expr): Expr {
                 numerator: exprMap(fragment.numerator, func),
               };
             case 'now':
+            case 'numberLiteral':
             case 'stringLiteral':
             case 'timeLiteral':
             case 'regexpLiteral':
