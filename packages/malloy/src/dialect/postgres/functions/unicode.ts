@@ -21,26 +21,23 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FUNCTIONS} from '../../functions';
-import {fnByteLength} from './byte_length';
-import {fnGreatest, fnLeast} from './greatest_and_least';
-import {fnIsInf} from './is_inf';
-import {fnIsNan} from './is_nan';
-import {fnRand} from './rand';
-import {fnRegexpExtract} from './regexp_extract';
-import {fnRound} from './round';
-import {fnStddev} from './stddev';
-import {fnUnicode} from './unicode';
+import {
+  arg,
+  overload,
+  param,
+  minScalar,
+  anyExprType,
+  sql,
+  DialectFunctionOverloadDef,
+} from '../../functions/util';
 
-export const POSTGRES_FUNCTIONS = FUNCTIONS.clone();
-POSTGRES_FUNCTIONS.add('regexp_extract', fnRegexpExtract);
-POSTGRES_FUNCTIONS.add('stddev', fnStddev);
-POSTGRES_FUNCTIONS.add('rand', fnRand);
-POSTGRES_FUNCTIONS.add('greatest', fnGreatest);
-POSTGRES_FUNCTIONS.add('least', fnLeast);
-POSTGRES_FUNCTIONS.add('is_nan', fnIsNan);
-POSTGRES_FUNCTIONS.add('is_inf', fnIsInf);
-POSTGRES_FUNCTIONS.add('round', fnRound);
-POSTGRES_FUNCTIONS.add('byte_length', fnByteLength);
-POSTGRES_FUNCTIONS.add('unicode', fnUnicode);
-POSTGRES_FUNCTIONS.seal();
+export function fnUnicode(): DialectFunctionOverloadDef[] {
+  // Aparently the ASCII function also works for unicode code points...
+  return [
+    overload(
+      minScalar('number'),
+      [param('value', anyExprType('string'))],
+      sql`ASCII(${arg('value')})`
+    ),
+  ];
+}
