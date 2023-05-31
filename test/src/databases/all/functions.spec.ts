@@ -932,9 +932,9 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTest('chr(null)', null);
     });
     // BigQuery's documentation says that `chr(0)` returns the empty string, but it doesn't,
-    // it actually returns the null character, which makes more sense anyway.
+    // it actually returns the null character. We generate code so that it does this.
     it(`works with 0 - ${databaseName}`, async () => {
-      await funcTest('chr(0)', String.fromCharCode(0));
+      await funcTest('chr(0)', '');
     });
   });
   describe('ascii', () => {

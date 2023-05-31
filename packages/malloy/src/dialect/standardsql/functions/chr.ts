@@ -21,11 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FUNCTIONS} from '../../functions';
-import {fnChr} from './chr';
-import {fnPi} from './pi';
+import {
+  overload,
+  minScalar,
+  anyExprType,
+  sql,
+  DialectFunctionOverloadDef,
+  makeParam,
+} from '../../functions/util';
 
-export const STANDARDSQL_FUNCTIONS = FUNCTIONS.clone();
-STANDARDSQL_FUNCTIONS.add('pi', fnPi);
-STANDARDSQL_FUNCTIONS.add('chr', fnChr);
-STANDARDSQL_FUNCTIONS.seal();
+export function fnChr(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('number'));
+  return [
+    overload(
+      minScalar('string'),
+      [value.param],
+      sql`CASE WHEN IFNULL(${value.arg}, 1) = 0 THEN '' ELSE CHR(${value.arg}) END`
+    ),
+  ];
+}

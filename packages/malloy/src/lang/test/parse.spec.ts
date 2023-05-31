@@ -624,7 +624,7 @@ describe('model statements', () => {
           calculate: s is lag(x, x)
         }`).compileToFailWith(
           // TODO improve this error message
-          "Parameter 2 ('offset') of lag must be constant, but received output"
+          "Parameter 2 ('offset') of lag must be literal or constant, but received output"
         );
       });
       test(
@@ -697,7 +697,7 @@ describe('model statements', () => {
           // Parameter 1 ('value') of 'lag' must be a constant, an aggregate, or an expression using
           // only fields that appear in the query output. Received an expression which uses a field
           // that is not in the query output.
-          "Parameter 1 ('value') of lag must be constant or output, but received input"
+          "Parameter 1 ('value') of lag must be literal, constant or output, but received input"
         );
       });
       test(
@@ -1523,12 +1523,37 @@ describe('expressions', () => {
         x.type === 'number' &&
         x.e
       ) {
-        const firstFrag = x.e[0];
-        if (typeof firstFrag === 'string') {
-          expect(firstFrag).toContain('(');
-        } else {
-          fail('expression with parens compiled oddly');
-        }
+        expect(x).toMatchObject({
+          'e': [
+            {
+              'function': 'numberLiteral',
+              'literal': '1',
+              'type': 'dialect',
+            },
+            // TODO not sure why there are TWO sets of parentheses... A previous version of this test
+            // just checked that there were ANY parens, so that went under the radar. Not fixing now.
+            '+((',
+            {
+              'denominator': [
+                {
+                  'function': 'numberLiteral',
+                  'literal': '4',
+                  'type': 'dialect',
+                },
+              ],
+              'function': 'div',
+              'numerator': [
+                {
+                  'function': 'numberLiteral',
+                  'literal': '3',
+                  'type': 'dialect',
+                },
+              ],
+              'type': 'dialect',
+            },
+            '))',
+          ],
+        });
       } else {
         fail('expression with parens compiled oddly');
       }
