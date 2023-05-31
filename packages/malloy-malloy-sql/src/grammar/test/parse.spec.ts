@@ -139,6 +139,36 @@ describe('MalloySQL parse', () => {
     });
   });
 
+  describe('Embedded Malloy', () => {
+    test('Parenthized embedded malloy can handle space between ( and {%', () => {
+      const parse = MalloySQLParser.parse(
+        '>>>sql connection:bigquery\nSELECT (  %{ malloy }%  )'
+      );
+      expect(
+        (parse.statements[0] as MalloySQLSQLStatement).embeddedMalloyQueries[0]
+          .query
+      ).toBe(' malloy ');
+      expect(
+        (parse.statements[0] as MalloySQLSQLStatement).embeddedMalloyQueries[0]
+          .parenthized
+      ).toBeTruthy();
+    });
+
+    test('Non-parenthized embedded malloy', () => {
+      const parse = MalloySQLParser.parse(
+        '>>>sql connection:bigquery\nSELECT %{ malloy }%'
+      );
+      expect(
+        (parse.statements[0] as MalloySQLSQLStatement).embeddedMalloyQueries[0]
+          .query
+      ).toBe(' malloy ');
+      expect(
+        (parse.statements[0] as MalloySQLSQLStatement).embeddedMalloyQueries[0]
+          .parenthized
+      ).toBeFalsy();
+    });
+  });
+
   describe('Parse output', () => {
     test('Should provide correct output for single statement', () => {
       const parse = MalloySQLParser.parse(
