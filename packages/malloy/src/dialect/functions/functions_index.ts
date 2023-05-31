@@ -78,3 +78,4 @@ export {
   fnLn,
   fnLog10,
 } from './simple_numeric_functions';
+export {fnAvgRolling} from './avg_rolling';

@@ -119,6 +119,7 @@ export function getDialectFunction(name: string): FunctionDef | undefined {
             params: overload.params,
             dialect: {[dialect.name]: overload.e},
             needsWindowOrderBy: overload.needsWindowOrderBy,
+            between: overload.between,
           });
         }
       }

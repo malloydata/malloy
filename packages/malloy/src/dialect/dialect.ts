@@ -232,6 +232,10 @@ export abstract class Dialect {
 
   abstract sqlRegexpMatch(expr: Expr, regex: Expr): Expr;
 
+  sqlLiteralNumber(literal: string): string {
+    return literal;
+  }
+
   dialectExpr(qi: QueryInfo, df: DialectFragment): Expr {
     switch (df.function) {
       case 'now':
@@ -261,6 +265,8 @@ export abstract class Dialect {
       }
       case 'stringLiteral':
         return [this.sqlLiteralString(df.literal)];
+      case 'numberLiteral':
+        return [this.sqlLiteralNumber(df.literal)];
       case 'regexpLiteral':
         return [this.sqlLiteralRegexp(df.literal)];
     }

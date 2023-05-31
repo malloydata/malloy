@@ -511,7 +511,8 @@ class QueryField extends QueryNode {
           context,
           funcCall,
           overload,
-          state
+          state,
+          args
         );
       }
       return this.generateExpressionFromExpr(
@@ -794,7 +795,8 @@ class QueryField extends QueryNode {
     context: QueryStruct,
     expr: Expr,
     overload: FunctionOverloadDef,
-    state: GenerateState
+    state: GenerateState,
+    args: Expr[]
   ): string {
     // const fields = resultStruct.getUngroupPartitions({
     //   type: 'all',
@@ -872,6 +874,36 @@ class QueryField extends QueryNode {
       }
     }
 
+    let between = '';
+    if (overload.between) {
+      const [preceding, following] = [
+        overload.between.preceding,
+        overload.between.following,
+      ].map(value => {
+        if (value === -1) {
+          return 'UNBOUNDED';
+        }
+        if (typeof value === 'number') {
+          return value;
+        }
+        const argIndex = overload.params.findIndex(
+          param => param.name === value
+        );
+        const arg = args[argIndex];
+        if (
+          arg.length !== 1 ||
+          typeof arg[0] === 'string' ||
+          arg[0].type !== 'dialect' ||
+          arg[0].function !== 'numberLiteral'
+        ) {
+          throw new Error('Invalid number of rows for window spec');
+        }
+        // TODO this does not handle float literals correctly
+        return arg[0].literal;
+      });
+      between = `ROWS BETWEEN ${preceding} PRECEDING AND ${following} FOLLOWING`;
+    }
+
     const funcSQL = this.generateExpressionFromExpr(
       resultStruct,
       context,
@@ -879,7 +911,7 @@ class QueryField extends QueryNode {
       state
     );
 
-    return `${funcSQL} OVER(${partitionBy} ${orderBy})`;
+    return `${funcSQL} OVER(${partitionBy} ${orderBy} ${between})`;
   }
 
   generateExpressionFromExpr(
@@ -2150,10 +2182,9 @@ class QueryQuery extends QueryField {
             expressions.push(expr.denominator);
             expressions.push(expr.numerator);
             break;
+          case 'numberLiteral':
           case 'timeLiteral':
-            break;
           case 'stringLiteral':
-            break;
           case 'regexpLiteral':
             break;
           case 'timeDiff':

@@ -21,32 +21,45 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
-import {ExprValue} from '../types/expr-value';
-import {FT} from '../fragtype-utils';
+import {ExpressionValueType} from '../..';
+import {
+  overload,
+  sql,
+  DialectFunctionOverloadDef,
+  minAnalytic,
+  maxAggregate,
+  output,
+  makeParam,
+  maxScalar,
+  literal,
+} from './util';
 
-export class ExprString extends ExpressionDef {
-  elementType = 'string literal';
-  value: string;
-  constructor(src: string) {
-    super();
-    const bareStr = src.slice(1, -1);
-    const val = bareStr.replace(/\\(.)/g, '$1');
-    this.value = val;
-  }
+const types: ExpressionValueType[] = ['string', 'number', 'timestamp', 'date'];
 
-  getExpression(_fs: FieldSpace): ExprValue {
-    return {
-      ...FT.stringT,
-      value: [
+export function fnAvgRolling(): DialectFunctionOverloadDef[] {
+  return types.flatMap(type => {
+    const value = makeParam('value', output(maxAggregate(type)));
+    const preceding = makeParam('preceding', literal(maxScalar('number')));
+    const following = makeParam('following', literal(maxScalar('number')));
+    return [
+      overload(
+        minAnalytic(type),
+        [value.param, preceding.param],
+        sql`AVG(${value.arg})`,
         {
-          type: 'dialect',
-          function: 'stringLiteral',
-          literal: this.value,
-        },
-      ],
-      evalSpace: 'literal',
-    };
-  }
+          needsWindowOrderBy: true,
+          between: {preceding: 'preceding', following: 0},
+        }
+      ),
+      overload(
+        minAnalytic(type),
+        [value.param, preceding.param, following.param],
+        sql`AVG(${value.arg})`,
+        {
+          needsWindowOrderBy: true,
+          between: {preceding: 'preceding', following: 'following'},
+        }
+      ),
+    ];
+  });
 }

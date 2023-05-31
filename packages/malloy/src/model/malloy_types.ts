@@ -351,6 +351,11 @@ export interface RegexpLiteralFragment extends DialectFragmentBase {
   literal: string;
 }
 
+export interface NumberLiteralFragment extends DialectFragmentBase {
+  function: 'numberLiteral';
+  literal: string;
+}
+
 export type DialectFragment =
   | DivFragment
   | TimeLiteralFragment
@@ -362,6 +367,7 @@ export type DialectFragment =
   | TimeExtractFragment
   | StringLiteralFragment
   | RegexpLiteralFragment
+  | NumberLiteralFragment
   | RegexpMatchFragment;
 
 export type Fragment =
@@ -876,12 +882,14 @@ export interface FunctionParamTypeDesc {
   evalSpace: EvalSpace;
 }
 
-export type EvalSpace = 'constant' | 'input' | 'output';
+export type EvalSpace = 'constant' | 'input' | 'output' | 'literal';
 
 export function mergeEvalSpaces(...evalSpaces: EvalSpace[]): EvalSpace {
-  if (evalSpaces.every(e => e === 'constant')) {
+  if (evalSpaces.every(e => e === 'constant' || e === 'literal')) {
     return 'constant';
-  } else if (evalSpaces.every(e => e === 'output' || e === 'constant')) {
+  } else if (
+    evalSpaces.every(e => e === 'output' || e === 'constant' || e === 'literal')
+  ) {
     return 'output';
   }
   return 'input';
@@ -907,6 +915,7 @@ export interface FunctionOverloadDef {
   // The expression type here is the MINIMUM return type
   returnType: TypeDesc;
   needsWindowOrderBy?: boolean;
+  between?: {preceding: number | string; following: number | string};
   params: FunctionParameterDef[];
   dialect: {
     [dialect: string]: Expr;

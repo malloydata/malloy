@@ -58,6 +58,7 @@ import {
   fnSumCumulative,
   fnMaxCumulative,
   fnLead,
+  fnAvgRolling,
 } from './functions_index';
 import {FunctionMap} from './function_map';
 
@@ -127,5 +128,6 @@ FUNCTIONS.add('sum_cumulative', fnSumCumulative);
 FUNCTIONS.add('min_window', fnMinWindow);
 FUNCTIONS.add('max_window', fnMaxWindow);
 FUNCTIONS.add('sum_window', fnSumWindow);
+FUNCTIONS.add('avg_rolling', fnAvgRolling);
 
 FUNCTIONS.seal();

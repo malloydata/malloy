@@ -37,7 +37,7 @@ export class ExprRegEx extends ExpressionDef {
       value: [
         {type: 'dialect', function: 'regexpLiteral', literal: this.regex},
       ],
-      evalSpace: 'constant',
+      evalSpace: 'literal',
     };
   }
 }

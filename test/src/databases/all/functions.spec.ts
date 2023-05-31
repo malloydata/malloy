@@ -1047,7 +1047,75 @@ expressionModels.forEach((expressionModel, databaseName) => {
       expect(result.data.path(9, 'next_state').value).toBe('NONE');
     });
   });
-  describe('last_value', () => {});
+  describe('last_value', () => {
+    it(`works - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `
+          query: state_facts -> {
+            group_by: state, births
+            order_by: births desc
+            calculate: least_births is last_value(births)
+          }`
+        )
+        .run({rowLimit: 100});
+      const numRows = result.data.toObject().length;
+      const lastBirths = result.data.path(numRows - 1, 'births').value;
+      expect(result.data.path(0, 'least_births').value).toBe(lastBirths);
+      expect(result.data.path(1, 'least_births').value).toBe(lastBirths);
+    });
+  });
+  describe('avg_rolling', () => {
+    it(`works - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `
+          query: state_facts -> {
+            group_by: state, births
+            order_by: births desc
+            calculate: rolling_avg is avg_rolling(births, 2)
+          }`
+        )
+        .run({rowLimit: 100});
+      const births0 = result.data.path(0, 'births').number.value;
+      const births1 = result.data.path(1, 'births').number.value;
+      const births2 = result.data.path(2, 'births').number.value;
+      const births3 = result.data.path(3, 'births').number.value;
+      expect(result.data.path(0, 'rolling_avg').number.value).toBe(births0);
+      expect(Math.floor(result.data.path(1, 'rolling_avg').number.value)).toBe(
+        Math.floor((births0 + births1) / 2)
+      );
+      expect(Math.floor(result.data.path(2, 'rolling_avg').number.value)).toBe(
+        Math.floor((births0 + births1 + births2) / 3)
+      );
+      expect(Math.floor(result.data.path(3, 'rolling_avg').number.value)).toBe(
+        Math.floor((births1 + births2 + births3) / 3)
+      );
+    });
+
+    it(`works forward - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `
+          query: state_facts -> { project: *; limit: 3 } -> {
+            group_by: state, births
+            order_by: births desc
+            calculate: rolling_avg is avg_rolling(births, 0, 2)
+          }`
+        )
+        .run({rowLimit: 100});
+      const births0 = result.data.path(0, 'births').number.value;
+      const births1 = result.data.path(1, 'births').number.value;
+      const births2 = result.data.path(2, 'births').number.value;
+      expect(Math.floor(result.data.path(0, 'rolling_avg').number.value)).toBe(
+        Math.floor((births0 + births1 + births2) / 3)
+      );
+      expect(Math.floor(result.data.path(1, 'rolling_avg').number.value)).toBe(
+        Math.floor((births1 + births2) / 2)
+      );
+      expect(result.data.path(2, 'rolling_avg').number.value).toBe(births2);
+    });
+  });
   describe('min_cumulative', () => {});
   describe('max_cumulative', () => {});
   describe('sum_cumulative', () => {});

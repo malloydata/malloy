@@ -168,7 +168,11 @@ export class ExprFunc extends ExpressionDef {
     for (const error of evalSpaceErrors) {
       const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
       const allowed =
-        error.maxEvalSpace === 'constant' ? 'constant' : 'constant or output';
+        error.maxEvalSpace === 'literal'
+          ? 'literal'
+          : error.maxEvalSpace === 'constant'
+          ? 'literal or constant'
+          : 'literal, constant or output';
       const arg = this.args[adjustedIndex];
       arg.log(
         `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
@@ -297,6 +301,7 @@ function findOverload(
           }
         }
         if (
+          (paramT.evalSpace === 'literal' && arg.evalSpace !== 'literal') ||
           (paramT.evalSpace === 'constant' &&
             (arg.evalSpace === 'input' || arg.evalSpace === 'output')) ||
           (paramT.evalSpace === 'output' && arg.evalSpace === 'input')

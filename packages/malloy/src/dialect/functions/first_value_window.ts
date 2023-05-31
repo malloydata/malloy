@@ -58,7 +58,10 @@ export function fnLastValueWindow(): DialectFunctionOverloadDef[] {
       minAnalytic(type),
       [param('value', output(maxAggregate(type)))],
       sql`LAST_VALUE(${arg('value')})`,
-      {needsWindowOrderBy: true}
+      {
+        needsWindowOrderBy: true,
+        between: {preceding: -1, following: -1},
+      }
     ),
   ]);
 }

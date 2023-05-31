@@ -36,6 +36,7 @@ export interface DialectFunctionOverloadDef {
   params: FunctionParameterDef[];
   e: Expr;
   needsWindowOrderBy?: boolean;
+  between: {preceding: number | string; following: number | string} | undefined;
 }
 
 export function arg(name: string): Fragment {
@@ -93,6 +94,13 @@ export function output(type: TypeDesc): TypeDesc {
   return {
     ...type,
     evalSpace: 'output',
+  };
+}
+
+export function literal(type: TypeDesc): TypeDesc {
+  return {
+    ...type,
+    evalSpace: 'literal',
   };
 }
 
@@ -195,12 +203,16 @@ export function overload(
   returnType: TypeDesc,
   params: FunctionParameterDef[],
   e: Expr,
-  options?: {needsWindowOrderBy?: boolean}
+  options?: {
+    needsWindowOrderBy?: boolean;
+    between?: {preceding: number | string; following: number | string};
+  }
 ): DialectFunctionOverloadDef {
   return {
     returnType,
     params,
     e,
     needsWindowOrderBy: options?.needsWindowOrderBy,
+    between: options?.between,
   };
 }
