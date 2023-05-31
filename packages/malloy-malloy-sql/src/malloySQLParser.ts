@@ -196,6 +196,7 @@ export class MalloySQLParser {
               query: part.malloy,
               parenthized: part.parenthized,
               range: this.convertRange(part.range),
+              malloyRange: this.convertRange(part.malloyRange),
             };
           });
 

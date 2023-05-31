@@ -144,28 +144,24 @@ describe('MalloySQL parse', () => {
       const parse = MalloySQLParser.parse(
         '>>>sql connection:bigquery\nSELECT (  %{ malloy }%  )'
       );
-      expect(
-        (parse.statements[0] as MalloySQLSQLStatement).embeddedMalloyQueries[0]
-          .query
-      ).toBe(' malloy ');
-      expect(
-        (parse.statements[0] as MalloySQLSQLStatement).embeddedMalloyQueries[0]
-          .parenthized
-      ).toBeTruthy();
+      const stmt = parse.statements[0] as MalloySQLSQLStatement;
+      const embeddedMalloy = stmt.embeddedMalloyQueries[0];
+      expect(embeddedMalloy.query).toBe(' malloy ');
+      expect(embeddedMalloy.parenthized).toBeTruthy();
+      expect(embeddedMalloy.range.start.character).toBe(8);
+      expect(embeddedMalloy.malloyRange.start.character).toBe(13);
     });
 
     test('Non-parenthized embedded malloy', () => {
       const parse = MalloySQLParser.parse(
         '>>>sql connection:bigquery\nSELECT %{ malloy }%'
       );
-      expect(
-        (parse.statements[0] as MalloySQLSQLStatement).embeddedMalloyQueries[0]
-          .query
-      ).toBe(' malloy ');
-      expect(
-        (parse.statements[0] as MalloySQLSQLStatement).embeddedMalloyQueries[0]
-          .parenthized
-      ).toBeFalsy();
+      const stmt = parse.statements[0] as MalloySQLSQLStatement;
+      const embeddedMalloy = stmt.embeddedMalloyQueries[0];
+      expect(embeddedMalloy.query).toBe(' malloy ');
+      expect(embeddedMalloy.parenthized).toBeFalsy();
+      expect(embeddedMalloy.range.start.character).toBe(8);
+      expect(embeddedMalloy.malloyRange.start.character).toBe(10);
     });
   });
 
