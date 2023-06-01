@@ -282,7 +282,7 @@ export class PostgresDialect extends Dialect {
   }
 
   sqlNow(): Expr {
-    return mkExpr`CURRENT_TIMESTAMP`;
+    return mkExpr`LOCALTIMESTAMP`;
   }
 
   sqlTrunc(qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {

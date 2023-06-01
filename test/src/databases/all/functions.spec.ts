@@ -499,9 +499,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
     });
 
     it(`works with now as the default value - ${databaseName}`, async () => {
-      // TODO there's an issue with Postgres here where the time literal has no timezone
-      // but `now` has a timezone.
-      if (databaseName === 'postgres') return;
       const result = await expressionModel
         .loadQuery(
           `
