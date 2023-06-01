@@ -172,9 +172,9 @@ describe('MalloySQL parse', () => {
       );
       expect(parse.statements).toHaveLength(1);
       expect(parse.statements[0].type).toBe(MalloySQLStatementType.SQL);
-      expect(parse.statements[0].statementText).toBe('SELECT 1');
+      expect(parse.statements[0].text).toBe('SELECT 1');
       expect(parse.statements[0].config?.connection).toBe('bigquery');
-      expect(parse.statements[0].statementIndex).toBe(0);
+      expect(parse.statements[0].index).toBe(0);
       expect(parse.statements[0].range.start.line).toBe(1);
       expect(parse.statements[0].range.start.character).toBe(0);
       expect(parse.statements[0].range.end.character).toBe(8);
@@ -186,18 +186,16 @@ describe('MalloySQL parse', () => {
       );
       expect(parse.statements).toHaveLength(2);
       expect(parse.statements[0].type).toBe(MalloySQLStatementType.SQL);
-      expect(parse.statements[0].statementText).toBe('SELECT 1\n');
+      expect(parse.statements[0].text).toBe('SELECT 1\n');
       expect(parse.statements[0].config?.connection).toBe('bigquery');
-      expect(parse.statements[0].statementIndex).toBe(0);
+      expect(parse.statements[0].index).toBe(0);
       expect(parse.statements[0].range.start.line).toBe(1);
       expect(parse.statements[0].range.start.character).toBe(0);
       expect(parse.statements[0].range.end.character).toBe(0);
 
       expect(parse.statements[1].type).toBe(MalloySQLStatementType.MALLOY);
-      expect(parse.statements[1].statementText).toBe(
-        'import "airports.malloy"'
-      );
-      expect(parse.statements[1].statementIndex).toBe(1);
+      expect(parse.statements[1].text).toBe('import "airports.malloy"');
+      expect(parse.statements[1].index).toBe(1);
       expect(parse.statements[1].range.start.line).toBe(3);
       expect(parse.statements[1].range.start.character).toBe(0);
       expect(parse.statements[1].range.end.character).toBe(24);
@@ -209,11 +207,11 @@ describe('MalloySQL parse', () => {
       );
       expect(parse.statements).toHaveLength(2);
       expect(parse.statements[0].type).toBe(MalloySQLStatementType.SQL);
-      expect(parse.statements[0].statementText).toBe(
+      expect(parse.statements[0].text).toBe(
         'SELECT 1 FROM %{ malloy-here }%;\n'
       );
       expect(parse.statements[0].config?.connection).toBe('bigquery');
-      expect(parse.statements[0].statementIndex).toBe(0);
+      expect(parse.statements[0].index).toBe(0);
       expect(parse.statements[0].range.start.line).toBe(1);
       expect(parse.statements[0].range.start.character).toBe(0);
       expect(parse.statements[0].range.end.character).toBe(0);
@@ -223,14 +221,13 @@ describe('MalloySQL parse', () => {
       expect(embeddedMalloy).toHaveLength(1);
       expect(embeddedMalloy[0].parenthized).toBeFalsy();
       expect(embeddedMalloy[0].query).toBe(' malloy-here ');
+      expect(embeddedMalloy[0].text).toBe('%{ malloy-here }%');
       expect(embeddedMalloy[0].range.start.line).toBe(1);
       expect(embeddedMalloy[0].range.start.character).toBe(14);
 
       expect(parse.statements[1].type).toBe(MalloySQLStatementType.MALLOY);
-      expect(parse.statements[1].statementText).toBe(
-        'import "airports.malloy"'
-      );
-      expect(parse.statements[1].statementIndex).toBe(1);
+      expect(parse.statements[1].text).toBe('import "airports.malloy"');
+      expect(parse.statements[1].index).toBe(1);
       expect(parse.statements[1].range.start.line).toBe(3);
       expect(parse.statements[1].range.start.character).toBe(0);
       expect(parse.statements[1].range.end.character).toBe(24);

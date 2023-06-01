@@ -161,8 +161,8 @@ export class MalloySQLParser {
       }
 
       const base: MalloySQLStatementBase = {
-        statementIndex,
-        statementText: parsedStatement.statementText,
+        index: statementIndex,
+        text: parsedStatement.statementText,
         range: this.convertRange(parsedStatement.range),
         delimiterRange: this.convertRange(parsedStatement.delimiterRange),
       };
@@ -197,6 +197,7 @@ export class MalloySQLParser {
               query: part.malloy,
               parenthized: part.parenthized,
               range: this.convertRange(part.range),
+              text: part.text,
               malloyRange: this.convertRange(part.malloyRange),
             };
           });
