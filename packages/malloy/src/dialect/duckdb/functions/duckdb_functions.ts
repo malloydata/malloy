@@ -24,10 +24,12 @@
 import {FUNCTIONS} from '../../functions';
 import {fnByteLength} from './byte_length';
 import {fnDiv} from './div';
+import {fnFormat} from './format';
 import {fnGreatest, fnLeast} from './greatest_and_least';
 import {fnIsInf} from './is_inf';
 import {fnIsNan} from './is_nan';
 import {fnRand} from './rand';
+import {fnReplace} from './replace';
 import {fnTrunc} from './trunc';
 import {fnUnicode} from './unicode';
 
@@ -41,4 +43,6 @@ DUCKDB_FUNCTIONS.add('least', fnLeast);
 DUCKDB_FUNCTIONS.add('div', fnDiv);
 DUCKDB_FUNCTIONS.add('byte_length', fnByteLength);
 DUCKDB_FUNCTIONS.add('unicode', fnUnicode);
+DUCKDB_FUNCTIONS.add('replace', fnReplace);
+DUCKDB_FUNCTIONS.add('format', fnFormat);
 DUCKDB_FUNCTIONS.seal();

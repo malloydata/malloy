@@ -21,25 +21,29 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn} from '@malloydata/malloy';
-import {Renderer} from '../renderer';
-import {createNullElement} from './utils';
+import {
+  overload,
+  minScalar,
+  anyExprType,
+  sql,
+  DialectFunctionOverloadDef,
+  makeParam,
+} from '../../functions/util';
 
-export class HTMLTextRenderer implements Renderer {
-  constructor(private readonly document: Document) {}
-
-  getText(data: DataColumn): string | null {
-    return data.value === null ? null : `${data.value}`;
-  }
-
-  async render(data: DataColumn): Promise<HTMLElement> {
-    const text = this.getText(data);
-    if (text === null) {
-      return createNullElement(this.document);
-    }
-
-    const element = this.document.createElement('span');
-    element.appendChild(this.document.createTextNode(text));
-    return element;
-  }
+export function fnSubstr(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('string'));
+  const position = makeParam('position', anyExprType('number'));
+  const length = makeParam('length', anyExprType('number'));
+  return [
+    overload(
+      minScalar('string'),
+      [value.param, position.param],
+      sql`SUBSTR(${value.arg}, CASE WHEN ${position.arg} < 0 THEN LENGTH(${value.arg}) + ${position.arg} + 1 ELSE ${position.arg} END)`
+    ),
+    overload(
+      minScalar('string'),
+      [value.param, position.param, length.param],
+      sql`SUBSTR(${value.arg}, CASE WHEN ${position.arg} < 0 THEN LENGTH(${value.arg}) + ${position.arg} + 1 ELSE ${position.arg} END, ${length.arg})`
+    ),
+  ];
 }

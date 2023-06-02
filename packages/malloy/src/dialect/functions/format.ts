@@ -60,6 +60,7 @@ export function fnFormat(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('string'),
       [
+        param('format_string', anyExprType('string')),
         params(
           'values',
           anyExprType('string'),

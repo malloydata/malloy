@@ -87,6 +87,24 @@ expressionModels.forEach((expressionModel, databaseName) => {
     expexted: string | boolean | number | null
   ) => funcTestGeneral(expr, 'aggregate', {success: expexted});
 
+  const funcTestMultiple = async (
+    ...testCases: [string, string | boolean | number | null][]
+  ) => {
+    const run = async () => {
+      return await expressionModel
+        .loadQuery(
+          `
+      query: aircraft -> { ${testCases.map((testCase, i) => `group_by: f${i} is ${testCase[0]}`)} }`
+        )
+        .run();
+    };
+
+    const result = await run();
+    testCases.forEach((testCase, i) => {
+      expect(result.data.path(0, `f${i}`).value).toBe(testCase[1]);
+    })
+  };
+
   describe('concat', () => {
     it(`works with two args - ${databaseName}`, async () => {
       await funcTest("concat('foo', 'bar')", 'foobar');
@@ -240,6 +258,17 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTest("replace('aaaa', 'a', 'c')", 'cccc');
     });
 
+    it(`works multiple replacement regex - ${databaseName}`, async () => {
+      await funcTest("replace('aaaa', r'.', 'c')", 'cccc');
+    });
+
+    it(`works multiple replacement capture - ${databaseName}`, async () => {
+      await funcTest(
+        "replace('axbxc', r'(a).(b).(c)', '\\\\0 - \\\\1 - \\\\2 - \\\\3')",
+        'axbxc - a - b - c'
+      );
+    });
+
     it(`works with empty replacement - ${databaseName}`, async () => {
       await funcTest("replace('aaaa', '', 'c')", 'aaaa');
     });
@@ -266,12 +295,10 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTest("substr('foo', 2, 1)", 'o');
     });
 
-    // TODO postgres doesn't do this properly?
-    it.skip(`works with negative start - ${databaseName}`, async () => {
+    it(`works with negative start - ${databaseName}`, async () => {
       await funcTest("substr('foo bar baz', -3)", 'baz');
     });
 
-    // TODO this doesn't work in Postgres...
     it(`works with null string - ${databaseName}`, async () => {
       await funcTest('substr(null, 1, 2)', null);
     });
@@ -968,7 +995,21 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTest('unicode(null)', null);
     });
   });
-  describe('format', () => {});
+  describe('format', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTestMultiple(
+        ["format('%d', 10)", '10'],
+        ["format('|%10d|', 11)", '|           11|'],
+        ["format('+%010d+', 12)", '+0000000012+'],
+        ["format('%\\'d', 123456789)", '123,456,789'],
+        ["format('-%s-', 'abcd efg')", '-abcd efg-'],
+        ["format('%f %E', 1.1, 2.2)", '1.100000 2.200000E+00'],
+        ["format('%t', @2003-11-01)", '10'],
+        ["format('%t', @2003-11-01 11:28:00)", '10']
+      );
+    });
+  });
+
   describe('repeat', () => {
     it(`works 0 - ${databaseName}`, async () => {
       await funcTest("repeat('foo', 0)", '');

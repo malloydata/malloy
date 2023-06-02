@@ -18,6 +18,30 @@ If no values are given, `concat` returns the empty string.
 
 `concat(1, null) = null` -->
 
+```malloy
+--! {"isModel": true, "modelPath": "/inline/w1.malloy", "isHidden": true}
+sql: my_sql_query is {
+  select: """
+    SELECT 1
+  """
+}
+
+source: limited_users is from_sql(my_sql_query) {
+  measure: user_count is count()
+}
+
+source: words is table('malloy-data.malloytest.words_bigger'){
+  query: five_letter_words is {
+    where: length(word) = 5 and word ~ r'^[a-z]{5}$'
+    project: word is upper(word)
+  }
+}
+
+source: numbers is table('malloy-data.malloytest.numbers') {
+  where: num <= 5
+}
+```
+
 #### `lower(value)`
 
 Returns a string like `value` but with all alphabetic characters in lowercase.

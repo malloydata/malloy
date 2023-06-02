@@ -29,8 +29,10 @@ import {fnIsInf} from './is_inf';
 import {fnIsNan} from './is_nan';
 import {fnRand} from './rand';
 import {fnRegexpExtract} from './regexp_extract';
+import {fnReplace} from './replace';
 import {fnRound} from './round';
 import {fnStddev} from './stddev';
+import {fnSubstr} from './substr';
 import {fnTrunc} from './trunc';
 import {fnUnicode} from './unicode';
 
@@ -47,4 +49,6 @@ POSTGRES_FUNCTIONS.add('byte_length', fnByteLength);
 POSTGRES_FUNCTIONS.add('unicode', fnUnicode);
 POSTGRES_FUNCTIONS.add('ifnull', fnIfnull);
 POSTGRES_FUNCTIONS.add('trunc', fnTrunc);
+POSTGRES_FUNCTIONS.add('substr', fnSubstr);
+POSTGRES_FUNCTIONS.add('replace', fnReplace);
 POSTGRES_FUNCTIONS.seal();

@@ -21,25 +21,30 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn} from '@malloydata/malloy';
-import {Renderer} from '../renderer';
-import {createNullElement} from './utils';
+import {
+  overload,
+  minScalar,
+  anyExprType,
+  sql,
+  DialectFunctionOverloadDef,
+  makeParam,
+} from '../../functions/util';
 
-export class HTMLTextRenderer implements Renderer {
-  constructor(private readonly document: Document) {}
-
-  getText(data: DataColumn): string | null {
-    return data.value === null ? null : `${data.value}`;
-  }
-
-  async render(data: DataColumn): Promise<HTMLElement> {
-    const text = this.getText(data);
-    if (text === null) {
-      return createNullElement(this.document);
-    }
-
-    const element = this.document.createElement('span');
-    element.appendChild(this.document.createTextNode(text));
-    return element;
-  }
+export function fnReplace(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('string'));
+  const stringPattern = makeParam('pattern', anyExprType('string'));
+  const regexPattern = makeParam('pattern', anyExprType('regular expression'));
+  const replacement = makeParam('replacement', anyExprType('string'));
+  return [
+    overload(
+      minScalar('string'),
+      [value.param, stringPattern.param, replacement.param],
+      sql`REPLACE(${value.arg}, ${stringPattern.arg}, ${replacement.arg})`
+    ),
+    overload(
+      minScalar('string'),
+      [value.param, regexPattern.param, replacement.param],
+      sql`REGEXP_REPLACE(${value.arg}, ${regexPattern.arg}, ${replacement.arg}, 'g')`
+    ),
+  ];
 }

@@ -22,32 +22,55 @@
  */
 
 import {
+  arg,
   overload,
+  params,
   minScalar,
   anyExprType,
+  spread,
   sql,
   DialectFunctionOverloadDef,
-  makeParam,
+  param,
 } from './util';
 
-export function fnReplace(): DialectFunctionOverloadDef[] {
-  const value = makeParam('value', anyExprType('string'));
-  const stringPattern = makeParam('pattern', anyExprType('string'));
-  const regexPattern = makeParam('pattern', anyExprType('regular expression'));
-  const replacement = makeParam('replacement', anyExprType('string'));
+export function fnFormat(): DialectFunctionOverloadDef[] {
   return [
+    // TODO maybe make a way to spread with a leading comma (when there are any args)
+    // in order to avoid having to split this into three overloads...
     overload(
       minScalar('string'),
-      [value.param, stringPattern.param, replacement.param],
-      sql`REPLACE(${value.arg}, ${stringPattern.arg}, ${replacement.arg})`
+      [param('format_string', anyExprType('string'))],
+      sql`PRINTF(${arg('format_string')})`
     ),
-    // TODO perhaps this should be a separate `regexp_replace` function.
-    // Which would better match BQ, but I think it should be just a different
-    // overload of `replace` (how it is here):
     overload(
       minScalar('string'),
-      [value.param, regexPattern.param, replacement.param],
-      sql`REGEXP_REPLACE(${value.arg}, ${regexPattern.arg}, ${replacement.arg})`
+      [
+        param('format_string', anyExprType('string')),
+        param(
+          'value',
+          anyExprType('string'),
+          anyExprType('number'),
+          anyExprType('date'),
+          anyExprType('timestamp'),
+          anyExprType('boolean')
+        ),
+      ],
+      sql`PRINTF(${arg('format_string')}, ${arg('value')})`
+    ),
+    overload(
+      minScalar('string'),
+      [
+        param('format_string', anyExprType('string')),
+        params(
+          'values',
+          anyExprType('string'),
+          anyExprType('number'),
+          anyExprType('date'),
+          anyExprType('timestamp'),
+          anyExprType('boolean')
+        ),
+      ],
+      sql`PRINTF(${arg('format_string')}, ${spread(arg('values'))})`
     ),
   ];
 }
