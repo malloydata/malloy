@@ -123,17 +123,24 @@ export interface MalloyParseRoot {
   malloyVersion: string;
 }
 
-interface URLContentsData extends ErrorResponse, NeedURLData, FinalResponse {
-  urlContents: string;
-  isPrecompiledModelDef: boolean;
+interface ParseData extends ErrorResponse, NeedURLData, FinalResponse {
+  parse: MalloyParseRoot;
 }
+export type ParseResponse = Partial<ParseData>;
 
-export type URLContentsResponse = Partial<URLContentsData>;
+/**
+ * ParseStep -- Parse the source URL
+ */
+interface SourceInfo {
+  lines: string[];
+  at: {begin: number; end: number}[];
+  length: number;
+}
+class ParseStep implements TranslationStep {
+  response?: ParseResponse;
+  sourceInfo?: SourceInfo;
 
-class URLContentsStep implements TranslationStep {
-  response?: URLContentsResponse;
-
-  step(that: MalloyTranslation): URLContentsResponse {
+  step(that: MalloyTranslation): ParseResponse {
     if (this.response) {
       return this.response;
     }
@@ -167,44 +174,7 @@ class URLContentsStep implements TranslationStep {
       }
       return {urls: [that.sourceURL]};
     }
-    const urlContents = srcEnt.value === '' ? '\n' : srcEnt.value;
-    const isPrecompiledModelDef = urlContents.trimStart().startsWith('{');
-    this.response = {isPrecompiledModelDef, urlContents};
-    return this.response;
-  }
-}
-
-interface ParseData extends ErrorResponse, NeedURLData, FinalResponse {
-  parse: MalloyParseRoot;
-}
-export type ParseResponse = Partial<ParseData>;
-
-/**
- * ParseStep -- Parse the source URL
- */
-interface SourceInfo {
-  lines: string[];
-  at: {begin: number; end: number}[];
-  length: number;
-}
-class ParseStep implements TranslationStep {
-  response?: ParseResponse;
-  sourceInfo?: SourceInfo;
-
-  constructor(readonly urlContentsStep: URLContentsStep) {}
-
-  step(that: MalloyTranslation): ParseResponse {
-    if (this.response) {
-      return this.response;
-    }
-
-    const urlContentsReq = this.urlContentsStep.step(that);
-    if (urlContentsReq.urlContents === undefined) {
-      return urlContentsReq;
-    }
-
-    const source = urlContentsReq.urlContents;
-
+    const source = srcEnt.value === '' ? '\n' : srcEnt.value;
     this.sourceInfo = this.getSourceInfo(source);
 
     let parse: MalloyParseRoot | undefined;
@@ -366,11 +336,6 @@ class ImportsAndTablesStep implements TranslationStep {
     }
 
     for (const child of that.childTranslators.values()) {
-      const kidContents = child.urlContentsStep.step(child);
-      if (isNeedResponse(kidContents)) {
-        return kidContents;
-      }
-      if (kidContents.isPrecompiledModelDef) continue;
       const kidNeeds = child.importsAndTablesStep.step(child);
       if (isNeedResponse(kidNeeds)) {
         return kidNeeds;
@@ -461,13 +426,6 @@ which has an SQL block ...
     // Now make sure that every child has fully translated itself
     // before this tree is ready to also translate ...
     for (const child of that.childTranslators.values()) {
-      // TODO this is pretty ugly -- maybe instead the astStep... etc, would just return that they were
-      // "skipped" because the step is not needed for the child...
-      const kidContents = child.urlContentsStep.step(child);
-      if (isNeedResponse(kidContents)) {
-        return kidContents;
-      }
-      if (kidContents.isPrecompiledModelDef) continue;
       const kidNeeds = child.astStep.step(child);
       if (isNeedResponse(kidNeeds)) {
         return kidNeeds;
@@ -594,42 +552,10 @@ class HelpContextStep implements TranslationStep {
 
 class TranslateStep implements TranslationStep {
   response?: TranslateResponse;
-  constructor(
-    readonly astStep: ASTStep,
-    readonly urlContentsStep: URLContentsStep
-  ) {}
+  constructor(readonly astStep: ASTStep) {}
 
   step(that: MalloyTranslation, extendingModel?: ModelDef): TranslateResponse {
     if (this.response) {
-      return this.response;
-    }
-
-    const urlContentsStep = this.urlContentsStep.step(that);
-    if (urlContentsStep.urlContents === undefined) {
-      return urlContentsStep;
-    }
-
-    const source = urlContentsStep.urlContents;
-
-    if (urlContentsStep.isPrecompiledModelDef) {
-      try {
-        that.modelDef = JSON.parse(source);
-        this.response = {
-          translated: {
-            modelDef: that.modelDef,
-            queryList: [],
-            sqlBlocks: [],
-          },
-        };
-      } catch (error) {
-        this.response = {
-          errors: [
-            {
-              message: `Error parsing pre-translated model: ${error}.`,
-            },
-          ],
-        };
-      }
       return this.response;
     }
 
@@ -682,17 +608,7 @@ class TranslateStep implements TranslationStep {
   }
 }
 
-interface ImportedTranslation {
-  modelDef: ModelDef;
-}
-
-// export class PreTranslatedChild implements ImportedTranslation {
-//   constructor(readonly sourceURL) {
-
-//   }
-// }
-
-export abstract class MalloyTranslation implements ImportedTranslation {
+export abstract class MalloyTranslation {
   abstract root: MalloyTranslator;
   childTranslators: Map<string, MalloyTranslation>;
   urlIsFullPath?: boolean;
@@ -700,7 +616,6 @@ export abstract class MalloyTranslation implements ImportedTranslation {
   sqlBlocks: SQLBlockStructDef[] = [];
   modelDef: ModelDef;
 
-  readonly urlContentsStep: URLContentsStep;
   readonly parseStep: ParseStep;
   readonly importsAndTablesStep: ImportsAndTablesStep;
   readonly astStep: ASTStep;
@@ -728,14 +643,13 @@ export abstract class MalloyTranslation implements ImportedTranslation {
      * it asks the step what it needs to complete, and all the right
      * things will happen automatically.
      */
-    this.urlContentsStep = new URLContentsStep();
-    this.parseStep = new ParseStep(this.urlContentsStep);
+    this.parseStep = new ParseStep();
     this.metadataStep = new MetadataStep(this.parseStep);
     this.completionsStep = new CompletionsStep(this.parseStep);
     this.helpContextStep = new HelpContextStep(this.parseStep);
     this.importsAndTablesStep = new ImportsAndTablesStep(this.parseStep);
     this.astStep = new ASTStep(this.importsAndTablesStep);
-    this.translateStep = new TranslateStep(this.astStep, this.urlContentsStep);
+    this.translateStep = new TranslateStep(this.astStep);
     this.references = new ReferenceList(sourceURL);
   }
 
@@ -833,11 +747,7 @@ export abstract class MalloyTranslation implements ImportedTranslation {
       if (did.translated) {
         for (const fromChild of child.modelDef.exports) {
           const modelEntry = child.modelDef.contents[fromChild];
-          if (
-            modelEntry.type === 'struct' ||
-            modelEntry.type === 'query' ||
-            modelEntry.type === 'function'
-          ) {
+          if (modelEntry.type === 'struct' || modelEntry.type === 'query') {
             exports[fromChild] = modelEntry;
           }
         }
