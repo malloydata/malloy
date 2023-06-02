@@ -71,6 +71,11 @@ function qtz(qi: QueryInfo): string | undefined {
   }
 }
 
+declare interface TimeMeasure {
+  use: string;
+  ratio: number;
+}
+
 export class StandardSQLDialect extends Dialect {
   name = 'standardsql';
   defaultNumberType = 'FLOAT64';
@@ -437,14 +442,14 @@ ${indent(sql)}
   }
 
   sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
-    const measureMap = {
-      microsecond: {use: 'microsecond', ratio: 1},
-      millisecond: {use: 'microsecond', ratio: 1000},
-      second: {use: 'millisecond', ratio: 1000},
-      minute: {use: 'second', ratio: 60},
-      hour: {use: 'minute', ratio: 60},
-      day: {use: 'hour', ratio: 24},
-      week: {use: 'day', ratio: 7},
+    const measureMap: Record<string, TimeMeasure> = {
+      'microsecond': {use: 'microsecond', ratio: 1},
+      'millisecond': {use: 'microsecond', ratio: 1000},
+      'second': {use: 'millisecond', ratio: 1000},
+      'minute': {use: 'second', ratio: 60},
+      'hour': {use: 'minute', ratio: 60},
+      'day': {use: 'hour', ratio: 24},
+      'week': {use: 'day', ratio: 7},
     };
     let lVal = from.value;
     let rVal = to.value;
