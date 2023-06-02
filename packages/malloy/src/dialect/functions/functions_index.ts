@@ -24,7 +24,6 @@
 export {fnConcat} from './concat';
 export {fnTrunc} from './trunc';
 export {fnStddev} from './stddev';
-export {fnFormat} from './format';
 export {fnRound} from './round';
 export {fnLower} from './lower';
 export {fnChr, fnAscii, fnUnicode} from './chr';

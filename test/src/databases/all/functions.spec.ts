@@ -94,7 +94,9 @@ expressionModels.forEach((expressionModel, databaseName) => {
       return await expressionModel
         .loadQuery(
           `
-      query: aircraft -> { ${testCases.map((testCase, i) => `group_by: f${i} is ${testCase[0]}`)} }`
+      query: aircraft -> { ${testCases.map(
+        (testCase, i) => `group_by: f${i} is ${testCase[0]}`
+      )} }`
         )
         .run();
     };
@@ -994,21 +996,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works null - ${databaseName}`, async () => {
       await funcTest('unicode(null)', null);
     });
-  });
-  describe('format', () => {
-    it(`works - ${databaseName}`, async () => {
-      await funcTestMultiple(
-        ["format('%d', 10)", '10'],
-        ["format('|%10d|', 11)", '|           11|'],
-        ["format('+%010d+', 12)", '+0000000012+'],
-        ["format('%\\'d', 123456789)", '123,456,789'],
-        ["format('-%s-', 'abcd efg')", '-abcd efg-'],
-        ["format('%f %E', 1.1, 2.2)", '1.100000 2.200000E+00'],
-        ["format('%t', @2003-11-01)", '10'],
-        ["format('%t', @2003-11-01 11:28:00)", '10']
-      );
-    });
-  });
 
   describe('repeat', () => {
     it(`works 0 - ${databaseName}`, async () => {

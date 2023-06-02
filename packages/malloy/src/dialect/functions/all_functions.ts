@@ -47,7 +47,6 @@ import {
   fnRand,
   fnPi,
   fnAscii,
-  fnFormat,
   fnReverse,
   fnRepeat,
   fnUnicode,
@@ -108,7 +107,6 @@ FUNCTIONS.add('nullif', fnNullif);
 FUNCTIONS.add('chr', fnChr);
 FUNCTIONS.add('ascii', fnAscii);
 FUNCTIONS.add('unicode', fnUnicode);
-FUNCTIONS.add('format', fnFormat);
 FUNCTIONS.add('repeat', fnRepeat);
 FUNCTIONS.add('reverse', fnReverse);
 
