@@ -25,7 +25,8 @@ import {FieldDeclaration} from '../query-items/field-declaration';
 import {ListOf} from '../types/malloy-element';
 
 export class DeclareFields extends ListOf<FieldDeclaration> {
-  constructor(fields: FieldDeclaration[], fieldType = 'declare') {
-    super(fieldType, fields);
+  elementType = 'declareFields';
+  constructor(fields: FieldDeclaration[]) {
+    super(fields);
   }
 }

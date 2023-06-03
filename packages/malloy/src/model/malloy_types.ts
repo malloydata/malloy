@@ -498,12 +498,17 @@ export function isAtomicFieldType(s: string): s is AtomicFieldType {
   ].includes(s);
 }
 
-/** All scalars can have an optional expression */
+/**
+ * Fields which contain scalar data all inherit from this. The field
+ * value could be an expression, and this is one of the objects
+ * which might have an annotation.
+ */
 export interface FieldAtomicDef
   extends NamedObject,
     Expression,
     ResultMetadata {
   type: AtomicFieldType;
+  annotation?: Annotation;
 }
 
 // this field definition represents something in the database.
@@ -643,6 +648,7 @@ export interface Pipeline {
 export interface Query extends Pipeline, Filtered, HasLocation {
   type?: 'query';
   structRef: StructRef;
+  annotation?: Annotation;
 }
 
 export type NamedQuery = Query & NamedObject;
@@ -716,6 +722,7 @@ export interface QuerySegment extends Filtered {
 
 export interface TurtleDef extends NamedObject, Pipeline {
   type: 'turtle';
+  annotation?: Annotation;
 }
 
 export type JoinRelationship =
@@ -792,6 +799,7 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
   parameters?: Record<string, Parameter>;
   queryTimezone?: string;
   dialect: string;
+  annotation?: Annotation;
 }
 
 export interface SQLBlockStructDef extends StructDef {
@@ -891,6 +899,12 @@ export interface ModelDef {
 
 /** Very common record type */
 export type NamedStructDefs = Record<string, StructDef>;
+
+/** Malloy source annotations attached to objects */
+export interface Annotation {
+  inherit?: Annotation;
+  notes?: string[];
+}
 
 export type QueryScalar = string | boolean | number | Date | Buffer | null;
 

@@ -154,7 +154,8 @@ export class ExpressionJoin extends Join {
 }
 
 export class Joins extends ListOf<Join> {
+  elementType = 'joinList';
   constructor(joins: Join[]) {
-    super('joinList', joins);
+    super(joins);
   }
 }

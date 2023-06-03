@@ -22,7 +22,7 @@
  */
 
 export * from './query-properties/nest';
-export * from './elements/annotation';
+export * from './elements/doc-annotation';
 export * from './elements/define-source';
 export * from './elements/define-query';
 export * from './elements/source';
@@ -83,7 +83,7 @@ export * from './query-items/field-declaration';
 export * from './query-items/field-references';
 export * from './query-properties/aggregate';
 export * from './query-properties/declare-fields';
-export * from './query-properties/dimmensions';
+export * from './query-properties/dimensions';
 export * from './query-properties/filters';
 export * from './query-properties/group-by';
 export * from './query-properties/indexing';
@@ -103,7 +103,7 @@ export * from './sources/table-source';
 export * from './sql-elements/sql-statement';
 export * from './sql-elements/sql-string';
 export * from './types/comparison';
-export * from './types/explore-desc';
+export * from './types/source-desc';
 export * from './types/source-property';
 export * from './types/expression-def';
 export * from './types/field-collection-member';

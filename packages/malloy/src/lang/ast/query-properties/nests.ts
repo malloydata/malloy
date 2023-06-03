@@ -25,7 +25,8 @@ import {ListOf} from '../types/malloy-element';
 import {NestedQuery} from '../types/nested-query';
 
 export class Nests extends ListOf<NestedQuery> {
+  elementType = 'nestedQueries';
   constructor(nests: NestedQuery[]) {
-    super('nestedQueries', nests);
+    super(nests);
   }
 }

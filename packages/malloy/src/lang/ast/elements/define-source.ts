@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {StructDef} from '../../../model/malloy_types';
 import {ModelDataRequest} from '../../translate-response';
 
 import {ErrorFactory} from '../error-factory';
@@ -67,21 +68,29 @@ export class DefineSource extends MalloyElement implements DocStatement {
       if (ErrorFactory.isErrorStructDef(structDef)) {
         return;
       }
-      doc.setEntry(this.name, {
-        entry: {
-          ...structDef,
-          as: this.name,
-          location: this.location,
-        },
-        exported: this.exported,
-      });
+      const entry: StructDef = {
+        ...structDef,
+        as: this.name,
+        location: this.location,
+      };
+      if (doc.currentAnnotation) {
+        entry.annotation = doc.currentAnnotation;
+        if (structDef.annotation) {
+          entry.annotation = {
+            inherit: structDef.annotation,
+            notes: doc.currentAnnotation.notes,
+          };
+        }
+      }
+      doc.setEntry(this.name, {entry, exported: this.exported});
     }
   }
 }
 
 export class DefineSourceList extends RunList implements DocStatement {
+  elementType = 'defineSources';
   constructor(sourceList: DefineSource[]) {
-    super('defineSources', sourceList);
+    super(sourceList);
   }
 
   execute(doc: Document): ModelDataRequest {

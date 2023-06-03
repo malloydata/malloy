@@ -59,8 +59,9 @@ export class OrderBy extends MalloyElement {
 }
 
 export class Ordering extends ListOf<OrderBy> {
+  elementType = 'ordering';
   constructor(list: OrderBy[]) {
-    super('ordering', list);
+    super(list);
   }
 
   getOrderBy(fs: FieldSpace): ModelOrderBy[] {

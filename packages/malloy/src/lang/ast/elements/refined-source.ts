@@ -23,7 +23,11 @@
 
 import cloneDeep from 'lodash/cloneDeep';
 
-import {StructDef, expressionIsCalculation} from '../../../model/malloy_types';
+import {
+  Annotation,
+  StructDef,
+  expressionIsCalculation,
+} from '../../../model/malloy_types';
 
 import {RefinedSpace} from '../field-space/refined-space';
 import {HasParameter} from '../parameters/has-parameter';
@@ -34,19 +38,22 @@ import {FieldListEdit} from '../source-properties/field-list-edit';
 import {PrimaryKey} from '../source-properties/primary-key';
 import {Renames} from '../source-properties/renames';
 import {Turtles} from '../source-properties/turtles';
-import {ExploreDesc} from '../types/explore-desc';
+import {SourceDesc} from '../types/source-desc';
 import {ExploreField} from '../types/explore-field';
 
 import {Source} from './source';
 import {TimezoneStatement} from '../source-properties/timezone-statement';
+import {ObjectAnnotation} from '../types/malloy-element';
+import {isNoteable} from './doc-annotation';
 
 /**
  * A Source made from a source reference and a set of refinements
  */
 export class RefinedSource extends Source {
   elementType = 'refinedSource';
+  currentAnnotation?: Annotation;
 
-  constructor(readonly source: Source, readonly refinement: ExploreDesc) {
+  constructor(readonly source: Source, readonly refinement: SourceDesc) {
     super({source: source, refinement: refinement});
   }
 
@@ -61,7 +68,15 @@ export class RefinedSource extends Source {
     const filters: Filter[] = [];
     let newTimezone: string | undefined;
 
+    let noteForSomething: Annotation | undefined = undefined;
     for (const el of this.refinement.list) {
+      if (el instanceof ObjectAnnotation) {
+        noteForSomething = {notes: el.notes};
+        continue;
+      }
+      if (isNoteable(el) && noteForSomething) {
+        el.annotation = noteForSomething;
+      }
       const errTo = el;
       if (el instanceof PrimaryKey) {
         if (primaryKey) {
@@ -89,6 +104,7 @@ export class RefinedSource extends Source {
       } else {
         errTo.log(`Unexpected explore property: '${errTo.elementType}'`);
       }
+      noteForSomething = undefined;
     }
 
     const from = cloneDeep(this.source.structDef());

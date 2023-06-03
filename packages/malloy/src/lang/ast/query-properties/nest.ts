@@ -32,6 +32,7 @@ import {opOutputStruct} from '../struct-utils';
 import {TurtleHeadedPipe} from '../types/turtle-headed-pipe';
 import {QueryInputSpace} from '../field-space/query-spaces';
 import {StaticSpace} from '../field-space/static-space';
+import {Noteable} from '../elements/doc-annotation';
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
@@ -39,7 +40,9 @@ function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   return !!ret;
 }
 
-export class TurtleDecl extends TurtleHeadedPipe {
+export class TurtleDecl extends TurtleHeadedPipe implements Noteable {
+  readonly isNoteable = true;
+  annotation?: model.Annotation;
   constructor(readonly name: string) {
     super();
   }
@@ -90,12 +93,16 @@ export class TurtleDecl extends TurtleHeadedPipe {
       this.nestedInQuerySpace = nestParent;
     }
     const pipe = this.getPipeline(fs);
-    return {
+    const turtle: model.TurtleDef = {
       type: 'turtle',
       name: this.name,
       ...pipe,
       location: this.location,
     };
+    if (this.annotation) {
+      turtle.annotation = this.annotation;
+    }
+    return turtle;
   }
 }
 

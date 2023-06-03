@@ -61,7 +61,7 @@ export class Filter extends ListOf<FilterElement> {
   // TODO(maden): Check this field usage/need
   private readonly havingClause?: boolean;
   constructor(elements: FilterElement[] = []) {
-    super('filterElements', elements);
+    super(elements);
   }
 
   set having(isHaving: boolean) {

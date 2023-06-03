@@ -52,13 +52,24 @@ export class DefineQuery extends MalloyElement implements DocStatement {
       name: this.name,
       location: this.location,
     };
+    if (doc.currentAnnotation) {
+      if (entry.annotation) {
+        entry.annotation = {
+          inherit: entry.annotation,
+          notes: doc.currentAnnotation.notes,
+        };
+      } else {
+        entry.annotation = doc.currentAnnotation;
+      }
+    }
     doc.setEntry(this.name, {entry, exported: true});
   }
 }
 
 export class DefineQueryList extends RunList implements DocStatement {
+  elementType = 'defineQueries';
   constructor(queryList: DefineQuery[]) {
-    super('defineQueries', queryList);
+    super(queryList);
   }
 
   execute(doc: Document): ModelDataRequest {

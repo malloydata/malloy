@@ -31,7 +31,7 @@ export class FieldReference extends ListOf<FieldName> {
   elementType = 'fieldReference';
 
   constructor(names: FieldName[]) {
-    super('fieldReference', names);
+    super(names);
   }
 
   get refString(): string {
@@ -86,7 +86,8 @@ export class WildcardFieldReference extends MalloyElement {
 export type FieldReferenceElement = FieldReference | WildcardFieldReference;
 
 export class FieldReferences extends ListOf<FieldReferenceElement> {
+  elementType = 'fieldReferenceList';
   constructor(members: FieldReferenceElement[]) {
-    super('fieldReferenceList', members);
+    super(members);
   }
 }

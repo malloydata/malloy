@@ -23,7 +23,7 @@
 
 import {NestDefinition, isNestedQuery} from '../query-properties/nest';
 import {NestReference} from '../query-properties/nest-reference';
-import {MalloyElement} from './malloy-element';
+import {MalloyElement, ObjectAnnotation} from './malloy-element';
 import {Aggregate} from '../query-properties/aggregate';
 import {DeclareFields} from '../query-properties/declare-fields';
 import {Filter} from '../query-properties/filters';
@@ -54,6 +54,7 @@ export type QueryProperty =
   | Nests
   | Aggregate
   | GroupBy
+  | ObjectAnnotation
   | TimezoneStatement;
 export function isQueryProperty(q: MalloyElement): q is QueryProperty {
   return (
@@ -68,6 +69,7 @@ export function isQueryProperty(q: MalloyElement): q is QueryProperty {
     q instanceof ProjectStatement ||
     q instanceof Aggregate ||
     q instanceof Nests ||
+    q instanceof ObjectAnnotation ||
     isNestedQuery(q) ||
     q instanceof GroupBy ||
     q instanceof TimezoneStatement

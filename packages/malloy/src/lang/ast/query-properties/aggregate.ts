@@ -26,8 +26,9 @@ import {ListOf} from '../types/malloy-element';
 import {QueryItem} from '../types/query-item';
 
 export class Aggregate extends ListOf<QueryItem> {
+  elementType = 'aggregateList';
   constructor(members: QueryItem[]) {
-    super('aggregate', members);
+    super(members);
     for (const el of members) {
       if (el instanceof FieldDeclaration) {
         el.isMeasure = true;

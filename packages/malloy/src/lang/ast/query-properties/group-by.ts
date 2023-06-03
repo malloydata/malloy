@@ -26,8 +26,9 @@ import {ListOf} from '../types/malloy-element';
 import {QueryItem} from '../types/query-item';
 
 export class GroupBy extends ListOf<QueryItem> {
+  elementType = 'groupBy';
   constructor(members: QueryItem[]) {
-    super('groupBy', members);
+    super(members);
     for (const el of members) {
       if (el instanceof FieldDeclaration) {
         el.isMeasure = false;

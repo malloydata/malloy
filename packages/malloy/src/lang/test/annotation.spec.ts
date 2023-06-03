@@ -21,114 +21,198 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation} from '../ast';
+import {TestTranslator} from './test-translator';
+import './parse-expects';
 
-interface AnAnnotation {
-  inherits?: AnAnnotation;
-  mine: string[];
-}
-
-const turtleA: AnAnnotation = {
-  mine: ['#turtleNote'],
-};
-
-const queryA: AnAnnotation = {
-  inherits: turtleA,
-  mine: ['#queryNote'],
-};
-
-const runStmt: AnAnnotation = {
-  inherits: queryA,
-  mine: ['#runNote'],
-};
-
-// eslint-disable-next-line no-console
-console.log(runStmt);
-
-describe('annotation parsing', () => {
-  test('doc annotations', () => {
-    const a = Annotation.make('#" This is a doc string');
-    expect(a).toBeDefined();
-    if (a) {
-      expect(a.annote).toMatchObject({docString: 'This is a doc string'});
+describe('annotation collection', () => {
+  test('single source annotation', () => {
+    const m = new TestTranslator(`
+      # note1
+      source: note_a is a
+    `);
+    expect(m).modelCompiled();
+    const note_a = m.getSourceDef('note_a');
+    expect(note_a).toBeDefined();
+    if (note_a) {
+      expect(note_a.annotation).toMatchObject({notes: ['# note1\n']});
     }
   });
-  test('simple property', () => {
-    const a = Annotation.make('# linechart');
-    expect(a).toBeDefined();
-    if (a) {
-      expect(a.annote).toMatchObject({properties: {linechart: true}});
-    }
-  });
-  test('simple quoted property', () => {
-    const a = Annotation.make('# "linechart"');
-    expect(a).toBeDefined();
-    if (a) {
-      expect(a.annote).toMatchObject({properties: {linechart: true}});
-    }
-  });
-  test('quoted property with " and space', () => {
-    const annotation = '# "a \\"chart\\""';
-    const a = Annotation.make(annotation);
-    expect(a).toBeDefined();
-    if (a) {
-      expect(a.annote).toMatchObject({properties: {'a \\"chart\\"': true}});
-    }
-  });
-  test('quoted property with value', () => {
-    const a = Annotation.make('# "linechart"=yes');
-    expect(a).toBeDefined();
-    if (a) {
-      expect(a.annote).toMatchObject({properties: {linechart: 'yes'}});
-    }
-  });
-  test('property with simple value', () => {
-    const a = Annotation.make('# chart=line');
-    expect(a).toBeDefined();
-    if (a) {
-      expect(a.annote).toMatchObject({properties: {chart: 'line'}});
-    }
-  });
-  test('property with quoted value', () => {
-    const a = Annotation.make('# chart="line"');
-    expect(a).toBeDefined();
-    if (a) {
-      expect(a.annote).toMatchObject({properties: {chart: 'line'}});
-    }
-  });
-  test('spaces ignored', () => {
-    const a = Annotation.make('#     chart =  line ');
-    expect(a).toBeDefined();
-    if (a) {
-      expect(a.annote).toMatchObject({properties: {chart: 'line'}});
-    }
-  });
-  test('= with no value', () => {
-    expect(Annotation.make('# name =  ')).toBeUndefined();
-  });
-  test('multiple = with no value', () => {
-    expect(Annotation.make('# name =  = me')).toBeUndefined();
-  });
-  test('missing quote', () => {
-    expect(Annotation.make('# name =  "no quote')).toBeUndefined();
-  });
-  test('leading =', () => {
-    expect(Annotation.make('#  =name  ')).toBeUndefined();
-  });
-  test('complex line', () => {
-    const a = Annotation.make('# a b=c "d"=e f="g" "h"="i" "j"');
-    expect(a).toBeDefined();
-    if (a) {
-      expect(a.annote).toMatchObject({
-        properties: {
-          a: true,
-          b: 'c',
-          d: 'e',
-          f: 'g',
-          h: 'i',
-          j: true,
-        },
+  test('multi line source annotation', () => {
+    const m = new TestTranslator(`
+      # note1
+      # note2
+      source: note_a is a
+    `);
+    expect(m).modelCompiled();
+    const note_a = m.getSourceDef('note_a');
+    expect(note_a).toBeDefined();
+    if (note_a) {
+      expect(note_a.annotation).toMatchObject({
+        notes: ['# note1\n', '# note2\n'],
       });
     }
   });
+  test('inherited annotation source', () => {
+    const m = new TestTranslator(`
+      # note0
+      source: note_b is a
+      # note1
+      source: note_a is note_b { primary_key: ai }
+    `);
+    expect(m).modelCompiled();
+    const note_a = m.getSourceDef('note_a');
+    expect(note_a).toBeDefined();
+    if (note_a) {
+      expect(note_a.annotation).toMatchObject({
+        inherit: {notes: ['# note0\n']},
+        notes: ['# note1\n'],
+      });
+    }
+  });
+  test('single query annotation', () => {
+    const m = new TestTranslator(`
+      # note1
+      query: note_a is a -> {project: *}
+    `);
+    expect(m).modelCompiled();
+    const note_a = m.getQuery('note_a');
+    expect(note_a).toBeDefined();
+    if (note_a) {
+      expect(note_a.annotation).toMatchObject({notes: ['# note1\n']});
+    }
+  });
+  test('multi line query annotation', () => {
+    const m = new TestTranslator(`
+      # note1
+      # note2
+      query: note_a is a -> {project: *}
+    `);
+    expect(m).modelCompiled();
+    const note_a = m.getQuery('note_a');
+    expect(note_a).toBeDefined();
+    if (note_a) {
+      expect(note_a.annotation).toMatchObject({
+        notes: ['# note1\n', '# note2\n'],
+      });
+    }
+  });
+  test('inherited annotation query', () => {
+    const m = new TestTranslator(`
+      # note0
+      query: note_b is a -> { project: * }
+      # note1
+      query: note_a is -> note_b { where: astr = 'a' }
+    `);
+    expect(m).modelCompiled();
+    const note_a = m.getQuery('note_a');
+    expect(note_a).toBeDefined();
+    if (note_a) {
+      expect(note_a.annotation).toMatchObject({
+        inherit: {notes: ['# note0\n']},
+        notes: ['# note1\n'],
+      });
+    }
+  });
+
+  test('single turtle annotation', () => {
+    const m = new TestTranslator(`
+      source: na is a {
+        # note1
+        query: qa is {project: *}
+      }
+      query: note_a is na->qa
+    `);
+    expect(m).modelCompiled();
+    const note_a = m.getQuery('note_a');
+    expect(note_a).toBeDefined();
+    if (note_a) {
+      expect(note_a.annotation).toMatchObject({notes: ['# note1\n']});
+    }
+  });
+  test.todo('use api to run the tests below');
+  //   test('doc annotations', () => {
+  //     const a = new ObjectAnnotation.make('#" This is a doc string');
+  //     expect(a).toBeDefined();
+  //     if (a) {
+  //       expect(a.annote).toMatchObject({docString: 'This is a doc string'});
+  //     }
+  //   });
+  //   test('simple property', () => {
+  //     const a = ObjectAnnotation.make('# linechart');
+  //     expect(a).toBeDefined();
+  //     if (a) {
+  //       expect(a.annote).toMatchObject({properties: {linechart: true}});
+  //     }
+  //   });
+  //   test('simple quoted property', () => {
+  //     const a = ObjectAnnotation.make('# "linechart"');
+  //     expect(a).toBeDefined();
+  //     if (a) {
+  //       expect(a.annote).toMatchObject({properties: {linechart: true}});
+  //     }
+  //   });
+  //   test('quoted property with " and space', () => {
+  //     const annotation = '# "a \\"chart\\""';
+  //     const a = ObjectAnnotation.make(annotation);
+  //     expect(a).toBeDefined();
+  //     if (a) {
+  //       expect(a.annote).toMatchObject({properties: {'a \\"chart\\"': true}});
+  //     }
+  //   });
+  //   test('quoted property with value', () => {
+  //     const a = ObjectAnnotation.make('# "linechart"=yes');
+  //     expect(a).toBeDefined();
+  //     if (a) {
+  //       expect(a.annote).toMatchObject({properties: {linechart: 'yes'}});
+  //     }
+  //   });
+  //   test('property with simple value', () => {
+  //     const a = ObjectAnnotation.make('# chart=line');
+  //     expect(a).toBeDefined();
+  //     if (a) {
+  //       expect(a.annote).toMatchObject({properties: {chart: 'line'}});
+  //     }
+  //   });
+  //   test('property with quoted value', () => {
+  //     const a = ObjectAnnotation.make('# chart="line"');
+  //     expect(a).toBeDefined();
+  //     if (a) {
+  //       expect(a.annote).toMatchObject({properties: {chart: 'line'}});
+  //     }
+  //   });
+  //   test('spaces ignored', () => {
+  //     const a = ObjectAnnotation.make('#     chart =  line ');
+  //     expect(a).toBeDefined();
+  //     if (a) {
+  //       expect(a.annote).toMatchObject({properties: {chart: 'line'}});
+  //     }
+  //   });
+  //   test('= with no value', () => {
+  //     expect(ObjectAnnotation.make('# name =  ')).toBeUndefined();
+  //   });
+  //   test('multiple = with no value', () => {
+  //     expect(ObjectAnnotation.make('# name =  = me')).toBeUndefined();
+  //   });
+  //   test('missing quote', () => {
+  //     expect(ObjectAnnotation.make('# name =  "no quote')).toBeUndefined();
+  //   });
+  //   test('leading =', () => {
+  //     expect(ObjectAnnotation.make('#  =name  ')).toBeUndefined();
+  //   });
+  //   test('complex line', () => {
+  //     const a = ObjectAnnotation.make('# a b=c "d"=e f="g" "h"="i" "j"');
+  //     expect(a).toBeDefined();
+  //     if (a) {
+  //       expect(a.annote).toMatchObject({
+  //         properties: {
+  //           a: true,
+  //           b: 'c',
+  //           d: 'e',
+  //           f: 'g',
+  //           h: 'i',
+  //           j: true,
+  //         },
+  //       });
+  //     }
+  //   });
 });

@@ -1217,9 +1217,7 @@ describe('error handling', () => {
     `)
   );
   test('popping out of embedding when not embedded', () => {
-    expect('}%').compileToFailWith(
-      "extraneous input '}%' expecting {<EOF>, EXPLORE, QUERY, SOURCE, SQL, IMPORT, ';'}"
-    );
+    expect('}%').compileToFailWith(/^extraneous input '}%'/);
   });
 
   test('bad sql in sql block', () => {

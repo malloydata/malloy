@@ -346,10 +346,10 @@ export class MalloyToAST
     return source;
   }
 
-  visitExploreProperties(pcx: parse.ExplorePropertiesContext): ast.ExploreDesc {
+  visitExploreProperties(pcx: parse.ExplorePropertiesContext): ast.SourceDesc {
     const filterCx = pcx.filterShortcut();
     const visited = pcx.exploreStatement().map(ecx => this.visit(ecx));
-    const propList = new ast.ExploreDesc(this.onlyExploreProperties(visited));
+    const propList = new ast.SourceDesc(this.onlyExploreProperties(visited));
     if (filterCx) {
       propList.push(this.getFilterShortcut(filterCx));
     }
@@ -1242,5 +1242,17 @@ export class MalloyToAST
     }
     const enabled = pcx.sampleSpec().TRUE() !== undefined;
     return new ast.SampleProperty({enable: enabled});
+  }
+
+  visitDocAnnotations(pcx: parse.DocAnnotationsContext): ast.DocAnnotation {
+    const allNotes = pcx.ANNOTATION().map(note => note.text);
+    return new ast.DocAnnotation(allNotes);
+  }
+
+  visitDefExploreAnnotation(
+    pcx: parse.DefExploreAnnotationContext
+  ): ast.ObjectAnnotation {
+    const allNotes = pcx.ANNOTATION().map(note => note.text);
+    return new ast.ObjectAnnotation(allNotes);
   }
 }

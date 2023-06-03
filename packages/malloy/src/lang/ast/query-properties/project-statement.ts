@@ -25,7 +25,8 @@ import {FieldCollectionMember} from '../types/field-collection-member';
 import {ListOf} from '../types/malloy-element';
 
 export class ProjectStatement extends ListOf<FieldCollectionMember> {
+  elementType = 'projectFields';
   constructor(members: FieldCollectionMember[]) {
-    super('fieldCollection', members);
+    super(members);
   }
 }

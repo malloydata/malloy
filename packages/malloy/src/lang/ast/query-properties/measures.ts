@@ -25,8 +25,9 @@ import {FieldDeclaration} from '../query-items/field-declaration';
 import {DeclareFields} from './declare-fields';
 
 export class Measures extends DeclareFields {
+  elementType = 'measureList';
   constructor(measures: FieldDeclaration[]) {
-    super(measures, 'measure');
+    super(measures);
     for (const dim of measures) {
       dim.isMeasure = true;
     }

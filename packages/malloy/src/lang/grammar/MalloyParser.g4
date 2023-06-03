@@ -30,8 +30,8 @@ malloyStatement
   : defineSourceStatement
   | defineSQLStatement
   | defineQuery
+  | docAnnotations
   | importStatement
-  | docAnnotation
   ;
 
 
@@ -82,8 +82,8 @@ importURL
   : JSON_STRING
   ;
 
-docAnnotation
-  : ANNOTATION
+docAnnotations
+  : ANNOTATION+
   ;
 
 topLevelQueryDefs
@@ -168,7 +168,7 @@ exploreStatement
   | (ACCEPT | EXCEPT) fieldNameList    # defExploreEditField
   | QUERY subQueryDefList              # defExploreQuery
   | timezoneStatement                  # defExploreTimezone
-  | ANNOTATION                         # defExploreAnnotation
+  | ANNOTATION+                        # defExploreAnnotation
   ;
 
 renameList
@@ -291,8 +291,8 @@ nestedQueryList
   ;
 
 nestEntry
-  : queryName (refineOperator? queryProperties)?      # nestExisting
-  | queryName IS pipelineFromName   # nestDef
+  : queryName (refineOperator? queryProperties)?   # nestExisting
+  | queryName IS pipelineFromName                  # nestDef
   ;
 
 aggregateStatement
