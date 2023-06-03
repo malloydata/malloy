@@ -29,7 +29,6 @@ import {
   ModelDef,
   Query,
   SQLBlockStructDef,
-  Annotation,
 } from '../../../model/malloy_types';
 
 import {MessageLogger} from '../../parse-log';
@@ -340,11 +339,11 @@ export class RunList extends ListOf<DocStatement> {
         if (resp) {
           return resp;
         }
-        this.execCursor += 1;
-        if (!(el instanceof ObjectAnnotation)) {
-          doc.consumeAnnotation();
+        if (!(el instanceof DocAnnotation)) {
+          doc.notes = []; // Success, consume the annotation;
         }
       }
+      this.execCursor += 1;
     }
     return undefined;
   }
@@ -370,7 +369,7 @@ export class Document extends MalloyElement implements NameSpace {
   sqlBlocks: SQLBlockStructDef[] = [];
   statements: RunList;
   didInitModel = false;
-  currentAnnotation?: Annotation;
+  notes: string[] = [];
 
   constructor(statements: DocStatement[]) {
     super();
@@ -446,23 +445,6 @@ export class Document extends MalloyElement implements NameSpace {
   setEntry(str: string, ent: ModelEntry): void {
     this.documentModel[str] = ent;
   }
-
-  consumeAnnotation() {
-    this.currentAnnotation = undefined;
-  }
-}
-
-/**
- * Annotation lines are collected as a set of statements are executed
- * by the model/query execution loop, this is just a data structure
- * to hold the value. Not 100% sure that the collection should be
- * done in a more common place, but I haven't yet figured out how to
- * stash the collected results in a way which each of the executors
- * could find.
- * mtoy todo fix that or shorten this comment
- */
-export interface Notetaker {
-  currentAnnotation?: Annotation;
 }
 
 export class ObjectAnnotation extends MalloyElement {
@@ -474,8 +456,9 @@ export class ObjectAnnotation extends MalloyElement {
 
 export class DocAnnotation extends ObjectAnnotation implements DocStatement {
   elementType = 'model element annotation';
+
   execute(doc: Document): ModelDataRequest {
-    doc.currentAnnotation = {notes: this.notes};
+    doc.notes = this.notes;
     return;
   }
 }

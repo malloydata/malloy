@@ -107,8 +107,9 @@ export class TurtleDecl extends TurtleHeadedPipe implements Noteable {
       ...pipe,
       location: this.location,
     };
-    if (this.annotation) {
-      turtle.annotation = this.annotation;
+    const turtleNote = this.getAnnotation();
+    if (turtleNote) {
+      turtle.annotation = turtleNote;
     }
     return turtle;
   }

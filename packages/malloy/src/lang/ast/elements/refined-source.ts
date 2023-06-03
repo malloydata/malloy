@@ -68,14 +68,17 @@ export class RefinedSource extends Source {
     const filters: Filter[] = [];
     let newTimezone: string | undefined;
 
-    let noteForSomething: Annotation | undefined = undefined;
+    let blockNotes: string[] = [];
     for (const el of this.refinement.list) {
       if (el instanceof ObjectAnnotation) {
-        noteForSomething = {notes: el.notes};
+        blockNotes = el.notes;
         continue;
       }
-      if (isNoteable(el) && noteForSomething) {
-        el.setAnnotation(noteForSomething);
+      if (blockNotes.length > 0) {
+        if (isNoteable(el)) {
+          el.setAnnotation({blockNotes});
+        }
+        blockNotes = [];
       }
       const errTo = el;
       if (el instanceof PrimaryKey) {
@@ -104,7 +107,6 @@ export class RefinedSource extends Source {
       } else {
         errTo.log(`Unexpected explore property: '${errTo.elementType}'`);
       }
-      noteForSomething = undefined;
     }
 
     const from = cloneDeep(this.source.structDef());

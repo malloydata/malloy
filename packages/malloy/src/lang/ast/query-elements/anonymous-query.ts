@@ -36,14 +36,10 @@ export class AnonymousQuery extends MalloyElement implements DocStatement {
 
   execute(doc: Document): ModelDataRequest {
     const modelQuery = this.theQuery.query();
-    if (doc.currentAnnotation) {
-      modelQuery.annotation = doc.currentAnnotation;
-      if (modelQuery.annotation) {
-        modelQuery.annotation = {
-          inherit: modelQuery.annotation,
-          notes: doc.currentAnnotation.notes,
-        };
-      }
+    if (doc.notes.length > 0) {
+      modelQuery.annotation = modelQuery.annotation
+        ? {refines: modelQuery.annotation, notes: doc.notes}
+        : {notes: doc.notes};
     }
     doc.queryList.push(modelQuery);
     return undefined;

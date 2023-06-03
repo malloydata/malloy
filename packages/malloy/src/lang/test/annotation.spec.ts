@@ -37,6 +37,19 @@ describe('annotation collection', () => {
       expect(note_a.annotation).toMatchObject({notes: ['# note1\n']});
     }
   });
+  test('top level annotations are consumed', () => {
+    const m = new TestTranslator(`
+      # note1
+      source: note_a is a
+      source: note_b is a
+    `);
+    expect(m).modelCompiled();
+    const note_b = m.getSourceDef('note_b');
+    expect(note_b).toBeDefined();
+    if (note_b) {
+      expect(note_b.annotation).toBeUndefined();
+    }
+  });
   test('multi line source annotation', () => {
     const m = new TestTranslator(`
       # note1
@@ -64,7 +77,7 @@ describe('annotation collection', () => {
     expect(note_a).toBeDefined();
     if (note_a) {
       expect(note_a.annotation).toMatchObject({
-        inherit: {notes: ['# note0\n']},
+        refines: {notes: ['# note0\n']},
         notes: ['# note1\n'],
       });
     }
@@ -108,17 +121,18 @@ describe('annotation collection', () => {
     expect(note_a).toBeDefined();
     if (note_a) {
       expect(note_a.annotation).toMatchObject({
-        inherit: {notes: ['# note0\n']},
+        refines: {notes: ['# note0\n']},
         notes: ['# note1\n'],
       });
     }
   });
 
-  test('single turtle annotation', () => {
+  test('turtle block annotation', () => {
     const m = new TestTranslator(`
       source: na is a {
         # note1
-        query: qa is {project: *}
+        query:
+          qa is {project: *}
       }
       query: note_a is na->qa
     `);
@@ -126,7 +140,7 @@ describe('annotation collection', () => {
     const note_a = m.getQuery('note_a');
     expect(note_a).toBeDefined();
     if (note_a) {
-      expect(note_a.annotation).toMatchObject({notes: ['# note1\n']});
+      expect(note_a.annotation).toMatchObject({blockNotes: ['# note1\n']});
     }
   });
   test.todo('use api to run the tests below');

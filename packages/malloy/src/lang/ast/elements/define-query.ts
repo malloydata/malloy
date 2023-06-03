@@ -52,15 +52,10 @@ export class DefineQuery extends MalloyElement implements DocStatement {
       name: this.name,
       location: this.location,
     };
-    if (doc.currentAnnotation) {
-      if (entry.annotation) {
-        entry.annotation = {
-          inherit: entry.annotation,
-          notes: doc.currentAnnotation.notes,
-        };
-      } else {
-        entry.annotation = doc.currentAnnotation;
-      }
+    if (doc.notes.length > 0) {
+      entry.annotation = entry.annotation
+        ? {refines: entry.annotation, notes: doc.notes}
+        : {notes: doc.notes};
     }
     doc.setEntry(this.name, {entry, exported: true});
   }

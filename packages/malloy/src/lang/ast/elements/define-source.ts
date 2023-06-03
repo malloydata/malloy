@@ -73,14 +73,10 @@ export class DefineSource extends MalloyElement implements DocStatement {
         as: this.name,
         location: this.location,
       };
-      if (doc.currentAnnotation) {
-        entry.annotation = doc.currentAnnotation;
-        if (structDef.annotation) {
-          entry.annotation = {
-            inherit: structDef.annotation,
-            notes: doc.currentAnnotation.notes,
-          };
-        }
+      if (doc.notes.length > 0) {
+        entry.annotation = structDef.annotation
+          ? {refines: structDef.annotation, notes: doc.notes}
+          : {notes: doc.notes};
       }
       doc.setEntry(this.name, {entry, exported: this.exported});
     }

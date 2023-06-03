@@ -131,10 +131,12 @@ export function isNoteable(el: unknown): el is Noteable {
 //   return new ObjectAnnotation({properties});
 // }
 
-export class ZDocAnnotation extends ObjectAnnotation implements DocStatement {
-  elementType = 'model element annotation';
-  execute(doc: Document): ModelDataRequest {
-    doc.currentAnnotation = {notes: this.notes};
+export class TODO_DELETE_ME_DocAnnotation
+  extends ObjectAnnotation
+  implements DocStatement
+{
+  elementType = 'no model element annotation';
+  execute(_doc: Document): ModelDataRequest {
     return;
   }
 }
