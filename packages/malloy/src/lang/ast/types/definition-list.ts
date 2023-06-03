@@ -7,9 +7,9 @@ export abstract class DefinitionList<DT extends MalloyElement>
   implements Noteable
 {
   readonly isNoteable = true;
-  anonotation: Annotation | undefined;
+  private anonotation: Annotation | undefined;
 
-  addAnnotation(note: Annotation): void {
+  setAnnotation(note: Annotation): void {
     this.anonotation = note;
     this.distributeAnnotation();
   }
@@ -27,7 +27,7 @@ export abstract class DefinitionList<DT extends MalloyElement>
       // If we have an annotation, distribute it to all the children.
       for (const el of this.elements) {
         if (isNoteable(el)) {
-          el.addAnnotation = {...theNote};
+          el.setAnnotation = {...theNote};
         }
       }
     }

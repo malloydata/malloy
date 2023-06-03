@@ -75,7 +75,7 @@ export class RefinedSource extends Source {
         continue;
       }
       if (isNoteable(el) && noteForSomething) {
-        el.addAnnotation(noteForSomething);
+        el.setAnnotation(noteForSomething);
       }
       const errTo = el;
       if (el instanceof PrimaryKey) {

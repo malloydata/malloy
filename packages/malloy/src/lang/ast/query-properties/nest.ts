@@ -47,7 +47,7 @@ export class TurtleDecl extends TurtleHeadedPipe implements Noteable {
     super();
   }
 
-  addAnnotation(note: model.Annotation): void {
+  setAnnotation(note: model.Annotation): void {
     this.annotation = note;
   }
 
