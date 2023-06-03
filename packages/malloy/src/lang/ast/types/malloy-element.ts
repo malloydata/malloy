@@ -302,7 +302,7 @@ export abstract class ListOf<ET extends MalloyElement> extends MalloyElement {
     this.newContents();
   }
 
-  private newContents(): void {
+  protected newContents(): void {
     this.has({listOf: this.elements});
   }
 

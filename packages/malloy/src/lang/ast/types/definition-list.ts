@@ -7,19 +7,34 @@ export abstract class DefinitionList<DT extends MalloyElement>
   implements Noteable
 {
   readonly isNoteable = true;
-  private takeNotes = true;
-  anonotation?: Annotation;
-  elementType = 'genericDefinitionList';
+  anonotation: Annotation | undefined;
 
-  get list(): DT[] {
-    if (this.takeNotes && this.anonotation) {
+  addAnnotation(note: Annotation): void {
+    this.anonotation = note;
+    this.distributeAnnotation();
+  }
+
+  getAnnotation(): Annotation | undefined {
+    return this.anonotation;
+  }
+
+  distributeAnnotation() {
+    // mtoy todo fix this when you understand what is going on
+    // workaround for `this.annotation` testing as undefined, when it is defined
+    const key = 'annotation';
+    const theNote = this[key];
+    if (theNote !== undefined) {
+      // If we have an annotation, distribute it to all the children.
       for (const el of this.elements) {
         if (isNoteable(el)) {
-          el.annotation = this.anonotation;
+          el.addAnnotation = {...theNote};
         }
       }
-      this.takeNotes = false;
     }
-    return this.elements;
+  }
+
+  protected newContents(): void {
+    super.newContents();
+    this.distributeAnnotation();
   }
 }

@@ -47,6 +47,14 @@ export class TurtleDecl extends TurtleHeadedPipe implements Noteable {
     super();
   }
 
+  addAnnotation(note: model.Annotation): void {
+    this.annotation = note;
+  }
+
+  getAnnotation(): model.Annotation | undefined {
+    return this.annotation;
+  }
+
   getPipeline(fs: FieldSpace): model.Pipeline {
     const modelPipe: model.Pipeline = {pipeline: []};
     if (this.turtleName) {

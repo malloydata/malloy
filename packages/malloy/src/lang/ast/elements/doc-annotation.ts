@@ -31,7 +31,8 @@ import {
 
 export interface Noteable {
   isNoteable: true;
-  annotation?: Annotation;
+  setAnnotation(note: Annotation): void;
+  getAnnotation(): Annotation | undefined;
 }
 export function isNoteable(el: unknown): el is Noteable {
   return (el as Noteable).isNoteable;
