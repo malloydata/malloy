@@ -14,17 +14,17 @@ export abstract class DefinitionList<DT extends MalloyElement>
     this.distributeAnnotation();
   }
 
-  getAnnotation(): Annotation | undefined {
-    return this.noteForChildren;
+  getAnnotation(): Annotation {
+    return this.noteForChildren || {};
   }
 
   distributeAnnotation() {
-    const theNote = this.noteForChildren;
-    if (theNote !== undefined) {
+    const blockNotes = this.noteForChildren?.notes;
+    if (blockNotes && blockNotes.length > 0) {
       // If we have an annotation, distribute it to all the children.
       for (const el of this.elements) {
         if (isNoteable(el)) {
-          el.setAnnotation({...theNote});
+          el.setAnnotation({...el.getAnnotation(), blockNotes});
         }
       }
     }

@@ -68,17 +68,19 @@ export class RefinedSource extends Source {
     const filters: Filter[] = [];
     let newTimezone: string | undefined;
 
-    let blockNotes: string[] = [];
+    let notesForDef: string[] = [];
     for (const el of this.refinement.list) {
       if (el instanceof ObjectAnnotation) {
-        blockNotes = el.notes;
+        notesForDef = el.notes;
+        // Yeah is this weird, because of the grammar, the next statement
+        // will be the one which wants the notes
         continue;
       }
-      if (blockNotes.length > 0) {
+      if (notesForDef.length > 0) {
         if (isNoteable(el)) {
-          el.setAnnotation({blockNotes});
+          el.setAnnotation({notes: notesForDef});
         }
-        blockNotes = [];
+        notesForDef = [];
       }
       const errTo = el;
       if (el instanceof PrimaryKey) {

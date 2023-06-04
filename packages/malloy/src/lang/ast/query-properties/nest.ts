@@ -51,8 +51,8 @@ export class TurtleDecl extends TurtleHeadedPipe implements Noteable {
     this.annotation = note;
   }
 
-  getAnnotation(): model.Annotation | undefined {
-    return this.annotation;
+  getAnnotation(): model.Annotation {
+    return this.annotation || {};
   }
 
   getPipeline(fs: FieldSpace): model.Pipeline {

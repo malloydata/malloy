@@ -445,6 +445,7 @@ export class MalloyToAST
   }
 
   visitJoinOn(pcx: parse.JoinOnContext): ast.Join {
+    const notes = pcx.ANNOTATION().map(cx => cx.text);
     const joinAs = this.getModelEntryName(pcx.joinNameDef());
     const joinFrom = this.getJoinSource(joinAs, pcx.explore());
     const join = new ast.ExpressionJoin(joinAs, joinFrom);
@@ -452,18 +453,26 @@ export class MalloyToAST
     if (onCx) {
       join.joinOn = this.getFieldExpr(onCx);
     }
+    if (notes.length > 0) {
+      join.setAnnotation({notes});
+    }
     return this.astAt(join, pcx);
   }
 
   visitJoinWith(pcx: parse.JoinWithContext): ast.Join {
+    const notes = pcx.ANNOTATION().map(cx => cx.text);
     const joinAs = this.getModelEntryName(pcx.joinNameDef());
     const joinFrom = this.getJoinSource(joinAs, pcx.explore());
     const joinOn = this.getFieldExpr(pcx.fieldExpr());
     const join = new ast.KeyJoin(joinAs, joinFrom, joinOn);
+    if (notes.length > 0) {
+      join.setAnnotation({notes});
+    }
     return this.astAt(join, pcx);
   }
 
   visitFieldDef(pcx: parse.FieldDefContext): ast.FieldDeclaration {
+    const notes = pcx.ANNOTATION().map(cx => cx.text);
     const defCx = pcx.fieldExpr();
     const fieldName = this.getIdText(pcx.fieldNameDef());
     const valExpr = this.getFieldExpr(defCx);
@@ -472,6 +481,9 @@ export class MalloyToAST
       fieldName,
       this.getSourceCode(defCx)
     );
+    if (notes.length > 0) {
+      def.setAnnotation({notes});
+    }
     return this.astAt(def, pcx);
   }
 
@@ -839,8 +851,12 @@ export class MalloyToAST
   }
 
   visitExploreQueryDef(pcx: parse.ExploreQueryDefContext): ast.TurtleDecl {
+    const notes = pcx.ANNOTATION().map(a => a.text);
     const name = this.getIdText(pcx.exploreQueryNameDef());
     const queryDef = new ast.TurtleDecl(name);
+    if (notes.length > 0) {
+      queryDef.setAnnotation({notes: notes});
+    }
     this.buildPipelineFromName(queryDef, pcx.pipelineFromName());
     return this.astAt(queryDef, pcx);
   }

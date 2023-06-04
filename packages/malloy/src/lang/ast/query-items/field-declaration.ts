@@ -23,10 +23,12 @@
 
 import {Dialect} from '../../../dialect/dialect';
 import {
+  Annotation,
   FieldTypeDef,
   isAtomicFieldType,
   StructDef,
 } from '../../../model/malloy_types';
+import {Noteable} from '../elements/doc-annotation';
 
 import {compressExpr} from '../expressions/utils';
 import {FT} from '../fragtype-utils';
@@ -36,9 +38,11 @@ import {isGranularResult} from '../types/granular-result';
 import {LookupResult} from '../types/lookup-result';
 import {MalloyElement} from '../types/malloy-element';
 
-export class FieldDeclaration extends MalloyElement {
+export class FieldDeclaration extends MalloyElement implements Noteable {
   elementType = 'fieldDeclaration';
   isMeasure?: boolean;
+  readonly isNoteable = true;
+  private annotation?: Annotation;
 
   constructor(
     readonly expr: ExpressionDef,
@@ -94,6 +98,9 @@ export class FieldDeclaration extends MalloyElement {
       if (isGranularResult(exprValue) && template.type === 'timestamp') {
         template.timeframe = exprValue.timeframe;
       }
+      if (this.annotation) {
+        template.annotation = this.annotation;
+      }
       return template;
     }
     const circularDef = exprFS instanceof DefSpace && exprFS.foundCircle;
@@ -109,6 +116,14 @@ export class FieldDeclaration extends MalloyElement {
       name: `error_defining_${exprName}`,
       type: 'string',
     };
+  }
+
+  setAnnotation(note: Annotation) {
+    this.annotation = note;
+  }
+
+  getAnnotation(): Annotation {
+    return this.annotation || {};
   }
 }
 

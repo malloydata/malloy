@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TestTranslator} from './test-translator';
+import {TestTranslator, getField} from './test-translator';
 import './parse-expects';
 
 describe('annotation collection', () => {
@@ -126,13 +126,11 @@ describe('annotation collection', () => {
       });
     }
   });
-
   test('turtle block annotation', () => {
     const m = new TestTranslator(`
       source: na is a {
         # note1
-        query:
-          qa is {project: *}
+        query: qa is {project: *}
       }
       query: note_a is na->qa
     `);
@@ -141,6 +139,127 @@ describe('annotation collection', () => {
     expect(note_a).toBeDefined();
     if (note_a) {
       expect(note_a.annotation).toMatchObject({blockNotes: ['# note1\n']});
+    }
+  });
+  test('fielddef block annotation', () => {
+    const m = new TestTranslator(`
+      source: na is a {
+        # note1
+        dimension: note_a is astr
+      }
+    `);
+    expect(m).modelCompiled();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    if (na) {
+      const note_a = getField(na, 'note_a');
+      expect(note_a?.annotation).toMatchObject({blockNotes: ['# note1\n']});
+    }
+  });
+  test('fielddef block annotation is consumed', () => {
+    const m = new TestTranslator(`
+      source: na is a {
+        # note1
+        dimension: note_b is astr
+        dimension: note_a is astr
+      }
+    `);
+    expect(m).modelCompiled();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    if (na) {
+      const note_a = getField(na, 'note_a');
+      expect(note_a?.annotation).toBeUndefined();
+    }
+  });
+  test('fielddef block and local annotation', () => {
+    const m = new TestTranslator(`
+      source: na is a {
+        # note1
+        dimension:
+          # note2
+          note_a is astr
+      }
+    `);
+    expect(m).modelCompiled();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    if (na) {
+      const note_a = getField(na, 'note_a');
+      expect(note_a?.annotation).toMatchObject({
+        blockNotes: ['# note1\n'],
+        notes: ['# note2\n'],
+      });
+    }
+  });
+  test('join-on block annotation', () => {
+    const m = new TestTranslator(`
+      source: na is a {
+        # note1
+        join_one: note_a is a on note_a.astr = astr
+      }
+    `);
+    expect(m).modelCompiled();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    if (na) {
+      const note_a = getField(na, 'note_a');
+      expect(note_a?.annotation).toMatchObject({blockNotes: ['# note1\n']});
+    }
+  });
+  test('join-with block annotation', () => {
+    const m = new TestTranslator(`
+      source: na is a {
+        # note1
+        join_one: note_a is a with astr
+      }
+    `);
+    expect(m).modelCompiled();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    if (na) {
+      const note_a = getField(na, 'note_a');
+      expect(note_a?.annotation).toMatchObject({blockNotes: ['# note1\n']});
+    }
+  });
+  test('join-with block and local annotation', () => {
+    const m = new TestTranslator(`
+      source: na is a {
+        # note1
+        join_one:
+          # note2
+          note_a is a with astr
+      }
+    `);
+    expect(m).modelCompiled();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    if (na) {
+      const note_a = getField(na, 'note_a');
+      expect(note_a?.annotation).toMatchObject({
+        blockNotes: ['# note1\n'],
+        notes: ['# note2\n'],
+      });
+    }
+  });
+  test('turtle block and local annotation', () => {
+    const m = new TestTranslator(`
+      source: na is a {
+        # note1
+        query:
+          # note2
+          qa is {project: *}
+      }
+      query: note_a is na->qa
+    `);
+    expect(m).modelCompiled();
+    const note_a = m.getQuery('note_a');
+    expect(note_a).toBeDefined();
+    if (note_a) {
+      expect(note_a.annotation).toMatchObject({
+        blockNotes: ['# note1\n'],
+        notes: ['# note2\n'],
+      });
     }
   });
   test.todo('use api to run the tests below');
@@ -229,4 +348,5 @@ describe('annotation collection', () => {
   //       });
   //     }
   //   });
+  // test.skip("property in refines,blockNotes,notes with same name on 1 object");
 });

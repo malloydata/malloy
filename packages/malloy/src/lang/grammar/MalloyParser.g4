@@ -188,7 +188,7 @@ measureDefList
   ;
 
 fieldDef
-  : fieldNameDef IS fieldExpr
+  : ANNOTATION* fieldNameDef IS fieldExpr
   ;
 
 fieldNameDef: id;
@@ -211,8 +211,8 @@ joinList
   ;
 
 joinDef
-  : joinNameDef (IS explore)? WITH fieldExpr        # joinWith
-  | joinNameDef (IS explore)? (ON joinExpression)?  # joinOn
+  : ANNOTATION* joinNameDef (IS explore)? WITH fieldExpr        # joinWith
+  | ANNOTATION* joinNameDef (IS explore)? (ON joinExpression)?  # joinOn
   ;
 
 joinExpression: fieldExpr;
@@ -246,7 +246,7 @@ subQueryDefList
 exploreQueryNameDef: id;
 
 exploreQueryDef
-  : exploreQueryNameDef IS pipelineFromName
+  : ANNOTATION* exploreQueryNameDef IS pipelineFromName
   ;
 
 queryStatement
