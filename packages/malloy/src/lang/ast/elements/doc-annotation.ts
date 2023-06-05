@@ -21,22 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation} from '../../../model/malloy_types';
 import {ModelDataRequest} from '../../translate-response';
 import {
   Document,
   DocStatement,
   ObjectAnnotation,
 } from '../types/malloy-element';
-
-export interface Noteable {
-  isNoteable: true;
-  setAnnotation(note: Annotation): void;
-  getAnnotation(): Annotation;
-}
-export function isNoteable(el: unknown): el is Noteable {
-  return (el as Noteable).isNoteable;
-}
 
 // interface DocAnnotation {
 //   docString: string;

@@ -26,13 +26,13 @@ import * as model from '../../../model/malloy_types';
 import {NestedQuery} from '../types/nested-query';
 import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
+import {Noteable} from '../types/noteable';
 import {NestReference} from './nest-reference';
 import {QueryField} from '../field-space/query-space-field';
 import {opOutputStruct} from '../struct-utils';
 import {TurtleHeadedPipe} from '../types/turtle-headed-pipe';
 import {QueryInputSpace} from '../field-space/query-spaces';
 import {StaticSpace} from '../field-space/static-space';
-import {Noteable} from '../elements/doc-annotation';
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
@@ -41,7 +41,7 @@ function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
 }
 
 export class TurtleDecl extends TurtleHeadedPipe implements Noteable {
-  readonly isNoteable = true;
+  readonly isNoteableObj = true;
   annotation?: model.Annotation;
   constructor(readonly name: string) {
     super();

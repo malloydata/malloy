@@ -44,7 +44,6 @@ import {ExploreField} from '../types/explore-field';
 import {Source} from './source';
 import {TimezoneStatement} from '../source-properties/timezone-statement';
 import {ObjectAnnotation} from '../types/malloy-element';
-import {isNoteable} from './doc-annotation';
 
 /**
  * A Source made from a source reference and a set of refinements
@@ -68,19 +67,10 @@ export class RefinedSource extends Source {
     const filters: Filter[] = [];
     let newTimezone: string | undefined;
 
-    let notesForDef: string[] = [];
     for (const el of this.refinement.list) {
       if (el instanceof ObjectAnnotation) {
-        notesForDef = el.notes;
-        // Yeah is this weird, because of the grammar, the next statement
-        // will be the one which wants the notes
+        // Silently ignoring unclaimed annotations
         continue;
-      }
-      if (notesForDef.length > 0) {
-        if (isNoteable(el)) {
-          el.setAnnotation({notes: notesForDef});
-        }
-        notesForDef = [];
       }
       const errTo = el;
       if (el instanceof PrimaryKey) {

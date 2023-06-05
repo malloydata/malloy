@@ -23,6 +23,7 @@
 import cloneDeep from 'lodash/cloneDeep';
 
 import {
+  Annotation,
   DocumentLocation,
   DocumentReference,
   isSQLBlockStruct,
@@ -37,6 +38,7 @@ import {ModelDataRequest} from '../../translate-response';
 import {DocumentCompileResult} from './document-compile-result';
 import {ModelEntry} from './model-entry';
 import {NameSpace} from './name-space';
+import {Noteable, isNoteable, extendNote} from './noteable';
 
 export abstract class MalloyElement {
   abstract elementType: string;
@@ -324,9 +326,12 @@ export abstract class ListOf<ET extends MalloyElement> extends MalloyElement {
   }
 }
 
-export class RunList extends ListOf<DocStatement> {
+export class RunList extends ListOf<DocStatement> implements Noteable {
   elementType = 'topLevelStatements';
   execCursor = 0;
+  readonly isNoteableObj = true;
+  note?: Annotation;
+  noteCursor = 0;
   executeList(doc: Document): ModelDataRequest {
     while (this.execCursor < this.elements.length) {
       if (doc.errorsExist()) {
@@ -334,14 +339,19 @@ export class RunList extends ListOf<DocStatement> {
         return;
       }
       const el = this.elements[this.execCursor];
-      if (isDocStatement(el)) {
-        const resp = el.execute(doc);
-        if (resp) {
-          return resp;
+      if (this.noteCursor === this.execCursor) {
+        // We only want to set the note on each element once,
+        // but we might execute a element multiple times
+        if (this.note && isNoteable(el)) {
+          extendNote(el, this.note);
         }
-        if (!(el instanceof DocAnnotation)) {
-          doc.notes = []; // Success, consume the annotation;
-        }
+        this.noteCursor += 1;
+      }
+      const resp = el.execute(doc);
+      if (resp) {
+        // Statment needs information (likely SQL schema) so we return
+        // the response, and will come back here later
+        return resp;
       }
       this.execCursor += 1;
     }
@@ -369,7 +379,6 @@ export class Document extends MalloyElement implements NameSpace {
   sqlBlocks: SQLBlockStructDef[] = [];
   statements: RunList;
   didInitModel = false;
-  notes: string[] = [];
 
   constructor(statements: DocStatement[]) {
     super();
@@ -457,8 +466,8 @@ export class ObjectAnnotation extends MalloyElement {
 export class DocAnnotation extends ObjectAnnotation implements DocStatement {
   elementType = 'model element annotation';
 
-  execute(doc: Document): ModelDataRequest {
-    doc.notes = this.notes;
+  execute(_doc: Document): ModelDataRequest {
+    // A note which no element wants, we accept and ignore them
     return;
   }
 }

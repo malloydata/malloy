@@ -27,19 +27,19 @@ import {
   isJoinOn,
   StructDef,
 } from '../../../model/malloy_types';
-import {Noteable} from '../elements/doc-annotation';
 import {Source} from '../elements/source';
 import {compressExpr} from '../expressions/utils';
 import {DefinitionList} from '../types/definition-list';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
+import {Noteable} from '../types/noteable';
 
 export abstract class Join extends MalloyElement implements Noteable {
   abstract name: ModelEntryReference;
   abstract structDef(): StructDef;
   abstract fixupJoinOn(outer: FieldSpace, inStruct: StructDef): void;
-  readonly isNoteable = true;
+  readonly isNoteableObj = true;
   note?: Annotation;
   getAnnotation(): Annotation {
     return this.note || {};

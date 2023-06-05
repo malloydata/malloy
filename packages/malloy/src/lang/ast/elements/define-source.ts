@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef} from '../../../model/malloy_types';
+import {Annotation, StructDef} from '../../../model/malloy_types';
 import {ModelDataRequest} from '../../translate-response';
 
 import {ErrorFactory} from '../error-factory';
@@ -32,10 +32,14 @@ import {
   MalloyElement,
   RunList,
 } from '../types/malloy-element';
+import {Noteable} from '../types/noteable';
 
 import {Source} from './source';
 
-export class DefineSource extends MalloyElement implements DocStatement {
+export class DefineSource
+  extends MalloyElement
+  implements DocStatement, Noteable
+{
   elementType = 'defineSource';
   readonly parameters?: HasParameter[];
   constructor(
@@ -59,6 +63,8 @@ export class DefineSource extends MalloyElement implements DocStatement {
       this.has({parameters: this.parameters});
     }
   }
+  readonly isNoteableObj = true;
+  note?: Annotation;
 
   execute(doc: Document): ModelDataRequest {
     if (doc.modelEntry(this.name)) {
@@ -73,10 +79,10 @@ export class DefineSource extends MalloyElement implements DocStatement {
         as: this.name,
         location: this.location,
       };
-      if (doc.notes.length > 0) {
+      if (this.note) {
         entry.annotation = structDef.annotation
-          ? {refines: structDef.annotation, notes: doc.notes}
-          : {notes: doc.notes};
+          ? {...this.note, refines: structDef.annotation}
+          : this.note;
       }
       doc.setEntry(this.name, {entry, exported: this.exported});
     }

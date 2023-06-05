@@ -22,7 +22,7 @@
  */
 
 import {ParserRuleContext} from 'antlr4ts';
-import {ParseTree} from 'antlr4ts/tree';
+import {ParseTree, TerminalNode} from 'antlr4ts/tree';
 import {AbstractParseTreeVisitor} from 'antlr4ts/tree/AbstractParseTreeVisitor';
 import {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
 import * as parse from './lib/Malloy/MalloyParser';
@@ -30,6 +30,21 @@ import * as ast from './ast';
 import {LogSeverity, MessageLogger} from './parse-log';
 import {MalloyParseRoot} from './parse-malloy';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
+import {extendNote} from './ast/types/noteable';
+
+/**
+ * Get all the possibly missing annotations from this parse rule
+ * @param cx Any parse context which has an ANNOTATION* rules
+ * @returns Array of texts for the annotations
+ */
+function getNotes(cx: {ANNOTATION: () => TerminalNode[]}): string[] {
+  return cx.ANNOTATION().map(a => a.text);
+}
+
+function getIsNotes(cx: parse.IsDefineContext): string[] {
+  const before = getNotes(cx._beforeIs);
+  return before.concat(getNotes(cx._afterIs));
+}
 
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
@@ -315,13 +330,15 @@ export class MalloyToAST
 
   visitDefineSourceStatement(
     pcx: parse.DefineSourceStatementContext
-  ): ast.DefineSourceList | ast.DefineSource {
+  ): ast.DefineSourceList {
     const defsCx = pcx.sourcePropertyList().sourceDefinition();
     const defs = defsCx.map(dcx => this.visitsourceDefinition(dcx));
-    if (defs.length === 1) {
-      return defs[0];
+    const blockNotes = getNotes(pcx.annotations());
+    const defList = new ast.DefineSourceList(defs);
+    if (blockNotes.length > 0) {
+      extendNote(defList, {blockNotes});
     }
-    return new ast.DefineSourceList(defs);
+    return defList;
   }
 
   visitsourceDefinition(pcx: parse.SourceDefinitionContext): ast.DefineSource {
@@ -331,6 +348,10 @@ export class MalloyToAST
       true,
       []
     );
+    const notes = getNotes(pcx).concat(getIsNotes(pcx.isDefine()));
+    if (notes.length > 0) {
+      extendNote(exploreDef, {notes});
+    }
     return this.astAt(exploreDef, pcx);
   }
 
@@ -794,28 +815,42 @@ export class MalloyToAST
     const stmts = pcx
       .topLevelQueryDef()
       .map(cx => this.visitTopLevelQueryDef(cx));
-    if (stmts.length === 1) {
-      return stmts[0];
+    const blockNotes = getNotes(pcx.annotations());
+    const queryDefs = new ast.DefineQueryList(stmts);
+    if (blockNotes.length > 0) {
+      extendNote(queryDefs, {blockNotes});
     }
-    return new ast.DefineQueryList(stmts);
+    return queryDefs;
   }
 
   visitTopLevelQueryDef(pcx: parse.TopLevelQueryDefContext): ast.DefineQuery {
     const queryName = this.getIdText(pcx.queryName());
-    const queryDef = this.visit(pcx.query());
-    if (ast.isQueryElement(queryDef)) {
-      return this.astAt(new ast.DefineQuery(queryName, queryDef), pcx);
+    const queryExpr = this.visit(pcx.query());
+    if (ast.isQueryElement(queryExpr)) {
+      const notes = getNotes(pcx.annotations()).concat(
+        getIsNotes(pcx.isDefine())
+      );
+      const queryDef = new ast.DefineQuery(queryName, queryExpr);
+      if (notes.length > 0) {
+        extendNote(queryDef, {notes});
+      }
+      return this.astAt(queryDef, pcx);
     }
     throw this.internalError(
       pcx,
-      `Expect query definition, got a '${queryDef.elementType}'`
+      `Expected query definition, got a '${queryExpr.elementType}'`
     );
   }
 
   visitAnonymousQuery(pcx: parse.AnonymousQueryContext): ast.AnonymousQuery {
     const query = this.visit(pcx.topLevelAnonQueryDef().query());
     if (ast.isQueryElement(query)) {
-      return new ast.AnonymousQuery(query);
+      const theQuery = new ast.AnonymousQuery(query);
+      const blockNotes = getNotes(pcx.annotations());
+      if (blockNotes.length > 0) {
+        extendNote(theQuery, {blockNotes});
+      }
+      return this.astAt(theQuery, pcx);
     }
     throw this.internalError(
       pcx,

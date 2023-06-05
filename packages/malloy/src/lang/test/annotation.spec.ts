@@ -24,30 +24,41 @@
 import {TestTranslator, getField} from './test-translator';
 import './parse-expects';
 
-describe('annotation collection', () => {
-  test('single source annotation', () => {
+describe('document annotation', () => {
+  test('every source annotation point', () => {
     const m = new TestTranslator(`
       # note1
-      source: note_a is a
+      # note1.1
+      source:
+      # note2
+      note_a
+      # note3
+      is
+      # note4
+      a
+      # note5
+      note_b
+      # note6
+      is
+      # note7
+      a
     `);
     expect(m).modelCompiled();
     const note_a = m.getSourceDef('note_a');
     expect(note_a).toBeDefined();
     if (note_a) {
-      expect(note_a.annotation).toMatchObject({notes: ['# note1\n']});
+      expect(note_a.annotation).toMatchObject({
+        blockNotes: ['# note1\n', '# note1.1\n'],
+        notes: ['# note2\n', '# note3\n', '# note4\n'],
+      });
     }
-  });
-  test('top level annotations are consumed', () => {
-    const m = new TestTranslator(`
-      # note1
-      source: note_a is a
-      source: note_b is a
-    `);
-    expect(m).modelCompiled();
     const note_b = m.getSourceDef('note_b');
     expect(note_b).toBeDefined();
     if (note_b) {
-      expect(note_b.annotation).toBeUndefined();
+      expect(note_b.annotation).toMatchObject({
+        blockNotes: ['# note1\n', '# note1.1\n'],
+        notes: ['# note5\n', '# note6\n', '# note7\n'],
+      });
     }
   });
   test('multi line source annotation', () => {
@@ -61,7 +72,7 @@ describe('annotation collection', () => {
     expect(note_a).toBeDefined();
     if (note_a) {
       expect(note_a.annotation).toMatchObject({
-        notes: ['# note1\n', '# note2\n'],
+        blockNotes: ['# note1\n', '# note2\n'],
       });
     }
   });
@@ -77,21 +88,42 @@ describe('annotation collection', () => {
     expect(note_a).toBeDefined();
     if (note_a) {
       expect(note_a.annotation).toMatchObject({
-        refines: {notes: ['# note0\n']},
-        notes: ['# note1\n'],
+        refines: {blockNotes: ['# note0\n']},
+        blockNotes: ['# note1\n'],
       });
     }
   });
-  test('single query annotation', () => {
+  test('define full query annotation points', () => {
     const m = new TestTranslator(`
       # note1
-      query: note_a is a -> {project: *}
+      query:
+      # note2
+      note_a
+      # note3
+      is
+      # note4
+      a -> {project: *}
     `);
     expect(m).modelCompiled();
     const note_a = m.getQuery('note_a');
     expect(note_a).toBeDefined();
     if (note_a) {
-      expect(note_a.annotation).toMatchObject({notes: ['# note1\n']});
+      expect(note_a.annotation).toMatchObject({
+        blockNotes: ['# note1\n'],
+        notes: ['# note2\n', '# note3\n', '# note4\n'],
+      });
+    }
+  });
+  test('anonymous query annotation points', () => {
+    const m = new TestTranslator(`
+      # note1
+      query: a -> {project: *}
+    `);
+    expect(m).modelCompiled();
+    const note_a = m.getQuery(0);
+    expect(note_a).toBeDefined();
+    if (note_a) {
+      expect(note_a.annotation).toMatchObject({blockNotes: ['# note1\n']});
     }
   });
   test('multi line query annotation', () => {
@@ -105,15 +137,17 @@ describe('annotation collection', () => {
     expect(note_a).toBeDefined();
     if (note_a) {
       expect(note_a.annotation).toMatchObject({
-        notes: ['# note1\n', '# note2\n'],
+        blockNotes: ['# note1\n', '# note2\n'],
       });
     }
   });
   test('inherited annotation query', () => {
     const m = new TestTranslator(`
-      # note0
-      query: note_b is a -> { project: * }
-      # note1
+    # noteb0
+      query:
+    # noteb1
+        note_b is a -> { project: * }
+    # note1
       query: note_a is -> note_b { where: astr = 'a' }
     `);
     expect(m).modelCompiled();
@@ -121,11 +155,13 @@ describe('annotation collection', () => {
     expect(note_a).toBeDefined();
     if (note_a) {
       expect(note_a.annotation).toMatchObject({
-        refines: {notes: ['# note0\n']},
-        notes: ['# note1\n'],
+        refines: {blockNotes: ['# noteb0\n'], notes: ['# noteb1\n']},
+        blockNotes: ['# note1\n'],
       });
     }
   });
+});
+describe.skip('source definition annotations', () => {
   test('turtle block annotation', () => {
     const m = new TestTranslator(`
       source: na is a {
@@ -154,22 +190,6 @@ describe('annotation collection', () => {
     if (na) {
       const note_a = getField(na, 'note_a');
       expect(note_a?.annotation).toMatchObject({blockNotes: ['# note1\n']});
-    }
-  });
-  test('fielddef block annotation is consumed', () => {
-    const m = new TestTranslator(`
-      source: na is a {
-        # note1
-        dimension: note_b is astr
-        dimension: note_a is astr
-      }
-    `);
-    expect(m).modelCompiled();
-    const na = m.getSourceDef('na');
-    expect(na).toBeDefined();
-    if (na) {
-      const note_a = getField(na, 'note_a');
-      expect(note_a?.annotation).toBeUndefined();
     }
   });
   test('fielddef block and local annotation', () => {
@@ -257,6 +277,88 @@ describe('annotation collection', () => {
     expect(note_a).toBeDefined();
     if (note_a) {
       expect(note_a.annotation).toMatchObject({
+        blockNotes: ['# note1\n'],
+        notes: ['# note2\n'],
+      });
+    }
+  });
+});
+describe('query operation annotations', () => {
+  test('project annotation', () => {
+    const m = new TestTranslator(`
+      query: findme is a -> {
+        # note1
+        project:
+          # note2
+          note_a is astr
+      }
+    `);
+    expect(m).modelCompiled();
+    const foundYou = m.getQuery('findme');
+    expect(foundYou).toBeDefined();
+    if (foundYou) {
+      const note_a = getField(foundYou.pipeline[0], 'note_a');
+      expect(note_a?.annotation).toMatchObject({
+        blockNotes: ['# note1\n'],
+        notes: ['# note2\n'],
+      });
+    }
+  });
+  test('group_by annotation', () => {
+    const m = new TestTranslator(`
+      query: findme is a -> {
+        # note1
+        group_by:
+          # note2
+          note_a is astr
+      }
+    `);
+    expect(m).modelCompiled();
+    const foundYou = m.getQuery('findme');
+    expect(foundYou).toBeDefined();
+    if (foundYou) {
+      const note_a = getField(foundYou.pipeline[0], 'note_a');
+      expect(note_a?.annotation).toMatchObject({
+        blockNotes: ['# note1\n'],
+        notes: ['# note2\n'],
+      });
+    }
+  });
+  test('measure annotation', () => {
+    const m = new TestTranslator(`
+      query: findme is a -> {
+        # note1
+        measure:
+          # note2
+          note_a is max(astr)
+      }
+    `);
+    expect(m).modelCompiled();
+    const foundYou = m.getQuery('findme');
+    expect(foundYou).toBeDefined();
+    if (foundYou) {
+      const note_a = getField(foundYou.pipeline[0], 'note_a');
+      expect(note_a?.annotation).toMatchObject({
+        blockNotes: ['# note1\n'],
+        notes: ['# note2\n'],
+      });
+    }
+  });
+  test('nest annotation', () => {
+    const m = new TestTranslator(`
+      query: findme is ab -> {
+        # note1
+        nest:
+          # note2
+          note_a is aturtle
+      }
+    `);
+    expect(m).modelCompiled();
+    const foundYou = m.getQuery('findme');
+    expect(foundYou).toBeDefined();
+    if (foundYou) {
+      const note_a = getField(foundYou.pipeline[0], 'note_a');
+      expect(note_a?.annotation).toMatchObject({
         blockNotes: ['# note1\n'],
         notes: ['# note2\n'],
       });

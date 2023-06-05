@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {NamedQuery} from '../../../model/malloy_types';
+import {Annotation, NamedQuery} from '../../../model/malloy_types';
 
 import {ModelDataRequest} from '../../translate-response';
 
@@ -32,13 +32,20 @@ import {
   RunList,
 } from '../types/malloy-element';
 import {QueryElement} from '../types/query-element';
+import {Noteable} from '../types/noteable';
 
-export class DefineQuery extends MalloyElement implements DocStatement {
+export class DefineQuery
+  extends MalloyElement
+  implements DocStatement, Noteable
+{
   elementType = 'defineQuery';
 
   constructor(readonly name: string, readonly queryDetails: QueryElement) {
     super({queryDetails: queryDetails});
   }
+
+  readonly isNoteableObj = true;
+  note?: Annotation;
 
   execute(doc: Document): ModelDataRequest {
     const existing = doc.getEntry(this.name);
@@ -52,10 +59,10 @@ export class DefineQuery extends MalloyElement implements DocStatement {
       name: this.name,
       location: this.location,
     };
-    if (doc.notes.length > 0) {
+    if (this.note) {
       entry.annotation = entry.annotation
-        ? {refines: entry.annotation, notes: doc.notes}
-        : {notes: doc.notes};
+        ? {...this.note, refines: entry.annotation}
+        : this.note;
     }
     doc.setEntry(this.name, {entry, exported: true});
   }

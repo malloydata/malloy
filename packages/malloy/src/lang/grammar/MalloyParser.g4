@@ -30,31 +30,34 @@ malloyStatement
   : defineSourceStatement
   | defineSQLStatement
   | defineQuery
-  | docAnnotations
   | importStatement
+  | docAnnotations
   ;
 
 
 defineSourceStatement
-  : exploreKeyword sourcePropertyList
-  ;
-
-exploreKeyword
-  : EXPLORE
-  | SOURCE
+  : annotations SOURCE sourcePropertyList
   ;
 
 defineQuery
-  : QUERY topLevelQueryDefs      # namedQueries_stub
-  | QUERY topLevelAnonQueryDef   # anonymousQuery
+  : topLevelQueryDefs                        # use_top_level_query_defs
+  | annotations QUERY topLevelAnonQueryDef   # anonymousQuery
   ;
 
 topLevelAnonQueryDef
-  : query
+  : annotations query
+  ;
+
+annotations
+  : ANNOTATION*
+  ;
+
+isDefine
+  : beforeIs=annotations IS afterIs=annotations
   ;
 
 defineSQLStatement
-  : SQL (nameSQLBlock IS)? sqlBlock
+  : SQL nameSQLBlock isDefine sqlBlock
   ;
 
 sqlBlock
@@ -87,11 +90,11 @@ docAnnotations
   ;
 
 topLevelQueryDefs
-  : topLevelQueryDef (COMMA? topLevelQueryDef)* COMMA?
+  : annotations QUERY topLevelQueryDef (COMMA? topLevelQueryDef)* COMMA?
   ;
 
 topLevelQueryDef
-  : queryName IS query
+  : annotations queryName isDefine query
   ;
 
 refineOperator: PLUS ;
@@ -135,7 +138,7 @@ sourcePropertyList
   ;
 
 sourceDefinition
-  : sourceNameDef IS explore
+  : ANNOTATION* sourceNameDef isDefine explore
   ;
 
 explore
@@ -176,7 +179,7 @@ renameList
   ;
 
 exploreRenameDef
-  : fieldName IS fieldName
+  : fieldName isDefine fieldName
   ;
 
 dimensionDefList
@@ -188,7 +191,7 @@ measureDefList
   ;
 
 fieldDef
-  : ANNOTATION* fieldNameDef IS fieldExpr
+  : ANNOTATION* fieldNameDef isDefine fieldExpr
   ;
 
 fieldNameDef: id;
@@ -246,7 +249,7 @@ subQueryDefList
 exploreQueryNameDef: id;
 
 exploreQueryDef
-  : ANNOTATION* exploreQueryNameDef IS pipelineFromName
+  : ANNOTATION* exploreQueryNameDef isDefine pipelineFromName
   ;
 
 queryStatement
@@ -278,8 +281,8 @@ queryFieldList
 dimensionDef: fieldDef;
 
 queryFieldEntry
-  : fieldPath      # queryFieldRef
-  | dimensionDef   # queryFieldDef
+  : ANNOTATION* fieldPath      # queryFieldRef
+  | ANNOTATION* dimensionDef   # queryFieldDef
   ;
 
 nestStatement
@@ -291,8 +294,8 @@ nestedQueryList
   ;
 
 nestEntry
-  : queryName (refineOperator? queryProperties)?   # nestExisting
-  | queryName IS pipelineFromName                  # nestDef
+  : ANNOTATION* queryName (refineOperator? queryProperties)?   # nestExisting
+  | ANNOTATION* queryName isDefine pipelineFromName                  # nestDef
   ;
 
 aggregateStatement

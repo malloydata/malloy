@@ -21,29 +21,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation} from '../../../model';
-import {ListOf, MalloyElement} from './malloy-element';
-import {Noteable, extendNote, isNoteable} from '../types/noteable';
+import {Annotation} from '../../../model/malloy_types';
 
-export abstract class DefinitionList<DT extends MalloyElement>
-  extends ListOf<DT>
-  implements Noteable
-{
-  readonly isNoteableObj = true;
+/**
+ * An object which can receive annotations is "Noteable"
+ */
+export interface Noteable {
+  isNoteableObj: true;
   note?: Annotation;
+}
 
-  distributeAnnotation() {
-    if (this.note) {
-      for (const el of this.elements) {
-        if (isNoteable(el)) {
-          extendNote(el, this.note);
-        }
-      }
-    }
-  }
+export function isNoteable(el: unknown): el is Noteable {
+  return (el as Noteable).isNoteableObj;
+}
 
-  protected newContents(): void {
-    super.newContents();
-    this.distributeAnnotation();
-  }
+export function extendNote(to: Noteable, ext: Partial<Annotation>) {
+  to.note = {...to.note, ...ext};
 }

@@ -28,7 +28,6 @@ import {
   isAtomicFieldType,
   StructDef,
 } from '../../../model/malloy_types';
-import {Noteable} from '../elements/doc-annotation';
 
 import {compressExpr} from '../expressions/utils';
 import {FT} from '../fragtype-utils';
@@ -37,11 +36,12 @@ import {FieldName, FieldSpace} from '../types/field-space';
 import {isGranularResult} from '../types/granular-result';
 import {LookupResult} from '../types/lookup-result';
 import {MalloyElement} from '../types/malloy-element';
+import {Noteable} from '../types/noteable';
 
 export class FieldDeclaration extends MalloyElement implements Noteable {
   elementType = 'fieldDeclaration';
   isMeasure?: boolean;
-  readonly isNoteable = true;
+  readonly isNoteableObj = true;
   private annotation?: Annotation;
 
   constructor(
