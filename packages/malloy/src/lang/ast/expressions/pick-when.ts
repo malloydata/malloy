@@ -87,7 +87,7 @@ export class Pick extends ExpressionDef {
           );
           return errorFor('pick when type');
         }
-      } else {
+      } else if (thenExpr.dataType !== 'null') {
         returnType = thenExpr;
       }
       caseValue.push(' WHEN ', ...whenExpr.value, ' THEN ', ...thenExpr.value);
@@ -121,6 +121,7 @@ export class Pick extends ExpressionDef {
     }
 
     const choiceValues: Choice[] = [];
+    let returnType: ExprValue | undefined;
     for (const c of this.choices) {
       if (c.pick === undefined) {
         this.log('pick with no value can only be used with apply');
@@ -131,12 +132,20 @@ export class Pick extends ExpressionDef {
         this.log('pick with partial when can only be used with apply');
         return errorFor('partial when');
       }
+      const result = c.pick.getExpression(fs);
       choiceValues.push({
-        pick: c.pick.getExpression(fs),
+        pick: result,
         when: c.when.getExpression(fs),
       });
+
+      if (result.dataType !== 'null') {
+        returnType ||= result;
+      }
     }
-    const returnType = choiceValues[0].pick;
+
+    const elsePart = this.elsePick;
+    const elseVal = elsePart.getExpression(fs);
+    returnType ||= elseVal;
 
     const caseValue: Fragment[] = ['CASE'];
     let anyExpressionType: ExpressionType = returnType.expressionType;
