@@ -332,7 +332,7 @@ export class MalloyToAST
   ): ast.DefineSourceList {
     const defsCx = pcx.sourcePropertyList().sourceDefinition();
     const defs = defsCx.map(dcx => this.visitsourceDefinition(dcx));
-    const blockNotes = getNotes(pcx.annotations());
+    const blockNotes = getNotes(pcx.tags());
     const defList = new ast.DefineSourceList(defs);
     defList.extendNote({blockNotes});
     return defList;
@@ -484,7 +484,6 @@ export class MalloyToAST
   }
 
   visitFieldDef(pcx: parse.FieldDefContext): ast.FieldDeclaration {
-    const notes = pcx.ANNOTATION().map(cx => cx.text);
     const defCx = pcx.fieldExpr();
     const fieldName = this.getIdText(pcx.fieldNameDef());
     const valExpr = this.getFieldExpr(defCx);
@@ -493,7 +492,7 @@ export class MalloyToAST
       fieldName,
       this.getSourceCode(defCx)
     );
-    def.extendNote({notes});
+    def.extendNote({notes: getNotes(pcx.tags())});
     return this.astAt(def, pcx);
   }
 
@@ -505,12 +504,14 @@ export class MalloyToAST
       false
     );
     const stmt = new ast.Dimensions(defs);
+    stmt.extendNote({blockNotes: getNotes(pcx.tags())});
     return this.astAt(stmt, pcx);
   }
 
   visitDefExploreMeasure(pcx: parse.DefExploreMeasureContext): ast.Measures {
     const defs = this.getFieldDefs(pcx.measureDefList().measureDef(), true);
     const stmt = new ast.Measures(defs);
+    stmt.extendNote({blockNotes: getNotes(pcx.tags())});
     return this.astAt(stmt, pcx);
   }
 
@@ -567,7 +568,7 @@ export class MalloyToAST
 
   visitDefExploreQuery(pcx: parse.DefExploreQueryContext): ast.MalloyElement {
     const queryDefs = this.visitSubQueryDefList(pcx.subQueryDefList());
-    const blockNotes = getNotes(pcx.annotations());
+    const blockNotes = getNotes(pcx.tags());
     queryDefs.extendNote({blockNotes});
     return queryDefs;
   }
@@ -811,7 +812,7 @@ export class MalloyToAST
     const stmts = pcx
       .topLevelQueryDef()
       .map(cx => this.visitTopLevelQueryDef(cx));
-    const blockNotes = getNotes(pcx.annotations());
+    const blockNotes = getNotes(pcx.tags());
     const queryDefs = new ast.DefineQueryList(stmts);
     queryDefs.extendNote({blockNotes});
     return queryDefs;
@@ -821,9 +822,7 @@ export class MalloyToAST
     const queryName = this.getIdText(pcx.queryName());
     const queryExpr = this.visit(pcx.query());
     if (ast.isQueryElement(queryExpr)) {
-      const notes = getNotes(pcx.annotations()).concat(
-        getIsNotes(pcx.isDefine())
-      );
+      const notes = getNotes(pcx.tags()).concat(getIsNotes(pcx.isDefine()));
       const queryDef = new ast.DefineQuery(queryName, queryExpr);
       queryDef.extendNote({notes});
       return this.astAt(queryDef, pcx);
@@ -838,7 +837,7 @@ export class MalloyToAST
     const query = this.visit(pcx.topLevelAnonQueryDef().query());
     if (ast.isQueryElement(query)) {
       const theQuery = new ast.AnonymousQuery(query);
-      const blockNotes = getNotes(pcx.annotations());
+      const blockNotes = getNotes(pcx.tags());
       theQuery.extendNote({blockNotes});
       return this.astAt(theQuery, pcx);
     }

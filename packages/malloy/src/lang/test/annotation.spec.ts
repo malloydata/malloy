@@ -24,6 +24,11 @@
 import {TestTranslator, getField} from './test-translator';
 import './parse-expects';
 
+const defaultTags = {
+  blockNotes: ['# blockNote\n'],
+  notes: ['# note\n'],
+};
+
 describe('document annotation', () => {
   test('every source annotation point', () => {
     const m = new TestTranslator(`
@@ -165,9 +170,9 @@ describe('source definition annotations', () => {
   test('turtle block annotation', () => {
     const m = new TestTranslator(`
       source: na is a {
-        # note1
+        # blockNote
         query:
-        # note2
+        # note
           note_a is {project: *}
       }
     `);
@@ -177,17 +182,16 @@ describe('source definition annotations', () => {
     if (na) {
       const note_a = getField(na, 'note_a');
       expect(note_a).toBeDefined();
-      expect(note_a.annotation).toMatchObject({
-        blockNotes: ['# note1\n'],
-        notes: ['# note2\n'],
-      });
+      expect(note_a.annotation).toMatchObject(defaultTags);
     }
   });
   test('query inherits turtle annotation', () => {
     const m = new TestTranslator(`
       source: na is a {
-        # note1
-        query: qa is {project: *}
+        # blockNote
+        query:
+          # note
+          qa is {project: *}
       }
       query: note_a is na->qa
     `);
@@ -195,30 +199,15 @@ describe('source definition annotations', () => {
     const note_a = m.getQuery('note_a');
     expect(note_a).toBeDefined();
     if (note_a) {
-      expect(note_a.annotation).toMatchObject({blockNotes: ['# note1\n']});
+      expect(note_a.annotation).toMatchObject(defaultTags);
     }
   });
-  test('fielddef block annotation', () => {
+  test('dimension block annotation', () => {
     const m = new TestTranslator(`
       source: na is a {
-        # note1
-        dimension: note_a is astr
-      }
-    `);
-    expect(m).modelCompiled();
-    const na = m.getSourceDef('na');
-    expect(na).toBeDefined();
-    if (na) {
-      const note_a = getField(na, 'note_a');
-      expect(note_a?.annotation).toMatchObject({blockNotes: ['# note1\n']});
-    }
-  });
-  test('fielddef block and local annotation', () => {
-    const m = new TestTranslator(`
-      source: na is a {
-        # note1
+        # blockNote
         dimension:
-          # note2
+          # note
           note_a is astr
       }
     `);
@@ -227,17 +216,16 @@ describe('source definition annotations', () => {
     expect(na).toBeDefined();
     if (na) {
       const note_a = getField(na, 'note_a');
-      expect(note_a?.annotation).toMatchObject({
-        blockNotes: ['# note1\n'],
-        notes: ['# note2\n'],
-      });
+      expect(note_a?.annotation).toMatchObject(defaultTags);
     }
   });
-  test('join-on block annotation', () => {
+  test('measure block annotation', () => {
     const m = new TestTranslator(`
       source: na is a {
-        # note1
-        join_one: note_a is a on note_a.astr = astr
+        # blockNote
+        measure:
+          # note
+          note_a is max(astr)
       }
     `);
     expect(m).modelCompiled();
@@ -245,7 +233,24 @@ describe('source definition annotations', () => {
     expect(na).toBeDefined();
     if (na) {
       const note_a = getField(na, 'note_a');
-      expect(note_a?.annotation).toMatchObject({blockNotes: ['# note1\n']});
+      expect(note_a?.annotation).toMatchObject(defaultTags);
+    }
+  });
+  test('join-on block annotation', () => {
+    const m = new TestTranslator(`
+      source: na is a {
+        # blockNote
+        join_one:
+          # note
+          note_a is a on note_a.astr = astr
+      }
+    `);
+    expect(m).modelCompiled();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    if (na) {
+      const note_a = getField(na, 'note_a');
+      expect(note_a?.annotation).toMatchObject(defaultTags);
     }
   });
   test('join-with block annotation', () => {

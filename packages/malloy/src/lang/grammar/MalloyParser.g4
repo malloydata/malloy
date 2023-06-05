@@ -36,24 +36,24 @@ malloyStatement
 
 
 defineSourceStatement
-  : annotations SOURCE sourcePropertyList
+  : tags SOURCE sourcePropertyList
   ;
 
 defineQuery
   : topLevelQueryDefs                        # use_top_level_query_defs
-  | annotations QUERY topLevelAnonQueryDef   # anonymousQuery
+  | tags QUERY topLevelAnonQueryDef   # anonymousQuery
   ;
 
 topLevelAnonQueryDef
-  : annotations query
+  : tags query
   ;
 
-annotations
+tags
   : ANNOTATION*
   ;
 
 isDefine
-  : beforeIs=annotations IS afterIs=annotations
+  : beforeIs=tags IS afterIs=tags
   ;
 
 defineSQLStatement
@@ -90,11 +90,11 @@ docAnnotations
   ;
 
 topLevelQueryDefs
-  : annotations QUERY topLevelQueryDef (COMMA? topLevelQueryDef)* COMMA?
+  : tags QUERY topLevelQueryDef (COMMA? topLevelQueryDef)* COMMA?
   ;
 
 topLevelQueryDef
-  : annotations queryName isDefine query
+  : tags queryName isDefine query
   ;
 
 refineOperator: PLUS ;
@@ -161,15 +161,15 @@ exploreProperties
   ;
 
 exploreStatement
-  : DIMENSION dimensionDefList         # defExploreDimension
-  | MEASURE measureDefList             # defExploreMeasure
+  : tags DIMENSION dimensionDefList    # defExploreDimension
+  | tags MEASURE measureDefList        # defExploreMeasure
   | declareStatement                   # defDeclare_stub
   | joinStatement                      # defJoin_stub
   | whereStatement                     # defExploreWhere
   | PRIMARY_KEY fieldName              # defExplorePrimaryKey
   | RENAME renameList                  # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList    # defExploreEditField
-  | annotations QUERY subQueryDefList  # defExploreQuery
+  | tags QUERY subQueryDefList  # defExploreQuery
   | timezoneStatement                  # defExploreTimezone
   | ANNOTATION+                        # defExploreAnnotation
   ;
@@ -191,7 +191,7 @@ measureDefList
   ;
 
 fieldDef
-  : ANNOTATION* fieldNameDef isDefine fieldExpr
+  : tags fieldNameDef isDefine fieldExpr
   ;
 
 fieldNameDef: id;
