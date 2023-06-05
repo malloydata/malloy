@@ -26,7 +26,7 @@ import {ModelDataRequest} from '../../translate-response';
 
 import {DocStatement, Document, MalloyElement} from '../types/malloy-element';
 import {QueryElement} from '../types/query-element';
-import {Noteable} from '../types/noteable';
+import {Noteable, extendNoteMethod} from '../types/noteable';
 
 export class AnonymousQuery
   extends MalloyElement
@@ -40,6 +40,7 @@ export class AnonymousQuery
   }
 
   readonly isNoteableObj = true;
+  extendNote = extendNoteMethod;
   note?: Annotation;
 
   execute(doc: Document): ModelDataRequest {

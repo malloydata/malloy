@@ -169,7 +169,7 @@ exploreStatement
   | PRIMARY_KEY fieldName              # defExplorePrimaryKey
   | RENAME renameList                  # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList    # defExploreEditField
-  | QUERY subQueryDefList              # defExploreQuery
+  | annotations QUERY subQueryDefList  # defExploreQuery
   | timezoneStatement                  # defExploreTimezone
   | ANNOTATION+                        # defExploreAnnotation
   ;

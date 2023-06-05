@@ -30,7 +30,6 @@ import * as ast from './ast';
 import {LogSeverity, MessageLogger} from './parse-log';
 import {MalloyParseRoot} from './parse-malloy';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
-import {extendNote} from './ast/types/noteable';
 
 /**
  * Get all the possibly missing annotations from this parse rule
@@ -335,9 +334,7 @@ export class MalloyToAST
     const defs = defsCx.map(dcx => this.visitsourceDefinition(dcx));
     const blockNotes = getNotes(pcx.annotations());
     const defList = new ast.DefineSourceList(defs);
-    if (blockNotes.length > 0) {
-      extendNote(defList, {blockNotes});
-    }
+    defList.extendNote({blockNotes});
     return defList;
   }
 
@@ -349,9 +346,7 @@ export class MalloyToAST
       []
     );
     const notes = getNotes(pcx).concat(getIsNotes(pcx.isDefine()));
-    if (notes.length > 0) {
-      extendNote(exploreDef, {notes});
-    }
+    exploreDef.extendNote({notes});
     return this.astAt(exploreDef, pcx);
   }
 
@@ -474,9 +469,7 @@ export class MalloyToAST
     if (onCx) {
       join.joinOn = this.getFieldExpr(onCx);
     }
-    if (notes.length > 0) {
-      join.setAnnotation({notes});
-    }
+    join.extendNote({notes});
     return this.astAt(join, pcx);
   }
 
@@ -486,9 +479,7 @@ export class MalloyToAST
     const joinFrom = this.getJoinSource(joinAs, pcx.explore());
     const joinOn = this.getFieldExpr(pcx.fieldExpr());
     const join = new ast.KeyJoin(joinAs, joinFrom, joinOn);
-    if (notes.length > 0) {
-      join.setAnnotation({notes});
-    }
+    join.extendNote({notes});
     return this.astAt(join, pcx);
   }
 
@@ -502,9 +493,7 @@ export class MalloyToAST
       fieldName,
       this.getSourceCode(defCx)
     );
-    if (notes.length > 0) {
-      def.setAnnotation({notes});
-    }
+    def.extendNote({notes});
     return this.astAt(def, pcx);
   }
 
@@ -574,6 +563,13 @@ export class MalloyToAST
       .exploreQueryDef()
       .map(cx => this.visitExploreQueryDef(cx));
     return new ast.Turtles(babyTurtles);
+  }
+
+  visitDefExploreQuery(pcx: parse.DefExploreQueryContext): ast.MalloyElement {
+    const queryDefs = this.visitSubQueryDefList(pcx.subQueryDefList());
+    const blockNotes = getNotes(pcx.annotations());
+    queryDefs.extendNote({blockNotes});
+    return queryDefs;
   }
 
   visitDefExplorePrimaryKey(
@@ -817,9 +813,7 @@ export class MalloyToAST
       .map(cx => this.visitTopLevelQueryDef(cx));
     const blockNotes = getNotes(pcx.annotations());
     const queryDefs = new ast.DefineQueryList(stmts);
-    if (blockNotes.length > 0) {
-      extendNote(queryDefs, {blockNotes});
-    }
+    queryDefs.extendNote({blockNotes});
     return queryDefs;
   }
 
@@ -831,9 +825,7 @@ export class MalloyToAST
         getIsNotes(pcx.isDefine())
       );
       const queryDef = new ast.DefineQuery(queryName, queryExpr);
-      if (notes.length > 0) {
-        extendNote(queryDef, {notes});
-      }
+      queryDef.extendNote({notes});
       return this.astAt(queryDef, pcx);
     }
     throw this.internalError(
@@ -847,9 +839,7 @@ export class MalloyToAST
     if (ast.isQueryElement(query)) {
       const theQuery = new ast.AnonymousQuery(query);
       const blockNotes = getNotes(pcx.annotations());
-      if (blockNotes.length > 0) {
-        extendNote(theQuery, {blockNotes});
-      }
+      theQuery.extendNote({blockNotes});
       return this.astAt(theQuery, pcx);
     }
     throw this.internalError(
@@ -889,9 +879,7 @@ export class MalloyToAST
     const notes = pcx.ANNOTATION().map(a => a.text);
     const name = this.getIdText(pcx.exploreQueryNameDef());
     const queryDef = new ast.TurtleDecl(name);
-    if (notes.length > 0) {
-      queryDef.setAnnotation({notes: notes});
-    }
+    queryDef.extendNote({notes});
     this.buildPipelineFromName(queryDef, pcx.pipelineFromName());
     return this.astAt(queryDef, pcx);
   }

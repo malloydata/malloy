@@ -29,12 +29,22 @@ import {Annotation} from '../../../model/malloy_types';
 export interface Noteable {
   isNoteableObj: true;
   note?: Annotation;
+  extendNote(ext: Partial<Annotation>): void;
 }
 
 export function isNoteable(el: unknown): el is Noteable {
   return (el as Noteable).isNoteableObj;
 }
 
-export function extendNote(to: Noteable, ext: Partial<Annotation>) {
-  to.note = {...to.note, ...ext};
+export function extendNoteMethod(this: Noteable, ext: Partial<Annotation>) {
+  extendNoteHelper(this, ext);
+}
+
+export function extendNoteHelper(to: Noteable, ext: Partial<Annotation>) {
+  if (
+    (ext.notes && ext.notes.length > 0) ||
+    (ext.blockNotes && ext.blockNotes.length > 0)
+  ) {
+    to.note = {...to.note, ...ext};
+  }
 }

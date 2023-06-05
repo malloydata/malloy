@@ -33,20 +33,15 @@ import {DefinitionList} from '../types/definition-list';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
-import {Noteable} from '../types/noteable';
+import {extendNoteMethod, Noteable} from '../types/noteable';
 
 export abstract class Join extends MalloyElement implements Noteable {
   abstract name: ModelEntryReference;
   abstract structDef(): StructDef;
   abstract fixupJoinOn(outer: FieldSpace, inStruct: StructDef): void;
   readonly isNoteableObj = true;
+  extendNote = extendNoteMethod;
   note?: Annotation;
-  getAnnotation(): Annotation {
-    return this.note || {};
-  }
-  setAnnotation(note: Annotation): void {
-    this.note = note;
-  }
 }
 
 export class KeyJoin extends Join {

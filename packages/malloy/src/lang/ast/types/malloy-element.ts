@@ -38,7 +38,7 @@ import {ModelDataRequest} from '../../translate-response';
 import {DocumentCompileResult} from './document-compile-result';
 import {ModelEntry} from './model-entry';
 import {NameSpace} from './name-space';
-import {Noteable, isNoteable, extendNote} from './noteable';
+import {Noteable, isNoteable, extendNoteMethod} from './noteable';
 
 export abstract class MalloyElement {
   abstract elementType: string;
@@ -330,6 +330,7 @@ export class RunList extends ListOf<DocStatement> implements Noteable {
   elementType = 'topLevelStatements';
   execCursor = 0;
   readonly isNoteableObj = true;
+  extendNote = extendNoteMethod;
   note?: Annotation;
   noteCursor = 0;
   executeList(doc: Document): ModelDataRequest {
@@ -343,7 +344,7 @@ export class RunList extends ListOf<DocStatement> implements Noteable {
         // We only want to set the note on each element once,
         // but we might execute a element multiple times
         if (this.note && isNoteable(el)) {
-          extendNote(el, this.note);
+          el.extendNote(this.note);
         }
         this.noteCursor += 1;
       }

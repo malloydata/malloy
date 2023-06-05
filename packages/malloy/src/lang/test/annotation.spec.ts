@@ -161,8 +161,29 @@ describe('document annotation', () => {
     }
   });
 });
-describe.skip('source definition annotations', () => {
+describe('source definition annotations', () => {
   test('turtle block annotation', () => {
+    const m = new TestTranslator(`
+      source: na is a {
+        # note1
+        query:
+        # note2
+          note_a is {project: *}
+      }
+    `);
+    expect(m).modelCompiled();
+    const na = m.getSourceDef('na');
+    expect(na).toBeDefined();
+    if (na) {
+      const note_a = getField(na, 'note_a');
+      expect(note_a).toBeDefined();
+      expect(note_a.annotation).toMatchObject({
+        blockNotes: ['# note1\n'],
+        notes: ['# note2\n'],
+      });
+    }
+  });
+  test('query inherits turtle annotation', () => {
     const m = new TestTranslator(`
       source: na is a {
         # note1
@@ -257,26 +278,6 @@ describe.skip('source definition annotations', () => {
     if (na) {
       const note_a = getField(na, 'note_a');
       expect(note_a?.annotation).toMatchObject({
-        blockNotes: ['# note1\n'],
-        notes: ['# note2\n'],
-      });
-    }
-  });
-  test('turtle block and local annotation', () => {
-    const m = new TestTranslator(`
-      source: na is a {
-        # note1
-        query:
-          # note2
-          qa is {project: *}
-      }
-      query: note_a is na->qa
-    `);
-    expect(m).modelCompiled();
-    const note_a = m.getQuery('note_a');
-    expect(note_a).toBeDefined();
-    if (note_a) {
-      expect(note_a.annotation).toMatchObject({
         blockNotes: ['# note1\n'],
         notes: ['# note2\n'],
       });

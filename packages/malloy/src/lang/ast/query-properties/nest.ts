@@ -26,7 +26,7 @@ import * as model from '../../../model/malloy_types';
 import {NestedQuery} from '../types/nested-query';
 import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
-import {Noteable} from '../types/noteable';
+import {Noteable, extendNoteMethod} from '../types/noteable';
 import {NestReference} from './nest-reference';
 import {QueryField} from '../field-space/query-space-field';
 import {opOutputStruct} from '../struct-utils';
@@ -42,17 +42,10 @@ function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
 
 export class TurtleDecl extends TurtleHeadedPipe implements Noteable {
   readonly isNoteableObj = true;
-  annotation?: model.Annotation;
+  extendNote = extendNoteMethod;
+  note?: model.Annotation;
   constructor(readonly name: string) {
     super();
-  }
-
-  setAnnotation(note: model.Annotation): void {
-    this.annotation = note;
-  }
-
-  getAnnotation(): model.Annotation {
-    return this.annotation || {};
   }
 
   getPipeline(fs: FieldSpace): model.Pipeline {
@@ -107,9 +100,8 @@ export class TurtleDecl extends TurtleHeadedPipe implements Noteable {
       ...pipe,
       location: this.location,
     };
-    const turtleNote = this.getAnnotation();
-    if (turtleNote) {
-      turtle.annotation = turtleNote;
+    if (this.note) {
+      turtle.annotation = this.note;
     }
     return turtle;
   }

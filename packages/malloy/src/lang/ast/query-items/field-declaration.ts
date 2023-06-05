@@ -36,13 +36,14 @@ import {FieldName, FieldSpace} from '../types/field-space';
 import {isGranularResult} from '../types/granular-result';
 import {LookupResult} from '../types/lookup-result';
 import {MalloyElement} from '../types/malloy-element';
-import {Noteable} from '../types/noteable';
+import {extendNoteMethod, Noteable} from '../types/noteable';
 
 export class FieldDeclaration extends MalloyElement implements Noteable {
   elementType = 'fieldDeclaration';
   isMeasure?: boolean;
   readonly isNoteableObj = true;
-  private annotation?: Annotation;
+  extendNote = extendNoteMethod;
+  note?: Annotation;
 
   constructor(
     readonly expr: ExpressionDef,
@@ -98,8 +99,8 @@ export class FieldDeclaration extends MalloyElement implements Noteable {
       if (isGranularResult(exprValue) && template.type === 'timestamp') {
         template.timeframe = exprValue.timeframe;
       }
-      if (this.annotation) {
-        template.annotation = this.annotation;
+      if (this.note) {
+        template.annotation = this.note;
       }
       return template;
     }
@@ -116,14 +117,6 @@ export class FieldDeclaration extends MalloyElement implements Noteable {
       name: `error_defining_${exprName}`,
       type: 'string',
     };
-  }
-
-  setAnnotation(note: Annotation) {
-    this.annotation = note;
-  }
-
-  getAnnotation(): Annotation {
-    return this.annotation || {};
   }
 }
 

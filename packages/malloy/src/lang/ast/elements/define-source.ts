@@ -32,7 +32,7 @@ import {
   MalloyElement,
   RunList,
 } from '../types/malloy-element';
-import {Noteable} from '../types/noteable';
+import {Noteable, extendNoteMethod} from '../types/noteable';
 
 import {Source} from './source';
 
@@ -64,6 +64,7 @@ export class DefineSource
     }
   }
   readonly isNoteableObj = true;
+  extendNote = extendNoteMethod;
   note?: Annotation;
 
   execute(doc: Document): ModelDataRequest {

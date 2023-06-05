@@ -23,7 +23,7 @@
 
 import {Annotation} from '../../../model';
 import {ListOf, MalloyElement} from './malloy-element';
-import {Noteable, extendNote, isNoteable} from '../types/noteable';
+import {Noteable, extendNoteHelper, isNoteable} from '../types/noteable';
 
 export abstract class DefinitionList<DT extends MalloyElement>
   extends ListOf<DT>
@@ -32,11 +32,16 @@ export abstract class DefinitionList<DT extends MalloyElement>
   readonly isNoteableObj = true;
   note?: Annotation;
 
+  extendNote(ext: Partial<Annotation>) {
+    extendNoteHelper(this, ext);
+    this.distributeAnnotation();
+  }
+
   distributeAnnotation() {
     if (this.note) {
       for (const el of this.elements) {
         if (isNoteable(el)) {
-          extendNote(el, this.note);
+          el.extendNote(this.note);
         }
       }
     }
