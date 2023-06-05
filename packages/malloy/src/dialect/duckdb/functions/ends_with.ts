@@ -21,28 +21,23 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FUNCTIONS} from '../../functions';
-import {fnByteLength} from './byte_length';
-import {fnDiv} from './div';
-import {fnEndsWith} from './ends_with';
-import {fnGreatest, fnLeast} from './greatest_and_least';
-import {fnIsInf} from './is_inf';
-import {fnIsNan} from './is_nan';
-import {fnRand} from './rand';
-import {fnReplace} from './replace';
-import {fnTrunc} from './trunc';
-import {fnUnicode} from './unicode';
+import {
+  overload,
+  minScalar,
+  anyExprType,
+  sql,
+  DialectFunctionOverloadDef,
+  makeParam,
+} from '../../functions/util';
 
-export const DUCKDB_FUNCTIONS = FUNCTIONS.clone();
-DUCKDB_FUNCTIONS.add('trunc', fnTrunc);
-DUCKDB_FUNCTIONS.add('rand', fnRand);
-DUCKDB_FUNCTIONS.add('is_nan', fnIsNan);
-DUCKDB_FUNCTIONS.add('is_inf', fnIsInf);
-DUCKDB_FUNCTIONS.add('greatest', fnGreatest);
-DUCKDB_FUNCTIONS.add('least', fnLeast);
-DUCKDB_FUNCTIONS.add('div', fnDiv);
-DUCKDB_FUNCTIONS.add('byte_length', fnByteLength);
-DUCKDB_FUNCTIONS.add('unicode', fnUnicode);
-DUCKDB_FUNCTIONS.add('replace', fnReplace);
-DUCKDB_FUNCTIONS.add('ends_with', fnEndsWith);
-DUCKDB_FUNCTIONS.seal();
+export function fnEndsWith(): DialectFunctionOverloadDef[] {
+  const value = makeParam('value', anyExprType('string'));
+  const suffix = makeParam('suffix', anyExprType('string'));
+  return [
+    overload(
+      minScalar('boolean'),
+      [value.param, suffix.param],
+      sql`SUFFIX(${value.arg}, ${suffix.arg})`
+    ),
+  ];
+}

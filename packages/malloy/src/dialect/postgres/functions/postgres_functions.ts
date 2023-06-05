@@ -23,6 +23,7 @@
 
 import {FUNCTIONS} from '../../functions';
 import {fnByteLength} from './byte_length';
+import {fnEndsWith} from './ends_with';
 import {fnGreatest, fnLeast} from './greatest_and_least';
 import {fnIfnull} from './ifnull';
 import {fnIsInf} from './is_inf';
@@ -51,4 +52,5 @@ POSTGRES_FUNCTIONS.add('ifnull', fnIfnull);
 POSTGRES_FUNCTIONS.add('trunc', fnTrunc);
 POSTGRES_FUNCTIONS.add('substr', fnSubstr);
 POSTGRES_FUNCTIONS.add('replace', fnReplace);
+POSTGRES_FUNCTIONS.add('ends_with', fnEndsWith);
 POSTGRES_FUNCTIONS.seal();
