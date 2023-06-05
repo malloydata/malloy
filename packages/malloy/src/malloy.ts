@@ -412,6 +412,7 @@ export class Malloy {
           // TODO feature-sql-block There is no source explore...
           sourceExplore: '',
           sourceFilters: [],
+          queryTimezone: sqlStruct.queryTimezone,
         },
         {
           name: 'empty_model',
