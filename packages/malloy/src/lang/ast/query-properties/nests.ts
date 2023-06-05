@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ListOf} from '../types/malloy-element';
+import {DefinitionList} from '../types/definition-list';
 import {NestedQuery} from '../types/nested-query';
 
-export class Nests extends ListOf<NestedQuery> {
+export class Nests extends DefinitionList<NestedQuery> {
   elementType = 'nestedQueries';
   constructor(nests: NestedQuery[]) {
     super(nests);

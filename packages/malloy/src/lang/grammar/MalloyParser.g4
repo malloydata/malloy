@@ -204,9 +204,9 @@ declareStatement
   ;
 
 joinStatement
-  : JOIN_ONE joinList                  # defJoinOne
-  | JOIN_MANY joinList                 # defJoinMany
-  | JOIN_CROSS joinList                # defJoinCross
+  : tags JOIN_ONE joinList                  # defJoinOne
+  | tags JOIN_MANY joinList                 # defJoinMany
+  | tags JOIN_CROSS joinList                # defJoinCross
   ;
 
 joinList
@@ -271,7 +271,7 @@ queryStatement
   ;
 
 groupByStatement
-  : GROUP_BY queryFieldList
+  : tags GROUP_BY queryFieldList
   ;
 
 queryFieldList
@@ -281,12 +281,12 @@ queryFieldList
 dimensionDef: fieldDef;
 
 queryFieldEntry
-  : ANNOTATION* fieldPath      # queryFieldRef
-  | ANNOTATION* dimensionDef   # queryFieldDef
+  : tags dimensionDef   # queryFieldDef
+  | fieldPath           # queryFieldRef
   ;
 
 nestStatement
-  : NEST nestedQueryList
+  : tags NEST nestedQueryList
   ;
 
 nestedQueryList
@@ -294,16 +294,16 @@ nestedQueryList
   ;
 
 nestEntry
-  : ANNOTATION* queryName (refineOperator? queryProperties)?   # nestExisting
-  | ANNOTATION* queryName isDefine pipelineFromName                  # nestDef
+  : queryName (refineOperator? queryProperties)?   # nestExisting
+  | tags queryName isDefine pipelineFromName       # nestDef
   ;
 
 aggregateStatement
-  : AGGREGATE queryFieldList
+  : tags AGGREGATE queryFieldList
   ;
 
 projectStatement
-  : PROJECT fieldCollection
+  : tags PROJECT fieldCollection
   ;
 
 orderByStatement

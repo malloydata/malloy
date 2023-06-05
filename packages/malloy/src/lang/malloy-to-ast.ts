@@ -413,7 +413,9 @@ export class MalloyToAST
         }
       }
     }
-    return new ast.Joins(joins);
+    const joinMany = new ast.Joins(joins);
+    joinMany.extendNote({blockNotes: getNotes(pcx.tags())});
+    return joinMany;
   }
 
   visitDefJoinOne(pcx: parse.DefJoinOneContext): ast.Joins {
@@ -427,7 +429,9 @@ export class MalloyToAST
         }
       }
     }
-    return new ast.Joins(joins);
+    const joinOne = new ast.Joins(joins);
+    joinOne.extendNote({blockNotes: getNotes(pcx.tags())});
+    return joinOne;
   }
 
   visitDefJoinCross(pcx: parse.DefJoinCrossContext): ast.Joins {
@@ -443,7 +447,9 @@ export class MalloyToAST
         }
       }
     }
-    return new ast.Joins(joins);
+    const joinCross = new ast.Joins(joins);
+    joinCross.extendNote({blockNotes: getNotes(pcx.tags())});
+    return joinCross;
   }
 
   protected getJoinList(pcx: parse.JoinListContext): ast.MalloyElement[] {
@@ -638,6 +644,7 @@ export class MalloyToAST
   visitQueryFieldDef(pcx: parse.QueryFieldDefContext): ast.QueryItem {
     const defCx = pcx.dimensionDef().fieldDef();
     const dim = this.visitFieldDef(defCx);
+    dim.extendNote({notes: getNotes(pcx.tags())});
     return this.astAt(dim, defCx);
   }
 
@@ -660,11 +667,15 @@ export class MalloyToAST
   }
 
   visitAggregateStatement(pcx: parse.AggregateStatementContext): ast.Aggregate {
-    return new ast.Aggregate(this.getQueryItems(pcx.queryFieldList()));
+    const agStmt = new ast.Aggregate(this.getQueryItems(pcx.queryFieldList()));
+    agStmt.extendNote({blockNotes: getNotes(pcx.tags())});
+    return agStmt;
   }
 
   visitGroupByStatement(pcx: parse.GroupByStatementContext): ast.GroupBy {
-    return new ast.GroupBy(this.getQueryItems(pcx.queryFieldList()));
+    const groupBy = new ast.GroupBy(this.getQueryItems(pcx.queryFieldList()));
+    groupBy.extendNote({blockNotes: getNotes(pcx.tags())});
+    return groupBy;
   }
 
   visitFieldCollection(
@@ -683,6 +694,14 @@ export class MalloyToAST
       }
     }
     return this.astAt(new ast.ProjectStatement(fields), pcx);
+  }
+
+  visitProjectStatement(
+    pcx: parse.ProjectStatementContext
+  ): ast.ProjectStatement {
+    const project = this.visitFieldCollection(pcx.fieldCollection());
+    project.extendNote({blockNotes: getNotes(pcx.tags())});
+    return project;
   }
 
   visitWildMember(pcx: parse.WildMemberContext): ast.FieldReferenceElement {
@@ -847,11 +866,14 @@ export class MalloyToAST
     );
   }
 
-  visitNestedQueryList(pcx: parse.NestedQueryListContext): ast.MalloyElement {
+  visitNestStatement(pcx: parse.NestStatementContext): ast.Nests {
+    const nests = this.visitNestedQueryList(pcx.nestedQueryList());
+    nests.extendNote({blockNotes: getNotes(pcx.tags())});
+    return nests;
+  }
+
+  visitNestedQueryList(pcx: parse.NestedQueryListContext): ast.Nests {
     const nestedList = pcx.nestEntry().map(cx => this.visit(cx));
-    if (nestedList.length === 1) {
-      return nestedList[0];
-    }
     return new ast.Nests(this.onlyNestedQueries(nestedList));
   }
 
@@ -871,6 +893,7 @@ export class MalloyToAST
     const name = this.getIdText(pcx.queryName());
     const nestDef = new ast.NestDefinition(name);
     this.buildPipelineFromName(nestDef, pcx.pipelineFromName());
+    nestDef.extendNote({notes: getNotes(pcx.tags())});
     return this.astAt(nestDef, pcx);
   }
 

@@ -22,10 +22,10 @@
  */
 
 import {FieldDeclaration} from '../query-items/field-declaration';
-import {ListOf} from '../types/malloy-element';
+import {DefinitionList} from '../types/definition-list';
 import {QueryItem} from '../types/query-item';
 
-export class Aggregate extends ListOf<QueryItem> {
+export class Aggregate extends DefinitionList<QueryItem> {
   elementType = 'aggregateList';
   constructor(members: QueryItem[]) {
     super(members);

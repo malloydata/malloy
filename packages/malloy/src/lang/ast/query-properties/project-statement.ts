@@ -21,10 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {DefinitionList} from '../types/definition-list';
 import {FieldCollectionMember} from '../types/field-collection-member';
-import {ListOf} from '../types/malloy-element';
 
-export class ProjectStatement extends ListOf<FieldCollectionMember> {
+export class ProjectStatement extends DefinitionList<FieldCollectionMember> {
   elementType = 'projectFields';
   constructor(members: FieldCollectionMember[]) {
     super(members);

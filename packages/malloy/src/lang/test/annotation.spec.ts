@@ -256,24 +256,9 @@ describe('source definition annotations', () => {
   test('join-with block annotation', () => {
     const m = new TestTranslator(`
       source: na is a {
-        # note1
-        join_one: note_a is a with astr
-      }
-    `);
-    expect(m).modelCompiled();
-    const na = m.getSourceDef('na');
-    expect(na).toBeDefined();
-    if (na) {
-      const note_a = getField(na, 'note_a');
-      expect(note_a?.annotation).toMatchObject({blockNotes: ['# note1\n']});
-    }
-  });
-  test('join-with block and local annotation', () => {
-    const m = new TestTranslator(`
-      source: na is a {
-        # note1
+        # blockNote
         join_one:
-          # note2
+          # note
           note_a is a with astr
       }
     `);
@@ -282,10 +267,7 @@ describe('source definition annotations', () => {
     expect(na).toBeDefined();
     if (na) {
       const note_a = getField(na, 'note_a');
-      expect(note_a?.annotation).toMatchObject({
-        blockNotes: ['# note1\n'],
-        notes: ['# note2\n'],
-      });
+      expect(note_a?.annotation).toMatchObject(defaultTags);
     }
   });
 });
@@ -293,9 +275,9 @@ describe('query operation annotations', () => {
   test('project annotation', () => {
     const m = new TestTranslator(`
       query: findme is a -> {
-        # note1
+        # blockNote
         project:
-          # note2
+          # note
           note_a is astr
       }
     `);
@@ -304,18 +286,15 @@ describe('query operation annotations', () => {
     expect(foundYou).toBeDefined();
     if (foundYou) {
       const note_a = getField(foundYou.pipeline[0], 'note_a');
-      expect(note_a?.annotation).toMatchObject({
-        blockNotes: ['# note1\n'],
-        notes: ['# note2\n'],
-      });
+      expect(note_a?.annotation).toMatchObject(defaultTags);
     }
   });
   test('group_by annotation', () => {
     const m = new TestTranslator(`
       query: findme is a -> {
-        # note1
+        # blockNote
         group_by:
-          # note2
+          # note
           note_a is astr
       }
     `);
@@ -324,18 +303,15 @@ describe('query operation annotations', () => {
     expect(foundYou).toBeDefined();
     if (foundYou) {
       const note_a = getField(foundYou.pipeline[0], 'note_a');
-      expect(note_a?.annotation).toMatchObject({
-        blockNotes: ['# note1\n'],
-        notes: ['# note2\n'],
-      });
+      expect(note_a?.annotation).toMatchObject(defaultTags);
     }
   });
-  test('measure annotation', () => {
+  test('aggregate annotation', () => {
     const m = new TestTranslator(`
       query: findme is a -> {
-        # note1
-        measure:
-          # note2
+        # blockNote
+        aggregate:
+          # note
           note_a is max(astr)
       }
     `);
@@ -344,18 +320,15 @@ describe('query operation annotations', () => {
     expect(foundYou).toBeDefined();
     if (foundYou) {
       const note_a = getField(foundYou.pipeline[0], 'note_a');
-      expect(note_a?.annotation).toMatchObject({
-        blockNotes: ['# note1\n'],
-        notes: ['# note2\n'],
-      });
+      expect(note_a?.annotation).toMatchObject(defaultTags);
     }
   });
   test('nest annotation', () => {
     const m = new TestTranslator(`
       query: findme is ab -> {
-        # note1
+        # blockNote
         nest:
-          # note2
+          # note
           note_a is aturtle
       }
     `);
@@ -364,13 +337,12 @@ describe('query operation annotations', () => {
     expect(foundYou).toBeDefined();
     if (foundYou) {
       const note_a = getField(foundYou.pipeline[0], 'note_a');
-      expect(note_a?.annotation).toMatchObject({
-        blockNotes: ['# note1\n'],
-        notes: ['# note2\n'],
-      });
+      expect(note_a?.annotation).toMatchObject(defaultTags);
     }
   });
   test.todo('use api to run the tests below');
+  test.todo('add before-is and after-is tests to defaultTags');
+  test.todo('make sure turtles inherit refinements');
   //   test('doc annotations', () => {
   //     const a = new ObjectAnnotation.make('#" This is a doc string');
   //     expect(a).toBeDefined();
