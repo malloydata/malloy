@@ -107,6 +107,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
     })
   };
 
+  // TODO use funcTestMultiple for all these tests to make them a lot faster
+
   describe('concat', () => {
     it(`works with two args - ${databaseName}`, async () => {
       await funcTest("concat('foo', 'bar')", 'foobar');

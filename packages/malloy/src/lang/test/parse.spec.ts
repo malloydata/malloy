@@ -56,6 +56,15 @@ function exprOK(s: string): TestFunc {
   };
 }
 
+function exprType(s: string, t: string): TestFunc {
+  return () => {
+    const expr = new BetaExpression(s);
+    expect(expr).modelParsed();
+    expect(expr.generated().dataType).toBe(t);
+    return undefined;
+  };
+}
+
 function modelOK(s: string): TestFunc {
   return () => {
     const m = new TestTranslator(s);
@@ -1408,6 +1417,18 @@ describe('expressions', () => {
           pick 'the questionable answer' when = '54'
           else 'random'
     `)
+    );
+    test(
+      'null branch with else',
+      exprType("astr ? pick null when = '42' else 3", 'number')
+    );
+    test(
+      'null branch no else',
+      exprType("astr ? pick null when = '42'", 'string')
+    );
+    test(
+      'null branch no apply',
+      exprType('pick null when 1 = 1 else 3', 'number')
     );
     test(
       'filtering',
