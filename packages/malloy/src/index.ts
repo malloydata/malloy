@@ -54,6 +54,7 @@ export type {
   SearchIndexResult,
   ModelDef,
   Query,
+  QueryRunStats,
   NamedQuery,
   NamedModelObject,
   ExpressionType,

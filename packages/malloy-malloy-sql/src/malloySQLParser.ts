@@ -66,8 +66,9 @@ export class MalloySQLParser {
   private static convertLocation(
     location: MalloySQLParseLocation
   ): DocumentPosition {
+    // VSCode expects line/character numbers to be zero-based
     return {
-      character: location.column,
+      character: location.column - 1,
       line: location.line - 1,
     };
   }
@@ -139,7 +140,8 @@ export class MalloySQLParser {
         errors.push(
           this.createParseError(
             'Only comments are allowed after ">>>malloy"',
-            parsedStatement.delimiterRange
+            parsedStatement.delimiterRange,
+            url
           )
         );
       }
@@ -152,14 +154,15 @@ export class MalloySQLParser {
           errors.push(
             this.createParseError(
               '"connection:" found but no connection value was provided',
-              parsedStatement.delimiterRange
+              parsedStatement.delimiterRange,
+              url
             )
           );
       }
 
       const base: MalloySQLStatementBase = {
-        statementIndex,
-        statementText: parsedStatement.statementText,
+        index: statementIndex,
+        text: parsedStatement.statementText,
         range: this.convertRange(parsedStatement.range),
         delimiterRange: this.convertRange(parsedStatement.delimiterRange),
       };
@@ -177,7 +180,8 @@ export class MalloySQLParser {
             errors.push(
               this.createParseError(
                 'No connection configuration specified, add "connection: my_connection_name" to this >>>sql line or to an above one',
-                parsedStatement.delimiterRange
+                parsedStatement.delimiterRange,
+                url
               )
             );
           config.connection = previousConnection;
@@ -193,6 +197,8 @@ export class MalloySQLParser {
               query: part.malloy,
               parenthized: part.parenthized,
               range: this.convertRange(part.range),
+              text: part.text,
+              malloyRange: this.convertRange(part.malloyRange),
             };
           });
 

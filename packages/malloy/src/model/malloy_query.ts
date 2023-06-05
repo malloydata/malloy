@@ -1931,6 +1931,13 @@ class QueryQuery extends QueryField {
     }
   }
 
+  inNestedPipeline(): boolean {
+    return (
+      this.parent.fieldDef.structSource.type === 'sql' &&
+      this.parent.fieldDef.structSource.method === 'nested'
+    );
+  }
+
   getFieldList(): QueryFieldDef[] {
     switch (this.firstSegment.type) {
       // case "index":
@@ -2629,12 +2636,14 @@ class QueryQuery extends QueryField {
           this.parent.fieldDef.structRelationship.isArray
       );
       // we need to generate primary key.  If parent has a primary key combine
+      // console.log(ji.alias, fieldExpression, this.inNestedPipeline());
       s += `${this.parent.dialect.sqlUnnestAlias(
         fieldExpression,
         ji.alias,
         ji.getDialectFieldList(),
         ji.makeUniqueKey,
-        structRelationship.isArray
+        structRelationship.isArray,
+        this.inNestedPipeline()
       )}\n`;
     } else if (structRelationship.type === 'inline') {
       throw new Error(

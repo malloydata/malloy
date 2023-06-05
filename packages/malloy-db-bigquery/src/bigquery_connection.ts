@@ -44,6 +44,7 @@ import {
   PooledConnection,
   QueryData,
   QueryDataRow,
+  QueryRunStats,
   SQLBlock,
   StreamingConnection,
   StructDef,
@@ -322,9 +323,13 @@ export class BigQueryConnection
     }
   }
 
-  public async costQuery(sqlCommand: string): Promise<number> {
+  public async estimateQueryCost(sqlCommand: string): Promise<QueryRunStats> {
     const dryRunResults = await this.dryRunSQLQuery(sqlCommand);
-    return Number(dryRunResults.metadata.statistics.totalBytesProcessed);
+    return {
+      queryCostBytes: Number(
+        dryRunResults.metadata.statistics.totalBytesProcessed
+      ),
+    };
   }
 
   public async structDefFromSQL(sqlCommand: string): Promise<StructDef> {
