@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {maxExpressionType, mergeEvalSpaces, mkExpr} from '../../../model';
+import {maxExpressionType, mkExpr} from '../../../model';
 import {FT} from '../fragtype-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
@@ -55,7 +55,6 @@ export class ExprCoalesce extends ExpressionDef {
         whenNull.expressionType
       ),
       value: mkExpr`COALESCE(${maybeNull.value},${whenNull.value})`,
-      evalSpace: mergeEvalSpaces(maybeNull.evalSpace, whenNull.evalSpace),
     };
   }
 }
