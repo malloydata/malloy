@@ -25,6 +25,7 @@ import {RunSQLOptions} from './run_sql_options';
 import {
   MalloyQueryData,
   QueryDataRow,
+  QueryRunStats,
   SQLBlock,
   StructDef,
 } from './model/malloy_types';
@@ -121,6 +122,8 @@ export interface Connection extends InfoConnection {
   canStream(): this is StreamingConnection;
 
   close(): Promise<void>;
+
+  estimateQueryCost(sqlCommand: string): Promise<QueryRunStats>;
 }
 
 // TODO feature-sql-block Comment

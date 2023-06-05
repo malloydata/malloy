@@ -37,6 +37,7 @@ import {
   PooledConnection,
   QueryData,
   QueryDataRow,
+  QueryRunStats,
   RunSQLOptions,
   SQLBlock,
   StreamingConnection,
@@ -405,6 +406,10 @@ export class PostgresConnection
       }
     }
     await client.end();
+  }
+
+  public async estimateQueryCost(_: string): Promise<QueryRunStats> {
+    return {};
   }
 
   public async manifestTemporaryTable(sqlCommand: string): Promise<string> {

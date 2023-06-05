@@ -1030,5 +1030,4 @@ export interface SearchValueMapResult {
   cardinality: number;
   values: {fieldValue: string; weight: number}[];
 }
-
 // clang-format on
