@@ -28,11 +28,7 @@ import * as malloy from '@malloydata/malloy';
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 
-// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
-
-const runtimes = new RuntimeList(
-  databasesFromEnvironmentOr(['bigquery', 'duckdb'])
-);
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 const expressionModelText = `
 explore: aircraft_models is table('malloytest.aircraft_models'){
