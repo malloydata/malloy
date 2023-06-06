@@ -41,7 +41,7 @@ interface Choice {
 }
 
 function typeCoalesce(ev1: ExprValue | undefined, ev2: ExprValue): ExprValue {
-  return (ev1 === undefined || ev1.dataType === 'null') ? ev2 : ev1;
+  return ev1 === undefined || ev1.dataType === 'null' ? ev2 : ev1;
 }
 
 export class Pick extends ExpressionDef {
@@ -85,9 +85,7 @@ export class Pick extends ExpressionDef {
       );
       if (returnType && !FT.typeEq(returnType, thenExpr, true)) {
         const whenType = FT.inspect(thenExpr);
-        this.log(
-          `pick type '${whenType}', expected '${returnType.dataType}'`
-        );
+        this.log(`pick type '${whenType}', expected '${returnType.dataType}'`);
         return errorFor('pick when type');
       }
       returnType = typeCoalesce(returnType, thenExpr);
@@ -152,7 +150,7 @@ export class Pick extends ExpressionDef {
         this.log(`pick type '${whenType}', expected '${returnType.dataType}'`);
         return errorFor('pick value type');
       }
-      returnType = typeCoalesce(returnType,aChoice.pick);
+      returnType = typeCoalesce(returnType, aChoice.pick);
       anyExpressionType = maxExpressionType(
         anyExpressionType,
         maxExpressionType(
