@@ -37,7 +37,7 @@ export function fnEndsWith(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('boolean'),
       [value.param, suffix.param],
-      sql`(RIGHT(${value.arg}, LENGTH(${suffix.arg})) = ${suffix.arg})`
+      sql`COALESCE(RIGHT(${value.arg}, LENGTH(${suffix.arg})) = ${suffix.arg}, false)`
     ),
   ];
 }

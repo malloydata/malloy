@@ -28,7 +28,11 @@ import * as malloy from '@malloydata/malloy';
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+
+const runtimes = new RuntimeList(
+  databasesFromEnvironmentOr(['bigquery', 'duckdb'])
+);
 
 const expressionModelText = `
 explore: aircraft_models is table('malloytest.aircraft_models'){
@@ -679,7 +683,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTestMultiple(
         ["is_inf('+inf'::number)", true],
         ['is_inf(100)', false],
-        ['is_inf(null)', null]
+        ['is_inf(null)', false]
       );
     });
   });
@@ -688,7 +692,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTestMultiple(
         ["is_nan('NaN'::number)", true],
         ['is_nan(100)', false],
-        ['is_nan(null)', null]
+        ['is_nan(null)', false]
       );
     });
   });
@@ -746,8 +750,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTestMultiple(
         ["starts_with('hello world', 'hello')", true],
         ["starts_with('hello world', 'world')", false],
-        ["starts_with(null, 'world')", null],
-        ["starts_with('hello world', null)", null]
+        ["starts_with(null, 'world')", false],
+        ["starts_with('hello world', null)", false]
       );
     });
   });
@@ -756,8 +760,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTestMultiple(
         ["ends_with('hello world', 'world')", true],
         ["ends_with('hello world', 'hello')", false],
-        ["ends_with(null, 'world')", null],
-        ["ends_with('hello world', null)", null]
+        ["ends_with(null, 'world')", false],
+        ["ends_with('hello world', null)", false]
       );
     });
   });

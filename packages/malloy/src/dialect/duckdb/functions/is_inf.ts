@@ -36,7 +36,7 @@ export function fnIsInf(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('boolean'),
       [param('value', anyExprType('number'))],
-      sql`ISINF(${arg('value')})`
+      sql`COALESCE(ISINF(${arg('value')}), false)`
     ),
   ];
 }

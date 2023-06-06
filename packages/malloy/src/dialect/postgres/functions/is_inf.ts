@@ -36,7 +36,7 @@ export function fnIsInf(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('boolean'),
       [value.param],
-      sql`(${value.arg} = DOUBLE PRECISION 'Infinity' OR ${value.arg} = DOUBLE PRECISION '-Infinity')`
+      sql`COALESCE(${value.arg} = DOUBLE PRECISION 'Infinity' OR ${value.arg} = DOUBLE PRECISION '-Infinity', false)`
     ),
   ];
 }
