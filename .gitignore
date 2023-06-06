@@ -9,6 +9,7 @@ packages/malloy/src/lang/lib
 packages/**/package-lock.json
 packages/**/.eslintcache
 packages/malloy/src/lang/grammar/.antlr
+packages/malloy-malloy-sql/src/grammar/malloySQL.js
 demo/**/build
 demo/**/dist
 demo/**/node_modules

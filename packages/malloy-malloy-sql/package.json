@@ -1,5 +1,5 @@
 {
-  "name": "@malloydata/db-postgres",
+  "name": "@malloydata/malloy-sql",
   "version": "0.0.38",
   "license": "MIT",
   "main": "dist/index.js",
@@ -10,18 +10,19 @@
     "url": "https://github.com/malloydata/malloy"
   },
   "scripts": {
+    "build-grammar": "peggy -o src/grammar/malloySQL.js src/grammar/malloySQL.pegjs",
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
-    "test": "jest --config=../../jest.config.js",
-    "build": "tsc --build",
+    "test": "npm run build-grammar && jest --config=../../jest.config.js",
+    "build": "npm run build-grammar && tsc --build",
     "clean": "tsc --build --clean",
-    "malloyc": "ts-node ../../scripts/malloy-to-json",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.38",
-    "@types/pg": "^8.6.1",
-    "pg": "^8.7.1",
-    "pg-query-stream": "4.2.3"
+    "@malloydata/malloy": "^0.0.38"
+  },
+  "devDependencies": {
+    "md5": "^2.3.0",
+    "peggy": "^3.0.2"
   }
 }

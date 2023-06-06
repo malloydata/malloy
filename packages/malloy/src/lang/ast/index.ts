@@ -40,6 +40,7 @@ export * from './expressions/expr-alternation-tree';
 export * from './expressions/expr-asymmetric';
 export * from './expressions/expr-avg';
 export * from './expressions/expr-cast';
+export * from './expressions/expr-coalesce';
 export * from './expressions/expr-compare';
 export * from './expressions/expr-count';
 export * from './expressions/expr-count-distinct';

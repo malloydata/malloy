@@ -20,16 +20,12 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
-module.exports = {
-  moduleDirectories: ['../../node_modules'],
-  moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx'],
-  modulePathIgnorePatterns: ['<rootDir>/dist/'],
-  setupFilesAfterEnv: ['jest-expect-message'],
-  testMatch: ['**/?(*.)spec.(ts|js)?(x)'],
-  transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest',
-  },
-  testTimeout: 100000,
-  verbose: true,
-};
+export {MalloySQLParser, MalloySQLParseError} from './malloySQLParser';
+export type {MalloySQLParse} from './malloySQLParser';
+export type {
+  MalloySQLMalloyStatement,
+  MalloySQLSQLStatement,
+  MalloySQLStatement,
+  MalloySQLParseErrorExpected,
+} from './types';
+export {MalloySQLStatementType} from './types';

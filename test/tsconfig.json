@@ -17,6 +17,9 @@
     },
     {
       "path": "../packages/malloy-db-duckdb"
+    },
+    {
+      "path": "../packages/malloy-malloy-sql"
     }
   ]
 }

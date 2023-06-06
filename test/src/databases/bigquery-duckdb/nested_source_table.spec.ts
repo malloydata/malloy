@@ -203,6 +203,42 @@ describe.each(runtimes.runtimeList)(
       // expect(result.data.path(0, "fieldValue").value).toBe("Organic Search");
       // expect(result.data.path(0, "weight").value).toBe(18);
     });
+
+    test(`autobin - ${databaseName}`, async () => {
+      const _result = await runtime
+        .loadQuery(
+          `
+          source: airports is table('malloytest.airports') + {
+            measure:
+              airport_count is count()
+            query: by_elevation is {
+              aggregate: bin_size is NULLIF((max(elevation) - min(elevation))/30,0)
+              nest: data is {
+                group_by: elevation
+                aggregate: row_count is count()
+              }
+            }
+            -> {
+              group_by: elevation is floor(data.elevation/bin_size)*bin_size + bin_size/2
+              aggregate: airport_count is data.row_count.sum()
+              order_by: elevation
+            }
+          }
+
+          query: airports -> {
+            group_by: state is state
+            aggregate: airport_count
+            nest: by_elevation_bar_chart is by_elevation
+          }
+        `
+        )
+        .run();
+      // console.log(result.sql);
+      // console.log(result.data.toObject());
+      // expect(result.data.path(0, 'fieldName').value).toBe('channelGrouping');
+      // expect(result.data.path(0, 'fieldValue').value).toBe('Organic Search');
+      // expect(result.data.path(0, "weight").value).toBe(18);
+    });
   }
 );
 

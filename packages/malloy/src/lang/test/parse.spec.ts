@@ -295,6 +295,11 @@ describe('model statements', () => {
       `)
     );
   });
+  test('errors on redefinition of query', () => {
+    expect(
+      'query: q1 is a -> { project: * }, q1 is a -> { project: * }'
+    ).compileToFailWith("Query 'q1' is already defined, cannot redefine");
+  });
 });
 
 describe('explore properties', () => {
@@ -833,6 +838,7 @@ describe('expressions', () => {
     test('not', exprOK('not true'));
     test('and', exprOK('true and false'));
     test('or', exprOK('true or false'));
+    test('null-check (??)', exprOK('ai ?? 7'));
     test('disallow date OP number', () => {
       expect(new BetaExpression('@2001 = 7')).compileToFailWith(
         'Cannot compare a date to a number'

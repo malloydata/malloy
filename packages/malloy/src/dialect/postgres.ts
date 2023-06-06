@@ -45,31 +45,31 @@ import {
 } from './dialect';
 
 const castMap: Record<string, string> = {
-  number: 'double precision',
-  string: 'varchar',
+  'number': 'double precision',
+  'string': 'varchar',
 };
 
 const pgExtractionMap: Record<string, string> = {
-  day_of_week: 'dow',
-  day_of_year: 'doy',
+  'day_of_week': 'dow',
+  'day_of_year': 'doy',
 };
 
 const pgMakeIntervalMap: Record<string, string> = {
-  year: 'years',
-  month: 'months',
-  week: 'weeks',
-  day: 'days',
-  hour: 'hours',
-  minute: 'mins',
-  second: 'secs',
+  'year': 'years',
+  'month': 'months',
+  'week': 'weeks',
+  'day': 'days',
+  'hour': 'hours',
+  'minute': 'mins',
+  'second': 'secs',
 };
 
 const inSeconds: Record<string, number> = {
-  second: 1,
-  minute: 60,
-  hour: 3600,
-  day: 24 * 3600,
-  week: 7 * 24 * 3600,
+  'second': 1,
+  'minute': 60,
+  'hour': 3600,
+  'day': 24 * 3600,
+  'week': 7 * 24 * 3600,
 };
 
 export class PostgresDialect extends Dialect {
@@ -88,7 +88,7 @@ export class PostgresDialect extends Dialect {
   supportsQualify = false;
 
   functionInfo: Record<string, FunctionInfo> = {
-    concat: {returnType: 'string'},
+    'concat': {returnType: 'string'},
   };
 
   quoteTablePath(tablePath: string): string {
@@ -196,7 +196,8 @@ export class PostgresDialect extends Dialect {
     alias: string,
     fieldList: DialectFieldList,
     needDistinctKey: boolean,
-    isArray: boolean
+    isArray: boolean,
+    _isInNestedPipeline: boolean
   ): string {
     if (isArray) {
       if (needDistinctKey) {

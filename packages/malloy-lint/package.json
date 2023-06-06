@@ -1,5 +1,5 @@
 {
-  "name": "@malloydata/db-postgres",
+  "name": "@malloydata/eslint-plugin-lint",
   "version": "0.0.38",
   "license": "MIT",
   "main": "dist/index.js",
@@ -10,18 +10,14 @@
     "url": "https://github.com/malloydata/malloy"
   },
   "scripts": {
-    "lint": "eslint '**/*.ts{,x}'",
-    "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "malloyc": "ts-node ../../scripts/malloy-to-json",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.38",
-    "@types/pg": "^8.6.1",
-    "pg": "^8.7.1",
-    "pg-query-stream": "4.2.3"
+    "@typescript-eslint/utils": "^5.59.1",
+    "tsutils": "^3.21.0",
+    "typescript": "^4.8.4"
   }
 }

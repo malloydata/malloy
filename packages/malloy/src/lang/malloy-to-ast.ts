@@ -857,18 +857,34 @@ export class MalloyToAST
     return exprList.map(ecx => this.getFieldExpr(ecx));
   }
 
-  visitExprLogical(pcx: parse.ExprLogicalContext): ast.ExprLogicalOp {
+  visitExprLogicalOr(pcx: parse.ExprLogicalOrContext): ast.ExprLogicalOp {
     const left = this.getFieldExpr(pcx.fieldExpr(0));
     const right = this.getFieldExpr(pcx.fieldExpr(1));
-    return new ast.ExprLogicalOp(left, pcx.AND() ? 'and' : 'or', right);
+    return new ast.ExprLogicalOp(left, 'or', right);
   }
 
-  visitExprLogicalTree(
-    pcx: parse.ExprLogicalTreeContext
-  ): ast.ExprAlternationTree {
+  visitExprLogicalAnd(pcx: parse.ExprLogicalAndContext): ast.ExprLogicalOp {
+    const left = this.getFieldExpr(pcx.fieldExpr(0));
+    const right = this.getFieldExpr(pcx.fieldExpr(1));
+    return new ast.ExprLogicalOp(left, 'and', right);
+  }
+
+  visitExprOrTree(pcx: parse.ExprOrTreeContext): ast.ExprAlternationTree {
     const left = this.getFieldExpr(pcx.fieldExpr());
     const right = this.getFieldExpr(pcx.partialAllowedFieldExpr());
-    return new ast.ExprAlternationTree(left, pcx.AMPER() ? '&' : '|', right);
+    return this.astAt(new ast.ExprAlternationTree(left, '|', right), pcx);
+  }
+
+  visitExprAndTree(pcx: parse.ExprAndTreeContext): ast.ExprAlternationTree {
+    const left = this.getFieldExpr(pcx.fieldExpr());
+    const right = this.getFieldExpr(pcx.partialAllowedFieldExpr());
+    return this.astAt(new ast.ExprAlternationTree(left, '&', right), pcx);
+  }
+
+  visitExprCoalesce(pcx: parse.ExprCoalesceContext): ast.ExprCoalesce {
+    const left = this.getFieldExpr(pcx.fieldExpr()[0]);
+    const right = this.getFieldExpr(pcx.fieldExpr()[1]);
+    return this.astAt(new ast.ExprCoalesce(left, right), pcx);
   }
 
   visitPartialAllowedFieldExpr(
@@ -1029,9 +1045,6 @@ export class MalloyToAST
   }
 
   visitExprApply(pcx: parse.ExprApplyContext): ast.Apply {
-    if (pcx.COLON()) {
-      this.contextError(pcx, "':' for apply is deprecated, use '?'", 'warn');
-    }
     return new ast.Apply(
       this.getFieldExpr(pcx.fieldExpr()),
       this.getFieldExpr(pcx.partialAllowedFieldExpr())

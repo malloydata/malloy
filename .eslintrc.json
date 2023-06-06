@@ -1,7 +1,8 @@
 {
   "extends": "./node_modules/gts/",
   "parserOptions": {
-    "warnOnUnsupportedTypeScriptVersion": false
+    "warnOnUnsupportedTypeScriptVersion": false,
+    "project": "./tsconfig.packages.json"
   },
   "ignorePatterns": [
     "*.d.ts",
@@ -9,6 +10,7 @@
     "packages/malloy/src/lang/lib/Malloy",
     "dist/"
   ],
+  "plugins": ["@malloydata/lint"],
   "rules": {
     "no-console": "warn",
     "prettier/prettier": ["error", {"quoteProps": "preserve"}],
@@ -39,9 +41,7 @@
       "warn",
       {"prefer": "parameter-property"}
     ],
-    "quote-props": [
-      "error",
-      "consistent"
-    ]
+    "quote-props": ["error", "consistent"],
+    "@malloydata/lint/quote-string-properties": "error"
   }
 }
