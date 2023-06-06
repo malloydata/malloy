@@ -22,10 +22,10 @@
  */
 
 import {ExprValue} from '../types/expr-value';
+import {FieldValueType} from '../../../model';
 import {FT} from '../fragtype-utils';
 import {ExprAggregateFunction} from './expr-aggregate-function';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldValueType} from '../../../model';
 
 export class ExprMin extends ExprAggregateFunction {
   legalChildTypes = [FT.numberT, FT.stringT, FT.dateT, FT.timestampT];

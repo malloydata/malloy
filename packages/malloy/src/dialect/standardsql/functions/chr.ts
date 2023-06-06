@@ -36,6 +36,8 @@ export function fnChr(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('string'),
       [value.param],
+      // Need to explicitly have a case for when the arg is 0, to return ''
+      // Also, cannot compare literal null with = in BigQuery, so we wrap in an IFNULL
       sql`CASE WHEN IFNULL(${value.arg}, 1) = 0 THEN '' ELSE CHR(${value.arg}) END`
     ),
   ];

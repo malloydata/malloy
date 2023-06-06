@@ -97,7 +97,6 @@ export abstract class PipelineDesc extends MalloyElement {
     const firstSeg = pipeline[0];
     if (firstSeg) {
       this.headRefinement.refineFrom(firstSeg);
-      // What is teh ouput of the refineFrom
     }
     pipeline[0] = this.headRefinement.getOp(fs, this).segment;
     return {pipeline};

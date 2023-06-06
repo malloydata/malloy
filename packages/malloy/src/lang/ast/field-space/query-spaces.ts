@@ -147,7 +147,6 @@ export abstract class QuerySpace extends RefinedSpace {
 
   addWild(wild: WildcardFieldReference): void {
     let success = true;
-    // TODO actually handle join_path.* and **
     let current = this.exprSpace as FieldSpace;
     const parts = wild.refString.split('.');
     const conflictMap = {};
@@ -179,6 +178,7 @@ export abstract class QuerySpace extends RefinedSpace {
           }
         }
       } else if (part === '**') {
+        // TODO actually handle **
         wild.log('** is currently broken');
         success = false;
         // const spaces: {space: FieldSpace; ref: string | undefined}[] = [

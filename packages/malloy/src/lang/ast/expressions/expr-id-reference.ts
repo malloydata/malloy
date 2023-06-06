@@ -24,6 +24,7 @@
 import {
   expressionIsAggregate,
   isConditionParameter,
+  mergeEvalSpaces,
 } from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
 import {ExprValue} from '../types/expr-value';
@@ -54,9 +55,7 @@ export class ExprIdReference extends ExpressionDef {
       }
       const value = [{type: def.found.refType, path: this.refString}];
       const td = def.found.typeDesc();
-      // TODO We think that aggregates are really more 'input' like, but for now,
-      // we consider them to always be 'output'. Once we better understand the input
-      // output thing we can reconsider this.
+      // We think that aggregates are more 'output' like, but maybe we will reconsider that...
       if (expressionIsAggregate(td.expressionType)) {
         td.evalSpace = 'output';
       }
@@ -75,7 +74,8 @@ export class ExprIdReference extends ExpressionDef {
         return {
           dataType: 'boolean',
           expressionType: lval.expressionType,
-          evalSpace: lval.evalSpace, // TODO unsure about this
+          // TODO not sure about the input-ness of parameters
+          evalSpace: mergeEvalSpaces(lval.evalSpace, 'input'),
           value: [
             {
               type: 'apply',

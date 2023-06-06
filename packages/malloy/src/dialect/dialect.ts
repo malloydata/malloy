@@ -280,6 +280,10 @@ export abstract class Dialect {
   sqlAggDistinct(
     _key: string,
     _values: string[],
+    // A function which takes the value names used internally and produces the SQL operation using those
+    // value names.
+    // TODO maybe this should be flipped around and the SQL should be passed in directly along with the
+    // value names used?
     _func: (valNames: string[]) => string
   ) {
     return 'sqlAggDistinct called but not implemented';

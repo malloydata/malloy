@@ -397,6 +397,9 @@ export class PostgresDialect extends Dialect {
     )`;
   }
 
+  // TODO this does not preserve the types of the arguments, meaning we have to hack
+  // around this in the definitions of functions that use this to cast back to the correct
+  // type (from text). See the postgres implementation of stddev.
   sqlAggDistinct(
     key: string,
     values: string[],

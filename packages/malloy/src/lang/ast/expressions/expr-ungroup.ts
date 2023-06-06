@@ -96,7 +96,7 @@ export class ExprUngroup extends ExpressionDef {
         dataType: this.returns(exprVal),
         expressionType: 'ungrouped_aggregate',
         value: [ungroup],
-        evalSpace: 'input',
+        evalSpace: 'output',
       };
     }
     this.log(`${this.control}() incompatible type`);

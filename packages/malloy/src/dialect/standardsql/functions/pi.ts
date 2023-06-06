@@ -29,5 +29,6 @@ import {
 } from '../../functions/util';
 
 export function fnPi(): DialectFunctionOverloadDef[] {
+  // There's no built-in PI function, but we can compute it easily.
   return [overload(minScalar('number'), [], sql`ACOS(-1)`)];
 }

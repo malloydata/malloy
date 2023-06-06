@@ -80,6 +80,8 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
             ],
             evalSpace: footType.evalSpace,
           };
+          // If you reference an output field as the foot, then we need to get the
+          // source from that field, rather than using the default source.
           if (
             sourceFoot instanceof OutputSpaceEntry &&
             sourceFoot.inputSpaceEntry instanceof ReferenceField

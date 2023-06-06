@@ -45,6 +45,8 @@ export class ReferenceField extends SpaceField {
   }
 
   typeDesc(): TypeDesc {
+    // Remember the actual type of the field that was looked up so it can be used for
+    // type checking.
     if (this.res !== undefined && this.res.found) {
       return this.res.found.typeDesc();
     }
