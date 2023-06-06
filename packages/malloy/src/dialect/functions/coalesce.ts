@@ -21,30 +21,32 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FUNCTIONS} from '../../functions';
-import {fnByteLength} from './byte_length';
-import {fnDiv} from './div';
-import {fnEndsWith} from './ends_with';
-import {fnGreatest, fnLeast} from './greatest_and_least';
-import {fnIsInf} from './is_inf';
-import {fnIsNan} from './is_nan';
-import {fnLog} from './log';
-import {fnRand} from './rand';
-import {fnReplace} from './replace';
-import {fnTrunc} from './trunc';
-import {fnUnicode} from './unicode';
+import {ExpressionValueType} from '../..';
+import {
+  arg,
+  overload,
+  minScalar,
+  sql,
+  DialectFunctionOverloadDef,
+  anyExprType,
+  params,
+  spread,
+} from './util';
 
-export const DUCKDB_FUNCTIONS = FUNCTIONS.clone();
-DUCKDB_FUNCTIONS.add('trunc', fnTrunc);
-DUCKDB_FUNCTIONS.add('rand', fnRand);
-DUCKDB_FUNCTIONS.add('is_nan', fnIsNan);
-DUCKDB_FUNCTIONS.add('is_inf', fnIsInf);
-DUCKDB_FUNCTIONS.add('greatest', fnGreatest);
-DUCKDB_FUNCTIONS.add('least', fnLeast);
-DUCKDB_FUNCTIONS.add('div', fnDiv);
-DUCKDB_FUNCTIONS.add('byte_length', fnByteLength);
-DUCKDB_FUNCTIONS.add('unicode', fnUnicode);
-DUCKDB_FUNCTIONS.add('replace', fnReplace);
-DUCKDB_FUNCTIONS.add('ends_with', fnEndsWith);
-DUCKDB_FUNCTIONS.add('log', fnLog);
-DUCKDB_FUNCTIONS.seal();
+const types: ExpressionValueType[] = [
+  'string',
+  'number',
+  'timestamp',
+  'date',
+  'json',
+];
+
+export function fnCoalesce(): DialectFunctionOverloadDef[] {
+  return types.map(type =>
+    overload(
+      minScalar(type),
+      [params('values', anyExprType(type))],
+      sql`COALESCE(${spread(arg('values'))})`
+    )
+  );
+}

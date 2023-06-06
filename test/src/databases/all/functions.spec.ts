@@ -564,6 +564,35 @@ expressionModels.forEach((expressionModel, databaseName) => {
       );
     });
   });
+  describe('log', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTestMultiple(
+        ['log(10, 10)', 1],
+        ['log(100, 10)', 2],
+        ['log(32, 2)', 5],
+        ['log(null, 2)', null],
+        ['log(10, null)', null]
+      );
+    });
+  });
+  describe('ln', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTestMultiple(
+        ['ln(exp(1))', 1],
+        ['ln(exp(2))', 2],
+        ['ln(null)', null]
+      );
+    });
+  });
+  describe('exp', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTestMultiple(
+        ['exp(0)', 1],
+        ['ln(exp(1))', 1],
+        ['exp(null)', null]
+      );
+    });
+  });
 
   // TODO trig functions could have more exhaustive tests -- these are mostly just here to
   // ensure they exist
@@ -791,43 +820,38 @@ expressionModels.forEach((expressionModel, databaseName) => {
       );
     });
   });
-  // TODO probably removing ifnull
   describe('ifnull', () => {
-    it(`works with non-null - ${databaseName}`, async () => {
-      await funcTest("ifnull('a', 'b')", 'a');
+    it(`works - ${databaseName}`, async () => {
+      await funcTestMultiple(
+        ["ifnull('a', 'b')", 'a'],
+        ["ifnull(null, 'b')", 'b'],
+        ["ifnull('a', null)", 'a'],
+        ['ifnull(null, null)', null]
+      );
     });
-
-    it(`works with null - ${databaseName}`, async () => {
-      await funcTest("ifnull(null, 'b')", 'b');
-    });
-
-    it(`works with null default - ${databaseName}`, async () => {
-      await funcTest("ifnull('a', null)", 'a');
-    });
-
-    it(`works with two nulls - ${databaseName}`, async () => {
-      await funcTest('ifnull(null, null)', null);
+  });
+  describe('coalesce', () => {
+    it(`works - ${databaseName}`, async () => {
+      await funcTestMultiple(
+        ["coalesce('a')", 'a'],
+        ["coalesce('a', 'b')", 'a'],
+        ["coalesce(null, 'a', 'b')", 'a'],
+        ["coalesce(null, 'b')", 'b'],
+        ["coalesce('a', null)", 'a'],
+        ['coalesce(null, null)', null],
+        ['coalesce(null)', null]
+      );
     });
   });
   describe('nullif', () => {
-    it(`works with equal - ${databaseName}`, async () => {
-      await funcTest("nullif('a', 'a')", null);
-    });
-
-    it(`works with non-equal - ${databaseName}`, async () => {
-      await funcTest("nullif('a', 'b')", 'a');
-    });
-
-    it(`works with null check - ${databaseName}`, async () => {
-      await funcTest("nullif('a', null)", 'a');
-    });
-
-    it(`works with two nulls - ${databaseName}`, async () => {
-      await funcTest('nullif(null, null)', null);
-    });
-
-    it(`works with null value - ${databaseName}`, async () => {
-      await funcTest('nullif(null, 2)', null);
+    it(`works - ${databaseName}`, async () => {
+      await funcTestMultiple(
+        ["nullif('a', 'a')", null],
+        ["nullif('a', 'b')", 'a'],
+        ["nullif('a', null)", 'a'],
+        ['nullif(null, null)', null],
+        ['nullif(null, 2)', null]
+      );
     });
   });
   describe('chr', () => {
@@ -952,7 +976,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       expect(result.data.path(1, 'least_births').value).toBe(lastBirths);
     });
   });
-  describe('avg_rolling', () => {
+  describe('avg_moving', () => {
     it(`works - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
@@ -960,7 +984,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
           query: state_facts -> {
             group_by: state, births
             order_by: births desc
-            calculate: rolling_avg is avg_rolling(births, 2)
+            calculate: rolling_avg is avg_moving(births, 2)
           }`
         )
         .run({rowLimit: 100});
@@ -987,7 +1011,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
           query: state_facts -> { project: *; limit: 3 } -> {
             group_by: state, births
             order_by: births desc
-            calculate: rolling_avg is avg_rolling(births, 0, 2)
+            calculate: rolling_avg is avg_moving(births, 0, 2)
           }`
         )
         .run({rowLimit: 100});

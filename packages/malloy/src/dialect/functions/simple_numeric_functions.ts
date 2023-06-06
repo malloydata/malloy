@@ -55,4 +55,4 @@ export const fnFloor = () => simple('FLOOR');
 export const fnAbs = () => simple('ABS');
 export const fnSqrt = () => simple('SQRT');
 export const fnLn = () => simple('LN');
-export const fnLog10 = () => simple('LOG10');
+export const fnExp = () => simple('EXP');
