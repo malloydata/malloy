@@ -711,7 +711,6 @@ export interface QuerySegment extends Filtered {
   limit?: number;
   by?: By;
   orderBy?: OrderBy[]; // uses output field name or index.
-  // TODO: I think this is what I need.
   queryTimezone?: string;
 }
 
