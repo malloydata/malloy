@@ -40,6 +40,10 @@ interface Choice {
   when: ExprValue;
 }
 
+function typeCoalesce(ev1: ExprValue | undefined, ev2: ExprValue): ExprValue {
+  return ev1 === undefined || ev1.dataType === 'null' ? ev2 : ev1;
+}
+
 export class Pick extends ExpressionDef {
   elementType = 'pick';
   constructor(readonly choices: PickWhen[], readonly elsePick?: ExpressionDef) {
@@ -79,22 +83,17 @@ export class Pick extends ExpressionDef {
         anyExpressionType,
         maxExpressionType(whenExpr.expressionType, thenExpr.expressionType)
       );
-      if (returnType) {
-        if (!FT.typeEq(returnType, thenExpr, true)) {
-          const whenType = FT.inspect(thenExpr);
-          this.log(
-            `pick type '${whenType}', expected '${returnType.dataType}'`
-          );
-          return errorFor('pick when type');
-        }
-      } else {
-        returnType = thenExpr;
+      if (returnType && !FT.typeEq(returnType, thenExpr, true)) {
+        const whenType = FT.inspect(thenExpr);
+        this.log(`pick type '${whenType}', expected '${returnType.dataType}'`);
+        return errorFor('pick when type');
       }
+      returnType = typeCoalesce(returnType, thenExpr);
       caseValue.push(' WHEN ', ...whenExpr.value, ' THEN ', ...thenExpr.value);
     }
     const elsePart = this.elsePick || expr;
     const elseVal = elsePart.getExpression(fs);
-    returnType ||= elseVal;
+    returnType = typeCoalesce(returnType, elseVal);
     if (!FT.typeEq(returnType, elseVal, true)) {
       const errSrc = this.elsePick ? 'else' : 'pick default';
       this.log(
@@ -136,10 +135,9 @@ export class Pick extends ExpressionDef {
         when: c.when.getExpression(fs),
       });
     }
-    const returnType = choiceValues[0].pick;
-
+    let returnType: ExprValue | undefined;
     const caseValue: Fragment[] = ['CASE'];
-    let anyExpressionType: ExpressionType = returnType.expressionType;
+    let anyExpressionType: ExpressionType = 'scalar';
     for (const aChoice of choiceValues) {
       if (!FT.typeEq(aChoice.when, FT.boolT)) {
         this.log(
@@ -147,11 +145,12 @@ export class Pick extends ExpressionDef {
         );
         return errorFor('pick when type');
       }
-      if (!FT.typeEq(returnType, aChoice.pick, true)) {
+      if (returnType && !FT.typeEq(returnType, aChoice.pick, true)) {
         const whenType = FT.inspect(aChoice.pick);
         this.log(`pick type '${whenType}', expected '${returnType.dataType}'`);
         return errorFor('pick value type');
       }
+      returnType = typeCoalesce(returnType, aChoice.pick);
       anyExpressionType = maxExpressionType(
         anyExpressionType,
         maxExpressionType(
@@ -171,6 +170,7 @@ export class Pick extends ExpressionDef {
       anyExpressionType,
       defVal.expressionType
     );
+    returnType = typeCoalesce(returnType, defVal);
     if (!FT.typeEq(returnType, defVal, true)) {
       this.elsePick.log(
         `else type '${FT.inspect(defVal)}', expected '${returnType.dataType}'`
