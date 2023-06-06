@@ -56,9 +56,6 @@ export class HTMLDateRenderer implements Renderer {
 
     const element = this.document.createElement('span');
     element.appendChild(this.document.createTextNode(timestring));
-    element.appendChild(
-      this.document.createTextNode(this.options.queryTimezone ?? 'NT')
-    );
     return element;
   }
 }
