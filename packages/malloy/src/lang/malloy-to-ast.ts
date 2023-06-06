@@ -331,21 +331,21 @@ export class MalloyToAST
     pcx: parse.DefineSourceStatementContext
   ): ast.DefineSourceList {
     const defsCx = pcx.sourcePropertyList().sourceDefinition();
-    const defs = defsCx.map(dcx => this.visitsourceDefinition(dcx));
+    const defs = defsCx.map(dcx => this.visitSourceDefinition(dcx));
     const blockNotes = getNotes(pcx.tags());
     const defList = new ast.DefineSourceList(defs);
     defList.extendNote({blockNotes});
     return defList;
   }
 
-  visitsourceDefinition(pcx: parse.SourceDefinitionContext): ast.DefineSource {
+  visitSourceDefinition(pcx: parse.SourceDefinitionContext): ast.DefineSource {
     const exploreDef = new ast.DefineSource(
       this.getIdText(pcx.sourceNameDef()),
       this.visitExplore(pcx.explore()),
       true,
       []
     );
-    const notes = getNotes(pcx).concat(getIsNotes(pcx.isDefine()));
+    const notes = getNotes(pcx.tags()).concat(getIsNotes(pcx.isDefine()));
     exploreDef.extendNote({notes});
     return this.astAt(exploreDef, pcx);
   }
@@ -458,34 +458,34 @@ export class MalloyToAST
 
   protected getJoinSource(
     name: ast.ModelEntryReference,
-    ecx: parse.ExploreContext | undefined
-  ): ast.Source {
+    ecx: parse.IsExploreContext | undefined
+  ): {joinFrom: ast.Source; notes: string[]} {
     if (ecx) {
-      return this.visitExplore(ecx);
+      const joinSrc = this.visitExplore(ecx.explore());
+      const notes = getNotes(ecx._before_is).concat(getNotes(ecx._after_is));
+      return {joinFrom: joinSrc, notes};
     }
-    return new ast.NamedSource(name);
+    return {joinFrom: new ast.NamedSource(name), notes: []};
   }
 
   visitJoinOn(pcx: parse.JoinOnContext): ast.Join {
-    const notes = pcx.ANNOTATION().map(cx => cx.text);
     const joinAs = this.getModelEntryName(pcx.joinNameDef());
-    const joinFrom = this.getJoinSource(joinAs, pcx.explore());
+    const {joinFrom, notes} = this.getJoinSource(joinAs, pcx.isExplore());
     const join = new ast.ExpressionJoin(joinAs, joinFrom);
     const onCx = pcx.joinExpression();
     if (onCx) {
       join.joinOn = this.getFieldExpr(onCx);
     }
-    join.extendNote({notes});
+    join.extendNote({notes: getNotes(pcx).concat(notes)});
     return this.astAt(join, pcx);
   }
 
   visitJoinWith(pcx: parse.JoinWithContext): ast.Join {
-    const notes = pcx.ANNOTATION().map(cx => cx.text);
     const joinAs = this.getModelEntryName(pcx.joinNameDef());
-    const joinFrom = this.getJoinSource(joinAs, pcx.explore());
+    const {joinFrom, notes} = this.getJoinSource(joinAs, pcx.isExplore());
     const joinOn = this.getFieldExpr(pcx.fieldExpr());
     const join = new ast.KeyJoin(joinAs, joinFrom, joinOn);
-    join.extendNote({notes});
+    join.extendNote({notes: getNotes(pcx).concat(notes)});
     return this.astAt(join, pcx);
   }
 
@@ -498,7 +498,8 @@ export class MalloyToAST
       fieldName,
       this.getSourceCode(defCx)
     );
-    def.extendNote({notes: getNotes(pcx.tags())});
+    const notes = getNotes(pcx.tags()).concat(getIsNotes(pcx.isDefine()));
+    def.extendNote({notes});
     return this.astAt(def, pcx);
   }
 
@@ -644,7 +645,6 @@ export class MalloyToAST
   visitQueryFieldDef(pcx: parse.QueryFieldDefContext): ast.QueryItem {
     const defCx = pcx.dimensionDef().fieldDef();
     const dim = this.visitFieldDef(defCx);
-    dim.extendNote({notes: getNotes(pcx.tags())});
     return this.astAt(dim, defCx);
   }
 
@@ -893,14 +893,16 @@ export class MalloyToAST
     const name = this.getIdText(pcx.queryName());
     const nestDef = new ast.NestDefinition(name);
     this.buildPipelineFromName(nestDef, pcx.pipelineFromName());
-    nestDef.extendNote({notes: getNotes(pcx.tags())});
+    nestDef.extendNote({
+      notes: getNotes(pcx.tags()).concat(getIsNotes(pcx.isDefine())),
+    });
     return this.astAt(nestDef, pcx);
   }
 
   visitExploreQueryDef(pcx: parse.ExploreQueryDefContext): ast.TurtleDecl {
-    const notes = pcx.ANNOTATION().map(a => a.text);
     const name = this.getIdText(pcx.exploreQueryNameDef());
     const queryDef = new ast.TurtleDecl(name);
+    const notes = getNotes(pcx).concat(getIsNotes(pcx.isDefine()));
     queryDef.extendNote({notes});
     this.buildPipelineFromName(queryDef, pcx.pipelineFromName());
     return this.astAt(queryDef, pcx);

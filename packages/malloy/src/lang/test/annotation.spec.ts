@@ -26,50 +26,42 @@ import './parse-expects';
 
 const defaultTags = {
   blockNotes: ['# blockNote\n'],
-  notes: ['# note\n'],
+  notes: ['# note\n', '# b4-is\n', '# after-is\n'],
 };
 
 describe('document annotation', () => {
   test('every source annotation point', () => {
     const m = new TestTranslator(`
-      # note1
-      # note1.1
+      # blockNote
       source:
-      # note2
+      # note
       note_a
-      # note3
+      # b4-is
       is
-      # note4
+      # after-is
       a
-      # note5
-      note_b
-      # note6
-      is
-      # note7
-      a
+      # note1
+      note_b is a
     `);
     expect(m).modelCompiled();
     const note_a = m.getSourceDef('note_a');
     expect(note_a).toBeDefined();
     if (note_a) {
-      expect(note_a.annotation).toMatchObject({
-        blockNotes: ['# note1\n', '# note1.1\n'],
-        notes: ['# note2\n', '# note3\n', '# note4\n'],
-      });
+      expect(note_a.annotation).toMatchObject(defaultTags);
     }
     const note_b = m.getSourceDef('note_b');
     expect(note_b).toBeDefined();
     if (note_b) {
       expect(note_b.annotation).toMatchObject({
-        blockNotes: ['# note1\n', '# note1.1\n'],
-        notes: ['# note5\n', '# note6\n', '# note7\n'],
+        blockNotes: defaultTags.blockNotes,
+        notes: ['# note1\n'],
       });
     }
   });
   test('multi line source annotation', () => {
     const m = new TestTranslator(`
       # note1
-      # note2
+      # note1.1
       source: note_a is a
     `);
     expect(m).modelCompiled();
@@ -77,7 +69,7 @@ describe('document annotation', () => {
     expect(note_a).toBeDefined();
     if (note_a) {
       expect(note_a.annotation).toMatchObject({
-        blockNotes: ['# note1\n', '# note2\n'],
+        blockNotes: ['# note1\n', '# note1.1\n'],
       });
     }
   });
@@ -100,23 +92,20 @@ describe('document annotation', () => {
   });
   test('define full query annotation points', () => {
     const m = new TestTranslator(`
-      # note1
+      # blockNote
       query:
-      # note2
+      # note
       note_a
-      # note3
+      # b4-is
       is
-      # note4
+      # after-is
       a -> {project: *}
     `);
     expect(m).modelCompiled();
     const note_a = m.getQuery('note_a');
     expect(note_a).toBeDefined();
     if (note_a) {
-      expect(note_a.annotation).toMatchObject({
-        blockNotes: ['# note1\n'],
-        notes: ['# note2\n', '# note3\n', '# note4\n'],
-      });
+      expect(note_a.annotation).toMatchObject(defaultTags);
     }
   });
   test('anonymous query annotation points', () => {
@@ -167,15 +156,20 @@ describe('document annotation', () => {
   });
 });
 describe('source definition annotations', () => {
+  const turtleDef = `
+    source: na is a {
+      # blockNote
+      query:
+      # note
+        note_a
+        # b4-is
+        is
+        # after-is
+        {project: *}
+    }
+  `;
   test('turtle block annotation', () => {
-    const m = new TestTranslator(`
-      source: na is a {
-        # blockNote
-        query:
-        # note
-          note_a is {project: *}
-      }
-    `);
+    const m = new TestTranslator(turtleDef);
     expect(m).modelCompiled();
     const na = m.getSourceDef('na');
     expect(na).toBeDefined();
@@ -185,21 +179,16 @@ describe('source definition annotations', () => {
       expect(note_a.annotation).toMatchObject(defaultTags);
     }
   });
-  test('query inherits turtle annotation', () => {
+  test('query gains turtle annotation', () => {
     const m = new TestTranslator(`
-      source: na is a {
-        # blockNote
-        query:
-          # note
-          qa is {project: *}
-      }
-      query: note_a is na->qa
+      ${turtleDef}
+      query: note_q is na->note_a
     `);
     expect(m).modelCompiled();
-    const note_a = m.getQuery('note_a');
-    expect(note_a).toBeDefined();
-    if (note_a) {
-      expect(note_a.annotation).toMatchObject(defaultTags);
+    const note_q = m.getQuery('note_q');
+    expect(note_q).toBeDefined();
+    if (note_q) {
+      expect(note_q.annotation).toMatchObject(defaultTags);
     }
   });
   test('dimension block annotation', () => {
@@ -208,7 +197,11 @@ describe('source definition annotations', () => {
         # blockNote
         dimension:
           # note
-          note_a is astr
+          note_a
+          # b4-is
+          is
+          # after-is
+          astr
       }
     `);
     expect(m).modelCompiled();
@@ -225,7 +218,11 @@ describe('source definition annotations', () => {
         # blockNote
         measure:
           # note
-          note_a is max(astr)
+          note_a
+          # b4-is
+          is
+          # after-is
+          max(astr)
       }
     `);
     expect(m).modelCompiled();
@@ -236,13 +233,17 @@ describe('source definition annotations', () => {
       expect(note_a?.annotation).toMatchObject(defaultTags);
     }
   });
-  test('join-on block annotation', () => {
+  test('join_one-with block annotation', () => {
     const m = new TestTranslator(`
       source: na is a {
         # blockNote
         join_one:
           # note
-          note_a is a on note_a.astr = astr
+          note_a
+          # b4-is
+          is
+          # after-is
+          ab with astr
       }
     `);
     expect(m).modelCompiled();
@@ -253,13 +254,17 @@ describe('source definition annotations', () => {
       expect(note_a?.annotation).toMatchObject(defaultTags);
     }
   });
-  test('join-with block annotation', () => {
+  test('join_many-on block annotation', () => {
     const m = new TestTranslator(`
       source: na is a {
         # blockNote
-        join_one:
-          # note
-          note_a is a with astr
+        join_many:
+        # note
+        note_a
+        # b4-is
+        is
+        # after-is
+        a on note_a.astr = astr
       }
     `);
     expect(m).modelCompiled();
@@ -278,7 +283,11 @@ describe('query operation annotations', () => {
         # blockNote
         project:
           # note
-          note_a is astr
+          note_a
+          # b4-is
+          is
+          # after-is
+          astr
       }
     `);
     expect(m).modelCompiled();
@@ -295,7 +304,11 @@ describe('query operation annotations', () => {
         # blockNote
         group_by:
           # note
-          note_a is astr
+          note_a
+          # b4-is
+          is
+          # after-is
+          astr
       }
     `);
     expect(m).modelCompiled();
@@ -312,7 +325,11 @@ describe('query operation annotations', () => {
         # blockNote
         aggregate:
           # note
-          note_a is max(astr)
+          note_a
+          # b4-is
+          is
+          # after-is
+          max(astr)
       }
     `);
     expect(m).modelCompiled();
@@ -329,7 +346,11 @@ describe('query operation annotations', () => {
         # blockNote
         nest:
           # note
-          note_a is aturtle
+          note_a
+          # b4-is
+          is
+          # after-is
+          aturtle
       }
     `);
     expect(m).modelCompiled();
@@ -341,7 +362,6 @@ describe('query operation annotations', () => {
     }
   });
   test.todo('use api to run the tests below');
-  test.todo('add before-is and after-is tests to defaultTags');
   test.todo('make sure turtles inherit refinements');
   //   test('doc annotations', () => {
   //     const a = new ObjectAnnotation.make('#" This is a doc string');

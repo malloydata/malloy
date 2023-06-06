@@ -138,7 +138,7 @@ sourcePropertyList
   ;
 
 sourceDefinition
-  : ANNOTATION* sourceNameDef isDefine explore
+  : tags sourceNameDef isDefine explore
   ;
 
 explore
@@ -169,7 +169,7 @@ exploreStatement
   | PRIMARY_KEY fieldName              # defExplorePrimaryKey
   | RENAME renameList                  # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList    # defExploreEditField
-  | tags QUERY subQueryDefList  # defExploreQuery
+  | tags QUERY subQueryDefList         # defExploreQuery
   | timezoneStatement                  # defExploreTimezone
   | ANNOTATION+                        # defExploreAnnotation
   ;
@@ -213,9 +213,13 @@ joinList
   : joinDef (COMMA? joinDef)* COMMA?
   ;
 
+isExplore
+  : before_is=tags IS after_is=tags explore
+  ;
+
 joinDef
-  : ANNOTATION* joinNameDef (IS explore)? WITH fieldExpr        # joinWith
-  | ANNOTATION* joinNameDef (IS explore)? (ON joinExpression)?  # joinOn
+  : ANNOTATION* joinNameDef isExplore? WITH fieldExpr        # joinWith
+  | ANNOTATION* joinNameDef isExplore? (ON joinExpression)?  # joinOn
   ;
 
 joinExpression: fieldExpr;
@@ -281,7 +285,7 @@ queryFieldList
 dimensionDef: fieldDef;
 
 queryFieldEntry
-  : tags dimensionDef   # queryFieldDef
+  : dimensionDef        # queryFieldDef
   | fieldPath           # queryFieldRef
   ;
 
