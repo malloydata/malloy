@@ -1088,6 +1088,13 @@ export class PreparedResult {
     throw new Error(`'${name} is not an explore`);
   }
 
+  /**
+   * @return The query timezone.
+   */
+  public get queryTimezone(): string | undefined {
+    return this.inner.queryTimezone;
+  }
+
   public get _sourceExploreName(): string {
     return this.inner.sourceExplore;
   }

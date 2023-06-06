@@ -296,7 +296,7 @@ export function makeRenderer(
         (field.type === AtomicFieldType.Date ||
           field.type === AtomicFieldType.Timestamp))
     ) {
-      return new HTMLDateRenderer(document);
+      return new HTMLDateRenderer(document, options);
     } else if (renderDef.renderer === 'currency') {
       return new HTMLCurrencyRenderer(document);
     } else if (renderDef.renderer === 'percent') {
