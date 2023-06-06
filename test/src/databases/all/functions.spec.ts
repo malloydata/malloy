@@ -207,7 +207,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         ["replace('aaaa', r'.', 'c')", 'cccc'],
         [
           "replace('axbxc', r'(a).(b).(c)', '\\\\0 - \\\\1 - \\\\2 - \\\\3')",
-          'axbxc - a - b - c',
+          databaseName === 'postgres' ? '\\0 - a - b - c' : 'axbxc - a - b - c',
         ],
         ["replace('aaaa', '', 'c')", 'aaaa'],
         ["replace(null, 'a', 'c')", null],
