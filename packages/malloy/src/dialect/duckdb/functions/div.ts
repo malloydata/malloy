@@ -31,15 +31,15 @@ import {
 } from '../../functions/util';
 
 export function fnDiv(): DialectFunctionOverloadDef[] {
-  const numerator = makeParam('numerator', anyExprType('number'));
-  const denominator = makeParam('denominator', anyExprType('number'));
+  const dividend = makeParam('dividend', anyExprType('number'));
+  const divisor = makeParam('divisor', anyExprType('number'));
   return [
     overload(
       minScalar('number'),
-      [numerator.param, denominator.param],
+      [dividend.param, divisor.param],
       // TODO In DuckDB 0.8 there is a new // operator which does integer division.
       // When we upgrade, we should switch this to use that instead.
-      sql`CASE WHEN ${numerator.arg} / ${denominator.arg} < 0 THEN CEIL(${numerator.arg} / ${denominator.arg}) ELSE FLOOR(${numerator.arg} / ${denominator.arg}) END`
+      sql`CASE WHEN ${dividend.arg} / ${divisor.arg} < 0 THEN CEIL(${dividend.arg} / ${divisor.arg}) ELSE FLOOR(${dividend.arg} / ${divisor.arg}) END`
     ),
   ];
 }

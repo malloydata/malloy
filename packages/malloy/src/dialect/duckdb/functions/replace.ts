@@ -44,6 +44,7 @@ export function fnReplace(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('string'),
       [value.param, regexPattern.param, replacement.param],
+      // In DuckDB we specifically need to say that the replacement should be global.
       sql`REGEXP_REPLACE(${value.arg}, ${regexPattern.arg}, ${replacement.arg}, 'g')`
     ),
   ];

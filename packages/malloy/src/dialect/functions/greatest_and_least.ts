@@ -41,6 +41,9 @@ const types: ExpressionValueType[] = [
   'json',
 ];
 
+// TODO Flip this around so that in DuckDB and Postgres, it just calls the function
+// directly, and in BigQuery we add a wrapper to ensure that the null behavior is consistent.
+// It should be that nulls are ignored, rather than propagated.
 function greatestOrLeast(
   fn: 'GREATEST' | 'LEAST'
 ): DialectFunctionOverloadDef[] {

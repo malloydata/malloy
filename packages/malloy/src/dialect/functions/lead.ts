@@ -23,9 +23,7 @@
 
 import {ExpressionValueType} from '../..';
 import {
-  arg,
   overload,
-  param,
   sql,
   DialectFunctionOverloadDef,
   minAnalytic,
@@ -33,6 +31,8 @@ import {
   maxScalar,
   output,
   constant,
+  makeParam,
+  literal,
 } from './util';
 
 const types: ExpressionValueType[] = [
@@ -44,31 +44,26 @@ const types: ExpressionValueType[] = [
 ];
 
 export function fnLead(): DialectFunctionOverloadDef[] {
-  return types.flatMap(type => [
-    overload(
-      minAnalytic(type),
-      [param('value', output(maxAggregate(type)))],
-      sql`LEAD(${arg('value')})`,
-      {needsWindowOrderBy: true}
-    ),
-    overload(
-      minAnalytic(type),
-      [
-        param('value', output(maxAggregate(type))),
-        param('offset', constant(maxScalar('number'))),
-      ],
-      sql`LEAD(${arg('value')}, ${arg('offset')})`,
-      {needsWindowOrderBy: true}
-    ),
-    overload(
-      minAnalytic(type),
-      [
-        param('value', output(maxAggregate(type))),
-        param('offset', constant(maxScalar('number'))),
-        param('default', constant(maxAggregate(type))),
-      ],
-      sql`LEAD(${arg('value')}, ${arg('offset')}, ${arg('default')})`,
-      {needsWindowOrderBy: true}
-    ),
-  ]);
+  return types.flatMap(type => {
+    const value = makeParam('value', output(maxAggregate(type)));
+    const offset = makeParam('offset', literal(maxScalar('number')));
+    const def = makeParam('default', constant(maxAggregate(type)));
+    return [
+      overload(minAnalytic(type), [value.param], sql`LEAD(${value.arg})`, {
+        needsWindowOrderBy: true,
+      }),
+      overload(
+        minAnalytic(type),
+        [value.param, offset.param],
+        sql`LEAD(${value.arg}, ${offset.arg})`,
+        {needsWindowOrderBy: true}
+      ),
+      overload(
+        minAnalytic(type),
+        [value.param, offset.param, def.param],
+        sql`LEAD(${value.arg}, ${offset.arg}, ${def.arg})`,
+        {needsWindowOrderBy: true}
+      ),
+    ];
+  });
 }

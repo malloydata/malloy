@@ -33,6 +33,8 @@ import {NameSpace} from './name-space';
  */
 export class GlobalNameSpace implements NameSpace {
   getEntry(name: string): ModelEntry | undefined {
+    // TODO cache this or precompute this so we're not comparing/merging dialect
+    // overloads on every usage
     const func = getDialectFunction(name);
     if (func === undefined) {
       return undefined;

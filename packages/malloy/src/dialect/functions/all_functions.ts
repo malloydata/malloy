@@ -57,7 +57,6 @@ import {fnStrpos} from './strpos';
 import {fnDiv} from './div';
 import {fnGreatest, fnLeast} from './greatest_and_least';
 import {fnTrim, fnLtrim, fnRtrim} from './trim_functions';
-import {fnNumNulls, fnNumNonNulls} from './num_nulls_and_nonnulls';
 import {fnRand} from './rand';
 import {fnPi} from './pi';
 import {fnRepeat} from './repeat';
@@ -81,6 +80,12 @@ import {fnAvgRolling} from './avg_moving';
 import {FunctionMap} from './function_map';
 import {fnCoalesce} from './coalesce';
 
+/**
+ * This is a function map containing default implementations of all Malloy
+ * built-in functions. These don't work in all dialects, but are a good starting
+ * point. In dialects where they don't work, specific functions are overridden in
+ * a dialect-specific function map.
+ */
 export const FUNCTIONS = new FunctionMap();
 
 // Scalar functions
@@ -113,8 +118,6 @@ FUNCTIONS.add('ends_with', fnEndsWith);
 FUNCTIONS.add('trim', fnTrim);
 FUNCTIONS.add('ltrim', fnLtrim);
 FUNCTIONS.add('rtrim', fnRtrim);
-FUNCTIONS.add('num_nulls', fnNumNulls);
-FUNCTIONS.add('num_nonnulls', fnNumNonNulls);
 FUNCTIONS.add('rand', fnRand);
 FUNCTIONS.add('pi', fnPi);
 FUNCTIONS.add('substr', fnSubstr);

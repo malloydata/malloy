@@ -277,6 +277,7 @@ export abstract class Dialect {
     return 'sqlSumDistinct called but not implemented';
   }
 
+  // Like sqlSumDistinct, but for an arbitrary aggregate expression
   sqlAggDistinct(
     _key: string,
     _values: string[],

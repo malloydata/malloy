@@ -36,10 +36,10 @@ export function fnDiv(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('number'),
       [
-        param('numerator', anyExprType('number')),
-        param('denominator', anyExprType('number')),
+        param('dividend', anyExprType('number')),
+        param('divisor', anyExprType('number')),
       ],
-      sql`DIV(${arg('numerator')}, ${arg('denominator')})`
+      sql`DIV(${arg('dividend')}, ${arg('divisor')})`
     ),
   ];
 }

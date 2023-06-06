@@ -33,6 +33,9 @@ import {
 export function fnTrunc(): DialectFunctionOverloadDef[] {
   const value = makeParam('value', anyExprType('number'));
   const precision = makeParam('precision', anyExprType('number'));
+  // Trunc function doesn't exist in DuckDB, so we emulate it.
+  // For both overloads, we switch between CEIL and FLOOR based on the sign of the arugment
+  // For the overload with precision, we multiply by a power of 10 before rounding, then divide.
   return [
     overload(
       minScalar('number'),

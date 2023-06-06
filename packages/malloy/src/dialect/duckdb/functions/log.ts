@@ -37,6 +37,8 @@ export function fnLog(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('number'),
       [value.param, base.param],
+      // DuckDB doesn't seem to have a log with base function, so we use the change of base
+      // forumla to implement it.
       sql`(LN(${value.arg}) / LN(${base.arg}))`
     ),
   ];
