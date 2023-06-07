@@ -45,6 +45,7 @@ export abstract class DynamicSpace extends StaticSpace {
   completions: (() => void)[] = [];
   private complete = false;
   protected newTimezone?: string;
+  private seteTimezone = false;
 
   constructor(extending: SourceSpec) {
     const source = new SpaceSeed(extending);
@@ -97,6 +98,17 @@ export abstract class DynamicSpace extends StaticSpace {
 
   setTimezone(tz: string): void {
     this.newTimezone = tz;
+    if (this.final) {
+      this.final.queryTimezone = tz;
+    }
+
+    this.seteTimezone = true;
+    /* Error.stackTraceLimit = Infinity;
+    throw new Error(
+      `-----> set timezone ${this.seteTimezone} ${this.newTimezone ?? 'NT'} ${
+        new Error('maerrore').stack ?? ''
+      }`
+    );*/
   }
 
   structDef(): model.StructDef {
@@ -147,6 +159,18 @@ export abstract class DynamicSpace extends StaticSpace {
         join.fixupJoinOn(this, missingOn);
       }
     }
+
+    if (
+      this.entries().filter(f => f[1].refType.toString() !== 'field').length > 0
+    ) {
+      Error.stackTraceLimit = Infinity;
+      throw new Error(
+        `-----> set timezone ${this.seteTimezone} ${
+          this.newTimezone ?? 'NT'
+        } ${JSON.stringify(this.entries().map(f => f[1].refType))}`
+      );
+    }
+
     if (this.newTimezone) {
       this.final.queryTimezone = this.newTimezone;
     }

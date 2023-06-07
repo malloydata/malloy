@@ -1598,6 +1598,10 @@ class QueryQuery extends QueryField {
     this.stageWriter = stageWriter;
     // do some magic here to get the first segment.
     this.firstSegment = fieldDef.pipeline[0] as QuerySegment;
+    Error.stackTraceLimit = Infinity;
+    throw new Error(
+      `segment ${fieldDef.pipeline.length} ${new Error('').stack}`
+    );
   }
 
   static makeQuery(
@@ -3126,6 +3130,9 @@ class QueryQuery extends QueryField {
     this.prepare(stageWriter);
     let lastStageName = this.generateSQL(stageWriter);
     let outputStruct = this.getResultStructDef();
+    if (this.fieldDef.pipeline.length !== -1) {
+      throw new Error(`Pz ${this.fieldDef.pipeline.length}`);
+    }
     if (this.fieldDef.pipeline.length > 1) {
       // console.log(pretty(outputStruct));
       const pipeline = [...this.fieldDef.pipeline];
@@ -3143,9 +3150,14 @@ class QueryQuery extends QueryField {
           s,
           stageWriter
         );
+
+        // TODO: iterating pipeline.
         q.prepare(stageWriter);
         lastStageName = q.generateSQL(stageWriter);
         outputStruct = q.getResultStructDef();
+        if (!outputStruct.queryTimezone) {
+          throw new Error(`----> mytz ${outputStruct.queryTimezone ?? 'NT'}`);
+        }
         structDef = {
           ...outputStruct,
           structSource: {type: 'sql', method: 'lastStage'},

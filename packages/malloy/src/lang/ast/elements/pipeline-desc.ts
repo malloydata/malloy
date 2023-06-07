@@ -68,6 +68,7 @@ export abstract class PipelineDesc extends MalloyElement {
     let returnPipe: PipeSegment[] | undefined;
     for (const qop of this.qops) {
       const qopIsNested = modelPipe.length === 0;
+      // TODO: HERE.
       const next = qop.getOp(nextFS, qopIsNested ? this : null);
       if (returnPipe === undefined) {
         returnPipe = [...modelPipe];
