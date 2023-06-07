@@ -79,7 +79,6 @@ export class TurtleDecl extends TurtleHeadedPipe {
     }
     const appended = this.appendOps(modelPipe.pipeline, appendInput);
     modelPipe.pipeline = appended.opList;
-    modelPipe.queryTimezone = appended.structDef.queryTimezone;
     return modelPipe;
   }
 

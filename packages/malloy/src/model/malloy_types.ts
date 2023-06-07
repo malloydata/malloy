@@ -638,7 +638,6 @@ export interface TurtleSegment extends Filtered {
 export interface Pipeline {
   pipeHead?: TurtleSegment;
   pipeline: PipeSegment[];
-  queryTimezone?: string;
 }
 
 export interface Query extends Pipeline, Filtered, HasLocation {

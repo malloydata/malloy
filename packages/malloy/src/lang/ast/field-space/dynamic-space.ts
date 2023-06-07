@@ -117,16 +117,10 @@ export abstract class DynamicSpace extends StaticSpace {
         } else if (spaceEntry instanceof QueryField) {
           const fd = spaceEntry.fieldDef();
           if (fd.type === 'turtle') {
-            if (fd.queryTimezone) {
-              Error.stackTraceLimit = Infinity;
-              // throw new Error(`qs ${new Error('').stack}`);
-              // this.newTimezone = fd.queryTimezone;
-            } else {
-              const stage = fd.pipeline[0];
-              if (stage.type === 'project') {
-                if (stage.queryTimezone) {
-                  this.newTimezone = stage.queryTimezone;
-                }
+            const stage = fd.pipeline[0];
+            if (stage.type === 'project') {
+              if (stage.queryTimezone) {
+                this.newTimezone = stage.queryTimezone;
               }
             }
           }
