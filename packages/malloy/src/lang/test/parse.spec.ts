@@ -683,6 +683,40 @@ describe('model statements', () => {
           calculate: l is lag(n, 1, now)
         }`)
       );
+      test(
+        'use a field which is a constant in a constant param',
+        modelOK(`query: a -> {
+          group_by: ai, pi is pi()
+          calculate: l is lag(ai, 1, pi)
+        }`)
+      );
+      // TODO it might be nice to reference a field which is a constant, and be able to
+      // use that as a constant param. Same with a literal.
+      test('cannot use a field which is a constant in a constant param', () => {
+        expect(
+          `query: a -> {
+            group_by: ai, pi is pi()
+            calculate: l is lag(ai, 1, pi)
+          }`
+        ).compileToFailWith(
+          "Parameter 3 ('default') of lag must be literal or constant, but received output"
+        );
+      });
+      // TODO we don't handle referencing a join as a field correctly in all cases today.
+      // For now, it at least is considered type `struct` and therefore fails to parse
+      // as a function argument.
+      // We add <join_name>_id to the query, but it's not included in the output space
+      test('cannot use struct in function arg', () => {
+        expect(
+          `query: a {join_one: b with astr } -> {
+            group_by: b
+            calculate: foo is lag(b)
+          }`
+        ).compileToFailWith(
+          'No matching overload for function lag(struct)',
+          "Cannot define 'foo', value has unknown type"
+        );
+      });
       // TODO this doesn't work today, we're not rigorous enough with integer
       // subtypes. But we should probably make this typecheck properly.
       test.skip('cannot use float in round precision', () => {

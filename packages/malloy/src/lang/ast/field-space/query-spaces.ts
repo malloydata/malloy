@@ -283,8 +283,7 @@ export abstract class QuerySpace extends RefinedSpace {
 
   protected queryFieldDefs(): model.QueryFieldDef[] {
     const fields: model.QueryFieldDef[] = [];
-    // TODO if don't need name, then remove it
-    for (const [name, field] of this.entries()) {
+    for (const [, field] of this.entries()) {
       if (field instanceof SpaceField) {
         const fieldQueryDef = field.getQueryFieldDef(this.exprSpace);
         if (fieldQueryDef) {
@@ -304,18 +303,13 @@ export abstract class QuerySpace extends RefinedSpace {
             }
           }
         }
-        // TODO I removed this because during calculation of the refinement space,
+        // TODO I removed the error here because during calculation of the refinement space,
         // (see creation of a QuerySpace) we add references to all the fields from
         // the refinement, but they don't have definitions. So in the case where we
         // don't have a field def, we "know" that that field is already in the query,
         // and we don't need to worry about actually adding it. This is also true for
         // project statements, where we add "*" as a field and also all the individuala
-        // fields, but the individual fields don't have field defs. (TODO crs double
-        // check that that's actually true about them not having fields defs...)
-        // Also true of project
-        // else {
-        //   throw new Error(`'${name}' does not have a QueryFieldDef`);
-        // }
+        // fields, but the individual fields don't have field defs.
       }
     }
     this.isComplete();

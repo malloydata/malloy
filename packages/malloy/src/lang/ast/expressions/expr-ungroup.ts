@@ -90,6 +90,9 @@ export class ExprUngroup extends ExpressionDef {
           });
           dstFields.push(mustBeInOutput.refString);
         }
+        // TODO maybe now we can just look up the fields in the output space now and ensure
+        // they're all there, rather than waiting until the query is finished to do it?
+        // See `order_by` for an example of how this could work.
         ungroup.fields = dstFields;
       }
       return {
