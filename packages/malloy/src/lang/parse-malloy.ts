@@ -578,6 +578,7 @@ class TranslateStep implements TranslationStep {
             return docCompile.needs;
           } else {
             that.modelDef = docCompile.modelDef;
+            // throw new Error(`Model def ${JSON.stringify(that.modelDef)}`);
             that.queryList = docCompile.queryList;
             that.sqlBlocks = docCompile.sqlBlocks;
             break;

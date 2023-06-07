@@ -1025,6 +1025,10 @@ class FieldInstanceResult implements FieldInstance {
     this.parent = parent;
     this.turtleDef = turtleDef;
     this.firstSegment = turtleDef.pipeline[0];
+
+    if (isIndexSegment(this.firstSegment) || !this.firstSegment.queryTimezone) {
+      throw new Error(`QI2 ${JSON.stringify(this.turtleDef.pipeline)}`);
+    }
   }
 
   getQueryInfo(): QueryInfo {
@@ -1598,10 +1602,6 @@ class QueryQuery extends QueryField {
     this.stageWriter = stageWriter;
     // do some magic here to get the first segment.
     this.firstSegment = fieldDef.pipeline[0] as QuerySegment;
-    Error.stackTraceLimit = Infinity;
-    throw new Error(
-      `segment ${fieldDef.pipeline.length} ${new Error('').stack}`
-    );
   }
 
   static makeQuery(
@@ -3130,9 +3130,6 @@ class QueryQuery extends QueryField {
     this.prepare(stageWriter);
     let lastStageName = this.generateSQL(stageWriter);
     let outputStruct = this.getResultStructDef();
-    if (this.fieldDef.pipeline.length !== -1) {
-      throw new Error(`Pz ${this.fieldDef.pipeline.length}`);
-    }
     if (this.fieldDef.pipeline.length > 1) {
       // console.log(pretty(outputStruct));
       const pipeline = [...this.fieldDef.pipeline];

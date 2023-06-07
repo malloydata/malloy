@@ -67,6 +67,7 @@ export class DefineSource extends MalloyElement implements DocStatement {
       if (ErrorFactory.isErrorStructDef(structDef)) {
         return;
       }
+      // TODO: here.
       doc.setEntry(this.name, {
         entry: {
           ...structDef,

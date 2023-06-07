@@ -45,7 +45,8 @@ export abstract class DynamicSpace extends StaticSpace {
   completions: (() => void)[] = [];
   private complete = false;
   protected newTimezone?: string;
-  private seteTimezone = false;
+
+  private fieldCount: number = 0;
 
   constructor(extending: SourceSpec) {
     const source = new SpaceSeed(extending);
@@ -101,14 +102,6 @@ export abstract class DynamicSpace extends StaticSpace {
     if (this.final) {
       this.final.queryTimezone = tz;
     }
-
-    this.seteTimezone = true;
-    /* Error.stackTraceLimit = Infinity;
-    throw new Error(
-      `-----> set timezone ${this.seteTimezone} ${this.newTimezone ?? 'NT'} ${
-        new Error('maerrore').stack ?? ''
-      }`
-    );*/
   }
 
   structDef(): model.StructDef {
@@ -127,6 +120,21 @@ export abstract class DynamicSpace extends StaticSpace {
         if (spaceEntry instanceof StructSpaceFieldBase) {
           joins.push([name, spaceEntry]);
         } else if (spaceEntry instanceof QueryField) {
+          const fd = spaceEntry.fieldDef();
+          if (fd.type === 'turtle') {
+            if (fd.queryTimezone) {
+              Error.stackTraceLimit = Infinity;
+              // throw new Error(`qs ${new Error('').stack}`);
+              // this.newTimezone = fd.queryTimezone;
+            } else {
+              const stage = fd.pipeline[0];
+              if (stage.type === 'project') {
+                if (stage.queryTimezone) {
+                  this.newTimezone = stage.queryTimezone;
+                }
+              }
+            }
+          }
           turtles.push([name, spaceEntry]);
         } else if (spaceEntry instanceof SpaceField) {
           fields.push([name, spaceEntry]);
@@ -143,11 +151,17 @@ export abstract class DynamicSpace extends StaticSpace {
             fixupJoins.push([field.join, joinStruct]);
           }
         } else {
-          const fieldDef = field.fieldDef();
-          if (fieldDef) {
-            this.final.fields.push(fieldDef);
-          } else {
-            throw new Error(`'${fieldName}' doesn't have a FieldDef`);
+          try {
+            const fieldDef = field.fieldDef();
+            if (fieldDef) {
+              this.final.fields.push(fieldDef);
+            } else {
+              throw new Error(`'${fieldName}' doesn't have a FieldDef`);
+            }
+          } catch (ex) {
+            throw Error(
+              ` rethrow ${JSON.stringify(field.fieldDef())} ${ex.stack}`
+            );
           }
         }
       }
@@ -160,20 +174,32 @@ export abstract class DynamicSpace extends StaticSpace {
       }
     }
 
-    if (
-      this.entries().filter(f => f[1].refType.toString() !== 'field').length > 0
-    ) {
-      Error.stackTraceLimit = Infinity;
-      throw new Error(
-        `-----> set timezone ${this.seteTimezone} ${
-          this.newTimezone ?? 'NT'
-        } ${JSON.stringify(this.entries().map(f => f[1].refType))}`
-      );
-    }
-
     if (this.newTimezone) {
+      Error.stackTraceLimit = Infinity;
+      /* if (this.fieldCount === 0) {
+        this.fieldCount++;
+
+        throw new Error(`tz3 ${new Error('').stack}`);
+      } */
+
       this.final.queryTimezone = this.newTimezone;
-    }
+    } /*else {
+      /*if (this.fieldCount === 0) {
+        this.fieldCount = 1;
+        this.entries()
+          .filter(e => e[1].typeDesc().dataType === 'turtle')
+          .map(e => e[1] as TurtleDecl)
+          .map(e => JSON.stringify((e[1] as QueryField).fieldDef()));
+        /* throw new Error(
+          ` qt ${entered} ${this.entries()
+            .filter(e => e[1].typeDesc().dataType === 'turtle')
+            .map(e => JSON.stringify((e[1] as QueryField).fieldDef()))}`
+        );
+      } else {
+        Error.stackTraceLimit = Infinity;
+        throw new Error(`vali ${new Error('').stack}`);
+      }
+    }*/
     this.isComplete();
     return this.final;
   }

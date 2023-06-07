@@ -412,7 +412,6 @@ export class Malloy {
           // TODO feature-sql-block There is no source explore...
           sourceExplore: '',
           sourceFilters: [],
-          queryTimezone: sqlStruct.queryTimezone,
         },
         {
           name: 'empty_model',
@@ -422,12 +421,16 @@ export class Malloy {
       );
     } else if (preparedResult) {
       const result = await connection.runSQL(preparedResult.sql, options);
+      //throw new Error(`---> ${JSON.stringify(preparedResult)}`);
       return new Result(
         {
           ...preparedResult._rawQuery,
           result: result.rows,
           totalRows: result.totalRows,
           runStats: result.runStats,
+          queryTimezone: preparedResult.queryTimezone,
+          /*  preparedResult._modelDef.contents['orders']['fields'][5]
+              .queryTimezone,*/
         },
         preparedResult._modelDef
       );
@@ -1131,7 +1134,9 @@ export class PreparedResult {
    * @return The query timezone.
    */
   public get queryTimezone(): string | undefined {
-    return this.inner.queryTimezone;
+    return this.inner.structs
+      .filter(struct => struct.name === this.inner.lastStageName)
+      .map(struct => struct.queryTimezone)[0];
   }
 
   public get _sourceExploreName(): string {
@@ -1362,6 +1367,7 @@ export class Explore extends Entity {
           if (fieldDef.type === 'struct') {
             return [name, new ExploreField(fieldDef, this, sourceField)];
           } else if (fieldDef.type === 'turtle') {
+            // TODO: here.
             return [name, new QueryField(fieldDef, this, sourceField)];
           } else {
             if (fieldDef.type === 'string') {

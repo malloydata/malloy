@@ -75,6 +75,7 @@ export abstract class PipelineDesc extends MalloyElement {
       }
       returnPipe.push(next.segment);
       nextFS = next.outputSpace();
+      // TODO: NEXTFS contains proper.
     }
     return {
       opList: returnPipe || modelPipe,
