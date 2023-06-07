@@ -111,6 +111,8 @@ export class ExprFunc extends ExpressionDef {
         evalSpace: 'constant',
       };
     }
+    // Find the 'implicit argument' for aggregate functions called like `some_join.some_field.agg(...args)`
+    // where the full arg list is `(some_field, ...args)`.
     let implicitExpr: ExprValue | undefined = undefined;
     let structPath = this.source?.refString;
     if (this.source) {
@@ -138,6 +140,7 @@ export class ExprFunc extends ExpressionDef {
         return errorFor(message);
       }
     }
+    // Construct the full args list including the implicit arg.
     const argExprs = [
       ...(implicitExpr ? [implicitExpr] : []),
       ...argExprsWithoutImplicit,
@@ -157,6 +160,7 @@ export class ExprFunc extends ExpressionDef {
       };
     }
     const {overload, expressionTypeErrors, evalSpaceErrors} = result;
+    // Report errors for expression type mismatch
     for (const error of expressionTypeErrors) {
       const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
       const allowed = expressionIsScalar(error.maxExpressionType)
@@ -169,6 +173,7 @@ export class ExprFunc extends ExpressionDef {
         } must be ${allowed}, but received ${error.actualExpressionType}`
       );
     }
+    // Report errors for eval space mismatch
     for (const error of evalSpaceErrors) {
       const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
       const allowed =
@@ -226,6 +231,11 @@ export class ExprFunc extends ExpressionDef {
       };
     }
     const maxEvalSpace = mergeEvalSpaces(...argExprs.map(e => e.evalSpace));
+    // If the merged eval space of all args is constant, the result is constant.
+    // If the expression is scalar, then the eval space is that merged eval space.
+    // If the expression is aggregate, then then eval space is always 'output'.
+    // If the expression is analytic, the eval space doesn't really matter.. It's really
+    // 'super_output' but that's not useful to us, so it's just 'output'.
     const evalSpace =
       maxEvalSpace === 'constant'
         ? 'constant'
@@ -305,9 +315,12 @@ function findOverload(
           }
         }
         if (
+          // Error if literal is required but arg is not literal
           (paramT.evalSpace === 'literal' && arg.evalSpace !== 'literal') ||
+          // Error if constant is required but arg is input/output
           (paramT.evalSpace === 'constant' &&
             (arg.evalSpace === 'input' || arg.evalSpace === 'output')) ||
+          // Error if output is required but arg is input
           (paramT.evalSpace === 'output' && arg.evalSpace === 'input')
         ) {
           evalSpaceErrors.push({
