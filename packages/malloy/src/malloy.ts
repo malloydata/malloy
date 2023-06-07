@@ -421,7 +421,6 @@ export class Malloy {
       );
     } else if (preparedResult) {
       const result = await connection.runSQL(preparedResult.sql, options);
-      //throw new Error(`---> ${JSON.stringify(preparedResult)}`);
       return new Result(
         {
           ...preparedResult._rawQuery,
@@ -429,8 +428,6 @@ export class Malloy {
           totalRows: result.totalRows,
           runStats: result.runStats,
           queryTimezone: preparedResult.queryTimezone,
-          /*  preparedResult._modelDef.contents['orders']['fields'][5]
-              .queryTimezone,*/
         },
         preparedResult._modelDef
       );
@@ -1367,7 +1364,6 @@ export class Explore extends Entity {
           if (fieldDef.type === 'struct') {
             return [name, new ExploreField(fieldDef, this, sourceField)];
           } else if (fieldDef.type === 'turtle') {
-            // TODO: here.
             return [name, new QueryField(fieldDef, this, sourceField)];
           } else {
             if (fieldDef.type === 'string') {

@@ -344,7 +344,7 @@ export class DuckDBDialect extends Dialect {
     const castTo = castMap[cast.dstType] || cast.dstType;
     const tz = qtz(qi);
     if (op === 'timestamp::date' && tz) {
-      const tstz = mkExpr`${cast.expr}::TIMESTAMPTZw`;
+      const tstz = mkExpr`${cast.expr}::TIMESTAMPTZ`;
       return mkExpr`CAST((${tstz}) AT TIME ZONE '${tz}' AS DATE)`;
     } else if (op === 'date::timestamp' && tz) {
       return mkExpr`CAST((${cast.expr})::TIMESTAMP AT TIME ZONE '${tz}' AS TIMESTAMP)`;

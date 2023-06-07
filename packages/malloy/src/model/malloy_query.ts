@@ -1025,10 +1025,6 @@ class FieldInstanceResult implements FieldInstance {
     this.parent = parent;
     this.turtleDef = turtleDef;
     this.firstSegment = turtleDef.pipeline[0];
-
-    if (isIndexSegment(this.firstSegment) || !this.firstSegment.queryTimezone) {
-      throw new Error(`QI2 ${JSON.stringify(this.turtleDef.pipeline)}`);
-    }
   }
 
   getQueryInfo(): QueryInfo {
@@ -3148,13 +3144,9 @@ class QueryQuery extends QueryField {
           stageWriter
         );
 
-        // TODO: iterating pipeline.
         q.prepare(stageWriter);
         lastStageName = q.generateSQL(stageWriter);
         outputStruct = q.getResultStructDef();
-        if (!outputStruct.queryTimezone) {
-          throw new Error(`----> mytz ${outputStruct.queryTimezone ?? 'NT'}`);
-        }
         structDef = {
           ...outputStruct,
           structSource: {type: 'sql', method: 'lastStage'},

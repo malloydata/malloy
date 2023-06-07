@@ -46,8 +46,6 @@ export abstract class DynamicSpace extends StaticSpace {
   private complete = false;
   protected newTimezone?: string;
 
-  private fieldCount: number = 0;
-
   constructor(extending: SourceSpec) {
     const source = new SpaceSeed(extending);
     super(cloneDeep(source.structDef));
@@ -151,17 +149,11 @@ export abstract class DynamicSpace extends StaticSpace {
             fixupJoins.push([field.join, joinStruct]);
           }
         } else {
-          try {
-            const fieldDef = field.fieldDef();
-            if (fieldDef) {
-              this.final.fields.push(fieldDef);
-            } else {
-              throw new Error(`'${fieldName}' doesn't have a FieldDef`);
-            }
-          } catch (ex) {
-            throw Error(
-              ` rethrow ${JSON.stringify(field.fieldDef())} ${ex.stack}`
-            );
+          const fieldDef = field.fieldDef();
+          if (fieldDef) {
+            this.final.fields.push(fieldDef);
+          } else {
+            throw new Error(`'${fieldName}' doesn't have a FieldDef`);
           }
         }
       }
@@ -175,31 +167,9 @@ export abstract class DynamicSpace extends StaticSpace {
     }
 
     if (this.newTimezone) {
-      Error.stackTraceLimit = Infinity;
-      /* if (this.fieldCount === 0) {
-        this.fieldCount++;
-
-        throw new Error(`tz3 ${new Error('').stack}`);
-      } */
-
       this.final.queryTimezone = this.newTimezone;
-    } /*else {
-      /*if (this.fieldCount === 0) {
-        this.fieldCount = 1;
-        this.entries()
-          .filter(e => e[1].typeDesc().dataType === 'turtle')
-          .map(e => e[1] as TurtleDecl)
-          .map(e => JSON.stringify((e[1] as QueryField).fieldDef()));
-        /* throw new Error(
-          ` qt ${entered} ${this.entries()
-            .filter(e => e[1].typeDesc().dataType === 'turtle')
-            .map(e => JSON.stringify((e[1] as QueryField).fieldDef()))}`
-        );
-      } else {
-        Error.stackTraceLimit = Infinity;
-        throw new Error(`vali ${new Error('').stack}`);
-      }
-    }*/
+    }
+
     this.isComplete();
     return this.final;
   }
