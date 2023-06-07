@@ -638,10 +638,27 @@ describe('model statements', () => {
       test('lag can check that other args are constant', () => {
         expect(`query: a -> {
           group_by: x is 1
-          calculate: s is lag(x, x)
+          calculate: s is lag(x, 1, x)
         }`).compileToFailWith(
           // TODO improve this error message
-          "Parameter 2 ('offset') of lag must be literal or constant, but received output"
+          "Parameter 3 ('default') of lag must be literal or constant, but received output"
+        );
+      });
+      test('lag can check that other args are literal', () => {
+        expect(`query: a -> {
+          group_by: x is 1
+          calculate: s is lag(x, 1 + 1)
+        }`).compileToFailWith(
+          // TODO improve this error message
+          "Parameter 2 ('offset') of lag must be literal, but received constant"
+        );
+      });
+      test('lag can check that other args are nonnull', () => {
+        expect(`query: a -> {
+          group_by: x is 1
+          calculate: s is lag(x, null)
+        }`).compileToFailWith(
+          "Parameter 2 ('offset') of lag must not be a literal null"
         );
       });
       test(

@@ -159,7 +159,8 @@ export class ExprFunc extends ExpressionDef {
         evalSpace: 'constant',
       };
     }
-    const {overload, expressionTypeErrors, evalSpaceErrors} = result;
+    const {overload, expressionTypeErrors, evalSpaceErrors, nullabilityErrors} =
+      result;
     // Report errors for expression type mismatch
     for (const error of expressionTypeErrors) {
       const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
@@ -187,6 +188,16 @@ export class ExprFunc extends ExpressionDef {
         `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
           this.name
         } must be ${allowed}, but received ${error.actualEvalSpace}`
+      );
+    }
+    // Report nullability errors
+    for (const error of nullabilityErrors) {
+      const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
+      const arg = this.args[adjustedIndex];
+      arg.log(
+        `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
+          this.name
+        } must not be a literal null`
       );
     }
     const type = overload.returnType;
@@ -265,6 +276,11 @@ type EvalSpaceError = {
   maxEvalSpace: EvalSpace;
 };
 
+type NullabilityError = {
+  argIndex: number;
+  param: FunctionParameterDef;
+};
+
 function findOverload(
   func: FunctionDef,
   args: ExprValue[]
@@ -273,6 +289,7 @@ function findOverload(
       overload: FunctionOverloadDef;
       expressionTypeErrors: ExpressionTypeError[];
       evalSpaceErrors: EvalSpaceError[];
+      nullabilityErrors: NullabilityError[];
     }
   | undefined {
   for (const overload of func.overloads) {
@@ -281,6 +298,7 @@ function findOverload(
     let matchedVariadic = false;
     const expressionTypeErrors: ExpressionTypeError[] = [];
     const evalSpaceErrors: EvalSpaceError[] = [];
+    const nullabilityErrors: NullabilityError[] = [];
     for (let argIndex = 0; argIndex < args.length; argIndex++) {
       const arg = args[argIndex];
       const param = overload.params[paramIndex];
@@ -289,6 +307,8 @@ function findOverload(
         break;
       }
       const argOk = param.allowedTypes.some(paramT => {
+        // Check whether types match (allowing for nullability errors, expression type errors,
+        // eval space errors, and unknown types due to prior errors in args)
         const dataTypeMatch =
           paramT.dataType === arg.dataType ||
           paramT.dataType === 'any' ||
@@ -300,6 +320,7 @@ function findOverload(
           // I think we may want to add an `error` type for nodes generated from errors,
           // then make `error` propagate without generating more errors.
           arg.dataType === 'unknown';
+        // Check expression type errors
         if (paramT.expressionType) {
           const expressionTypeMatch = isExpressionTypeLEQ(
             arg.expressionType,
@@ -314,6 +335,7 @@ function findOverload(
             });
           }
         }
+        // Check eval space errors
         if (
           // Error if literal is required but arg is not literal
           (paramT.evalSpace === 'literal' && arg.evalSpace !== 'literal') ||
@@ -328,6 +350,15 @@ function findOverload(
             param,
             maxEvalSpace: paramT.evalSpace,
             actualEvalSpace: arg.evalSpace,
+          });
+        }
+        // Check nullability errors. For now we only require that literal arguments must be
+        // non-null, but in the future we may allow parameters to say whether they can accept literal
+        // nulls.
+        if (paramT.evalSpace === 'literal' && arg.dataType === 'null') {
+          nullabilityErrors.push({
+            argIndex,
+            param,
           });
         }
         return dataTypeMatch;
@@ -351,7 +382,12 @@ function findOverload(
       continue;
     }
     if (ok) {
-      return {overload, expressionTypeErrors, evalSpaceErrors};
+      return {
+        overload,
+        expressionTypeErrors,
+        evalSpaceErrors,
+        nullabilityErrors,
+      };
     }
   }
 }

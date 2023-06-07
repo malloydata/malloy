@@ -31,7 +31,7 @@ export class ExprNULL extends ExpressionDef {
       dataType: 'null',
       value: ['NULL'],
       expressionType: 'scalar',
-      evalSpace: 'constant',
+      evalSpace: 'literal',
     };
   }
 }
