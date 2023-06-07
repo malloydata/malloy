@@ -89,9 +89,13 @@ export class ExprFunc extends ExpressionDef {
       };
     }
 
+    // TODO this makes functions case-insensitive. This is weird that this is the only place
+    // where case insensitivity is thing.
     const func = this.modelEntry(this.name.toLowerCase())?.entry;
     if (func === undefined) {
-      this.log(`Unknown function '${this.name}'. Did you mean to import it?`);
+      this.log(
+        `Unknown function '${this.name}'. Use '${this.name}!(...)' to call a SQL function directly.`
+      );
       return {
         dataType: 'unknown',
         expressionType: 'scalar',

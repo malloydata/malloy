@@ -583,6 +583,14 @@ describe('model statements', () => {
           "Cannot define 's', value has unknown type"
         );
       });
+      test('unknown function', () => {
+        expect(`query: a -> {
+          group_by: s is asdfasdf()
+        }`).compileToFailWith(
+          "Unknown function 'asdfasdf'. Use 'asdfasdf!(...)' to call a SQL function directly.",
+          "Cannot define 's', value has unknown type"
+        );
+      });
       test(
         'can select different overload',
         modelOK('query: a -> { group_by: s is concat() }')
