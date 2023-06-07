@@ -79,8 +79,12 @@ function numberFixedDigits(value: number, digits: number) {
 
 export function timeToString(
   time: Date,
-  timeframe: DateTimeframe | TimestampTimeframe
+  timeframe: DateTimeframe | TimestampTimeframe,
+  timezone?: string
 ): string {
+  if (timezone) {
+    time = new Date(time.toLocaleString('en', {timeZone: timezone}));
+  }
   switch (timeframe) {
     case TimestampTimeframe.Year:
     case DateTimeframe.Year: {

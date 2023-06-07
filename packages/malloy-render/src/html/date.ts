@@ -52,7 +52,11 @@ export class HTMLDateRenderer implements Renderer {
       data.field.timeframe ||
       (data.isTimestamp() ? TimestampTimeframe.Second : DateTimeframe.Day);
 
-    const timestring = timeToString(data.value, timeframe);
+    const timestring = timeToString(
+      data.value,
+      timeframe,
+      this.options.queryTimezone
+    );
 
     const element = this.document.createElement('span');
     element.appendChild(this.document.createTextNode(timestring));
