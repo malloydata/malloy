@@ -231,6 +231,11 @@ export abstract class QuerySpace extends RefinedSpace {
       }
     }
     if (success) {
+      // TODO perform the entire replacement of * and ** here in the parser.
+      // Today, we add all the fields to the output space, and then still add * to
+      // the query. The compiler then does a second * expansion. Instead, we should
+      // just add all the fields to the query here and then remove the code in the compiler
+      // for expanding the *.
       this.setEntry(wild.refString, new WildSpaceField(wild.refString));
     }
   }
