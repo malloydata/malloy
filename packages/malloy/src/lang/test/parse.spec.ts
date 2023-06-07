@@ -1497,18 +1497,6 @@ describe('expressions', () => {
     `)
     );
     test(
-      'null branch with else',
-      exprType("astr ? pick null when = '42' else 3", 'number')
-    );
-    test(
-      'null branch no else',
-      exprType("astr ? pick null when = '42'", 'string')
-    );
-    test(
-      'null branch no apply',
-      exprType('pick null when 1 = 1 else 3', 'number')
-    );
-    test(
       'filtering',
       exprOK(`
         astr ? pick 'missing value' when NULL

@@ -924,7 +924,6 @@ export interface FunctionOverloadDef {
 
 export interface FunctionDef extends NamedObject {
   type: 'function';
-  // TODO
   overloads: FunctionOverloadDef[];
 }
 

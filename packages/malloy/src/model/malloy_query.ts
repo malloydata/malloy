@@ -775,7 +775,6 @@ class QueryField extends QueryNode {
     );
   }
 
-  // TODO
   getAnalyticPartitions(resultStruct: FieldInstanceResult) {
     const ret: string[] = [];
     let p = resultStruct.parent;
@@ -798,14 +797,8 @@ class QueryField extends QueryNode {
     state: GenerateState,
     args: Expr[]
   ): string {
-    // const fields = resultStruct.getUngroupPartitions({
-    //   type: 'all',
-    //   fields: [],
-    //   groupSet: resultStruct.groupSet,
-    // });
     let partitionBy = '';
     const isComplex = resultStruct.root().isComplexQuery;
-    // TODO listy generate partition by
     const fieldsString = this.getAnalyticPartitions(resultStruct);
     if (isComplex || fieldsString.length > 0) {
       partitionBy = 'PARTITION BY ';
@@ -816,9 +809,6 @@ class QueryField extends QueryNode {
         partitionBy += `, ${fieldsString}`;
       }
     }
-
-    // TODO: so order by and arguments need to generate partitionSQL if
-    // the partitionSQL exists and the parameter is an "output"
 
     let orderBy = '';
     if (overload.needsWindowOrderBy) {
@@ -2802,9 +2792,6 @@ class QueryQuery extends QueryField {
     output: StageOutputContext,
     stageWriter: StageWriter
   ) {
-    // nest has FI result
-    // when see field name in output fragment, it's
-    // field_name + __ + FIR.groupSet
     for (const [name, fi] of resultSet.allFields) {
       const outputName = this.parent.dialect.sqlMaybeQuoteIdentifier(
         `${name}__${resultSet.groupSet}`
