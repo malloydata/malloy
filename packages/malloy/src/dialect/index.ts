@@ -23,7 +23,7 @@
 
 export {Dialect} from './dialect';
 export type {DialectFieldList} from './dialect';
-export {StandardSQLDialect} from './standardsql/standardsql';
-export {PostgresDialect} from './postgres/postgres';
+export {StandardSQLDialect} from './standardsql';
+export {PostgresDialect} from './postgres';
 export {DuckDBDialect} from './duckdb';
 export {getDialect, registerDialect, getDialectFunction} from './dialect_map';

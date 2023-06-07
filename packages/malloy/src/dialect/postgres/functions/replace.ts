@@ -44,6 +44,7 @@ export function fnReplace(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('string'),
       [value.param, regexPattern.param, replacement.param],
+      // In Postgres we need to specifically say that it's a global replacement.
       sql`REGEXP_REPLACE(${value.arg}, ${regexPattern.arg}, ${replacement.arg}, 'g')`
     ),
   ];

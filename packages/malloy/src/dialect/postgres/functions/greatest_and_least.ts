@@ -48,6 +48,7 @@ function greatestOrLeast(
     overload(
       minScalar(type),
       [params('values', anyExprType(type))],
+      // We match BigQuery null behavior here -- if any argument is null, return null
       [
         sqlFragment(
           'CASE WHEN NUM_NULLS(',

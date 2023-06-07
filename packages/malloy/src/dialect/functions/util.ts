@@ -53,6 +53,9 @@ export function spread(f: Fragment): Fragment {
   };
 }
 
+/**
+ * Prefer `sql` when possible.
+ */
 export function sqlFragment(...e: Expr): Fragment {
   return {
     type: 'sql_expression',
@@ -115,6 +118,9 @@ export function params(
   };
 }
 
+/**
+ * Prefer `makeParam` for future function definitions
+ */
 export function param(
   name: string,
   ...allowedTypes: FunctionParamTypeDesc[]

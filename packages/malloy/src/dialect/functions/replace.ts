@@ -35,6 +35,7 @@ export function fnReplace(): DialectFunctionOverloadDef[] {
   const stringPattern = makeParam('pattern', anyExprType('string'));
   const regexPattern = makeParam('pattern', anyExprType('regular expression'));
   const replacement = makeParam('replacement', anyExprType('string'));
+  // TODO maybe we need to have a parameter to say whether it's a global replacement or not...
   return [
     overload(
       minScalar('string'),

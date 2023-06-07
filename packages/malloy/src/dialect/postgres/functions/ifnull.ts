@@ -45,6 +45,7 @@ export function fnIfnull(): DialectFunctionOverloadDef[] {
     overload(
       minScalar(type),
       [param('value', anyExprType(type)), param('default', anyExprType(type))],
+      // Postgres doesn't have an IFNULL function, so we use COALESCE, which is equivalent.
       sql`COALESCE(${arg('value')}, ${arg('default')})`
     )
   );

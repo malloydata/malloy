@@ -37,6 +37,7 @@ export function fnLog(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('number'),
       [value.param, base.param],
+      // Parameter order is backwards in Postgres.
       sql`LOG(${base.arg}, ${value.arg})`
     ),
   ];

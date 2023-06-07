@@ -23,8 +23,8 @@
 
 import {DuckDBDialect} from './duckdb';
 import {Dialect} from './dialect';
-import {PostgresDialect} from './postgres/postgres';
-import {StandardSQLDialect} from './standardsql/standardsql';
+import {PostgresDialect} from './postgres';
+import {StandardSQLDialect} from './standardsql';
 import {FunctionDef, FunctionOverloadDef} from '../model';
 import {DialectFunctionOverloadDef} from './functions';
 

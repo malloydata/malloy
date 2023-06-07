@@ -35,6 +35,7 @@ export function fnSubstr(): DialectFunctionOverloadDef[] {
   const position = makeParam('position', anyExprType('number'));
   const length = makeParam('length', anyExprType('number'));
   return [
+    // We do some fancy footwork here to make Postgres support negative indexing for the position parameter
     overload(
       minScalar('string'),
       [value.param, position.param],

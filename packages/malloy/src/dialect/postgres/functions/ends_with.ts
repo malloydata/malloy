@@ -37,6 +37,8 @@ export function fnEndsWith(): DialectFunctionOverloadDef[] {
     overload(
       minScalar('boolean'),
       [value.param, suffix.param],
+      // There's no ENDS_WITH function in Postgres, so we do a hacky check that the last
+      // N characters, where N is the length of the suffix, are equal to the suffix.
       sql`COALESCE(RIGHT(${value.arg}, LENGTH(${suffix.arg})) = ${suffix.arg}, false)`
     ),
   ];

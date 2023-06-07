@@ -36,6 +36,7 @@ export function fnTrunc(): DialectFunctionOverloadDef[] {
   // Postgres doesn't let you TRUNC a FLOAT with a precision, so we cast to NUMERIC first
   // Also, TRUNC(NULL) doesn't compile because PG doesn't know the type of NULL, so we cast to
   // NUMERIC there too...
+  // TODO Maybe there's a way we don't have to cast to NUMERIC.
   return [
     overload(
       minScalar('number'),
