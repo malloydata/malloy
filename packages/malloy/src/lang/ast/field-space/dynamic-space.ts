@@ -97,9 +97,6 @@ export abstract class DynamicSpace extends StaticSpace {
 
   setTimezone(tz: string): void {
     this.newTimezone = tz;
-    if (this.final) {
-      this.final.queryTimezone = tz;
-    }
   }
 
   structDef(): model.StructDef {

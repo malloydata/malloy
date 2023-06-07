@@ -109,7 +109,6 @@ export class ReduceExecutor implements Executor {
         this.inputFS.extendSource(qel);
       }
     } else if (qp instanceof TimezoneStatement) {
-      // TODO: reaching this.
       this.resultFS.setTimezone(qp.tz);
     }
   }

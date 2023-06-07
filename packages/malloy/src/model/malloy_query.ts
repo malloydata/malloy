@@ -3143,7 +3143,6 @@ class QueryQuery extends QueryField {
           s,
           stageWriter
         );
-
         q.prepare(stageWriter);
         lastStageName = q.generateSQL(stageWriter);
         outputStruct = q.getResultStructDef();
