@@ -115,15 +115,6 @@ export abstract class DynamicSpace extends StaticSpace {
         if (spaceEntry instanceof StructSpaceFieldBase) {
           joins.push([name, spaceEntry]);
         } else if (spaceEntry instanceof QueryField) {
-          const fd = spaceEntry.fieldDef();
-          if (fd.type === 'turtle') {
-            const stage = fd.pipeline[0];
-            if (stage.type === 'project') {
-              if (stage.queryTimezone) {
-                this.newTimezone = stage.queryTimezone;
-              }
-            }
-          }
           turtles.push([name, spaceEntry]);
         } else if (spaceEntry instanceof SpaceField) {
           fields.push([name, spaceEntry]);
@@ -156,11 +147,9 @@ export abstract class DynamicSpace extends StaticSpace {
         join.fixupJoinOn(this, missingOn);
       }
     }
-
     if (this.newTimezone) {
       this.final.queryTimezone = this.newTimezone;
     }
-
     this.isComplete();
     return this.final;
   }
