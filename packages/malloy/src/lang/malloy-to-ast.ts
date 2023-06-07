@@ -580,7 +580,7 @@ export class MalloyToAST
       this.stripQuotes(cx.STRING_LITERAL().text)
     );
 
-    if (!timezoneStatement.isValidTimezone) {
+    if (!timezoneStatement.isValid) {
       this.astError(
         timezoneStatement,
         `Invalid timezone: ${timezoneStatement.tz}`

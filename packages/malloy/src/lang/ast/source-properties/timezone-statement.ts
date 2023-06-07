@@ -29,7 +29,7 @@ export class TimezoneStatement extends MalloyElement {
     super();
   }
 
-  get isValidTimezone(): boolean {
+  get isValid(): boolean {
     try {
       Intl.DateTimeFormat(undefined, {timeZone: this.tz});
       return true;
