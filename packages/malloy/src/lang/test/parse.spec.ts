@@ -683,13 +683,6 @@ describe('model statements', () => {
           calculate: l is lag(n, 1, now)
         }`)
       );
-      test(
-        'use a field which is a constant in a constant param',
-        modelOK(`query: a -> {
-          group_by: ai, pi is pi()
-          calculate: l is lag(ai, 1, pi)
-        }`)
-      );
       // TODO it might be nice to reference a field which is a constant, and be able to
       // use that as a constant param. Same with a literal.
       test('cannot use a field which is a constant in a constant param', () => {
