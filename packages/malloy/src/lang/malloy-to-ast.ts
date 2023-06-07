@@ -576,10 +576,18 @@ export class MalloyToAST
   visitTimezoneStatement(
     cx: parse.TimezoneStatementContext
   ): ast.TimezoneStatement {
-    return this.astAt(
-      new ast.TimezoneStatement(this.stripQuotes(cx.STRING_LITERAL().text)),
-      cx
+    const timezoneStatement = new ast.TimezoneStatement(
+      this.stripQuotes(cx.STRING_LITERAL().text)
     );
+
+    if (!timezoneStatement.isValidTimezone) {
+      this.astError(
+        timezoneStatement,
+        `Invalid timezone: ${timezoneStatement.tz}`
+      );
+    }
+
+    return this.astAt(timezoneStatement, cx);
   }
 
   visitQueryProperties(pcx: parse.QueryPropertiesContext): ast.QOPDesc {
