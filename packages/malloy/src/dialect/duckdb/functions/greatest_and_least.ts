@@ -64,9 +64,9 @@ function greatestOrLeast(
        */
       [
         sqlFragment(
-          'CASE WHEN LIST_AGGREGATE(LIST_TRANSFORM([',
+          'CASE WHEN LEN(LIST_FILTER([',
           spread(arg('values')),
-          `], x -> CASE WHEN x IS NULL THEN 1 ELSE 0 END), 'sum') > 0 THEN NULL ELSE ${fn}(`,
+          `], x -> x is null)) > 0 THEN NULL ELSE ${fn}(`,
           spread(arg('values')),
           ') END'
         ),
