@@ -1377,9 +1377,28 @@ describe('expressions', () => {
   });
 
   test('filtered measure', exprOK("acount {? astr = 'why?' }"));
+  test(
+    'filtered ungrouped aggregate',
+    modelOK(`
+        query: a -> {
+          group_by: ai
+          aggregate: x is all(avg(ai)) { where: true }
+        }
+      `)
+  );
   test('correctly flags filtered scalar', () => {
     const e = new BetaExpression('ai { where: true }');
     expect(e).compileToFailWith(
+      'Filtered expression requires an aggregate computation'
+    );
+  });
+  test('correctly flags filtered analytic', () => {
+    expect(markSource`
+        query: a -> {
+          group_by: ai
+          calculate: l is lag(ai) { where: true }
+        }
+      `).compileToFailWith(
       'Filtered expression requires an aggregate computation'
     );
   });

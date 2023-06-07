@@ -22,8 +22,8 @@
  */
 
 import {
+  expressionIsAggregate,
   expressionIsCalculation,
-  expressionIsScalar,
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
@@ -43,7 +43,7 @@ export class ExprFilter extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const testList = this.filter.getFilterList(fs);
     const resultExpr = this.expr.getExpression(fs);
-    if (expressionIsScalar(resultExpr.expressionType)) {
+    if (!expressionIsAggregate(resultExpr.expressionType)) {
       this.expr.log('Filtered expression requires an aggregate computation');
       return resultExpr;
     }
