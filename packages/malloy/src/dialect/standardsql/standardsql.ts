@@ -93,7 +93,6 @@ export class StandardSQLDialect extends Dialect {
   supportsCTEinCoorelatedSubQueries = false;
   dontUnionIndex = true; // bigquery can't use a sample table more than once in a query.
   supportsQualify = true;
-  requiresWindowOrderByToBeGrouped = true;
 
   quoteTablePath(tablePath: string): string {
     return `\`${tablePath}\``;

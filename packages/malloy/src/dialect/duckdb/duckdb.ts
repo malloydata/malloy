@@ -69,7 +69,6 @@ export class DuckDBDialect extends Dialect {
   supportsCTEinCoorelatedSubQueries = true;
   dontUnionIndex = true;
   supportsQualify = true;
-  requiresWindowOrderByToBeGrouped = false;
 
   // hack until they support temporary macros.
   get udfPrefix(): string {
