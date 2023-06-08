@@ -659,6 +659,22 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       {found_null: 'correct', else_pass: 'correct', literal_null: 'correct'}
     );
   });
+
+  test('dimension expressions expanded with parens properly', async () => {
+    await expect(runtime).queryMatches(
+      `
+      sql: tbl is { connection: "${databaseName}" select: """SELECT 1 as n"""}
+      query: from_sql(tbl) + {
+        dimension: fot is (false) or (true)
+      } -> {
+        project:
+          no_paren is false and fot
+          paren is    false and (fot)
+      }
+      `,
+      {paren: false, no_paren: false}
+    );
+  });
 });
 
 afterAll(async () => {
