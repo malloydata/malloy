@@ -41,6 +41,7 @@ const types: ExpressionValueType[] = [
   'timestamp',
   'date',
   'json',
+  'boolean',
 ];
 
 export function fnLag(): DialectFunctionOverloadDef[] {

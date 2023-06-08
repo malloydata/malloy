@@ -417,6 +417,56 @@ expressionModels.forEach((expressionModel, databaseName) => {
       expect(result.data.path(2, 'prev_state').value).toBe('AL');
     });
 
+    it(`works with expression field - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `query: state_facts -> {
+          group_by: lower_state is lower(state)
+          calculate: prev_state is lag(lower_state)
+        }`
+        )
+        .run();
+      expect(result.data.path(0, 'lower_state').value).toBe('ak');
+      expect(result.data.path(0, 'prev_state').value).toBe(null);
+      expect(result.data.path(1, 'prev_state').value).toBe('ak');
+      expect(result.data.path(1, 'lower_state').value).toBe('al');
+      expect(result.data.path(2, 'prev_state').value).toBe('al');
+    });
+
+    it(`works with expression - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `query: state_facts -> {
+          group_by: state
+          calculate: prev_state is lag(lower(state))
+        }`
+        )
+        .run();
+      expect(result.data.path(0, 'state').value).toBe('AK');
+      expect(result.data.path(0, 'prev_state').value).toBe(null);
+      expect(result.data.path(1, 'prev_state').value).toBe('ak');
+      expect(result.data.path(1, 'state').value).toBe('AL');
+      expect(result.data.path(2, 'prev_state').value).toBe('al');
+    });
+
+    it(`works with field, ordering by expression field - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `query: state_facts -> {
+          group_by: lower_state is lower(state)
+          aggregate: c is count()
+          order_by: lower_state
+          calculate: prev_count is lag(c)
+        }`
+        )
+        .run();
+      expect(result.data.path(0, 'lower_state').value).toBe('ak');
+      expect(result.data.path(0, 'prev_count').value).toBe(null);
+      expect(result.data.path(1, 'prev_count').value).toBe(1);
+      expect(result.data.path(1, 'lower_state').value).toBe('al');
+      expect(result.data.path(2, 'prev_count').value).toBe(1);
+    });
+
     it(`works with offset - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(

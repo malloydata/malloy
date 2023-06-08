@@ -2123,6 +2123,13 @@ class QueryQuery extends QueryField {
     joinStack: string[]
   ): void {
     for (const expr of e) {
+      if (
+        isFunctionCallFragment(expr) &&
+        expressionIsAnalytic(expr.overload.returnType.expressionType)
+      ) {
+        resultStruct.root().isComplexQuery = true;
+        resultStruct.root().queryUsesPartitioning = true;
+      }
       if (isUngroupFragment(expr)) {
         resultStruct.resultUsesUngrouped = true;
         resultStruct.root().isComplexQuery = true;
