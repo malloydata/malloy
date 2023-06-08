@@ -330,16 +330,20 @@ class QueryField extends QueryNode {
     // find the structDef and return the path to the field...
     const field = context.getFieldByName(expr.path) as QueryField;
     if (hasExpression(field.fieldDef)) {
-      let ret = this.generateExpressionFromExpr(
+      const ret = this.generateExpressionFromExpr(
         resultSet,
         field.parent,
         field.fieldDef.e,
         state
       );
-      if (!ret.match(/^\(.*\)$/)) {
-        ret = `(${ret})`;
-      }
-      return ret;
+      // in order to avoid too many parens, there was some code here ..
+      // if (!ret.match(/^\(.*\)$/)) {
+      //   ret = `(${ret})`;
+      // }
+      // but this  failed when the expresion was (bool1)or(bool2)
+      // there could maybe be a smarter parse of the expression to avoid
+      // an extra paren, but correctness first, beauty AND correctness later
+      return `(${ret})`;
     } else {
       // return field.parent.getIdentifier() + "." + field.fieldDef.name;
       return field.generateExpression(resultSet);
