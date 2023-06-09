@@ -76,4 +76,9 @@ describe('extendModel', () => {
     const twoState = await q2.run();
     expect(twoState.data.path(0, 'state').value).toBe('CA');
   });
+  test('returns helpful error message if named query does not exist', async () => {
+    await expect(runtime.getQueryByName('', 'Dummy Query')).rejects.toThrow(
+      'Given query name does not refer to a named query.'
+    );
+  });
 });
