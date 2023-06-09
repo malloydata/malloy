@@ -2282,7 +2282,8 @@ class QueryQuery extends QueryField {
     let structSQL = qs.structSourceSQL(stageWriter);
     if (isJoinOn(structRelationship)) {
       if (ji.makeUniqueKey) {
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL} as x)`;
+        const passKeys = this.generateSQLPassthroughKeys(qs);
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * ${passKeys} FROM ${structSQL} as x)`;
       }
       let onCondition = '';
       if (qs.parent === undefined) {
@@ -2374,6 +2375,26 @@ class QueryQuery extends QueryField {
     return s;
   }
 
+  // BigQuery has wildcard psudo columns that are treated differently
+  //  SELECT * FROM xxx doesn't include these psuedo columns but we need them so
+  //  filters can get pushed down properly when generating a UNIQUE key.
+  //  No other dialect really needs this so we are coding here but maybe someday
+  //  this makes its way into the dialect.
+  generateSQLPassthroughKeys(qs: QueryStruct): string {
+    let ret = '';
+    if (qs.dialect.name === 'standardsql') {
+      const psudoCols = [
+        '_TABLE_SUFFIX',
+        '_PARTITIONDATE',
+        '_PARTITIONTIME',
+      ].filter(element => qs.getChildByName(element) !== undefined);
+      if (psudoCols.length > 0) {
+        ret = ', ' + psudoCols.join(', ');
+      }
+    }
+    return ret;
+  }
+
   generateSQLJoins(stageWriter: StageWriter): string {
     let s = '';
     // get the first value from the map (weird, I know)
@@ -2395,7 +2416,8 @@ class QueryQuery extends QueryField {
     const structRelationship = qs.fieldDef.structRelationship;
     if (structRelationship.type === 'basetable') {
       if (ji.makeUniqueKey) {
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL} as x)`;
+        const passKeys = this.generateSQLPassthroughKeys(qs);
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * ${passKeys} FROM ${structSQL} as x)`;
       }
       s += `FROM ${structSQL} as ${this.parent.getIdentifier()}\n`;
     } else {
