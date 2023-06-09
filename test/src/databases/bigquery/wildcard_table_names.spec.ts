@@ -113,7 +113,7 @@ describe('Wildcard BigQuery Tables', () => {
     }
   });
 
-  test('test join with wildcard tables and _TABLE_SUFFIX as a filter', async () => {
+  test('test join with wildcard tables and _TABLE_SUFFIX as source a filter', async () => {
     const runtime = runtimes.runtimeMap.get('bigquery');
     expect(runtime).toBeDefined();
     if (runtime) {
@@ -143,6 +143,33 @@ describe('Wildcard BigQuery Tables', () => {
         {state: 'OK', aircraft_count: 1},
         {state: 'OR', aircraft_count: 1},
       ]);
+    }
+  });
+
+  test('test join with wildcard tables and _TABLE_SUFFIX as a filter and generated_uuid', async () => {
+    // issue # 1147
+    const runtime = runtimes.runtimeMap.get('bigquery');
+    expect(runtime).toBeDefined();
+    if (runtime) {
+      const result = await runtime
+        .loadQuery(
+          `
+        source: aircraft is table('malloy-data.malloytest.wildcard_aircraft_*') {
+          join_many: state_facts is table('malloy-data.malloytest.state_facts')
+            on state_facts.state = state
+        }
+
+        query: aircraft -> {
+          group_by: state_facts.state
+          aggregate: aircraft_count is count()
+          where: _TABLE_SUFFIX = '02'
+          order_by: 1 desc
+          limit: 1
+        }
+`
+        )
+        .run();
+      expect(result.data.path(0, 'state').value).toBe('OR');
     }
   });
 
