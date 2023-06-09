@@ -2383,9 +2383,11 @@ class QueryQuery extends QueryField {
   generateSQLPassthroughKeys(qs: QueryStruct): string {
     let ret = '';
     if (qs.dialect.name === 'standardsql') {
-      const psudoCols = ['_TABLE_SUFFIX'].filter(
-        element => qs.getFieldByName(element) !== undefined
-      );
+      const psudoCols = [
+        '_TABLE_SUFFIX',
+        '_PARTITIONDATE',
+        '_PARTITIONTIME',
+      ].filter(element => qs.getChildByName(element) !== undefined);
       if (psudoCols.length > 0) {
         ret = ', ' + psudoCols.join(', ');
       }
