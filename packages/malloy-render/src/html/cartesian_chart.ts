@@ -75,12 +75,15 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
     const xSort = xType === 'nominal' ? null : undefined;
     const ySort = yType === 'nominal' ? null : undefined;
 
+    // Use zero scale for bar and line charts
+    const zeroScale = mark === 'point' ? false : true;
+
     const xDef = {
       field: xField.name,
       type: xType,
       sort: xSort,
       axis: {title: formatTitle(this.options, xField.name)},
-      scale: {zero: false},
+      scale: {zero: zeroScale},
     };
 
     const yDef = {
@@ -88,7 +91,7 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       type: yType,
       sort: ySort,
       axis: {title: formatTitle(this.options, yField.name)},
-      scale: {zero: false},
+      scale: {zero: zeroScale},
     };
 
     return {
