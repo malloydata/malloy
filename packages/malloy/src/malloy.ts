@@ -627,7 +627,7 @@ export class Model {
    */
   public getPreparedQueryByName(queryName: string): PreparedQuery {
     const query = this.modelDef.contents[queryName];
-    if (query.type === 'query') {
+    if (query?.type === 'query') {
       return new PreparedQuery(query, this.modelDef, queryName);
     }
 
