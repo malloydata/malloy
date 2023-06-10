@@ -902,7 +902,7 @@ export type NamedStructDefs = Record<string, StructDef>;
 
 /** Malloy source annotations attached to objects */
 export interface Annotation {
-  refines?: Annotation;
+  inherits?: Annotation;
   blockNotes?: string[];
   notes?: string[];
 }

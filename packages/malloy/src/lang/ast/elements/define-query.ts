@@ -62,7 +62,7 @@ export class DefineQuery
     };
     if (this.note) {
       entry.annotation = entry.annotation
-        ? {...this.note, refines: entry.annotation}
+        ? {...this.note, inherits: entry.annotation}
         : this.note;
     }
     doc.setEntry(this.name, {entry, exported: true});

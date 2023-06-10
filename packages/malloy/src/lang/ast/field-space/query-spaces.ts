@@ -157,6 +157,18 @@ export abstract class QuerySpace extends RefinedSpace {
         const fieldQueryDef = field.getQueryFieldDef(this.exprSpace);
         if (fieldQueryDef) {
           if (this.canContain(fieldQueryDef)) {
+            // If the name is a ref, and the thing it is referring to
+            // has annoation, we can't push the name, we need to
+            // push an annotated reference to the name.
+            if (typeof fieldQueryDef === 'string') {
+              const refField = new FieldName(fieldQueryDef);
+              const refDef = refField.getField(this.queryInputSpace).found;
+              if (refDef) {
+                // mtoy todo remove this whole section or implement it
+                // I hit a wall here, turned out to be hard to ask the
+                // thing this refers to "do you have an annotation".
+              }
+            }
             fields.push(fieldQueryDef);
           } else {
             this.log(`'${name}' not legal in ${this.segmentType}`);

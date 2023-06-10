@@ -82,7 +82,7 @@ export class DefineSource
       };
       if (this.note) {
         entry.annotation = structDef.annotation
-          ? {...this.note, refines: structDef.annotation}
+          ? {...this.note, inherits: structDef.annotation}
           : this.note;
       }
       doc.setEntry(this.name, {entry, exported: this.exported});

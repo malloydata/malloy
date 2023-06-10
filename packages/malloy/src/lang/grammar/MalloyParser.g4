@@ -465,9 +465,9 @@ fieldCollection
   ;
 
 collectionMember
-  : fieldPath                         # nameMember
-  | (fieldPath DOT)? (STAR|STARSTAR)  # wildMember
-  | fieldDef                          # newMember
+  : tags fieldPath                         # nameMember
+  | tags (fieldPath DOT)? (STAR|STARSTAR)  # wildMember
+  | fieldDef                               # newMember
   ;
 
 fieldPath

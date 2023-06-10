@@ -61,6 +61,9 @@ export class TurtleDecl extends TurtleHeadedPipe implements Noteable {
         if (isTurtle(headDef)) {
           const newPipe = this.refinePipeline(fs, headDef);
           modelPipe.pipeline = [...newPipe.pipeline];
+          if (headDef.annotation) {
+            this.extendNote({inherits: headDef.annotation});
+          }
           reportWrongType = false;
         }
       }

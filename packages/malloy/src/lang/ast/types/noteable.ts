@@ -43,7 +43,8 @@ export function extendNoteMethod(this: Noteable, ext: Partial<Annotation>) {
 export function extendNoteHelper(to: Noteable, ext: Partial<Annotation>) {
   if (
     (ext.notes && ext.notes.length > 0) ||
-    (ext.blockNotes && ext.blockNotes.length > 0)
+    (ext.blockNotes && ext.blockNotes.length > 0) ||
+    ext.inherits !== undefined
   ) {
     to.note = {...to.note, ...ext};
   }

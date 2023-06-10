@@ -112,18 +112,18 @@ export abstract class PipelineDesc extends MalloyElement {
     annotation: Annotation | undefined;
   } {
     const turtle = getStructFieldDef(fromStruct, turtleName);
+    let annotation: Annotation | undefined;
     if (!turtle) {
       this.log(`Query '${turtleName}' is not defined in source`);
     } else if (turtle.type !== 'turtle') {
       this.log(`'${turtleName}' is not a query`);
     } else {
-      return {
-        pipeline: turtle.pipeline,
-        location: turtle.location,
-        annotation: turtle.annotation,
-      };
+      if (turtle.annotation) {
+        annotation = {inherits: turtle.annotation};
+      }
+      return {pipeline: turtle.pipeline, location: turtle.location, annotation};
     }
-    return {pipeline: [], location: undefined, annotation: undefined};
+    return {pipeline: [], location: undefined, annotation};
   }
 
   protected getOutputStruct(

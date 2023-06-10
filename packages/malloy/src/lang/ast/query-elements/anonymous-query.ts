@@ -47,7 +47,7 @@ export class AnonymousQuery
     const modelQuery = this.theQuery.query();
     if (this.note) {
       modelQuery.annotation = modelQuery.annotation
-        ? {...this.note, refines: modelQuery.annotation}
+        ? {...this.note, inherits: modelQuery.annotation}
         : this.note;
     }
     doc.queryList.push(modelQuery);

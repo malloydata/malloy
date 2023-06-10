@@ -704,11 +704,19 @@ export class MalloyToAST
     return project;
   }
 
-  visitWildMember(pcx: parse.WildMemberContext): ast.FieldReferenceElement {
+  visitWildMember(pcx: parse.WildMemberContext): ast.WildcardFieldReference {
     const nameCx = pcx.fieldPath();
     const stars = pcx.STAR() ? '*' : '**';
     const join = nameCx ? this.visitFieldPath(nameCx) : undefined;
-    return new ast.WildcardFieldReference(join, stars);
+    const wild = new ast.WildcardFieldReference(join, stars);
+    wild.extendNote({notes: getNotes(pcx.tags())});
+    return wild;
+  }
+
+  visitNameMember(pcx: parse.NameMemberContext): ast.FieldReference {
+    const fRef = this.visitFieldPath(pcx.fieldPath());
+    fRef.extendNote({notes: getNotes(pcx.tags())});
+    return fRef;
   }
 
   visitIndexFields(pcx: parse.IndexFieldsContext): ast.FieldReferences {
