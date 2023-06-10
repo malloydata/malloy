@@ -27,7 +27,7 @@ import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
 
 const joinModelText = `
-  explore: aircraft_models is table('malloytest.aircraft_models') {
+  source: aircraft_models is table('malloytest.aircraft_models') {
     primary_key: aircraft_model_code
     measure: model_count is count(*)
     query: manufacturer_models is {
@@ -40,12 +40,12 @@ const joinModelText = `
     }
   }
 
-  explore: aircraft is table('malloytest.aircraft'){
+  source: aircraft is table('malloytest.aircraft'){
     primary_key: tail_num
     measure: aircraft_count is count(*)
   }
 
-  explore: funnel is from(aircraft_models->manufacturer_models) {
+  source: funnel is from(aircraft_models->manufacturer_models) {
     join_one: seats is from(aircraft_models->manufacturer_seats)
         with manufacturer
   }
@@ -69,7 +69,7 @@ describe('join expression tests', () => {
         .loadModel(joinModelText)
         .loadQuery(
           `
-      explore: a2 is aircraft {
+      source: a2 is aircraft {
         join_one: aircraft_models with aircraft_model_code
       }
 
@@ -185,7 +185,7 @@ describe('join expression tests', () => {
         .loadModel(joinModelText)
         .loadQuery(
           `
-      explore: foo is from(aircraft_models-> manufacturer_models){
+      source: foo is from(aircraft_models-> manufacturer_models){
         join_one: seats is from(aircraft_models->manufacturer_seats)
           with manufacturer
       }

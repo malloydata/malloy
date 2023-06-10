@@ -30,7 +30,7 @@ import {databasesFromEnvironmentOr, mkSqlEqWith} from '../../util';
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 const expressionModelText = `
-explore: aircraft_models is table('malloytest.aircraft_models'){
+source: aircraft_models is table('malloytest.aircraft_models'){
   primary_key: aircraft_model_code
   measure:
     airport_count is count(*),
@@ -42,7 +42,7 @@ explore: aircraft_models is table('malloytest.aircraft_models'){
   dimension: seats_bucketed is FLOOR(seats/20)*20.0
 }
 
-explore: aircraft is table('malloytest.aircraft'){
+source: aircraft is table('malloytest.aircraft'){
   primary_key: tail_num
   join_one: aircraft_models with aircraft_model_code
   measure: aircraft_count is count(*)
@@ -393,7 +393,7 @@ describe.each(expressionModels)('%s', (databaseName, expressionModel) => {
     const result = await expressionModel
       .loadQuery(
         `
-        explore: b is aircraft{ where: aircraft_models.manufacturer ? ~'B%' }
+        source: b is aircraft{ where: aircraft_models.manufacturer ? ~'B%' }
 
         query: b->{aggregate: m_count is count(distinct aircraft_models.manufacturer) }
         `
@@ -433,7 +433,7 @@ describe.each(expressionModels)('%s', (databaseName, expressionModel) => {
     const result = await expressionModel
       .loadQuery(
         `
-  explore: a is table('malloytest.aircraft') {
+  source: a is table('malloytest.aircraft') {
     primary_key: tail_num
     measure: aircraft_count is count()
   }
@@ -456,13 +456,13 @@ describe.each(expressionModels)('%s', (databaseName, expressionModel) => {
     const result = await expressionModel
       .loadQuery(
         `
-    explore: a_models is table('malloytest.aircraft_models'){
+    source: a_models is table('malloytest.aircraft_models'){
       where: manufacturer ? ~'B%'
       primary_key: aircraft_model_code
       measure:model_count is count()
     }
 
-    explore: aircraft2 is table('malloytest.aircraft'){
+    source: aircraft2 is table('malloytest.aircraft'){
       join_one: model is a_models with aircraft_model_code
       measure: aircraft_count is count()
     }
@@ -483,7 +483,7 @@ describe.each(expressionModels)('%s', (databaseName, expressionModel) => {
     const result = await expressionModel
       .loadQuery(
         `
-    explore: bo_models is
+    source: bo_models is
       from(
           table('malloytest.aircraft_models') {? manufacturer ? ~ 'BO%' }
           -> { project: aircraft_model_code, manufacturer, seats }
@@ -492,7 +492,7 @@ describe.each(expressionModels)('%s', (databaseName, expressionModel) => {
           measure: bo_count is count()
         }
 
-    explore: b_models is
+    source: b_models is
         from(
           table('malloytest.aircraft_models') {? manufacturer ? ~ 'B%' }
           -> { project: aircraft_model_code, manufacturer, seats }
@@ -503,7 +503,7 @@ describe.each(expressionModels)('%s', (databaseName, expressionModel) => {
           join_one: bo_models with aircraft_model_code
         }
 
-    explore: models is table('malloytest.aircraft_models') {
+    source: models is table('malloytest.aircraft_models') {
       join_one: b_models with aircraft_model_code
       measure: model_count is count()
     }
@@ -557,7 +557,7 @@ describe.each(expressionModels)('%s', (databaseName, expressionModel) => {
     const result = await expressionModel
       .loadQuery(
         `
-      explore: f is table('malloytest.flights'){
+      source: f is table('malloytest.flights'){
         join_one: a is table('malloytest.aircraft') {
           join_one: state_facts is table('malloytest.state_facts'){primary_key: state} with state
         } on tail_num = a.tail_num
