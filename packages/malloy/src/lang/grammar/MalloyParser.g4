@@ -35,8 +35,14 @@ malloyStatement
   ;
 
 
+// mtoy todo make sure this EXPLORE thing is gone
 defineSourceStatement
-  : tags SOURCE sourcePropertyList
+  : tags exploreKeyword sourcePropertyList
+  ;
+
+exploreKeyword
+  : EXPLORE
+  | SOURCE
   ;
 
 defineQuery
