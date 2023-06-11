@@ -1813,12 +1813,12 @@ class QueryQuery extends QueryField {
           while (path.length > 0 && (pathElementName = path.shift())) {
             const structNode = struct.getChildByName(pathElementName);
             if (structNode === undefined) {
-              throw new Error(`Nested explore not found '${pathElementName}'`);
+              throw new Error(`Nested source not found '${pathElementName}'`);
             }
             if (structNode instanceof QueryStruct) {
               struct = structNode;
             } else {
-              throw new Error(`'${pathElementName}' is not an explore object`);
+              throw new Error(`'${pathElementName}' is not a source object`);
             }
           }
           ret = ret.concat(

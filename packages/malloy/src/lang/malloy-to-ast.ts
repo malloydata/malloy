@@ -94,7 +94,7 @@ export class MalloyToAST
       if (ast.isSourceProperty(el)) {
         eps.push(el);
       } else {
-        this.astError(el, `Expected explore property, not '${el.elementType}'`);
+        this.astError(el, `Expected source property, not '${el.elementType}'`);
       }
     }
     return eps;
@@ -106,7 +106,7 @@ export class MalloyToAST
       if (el instanceof ast.Join) {
         eps.push(el);
       } else {
-        this.astError(el, `Expected explore property, not '${el.elementType}'`);
+        this.astError(el, `Expected source property, not '${el.elementType}'`);
       }
     }
     return eps;
@@ -267,10 +267,7 @@ export class MalloyToAST
     if (element instanceof ast.Source) {
       return element;
     }
-    throw this.internalError(
-      pcx,
-      `'${element.elementType}': illegal explore source`
-    );
+    throw this.internalError(pcx, `'${element.elementType}': illegal source`);
   }
 
   protected makeSqlString(

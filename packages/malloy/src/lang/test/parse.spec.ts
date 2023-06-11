@@ -102,22 +102,19 @@ function badModel(s: MarkedSource | string, msg: string): TestFunc {
 
 describe('model statements', () => {
   describe('source:', () => {
-    test('explore table', modelOK("source: testA is table('aTable')"));
-    test('explore shorcut fitlered table', () => {
+    test('table', modelOK("source: testA is table('aTable')"));
+    test('shorcut fitlered table', () => {
       expect("source: testA is table('aTable') {? astr ~ 'a%' } ").toCompile();
     });
     test(
-      'explore fitlered table',
+      'fitlered table',
       modelOK(`
         source: testA is table('aTable') { where: astr ~ 'a%' }
       `)
     );
-    test('explore explore', modelOK('source: testA is a'));
-    test(
-      'explore query',
-      modelOK('source: testA is from(a->{group_by: astr})')
-    );
-    test('refine explore', modelOK('source: aa is a { dimension: a is astr }'));
+    test('ref source with no refinement', modelOK('source: testA is a'));
+    test('from(query)', modelOK('source: testA is from(a->{group_by: astr})'));
+    test('refine source', modelOK('source: aa is a { dimension: a is astr }'));
     test('source refinement preserves original', () => {
       const x = new TestTranslator('source: na is a + { dimension: one is 1 }');
       expect(x).modelCompiled();
@@ -165,7 +162,7 @@ describe('model statements', () => {
       `)
     );
     test(
-      'query from explore from query',
+      'from(query) refined into query',
       modelOK(
         'query: from(ab -> {group_by: astr}) { dimension: bigstr is UPPER(astr) } -> { group_by: bigstr }'
       )
@@ -308,7 +305,7 @@ describe('model statements', () => {
   });
 });
 
-describe('explore properties', () => {
+describe('source properties', () => {
   test('single dimension', modelOK('source: aa is a { dimension: x is 1 }'));
   test(
     'multiple dimensions',
@@ -1280,7 +1277,7 @@ function getSelectOneStruct(sqlBlock: SQLBlockSource): SQLBlockStructDef {
 }
 
 describe('source locations', () => {
-  test('renamed explore location', () => {
+  test('renamed source location', () => {
     const source = markSource`source: ${'na is a'}`;
     const m = new TestTranslator(source.code);
     expect(m).modelParsed();
@@ -1289,7 +1286,7 @@ describe('source locations', () => {
     );
   });
 
-  test('refined explore location', () => {
+  test('refined source location', () => {
     const source = markSource`source: ${'na is a {}'}`;
     const m = new TestTranslator(source.code);
     expect(m).modelParsed();
@@ -1975,7 +1972,7 @@ describe('source references', () => {
     });
   });
 
-  test('reference to explore in join', () => {
+  test('reference to sourcein join', () => {
     const source = markSource`
       source: ${'exp1 is a'}
       source: exp2 is a {
@@ -2162,7 +2159,7 @@ describe('pipeline comprehension', () => {
     `)
   );
   test(
-    'Querying an explore based on a query',
+    'Querying an sourcebased on a query',
     modelOK(`
       query: q is a -> { group_by: astr; aggregate: strsum is ai.sum() }
       source: aq is a {

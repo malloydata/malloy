@@ -64,7 +64,7 @@ afterAll(async () => {
 
 describe('join expression tests', () => {
   runtimes.runtimeMap.forEach((runtime, database) => {
-    it(`model explore refine join - ${database}`, async () => {
+    it(`model source refine join - ${database}`, async () => {
       const result = await runtime
         .loadModel(joinModelText)
         .loadQuery(
@@ -84,7 +84,7 @@ describe('join expression tests', () => {
       expect(result.data.value[0]['model_count']).toBe(1416);
     });
 
-    it(`model explore refine in query join - ${database}`, async () => {
+    it(`model source refine in query join - ${database}`, async () => {
       const result = await runtime
         .loadModel(joinModelText)
         .loadQuery(
@@ -126,7 +126,7 @@ describe('join expression tests', () => {
       expect(result.data.value[0]['num_models']).toBe(1147);
     });
 
-    it(`model: explore based on query - ${database}`, async () => {
+    it(`model: source based on query - ${database}`, async () => {
       const result = await runtime
         .loadModel(joinModelText)
         .loadQuery(

@@ -95,7 +95,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   // issue #157
-  it(`explore - not -found  - ${databaseName}`, async () => {
+  it(`source- not -found  - ${databaseName}`, async () => {
     // console.log(result.data.toObject());
     let error;
     try {

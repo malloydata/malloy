@@ -54,7 +54,7 @@ function testSymbol(
   });
 }
 
-test('explore symbols are included', () => {
+test('source symbols are included', () => {
   testSymbol(
     markSource`source: ${"flights is table('my.table.flights')"}`,
     'flights',
