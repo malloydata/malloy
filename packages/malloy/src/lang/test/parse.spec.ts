@@ -1221,7 +1221,7 @@ describe('error handling', () => {
   });
 
   test('bad sql in sql block', () => {
-    const badModel = new TestTranslator('sql: { select: """)""" }');
+    const badModel = new TestTranslator('sql: noWorky is { select: """)""" }');
     expect(badModel).modelParsed();
     const needSchema = badModel.translate();
     expect(needSchema.compileSQL).toBeDefined();
