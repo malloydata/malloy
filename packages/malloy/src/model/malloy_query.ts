@@ -370,7 +370,7 @@ class QueryField extends QueryNode {
     frag: OutputFieldFragment,
     _state: GenerateState
   ): string {
-    return resultSet.getField(frag.name).getPartitionSQL();
+    return resultSet.getField(frag.name).getAnalyticalSQL(false);
   }
 
   generateSQLExpression(
@@ -633,7 +633,7 @@ class QueryField extends QueryNode {
     const fields = resultSet.getUngroupPartitions(ungroupSet);
 
     let partitionBy = '';
-    const fieldsString = fields.map(f => f.getPartitionSQL()).join(', ');
+    const fieldsString = fields.map(f => f.getAnalyticalSQL(true)).join(', ');
     if (fieldsString.length > 0) {
       partitionBy = `PARTITION BY ${fieldsString}`;
     }
@@ -782,7 +782,7 @@ class QueryField extends QueryNode {
       const scalars = p.fields(
         fi => isScalarField(fi.f) && fi.fieldUsage.type === 'result'
       );
-      const partitionSQLs = scalars.map(fi => fi.getPartitionSQL());
+      const partitionSQLs = scalars.map(fi => fi.getAnalyticalSQL(true));
       ret.push(...partitionSQLs);
       p = p.parent;
     }
@@ -835,7 +835,7 @@ class QueryField extends QueryNode {
           continue;
         }
         if (resultStruct.firstSegment.type === 'reduce') {
-          const orderSQL = orderingField.fif.getPartitionSQL();
+          const orderSQL = orderingField.fif.getAnalyticalSQL(false);
           obSQL.push(` ${orderSQL} ${ordering.dir || 'ASC'}`);
         } else if (resultStruct.firstSegment.type === 'project') {
           obSQL.push(
@@ -1212,6 +1212,7 @@ class FieldInstanceField implements FieldInstance {
   fieldUsage: FieldUsage;
   additionalGroupSets: number[] = [];
   parent: FieldInstanceResult;
+  analyticalSQL: string | undefined; // the name of the field when used in a window function calculation.
   partitionSQL: string | undefined; // the name of the field when used as a partition.
   constructor(
     f: QueryField,
@@ -1240,11 +1241,13 @@ class FieldInstanceField implements FieldInstance {
     return exp;
   }
 
-  getPartitionSQL() {
-    if (this.partitionSQL === undefined) {
+  getAnalyticalSQL(forPartition: boolean): string {
+    if (this.analyticalSQL === undefined) {
       return this.getSQL();
-    } else {
+    } else if (forPartition && this.partitionSQL) {
       return this.partitionSQL;
+    } else {
+      return this.analyticalSQL;
     }
   }
 }
@@ -2801,23 +2804,18 @@ class QueryQuery extends QueryField {
               // BigQuery can't partition aggregate function except when the field has no
               //  expression.  Additionally it can't partition by floats.  We stuff expressions
               //  and numbers as strings into a lateral join when the query has ungrouped expressions
+              const outputFieldName = `__lateral_join_bag.${outputName}`;
+              fi.analyticalSQL = outputFieldName;
+              output.lateralJoinSQLExpressions.push(`${exp} as ${outputName}`);
+              output.sql.push(outputFieldName);
               if (fi.f.fieldDef.type === 'number') {
-                // make an extra dimension as a string
-                output.sql.push(`${exp} as ${outputName}`);
-                const outputFieldName = `__lateral_join_bag.${outputName}_string`;
-                output.sql.push(outputFieldName);
+                const outputFieldNameString = `${outputFieldName}_string`;
+                output.sql.push(outputFieldNameString);
                 output.dimensionIndexes.push(output.fieldIndex++);
                 output.lateralJoinSQLExpressions.push(
                   `CAST(${exp} as STRING) as ${outputName}_string`
                 );
-                fi.partitionSQL = outputFieldName;
-              } else {
-                const outputFieldName = `__lateral_join_bag.${outputName}`;
-                fi.partitionSQL = outputFieldName;
-                output.lateralJoinSQLExpressions.push(
-                  `${exp} as ${outputName}`
-                );
-                output.sql.push(outputFieldName);
+                fi.partitionSQL = outputFieldNameString;
               }
             } else {
               // just treat it like a regular field.

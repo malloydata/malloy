@@ -304,12 +304,13 @@ expressionModels.forEach((expressionModel, databaseName) => {
       const result = await expressionModel
         .loadQuery(
           `query: state_facts -> {
-          group_by: state
+          group_by: popular_name
           aggregate: c is count()
           calculate: row_num is row_number()
         }`
         )
         .run();
+      console.log(result.sql);
       expect(result.data.path(0, 'row_num').value).toBe(1);
       expect(result.data.path(1, 'row_num').value).toBe(2);
     });
