@@ -2115,8 +2115,10 @@ class QueryQuery extends QueryField {
     for (const expr of e) {
       if (
         isFunctionCallFragment(expr) &&
-        expressionIsAnalytic(expr.overload.returnType.expressionType)
+        expressionIsAnalytic(expr.overload.returnType.expressionType) &&
+        this.parent.dialect.name === 'standardsql'
       ) {
+        // force the use of a lateral_join_bag
         resultStruct.root().isComplexQuery = true;
         resultStruct.root().queryUsesPartitioning = true;
       }
