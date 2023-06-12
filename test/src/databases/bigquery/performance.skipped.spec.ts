@@ -34,7 +34,7 @@ it.skip('accessors are not too expensive', async () => {
   if (runtime) {
     const result = await runtime
       .loadQuery(
-        "explore 'malloy-data.faa.flights' | reduce inner is (reduce top 1000000 distance id2)"
+        "source 'malloy-data.faa.flights' | reduce inner is (reduce top 1000000 distance id2)"
       )
       .run();
     let noAccessorTime;

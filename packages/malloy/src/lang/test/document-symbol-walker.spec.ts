@@ -54,9 +54,9 @@ function testSymbol(
   });
 }
 
-test('explore symbols are included', () => {
+test('source symbols are included', () => {
   testSymbol(
-    markSource`explore: ${"flights is table('my.table.flights')"}`,
+    markSource`source: ${"flights is table('my.table.flights')"}`,
     'flights',
     'explore',
     [0]
@@ -75,7 +75,7 @@ test('query symbols are included', () => {
 test('expression field defs are included', () => {
   testSymbol(
     markSource`
-      explore: flights is table('my.table.flights') {
+      source: flights is table('my.table.flights') {
         dimension: ${'one is 1'}
       }
     `,
@@ -88,7 +88,7 @@ test('expression field defs are included', () => {
 test('renamed fields are included', () => {
   testSymbol(
     markSource`
-      explore: flights is table('my.table.flights') {
+      source: flights is table('my.table.flights') {
         rename: ${'field_two is field_2'}
       }
     `,
@@ -101,7 +101,7 @@ test('renamed fields are included', () => {
 test('name only fields are included', () => {
   testSymbol(
     markSource`
-      explore: flights is table('my.table.flights') {
+      source: flights is table('my.table.flights') {
         dimension: ${'field_two is field_2'}
       }
     `,
@@ -114,7 +114,7 @@ test('name only fields are included', () => {
 test('turtle fields are included', () => {
   testSymbol(
     markSource`
-      explore: flights is table('my.table.flights') {
+      source: flights is table('my.table.flights') {
         query: ${'my_turtle is { group_by: a }'}
       }
     `,
@@ -127,7 +127,7 @@ test('turtle fields are included', () => {
 test('turtle children fields are included', () => {
   testSymbol(
     markSource`
-      explore: flights is table('my.table.flights') {
+      source: flights is table('my.table.flights') {
         query: my_turtle is { group_by: ${'a'} }
       }
     `,
@@ -140,7 +140,7 @@ test('turtle children fields are included', () => {
 test('turtle children turtles are included', () => {
   testSymbol(
     markSource`
-      explore: flights is table('my.table.flights') {
+      source: flights is table('my.table.flights') {
         query: my_turtle is { nest: ${'inner_turtle is { group_by: a }'} }
       }
     `,
@@ -153,7 +153,7 @@ test('turtle children turtles are included', () => {
 test('join withs are included', () => {
   testSymbol(
     markSource`
-      explore: flights is table('my.table.flights') {
+      source: flights is table('my.table.flights') {
         join_one: ${'a is b with c'}
       }
     `,
@@ -166,7 +166,7 @@ test('join withs are included', () => {
 test('join ons are included', () => {
   testSymbol(
     markSource`
-      explore: flights is table('my.table.flights') {
+      source: flights is table('my.table.flights') {
         join_one: ${'a is b on c'}
       }
     `,

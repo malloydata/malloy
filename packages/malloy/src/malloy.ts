@@ -1849,7 +1849,7 @@ export class ExploreField extends Explore {
       case 'nested':
         return JoinRelationship.ManyToOne;
       default:
-        throw new Error('An explore field must have a join relationship.');
+        throw new Error('A source field must have a join relationship.');
     }
   }
 

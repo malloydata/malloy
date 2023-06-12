@@ -32,6 +32,7 @@ import {
 } from './test-translator';
 import {inspect} from 'util';
 
+type ErrorSpec = string | RegExp;
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {
@@ -42,7 +43,7 @@ declare global {
       modelCompiled(): R;
       expressionCompiled(): R;
       toReturnType(tp: string): R;
-      compileToFailWith(...expectedErrors: string[]): R;
+      compileToFailWith(...expectedErrors: ErrorSpec[]): R;
       isLocationIn(at: DocumentLocation, txt: string): R;
     }
   }
@@ -158,7 +159,7 @@ expect.extend({
   },
   toReturnType: function (functionCall: string, returnType: string) {
     const exprModel = new TestTranslator(
-      `explore: x is a { dimension: d is ${functionCall} }`
+      `source: x is a { dimension: d is ${functionCall} }`
     );
     expect(exprModel).modelCompiled();
     const x = exprModel.getSourceDef('x');
@@ -174,7 +175,7 @@ expect.extend({
   },
   compileToFailWith: function (
     s: MarkedSource | string | TestTranslator,
-    ...msgs: string[]
+    ...msgs: ErrorSpec[]
   ) {
     let emsg = 'Compile Error expectation not met\nExpected message';
     let mSrc: MarkedSource | undefined;
@@ -219,7 +220,11 @@ expect.extend({
       for (i = 0; i < msgs.length && errList[i]; i += 1) {
         const msg = msgs[i];
         const err = errList[i];
-        if (msg !== err.message) {
+        const matched =
+          typeof msg === 'string'
+            ? msg === err.message
+            : err.message.match(msg);
+        if (!matched) {
           explain.push(`Expected: ${msg}\nGot: ${err.message}`);
         } else {
           if (mSrc?.locations[i]) {
