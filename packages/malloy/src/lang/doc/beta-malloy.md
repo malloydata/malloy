@@ -43,7 +43,7 @@ The beta-malloy LookML-ish syntax would have one of two forms.  For a single dec
 
 as in these statements ...
 
-    explore: flights is table('malloydata.faa.flights') { primary key: id }
+    source: flights is table('malloydata.faa.flights') { primary key: id }
 
     join_one: things is thing_table with thing_id
 
@@ -66,7 +66,7 @@ which will allow grouped blocks of dimensions or joins where that adds readabili
 
 Creation of explores in malloy is always a gesture of refinement based on existing object where the simplest object is a table. For example we want `flights` to mean the `malloydta.faa.flights` table ...
 ```
-   explore: flights is table('malloydata.faa.flights') {
+   source: flights is table('malloydata.faa.flights') {
        primary key: id
        ... other flights stuff
    }
@@ -75,14 +75,14 @@ In beta-malloy any time you name a refineable object you can create an enhanced 
 
 As an example ... this ...
 
-    explore: carriers is table('malloydata.faa.carriers') { primary key: id }
-    explore: flights is table('malloydata.faa.flights') {
+    source: carriers is table('malloydata.faa.carriers') { primary key: id }
+    source: flights is table('malloydata.faa.flights') {
       join_one: carrier is carriers with carrier_id
     }
 
 ... can be written without having to create an explore for carriers by writing the enhancement inline in the join ...
 
-    explore: flights is table('malloydata.faa.flights') {
+    source: flights is table('malloydata.faa.flights') {
       join_one: carrier is table('malloydata.faa.carriers') on carrier_id = carrier.id
     }
 
@@ -118,7 +118,7 @@ A `group by` or a `project` have a list of references, or new dimensions.  An `a
 
 The magic `: []` syntax for filters is gone. An explore or a project query can have a `where:` property, and an aggregating query can have a `where:` and a `having:`. The value is still a `[]` bracketed, comma seperated list of malloy expressions.
 
-    explore: flights_21st_century is flights {
+    source: flights_21st_century is flights {
       where: dep_time >= @2001
     }
 
@@ -171,8 +171,8 @@ All queries start with either
   *  _exploreSpec_ `->` _querySpec_  [ `->` _querySpec_ ... ]
   * `->` _queryName_ [ `-> _querySpec_ ... ]
 
-1) `explore: eName is eName1 { }`
-2) `explore: eName is from(->qName) { }`
+1) `source: eName is eName1 { }`
+2) `source: eName is from(->qName) { }`
 3) `query: qName is ->qName1->subQName { }`
 4) `query: qName is eName->subQName { }`
 5) ... there is no 5, `query: ->qName->subQueryName` is not legal
@@ -180,8 +180,8 @@ All queries start with either
 7) `query: ->qName->{ fullQuery }`
 8) `query: eName->{ fullQuery }`
 9) `query: eName->subQName`
-10) `explore: eName is eName1 { query: subQuery is -> { ... } -> { ... }`
-11) explore: eName is from(eName1->qName {qRefine}) { eRefine }
+10) `source: eName is eName1 { query: subQuery is -> { ... } -> { ... }`
+11) source: eName is from(eName1->qName {qRefine}) { eRefine }
 
 ## Search/Suggestion are totally missing
 
@@ -210,7 +210,7 @@ Because filtering is ubiquitous, there is a shorthand for filtering. We expect a
 Nested queries are declared in an explore with the `query:` keyword ...
 
 ```
-explore: flights is 'malloydata.faa.flights' {
+source: flights is 'malloydata.faa.flights' {
     ...
     query: by_carrier is {
         group by: carrier.nickname
@@ -221,7 +221,7 @@ explore: flights is 'malloydata.faa.flights' {
 
 And to include a nested query in a result set, much like the `aggregate:` keyword accepts existing names measures, or allows new measures, there is a `nest:` keyword to nest a query ...
 
-    explore: flights is 'malloydata.faa.flights' {
+    source: flights is 'malloydata.faa.flights' {
         ...
         query: airport_dashboard is {
           group by: [
@@ -241,7 +241,7 @@ You can use `from()` to make an explore from a query, anywhere an explore name
 would be legal, for example:
 
     -- given this explore ...
-    explore: users is table('schema.users') {
+    source: users is table('schema.users') {
         ...
         join_one: orders with orders.user_id
         query: user_order_facts is {
@@ -254,7 +254,7 @@ would be legal, for example:
 
     -- ... make user->user_order_facts a top level entity for joins etc
     -- but add new dimension
-    explore: user_order_facts is from(users->user_order_facts) {
+    source: user_order_facts is from(users->user_order_facts) {
         primary_key: user_id
         dimension: super_user is lifetime_value > 1000
     }

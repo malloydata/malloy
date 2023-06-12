@@ -56,6 +56,15 @@ function exprOK(s: string): TestFunc {
   };
 }
 
+function exprType(s: string, t: string): TestFunc {
+  return () => {
+    const expr = new BetaExpression(s);
+    expect(expr).modelParsed();
+    expect(expr.generated().dataType).toBe(t);
+    return undefined;
+  };
+}
+
 function modelOK(s: string): TestFunc {
   return () => {
     const m = new TestTranslator(s);
@@ -92,26 +101,20 @@ function badModel(s: MarkedSource | string, msg: string): TestFunc {
 }
 
 describe('model statements', () => {
-  describe('explore:', () => {
-    test('explore table', modelOK("explore: testA is table('aTable')"));
-    test('explore shorcut fitlered table', () => {
-      expect("explore: testA is table('aTable') {? astr ~ 'a%' } ").toCompile();
+  describe('source:', () => {
+    test('table', modelOK("source: testA is table('aTable')"));
+    test('shorcut fitlered table', () => {
+      expect("source: testA is table('aTable') {? astr ~ 'a%' } ").toCompile();
     });
     test(
-      'explore fitlered table',
+      'fitlered table',
       modelOK(`
-        explore: testA is table('aTable') { where: astr ~ 'a%' }
+        source: testA is table('aTable') { where: astr ~ 'a%' }
       `)
     );
-    test('explore explore', modelOK('explore: testA is a'));
-    test(
-      'explore query',
-      modelOK('explore: testA is from(a->{group_by: astr})')
-    );
-    test(
-      'refine explore',
-      modelOK('explore: aa is a { dimension: a is astr }')
-    );
+    test('ref source with no refinement', modelOK('source: testA is a'));
+    test('from(query)', modelOK('source: testA is from(a->{group_by: astr})'));
+    test('refine source', modelOK('source: aa is a { dimension: a is astr }'));
     test('source refinement preserves original', () => {
       const x = new TestTranslator('source: na is a + { dimension: one is 1 }');
       expect(x).modelCompiled();
@@ -159,7 +162,7 @@ describe('model statements', () => {
       `)
     );
     test(
-      'query from explore from query',
+      'from(query) refined into query',
       modelOK(
         'query: from(ab -> {group_by: astr}) { dimension: bigstr is UPPER(astr) } -> { group_by: bigstr }'
       )
@@ -302,45 +305,45 @@ describe('model statements', () => {
   });
 });
 
-describe('explore properties', () => {
-  test('single dimension', modelOK('explore: aa is a { dimension: x is 1 }'));
+describe('source properties', () => {
+  test('single dimension', modelOK('source: aa is a { dimension: x is 1 }'));
   test(
     'multiple dimensions',
     modelOK(`
-      explore: aa is a {
+      source: aa is a {
         dimension:
           x is 1
           y is 2
       }
     `)
   );
-  test('single declare', modelOK('explore: aa is a { declare: x is 1 }'));
+  test('single declare', modelOK('source: aa is a { declare: x is 1 }'));
   test(
     'multiple declare',
     modelOK(`
-      explore: aa is a {
+      source: aa is a {
         declare:
           x is 1
           y is 2
       }
     `)
   );
-  test('single measure', modelOK('explore: aa is a { measure: x is count() }'));
+  test('single measure', modelOK('source: aa is a { measure: x is count() }'));
   test(
     'multiple measures',
     modelOK(`
-      explore: aa is a {
+      source: aa is a {
         dimension:
           x is count()
           y is x * x
       }
     `)
   );
-  test('single where', modelOK('explore: aa is a { where: ai > 10 }'));
+  test('single where', modelOK('source: aa is a { where: ai > 10 }'));
   test(
     'multiple where',
     modelOK(`
-      explore: aa is a {
+      source: aa is a {
         where:
           ai > 10,
           af < 1000
@@ -360,32 +363,32 @@ describe('explore properties', () => {
     }`)
   );
   describe('joins', () => {
-    test('with', modelOK('explore: x is a { join_one: b with astr }'));
-    test('with', modelOK('explore: x is a { join_one: y is b with astr }'));
+    test('with', modelOK('source: x is a { join_one: b with astr }'));
+    test('with', modelOK('source: x is a { join_one: y is b with astr }'));
     test(
       'with dotted ref',
-      modelOK('explore: x is ab { join_one: xz is a with b.astr }')
+      modelOK('source: x is ab { join_one: xz is a with b.astr }')
     );
-    test('one on', modelOK('explore: x is a { join_one: b on astr = b.astr }'));
+    test('one on', modelOK('source: x is a { join_one: b on astr = b.astr }'));
     test(
       'one is on',
-      modelOK('explore: x is a { join_one: y is b on astr = y.astr }')
+      modelOK('source: x is a { join_one: y is b on astr = y.astr }')
     );
     test(
       'many on',
-      modelOK('explore: nab is a { join_many: b on astr = b.astr }')
+      modelOK('source: nab is a { join_many: b on astr = b.astr }')
     );
     test(
       'many is on',
-      modelOK('explore: y is a { join_many: x is b on astr = x.astr }')
+      modelOK('source: y is a { join_many: x is b on astr = x.astr }')
     );
-    test('cross', modelOK('explore: nab is a { join_cross: b }'));
-    test('cross is', modelOK('explore: nab is a { join_cross: xb is b }'));
-    test('cross on', modelOK('explore: nab is a { join_cross: b on true}'));
+    test('cross', modelOK('source: nab is a { join_cross: b }'));
+    test('cross is', modelOK('source: nab is a { join_cross: xb is b }'));
+    test('cross on', modelOK('source: nab is a { join_cross: b on true}'));
     test(
       'multiple joins',
       modelOK(`
-        explore: nab is a {
+        source: nab is a {
           join_one:
             b with astr,
             br is b with astr
@@ -404,19 +407,19 @@ describe('explore properties', () => {
       );
     });
   });
-  test('primary_key', modelOK('explore: c is a { primary_key: ai }'));
-  test('rename', modelOK('explore: c is a { rename: nn is ai }'));
+  test('primary_key', modelOK('source: c is a { primary_key: ai }'));
+  test('rename', modelOK('source: c is a { rename: nn is ai }'));
   test('accept single', () => {
-    const onlyAstr = new TestTranslator('explore: c is a { accept: astr }');
+    const onlyAstr = new TestTranslator('source: c is a { accept: astr }');
     expect(onlyAstr).modelCompiled();
     const c = onlyAstr.getSourceDef('c');
     if (c) {
       expect(c.fields.length).toBe(1);
     }
   });
-  test('accept multi', modelOK('explore: c is a { accept: astr, af }'));
+  test('accept multi', modelOK('source: c is a { accept: astr, af }'));
   test('except single', () => {
-    const noAstr = new TestTranslator('explore: c is a { except: astr }');
+    const noAstr = new TestTranslator('source: c is a { except: astr }');
     expect(noAstr).modelCompiled();
     const c = noAstr.getSourceDef('c');
     if (c) {
@@ -424,15 +427,15 @@ describe('explore properties', () => {
       expect(foundAstr).toBeUndefined();
     }
   });
-  test('except multi', modelOK('explore: c is a { except: astr, af }'));
+  test('except multi', modelOK('source: c is a { except: astr, af }'));
   test(
     'explore-query',
-    modelOK('explore: c is a {query: q is { group_by: astr } }')
+    modelOK('source: c is a {query: q is { group_by: astr } }')
   );
   test(
     'refined explore-query',
     modelOK(`
-      explore: abNew is ab {
+      source: abNew is ab {
         query: for1 is aturtle {? ai = 1 }
       }
     `)
@@ -440,7 +443,7 @@ describe('explore properties', () => {
   test(
     'chained explore-query',
     modelOK(`
-      explore: c is a {
+      source: c is a {
         query: chain is {
           group_by: astr
         } -> {
@@ -453,7 +456,7 @@ describe('explore properties', () => {
   test(
     'multiple explore-query',
     modelOK(`
-      explore: abNew is ab {
+      source: abNew is ab {
         query:
           q1 is { group_by: astr },
           q2 is { group_by: ai }
@@ -918,6 +921,18 @@ describe('expressions', () => {
     `)
     );
     test(
+      'null branch with else',
+      exprType("astr ? pick null when = '42' else 3", 'number')
+    );
+    test(
+      'null branch no else',
+      exprType("astr ? pick null when = '42'", 'string')
+    );
+    test(
+      'null branch no apply',
+      exprType('pick null when 1 = 1 else 3', 'number')
+    );
+    test(
       'tiering',
       exprOK(`
       ai ?
@@ -947,7 +962,7 @@ describe('expressions', () => {
     );
     test('n-ary without else', () => {
       expect(markSource`
-        explore: na is a + { dimension: d is
+        source: na is a + { dimension: d is
           pick 7 when true and true
         }
       `).compileToFailWith(
@@ -957,7 +972,7 @@ describe('expressions', () => {
     });
     test('n-ary with mismatch when clauses', () => {
       expect(markSource`
-        explore: na is a + { dimension: d is
+        source: na is a + { dimension: d is
           pick 7 when true and true
           pick '7' when true or true
           else 7
@@ -969,7 +984,7 @@ describe('expressions', () => {
     });
     test('n-ary with mismatched else clause', () => {
       expect(markSource`
-        explore: na is a + { dimension: d is
+        source: na is a + { dimension: d is
           pick 7 when true and true
           else '7'
         }
@@ -980,7 +995,7 @@ describe('expressions', () => {
     });
     test('applied else mismatch', () => {
       expect(markSource`
-        explore: na is a + { dimension: d is
+        source: na is a + { dimension: d is
           7 ? pick 7 when 7 else 'not seven'
         }
       `).compileToFailWith(
@@ -990,7 +1005,7 @@ describe('expressions', () => {
     });
     test('applied default mismatch', () => {
       expect(markSource`
-        explore: na is a + { dimension: d is
+        source: na is a + { dimension: d is
           7 ? pick 'seven' when 7
         }
       `).compileToFailWith(
@@ -1000,7 +1015,7 @@ describe('expressions', () => {
     });
     test('applied when mismatch', () => {
       expect(markSource`
-        explore: na is a + { dimension: d is
+        source: na is a + { dimension: d is
           7 ? pick 'seven' when 7 pick 6 when 6
         }
       `).compileToFailWith(
@@ -1128,22 +1143,22 @@ describe('error handling', () => {
   test('join reference before definition', () => {
     expect(
       markSource`
-        explore: newAB is a { join_one: newB is ${'bb'} on astring }
-        explore: newB is b
+        source: newAB is a { join_one: newB is ${'bb'} on astring }
+        source: newB is b
       `
     ).compileToFailWith("Undefined source 'bb'");
   });
   test(
     'non-rename rename',
     badModel(
-      'explore: na is a { rename: astr is astr }',
+      'source: na is a { rename: astr is astr }',
       "Can't rename field to itself"
     )
   );
   test(
     'reference to field in its definition',
     badModel(
-      'explore: na is a { dimension: ustr is UPPER(ustr) } ',
+      'source: na is a { dimension: ustr is UPPER(ustr) } ',
       "Circular reference to 'ustr' in definition"
     )
   );
@@ -1169,7 +1184,7 @@ describe('error handling', () => {
   );
   test('query on source with errors', () => {
     expect(markSource`
-        explore: na is a { join_one: ${'n'} on astr }
+        source: na is a { join_one: ${'n'} on astr }
       `).compileToFailWith("Undefined source 'n'");
   });
   test('detect duplicate output field names', () => {
@@ -1262,8 +1277,8 @@ function getSelectOneStruct(sqlBlock: SQLBlockSource): SQLBlockStructDef {
 }
 
 describe('source locations', () => {
-  test('renamed explore location', () => {
-    const source = markSource`explore: ${'na is a'}`;
+  test('renamed source location', () => {
+    const source = markSource`source: ${'na is a'}`;
     const m = new TestTranslator(source.code);
     expect(m).modelParsed();
     expect(getExplore(m.modelDef, 'na').location).toMatchObject(
@@ -1271,8 +1286,8 @@ describe('source locations', () => {
     );
   });
 
-  test('refined explore location', () => {
-    const source = markSource`explore: ${'na is a {}'}`;
+  test('refined source location', () => {
+    const source = markSource`source: ${'na is a {}'}`;
     const m = new TestTranslator(source.code);
     expect(m).modelParsed();
     expect(getExplore(m.modelDef, 'na').location).toMatchObject(
@@ -1281,7 +1296,7 @@ describe('source locations', () => {
   });
 
   test('location of defined dimension', () => {
-    const source = markSource`explore: na is a { dimension: ${'x is 1'} }`;
+    const source = markSource`source: na is a { dimension: ${'x is 1'} }`;
     const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     const na = getExplore(m.modelDef, 'na');
@@ -1290,7 +1305,7 @@ describe('source locations', () => {
   });
 
   test('location of defined measure', () => {
-    const source = markSource`explore: na is a { measure: ${'x is count()'} }`;
+    const source = markSource`source: na is a { measure: ${'x is count()'} }`;
     const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     const na = getExplore(m.modelDef, 'na');
@@ -1299,7 +1314,7 @@ describe('source locations', () => {
   });
 
   test('location of defined query', () => {
-    const source = markSource`explore: na is a { query: ${'x is { group_by: y is 1 }'} }`;
+    const source = markSource`source: na is a { query: ${'x is { group_by: y is 1 }'} }`;
     const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     const na = getExplore(m.modelDef, 'na');
@@ -1309,7 +1324,7 @@ describe('source locations', () => {
 
   test('location of defined field inside a query', () => {
     const source = markSource`
-      explore: na is a {
+      source: na is a {
         query: x is {
           group_by: ${'y is 1'}
         }
@@ -1325,7 +1340,7 @@ describe('source locations', () => {
 
   test('location of filtered field inside a query', () => {
     const source = markSource`
-      explore: na is a {
+      source: na is a {
         measure: y is count()
         query: x is {
           group_by: ${'z is y { where: true }'}
@@ -1341,7 +1356,7 @@ describe('source locations', () => {
   });
 
   test('location of field inherited from table', () => {
-    const source = markSource`explore: na is ${"table('aTable')"}`;
+    const source = markSource`source: na is ${"table('aTable')"}`;
     const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
     const na = getExplore(m.modelDef, 'na');
@@ -1352,7 +1367,7 @@ describe('source locations', () => {
   test('location of field inherited from sql block', () => {
     const source = markSource`--- comment
       sql: s is { select: ${'"""SELECT 1 as one """'} }
-      explore: na is from_sql(s)
+      source: na is from_sql(s)
     `;
     const m = new TestTranslator(source.code);
     expect(m).modelParsed();
@@ -1371,7 +1386,7 @@ describe('source locations', () => {
 
   test('location of fields inherited from a query', () => {
     const source = markSource`
-      explore: na is from(
+      source: na is from(
         ${"table('aTable')"} -> {
           group_by:
             abool
@@ -1423,7 +1438,7 @@ describe('source locations', () => {
 
   test('location of renamed field', () => {
     const source = markSource`
-      explore: na is a {
+      source: na is a {
         rename: ${'bbool is abool'}
       }
     `;
@@ -1436,7 +1451,7 @@ describe('source locations', () => {
 
   test('location of join on', () => {
     const source = markSource`
-      explore: na is a {
+      source: na is a {
         join_one: ${'x is a { primary_key: abool } on abool'}
       }
     `;
@@ -1449,7 +1464,7 @@ describe('source locations', () => {
 
   test('location of join with', () => {
     const source = markSource`
-      explore: na is a {
+      source: na is a {
         join_one: ${'x is a { primary_key: astr } with astr'}
       }
     `;
@@ -1462,7 +1477,7 @@ describe('source locations', () => {
 
   test('location of field in join', () => {
     const source = markSource`
-      explore: na is a {
+      source: na is a {
         join_one: x is a {
           primary_key: abool
           dimension: ${'y is 1'}
@@ -1528,7 +1543,7 @@ describe('source locations', () => {
 describe('source references', () => {
   test('reference to explore', () => {
     const source = markSource`
-      explore: ${'na is a'}
+      source: ${'na is a'}
       query: ${'na'} -> { project: * }
     `;
     const m = new TestTranslator(source.code);
@@ -1545,7 +1560,7 @@ describe('source references', () => {
 
   test('reference to query in query', () => {
     const source = markSource`
-      explore: t is a {
+      source: t is a {
         query: ${'q is { project: * }'}
       }
       query: t -> ${'q'}
@@ -1564,7 +1579,7 @@ describe('source references', () => {
 
   test('reference to query in query (version 2)', () => {
     const source = markSource`
-      explore: na is a { query: ${'x is { group_by: y is 1 }'} }
+      source: na is a { query: ${'x is { group_by: y is 1 }'} }
       query: na -> ${'x'}
     `;
     const m = new TestTranslator(source.code);
@@ -1582,7 +1597,7 @@ describe('source references', () => {
   test('reference to sql block', () => {
     const source = markSource`
       ${'sql: s is {select:"""SELECT 1 as one"""}'}
-      explore: na is from_sql(${'s'})
+      source: na is from_sql(${'s'})
     `;
     const m = new TestTranslator(source.code);
     expect(m).modelParsed();
@@ -1609,7 +1624,7 @@ describe('source references', () => {
   test('reference to query in from', () => {
     const source = markSource`
       query: ${'q is a -> { project: * }'}
-      explore: na is from(-> ${'q'})
+      source: na is from(-> ${'q'})
     `;
     const m = new TestTranslator(source.code);
     expect(m).modelCompiled();
@@ -1659,7 +1674,7 @@ describe('source references', () => {
 
   test('reference to field in expression', () => {
     const source = markSource`
-      explore: na is ${"table('aTable')"}
+      source: na is ${"table('aTable')"}
       query: na -> { project: bbool is not ${'abool'} }
     `;
     const m = new TestTranslator(source.code);
@@ -1676,7 +1691,7 @@ describe('source references', () => {
 
   test('reference to quoted field in expression', () => {
     const source = markSource`
-      explore: na is a {
+      source: na is a {
         dimension: ${"`name` is 'name'"}
       }
       query: na -> { project: ${'`name`'} }
@@ -1695,7 +1710,7 @@ describe('source references', () => {
 
   test('reference to joined field in expression', () => {
     const source = markSource`
-      explore: na is a {
+      source: na is a {
         join_one: self is ${"table('aTable')"}
           on astr = self.astr
       }
@@ -1715,7 +1730,7 @@ describe('source references', () => {
 
   test('reference to joined join in expression', () => {
     const source = markSource`
-      explore: na is a {
+      source: na is a {
         join_one: ${'self is a on astr = self.astr'}
       }
       query: na -> { project: bstr is ${'self'}.astr }
@@ -1750,7 +1765,7 @@ describe('source references', () => {
 
   test('reference to field not in expression (project)', () => {
     const source = markSource`
-      explore: na is ${"table('aTable')"}
+      source: na is ${"table('aTable')"}
       query: na -> { project: ${'abool'} }
     `;
     const m = new TestTranslator(source.code);
@@ -1824,7 +1839,7 @@ describe('source references', () => {
 
   test('reference to field in measure', () => {
     const source = markSource`
-      explore: e is a {
+      source: e is a {
         measure: ${'c is count()'}
         measure: c2 is ${'c'}
       }
@@ -1900,7 +1915,7 @@ describe('source references', () => {
 
   test('reference to field in aggregate source', () => {
     const source = markSource`
-      explore: na is ${"table('aTable')"}
+      source: na is ${"table('aTable')"}
       query: na -> { aggregate: ai_sum is ${'ai'}.sum() }
     `;
     const m = new TestTranslator(source.code);
@@ -1921,7 +1936,7 @@ describe('source references', () => {
 
   test('reference to join in aggregate source', () => {
     const source = markSource`
-      explore: na is a {
+      source: na is a {
         join_one: ${'self is a on astr = self.astr'}
       }
       query: na -> { aggregate: ai_sum is ${'self'}.sum(self.ai) }
@@ -1940,7 +1955,7 @@ describe('source references', () => {
 
   test('reference to join in aggregate in expr', () => {
     const source = markSource`
-      explore: na is a {
+      source: na is a {
         join_one: ${'self is a on astr = self.astr'}
       }
       query: na -> { aggregate: ai_sum is self.sum(${'self'}.ai) }
@@ -1957,10 +1972,10 @@ describe('source references', () => {
     });
   });
 
-  test('reference to explore in join', () => {
+  test('reference to sourcein join', () => {
     const source = markSource`
-      explore: ${'exp1 is a'}
-      explore: exp2 is a {
+      source: ${'exp1 is a'}
+      source: exp2 is a {
         join_one: ${'exp1'} on astr = exp1.astr
       }
     `;
@@ -1978,7 +1993,7 @@ describe('source references', () => {
 
   test('reference to field in aggregate (in expr)', () => {
     const source = markSource`
-      explore: na is ${"table('aTable')"}
+      source: na is ${"table('aTable')"}
       query: na -> { aggregate: ai_sum is sum(${'ai'}) }
     `;
     const m = new TestTranslator(source.code);
@@ -1995,7 +2010,7 @@ describe('source references', () => {
 
   test('reference to field in rename', () => {
     const source = markSource`
-      explore: na is ${"table('aTable')"} {
+      source: na is ${"table('aTable')"} {
         rename: bbool is ${'abool'}
       }
     `;
@@ -2013,8 +2028,8 @@ describe('source references', () => {
 
   test('reference to field in join with', () => {
     const source = markSource`
-      explore: exp1 is a { primary_key: astr }
-      explore: exp2 is ${"table('aTable')"} {
+      source: exp1 is a { primary_key: astr }
+      source: exp2 is ${"table('aTable')"} {
         join_one: exp1 with ${'astr'}
       }
     `;
@@ -2064,7 +2079,7 @@ describe('translation need error locations', () => {
 
   test('table struct error location', () => {
     const source = markSource`
-      explore: bad_explore is ${"table('malloy-data.bad.table')"}
+      source: bad_explore is ${"table('malloy-data.bad.table')"}
     `;
     const m = new TestTranslator(source.code);
     const result = m.translate();
@@ -2084,7 +2099,7 @@ describe('pipeline comprehension', () => {
   test(
     'second query gets namespace from first',
     modelOK(`
-      explore: aq is a {
+      source: aq is a {
         query: t1 is {
           group_by: t1int is ai, t1str is astr
         } -> {
@@ -2097,7 +2112,7 @@ describe('pipeline comprehension', () => {
     "second query doesn't have access to original fields",
     badModel(
       markSource`
-        explore: aq is a {
+        source: aq is a {
           query: t1 is {
             group_by: t1int is ai, t1str is astr
           } -> {
@@ -2111,7 +2126,7 @@ describe('pipeline comprehension', () => {
   test(
     'new query can append ops to existing query',
     modelOK(`
-      explore: aq is a {
+      source: aq is a {
         query: t0 is {
           group_by: t1int is ai, t1str is astr
         }
@@ -2124,7 +2139,7 @@ describe('pipeline comprehension', () => {
   test(
     'new query can refine and append to exisiting query',
     modelOK(`
-      explore: aq is table('aTable') {
+      source: aq is table('aTable') {
         query: by_region is { group_by: astr }
         query: by_region2 is by_region {
           nest: dateNest is { group_by: ad }
@@ -2144,10 +2159,10 @@ describe('pipeline comprehension', () => {
     `)
   );
   test(
-    'Querying an explore based on a query',
+    'Querying an sourcebased on a query',
     modelOK(`
       query: q is a -> { group_by: astr; aggregate: strsum is ai.sum() }
-      explore: aq is a {
+      source: aq is a {
         join_one: aq is from(->q) on astr = aq.astr
       }
       query: aqf is aq -> { project: * }

@@ -63,7 +63,7 @@ test('Supports model properties', () => {
   );
 });
 
-test('Supports explore properties', () => {
+test('Supports source properties', () => {
   testHelpContext(
     markSource`${source}`,
     {line: 1, character: 3},

@@ -49,8 +49,10 @@ describe('db:BigQuery', () => {
   });
 
   it('costs a SQL query', async () => {
-    const res = await bq.costQuery('SELECT * FROM malloy-data.faa.airports');
-    expect(res).toBe(3029200);
+    const res = await bq.estimateQueryCost(
+      'SELECT * FROM malloy-data.faa.airports'
+    );
+    expect(res.queryCostBytes).toBe(3029200);
   });
 
   it('gets table schema', async () => {
@@ -69,7 +71,7 @@ describe('db:BigQuery', () => {
   it('runs a Malloy query', async () => {
     const sql = await runtime
       .loadModel(
-        "explore: carriers is table('malloy-data.faa.carriers') { measure: carrier_count is count() }"
+        "source: carriers is table('malloy-data.faa.carriers') { measure: carrier_count is count() }"
       )
       .loadQuery('query: carriers -> { aggregate: carrier_count }')
       .getSQL();
@@ -80,7 +82,7 @@ describe('db:BigQuery', () => {
   it('streams a Malloy query for download', async () => {
     const sql = await runtime
       .loadModel(
-        "explore: carriers is table('malloy-data.faa.carriers') { measure: carrier_count is count() }"
+        "source: carriers is table('malloy-data.faa.carriers') { measure: carrier_count is count() }"
       )
       .loadQuery('query: carriers -> { group_by: name }')
       .getSQL();

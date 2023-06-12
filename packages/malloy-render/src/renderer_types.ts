@@ -28,6 +28,7 @@ export interface RendererOptions {
   isDrillingEnabled?: boolean;
   onDrill?: DrillFunction;
   titleCase?: boolean;
+  queryTimezone?: string;
 }
 
 export type DrillFunction = (

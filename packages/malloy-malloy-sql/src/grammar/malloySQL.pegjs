@@ -16,11 +16,14 @@ other "query string" = s:$(!delimiter_start !comment !embedded_malloy .)+ {
 }
 
 embedded_malloy = parenthized_embedded_malloy / plain_embedded_malloy
-parenthized_embedded_malloy = t:$('(' __ '%{' (!'}%' .)* '}%' __ ')') {
-  return {type: "malloy", text:t, malloy:t.slice(3, -3), range:location(), parenthized: true}
+parenthized_embedded_malloy = '(' __ em:plain_embedded_malloy __ ')' {
+  return {type: "malloy", text:text(), malloy:em.malloy, malloyRange: em.malloyRange, range:location(), parenthized: true}
 }
-plain_embedded_malloy = t:$('%{' (!'}%' .)* '}%') {
-  return {type: "malloy", text:t, malloy:t.slice(2, -2), range:location(), parenthized: false}
+plain_embedded_malloy = '%{' m:malloy '}%' {
+  return {type: "malloy", text:text(), malloy:m.text, malloyRange: m.malloyRange, range:location(), parenthized: false}
+}
+malloy = (!'}%' .)* {
+  return {malloyRange: location(), text:text()}
 }
 
 delimiter =

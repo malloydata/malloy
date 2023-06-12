@@ -942,6 +942,7 @@ export interface CompiledQuery extends DrillSource {
   malloy: string;
   queryName?: string | undefined;
   connectionName: string;
+  queryTimezone?: string;
 }
 
 /** Result type for running a Malloy query. */
@@ -1045,5 +1046,4 @@ export interface SearchValueMapResult {
   cardinality: number;
   values: {fieldValue: string; weight: number}[];
 }
-
 // clang-format on

@@ -412,6 +412,7 @@ export class Malloy {
           // TODO feature-sql-block There is no source explore...
           sourceExplore: '',
           sourceFilters: [],
+          queryTimezone: sqlStruct.queryTimezone,
         },
         {
           name: 'empty_model',
@@ -524,6 +525,45 @@ export class Malloy {
       index += 1;
     }
   }
+
+  public static async estimateQueryCost(params: {
+    connections: LookupConnection<Connection>;
+    preparedResult: PreparedResult;
+  }): Promise<QueryRunStats>;
+  public static async estimateQueryCost(params: {
+    connections: LookupConnection<Connection>;
+    sqlStruct: SQLBlockStructDef;
+  }): Promise<QueryRunStats>;
+  public static async estimateQueryCost({
+    connections,
+    preparedResult,
+    sqlStruct,
+  }: {
+    preparedResult?: PreparedResult;
+    sqlStruct?: SQLBlockStructDef;
+    connections: LookupConnection<Connection>;
+  }): Promise<QueryRunStats> {
+    const sqlBlock = sqlStruct?.structSource.sqlBlock;
+    if (!connections) {
+      throw new Error(
+        'Internal Error: Connection or LookupConnection<Connection> must be provided.'
+      );
+    }
+
+    const connectionName =
+      sqlBlock?.connection || preparedResult?.connectionName;
+    const connection = await connections.lookupConnection(connectionName);
+
+    if (sqlBlock) {
+      return await connection.estimateQueryCost(sqlBlock?.selectStr);
+    } else if (preparedResult) {
+      return await connection.estimateQueryCost(preparedResult?.sql);
+    } else {
+      throw new Error(
+        'Internal error: sqlStruct or preparedResult must be provided.'
+      );
+    }
+  }
 }
 
 /**
@@ -587,7 +627,7 @@ export class Model {
    */
   public getPreparedQueryByName(queryName: string): PreparedQuery {
     const query = this.modelDef.contents[queryName];
-    if (query.type === 'query') {
+    if (query?.type === 'query') {
       return new PreparedQuery(query, this.modelDef, queryName);
     }
 
@@ -1085,6 +1125,13 @@ export class PreparedResult {
       return new Explore(explore);
     }
     throw new Error(`'${name} is not an explore`);
+  }
+
+  /**
+   * @return The query timezone.
+   */
+  public get queryTimezone(): string | undefined {
+    return this.inner.queryTimezone;
   }
 
   public get _sourceExploreName(): string {
@@ -1802,7 +1849,7 @@ export class ExploreField extends Explore {
       case 'nested':
         return JoinRelationship.ManyToOne;
       default:
-        throw new Error('An explore field must have a join relationship.');
+        throw new Error('A source field must have a join relationship.');
     }
   }
 
@@ -2536,6 +2583,17 @@ export class QueryMaterializer extends FluentState<PreparedQuery> {
   public getPreparedQuery(): Promise<PreparedQuery> {
     return this.materialize();
   }
+
+  /**
+   * Estimates the cost of this loaded `Query`.
+   *
+   * @return The estimated cost of running this loaded query.
+   */
+  public async estimateQueryCost(): Promise<QueryRunStats> {
+    const connections = this.runtime.connections;
+    const preparedResult = await this.getPreparedResult();
+    return Malloy.estimateQueryCost({connections, preparedResult});
+  }
 }
 
 /**
@@ -2634,6 +2692,12 @@ export class SQLBlockMaterializer extends FluentState<SQLBlockStructDef> {
   public async getSQL(): Promise<string> {
     const sqlStruct = await this.getSQLBlock();
     return sqlStruct.structSource.sqlBlock.selectStr;
+  }
+
+  public async estimateQueryCost(): Promise<QueryRunStats> {
+    const connections = this.runtime.connections;
+    const sqlStruct = await this.getSQLBlock();
+    return Malloy.estimateQueryCost({connections, sqlStruct});
   }
 }
 

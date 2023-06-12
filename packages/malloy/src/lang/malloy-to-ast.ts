@@ -108,7 +108,7 @@ export class MalloyToAST
       if (ast.isSourceProperty(el)) {
         eps.push(el);
       } else {
-        this.astError(el, `Expected explore property, not '${el.elementType}'`);
+        this.astError(el, `Expected source property, not '${el.elementType}'`);
       }
     }
     return eps;
@@ -120,7 +120,7 @@ export class MalloyToAST
       if (el instanceof ast.Join) {
         eps.push(el);
       } else {
-        this.astError(el, `Expected explore property, not '${el.elementType}'`);
+        this.astError(el, `Expected source property, not '${el.elementType}'`);
       }
     }
     return eps;
@@ -281,10 +281,7 @@ export class MalloyToAST
     if (element instanceof ast.Source) {
       return element;
     }
-    throw this.internalError(
-      pcx,
-      `'${element.elementType}': illegal explore source`
-    );
+    throw this.internalError(pcx, `'${element.elementType}': illegal source`);
   }
 
   protected makeSqlString(
@@ -613,10 +610,18 @@ export class MalloyToAST
   visitTimezoneStatement(
     cx: parse.TimezoneStatementContext
   ): ast.TimezoneStatement {
-    return this.astAt(
-      new ast.TimezoneStatement(this.stripQuotes(cx.STRING_LITERAL().text)),
-      cx
+    const timezoneStatement = new ast.TimezoneStatement(
+      this.stripQuotes(cx.STRING_LITERAL().text)
     );
+
+    if (!timezoneStatement.isValid) {
+      this.astError(
+        timezoneStatement,
+        `Invalid timezone: ${timezoneStatement.tz}`
+      );
+    }
+
+    return this.astAt(timezoneStatement, cx);
   }
 
   visitQueryProperties(pcx: parse.QueryPropertiesContext): ast.QOPDesc {
