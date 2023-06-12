@@ -34,13 +34,12 @@ malloyStatement
   | docAnnotations
   ;
 
-
 defineSourceStatement
-  : SOURCE sourcePropertyList
+  : tags SOURCE sourcePropertyList
   ;
 
 defineQuery
-  : topLevelQueryDefs                        # use_top_level_query_defs
+  : topLevelQueryDefs                 # use_top_level_query_defs
   | tags QUERY topLevelAnonQueryDef   # anonymousQuery
   ;
 
