@@ -21,11 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Parameter} from '../../../model/malloy_types';
+import {Parameter, TypeDesc} from '../../../model/malloy_types';
 
 import {SpaceEntry} from './space-entry';
 import {HasParameter} from '../parameters/has-parameter';
-import {TypeDesc} from './type-desc';
 
 export abstract class SpaceParam extends SpaceEntry {
   abstract parameter(): Parameter;
@@ -43,7 +42,9 @@ export class AbstractParameter extends SpaceParam {
 
   typeDesc(): TypeDesc {
     const type = this.astParam.type || 'unknown';
-    return {dataType: type, expressionType: 'scalar'};
+    // TODO Not sure whether params are considered "input space". It seems like they
+    // could be input or constant, depending on usage.
+    return {dataType: type, expressionType: 'scalar', evalSpace: 'input'};
   }
 }
 
@@ -57,6 +58,12 @@ export class DefinedParameter extends SpaceParam {
   }
 
   typeDesc(): TypeDesc {
-    return {dataType: this.paramDef.type, expressionType: 'scalar'};
+    return {
+      dataType: this.paramDef.type,
+      expressionType: 'scalar',
+      // TODO Not sure whether params are considered "input space". It seems like they
+      // could be input or constant, depending on usage (same as above).
+      evalSpace: 'input',
+    };
   }
 }

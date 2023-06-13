@@ -807,8 +807,8 @@ describe('airport_tests', () => {
           }
         }
       } -> {
+        group_by: airport_count
         aggregate:
-          airport_count,
           sum_state is by_state.sum(by_state.airport_count),
           sum_fac is by_state.by_fac_type.sum(by_state.by_fac_type.airport_count)
       }

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {maxExpressionType} from '../../../model/malloy_types';
+import {maxExpressionType, mergeEvalSpaces} from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
 import {ExprValue} from '../types/expr-value';
@@ -50,6 +50,7 @@ export class Range extends ExpressionDef {
             fromValue.expressionType,
             toValue.expressionType
           ),
+          evalSpace: mergeEvalSpaces(fromValue.evalSpace, toValue.evalSpace),
           value: compose(fromValue.value, op2, toValue.value),
         };
       }

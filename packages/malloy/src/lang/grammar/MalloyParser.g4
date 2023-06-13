@@ -160,8 +160,8 @@ exploreProperties
   ;
 
 exploreStatement
-  : tags DIMENSION dimensionDefList    # defExploreDimension
-  | tags MEASURE measureDefList        # defExploreMeasure
+  : tags DIMENSION defList             # defExploreDimension
+  | tags MEASURE defList               # defExploreMeasure
   | declareStatement                   # defDeclare_stub
   | joinStatement                      # defJoin_stub
   | whereStatement                     # defExploreWhere
@@ -181,12 +181,8 @@ exploreRenameDef
   : fieldName isDefine fieldName
   ;
 
-dimensionDefList
-  : dimensionDef (COMMA? dimensionDef)* COMMA?
-  ;
-
-measureDefList
-  : measureDef (COMMA? measureDef)* COMMA?
+defList
+  : fieldDef (COMMA? fieldDef)* COMMA?
   ;
 
 fieldDef
@@ -196,10 +192,8 @@ fieldDef
 fieldNameDef: id;
 joinNameDef: id;
 
-measureDef: fieldDef;
-
 declareStatement
-  : DECLARE fieldDef (COMMA? fieldDef)* COMMA?
+  : DECLARE defList
   ;
 
 joinStatement
@@ -262,6 +256,7 @@ queryStatement
   | projectStatement
   | indexStatement
   | aggregateStatement
+  | calculateStatement
   | topStatement
   | limitStatement
   | orderByStatement
@@ -281,11 +276,10 @@ queryFieldList
   : queryFieldEntry (COMMA? queryFieldEntry)* COMMA?
   ;
 
-dimensionDef: fieldDef;
 
 queryFieldEntry
-  : dimensionDef        # queryFieldDef
-  | fieldPath           # queryFieldRef
+  : fieldPath
+  | fieldDef
   ;
 
 nestStatement
@@ -303,6 +297,10 @@ nestEntry
 
 aggregateStatement
   : tags AGGREGATE queryFieldList
+  ;
+
+calculateStatement
+  : tags CALCULATE queryFieldList
   ;
 
 projectStatement
@@ -434,7 +432,11 @@ fieldExpr
       aggregate
       OPAREN (fieldExpr | STAR)? CPAREN                    # exprAggregate
   | OPAREN partialAllowedFieldExpr CPAREN                  # exprExpr
-  | (id | timeframe) OPAREN ( argumentList? ) CPAREN       # exprFunc
+  | (fieldPath DOT)?
+      id
+      OPAREN ( argumentList? ) CPAREN                      # exprAggFunc
+  | ((id (EXCLAM malloyType?)?) | timeframe)
+    OPAREN ( argumentList? ) CPAREN                        # exprFunc
   | pickStatement                                          # exprPick
   | ungroup OPAREN fieldExpr (COMMA fieldName)* CPAREN     # exprUngroup
   ;
@@ -463,10 +465,14 @@ fieldCollection
   : collectionMember (COMMA? collectionMember)* COMMA?
   ;
 
+collectionWildCard
+  : (fieldPath DOT)? (STAR|STARSTAR)
+  ;
+
 collectionMember
-  : tags fieldPath                         # nameMember
-  | tags (fieldPath DOT)? (STAR|STARSTAR)  # wildMember
-  | fieldDef                               # newMember
+  : fieldPath
+  | collectionWildCard
+  | fieldDef
   ;
 
 fieldPath

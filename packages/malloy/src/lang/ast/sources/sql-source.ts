@@ -41,7 +41,10 @@ export class SQLSource extends NamedSource {
       this.log(`Undefined from_sql source '${this.refName}'`);
       return;
     }
-    if (entry.type === 'query') {
+    if (entry.type === 'function') {
+      this.log(`Cannot construct a source from a function '${this.refName}'`);
+      return;
+    } else if (entry.type === 'query') {
       this.log(`Cannot use 'from_sql()' with a query '${this.refName}'`);
       return;
     } else if (isSQLBlockStruct(entry) && entry.declaredSQLBlock) {

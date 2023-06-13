@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation, FieldDef} from '../../../model/malloy_types';
+import {Annotation, FieldDef, TypeDesc} from '../../../model/malloy_types';
 import {DefinitionList} from '../types/definition-list';
 
 import {FieldName, FieldSpace} from '../types/field-space';
@@ -29,8 +29,25 @@ import {LookupResult} from '../types/lookup-result';
 import {ListOf, MalloyElement} from '../types/malloy-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
 
-export class FieldReference extends ListOf<FieldName> implements Noteable {
-  elementType = 'fieldReference';
+import {
+  typecheckAggregate,
+  typecheckCalculate,
+  typecheckDeclare,
+  typecheckDimension,
+  typecheckGroupBy,
+  typecheckIndex,
+  typecheckMeasure,
+  typecheckProject,
+} from './typecheck_utils';
+
+export type FieldReferenceConstructor = new (
+  names: FieldName[]
+) => FieldReference;
+
+export abstract class FieldReference
+  extends ListOf<FieldName>
+  implements Noteable
+{
   readonly isNoteableObj = true;
   note?: Annotation;
   extendNote = extendNoteMethod;
@@ -62,8 +79,89 @@ export class FieldReference extends ListOf<FieldName> implements Noteable {
     return this.list[this.list.length - 1].refString;
   }
 
+  abstract typecheck(type: TypeDesc);
+
   getField(fs: FieldSpace): LookupResult {
-    return fs.lookup(this.list);
+    const result = fs.lookup(this.list);
+
+    if (result.found) {
+      const actualType = result.found.typeDesc();
+      this.typecheck(actualType);
+    }
+
+    return result;
+  }
+}
+
+export class AcceptExceptFieldReference extends FieldReference {
+  elementType = 'acceptExceptFieldReference';
+  // Nothing to typecheck here
+  typecheck() {
+    return;
+  }
+}
+
+export class ExpressionFieldReference extends FieldReference {
+  elementType = 'expressionFieldReference';
+  // We assume that the outer expression will typecheck this
+  typecheck() {
+    return;
+  }
+}
+
+export class CalculateFieldReference extends FieldReference {
+  elementType = 'calculateFieldReference';
+  typecheck(type: TypeDesc) {
+    typecheckCalculate(type, this);
+  }
+}
+
+export class IndexFieldReference extends FieldReference {
+  elementType = 'indexFieldReference';
+  typecheck(type: TypeDesc) {
+    typecheckIndex(type, this);
+  }
+}
+
+export class AggregateFieldReference extends FieldReference {
+  elementType = 'aggregateFieldReference';
+  typecheck(type: TypeDesc) {
+    typecheckAggregate(type, this);
+  }
+}
+
+export class GroupByFieldReference extends FieldReference {
+  elementType = 'groupByFieldReference';
+  typecheck(type: TypeDesc) {
+    typecheckGroupBy(type, this);
+  }
+}
+
+export class ProjectFieldReference extends FieldReference {
+  elementType = 'projectFieldReference';
+  typecheck(type: TypeDesc) {
+    typecheckProject(type, this);
+  }
+}
+
+export class DeclareFieldReference extends FieldReference {
+  elementType = 'declareFieldReference';
+  typecheck(type: TypeDesc) {
+    typecheckDeclare(type, this);
+  }
+}
+
+export class MeasureFieldReference extends FieldReference {
+  elementType = 'measureFieldReference';
+  typecheck(type: TypeDesc) {
+    typecheckMeasure(type, this);
+  }
+}
+
+export class DimensionFieldReference extends FieldReference {
+  elementType = 'dimensionFieldReference';
+  typecheck(type: TypeDesc) {
+    typecheckDimension(type, this);
   }
 }
 

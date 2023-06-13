@@ -21,10 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDef, FieldTypeDef} from '../../../model/malloy_types';
+import {FieldDef, FieldTypeDef, TypeDesc} from '../../../model/malloy_types';
 
 import {SpaceField} from '../types/space-field';
-import {TypeDesc} from '../types/type-desc';
 
 export class ColumnSpaceField extends SpaceField {
   constructor(protected def: FieldTypeDef) {

@@ -21,18 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDeclaration} from '../query-items/field-declaration';
 import {DefinitionList} from '../types/definition-list';
 import {QueryItem} from '../types/query-item';
 
 export class GroupBy extends DefinitionList<QueryItem> {
   elementType = 'groupBy';
-  constructor(members: QueryItem[]) {
-    super(members);
-    for (const el of members) {
-      if (el instanceof FieldDeclaration) {
-        el.isMeasure = false;
-      }
-    }
-  }
 }

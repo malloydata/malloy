@@ -47,6 +47,7 @@ export class ExprTime extends ExpressionDef {
       dataType: timeType,
       expressionType,
       value: typeof value === 'string' ? [value] : value,
+      evalSpace: 'constant',
     };
   }
 

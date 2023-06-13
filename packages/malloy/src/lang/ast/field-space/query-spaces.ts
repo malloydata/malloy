@@ -41,6 +41,10 @@ import {QueryItem} from '../types/query-item';
 import {ReferenceField} from './reference-field';
 import {WildSpaceField} from './wild-space-field';
 import {RefinedSpace} from './refined-space';
+import {LookupResult} from '../types/lookup-result';
+import {SpaceEntry} from '../types/space-entry';
+import {ColumnSpaceField} from './column-space-field';
+import {StructSpaceField} from './static-space';
 
 /**
  * Unlike a source, which is a refinement of a namespace, a query
@@ -67,15 +71,51 @@ export class QueryInputSpace extends RefinedSpace {
       this.extendList.push(extendField.defineName);
     }
   }
+
+  isQueryFieldSpace() {
+    return true;
+  }
+
+  outputSpace() {
+    return this.result;
+  }
 }
 
+// TODO maybe rename QueryOutputSpace
 export abstract class QuerySpace extends RefinedSpace {
   readonly exprSpace: QueryInputSpace;
   astEl?: MalloyElement | undefined;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
-  constructor(readonly queryInputSpace: FieldSpace) {
+  constructor(
+    readonly queryInputSpace: FieldSpace,
+    refineThis: model.PipeSegment | undefined
+  ) {
     super(queryInputSpace.emptyStructDef());
     this.exprSpace = new QueryInputSpace(queryInputSpace, this);
+    if (refineThis) this.addRefineFromFields(refineThis);
+  }
+
+  private addRefineFromFields(refineThis: model.PipeSegment) {
+    for (const field of refineThis.fields) {
+      if (typeof field === 'string') {
+        const ent = this.exprSpace.entry(field);
+        if (ent) {
+          this.setEntry(field, ent);
+        }
+      } else if (model.isFilteredAliasedName(field)) {
+        const name = field.as ?? field.name;
+        const ent = this.exprSpace.entry(name);
+        if (ent) {
+          this.setEntry(name, ent);
+        }
+      } else {
+        // TODO can you reference fields in a turtle as fields in the output space,
+        // e.g. order_by: my_turtle.foo, or lag(my_turtle.foo)
+        if (field.type !== 'turtle') {
+          this.setEntry(field.as ?? field.name, new ColumnSpaceField(field));
+        }
+      }
+    }
   }
 
   log(s: string): void {
@@ -106,7 +146,98 @@ export abstract class QuerySpace extends RefinedSpace {
   }
 
   addWild(wild: WildcardFieldReference): void {
-    this.setEntry(wild.refString, new WildSpaceField(wild.refString));
+    let success = true;
+    let current = this.exprSpace as FieldSpace;
+    const parts = wild.refString.split('.');
+    const conflictMap = {};
+    function logConflict(name: string, parentRef: string | undefined) {
+      const conflict = conflictMap[name];
+      wild.log(
+        `Cannot expand '${name}'${
+          parentRef ? ` in ${parentRef}` : ''
+        } because a field with that name already exists${
+          conflict ? ` (conflicts with ${conflict})` : ''
+        }`
+      );
+      success = false;
+    }
+    for (let pi = 0; pi < parts.length; pi++) {
+      const part = parts[pi];
+      const prevParts = parts.slice(0, pi);
+      const parentRef = pi > 0 ? prevParts.join('.') : undefined;
+      const fullName = [...prevParts.join('.'), part].join('.');
+      if (part === '*') {
+        for (const [name, entry] of current.entries()) {
+          if (this.entry(name)) {
+            logConflict(name, parentRef);
+            success = false;
+          }
+          if (model.expressionIsScalar(entry.typeDesc().expressionType)) {
+            this.setEntry(name, entry);
+            conflictMap[name] = fullName;
+          }
+        }
+      } else if (part === '**') {
+        // TODO actually handle **
+        wild.log('** is currently broken');
+        success = false;
+        // const spaces: {space: FieldSpace; ref: string | undefined}[] = [
+        //   {space: current, ref: undefined},
+        // ];
+        // let toExpand: {space: FieldSpace; ref: string | undefined} | undefined;
+        // while ((toExpand = spaces.pop())) {
+        //   for (const [name, entry] of toExpand.space.entries()) {
+        //     if (this.entry(name)) {
+        //       logConflict(name, toExpand.ref);
+        //       success = false;
+        //     }
+        //     if (model.expressionIsScalar(entry.typeDesc().expressionType)) {
+        //       this.setEntry(name, entry);
+        //       conflictMap[name] = toExpand.ref
+        //         ? `${toExpand.ref}.${name}`
+        //         : name;
+        //     }
+        //     if (entry instanceof StructSpaceField) {
+        //       spaces.push({
+        //         space: entry.fieldSpace,
+        //         ref: [
+        //           ...(parentRef ? [parentRef] : []),
+        //           ...(toExpand.ref ? [toExpand.ref] : []),
+        //           name,
+        //         ].join('.'),
+        //       });
+        //     }
+        //   }
+        // }
+      } else {
+        const ent = current.entry(part);
+        if (ent) {
+          if (ent instanceof StructSpaceField) {
+            current = ent.fieldSpace;
+          } else {
+            wild.log(
+              `Field '${part}'${
+                parentRef ? ` in ${parentRef}` : ''
+              } is not a struct`
+            );
+            success = false;
+          }
+        } else {
+          wild.log(
+            `No such field '${part}'${parentRef ? ` in ${parentRef}` : ''}`
+          );
+          success = false;
+        }
+      }
+    }
+    if (success) {
+      // TODO perform the entire replacement of * and ** here in the parser.
+      // Today, we add all the fields to the output space, and then still add * to
+      // the query. The compiler then does a second * expansion. Instead, we should
+      // just add all the fields to the query here and then remove the code in the compiler
+      // for expanding the *.
+      this.setEntry(wild.refString, new WildSpaceField(wild.refString));
+    }
   }
 
   /**
@@ -146,36 +277,39 @@ export abstract class QuerySpace extends RefinedSpace {
     }
   }
 
-  canContain(_qd: model.QueryFieldDef): boolean {
+  canContain(_typeDesc: model.TypeDesc): boolean {
     return true;
   }
 
   protected queryFieldDefs(): model.QueryFieldDef[] {
     const fields: model.QueryFieldDef[] = [];
-    for (const [name, field] of this.entries()) {
+    for (const [, field] of this.entries()) {
       if (field instanceof SpaceField) {
         const fieldQueryDef = field.getQueryFieldDef(this.exprSpace);
         if (fieldQueryDef) {
-          if (this.canContain(fieldQueryDef)) {
-            // If the name is a ref, and the thing it is referring to
-            // has annoation, we can't push the name, we need to
-            // push an annotated reference to the name.
-            if (typeof fieldQueryDef === 'string') {
-              const refField = new FieldName(fieldQueryDef);
-              const refDef = refField.getField(this.queryInputSpace).found;
-              if (refDef) {
-                // mtoy todo remove this whole section or implement it
-                // I hit a wall here, turned out to be hard to ask the
-                // thing this refers to "do you have an annotation".
-              }
-            }
+          if (field instanceof WildSpaceField) {
             fields.push(fieldQueryDef);
           } else {
-            this.log(`'${name}' not legal in ${this.segmentType}`);
+            const typeDesc = field.typeDesc();
+            // Filter out fields whose type is unknown, which means that a totally bad field
+            // isn't sent to the compiler, where it will wig out. The downside is that in
+            // subsequent stages of a query, the field is not in the input struct. But since
+            // the error message says "Cannot define x which has unknown type", it makes sense
+            // that it wouldn't be "defined" in later stages.
+            // TODO Figure out how to make errors generated by `canContain` go in the right place,
+            // maybe by adding a logable element to SpaceFields.
+            if (typeDesc.dataType !== 'unknown' && this.canContain(typeDesc)) {
+              fields.push(fieldQueryDef);
+            }
           }
-        } else {
-          throw new Error(`'${name}' does not have a QueryFieldDef`);
         }
+        // TODO I removed the error here because during calculation of the refinement space,
+        // (see creation of a QuerySpace) we add references to all the fields from
+        // the refinement, but they don't have definitions. So in the case where we
+        // don't have a field def, we "know" that that field is already in the query,
+        // and we don't need to worry about actually adding it. This is also true for
+        // project statements, where we add "*" as a field and also all the individuala
+        // fields, but the individual fields don't have field defs.
       }
     }
     this.isComplete();
@@ -234,8 +368,43 @@ export abstract class QuerySpace extends RefinedSpace {
     this.isComplete();
     return segment;
   }
+
+  lookup(path: FieldName[]): LookupResult {
+    const result = super.lookup(path);
+    if (result.found) {
+      return {
+        error: undefined,
+        found: new OutputSpaceEntry(result.found),
+      };
+    }
+    return this.exprSpace.lookup(path);
+  }
+
+  isQueryFieldSpace() {
+    return true;
+  }
+
+  outputSpace() {
+    return this;
+  }
 }
 
 export class ReduceFieldSpace extends QuerySpace {
   readonly segmentType = 'reduce';
+}
+
+export class OutputSpaceEntry extends SpaceEntry {
+  refType: 'field' | 'parameter';
+  constructor(readonly inputSpaceEntry: SpaceEntry) {
+    super();
+    this.refType = inputSpaceEntry.refType;
+  }
+
+  typeDesc(): model.TypeDesc {
+    const type = this.inputSpaceEntry.typeDesc();
+    return {
+      ...type,
+      evalSpace: type.evalSpace === 'constant' ? 'constant' : 'output',
+    };
+  }
 }

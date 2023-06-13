@@ -22,7 +22,7 @@
  */
 
 import {ExprValue} from '../types/expr-value';
-import {FieldValueType} from '../types/type-desc';
+import {FieldValueType} from '../../../model';
 import {FT} from '../fragtype-utils';
 import {ExprAggregateFunction} from './expr-aggregate-function';
 import {ExpressionDef} from '../types/expression-def';

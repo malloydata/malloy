@@ -37,6 +37,10 @@ export class ExprNumber extends ExpressionDef {
   }
 
   constantExpression(): ExprValue {
-    return {...FT.numberT, value: [this.n]};
+    return {
+      ...FT.numberT,
+      evalSpace: 'literal',
+      value: [{type: 'dialect', function: 'numberLiteral', literal: this.n}],
+    };
   }
 }

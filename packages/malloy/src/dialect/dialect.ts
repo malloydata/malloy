@@ -22,7 +22,6 @@
  */
 
 import {
-  AtomicFieldType as AtomicFieldTypeInner,
   DialectFragment,
   Expr,
   ExtractUnit,
@@ -34,6 +33,7 @@ import {
   TypecastFragment,
   mkExpr,
 } from '../model/malloy_types';
+import {DialectFunctionOverloadDef} from './functions';
 
 interface DialectField {
   type: string;
@@ -81,15 +81,6 @@ export function qtz(qi: QueryInfo): string | undefined {
   return tz;
 }
 
-/**
- * Someday this might be used to control how a function call in malloy is
- * translated into a function call in SQL. Today this is just so that
- * the expression compiler can know the output type of a function.
- */
-export interface FunctionInfo {
-  returnType: AtomicFieldTypeInner;
-}
-
 export type DialectFieldList = DialectField[];
 
 export abstract class Dialect {
@@ -101,12 +92,17 @@ export abstract class Dialect {
   abstract divisionIsInteger: boolean;
   abstract supportsSumDistinctFunction: boolean;
   abstract unnestWithNumbers: boolean;
-  protected abstract functionInfo: Record<string, FunctionInfo>;
   abstract defaultSampling: Sampling;
+  abstract supportsAggDistinct: boolean;
   abstract supportUnnestArrayAgg: boolean; // won't need UDFs for nested pipelines
   abstract supportsCTEinCoorelatedSubQueries: boolean;
   abstract dontUnionIndex: boolean;
   abstract supportsQualify: boolean;
+
+  // return the definition of a function with the given name
+  abstract getGlobalFunctionDef(
+    name: string
+  ): DialectFunctionOverloadDef[] | undefined;
 
   // return a quoted string for use as a table path.
   abstract quoteTablePath(tablePath: string): string;
@@ -229,12 +225,14 @@ export abstract class Dialect {
     timezone?: string
   ): string;
 
-  abstract sqlLiteralString(literak: string): string;
+  abstract sqlLiteralString(literal: string): string;
 
-  abstract sqlRegexpMatch(expr: Expr, regex: string): Expr;
+  abstract sqlLiteralRegexp(literal: string): string;
 
-  getFunctionInfo(functionName: string): FunctionInfo | undefined {
-    return this.functionInfo[functionName.toLowerCase()];
+  abstract sqlRegexpMatch(expr: Expr, regex: Expr): Expr;
+
+  sqlLiteralNumber(literal: string): string {
+    return literal;
   }
 
   dialectExpr(qi: QueryInfo, df: DialectFragment): Expr {
@@ -266,11 +264,28 @@ export abstract class Dialect {
       }
       case 'stringLiteral':
         return [this.sqlLiteralString(df.literal)];
+      case 'numberLiteral':
+        return [this.sqlLiteralNumber(df.literal)];
+      case 'regexpLiteral':
+        return [this.sqlLiteralRegexp(df.literal)];
     }
   }
 
   sqlSumDistinct(_key: string, _value: string, _funcName: string): string {
-    return 'sqlSumDistinct called bu not implemented';
+    return 'sqlSumDistinct called but not implemented';
+  }
+
+  // Like sqlSumDistinct, but for an arbitrary aggregate expression
+  sqlAggDistinct(
+    _key: string,
+    _values: string[],
+    // A function which takes the value names used internally and produces the SQL operation using those
+    // value names.
+    // TODO maybe this should be flipped around and the SQL should be passed in directly along with the
+    // value names used?
+    _func: (valNames: string[]) => string
+  ) {
+    return 'sqlAggDistinct called but not implemented';
   }
 
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {

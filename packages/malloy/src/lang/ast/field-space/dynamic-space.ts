@@ -123,7 +123,7 @@ export abstract class DynamicSpace extends StaticSpace {
         }
       }
       const reorderFields = [...fields, ...joins, ...turtles];
-      for (const [fieldName, field] of reorderFields) {
+      for (const [, field] of reorderFields) {
         if (field instanceof JoinSpaceField) {
           const joinStruct = field.join.structDef();
           if (!ErrorFactory.isErrorStructDef(joinStruct)) {
@@ -134,9 +134,12 @@ export abstract class DynamicSpace extends StaticSpace {
           const fieldDef = field.fieldDef();
           if (fieldDef) {
             this.final.fields.push(fieldDef);
-          } else {
-            throw new Error(`'${fieldName}' doesn't have a FieldDef`);
           }
+          // TODO I'm just removing this, but perhaps instead I should just filter
+          // out ReferenceFields and still make this check.
+          // else {
+          //   throw new Error(`'${fieldName}' doesn't have a FieldDef`);
+          // }
         }
       }
       if (Object.entries(parameters).length > 0) {

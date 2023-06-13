@@ -76,16 +76,19 @@ export class Filter extends ListOf<FilterElement> {
       // here allows better reflection of errors back to user.
       if (this.havingClause !== undefined) {
         if (this.havingClause) {
+          // TODO I don't understand how this is working currently? This seems to imply
+          // that a calculation is NOT allowed, but it is...? It appears maybe this code
+          // just isn't being called.
           if (expressionIsCalculation(fExpr.expressionType)) {
             oneElement.log(
-              'Aggregate or Analytical expression expected in HAVING filter'
+              'Aggregate or analytic expression expected in HAVING filter'
             );
             continue;
           }
         } else {
-          if (fExpr.expressionType !== 'scalar') {
+          if (expressionIsCalculation(fExpr.expressionType)) {
             oneElement.log(
-              'Aggregate or Analytical expressions not allowed in WHERE'
+              'Aggregate or analytic expressions not allowed in WHERE'
             );
             continue;
           }

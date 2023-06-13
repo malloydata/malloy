@@ -41,6 +41,7 @@ import {MalloyChildTranslator, MalloyTranslator} from '../parse-malloy';
 import {DataRequestResponse, TranslateResponse} from '../translate-response';
 import {StaticSpace} from '../ast/field-space/static-space';
 import {ExprValue} from '../ast/types/expr-value';
+import {GlobalNameSpace} from '../ast/types/global-name-space';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any,@typescript-eslint/explicit-module-boundary-types
 export function pretty(thing: any): string {
@@ -159,6 +160,7 @@ export const aTableDef = mockSchema['aTable'];
  */
 class TestRoot extends MalloyElement implements NameSpace {
   elementType = 'test root';
+  globalNameSpace: NameSpace = new GlobalNameSpace();
 
   constructor(
     child: MalloyElement,
@@ -174,6 +176,8 @@ class TestRoot extends MalloyElement implements NameSpace {
   }
 
   getEntry(name: string): ModelEntry | undefined {
+    const global = this.globalNameSpace.getEntry(name);
+    if (global) return global;
     const struct = this.modelDef.contents[name];
     if (struct.type === 'struct') {
       const exported = this.modelDef.exports.includes(name);

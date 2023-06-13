@@ -36,16 +36,11 @@ import {
   isSamplingPercent,
   isSamplingRows,
   mkExpr,
-} from '../model/malloy_types';
-import {indent} from '../model/utils';
-import {
-  Dialect,
-  DialectFieldList,
-  FunctionInfo,
-  QueryInfo,
-  inDays,
-  qtz,
-} from './dialect';
+} from '../../model/malloy_types';
+import {indent} from '../../model/utils';
+import {DialectFunctionOverloadDef} from '../functions';
+import {DUCKDB_FUNCTIONS} from './functions';
+import {Dialect, DialectFieldList, QueryInfo, inDays, qtz} from '../dialect';
 
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';
@@ -70,13 +65,10 @@ export class DuckDBDialect extends Dialect {
   unnestWithNumbers = true;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
+  supportsAggDistinct = true;
   supportsCTEinCoorelatedSubQueries = true;
   dontUnionIndex = true;
   supportsQualify = true;
-
-  functionInfo: Record<string, FunctionInfo> = {
-    'concat': {returnType: 'string'},
-  };
 
   // hack until they support temporary macros.
   get udfPrefix(): string {
@@ -262,10 +254,6 @@ export class DuckDBDialect extends Dialect {
     throw new Error('Not implemented Yet');
   }
 
-  getFunctionInfo(functionName: string): FunctionInfo | undefined {
-    return this.functionInfo[functionName];
-  }
-
   sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
     let lVal = from.value;
     let rVal = to.value;
@@ -355,7 +343,7 @@ export class DuckDBDialect extends Dialect {
     return cast.expr;
   }
 
-  sqlRegexpMatch(expr: Expr, regexp: string): Expr {
+  sqlRegexpMatch(expr: Expr, regexp: Expr): Expr {
     return mkExpr`REGEXP_MATCHES(${expr}, ${regexp})`;
   }
 
@@ -384,6 +372,22 @@ export class DuckDBDialect extends Dialect {
       )
     )`;
   }
+
+  sqlAggDistinct(
+    key: string,
+    values: string[],
+    func: (valNames: string[]) => string
+  ): string {
+    return `(
+      SELECT ${func(values.map((v, i) => `a.val${i}`))} as value
+      FROM (
+        SELECT UNNEST(list(distinct {key:${key}, ${values
+      .map((v, i) => `val${i}: ${v}`)
+      .join(',')}})) a
+      )
+    )`;
+  }
+
   // sqlSumDistinct(key: string, value: string): string {
   //   const _factor = 32;
   //   const precision = 0.000001;
@@ -414,5 +418,13 @@ export class DuckDBDialect extends Dialect {
 
   sqlLiteralString(literal: string): string {
     return "'" + literal.replace(/'/g, "''") + "'";
+  }
+
+  sqlLiteralRegexp(literal: string): string {
+    return "'" + literal.replace(/'/g, "''") + "'";
+  }
+
+  getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
+    return DUCKDB_FUNCTIONS.get(name);
   }
 }

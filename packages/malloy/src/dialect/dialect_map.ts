@@ -25,6 +25,8 @@ import {DuckDBDialect} from './duckdb';
 import {Dialect} from './dialect';
 import {PostgresDialect} from './postgres';
 import {StandardSQLDialect} from './standardsql';
+import {FunctionDef, FunctionOverloadDef} from '../model';
+import {DialectFunctionOverloadDef} from './functions';
 
 const dialectMap = new Map<string, Dialect>();
 
@@ -43,3 +45,86 @@ export function registerDialect(d: Dialect): void {
 registerDialect(new PostgresDialect());
 registerDialect(new StandardSQLDialect());
 registerDialect(new DuckDBDialect());
+
+function paramsEqual(
+  a: DialectFunctionOverloadDef,
+  b: FunctionOverloadDef
+): boolean {
+  return (
+    a.params.length === b.params.length &&
+    a.params.every((param, i) => {
+      const otherParam = b.params[i];
+      return (
+        param.isVariadic === otherParam.isVariadic &&
+        param.name === otherParam.name &&
+        param.allowedTypes.length === otherParam.allowedTypes.length &&
+        param.allowedTypes.every(t =>
+          otherParam.allowedTypes.some(
+            ot =>
+              t.dataType === ot.dataType &&
+              t.expressionType === ot.expressionType
+          )
+        )
+      );
+    })
+  );
+}
+
+function paramsCompatible(
+  a: DialectFunctionOverloadDef,
+  b: FunctionOverloadDef
+): boolean {
+  // TODO detect when parameters are not exactly equal, but would cause collision issues...
+  return paramsEqual(a, b);
+}
+
+function returnEqual(
+  a: DialectFunctionOverloadDef,
+  b: FunctionOverloadDef
+): boolean {
+  return (
+    a.returnType.dataType === b.returnType.dataType &&
+    a.returnType.expressionType === b.returnType.expressionType
+  );
+}
+
+export function getDialectFunction(name: string): FunctionDef | undefined {
+  const func: FunctionDef = {
+    type: 'function',
+    name,
+    overloads: [],
+  };
+  let found = false;
+  for (const dialect of dialectMap.values()) {
+    const overloads = dialect.getGlobalFunctionDef(name);
+    if (overloads) {
+      for (const overload of overloads) {
+        let handled = false;
+        for (const existingOverload of func.overloads) {
+          if (!paramsCompatible(overload, existingOverload)) {
+            continue;
+          }
+          if (!paramsEqual(overload, existingOverload)) {
+            throw new Error('params are compatible but not equal');
+          }
+          if (!returnEqual(overload, existingOverload)) {
+            throw new Error('params match but return types differ!');
+          }
+          existingOverload.dialect[dialect.name] = overload.e;
+          handled = true;
+        }
+        if (!handled) {
+          func.overloads.push({
+            returnType: overload.returnType,
+            params: overload.params,
+            dialect: {[dialect.name]: overload.e},
+            needsWindowOrderBy: overload.needsWindowOrderBy,
+            between: overload.between,
+          });
+        }
+      }
+      found = true;
+    }
+  }
+  return found ? func : undefined;
+}

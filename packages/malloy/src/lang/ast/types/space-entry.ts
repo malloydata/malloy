@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TypeDesc} from './type-desc';
+import {TypeDesc} from '../../../model';
 
 export abstract class SpaceEntry {
   abstract typeDesc(): TypeDesc;

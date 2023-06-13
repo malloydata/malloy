@@ -21,11 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {QueryFieldDef} from '../../../model/malloy_types';
+import {QueryFieldDef, TypeDesc} from '../../../model/malloy_types';
 
 import {FieldSpace} from '../types/field-space';
 import {SpaceField} from '../types/space-field';
-import {TypeDesc} from '../types/type-desc';
 
 export class WildSpaceField extends SpaceField {
   constructor(readonly wildText: string) {

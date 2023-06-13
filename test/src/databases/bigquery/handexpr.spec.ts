@@ -460,48 +460,6 @@ describe('BigQuery hand-built expression test', () => {
     // expect(result.data.value[0].total_seats).toBe(452415);
   });
 
-  it(`hand row_number - ${databaseName}`, async () => {
-    const result = await handModel
-      ._loadQueryFromQueryDef({
-        structRef: 'aircraft',
-        pipeline: [
-          {
-            type: 'reduce',
-            fields: [
-              'state',
-              'aircraft_count',
-              {
-                name: 'row_num',
-                type: 'number',
-                expressionType: 'analytic',
-                e: [
-                  {
-                    type: 'analytic',
-                    function: 'row_number',
-                  },
-                ],
-              },
-              {
-                name: '_rank',
-                type: 'number',
-                expressionType: 'analytic',
-                e: [
-                  {
-                    type: 'analytic',
-                    function: 'rank',
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      })
-      .run({rowLimit: 15});
-    for (let i = 0; i < result.data.rowCount; i++) {
-      expect(result.data.value[i]['row_num']).toBe(i + 1);
-    }
-  });
-
   it(`hand turtle3 - ${databaseName}`, async () => {
     const sql = await compileHandQueryToSQL(handModel, {
       structRef: 'aircraft',
@@ -557,60 +515,6 @@ describe('BigQuery hand-built expression test', () => {
     await validateCompilation(databaseName, sql);
     // console.log(sql);
     // expect(result.data.value[0].total_seats).toBe(452415);
-  });
-
-  it(`hand turtle analytic - ${databaseName}`, async () => {
-    await handModel
-      ._loadQueryFromQueryDef({
-        structRef: 'aircraft',
-        pipeline: [
-          {
-            type: 'reduce',
-            fields: [
-              'state',
-              'aircraft_count',
-              {
-                type: 'turtle',
-                name: 'my_turtle',
-                pipeline: [
-                  {
-                    type: 'reduce',
-                    limit: 4,
-                    fields: [
-                      'county',
-                      'aircraft_count',
-                      {
-                        name: 'row_num',
-                        type: 'number',
-                        expressionType: 'analytic',
-                        e: [
-                          {
-                            type: 'analytic',
-                            function: 'row_number',
-                          },
-                        ],
-                      },
-                      // {
-                      //   name: "first_state",
-                      //   type: "number",
-                      //   expressionType: "analytic",
-                      //   e: [
-                      //     {
-                      //       type: "analytic",
-                      //       function: "first_value_in_column",
-                      //       parameters: "state",
-                      //     },
-                      //   ],
-                      // },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      })
-      .run();
   });
 
   it(`hand: declared pipeline as main query - ${databaseName}`, async () => {

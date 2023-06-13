@@ -46,6 +46,7 @@ export class ExprString extends ExpressionDef {
           literal: this.value,
         },
       ],
+      evalSpace: 'literal',
     };
   }
 }

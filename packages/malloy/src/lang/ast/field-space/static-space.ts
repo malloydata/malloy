@@ -27,7 +27,7 @@ import {FieldDef, StructDef, isTurtleDef} from '../../../model/malloy_types';
 
 import {SpaceEntry} from '../types/space-entry';
 import {LookupResult} from '../types/lookup-result';
-import {FieldName, FieldSpace} from '../types/field-space';
+import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {DefinedParameter} from '../types/space-param';
 import {SpaceField} from '../types/space-field';
 import {StructSpaceFieldBase} from './struct-space-field-base';
@@ -98,7 +98,8 @@ export class StaticSpace implements FieldSpace {
     delete this.map[name];
   }
 
-  protected entry(name: string): SpaceEntry | undefined {
+  // TODO this was protected
+  entry(name: string): SpaceEntry | undefined {
     return this.map[name];
   }
 
@@ -106,7 +107,7 @@ export class StaticSpace implements FieldSpace {
     this.map[name] = value;
   }
 
-  protected entries(): [string, SpaceEntry][] {
+  entries(): [string, SpaceEntry][] {
     return Object.entries(this.map);
   }
 
@@ -165,6 +166,10 @@ export class StaticSpace implements FieldSpace {
       };
     }
     return {found, error: undefined};
+  }
+
+  isQueryFieldSpace(): this is QueryFieldSpace {
+    return false;
   }
 }
 

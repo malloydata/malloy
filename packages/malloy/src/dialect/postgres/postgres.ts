@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {indent} from '../model/utils';
+import {indent} from '../../model/utils';
 import {
   DateUnit,
   Expr,
@@ -35,14 +35,10 @@ import {
   isSamplingPercent,
   isSamplingRows,
   mkExpr,
-} from '../model/malloy_types';
-import {
-  Dialect,
-  DialectFieldList,
-  FunctionInfo,
-  QueryInfo,
-  qtz,
-} from './dialect';
+} from '../../model/malloy_types';
+import {POSTGRES_FUNCTIONS} from './functions';
+import {DialectFunctionOverloadDef} from '../functions';
+import {Dialect, DialectFieldList, QueryInfo, qtz} from '../dialect';
 
 const castMap: Record<string, string> = {
   'number': 'double precision',
@@ -83,13 +79,11 @@ export class PostgresDialect extends Dialect {
   unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
+  supportsAggDistinct = true;
   supportsCTEinCoorelatedSubQueries = true;
   dontUnionIndex = false;
   supportsQualify = false;
-
-  functionInfo: Record<string, FunctionInfo> = {
-    'concat': {returnType: 'string'},
-  };
+  globalFunctions = POSTGRES_FUNCTIONS;
 
   quoteTablePath(tablePath: string): string {
     return tablePath
@@ -288,7 +282,7 @@ export class PostgresDialect extends Dialect {
   }
 
   sqlNow(): Expr {
-    return mkExpr`CURRENT_TIMESTAMP`;
+    return mkExpr`LOCALTIMESTAMP`;
   }
 
   sqlTrunc(qi: QueryInfo, sqlTime: TimeValue, units: TimestampUnit): Expr {
@@ -358,7 +352,7 @@ export class PostgresDialect extends Dialect {
     return cast.expr;
   }
 
-  sqlRegexpMatch(expr: Expr, regexp: string): Expr {
+  sqlRegexpMatch(expr: Expr, regexp: Expr): Expr {
     return mkExpr`(${expr} ~ ${regexp})`;
   }
 
@@ -376,10 +370,6 @@ export class PostgresDialect extends Dialect {
       return `TIMESTAMPTZ '${timeString} ${tz}'::TIMESTAMP`;
     }
     return `TIMESTAMP '${timeString}'`;
-  }
-
-  getFunctionInfo(functionName: string): FunctionInfo | undefined {
-    return this.functionInfo[functionName];
   }
 
   sqlMeasureTime(from: TimeValue, to: TimeValue, units: string): Expr {
@@ -406,6 +396,24 @@ export class PostgresDialect extends Dialect {
     )`;
   }
 
+  // TODO this does not preserve the types of the arguments, meaning we have to hack
+  // around this in the definitions of functions that use this to cast back to the correct
+  // type (from text). See the postgres implementation of stddev.
+  sqlAggDistinct(
+    key: string,
+    values: string[],
+    func: (valNames: string[]) => string
+  ): string {
+    return `(
+      SELECT ${func(values.map((v, i) => `(a::json->>'f${i + 2}')`))} as value
+      FROM (
+        SELECT UNNEST(array_agg(distinct row_to_json(row(${key},${values.join(
+      ','
+    )}))::text)) a
+      ) a
+    )`;
+  }
+
   sqlSampleTable(tableSQL: string, sample: Sampling | undefined): string {
     if (sample !== undefined) {
       if (isSamplingEnable(sample) && sample.enable) {
@@ -426,5 +434,13 @@ export class PostgresDialect extends Dialect {
 
   sqlLiteralString(literal: string): string {
     return "'" + literal.replace(/'/g, "''") + "'";
+  }
+
+  sqlLiteralRegexp(literal: string): string {
+    return "'" + literal.replace(/'/g, "''") + "'";
+  }
+
+  getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
+    return POSTGRES_FUNCTIONS.get(name);
   }
 }

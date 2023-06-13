@@ -21,10 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DocumentLocation, FieldDef} from '../../../model/malloy_types';
+import {
+  DocumentLocation,
+  FieldDef,
+  TypeDesc,
+} from '../../../model/malloy_types';
 
 import {SpaceField} from '../types/space-field';
-import {TypeDesc} from '../types/type-desc';
 
 export class RenameSpaceField extends SpaceField {
   constructor(

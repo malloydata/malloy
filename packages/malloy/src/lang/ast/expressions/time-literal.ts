@@ -108,9 +108,15 @@ abstract class TimeLiteral extends ExpressionDef {
     const expressionType = 'scalar';
     const value = [timeFrag];
     if (this.units) {
-      return {dataType, expressionType, value, timeframe: this.units};
+      return {
+        dataType,
+        expressionType,
+        value,
+        timeframe: this.units,
+        evalSpace: 'literal',
+      };
     }
-    return {dataType, expressionType, value};
+    return {dataType, expressionType, value, evalSpace: 'literal'};
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
@@ -254,7 +260,7 @@ abstract class DateBasedLiteral extends GranularLiteral {
     const timestamp = [
       this.makeLiteral(`${this.literalPart} 00:00:00`, 'timestamp'),
     ];
-    return {...dateValue, morphic: {timestamp}};
+    return {...dateValue, morphic: {timestamp}, evalSpace: 'literal'};
   }
 
   getNext(): ExprValue | undefined {

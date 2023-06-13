@@ -22,9 +22,11 @@
  */
 
 import {
+  EvalSpace,
   ExpressionType,
   Fragment,
   maxExpressionType,
+  mergeEvalSpaces,
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
@@ -74,6 +76,7 @@ export class Pick extends ExpressionDef {
     const caseValue: Fragment[] = ['CASE'];
     let returnType: ExprValue | undefined;
     let anyExpressionType: ExpressionType = 'scalar';
+    let anyEvalSpace: EvalSpace = 'constant';
     for (const choice of this.choices) {
       const whenExpr = choice.when.apply(fs, '=', expr);
       const thenExpr = choice.pick
@@ -82,6 +85,11 @@ export class Pick extends ExpressionDef {
       anyExpressionType = maxExpressionType(
         anyExpressionType,
         maxExpressionType(whenExpr.expressionType, thenExpr.expressionType)
+      );
+      anyEvalSpace = mergeEvalSpaces(
+        anyEvalSpace,
+        whenExpr.evalSpace,
+        thenExpr.evalSpace
       );
       if (returnType && !FT.typeEq(returnType, thenExpr, true)) {
         const whenType = FT.inspect(thenExpr);
@@ -109,6 +117,7 @@ export class Pick extends ExpressionDef {
         anyExpressionType,
         elseVal.expressionType
       ),
+      evalSpace: mergeEvalSpaces(anyEvalSpace, elseVal.evalSpace),
       value: compressExpr([...caseValue, ' ELSE ', ...elseVal.value, ' END']),
     };
   }
@@ -138,6 +147,7 @@ export class Pick extends ExpressionDef {
     let returnType: ExprValue | undefined;
     const caseValue: Fragment[] = ['CASE'];
     let anyExpressionType: ExpressionType = 'scalar';
+    let anyEvalSpace: EvalSpace = 'constant';
     for (const aChoice of choiceValues) {
       if (!FT.typeEq(aChoice.when, FT.boolT)) {
         this.log(
@@ -158,6 +168,11 @@ export class Pick extends ExpressionDef {
           aChoice.when.expressionType
         )
       );
+      anyEvalSpace = mergeEvalSpaces(
+        anyEvalSpace,
+        aChoice.pick.evalSpace,
+        aChoice.when.evalSpace
+      );
       caseValue.push(
         ' WHEN ',
         ...aChoice.when.value,
@@ -170,6 +185,7 @@ export class Pick extends ExpressionDef {
       anyExpressionType,
       defVal.expressionType
     );
+    anyEvalSpace = mergeEvalSpaces(anyEvalSpace, defVal.evalSpace);
     returnType = typeCoalesce(returnType, defVal);
     if (!FT.typeEq(returnType, defVal, true)) {
       this.elsePick.log(
@@ -182,6 +198,7 @@ export class Pick extends ExpressionDef {
       dataType: returnType.dataType,
       expressionType: anyExpressionType,
       value: compressExpr(caseValue),
+      evalSpace: anyEvalSpace,
     };
   }
 }

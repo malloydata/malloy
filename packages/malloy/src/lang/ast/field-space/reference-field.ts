@@ -21,14 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {QueryFieldDef} from '../../../model/malloy_types';
+import {QueryFieldDef, TypeDesc} from '../../../model/malloy_types';
 
 import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';
+import {LookupResult} from '../types/lookup-result';
 import {SpaceField} from '../types/space-field';
-import {TypeDesc} from '../types/type-desc';
 
 export class ReferenceField extends SpaceField {
+  res: LookupResult | undefined = undefined;
   constructor(readonly fieldRef: FieldReference) {
     super();
   }
@@ -39,10 +40,16 @@ export class ReferenceField extends SpaceField {
     if (check.error) {
       this.fieldRef.log(check.error);
     }
+    this.res = check;
     return this.fieldRef.refString;
   }
 
   typeDesc(): TypeDesc {
-    return {dataType: 'unknown', expressionType: 'scalar'};
+    // Remember the actual type of the field that was looked up so it can be used for
+    // type checking.
+    if (this.res !== undefined && this.res.found) {
+      return this.res.found.typeDesc();
+    }
+    return {dataType: 'unknown', expressionType: 'scalar', evalSpace: 'input'};
   }
 }

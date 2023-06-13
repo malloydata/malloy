@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {maxExpressionType} from '../../../model/malloy_types';
+import {maxExpressionType, mergeEvalSpaces} from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
 import {FT} from '../fragtype-utils';
@@ -47,12 +47,14 @@ export abstract class BinaryBoolean<
     const left = this.left.getExpression(fs);
     const right = this.right.getExpression(fs);
     if (this.typeCheck(this.left, left) && this.typeCheck(this.right, right)) {
+      const evalSpace = mergeEvalSpaces(left.evalSpace, right.evalSpace);
       return {
         dataType: 'boolean',
         expressionType: maxExpressionType(
           left.expressionType,
           right.expressionType
         ),
+        evalSpace,
         value: compose(left.value, this.op, right.value),
       };
     }

@@ -23,17 +23,17 @@
 
 import {
   expressionIsAggregate,
+  expressionIsUngroupedAggregate,
+  FieldValueType,
   UngroupFragment,
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
-import {QueryInputSpace} from '../field-space/query-spaces';
+import {QuerySpace} from '../field-space/query-spaces';
 import {FT} from '../fragtype-utils';
-import {DefSpace} from '../query-items/field-declaration';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace} from '../types/field-space';
-import {FieldValueType} from '../types/type-desc';
 
 export class ExprUngroup extends ExpressionDef {
   legalChildTypes = FT.anyAtomicT;
@@ -56,23 +56,32 @@ export class ExprUngroup extends ExpressionDef {
       this.expr.log(`${this.control}() expression must be an aggregate`);
       return errorFor('ungrouped scalar');
     }
+    if (expressionIsUngroupedAggregate(exprVal.expressionType)) {
+      this.expr.log(
+        `${this.control}() expression must not already be ungrouped`
+      );
+      return errorFor('doubly-ungrouped aggregate');
+    }
     const ungroup: UngroupFragment = {
       type: this.control,
       e: exprVal.value,
     };
     if (this.typeCheck(this.expr, {...exprVal, expressionType: 'scalar'})) {
       if (this.fields.length > 0) {
-        let qs = fs;
-        if (fs instanceof DefSpace) {
-          qs = fs.realFS;
-        }
-        if (!(qs instanceof QueryInputSpace)) {
+        if (!fs.isQueryFieldSpace()) {
           this.log(
             `${this.control}() must be in a query -- weird internal error`
           );
           return errorFor('ungroup query check');
         }
-        const output = qs.result;
+        const output = fs.outputSpace();
+        if (!(output instanceof QuerySpace)) {
+          // TODO maybe make OutputSpace return an interface which has checkUngroup
+          this.log(
+            `${this.control}() must be in a query -- weird internal error`
+          );
+          return errorFor('ungroup query check');
+        }
         const dstFields: string[] = [];
         const isExclude = this.control === 'exclude';
         for (const mustBeInOutput of this.fields) {
@@ -81,12 +90,16 @@ export class ExprUngroup extends ExpressionDef {
           });
           dstFields.push(mustBeInOutput.refString);
         }
+        // TODO maybe now we can just look up the fields in the output space now and ensure
+        // they're all there, rather than waiting until the query is finished to do it?
+        // See `order_by` for an example of how this could work.
         ungroup.fields = dstFields;
       }
       return {
         dataType: this.returns(exprVal),
-        expressionType: 'analytic',
+        expressionType: 'ungrouped_aggregate',
         value: [ungroup],
+        evalSpace: 'output',
       };
     }
     this.log(`${this.control}() incompatible type`);
