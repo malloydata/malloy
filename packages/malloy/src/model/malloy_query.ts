@@ -1033,9 +1033,9 @@ class FieldInstanceResult implements FieldInstance {
 
   getQueryInfo(): QueryInfo {
     if (!isIndexSegment(this.firstSegment)) {
-      const queryTimezone = this.firstSegment.queryTimezone;
+      const {queryTimezone} = this.firstSegment;
       if (queryTimezone) {
-        return {queryTimezone: queryTimezone};
+        return {queryTimezone};
       }
     }
     return {};
