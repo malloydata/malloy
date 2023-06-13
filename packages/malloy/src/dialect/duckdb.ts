@@ -314,7 +314,6 @@ export class DuckDBDialect extends Dialect {
     if (from.valueType === 'timestamp') {
       const tz = qtz(qi);
       if (tz) {
-        // ACTUAL USE
         extractFrom = mkExpr`(${extractFrom}::TIMESTAMPTZ AT TIME ZONE '${tz}')`;
       }
     }
@@ -371,7 +370,7 @@ export class DuckDBDialect extends Dialect {
     }
     const tz = timezone || qtz(qi);
     if (tz) {
-      return `TIMESTAMPTZb '${timeString} ${tz}'::TIMESTAMP`;
+      return `TIMESTAMPTZ '${timeString} ${tz}'::TIMESTAMP`;
     }
     return `TIMESTAMP '${timeString}'`;
   }
