@@ -714,13 +714,15 @@ export class MalloyToAST
   }
 
   visitCalculateStatement(pcx: parse.CalculateStatementContext): ast.Calculate {
-    return new ast.Calculate(
+    const stmt = new ast.Calculate(
       this.getQueryItems(
         pcx.queryFieldList(),
         ast.CalculateFieldDeclaration,
         ast.CalculateFieldReference
       )
     );
+    stmt.extendNote({blockNotes: getNotes(pcx.tags())});
+    return stmt;
   }
 
   getFieldCollectionMember(
@@ -760,6 +762,14 @@ export class MalloyToAST
         )
       );
     return this.astAt(new ast.ProjectStatement(fields), pcx);
+  }
+
+  visitProjectStatement(
+    pcx: parse.ProjectStatementContext
+  ): ast.ProjectStatement {
+    const stmt = this.visitFieldCollection(pcx.fieldCollection());
+    stmt.extendNote({blockNotes: getNotes(pcx.tags())});
+    return stmt;
   }
 
   visitCollectionWildCard(
