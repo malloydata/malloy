@@ -118,7 +118,7 @@ describe('sql:', () => {
     }
   });
 
-  test('explore from imported sql-based-source', () => {
+  test('source from imported sql-based-source', () => {
     const createModel = `
       sql: users IS { select: """${selStmt}""" }
       source: malloyUsers is from_sql(users) { primary_key: ai }
@@ -176,7 +176,7 @@ describe('sql:', () => {
     expect(model).modelCompiled();
   });
 
-  test('explore from extended sql-based-source', () => {
+  test('source from extended sql-based-source', () => {
     const model = new TestTranslator(`
       sql: sql_block IS { select: """${selStmt}""" }
       source: malloy_source is from_sql(sql_block) { primary_key: ai }

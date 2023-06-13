@@ -87,7 +87,7 @@ export class RefinedSource extends Source {
       } else if (el instanceof TimezoneStatement) {
         newTimezone = el.tz;
       } else {
-        errTo.log(`Unexpected explore property: '${errTo.elementType}'`);
+        errTo.log(`Unexpected source property: '${errTo.elementType}'`);
       }
     }
 
