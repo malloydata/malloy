@@ -365,11 +365,9 @@ function makeContainerRenderer<Type extends ContainerRenderer>(
   explore: Explore,
   options: RendererOptions
 ): ContainerRenderer {
-  options.tree = `${options.tree} | explore ${explore.structDef.queryTimezone} | `;
   const c = ContainerRenderer.make(cType, document, explore, options);
   const result: ChildRenderers = {};
   explore.intrinsicFields.forEach((field: Field) => {
-    options.tree = `${options.tree} ${field.name}, `;
     result[field.name] = makeRenderer(
       field,
       document,
