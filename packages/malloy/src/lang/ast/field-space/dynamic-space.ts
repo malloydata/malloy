@@ -148,7 +148,7 @@ export abstract class DynamicSpace extends StaticSpace {
       }
     }
     if (this.newTimezone) {
-      this.final.queryTimezone = this.newTimezone;
+      this.final.queryTimezoneD = this.newTimezone;
     }
     this.isComplete();
     return this.final;

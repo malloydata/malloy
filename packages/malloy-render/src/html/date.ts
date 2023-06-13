@@ -28,12 +28,11 @@ import {
 } from '@malloydata/malloy';
 import {Renderer} from '../renderer';
 import {createErrorElement, createNullElement, timeToString} from './utils';
-import {RendererOptions} from '../renderer_types';
 
 export class HTMLDateRenderer implements Renderer {
   constructor(
     private readonly document: Document,
-    private readonly options: RendererOptions
+    private readonly queryTimezone: string | undefined
   ) {}
 
   async render(data: DataColumn): Promise<HTMLElement> {
@@ -52,14 +51,12 @@ export class HTMLDateRenderer implements Renderer {
       data.field.timeframe ||
       (data.isTimestamp() ? TimestampTimeframe.Second : DateTimeframe.Day);
 
-    const timestring = timeToString(
-      data.value,
-      timeframe,
-      this.options.queryTimezone
-    );
+    const timestring = timeToString(data.value, timeframe, this.queryTimezone);
 
     const element = this.document.createElement('span');
-    element.appendChild(this.document.createTextNode(timestring));
+    element.appendChild(
+      this.document.createTextNode(`${timestring} ${this.queryTimezone}`)
+    );
     return element;
   }
 }

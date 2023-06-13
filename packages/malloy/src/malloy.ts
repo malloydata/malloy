@@ -428,7 +428,6 @@ export class Malloy {
           result: result.rows,
           totalRows: result.totalRows,
           runStats: result.runStats,
-          queryTimezone: preparedResult.queryTimezone,
         },
         preparedResult._modelDef
       );
@@ -1109,11 +1108,12 @@ export class PreparedResult {
     // TODO `sourceExplore` is not fully-implemented yet -- it cannot
     //      handle cases where the source of the query is something other than
     //      a named explore.
-    try {
-      return new Explore(namedExplore, this.sourceExplore);
-    } catch (error) {
+    // TODO: here copies
+    //try {
+    return new Explore(namedExplore, this.sourceExplore);
+    /*} catch (error) {
       return new Explore(namedExplore);
-    }
+    }*/
   }
 
   public get sourceExplore(): Explore {
@@ -1126,15 +1126,6 @@ export class PreparedResult {
       return new Explore(explore);
     }
     throw new Error(`'${name} is not an explore`);
-  }
-
-  /**
-   * @return The query timezone.
-   */
-  public get queryTimezone(): string | undefined {
-    return this.inner.structs
-      .filter(struct => struct.name === this.inner.lastStageName)
-      .map(struct => struct.queryTimezone)[0];
   }
 
   public get _sourceExploreName(): string {

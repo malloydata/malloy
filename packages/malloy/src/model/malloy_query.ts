@@ -1029,9 +1029,9 @@ class FieldInstanceResult implements FieldInstance {
 
   getQueryInfo(): QueryInfo {
     if (!isIndexSegment(this.firstSegment)) {
-      const {queryTimezone} = this.firstSegment;
-      if (queryTimezone) {
-        return {queryTimezone};
+      const queryTimezoneS = this.firstSegment.queryTimezoneS;
+      if (queryTimezoneS) {
+        return {queryTimezoneQI: queryTimezoneS};
       }
     }
     return {};
@@ -1577,7 +1577,7 @@ type StageOutputContext = {
 };
 
 /** Query builder object. */
-class QueryQuery extends QueryField {
+export class QueryQuery extends QueryField {
   fieldDef: TurtleDef;
   firstSegment: PipeSegment;
   prepared = false;
@@ -1640,11 +1640,11 @@ class QueryQuery extends QueryField {
     }
 
     if (
-      sourceDef.queryTimezone &&
+      sourceDef.queryTimezoneD &&
       isQuerySegment(firstStage) &&
-      firstStage.queryTimezone === undefined
+      firstStage.queryTimezoneS === undefined
     ) {
-      firstStage.queryTimezone = sourceDef.queryTimezone;
+      firstStage.queryTimezoneS = sourceDef.queryTimezoneD;
     }
 
     switch (firstStage.type) {
@@ -2265,9 +2265,9 @@ class QueryQuery extends QueryField {
       resultMetadata: this.getResultMetadata(this.rootResult),
       type: 'struct',
     };
-    if (isQuerySegment(this.firstSegment) && this.firstSegment.queryTimezone) {
-      outputStruct.queryTimezone = this.firstSegment.queryTimezone;
-    }
+
+    outputStruct.queryTimezoneD = resultStruct.getQueryInfo().queryTimezoneQI;
+
     return outputStruct;
   }
 

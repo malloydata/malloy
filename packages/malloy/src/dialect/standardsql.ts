@@ -65,7 +65,7 @@ const extractMap: Record<string, string> = {
  * Return a non UTC timezone, if one was specificed.
  */
 function qtz(qi: QueryInfo): string | undefined {
-  const tz = qi.queryTimezone;
+  const tz = qi.queryTimezoneQI;
   if (tz && tz !== 'UTC') {
     return tz;
   }

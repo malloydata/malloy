@@ -62,9 +62,15 @@ export class HTMLView {
     table: DataArray,
     options: RendererOptions
   ): Promise<HTMLElement> {
-    const renderer = makeRenderer(table.field, this.document, options, {
-      size: 'large',
-    });
+    const renderer = makeRenderer(
+      table.field,
+      this.document,
+      options,
+      {
+        size: 'large',
+      },
+      table.field.structDef.queryTimezoneD
+    );
     try {
       // TODO Implement row streaming capability for some renderers: some renderers should be usable
       //      as a builder with `begin(field: StructDef)`, `row(field: StructDef, row: QueryDataRow)`,
@@ -72,7 +78,13 @@ export class HTMLView {
       //      Primarily, this should be possible for the `table` and `dashboard` renderers.
       //      This would only be used at this top level (and HTML view should support `begin`,
       //      `row`, and `end` as well).
-      return await renderer.render(table);
+      Error.stackTraceLimit = Infinity;
+      return await renderer.render(table) /*.appendChild(
+        createErrorElement(
+          this.document,
+          `${JSON.stringify(table.field)} ${new Error('abc').stack}`
+        )
+      )*/;
     } catch (error) {
       if (error instanceof Error) {
         return createErrorElement(this.document, error);
@@ -173,7 +185,8 @@ export function makeRenderer(
   field: Explore | Field,
   document: Document,
   options: RendererOptions,
-  styleDefaults: StyleDefaults
+  styleDefaults: StyleDefaults,
+  queryTimezone: string | undefined
 ): Renderer {
   const renderDef = getRendererOptions(field, options.dataStyles) || {};
   options.dataStyles[field.name] = renderDef;
@@ -296,7 +309,7 @@ export function makeRenderer(
         (field.type === AtomicFieldType.Date ||
           field.type === AtomicFieldType.Timestamp))
     ) {
-      return new HTMLDateRenderer(document, options);
+      return new HTMLDateRenderer(document, queryTimezone);
     } else if (renderDef.renderer === 'currency') {
       return new HTMLCurrencyRenderer(document);
     } else if (renderDef.renderer === 'percent') {
@@ -358,14 +371,17 @@ function makeContainerRenderer<Type extends ContainerRenderer>(
   explore: Explore,
   options: RendererOptions
 ): ContainerRenderer {
+  options.tree = `${options.tree} | explore ${explore.structDef.queryTimezoneD} | `;
   const c = ContainerRenderer.make(cType, document, explore, options);
   const result: ChildRenderers = {};
   explore.intrinsicFields.forEach((field: Field) => {
+    options.tree = `${options.tree} ${field.name}, `;
     result[field.name] = makeRenderer(
       field,
       document,
       options,
-      c.defaultStylesForChildren
+      c.defaultStylesForChildren,
+      explore.structDef.queryTimezoneD
     );
   });
   c.childRenderers = result;

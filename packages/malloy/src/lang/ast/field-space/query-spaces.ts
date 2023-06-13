@@ -217,7 +217,7 @@ export abstract class QuerySpace extends RefinedSpace {
       segment.extendSource = mergeFields(segment.extendSource, newExtends);
     }
     if (this.newTimezone) {
-      segment.queryTimezone = this.newTimezone;
+      segment.queryTimezoneS = this.newTimezone;
     }
     this.isComplete();
     return segment;

@@ -711,7 +711,7 @@ export interface QuerySegment extends Filtered {
   limit?: number;
   by?: By;
   orderBy?: OrderBy[]; // uses output field name or index.
-  queryTimezone?: string;
+  queryTimezoneS?: string;
 }
 
 export interface TurtleDef extends NamedObject, Pipeline {
@@ -790,7 +790,7 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
   fields: FieldDef[];
   primaryKey?: PrimaryKeyRef;
   parameters?: Record<string, Parameter>;
-  queryTimezone?: string;
+  queryTimezoneD?: string;
   dialect: string;
 }
 
@@ -927,7 +927,6 @@ export interface CompiledQuery extends DrillSource {
   malloy: string;
   queryName?: string | undefined;
   connectionName: string;
-  queryTimezone?: string;
 }
 
 /** Result type for running a Malloy query. */
