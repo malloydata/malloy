@@ -340,7 +340,7 @@ export class TestTranslator extends MalloyTranslator {
     if (explore && explore.type === 'struct') {
       return explore;
     }
-    throw new Error(`Expected model to contain explore '${exploreName}'`);
+    throw new Error(`Expected model to contain source '${exploreName}'`);
   }
 
   static inspectCompile = false;

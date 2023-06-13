@@ -28,9 +28,13 @@ import {
 } from '@malloydata/malloy';
 import {Renderer} from '../renderer';
 import {createErrorElement, createNullElement, timeToString} from './utils';
+import {RendererOptions} from '../renderer_types';
 
 export class HTMLDateRenderer implements Renderer {
-  constructor(private readonly document: Document) {}
+  constructor(
+    private readonly document: Document,
+    private readonly options: RendererOptions
+  ) {}
 
   async render(data: DataColumn): Promise<HTMLElement> {
     if (data.isNull()) {

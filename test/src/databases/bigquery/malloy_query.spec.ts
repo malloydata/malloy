@@ -690,7 +690,7 @@ describe('BigQuery expression tests', () => {
 });
 
 const airportModelText = `
-explore: airports is table('malloy-data.malloytest.airports'){
+source: airports is table('malloy-data.malloytest.airports'){
   primary_key: code
   measure: airport_count is count(*)
 
@@ -823,7 +823,7 @@ describe('airport_tests', () => {
     const result = await runQuery(
       model,
       `
-        explore: my_airports is airports {
+        source: my_airports is airports {
           query: pipe_turtle is {
             aggregate: a is airport_count
           } -> {
