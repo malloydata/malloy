@@ -47,7 +47,6 @@ async function runUnsupportedRenderTest(
     const document = new JSDOM().window.document;
     const html = await new HTMLView(document).render(result.data, {
       dataStyles: {},
-      tree: '',
     });
     expect(html.innerHTML).toContain('<thead>');
     expect(html.innerHTML).toContain(rendered);
@@ -81,7 +80,6 @@ describe('rendering results', () => {
       const document = new JSDOM().window.document;
       await new HTMLView(document).render(result.data, {
         dataStyles: {},
-        tree: '',
       });
     }
   });

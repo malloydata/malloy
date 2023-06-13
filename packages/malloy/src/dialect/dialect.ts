@@ -49,7 +49,7 @@ interface DialectField {
  * mtoy TODO rename this interface to something other than "QueryInfo"
  */
 export interface QueryInfo {
-  queryTimezoneQI?: string;
+  queryTimezone?: string;
   systemTimezone?: string;
 }
 
@@ -74,7 +74,7 @@ export function inDays(units: string): boolean {
 // Return the active query timezone, if it different than the
 // "native" timezone for timestamps.
 export function qtz(qi: QueryInfo): string | undefined {
-  const tz = qi.queryTimezoneQI;
+  const tz = qi.queryTimezone;
   if (tz === undefined || tz === qi.systemTimezone) {
     return undefined;
   }
@@ -285,6 +285,6 @@ export abstract class Dialect {
   }
 
   sqlTzStr(qi: QueryInfo): string {
-    return `"${qi.queryTimezoneQI}"`;
+    return `"${qi.queryTimezone}"`;
   }
 }

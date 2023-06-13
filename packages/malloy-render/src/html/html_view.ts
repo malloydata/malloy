@@ -69,7 +69,7 @@ export class HTMLView {
       {
         size: 'large',
       },
-      table.field.structDef.queryTimezoneD
+      table.field.structDef.queryTimezone
     );
     try {
       // TODO Implement row streaming capability for some renderers: some renderers should be usable
@@ -78,13 +78,7 @@ export class HTMLView {
       //      Primarily, this should be possible for the `table` and `dashboard` renderers.
       //      This would only be used at this top level (and HTML view should support `begin`,
       //      `row`, and `end` as well).
-      Error.stackTraceLimit = Infinity;
-      return await renderer.render(table) /*.appendChild(
-        createErrorElement(
-          this.document,
-          `${JSON.stringify(table.field)} ${new Error('abc').stack}`
-        )
-      )*/;
+      return await renderer.render(table);
     } catch (error) {
       if (error instanceof Error) {
         return createErrorElement(this.document, error);
@@ -371,7 +365,7 @@ function makeContainerRenderer<Type extends ContainerRenderer>(
   explore: Explore,
   options: RendererOptions
 ): ContainerRenderer {
-  options.tree = `${options.tree} | explore ${explore.structDef.queryTimezoneD} | `;
+  options.tree = `${options.tree} | explore ${explore.structDef.queryTimezone} | `;
   const c = ContainerRenderer.make(cType, document, explore, options);
   const result: ChildRenderers = {};
   explore.intrinsicFields.forEach((field: Field) => {
@@ -381,7 +375,7 @@ function makeContainerRenderer<Type extends ContainerRenderer>(
       document,
       options,
       c.defaultStylesForChildren,
-      explore.structDef.queryTimezoneD
+      explore.structDef.queryTimezone
     );
   });
   c.childRenderers = result;

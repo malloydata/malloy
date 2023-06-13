@@ -1108,12 +1108,11 @@ export class PreparedResult {
     // TODO `sourceExplore` is not fully-implemented yet -- it cannot
     //      handle cases where the source of the query is something other than
     //      a named explore.
-    // TODO: here copies
-    //try {
-    return new Explore(namedExplore, this.sourceExplore);
-    /*} catch (error) {
+    try {
+      return new Explore(namedExplore, this.sourceExplore);
+    } catch (error) {
       return new Explore(namedExplore);
-    }*/
+    }
   }
 
   public get sourceExplore(): Explore {
