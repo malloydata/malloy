@@ -22,9 +22,10 @@
  */
 
 import {
-  QueryFieldDef,
   expressionIsAggregate,
-  isFilteredAliasedName,
+  expressionInvolvesAggregate,
+  expressionIsAnalytic,
+  TypeDesc,
 } from '../../../model/malloy_types';
 
 import {QuerySpace} from './query-spaces';
@@ -32,19 +33,22 @@ import {QuerySpace} from './query-spaces';
 export class ProjectFieldSpace extends QuerySpace {
   readonly segmentType = 'project';
 
-  canContain(qd: QueryFieldDef): boolean {
-    if (typeof qd !== 'string') {
-      if (isFilteredAliasedName(qd)) {
-        return true;
-      }
-      if (qd.type === 'turtle') {
-        this.log('Cannot nest queries in project');
-        return false;
-      }
-      if (expressionIsAggregate(qd.expressionType)) {
-        this.log('Cannot add aggregate measures to project');
-        return false;
-      }
+  canContain(typeDesc: TypeDesc): boolean {
+    if (
+      typeDesc.dataType === 'turtle' ||
+      expressionIsAggregate(typeDesc.expressionType)
+    ) {
+      // We don't need to log here, because an error should have already been logged.
+      return false;
+    }
+    // TODO it would be really nice to attach this error message to the specific field,
+    // rather than the whole query.
+    if (
+      expressionInvolvesAggregate(typeDesc.expressionType) &&
+      expressionIsAnalytic(typeDesc.expressionType)
+    ) {
+      this.log('Cannot add aggregate analyics to project');
+      return false;
     }
     return true;
   }

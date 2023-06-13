@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {indent} from '../model/utils';
+import {indent} from '../../model/utils';
 import {
   Expr,
   ExtractUnit,
@@ -33,8 +33,10 @@ import {
   isSamplingPercent,
   isSamplingRows,
   mkExpr,
-} from '../model/malloy_types';
-import {Dialect, DialectFieldList, FunctionInfo, QueryInfo} from './dialect';
+} from '../../model/malloy_types';
+import {STANDARDSQL_FUNCTIONS} from './functions';
+import {DialectFunctionOverloadDef} from '../functions';
+import {Dialect, DialectFieldList, QueryInfo} from '../dialect';
 
 const castMap: Record<string, string> = {
   'number': 'float64',
@@ -87,17 +89,10 @@ export class StandardSQLDialect extends Dialect {
   unnestWithNumbers = false;
   defaultSampling = {enable: false};
   supportUnnestArrayAgg = false;
+  supportsAggDistinct = false;
   supportsCTEinCoorelatedSubQueries = false;
   dontUnionIndex = true; // bigquery can't use a sample table more than once in a query.
   supportsQualify = true;
-
-  // I think we want an optional list of parameters types that we force a cast to.
-  functionInfo: Record<string, FunctionInfo> = {
-    'timestamp_seconds': {
-      returnType: 'timestamp',
-    },
-    'concat': {returnType: 'string'},
-  };
 
   quoteTablePath(tablePath: string): string {
     return `\`${tablePath}\``;
@@ -417,8 +412,8 @@ ${indent(sql)}
     return cast.expr;
   }
 
-  sqlRegexpMatch(expr: Expr, regexp: string): Expr {
-    return mkExpr`REGEXP_CONTAINS(${expr}, r${regexp})`;
+  sqlRegexpMatch(expr: Expr, regexp: Expr): Expr {
+    return mkExpr`REGEXP_CONTAINS(${expr}, ${regexp})`;
   }
 
   sqlLiteralTime(
@@ -493,5 +488,14 @@ ${indent(sql)}
   sqlLiteralString(literal: string): string {
     const noVirgule = literal.replace(/\\/g, '\\\\');
     return "'" + noVirgule.replace(/'/g, "\\'") + "'";
+  }
+
+  sqlLiteralRegexp(literal: string): string {
+    const noVirgule = literal.replace(/\\/g, '\\\\');
+    return "r'" + noVirgule.replace(/'/g, "\\'") + "'";
+  }
+
+  getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
+    return STANDARDSQL_FUNCTIONS.get(name);
   }
 }

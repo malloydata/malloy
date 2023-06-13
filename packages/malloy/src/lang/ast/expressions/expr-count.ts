@@ -55,6 +55,7 @@ export class ExprCount extends ExprAggregateFunction {
       dataType: 'number',
       expressionType: 'aggregate',
       value: [ret],
+      evalSpace: 'output',
     };
   }
 }

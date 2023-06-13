@@ -23,14 +23,16 @@
 
 import cloneDeep from 'lodash/cloneDeep';
 import {Dialect, DialectFieldList, getDialect} from '../dialect';
-import {StandardSQLDialect} from '../dialect/standardsql';
+import {StandardSQLDialect} from '../dialect/standardsql/standardsql';
 import {
   AggregateFragment,
-  AnalyticFragment,
   CompiledQuery,
   DialectFragment,
   Expr,
+  expressionIsAggregate,
+  expressionIsAnalytic,
   expressionIsCalculation,
+  expressionIsScalar,
   FieldAtomicDef,
   FieldDateDef,
   FieldDef,
@@ -40,30 +42,37 @@ import {
   Filtered,
   FilterExpression,
   FilterFragment,
+  FunctionCallFragment,
+  FunctionOverloadDef,
+  FunctionParameterDef,
   getIdentifier,
   getPhysicalFields,
   hasExpression,
   IndexSegment,
   isAggregateFragment,
-  isAnalyticFragment,
   isApplyFragment,
   isApplyValue,
   isAsymmetricFragment,
   isDialectFragment,
   isFieldFragment,
   isFilterFragment,
+  isFunctionCallFragment,
+  isFunctionParameterFragment,
   isIndexSegment,
   isJoinOn,
+  isOutputFieldFragment,
   isParameterFragment,
   isPhysical,
   isQuerySegment,
+  isSpreadFragment,
+  isSQLExpressionFragment,
   isUngroupFragment,
   isValueParameter,
   JoinRelationship,
-  malloyFunctions,
   ModelDef,
   NamedQuery,
   OrderBy,
+  OutputFieldFragment,
   Parameter,
   ParameterFragment,
   PipeSegment,
@@ -73,6 +82,8 @@ import {
   ResultMetadataDef,
   ResultStructMetadataDef,
   SearchIndexResult,
+  SpreadFragment,
+  SQLExpressionFragment,
   StructDef,
   StructRef,
   TurtleDef,
@@ -80,7 +91,14 @@ import {
 } from './malloy_types';
 
 import {Connection} from '../runtime_types';
-import {AndChain, generateHash, indent} from './utils';
+import {
+  AndChain,
+  exprMap,
+  generateHash,
+  indent,
+  joinWith,
+  range,
+} from './utils';
 import {QueryInfo} from '../dialect/dialect';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
@@ -350,6 +368,175 @@ class QueryField extends QueryNode {
     }
   }
 
+  generateOutputFieldFragment(
+    resultSet: FieldInstanceResult,
+    _context: QueryStruct,
+    frag: OutputFieldFragment,
+    _state: GenerateState
+  ): string {
+    return resultSet.getField(frag.name).getAnalyticalSQL(false);
+  }
+
+  generateSQLExpression(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    frag: SQLExpressionFragment,
+    state: GenerateState
+  ): string {
+    return this.generateExpressionFromExpr(resultSet, context, frag.e, state);
+  }
+
+  private getParameterMap(
+    overload: FunctionOverloadDef,
+    numArgs: number
+  ): Map<string, {argIndexes: number[]; param: FunctionParameterDef}> {
+    return new Map(
+      overload.params.map((param, paramIndex) => {
+        const argIndexes = param.isVariadic
+          ? range(paramIndex, numArgs)
+          : [paramIndex];
+        return [param.name, {param, argIndexes}];
+      })
+    );
+  }
+
+  private expandFunctionCall(
+    dialect: string,
+    overload: FunctionOverloadDef,
+    args: Expr[]
+  ) {
+    const paramMap = this.getParameterMap(overload, args.length);
+    if (overload.dialect[dialect] === undefined) {
+      throw new Error(`Function is not defined for dialect ${dialect}`);
+    }
+    return exprMap(overload.dialect[dialect], fragment => {
+      if (typeof fragment === 'string') {
+        return [fragment];
+      } else if (fragment.type === 'spread') {
+        const param = fragment.e[0];
+        if (
+          fragment.e.length !== 1 ||
+          typeof param === 'string' ||
+          param.type !== 'function_parameter'
+        ) {
+          throw new Error(
+            'Invalid function definition. Argument to spread must be a function parameter.'
+          );
+          return [];
+        }
+        const entry = paramMap.get(param.name);
+        if (entry === undefined) {
+          return [fragment];
+        } else {
+          return joinWith(
+            entry.argIndexes.map(argIndex => args[argIndex]),
+            ','
+          );
+        }
+      } else if (fragment.type === 'function_parameter') {
+        const entry = paramMap.get(fragment.name);
+        if (entry === undefined) {
+          return [fragment];
+        } else if (entry.param.isVariadic) {
+          const spread = joinWith(
+            entry.argIndexes.map(argIndex => args[argIndex]),
+            ','
+          );
+          return ['[', ...spread, ']'];
+        } else {
+          return args[entry.argIndexes[0]];
+        }
+      }
+      return [fragment];
+    });
+  }
+
+  generateFunctionCallExpression(
+    resultSet: FieldInstanceResult,
+    context: QueryStruct,
+    frag: FunctionCallFragment,
+    state: GenerateState
+  ): string {
+    const overload = frag.overload;
+    const args = frag.args;
+    const distinctKey =
+      expressionIsAggregate(overload.returnType.expressionType) &&
+      this.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
+    if (distinctKey) {
+      if (!context.dialect.supportsAggDistinct) {
+        throw new Error(
+          `Asymmetric aggregates are not supported for custom functions in ${context.dialect.name}.`
+        );
+      }
+      const argsExpressions = args.map(arg => {
+        return this.generateDimFragment(resultSet, context, arg, state);
+      });
+      return context.dialect.sqlAggDistinct(
+        distinctKey,
+        argsExpressions,
+        valNames => {
+          const funcCall = this.expandFunctionCall(
+            context.dialect.name,
+            overload,
+            valNames.map(v => [v])
+          );
+          return this.generateExpressionFromExpr(
+            resultSet,
+            context,
+            funcCall,
+            state
+          );
+        }
+      );
+    } else {
+      const mappedArgs = expressionIsAggregate(
+        overload.returnType.expressionType
+      )
+        ? args.map(arg => {
+            // TODO We assume that all arguments to this aggregate-returning function need to
+            // have filters applied to them. This is not necessarily true in the general case,
+            // e.g. in a function `avg_plus(a, b) = avg(a) + b` -- here, `b` should not be
+            // be filtered. But since there aren't any aggregate functions like this in the
+            // standard library we have planned, we ignore this for now.
+            return [this.generateDimFragment(resultSet, context, arg, state)];
+          })
+        : args;
+      const funcCall: Expr = this.expandFunctionCall(
+        context.dialect.name,
+        overload,
+        mappedArgs
+      );
+
+      if (expressionIsAnalytic(overload.returnType.expressionType)) {
+        // TODO probably need to pass in the function and arguments separately
+        // in order to generate parameter SQL correctly in BQ re: partition
+        return this.generateAnalyticFragment(
+          resultSet,
+          context,
+          funcCall,
+          overload,
+          state,
+          args
+        );
+      }
+      return this.generateExpressionFromExpr(
+        resultSet,
+        context,
+        funcCall,
+        state
+      );
+    }
+  }
+
+  generateSpread(
+    _resultSet: FieldInstanceResult,
+    _context: QueryStruct,
+    _frag: SpreadFragment,
+    _state: GenerateState
+  ): string {
+    throw new Error('Unexpanded spread encountered during SQL generation');
+  }
+
   generateParameterFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
@@ -406,15 +593,10 @@ class QueryField extends QueryNode {
   generateDimFragment(
     resultSet: FieldInstanceResult,
     context: QueryStruct,
-    expr: AggregateFragment,
+    expr: Expr,
     state: GenerateState
   ): string {
-    let dim = this.generateExpressionFromExpr(
-      resultSet,
-      context,
-      expr.e,
-      state
-    );
+    let dim = this.generateExpressionFromExpr(resultSet, context, expr, state);
     if (state.whereSQL) {
       dim = `CASE WHEN ${state.whereSQL} THEN ${dim} END`;
     }
@@ -455,7 +637,7 @@ class QueryField extends QueryNode {
     const fields = resultSet.getUngroupPartitions(ungroupSet);
 
     let partitionBy = '';
-    const fieldsString = fields.map(f => f.getPartitionSQL()).join(', ');
+    const fieldsString = fields.map(f => f.getAnalyticalSQL(true)).join(', ');
     if (fieldsString.length > 0) {
       partitionBy = `PARTITION BY ${fieldsString}`;
     }
@@ -484,7 +666,7 @@ class QueryField extends QueryNode {
     expr: AggregateFragment,
     state: GenerateState
   ): string {
-    const dimSQL = this.generateDimFragment(resultSet, context, expr, state);
+    const dimSQL = this.generateDimFragment(resultSet, context, expr.e, state);
     const distinctKeySQL = this.generateDistinctKeyIfNecessary(
       resultSet,
       context,
@@ -509,7 +691,7 @@ class QueryField extends QueryNode {
     expr: AggregateFragment,
     state: GenerateState
   ): string {
-    const dimSQL = this.generateDimFragment(resultSet, context, expr, state);
+    const dimSQL = this.generateDimFragment(resultSet, context, expr.e, state);
     const f =
       expr.function === 'count_distinct'
         ? 'count(distinct '
@@ -524,7 +706,7 @@ class QueryField extends QueryNode {
     state: GenerateState
   ): string {
     // find the structDef and return the path to the field...
-    const dimSQL = this.generateDimFragment(resultSet, context, expr, state);
+    const dimSQL = this.generateDimFragment(resultSet, context, expr.e, state);
     const distinctKeySQL = this.generateDistinctKeyIfNecessary(
       resultSet,
       context,
@@ -597,77 +779,120 @@ class QueryField extends QueryNode {
     );
   }
 
+  getAnalyticPartitions(resultStruct: FieldInstanceResult) {
+    const ret: string[] = [];
+    let p = resultStruct.parent;
+    while (p !== undefined) {
+      const scalars = p.fields(
+        fi => isScalarField(fi.f) && fi.fieldUsage.type === 'result'
+      );
+      const partitionSQLs = scalars.map(fi => fi.getAnalyticalSQL(true));
+      ret.push(...partitionSQLs);
+      p = p.parent;
+    }
+    return ret.join(', ');
+  }
+
   generateAnalyticFragment(
     resultStruct: FieldInstanceResult,
     context: QueryStruct,
-    expr: AnalyticFragment,
-    state: GenerateState
+    expr: Expr,
+    overload: FunctionOverloadDef,
+    state: GenerateState,
+    args: Expr[]
   ): string {
-    const fields = resultStruct.getUngroupPartitions(undefined);
     let partitionBy = '';
-    const fieldsString = fields.map(f => f.getPartitionSQL()).join(', ');
-    if (fieldsString.length > 0) {
-      partitionBy = `PARTITION BY ${fieldsString}`;
+    const isComplex = resultStruct.root().isComplexQuery;
+    const fieldsString = this.getAnalyticPartitions(resultStruct);
+    if (isComplex || fieldsString.length > 0) {
+      partitionBy = 'PARTITION BY ';
+      if (isComplex) {
+        partitionBy += 'group_set';
+      }
+      if (fieldsString.length > 0) {
+        partitionBy += `, ${fieldsString}`;
+      }
     }
 
     let orderBy = '';
-
-    // calculate the ordering.
-    const obSQL: string[] = [];
-    let orderingField;
-    const orderByDef =
-      (resultStruct.firstSegment as QuerySegment).orderBy ||
-      resultStruct.calculateDefaultOrderBy();
-    for (const ordering of orderByDef) {
-      if (typeof ordering.field === 'string') {
-        orderingField = {
-          name: ordering.field,
-          fif: resultStruct.getField(ordering.field),
-        };
-      } else {
-        orderingField = resultStruct.getFieldByNumber(ordering.field);
-      }
-      if (resultStruct.firstSegment.type === 'reduce') {
-        obSQL.push(
-          ` ${orderingField.fif.getSQL()}` +
-            // this.parent.dialect.sqlMaybeQuoteIdentifier(
-            //   `${orderingField.name}__${resultStruct.groupSet}`
-            // ) +
-            ` ${ordering.dir || 'ASC'}`
-        );
-      } else if (resultStruct.firstSegment.type === 'project') {
-        obSQL.push(
-          ` ${orderingField.fif.f.generateExpression(resultStruct)} ${
-            ordering.dir || 'ASC'
-          }`
-        );
-      }
-    }
-    const func = malloyFunctions[expr.function];
-    const paramSQL: string[] = [];
-    if (expr.parameters !== undefined) {
-      for (const e of expr.parameters) {
-        if (typeof e === 'string') {
-          paramSQL.push(e); // need to map to dimensional expression.
-        } else if (typeof e === 'number') {
-          paramSQL.push(e.toString());
+    if (overload.needsWindowOrderBy) {
+      // calculate the ordering.
+      const obSQL: string[] = [];
+      let orderingField;
+      const orderByDef =
+        (resultStruct.firstSegment as QuerySegment).orderBy ||
+        resultStruct.calculateDefaultOrderBy();
+      for (const ordering of orderByDef) {
+        if (typeof ordering.field === 'string') {
+          orderingField = {
+            name: ordering.field,
+            fif: resultStruct.getField(ordering.field),
+          };
         } else {
-          paramSQL.push(
-            this.generateExpressionFromExpr(resultStruct, context, e, state)
+          orderingField = resultStruct.getFieldByNumber(ordering.field);
+        }
+        const exprType = orderingField.fif.f.fieldDef.expressionType;
+        // TODO today we do not support ordering by analytic functions at all, so this works
+        // but eventually we will, and this check will just want to ensure that the order field
+        // isn't the same as the field we're currently compiling (otherwise we will loop infintely)
+        if (expressionIsAnalytic(exprType)) {
+          continue;
+        }
+        if (resultStruct.firstSegment.type === 'reduce') {
+          const orderSQL = orderingField.fif.getAnalyticalSQL(false);
+          obSQL.push(` ${orderSQL} ${ordering.dir || 'ASC'}`);
+        } else if (resultStruct.firstSegment.type === 'project') {
+          obSQL.push(
+            ` ${orderingField.fif.f.generateExpression(resultStruct)} ${
+              ordering.dir || 'ASC'
+            }`
           );
         }
       }
+
+      if (obSQL.length > 0) {
+        orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL);
+      }
     }
 
-    if (obSQL.length > 0) {
-      orderBy = ' ' + this.parent.dialect.sqlOrderBy(obSQL);
+    let between = '';
+    if (overload.between) {
+      const [preceding, following] = [
+        overload.between.preceding,
+        overload.between.following,
+      ].map(value => {
+        if (value === -1) {
+          return 'UNBOUNDED';
+        }
+        if (typeof value === 'number') {
+          return value;
+        }
+        const argIndex = overload.params.findIndex(
+          param => param.name === value
+        );
+        const arg = args[argIndex];
+        if (
+          arg.length !== 1 ||
+          typeof arg[0] === 'string' ||
+          arg[0].type !== 'dialect' ||
+          arg[0].function !== 'numberLiteral'
+        ) {
+          throw new Error('Invalid number of rows for window spec');
+        }
+        // TODO this does not handle float literals correctly
+        return arg[0].literal;
+      });
+      between = `ROWS BETWEEN ${preceding} PRECEDING AND ${following} FOLLOWING`;
     }
 
-    const sqlName = func.sqlName || expr.function;
+    const funcSQL = this.generateExpressionFromExpr(
+      resultStruct,
+      context,
+      expr,
+      state
+    );
 
-    return `${sqlName}(${paramSQL.join(
-      ', '
-    )}) OVER(${partitionBy} ${orderBy} )`;
+    return `${funcSQL} OVER(${partitionBy} ${orderBy} ${between})`;
   }
 
   generateExpressionFromExpr(
@@ -688,8 +913,6 @@ class QueryField extends QueryNode {
         s += this.generateFilterFragment(resultSet, context, expr, state);
       } else if (isUngroupFragment(expr)) {
         s += this.generateUngroupedFragment(resultSet, context, expr, state);
-      } else if (isAnalyticFragment(expr)) {
-        s += this.generateAnalyticFragment(resultSet, context, expr, state);
       } else if (isAggregateFragment(expr)) {
         let agg;
         if (expr.function === 'sum') {
@@ -735,6 +958,23 @@ class QueryField extends QueryNode {
             'Internal Error: Partial application value referenced but not provided'
           );
         }
+      } else if (isFunctionParameterFragment(expr)) {
+        throw new Error(
+          'Internal Error: Function parameter fragment remaining during SQL generation'
+        );
+      } else if (isOutputFieldFragment(expr)) {
+        s += this.generateOutputFieldFragment(resultSet, context, expr, state);
+      } else if (isSQLExpressionFragment(expr)) {
+        s += this.generateSQLExpression(resultSet, context, expr, state);
+      } else if (isFunctionCallFragment(expr)) {
+        s += this.generateFunctionCallExpression(
+          resultSet,
+          context,
+          expr,
+          state
+        );
+      } else if (isSpreadFragment(expr)) {
+        s += this.generateSpread(resultSet, context, expr, state);
       } else if (expr.type === 'dialect') {
         s += this.generateDialect(resultSet, context, expr, state);
       } else {
@@ -782,6 +1022,10 @@ function isCalculatedField(f: QueryField): f is QueryAtomicField {
   return f instanceof QueryAtomicField && f.isCalculated();
 }
 
+function isAggregateField(f: QueryField): f is QueryAtomicField {
+  return f instanceof QueryAtomicField && f.isAggregate();
+}
+
 function isScalarField(f: QueryField): f is QueryAtomicField {
   return f instanceof QueryAtomicField && !f.isCalculated();
 }
@@ -793,6 +1037,12 @@ class QueryAtomicField extends QueryField {
 
   isCalculated(): boolean {
     return expressionIsCalculation(
+      (this.fieldDef as FieldAtomicDef).expressionType
+    );
+  }
+
+  isAggregate(): boolean {
+    return expressionIsAggregate(
       (this.fieldDef as FieldAtomicDef).expressionType
     );
   }
@@ -966,6 +1216,7 @@ class FieldInstanceField implements FieldInstance {
   fieldUsage: FieldUsage;
   additionalGroupSets: number[] = [];
   parent: FieldInstanceResult;
+  analyticalSQL: string | undefined; // the name of the field when used in a window function calculation.
   partitionSQL: string | undefined; // the name of the field when used as a partition.
   constructor(
     f: QueryField,
@@ -985,19 +1236,22 @@ class FieldInstanceField implements FieldInstance {
     let exp = this.f.generateExpression(this.parent);
     if (isScalarField(this.f)) {
       exp = this.f.caseGroup(
-        this.parent.childGroups.concat(this.additionalGroupSets),
-        // this.parent.groupSet > 0 ? this.parent.childGroups : [],
+        this.parent.groupSet > 0
+          ? this.parent.childGroups.concat(this.additionalGroupSets)
+          : [],
         exp
       );
     }
     return exp;
   }
 
-  getPartitionSQL() {
-    if (this.partitionSQL === undefined) {
+  getAnalyticalSQL(forPartition: boolean): string {
+    if (this.analyticalSQL === undefined) {
       return this.getSQL();
-    } else {
+    } else if (forPartition && this.partitionSQL) {
       return this.partitionSQL;
+    } else {
+      return this.analyticalSQL;
     }
   }
 }
@@ -1232,7 +1486,7 @@ class FieldInstanceResult implements FieldInstance {
           firstField ||= fi.fieldUsage.resultIndex;
           if (['date', 'timestamp'].indexOf(fi.f.fieldDef.type) > -1) {
             return [{dir: 'desc', field: fi.fieldUsage.resultIndex}];
-          } else if (isCalculatedField(fi.f)) {
+          } else if (isAggregateField(fi.f)) {
             return [{dir: 'desc', field: fi.fieldUsage.resultIndex}];
           }
         }
@@ -1863,6 +2117,15 @@ class QueryQuery extends QueryField {
     joinStack: string[]
   ): void {
     for (const expr of e) {
+      if (
+        isFunctionCallFragment(expr) &&
+        expressionIsAnalytic(expr.overload.returnType.expressionType) &&
+        this.parent.dialect.name === 'standardsql'
+      ) {
+        // force the use of a lateral_join_bag
+        resultStruct.root().isComplexQuery = true;
+        resultStruct.root().queryUsesPartitioning = true;
+      }
       if (isUngroupFragment(expr)) {
         resultStruct.resultUsesUngrouped = true;
         resultStruct.root().isComplexQuery = true;
@@ -1909,6 +2172,7 @@ class QueryQuery extends QueryField {
           );
           this.addDependantExpr(resultStruct, context, expr.e, joinStack);
         }
+        this.addDependantExpr(resultStruct, context, expr.e, joinStack);
       } else if (isDialectFragment(expr)) {
         const expressions: Expr[] = [];
         switch (expr.function) {
@@ -1918,9 +2182,10 @@ class QueryQuery extends QueryField {
             expressions.push(expr.denominator);
             expressions.push(expr.numerator);
             break;
+          case 'numberLiteral':
           case 'timeLiteral':
-            break;
           case 'stringLiteral':
+          case 'regexpLiteral':
             break;
           case 'timeDiff':
             expressions.push(expr.left.value, expr.right.value);
@@ -1960,8 +2225,24 @@ class QueryQuery extends QueryField {
           }
         }
         this.addDependantExpr(resultStruct, context, expr.e, joinStack);
-      } else if (isAnalyticFragment(expr)) {
-        resultStruct.root().queryUsesPartitioning = true;
+      } else if (isFunctionCallFragment(expr)) {
+        if (expr.structPath) {
+          this.addDependantPath(
+            resultStruct,
+            context,
+            expr.structPath,
+            true,
+            joinStack
+          );
+        }
+        // TODO Do we need to call `addStructToJoin` here in the case when there is no `structPath`
+        // and the function is an aggregate function?
+        for (const e of expr.args) {
+          this.addDependantExpr(resultStruct, context, e, joinStack);
+        }
+        if (expressionIsAnalytic(expr.overload.returnType.expressionType)) {
+          resultStruct.root().queryUsesPartitioning = true;
+        }
       }
     }
   }
@@ -1996,7 +2277,7 @@ class QueryQuery extends QueryField {
         });
         this.addDependancies(resultStruct, field);
 
-        if (isCalculatedField(field)) {
+        if (isAggregateField(field)) {
           if (this.firstSegment.type === 'project') {
             throw new Error(
               `Aggregate Fields cannot be used in PROJECT - '${field.fieldDef.name}'`
@@ -2065,7 +2346,7 @@ class QueryQuery extends QueryField {
 
       if (
         (which === 'having' && expressionIsCalculation(cond.expressionType)) ||
-        (which === 'where' && cond.expressionType === 'scalar')
+        (which === 'where' && expressionIsScalar(cond.expressionType))
       ) {
         const sqlClause = this.generateExpressionFromExpr(
           resultStruct,
@@ -2551,23 +2832,18 @@ class QueryQuery extends QueryField {
               // BigQuery can't partition aggregate function except when the field has no
               //  expression.  Additionally it can't partition by floats.  We stuff expressions
               //  and numbers as strings into a lateral join when the query has ungrouped expressions
+              const outputFieldName = `__lateral_join_bag.${outputName}`;
+              fi.analyticalSQL = outputFieldName;
+              output.lateralJoinSQLExpressions.push(`${exp} as ${outputName}`);
+              output.sql.push(outputFieldName);
               if (fi.f.fieldDef.type === 'number') {
-                // make an extra dimension as a string
-                output.sql.push(`${exp} as ${outputName}`);
-                const outputFieldName = `__lateral_join_bag.${outputName}_string`;
-                output.sql.push(outputFieldName);
+                const outputFieldNameString = `${outputFieldName}_string`;
+                output.sql.push(outputFieldNameString);
                 output.dimensionIndexes.push(output.fieldIndex++);
                 output.lateralJoinSQLExpressions.push(
                   `CAST(${exp} as STRING) as ${outputName}_string`
                 );
-                fi.partitionSQL = outputFieldName;
-              } else {
-                const outputFieldName = `__lateral_join_bag.${outputName}`;
-                fi.partitionSQL = outputFieldName;
-                output.lateralJoinSQLExpressions.push(
-                  `${exp} as ${outputName}`
-                );
-                output.sql.push(outputFieldName);
+                fi.partitionSQL = outputFieldNameString;
               }
             } else {
               // just treat it like a regular field.

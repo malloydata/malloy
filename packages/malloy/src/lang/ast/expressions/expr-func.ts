@@ -22,49 +22,372 @@
  */
 
 import {
+  EvalSpace,
+  Expr,
+  expressionIsAggregate,
+  expressionIsScalar,
   ExpressionType,
+  FieldValueType,
   Fragment,
+  FunctionDef,
+  FunctionOverloadDef,
+  FunctionParameterDef,
+  isAtomicFieldType,
+  isExpressionTypeLEQ,
   maxExpressionType,
+  maxOfExpressionTypes,
+  mergeEvalSpaces,
 } from '../../../model/malloy_types';
+import {errorFor} from '../ast-utils';
+import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 
+import {FieldReference} from '../query-items/field-references';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
-import {FieldValueType} from '../types/type-desc';
 import {compressExpr} from './utils';
 
 export class ExprFunc extends ExpressionDef {
   elementType = 'function call()';
-  constructor(readonly name: string, readonly args: ExpressionDef[]) {
+  constructor(
+    readonly name: string,
+    readonly args: ExpressionDef[],
+    readonly isRaw: boolean,
+    readonly rawType: FieldValueType | undefined,
+    readonly source?: FieldReference
+  ) {
     super({args: args});
+    this.has({source: source});
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    let expressionType: ExpressionType = 'scalar';
-    let collectType: FieldValueType | undefined;
-    const funcCall: Fragment[] = [`${this.name}(`];
-    for (const fexpr of this.args) {
-      const expr = fexpr.getExpression(fs);
-      expressionType = maxExpressionType(expressionType, expr.expressionType);
+    const argExprsWithoutImplicit = this.args.map(arg => arg.getExpression(fs));
+    if (this.isRaw) {
+      let expressionType: ExpressionType = 'scalar';
+      let collectType: FieldValueType | undefined;
+      const funcCall: Fragment[] = [`${this.name}(`];
+      for (const expr of argExprsWithoutImplicit) {
+        expressionType = maxExpressionType(expressionType, expr.expressionType);
 
-      if (collectType) {
-        funcCall.push(',');
-      } else {
-        collectType = expr.dataType;
+        if (collectType) {
+          funcCall.push(',');
+        } else {
+          collectType = expr.dataType;
+        }
+        funcCall.push(...expr.value);
       }
-      funcCall.push(...expr.value);
-    }
-    funcCall.push(')');
+      funcCall.push(')');
 
-    const dialect = fs.dialectObj();
-    const dataType =
-      dialect?.getFunctionInfo(this.name)?.returnType ??
-      collectType ??
-      'number';
+      const dataType = this.rawType ?? collectType ?? 'number';
+      return {
+        dataType,
+        expressionType,
+        value: compressExpr(funcCall),
+        evalSpace: mergeEvalSpaces(
+          ...argExprsWithoutImplicit.map(e => e.evalSpace)
+        ),
+      };
+    }
+
+    // TODO this makes functions case-insensitive. This is weird that this is the only place
+    // where case insensitivity is thing.
+    const func = this.modelEntry(this.name.toLowerCase())?.entry;
+    if (func === undefined) {
+      this.log(
+        `Unknown function '${this.name}'. Use '${this.name}!(...)' to call a SQL function directly.`
+      );
+      return {
+        dataType: 'unknown',
+        expressionType: 'scalar',
+        value: [],
+        evalSpace: 'constant',
+      };
+    } else if (func.type !== 'function') {
+      this.log(`Cannot call '${this.name}', which is of type ${func.type}`);
+      return {
+        dataType: 'unknown',
+        expressionType: 'scalar',
+        value: [],
+        evalSpace: 'constant',
+      };
+    }
+    // Find the 'implicit argument' for aggregate functions called like `some_join.some_field.agg(...args)`
+    // where the full arg list is `(some_field, ...args)`.
+    let implicitExpr: ExprValue | undefined = undefined;
+    let structPath = this.source?.refString;
+    if (this.source) {
+      const sourceFoot = this.source.getField(fs).found;
+      if (sourceFoot) {
+        const footType = sourceFoot.typeDesc();
+        if (isAtomicFieldType(footType.dataType)) {
+          implicitExpr = {
+            dataType: footType.dataType,
+            expressionType: footType.expressionType,
+            value: [{type: 'field', path: this.source.refString}],
+            evalSpace: footType.evalSpace,
+          };
+          structPath = this.source.sourceString;
+        } else {
+          if (!(sourceFoot instanceof StructSpaceFieldBase)) {
+            const message = `Aggregate source cannot be a ${footType.dataType}`;
+            this.log(message);
+            return errorFor(message);
+          }
+        }
+      } else {
+        const message = `Reference to undefined value ${this.source.refString}`;
+        this.log(message);
+        return errorFor(message);
+      }
+    }
+    // Construct the full args list including the implicit arg.
+    const argExprs = [
+      ...(implicitExpr ? [implicitExpr] : []),
+      ...argExprsWithoutImplicit,
+    ];
+    const result = findOverload(func, argExprs);
+    if (result === undefined) {
+      this.log(
+        `No matching overload for function ${this.name}(${argExprs
+          .map(e => e.dataType)
+          .join(', ')})`
+      );
+      return {
+        dataType: 'unknown',
+        expressionType: 'scalar',
+        value: [],
+        evalSpace: 'constant',
+      };
+    }
+    const {overload, expressionTypeErrors, evalSpaceErrors, nullabilityErrors} =
+      result;
+    // Report errors for expression type mismatch
+    for (const error of expressionTypeErrors) {
+      const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
+      const allowed = expressionIsScalar(error.maxExpressionType)
+        ? 'scalar'
+        : 'scalar or aggregate';
+      const arg = this.args[adjustedIndex];
+      arg.log(
+        `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
+          this.name
+        } must be ${allowed}, but received ${error.actualExpressionType}`
+      );
+    }
+    // Report errors for eval space mismatch
+    for (const error of evalSpaceErrors) {
+      const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
+      const allowed =
+        error.maxEvalSpace === 'literal'
+          ? 'literal'
+          : error.maxEvalSpace === 'constant'
+          ? 'literal or constant'
+          : 'literal, constant or output';
+      const arg = this.args[adjustedIndex];
+      arg.log(
+        `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
+          this.name
+        } must be ${allowed}, but received ${error.actualEvalSpace}`
+      );
+    }
+    // Report nullability errors
+    for (const error of nullabilityErrors) {
+      const adjustedIndex = error.argIndex - (implicitExpr ? 1 : 0);
+      const arg = this.args[adjustedIndex];
+      arg.log(
+        `Parameter ${error.argIndex + 1} ('${error.param.name}') of ${
+          this.name
+        } must not be a literal null`
+      );
+    }
+    const type = overload.returnType;
+    const expressionType = maxOfExpressionTypes([
+      type.expressionType,
+      ...argExprs.map(e => e.expressionType),
+    ]);
+    if (
+      !expressionIsAggregate(overload.returnType.expressionType) &&
+      this.source !== undefined
+    ) {
+      this.log(
+        `Cannot call function ${this.name}(${argExprs
+          .map(e => e.dataType)
+          .join(', ')}) with source`
+      );
+      return {
+        dataType: 'unknown',
+        expressionType,
+        value: [],
+        evalSpace: 'constant',
+      };
+    }
+    const funcCall: Expr = [
+      {
+        type: 'function_call',
+        overload,
+        args: argExprs.map(x => x.value),
+        expressionType,
+        structPath,
+      },
+    ];
+    if (type.dataType === 'any') {
+      this.log(
+        `Invalid return type ${type.dataType} for function '${this.name}'`
+      );
+      return {
+        dataType: 'unknown',
+        expressionType,
+        value: [],
+        evalSpace: 'constant',
+      };
+    }
+    const maxEvalSpace = mergeEvalSpaces(...argExprs.map(e => e.evalSpace));
+    // If the merged eval space of all args is constant, the result is constant.
+    // If the expression is scalar, then the eval space is that merged eval space.
+    // If the expression is aggregate, then then eval space is always 'output'.
+    // If the expression is analytic, the eval space doesn't really matter.. It's really
+    // 'super_output' but that's not useful to us, so it's just 'output'.
+    const evalSpace =
+      maxEvalSpace === 'constant'
+        ? 'constant'
+        : expressionIsScalar(expressionType)
+        ? maxEvalSpace
+        : 'output';
     return {
-      dataType: dataType,
+      dataType: type.dataType,
       expressionType,
       value: compressExpr(funcCall),
+      evalSpace,
     };
+  }
+}
+
+type ExpressionTypeError = {
+  argIndex: number;
+  actualExpressionType: ExpressionType;
+  maxExpressionType: ExpressionType;
+  param: FunctionParameterDef;
+};
+
+type EvalSpaceError = {
+  argIndex: number;
+  param: FunctionParameterDef;
+  actualEvalSpace: EvalSpace;
+  maxEvalSpace: EvalSpace;
+};
+
+type NullabilityError = {
+  argIndex: number;
+  param: FunctionParameterDef;
+};
+
+function findOverload(
+  func: FunctionDef,
+  args: ExprValue[]
+):
+  | {
+      overload: FunctionOverloadDef;
+      expressionTypeErrors: ExpressionTypeError[];
+      evalSpaceErrors: EvalSpaceError[];
+      nullabilityErrors: NullabilityError[];
+    }
+  | undefined {
+  for (const overload of func.overloads) {
+    let paramIndex = 0;
+    let ok = true;
+    let matchedVariadic = false;
+    const expressionTypeErrors: ExpressionTypeError[] = [];
+    const evalSpaceErrors: EvalSpaceError[] = [];
+    const nullabilityErrors: NullabilityError[] = [];
+    for (let argIndex = 0; argIndex < args.length; argIndex++) {
+      const arg = args[argIndex];
+      const param = overload.params[paramIndex];
+      if (param === undefined) {
+        ok = false;
+        break;
+      }
+      const argOk = param.allowedTypes.some(paramT => {
+        // Check whether types match (allowing for nullability errors, expression type errors,
+        // eval space errors, and unknown types due to prior errors in args)
+        const dataTypeMatch =
+          paramT.dataType === arg.dataType ||
+          paramT.dataType === 'any' ||
+          // TODO We should consider whether `nulls` should always be allowed. It probably
+          // does not make sense to limit function calls to not allow nulls, since have
+          // so little control over nullability.
+          arg.dataType === 'null' ||
+          // TODO I've included this because it means that errors cascade a bit less...
+          // I think we may want to add an `error` type for nodes generated from errors,
+          // then make `error` propagate without generating more errors.
+          arg.dataType === 'unknown';
+        // Check expression type errors
+        if (paramT.expressionType) {
+          const expressionTypeMatch = isExpressionTypeLEQ(
+            arg.expressionType,
+            paramT.expressionType
+          );
+          if (!expressionTypeMatch) {
+            expressionTypeErrors.push({
+              argIndex,
+              maxExpressionType: paramT.expressionType,
+              actualExpressionType: arg.expressionType,
+              param,
+            });
+          }
+        }
+        // Check eval space errors
+        if (
+          // Error if literal is required but arg is not literal
+          (paramT.evalSpace === 'literal' && arg.evalSpace !== 'literal') ||
+          // Error if constant is required but arg is input/output
+          (paramT.evalSpace === 'constant' &&
+            (arg.evalSpace === 'input' || arg.evalSpace === 'output')) ||
+          // Error if output is required but arg is input
+          (paramT.evalSpace === 'output' && arg.evalSpace === 'input')
+        ) {
+          evalSpaceErrors.push({
+            argIndex,
+            param,
+            maxEvalSpace: paramT.evalSpace,
+            actualEvalSpace: arg.evalSpace,
+          });
+        }
+        // Check nullability errors. For now we only require that literal arguments must be
+        // non-null, but in the future we may allow parameters to say whether they can accept literal
+        // nulls.
+        if (paramT.evalSpace === 'literal' && arg.dataType === 'null') {
+          nullabilityErrors.push({
+            argIndex,
+            param,
+          });
+        }
+        return dataTypeMatch;
+      });
+      if (!argOk) {
+        ok = false;
+        break;
+      }
+      if (param.isVariadic) {
+        if (argIndex === args.length - 1) {
+          matchedVariadic = true;
+        }
+      } else {
+        paramIndex++;
+      }
+    }
+    if (
+      !matchedVariadic &&
+      (paramIndex !== args.length || paramIndex !== overload.params.length)
+    ) {
+      continue;
+    }
+    if (ok) {
+      return {
+        overload,
+        expressionTypeErrors,
+        evalSpaceErrors,
+        nullabilityErrors,
+      };
+    }
   }
 }

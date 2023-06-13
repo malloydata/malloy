@@ -21,7 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {expressionIsCalculation} from '../../../model/malloy_types';
+import {
+  expressionIsAggregate,
+  expressionIsCalculation,
+} from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
 import {FT} from '../fragtype-utils';
@@ -40,7 +43,7 @@ export class ExprFilter extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const testList = this.filter.getFilterList(fs);
     const resultExpr = this.expr.getExpression(fs);
-    if (resultExpr.expressionType === 'scalar') {
+    if (!expressionIsAggregate(resultExpr.expressionType)) {
       this.expr.log('Filtered expression requires an aggregate computation');
       return resultExpr;
     }

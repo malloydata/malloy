@@ -27,8 +27,5 @@ import {DeclareFields} from './declare-fields';
 export class Dimensions extends DeclareFields {
   constructor(dimensions: FieldDeclaration[]) {
     super(dimensions, 'dimension');
-    for (const dim of dimensions) {
-      dim.isMeasure = false;
-    }
   }
 }

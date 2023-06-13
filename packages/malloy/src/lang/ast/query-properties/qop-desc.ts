@@ -22,7 +22,6 @@
  */
 
 import {PipeSegment} from '../../../model/malloy_types';
-
 import {Executor} from '../types/executor';
 import {IndexExecutor} from '../executors/index-executor';
 import {ProjectExecutor} from '../executors/project-executor';
@@ -38,7 +37,6 @@ import {Nests} from './nests';
 import {ProjectStatement} from './project-statement';
 import {opOutputStruct} from '../struct-utils';
 import {QueryProperty} from '../types/query-property';
-
 import {isNestedQuery} from './nest';
 import {StaticSpace} from '../field-space/static-space';
 
@@ -110,11 +108,11 @@ export class QOPDesc extends ListOf<QueryProperty> {
     switch (this.computeType()) {
       case 'aggregate':
       case 'grouping':
-        return new ReduceExecutor(baseFS);
+        return new ReduceExecutor(baseFS, this.refineThis);
       case 'project':
-        return new ProjectExecutor(baseFS);
+        return new ProjectExecutor(baseFS, this.refineThis);
       case 'index':
-        return new IndexExecutor(baseFS);
+        return new IndexExecutor(baseFS, this.refineThis);
     }
   }
 
@@ -131,6 +129,9 @@ export class QOPDesc extends ListOf<QueryProperty> {
     return {
       segment,
       outputSpace: () =>
+        // TODO someday we'd like to get rid of the call to opOutputStruct here.
+        // If the `qex.resultFS` is correct, then we should be able to just use that
+        // in a more direct way.
         new StaticSpace(opOutputStruct(this, inputFS.structDef(), segment)),
     };
   }

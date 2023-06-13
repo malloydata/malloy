@@ -21,7 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {isConditionParameter} from '../../../model/malloy_types';
+import {
+  expressionIsAggregate,
+  isConditionParameter,
+  mergeEvalSpaces,
+} from '../../../model/malloy_types';
 import {errorFor} from '../ast-utils';
 import {ExprValue} from '../types/expr-value';
 import {FieldReference} from '../query-items/field-references';
@@ -43,8 +47,18 @@ export class ExprIdReference extends ExpressionDef {
   getExpression(fs: FieldSpace): ExprValue {
     const def = this.fieldReference.getField(fs);
     if (def.found) {
+      if (def.found.typeDesc().evalSpace === 'output') {
+        return {
+          ...def.found.typeDesc(),
+          value: [{type: 'outputField', name: this.refString}],
+        };
+      }
       const value = [{type: def.found.refType, path: this.refString}];
       const td = def.found.typeDesc();
+      // We think that aggregates are more 'output' like, but maybe we will reconsider that...
+      if (expressionIsAggregate(td.expressionType)) {
+        td.evalSpace = 'output';
+      }
       return {...td, value};
     }
     this.log(def.error);
@@ -60,6 +74,8 @@ export class ExprIdReference extends ExpressionDef {
         return {
           dataType: 'boolean',
           expressionType: lval.expressionType,
+          // TODO not sure about the input-ness of parameters
+          evalSpace: mergeEvalSpaces(lval.evalSpace, 'input'),
           value: [
             {
               type: 'apply',

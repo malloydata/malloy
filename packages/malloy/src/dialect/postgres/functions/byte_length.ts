@@ -21,19 +21,22 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicFieldType, ExpressionType} from '../../../model/malloy_types';
+import {
+  arg,
+  overload,
+  param,
+  minScalar,
+  anyExprType,
+  sql,
+  DialectFunctionOverloadDef,
+} from '../../functions/util';
 
-export type ExpressionValueType =
-  | AtomicFieldType
-  | 'null'
-  | 'unknown'
-  | 'duration'
-  | 'regular expression';
-
-export type FieldValueType = ExpressionValueType | 'turtle' | 'struct';
-
-export interface TypeDesc {
-  dataType: FieldValueType;
-  expressionType: ExpressionType;
-  rawType?: string;
+export function fnByteLength(): DialectFunctionOverloadDef[] {
+  return [
+    overload(
+      minScalar('number'),
+      [param('value', anyExprType('string'))],
+      sql`OCTET_LENGTH(${arg('value')})`
+    ),
+  ];
 }

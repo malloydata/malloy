@@ -34,6 +34,8 @@ fragment SPACE_CHAR: [ \u000B\t\r\n];
 // colon keywords ...
 ACCEPT: A C C E P T SPACE_CHAR* ':';
 AGGREGATE: A G G R E G A T E SPACE_CHAR* ':';
+CALCULATE: C A L C U L A T E SPACE_CHAR* ':';
+CALCULATION: C A L C U L A T I O N SPACE_CHAR* ':';
 CONNECTION: C O N N E C T I O N SPACE_CHAR* ':';
 DECLARE: D E C L A R E  ':' ;
 DIMENSION: D I M E N S I O N SPACE_CHAR* ':';
@@ -136,6 +138,7 @@ CBRACK: ']' ;
 OCURLY: '{' ;
 CCURLY: '}' ;
 DOUBLECOLON: '::';
+EXCLAM: '!';
 COLON: ':' ;
 COMMA: ',';
 DOT: '.' ;

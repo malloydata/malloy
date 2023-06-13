@@ -27,6 +27,7 @@ import {
   isTimeFieldType,
   isTimestampUnit,
   maxExpressionType,
+  mergeEvalSpaces,
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
@@ -119,6 +120,7 @@ export class ExprTimeExtract extends ExpressionDef {
             first.expressionType,
             last.expressionType
           ),
+          evalSpace: mergeEvalSpaces(first.evalSpace, last.evalSpace),
           value: [
             {
               type: 'dialect',
@@ -135,6 +137,7 @@ export class ExprTimeExtract extends ExpressionDef {
           return {
             dataType: 'number',
             expressionType: argV.expressionType,
+            evalSpace: argV.evalSpace,
             value: [
               {
                 type: 'dialect',

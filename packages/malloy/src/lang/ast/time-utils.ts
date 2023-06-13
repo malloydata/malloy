@@ -29,11 +29,11 @@ import {
   TimestampUnit,
   TypecastFragment,
   isAtomicFieldType,
+  FieldValueType,
 } from '../../model/malloy_types';
 
 import {compressExpr} from './expressions/utils';
 import {TimeResult} from './types/time-result';
-import {FieldValueType} from './types/type-desc';
 
 export function timeOffset(
   timeType: TimeFieldType,

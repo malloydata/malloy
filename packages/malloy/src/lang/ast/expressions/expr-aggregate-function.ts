@@ -23,17 +23,20 @@
 
 import {
   AggregateFragment,
+  expressionIsAggregate,
+  FieldValueType,
   isAtomicFieldType,
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
+import {OutputSpaceEntry} from '../field-space/query-spaces';
+import {ReferenceField} from '../field-space/reference-field';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 import {FT} from '../fragtype-utils';
 import {FieldReference} from '../query-items/field-references';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
-import {FieldValueType} from '../types/type-desc';
 
 export abstract class ExprAggregateFunction extends ExpressionDef {
   elementType: string;
@@ -64,9 +67,29 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           exprVal = {
             dataType: footType.dataType,
             expressionType: footType.expressionType,
-            value: [{type: 'field', path: this.source.refString}],
+            value: [
+              footType.evalSpace === 'output'
+                ? {
+                    type: 'outputField',
+                    name: this.source.refString,
+                  }
+                : {
+                    type: 'field',
+                    path: this.source.refString,
+                  },
+            ],
+            evalSpace: footType.evalSpace,
           };
-          structPath = this.source.sourceString;
+          // If you reference an output field as the foot, then we need to get the
+          // source from that field, rather than using the default source.
+          if (
+            sourceFoot instanceof OutputSpaceEntry &&
+            sourceFoot.inputSpaceEntry instanceof ReferenceField
+          ) {
+            structPath = sourceFoot.inputSpaceEntry.fieldRef.sourceString;
+          } else {
+            structPath = this.source.sourceString;
+          }
         } else {
           if (!(sourceFoot instanceof StructSpaceFieldBase)) {
             this.log(`Aggregate source cannot be a ${footType.dataType}`);
@@ -86,6 +109,10 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
       this.log('Missing expression for aggregate function');
       return errorFor('agggregate without expression');
     }
+    if (expressionIsAggregate(exprVal.expressionType)) {
+      this.log('Aggregate expression cannot be aggregate');
+      return errorFor('reagggregate');
+    }
     if (
       this.typeCheck(this.expr || this, {
         ...exprVal,
@@ -104,6 +131,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         dataType: this.returns(exprVal),
         expressionType: 'aggregate',
         value: [f],
+        evalSpace: 'output',
       };
     }
     return errorFor('aggregate type check');

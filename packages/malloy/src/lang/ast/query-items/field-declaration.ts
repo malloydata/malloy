@@ -30,16 +30,30 @@ import {
 
 import {compressExpr} from '../expressions/utils';
 import {FT} from '../fragtype-utils';
+import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
-import {FieldName, FieldSpace} from '../types/field-space';
+import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {isGranularResult} from '../types/granular-result';
 import {LookupResult} from '../types/lookup-result';
 import {MalloyElement} from '../types/malloy-element';
+import {SpaceEntry} from '../types/space-entry';
+import {
+  typecheckAggregate,
+  typecheckCalculate,
+  typecheckDeclare,
+  typecheckDimension,
+  typecheckGroupBy,
+  typecheckMeasure,
+  typecheckProject,
+} from './typecheck_utils';
 
-export class FieldDeclaration extends MalloyElement {
-  elementType = 'fieldDeclaration';
-  isMeasure?: boolean;
+export type FieldDeclarationConstructor = new (
+  expr: ExpressionDef,
+  defineName: string,
+  exprSrc?: string
+) => FieldDeclaration;
 
+export abstract class FieldDeclaration extends MalloyElement {
   constructor(
     readonly expr: ExpressionDef,
     readonly defineName: string,
@@ -61,11 +75,25 @@ export class FieldDeclaration extends MalloyElement {
     return this.queryFieldDef(new DefSpace(fs, this), exprName);
   }
 
+  abstract typecheckExprValue(expr: ExprValue): void;
+
+  executesInOutputSpace(): boolean {
+    return false;
+  }
+
   queryFieldDef(exprFS: FieldSpace, exprName: string): FieldTypeDef {
     let exprValue;
 
+    function getOutputFS() {
+      if (exprFS.isQueryFieldSpace()) {
+        return exprFS.outputSpace();
+      }
+      throw new Error('must be in a query -- weird internal error');
+    }
+
     try {
-      exprValue = this.expr.getExpression(exprFS);
+      const fs = this.executesInOutputSpace() ? getOutputFS() : exprFS;
+      exprValue = this.expr.getExpression(fs);
     } catch (error) {
       this.log(`Cannot define '${exprName}', ${error.message}`);
       return {
@@ -87,6 +115,7 @@ export class FieldDeclaration extends MalloyElement {
       if (exprValue.expressionType) {
         template.expressionType = exprValue.expressionType;
       }
+      this.typecheckExprValue(exprValue);
       if (this.exprSrc) {
         template.code = this.exprSrc;
       }
@@ -112,6 +141,58 @@ export class FieldDeclaration extends MalloyElement {
   }
 }
 
+export class CalculateFieldDeclaration extends FieldDeclaration {
+  elementType = 'calculateFieldDeclaration';
+  typecheckExprValue(expr: ExprValue) {
+    typecheckCalculate(expr, this);
+  }
+  executesInOutputSpace(): boolean {
+    return true;
+  }
+}
+
+export class AggregateFieldDeclaration extends FieldDeclaration {
+  elementType = 'aggregateFieldDeclaration';
+  typecheckExprValue(expr: ExprValue) {
+    typecheckAggregate(expr, this);
+  }
+}
+
+export class GroupByFieldDeclaration extends FieldDeclaration {
+  elementType = 'groupByFieldDeclaration';
+  typecheckExprValue(expr: ExprValue) {
+    typecheckGroupBy(expr, this);
+  }
+}
+
+export class ProjectFieldDeclaration extends FieldDeclaration {
+  elementType = 'projectFieldDeclaration';
+  typecheckExprValue(expr: ExprValue) {
+    typecheckProject(expr, this);
+  }
+}
+
+export class DeclareFieldDeclaration extends FieldDeclaration {
+  elementType = 'declareFieldDeclaration';
+  typecheckExprValue(expr: ExprValue) {
+    typecheckDeclare(expr, this);
+  }
+}
+
+export class MeasureFieldDeclaration extends FieldDeclaration {
+  elementType = 'measureFieldDeclaration';
+  typecheckExprValue(expr: ExprValue) {
+    typecheckMeasure(expr, this);
+  }
+}
+
+export class DimensionFieldDeclaration extends FieldDeclaration {
+  elementType = 'dimensionFieldDeclaration';
+  typecheckExprValue(expr: ExprValue) {
+    typecheckDimension(expr, this);
+  }
+}
+
 /**
  * Used to detect references to fields in the statement which defines them
  */
@@ -128,6 +209,9 @@ export class DefSpace implements FieldSpace {
   emptyStructDef(): StructDef {
     return this.realFS.emptyStructDef();
   }
+  entry(name: string): SpaceEntry | undefined {
+    return this.realFS.entry(name);
+  }
   lookup(symbol: FieldName[]): LookupResult {
     if (symbol[0] && symbol[0].refString === this.circular.defineName) {
       this.foundCircle = true;
@@ -138,10 +222,24 @@ export class DefSpace implements FieldSpace {
     }
     return this.realFS.lookup(symbol);
   }
+  entries(): [string, SpaceEntry][] {
+    return this.realFS.entries();
+  }
   dialectObj(): Dialect | undefined {
     return this.realFS.dialectObj();
   }
   whenComplete(step: () => void): void {
     this.realFS.whenComplete(step);
+  }
+
+  isQueryFieldSpace(): this is QueryFieldSpace {
+    return this.realFS.isQueryFieldSpace();
+  }
+
+  outputSpace() {
+    if (this.realFS.isQueryFieldSpace()) {
+      return this.realFS.outputSpace();
+    }
+    throw new Error('Not a query field space');
   }
 }

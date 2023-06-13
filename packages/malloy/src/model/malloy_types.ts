@@ -156,6 +156,15 @@ export interface ResultStructMetadata {
   resultMetadata?: ResultStructMetadataDef;
 }
 
+export interface OutputFieldFragment {
+  type: 'outputField';
+  name: string;
+}
+
+export function isOutputFieldFragment(f: Fragment): f is OutputFieldFragment {
+  return (f as OutputFieldFragment)?.type === 'outputField';
+}
+
 export interface FilterFragment {
   type: 'filterExpression';
   filterList: FilterExpression[];
@@ -194,75 +203,47 @@ export function isUngroupFragment(f: Fragment): f is UngroupFragment {
   return ftype === 'all' || ftype === 'exclude';
 }
 
-export type MalloyFunctionParam = AtomicFieldType | 'any' | 'nconst' | 'regexp';
-
-export interface MalloyFunctionInfo {
-  returnType: AtomicFieldType;
-  parameters: 'any' | 'none' | MalloyFunctionParam[];
-  expressionType?: 'aggregate' | 'analytic'; // forces expression type
-  sqlName?: string;
+export interface FunctionParameterFragment {
+  type: 'function_parameter';
+  name: string;
 }
 
-export const malloyFunctions: Record<string, MalloyFunctionInfo> = {
-  'row_number': {
-    returnType: 'number',
-    parameters: 'none',
-    expressionType: 'analytic',
-  },
-  'rank': {
-    returnType: 'number',
-    parameters: 'none',
-    expressionType: 'analytic',
-  },
-  'dense_rank': {
-    returnType: 'number',
-    parameters: 'none',
-    expressionType: 'analytic',
-  },
-  'first_value_in_column': {
-    returnType: 'number',
-    parameters: 'any',
-    expressionType: 'analytic',
-    sqlName: 'first_value',
-  },
-  'last_value_in_column': {
-    returnType: 'number',
-    parameters: 'any',
-    expressionType: 'analytic',
-    sqlName: 'last_value',
-  },
-  'min_in_column': {
-    returnType: 'number',
-    parameters: 'any',
-    expressionType: 'analytic',
-    sqlName: 'min',
-  },
-  'max_in_column': {
-    returnType: 'number',
-    parameters: 'any',
-    expressionType: 'analytic',
-    sqlName: 'max',
-  },
-  'ntile': {
-    returnType: 'number',
-    parameters: ['nconst'],
-    expressionType: 'analytic',
-  },
-  'lag': {
-    returnType: 'number',
-    parameters: ['number', 'nconst'],
-    expressionType: 'analytic',
-  },
-};
-
-export interface AnalyticFragment {
-  type: 'analytic';
-  function: string;
-  parameters?: (string | number | Expr)[]; // output field name or expression
+export function isFunctionParameterFragment(
+  f: Fragment
+): f is FunctionParameterFragment {
+  return (f as FunctionParameterFragment)?.type === 'function_parameter';
 }
 
-export function isAnalyticFragment(f: Fragment): f is AnalyticFragment {
-  return (f as AnalyticFragment)?.type === 'analytic';
+export interface FunctionCallFragment {
+  type: 'function_call';
+  overload: FunctionOverloadDef;
+  expressionType: ExpressionType;
+  args: Expr[];
+  structPath?: string;
+}
+
+export function isFunctionCallFragment(f: Fragment): f is FunctionCallFragment {
+  return (f as FunctionCallFragment)?.type === 'function_call';
+}
+
+export interface SQLExpressionFragment {
+  type: 'sql_expression';
+  e: Expr;
+}
+
+export function isSQLExpressionFragment(
+  f: Fragment
+): f is SQLExpressionFragment {
+  return (f as SQLExpressionFragment)?.type === 'sql_expression';
+}
+
+export interface SpreadFragment {
+  type: 'spread';
+  e: Expr;
+}
+
+export function isSpreadFragment(f: Fragment): f is SpreadFragment {
+  return (f as SpreadFragment)?.type === 'spread';
 }
 
 export interface FieldFragment {
@@ -344,7 +325,7 @@ export interface TypecastFragment extends DialectFragmentBase {
 export interface RegexpMatchFragment extends DialectFragmentBase {
   function: 'regexpMatch';
   expr: Expr;
-  regexp: string;
+  regexp: Expr;
 }
 
 export interface DivFragment extends DialectFragmentBase {
@@ -365,6 +346,16 @@ export interface StringLiteralFragment extends DialectFragmentBase {
   literal: string;
 }
 
+export interface RegexpLiteralFragment extends DialectFragmentBase {
+  function: 'regexpLiteral';
+  literal: string;
+}
+
+export interface NumberLiteralFragment extends DialectFragmentBase {
+  function: 'numberLiteral';
+  literal: string;
+}
+
 export type DialectFragment =
   | DivFragment
   | TimeLiteralFragment
@@ -375,6 +366,8 @@ export type DialectFragment =
   | TypecastFragment
   | TimeExtractFragment
   | StringLiteralFragment
+  | RegexpLiteralFragment
+  | NumberLiteralFragment
   | RegexpMatchFragment;
 
 export type Fragment =
@@ -384,10 +377,14 @@ export type Fragment =
   | FieldFragment
   | ParameterFragment
   | FilterFragment
+  | OutputFieldFragment
   | AggregateFragment
   | UngroupFragment
   | DialectFragment
-  | AnalyticFragment;
+  | FunctionParameterFragment
+  | FunctionCallFragment
+  | SQLExpressionFragment
+  | SpreadFragment;
 
 export type Expr = Fragment[];
 
@@ -434,7 +431,12 @@ export function mkExpr(
   return ret;
 }
 
-export type ExpressionType = 'scalar' | 'aggregate' | 'analytic';
+export type ExpressionType =
+  | 'scalar'
+  | 'aggregate'
+  | 'scalar_analytic'
+  | 'aggregate_analytic'
+  | 'ungrouped_aggregate';
 
 export interface Expression {
   e?: Expr;
@@ -442,28 +444,91 @@ export interface Expression {
   code?: string;
 }
 
+export function expressionIsScalar(e: ExpressionType | undefined): boolean {
+  return e === undefined || e === 'scalar';
+}
+
 export function expressionIsAggregate(e: ExpressionType | undefined): boolean {
-  return e === 'aggregate';
+  return e === 'aggregate' || e === 'ungrouped_aggregate';
+}
+
+export function expressionIsUngroupedAggregate(
+  e: ExpressionType | undefined
+): boolean {
+  return e === 'ungrouped_aggregate';
+}
+
+export function expressionInvolvesAggregate(
+  e: ExpressionType | undefined
+): boolean {
+  return (
+    e === 'aggregate' ||
+    e === 'ungrouped_aggregate' ||
+    e === 'aggregate_analytic'
+  );
 }
 
 export function expressionIsCalculation(
   e: ExpressionType | undefined
 ): boolean {
-  return e === 'aggregate' || e === 'analytic';
+  return (
+    e === 'aggregate' ||
+    e === 'scalar_analytic' ||
+    e === 'aggregate_analytic' ||
+    e === 'ungrouped_aggregate'
+  );
 }
 
+export function expressionIsAnalytic(e: ExpressionType | undefined): boolean {
+  return e === 'aggregate_analytic' || e === 'scalar_analytic';
+}
+
+function expressionTypeLevel(e: ExpressionType): number {
+  return {
+    scalar: 0,
+    aggregate: 1,
+    ungrouped_aggregate: 2,
+    scalar_analytic: 2,
+    aggregate_analytic: 3,
+  }[e];
+}
+
+export function isExpressionTypeLEQ(
+  e1: ExpressionType,
+  e2: ExpressionType
+): boolean {
+  return e1 === e2 || expressionTypeLevel(e1) < expressionTypeLevel(e2);
+}
+
+// TODO rename this to be like `combineExpressionTypes`
 export function maxExpressionType(
   e1: ExpressionType,
   e2: ExpressionType
 ): ExpressionType {
+  // TODO handle the case where e1 is analytic and e2 is ungrouped_aggregate
   let ret: ExpressionType = 'scalar';
   if (e1 === 'aggregate' || e2 === 'aggregate') {
     ret = 'aggregate';
   }
-  if (e1 === 'analytic' || e2 === 'analytic') {
-    ret = 'analytic';
+  if (e1 === 'ungrouped_aggregate' || e2 === 'ungrouped_aggregate') {
+    ret = 'ungrouped_aggregate';
+  }
+  if (e1 === 'scalar_analytic' || e2 === 'scalar_analytic') {
+    ret = 'scalar_analytic';
+  }
+  if (e1 === 'aggregate_analytic' || e2 === 'aggregate_analytic') {
+    ret = 'aggregate_analytic';
+  }
+  if (e1 === 'scalar_analytic' && e2 === 'aggregate') {
+    ret = 'aggregate_analytic';
+  } else if (e1 === 'aggregate' && e2 === 'scalar_analytic') {
+    ret = 'aggregate_analytic';
   }
   return ret;
+}
+
+export function maxOfExpressionTypes(types: ExpressionType[]): ExpressionType {
+  return types.reduce(maxExpressionType, 'scalar');
 }
 
 interface JustExpression {
@@ -794,6 +859,74 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
   dialect: string;
 }
 
+export type ExpressionValueType =
+  | AtomicFieldType
+  | 'null'
+  | 'unknown'
+  | 'duration'
+  | 'any'
+  | 'regular expression';
+
+export type FieldValueType = ExpressionValueType | 'turtle' | 'struct';
+
+export interface ExpressionTypeDesc {
+  dataType: FieldValueType;
+  expressionType: ExpressionType;
+  rawType?: string;
+  evalSpace: EvalSpace;
+}
+
+export interface FunctionParamTypeDesc {
+  dataType: FieldValueType;
+  expressionType: ExpressionType | undefined;
+  evalSpace: EvalSpace;
+}
+
+export type EvalSpace = 'constant' | 'input' | 'output' | 'literal';
+
+export function mergeEvalSpaces(...evalSpaces: EvalSpace[]): EvalSpace {
+  if (evalSpaces.every(e => e === 'constant' || e === 'literal')) {
+    return 'constant';
+  } else if (
+    evalSpaces.every(e => e === 'output' || e === 'constant' || e === 'literal')
+  ) {
+    return 'output';
+  }
+  return 'input';
+}
+
+export interface TypeDesc {
+  dataType: FieldValueType;
+  expressionType: ExpressionType;
+  rawType?: string;
+  evalSpace: EvalSpace;
+}
+
+export interface FunctionParameterDef {
+  name: string;
+  // These expression types are MAXIMUM types -- e.g. if you specify "scalar",
+  // you cannot pass in an "aggregate" and if you specify "aggregate", you can
+  // pass in "scalar" or "aggregate", but not "analytic"
+  allowedTypes: FunctionParamTypeDesc[];
+  isVariadic: boolean;
+}
+
+export interface FunctionOverloadDef {
+  // The expression type here is the MINIMUM return type
+  returnType: TypeDesc;
+  needsWindowOrderBy?: boolean;
+  between?: {preceding: number | string; following: number | string};
+  params: FunctionParameterDef[];
+  dialect: {
+    [dialect: string]: Expr;
+  };
+}
+
+export interface FunctionDef extends NamedObject {
+  type: 'function';
+  overloads: FunctionOverloadDef[];
+}
+
 export interface SQLBlockStructDef extends StructDef {
   structSource: SubquerySource;
   // This was added to that errors for structdefs created in sql: but NOT used in
@@ -880,7 +1013,7 @@ export function getIdentifier(n: AliasedName): string {
   return n.name;
 }
 
-export type NamedModelObject = StructDef | NamedQuery;
+export type NamedModelObject = StructDef | NamedQuery | FunctionDef;
 
 /** Result of parsing a model file */
 export interface ModelDef {
@@ -891,6 +1024,7 @@ export interface ModelDef {
 
 /** Very common record type */
 export type NamedStructDefs = Record<string, StructDef>;
+export type NamedModelObjects = Record<string, NamedModelObject>;
 
 export type QueryScalar = string | boolean | number | Date | Buffer | null;
 

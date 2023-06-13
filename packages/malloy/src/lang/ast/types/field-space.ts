@@ -26,6 +26,7 @@ import {StructDef} from '../../../model/malloy_types';
 
 import {LookupResult} from './lookup-result';
 import {MalloyElement} from './malloy-element';
+import {SpaceEntry} from './space-entry';
 
 /**
  * A FieldSpace is a hierarchy of namespaces, where the leaf nodes
@@ -36,8 +37,15 @@ export interface FieldSpace {
   structDef(): StructDef;
   emptyStructDef(): StructDef;
   lookup(symbol: FieldName[]): LookupResult;
+  entry(symbol: string): SpaceEntry | undefined;
+  entries(): [string, SpaceEntry][];
   dialectObj(): Dialect | undefined;
   whenComplete: (step: () => void) => void;
+  isQueryFieldSpace(): this is QueryFieldSpace;
+}
+
+export interface QueryFieldSpace extends FieldSpace {
+  outputSpace(): FieldSpace;
 }
 
 export class FieldName extends MalloyElement {

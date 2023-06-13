@@ -297,11 +297,546 @@ describe('model statements', () => {
         }
       `)
     );
+    describe('query operation typechecking', () => {
+      describe('field declarations', () => {
+        test('cannot use aggregate in group_by', () => {
+          expect('query: a -> { group_by: s is count()}').compileToFailWith(
+            'Cannot use an aggregate field in a group_by operation, did you mean to use an aggregate operation instead?'
+          );
+        });
+        test('cannot use ungrouped_aggregate in group_by', () => {
+          expect(
+            'query: a -> { group_by: s is all(count())}'
+          ).compileToFailWith(
+            'Cannot use an aggregate field in a group_by operation, did you mean to use an aggregate operation instead?'
+          );
+        });
+        test('cannot use analytic in group_by', () => {
+          expect(
+            'query: a -> { group_by: s is row_number()}'
+          ).compileToFailWith(
+            'Cannot use an analytic field in a group_by operation, did you mean to use a calculate operation instead?'
+          );
+        });
+        test('cannot use aggregate in dimension', () => {
+          expect(
+            'source: a1 is a { dimension: s is count()}'
+          ).compileToFailWith(
+            'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?'
+          );
+        });
+        test('cannot use ungrouped_aggregate in dimension', () => {
+          expect(
+            'source: a1 is a { dimension: s is all(count())}'
+          ).compileToFailWith(
+            'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?'
+          );
+        });
+        test('cannot use analytic in dimension', () => {
+          expect(
+            'source: a1 is a { dimension: s is row_number()}'
+          ).compileToFailWith(
+            'Cannot use an analytic field in a dimension declaration'
+          );
+        });
+        test('cannot use scalar in measure', () => {
+          expect('source: a1 is a { measure: s is 1}').compileToFailWith(
+            'Cannot use a scalar field in a measure declaration, did you mean to use a dimension declaration instead?'
+          );
+        });
+        test('cannot use analytic in measure', () => {
+          expect(
+            'source: a1 is a { measure: s is lag(count())}'
+          ).compileToFailWith(
+            'Cannot use an analytic field in a measure declaration'
+          );
+        });
+        test('cannot use scalar in aggregate', () => {
+          expect('query: a -> { aggregate: s is 1}').compileToFailWith(
+            'Cannot use a scalar field in an aggregate operation, did you mean to use a group_by or project operation instead?'
+          );
+        });
+        test('cannot use analytic in aggregate', () => {
+          expect(
+            'query: a -> { aggregate: s is lag(count())}'
+          ).compileToFailWith(
+            'Cannot use an analytic field in an aggregate operation, did you mean to use a calculate operation instead?'
+          );
+        });
+        test('cannot use scalar in calculate', () => {
+          expect(
+            'query: a -> { group_by: a is 1; calculate: s is 1 }'
+          ).compileToFailWith(
+            'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or project operation instead?'
+          );
+        });
+        test('cannot use aggregate in calculate', () => {
+          expect(
+            'query: a -> { group_by: a is 1; calculate: s is count() }'
+          ).compileToFailWith(
+            'Cannot use an aggregate field in a calculate operation, did you mean to use an aggregate operation instead?'
+          );
+        });
+        test('cannot use aggregate in project', () => {
+          expect('query: a -> { project: s is count() }').compileToFailWith(
+            'Cannot use an aggregate field in a project operation, did you mean to use an aggregate operation instead?'
+          );
+        });
+        test('cannot use analytic in project', () => {
+          expect(
+            'query: a -> { project: s is row_number() }'
+          ).compileToFailWith(
+            'Cannot use an analytic field in a project operation, did you mean to use a calculate operation instead?'
+          );
+        });
+        test('cannot use analytic in declare', () => {
+          expect(
+            'query: a -> { group_by: a is 1; declare: s is row_number() }'
+          ).compileToFailWith(
+            'Analytic expressions can not be used in a declare block'
+          );
+        });
+        test('cannot use aggregate in index', () => {
+          expect(
+            'query: a { measure: acount is count() } -> { index: acount }'
+          ).compileToFailWith(
+            'Cannot use an aggregate field in an index operation'
+          );
+        });
+        test(
+          'can use aggregate in except',
+          modelOK(`
+            source: b1 is a { measure: acount is count() }
+            source: c1 is b1 { except: acount }
+          `)
+        );
+      });
+      describe('field references', () => {
+        test('cannot use aggregate in group_by', () => {
+          expect(
+            'query: a -> { declare: acount is count(); group_by: acount }'
+          ).compileToFailWith(
+            'Cannot use an aggregate field in a group_by operation, did you mean to use an aggregate operation instead?'
+          );
+        });
+        test('cannot use query in group_by', () => {
+          expect(
+            'query: a { query: q is { group_by: x is 1 } } -> { group_by: q }'
+          ).compileToFailWith(
+            'Cannot use a query field in a group_by operation, did you mean to use a nest operation instead?'
+          );
+        });
+        test('cannot use scalar in aggregate', () => {
+          expect(
+            'query: a -> { declare: aconst is 1; aggregate: aconst }'
+          ).compileToFailWith(
+            'Cannot use a scalar field in an aggregate operation, did you mean to use a group_by or project operation instead?'
+          );
+        });
+        test('cannot use scalar in calculate', () => {
+          expect(
+            'query: a -> { declare: aconst is 1; group_by: x is 1; calculate: aconst }'
+          ).compileToFailWith(
+            'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or project operation instead?'
+          );
+        });
+        test('cannot use aggregate in calculate', () => {
+          expect(
+            'query: a -> { declare: acount is count(); group_by: x is 1; calculate: acount }'
+          ).compileToFailWith(
+            'Cannot use an aggregate field in a calculate operation, did you mean to use an aggregate operation instead?'
+          );
+        });
+        test('cannot use query in project', () => {
+          expect(
+            'query: a { query: q is { group_by: x is 1 } } -> { project: q }'
+          ).compileToFailWith(
+            'Cannot use a query field in a project operation, did you mean to use a nest operation instead?'
+          );
+        });
+        test('cannot use query in index', () => {
+          expect(
+            'query: a { query: q is { group_by: x is 1 } } -> { index: q }'
+          ).compileToFailWith('Cannot use a query field in an index operation');
+        });
+        test('cannot use query in calculate', () => {
+          expect(
+            'query: a { query: q is { group_by: x is 1 } } -> { group_by: x is 1; calculate: q }'
+          ).compileToFailWith(
+            'Cannot use a query field in a calculate operation, did you mean to use a nest operation instead?'
+          );
+        });
+        test('cannot use query in aggregate', () => {
+          expect(
+            'query: a { query: q is { group_by: x is 1 } } -> { aggregate: q }'
+          ).compileToFailWith(
+            'Cannot use a query field in an aggregate operation, did you mean to use a nest operation instead?'
+          );
+        });
+        test('cannot use aggregate in calculate, preserved over refinement', () => {
+          expect(`query: a1 is a -> {
+            aggregate: c is count()
+          }
+          query: -> a1 {
+            calculate: b is c
+          }`).compileToFailWith(
+            'Cannot use an aggregate field in a calculate operation, did you mean to use an aggregate operation instead?'
+          );
+        });
+        test('cannot use scalar in calculate, preserved over refinement', () => {
+          expect(`query: a1 is a -> {
+            group_by: c is 1
+          }
+          query: -> a1 {
+            calculate: b is c
+          }`).compileToFailWith(
+            'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or project operation instead?'
+          );
+        });
+        test('cannot use analytic in group_by, preserved over refinement', () => {
+          expect(`query: a1 is a -> {
+            group_by: c is 1
+            calculate: c2 is lag(c)
+          }
+          query: -> a1 {
+            group_by: b is c2
+          }`).compileToFailWith(
+            // c2 is not defined because group_by doesn't know to look in the output space
+            "'c2' is not defined",
+            "Cannot define 'b', value has unknown type"
+          );
+        });
+        test('cannot use analytic in order_by, preserved over refinement', () => {
+          expect(`query: a1 is a -> {
+            group_by: c is 1
+            calculate: c2 is lag(c)
+          }
+          query: -> a1 {
+            order_by: c2
+          }`).compileToFailWith('Illegal order by of analytic field c2');
+        });
+        test('cannot ungroup an ungrouped', () => {
+          expect(`query: a1 is a -> {
+            group_by: c is 1
+            aggregate: c2 is all(all(sum(ai)))
+          }`).compileToFailWith(
+            'all() expression must not already be ungrouped',
+            "Cannot define 'c2', value has unknown type"
+          );
+        });
+        test('cannot aggregate an ungrouped', () => {
+          expect(`query: a1 is a -> {
+            group_by: c is 1
+            aggregate: c2 is sum(all(sum(ai)))
+          }`).compileToFailWith(
+            'Aggregate expression cannot be aggregate',
+            "Cannot define 'c2', value has unknown type"
+          );
+        });
+        test('cannot aggregate an aggregate', () => {
+          expect(`query: a1 is a -> {
+            group_by: c is 1
+            aggregate: c2 is sum(sum(ai))
+          }`).compileToFailWith(
+            'Aggregate expression cannot be aggregate',
+            "Cannot define 'c2', value has unknown type"
+          );
+        });
+        test(
+          'can use field def in group_by, preserved over refinement',
+          modelOK(`query: a1 is a -> {
+            group_by: c is 1
+          }
+          query: -> a1 {
+            order_by: c
+          }`)
+        );
+        test(
+          'can use field ref in group_by, preserved over refinement',
+          modelOK(`query: a1 is a -> {
+            group_by: c is astr
+          }
+          query: -> a1 {
+            order_by: c
+          }`)
+        );
+      });
+    });
+    describe('function typechecking', () => {
+      test(
+        'use function correctly',
+        modelOK(`query: a -> {
+          group_by: s is concat('a', 'b')
+        }`)
+      );
+      test('function no matching overload', () => {
+        expect(`query: a -> {
+          group_by: s is floor('a', 'b')
+        }`).compileToFailWith(
+          'No matching overload for function floor(string, string)',
+          "Cannot define 's', value has unknown type"
+        );
+      });
+      test('unknown function', () => {
+        expect(`query: a -> {
+          group_by: s is asdfasdf()
+        }`).compileToFailWith(
+          "Unknown function 'asdfasdf'. Use 'asdfasdf!(...)' to call a SQL function directly.",
+          "Cannot define 's', value has unknown type"
+        );
+      });
+      test(
+        'can select different overload',
+        modelOK('query: a -> { group_by: s is concat() }')
+      );
+      test(
+        'can pass different expression types',
+        modelOK(`query: a -> {
+          group_by: f1 is sqrt(1)
+          aggregate: f2 is sqrt(count())
+          aggregate: f3 is sqrt(all(count()))
+          calculate: f4 is sqrt(lag(f1))
+          calculate: f5 is sqrt(lag(count()))
+        }`)
+      );
+      test(
+        'function return type correct',
+        modelOK(`query: a -> {
+          group_by: s is floor(1.2) + 1
+        }`)
+      );
+      test('function return type incorrect', () => {
+        expect(`query: a -> {
+            group_by: s is floor(1.2) + 'a'
+        }`).compileToFailWith(
+          "Non numeric('number,string') value with '+'",
+          "Cannot define 's', value has unknown type"
+        );
+      });
+      test(
+        'can use output value in calculate',
+        modelOK(`query: a -> {
+          group_by: x is 1
+          calculate: s is lag(x)
+        }`)
+      );
+      test('cannot use output value in group_by', () => {
+        expect(`query: a -> {
+          group_by: x is 1
+          group_by: y is x
+        }`).compileToFailWith(
+          "'x' is not defined",
+          "Cannot define 'y', value has unknown type"
+        );
+      });
+      test('lag can check that other args are constant', () => {
+        expect(`query: a -> {
+          group_by: x is 1
+          calculate: s is lag(x, 1, x)
+        }`).compileToFailWith(
+          // TODO improve this error message
+          "Parameter 3 ('default') of lag must be literal or constant, but received output"
+        );
+      });
+      test('lag can check that other args are literal', () => {
+        expect(`query: a -> {
+          group_by: x is 1
+          calculate: s is lag(x, 1 + 1)
+        }`).compileToFailWith(
+          // TODO improve this error message
+          "Parameter 2 ('offset') of lag must be literal, but received constant"
+        );
+      });
+      test('lag can check that other args are nonnull', () => {
+        expect(`query: a -> {
+          group_by: x is 1
+          calculate: s is lag(x, null)
+        }`).compileToFailWith(
+          "Parameter 2 ('offset') of lag must not be a literal null"
+        );
+      });
+      test(
+        'lag can use constant values for other args',
+        modelOK(`query: a -> {
+          group_by: x is 1
+          calculate: s is lag(x, 2)
+        }`)
+      );
+      test('cannot name top level objects same as functions', () => {
+        expect(
+          markSource`query: ${'concat is a -> { group_by: x is 1 }'}`
+        ).compileToFailWith(
+          // TODO improve this error message
+          "'concat' is already defined, cannot redefine"
+        );
+      });
+      test(
+        '`now` is considered constant`',
+        modelOK(`query: a -> {
+          group_by: n is now
+          calculate: l is lag(n, 1, now)
+        }`)
+      );
+      // TODO it might be nice to reference a field which is a constant, and be able to
+      // use that as a constant param. Same with a literal.
+      test('cannot use a field which is a constant in a constant param', () => {
+        expect(
+          `query: a -> {
+            group_by: ai, pi is pi()
+            calculate: l is lag(ai, 1, pi)
+          }`
+        ).compileToFailWith(
+          "Parameter 3 ('default') of lag must be literal or constant, but received output"
+        );
+      });
+      // TODO we don't handle referencing a join as a field correctly in all cases today.
+      // For now, it at least is considered type `struct` and therefore fails to parse
+      // as a function argument.
+      // We add <join_name>_id to the query, but it's not included in the output space
+      test('cannot use struct in function arg', () => {
+        expect(
+          `query: a {join_one: b with astr } -> {
+            group_by: b
+            calculate: foo is lag(b)
+          }`
+        ).compileToFailWith(
+          'No matching overload for function lag(struct)',
+          "Cannot define 'foo', value has unknown type"
+        );
+      });
+      // TODO this doesn't work today, we're not rigorous enough with integer
+      // subtypes. But we should probably make this typecheck properly.
+      test.skip('cannot use float in round precision', () => {
+        expect(`query: a -> {
+          group_by: x is round(1.5, 1.6)
+        }`).compileToFailWith(
+          // TODO improve this error message
+          "Parameter 2 ('precision') for round must be integer, received float"
+        );
+      });
+      test('cannot use stddev with no arguments', () => {
+        expect(`query: a -> {
+          aggregate: x is stddev()
+        }`).compileToFailWith(
+          'No matching overload for function stddev()',
+          "Cannot define 'x', value has unknown type"
+        );
+      });
+      test(
+        'can use stddev with postfix syntax',
+        modelOK(`query: a -> {
+          declare: y is 1
+          aggregate: x is y.stddev()
+        }`)
+      );
+      test(
+        'can use stddev with postfix syntax on join',
+        modelOK(`query: a -> {
+          join_one: b with astr
+          aggregate: x is b.ai.stddev()
+        }`)
+      );
+      test(
+        'can use calculate with a measure',
+        modelOK(`query: a { measure: c is count() } -> {
+          group_by: y is 1
+          calculate: x is lag(c)
+        }`)
+      );
+      test('cannot use calculate with input fields', () => {
+        expect(`query: a -> {
+          group_by: y is 1
+          calculate: x is lag(ai)
+        }`).compileToFailWith(
+          // TODO improve this error message:
+          // Parameter 1 ('value') of 'lag' must be a constant, an aggregate, or an expression using
+          // only fields that appear in the query output. Received an expression which uses a field
+          // that is not in the query output.
+          "Parameter 1 ('value') of lag must be literal, constant or output, but received input"
+        );
+      });
+      test(
+        'can use calculate with aggregate field which is not in query',
+        modelOK(`query: a { measure: acount is count() } -> {
+          group_by: astr
+          calculate: pc is lag(acount)
+        }`)
+      );
+      test('cannot use agregate as argument to agg function', () => {
+        expect(`query: a -> {
+          aggregate: x is stddev(count())
+        }`).compileToFailWith(
+          "Parameter 1 ('value') of stddev must be scalar, but received aggregate"
+        );
+      });
+      test('cannot use calculate with no other fields', () => {
+        expect(`query: a -> {
+          calculate: x is row_number()
+        }`).compileToFailWith(
+          "Can't determine query type (group_by/aggregate/nest,project,index)"
+        );
+      });
+      // TODO someday make it so we can order by an analytic function
+      test('today: cannot order by analytic function', () => {
+        expect(`query: a -> {
+          group_by: astr
+          calculate: row_num is row_number()
+          order_by: row_num desc
+        }`).compileToFailWith('Illegal order by of analytic field row_num');
+      });
+      test('cannot use analytic in calculate -- and preserved over refinement', () => {
+        expect(`query: a1 is a -> {
+          group_by: astr
+          calculate: p is lag(astr)
+        }
+        query: -> a1 {
+          calculate: p1 is lag(p)
+        }`).compileToFailWith(
+          "Parameter 1 ('value') of lag must be scalar or aggregate, but received scalar_analytic"
+        );
+      });
+      test('cannot use aggregate analytic in project', () => {
+        expect(`query: a -> {
+          project: astr
+          calculate: p is lag(count())
+        }`).compileToFailWith('Cannot add aggregate analyics to project');
+      });
+      test(
+        'reference field in join',
+        modelOK(`query: a -> {
+          join_one: b with astr
+          group_by: b.ai
+        }`)
+      );
+      // TODO decide whether this syntax should be legal, really...
+      test(
+        'reference join name in group_by',
+        modelOK(`query: a -> {
+          join_one: b with astr
+          group_by: b
+        }`)
+      );
+      test(
+        'can reference project: inline join.* field in calculate',
+        modelOK(`query: a -> {
+          join_one: b with astr
+          project: b.*
+          calculate: s is lag(ai)
+        }`)
+      );
+      test(
+        'can reference project: join.* field in calculate',
+        modelOK(`query: a { join_one: b with astr } -> {
+          project: b.*
+          calculate: s is lag(ai)
+        }`)
+      );
+    });
   });
   test('errors on redefinition of query', () => {
     expect(
       'query: q1 is a -> { project: * }, q1 is a -> { project: * }'
-    ).compileToFailWith("Query 'q1' is already defined, cannot redefine");
+    ).compileToFailWith("'q1' is already defined, cannot redefine");
   });
 });
 
@@ -333,7 +868,7 @@ describe('source properties', () => {
     'multiple measures',
     modelOK(`
       source: aa is a {
-        dimension:
+        measure:
           x is count()
           y is x * x
       }
@@ -533,20 +1068,35 @@ describe('qops', () => {
   });
   test('index sample-rows', modelOK('query:a->{index: *; sample: 100000}'));
   test('top N', modelOK('query: a->{ top: 5; group_by: astr }'));
-  test('top N by field', modelOK('query: a->{top: 5 by af; group_by: astr}'));
+  test('top N by field', modelOK('query: a->{top: 5 by astr; group_by: astr}'));
   test(
     'top N by expression',
-    modelOK('query: ab->{top: 5 by acount; group_by: astr}')
+    modelOK('query: ab->{top: 5 by ai + 1; group_by: ai}')
   );
+  test('top N by field must be in the output space', () =>
+    expect('query: a->{top: 5 by af; group_by: astr}').compileToFailWith(
+      'Unknown field af in output space'
+    ));
   test('limit N', modelOK('query: a->{ limit: 5; group_by: astr }'));
-  test('order by', modelOK('query: a->{ order_by: af; group_by: astr }'));
+  test('order by', modelOK('query: a->{ order_by: astr; group_by: astr }'));
+  test(
+    'order by preserved over refinement',
+    modelOK(`
+      query: a1 is a -> { group_by: astr }
+      query: -> a1 { order_by: astr }
+    `)
+  );
+  test('order by must be in the output space', () =>
+    expect('query: a -> { order_by: af; group_by: astr }').compileToFailWith(
+      'Unknown field af in output space'
+    ));
   test(
     'order by asc',
-    modelOK('query: a->{ order_by: af asc; group_by: astr }')
+    modelOK('query: a->{ order_by: astr asc; group_by: astr }')
   );
   test(
     'order by desc',
-    modelOK('query: a->{ order_by: af desc; group_by: astr }')
+    modelOK('query: a->{ order_by: astr desc; group_by: astr }')
   );
   test('order by N', modelOK('query: a->{ order_by: 1 asc; group_by: astr }'));
   test(
@@ -820,7 +1370,7 @@ describe('expressions', () => {
   });
 
   test('field name', exprOK('astr'));
-  test('function call', exprOK('CURRENT_TIMESTAMP()'));
+  test('function call', exprOK("concat('foo')"));
 
   describe('operators', () => {
     test('addition', exprOK('42 + 7'));
@@ -873,9 +1423,28 @@ describe('expressions', () => {
   });
 
   test('filtered measure', exprOK("acount {? astr = 'why?' }"));
+  test(
+    'filtered ungrouped aggregate',
+    modelOK(`
+        query: a -> {
+          group_by: ai
+          aggregate: x is all(avg(ai)) { where: true }
+        }
+      `)
+  );
   test('correctly flags filtered scalar', () => {
     const e = new BetaExpression('ai { where: true }');
     expect(e).compileToFailWith(
+      'Filtered expression requires an aggregate computation'
+    );
+  });
+  test('correctly flags filtered analytic', () => {
+    expect(markSource`
+        query: a -> {
+          group_by: ai
+          calculate: l is lag(ai) { where: true }
+        }
+      `).compileToFailWith(
       'Filtered expression requires an aggregate computation'
     );
   });
@@ -1040,12 +1609,37 @@ describe('expressions', () => {
         x.type === 'number' &&
         x.e
       ) {
-        const firstFrag = x.e[0];
-        if (typeof firstFrag === 'string') {
-          expect(firstFrag).toContain('(');
-        } else {
-          fail('expression with parens compiled oddly');
-        }
+        expect(x).toMatchObject({
+          'e': [
+            {
+              'function': 'numberLiteral',
+              'literal': '1',
+              'type': 'dialect',
+            },
+            // TODO not sure why there are TWO sets of parentheses... A previous version of this test
+            // just checked that there were ANY parens, so that went under the radar. Not fixing now.
+            '+((',
+            {
+              'denominator': [
+                {
+                  'function': 'numberLiteral',
+                  'literal': '4',
+                  'type': 'dialect',
+                },
+              ],
+              'function': 'div',
+              'numerator': [
+                {
+                  'function': 'numberLiteral',
+                  'literal': '3',
+                  'type': 'dialect',
+                },
+              ],
+              'type': 'dialect',
+            },
+            '))',
+          ],
+        });
       } else {
         fail('expression with parens compiled oddly');
       }
@@ -1343,7 +1937,7 @@ describe('source locations', () => {
       source: na is a {
         measure: y is count()
         query: x is {
-          group_by: ${'z is y { where: true }'}
+          aggregate: ${'z is y { where: true }'}
         }
       }`;
 
@@ -2184,8 +2778,8 @@ describe('pipeline comprehension', () => {
   });
 });
 
-describe('standard sql function return types', () => {
+describe('raw function call with type specified', () => {
   test('timestamp_seconds', () => {
-    expect('timestamp_seconds(0)').toReturnType('timestamp');
+    expect('timestamp_seconds!timestamp(0)').toReturnType('timestamp');
   });
 });

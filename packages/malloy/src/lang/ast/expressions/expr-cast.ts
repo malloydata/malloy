@@ -50,6 +50,7 @@ export class ExprCast extends ExpressionDef {
       value: compressExpr(
         castTo(this.castType, expr.value, expr.dataType, this.safe)
       ),
+      evalSpace: expr.evalSpace,
     };
   }
 }

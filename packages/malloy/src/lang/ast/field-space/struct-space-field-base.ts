@@ -21,10 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDef, StructDef} from '../../../model/malloy_types';
+import {FieldDef, StructDef, TypeDesc} from '../../../model/malloy_types';
 import {FieldSpace} from '../types/field-space';
 import {SpaceField} from '../types/space-field';
-import {TypeDesc} from '../types/type-desc';
 
 export abstract class StructSpaceFieldBase extends SpaceField {
   constructor(protected sourceDef: StructDef) {
@@ -38,6 +37,6 @@ export abstract class StructSpaceFieldBase extends SpaceField {
   }
 
   typeDesc(): TypeDesc {
-    return {dataType: 'struct', expressionType: 'scalar'};
+    return {dataType: 'struct', expressionType: 'scalar', evalSpace: 'input'};
   }
 }

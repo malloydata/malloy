@@ -29,7 +29,7 @@ export class HTMLTextRenderer implements Renderer {
   constructor(private readonly document: Document) {}
 
   getText(data: DataColumn): string | null {
-    return `${data.value}`;
+    return data.value === null ? null : `${data.value}`;
   }
 
   async render(data: DataColumn): Promise<HTMLElement> {
