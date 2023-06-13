@@ -66,15 +66,15 @@ describe('Multi-connection', () => {
   });
 
   const expressionModelText = `
-explore: default_aircraft is table('malloytest.aircraft'){
+source: default_aircraft is table('malloytest.aircraft'){
   measure: aircraft_count is count(DISTINCT tail_num)
 }
 
-explore: bigquery_state_facts is table('malloytest.state_facts'){
+source: bigquery_state_facts is table('malloytest.state_facts'){
   measure: state_count is count(DISTINCT state)+2
 }
 
-explore: postgres_aircraft is table('postgres:malloytest.aircraft'){
+source: postgres_aircraft is table('postgres:malloytest.aircraft'){
   measure: aircraft_count is count(DISTINCT tail_num)+4
 }
 `;

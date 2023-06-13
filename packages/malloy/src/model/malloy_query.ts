@@ -330,16 +330,20 @@ class QueryField extends QueryNode {
     // find the structDef and return the path to the field...
     const field = context.getFieldByName(expr.path) as QueryField;
     if (hasExpression(field.fieldDef)) {
-      let ret = this.generateExpressionFromExpr(
+      const ret = this.generateExpressionFromExpr(
         resultSet,
         field.parent,
         field.fieldDef.e,
         state
       );
-      if (!ret.match(/^\(.*\)$/)) {
-        ret = `(${ret})`;
-      }
-      return ret;
+      // in order to avoid too many parens, there was some code here ..
+      // if (!ret.match(/^\(.*\)$/)) {
+      //   ret = `(${ret})`;
+      // }
+      // but this  failed when the expresion was (bool1)or(bool2)
+      // there could maybe be a smarter parse of the expression to avoid
+      // an extra paren, but correctness first, beauty AND correctness later
+      return `(${ret})`;
     } else {
       // return field.parent.getIdentifier() + "." + field.fieldDef.name;
       return field.generateExpression(resultSet);
@@ -1809,12 +1813,12 @@ export class QueryQuery extends QueryField {
           while (path.length > 0 && (pathElementName = path.shift())) {
             const structNode = struct.getChildByName(pathElementName);
             if (structNode === undefined) {
-              throw new Error(`Nested explore not found '${pathElementName}'`);
+              throw new Error(`Nested source not found '${pathElementName}'`);
             }
             if (structNode instanceof QueryStruct) {
               struct = structNode;
             } else {
-              throw new Error(`'${pathElementName}' is not an explore object`);
+              throw new Error(`'${pathElementName}' is not a source object`);
             }
           }
           ret = ret.concat(
@@ -2278,7 +2282,8 @@ export class QueryQuery extends QueryField {
     let structSQL = qs.structSourceSQL(stageWriter);
     if (isJoinOn(structRelationship)) {
       if (ji.makeUniqueKey) {
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL} as x)`;
+        const passKeys = this.generateSQLPassthroughKeys(qs);
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * ${passKeys} FROM ${structSQL} as x)`;
       }
       let onCondition = '';
       if (qs.parent === undefined) {
@@ -2370,6 +2375,26 @@ export class QueryQuery extends QueryField {
     return s;
   }
 
+  // BigQuery has wildcard psudo columns that are treated differently
+  //  SELECT * FROM xxx doesn't include these psuedo columns but we need them so
+  //  filters can get pushed down properly when generating a UNIQUE key.
+  //  No other dialect really needs this so we are coding here but maybe someday
+  //  this makes its way into the dialect.
+  generateSQLPassthroughKeys(qs: QueryStruct): string {
+    let ret = '';
+    if (qs.dialect.name === 'standardsql') {
+      const psudoCols = [
+        '_TABLE_SUFFIX',
+        '_PARTITIONDATE',
+        '_PARTITIONTIME',
+      ].filter(element => qs.getChildByName(element) !== undefined);
+      if (psudoCols.length > 0) {
+        ret = ', ' + psudoCols.join(', ');
+      }
+    }
+    return ret;
+  }
+
   generateSQLJoins(stageWriter: StageWriter): string {
     let s = '';
     // get the first value from the map (weird, I know)
@@ -2391,7 +2416,8 @@ export class QueryQuery extends QueryField {
     const structRelationship = qs.fieldDef.structRelationship;
     if (structRelationship.type === 'basetable') {
       if (ji.makeUniqueKey) {
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * FROM ${structSQL} as x)`;
+        const passKeys = this.generateSQLPassthroughKeys(qs);
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * ${passKeys} FROM ${structSQL} as x)`;
       }
       s += `FROM ${structSQL} as ${this.parent.getIdentifier()}\n`;
     } else {

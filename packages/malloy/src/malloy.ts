@@ -627,7 +627,7 @@ export class Model {
    */
   public getPreparedQueryByName(queryName: string): PreparedQuery {
     const query = this.modelDef.contents[queryName];
-    if (query.type === 'query') {
+    if (query?.type === 'query') {
       return new PreparedQuery(query, this.modelDef, queryName);
     }
 
@@ -1843,7 +1843,7 @@ export class ExploreField extends Explore {
       case 'nested':
         return JoinRelationship.ManyToOne;
       default:
-        throw new Error('An explore field must have a join relationship.');
+        throw new Error('A source field must have a join relationship.');
     }
   }
 

@@ -34,12 +34,7 @@ malloyStatement
   ;
 
 defineSourceStatement
-  : exploreKeyword sourcePropertyList
-  ;
-
-exploreKeyword
-  : EXPLORE
-  | SOURCE
+  : SOURCE sourcePropertyList
   ;
 
 defineQuery
