@@ -32,6 +32,7 @@ malloyStatement
   | defineQuery
   | importStatement
   | docAnnotations
+  | ignoredObjectAnnotations
   ;
 
 defineSourceStatement
@@ -85,7 +86,15 @@ importURL
   ;
 
 docAnnotations
+  : DOC_ANNOTATION+
+  ;
+
+ignoredObjectAnnotations
   : ANNOTATION+
+  ;
+
+ignoredModelAnnotations
+  : DOC_ANNOTATION+
   ;
 
 topLevelQueryDefs
@@ -171,6 +180,7 @@ exploreStatement
   | tags QUERY subQueryDefList         # defExploreQuery
   | timezoneStatement                  # defExploreTimezone
   | ANNOTATION+                        # defExploreAnnotation
+  | ignoredModelAnnotations            # defIgnoreModel_stub
   ;
 
 renameList
@@ -266,6 +276,7 @@ queryStatement
   | sampleStatement
   | timezoneStatement
   | queryAnnotation
+  | ignoredModelAnnotations
   ;
 
 groupByStatement

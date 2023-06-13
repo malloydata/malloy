@@ -1028,6 +1028,7 @@ export interface ModelDef {
   name: string;
   exports: string[];
   contents: Record<string, NamedModelObject>;
+  annotation?: Annotation;
 }
 
 /** Very common record type */

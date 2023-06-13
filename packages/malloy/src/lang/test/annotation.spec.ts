@@ -60,12 +60,12 @@ describe('document annotation', () => {
     const note_a = m.getSourceDef('note_a');
     expect(note_a).toBeDefined();
     if (note_a) {
-      expect(note_a.annotation).toMatchObject(defaultTags);
+      expect(note_a.annotation).toEqual(defaultTags);
     }
     const note_b = m.getSourceDef('note_b');
     expect(note_b).toBeDefined();
     if (note_b) {
-      expect(note_b.annotation).toMatchObject({
+      expect(note_b.annotation).toEqual({
         blockNotes: defaultTags.blockNotes,
         notes: ['# note1\n'],
       });
@@ -81,7 +81,7 @@ describe('document annotation', () => {
     const note_a = m.getSourceDef('note_a');
     expect(note_a).toBeDefined();
     if (note_a) {
-      expect(note_a.annotation).toMatchObject({
+      expect(note_a.annotation).toEqual({
         blockNotes: ['# note1\n', '# note1.1\n'],
       });
     }
@@ -97,7 +97,7 @@ describe('document annotation', () => {
     const note_a = m.getSourceDef('note_a');
     expect(note_a).toBeDefined();
     if (note_a) {
-      expect(note_a.annotation).toMatchObject({
+      expect(note_a.annotation).toEqual({
         inherits: {blockNotes: ['# note0\n']},
         blockNotes: ['# note1\n'],
       });
@@ -118,7 +118,7 @@ describe('document annotation', () => {
     const note_a = m.getQuery('note_a');
     expect(note_a).toBeDefined();
     if (note_a) {
-      expect(note_a.annotation).toMatchObject(defaultTags);
+      expect(note_a.annotation).toEqual(defaultTags);
     }
   });
   test('anonymous query annotation points', () => {
@@ -130,7 +130,7 @@ describe('document annotation', () => {
     const note_a = m.getQuery(0);
     expect(note_a).toBeDefined();
     if (note_a) {
-      expect(note_a.annotation).toMatchObject({blockNotes: ['# note1\n']});
+      expect(note_a.annotation).toEqual({blockNotes: ['# note1\n']});
     }
   });
   test('multi line query annotation', () => {
@@ -143,7 +143,7 @@ describe('document annotation', () => {
     const note_a = m.getQuery('note_a');
     expect(note_a).toBeDefined();
     if (note_a) {
-      expect(note_a.annotation).toMatchObject({
+      expect(note_a.annotation).toEqual({
         blockNotes: ['# note1\n', '# note2\n'],
       });
     }
@@ -161,7 +161,7 @@ describe('document annotation', () => {
     const note_a = m.getQuery('note_a');
     expect(note_a).toBeDefined();
     if (note_a) {
-      expect(note_a.annotation).toMatchObject({
+      expect(note_a.annotation).toEqual({
         inherits: {blockNotes: ['# noteb0\n'], notes: ['# noteb1\n']},
         blockNotes: ['# note1\n'],
       });
@@ -175,7 +175,25 @@ describe('document annotation', () => {
     expect(m).modelCompiled();
     const note_a = m.getQuery(0);
     expect(note_a?.annotation).toBeDefined();
-    expect(note_a?.annotation).toMatchObject({inherits: defaultTags});
+    expect(note_a?.annotation).toEqual({inherits: defaultTags});
+  });
+  test('model annotations', () => {
+    const m = new TestTranslator(`
+      ## model1
+      ## model2
+    `);
+    expect(m).modelCompiled();
+    const model = m.translate()?.translated;
+    expect(model).toBeDefined();
+    const notes = model?.modelDef.annotation;
+    expect(notes).toEqual({notes: ['## model1\n', '## model2\n']});
+  });
+  test('ignores objectless object annotations', () => {
+    const m = new TestTranslator(`
+      # note1
+      ## model1
+    `);
+    expect(m).modelCompiled();
   });
 });
 describe('source definition annotations', () => {
@@ -187,7 +205,7 @@ describe('source definition annotations', () => {
     if (na) {
       const note_a = getFieldDef(na, 'note_a');
       expect(note_a).toBeDefined();
-      expect(note_a.annotation).toMatchObject(defaultTags);
+      expect(note_a.annotation).toEqual(defaultTags);
     }
   });
   test('refined turtle inherits annotation', () => {
@@ -203,7 +221,7 @@ describe('source definition annotations', () => {
     if (na) {
       const note_a = getFieldDef(na, 'new_note_a');
       expect(note_a?.annotation).toBeDefined();
-      expect(note_a.annotation).toMatchObject({inherits: defaultTags});
+      expect(note_a.annotation).toEqual({inherits: defaultTags});
     }
   });
   test('dimension block annotation', () => {
@@ -224,7 +242,7 @@ describe('source definition annotations', () => {
     expect(na).toBeDefined();
     if (na) {
       const note_a = getFieldDef(na, 'note_a');
-      expect(note_a?.annotation).toMatchObject(defaultTags);
+      expect(note_a?.annotation).toEqual(defaultTags);
     }
   });
   test('measure block annotation', () => {
@@ -245,7 +263,7 @@ describe('source definition annotations', () => {
     expect(na).toBeDefined();
     if (na) {
       const note_a = getFieldDef(na, 'note_a');
-      expect(note_a?.annotation).toMatchObject(defaultTags);
+      expect(note_a?.annotation).toEqual(defaultTags);
     }
   });
   test('join_one-with block annotation', () => {
@@ -266,7 +284,7 @@ describe('source definition annotations', () => {
     expect(na).toBeDefined();
     if (na) {
       const note_a = getFieldDef(na, 'note_a');
-      expect(note_a?.annotation).toMatchObject(defaultTags);
+      expect(note_a?.annotation).toEqual(defaultTags);
     }
   });
   test('join_many-on block annotation', () => {
@@ -287,11 +305,28 @@ describe('source definition annotations', () => {
     expect(na).toBeDefined();
     if (na) {
       const note_a = getFieldDef(na, 'note_a');
-      expect(note_a?.annotation).toMatchObject(defaultTags);
+      expect(note_a?.annotation).toEqual(defaultTags);
     }
+  });
+  test('ignores model annotation', () => {
+    const m = new TestTranslator(`
+      source: na is a {
+        ## model1
+      }
+    `);
+    expect(m).modelCompiled();
   });
 });
 describe('query operation annotations', () => {
+  test('ignores model annotation', () => {
+    const m = new TestTranslator(`
+      query: a -> {
+        ## model1
+        project: *
+      }
+    `);
+    expect(m).modelCompiled();
+  });
   test('project new definition annotation', () => {
     const m = new TestTranslator(`
       query: findme is a -> {
@@ -310,7 +345,7 @@ describe('query operation annotations', () => {
     expect(foundYou).toBeDefined();
     if (foundYou) {
       const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
-      expect(note_a?.annotation).toMatchObject(defaultTags);
+      expect(note_a?.annotation).toEqual(defaultTags);
     }
   });
   test.skip('project ref inherits annotation', () => {
@@ -336,7 +371,7 @@ describe('query operation annotations', () => {
     expect(foundYou).toBeDefined();
     if (foundYou) {
       const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
-      expect(note_a?.annotation).toMatchObject({
+      expect(note_a?.annotation).toEqual({
         inherits: defaultTags,
         blockNotes: ['# note1'],
         notes: ['# note2'],
@@ -361,7 +396,29 @@ describe('query operation annotations', () => {
     expect(foundYou).toBeDefined();
     if (foundYou) {
       const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
-      expect(note_a?.annotation).toMatchObject(defaultTags);
+      expect(note_a?.annotation).toEqual(defaultTags);
+    }
+  });
+  test('caculate def', () => {
+    const m = new TestTranslator(`
+      query: findme is a -> {
+        group_by: astr, ai
+        # blockNote
+        calculate:
+          # note
+          note_a
+          # b4-is
+          is
+          # after-is
+          lag(ai)
+      }
+    `);
+    expect(m).modelCompiled();
+    const foundYou = m.getQuery('findme');
+    expect(foundYou).toBeDefined();
+    if (foundYou) {
+      const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
+      expect(note_a?.annotation).toEqual(defaultTags);
     }
   });
   test.skip('group_by ref inherits', () => {
@@ -388,7 +445,7 @@ describe('query operation annotations', () => {
     expect(foundYou).toBeDefined();
     if (foundYou) {
       const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
-      expect(note_a?.annotation).toMatchObject({
+      expect(note_a?.annotation).toEqual({
         inherits: defaultTags,
         notes: ['# note1\n', '# note2\n'],
       });
@@ -412,7 +469,7 @@ describe('query operation annotations', () => {
     expect(foundYou).toBeDefined();
     if (foundYou) {
       const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
-      expect(note_a?.annotation).toMatchObject(defaultTags);
+      expect(note_a?.annotation).toEqual(defaultTags);
     }
   });
   test.skip('aggregate ref inherits', () => {
@@ -439,7 +496,7 @@ describe('query operation annotations', () => {
     expect(foundYou).toBeDefined();
     if (foundYou) {
       const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
-      expect(note_a?.annotation).toMatchObject({
+      expect(note_a?.annotation).toEqual({
         inherits: defaultTags,
         notes: ['# note1\n', '# note2\n'],
       });
@@ -463,7 +520,7 @@ describe('query operation annotations', () => {
     expect(foundYou).toBeDefined();
     if (foundYou) {
       const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
-      expect(note_a?.annotation).toMatchObject(defaultTags);
+      expect(note_a?.annotation).toEqual(defaultTags);
     }
   });
   test('nest from existing inherits annotation', () => {
@@ -478,7 +535,7 @@ describe('query operation annotations', () => {
     expect(foundYou).toBeDefined();
     if (foundYou) {
       const note_b = getFieldDef(foundYou.pipeline[0], 'note_b');
-      expect(note_b?.annotation).toMatchObject({inherits: defaultTags});
+      expect(note_b?.annotation).toEqual({inherits: defaultTags});
     }
   });
   test.todo('use api to run the tests below');
@@ -487,21 +544,21 @@ describe('query operation annotations', () => {
   //     const a = new ObjectAnnotation.make('#" This is a doc string');
   //     expect(a).toBeDefined();
   //     if (a) {
-  //       expect(a.annote).toMatchObject({docString: 'This is a doc string'});
+  //       expect(a.annote).toEqual({docString: 'This is a doc string'});
   //     }
   //   });
   //   test('simple property', () => {
   //     const a = ObjectAnnotation.make('# linechart');
   //     expect(a).toBeDefined();
   //     if (a) {
-  //       expect(a.annote).toMatchObject({properties: {linechart: true}});
+  //       expect(a.annote).toEqual({properties: {linechart: true}});
   //     }
   //   });
   //   test('simple quoted property', () => {
   //     const a = ObjectAnnotation.make('# "linechart"');
   //     expect(a).toBeDefined();
   //     if (a) {
-  //       expect(a.annote).toMatchObject({properties: {linechart: true}});
+  //       expect(a.annote).toEqual({properties: {linechart: true}});
   //     }
   //   });
   //   test('quoted property with " and space', () => {
@@ -509,35 +566,35 @@ describe('query operation annotations', () => {
   //     const a = ObjectAnnotation.make(annotation);
   //     expect(a).toBeDefined();
   //     if (a) {
-  //       expect(a.annote).toMatchObject({properties: {'a \\"chart\\"': true}});
+  //       expect(a.annote).toEqual({properties: {'a \\"chart\\"': true}});
   //     }
   //   });
   //   test('quoted property with value', () => {
   //     const a = ObjectAnnotation.make('# "linechart"=yes');
   //     expect(a).toBeDefined();
   //     if (a) {
-  //       expect(a.annote).toMatchObject({properties: {linechart: 'yes'}});
+  //       expect(a.annote).toEqual({properties: {linechart: 'yes'}});
   //     }
   //   });
   //   test('property with simple value', () => {
   //     const a = ObjectAnnotation.make('# chart=line');
   //     expect(a).toBeDefined();
   //     if (a) {
-  //       expect(a.annote).toMatchObject({properties: {chart: 'line'}});
+  //       expect(a.annote).toEqual({properties: {chart: 'line'}});
   //     }
   //   });
   //   test('property with quoted value', () => {
   //     const a = ObjectAnnotation.make('# chart="line"');
   //     expect(a).toBeDefined();
   //     if (a) {
-  //       expect(a.annote).toMatchObject({properties: {chart: 'line'}});
+  //       expect(a.annote).toEqual({properties: {chart: 'line'}});
   //     }
   //   });
   //   test('spaces ignored', () => {
   //     const a = ObjectAnnotation.make('#     chart =  line ');
   //     expect(a).toBeDefined();
   //     if (a) {
-  //       expect(a.annote).toMatchObject({properties: {chart: 'line'}});
+  //       expect(a.annote).toEqual({properties: {chart: 'line'}});
   //     }
   //   });
   //   test('= with no value', () => {
@@ -556,7 +613,7 @@ describe('query operation annotations', () => {
   //     const a = ObjectAnnotation.make('# a b=c "d"=e f="g" "h"="i" "j"');
   //     expect(a).toBeDefined();
   //     if (a) {
-  //       expect(a.annote).toMatchObject({
+  //       expect(a.annote).toEqual({
   //         properties: {
   //           a: true,
   //           b: 'c',

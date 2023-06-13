@@ -387,6 +387,7 @@ export class Document extends MalloyElement implements NameSpace {
   sqlBlocks: SQLBlockStructDef[] = [];
   statements: RunList;
   didInitModel = false;
+  notes: string[] = [];
 
   constructor(statements: DocStatement[]) {
     super();
@@ -439,6 +440,9 @@ export class Document extends MalloyElement implements NameSpace {
         def.contents[entry] = cloneDeep(entryDef);
       }
     }
+    if (this.notes.length > 0) {
+      def.annotation = {notes: this.notes};
+    }
     return def;
   }
 
@@ -479,11 +483,11 @@ export class ObjectAnnotation extends MalloyElement {
   }
 }
 
-export class DocAnnotation extends ObjectAnnotation implements DocStatement {
-  elementType = 'model element annotation';
+export class ModelAnnotation extends ObjectAnnotation implements DocStatement {
+  elementType = 'modelAnnotation';
 
-  execute(_doc: Document): ModelDataRequest {
-    // A note which no element wants, we accept and ignore them
+  execute(doc: Document): ModelDataRequest {
+    doc.notes = doc.notes.concat(this.notes);
     return;
   }
 }
