@@ -31,17 +31,17 @@ import {databasesFromEnvironmentOr} from '../../util';
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 const expressionModelText = `
-explore: aircraft_models is table('malloytest.aircraft_models'){
+source: aircraft_models is table('malloytest.aircraft_models'){
   primary_key: aircraft_model_code
 }
 
-explore: aircraft is table('malloytest.aircraft'){
+source: aircraft is table('malloytest.aircraft'){
   primary_key: tail_num
   join_one: aircraft_models with aircraft_model_code
   measure: aircraft_count is count()
 }
 
-explore: airports is table('malloytest.airports') {}
+source: airports is table('malloytest.airports') {}
 
 source: state_facts is table('malloytest.state_facts') {}
 `;
@@ -310,6 +310,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
         }`
         )
         .run();
+      console.log(result.sql);
       expect(result.data.path(0, 'row_num').value).toBe(1);
       expect(result.data.path(1, 'row_num').value).toBe(2);
     });
