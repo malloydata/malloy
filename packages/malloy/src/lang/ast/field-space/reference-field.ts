@@ -37,17 +37,21 @@ import {SpaceField} from '../types/space-field';
 
 export class ReferenceField extends SpaceField {
   res?: SpaceEntry;
+  private queryFieldDef?: QueryFieldDef;
   constructor(readonly fieldRef: FieldReference) {
     super();
   }
 
   getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined {
-    const check = this.fieldRef.getField(fs);
-    if (check.error) {
-      this.fieldRef.log(check.error);
+    if (!this.queryFieldDef) {
+      const check = this.fieldRef.getField(fs);
+      if (check.error) {
+        this.fieldRef.log(check.error);
+      }
+      this.res = check.found;
+      this.queryFieldDef = this.maybeAnnotate();
     }
-    this.res = check.found;
-    return this.annotate(this.fieldRef.refString, this.fieldRef.note);
+    return this.queryFieldDef;
   }
 
   typeDesc(): TypeDesc {
@@ -63,7 +67,8 @@ export class ReferenceField extends SpaceField {
    * If the referenced field has any annotations, replace the reference
    * with the definition so we can forward the annotations.
    */
-  annotate(qfd: string, notes: Annotation | undefined): QueryFieldDef {
+  maybeAnnotate(): QueryFieldDef {
+    const path = this.fieldRef.refString;
     if (
       this.res &&
       this.res instanceof SpaceField &&
@@ -74,6 +79,7 @@ export class ReferenceField extends SpaceField {
       if (isFilteredAliasedName(origFd)) {
         return origFd;
       }
+      const notes = this.fieldRef.note;
       if (origFd.annotation || notes) {
         const annotation: Annotation = notes || {};
         if (origFd.annotation) {
@@ -86,18 +92,18 @@ export class ReferenceField extends SpaceField {
             const newField: FieldAtomicDef = {
               name: this.fieldRef.list[-1].refString,
               type: origFd.type,
-              e: [{type: 'field', path: this.fieldRef.refString}],
+              e: [{type: 'field', path}],
               annotation,
             };
             return newField;
           }
           // maybe ok, this likely is some field which cannot be referenced
           // in a query and will error, so there would be nothing to annotate
-          return qfd;
+          return path;
         }
         return {...origFd, annotation};
       }
     }
-    return qfd;
+    return path;
   }
 }
