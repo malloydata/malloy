@@ -492,7 +492,7 @@ ${indent(sql)}
 
   sqlLiteralRegexp(literal: string): string {
     const noVirgule = literal.replace(/\\/g, '\\\\');
-    return "r'" + noVirgule.replace(/'/g, "\\'") + "'";
+    return "'" + noVirgule.replace(/'/g, "\\'") + "'";
   }
 
   getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {

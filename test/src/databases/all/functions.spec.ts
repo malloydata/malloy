@@ -195,7 +195,8 @@ expressionModels.forEach((expressionModel, databaseName) => {
       await funcTestMultiple(
         ["regexp_extract('I have a dog', r'd[aeiou]g')", 'dog'],
         ["regexp_extract(null, r'd[aeiou]g')", null],
-        ["regexp_extract('foo', null)", null]
+        ["regexp_extract('foo', null)", null],
+        ["regexp_extract('I have a d0g', r'd\\dg')", 'd0g']
       );
     });
   });
