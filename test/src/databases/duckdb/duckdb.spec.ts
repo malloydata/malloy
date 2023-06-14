@@ -24,7 +24,7 @@
 import {RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
 
-const runtimes = [/* 'duckdb', */ 'duckdb_wasm'];
+const runtimes = ['duckdb', 'duckdb_wasm'];
 
 const [_describe, databases] = describeIfDatabaseAvailable(runtimes);
 const allDucks = new RuntimeList(databases);

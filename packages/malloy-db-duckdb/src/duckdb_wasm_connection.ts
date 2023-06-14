@@ -68,7 +68,9 @@ const unwrapArrow = (value: unknown): any => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result: Record<string | symbol, any> = {};
       for (const key in obj) {
-        result[key] = unwrapArrow(obj[key]);
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          result[key] = unwrapArrow(obj[key]);
+        }
       }
       return result;
     }
@@ -172,14 +174,15 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
 
   protected async setup(): Promise<void> {
     const doSetup = async () => {
-      // if (this.workingDirectory) {
-      //   await this.runDuckDBQuery(
-      //     `SET FILE_SEARCH_PATH='${this.workingDirectory}'`
-      //   );
-      // }
-      for (const ext of ['json', 'httpfs', 'icu']) {
-        await this.loadExtension(ext);
+      if (this.workingDirectory) {
+        await this.runDuckDBQuery(
+          `SET FILE_SEARCH_PATH='${this.workingDirectory}'`
+        );
       }
+      // Not quite ready for prime time
+      // for (const ext of ['json', 'httpfs', 'icu']) {
+      //   await this.loadExtension(ext);
+      // }
     };
     await this.connecting;
     if (!this.isSetup) {

@@ -22,7 +22,6 @@
  */
 
 import crypto from 'crypto';
-import os from 'os';
 import {DuckDBBundles} from '@malloydata/duckdb-wasm';
 import {DuckDBWASMConnection as DuckDBWASMConnectionBase} from './duckdb_wasm_connection';
 
@@ -52,24 +51,5 @@ export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
 
   async createHash(sqlCommand: string): Promise<string> {
     return crypto.createHash('md5').update(sqlCommand).digest('hex');
-  }
-
-  protected async setup(): Promise<void> {
-    const doSetup = async () => {
-      if (this.workingDirectory) {
-        await this.runDuckDBQuery(
-          `SET FILE_SEARCH_PATH='${this.workingDirectory}'`
-        );
-      }
-      await this.runDuckDBQuery(`SET home_directory='${os.homedir()}'`);
-      for (const ext of ['json', 'httpfs', 'icu']) {
-        await this.loadExtension(ext);
-      }
-    };
-    await this.connecting;
-    if (!this.isSetup) {
-      this.isSetup = doSetup();
-    }
-    await this.isSetup;
   }
 }
