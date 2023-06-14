@@ -30,6 +30,7 @@ import {TypeDesc} from '../../../model/malloy_types';
 export class FieldDefinitionValue extends SpaceField {
   fieldName: string;
   defType?: TypeDesc;
+  qfd?: model.QueryFieldDef;
   constructor(readonly space: FieldSpace, readonly exprDef: FieldDeclaration) {
     super();
     this.fieldName = exprDef.defineName;
@@ -40,15 +41,20 @@ export class FieldDefinitionValue extends SpaceField {
   }
 
   fieldDef(): model.FieldDef {
-    const def = this.exprDef.fieldDef(this.space, this.name);
-    this.defType = this.fieldTypeFromFieldDef(def);
-    return def;
+    if (!this.haveFieldDef) {
+      this.haveFieldDef = this.exprDef.fieldDef(this.space, this.name);
+      this.defType = this.fieldTypeFromFieldDef(this.haveFieldDef);
+    }
+    return this.haveFieldDef;
   }
 
   getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef {
-    const def = this.exprDef.queryFieldDef(fs, this.name);
-    this.defType = this.fieldTypeFromFieldDef(def);
-    return def;
+    if (!this.qfd) {
+      const def = this.exprDef.queryFieldDef(fs, this.name);
+      this.defType = this.fieldTypeFromFieldDef(def);
+      this.qfd = def;
+    }
+    return this.qfd;
   }
 
   typeDesc(): TypeDesc {

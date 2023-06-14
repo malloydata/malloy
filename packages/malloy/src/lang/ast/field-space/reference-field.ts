@@ -92,7 +92,8 @@ export class ReferenceField extends SpaceField {
             };
             return newField;
           }
-          // punt, annotations lost, fixme later
+          // maybe ok, this likely is some field which cannot be referenced
+          // in a query and will error, so there would be nothing to annotate
           return qfd;
         }
         return {...origFd, annotation};
