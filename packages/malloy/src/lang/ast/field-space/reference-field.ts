@@ -70,7 +70,6 @@ export class ReferenceField extends SpaceField {
   maybeAnnotate(): QueryFieldDef {
     const path = this.fieldRef.refString;
     if (
-      this.res &&
       this.res instanceof SpaceField &&
       this.res.haveFieldDef &&
       typeof this.res.haveFieldDef !== 'string'
