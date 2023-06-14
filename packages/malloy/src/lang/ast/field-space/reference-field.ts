@@ -42,7 +42,6 @@ export class ReferenceField extends SpaceField {
   }
 
   getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined {
-
     const check = this.fieldRef.getField(fs);
     if (check.error) {
       this.fieldRef.log(check.error);
