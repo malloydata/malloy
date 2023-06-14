@@ -65,7 +65,7 @@ export class ReferenceField extends SpaceField {
 
   /**
    * If the referenced field has any annotations, replace the reference
-   * with the definition so we can forward the annotations.
+   * with something which can hold an annotation
    */
   maybeAnnotate(): QueryFieldDef {
     const path = this.fieldRef.refString;
