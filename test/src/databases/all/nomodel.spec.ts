@@ -1079,7 +1079,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
                   \`P O P\` is popular_name
                   \`J P O P\` is \`j space\`.popular_name
                 aggregate: \`c o u n t\` is count()
-                calculate: \`R O W\` is row_number()
+                calculate:
+                  \`R O W\` is row_number()
+                  \`l a g\` is lag(\`P O P\`, 1)
                 nest: \`by state\` is {
                   group_by: \`J S\` is \`j space\`.state
                   aggregate: \`c o u n t\` is count()

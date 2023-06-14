@@ -2841,11 +2841,15 @@ class QueryQuery extends QueryField {
               output.lateralJoinSQLExpressions.push(`${exp} as ${outputName}`);
               output.sql.push(outputFieldName);
               if (fi.f.fieldDef.type === 'number') {
-                const outputFieldNameString = `${outputFieldName}_string`;
+                const outputNameString =
+                  this.parent.dialect.sqlMaybeQuoteIdentifier(
+                    `${name}__${resultSet.groupSet}_string`
+                  );
+                const outputFieldNameString = `__lateral_join_bag.${outputNameString}`;
                 output.sql.push(outputFieldNameString);
                 output.dimensionIndexes.push(output.fieldIndex++);
                 output.lateralJoinSQLExpressions.push(
-                  `CAST(${exp} as STRING) as ${outputName}_string`
+                  `CAST(${exp} as STRING) as ${outputNameString}`
                 );
                 fi.partitionSQL = outputFieldNameString;
               }
