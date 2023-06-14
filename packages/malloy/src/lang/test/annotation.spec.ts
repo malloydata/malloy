@@ -348,7 +348,7 @@ describe('query operation annotations', () => {
       expect(note_a?.annotation).toEqual(defaultTags);
     }
   });
-  test.skip('project ref inherits annotation', () => {
+  test('project ref inherits annotation', () => {
     const m = new TestTranslator(`
       query: a + {
         # blockNote
@@ -364,7 +364,7 @@ describe('query operation annotations', () => {
         project:
           # note2
           note_a
-        }
+      }
     `);
     expect(m).modelCompiled();
     const foundYou = m.getQuery(0);
@@ -373,8 +373,8 @@ describe('query operation annotations', () => {
       const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
       expect(note_a?.annotation).toEqual({
         inherits: defaultTags,
-        blockNotes: ['# note1'],
-        notes: ['# note2'],
+        blockNotes: ['# note1\n'],
+        notes: ['# note2\n'],
       });
     }
   });
@@ -421,7 +421,7 @@ describe('query operation annotations', () => {
       expect(note_a?.annotation).toEqual(defaultTags);
     }
   });
-  test.skip('group_by ref inherits', () => {
+  test('group_by ref inherits', () => {
     const m = new TestTranslator(`
       source: aa is a + {
         # blockNote
@@ -434,9 +434,9 @@ describe('query operation annotations', () => {
           astr
       }
       query: findme is aa -> {
-        # note 1
+        # note1
         group_by:
-        # note 2
+        # note2
         note_a
       }
     `);
@@ -446,8 +446,9 @@ describe('query operation annotations', () => {
     if (foundYou) {
       const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
       expect(note_a?.annotation).toEqual({
+        blockNotes: ['# note1\n'],
         inherits: defaultTags,
-        notes: ['# note1\n', '# note2\n'],
+        notes: ['# note2\n'],
       });
     }
   });
@@ -472,7 +473,7 @@ describe('query operation annotations', () => {
       expect(note_a?.annotation).toEqual(defaultTags);
     }
   });
-  test.skip('aggregate ref inherits', () => {
+  test('aggregate ref inherits', () => {
     const m = new TestTranslator(`
       source: aa is a + {
         # blockNote
@@ -485,9 +486,9 @@ describe('query operation annotations', () => {
           max(astr)
       }
       query: findme is aa -> {
-        # note 1
+        # note1
         aggregate:
-        # note 2
+        # note2
         note_a
       }
     `);
@@ -497,8 +498,9 @@ describe('query operation annotations', () => {
     if (foundYou) {
       const note_a = getFieldDef(foundYou.pipeline[0], 'note_a');
       expect(note_a?.annotation).toEqual({
+        blockNotes: ['# note1\n'],
         inherits: defaultTags,
-        notes: ['# note1\n', '# note2\n'],
+        notes: ['# note2\n'],
       });
     }
   });

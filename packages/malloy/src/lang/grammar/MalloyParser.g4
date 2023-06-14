@@ -289,7 +289,7 @@ queryFieldList
 
 
 queryFieldEntry
-  : fieldPath
+  : taggedRef
   | fieldDef
   ;
 
@@ -480,8 +480,12 @@ collectionWildCard
   : (fieldPath DOT)? (STAR|STARSTAR)
   ;
 
+taggedRef
+  : tags fieldPath
+  ;
+
 collectionMember
-  : fieldPath
+  : taggedRef
   | collectionWildCard
   | fieldDef
   ;

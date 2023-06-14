@@ -616,9 +616,9 @@ export class MalloyToAST
     makeFieldDef: ast.FieldDeclarationConstructor,
     makeFieldRef: ast.FieldReferenceConstructor
   ): ast.QueryItem {
-    const fieldPath = ctx.fieldPath();
-    if (fieldPath) {
-      return this.getFieldPath(fieldPath, makeFieldRef);
+    const refCx = ctx.taggedRef();
+    if (refCx) {
+      return this.getTaggedRef(refCx, makeFieldRef);
     }
     const def = ctx.fieldDef();
     if (def) {
@@ -682,6 +682,15 @@ export class MalloyToAST
     return stmt;
   }
 
+  getTaggedRef(
+    pcx: parse.TaggedRefContext,
+    makeFieldRef: ast.FieldReferenceConstructor
+  ): ast.FieldReference {
+    const ref = this.getFieldPath(pcx.fieldPath(), makeFieldRef);
+    ref.extendNote({notes: getNotes(pcx.tags())});
+    return ref;
+  }
+
   getFieldCollectionMember(
     pcx: parse.CollectionMemberContext,
     makeFieldDef: FieldDeclarationConstructor,
@@ -691,9 +700,9 @@ export class MalloyToAST
     if (fieldDef) {
       return this.getFieldDef(fieldDef, makeFieldDef);
     }
-    const fieldPath = pcx.fieldPath();
-    if (fieldPath) {
-      return this.getFieldPath(fieldPath, makeFieldRef);
+    const refCx = pcx.taggedRef();
+    if (refCx) {
+      return this.getTaggedRef(refCx, makeFieldRef);
     }
     const collectionWildcard = pcx.collectionWildCard();
     if (collectionWildcard) {

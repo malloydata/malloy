@@ -21,35 +21,83 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {QueryFieldDef, TypeDesc} from '../../../model/malloy_types';
+import {
+  Annotation,
+  FieldAtomicDef,
+  QueryFieldDef,
+  TypeDesc,
+  isAtomicFieldType,
+  isFilteredAliasedName,
+} from '../../../model/malloy_types';
 
 import {FieldReference} from '../query-items/field-references';
 import {FieldSpace} from '../types/field-space';
-import {LookupResult} from '../types/lookup-result';
+import {SpaceEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
 
 export class ReferenceField extends SpaceField {
-  res: LookupResult | undefined = undefined;
+  res?: SpaceEntry;
   constructor(readonly fieldRef: FieldReference) {
     super();
   }
 
   getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined {
-    // Lookup string and generate error if it isn't defined.
+
     const check = this.fieldRef.getField(fs);
     if (check.error) {
       this.fieldRef.log(check.error);
     }
-    this.res = check;
-    return this.fieldRef.refString;
+    this.res = check.found;
+    return this.annotate(this.fieldRef.refString, this.fieldRef.note);
   }
 
   typeDesc(): TypeDesc {
     // Remember the actual type of the field that was looked up so it can be used for
     // type checking.
-    if (this.res !== undefined && this.res.found) {
-      return this.res.found.typeDesc();
+    if (this.res !== undefined) {
+      return this.res.typeDesc();
     }
     return {dataType: 'unknown', expressionType: 'scalar', evalSpace: 'input'};
+  }
+
+  /**
+   * If the referenced field has any annotations, replace the reference
+   * with the definition so we can forward the annotations.
+   */
+  annotate(qfd: string, notes: Annotation | undefined): QueryFieldDef {
+    if (
+      this.res &&
+      this.res instanceof SpaceField &&
+      this.res.haveFieldDef &&
+      typeof this.res.haveFieldDef !== 'string'
+    ) {
+      const origFd = this.res.haveFieldDef;
+      if (isFilteredAliasedName(origFd)) {
+        return origFd;
+      }
+      if (origFd.annotation || notes) {
+        const annotation: Annotation = notes || {};
+        if (origFd.annotation) {
+          annotation.inherits = origFd.annotation;
+        }
+        if (this.fieldRef.list.length > 1) {
+          // This is a field inside a join or a record, create an expression
+          // and annotate the expression.
+          if (isAtomicFieldType(origFd.type)) {
+            const newField: FieldAtomicDef = {
+              name: this.fieldRef.list[-1].refString,
+              type: origFd.type,
+              e: [{type: 'field', path: this.fieldRef.refString}],
+              annotation,
+            };
+            return newField;
+          }
+          // punt, annotations lost, fixme later
+          return qfd;
+        }
+        return {...origFd, annotation};
+      }
+    }
+    return qfd;
   }
 }

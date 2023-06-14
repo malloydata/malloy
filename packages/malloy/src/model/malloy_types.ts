@@ -535,7 +535,7 @@ interface JustExpression {
   e: Expr;
 }
 type HasExpression = FieldDef & JustExpression;
-/**  Grants access to the expression property of a FielfDef */
+/**  Grants access to the expression property of a FieldDef */
 export function hasExpression(f: FieldDef): f is HasExpression {
   return (f as JustExpression).e !== undefined;
 }
