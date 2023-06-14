@@ -108,10 +108,6 @@ function generateSQLStringLiteral(sourceString: string): string {
   return `'${sourceString}'`;
 }
 
-function identifierNormalize(s: string) {
-  return s.replace(/[^a-zA-Z0-9_]/g, '_o_');
-}
-
 /** Parent from QueryStruct. */
 export declare interface ParentQueryStruct {
   struct: QueryStruct;
@@ -2704,7 +2700,7 @@ class QueryQuery extends QueryField {
         const passKeys = this.generateSQLPassthroughKeys(qs);
         structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * ${passKeys} FROM ${structSQL} as x)`;
       }
-      s += `FROM ${structSQL} as ${ji.alias}\n`;
+      s += `FROM ${structSQL} as ${this.parent.getIdentifier()}\n`;
     } else {
       throw new Error('Internal Error, queries must start from a basetable');
     }
@@ -3152,9 +3148,7 @@ class QueryQuery extends QueryField {
           } else if (isCalculatedField(fi.f)) {
             fieldsSQL.push(
               this.parent.dialect.sqlAnyValueLastTurtle(
-                this.parent.dialect.sqlMaybeQuoteIdentifier(
-                  `${name}__${this.rootResult.groupSet}`
-                ),
+                name,
                 this.rootResult.groupSet,
                 sqlName
               )
@@ -3176,9 +3170,7 @@ class QueryQuery extends QueryField {
         } else if (fi.firstSegment.type === 'project') {
           fieldsSQL.push(
             this.parent.dialect.sqlAnyValueLastTurtle(
-              this.parent.dialect.sqlMaybeQuoteIdentifier(
-                `${name}__${this.rootResult.groupSet}`
-              ),
+              name,
               this.rootResult.groupSet,
               sqlName
             )
@@ -3852,7 +3844,7 @@ class QueryStruct extends QueryNode {
     // make a unique alias name
     if (ret === undefined) {
       const aliases = Array.from(this.pathAliasMap.values());
-      const base = identifierNormalize(getIdentifier(this.fieldDef));
+      const base = getIdentifier(this.fieldDef);
       let name = `${base}_0`;
       let n = 1;
       while (aliases.includes(name) && n < 1000) {
@@ -3925,7 +3917,7 @@ class QueryStruct extends QueryNode {
       if (this.fieldDef.as === undefined) {
         return 'base';
       } else {
-        return identifierNormalize(super.getIdentifier());
+        return super.getIdentifier();
       }
     }
     // if this is an inline object, include the parents alias.
