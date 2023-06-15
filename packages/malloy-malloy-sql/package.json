@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy-sql",
-  "version": "0.0.42",
+  "version": "0.0.43",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -19,7 +19,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.42"
+    "@malloydata/malloy": "^0.0.43"
   },
   "devDependencies": {
     "md5": "^2.3.0",
