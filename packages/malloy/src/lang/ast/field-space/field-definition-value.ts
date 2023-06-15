@@ -59,7 +59,7 @@ export class FieldDefinitionValue extends SpaceField {
 
   typeDesc(): TypeDesc {
     if (this.defType) {
-      return this.defType;
+      return {...this.defType};
     }
     return this.fieldTypeFromFieldDef(this.fieldDef());
   }

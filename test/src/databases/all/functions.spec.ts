@@ -310,7 +310,6 @@ expressionModels.forEach((expressionModel, databaseName) => {
         }`
         )
         .run();
-      console.log(result.sql);
       expect(result.data.path(0, 'row_num').value).toBe(1);
       expect(result.data.path(1, 'row_num').value).toBe(2);
     });
