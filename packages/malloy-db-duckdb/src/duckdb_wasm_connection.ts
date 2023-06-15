@@ -33,7 +33,8 @@ import {
 import {StructRow, Table, Vector} from 'apache-arrow';
 import {DuckDBCommon, QueryOptionsReader} from './duckdb_common';
 
-const TABLE_MATCH = /FROM\s*'(.*)'/gi;
+const TABLE_MATCH = /FROM\s*('([^']*)'|"([^"]*)")/gi;
+const TABLE_FUNCTION_MATCH = /FROM\s+[a-z0-9_]+\(('([^']*)'|"([^"]*)")/gi;
 
 /**
  * Arrow's toJSON() doesn't really do what I'd expect, since
@@ -272,7 +273,10 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   > {
     const tables: string[] = [];
     for (const match of sqlRef.selectStr.matchAll(TABLE_MATCH)) {
-      tables.push(match[1]);
+      tables.push(match[2] || match[3]);
+    }
+    for (const match of sqlRef.selectStr.matchAll(TABLE_FUNCTION_MATCH)) {
+      tables.push(match[2] || match[3]);
     }
     await this.findTables(tables);
     return super.fetchSchemaForSQLBlock(sqlRef);
