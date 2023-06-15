@@ -34,7 +34,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     const result = await runtime
       .loadQuery(
         `
-        query: table('duckdb:test/data/duckdb/fl*.parquet') -> {
+        query: table('duckdb:test/data/duckdb/flights/part.*.parquet') -> {
           top: 1
           group_by: carrier;
         }

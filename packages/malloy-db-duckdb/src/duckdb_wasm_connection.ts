@@ -68,7 +68,9 @@ const unwrapArrow = (value: unknown): any => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const result: Record<string | symbol, any> = {};
       for (const key in obj) {
-        result[key] = unwrapArrow(obj[key]);
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          result[key] = unwrapArrow(obj[key]);
+        }
       }
       return result;
     }
@@ -104,7 +106,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   connecting: Promise<void>;
   protected _connection: duckdb.AsyncDuckDBConnection | null = null;
   protected _database: duckdb.AsyncDuckDB | null = null;
-  protected isSetup = false;
+  protected isSetup: Promise<void> | undefined;
   private worker: Worker | null = null;
 
   private remoteFileCallbacks: RemoteFileCallback[] = [];
@@ -113,7 +115,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   constructor(
     public readonly name: string,
     private databasePath: string | null = null,
-    private workingDirectory = '/',
+    protected workingDirectory = '/',
     queryOptions?: QueryOptionsReader
   ) {
     super(queryOptions);
@@ -160,8 +162,33 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     return this._database;
   }
 
+  async loadExtension(ext: string) {
+    try {
+      await this.runDuckDBQuery(`INSTALL '${ext}'`);
+      await this.runDuckDBQuery(`LOAD '${ext}'`);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(`Unable to load ${ext} extension`, error);
+    }
+  }
+
   protected async setup(): Promise<void> {
+    const doSetup = async () => {
+      if (this.workingDirectory) {
+        await this.runDuckDBQuery(
+          `SET FILE_SEARCH_PATH='${this.workingDirectory}'`
+        );
+      }
+      // Not quite ready for prime time
+      // for (const ext of ['json', 'httpfs', 'icu']) {
+      //   await this.loadExtension(ext);
+      // }
+    };
     await this.connecting;
+    if (!this.isSetup) {
+      this.isSetup = doSetup();
+    }
+    await this.isSetup;
   }
 
   protected async runDuckDBQuery(
