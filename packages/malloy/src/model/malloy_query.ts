@@ -1581,7 +1581,7 @@ type StageOutputContext = {
 };
 
 /** Query builder object. */
-export class QueryQuery extends QueryField {
+class QueryQuery extends QueryField {
   fieldDef: TurtleDef;
   firstSegment: PipeSegment;
   prepared = false;
