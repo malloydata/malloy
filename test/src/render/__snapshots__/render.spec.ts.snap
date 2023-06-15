@@ -9,7 +9,7 @@ exports[`rendering results date renderer date with timezone rendered correctly 1
       <th
         style="padding: 8px; text-align: left;"
       >
-        mex_​time
+        mex_​time (America/Mexico_City)
       </th>
     </tr>
   </thead>
