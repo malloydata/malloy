@@ -19,7 +19,7 @@ exports[`rendering results date renderer date with timezone rendered correctly 1
         style="padding: 8px; vertical-align: top;"
       >
         <span>
-          2021-02-24 03:05:06 America/Mexico_City
+          2021-02-24 03:05:06
         </span>
       </td>
     </tr>

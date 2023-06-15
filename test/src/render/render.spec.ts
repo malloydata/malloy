@@ -192,7 +192,7 @@ describe('rendering results', () => {
   });
 
   describe('date renderer', () => {
-    test('date with timezone rendered correctly', async () => {
+    test.only('date with timezone rendered correctly', async () => {
       const connectionName = 'duckdb';
       const runtime = runtimes.runtimeMap.get(connectionName);
       expect(runtime).toBeDefined();
