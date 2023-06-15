@@ -141,9 +141,7 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
   return new SingleConnectionRuntime(files, connection);
 }
 
-export const allDatabases = [
-  /*'postgres', 'bigquery', */ 'duckdb' /*, 'duckdb_wasm'*/,
-];
+export const allDatabases = ['postgres', 'bigquery', 'duckdb', 'duckdb_wasm'];
 type RuntimeDatabaseNames = typeof allDatabases[number];
 
 export class RuntimeList {
