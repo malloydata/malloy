@@ -139,7 +139,7 @@ export class PostgresDialect extends Dialect {
     groupSet: number,
     sqlName: string
   ): string {
-    return `(ARRAY_AGG(${name}__${groupSet}) FILTER (WHERE group_set=${groupSet} AND ${name} IS NOT NULL))[1] as ${sqlName}`;
+    return `(ARRAY_AGG(${name}) FILTER (WHERE group_set=${groupSet} AND ${name} IS NOT NULL))[1] as ${sqlName}`;
   }
 
   sqlCoaleseMeasuresInline(
