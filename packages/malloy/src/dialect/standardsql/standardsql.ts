@@ -134,7 +134,7 @@ export class StandardSQLDialect extends Dialect {
     groupSet: number,
     sqlName: string
   ): string {
-    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN ${name}__${groupSet} END) as ${sqlName}`;
+    return `ANY_VALUE(CASE WHEN group_set=${groupSet} THEN ${name} END) as ${sqlName}`;
   }
 
   sqlCoaleseMeasuresInline(
@@ -337,9 +337,10 @@ ${indent(sql)}
   WITHIN`.split(/\s/);
 
   sqlMaybeQuoteIdentifier(identifier: string): string {
-    return this.keywords.indexOf(identifier.toUpperCase()) > 0
-      ? '`' + identifier + '`'
-      : identifier;
+    // return this.keywords.indexOf(identifier.toUpperCase()) > 0
+    //   ? '`' + identifier + '`'
+    //   : identifier;
+    return '`' + identifier + '`';
   }
 
   sqlNow(): Expr {
