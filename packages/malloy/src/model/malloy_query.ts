@@ -1581,7 +1581,7 @@ type StageOutputContext = {
 };
 
 /** Query builder object. */
-class QueryQuery extends QueryField {
+export class QueryQuery extends QueryField {
   fieldDef: TurtleDef;
   firstSegment: PipeSegment;
   prepared = false;
@@ -2269,9 +2269,9 @@ class QueryQuery extends QueryField {
       resultMetadata: this.getResultMetadata(this.rootResult),
       type: 'struct',
     };
-    if (isQuerySegment(this.firstSegment) && this.firstSegment.queryTimezone) {
-      outputStruct.queryTimezone = this.firstSegment.queryTimezone;
-    }
+
+    outputStruct.queryTimezone = resultStruct.getQueryInfo().queryTimezone;
+
     return outputStruct;
   }
 

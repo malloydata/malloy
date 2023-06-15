@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Result, Runtime} from '@malloydata/malloy';
+import {QueryMaterializer, Result, Runtime} from '@malloydata/malloy';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -71,35 +71,40 @@ expect.extend({
     querySrc: string,
     expected: Record<string, unknown>
   ) {
+    let query: QueryMaterializer;
     try {
-      const query = runtime.loadQuery(querySrc);
-      try {
-        const result = await query.run();
-        const fails: string[] = [];
-        for (const [name, value] of Object.entries(expected)) {
-          try {
-            const got = result.data.path(0, name).value;
-            const mustBe = value instanceof Date ? value.getTime() : value;
-            const actuallyGot = got instanceof Date ? got.getTime() : got;
-            if (actuallyGot !== mustBe) {
-              fails.push(`Expected {${name}: ${value}} Got: ${got}`);
-            }
-          } catch (e) {
-            fails.push(`Expected {${name}: ${value}} Error: ${e.message}`);
-          }
-        }
-        if (fails.length !== 0) {
-          const failMsg = `SQL: ${await query.getSQL()}\n${fails.join('\n')}`;
-          return {pass: false, message: () => failMsg};
-        }
-      } catch (e) {
-        const failMsg =
-          `query.run failed: ${e.message}\n` + `SQL: ${await query.getSQL()}`;
-        return {pass: false, message: () => failMsg};
-      }
+      query = runtime.loadQuery(querySrc);
     } catch (e) {
       return {pass: false, message: () => `loadQuery failed: ${e.message}`};
     }
+
+    let result: Result;
+    try {
+      result = await query.run();
+    } catch (e) {
+      const failMsg =
+        `query.run failed: ${e.message}\n` + `SQL: ${await query.getSQL()}`;
+      return {pass: false, message: () => failMsg};
+    }
+
+    const fails: string[] = [];
+    for (const [name, value] of Object.entries(expected)) {
+      try {
+        const got = result.data.path(0, name).value;
+        const mustBe = value instanceof Date ? value.getTime() : value;
+        const actuallyGot = got instanceof Date ? got.getTime() : got;
+        if (actuallyGot !== mustBe) {
+          fails.push(`Expected {${name}: ${value}} Got: ${got}`);
+        }
+      } catch (e) {
+        fails.push(`Expected {${name}: ${value}} Error: ${e.message}`);
+      }
+    }
+    if (fails.length !== 0) {
+      const failMsg = `SQL: ${await query.getSQL()}\n${fails.join('\n')}`;
+      return {pass: false, message: () => failMsg};
+    }
+
     return {
       pass: true,
       message: () => `First row matched ${JSON.stringify(expected)}`,
