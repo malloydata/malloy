@@ -894,8 +894,9 @@ export class MalloyToAST
     const query = this.visit(pcx.topLevelAnonQueryDef().query());
     if (ast.isQueryElement(query)) {
       const theQuery = new ast.AnonymousQuery(query);
+      const notes = getNotes(pcx.topLevelAnonQueryDef().tags());
       const blockNotes = getNotes(pcx.tags());
-      theQuery.extendNote({blockNotes});
+      theQuery.extendNote({notes, blockNotes});
       return this.astAt(theQuery, pcx);
     }
     throw this.internalError(
