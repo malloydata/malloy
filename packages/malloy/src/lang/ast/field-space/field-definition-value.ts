@@ -29,8 +29,6 @@ import {TypeDesc} from '../../../model/malloy_types';
 
 export class FieldDefinitionValue extends SpaceField {
   fieldName: string;
-  defType?: TypeDesc;
-  qfd?: model.QueryFieldDef;
   constructor(readonly space: FieldSpace, readonly exprDef: FieldDeclaration) {
     super();
     this.fieldName = exprDef.defineName;
@@ -40,27 +38,30 @@ export class FieldDefinitionValue extends SpaceField {
     return this.fieldName;
   }
 
+  // A source will call this when it defines the field
   fieldDef(): model.FieldDef {
     if (!this.haveFieldDef) {
       this.haveFieldDef = this.exprDef.fieldDef(this.space, this.name);
-      this.defType = this.fieldTypeFromFieldDef(this.haveFieldDef);
     }
     return this.haveFieldDef;
   }
 
+  // A query will call this when it defined the field
+  private qfd?: model.FieldTypeDef;
   getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef {
     if (!this.qfd) {
       const def = this.exprDef.queryFieldDef(fs, this.name);
-      this.defType = this.fieldTypeFromFieldDef(def);
       this.qfd = def;
     }
     return this.qfd;
   }
 
+  // If this is called before the expression has been evaluated, we don't
+  // really know what type we have. However since we have the FieldSpace,
+  // we can compile the expression to find out, this might result in
+  // some expressions being compiled twice.
   typeDesc(): TypeDesc {
-    if (this.defType) {
-      return {...this.defType};
-    }
-    return this.fieldTypeFromFieldDef(this.fieldDef());
+    const typeFrom = this.qfd || this.fieldDef();
+    return this.fieldTypeFromFieldDef(typeFrom);
   }
 }
