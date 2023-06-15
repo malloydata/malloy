@@ -54,7 +54,9 @@ export class HTMLDateRenderer implements Renderer {
     const timestring = timeToString(data.value, timeframe, this.queryTimezone);
 
     const element = this.document.createElement('span');
-    element.appendChild(this.document.createTextNode(timestring));
+    element.appendChild(
+      this.document.createTextNode(`${timestring} ${this.queryTimezone}`)
+    );
     return element;
   }
 }
