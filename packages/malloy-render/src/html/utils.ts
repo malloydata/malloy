@@ -82,12 +82,10 @@ export function timeToString(
   timeframe: DateTimeframe | TimestampTimeframe,
   timezone?: string
 ): string {
-  const debugging = `time.toDateString: ${time.toDateString()} year: ${time.getUTCFullYear()} |`;
   if (timezone) {
-    time = new Date(time.toLocaleString('en', {timeZone: timezone}));
+    time = new Date(time.toLocaleString('en-US', {timeZone: timezone}));
   }
 
-  return `${debugging} timeWTZ.toDateString: ${time.toDateString()} yearWTZ: ${time.getUTCFullYear()}`;
   switch (timeframe) {
     case TimestampTimeframe.Year:
     case DateTimeframe.Year: {
