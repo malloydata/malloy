@@ -83,6 +83,13 @@ export function timeToString(
   timezone?: string
 ): string {
   if (timezone) {
+    const dtfTime = Intl.DateTimeFormat('en-US', {timeZone: timezone}).format(
+      time
+    );
+    const tlsTime = time.toLocaleString('en-US', {timeZone: timezone});
+    return `DTF: ${new Date(dtfTime)} ${dtfTime} TLS: ${new Date(
+      tlsTime
+    )} ${tlsTime}`;
     time = new Date(time.toLocaleString('en-US', {timeZone: timezone}));
   }
 
