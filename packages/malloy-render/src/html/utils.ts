@@ -213,8 +213,15 @@ export function createDrillIcon(document: Document): HTMLElement {
 export function formatTitle(
   options: RendererOptions,
   name: string,
-  renderDef?: RenderDef | undefined
+  renderDef?: RenderDef | undefined,
+  isTimeField?: boolean,
+  timezone?: string
 ) {
   const label = renderDef?.data?.label || name;
-  return options.titleCase ? startCase(label) : label;
+  let title = options.titleCase ? startCase(label) : label;
+  if (isTimeField && timezone) {
+    title = `${title} (${timezone})`;
+  }
+
+  return title;
 }

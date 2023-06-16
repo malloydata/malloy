@@ -66,7 +66,8 @@ export abstract class HTMLChartRenderer implements Renderer {
     protected readonly document: Document,
     protected styleDefaults: StyleDefaults,
     protected options: RendererOptions,
-    chartOptions: ChartRenderOptions = {}
+    chartOptions: ChartRenderOptions = {},
+    protected timezone?: string
   ) {
     this.size = chartOptions.size || this.styleDefaults.size || 'medium';
   }

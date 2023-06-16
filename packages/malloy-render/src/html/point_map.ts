@@ -39,7 +39,8 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
     } else if (data.isTimestamp() || data.isDate()) {
       return timeToString(
         data.value,
-        data.field.timeframe || TimestampTimeframe.Second
+        data.field.timeframe || TimestampTimeframe.Second,
+        this.timezone
       );
     }
     throw new Error('Invalid field type for point map chart.');
@@ -54,6 +55,16 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
       }
     }
     throw new Error('Invalid field type for point map.');
+  }
+
+  isTimeFieldDef(field: Field): boolean {
+    if (field.isAtomicField()) {
+      if (field.isDate() || field.isTimestamp()) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
@@ -78,7 +89,15 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
         ? {
             field: colorField.name,
             type: colorType,
-            axis: {title: formatTitle(this.options, colorField.name)},
+            axis: {
+              title: formatTitle(
+                this.options,
+                colorField.name,
+                undefined,
+                this.isTimeFieldDef(colorField),
+                this.timezone
+              ),
+            },
             scale: getColorScale(colorType, false),
           }
         : undefined;
@@ -87,7 +106,15 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
       ? {
           field: sizeField.name,
           type: sizeType,
-          axis: {title: formatTitle(this.options, sizeField.name)},
+          axis: {
+            title: formatTitle(
+              this.options,
+              sizeField.name,
+              undefined,
+              this.isTimeFieldDef(sizeField),
+              this.timezone
+            ),
+          },
         }
       : {value: 5};
 
@@ -95,7 +122,15 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
       ? {
           field: shapeField.name,
           type: shapeType,
-          axis: {title: formatTitle(this.options, shapeField.name)},
+          axis: {
+            title: formatTitle(
+              this.options,
+              shapeField.name,
+              undefined,
+              this.isTimeFieldDef(shapeField),
+              this.timezone
+            ),
+          },
         }
       : {value: 'circle'};
 

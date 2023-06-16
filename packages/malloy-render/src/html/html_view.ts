@@ -197,7 +197,8 @@ export function makeRenderer(
       document,
       styleDefaults,
       options,
-      renderDef
+      renderDef,
+      queryTimezone
     );
   } else if (renderDef.renderer === 'image') {
     return new HTMLImageRenderer(document);
