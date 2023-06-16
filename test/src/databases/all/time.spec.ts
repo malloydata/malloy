@@ -509,10 +509,8 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
         }
         `
           )
-        ).resultExplore.structDef
-      ).toMatchObject({
-        queryTimezone: 'America/Los_Angeles',
-      });
+        ).resultExplore.queryTimezone
+      ).toBe('America/Los_Angeles');
     });
 
     test('timezone set in query inside source', async () => {
@@ -561,8 +559,8 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
         }
         `
           )
-        ).resultExplore.structDef
-      ).toMatchObject({queryTimezone: 'America/Los_Angeles'});
+        ).resultExplore.queryTimezone
+      ).toBe('America/Los_Angeles');
     });
 
     test('multiple timezones', async () => {

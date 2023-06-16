@@ -190,4 +190,27 @@ describe('rendering results', () => {
       '<span class="value-null">∅</span>'
     );
   });
+
+  describe('date renderer', () => {
+    test('date with timezone rendered correctly', async () => {
+      const connectionName = 'duckdb';
+      const runtime = runtimes.runtimeMap.get(connectionName);
+      expect(runtime).toBeDefined();
+      const src = `sql: one is { connection: "${connectionName}"  select: """SELECT 1"""}
+      query: mex_query is from_sql(one) -> {
+          timezone: 'America/Mexico_City'
+          project: mex_time is @2021-02-24 03:05:06
+        }
+      `;
+      const result = await (
+        await runtime!.loadModel(src).loadQueryByName('mex_query')
+      ).run();
+      const document = new JSDOM().window.document;
+      const html = await new HTMLView(document).render(result.data, {
+        dataStyles: {},
+      });
+
+      expect(html).toMatchSnapshot();
+    });
+  });
 });

@@ -1,0 +1,28 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`rendering results date renderer date with timezone rendered correctly 1`] = `
+<table
+  style="vertical-align: top; border-collapse: collapse; width: 100%;"
+>
+  <thead>
+    <tr>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        mex_​time (America/Mexico_City)
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-02-24 03:05:06
+        </span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+`;
