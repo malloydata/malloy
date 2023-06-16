@@ -25,6 +25,7 @@ import {DateTimeframe, TimestampTimeframe} from '@malloydata/malloy';
 import startCase from 'lodash/startCase';
 import {RenderDef} from '../data_styles';
 import {RendererOptions} from '../renderer_types';
+import moment from 'moment-timezone';
 
 export function getColorScale(
   type: 'temporal' | 'ordinal' | 'quantitative' | 'nominal' | undefined,
@@ -82,71 +83,65 @@ export function timeToString(
   timeframe: DateTimeframe | TimestampTimeframe,
   timezone?: string
 ): string {
+  let currentMoment = moment(time).tz('UTC', true);
   if (timezone) {
-    const dtfTime = Intl.DateTimeFormat('en-US', {timeZone: timezone}).format(
-      time
-    );
-    const tlsTime = time.toLocaleString('en-US', {timeZone: timezone});
-    return `DTF: ${new Date(dtfTime)} ${dtfTime} TLS: ${new Date(
-      tlsTime
-    )} ${tlsTime}`;
-    time = new Date(time.toLocaleString('en-US', {timeZone: timezone}));
+    currentMoment = currentMoment.tz(timezone);
   }
 
   switch (timeframe) {
     case TimestampTimeframe.Year:
     case DateTimeframe.Year: {
-      const year = numberFixedDigits(time.getUTCFullYear(), 4);
+      const year = numberFixedDigits(currentMoment.year(), 4);
       return `${year}`;
     }
     case TimestampTimeframe.Quarter:
     case DateTimeframe.Quarter: {
-      const year = numberFixedDigits(time.getUTCFullYear(), 4);
-      const quarter = Math.floor(time.getUTCMonth() / 3) + 1;
+      const year = numberFixedDigits(currentMoment.year(), 4);
+      const quarter = Math.floor(currentMoment.month() / 3) + 1;
       return `${year}-Q${quarter}`;
     }
     case TimestampTimeframe.Month:
     case DateTimeframe.Month: {
-      const year = numberFixedDigits(time.getUTCFullYear(), 2);
-      const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
+      const year = numberFixedDigits(currentMoment.year(), 2);
+      const month = numberFixedDigits(currentMoment.month() + 1, 2);
       return `${year}-${month}`;
     }
     case TimestampTimeframe.Week:
     case DateTimeframe.Week: {
-      const year = numberFixedDigits(time.getUTCFullYear(), 2);
-      const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
-      const day = numberFixedDigits(time.getUTCDate(), 2);
+      const year = numberFixedDigits(currentMoment.year(), 2);
+      const month = numberFixedDigits(currentMoment.month() + 1, 2);
+      const day = numberFixedDigits(currentMoment.date(), 2);
       return `WK${year}-${month}-${day}`;
     }
     case DateTimeframe.Day:
     case TimestampTimeframe.Day: {
-      const year = numberFixedDigits(time.getUTCFullYear(), 2);
-      const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
-      const day = numberFixedDigits(time.getUTCDate(), 2);
+      const year = numberFixedDigits(currentMoment.year(), 2);
+      const month = numberFixedDigits(currentMoment.month() + 1, 2);
+      const day = numberFixedDigits(currentMoment.date(), 2);
       return `${year}-${month}-${day}`;
     }
     case TimestampTimeframe.Hour: {
-      const year = numberFixedDigits(time.getUTCFullYear(), 2);
-      const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
-      const day = numberFixedDigits(time.getUTCDate(), 2);
-      const hour = numberFixedDigits(time.getUTCHours(), 2);
+      const year = numberFixedDigits(currentMoment.year(), 2);
+      const month = numberFixedDigits(currentMoment.month() + 1, 2);
+      const day = numberFixedDigits(currentMoment.date(), 2);
+      const hour = numberFixedDigits(currentMoment.hours(), 2);
       return `${year}-${month}-${day} ${hour}:00 for 1 hour`;
     }
     case TimestampTimeframe.Minute: {
-      const year = numberFixedDigits(time.getUTCFullYear(), 2);
-      const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
-      const day = numberFixedDigits(time.getUTCDate(), 2);
-      const hour = numberFixedDigits(time.getUTCHours(), 2);
-      const minute = numberFixedDigits(time.getUTCMinutes(), 2);
+      const year = numberFixedDigits(currentMoment.year(), 2);
+      const month = numberFixedDigits(currentMoment.month() + 1, 2);
+      const day = numberFixedDigits(currentMoment.date(), 2);
+      const hour = numberFixedDigits(currentMoment.hours(), 2);
+      const minute = numberFixedDigits(currentMoment.minutes(), 2);
       return `${year}-${month}-${day} ${hour}:${minute}`;
     }
     case TimestampTimeframe.Second: {
-      const year = numberFixedDigits(time.getUTCFullYear(), 2);
-      const month = numberFixedDigits(time.getUTCMonth() + 1, 2);
-      const day = numberFixedDigits(time.getUTCDate(), 2);
-      const hour = numberFixedDigits(time.getUTCHours(), 2);
-      const minute = numberFixedDigits(time.getUTCMinutes(), 2);
-      const second = numberFixedDigits(time.getUTCSeconds(), 2);
+      const year = numberFixedDigits(currentMoment.year(), 2);
+      const month = numberFixedDigits(currentMoment.month() + 1, 2);
+      const day = numberFixedDigits(currentMoment.date(), 2);
+      const hour = numberFixedDigits(currentMoment.hours(), 2);
+      const minute = numberFixedDigits(currentMoment.minutes(), 2);
+      const second = numberFixedDigits(currentMoment.seconds(), 2);
       return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
     }
     default:
