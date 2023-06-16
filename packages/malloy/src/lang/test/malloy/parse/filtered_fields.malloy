@@ -1,4 +1,0 @@
-EXPLORE flight | REDUCE
-  filteredA IS aAgg : [ filterOn:'expr' ]
-  filteredB IS bAgg : [ filterOn:'expr' ]
-  filteredC IS (REDUCE a c is d : [ filterOn:'expr' ])

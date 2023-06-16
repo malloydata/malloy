@@ -1,1 +1,0 @@
-EXPLORE flights | REDUCE : [ fild.name : 'value' ] abreduce is (reduce a,b) c, d  ORDER BY 2, 3 ASC LIMIT 10

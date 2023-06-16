@@ -1,5 +1,0 @@
-EXPLORE A
-  | REDUCE
-    totalBeels IS SUM(B),
-    uniqueCount IS COUNT(DISTINCT B),
-    totalCount IS count()
