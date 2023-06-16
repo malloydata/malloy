@@ -1458,6 +1458,10 @@ export class Explore extends Entity {
     return this._structDef;
   }
 
+  public get queryTimezone(): string | undefined {
+    return this.structDef.queryTimezone;
+  }
+
   public toJSON(): SerializedExplore {
     return {
       _structDef: this._structDef,

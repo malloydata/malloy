@@ -373,7 +373,7 @@ function makeContainerRenderer<Type extends ContainerRenderer>(
       document,
       options,
       c.defaultStylesForChildren,
-      explore.structDef.queryTimezone
+      explore.queryTimezone
     );
   });
   c.childRenderers = result;
