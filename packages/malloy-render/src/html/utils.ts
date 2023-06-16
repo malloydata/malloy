@@ -25,7 +25,7 @@ import {DateTimeframe, TimestampTimeframe} from '@malloydata/malloy';
 import startCase from 'lodash/startCase';
 import {RenderDef} from '../data_styles';
 import {RendererOptions} from '../renderer_types';
-import moment from 'moment-timezone';
+import {DateTime} from 'luxon';
 
 export function getColorScale(
   type: 'temporal' | 'ordinal' | 'quantitative' | 'nominal' | undefined,
@@ -83,65 +83,62 @@ export function timeToString(
   timeframe: DateTimeframe | TimestampTimeframe,
   timezone?: string
 ): string {
-  let currentMoment = moment(time).tz('UTC', true);
-  if (timezone) {
-    currentMoment = currentMoment.tz(timezone);
-  }
+  const dateTime = DateTime.fromJSDate(time, {zone: timezone});
 
   switch (timeframe) {
     case TimestampTimeframe.Year:
     case DateTimeframe.Year: {
-      const year = numberFixedDigits(currentMoment.year(), 4);
+      const year = numberFixedDigits(dateTime.year, 4);
       return `${year}`;
     }
     case TimestampTimeframe.Quarter:
     case DateTimeframe.Quarter: {
-      const year = numberFixedDigits(currentMoment.year(), 4);
-      const quarter = Math.floor(currentMoment.month() / 3) + 1;
+      const year = numberFixedDigits(dateTime.year, 4);
+      const quarter = Math.floor(dateTime.month / 3) + 1;
       return `${year}-Q${quarter}`;
     }
     case TimestampTimeframe.Month:
     case DateTimeframe.Month: {
-      const year = numberFixedDigits(currentMoment.year(), 2);
-      const month = numberFixedDigits(currentMoment.month() + 1, 2);
+      const year = numberFixedDigits(dateTime.year, 2);
+      const month = numberFixedDigits(dateTime.month, 2);
       return `${year}-${month}`;
     }
     case TimestampTimeframe.Week:
     case DateTimeframe.Week: {
-      const year = numberFixedDigits(currentMoment.year(), 2);
-      const month = numberFixedDigits(currentMoment.month() + 1, 2);
-      const day = numberFixedDigits(currentMoment.date(), 2);
+      const year = numberFixedDigits(dateTime.year, 2);
+      const month = numberFixedDigits(dateTime.month, 2);
+      const day = numberFixedDigits(dateTime.day, 2);
       return `WK${year}-${month}-${day}`;
     }
     case DateTimeframe.Day:
     case TimestampTimeframe.Day: {
-      const year = numberFixedDigits(currentMoment.year(), 2);
-      const month = numberFixedDigits(currentMoment.month() + 1, 2);
-      const day = numberFixedDigits(currentMoment.date(), 2);
+      const year = numberFixedDigits(dateTime.year, 2);
+      const month = numberFixedDigits(dateTime.month, 2);
+      const day = numberFixedDigits(dateTime.day, 2);
       return `${year}-${month}-${day}`;
     }
     case TimestampTimeframe.Hour: {
-      const year = numberFixedDigits(currentMoment.year(), 2);
-      const month = numberFixedDigits(currentMoment.month() + 1, 2);
-      const day = numberFixedDigits(currentMoment.date(), 2);
-      const hour = numberFixedDigits(currentMoment.hours(), 2);
+      const year = numberFixedDigits(dateTime.year, 2);
+      const month = numberFixedDigits(dateTime.month, 2);
+      const day = numberFixedDigits(dateTime.day, 2);
+      const hour = numberFixedDigits(dateTime.hour, 2);
       return `${year}-${month}-${day} ${hour}:00 for 1 hour`;
     }
     case TimestampTimeframe.Minute: {
-      const year = numberFixedDigits(currentMoment.year(), 2);
-      const month = numberFixedDigits(currentMoment.month() + 1, 2);
-      const day = numberFixedDigits(currentMoment.date(), 2);
-      const hour = numberFixedDigits(currentMoment.hours(), 2);
-      const minute = numberFixedDigits(currentMoment.minutes(), 2);
+      const year = numberFixedDigits(dateTime.year, 2);
+      const month = numberFixedDigits(dateTime.month, 2);
+      const day = numberFixedDigits(dateTime.day, 2);
+      const hour = numberFixedDigits(dateTime.hour, 2);
+      const minute = numberFixedDigits(dateTime.minute, 2);
       return `${year}-${month}-${day} ${hour}:${minute}`;
     }
     case TimestampTimeframe.Second: {
-      const year = numberFixedDigits(currentMoment.year(), 2);
-      const month = numberFixedDigits(currentMoment.month() + 1, 2);
-      const day = numberFixedDigits(currentMoment.date(), 2);
-      const hour = numberFixedDigits(currentMoment.hours(), 2);
-      const minute = numberFixedDigits(currentMoment.minutes(), 2);
-      const second = numberFixedDigits(currentMoment.seconds(), 2);
+      const year = numberFixedDigits(dateTime.year, 2);
+      const month = numberFixedDigits(dateTime.month, 2);
+      const day = numberFixedDigits(dateTime.day, 2);
+      const hour = numberFixedDigits(dateTime.hour, 2);
+      const minute = numberFixedDigits(dateTime.minute, 2);
+      const second = numberFixedDigits(dateTime.second, 2);
       return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
     }
     default:
