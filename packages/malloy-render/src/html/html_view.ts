@@ -62,9 +62,15 @@ export class HTMLView {
     table: DataArray,
     options: RendererOptions
   ): Promise<HTMLElement> {
-    const renderer = makeRenderer(table.field, this.document, options, {
-      size: 'large',
-    });
+    const renderer = makeRenderer(
+      table.field,
+      this.document,
+      options,
+      {
+        size: 'large',
+      },
+      table.field.structDef.queryTimezone
+    );
     try {
       // TODO Implement row streaming capability for some renderers: some renderers should be usable
       //      as a builder with `begin(field: StructDef)`, `row(field: StructDef, row: QueryDataRow)`,
@@ -173,7 +179,8 @@ export function makeRenderer(
   field: Explore | Field,
   document: Document,
   options: RendererOptions,
-  styleDefaults: StyleDefaults
+  styleDefaults: StyleDefaults,
+  queryTimezone: string | undefined
 ): Renderer {
   const renderDef = getRendererOptions(field, options.dataStyles) || {};
   options.dataStyles[field.name] = renderDef;
@@ -296,7 +303,7 @@ export function makeRenderer(
         (field.type === AtomicFieldType.Date ||
           field.type === AtomicFieldType.Timestamp))
     ) {
-      return new HTMLDateRenderer(document, options);
+      return new HTMLDateRenderer(document, queryTimezone);
     } else if (renderDef.renderer === 'currency') {
       return new HTMLCurrencyRenderer(document);
     } else if (renderDef.renderer === 'percent') {
@@ -365,7 +372,8 @@ function makeContainerRenderer<Type extends ContainerRenderer>(
       field,
       document,
       options,
-      c.defaultStylesForChildren
+      c.defaultStylesForChildren,
+      explore.structDef.queryTimezone
     );
   });
   c.childRenderers = result;
