@@ -1078,6 +1078,7 @@ export interface CompiledQuery extends DrillSource {
   queryName?: string | undefined;
   connectionName: string;
   queryTimezone?: string;
+  annotation?: Annotation;
 }
 
 /** Result type for running a Malloy query. */
