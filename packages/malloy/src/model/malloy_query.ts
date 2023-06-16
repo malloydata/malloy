@@ -2553,10 +2553,9 @@ class QueryQuery extends QueryField {
       structSource: {type: 'query_result'},
       resultMetadata: this.getResultMetadata(this.rootResult),
       type: 'struct',
+      queryTimezone: resultStruct.getQueryInfo().queryTimezone,
     };
-    if (isQuerySegment(this.firstSegment) && this.firstSegment.queryTimezone) {
-      outputStruct.queryTimezone = this.firstSegment.queryTimezone;
-    }
+
     return outputStruct;
   }
 

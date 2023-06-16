@@ -21,7 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FilterExpression, Fragment, Result, Runtime} from '@malloydata/malloy';
+import {
+  FilterExpression,
+  Fragment,
+  QueryMaterializer,
+  Result,
+  Runtime,
+} from '@malloydata/malloy';
 
 export function fStringEq(field: string, value: string): FilterExpression {
   return {
@@ -154,4 +160,24 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
     }
     return runtime.loadQuery(query).run();
   };
+}
+
+export async function runQuery(runtime: Runtime, querySrc: string) {
+  let query: QueryMaterializer;
+  try {
+    query = runtime.loadQuery(querySrc);
+  } catch (e) {
+    throw new Error(`loadQuery failed: ${e.message}`);
+  }
+
+  let result: Result;
+  try {
+    result = await query.run();
+  } catch (e) {
+    throw new Error(
+      `query.run failed: ${e.message}\n` + `SQL: ${await query.getSQL()}`
+    );
+  }
+
+  return result;
 }

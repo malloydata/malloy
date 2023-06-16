@@ -412,7 +412,6 @@ export class Malloy {
           // TODO feature-sql-block There is no source explore...
           sourceExplore: '',
           sourceFilters: [],
-          queryTimezone: sqlStruct.queryTimezone,
         },
         {
           name: 'empty_model',
@@ -1125,13 +1124,6 @@ export class PreparedResult {
       return new Explore(explore);
     }
     throw new Error(`'${name} is not an explore`);
-  }
-
-  /**
-   * @return The query timezone.
-   */
-  public get queryTimezone(): string | undefined {
-    return this.inner.queryTimezone;
   }
 
   public get _sourceExploreName(): string {
