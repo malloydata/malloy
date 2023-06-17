@@ -27,7 +27,6 @@ import {getDrillQuery} from '../drill';
 import {ContainerRenderer} from './container';
 import {HTMLNumberRenderer} from './number';
 import {createDrillIcon, formatTitle, yieldTask} from './utils';
-import {HTMLDateRenderer} from './date';
 
 export class HTMLTableRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
@@ -42,12 +41,12 @@ export class HTMLTableRenderer extends ContainerRenderer {
     table.field.intrinsicFields.forEach(field => {
       let name = formatTitle(
         this.options,
-        field.name,
-        this.options.dataStyles[field.name]
+        field,
+        this.options.dataStyles[field.name],
+        field.parentExplore.queryTimezone
       );
       const childRenderer = this.childRenderers[name];
       const isNumeric = childRenderer instanceof HTMLNumberRenderer;
-      const isDateTime = childRenderer instanceof HTMLDateRenderer;
       const headerCell = this.document.createElement('th');
       headerCell.style.cssText = `
         padding: 8px;
@@ -57,9 +56,6 @@ export class HTMLTableRenderer extends ContainerRenderer {
       `;
 
       name = name.replace(/_/g, '_&#8203;');
-      if (isDateTime && field.parentExplore.structDef.queryTimezone) {
-        name = `${name} (${field.parentExplore.structDef.queryTimezone})`;
-      }
       headerCell.innerHTML = name;
       header.appendChild(headerCell);
     });
