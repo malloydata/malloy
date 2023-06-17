@@ -191,16 +191,14 @@ export class Malloy {
             result.translated.modelDef,
             result.translated.queryList,
             result.translated.sqlBlocks,
+            result.logs || [],
             (position: ModelDocumentPosition) =>
               translator.referenceAt(position)
           );
         } else {
-          const errors = result.errors || [];
+          const logs = result.logs || [];
           const errText = translator.prettyErrors();
-          throw new MalloyError(
-            `Error(s) compiling model:\n${errText}`,
-            errors
-          );
+          throw new MalloyError(`Error(s) compiling model:\n${errText}`, logs);
         }
       } else {
         // Parse incomplete because some external information is required,
@@ -587,6 +585,7 @@ export class Model {
   private modelDef: ModelDef;
   private queryList: InternalQuery[];
   private sqlBlocks: SQLBlockStructDef[];
+  public readonly log: LogMessage[];
   _referenceAt: (
     location: ModelDocumentPosition
   ) => DocumentReference | undefined;
@@ -595,6 +594,7 @@ export class Model {
     modelDef: ModelDef,
     queryList: InternalQuery[],
     sqlBlocks: SQLBlockStructDef[],
+    log: LogMessage[],
     referenceAt: (
       location: ModelDocumentPosition
     ) => DocumentReference | undefined = () => undefined
@@ -602,6 +602,7 @@ export class Model {
     this.modelDef = modelDef;
     this.queryList = queryList;
     this.sqlBlocks = sqlBlocks;
+    this.log = log;
     this._referenceAt = referenceAt;
   }
 
@@ -1341,7 +1342,7 @@ export class Explore extends Entity {
   }
 
   public getSingleExploreModel(): Model {
-    return new Model(this.modelDef, [], []);
+    return new Model(this.modelDef, [], [], []);
   }
 
   private get fieldMap(): Map<string, Field> {
@@ -1957,7 +1958,7 @@ export class Runtime {
   //      be used in tests.
   public _loadModelFromModelDef(modelDef: ModelDef): ModelMaterializer {
     return new ModelMaterializer(this, async () => {
-      return new Model(modelDef, [], []);
+      return new Model(modelDef, [], [], []);
     });
   }
 

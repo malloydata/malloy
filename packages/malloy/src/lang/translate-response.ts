@@ -44,7 +44,13 @@ export interface FinalResponse {
 export interface ErrorResponse {
   errors: LogMessage[];
 }
-export type FatalResponse = FinalResponse & ErrorResponse;
+export interface WarningResponse {
+  warnings: LogMessage[];
+}
+export interface LogsResponse extends ErrorResponse, WarningResponse {
+  logs: LogMessage[];
+}
+export type FatalResponse = FinalResponse & LogsResponse;
 
 export interface NeedSchemaData {
   tables: string[];
@@ -83,7 +89,7 @@ interface HelpContext extends NeededData, ErrorResponse, FinalResponse {
 export type HelpContextResponse = Partial<HelpContext>;
 interface TranslatedResponseData
   extends NeededData,
-    ErrorResponse,
+    LogsResponse,
     FinalResponse {
   translated: {
     modelDef: ModelDef;

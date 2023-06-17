@@ -73,31 +73,34 @@ function modelOK(s: string): TestFunc {
   };
 }
 
-function badModel(s: MarkedSource | string, msg: string): TestFunc {
+function badModel(
+  s: MarkedSource | string,
+  msg: string,
+  warn = false
+): TestFunc {
   return () => {
     const src = typeof s === 'string' ? s : s.code;
-    const emsg = `Error expectation not met\nExpected error: '${msg}'\nSource:\n${src}`;
     const m = new TestTranslator(src);
     const t = m.translate();
-    if (t.translated) {
-      fail(emsg);
-    } else {
-      const errList = m.errors().errors;
-      const firstError = errList[0];
-      if (firstError.message !== msg) {
-        fail(`Received errror: ${firstError.message}\n${emsg}`);
-      }
-      if (typeof s !== 'string') {
-        if (!isEqual(errList[0].at, s.locations[0])) {
-          fail(
-            `Expected location: ${s.locations[0]}\n` +
-              `Received location: ${errList[0].at}\n${emsg}`
-          );
-        }
-      }
+    if (!warn) {
+      expect(t.translated).toBe(false);
     }
+    const logList = m.logs().logs;
+    const firstError = logList[0];
+    expect(firstError).not.toBeUndefined();
+    const severity = firstError.severity ?? 'error';
+    expect(firstError.message).toBe(msg);
+    if (typeof s !== 'string') {
+      expect(firstError.at).toMatchObject(s.locations[0]);
+    }
+    const expectedSeverity = warn ? 'warn' : 'error';
+    expect(severity).toBe(expectedSeverity);
     return undefined;
   };
+}
+
+function modelWarn(s: MarkedSource | string, msg: string) {
+  return badModel(s, msg, true);
 }
 
 describe('model statements', () => {

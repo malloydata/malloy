@@ -44,7 +44,7 @@ import {MalloyLexer} from './lib/Malloy/MalloyLexer';
 import {MalloyParser} from './lib/Malloy/MalloyParser';
 import * as ast from './ast';
 import {MalloyToAST} from './malloy-to-ast';
-import {MessageLog} from './parse-log';
+import {LogMessage, LogSeverity, MessageLog} from './parse-log';
 import {findReferences} from './parse-tree-walkers/find-external-references';
 import {Zone, ZoneData} from './zone';
 import {walkForDocumentSymbols} from './parse-tree-walkers/document-symbol-walker';
@@ -76,6 +76,8 @@ import {
   NeedURLData,
   TranslateResponse,
   isNeedResponse,
+  WarningResponse,
+  LogsResponse,
 } from './translate-response';
 import {MalloyParserErrorHandler} from './parse-error-handler';
 
@@ -434,7 +436,7 @@ which has an SQL block ...
 
     newAst.setTranslator(that);
     this.response = {
-      ...that.errors(), // these errors will by definition all be warnings
+      ...that.logs(),
       ast: newAst,
       final: true,
     };
@@ -600,7 +602,7 @@ class TranslateStep implements TranslationStep {
           queryList: that.queryList,
           sqlBlocks: that.sqlBlocks,
         },
-        ...that.errors(),
+        ...that.logs(),
         final: true,
       };
     }
@@ -670,8 +672,18 @@ export abstract class MalloyTranslation {
   fatalErrors(): FatalResponse {
     return {
       final: true,
-      errors: [...this.root.logger.getLog()],
+      ...this.logs(),
     };
+  }
+
+  logsWithSeverity(severity: LogSeverity): LogMessage[] {
+    return this.root.logger
+      .getLog()
+      .filter(
+        m =>
+          m.severity === severity ||
+          (severity === 'error' && m.severity === undefined)
+      );
   }
 
   /**
@@ -679,8 +691,19 @@ export abstract class MalloyTranslation {
    * When returning "errors so far", make a snapshot.
    */
   errors(): ErrorResponse {
-    const errors = this.root.logger.getLog();
-    return {errors: [...errors]};
+    return {errors: this.logsWithSeverity('error')};
+  }
+
+  warnings(): WarningResponse {
+    return {warnings: this.logsWithSeverity('warn')};
+  }
+
+  logs(): LogsResponse {
+    return {
+      logs: [...this.root.logger.getLog()],
+      ...this.errors(),
+      ...this.warnings(),
+    };
   }
 
   getLineMap(url: string): string[] | undefined {
