@@ -82,7 +82,7 @@ function badModel(s: MarkedSource | string, msg: string): TestFunc {
     if (t.translated) {
       fail(emsg);
     } else {
-      const errList = m.problems().problems;
+      const errList = m.problemResponse().problems;
       const firstError = errList[0];
       if (firstError.message !== msg) {
         fail(`Received errror: ${firstError.message}\n${emsg}`);
@@ -2649,7 +2649,7 @@ describe('translation need error locations', () => {
       errors: {urls: {[(result.urls || [])[0]]: 'Bad file!'}},
     });
     expect(m).not.modelParsed();
-    const errList = m.problems().problems;
+    const errList = m.problemResponse().problems;
     expect(errList[0].at).isLocationIn(source.locations[0], source.code);
     return undefined;
   });
@@ -2667,7 +2667,7 @@ describe('translation need error locations', () => {
       m.update({errors: {compileSQL: {[req.name]: 'Bad SQL!'}}});
     }
     expect(m).not.modelCompiled();
-    const errList = m.problems().problems;
+    const errList = m.problemResponse().problems;
     expect(errList[0].at).isLocationIn(source.locations[0], source.code);
   });
 
@@ -2683,7 +2683,7 @@ describe('translation need error locations', () => {
       },
     });
     expect(m).not.modelParsed();
-    const errList = m.problems().problems;
+    const errList = m.problemResponse().problems;
     expect(errList[0].at).isLocationIn(source.locations[0], source.code);
     return undefined;
   });

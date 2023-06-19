@@ -215,7 +215,7 @@ expect.extend({
       };
     } else {
       const explain: string[] = [];
-      const errList = m.problems().problems;
+      const errList = m.problemResponse().problems;
       let i;
       for (i = 0; i < msgs.length && errList[i]; i += 1) {
         const msg = msgs[i];

@@ -44,7 +44,7 @@ import {MalloyLexer} from './lib/Malloy/MalloyLexer';
 import {MalloyParser} from './lib/Malloy/MalloyParser';
 import * as ast from './ast';
 import {MalloyToAST} from './malloy-to-ast';
-import {MessageLog} from './parse-log';
+import {LogMessage, MessageLog} from './parse-log';
 import {findReferences} from './parse-tree-walkers/find-external-references';
 import {Zone, ZoneData} from './zone';
 import {walkForDocumentSymbols} from './parse-tree-walkers/document-symbol-walker';
@@ -437,7 +437,7 @@ which has an SQL block ...
 
     newAst.setTranslator(that);
     this.response = {
-      ...that.problems(), // these problems will by definition all be warnings
+      ...that.problemResponse(), // these problems will by definition all be warnings
       ast: newAst,
       final: true,
     };
@@ -604,7 +604,7 @@ class TranslateStep implements TranslationStep {
           queryList: that.queryList,
           sqlBlocks: that.sqlBlocks,
         },
-        ...that.problems(),
+        ...that.problemResponse(),
         final: true,
       };
     }
@@ -674,7 +674,7 @@ export abstract class MalloyTranslation {
   fatalErrors(): FatalResponse {
     return {
       final: true,
-      problems: [...this.root.logger.getLog()],
+      problems: this.root.logger.getLog().filter(e => e.severity === 'error'),
     };
   }
 
@@ -682,9 +682,12 @@ export abstract class MalloyTranslation {
    * The problem log can grow as progressively deeper questions are asked.
    * When returning "problems so far", make a snapshot.
    */
-  problems(): ProblemResponse {
-    const problems = this.root.logger.getLog();
-    return {problems: [...problems]};
+  problemResponse(): ProblemResponse {
+    return {problems: this.problems()};
+  }
+
+  problems(): LogMessage[] {
+    return [...this.root.logger.getLog()];
   }
 
   getLineMap(url: string): string[] | undefined {
