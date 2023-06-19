@@ -154,6 +154,7 @@ class ParseStep implements TranslationStep {
         that.urlIsFullPath = false;
         that.root.logger.log({
           message: `Could not compute full path URL: ${msg}`,
+          severity: 'error',
         });
       }
     }
@@ -168,7 +169,7 @@ class ParseStep implements TranslationStep {
           ? `import error: ${srcEnt.message}`
           : `import '${that.sourceURL}' error: ${srcEnt.message}`;
         const at = srcEnt.firstReference || that.defaultLocation();
-        that.root.logger.log({message, at});
+        that.root.logger.log({message, at, severity: 'error'});
         this.response = that.fatalErrors();
         return this.response;
       }
@@ -183,6 +184,7 @@ class ParseStep implements TranslationStep {
     } catch (parseException) {
       that.root.logger.log({
         message: `Malloy internal parser exception [${parseException.message}]`,
+        severity: 'error',
       });
       parse = undefined;
     }
@@ -308,6 +310,7 @@ class ImportsAndTablesStep implements TranslationStep {
             that.root.logger.log({
               message: `Malformed URL '${relativeRef}'"`,
               at: {url: that.sourceURL, range: firstRef},
+              severity: 'error',
             });
           }
         }
@@ -587,6 +590,7 @@ class TranslateStep implements TranslationStep {
         that.root.logger.log({
           message: `'${that.sourceURL}' did not parse to malloy document`,
           at: that.defaultLocation(),
+          severity: 'error',
         });
       }
     }

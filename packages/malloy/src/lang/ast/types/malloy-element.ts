@@ -172,7 +172,7 @@ export abstract class MalloyElement {
   }
 
   private readonly logged = new Set<string>();
-  log(message: string, severity?: LogSeverity): void {
+  log(message: string, severity: LogSeverity = 'error'): void {
     if (this.codeLocation) {
       /*
        * If this element has a location, then don't report the same
