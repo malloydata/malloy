@@ -181,5 +181,3 @@ export async function runQuery(runtime: Runtime, querySrc: string) {
 
   return result;
 }
-
-export {markSource} from './mark-source';

@@ -159,7 +159,7 @@ class ParseStep implements TranslationStep {
       }
     }
     if (!that.urlIsFullPath) {
-      return that.fatalErrors();
+      return that.fatalResponse();
     }
 
     const srcEnt = that.root.importZone.getEntry(that.sourceURL);
@@ -170,7 +170,7 @@ class ParseStep implements TranslationStep {
           : `import '${that.sourceURL}' error: ${srcEnt.message}`;
         const at = srcEnt.firstReference || that.defaultLocation();
         that.root.logger.log({message, at, severity: 'error'});
-        this.response = that.fatalErrors();
+        this.response = that.fatalResponse();
         return this.response;
       }
       return {urls: [that.sourceURL]};
@@ -192,7 +192,7 @@ class ParseStep implements TranslationStep {
     if (that.root.logger.hasErrors()) {
       this.response = {
         parse,
-        ...that.fatalErrors(),
+        ...that.fatalResponse(),
       };
     } else {
       this.response = {parse};
@@ -371,7 +371,7 @@ class ASTStep implements TranslationStep {
     const parseResponse = that.parseStep.response;
     // Errors in self or children will show up here ..
     if (that.root.logger.hasErrors()) {
-      this.response = that.fatalErrors();
+      this.response = that.fatalResponse();
       return this.response;
     }
 
@@ -384,7 +384,7 @@ class ASTStep implements TranslationStep {
     const secondPass = new MalloyToAST(parse, that.root.logger);
     const newAst = secondPass.visit(parse.root);
     if (that.root.logger.hasErrors()) {
-      this.response = that.fatalErrors();
+      this.response = that.fatalResponse();
       return this.response;
     }
 
@@ -415,7 +415,7 @@ class ASTStep implements TranslationStep {
     }
     // If there is a partial ast ...
     if (that.root.logger.hasErrors()) {
-      this.response = that.fatalErrors();
+      this.response = that.fatalResponse();
       return this.response;
     }
 
@@ -596,7 +596,7 @@ class TranslateStep implements TranslationStep {
     }
 
     if (that.root.logger.hasErrors()) {
-      this.response = that.fatalErrors();
+      this.response = that.fatalResponse();
     } else {
       this.response = {
         translated: {
@@ -671,10 +671,15 @@ export abstract class MalloyTranslation {
     return this.references.find(position);
   }
 
-  fatalErrors(): FatalResponse {
+  /**
+   * This returns a *final* response containing all problems, for when there are
+   * errors and the translation needs to stop and report errors. When doing so,
+   * it also reports warnings.
+   */
+  fatalResponse(): FatalResponse {
     return {
       final: true,
-      problems: this.root.logger.getLog().filter(e => e.severity === 'error'),
+      ...this.problemResponse(),
     };
   }
 
