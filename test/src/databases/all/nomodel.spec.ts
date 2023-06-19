@@ -847,11 +847,16 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       ${sql1234}
       source: eone is  from_sql(one) {}
 
-      query: eone -> { project: a is  '123'::date }
+      query: eone -> {
+        project:
+          bad_date is '123'::date
+          bad_number is 'abc'::number
+      }
       `
       )
       .run();
-    expect(result.data.value[0]['a']).toBe(null);
+    expect(result.data.value[0]['bad_date']).toBe(null);
+    expect(result.data.value[0]['bad_number']).toBe(null);
   });
 
   // local declarations
