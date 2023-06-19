@@ -41,10 +41,10 @@ import {DocumentHelpContext} from './parse-tree-walkers/document-help-context-wa
 export interface FinalResponse {
   final: true; // When final, there is no need to reply, translation is over
 }
-export interface ErrorResponse {
-  errors: LogMessage[];
+export interface ProblemResponse {
+  problems: LogMessage[];
 }
-export type FatalResponse = FinalResponse & ErrorResponse;
+export type FatalResponse = FinalResponse & ProblemResponse;
 
 export interface NeedSchemaData {
   tables: string[];
@@ -64,26 +64,26 @@ export function isNeedResponse(dr: DataRequestResponse): dr is NeededData {
   return !!dr && (dr.tables || dr.urls || dr.compileSQL) !== undefined;
 }
 export type ModelDataRequest = NeedCompileSQL | undefined;
-interface ASTData extends ErrorResponse, NeededData, FinalResponse {
+interface ASTData extends ProblemResponse, NeededData, FinalResponse {
   ast: MalloyElement;
 }
 export type ASTResponse = Partial<ASTData>;
-interface Metadata extends NeededData, ErrorResponse, FinalResponse {
+interface Metadata extends NeededData, ProblemResponse, FinalResponse {
   symbols: DocumentSymbol[];
   highlights: DocumentHighlight[];
 }
 export type MetadataResponse = Partial<Metadata>;
-interface Completions extends NeededData, ErrorResponse, FinalResponse {
+interface Completions extends NeededData, ProblemResponse, FinalResponse {
   completions: DocumentCompletion[];
 }
 export type CompletionsResponse = Partial<Completions>;
-interface HelpContext extends NeededData, ErrorResponse, FinalResponse {
+interface HelpContext extends NeededData, ProblemResponse, FinalResponse {
   helpContext: DocumentHelpContext | undefined;
 }
 export type HelpContextResponse = Partial<HelpContext>;
 interface TranslatedResponseData
   extends NeededData,
-    ErrorResponse,
+    ProblemResponse,
     FinalResponse {
   translated: {
     modelDef: ModelDef;

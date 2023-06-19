@@ -41,8 +41,8 @@ import {
 } from './types';
 
 export class MalloySQLParseError extends MalloyError {
-  constructor(message: string, log: LogMessage[] = []) {
-    super(message, log);
+  constructor(message: string, problems: LogMessage[] = []) {
+    super(message, problems);
   }
 }
 

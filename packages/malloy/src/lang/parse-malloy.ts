@@ -67,7 +67,7 @@ import {
   ASTResponse,
   CompletionsResponse,
   DataRequestResponse,
-  ErrorResponse,
+  ProblemResponse,
   FatalResponse,
   FinalResponse,
   HelpContextResponse,
@@ -123,7 +123,7 @@ export interface MalloyParseRoot {
   malloyVersion: string;
 }
 
-interface ParseData extends ErrorResponse, NeedURLData, FinalResponse {
+interface ParseData extends ProblemResponse, NeedURLData, FinalResponse {
   parse: MalloyParseRoot;
 }
 export type ParseResponse = Partial<ParseData>;
@@ -434,7 +434,7 @@ which has an SQL block ...
 
     newAst.setTranslator(that);
     this.response = {
-      ...that.errors(), // these errors will by definition all be warnings
+      ...that.problems(), // these problems will by definition all be warnings
       ast: newAst,
       final: true,
     };
@@ -600,7 +600,7 @@ class TranslateStep implements TranslationStep {
           queryList: that.queryList,
           sqlBlocks: that.sqlBlocks,
         },
-        ...that.errors(),
+        ...that.problems(),
         final: true,
       };
     }
@@ -670,17 +670,17 @@ export abstract class MalloyTranslation {
   fatalErrors(): FatalResponse {
     return {
       final: true,
-      errors: [...this.root.logger.getLog()],
+      problems: [...this.root.logger.getLog()],
     };
   }
 
   /**
-   * The error log can grow as progressively deeper questions are asked.
-   * When returning "errors so far", make a snapshot.
+   * The problem log can grow as progressively deeper questions are asked.
+   * When returning "problems so far", make a snapshot.
    */
-  errors(): ErrorResponse {
-    const errors = this.root.logger.getLog();
-    return {errors: [...errors]};
+  problems(): ProblemResponse {
+    const problems = this.root.logger.getLog();
+    return {problems: [...problems]};
   }
 
   getLineMap(url: string): string[] | undefined {

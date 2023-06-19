@@ -204,7 +204,7 @@ expect.extend({
     const t = m.translate();
     if (t.translated) {
       return {pass: false, message: () => emsg};
-    } else if (t.errors === undefined) {
+    } else if (t.problems === undefined) {
       return {
         pass: false,
         message: () =>
@@ -215,7 +215,7 @@ expect.extend({
       };
     } else {
       const explain: string[] = [];
-      const errList = m.errors().errors;
+      const errList = m.problems().problems;
       let i;
       for (i = 0; i < msgs.length && errList[i]; i += 1) {
         const msg = msgs[i];
