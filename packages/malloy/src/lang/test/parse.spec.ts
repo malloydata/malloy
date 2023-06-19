@@ -1370,6 +1370,11 @@ describe('expressions', () => {
     test('and', exprOK('true and false'));
     test('or', exprOK('true or false'));
     test('null-check (??)', exprOK('ai ?? 7'));
+    test('coalesce type mismatch', () => {
+      expect(new BetaExpression('ai ?? @2003')).compileToFailWith(
+        'Mismatched types for coalesce (number, date)'
+      );
+    });
     test('disallow date OP number', () => {
       expect(new BetaExpression('@2001 = 7')).compileToFailWith(
         'Cannot compare a date to a number'
@@ -2662,61 +2667,65 @@ describe('error cascading', () => {
     );
   });
 
-  const scalars = [
-    'err',
-    '@2003 ~ @2003 for err hours',
-    'err.hour',
-    'err::string',
-    '-err',
-    'err * 1',
-    '1 * err',
-    'err / 1',
-    '1 / err',
-    'err % 1',
-    '1 % err',
-    'err + 1',
-    '1 + err',
-    'err - 1',
-    '1 - err',
-    '@2003 ? err for 1 minute',
-    '@2003 ? @2003 for err minutes',
-    '3 ? > err & > 3',
-    '3 ? > 3 & > err',
-    '3 ? > err | > 3',
-    '3 ? > 3 | > err',
-    '3 ? > err',
-    '1 > err',
-    'err > 1',
-    '1 >= err',
-    'err >= 1',
-    '1 < err',
-    'err < 1',
-    '1 <= err',
-    'err <= 1',
-    '1 = err',
-    'err = 1',
-    '1 != err',
-    'err != 1',
-    '1 ~ err',
-    'err ~ 1',
-    '1 !~ err',
-    'err !~ 1',
-    'err ? > 3',
-    '3 ? > err',
-    'not err',
-    'err and true',
-    'true and err',
-    'err or true',
-    'true or err',
-    'err ?? 1',
-    '1 ?? err',
-    'cast(err as number)',
-    '(err)',
-    'length(err)',
-    'pick err when true else false',
-    'pick true when err else false',
-    'pick true when true else err',
-  ];
+  const typedScalars = {
+    'err': 'error',
+    '@2003 ~ @2003 for err hours': 'boolean',
+    'err.hour': 'timestamp',
+    'err.month': 'date',
+    'day_of_week(err)': 'number',
+    'err::string': 'string',
+    '-err': 'number',
+    'err * 1': 'number',
+    '1 * err': 'number',
+    'err / 1': 'number',
+    '1 / err': 'number',
+    'err % 1': 'number',
+    '1 % err': 'number',
+    'err + 1': 'number',
+    '1 + err': 'number',
+    'err - 1': 'number',
+    '1 - err': 'number',
+    '@2003 ? err for 1 minute': 'boolean',
+    '@2003 ? @2003 for err minutes': 'boolean',
+    '3 ? > err & > 3': 'boolean',
+    '3 ? > 3 & > err': 'boolean',
+    '3 ? > err | > 3': 'boolean',
+    '3 ? > 3 | > err': 'boolean',
+    'err ? > 3': 'boolean',
+    '3 ? > err': 'boolean',
+    '1 > err': 'boolean',
+    'err > 1': 'boolean',
+    '1 >= err': 'boolean',
+    'err >= 1': 'boolean',
+    '1 < err': 'boolean',
+    'err < 1': 'boolean',
+    '1 <= err': 'boolean',
+    'err <= 1': 'boolean',
+    '1 = err': 'boolean',
+    'err = 1': 'boolean',
+    '1 != err': 'boolean',
+    'err != 1': 'boolean',
+    '1 ~ err': 'boolean',
+    'err ~ 1': 'boolean',
+    '1 !~ err': 'boolean',
+    'err !~ 1': 'boolean',
+    'not err': 'boolean',
+    'err and true': 'boolean',
+    'true and err': 'boolean',
+    'err or true': 'boolean',
+    'true or err': 'boolean',
+    'err ?? 1': 'number',
+    '1 ?? err': 'number',
+    'cast(err as number)': 'number',
+    '(err)': 'error',
+    'length(err)': 'number',
+    'pick err when true else false': 'boolean',
+    'pick true when err else false': 'boolean',
+    'pick true when true else err': 'boolean',
+    'days(err to @2003)': 'number',
+    'days(@2003 to err)': 'number',
+  };
+  const scalars = Object.keys(typedScalars);
   const aggregates = [
     'measure_err { where: true }',
     'count(distinct err)',
@@ -2744,6 +2753,22 @@ describe('error cascading', () => {
       "Cannot define 'err', unexpected type: null",
       "'foo' is not defined"
     );
+  });
+
+  test('error type inference is good', () => {
+    for (const scalar of scalars) {
+      const source = `
+          source: a1 is a {
+            dimension:
+              ${'err is null'}
+              dim is length(${scalar}, 1)
+          }
+        `;
+      expect(source).compileToFailWith(
+        "Cannot define 'err', unexpected type: null",
+        `No matching overload for function length(${typedScalars[scalar]}, number)`
+      );
+    }
   });
 
   test('eval space of errors is preserved', () => {

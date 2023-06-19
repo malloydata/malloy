@@ -55,13 +55,13 @@ export class ForRange extends ExpressionDef {
         this.log(`FOR duration count must be a number, not '${nV.dataType}'`);
       }
       return {
-        dataType: 'error',
+        dataType: 'boolean',
         evalSpace: mergeEvalSpaces(startV.evalSpace, checkV.evalSpace),
         expressionType: maxExpressionType(
           startV.expressionType,
           checkV.expressionType
         ),
-        value: errorFor('for not nnumber').value,
+        value: errorFor('for not number').value,
       };
     }
     const units = this.timeframe.text;
