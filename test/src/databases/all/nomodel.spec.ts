@@ -839,6 +839,21 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   //   expect(result.data.value[0].version).toBe("something");
   // });
 
+  // invalid casts in malloy are by default safe and just return NULL
+  it(`safe_cast - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      ${sql1234}
+      source: eone is  from_sql(one) {}
+
+      query: eone -> { project: a is  '123'::date }
+      `
+      )
+      .run();
+    expect(result.data.value[0]['a']).toBe(null);
+  });
+
   // local declarations
   it(`local declarations external query - ${databaseName}`, async () => {
     const result = await runtime

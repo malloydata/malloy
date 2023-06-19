@@ -346,8 +346,10 @@ export class PostgresDialect extends Dialect {
     } else if (op === 'date::timestamp' && tz) {
       return mkExpr`CAST((${cast.expr})::TIMESTAMP AT TIME ZONE '${tz}' AS TIMESTAMP)`;
     }
-    if (cast.dstType !== cast.srcType) {
-      return mkExpr`CAST(${cast.expr} AS ${castTo})`;
+    if (cast.srcType !== cast.dstType) {
+      const dstType = castMap[cast.dstType] || cast.dstType;
+      const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
+      return mkExpr`${castFunc}(${cast.expr}  AS ${dstType})`;
     }
     return cast.expr;
   }
