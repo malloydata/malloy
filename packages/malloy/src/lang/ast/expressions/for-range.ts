@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {maxExpressionType, mergeEvalSpaces} from '../../../model';
 import {errorFor} from '../ast-utils';
 import {FT} from '../fragtype-utils';
 import {castDateToTimestamp, resolution, timeOffset} from '../time-utils';
@@ -50,8 +51,18 @@ export class ForRange extends ExpressionDef {
     }
     const nV = this.duration.getExpression(fs);
     if (nV.dataType !== 'number') {
-      this.log(`FOR duration count must be a number, not '${nV.dataType}'`);
-      return errorFor('FOR not number');
+      if (nV.dataType !== 'error') {
+        this.log(`FOR duration count must be a number, not '${nV.dataType}'`);
+      }
+      return {
+        dataType: 'error',
+        evalSpace: mergeEvalSpaces(startV.evalSpace, checkV.evalSpace),
+        expressionType: maxExpressionType(
+          startV.expressionType,
+          checkV.expressionType
+        ),
+        value: errorFor('for not nnumber').value,
+      };
     }
     const units = this.timeframe.text;
 

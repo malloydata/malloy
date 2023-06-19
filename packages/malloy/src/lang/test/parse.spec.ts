@@ -502,8 +502,7 @@ describe('model statements', () => {
             group_by: b is c2
           }`).compileToFailWith(
             // c2 is not defined because group_by doesn't know to look in the output space
-            "'c2' is not defined",
-            "Cannot define 'b', value has unknown type"
+            "'c2' is not defined"
           );
         });
         test('cannot use analytic in order_by, preserved over refinement', () => {
@@ -520,27 +519,20 @@ describe('model statements', () => {
             group_by: c is 1
             aggregate: c2 is all(all(sum(ai)))
           }`).compileToFailWith(
-            'all() expression must not already be ungrouped',
-            "Cannot define 'c2', value has unknown type"
+            'all() expression must not already be ungrouped'
           );
         });
         test('cannot aggregate an ungrouped', () => {
           expect(`query: a1 is a -> {
             group_by: c is 1
             aggregate: c2 is sum(all(sum(ai)))
-          }`).compileToFailWith(
-            'Aggregate expression cannot be aggregate',
-            "Cannot define 'c2', value has unknown type"
-          );
+          }`).compileToFailWith('Aggregate expression cannot be aggregate');
         });
         test('cannot aggregate an aggregate', () => {
           expect(`query: a1 is a -> {
             group_by: c is 1
             aggregate: c2 is sum(sum(ai))
-          }`).compileToFailWith(
-            'Aggregate expression cannot be aggregate',
-            "Cannot define 'c2', value has unknown type"
-          );
+          }`).compileToFailWith('Aggregate expression cannot be aggregate');
         });
         test(
           'can use field def in group_by, preserved over refinement',
@@ -573,16 +565,14 @@ describe('model statements', () => {
         expect(`query: a -> {
           group_by: s is floor('a', 'b')
         }`).compileToFailWith(
-          'No matching overload for function floor(string, string)',
-          "Cannot define 's', value has unknown type"
+          'No matching overload for function floor(string, string)'
         );
       });
       test('unknown function', () => {
         expect(`query: a -> {
           group_by: s is asdfasdf()
         }`).compileToFailWith(
-          "Unknown function 'asdfasdf'. Use 'asdfasdf!(...)' to call a SQL function directly.",
-          "Cannot define 's', value has unknown type"
+          "Unknown function 'asdfasdf'. Use 'asdfasdf!(...)' to call a SQL function directly."
         );
       });
       test(
@@ -608,10 +598,7 @@ describe('model statements', () => {
       test('function return type incorrect', () => {
         expect(`query: a -> {
             group_by: s is floor(1.2) + 'a'
-        }`).compileToFailWith(
-          "Non numeric('number,string') value with '+'",
-          "Cannot define 's', value has unknown type"
-        );
+        }`).compileToFailWith("Non numeric('number,string') value with '+'");
       });
       test(
         'can use output value in calculate',
@@ -624,10 +611,7 @@ describe('model statements', () => {
         expect(`query: a -> {
           group_by: x is 1
           group_by: y is x
-        }`).compileToFailWith(
-          "'x' is not defined",
-          "Cannot define 'y', value has unknown type"
-        );
+        }`).compileToFailWith("'x' is not defined");
       });
       test('lag can check that other args are constant', () => {
         expect(`query: a -> {
@@ -699,10 +683,7 @@ describe('model statements', () => {
             group_by: b
             calculate: foo is lag(b)
           }`
-        ).compileToFailWith(
-          'No matching overload for function lag(struct)',
-          "Cannot define 'foo', value has unknown type"
-        );
+        ).compileToFailWith('No matching overload for function lag(struct)');
       });
       // TODO this doesn't work today, we're not rigorous enough with integer
       // subtypes. But we should probably make this typecheck properly.
@@ -717,10 +698,7 @@ describe('model statements', () => {
       test('cannot use stddev with no arguments', () => {
         expect(`query: a -> {
           aggregate: x is stddev()
-        }`).compileToFailWith(
-          'No matching overload for function stddev()',
-          "Cannot define 'x', value has unknown type"
-        );
+        }`).compileToFailWith('No matching overload for function stddev()');
       });
       test(
         'can use stddev with postfix syntax',
@@ -1534,10 +1512,7 @@ describe('expressions', () => {
         source: na is a + { dimension: d is
           pick 7 when true and true
         }
-      `).compileToFailWith(
-        "pick incomplete, missing 'else'",
-        "Cannot define 'd', value has unknown type"
-      );
+      `).compileToFailWith("pick incomplete, missing 'else'");
     });
     test('n-ary with mismatch when clauses', () => {
       expect(markSource`
@@ -1546,10 +1521,7 @@ describe('expressions', () => {
           pick '7' when true or true
           else 7
         }
-      `).compileToFailWith(
-        "pick type 'string', expected 'number'",
-        "Cannot define 'd', value has unknown type"
-      );
+      `).compileToFailWith("pick type 'string', expected 'number'");
     });
     test('n-ary with mismatched else clause', () => {
       expect(markSource`
@@ -1557,40 +1529,28 @@ describe('expressions', () => {
           pick 7 when true and true
           else '7'
         }
-      `).compileToFailWith(
-        "else type 'string', expected 'number'",
-        "Cannot define 'd', value has unknown type"
-      );
+      `).compileToFailWith("else type 'string', expected 'number'");
     });
     test('applied else mismatch', () => {
       expect(markSource`
         source: na is a + { dimension: d is
           7 ? pick 7 when 7 else 'not seven'
         }
-      `).compileToFailWith(
-        "else type 'string', expected 'number'",
-        "Cannot define 'd', value has unknown type"
-      );
+      `).compileToFailWith("else type 'string', expected 'number'");
     });
     test('applied default mismatch', () => {
       expect(markSource`
         source: na is a + { dimension: d is
           7 ? pick 'seven' when 7
         }
-      `).compileToFailWith(
-        "pick default type 'number', expected 'string'",
-        "Cannot define 'd', value has unknown type"
-      );
+      `).compileToFailWith("pick default type 'number', expected 'string'");
     });
     test('applied when mismatch', () => {
       expect(markSource`
         source: na is a + { dimension: d is
           7 ? pick 'seven' when 7 pick 6 when 6
         }
-      `).compileToFailWith(
-        "pick type 'number', expected 'string'",
-        "Cannot define 'd', value has unknown type"
-      );
+      `).compileToFailWith("pick type 'number', expected 'string'");
     });
   });
   test('paren and applied div', () => {
@@ -2686,6 +2646,130 @@ describe('translation need error locations', () => {
     const errList = m.errors().errors;
     expect(errList[0].at).isLocationIn(source.locations[0], source.code);
     return undefined;
+  });
+});
+
+describe('error cascading', () => {
+  test('errors can appear in multiple top level objects', () => {
+    expect(
+      markSource`
+        source: a1 is a { dimension: ${'x is count()'} }
+        source: a2 is a { dimension: ${'x is count()'} }
+      `
+    ).compileToFailWith(
+      'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?',
+      'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?'
+    );
+  });
+
+  const scalars = [
+    'err',
+    '@2003 ~ @2003 for err hours',
+    'err.hour',
+    'err::string',
+    '-err',
+    'err * 1',
+    '1 * err',
+    'err / 1',
+    '1 / err',
+    'err % 1',
+    '1 % err',
+    'err + 1',
+    '1 + err',
+    'err - 1',
+    '1 - err',
+    '@2003 ? err for 1 minute',
+    '@2003 ? @2003 for err minutes',
+    '3 ? > err & > 3',
+    '3 ? > 3 & > err',
+    '3 ? > err | > 3',
+    '3 ? > 3 | > err',
+    '3 ? > err',
+    '1 > err',
+    'err > 1',
+    '1 >= err',
+    'err >= 1',
+    '1 < err',
+    'err < 1',
+    '1 <= err',
+    'err <= 1',
+    '1 = err',
+    'err = 1',
+    '1 != err',
+    'err != 1',
+    '1 ~ err',
+    'err ~ 1',
+    '1 !~ err',
+    'err !~ 1',
+    'err ? > 3',
+    '3 ? > err',
+    'not err',
+    'err and true',
+    'true and err',
+    'err or true',
+    'true or err',
+    'err ?? 1',
+    '1 ?? err',
+    'cast(err as number)',
+    '(err)',
+    'length(err)',
+    'pick err when true else false',
+    'pick true when err else false',
+    'pick true when true else err',
+  ];
+  const aggregates = [
+    'measure_err { where: true }',
+    'count(distinct err)',
+    'b.sum(err)',
+    'b.stddev(err)',
+  ];
+  const ungroupedAggregates = ['all(measure_err)'];
+
+  test('dependent errors do not cascade', () => {
+    expect(
+      `
+        source: a1 is a {
+          join_one: b with astr
+          dimension:
+            ${'err is null'}
+            ${scalars.map((d, i) => `e${i} is ${d}`).join('\n            ')}
+          measure:
+            measure_err is count(distinct foo),
+            ${[...aggregates, ...ungroupedAggregates]
+              .map((m, i) => `e${i + scalars.length} is ${m}`)
+              .join('\n            ')}
+        }
+      `
+    ).compileToFailWith(
+      "Cannot define 'err', unexpected type: null",
+      "'foo' is not defined"
+    );
+  });
+
+  test('eval space of errors is preserved', () => {
+    expect(
+      `
+        source: a1 is a {
+          join_one: b with astr
+        }
+        query: a1 -> {
+          group_by:
+            ${'err is null'}
+          aggregate:
+            measure_err is count(distinct foo)
+          calculate:
+            ${scalars
+              .map((d, i) => `e${i} is lag(${d})`)
+              .join('\n            ')}
+            ${aggregates
+              .map((m, i) => `e${i + scalars.length} is lag(${m})`)
+              .join('\n            ')}
+        }
+      `
+    ).compileToFailWith(
+      "Cannot define 'err', unexpected type: null",
+      "'foo' is not defined"
+    );
   });
 });
 
