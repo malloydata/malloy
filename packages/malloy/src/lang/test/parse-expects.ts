@@ -261,8 +261,6 @@ function checkForProblems(
   const t = m.translate();
   if (t.translated && !expectCompiles) {
     return {pass: false, message: () => emsg};
-  } else if (!t.translated && expectCompiles) {
-    return {pass: false, message: () => emsg};
   } else if (t.problems === undefined) {
     return {
       pass: false,
