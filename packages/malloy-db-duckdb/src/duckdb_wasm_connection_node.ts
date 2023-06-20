@@ -36,6 +36,7 @@ export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
       throw new Error('Unable to resolve @malloydata/duckdb-wasm dist path');
     }
     const dist = distMatch[0];
+
     return {
       mvp: {
         mainModule: `${dist}/duckdb-mvp.wasm`,

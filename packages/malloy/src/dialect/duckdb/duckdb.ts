@@ -119,7 +119,7 @@ export class DuckDBDialect extends Dialect {
     groupSet: number,
     sqlName: string
   ): string {
-    return `MAX(CASE WHEN group_set=${groupSet} THEN ${name}__${groupSet} END) as ${sqlName}`;
+    return `MAX(CASE WHEN group_set=${groupSet} THEN ${name} END) as ${sqlName}`;
   }
 
   sqlCoaleseMeasuresInline(

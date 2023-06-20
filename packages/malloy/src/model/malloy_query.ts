@@ -108,6 +108,10 @@ function generateSQLStringLiteral(sourceString: string): string {
   return `'${sourceString}'`;
 }
 
+function identifierNormalize(s: string) {
+  return s.replace(/[^a-zA-Z0-9_]/g, '_o_');
+}
+
 /** Parent from QueryStruct. */
 export declare interface ParentQueryStruct {
   struct: QueryStruct;
@@ -2555,10 +2559,9 @@ class QueryQuery extends QueryField {
       structSource: {type: 'query_result'},
       resultMetadata: this.getResultMetadata(this.rootResult),
       type: 'struct',
+      queryTimezone: resultStruct.getQueryInfo().queryTimezone,
     };
-    if (isQuerySegment(this.firstSegment) && this.firstSegment.queryTimezone) {
-      outputStruct.queryTimezone = this.firstSegment.queryTimezone;
-    }
+
     return outputStruct;
   }
 
@@ -2706,7 +2709,7 @@ class QueryQuery extends QueryField {
         const passKeys = this.generateSQLPassthroughKeys(qs);
         structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * ${passKeys} FROM ${structSQL} as x)`;
       }
-      s += `FROM ${structSQL} as ${this.parent.getIdentifier()}\n`;
+      s += `FROM ${structSQL} as ${ji.alias}\n`;
     } else {
       throw new Error('Internal Error, queries must start from a basetable');
     }
@@ -2843,11 +2846,15 @@ class QueryQuery extends QueryField {
               output.lateralJoinSQLExpressions.push(`${exp} as ${outputName}`);
               output.sql.push(outputFieldName);
               if (fi.f.fieldDef.type === 'number') {
-                const outputFieldNameString = `${outputFieldName}_string`;
+                const outputNameString =
+                  this.parent.dialect.sqlMaybeQuoteIdentifier(
+                    `${name}__${resultSet.groupSet}_string`
+                  );
+                const outputFieldNameString = `__lateral_join_bag.${outputNameString}`;
                 output.sql.push(outputFieldNameString);
                 output.dimensionIndexes.push(output.fieldIndex++);
                 output.lateralJoinSQLExpressions.push(
-                  `CAST(${exp} as STRING) as ${outputName}_string`
+                  `CAST(${exp} as STRING) as ${outputNameString}`
                 );
                 fi.partitionSQL = outputFieldNameString;
               }
@@ -3154,7 +3161,9 @@ class QueryQuery extends QueryField {
           } else if (isCalculatedField(fi.f)) {
             fieldsSQL.push(
               this.parent.dialect.sqlAnyValueLastTurtle(
-                name,
+                this.parent.dialect.sqlMaybeQuoteIdentifier(
+                  `${name}__${this.rootResult.groupSet}`
+                ),
                 this.rootResult.groupSet,
                 sqlName
               )
@@ -3176,7 +3185,9 @@ class QueryQuery extends QueryField {
         } else if (fi.firstSegment.type === 'project') {
           fieldsSQL.push(
             this.parent.dialect.sqlAnyValueLastTurtle(
-              name,
+              this.parent.dialect.sqlMaybeQuoteIdentifier(
+                `${name}__${this.rootResult.groupSet}`
+              ),
               this.rootResult.groupSet,
               sqlName
             )
@@ -3850,7 +3861,7 @@ class QueryStruct extends QueryNode {
     // make a unique alias name
     if (ret === undefined) {
       const aliases = Array.from(this.pathAliasMap.values());
-      const base = getIdentifier(this.fieldDef);
+      const base = identifierNormalize(getIdentifier(this.fieldDef));
       let name = `${base}_0`;
       let n = 1;
       while (aliases.includes(name) && n < 1000) {
@@ -3923,7 +3934,7 @@ class QueryStruct extends QueryNode {
       if (this.fieldDef.as === undefined) {
         return 'base';
       } else {
-        return super.getIdentifier();
+        return identifierNormalize(super.getIdentifier());
       }
     }
     // if this is an inline object, include the parents alias.

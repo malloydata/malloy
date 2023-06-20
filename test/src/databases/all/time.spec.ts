@@ -24,7 +24,7 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
-import {mkSqlEqWith} from '../../util';
+import {mkSqlEqWith, runQuery} from '../../util';
 import {DateTime as LuxonDateTime} from 'luxon';
 
 const runtimes = new RuntimeList(allDatabases);
@@ -491,6 +491,113 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
         {mex_220: zone_2020.toJSDate()}
       );
     }
+  });
+
+  describe('timezone set correctly', () => {
+    test('timezone set in source used by query', async () => {
+      expect(
+        (
+          await runQuery(
+            runtime,
+            `sql: timeData is { connection: "${dbName}"  select: """SELECT 1"""}
+        source: timezone is from_sql(timeData) + {
+          timezone: 'America/Los_Angeles'
+          dimension: la_time is @2021-02-24 03:05:06
+        }
+        query: timezone -> {
+          group_by: la_time
+        }
+        `
+          )
+        ).resultExplore.queryTimezone
+      ).toBe('America/Los_Angeles');
+    });
+
+    test('timezone set in query inside source', async () => {
+      expect(
+        (
+          await runQuery(
+            runtime,
+            `sql: timeData is { connection: "${dbName}"  select: """SELECT 1"""}
+        source: timezone is from_sql(timeData) + {
+          dimension: default_time is @2021-02-24 03:05:06
+          query: la_query is {
+            timezone: 'America/Los_Angeles'
+            project: la_time is @2021-02-24 03:05:06
+          }
+        }
+
+        query: timezone -> {
+           group_by: default_time
+           nest: la_query
+        }
+        `
+          )
+        ).resultExplore.structDef
+      ).toMatchObject({
+        fields: [{}, {name: 'la_query', queryTimezone: 'America/Los_Angeles'}],
+      });
+    });
+
+    test('timezone set in query using source', async () => {
+      expect(
+        (
+          await runQuery(
+            runtime,
+            `sql: timeData is { connection: "${dbName}"  select: """SELECT 1"""}
+        source: timezone is from_sql(timeData) + {
+          dimension: default_time is @2021-02-24 03:05:06
+          query: undef_query is {
+            project: undef_time is @2021-02-24 03:05:06
+          }
+        }
+
+        query: timezone -> {
+           timezone: 'America/Los_Angeles'
+           group_by: default_time
+           nest: undef_query
+        }
+        `
+          )
+        ).resultExplore.queryTimezone
+      ).toBe('America/Los_Angeles');
+    });
+
+    test('multiple timezones', async () => {
+      expect(
+        (
+          await runQuery(
+            runtime,
+            `sql: timeData is { connection: "${dbName}"  select: """SELECT 1"""}
+        source: timezone is from_sql(timeData) + {
+          timezone: 'America/New_York'
+          dimension: ny_time is @2021-02-24 03:05:06
+          query: la_query is {
+            timezone: 'America/Los_Angeles'
+            project: la_time is @2021-02-24 03:05:06
+          }
+          query: mex_query is {
+            timezone: 'America/Mexico_City'
+            project: mex_time is @2021-02-24 03:05:06
+          }
+        }
+
+        query: timezone -> {
+           group_by: ny_time
+           nest: la_query, mex_query
+        }
+        `
+          )
+        ).resultExplore.structDef
+      ).toMatchObject({
+        queryTimezone: 'America/New_York',
+        fields: [
+          {},
+          {name: 'la_query', queryTimezone: 'America/Los_Angeles'},
+          {name: 'mex_query', queryTimezone: 'America/Mexico_City'},
+        ],
+      });
+    });
   });
 });
 

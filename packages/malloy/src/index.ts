@@ -45,6 +45,7 @@ export type {
   FilterExpression,
   SQLBlock,
   // Used in Composer Demo
+  FieldAtomicDef,
   FieldDef,
   FilteredAliasedName,
   PipeSegment,

@@ -413,7 +413,6 @@ export class Malloy {
           // TODO feature-sql-block There is no source explore...
           sourceExplore: '',
           sourceFilters: [],
-          queryTimezone: sqlStruct.queryTimezone,
         },
         {
           name: 'empty_model',
@@ -1136,13 +1135,6 @@ export class PreparedResult implements Taggable {
     throw new Error(`'${name} is not an explore`);
   }
 
-  /**
-   * @return The query timezone.
-   */
-  public get queryTimezone(): string | undefined {
-    return this.inner.queryTimezone;
-  }
-
   public get _sourceExploreName(): string {
     return this.inner.sourceExplore;
   }
@@ -1473,6 +1465,10 @@ export class Explore extends Entity {
 
   public get structDef(): StructDef {
     return this._structDef;
+  }
+
+  public get queryTimezone(): string | undefined {
+    return this.structDef.queryTimezone;
   }
 
   public toJSON(): SerializedExplore {

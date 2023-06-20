@@ -311,27 +311,27 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.resultExplore.limit).toBe(3);
   });
 
-  // it(`number as null- ${databaseName}`, async () => {
-  //   // a cross join produces a Many to Many result.
-  //   // symmetric aggregate are needed on both sides of the join
-  //   // Check the row count and that sums on each side work properly.
-  //   const result = await runtime
-  //     .loadQuery(
-  //       `
-  //       source: s is table('malloytest.state_facts') + {
-  //       }
-  //       query: s-> {
-  //         group_by: state
-  //         nest: ugly is {
-  //           group_by: popular_name
-  //           aggregate: foo is NULLIF(sum(airport_count)*0,0)+1
-  //         }
-  //       }
-  //     `
-  //     )
-  //     .run();
-  //   expect(result.data.path(0, "ugly", 0, "foo").value).toBe(null);
-  // });
+  it(`number as null- ${databaseName}`, async () => {
+    // a cross join produces a Many to Many result.
+    // symmetric aggregate are needed on both sides of the join
+    // Check the row count and that sums on each side work properly.
+    const result = await runtime
+      .loadQuery(
+        `
+        source: s is table('malloytest.state_facts') + {
+        }
+        query: s-> {
+          group_by: state
+          nest: ugly is {
+            group_by: popular_name
+            aggregate: foo is NULLIF(sum(airport_count)*0,0)+1
+          }
+        }
+      `
+      )
+      .run();
+    expect(result.data.path(0, 'ugly', 0, 'foo').value).toBe(null);
+  });
 
   // average should only include non-null values in the denominator
   it(`avg ignore null- ${databaseName}`, async () => {
@@ -1066,6 +1066,34 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         )
         .run();
       expect(result.data.value[0]['back']).toBe(back);
+    });
+
+    test('spaces in names', async () => {
+      const result = await runtime
+        .loadQuery(
+          `
+            source: \`space race\` is table('malloytest.state_facts') {
+              join_one: \`j space\` is table('malloytest.state_facts') on \`j space\`.state=state
+              query: \`q u e r y\` is {
+                group_by:
+                  \`P O P\` is popular_name
+                  \`J P O P\` is \`j space\`.popular_name
+                aggregate: \`c o u n t\` is count()
+                calculate:
+                  \`R O W\` is row_number()
+                  \`l a g\` is lag(\`P O P\`, 1)
+                nest: \`by state\` is {
+                  group_by: \`J S\` is \`j space\`.state
+                  aggregate: \`c o u n t\` is count()
+                }
+              }
+            }
+
+            query: \`space race\` -> \`q u e r y\`
+        `
+        )
+        .run();
+      expect(result.data.value[0]['c o u n t']).toBe(24);
     });
   });
 });
