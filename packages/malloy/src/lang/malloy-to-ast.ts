@@ -1338,7 +1338,7 @@ export class MalloyToAST
   visitConnectionStatement(
     pcx: parse.ConnectionStatementContext
   ): ast.ConnectionStatement {
-    const name = this.getFieldName(pcx.id());
+    const name = this.getModelEntryName(pcx.id());
     const el = new ast.ConnectionStatement(name);
     return this.astAt(el, pcx);
   }

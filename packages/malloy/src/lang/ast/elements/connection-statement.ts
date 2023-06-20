@@ -22,22 +22,16 @@
  */
 
 import {ModelDataRequest} from '../../translate-response';
-import {FieldName} from '../types/field-space';
-import {DocStatement, Document, MalloyElement} from '../types/malloy-element';
+import {
+  DocStatement,
+  Document,
+  MalloyElement,
+  ModelEntryReference,
+} from '../types/malloy-element';
 
 export class ConnectionStatement extends MalloyElement implements DocStatement {
   elementType = 'connectin statement';
-
-  /*
-   * At the time of writng this comment, it is guaranteed that if an AST
-   * node for an import statement is created, the translator has already
-   * succesfully fetched the URL referred to in the statement.
-   *
-   * Error checking code in here is future proofing against a day when
-   * there are other ways to contruct an AST.
-   */
-
-  constructor(readonly name: FieldName) {
+  constructor(readonly name: ModelEntryReference) {
     super();
     this.has({name});
   }
