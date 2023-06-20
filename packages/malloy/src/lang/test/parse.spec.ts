@@ -1188,6 +1188,69 @@ describe('qops', () => {
     `)
   );
   test('nest ref', modelOK('query: ab->{group_by: ai; nest: aturtle}'));
+  describe('extend block', () => {
+    test('works with dimension', () => {
+      expect(
+        'query: a -> { extend: { dimension: x is 1 }; group_by: x }'
+      ).toCompile();
+    });
+    test('works with measure', () => {
+      expect(
+        'query: a -> { extend: { measure: x is count() }; aggregate: x }'
+      ).toCompile();
+    });
+    test('works with join_one', () => {
+      expect(
+        'query: a -> { extend: { join_one: bb is b on bb.astr = astr }; group_by: bb.astr }'
+      ).toCompile();
+    });
+    test('works with join_many', () => {
+      expect(
+        'query: a -> { extend: { join_many: b on astr = b.astr }; group_by: b.astr }'
+      ).toCompile();
+    });
+    test('works with join_cross', () => {
+      expect(
+        'query: a -> { extend: { join_cross: b on true }; group_by: b.astr }'
+      ).toCompile();
+    });
+    test('works with multiple in one block', () => {
+      expect(
+        'query: a -> { extend: { dimension: x is 1, y is 2 }; group_by: x, y }'
+      ).toCompile();
+    });
+    test('works with multiple blocks', () => {
+      expect(
+        'query: a -> { extend: { dimension: x is 1; dimension: y is 2; measure: c is count() }; group_by: x, y; aggregate: c }'
+      ).toCompile();
+    });
+  });
+  // TODO ENABLE_M4_WARNINGS: unskip when we have an M4 warning flag
+  describe.skip('declare/query join warnings', () => {
+    test('declare warning in query', () => {
+      expect(
+        markSource`query: a -> { declare: ${'x is 1'}; group_by: x, y }`
+      ).toCompileWithWarnings(
+        '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
+      );
+    });
+    test('declare warning in source', () => {
+      expect(
+        markSource`source: a2 is a { declare: ${'x is 1'} }`
+      ).toCompileWithWarnings(
+        '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
+      );
+    });
+    test('joins in query', () => {
+      expect(
+        markSource`query: a -> { ${'join_one: b on true'}; ${'join_many: c is b on true'}; ${'join_cross: d is b on true'}; group_by: b.astr }`
+      ).toCompileWithWarnings(
+        'Joins in queries are deprecated, move into an `extend:` block.',
+        'Joins in queries are deprecated, move into an `extend:` block.',
+        'Joins in queries are deprecated, move into an `extend:` block.'
+      );
+    });
+  });
   test('refine query with extended source', () => {
     const m = new TestTranslator(`
       source: nab is ab {

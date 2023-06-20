@@ -147,8 +147,8 @@ exploreProperties
   ;
 
 exploreStatement
-  : DIMENSION defList                  # defExploreDimension
-  | MEASURE defList                    # defExploreMeasure
+  : defDimensions                      # defExploreDimension
+  | defMeasures                        # defExploreMeasure
   | declareStatement                   # defDeclare_stub
   | joinStatement                      # defJoin_stub
   | whereStatement                     # defExploreWhere
@@ -157,6 +157,14 @@ exploreStatement
   | (ACCEPT | EXCEPT) fieldNameList    # defExploreEditField
   | QUERY subQueryDefList              # defExploreQuery
   | timezoneStatement                  # defExploreTimezone
+  ;
+
+defDimensions
+  : DIMENSION defList
+  ;
+
+defMeasures
+  : MEASURE defList
   ;
 
 renameList
@@ -186,6 +194,20 @@ joinStatement
   : JOIN_ONE joinList                  # defJoinOne
   | JOIN_MANY joinList                 # defJoinMany
   | JOIN_CROSS joinList                # defJoinCross
+  ;
+
+queryExtend
+  : EXTENDQ queryExtendStatementList
+  ;
+
+queryExtendStatement
+  : defDimensions
+  | defMeasures
+  | joinStatement
+  ;
+
+queryExtendStatementList
+  : OCURLY (queryExtendStatement | SEMI)* CCURLY
   ;
 
 joinList
@@ -234,7 +256,8 @@ exploreQueryDef
 queryStatement
   : groupByStatement
   | declareStatement
-  | joinStatement
+  | queryJoinStatement
+  | queryExtend
   | projectStatement
   | indexStatement
   | aggregateStatement
@@ -247,6 +270,10 @@ queryStatement
   | nestStatement
   | sampleStatement
   | timezoneStatement
+  ;
+
+queryJoinStatement
+  : joinStatement
   ;
 
 groupByStatement
