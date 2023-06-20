@@ -30,7 +30,9 @@ import * as ast from './ast';
 import {LogSeverity, MessageLogger} from './parse-log';
 import {MalloyParseRoot} from './parse-malloy';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
-import {FieldDeclarationConstructor} from './ast';
+import {FieldDeclarationConstructor, TableSource} from './ast';
+
+const ENABLE_M4_WARNINGS = false;
 
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
@@ -341,13 +343,37 @@ export class MalloyToAST
     return propList;
   }
 
-  visitExploreTable(pcx: parse.ExploreTableContext): ast.TableSource {
+  visitTableFunction(pcx: parse.TableFunctionContext): ast.TableSource {
     const tableName = this.stripQuotes(pcx.tableName().text);
-    return this.astAt(new ast.TableSource(tableName), pcx);
+    const el = this.astAt(new ast.TableFunctionSource(tableName), pcx);
+    if (ENABLE_M4_WARNINGS) {
+      this.astError(
+        el,
+        "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')` with `connection: connection_name`",
+        'warn'
+      );
+    }
+    return el;
+  }
+
+  visitTableMethod(pcx: parse.TableMethodContext): ast.TableSource {
+    const connectionName = this.getModelEntryName(pcx.connectionId());
+    const tableName = this.stripQuotes(pcx.tableName().text);
+    return this.astAt(
+      new ast.TableMethodSource(connectionName, tableName),
+      pcx
+    );
   }
 
   visitTableSource(pcx: parse.TableSourceContext): ast.TableSource {
-    return this.visitExploreTable(pcx.exploreTable());
+    const result = this.visit(pcx.exploreTable());
+    if (result instanceof TableSource) {
+      return result;
+    }
+    throw this.internalError(
+      pcx,
+      `Table source matched, but ${result.elementType} found`
+    );
   }
 
   visitSQLSourceName(pcx: parse.SQLSourceNameContext): ast.SQLSource {
@@ -1307,6 +1333,14 @@ export class MalloyToAST
       new ast.ImportStatement(url, this.parse.subTranslator.sourceURL),
       pcx
     );
+  }
+
+  visitConnectionStatement(
+    pcx: parse.ConnectionStatementContext
+  ): ast.ConnectionStatement {
+    const name = this.getFieldName(pcx.id());
+    const el = new ast.ConnectionStatement(name);
+    return this.astAt(el, pcx);
   }
 
   visitJustExpr(pcx: parse.JustExprContext): ast.ExpressionDef {

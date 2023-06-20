@@ -47,6 +47,9 @@ export class SQLSource extends NamedSource {
     } else if (entry.type === 'query') {
       this.log(`Cannot use 'from_sql()' with a query '${this.refName}'`);
       return;
+    } else if (entry.type === 'connection') {
+      this.log(`Cannot use 'from_sql()' with a connection '${this.refName}'`);
+      return;
     } else if (isSQLBlockStruct(entry) && entry.declaredSQLBlock) {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const {declaredSQLBlock, ...newEntry} = entry;

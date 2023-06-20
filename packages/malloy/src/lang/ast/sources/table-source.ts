@@ -25,18 +25,18 @@ import {StructDef} from '../../../model/malloy_types';
 
 import {Source} from '../elements/source';
 import {ErrorFactory} from '../error-factory';
+import {ModelEntryReference} from '../types/malloy-element';
 
-export class TableSource extends Source {
-  elementType = 'tableSource';
-  constructor(readonly name: string) {
-    super();
-  }
+export abstract class TableSource extends Source {
+  abstract getFullName(): string | undefined;
 
   structDef(): StructDef {
-    const tableDefEntry = this.translator()?.root.schemaZone.getEntry(
-      this.name
-    );
-    let msg = `Schema read failure for table '${this.name}'`;
+    const name = this.getFullName();
+    if (name === undefined) {
+      return ErrorFactory.structDef;
+    }
+    const tableDefEntry = this.translator()?.root.schemaZone.getEntry(name);
+    let msg = `Schema read failure for table '${name}'`;
     if (tableDefEntry) {
       if (tableDefEntry.status === 'present') {
         tableDefEntry.value.location = this.location;
@@ -58,5 +58,43 @@ export class TableSource extends Source {
     }
     this.log(msg);
     return ErrorFactory.structDef;
+  }
+}
+
+export class TableMethodSource extends TableSource {
+  elementType = 'tableMethodSource';
+  constructor(
+    readonly connectionName: ModelEntryReference,
+    readonly name: string
+  ) {
+    super();
+  }
+
+  getFullName(): string | undefined {
+    const connection = this.modelEntry(this.connectionName);
+    if (connection === undefined) {
+      this.connectionName.log(
+        `${this.connectionName.refString} is not defined`
+      );
+      return undefined;
+    } else if (connection.entry.type !== 'connection') {
+      this.connectionName.log(
+        `${this.connectionName.refString} is not a connection`
+      );
+      return undefined;
+    }
+    return `${this.connectionName.refString}:${this.name}`;
+  }
+}
+
+export class TableFunctionSource extends TableSource {
+  elementType = 'tableFunctionSource';
+  constructor(readonly name: string) {
+    super();
+  }
+
+  getFullName(): string | undefined {
+    // TODO return this parsed...
+    return this.name;
   }
 }

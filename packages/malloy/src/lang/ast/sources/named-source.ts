@@ -93,6 +93,9 @@ export class NamedSource extends Source {
     } else if (entry.type === 'function') {
       this.log(`Cannot construct a source from a function '${this.refName}`);
       return;
+    } else if (entry.type === 'connection') {
+      this.log(`Cannot construct a source from a connection '${this.refName}`);
+      return;
     } else if (isSQLBlockStruct(entry) && entry.declaredSQLBlock) {
       this.log(`Must use 'from_sql()' for sql source '${this.refName}`);
       return;

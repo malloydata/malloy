@@ -31,6 +31,11 @@ malloyStatement
   | defineSQLStatement
   | defineQuery
   | importStatement
+  | connectionStatement
+  ;
+
+connectionStatement
+  : CONNECTION id
   ;
 
 defineSourceStatement
@@ -104,8 +109,12 @@ pipeElement
   ;
 
 exploreTable
-  : TABLE OPAREN tableName CPAREN
+  : TABLE OPAREN tableName CPAREN                    # tableFunction
+  | connectionId DOT TABLE OPAREN tableName CPAREN   # tableMethod
   ;
+
+connectionId
+  : id;
 
 queryProperties
   : filterShortcut
