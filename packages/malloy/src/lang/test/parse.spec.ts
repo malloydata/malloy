@@ -569,6 +569,13 @@ describe('model statements', () => {
           group_by: s is concat('a', 'b')
         }`)
       );
+      test('function incorrect case', () => {
+        expect(`query: a -> {
+          group_by: s is CONCAT('a', 'b')
+        }`).toCompileWithWarnings(
+          "Case insensitivity for function names is deprecated, use 'concat' instead"
+        );
+      });
       test('function no matching overload', () => {
         expect(`query: a -> {
           group_by: s is floor('a', 'b')
