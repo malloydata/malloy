@@ -35,7 +35,6 @@ import {
 import {
   model,
   expr,
-  MarkedSource,
   TestTranslator,
   getExplore,
   getField,
@@ -45,38 +44,8 @@ import {
   markSource,
   BetaExpression,
 } from './test-translator';
-import isEqual from 'lodash/isEqual';
 import {isGranularResult} from '../ast/types/granular-result';
 import './parse-expects';
-
-type TestFunc = () => undefined;
-
-function badModel(s: MarkedSource | string, msg: string): TestFunc {
-  return () => {
-    const src = typeof s === 'string' ? s : s.code;
-    const emsg = `Error expectation not met\nExpected error: '${msg}'\nSource:\n${src}`;
-    const m = new TestTranslator(src);
-    const t = m.translate();
-    if (t.translated) {
-      fail(emsg);
-    } else {
-      const errList = m.errors().errors;
-      const firstError = errList[0];
-      if (firstError.message !== msg) {
-        fail(`Received errror: ${firstError.message}\n${emsg}`);
-      }
-      if (typeof s !== 'string') {
-        if (!isEqual(errList[0].at, s.locations[0])) {
-          fail(
-            `Expected location: ${s.locations[0]}\n` +
-              `Received location: ${errList[0].at}\n${emsg}`
-          );
-        }
-      }
-    }
-    return undefined;
-  };
-}
 
 describe('model statements', () => {
   describe('source:', () => {
@@ -1826,44 +1795,37 @@ describe('error handling', () => {
       `
     ).compileToFailWith("Undefined source 'bb'");
   });
-  test(
-    'non-rename rename',
-    badModel(
-      'source: na is a { rename: astr is astr }',
+  test('non-rename rename', () => {
+    expect('source: na is a { rename: astr is astr }').compileToFailWith(
       "Can't rename field to itself"
-    )
-  );
-  test(
-    'reference to field in its definition',
-    badModel(
-      'source: na is a { dimension: ustr is UPPER(ustr) } ',
-      "Circular reference to 'ustr' in definition"
-    )
-  );
+    );
+  });
+  test('reference to field in its definition', () => {
+    expect(
+      'source: na is a { dimension: ustr is UPPER(ustr) } '
+    ).compileToFailWith("Circular reference to 'ustr' in definition");
+  });
   test('empty model', () => {
     expect('').toTranslate();
   });
   test('one line model ', () => {
     expect('\n').toTranslate();
   });
-  test(
-    'query without fields',
-    badModel(
-      'query: a -> { top: 5 }',
+  test('query without fields', () => {
+    expect('query: a -> { top: 5 }').compileToFailWith(
       "Can't determine query type (group_by/aggregate/nest,project,index)"
-    )
-  );
-  test(
-    "refine can't change query type",
-    badModel(
-      'query: ab -> aturtle { project: astr }',
+    );
+  });
+  test("refine can't change query type", () => {
+    expect('query: ab -> aturtle { project: astr }').compileToFailWith(
       'project: not legal in grouping query'
-    )
-  );
-  test(
-    'undefined field ref in query',
-    badModel('query: ab -> { aggregate: xyzzy }', "'xyzzy' is not defined")
-  );
+    );
+  });
+  test('undefined field ref in query', () => {
+    expect('query: ab -> { aggregate: xyzzy }').compileToFailWith(
+      "'xyzzy' is not defined"
+    );
+  });
   test('query on source with errors', () => {
     expect(markSource`
         source: na is a { join_one: ${'n'} on astr }
@@ -2182,43 +2144,33 @@ describe('source locations', () => {
   //   expect(errList[0].at?.range.end).toEqual({ line: 2, character: 11 });
   // });
 
-  test(
-    'undefined query location',
-    badModel(
-      markSource`query: ${'-> xyz'}`,
+  test('undefined query location', () => {
+    expect(model`query: ${'-> xyz'}`).compileToFailWith(
       "Reference to undefined query 'xyz'"
-    )
-  );
-  test(
-    'undefined field reference',
-    badModel(
-      markSource`query: a -> { group_by: ${'xyz'} }`,
+    );
+  });
+  test('undefined field reference', () => {
+    expect(model`query: a -> { group_by: ${'xyz'} }`).compileToFailWith(
       "'xyz' is not defined"
-    )
-  );
-  test(
-    'bad query',
-    badModel(
-      markSource`query: a -> { group_by: astr; ${'project: *'} }`,
-      'project: not legal in grouping query'
-    )
-  );
+    );
+  });
+  test('bad query', () => {
+    expect(
+      model`query: a -> { group_by: astr; ${'project: *'} }`
+    ).compileToFailWith('project: not legal in grouping query');
+  });
 
-  test.skip(
-    'undefined field reference in top',
-    badModel(
-      markSource`query: a -> { group_by: one is 1; top: 1 by ${'xyz'} }`,
-      "'xyz' is not defined"
-    )
-  );
+  test.skip('undefined field reference in top', () => {
+    expect(
+      model`query: a -> { group_by: one is 1; top: 1 by ${'xyz'} }`
+    ).compileToFailWith("'xyz' is not defined");
+  });
 
-  test.skip(
-    'undefined field reference in order_by',
-    badModel(
-      markSource`query: a -> { group_by: one is 1; order_by: ${'xyz'} }`,
-      "'xyz' is not defined"
-    )
-  );
+  test.skip('undefined field reference in order_by', () => {
+    expect(
+      model`query: a -> { group_by: one is 1; order_by: ${'xyz'} }`
+    ).compileToFailWith("'xyz' is not defined");
+  });
 });
 
 describe('source references', () => {
@@ -2788,10 +2740,9 @@ describe('pipeline comprehension', () => {
       }
     `).toTranslate();
   });
-  test(
-    "second query doesn't have access to original fields",
-    badModel(
-      markSource`
+  test("second query doesn't have access to original fields", () => {
+    expect(
+      model`
         source: aq is a {
           query: t1 is {
             group_by: t1int is ai, t1str is astr
@@ -2799,10 +2750,9 @@ describe('pipeline comprehension', () => {
             project: ${'ai'}
           }
         }
-      `,
-      "'ai' is not defined"
-    )
-  );
+      `
+    ).compileToFailWith("'ai' is not defined");
+  });
   test('new query can append ops to existing query', () => {
     expect(`
       source: aq is a {
