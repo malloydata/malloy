@@ -127,9 +127,20 @@ describe('model statements', () => {
     });
   });
   describe('query:', () => {
+    test('anonymous query', () => {
+      expect(
+        markSource`query: ${"table('aTable') -> { group_by: astr }"}`
+      ).toCompileWithWarnings(
+        'Anonymous `query:` statements are deprecated, use `run:` instead'
+      );
+    });
+    test('run query', modelOK("run: table('aTable') -> { group_by: astr }"));
     test(
-      'anonymous query',
-      modelOK("query: table('aTable') -> { group_by: astr }")
+      'run query ref',
+      modelOK(`
+        query: foo is table('aTable') -> { group_by: astr }
+        run: foo
+      `)
     );
     test(
       'query',

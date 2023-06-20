@@ -566,8 +566,10 @@ export class MalloyToAST
   visitTimezoneStatement(
     cx: parse.TimezoneStatementContext
   ): ast.TimezoneStatement {
-    const timezoneStatement = new ast.TimezoneStatement(
-      this.stripQuotes(cx.STRING_LITERAL().text)
+    const tz = cx.timezoneName();
+    const timezoneStatement = this.astAt(
+      new ast.TimezoneStatement(this.stripQuotes(tz.STRING_LITERAL().text)),
+      tz
     );
 
     if (!timezoneStatement.isValid) {
@@ -871,14 +873,39 @@ export class MalloyToAST
   }
 
   visitAnonymousQuery(pcx: parse.AnonymousQueryContext): ast.AnonymousQuery {
-    const query = this.visit(pcx.topLevelAnonQueryDef().query());
+    const defCx = pcx.topLevelAnonQueryDef();
+    const query = this.visit(defCx.query());
     if (ast.isQueryElement(query)) {
-      return new ast.AnonymousQuery(query);
+      const el = this.astAt(new ast.AnonymousQuery(query), defCx);
+      this.astError(
+        el,
+        'Anonymous `query:` statements are deprecated, use `run:` instead',
+        'warn'
+      );
+      return el;
     }
     throw this.internalError(
       pcx,
       `Anonymous query matched, but ${query.elementType} found`
     );
+  }
+
+  visitRunStatementDef(pcx: parse.RunStatementDefContext): ast.RunQueryDef {
+    const query = this.visit(pcx.topLevelAnonQueryDef().query());
+    if (ast.isQueryElement(query)) {
+      const el = new ast.RunQueryDef(query);
+      return this.astAt(el, pcx);
+    }
+    throw this.internalError(
+      pcx,
+      `Run query matched, but ${query.elementType} found`
+    );
+  }
+
+  visitRunStatementRef(pcx: parse.RunStatementRefContext): ast.RunQueryRef {
+    const name = this.getFieldName(pcx.queryName());
+    const el = this.astAt(new ast.RunQueryRef(name), pcx.queryName());
+    return this.astAt(el, pcx);
   }
 
   visitNestedQueryList(pcx: parse.NestedQueryListContext): ast.MalloyElement {
