@@ -164,7 +164,7 @@ describe('model statements', () => {
     test(
       'from(query) refined into query',
       modelOK(
-        'query: from(ab -> {group_by: astr}) { dimension: bigstr is UPPER(astr) } -> { group_by: bigstr }'
+        'query: from(ab -> {group_by: astr}) { dimension: bigstr is upper(astr) } -> { group_by: bigstr }'
       )
     );
     test(
@@ -572,7 +572,7 @@ describe('model statements', () => {
       test('function incorrect case', () => {
         expect(`query: a -> {
           group_by: s is CONCAT('a', 'b')
-        }`).toCompileWithWarnings(
+        }`).modelCompiledWithWarnings(
           "Case insensitivity for function names is deprecated, use 'concat' instead"
         );
       });

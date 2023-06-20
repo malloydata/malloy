@@ -43,8 +43,8 @@ declare global {
       modelParsed(): R;
       toBeErrorless(): R;
       toCompile(): R;
-      toCompileWithWarnings(...expectedWarnings: SimpleProblemSpec[]): R;
       modelCompiled(): R;
+      modelCompiledWithWarnings(...expectedWarnings: SimpleProblemSpec[]): R;
       expressionCompiled(): R;
       toReturnType(tp: string): R;
       compileToFailWith(...expectedErrors: ProblemSpec[]): R;
@@ -53,13 +53,13 @@ declare global {
   }
 }
 
-function checkForErrors(trans: MalloyTranslator) {
+function ensureNoProblems(trans: MalloyTranslator) {
   if (trans.logger === undefined) {
     throw new Error('JESTERY BROKEN, CANT FIND ERORR LOG');
   }
-  if (trans.logger.hasErrors()) {
+  if (!trans.logger.empty()) {
     return {
-      message: () => `Translation Errors:\n${trans.prettyErrors()}`,
+      message: () => `Translation problems:\n${trans.prettyErrors()}`,
       pass: false,
     };
   }
@@ -143,7 +143,7 @@ expect.extend({
   toCompile: function (s: string) {
     const x = new TestTranslator(s);
     x.compile();
-    const errorCheck = checkForErrors(x);
+    const errorCheck = ensureNoProblems(x);
     if (!errorCheck.pass) {
       return errorCheck;
     }
@@ -152,11 +152,11 @@ expect.extend({
   },
   modelParsed: function (x: TestTranslator) {
     x.compile();
-    return checkForErrors(x);
+    return ensureNoProblems(x);
   },
   modelCompiled: function (x: TestTranslator) {
     x.compile();
-    const errorCheck = checkForErrors(x);
+    const errorCheck = ensureNoProblems(x);
     if (!errorCheck.pass) {
       return errorCheck;
     }
@@ -166,14 +166,14 @@ expect.extend({
   expressionCompiled: function (src: string) {
     const x = new BetaExpression(src);
     x.compile();
-    const errorCheck = checkForErrors(x);
+    const errorCheck = ensureNoProblems(x);
     if (!errorCheck.pass) {
       return errorCheck;
     }
     return checkForNeededs(x);
   },
   toBeErrorless: function (trans: MalloyTranslator) {
-    return checkForErrors(trans);
+    return ensureNoProblems(trans);
   },
   toReturnType: function (functionCall: string, returnType: string) {
     const exprModel = new TestTranslator(
@@ -197,7 +197,7 @@ expect.extend({
   ) {
     return checkForProblems(this, false, s, 'error', ...msgs);
   },
-  toCompileWithWarnings: function (
+  modelCompiledWithWarnings: function (
     s: MarkedSource | string | TestTranslator,
     ...msgs: SimpleProblemSpec[]
   ) {
