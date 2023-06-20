@@ -75,7 +75,7 @@ describe('sql:', () => {
       }
     `);
     const needReq = model.translate();
-    expect(model).modelParsed();
+    expect(model).toParse();
     const needs = needReq?.compileSQL;
     expect(needs).toBeDefined();
     if (needs) {
@@ -86,7 +86,7 @@ describe('sql:', () => {
       if (refKey) {
         const sr = makeSchemaResponse(sql);
         model.update({compileSQL: {[refKey]: sr}});
-        expect(model).modelCompiled();
+        expect(model).toTranslate();
         const expectThis = unlocatedStructDef({...sr, as: 'users'});
         if (isSQLBlockStruct(expectThis)) {
           expectThis.declaredSQLBlock = true;
@@ -101,7 +101,7 @@ describe('sql:', () => {
       sql: users IS { select: """${selStmt}""" }
       source: malloyUsers is from_sql(users) { primary_key: ai }
     `);
-    expect(model).modelParsed();
+    expect(model).toParse();
     const needReq = model.translate();
     const needs = needReq?.compileSQL;
     expect(needs).toBeDefined();
@@ -109,7 +109,7 @@ describe('sql:', () => {
       const sql = makeSQLBlock([{sql: selStmt}], 'aConnection');
       const refKey = needs.name;
       model.update({compileSQL: {[refKey]: makeSchemaResponse(sql)}});
-      expect(model).modelCompiled();
+      expect(model).toTranslate();
       const users = model.getSourceDef('malloyUsers');
       expect(users).toBeDefined();
       if (users && isSQLBlockStruct(users)) {
@@ -133,13 +133,13 @@ describe('sql:', () => {
       'internal://test/langtests/createModel.malloy',
       createModel
     );
-    expect(model).modelParsed();
+    expect(model).toParse();
     const needReq = model.translate();
     const needs = needReq?.compileSQL;
     expect(needs).toBeDefined();
     const sql = makeSQLBlock([{sql: selStmt}]);
     model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});
-    expect(model).modelCompiled();
+    expect(model).toTranslate();
   });
 
   it('turducken', () => {
@@ -148,7 +148,7 @@ describe('sql:', () => {
         select: """SELECT * FROM %{ a -> { group_by: astr } }% WHERE 1=1"""
       }
     `);
-    expect(m).modelParsed();
+    expect(m).toParse();
     const compileSql = m.translate().compileSQL;
     expect(compileSql).toBeDefined();
     if (compileSql) {
@@ -167,13 +167,13 @@ describe('sql:', () => {
       source: newaa is newa
     `;
     const model = new TestTranslator(shouldBeOK);
-    expect(model).modelParsed();
+    expect(model).toParse();
     const needReq = model.translate();
     const needs = needReq?.compileSQL;
     expect(needs).toBeDefined();
     const sql = makeSQLBlock([{sql: selStmt}]);
     model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});
-    expect(model).modelCompiled();
+    expect(model).toTranslate();
   });
 
   test('source from extended sql-based-source', () => {
@@ -183,7 +183,7 @@ describe('sql:', () => {
 `);
     const sql = makeSQLBlock([{sql: selStmt}]);
     model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});
-    expect(model).modelCompiled();
+    expect(model).toTranslate();
     const modelDef = model?.translate()?.translated?.modelDef;
 
     const extModel = new MalloyTranslator('sqlblocktest://main');
@@ -191,7 +191,7 @@ describe('sql:', () => {
       'sqlblocktest://main',
       'query: malloy_source -> { project: * }'
     );
-    extModel.translate(modelDef);
-    expect(extModel).toBeErrorless();
+    const tr = extModel.translate(modelDef);
+    expect(tr.errors).toEqual([]);
   });
 });

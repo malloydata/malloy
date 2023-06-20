@@ -458,6 +458,25 @@ export function getJoinField(structDef: StructDef, name: string): StructDef {
 export interface MarkedSource {
   code: string;
   locations: DocumentLocation[];
+  translator?: TestTranslator;
+}
+
+export function expr(
+  unmarked: TemplateStringsArray,
+  ...marked: string[]
+): MarkedSource {
+  const ms = markSource(unmarked, ...marked);
+  ms.translator = new BetaExpression(ms.code);
+  return ms;
+}
+
+export function model(
+  unmarked: TemplateStringsArray,
+  ...marked: string[]
+): MarkedSource {
+  const ms = markSource(unmarked, ...marked);
+  ms.translator = new TestTranslator(ms.code);
+  return ms;
 }
 
 export function markSource(

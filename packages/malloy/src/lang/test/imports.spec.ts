@@ -27,26 +27,26 @@ describe('import:', () => {
   test('simple source', () => {
     const docParse = new TestTranslator('import "child"');
     const xr = docParse.unresolved();
-    expect(docParse).toBeErrorless();
+    expect(docParse).toParse();
     expect(xr).toEqual({urls: ['internal://test/langtests/child']});
     docParse.update({
       urls: {'internal://test/langtests/child': 'source: aa is a'},
     });
-    expect(docParse).modelCompiled();
+    expect(docParse).toTranslate();
     const aa = docParse.getSourceDef('aa');
     expect(aa).toBeDefined();
   });
   test('simple query', () => {
     const docParse = new TestTranslator('import "child"');
     const xr = docParse.unresolved();
-    expect(docParse).toBeErrorless();
+    expect(docParse).toParse();
     expect(xr).toEqual({urls: ['internal://test/langtests/child']});
     docParse.update({
       urls: {
         'internal://test/langtests/child': 'query: aq is a->{ project: * }',
       },
     });
-    expect(docParse).modelCompiled();
+    expect(docParse).toTranslate();
     const aq = docParse.getQuery('aq');
     expect(aq).toBeDefined();
   });
@@ -58,7 +58,7 @@ source: newSrc is a {
 }
 `);
     const xr = docParse.unresolved();
-    expect(docParse).toBeErrorless();
+    expect(docParse).toParse();
     expect(xr).toEqual({urls: ['internal://test/langtests/child']});
     docParse.update({
       urls: {
@@ -69,7 +69,7 @@ source: botProjQSrc is from(->botProjQ)
 `,
       },
     });
-    expect(docParse).modelCompiled();
+    expect(docParse).toTranslate();
     const newSrc = docParse.getSourceDef('newSrc');
     const f = newSrc?.fields.find(f => f.name === 'b');
     expect(f?.type).toBe('struct');
@@ -84,7 +84,7 @@ source: botProjQSrc is from(->botProjQ)
   test('missing import', () => {
     const docParse = new TestTranslator('import "child"');
     const xr = docParse.unresolved();
-    expect(docParse).toBeErrorless();
+    expect(docParse).toParse();
     expect(xr).toEqual({urls: ['internal://test/langtests/child']});
     const reportedError = 'ENOWAY: No way to find your child';
     docParse.update({
@@ -93,7 +93,7 @@ source: botProjQSrc is from(->botProjQ)
       },
     });
     docParse.translate();
-    expect(docParse).not.toBeErrorless();
+    expect(docParse).not.toParse();
     expect(docParse.prettyErrors()).toContain(reportedError);
   });
   test('chained imports', () => {
@@ -102,12 +102,12 @@ source: botProjQSrc is from(->botProjQ)
       urls: {'internal://test/langtests/child': 'import "grandChild"'},
     });
     const xr = docParse.unresolved();
-    expect(docParse).toBeErrorless();
+    expect(docParse).toParse();
     expect(xr).toEqual({urls: ['internal://test/langtests/grandChild']});
   });
   test('relative imports', () => {
     const docParse = new TestTranslator('import "../parent.malloy"');
-    expect(docParse).modelParsed();
+    expect(docParse).toParse();
     const xr = docParse.unresolved();
     expect(xr).toEqual({urls: ['internal://test/parent.malloy']});
     docParse.update({
@@ -115,11 +115,11 @@ source: botProjQSrc is from(->botProjQ)
         'internal://test/parent.malloy': "source: aa is table('aTable')",
       },
     });
-    expect(docParse).modelCompiled();
+    expect(docParse).toTranslate();
   });
   test('relative imports with errors', () => {
     const docParse = new TestTranslator('import "../parent.malloy"');
-    expect(docParse).modelParsed();
+    expect(docParse).toParse();
     const xr = docParse.unresolved();
     expect(xr).toEqual({urls: ['internal://test/parent.malloy']});
     docParse.update({
@@ -145,7 +145,7 @@ source: botProjQSrc is from(->botProjQ)
       import "middle"
     `);
     fullModel.update({urls: srcFiles});
-    expect(fullModel).modelCompiled();
+    expect(fullModel).toTranslate();
     const ms = fullModel.getSourceDef('midSrc');
     expect(ms).toBeDefined();
     if (ms) {
