@@ -186,12 +186,15 @@ describe('sql:', () => {
     expect(model).toTranslate();
     const modelDef = model?.translate()?.translated?.modelDef;
 
+    // this tests the underlying api that .extendModel calls
     const extModel = new MalloyTranslator('sqlblocktest://main');
     extModel.importZone.define(
       'sqlblocktest://main',
       'query: malloy_source -> { project: * }'
     );
     const tr = extModel.translate(modelDef);
+    // because extModel is not a TestTranslator we can't use the hotness
     expect(tr.errors).toEqual([]);
+    expect(tr.translated).toBeDefined();
   });
 });
