@@ -62,7 +62,7 @@ export class DuckDBDialect extends Dialect {
   stringTypeName = 'VARCHAR';
   divisionIsInteger = true;
   supportsSumDistinctFunction = true;
-  unnestWithNumbers = true;
+  unnestWithNumbers = false;
   defaultSampling = {rows: 50000};
   supportUnnestArrayAgg = true;
   supportsAggDistinct = true;
