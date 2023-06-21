@@ -228,41 +228,38 @@ export class Malloy {
           // collect tables by connection name since there may be multiple connections
           const tablesByConnection: Map<
             string | undefined,
-            Array<string>
+            Record<string, string>
           > = new Map();
-          for (const connectionTableString of result.tables) {
-            const {connectionName} = parseTableURI(connectionTableString);
+          for (const tableKey in result.tables) {
+            const {connectionName, tablePath} = result.tables[tableKey];
 
-            let connectionToTablesMap = tablesByConnection.get(connectionName);
-            if (!connectionToTablesMap) {
-              connectionToTablesMap = [connectionTableString];
+            const connectionToTablesMap =
+              tablesByConnection.get(connectionName);
+            if (connectionToTablesMap === undefined) {
+              tablesByConnection.set(connectionName, {[tableKey]: tablePath});
             } else {
-              connectionToTablesMap.push(connectionTableString);
+              connectionToTablesMap[tableKey] = tablePath;
             }
-            tablesByConnection.set(connectionName, connectionToTablesMap);
           }
           // iterate over connections, fetching schema for all missing tables
-          for (const [
-            connectionName,
-            connectionTableString,
-          ] of tablesByConnection) {
+          for (const [connectionName, tablePathByKey] of tablesByConnection) {
             try {
               const connection = await connections.lookupConnection(
                 connectionName
               );
               // TODO detect if the union of `Object.keys(tables)` and `Object.keys(errors)` is not the same
-              //      as `Object.keys(connectionTableString)`, i.e. that all tables are accounted for. Otherwise
+              //      as `Object.keys(tablePathByKey)`, i.e. that all tables are accounted for. Otherwise
               //      the translator runs into an infinite loop fetching tables.
               const {schemas: tables, errors} =
-                await connection.fetchSchemaForTables(connectionTableString);
+                await connection.fetchSchemaForTables(tablePathByKey);
               translator.update({tables, errors: {tables: errors}});
             } catch (error) {
               // There was an exception getting the connection, associate that error
               // with all its tables
               const tables = {};
               const errors: {[name: string]: string} = {};
-              for (const table of connectionTableString) {
-                errors[table] = error.toString();
+              for (const tableKey in tablePathByKey) {
+                errors[tableKey] = error.toString();
               }
               translator.update({tables, errors: {tables: errors}});
             }
@@ -797,19 +794,6 @@ export class PreparedQuery {
       this._modelDef,
       this.name || turtleDef.as || turtleDef.name
     );
-  }
-}
-
-export function parseTableURI(tableURI: string): {
-  connectionName?: string;
-  tablePath: string;
-} {
-  const parts = tableURI.match(/^([^:]*):(.*)$/);
-  if (parts) {
-    const [, firstPart, secondPart] = parts;
-    return {connectionName: firstPart, tablePath: secondPart};
-  } else {
-    return {tablePath: tableURI};
   }
 }
 

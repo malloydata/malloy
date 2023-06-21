@@ -42,7 +42,6 @@ import {
   SQLBlock,
   StreamingConnection,
   StructDef,
-  parseTableURI,
 } from '@malloydata/malloy';
 import {Client, Pool, PoolClient} from 'pg';
 import QueryStream from 'pg-query-stream';
@@ -157,29 +156,30 @@ export class PostgresConnection
     return true;
   }
 
-  public async fetchSchemaForTables(missing: string[]): Promise<{
+  public async fetchSchemaForTables(missing: Record<string, string>): Promise<{
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;
   }> {
     const schemas: NamedStructDefs = {};
     const errors: {[name: string]: string} = {};
 
-    for (const tableURL of missing) {
-      let inCache = this.schemaCache.get(tableURL);
+    for (const tableKey in missing) {
+      let inCache = this.schemaCache.get(tableKey);
       if (!inCache) {
+        const tablePath = missing[tableKey];
         try {
           inCache = {
-            schema: await this.getTableSchema(tableURL),
+            schema: await this.getTableSchema(tableKey, tablePath),
           };
-          this.schemaCache.set(tableURL, inCache);
+          this.schemaCache.set(tableKey, inCache);
         } catch (error) {
           inCache = {error: error.message};
         }
       }
       if (inCache.schema !== undefined) {
-        schemas[tableURL] = inCache.schema;
+        schemas[tableKey] = inCache.schema;
       } else {
-        errors[tableURL] = inCache.error;
+        errors[tableKey] = inCache.error;
       }
     }
     return {schemas, errors};
@@ -320,11 +320,13 @@ export class PostgresConnection
     }
   }
 
-  private async getTableSchema(tableURL: string): Promise<StructDef> {
-    const {tablePath} = parseTableURI(tableURL);
+  private async getTableSchema(
+    tableKey: string,
+    tablePath: string
+  ): Promise<StructDef> {
     const structDef: StructDef = {
       type: 'struct',
-      name: tableURL,
+      name: tableKey,
       dialect: 'postgres',
       structSource: {type: 'table', tablePath},
       structRelationship: {

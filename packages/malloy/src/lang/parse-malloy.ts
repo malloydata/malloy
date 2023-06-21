@@ -45,7 +45,10 @@ import {MalloyParser} from './lib/Malloy/MalloyParser';
 import * as ast from './ast';
 import {MalloyToAST} from './malloy-to-ast';
 import {LogMessage, MessageLog} from './parse-log';
-import {findReferences} from './parse-tree-walkers/find-external-references';
+import {
+  findReferences,
+  FindReferencesData,
+} from './parse-tree-walkers/find-external-references';
 import {Zone, ZoneData} from './zone';
 import {walkForDocumentSymbols} from './parse-tree-walkers/document-symbol-walker';
 import {
@@ -265,7 +268,7 @@ class ParseStep implements TranslationStep {
 }
 
 class ImportsAndTablesStep implements TranslationStep {
-  private alreadyLooked = false;
+  private parseReferences: FindReferencesData | undefined = undefined;
   constructor(readonly parseStep: ParseStep) {}
 
   step(that: MalloyTranslation): DataRequestResponse | ParseResponse {
@@ -274,45 +277,40 @@ class ImportsAndTablesStep implements TranslationStep {
       return parseReq;
     }
 
-    if (!this.alreadyLooked) {
-      this.alreadyLooked = true;
-      const parseRefs = findReferences(
+    if (!this.parseReferences) {
+      this.parseReferences = findReferences(
         that,
         parseReq.parse.tokenStream,
         parseReq.parse.root
       );
 
-      if (parseRefs?.tables) {
-        for (const ref in parseRefs.tables) {
-          that.root.schemaZone.reference(ref, {
-            url: that.sourceURL,
-            range: parseRefs.tables[ref],
-          });
-        }
+      for (const ref in this.parseReferences.tables) {
+        that.root.schemaZone.reference(ref, {
+          url: that.sourceURL,
+          range: this.parseReferences.tables[ref].firstReference,
+        });
       }
 
-      if (parseRefs?.urls) {
-        for (const relativeRef in parseRefs.urls) {
-          const firstRef = parseRefs.urls[relativeRef];
-          try {
-            const ref = decodeURI(
-              new URL(relativeRef, that.sourceURL).toString()
-            );
-            that.addChild(ref);
-            that.root.importZone.reference(ref, {
-              url: that.sourceURL,
-              range: firstRef,
-            });
-          } catch (err) {
-            // This import spec is so bad the URL library threw up, this
-            // may be impossible, because it will append any garbage
-            // to the known good rootURL assuming it is relative
-            that.root.logger.log({
-              message: `Malformed URL '${relativeRef}'"`,
-              at: {url: that.sourceURL, range: firstRef},
-              severity: 'error',
-            });
-          }
+      for (const relativeRef in this.parseReferences.urls) {
+        const firstRef = this.parseReferences.urls[relativeRef];
+        try {
+          const ref = decodeURI(
+            new URL(relativeRef, that.sourceURL).toString()
+          );
+          that.addChild(ref);
+          that.root.importZone.reference(ref, {
+            url: that.sourceURL,
+            range: firstRef,
+          });
+        } catch (err) {
+          // This import spec is so bad the URL library threw up, this
+          // may be impossible, because it will append any garbage
+          // to the known good rootURL assuming it is relative
+          that.root.logger.log({
+            message: `Malformed URL '${relativeRef}'"`,
+            at: {url: that.sourceURL, range: firstRef},
+            severity: 'error',
+          });
         }
       }
     }
@@ -326,7 +324,15 @@ class ImportsAndTablesStep implements TranslationStep {
     let allMissing: DataRequestResponse = {};
     const missingTables = that.root.schemaZone.getUndefined();
     if (missingTables) {
-      allMissing = {tables: missingTables};
+      const tables = {};
+      for (const key of missingTables) {
+        const info = this.parseReferences.tables[key];
+        tables[key] = {
+          connectionName: info.connectionName,
+          tablePath: info.tablePath,
+        };
+      }
+      allMissing = {tables};
     }
 
     const missingImports = that.root.importZone.getUndefined();

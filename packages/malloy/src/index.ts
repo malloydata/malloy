@@ -101,7 +101,6 @@ export {
   DateTimeframe,
   TimestampTimeframe,
   Result,
-  parseTableURI,
   QueryMaterializer,
   CSVWriter,
   JSONWriter,

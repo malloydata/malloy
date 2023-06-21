@@ -2686,7 +2686,7 @@ describe('translation need error locations', () => {
     const result = m.translate();
     m.update({
       errors: {
-        tables: {[(result.tables || [])[0]]: 'Bad table!'},
+        tables: {[(result.tables || [])[0].tableKey]: 'Bad table!'},
       },
     });
     expect(m).not.modelParsed();

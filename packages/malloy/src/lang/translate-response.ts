@@ -47,7 +47,13 @@ export interface ProblemResponse {
 export type FatalResponse = FinalResponse & ProblemResponse;
 
 export interface NeedSchemaData {
-  tables: string[];
+  tables: Record<
+    string,
+    {
+      connectionName: string | undefined;
+      tablePath: string;
+    }
+  >;
 }
 
 export interface NeedURLData {

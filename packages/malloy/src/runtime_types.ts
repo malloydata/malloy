@@ -72,10 +72,11 @@ export interface InfoConnection {
   /**
    * Fetch schemas for multiple tables.
    *
-   * @param tables The names of tables to fetch schemas for.
-   * @return A mapping of table names to schemas.
+   * @param tables The names of tables to fetch schemas for, represented
+   * as a map of keys to table names.
+   * @return A mapping of table keys to schemas.
    */
-  fetchSchemaForTables(tables: string[]): Promise<{
+  fetchSchemaForTables(tables: Record<string, string>): Promise<{
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;
   }>;

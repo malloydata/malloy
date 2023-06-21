@@ -35,7 +35,6 @@ import {
   SQLBlock,
   StreamingConnection,
   StructDef,
-  parseTableURI,
 } from '@malloydata/malloy';
 
 const duckDBToMalloyTypes: {[key: string]: AtomicFieldTypeInner} = {
@@ -338,39 +337,42 @@ export abstract class DuckDBCommon
     return inCache;
   }
 
-  public async fetchSchemaForTables(tables: string[]): Promise<{
+  public async fetchSchemaForTables(tables: Record<string, string>): Promise<{
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;
   }> {
     const schemas: NamedStructDefs = {};
     const errors: {[name: string]: string} = {};
 
-    for (const tableURL of tables) {
-      let inCache = this.schemaCache.get(tableURL);
+    for (const tableKey in tables) {
+      let inCache = this.schemaCache.get(tableKey);
       if (!inCache) {
+        const tablePath = tables[tableKey];
         try {
           inCache = {
-            schema: await this.getTableSchema(tableURL),
+            schema: await this.getTableSchema(tableKey, tablePath),
           };
-          this.schemaCache.set(tableURL, inCache);
+          this.schemaCache.set(tableKey, inCache);
         } catch (error) {
           inCache = {error: error.message};
         }
       }
       if (inCache.schema !== undefined) {
-        schemas[tableURL] = inCache.schema;
+        schemas[tableKey] = inCache.schema;
       } else {
-        errors[tableURL] = inCache.error;
+        errors[tableKey] = inCache.error;
       }
     }
     return {schemas, errors};
   }
 
-  private async getTableSchema(tableURL: string): Promise<StructDef> {
-    const {tablePath} = parseTableURI(tableURL);
+  private async getTableSchema(
+    tableKey: string,
+    tablePath: string
+  ): Promise<StructDef> {
     const structDef: StructDef = {
       type: 'struct',
-      name: tablePath,
+      name: tableKey,
       dialect: 'duckdb',
       structSource: {type: 'table', tablePath},
       structRelationship: {

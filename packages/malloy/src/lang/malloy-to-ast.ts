@@ -344,8 +344,8 @@ export class MalloyToAST
   }
 
   visitTableFunction(pcx: parse.TableFunctionContext): ast.TableSource {
-    const tableName = this.stripQuotes(pcx.tableName().text);
-    const el = this.astAt(new ast.TableFunctionSource(tableName), pcx);
+    const tableURI = this.stripQuotes(pcx.tableURI().text);
+    const el = this.astAt(new ast.TableFunctionSource(tableURI), pcx);
     if (ENABLE_M4_WARNINGS) {
       this.astError(
         el,
@@ -358,9 +358,9 @@ export class MalloyToAST
 
   visitTableMethod(pcx: parse.TableMethodContext): ast.TableSource {
     const connectionName = this.getModelEntryName(pcx.connectionId());
-    const tableName = this.stripQuotes(pcx.tableName().text);
+    const tablePath = this.stripQuotes(pcx.tablePath().text);
     return this.astAt(
-      new ast.TableMethodSource(connectionName, tableName),
+      new ast.TableMethodSource(connectionName, tablePath),
       pcx
     );
   }

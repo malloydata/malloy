@@ -27,7 +27,6 @@ import {
   QueryDataRow,
   RunSQLOptions,
   StructDef,
-  parseTableURI,
   SQLBlock,
 } from '@malloydata/malloy';
 import {StructRow, Table, Vector} from 'apache-arrow';
@@ -282,16 +281,13 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     return super.fetchSchemaForSQLBlock(sqlRef);
   }
 
-  async fetchSchemaForTables(tableUris: string[]): Promise<{
+  async fetchSchemaForTables(missing: Record<string, string>): Promise<{
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;
   }> {
-    const tables = tableUris.map(tableUri => {
-      const {tablePath} = parseTableURI(tableUri);
-      return tablePath;
-    });
+    const tables = Object.values(missing);
     await this.findTables(tables);
-    return super.fetchSchemaForTables(tableUris);
+    return super.fetchSchemaForTables(missing);
   }
 
   async close(): Promise<void> {

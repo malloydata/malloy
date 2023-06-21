@@ -22,21 +22,27 @@
  */
 
 import {StructDef} from '../../../model/malloy_types';
-
+import {
+  constructTableKey,
+  deprecatedParseTableURI,
+} from '../../parse-tree-walkers/find-external-references';
 import {Source} from '../elements/source';
 import {ErrorFactory} from '../error-factory';
 import {ModelEntryReference} from '../types/malloy-element';
 
+type TableInfo = {tablePath: string; connectionName?: string | undefined};
 export abstract class TableSource extends Source {
-  abstract getFullName(): string | undefined;
+  abstract getTableInfo(): TableInfo | undefined;
 
   structDef(): StructDef {
-    const name = this.getFullName();
-    if (name === undefined) {
+    const info = this.getTableInfo();
+    if (info === undefined) {
       return ErrorFactory.structDef;
     }
-    const tableDefEntry = this.translator()?.root.schemaZone.getEntry(name);
-    let msg = `Schema read failure for table '${name}'`;
+    const {tablePath, connectionName} = info;
+    const key = constructTableKey(connectionName, tablePath);
+    const tableDefEntry = this.translator()?.root.schemaZone.getEntry(key);
+    let msg = `Schema read failure for table '${tablePath}' for connection '${connectionName}'`;
     if (tableDefEntry) {
       if (tableDefEntry.status === 'present') {
         tableDefEntry.value.location = this.location;
@@ -65,12 +71,12 @@ export class TableMethodSource extends TableSource {
   elementType = 'tableMethodSource';
   constructor(
     readonly connectionName: ModelEntryReference,
-    readonly name: string
+    readonly tablePath: string
   ) {
     super();
   }
 
-  getFullName(): string | undefined {
+  getTableInfo(): TableInfo | undefined {
     const connection = this.modelEntry(this.connectionName);
     if (connection === undefined) {
       this.connectionName.log(
@@ -83,18 +89,20 @@ export class TableMethodSource extends TableSource {
       );
       return undefined;
     }
-    return `${this.connectionName.refString}:${this.name}`;
+    return {
+      tablePath: this.tablePath,
+      connectionName: this.connectionName.refString,
+    };
   }
 }
 
 export class TableFunctionSource extends TableSource {
   elementType = 'tableFunctionSource';
-  constructor(readonly name: string) {
+  constructor(readonly tableURI: string) {
     super();
   }
 
-  getFullName(): string | undefined {
-    // TODO return this parsed...
-    return this.name;
+  getTableInfo(): TableInfo | undefined {
+    return deprecatedParseTableURI(this.tableURI);
   }
 }
