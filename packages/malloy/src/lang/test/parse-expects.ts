@@ -199,7 +199,6 @@ expect.extend({
   },
   translationToFailWith: function (s: TestSource, ...msgs: ErrorSpec[]) {
     let emsg = 'Compile Error expectation not met\nExpected message';
-    const mSrc = isMarkedSource(s) ? s : undefined;
     const qmsgs = msgs.map(s => `error '${s}'`);
     if (msgs.length === 1) {
       emsg += ` ${qmsgs[0]}`;
@@ -236,9 +235,9 @@ expect.extend({
         if (!matched) {
           explain.push(`Expected: ${msg}\nGot: ${err.message}`);
         } else {
-          if (mSrc?.locations[i]) {
+          if (isMarkedSource(s) && s.locations[i]) {
             const have = err.at?.range;
-            const want = mSrc.locations[i].range;
+            const want = s.locations[i].range;
             if (!this.equals(have, want)) {
               explain.push(
                 `Expected '${msg}' at location: ${inspect(want)}\n` +
