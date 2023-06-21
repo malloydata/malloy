@@ -1881,12 +1881,13 @@ describe('error handling', () => {
   });
 
   test('bad sql in sql block', () => {
-    const badModel = new TestTranslator('sql: { select: """)""" }');
-    expect(badModel).toParse();
-    const needSchema = badModel.translate();
+    const badSelect = model`sql: someName is { select: """)""" }`;
+    const badTrans = badSelect.translator;
+    expect(badSelect).toParse();
+    const needSchema = badTrans.translate();
     expect(needSchema.compileSQL).toBeDefined();
     if (needSchema.compileSQL) {
-      badModel.update({
+      badTrans.update({
         errors: {
           compileSQL: {
             [needSchema.compileSQL.name]: 'ZZZZ',
@@ -1894,7 +1895,7 @@ describe('error handling', () => {
         },
       });
     }
-    expect(badModel).translationToFailWith('Invalid SQL, ZZZZ');
+    expect(badTrans).translationToFailWith('Invalid SQL, ZZZZ');
   });
 });
 
