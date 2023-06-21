@@ -132,6 +132,12 @@ describe('model statements', () => {
         'a is not a connection'
       );
     });
+    // TODO unskip this when ENABLE_M4_WARNINGS becomes a document annotation
+    test.skip('table function is deprecated', () => {
+      expect("testA is table('conn:aTable')").modelCompiledWithWarnings(
+        "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')` with `connection: connection_name`"
+      );
+    });
   });
   describe('source:', () => {
     test('table', modelOK("source: testA is table('aTable')"));
