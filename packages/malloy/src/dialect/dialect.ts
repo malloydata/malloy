@@ -98,6 +98,7 @@ export abstract class Dialect {
   abstract supportsCTEinCoorelatedSubQueries: boolean;
   abstract dontUnionIndex: boolean;
   abstract supportsQualify: boolean;
+  abstract supportsSafeCast: boolean;
 
   // return the definition of a function with the given name
   abstract getGlobalFunctionDef(

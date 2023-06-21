@@ -81,6 +81,7 @@ export class PostgresDialect extends Dialect {
   supportUnnestArrayAgg = true;
   supportsAggDistinct = true;
   supportsCTEinCoorelatedSubQueries = true;
+  supportsSafeCast = false;
   dontUnionIndex = false;
   supportsQualify = false;
   globalFunctions = POSTGRES_FUNCTIONS;
@@ -348,7 +349,10 @@ export class PostgresDialect extends Dialect {
     }
     if (cast.srcType !== cast.dstType) {
       const dstType = castMap[cast.dstType] || cast.dstType;
-      const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
+      if (cast.safe) {
+        throw new Error("Internal Error, dialect doesn't support Safe Cast");
+      }
+      const castFunc = 'CAST';
       return mkExpr`${castFunc}(${cast.expr}  AS ${dstType})`;
     }
     return cast.expr;
