@@ -40,7 +40,7 @@ declare global {
       toParse(): R;
       toTranslate(): R;
       toReturnType(tp: string): R;
-      compileToFailWith(...expectedErrors: ErrorSpec[]): R;
+      translationFailsWith(...expectedErrors: ErrorSpec[]): R;
       isLocationIn(at: DocumentLocation, txt: string): R;
     }
   }
@@ -120,6 +120,10 @@ function highlightError(dl: DocumentLocation, txt: string): string {
 
 type TestSource = string | MarkedSource | TestTranslator;
 
+function isMarkedSource(ts: TestSource): ts is MarkedSource {
+  return typeof ts !== 'string' && !(ts instanceof TestTranslator);
+}
+
 function xlator(ts: TestSource) {
   if (ts instanceof TestTranslator) {
     return ts;
@@ -164,9 +168,9 @@ expect.extend({
     } $[returnType`;
     return {pass, message: () => msg};
   },
-  compileToFailWith: function (s: TestSource, ...msgs: ErrorSpec[]) {
+  translationFailsWith: function (s: TestSource, ...msgs: ErrorSpec[]) {
     let emsg = 'Compile Error expectation not met\nExpected message';
-    let mSrc: MarkedSource | undefined;
+    const mSrc = isMarkedSource(s) ? s : undefined;
     const qmsgs = msgs.map(s => `error '${s}'`);
     if (msgs.length === 1) {
       emsg += ` ${qmsgs[0]}`;

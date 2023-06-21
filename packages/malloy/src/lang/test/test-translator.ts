@@ -470,13 +470,19 @@ export function expr(
   return ms;
 }
 
+interface HasTranslator extends MarkedSource {
+  translator: TestTranslator;
+}
+
 export function model(
   unmarked: TemplateStringsArray,
   ...marked: string[]
-): MarkedSource {
+): HasTranslator {
   const ms = markSource(unmarked, ...marked);
-  ms.translator = new TestTranslator(ms.code);
-  return ms;
+  return {
+    ...ms,
+    translator: new TestTranslator(ms.code),
+  };
 }
 
 export function markSource(

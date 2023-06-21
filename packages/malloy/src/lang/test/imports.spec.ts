@@ -22,6 +22,7 @@
  */
 import './parse-expects';
 import {TestTranslator} from './test-translator';
+import escapeRegEx from 'lodash/escapeRegExp';
 
 describe('import:', () => {
   test('simple source', () => {
@@ -93,8 +94,9 @@ source: botProjQSrc is from(->botProjQ)
       },
     });
     docParse.translate();
-    expect(docParse).not.toParse();
-    expect(docParse.prettyErrors()).toContain(reportedError);
+    expect(docParse).translationFailsWith(
+      new RegExp(escapeRegEx(reportedError))
+    );
   });
   test('chained imports', () => {
     const docParse = new TestTranslator('import "child"');
@@ -130,7 +132,7 @@ source: botProjQSrc is from(->botProjQ)
           }`,
       },
     });
-    expect(docParse).compileToFailWith("Cannot redefine 'astr'");
+    expect(docParse).translationFailsWith("Cannot redefine 'astr'");
   });
   test('source references expanded when not exported', () => {
     const srcFiles = {
