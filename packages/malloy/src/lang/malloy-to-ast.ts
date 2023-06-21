@@ -357,7 +357,8 @@ export class MalloyToAST
   }
 
   visitTableMethod(pcx: parse.TableMethodContext): ast.TableSource {
-    const connectionName = this.getModelEntryName(pcx.connectionId());
+    const connId = pcx.connectionId();
+    const connectionName = this.astAt(this.getModelEntryName(connId), connId);
     const tablePath = this.stripQuotes(pcx.tablePath().text);
     return this.astAt(
       new ast.TableMethodSource(connectionName, tablePath),

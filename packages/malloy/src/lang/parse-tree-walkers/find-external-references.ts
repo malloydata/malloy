@@ -40,6 +40,7 @@ type NeedTables = Record<
 >;
 
 class FindExternalReferences implements MalloyParserListener {
+  knownConnectionNames: Record<string, boolean> = {};
   needTables: NeedTables = {};
   needImports: NeedImports = {};
 
@@ -63,11 +64,18 @@ class FindExternalReferences implements MalloyParserListener {
     }
   }
 
+  enterConnectionStatement(pcx: parser.ConnectionStatementContext) {
+    const connectionName = this.stripIdQuotes(pcx.id().text);
+    this.knownConnectionNames[connectionName] = true;
+  }
+
   enterTableMethod(pcx: parser.TableMethodContext) {
-    const connectionName = pcx.connectionId().text;
+    const connectionName = this.stripIdQuotes(pcx.connectionId().text);
     const tablePath = this.tokens.getText(pcx.tablePath()).slice(1, -1);
     const reference = this.trans.rangeFromContext(pcx);
-    this.registerTableReference(connectionName, tablePath, reference);
+    if (this.knownConnectionNames[connectionName]) {
+      this.registerTableReference(connectionName, tablePath, reference);
+    }
   }
 
   enterTableFunction(pcx: parser.TableFunctionContext) {
@@ -82,6 +90,13 @@ class FindExternalReferences implements MalloyParserListener {
     if (!this.needImports[url]) {
       this.needImports[url] = this.trans.rangeFromContext(pcx);
     }
+  }
+
+  stripIdQuotes(id: string) {
+    if (id[0] === '`' && id[id.length - 1] === '`') {
+      return id.slice(1, -1);
+    }
+    return id;
   }
 }
 

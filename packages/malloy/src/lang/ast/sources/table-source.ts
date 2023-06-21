@@ -74,6 +74,7 @@ export class TableMethodSource extends TableSource {
     readonly tablePath: string
   ) {
     super();
+    this.has({connectionName});
   }
 
   getTableInfo(): TableInfo | undefined {

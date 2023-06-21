@@ -101,6 +101,38 @@ function badModel(s: MarkedSource | string, msg: string): TestFunc {
 }
 
 describe('model statements', () => {
+  describe('table method', () => {
+    test('table method works', () => {
+      expect(
+        "connection: conn; source: testA is conn.table('aTable')"
+      ).toCompile();
+    });
+    test('table method works with quoted connection name', () => {
+      expect(
+        "connection: conn; source: testA is `conn`.table('aTable')"
+      ).toCompile();
+    });
+    test('table method works with non-quoted connection name', () => {
+      expect(
+        "connection: `conn`; source: testA is conn.table('aTable')"
+      ).toCompile();
+    });
+    test('table method fails when connection name is wrong', () => {
+      expect(
+        "connection: `bad_conn`; source: testA is bad_conn.table('aTable')"
+      ).not.toCompile();
+    });
+    test('table method fails when connection does not exist', () => {
+      expect("source: testA is conn.table('aTable')").compileToFailWith(
+        'conn is not defined'
+      );
+    });
+    test('table method fails when connection is not a connection', () => {
+      expect("source: testA is a.table('aTable')").compileToFailWith(
+        'a is not a connection'
+      );
+    });
+  });
   describe('source:', () => {
     test('table', modelOK("source: testA is table('aTable')"));
     test('shorcut fitlered table', () => {
@@ -2693,6 +2725,26 @@ describe('translation need error locations', () => {
     const errList = m.problemResponse().problems;
     expect(errList[0].at).isLocationIn(source.locations[0], source.code);
     return undefined;
+  });
+});
+
+describe('connection object', () => {
+  test('to be definable', () => {
+    expect('connection: my_connection').toCompile();
+  });
+  test('to be quoted definable', () => {
+    expect('connection: `my_connection`').toCompile();
+  });
+  test('to conflict with other connections', () => {
+    expect(markSource`
+    connection: my_connection
+    connection: ${'my_connection'}
+    `).compileToFailWith('my_connection is already defined');
+  });
+  test('to conflict with other top level objects', () => {
+    expect(markSource`
+    connection: ${'a'}
+    `).compileToFailWith('a is already defined');
   });
 });
 
