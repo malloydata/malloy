@@ -56,7 +56,7 @@ describe('document annotation', () => {
       # note1
       note_b is a
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const note_a = m.getSourceDef('note_a');
     expect(note_a).toBeDefined();
     if (note_a) {
@@ -77,7 +77,7 @@ describe('document annotation', () => {
       # note1.1
       source: note_a is a
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const note_a = m.getSourceDef('note_a');
     expect(note_a).toBeDefined();
     if (note_a) {
@@ -93,7 +93,7 @@ describe('document annotation', () => {
       # note1
       source: note_a is note_b { primary_key: ai }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const note_a = m.getSourceDef('note_a');
     expect(note_a).toBeDefined();
     if (note_a) {
@@ -114,7 +114,7 @@ describe('document annotation', () => {
       # after-is
       a -> {project: *}
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const note_a = m.getQuery('note_a');
     expect(note_a).toBeDefined();
     if (note_a) {
@@ -128,7 +128,7 @@ describe('document annotation', () => {
         # note2
         a -> {project: *}
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const note_a = m.getQuery(0);
     expect(note_a).toBeDefined();
     if (note_a) {
@@ -144,7 +144,7 @@ describe('document annotation', () => {
       # note2
       query: note_a is a -> {project: *}
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const note_a = m.getQuery('note_a');
     expect(note_a).toBeDefined();
     if (note_a) {
@@ -162,7 +162,7 @@ describe('document annotation', () => {
     # note1
       query: note_a is -> note_b { where: astr = 'a' }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const note_a = m.getQuery('note_a');
     expect(note_a).toBeDefined();
     if (note_a) {
@@ -177,7 +177,7 @@ describe('document annotation', () => {
       ${turtleDef}
       query: na->note_a
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const note_a = m.getQuery(0);
     expect(note_a?.annotation).toBeDefined();
     expect(note_a?.annotation).toEqual({inherits: defaultTags});
@@ -187,7 +187,7 @@ describe('document annotation', () => {
       ## model1
       ## model2
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const model = m.translate()?.translated;
     expect(model).toBeDefined();
     const notes = model?.modelDef.annotation;
@@ -198,13 +198,13 @@ describe('document annotation', () => {
       # note1
       ## model1
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
   });
 });
 describe('source definition annotations', () => {
   test('turtle block annotation', () => {
     const m = new TestTranslator(turtleDef);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const na = m.getSourceDef('na');
     expect(na).toBeDefined();
     if (na) {
@@ -220,7 +220,7 @@ describe('source definition annotations', () => {
         query: new_note_a is note_a
       }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const na = m.getSourceDef('new_na');
     expect(na).toBeDefined();
     if (na) {
@@ -242,7 +242,7 @@ describe('source definition annotations', () => {
           astr
       }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const na = m.getSourceDef('na');
     expect(na).toBeDefined();
     if (na) {
@@ -263,7 +263,7 @@ describe('source definition annotations', () => {
           max(astr)
       }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const na = m.getSourceDef('na');
     expect(na).toBeDefined();
     if (na) {
@@ -284,7 +284,7 @@ describe('source definition annotations', () => {
           ab with astr
       }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const na = m.getSourceDef('na');
     expect(na).toBeDefined();
     if (na) {
@@ -305,7 +305,7 @@ describe('source definition annotations', () => {
         a on note_a.astr = astr
       }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const na = m.getSourceDef('na');
     expect(na).toBeDefined();
     if (na) {
@@ -319,7 +319,7 @@ describe('source definition annotations', () => {
         ## model1
       }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
   });
 });
 describe('query operation annotations', () => {
@@ -330,7 +330,7 @@ describe('query operation annotations', () => {
         project: *
       }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
   });
   test('project new definition annotation', () => {
     const m = new TestTranslator(`
@@ -345,7 +345,7 @@ describe('query operation annotations', () => {
           astr
       }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const foundYou = m.getQuery('findme');
     expect(foundYou).toBeDefined();
     if (foundYou) {
@@ -371,7 +371,7 @@ describe('query operation annotations', () => {
           note_a
       }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const foundYou = m.getQuery(0);
     expect(foundYou).toBeDefined();
     if (foundYou) {
@@ -396,7 +396,7 @@ describe('query operation annotations', () => {
           astr
       }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const foundYou = m.getQuery('findme');
     expect(foundYou).toBeDefined();
     if (foundYou) {
@@ -418,7 +418,7 @@ describe('query operation annotations', () => {
           lag(ai)
       }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const foundYou = m.getQuery('findme');
     expect(foundYou).toBeDefined();
     if (foundYou) {
@@ -445,7 +445,7 @@ describe('query operation annotations', () => {
         note_a
       }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const foundYou = m.getQuery('findme');
     expect(foundYou).toBeDefined();
     if (foundYou) {
@@ -470,7 +470,7 @@ describe('query operation annotations', () => {
           max(astr)
       }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const foundYou = m.getQuery('findme');
     expect(foundYou).toBeDefined();
     if (foundYou) {
@@ -497,7 +497,7 @@ describe('query operation annotations', () => {
         note_a
       }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const foundYou = m.getQuery('findme');
     expect(foundYou).toBeDefined();
     if (foundYou) {
@@ -522,7 +522,7 @@ describe('query operation annotations', () => {
           aturtle
       }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const foundYou = m.getQuery('findme');
     expect(foundYou).toBeDefined();
     if (foundYou) {
@@ -537,7 +537,7 @@ describe('query operation annotations', () => {
         nest: note_b is note_a
       }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const foundYou = m.getQuery(0);
     expect(foundYou).toBeDefined();
     if (foundYou) {

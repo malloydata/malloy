@@ -465,17 +465,19 @@ export interface MarkedSource {
   translator?: TestTranslator;
 }
 
+interface HasTranslator extends MarkedSource {
+  translator: TestTranslator;
+}
+
 export function expr(
   unmarked: TemplateStringsArray,
   ...marked: string[]
-): MarkedSource {
+): HasTranslator {
   const ms = markSource(unmarked, ...marked);
-  ms.translator = new BetaExpression(ms.code);
-  return ms;
-}
-
-interface HasTranslator extends MarkedSource {
-  translator: TestTranslator;
+  return {
+    ...ms,
+    translator: new BetaExpression(ms.code),
+  };
 }
 
 export function model(
