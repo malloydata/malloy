@@ -37,10 +37,39 @@ declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {
     interface Matchers<R> {
+      /**
+       * expect(X).toParse()
+       *
+       * Passes if the source parses to an AST without errors.
+       *
+       * X can be a MarkedSource, a string, or a model. If it is a marked
+       * source, the errors which are found must match the locations of
+       * the markings.
+       */
       toParse(): R;
+      /**
+       * expect(X).toTranslate()
+       *
+       * Passes if the source compiles to code which could be used to
+       * generate SQL.
+       *
+       * X can be a MarkedSource, a string, or a model. If it is a marked
+       * source, the errors which are found must match the locations of
+       * the markings.
+       */
       toTranslate(): R;
       toReturnType(tp: string): R;
-      translationFailsWith(...expectedErrors: ErrorSpec[]): R;
+      /**
+       * expect(X).translateToFailWith(expectedErrors)
+       *
+       * X can be a MarkedSource, a string, or a model. If it is a marked
+       * source, the errors which are found must match the locations of
+       * the markings.
+       *
+       * @param expectedErrors varargs list of strings which must match
+       *        exactly, or regular expressions.
+       */
+      translationToFailWith(...expectedErrors: ErrorSpec[]): R;
       isLocationIn(at: DocumentLocation, txt: string): R;
     }
   }
@@ -168,7 +197,7 @@ expect.extend({
     } $[returnType`;
     return {pass, message: () => msg};
   },
-  translationFailsWith: function (s: TestSource, ...msgs: ErrorSpec[]) {
+  translationToFailWith: function (s: TestSource, ...msgs: ErrorSpec[]) {
     let emsg = 'Compile Error expectation not met\nExpected message';
     const mSrc = isMarkedSource(s) ? s : undefined;
     const qmsgs = msgs.map(s => `error '${s}'`);

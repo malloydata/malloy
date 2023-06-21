@@ -94,7 +94,7 @@ source: botProjQSrc is from(->botProjQ)
       },
     });
     docParse.translate();
-    expect(docParse).translationFailsWith(
+    expect(docParse).translationToFailWith(
       new RegExp(escapeRegEx(reportedError))
     );
   });
@@ -132,7 +132,7 @@ source: botProjQSrc is from(->botProjQ)
           }`,
       },
     });
-    expect(docParse).translationFailsWith("Cannot redefine 'astr'");
+    expect(docParse).translationToFailWith("Cannot redefine 'astr'");
   });
   test('source references expanded when not exported', () => {
     const srcFiles = {
