@@ -38,6 +38,7 @@ import {SampleProperty} from '../query-properties/sampling';
 import {Top} from '../query-properties/top';
 import {TimezoneStatement} from '../source-properties/timezone-statement';
 import {Calculate} from '../query-properties/calculate';
+import {ExtendBlock} from '../query-properties/extend';
 
 export type QueryProperty =
   | Ordering
@@ -54,7 +55,8 @@ export type QueryProperty =
   | NestReference
   | Nests
   | Aggregate
-  | GroupBy;
+  | GroupBy
+  | ExtendBlock;
 export function isQueryProperty(q: MalloyElement): q is QueryProperty {
   return (
     q instanceof Ordering ||
@@ -69,6 +71,7 @@ export function isQueryProperty(q: MalloyElement): q is QueryProperty {
     q instanceof Aggregate ||
     q instanceof Calculate ||
     q instanceof Nests ||
+    q instanceof ExtendBlock ||
     isNestedQuery(q) ||
     q instanceof GroupBy ||
     q instanceof TimezoneStatement
