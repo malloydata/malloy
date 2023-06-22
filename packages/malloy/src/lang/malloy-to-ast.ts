@@ -34,6 +34,8 @@ import {FieldDeclarationConstructor, TableSource} from './ast';
 
 const ENABLE_M4_WARNINGS = false;
 
+const ENABLE_M4_WARNINGS = false;
+
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
  * AST from an ANTLR parse tree.
@@ -456,6 +458,20 @@ export class MalloyToAST
     return new ast.NamedSource(name);
   }
 
+  visitQueryJoinStatement(
+    pcx: parse.QueryJoinStatementContext
+  ): ast.MalloyElement {
+    const result = this.astAt(this.visit(pcx.joinStatement()), pcx);
+    if (ENABLE_M4_WARNINGS) {
+      this.astError(
+        result,
+        'Joins in queries are deprecated, move into an `extend:` block.',
+        'warn'
+      );
+    }
+    return result;
+  }
+
   visitJoinOn(pcx: parse.JoinOnContext): ast.Join {
     const joinAs = this.getModelEntryName(pcx.joinNameDef());
     const joinFrom = this.getJoinSource(joinAs, pcx.explore());
@@ -486,9 +502,7 @@ export class MalloyToAST
     return this.astAt(def, pcx);
   }
 
-  visitDefExploreDimension(
-    pcx: parse.DefExploreDimensionContext
-  ): ast.Dimensions {
+  visitDefDimensions(pcx: parse.DefDimensionsContext): ast.Dimensions {
     const defs = this.getFieldDefs(
       pcx.defList().fieldDef(),
       ast.DimensionFieldDeclaration
@@ -497,7 +511,7 @@ export class MalloyToAST
     return this.astAt(stmt, pcx);
   }
 
-  visitDefExploreMeasure(pcx: parse.DefExploreMeasureContext): ast.Measures {
+  visitDefMeasures(pcx: parse.DefMeasuresContext): ast.Measures {
     const defs = this.getFieldDefs(
       pcx.defList().fieldDef(),
       ast.MeasureFieldDeclaration
@@ -506,13 +520,41 @@ export class MalloyToAST
     return this.astAt(stmt, pcx);
   }
 
+  visitQueryExtend(pcx: parse.QueryExtendContext): ast.ExtendBlock {
+    const extensions: ast.QueryExtendProperty[] = [];
+    const items = pcx
+      .queryExtendStatementList()
+      .queryExtendStatement()
+      .map(ctx => this.visit(ctx));
+    for (const item of items) {
+      if (ast.isQueryExtendProperty(item)) {
+        extensions.push(item);
+      } else {
+        throw this.internalError(
+          pcx,
+          `Query extend matched, but ${item.elementType} found`
+        );
+      }
+    }
+    const el = new ast.ExtendBlock(extensions);
+    return this.astAt(el, pcx);
+  }
+
   visitDeclareStatement(pcx: parse.DeclareStatementContext): ast.DeclareFields {
     const defs = this.getFieldDefs(
       pcx.defList().fieldDef(),
       ast.DeclareFieldDeclaration
     );
     const stmt = new ast.DeclareFields(defs);
-    return this.astAt(stmt, pcx);
+    const result = this.astAt(stmt, pcx);
+    if (ENABLE_M4_WARNINGS) {
+      this.astError(
+        result,
+        '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block',
+        'warn'
+      );
+    }
+    return result;
   }
 
   visitExploreRenameDef(pcx: parse.ExploreRenameDefContext): ast.RenameField {
@@ -593,8 +635,10 @@ export class MalloyToAST
   visitTimezoneStatement(
     cx: parse.TimezoneStatementContext
   ): ast.TimezoneStatement {
-    const timezoneStatement = new ast.TimezoneStatement(
-      this.stripQuotes(cx.STRING_LITERAL().text)
+    const tz = cx.timezoneName();
+    const timezoneStatement = this.astAt(
+      new ast.TimezoneStatement(this.stripQuotes(tz.STRING_LITERAL().text)),
+      tz
     );
 
     if (!timezoneStatement.isValid) {
@@ -898,14 +942,41 @@ export class MalloyToAST
   }
 
   visitAnonymousQuery(pcx: parse.AnonymousQueryContext): ast.AnonymousQuery {
-    const query = this.visit(pcx.topLevelAnonQueryDef().query());
+    const defCx = pcx.topLevelAnonQueryDef();
+    const query = this.visit(defCx.query());
     if (ast.isQueryElement(query)) {
-      return new ast.AnonymousQuery(query);
+      const el = this.astAt(new ast.AnonymousQuery(query), defCx);
+      if (ENABLE_M4_WARNINGS) {
+        this.astError(
+          el,
+          'Anonymous `query:` statements are deprecated, use `run:` instead',
+          'warn'
+        );
+      }
+      return el;
     }
     throw this.internalError(
       pcx,
       `Anonymous query matched, but ${query.elementType} found`
     );
+  }
+
+  visitRunStatementDef(pcx: parse.RunStatementDefContext): ast.RunQueryDef {
+    const query = this.visit(pcx.topLevelAnonQueryDef().query());
+    if (ast.isQueryElement(query)) {
+      const el = new ast.RunQueryDef(query);
+      return this.astAt(el, pcx);
+    }
+    throw this.internalError(
+      pcx,
+      `Run query matched, but ${query.elementType} found`
+    );
+  }
+
+  visitRunStatementRef(pcx: parse.RunStatementRefContext): ast.RunQueryRef {
+    const name = this.getModelEntryName(pcx.queryName());
+    const el = this.astAt(new ast.RunQueryRef(name), pcx.queryName());
+    return this.astAt(el, pcx);
   }
 
   visitNestedQueryList(pcx: parse.NestedQueryListContext): ast.MalloyElement {

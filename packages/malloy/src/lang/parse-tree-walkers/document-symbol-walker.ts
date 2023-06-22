@@ -61,6 +61,24 @@ class DocumentSymbolWalker implements MalloyParserListener {
     });
   }
 
+  enterRunStatementDef(pcx: parser.RunStatementDefContext) {
+    this.symbols.push({
+      range: this.translator.rangeFromContext(pcx.topLevelAnonQueryDef()),
+      name: 'unnamed_query',
+      type: 'unnamed_query',
+      children: [],
+    });
+  }
+
+  enterRunStatementRef(pcx: parser.RunStatementRefContext) {
+    this.symbols.push({
+      range: this.translator.rangeFromContext(pcx.queryName()),
+      name: pcx.queryName().id().text,
+      type: 'query',
+      children: [],
+    });
+  }
+
   enterTopLevelAnonQueryDef(pcx: parser.TopLevelAnonQueryDefContext) {
     this.symbols.push({
       range: this.translator.rangeFromContext(pcx),

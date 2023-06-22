@@ -112,9 +112,31 @@ describe('model statements', () => {
     });
   });
   describe('query:', () => {
+    // Delete this when ENABLE_M4_WARNINGS is converted to an annotation
     test('anonymous query', () => {
-      expect("query: table('aTable') -> { group_by: astr }").toTranslate();
+      expect(
+        markSource`query: ${"table('aTable') -> { group_by: astr }"}`
+      ).toTranslate();
     });
+    // Unskip this when ENABLE_M4_WARNINGS is converted to an annotation
+    test.skip('anonymous query', () => {
+      expect(
+        markSource`query: ${"table('aTable') -> { group_by: astr }"}`
+      ).toTranslateWithWarnings(
+        'Anonymous `query:` statements are deprecated, use `run:` instead'
+      );
+    });
+    test('run query', () =>
+      expect("run: table('aTable') -> { group_by: astr }").toTranslate());
+    test('run query ref', () =>
+      expect(`
+        query: foo is table('aTable') -> { group_by: astr }
+        run: foo
+      `).toTranslate());
+    test('query', () =>
+      expect(
+        "query: name is table('aTable') -> { group_by: astr }"
+      ).toTranslate());
     test('query', () => {
       expect(
         "query: name is table('aTable') -> { group_by: astr }"
@@ -1175,7 +1197,7 @@ describe('qops', () => {
       }
     `).toTranslate();
   });
-  test('nest multiple', () => {
+  test('nest multiple', () =>
     expect(`
       query: a->{
         group_by: ai
@@ -1183,10 +1205,71 @@ describe('qops', () => {
           nestbystr is { group_by: astr; aggregate: N is count() },
           renest is { group_by: astr; aggregate: N is count() }
       }
-    `).toTranslate();
+    `).toTranslate());
+  test('nest ref', () =>
+    expect('query: ab->{group_by: ai; nest: aturtle}').toTranslate());
+  describe('extend block', () => {
+    test('works with dimension', () => {
+      expect(
+        'query: a -> { extend: { dimension: x is 1 }; group_by: x }'
+      ).toTranslate();
+    });
+    test('works with measure', () => {
+      expect(
+        'query: a -> { extend: { measure: x is count() }; aggregate: x }'
+      ).toTranslate();
+    });
+    test('works with join_one', () => {
+      expect(
+        'query: a -> { extend: { join_one: bb is b on bb.astr = astr }; group_by: bb.astr }'
+      ).toTranslate();
+    });
+    test('works with join_many', () => {
+      expect(
+        'query: a -> { extend: { join_many: b on astr = b.astr }; group_by: b.astr }'
+      ).toTranslate();
+    });
+    test('works with join_cross', () => {
+      expect(
+        'query: a -> { extend: { join_cross: b on true }; group_by: b.astr }'
+      ).toTranslate();
+    });
+    test('works with multiple in one block', () => {
+      expect(
+        'query: a -> { extend: { dimension: x is 1, y is 2 }; group_by: x, y }'
+      ).toTranslate();
+    });
+    test('works with multiple blocks', () => {
+      expect(
+        'query: a -> { extend: { dimension: x is 1; dimension: y is 2; measure: c is count() }; group_by: x, y; aggregate: c }'
+      ).toTranslate();
+    });
   });
-  test('nest ref', () => {
-    expect('query: ab->{group_by: ai; nest: aturtle}').toTranslate();
+  // TODO ENABLE_M4_WARNINGS: unskip when we have an M4 warning flag
+  describe.skip('declare/query join warnings', () => {
+    test('declare warning in query', () => {
+      expect(
+        markSource`query: a -> { declare: ${'x is 1'}; group_by: x, y }`
+      ).toTranslateWithWarnings(
+        '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
+      );
+    });
+    test('declare warning in source', () => {
+      expect(
+        markSource`source: a2 is a { declare: ${'x is 1'} }`
+      ).toTranslateWithWarnings(
+        '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
+      );
+    });
+    test('joins in query', () => {
+      expect(
+        markSource`query: a -> { ${'join_one: b on true'}; ${'join_many: c is b on true'}; ${'join_cross: d is b on true'}; group_by: b.astr }`
+      ).toTranslateWithWarnings(
+        'Joins in queries are deprecated, move into an `extend:` block.',
+        'Joins in queries are deprecated, move into an `extend:` block.',
+        'Joins in queries are deprecated, move into an `extend:` block.'
+      );
+    });
   });
   test('refine query with extended source', () => {
     const m = new TestTranslator(`
