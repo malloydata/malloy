@@ -72,6 +72,8 @@ class FindExternalReferences implements MalloyParserListener {
 
   enterTableFunction(pcx: parser.TableFunctionContext) {
     const tableURI = this.tokens.getText(pcx.tableURI()).slice(1, -1);
+    // This use of `deprecatedParseTableURI` is ok because it is for handling the
+    // old, soon-to-be-deprecated table syntax.
     const {connectionName, tablePath} = deprecatedParseTableURI(tableURI);
     const reference = this.trans.rangeFromContext(pcx);
     this.registerTableReference(connectionName, tablePath, reference);
@@ -99,6 +101,15 @@ export function constructTableKey(
   return `${connectionName}:${tablePath}`;
 }
 
+/**
+ * This function parses an old-style `tableURI` into a connection name and
+ * table path. The name includes `deprecated` because it should only be used
+ * in the (deprecated) old-style `table('conn:tab')` syntax. Any use of this
+ * anywhere else is bad.
+ * @param tableURI The sting that is passed into the `table('conn:tab')` syntax.
+ * @returns A connection name and table path.
+ * @deprecated
+ */
 export function deprecatedParseTableURI(tableURI: string): {
   connectionName?: string;
   tablePath: string;

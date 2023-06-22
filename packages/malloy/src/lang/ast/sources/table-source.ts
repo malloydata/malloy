@@ -106,6 +106,8 @@ export class TableFunctionSource extends TableSource {
   }
 
   getTableInfo(): TableInfo | undefined {
+    // This use of `deprecatedParseTableURI` is ok because it is for handling the
+    // old, soon-to-be-deprecated table syntax.
     return deprecatedParseTableURI(this.tableURI);
   }
 }
