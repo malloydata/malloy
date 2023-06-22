@@ -50,29 +50,13 @@ import './parse-expects';
 describe('model statements', () => {
   describe('table method', () => {
     test('table method works', () => {
-      expect(
-        "connection: conn; source: testA is conn.table('aTable')"
-      ).toTranslate();
+      expect("source: testA is conn.table('aTable')").toTranslate();
     });
     test('table method works with quoted connection name', () => {
-      expect(
-        "connection: conn; source: testA is `conn`.table('aTable')"
-      ).toTranslate();
-    });
-    test('table method works with non-quoted connection name', () => {
-      expect(
-        "connection: `conn`; source: testA is conn.table('aTable')"
-      ).toTranslate();
+      expect("source: testA is `conn`.table('aTable')").toTranslate();
     });
     test('table method fails when connection name is wrong', () => {
-      expect(
-        "connection: `bad_conn`; source: testA is bad_conn.table('aTable')"
-      ).not.toTranslate();
-    });
-    test('table method fails when connection does not exist', () => {
-      expect("source: testA is conn.table('aTable')").translationToFailWith(
-        'conn is not defined'
-      );
+      expect("source: testA is bad_conn.table('aTable')").not.toTranslate();
     });
     test('table method fails when connection is not a connection', () => {
       expect("source: testA is a.table('aTable')").translationToFailWith(
@@ -82,7 +66,7 @@ describe('model statements', () => {
     // TODO unskip this when ENABLE_M4_WARNINGS becomes a document annotation
     test.skip('table function is deprecated', () => {
       expect("testA is table('conn:aTable')").toTranslateWithWarnings(
-        "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')` with `connection: connection_name`"
+        "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`"
       );
     });
   });

@@ -79,11 +79,13 @@ export class TableMethodSource extends TableSource {
 
   getTableInfo(): TableInfo | undefined {
     const connection = this.modelEntry(this.connectionName);
+    const name = this.connectionName.refString;
     if (connection === undefined) {
-      this.connectionName.log(
-        `${this.connectionName.refString} is not defined`
+      this.namespace()?.setEntry(
+        name,
+        {entry: {type: 'connection', name}, exported: true},
+        true
       );
-      return undefined;
     } else if (connection.entry.type !== 'connection') {
       this.connectionName.log(
         `${this.connectionName.refString} is not a connection`

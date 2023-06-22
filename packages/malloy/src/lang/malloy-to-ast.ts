@@ -349,7 +349,7 @@ export class MalloyToAST
     if (ENABLE_M4_WARNINGS) {
       this.astError(
         el,
-        "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')` with `connection: connection_name`",
+        "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`",
         'warn'
       );
     }
@@ -1334,14 +1334,6 @@ export class MalloyToAST
       new ast.ImportStatement(url, this.parse.subTranslator.sourceURL),
       pcx
     );
-  }
-
-  visitConnectionStatement(
-    pcx: parse.ConnectionStatementContext
-  ): ast.ConnectionStatement {
-    const name = this.getModelEntryName(pcx.id());
-    const el = new ast.ConnectionStatement(name);
-    return this.astAt(el, pcx);
   }
 
   visitJustExpr(pcx: parse.JustExprContext): ast.ExpressionDef {

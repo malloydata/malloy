@@ -31,11 +31,6 @@ malloyStatement
   | defineSQLStatement
   | defineQuery
   | importStatement
-  | connectionStatement
-  ;
-
-connectionStatement
-  : CONNECTION id
   ;
 
 defineSourceStatement
