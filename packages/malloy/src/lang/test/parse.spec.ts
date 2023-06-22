@@ -52,36 +52,36 @@ describe('model statements', () => {
     test('table method works', () => {
       expect(
         "connection: conn; source: testA is conn.table('aTable')"
-      ).toCompile();
+      ).toTranslate();
     });
     test('table method works with quoted connection name', () => {
       expect(
         "connection: conn; source: testA is `conn`.table('aTable')"
-      ).toCompile();
+      ).toTranslate();
     });
     test('table method works with non-quoted connection name', () => {
       expect(
         "connection: `conn`; source: testA is conn.table('aTable')"
-      ).toCompile();
+      ).toTranslate();
     });
     test('table method fails when connection name is wrong', () => {
       expect(
         "connection: `bad_conn`; source: testA is bad_conn.table('aTable')"
-      ).not.toCompile();
+      ).not.toTranslate();
     });
     test('table method fails when connection does not exist', () => {
-      expect("source: testA is conn.table('aTable')").compileToFailWith(
+      expect("source: testA is conn.table('aTable')").translationToFailWith(
         'conn is not defined'
       );
     });
     test('table method fails when connection is not a connection', () => {
-      expect("source: testA is a.table('aTable')").compileToFailWith(
+      expect("source: testA is a.table('aTable')").translationToFailWith(
         'a is not a connection'
       );
     });
     // TODO unskip this when ENABLE_M4_WARNINGS becomes a document annotation
     test.skip('table function is deprecated', () => {
-      expect("testA is table('conn:aTable')").modelCompiledWithWarnings(
+      expect("testA is table('conn:aTable')").toTranslateWithWarnings(
         "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')` with `connection: connection_name`"
       );
     });
@@ -2771,21 +2771,21 @@ describe('translation need error locations', () => {
 
 describe('connection object', () => {
   test('to be definable', () => {
-    expect('connection: my_connection').toCompile();
+    expect('connection: my_connection').toTranslate();
   });
   test('to be quoted definable', () => {
-    expect('connection: `my_connection`').toCompile();
+    expect('connection: `my_connection`').toTranslate();
   });
   test('to conflict with other connections', () => {
     expect(markSource`
     connection: my_connection
     connection: ${'my_connection'}
-    `).compileToFailWith('my_connection is already defined');
+    `).translationToFailWith('my_connection is already defined');
   });
   test('to conflict with other top level objects', () => {
     expect(markSource`
     connection: ${'a'}
-    `).compileToFailWith('a is already defined');
+    `).translationToFailWith('a is already defined');
   });
 });
 
