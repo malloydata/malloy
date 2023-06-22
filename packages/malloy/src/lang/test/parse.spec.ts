@@ -127,7 +127,14 @@ describe('model statements', () => {
     });
   });
   describe('query:', () => {
+    // Delete this when ENABLE_M4_WARNINGS is converted to an annotation
     test('anonymous query', () => {
+      expect(
+        markSource`query: ${"table('aTable') -> { group_by: astr }"}`
+      ).toCompile();
+    });
+    // Unskip this when ENABLE_M4_WARNINGS is converted to an annotation
+    test.skip('anonymous query', () => {
       expect(
         markSource`query: ${"table('aTable') -> { group_by: astr }"}`
       ).toCompileWithWarnings(

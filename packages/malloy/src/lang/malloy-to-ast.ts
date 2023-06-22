@@ -32,6 +32,8 @@ import {MalloyParseRoot} from './parse-malloy';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
 import {FieldDeclarationConstructor} from './ast';
 
+const ENABLE_M4_WARNINGS = false;
+
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
  * AST from an ANTLR parse tree.
@@ -877,11 +879,13 @@ export class MalloyToAST
     const query = this.visit(defCx.query());
     if (ast.isQueryElement(query)) {
       const el = this.astAt(new ast.AnonymousQuery(query), defCx);
-      this.astError(
-        el,
-        'Anonymous `query:` statements are deprecated, use `run:` instead',
-        'warn'
-      );
+      if (ENABLE_M4_WARNINGS) {
+        this.astError(
+          el,
+          'Anonymous `query:` statements are deprecated, use `run:` instead',
+          'warn'
+        );
+      }
       return el;
     }
     throw this.internalError(
@@ -903,7 +907,7 @@ export class MalloyToAST
   }
 
   visitRunStatementRef(pcx: parse.RunStatementRefContext): ast.RunQueryRef {
-    const name = this.getFieldName(pcx.queryName());
+    const name = this.getModelEntryName(pcx.queryName());
     const el = this.astAt(new ast.RunQueryRef(name), pcx.queryName());
     return this.astAt(el, pcx);
   }

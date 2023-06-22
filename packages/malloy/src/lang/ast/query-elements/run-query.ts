@@ -21,10 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldName} from '..';
 import {ModelDataRequest} from '../../translate-response';
-
-import {DocStatement, Document, MalloyElement} from '../types/malloy-element';
+import {
+  DocStatement,
+  Document,
+  MalloyElement,
+  ModelEntryReference,
+} from '../types/malloy-element';
 import {QueryElement} from '../types/query-element';
 
 abstract class RunQuery extends MalloyElement implements DocStatement {
@@ -47,7 +50,7 @@ export class RunQueryDef extends RunQuery {
 }
 
 export class RunQueryRef extends RunQuery {
-  constructor(readonly queryName: FieldName) {
+  constructor(readonly queryName: ModelEntryReference) {
     super();
     this.has({queryName});
   }
