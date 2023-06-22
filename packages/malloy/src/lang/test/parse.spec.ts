@@ -114,7 +114,7 @@ describe('model statements', () => {
     });
     test('from(query) refined into query', () => {
       expect(
-        'query: from(ab -> {group_by: astr}) { dimension: bigstr is UPPER(astr) } -> { group_by: bigstr }'
+        'query: from(ab -> {group_by: astr}) { dimension: bigstr is upper(astr) } -> { group_by: bigstr }'
       ).toTranslate();
     });
     test('query with shortcut filtered turtle', () => {
@@ -500,6 +500,13 @@ describe('model statements', () => {
         expect(`query: a -> {
           group_by: s is concat('a', 'b')
         }`).toTranslate();
+      });
+      test('function incorrect case', () => {
+        expect(`query: a -> {
+          group_by: s is CONCAT('a', 'b')
+        }`).toTranslateWithWarnings(
+          "Case insensitivity for function names is deprecated, use 'concat' instead"
+        );
       });
       test('function no matching overload', () => {
         expect(`query: a -> {
@@ -1773,7 +1780,7 @@ describe('error handling', () => {
   });
   test('reference to field in its definition', () => {
     expect(
-      'source: na is a { dimension: ustr is UPPER(ustr) } '
+      'source: na is a { dimension: ustr is upper(ustr) } '
     ).translationToFailWith("Circular reference to 'ustr' in definition");
   });
   test('empty model', () => {
@@ -2659,7 +2666,6 @@ describe('translation need error locations', () => {
       errors: {urls: {[(result.urls || [])[0]]: 'Bad file!'}},
     });
     expect(source).translationToFailWith(/Bad file!/);
-    return undefined;
   });
 
   test('sql struct error location', () => {
@@ -2675,7 +2681,7 @@ describe('translation need error locations', () => {
       m.update({errors: {compileSQL: {[req.name]: 'Bad SQL!'}}});
     }
     expect(m).not.toTranslate();
-    const errList = m.errors().errors;
+    const errList = m.problems();
     expect(errList[0].at).isLocationIn(source.locations[0], source.code);
   });
 

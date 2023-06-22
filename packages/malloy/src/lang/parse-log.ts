@@ -31,7 +31,7 @@ export type LogSeverity = 'error' | 'warn' | 'debug';
 export interface LogMessage {
   message: string;
   at?: DocumentLocation;
-  severity?: LogSeverity;
+  severity: LogSeverity;
 }
 
 export interface MessageLogger {

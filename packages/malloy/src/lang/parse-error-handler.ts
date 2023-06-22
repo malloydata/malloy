@@ -46,6 +46,7 @@ export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
     const error: LogMessage = {
       message: msg,
       at: {url: this.translator.sourceURL, range},
+      severity: 'error',
     };
     this.messages.log(error);
   }

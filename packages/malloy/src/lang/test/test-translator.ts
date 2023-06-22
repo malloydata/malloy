@@ -311,6 +311,7 @@ export class TestTranslator extends MalloyTranslator {
         this.logger.log({
           at: this.defaultLocation(),
           message: `Missing imports: ${whatImports.join(',')}`,
+          severity: 'error',
         });
       }
       const needThese = this.schemaZone.getUndefined();
@@ -319,12 +320,14 @@ export class TestTranslator extends MalloyTranslator {
         this.logger.log({
           at: this.defaultLocation(),
           message: `Missing schema: ${needThese.join(',')}`,
+          severity: 'error',
         });
       }
       if (mysterious) {
         this.logger.log({
           at: this.defaultLocation(),
           message: 'mysterious translation failure',
+          severity: 'error',
         });
       }
     }
