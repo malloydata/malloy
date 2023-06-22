@@ -34,8 +34,6 @@ import {FieldDeclarationConstructor, TableSource} from './ast';
 
 const ENABLE_M4_WARNINGS = false;
 
-const ENABLE_M4_WARNINGS = false;
-
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
  * AST from an ANTLR parse tree.
