@@ -33,7 +33,8 @@ import {
   isSQLFragment,
 } from '../../model';
 import {
-  MarkedSource,
+  model,
+  expr,
   TestTranslator,
   getExplore,
   getField,
@@ -43,81 +44,34 @@ import {
   markSource,
   BetaExpression,
 } from './test-translator';
-import isEqual from 'lodash/isEqual';
 import {isGranularResult} from '../ast/types/granular-result';
 import './parse-expects';
 
-type TestFunc = () => undefined;
-
-function exprOK(s: string): TestFunc {
-  return () => {
-    expect(new BetaExpression(s)).modelParsed();
-    return undefined;
-  };
-}
-
-function exprType(s: string, t: string): TestFunc {
-  return () => {
-    const expr = new BetaExpression(s);
-    expect(expr).modelParsed();
-    expect(expr.generated().dataType).toBe(t);
-    return undefined;
-  };
-}
-
-function modelOK(s: string): TestFunc {
-  return () => {
-    const m = new TestTranslator(s);
-    expect(m).modelCompiled();
-    return undefined;
-  };
-}
-
-function badModel(s: MarkedSource | string, msg: string): TestFunc {
-  return () => {
-    const src = typeof s === 'string' ? s : s.code;
-    const emsg = `Error expectation not met\nExpected error: '${msg}'\nSource:\n${src}`;
-    const m = new TestTranslator(src);
-    const t = m.translate();
-    if (t.translated) {
-      fail(emsg);
-    } else {
-      const errList = m.problemResponse().problems;
-      const firstError = errList[0];
-      if (firstError.message !== msg) {
-        fail(`Received errror: ${firstError.message}\n${emsg}`);
-      }
-      if (typeof s !== 'string') {
-        if (!isEqual(errList[0].at, s.locations[0])) {
-          fail(
-            `Expected location: ${s.locations[0]}\n` +
-              `Received location: ${errList[0].at}\n${emsg}`
-          );
-        }
-      }
-    }
-    return undefined;
-  };
-}
-
 describe('model statements', () => {
   describe('source:', () => {
-    test('table', modelOK("source: testA is table('aTable')"));
-    test('shorcut fitlered table', () => {
-      expect("source: testA is table('aTable') {? astr ~ 'a%' } ").toCompile();
+    test('table', () => {
+      expect("source: testA is table('aTable')").toTranslate();
     });
-    test(
-      'fitlered table',
-      modelOK(`
-        source: testA is table('aTable') { where: astr ~ 'a%' }
-      `)
-    );
-    test('ref source with no refinement', modelOK('source: testA is a'));
-    test('from(query)', modelOK('source: testA is from(a->{group_by: astr})'));
-    test('refine source', modelOK('source: aa is a { dimension: a is astr }'));
+    test('shorcut fitlered table', () => {
+      expect("source: xA is table('aTable') {? astr ~ 'a%' }").toTranslate();
+    });
+    test('fitlered table', () => {
+      expect(
+        "source: testA is table('aTable') { where: astr ~ 'a%' }"
+      ).toTranslate();
+    });
+    test('ref source with no refinement', () => {
+      expect('source: testA is a').toTranslate();
+    });
+    test('from(query)', () => {
+      expect('source: testA is from(a->{group_by: astr})').toTranslate();
+    });
+    test('refine source', () => {
+      expect('source: aa is a { dimension: a is astr }').toTranslate();
+    });
     test('source refinement preserves original', () => {
       const x = new TestTranslator('source: na is a + { dimension: one is 1 }');
-      expect(x).modelCompiled();
+      expect(x).toTranslate();
       const a = x.getSourceDef('a');
       if (a) {
         const aFields = a.fields.map(f => f.as || f.name);
@@ -131,98 +85,93 @@ describe('model statements', () => {
     test('anonymous query', () => {
       expect(
         markSource`query: ${"table('aTable') -> { group_by: astr }"}`
-      ).toCompile();
+      ).toTranslate();
     });
     // Unskip this when ENABLE_M4_WARNINGS is converted to an annotation
     test.skip('anonymous query', () => {
       expect(
         markSource`query: ${"table('aTable') -> { group_by: astr }"}`
-      ).toCompileWithWarnings(
+      ).toTranslateWithWarnings(
         'Anonymous `query:` statements are deprecated, use `run:` instead'
       );
     });
-    test('run query', modelOK("run: table('aTable') -> { group_by: astr }"));
-    test(
-      'run query ref',
-      modelOK(`
+    test('run query', () =>
+      expect("run: table('aTable') -> { group_by: astr }").toTranslate());
+    test('run query ref', () =>
+      expect(`
         query: foo is table('aTable') -> { group_by: astr }
         run: foo
-      `)
-    );
-    test(
-      'query',
-      modelOK("query: name is table('aTable') -> { group_by: astr }")
-    );
-    test(
-      'query from query',
-      modelOK(
+      `).toTranslate());
+    test('query', () =>
+      expect(
+        "query: name is table('aTable') -> { group_by: astr }"
+      ).toTranslate());
+    test('query', () => {
+      expect(
+        "query: name is table('aTable') -> { group_by: astr }"
+      ).toTranslate();
+    });
+    test('query from query', () => {
+      expect(
         `
           query: q1 is ab->{ group_by: astr limit: 10 }
           query: q2 is ->q1
         `
-      )
-    );
-    test(
-      'query with refinements from query',
-      modelOK(
+      ).toTranslate();
+    });
+    test('query with refinements from query', () => {
+      expect(
         `
           query: q1 is ab->{ group_by: astr limit: 10 }
           query: q2 is ->q1 { aggregate: acount }
         `
-      )
-    );
-    test(
-      'chained query operations',
-      modelOK(`
+      ).toTranslate();
+    });
+    test('chained query operations', () => {
+      expect(`
         query: ab
           -> { group_by: astr; aggregate: acount }
           -> { top: 5; where: astr ~ 'a%' group_by: astr }
-      `)
-    );
-    test(
-      'from(query) refined into query',
-      modelOK(
-        'query: from(ab -> {group_by: astr}) { dimension: bigstr is UPPER(astr) } -> { group_by: bigstr }'
-      )
-    );
-    test(
-      'query with shortcut filtered turtle',
-      modelOK("query: allA is ab->aturtle {? astr ~ 'a%' }")
-    );
-    test(
-      'query with filtered turtle',
-      modelOK("query: allA is ab->aturtle { where: astr ~ 'a%' }")
-    );
-    test(
-      'nest: in group_by:',
-      modelOK(`
+      `).toTranslate();
+    });
+    test('from(query) refined into query', () => {
+      expect(
+        'query: from(ab -> {group_by: astr}) { dimension: bigstr is upper(astr) } -> { group_by: bigstr }'
+      ).toTranslate();
+    });
+    test('query with shortcut filtered turtle', () => {
+      expect("query: allA is ab->aturtle {? astr ~ 'a%' }").toTranslate();
+    });
+    test('query with filtered turtle', () => {
+      expect("query: allA is ab->aturtle { where: astr ~ 'a%' }").toTranslate();
+    });
+    test('nest: in group_by:', () => {
+      expect(`
         query: ab -> {
           group_by: astr;
           nest: nested_count is {
             aggregate: acount
           }
         }
-      `)
-    );
-    test(
-      'reduce pipe project',
-      modelOK(`
+      `).toTranslate();
+    });
+    test('reduce pipe project', () => {
+      expect(`
         query: a -> { aggregate: f is count() } -> { project: f2 is f + 1 }
-      `)
-    );
-    test(
-      'refine and extend query',
-      modelOK(`
+      `).toTranslate();
+    });
+    test('refine and extend query', () => {
+      expect(`
         query: a_by_str is a -> { group_by: astr }
         query: -> a_by_str { aggregate: str_count is count() }
-      `)
-    );
+      `).toTranslate();
+    });
     test('query refinement preserves original', () => {
       const x = new TestTranslator(`
         query: q is a -> { aggregate: acount is count() }
         query: nq is -> q + { group_by: astr }
       `);
-      expect(x).modelCompiled();
+      expect(x).toTranslate();
       const q = x.getQuery('q');
       expect(q).toBeDefined();
       if (q) {
@@ -235,16 +184,15 @@ describe('model statements', () => {
         query: q is ab -> { aggregate: acount }
         query: nq is -> q -> { project: * }
       `);
-      expect(x).modelCompiled();
+      expect(x).toTranslate();
       const q = x.getQuery('q');
       expect(q).toBeDefined();
       if (q) {
         expect(q.pipeline.length).toBe(1);
       }
     });
-    test(
-      'all ungroup with args',
-      modelOK(`
+    test('all ungroup with args', () => {
+      expect(`
         query: a -> {
           group_by: astr
           nest: by_int is {
@@ -252,8 +200,8 @@ describe('model statements', () => {
             aggregate: bi_count is all(count(), ai)
           }
         }
-      `)
-    );
+      `).toTranslate();
+    });
     test('all ungroup checks args', () => {
       expect(`
       query: a -> {
@@ -263,11 +211,10 @@ describe('model statements', () => {
           aggregate: bi_count is all(count(), afloat)
         }
       }
-    `).compileToFailWith("all() 'afloat' is missing from query output");
+    `).translationToFailWith("all() 'afloat' is missing from query output");
     });
-    test(
-      'exclude ungroup with args',
-      modelOK(`
+    test('exclude ungroup with args', () => {
+      expect(`
         query: a -> {
           group_by: aa is 'a'
           nest: by_b is {
@@ -278,8 +225,8 @@ describe('model statements', () => {
             }
           }
         }
-      `)
-    );
+      `).toTranslate();
+    });
     test('exclude ungroup checks args', () => {
       expect(`
         query: a -> {
@@ -292,11 +239,10 @@ describe('model statements', () => {
             }
           }
         }
-      `).compileToFailWith("exclude() 'aaa' is missing from query output");
+      `).translationToFailWith("exclude() 'aaa' is missing from query output");
     });
-    test(
-      'exclude problem revealed by production models',
-      modelOK(`
+    test('exclude problem revealed by production models', () => {
+      expect(`
         source: carriers is table('malloytest.carriers') {
           primary_key: code
         }
@@ -313,181 +259,182 @@ describe('model statements', () => {
             }
           }
         }
-      `)
-    );
+      `).toTranslate();
+    });
     describe('query operation typechecking', () => {
       describe('field declarations', () => {
         test('cannot use aggregate in group_by', () => {
-          expect('query: a -> { group_by: s is count()}').compileToFailWith(
+          expect('query: a -> { group_by: s is count()}').translationToFailWith(
             'Cannot use an aggregate field in a group_by operation, did you mean to use an aggregate operation instead?'
           );
         });
         test('cannot use ungrouped_aggregate in group_by', () => {
           expect(
             'query: a -> { group_by: s is all(count())}'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use an aggregate field in a group_by operation, did you mean to use an aggregate operation instead?'
           );
         });
         test('cannot use analytic in group_by', () => {
           expect(
             'query: a -> { group_by: s is row_number()}'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use an analytic field in a group_by operation, did you mean to use a calculate operation instead?'
           );
         });
         test('cannot use aggregate in dimension', () => {
           expect(
             'source: a1 is a { dimension: s is count()}'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?'
           );
         });
         test('cannot use ungrouped_aggregate in dimension', () => {
           expect(
             'source: a1 is a { dimension: s is all(count())}'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?'
           );
         });
         test('cannot use analytic in dimension', () => {
           expect(
             'source: a1 is a { dimension: s is row_number()}'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use an analytic field in a dimension declaration'
           );
         });
         test('cannot use scalar in measure', () => {
-          expect('source: a1 is a { measure: s is 1}').compileToFailWith(
+          expect('source: a1 is a { measure: s is 1}').translationToFailWith(
             'Cannot use a scalar field in a measure declaration, did you mean to use a dimension declaration instead?'
           );
         });
         test('cannot use analytic in measure', () => {
           expect(
             'source: a1 is a { measure: s is lag(count())}'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use an analytic field in a measure declaration'
           );
         });
         test('cannot use scalar in aggregate', () => {
-          expect('query: a -> { aggregate: s is 1}').compileToFailWith(
+          expect('query: a -> { aggregate: s is 1}').translationToFailWith(
             'Cannot use a scalar field in an aggregate operation, did you mean to use a group_by or project operation instead?'
           );
         });
         test('cannot use analytic in aggregate', () => {
           expect(
             'query: a -> { aggregate: s is lag(count())}'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use an analytic field in an aggregate operation, did you mean to use a calculate operation instead?'
           );
         });
         test('cannot use scalar in calculate', () => {
           expect(
             'query: a -> { group_by: a is 1; calculate: s is 1 }'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or project operation instead?'
           );
         });
         test('cannot use aggregate in calculate', () => {
           expect(
             'query: a -> { group_by: a is 1; calculate: s is count() }'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use an aggregate field in a calculate operation, did you mean to use an aggregate operation instead?'
           );
         });
         test('cannot use aggregate in project', () => {
-          expect('query: a -> { project: s is count() }').compileToFailWith(
+          expect('query: a -> { project: s is count() }').translationToFailWith(
             'Cannot use an aggregate field in a project operation, did you mean to use an aggregate operation instead?'
           );
         });
         test('cannot use analytic in project', () => {
           expect(
             'query: a -> { project: s is row_number() }'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use an analytic field in a project operation, did you mean to use a calculate operation instead?'
           );
         });
         test('cannot use analytic in declare', () => {
           expect(
             'query: a -> { group_by: a is 1; declare: s is row_number() }'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Analytic expressions can not be used in a declare block'
           );
         });
         test('cannot use aggregate in index', () => {
           expect(
             'query: a { measure: acount is count() } -> { index: acount }'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use an aggregate field in an index operation'
           );
         });
-        test(
-          'can use aggregate in except',
-          modelOK(`
+        test('can use aggregate in except', () => {
+          expect(`
             source: b1 is a { measure: acount is count() }
             source: c1 is b1 { except: acount }
-          `)
-        );
+          `).toTranslate();
+        });
       });
       describe('field references', () => {
         test('cannot use aggregate in group_by', () => {
           expect(
             'query: a -> { declare: acount is count(); group_by: acount }'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use an aggregate field in a group_by operation, did you mean to use an aggregate operation instead?'
           );
         });
         test('cannot use query in group_by', () => {
           expect(
             'query: a { query: q is { group_by: x is 1 } } -> { group_by: q }'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use a query field in a group_by operation, did you mean to use a nest operation instead?'
           );
         });
         test('cannot use scalar in aggregate', () => {
           expect(
             'query: a -> { declare: aconst is 1; aggregate: aconst }'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use a scalar field in an aggregate operation, did you mean to use a group_by or project operation instead?'
           );
         });
         test('cannot use scalar in calculate', () => {
           expect(
             'query: a -> { declare: aconst is 1; group_by: x is 1; calculate: aconst }'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or project operation instead?'
           );
         });
         test('cannot use aggregate in calculate', () => {
           expect(
             'query: a -> { declare: acount is count(); group_by: x is 1; calculate: acount }'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use an aggregate field in a calculate operation, did you mean to use an aggregate operation instead?'
           );
         });
         test('cannot use query in project', () => {
           expect(
             'query: a { query: q is { group_by: x is 1 } } -> { project: q }'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use a query field in a project operation, did you mean to use a nest operation instead?'
           );
         });
         test('cannot use query in index', () => {
           expect(
             'query: a { query: q is { group_by: x is 1 } } -> { index: q }'
-          ).compileToFailWith('Cannot use a query field in an index operation');
+          ).translationToFailWith(
+            'Cannot use a query field in an index operation'
+          );
         });
         test('cannot use query in calculate', () => {
           expect(
             'query: a { query: q is { group_by: x is 1 } } -> { group_by: x is 1; calculate: q }'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use a query field in a calculate operation, did you mean to use a nest operation instead?'
           );
         });
         test('cannot use query in aggregate', () => {
           expect(
             'query: a { query: q is { group_by: x is 1 } } -> { aggregate: q }'
-          ).compileToFailWith(
+          ).translationToFailWith(
             'Cannot use a query field in an aggregate operation, did you mean to use a nest operation instead?'
           );
         });
@@ -497,7 +444,7 @@ describe('model statements', () => {
           }
           query: -> a1 {
             calculate: b is c
-          }`).compileToFailWith(
+          }`).translationToFailWith(
             'Cannot use an aggregate field in a calculate operation, did you mean to use an aggregate operation instead?'
           );
         });
@@ -507,7 +454,7 @@ describe('model statements', () => {
           }
           query: -> a1 {
             calculate: b is c
-          }`).compileToFailWith(
+          }`).translationToFailWith(
             'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or project operation instead?'
           );
         });
@@ -518,7 +465,7 @@ describe('model statements', () => {
           }
           query: -> a1 {
             group_by: b is c2
-          }`).compileToFailWith(
+          }`).translationToFailWith(
             // c2 is not defined because group_by doesn't know to look in the output space
             "'c2' is not defined",
             "Cannot define 'b', value has unknown type"
@@ -531,13 +478,13 @@ describe('model statements', () => {
           }
           query: -> a1 {
             order_by: c2
-          }`).compileToFailWith('Illegal order by of analytic field c2');
+          }`).translationToFailWith('Illegal order by of analytic field c2');
         });
         test('cannot ungroup an ungrouped', () => {
           expect(`query: a1 is a -> {
             group_by: c is 1
             aggregate: c2 is all(all(sum(ai)))
-          }`).compileToFailWith(
+          }`).translationToFailWith(
             'all() expression must not already be ungrouped',
             "Cannot define 'c2', value has unknown type"
           );
@@ -546,7 +493,7 @@ describe('model statements', () => {
           expect(`query: a1 is a -> {
             group_by: c is 1
             aggregate: c2 is sum(all(sum(ai)))
-          }`).compileToFailWith(
+          }`).translationToFailWith(
             'Aggregate expression cannot be aggregate',
             "Cannot define 'c2', value has unknown type"
           );
@@ -555,49 +502,46 @@ describe('model statements', () => {
           expect(`query: a1 is a -> {
             group_by: c is 1
             aggregate: c2 is sum(sum(ai))
-          }`).compileToFailWith(
+          }`).translationToFailWith(
             'Aggregate expression cannot be aggregate',
             "Cannot define 'c2', value has unknown type"
           );
         });
-        test(
-          'can use field def in group_by, preserved over refinement',
-          modelOK(`query: a1 is a -> {
+        test('can use field def in group_by, preserved over refinement', () => {
+          expect(`query: a1 is a -> {
             group_by: c is 1
           }
           query: -> a1 {
             order_by: c
-          }`)
-        );
-        test(
-          'can use field ref in group_by, preserved over refinement',
-          modelOK(`query: a1 is a -> {
+          }`).toTranslate();
+        });
+        test('can use field ref in group_by, preserved over refinement', () => {
+          expect(`query: a1 is a -> {
             group_by: c is astr
           }
           query: -> a1 {
             order_by: c
-          }`)
-        );
+          }`).toTranslate();
+        });
       });
     });
     describe('function typechecking', () => {
-      test(
-        'use function correctly',
-        modelOK(`query: a -> {
+      test('use function correctly', () => {
+        expect(`query: a -> {
           group_by: s is concat('a', 'b')
-        }`)
-      );
+        }`).toTranslate();
+      });
       test('function incorrect case', () => {
         expect(`query: a -> {
           group_by: s is CONCAT('a', 'b')
-        }`).toCompileWithWarnings(
+        }`).toTranslateWithWarnings(
           "Case insensitivity for function names is deprecated, use 'concat' instead"
         );
       });
       test('function no matching overload', () => {
         expect(`query: a -> {
           group_by: s is floor('a', 'b')
-        }`).compileToFailWith(
+        }`).translationToFailWith(
           'No matching overload for function floor(string, string)',
           "Cannot define 's', value has unknown type"
         );
@@ -605,51 +549,47 @@ describe('model statements', () => {
       test('unknown function', () => {
         expect(`query: a -> {
           group_by: s is asdfasdf()
-        }`).compileToFailWith(
+        }`).translationToFailWith(
           "Unknown function 'asdfasdf'. Use 'asdfasdf!(...)' to call a SQL function directly.",
           "Cannot define 's', value has unknown type"
         );
       });
-      test(
-        'can select different overload',
-        modelOK('query: a -> { group_by: s is concat() }')
-      );
-      test(
-        'can pass different expression types',
-        modelOK(`query: a -> {
+      test('can select different overload', () => {
+        expect('query: a -> { group_by: s is concat() }').toTranslate();
+      });
+      test('can pass different expression types', () => {
+        expect(`query: a -> {
           group_by: f1 is sqrt(1)
           aggregate: f2 is sqrt(count())
           aggregate: f3 is sqrt(all(count()))
           calculate: f4 is sqrt(lag(f1))
           calculate: f5 is sqrt(lag(count()))
-        }`)
-      );
-      test(
-        'function return type correct',
-        modelOK(`query: a -> {
+        }`).toTranslate();
+      });
+      test('function return type correct', () => {
+        expect(`query: a -> {
           group_by: s is floor(1.2) + 1
-        }`)
-      );
+        }`).toTranslate();
+      });
       test('function return type incorrect', () => {
         expect(`query: a -> {
             group_by: s is floor(1.2) + 'a'
-        }`).compileToFailWith(
+        }`).translationToFailWith(
           "Non numeric('number,string') value with '+'",
           "Cannot define 's', value has unknown type"
         );
       });
-      test(
-        'can use output value in calculate',
-        modelOK(`query: a -> {
+      test('can use output value in calculate', () => {
+        expect(`query: a -> {
           group_by: x is 1
           calculate: s is lag(x)
-        }`)
-      );
+        }`).toTranslate();
+      });
       test('cannot use output value in group_by', () => {
         expect(`query: a -> {
           group_by: x is 1
           group_by: y is x
-        }`).compileToFailWith(
+        }`).translationToFailWith(
           "'x' is not defined",
           "Cannot define 'y', value has unknown type"
         );
@@ -658,7 +598,7 @@ describe('model statements', () => {
         expect(`query: a -> {
           group_by: x is 1
           calculate: s is lag(x, 1, x)
-        }`).compileToFailWith(
+        }`).translationToFailWith(
           // TODO improve this error message
           "Parameter 3 ('default') of lag must be literal or constant, but received output"
         );
@@ -667,7 +607,7 @@ describe('model statements', () => {
         expect(`query: a -> {
           group_by: x is 1
           calculate: s is lag(x, 1 + 1)
-        }`).compileToFailWith(
+        }`).translationToFailWith(
           // TODO improve this error message
           "Parameter 2 ('offset') of lag must be literal, but received constant"
         );
@@ -676,32 +616,30 @@ describe('model statements', () => {
         expect(`query: a -> {
           group_by: x is 1
           calculate: s is lag(x, null)
-        }`).compileToFailWith(
+        }`).translationToFailWith(
           "Parameter 2 ('offset') of lag must not be a literal null"
         );
       });
-      test(
-        'lag can use constant values for other args',
-        modelOK(`query: a -> {
+      test('lag can use constant values for other args', () => {
+        expect(`query: a -> {
           group_by: x is 1
           calculate: s is lag(x, 2)
-        }`)
-      );
+        }`).toTranslate();
+      });
       test('cannot name top level objects same as functions', () => {
         expect(
           markSource`query: ${'concat is a -> { group_by: x is 1 }'}`
-        ).compileToFailWith(
+        ).translationToFailWith(
           // TODO improve this error message
           "'concat' is already defined, cannot redefine"
         );
       });
-      test(
-        '`now` is considered constant`',
-        modelOK(`query: a -> {
+      test('`now` is considered constant`', () => {
+        expect(`query: a -> {
           group_by: n is now
           calculate: l is lag(n, 1, now)
-        }`)
-      );
+        }`).toTranslate();
+      });
       // TODO it might be nice to reference a field which is a constant, and be able to
       // use that as a constant param. Same with a literal.
       test('cannot use a field which is a constant in a constant param', () => {
@@ -710,7 +648,7 @@ describe('model statements', () => {
             group_by: ai, pi is pi()
             calculate: l is lag(ai, 1, pi)
           }`
-        ).compileToFailWith(
+        ).translationToFailWith(
           "Parameter 3 ('default') of lag must be literal or constant, but received output"
         );
       });
@@ -724,7 +662,7 @@ describe('model statements', () => {
             group_by: b
             calculate: foo is lag(b)
           }`
-        ).compileToFailWith(
+        ).translationToFailWith(
           'No matching overload for function lag(struct)',
           "Cannot define 'foo', value has unknown type"
         );
@@ -734,7 +672,7 @@ describe('model statements', () => {
       test.skip('cannot use float in round precision', () => {
         expect(`query: a -> {
           group_by: x is round(1.5, 1.6)
-        }`).compileToFailWith(
+        }`).translationToFailWith(
           // TODO improve this error message
           "Parameter 2 ('precision') for round must be integer, received float"
         );
@@ -742,37 +680,34 @@ describe('model statements', () => {
       test('cannot use stddev with no arguments', () => {
         expect(`query: a -> {
           aggregate: x is stddev()
-        }`).compileToFailWith(
+        }`).translationToFailWith(
           'No matching overload for function stddev()',
           "Cannot define 'x', value has unknown type"
         );
       });
-      test(
-        'can use stddev with postfix syntax',
-        modelOK(`query: a -> {
+      test('can use stddev with postfix syntax', () => {
+        expect(`query: a -> {
           declare: y is 1
           aggregate: x is y.stddev()
-        }`)
-      );
-      test(
-        'can use stddev with postfix syntax on join',
-        modelOK(`query: a -> {
+        }`).toTranslate();
+      });
+      test('can use stddev with postfix syntax on join', () => {
+        expect(`query: a -> {
           join_one: b with astr
           aggregate: x is b.ai.stddev()
-        }`)
-      );
-      test(
-        'can use calculate with a measure',
-        modelOK(`query: a { measure: c is count() } -> {
+        }`).toTranslate();
+      });
+      test('can use calculate with a measure', () => {
+        expect(`query: a { measure: c is count() } -> {
           group_by: y is 1
           calculate: x is lag(c)
-        }`)
-      );
+        }`).toTranslate();
+      });
       test('cannot use calculate with input fields', () => {
         expect(`query: a -> {
           group_by: y is 1
           calculate: x is lag(ai)
-        }`).compileToFailWith(
+        }`).translationToFailWith(
           // TODO improve this error message:
           // Parameter 1 ('value') of 'lag' must be a constant, an aggregate, or an expression using
           // only fields that appear in the query output. Received an expression which uses a field
@@ -780,24 +715,23 @@ describe('model statements', () => {
           "Parameter 1 ('value') of lag must be literal, constant or output, but received input"
         );
       });
-      test(
-        'can use calculate with aggregate field which is not in query',
-        modelOK(`query: a { measure: acount is count() } -> {
+      test('can use calculate with aggregate field which is not in query', () => {
+        expect(`query: a { measure: acount is count() } -> {
           group_by: astr
           calculate: pc is lag(acount)
-        }`)
-      );
+        }`).toTranslate();
+      });
       test('cannot use agregate as argument to agg function', () => {
         expect(`query: a -> {
           aggregate: x is stddev(count())
-        }`).compileToFailWith(
+        }`).translationToFailWith(
           "Parameter 1 ('value') of stddev must be scalar, but received aggregate"
         );
       });
       test('cannot use calculate with no other fields', () => {
         expect(`query: a -> {
           calculate: x is row_number()
-        }`).compileToFailWith(
+        }`).translationToFailWith(
           "Can't determine query type (group_by/aggregate/nest,project,index)"
         );
       });
@@ -807,7 +741,7 @@ describe('model statements', () => {
           group_by: astr
           calculate: row_num is row_number()
           order_by: row_num desc
-        }`).compileToFailWith('Illegal order by of analytic field row_num');
+        }`).translationToFailWith('Illegal order by of analytic field row_num');
       });
       test('cannot use analytic in calculate -- and preserved over refinement', () => {
         expect(`query: a1 is a -> {
@@ -816,7 +750,7 @@ describe('model statements', () => {
         }
         query: -> a1 {
           calculate: p1 is lag(p)
-        }`).compileToFailWith(
+        }`).translationToFailWith(
           "Parameter 1 ('value') of lag must be scalar or aggregate, but received scalar_analytic"
         );
       });
@@ -824,95 +758,94 @@ describe('model statements', () => {
         expect(`query: a -> {
           project: astr
           calculate: p is lag(count())
-        }`).compileToFailWith('Cannot add aggregate analyics to project');
+        }`).translationToFailWith('Cannot add aggregate analyics to project');
       });
-      test(
-        'reference field in join',
-        modelOK(`query: a -> {
+      test('reference field in join', () => {
+        expect(`query: a -> {
           join_one: b with astr
           group_by: b.ai
-        }`)
-      );
+        }`).toTranslate();
+      });
       // TODO decide whether this syntax should be legal, really...
-      test(
-        'reference join name in group_by',
-        modelOK(`query: a -> {
+      test('reference join name in group_by', () => {
+        expect(`query: a -> {
           join_one: b with astr
           group_by: b
-        }`)
-      );
-      test(
-        'can reference project: inline join.* field in calculate',
-        modelOK(`query: a -> {
+        }`).toTranslate();
+      });
+      test('can reference project: inline join.* field in calculate', () => {
+        expect(`query: a -> {
           join_one: b with astr
           project: b.*
           calculate: s is lag(ai)
-        }`)
-      );
-      test(
-        'can reference project: join.* field in calculate',
-        modelOK(`query: a { join_one: b with astr } -> {
+        }`).toTranslate();
+      });
+      test('can reference project: join.* field in calculate', () => {
+        expect(`query: a { join_one: b with astr } -> {
           project: b.*
           calculate: s is lag(ai)
-        }`)
-      );
+        }`).toTranslate();
+      });
     });
   });
   test('errors on redefinition of query', () => {
     expect(
       'query: q1 is a -> { project: * }, q1 is a -> { project: * }'
-    ).compileToFailWith("'q1' is already defined, cannot redefine");
+    ).translationToFailWith("'q1' is already defined, cannot redefine");
   });
 });
 
 describe('source properties', () => {
-  test('single dimension', modelOK('source: aa is a { dimension: x is 1 }'));
-  test(
-    'multiple dimensions',
-    modelOK(`
+  test('single dimension', () => {
+    expect('source: aa is a { dimension: x is 1 }').toTranslate();
+  });
+  test('multiple dimensions', () => {
+    expect(`
       source: aa is a {
         dimension:
           x is 1
           y is 2
       }
-    `)
-  );
-  test('single declare', modelOK('source: aa is a { declare: x is 1 }'));
-  test(
-    'multiple declare',
-    modelOK(`
+    `).toTranslate();
+  });
+  test('single declare', () => {
+    expect('source: aa is a { declare: x is 1 }').toTranslate();
+  });
+  test('multiple declare', () => {
+    expect(`
       source: aa is a {
         declare:
           x is 1
           y is 2
       }
-    `)
-  );
-  test('single measure', modelOK('source: aa is a { measure: x is count() }'));
-  test(
-    'multiple measures',
-    modelOK(`
+    `).toTranslate();
+  });
+  test('single measure', () => {
+    expect('source: aa is a { measure: x is count() }').toTranslate();
+  });
+  test('multiple measures', () => {
+    expect(`
       source: aa is a {
         measure:
           x is count()
           y is x * x
       }
-    `)
-  );
-  test('single where', modelOK('source: aa is a { where: ai > 10 }'));
-  test(
-    'multiple where',
-    modelOK(`
+    `).toTranslate();
+  });
+  test('single where', () => {
+    expect('source: aa is a { where: ai > 10 }').toTranslate();
+  });
+  test('multiple where', () => {
+    expect(`
       source: aa is a {
         where:
           ai > 10,
           af < 1000
       }
-    `)
-  );
-  test(
-    'where clause can use the join namespace in source refined query',
-    modelOK(`
+    `).toTranslate();
+  });
+  test('where clause can use the join namespace in source refined query', () => {
+    expect(`
     source: flights is table('malloytest.flights') + {
       query: boo is {
         join_one: carriers is table('malloytest.carriers') on carrier = carriers.code
@@ -920,41 +853,60 @@ describe('source properties', () => {
         group_by: carriers.nickname
         aggregate: flight_count is count()
       }
-    }`)
-  );
+    }`).toTranslate();
+  });
   describe('joins', () => {
-    test('with', modelOK('source: x is a { join_one: b with astr }'));
-    test('with', modelOK('source: x is a { join_one: y is b with astr }'));
-    test(
-      'with dotted ref',
-      modelOK('source: x is ab { join_one: xz is a with b.astr }')
-    );
-    test('one on', modelOK('source: x is a { join_one: b on astr = b.astr }'));
-    test(
-      'one is on',
-      modelOK('source: x is a { join_one: y is b on astr = y.astr }')
-    );
-    test(
-      'many on',
-      modelOK('source: nab is a { join_many: b on astr = b.astr }')
-    );
-    test(
-      'many is on',
-      modelOK('source: y is a { join_many: x is b on astr = x.astr }')
-    );
-    test('cross', modelOK('source: nab is a { join_cross: b }'));
-    test('cross is', modelOK('source: nab is a { join_cross: xb is b }'));
-    test('cross on', modelOK('source: nab is a { join_cross: b on true}'));
-    test(
-      'multiple joins',
-      modelOK(`
+    test('with', () => {
+      expect('source: x is a { join_one: b with astr }').toTranslate();
+    });
+    test('with', () => {
+      expect(
+        model`source: x is a { join_one: y is b with astr }`
+      ).toTranslate();
+    });
+    test('with dotted ref', () => {
+      expect(
+        model`source: x is ab { join_one: xz is a with b.astr }`
+      ).toTranslate();
+    });
+    test('one on', () => {
+      expect(
+        model`source: x is a { join_one: b on astr = b.astr }`
+      ).toTranslate();
+    });
+    test('one is on', () => {
+      expect(
+        'source: x is a { join_one: y is b on astr = y.astr }'
+      ).toTranslate();
+    });
+    test('many on', () => {
+      expect(
+        'source: nab is a { join_many: b on astr = b.astr }'
+      ).toTranslate();
+    });
+    test('many is on', () => {
+      expect(
+        'source: y is a { join_many: x is b on astr = x.astr }'
+      ).toTranslate();
+    });
+    test('cross', () => {
+      expect('source: nab is a { join_cross: b }').toTranslate();
+    });
+    test('cross is', () => {
+      expect('source: nab is a { join_cross: xb is b }').toTranslate();
+    });
+    test('cross on', () => {
+      expect('source: nab is a { join_cross: b on true}').toTranslate();
+    });
+    test('multiple joins', () => {
+      expect(`
         source: nab is a {
           join_one:
             b with astr,
             br is b with astr
         }
-      `)
-    );
+      `).toTranslate();
+    });
     test('with requires primary key', () => {
       expect(
         markSource`
@@ -962,47 +914,52 @@ describe('source properties', () => {
             join_one: ${"bb is table('aTable') with astr"}
           }
         `
-      ).compileToFailWith(
+      ).translationToFailWith(
         'join_one: Cannot use with unless source has a primary key'
       );
     });
   });
-  test('primary_key', modelOK('source: c is a { primary_key: ai }'));
-  test('rename', modelOK('source: c is a { rename: nn is ai }'));
+  test('primary_key', () => {
+    expect('source: c is a { primary_key: ai }').toTranslate();
+  });
+  test('rename', () => {
+    expect('source: c is a { rename: nn is ai }').toTranslate();
+  });
   test('accept single', () => {
     const onlyAstr = new TestTranslator('source: c is a { accept: astr }');
-    expect(onlyAstr).modelCompiled();
+    expect(onlyAstr).toTranslate();
     const c = onlyAstr.getSourceDef('c');
     if (c) {
       expect(c.fields.length).toBe(1);
     }
   });
-  test('accept multi', modelOK('source: c is a { accept: astr, af }'));
+  test('accept multi', () => {
+    expect('source: c is a { accept: astr, af }').toTranslate();
+  });
   test('except single', () => {
     const noAstr = new TestTranslator('source: c is a { except: astr }');
-    expect(noAstr).modelCompiled();
+    expect(noAstr).toTranslate();
     const c = noAstr.getSourceDef('c');
     if (c) {
       const foundAstr = c.fields.find(f => f.name === 'astr');
       expect(foundAstr).toBeUndefined();
     }
   });
-  test('except multi', modelOK('source: c is a { except: astr, af }'));
-  test(
-    'explore-query',
-    modelOK('source: c is a {query: q is { group_by: astr } }')
-  );
-  test(
-    'refined explore-query',
-    modelOK(`
+  test('except multi', () => {
+    expect('source: c is a { except: astr, af }').toTranslate();
+  });
+  test('explore-query', () => {
+    expect('source: c is a {query: q is { group_by: astr } }').toTranslate();
+  });
+  test('refined explore-query', () => {
+    expect(`
       source: abNew is ab {
         query: for1 is aturtle {? ai = 1 }
       }
-    `)
-  );
-  test(
-    'chained explore-query',
-    modelOK(`
+    `).toTranslate();
+  });
+  test('chained explore-query', () => {
+    expect(`
       source: c is a {
         query: chain is {
           group_by: astr
@@ -1011,51 +968,70 @@ describe('source properties', () => {
           project: *
         }
       }
-    `)
-  );
-  test(
-    'multiple explore-query',
-    modelOK(`
+    `).toTranslate();
+  });
+  test('multiple explore-query', () => {
+    expect(`
       source: abNew is ab {
         query:
           q1 is { group_by: astr },
           q2 is { group_by: ai }
       }
-    `)
-  );
+    `).toTranslate();
+  });
 });
 
 describe('qops', () => {
-  test('group by single', modelOK('query: a->{ group_by: astr }'));
-  test("group_by x is x'", modelOK('query: a->{ group_by: ai is ai/2 }'));
-  test('group by multiple', modelOK('query: a->{ group_by: astr,ai }'));
-  test('aggregate single', modelOK('query: a->{ aggregate: num is count() }'));
-  test(
-    'aggregate multiple',
-    modelOK(`
+  test('group by single', () => {
+    expect('query: a->{ group_by: astr }').toTranslate();
+  });
+  test("group_by x is x'", () => {
+    expect('query: a->{ group_by: ai is ai/2 }').toTranslate();
+  });
+  test('group by multiple', () => {
+    expect('query: a->{ group_by: astr,ai }').toTranslate();
+  });
+  test('aggregate single', () => {
+    expect('query: a->{ aggregate: num is count() }').toTranslate();
+  });
+  test('aggregate multiple', () => {
+    expect(`
       query: a->{
         aggregate: num is count(), total is sum(ai)
       }
-    `)
-  );
-  test('project ref', modelOK('query:ab->{ project: b.astr }'));
-  test('project *', modelOK('query:ab->{ project: * }'));
-  test('project def', modelOK('query:ab->{ project: one is 1 }'));
-  test(
-    'project multiple',
-    modelOK(`
+    `).toTranslate();
+  });
+  test('project ref', () => {
+    expect('query:ab->{ project: b.astr }').toTranslate();
+  });
+  test('project *', () => {
+    expect('query:ab->{ project: * }').toTranslate();
+  });
+  test('project def', () => {
+    expect('query:ab->{ project: one is 1 }').toTranslate();
+  });
+  test('project multiple', () => {
+    expect(`
       query: a->{
         project: one is 1, astr
       }
-    `)
-  );
-  test('index single', modelOK('query:a->{index: astr}'));
-  test('index path', modelOK('query:ab->{index: ab.astr}'));
-  test('index unique on path', modelOK('query:ab->{index: b.astr, ab.astr}'));
-  test('index join.*', modelOK('query:ab->{index: ab.*}'));
+    `).toTranslate();
+  });
+  test('index single', () => {
+    expect('query:a->{index: astr}').toTranslate();
+  });
+  test('index path', () => {
+    expect('query:ab->{index: ab.astr}').toTranslate();
+  });
+  test('index unique on path', () => {
+    expect('query:ab->{index: b.astr, ab.astr}').toTranslate();
+  });
+  test('index join.*', () => {
+    expect('query:ab->{index: ab.*}').toTranslate();
+  });
   test('index multiple', () => {
     const model = new TestTranslator('query:a->{index: af, astr}');
-    expect(model).modelCompiled();
+    expect(model).toTranslate();
     const q = model.getQuery(0);
     expect(q).toBeDefined();
     if (q) {
@@ -1066,7 +1042,7 @@ describe('qops', () => {
   });
   test('index star', () => {
     const model = new TestTranslator('query:a->{index: *, astr}');
-    expect(model).modelCompiled();
+    expect(model).toTranslate();
     const q = model.getQuery(0);
     expect(q).toBeDefined();
     if (q) {
@@ -1075,12 +1051,18 @@ describe('qops', () => {
       expect(index.fields).toEqual(['*', 'astr']);
     }
   });
-  test('index by', modelOK('query:a->{index: * by ai}'));
-  test('index sampled', modelOK('query:a->{index: *; sample: true}'));
-  test('index unsampled', modelOK('query:a->{index: *; sample: false}'));
+  test('index by', () => {
+    expect('query:a->{index: * by ai}').toTranslate();
+  });
+  test('index sampled', () => {
+    expect('query:a->{index: *; sample: true}').toTranslate();
+  });
+  test('index unsampled', () => {
+    expect('query:a->{index: *; sample: false}').toTranslate();
+  });
   test('index sample-percent', () => {
     const model = new TestTranslator('query:a->{index: *; sample: 42%}');
-    expect(model).modelCompiled();
+    expect(model).toTranslate();
     const q = model.getQuery(0);
     expect(q).toBeDefined();
     if (q) {
@@ -1091,74 +1073,83 @@ describe('qops', () => {
       }
     }
   });
-  test('index sample-rows', modelOK('query:a->{index: *; sample: 100000}'));
-  test('top N', modelOK('query: a->{ top: 5; group_by: astr }'));
-  test('top N by field', modelOK('query: a->{top: 5 by astr; group_by: astr}'));
-  test(
-    'top N by expression',
-    modelOK('query: ab->{top: 5 by ai + 1; group_by: ai}')
-  );
+  test('index sample-rows', () => {
+    expect('query:a->{index: *; sample: 100000}').toTranslate();
+  });
+  test('top N', () => {
+    expect('query: a->{ top: 5; group_by: astr }').toTranslate();
+  });
+  test('top N by field', () => {
+    expect('query: a->{top: 5 by astr; group_by: astr}').toTranslate();
+  });
+  test('top N by expression', () => {
+    expect('query: ab->{top: 5 by ai + 1; group_by: ai}').toTranslate();
+  });
   test('top N by field must be in the output space', () =>
-    expect('query: a->{top: 5 by af; group_by: astr}').compileToFailWith(
+    expect('query: a->{top: 5 by af; group_by: astr}').translationToFailWith(
       'Unknown field af in output space'
     ));
-  test('limit N', modelOK('query: a->{ limit: 5; group_by: astr }'));
-  test('order by', modelOK('query: a->{ order_by: astr; group_by: astr }'));
-  test(
-    'order by preserved over refinement',
-    modelOK(`
+  test('limit N', () => {
+    expect('query: a->{ limit: 5; group_by: astr }').toTranslate();
+  });
+  test('order by', () => {
+    expect('query: a->{ order_by: astr; group_by: astr }').toTranslate();
+  });
+  test('order by preserved over refinement', () => {
+    expect(`
       query: a1 is a -> { group_by: astr }
       query: -> a1 { order_by: astr }
-    `)
-  );
+    `).toTranslate();
+  });
   test('order by must be in the output space', () =>
-    expect('query: a -> { order_by: af; group_by: astr }').compileToFailWith(
-      'Unknown field af in output space'
-    ));
-  test(
-    'order by asc',
-    modelOK('query: a->{ order_by: astr asc; group_by: astr }')
-  );
-  test(
-    'order by desc',
-    modelOK('query: a->{ order_by: astr desc; group_by: astr }')
-  );
-  test('order by N', modelOK('query: a->{ order_by: 1 asc; group_by: astr }'));
-  test(
-    'order by multiple',
-    modelOK(`
+    expect(
+      'query: a -> { order_by: af; group_by: astr }'
+    ).translationToFailWith('Unknown field af in output space'));
+  test('order by asc', () => {
+    expect('query: a->{ order_by: astr asc; group_by: astr }').toTranslate();
+  });
+  test('order by desc', () => {
+    expect('query: a->{ order_by: astr desc; group_by: astr }').toTranslate();
+  });
+  test('order by N', () => {
+    expect('query: a->{ order_by: 1 asc; group_by: astr }').toTranslate();
+  });
+  test('order by multiple', () => {
+    expect(`
       query: a->{
         order_by: 1 asc, af desc
         group_by: astr, af
       }
-    `)
-  );
-  test('where single', modelOK('query:a->{ group_by: astr; where: af > 10 }'));
-  test(
-    'having single',
-    modelOK(
+    `).toTranslate();
+  });
+  test('where single', () => {
+    expect('query:a->{ group_by: astr; where: af > 10 }').toTranslate();
+  });
+  test('having single', () => {
+    expect(
       'query:ab->{ aggregate: acount; group_by: astr; having: acount > 10 }'
-    )
-  );
-  test(
-    'compound having still works',
-    modelOK(
+    ).toTranslate();
+  });
+  test('compound having still works', () => {
+    expect(
       'query:ab->{ aggregate: acount; having: acount > 10 and acount < 100 }'
-    )
-  );
-  test(
-    'compound aggregate still works',
-    modelOK('query:ab->{ aggregate: thing is acount > 10 and acount < 100 }')
-  );
-  test(
-    'where multiple',
-    modelOK("query:a->{ group_by: astr; where: af > 10,astr~'a%' }")
-  );
+    ).toTranslate();
+  });
+  test('compound aggregate still works', () => {
+    expect(
+      'query:ab->{ aggregate: thing is acount > 10 and acount < 100 }'
+    ).toTranslate();
+  });
+  test('where multiple', () => {
+    expect(
+      "query:a->{ group_by: astr; where: af > 10,astr~'a%' }"
+    ).toTranslate();
+  });
   test('filters preserve source formatting in code:', () => {
     const model = new TestTranslator(
       "source: notb is a + { where: astr  !=  'b' }"
     );
-    expect(model).modelCompiled();
+    expect(model).toTranslate();
     const notb = model.getSourceDef('notb');
     expect(notb).toBeDefined();
     if (notb) {
@@ -1173,7 +1164,7 @@ describe('qops', () => {
     const model = new TestTranslator(
       'source: notb is a + { dimension: d is 1 +   2 }'
     );
-    expect(model).modelCompiled();
+    expect(model).toTranslate();
     const notb = model.getSourceDef('notb');
     expect(notb).toBeDefined();
     if (notb) {
@@ -1185,27 +1176,27 @@ describe('qops', () => {
       }
     }
   });
-  test(
-    'nest single',
-    modelOK(`
+  test('nest single', () => {
+    expect(`
       query: a->{
         group_by: ai
         nest: nestbystr is { group_by: astr; aggregate: N is count() }
       }
-    `)
-  );
-  test(
-    'nest multiple',
-    modelOK(`
+    `).toTranslate();
+  });
+  test('nest multiple', () => {
+    expect(`
       query: a->{
         group_by: ai
         nest:
           nestbystr is { group_by: astr; aggregate: N is count() },
           renest is { group_by: astr; aggregate: N is count() }
       }
-    `)
-  );
-  test('nest ref', modelOK('query: ab->{group_by: ai; nest: aturtle}'));
+    `).toTranslate();
+  });
+  test('nest ref', () => {
+    expect('query: ab->{group_by: ai; nest: aturtle}').toTranslate();
+  });
   test('refine query with extended source', () => {
     const m = new TestTranslator(`
       source: nab is ab {
@@ -1215,7 +1206,7 @@ describe('qops', () => {
       }
       query: nab -> xturtle + { aggregate: aratio }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const t = m.translate();
     if (t.translated) {
       const q = t.translated.queryList[0].pipeline[0];
@@ -1238,7 +1229,7 @@ describe('qops', () => {
         aggregate: aratio
       }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const t = m.translate();
     if (t.translated) {
       const q = t.translated.queryList[0].pipeline[0];
@@ -1261,7 +1252,7 @@ describe('qops', () => {
         group_by: foo is bb.astr
       }
     `);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const t = m.translate();
     if (t.translated) {
       const q = t.translated.queryList[0].pipeline[0];
@@ -1276,10 +1267,20 @@ describe('qops', () => {
 });
 
 describe('literals', () => {
-  test('integer', exprOK('42'));
-  test('string', exprOK("'fortywo-two'"));
-  test('string with quoted quote', exprOK("'Isn" + '\\' + "'t this nice'"));
-  test('string with quoted backslash', exprOK("'Is " + '\\' + '\\' + " nice'"));
+  test('integer', () => {
+    expect(expr`42`).toTranslate();
+  });
+  test('string', () => {
+    expect(expr`'fortywo-two'`).toTranslate();
+  });
+  test('string with quoted quote', () => {
+    const str = "'Isn" + '\\' + "'t this nice'";
+    expect(new BetaExpression(str)).toTranslate();
+  });
+  test('string with quoted backslash', () => {
+    const str = "'Is " + '\\' + '\\' + " nice'";
+    expect(new BetaExpression(str)).toTranslate();
+  });
   const literalTimes: [string, string, string | undefined, unknown][] = [
     ['@1960', 'date', 'year', {literal: '1960-01-01'}],
     ['@1960-Q2', 'date', 'quarter', {literal: '1960-04-01'}],
@@ -1323,7 +1324,7 @@ describe('literals', () => {
   ];
   test.each(literalTimes)('%s', (expr, timeType, timeframe, result) => {
     const exprModel = new BetaExpression(expr);
-    expect(exprModel).modelCompiled();
+    expect(exprModel).toTranslate();
     const ir = exprModel.generated();
     expect(ir.dataType).toEqual(timeType);
     if (timeframe) {
@@ -1346,7 +1347,7 @@ describe('literals', () => {
   ];
   test.each(morphicLiterals)('morphic value for %s is %s', (expr, morphic) => {
     const exprModel = new BetaExpression(expr);
-    expect(exprModel).modelCompiled();
+    expect(exprModel).toTranslate();
     const ir = exprModel.generated();
     const morphTo = ir.morphic && ir.morphic['timestamp'];
     if (morphic) {
@@ -1358,13 +1359,27 @@ describe('literals', () => {
       expect(morphTo).toBeUndefined();
     }
   });
-  test('minute+locale', exprOK('@1960-06-30 10:30[America/Los_Angeles]'));
-  test('second 8601', exprOK('@1960-06-30T10:30:31'));
-  test('null', exprOK('null'));
-  test('now', exprOK('now'));
-  test('true', exprOK('true'));
-  test('false', exprOK('false'));
-  test('regex', exprOK("r'RegularExpression'"));
+  test('minute+locale', () => {
+    expect(expr`@1960-06-30 10:30[America/Los_Angeles]`).toTranslate();
+  });
+  test('second 8601', () => {
+    expect(expr`@1960-06-30T10:30:31`).toTranslate();
+  });
+  test('null', () => {
+    expect(expr`null`).toTranslate();
+  });
+  test('now', () => {
+    expect(expr`now`).toTranslate();
+  });
+  test('true', () => {
+    expect(expr`true`).toTranslate();
+  });
+  test('false', () => {
+    expect(expr`false`).toTranslate();
+  });
+  test('regex', () => {
+    expect(expr`r'RegularExpression'`).toTranslate();
+  });
 });
 
 describe('expressions', () => {
@@ -1381,85 +1396,128 @@ describe('expressions', () => {
     ];
 
     test.each(timeframes.map(x => [x]))('truncate %s', unit => {
-      expect(new BetaExpression(`ats.${unit}`)).modelParsed();
+      expect(new BetaExpression(`ats.${unit}`)).toParse();
     });
 
     // mtoy todo units missing: implement, or document
     const diffable = ['second', 'minute', 'hour', 'day'];
     test.each(diffable.map(x => [x]))('timestamp difference - %s', unit => {
-      expect(new BetaExpression(`${unit}(@2021 to ats)`)).modelParsed();
+      expect(new BetaExpression(`${unit}(@2021 to ats)`)).toParse();
     });
     test.each(diffable.map(x => [x]))('timestamp difference - %s', unit => {
-      expect(new BetaExpression(`${unit}(ats to @2030)`)).modelParsed();
+      expect(new BetaExpression(`${unit}(ats to @2030)`)).toParse();
     });
   });
 
-  test('field name', exprOK('astr'));
-  test('function call', exprOK("concat('foo')"));
+  test('field name', () => {
+    expect(expr`astr`).toTranslate();
+  });
+  test('function call', () => {
+    expect(expr`concat('foo')`).toTranslate();
+  });
 
   describe('operators', () => {
-    test('addition', exprOK('42 + 7'));
-    test('subtraction', exprOK('42 - 7'));
-    test('multiplication', exprOK('42 * 7'));
-    test('mod', exprOK('42 % 7'));
-    test('division', exprOK('42 / 7'));
-    test('unary negation', exprOK('- ai'));
-    test('equal', exprOK('42 = 7'));
-    test('not equal', exprOK('42 != 7'));
-    test('greater than', exprOK('42 > 7'));
-    test('greater than or equal', exprOK('42 >= 7'));
-    test('less than or equal', exprOK('42 <= 7'));
-    test('less than', exprOK('42 < 7'));
-    test('match', exprOK("'forty-two' ~ 'fifty-four'"));
-    test('not match', exprOK("'forty-two' !~ 'fifty-four'"));
-    test('apply', exprOK("'forty-two' ? 'fifty-four'"));
-    test('not', exprOK('not true'));
-    test('and', exprOK('true and false'));
-    test('or', exprOK('true or false'));
-    test('null-check (??)', exprOK('ai ?? 7'));
+    test('addition', () => {
+      expect(expr`42 + 7`).toTranslate();
+    });
+    test('subtraction', () => {
+      expect(expr`42 - 7`).toTranslate();
+    });
+    test('multiplication', () => {
+      expect(expr`42 * 7`).toTranslate();
+    });
+    test('mod', () => {
+      expect(expr`42 % 7`).toTranslate();
+    });
+    test('division', () => {
+      expect(expr`42 / 7`).toTranslate();
+    });
+    test('unary negation', () => {
+      expect(expr`- ai`).toTranslate();
+    });
+    test('equal', () => {
+      expect(expr`42 = 7`).toTranslate();
+    });
+    test('not equal', () => {
+      expect(expr`42 != 7`).toTranslate();
+    });
+    test('greater than', () => {
+      expect(expr`42 > 7`).toTranslate();
+    });
+    test('greater than or equal', () => {
+      expect(expr`42 >= 7`).toTranslate();
+    });
+    test('less than or equal', () => {
+      expect(expr`42 <= 7`).toTranslate();
+    });
+    test('less than', () => {
+      expect(expr`42 < 7`).toTranslate();
+    });
+    test('match', () => {
+      expect(expr`'forty-two' ~ 'fifty-four'`).toTranslate();
+    });
+    test('not match', () => {
+      expect(expr`'forty-two' !~ 'fifty-four'`).toTranslate();
+    });
+    test('apply', () => {
+      expect(expr`'forty-two' ? 'fifty-four'`).toTranslate();
+    });
+    test('not', () => {
+      expect(expr`not true`).toTranslate();
+    });
+    test('and', () => {
+      expect(expr`true and false`).toTranslate();
+    });
+    test('or', () => {
+      expect(expr`true or false`).toTranslate();
+    });
+    test('null-check (??)', () => {
+      expect(expr`ai ?? 7`).toTranslate();
+    });
     test('disallow date OP number', () => {
-      expect(new BetaExpression('@2001 = 7')).compileToFailWith(
+      expect(new BetaExpression('@2001 = 7')).translationToFailWith(
         'Cannot compare a date to a number'
       );
     });
     test('disallow date OP timestamp', () => {
-      expect(new BetaExpression('ad = ats')).compileToFailWith(
+      expect(new BetaExpression('ad = ats')).translationToFailWith(
         'Cannot compare a date to a timestamp'
       );
     });
     test('disallow interval from date to timestamp', () => {
-      expect(new BetaExpression('days(ad to ats)')).compileToFailWith(
+      expect(new BetaExpression('days(ad to ats)')).translationToFailWith(
         'Cannot measure from date to timestamp'
       );
     });
     test('comparison promotes date literal to timestamp', () => {
-      expect('@2001 = ats').expressionCompiled();
+      expect(expr`@2001 = ats`).toTranslate();
     });
     test('can apply range to date', () => {
-      expect('ad ? @2001 for 1 day').expressionCompiled();
+      expect(expr`ad ? @2001 for 1 day`).toTranslate();
     });
     const noOffset = ['second', 'minute', 'hour'];
 
     test.each(noOffset.map(x => [x]))('disallow date delta %s', unit => {
-      expect(new BetaExpression(`ad + 10 ${unit}s`)).compileToFailWith(
+      expect(new BetaExpression(`ad + 10 ${unit}s`)).translationToFailWith(
         `Cannot offset date by ${unit}`
       );
     });
   });
 
-  test('filtered measure', exprOK("acount {? astr = 'why?' }"));
-  test(
-    'filtered ungrouped aggregate',
-    modelOK(`
+  test('filtered measure', () => {
+    expect(expr`acount {? astr = 'why?' }`).toTranslate();
+  });
+  test('filtered ungrouped aggregate', () => {
+    expect(`
         query: a -> {
           group_by: ai
           aggregate: x is all(avg(ai)) { where: true }
         }
-      `)
-  );
+      `).toTranslate();
+  });
   test('correctly flags filtered scalar', () => {
     const e = new BetaExpression('ai { where: true }');
-    expect(e).compileToFailWith(
+    expect(e).translationToFailWith(
       'Filtered expression requires an aggregate computation'
     );
   });
@@ -1469,97 +1527,98 @@ describe('expressions', () => {
           group_by: ai
           calculate: l is lag(ai) { where: true }
         }
-      `).compileToFailWith(
+      `).translationToFailWith(
       'Filtered expression requires an aggregate computation'
     );
   });
 
   describe('aggregate forms', () => {
-    test('count', exprOK('count()'));
-    test('count distinct', exprOK('count(distinct astr)'));
-    test('join.count()', exprOK('b.count()'));
+    test('count', () => {
+      expect(expr`count()`).toTranslate();
+    });
+    test('count distinct', () => {
+      expect(expr`count(distinct astr)`).toTranslate();
+    });
+    test('join.count()', () => {
+      expect(expr`b.count()`).toTranslate();
+    });
     for (const f of ['sum', 'min', 'max', 'avg']) {
       const fOfT = `${f}(af)`;
-      test(fOfT, exprOK(fOfT));
+      test(fOfT, () => {
+        expect(new BetaExpression(fOfT)).toTranslate();
+      });
       if (f !== 'min' && f !== 'max') {
         const joinDot = `b.af.${f}()`;
-        test(joinDot, exprOK(joinDot));
+        test(joinDot, () => {
+          expect(new BetaExpression(joinDot)).toTranslate();
+        });
         const joinAgg = `b.${f}(af)`;
-        test(joinAgg, exprOK(joinAgg));
+        test(joinAgg, () => {
+          expect(new BetaExpression(joinAgg)).toTranslate();
+        });
       }
     }
   });
 
   describe('pick statements', () => {
-    test(
-      'full',
-      exprOK(`
+    test('full', () => {
+      expect(expr`
         pick 'the answer' when ai = 42
         pick 'the questionable answer' when ai = 54
         else 'random'
-    `)
-    );
-    test(
-      'applied',
-      exprOK(`
+    `).toTranslate();
+    });
+    test('applied', () => {
+      expect(expr`
         astr ?
           pick 'the answer' when = '42'
           pick 'the questionable answer' when = '54'
           else 'random'
-    `)
-    );
-    test(
-      'filtering',
-      exprOK(`
-        astr ? pick 'missing value' when NULL
-    `)
-    );
-    test(
-      'null branch with else',
-      exprType("astr ? pick null when = '42' else 3", 'number')
-    );
-    test(
-      'null branch no else',
-      exprType("astr ? pick null when = '42'", 'string')
-    );
-    test(
-      'null branch no apply',
-      exprType('pick null when 1 = 1 else 3', 'number')
-    );
-    test(
-      'tiering',
-      exprOK(`
+    `).toTranslate();
+    });
+    test('filtering', () => {
+      expect(expr`astr ? pick 'missing value' when NULL`).toTranslate();
+    });
+    test('null branch with else', () => {
+      expect("astr ? pick null when = '42' else 3").toReturnType('number');
+    });
+    test('null branch no else', () => {
+      expect("astr ? pick null when = '42'").toReturnType('string');
+    });
+    test('null branch no apply', () => {
+      expect('pick null when 1 = 1 else 3').toReturnType('number');
+    });
+    test('tiering', () => {
+      expect(expr`
       ai ?
         pick 1 when < 10
         pick 10 when < 100
         pick 100 when < 1000
         else 10000
-  `)
-    );
-    test(
-      'transforming',
-      exprOK(`
+  `).toTranslate();
+    });
+    test('transforming', () => {
+      expect(expr`
         ai ?
           pick 'small' when < 10
           pick 'medium' when < 100
           else 'large'
-    `)
-    );
+    `).toTranslate();
+    });
 
-    test(
-      'when single values',
-      exprOK(`
+    test('when single values', () => {
+      expect(expr`
         ai ?
           pick 'one' when 1
           else 'a lot'
-      `)
-    );
+      `).toTranslate();
+    });
     test('n-ary without else', () => {
-      expect(markSource`
+      expect(`
         source: na is a + { dimension: d is
           pick 7 when true and true
         }
-      `).compileToFailWith(
+      `).translationToFailWith(
         "pick incomplete, missing 'else'",
         "Cannot define 'd', value has unknown type"
       );
@@ -1571,7 +1630,7 @@ describe('expressions', () => {
           pick '7' when true or true
           else 7
         }
-      `).compileToFailWith(
+      `).translationToFailWith(
         "pick type 'string', expected 'number'",
         "Cannot define 'd', value has unknown type"
       );
@@ -1582,7 +1641,7 @@ describe('expressions', () => {
           pick 7 when true and true
           else '7'
         }
-      `).compileToFailWith(
+      `).translationToFailWith(
         "else type 'string', expected 'number'",
         "Cannot define 'd', value has unknown type"
       );
@@ -1592,7 +1651,7 @@ describe('expressions', () => {
         source: na is a + { dimension: d is
           7 ? pick 7 when 7 else 'not seven'
         }
-      `).compileToFailWith(
+      `).translationToFailWith(
         "else type 'string', expected 'number'",
         "Cannot define 'd', value has unknown type"
       );
@@ -1602,7 +1661,7 @@ describe('expressions', () => {
         source: na is a + { dimension: d is
           7 ? pick 'seven' when 7
         }
-      `).compileToFailWith(
+      `).translationToFailWith(
         "pick default type 'number', expected 'string'",
         "Cannot define 'd', value has unknown type"
       );
@@ -1612,7 +1671,7 @@ describe('expressions', () => {
         source: na is a + { dimension: d is
           7 ? pick 'seven' when 7 pick 6 when 6
         }
-      `).compileToFailWith(
+      `).translationToFailWith(
         "pick type 'number', expected 'string'",
         "Cannot define 'd', value has unknown type"
       );
@@ -1621,7 +1680,7 @@ describe('expressions', () => {
   test('paren and applied div', () => {
     const modelSrc = 'query: z is a -> { group_by: x is 1+(3/4) }';
     const m = new TestTranslator(modelSrc);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const queryDef = m.translate()?.translated?.modelDef.contents['z'];
     expect(queryDef).toBeDefined();
     expect(queryDef?.type).toBe('query');
@@ -1677,26 +1736,26 @@ describe('expressions', () => {
     ['astr', 'string'],
     ['abool', 'boolean'],
   ])('Can compare field %s (type %s) to NULL', (name, _datatype) => {
-    expect(`${name} = NULL`).expressionCompiled();
+    expect(expr`${name} = NULL`).toTranslate();
   });
 });
 describe('unspported fields in schema', () => {
   test('unsupported reference in result allowed', () => {
     const uModel = new TestTranslator('query: a->{ group_by: aun }');
-    expect(uModel).modelCompiled();
+    expect(uModel).toTranslate();
   });
   test('unsupported reference can be compared to NULL', () => {
     const uModel = new TestTranslator(
       'query: a->{ where: aun != NULL; project: * }'
     );
-    expect(uModel).modelCompiled();
+    expect(uModel).toTranslate();
   });
   test('flag unsupported equality', () => {
     // because we don't know if the two unsupported types are comparable
     const uModel = new TestTranslator(
       'query: ab->{ where: aun = b.aun  project: * }'
     );
-    expect(uModel).compileToFailWith(
+    expect(uModel).translationToFailWith(
       'Unsupported type not allowed in expression'
     );
   });
@@ -1705,7 +1764,7 @@ describe('unspported fields in schema', () => {
     const uModel = new TestTranslator(
       'query: ab->{ where: aun > b.aun  project: * }'
     );
-    expect(uModel).compileToFailWith(
+    expect(uModel).translationToFailWith(
       'Unsupported type not allowed in expression'
     );
   });
@@ -1713,19 +1772,19 @@ describe('unspported fields in schema', () => {
     const uModel = new TestTranslator(
       'query: ab->{ where: aweird = b.aweird  project: * }'
     );
-    expect(uModel).modelCompiled();
+    expect(uModel).toTranslate();
   });
   test('flag not applied to unsupported', () => {
     const uModel = new TestTranslator(
       'source: x is a { dimension: notUn is not aun }'
     );
-    expect(uModel).compileToFailWith("'not' Can't use type unsupported");
+    expect(uModel).translationToFailWith("'not' Can't use type unsupported");
   });
   test('allow unsupported to be cast', () => {
     const uModel = new TestTranslator(
       'source: x is a { dimension: notUn is aun::string }'
     );
-    expect(uModel).modelCompiled();
+    expect(uModel).toTranslate();
   });
 });
 
@@ -1735,7 +1794,7 @@ describe('error handling', () => {
       source: flights is table('malloytest.flights') {
         query: carrier is { group_by: carrier }
       }
-    `).compileToFailWith("Cannot redefine 'carrier'");
+    `).translationToFailWith("Cannot redefine 'carrier'");
   });
   test('redefine source', () => {
     expect(markSource`
@@ -1745,10 +1804,10 @@ describe('error handling', () => {
       source: airports is table('malloytest.airports') + {
         primary_key: code
       }
-    `).compileToFailWith("Cannot redefine 'airports'");
+    `).translationToFailWith("Cannot redefine 'airports'");
   });
   test('query from undefined source', () => {
-    expect(markSource`query: ${'x'}->{ project: y }`).compileToFailWith(
+    expect(markSource`query: ${'x'}->{ project: y }`).translationToFailWith(
       "Undefined source 'x'"
     );
   });
@@ -1757,7 +1816,7 @@ describe('error handling', () => {
     // when "query: x->{ group_by: y}" (above) generated the correct error.
     expect(
       markSource`query: ${'x'}->{ project: y is z / 2 }`
-    ).compileToFailWith("Undefined source 'x'");
+    ).translationToFailWith("Undefined source 'x'");
   });
   test('join reference before definition', () => {
     expect(
@@ -1765,56 +1824,53 @@ describe('error handling', () => {
         source: newAB is a { join_one: newB is ${'bb'} on astring }
         source: newB is b
       `
-    ).compileToFailWith("Undefined source 'bb'");
+    ).translationToFailWith("Undefined source 'bb'");
   });
-  test(
-    'non-rename rename',
-    badModel(
-      'source: na is a { rename: astr is astr }',
+  test('non-rename rename', () => {
+    expect('source: na is a { rename: astr is astr }').translationToFailWith(
       "Can't rename field to itself"
-    )
-  );
-  test(
-    'reference to field in its definition',
-    badModel(
-      'source: na is a { dimension: ustr is UPPER(ustr) } ',
-      "Circular reference to 'ustr' in definition"
-    )
-  );
-  test('empty model', modelOK(''));
-  test('one line model ', modelOK('\n'));
-  test(
-    'query without fields',
-    badModel(
-      'query: a -> { top: 5 }',
+    );
+  });
+  test('reference to field in its definition', () => {
+    expect(
+      'source: na is a { dimension: ustr is upper(ustr) } '
+    ).translationToFailWith("Circular reference to 'ustr' in definition");
+  });
+  test('empty model', () => {
+    expect('').toTranslate();
+  });
+  test('one line model ', () => {
+    expect('\n').toTranslate();
+  });
+  test('query without fields', () => {
+    expect('query: a -> { top: 5 }').translationToFailWith(
       "Can't determine query type (group_by/aggregate/nest,project,index)"
-    )
-  );
-  test(
-    "refine can't change query type",
-    badModel(
-      'query: ab -> aturtle { project: astr }',
+    );
+  });
+  test("refine can't change query type", () => {
+    expect('query: ab -> aturtle { project: astr }').translationToFailWith(
       'project: not legal in grouping query'
-    )
-  );
-  test(
-    'undefined field ref in query',
-    badModel('query: ab -> { aggregate: xyzzy }', "'xyzzy' is not defined")
-  );
+    );
+  });
+  test('undefined field ref in query', () => {
+    expect('query: ab -> { aggregate: xyzzy }').translationToFailWith(
+      "'xyzzy' is not defined"
+    );
+  });
   test('query on source with errors', () => {
     expect(markSource`
         source: na is a { join_one: ${'n'} on astr }
-      `).compileToFailWith("Undefined source 'n'");
+      `).translationToFailWith("Undefined source 'n'");
   });
   test('detect duplicate output field names', () => {
     expect(
       markSource`query: ab -> { group_by: astr, ${'astr'} }`
-    ).compileToFailWith("Output already has a field named 'astr'");
+    ).translationToFailWith("Output already has a field named 'astr'");
   });
   test('detect join tail overlap existing ref', () => {
     expect(
       markSource`query: ab -> { group_by: astr, ${'b.astr'} }`
-    ).compileToFailWith("Output already has a field named 'astr'");
+    ).translationToFailWith("Output already has a field named 'astr'");
   });
   test('undefined in expression with regex compare', () => {
     expect(
@@ -1823,18 +1879,17 @@ describe('error handling', () => {
           dimension: d is meaning_of_life ~ r'(forty two|fifty four)'
         }
       `
-    ).compileToFailWith("'meaning_of_life' is not defined");
+    ).translationToFailWith("'meaning_of_life' is not defined");
   });
   test('detect output collision on join references', () => {
     expect(`
       query: ab -> {
         group_by: astr, b.astr
       }
-    `).compileToFailWith("Output already has a field named 'astr'");
+    `).translationToFailWith("Output already has a field named 'astr'");
   });
-  test(
-    'rejoin a query is renamed',
-    modelOK(`
+  test('rejoin a query is renamed', () => {
+    expect(`
       source: querySrc is from(
         table('malloytest.flights')->{
           group_by: origin
@@ -1848,15 +1903,15 @@ describe('error handling', () => {
         group_by: rejoin.nested.destination
       }
     }
-    `)
-  );
+    `).toTranslate();
+  });
   test('popping out of embedding when not embedded', () => {
-    expect('}%').compileToFailWith(/extraneous input '}%' expecting/);
+    expect('}%').translationToFailWith(/extraneous input '}%' expecting/);
   });
 
   test('bad sql in sql block', () => {
     const badModel = new TestTranslator('sql: { select: """)""" }');
-    expect(badModel).modelParsed();
+    expect(badModel).toParse();
     const needSchema = badModel.translate();
     expect(needSchema.compileSQL).toBeDefined();
     if (needSchema.compileSQL) {
@@ -1868,7 +1923,7 @@ describe('error handling', () => {
         },
       });
     }
-    expect(badModel).compileToFailWith('Invalid SQL, ZZZZ');
+    expect(badModel).translationToFailWith('Invalid SQL, ZZZZ');
   });
 });
 
@@ -1899,7 +1954,7 @@ describe('source locations', () => {
   test('renamed source location', () => {
     const source = markSource`source: ${'na is a'}`;
     const m = new TestTranslator(source.code);
-    expect(m).modelParsed();
+    expect(m).toParse();
     expect(getExplore(m.modelDef, 'na').location).toMatchObject(
       source.locations[0]
     );
@@ -1908,7 +1963,7 @@ describe('source locations', () => {
   test('refined source location', () => {
     const source = markSource`source: ${'na is a {}'}`;
     const m = new TestTranslator(source.code);
-    expect(m).modelParsed();
+    expect(m).toParse();
     expect(getExplore(m.modelDef, 'na').location).toMatchObject(
       source.locations[0]
     );
@@ -1917,7 +1972,7 @@ describe('source locations', () => {
   test('location of defined dimension', () => {
     const source = markSource`source: na is a { dimension: ${'x is 1'} }`;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
     const x = getField(na, 'x');
     expect(x.location).toMatchObject(source.locations[0]);
@@ -1926,7 +1981,7 @@ describe('source locations', () => {
   test('location of defined measure', () => {
     const source = markSource`source: na is a { measure: ${'x is count()'} }`;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
     const x = getField(na, 'x');
     expect(x.location).toMatchObject(source.locations[0]);
@@ -1935,7 +1990,7 @@ describe('source locations', () => {
   test('location of defined query', () => {
     const source = markSource`source: na is a { query: ${'x is { group_by: y is 1 }'} }`;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
     const x = getField(na, 'x');
     expect(x.location).toMatchObject(source.locations[0]);
@@ -1950,7 +2005,7 @@ describe('source locations', () => {
       }`;
 
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
     const x = getQueryField(na, 'x');
     const y = getField(x.pipeline[0], 'y');
@@ -1967,7 +2022,7 @@ describe('source locations', () => {
       }`;
 
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
     const x = getQueryField(na, 'x');
     const z = getField(x.pipeline[0], 'z');
@@ -1977,7 +2032,7 @@ describe('source locations', () => {
   test('location of field inherited from table', () => {
     const source = markSource`source: na is ${"table('aTable')"}`;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
     const abool = getField(na, 'abool');
     expect(abool.location).toMatchObject(source.locations[0]);
@@ -1989,14 +2044,14 @@ describe('source locations', () => {
       source: na is from_sql(s)
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelParsed();
+    expect(m).toParse();
     const compileSql = m.translate().compileSQL;
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
         compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
       });
-      expect(m).modelCompiled();
+      expect(m).toTranslate();
       const na = getExplore(m.modelDef, 'na');
       const one = getField(na, 'one');
       expect(one.location).isLocationIn(source.locations[0], source.code);
@@ -2014,7 +2069,7 @@ describe('source locations', () => {
       )
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
     const abool = getField(na, 'abool');
     expect(abool.location).toMatchObject(source.locations[0]);
@@ -2025,7 +2080,7 @@ describe('source locations', () => {
   test('location of named query', () => {
     const source = markSource`query: ${'q is a -> { project: * }'}`;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const q = getExplore(m.modelDef, 'q');
     expect(q.location).toMatchObject(source.locations[0]);
   });
@@ -2033,7 +2088,7 @@ describe('source locations', () => {
   test('location of field in named query', () => {
     const source = markSource`query: q is a -> { group_by: ${'b is 1'} }`;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const q = getModelQuery(m.modelDef, 'q');
     const a = getField(q.pipeline[0], 'b');
     expect(a.location).toMatchObject(source.locations[0]);
@@ -2042,14 +2097,14 @@ describe('source locations', () => {
   test('location of named SQL block', () => {
     const source = markSource`${'sql: s is { select: """SELECT 1 as one""" }'}`;
     const m = new TestTranslator(source.code);
-    expect(m).modelParsed();
+    expect(m).toParse();
     const compileSql = m.translate().compileSQL;
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
         compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
       });
-      expect(m).modelCompiled();
+      expect(m).toTranslate();
       const s = m.sqlBlocks[0];
       expect(s.location).isLocationIn(source.locations[0], source.code);
     }
@@ -2062,7 +2117,7 @@ describe('source locations', () => {
       }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
     const bbool = getField(na, 'bbool');
     expect(bbool.location).toMatchObject(source.locations[0]);
@@ -2075,7 +2130,7 @@ describe('source locations', () => {
       }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
     const x = getField(na, 'x');
     expect(x.location).toMatchObject(source.locations[0]);
@@ -2088,7 +2143,7 @@ describe('source locations', () => {
       }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
     const x = getField(na, 'x');
     expect(x.location).toMatchObject(source.locations[0]);
@@ -2104,7 +2159,7 @@ describe('source locations', () => {
       }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
     const x = getJoinField(na, 'x');
     const y = getField(x, 'y');
@@ -2115,48 +2170,38 @@ describe('source locations', () => {
   // test("multi line sql block token span is correct", () => {
   //   const sqlSource = `sql: { select: """// line 0\n//line 1\n// line 2""" }`;
   //   const m = new TestTranslator(sqlSource);
-  //   expect(m).not.modelParsed();
+  //   expect(m).not.toParse();
   //   const errList = m.errors().errors;
   //   expect(errList[0].at?.range.end).toEqual({ line: 2, character: 11 });
   // });
 
-  test(
-    'undefined query location',
-    badModel(
-      markSource`query: ${'-> xyz'}`,
+  test('undefined query location', () => {
+    expect(model`query: ${'-> xyz'}`).translationToFailWith(
       "Reference to undefined query 'xyz'"
-    )
-  );
-  test(
-    'undefined field reference',
-    badModel(
-      markSource`query: a -> { group_by: ${'xyz'} }`,
+    );
+  });
+  test('undefined field reference', () => {
+    expect(model`query: a -> { group_by: ${'xyz'} }`).translationToFailWith(
       "'xyz' is not defined"
-    )
-  );
-  test(
-    'bad query',
-    badModel(
-      markSource`query: a -> { group_by: astr; ${'project: *'} }`,
-      'project: not legal in grouping query'
-    )
-  );
+    );
+  });
+  test('bad query', () => {
+    expect(
+      model`query: a -> { group_by: astr; ${'project: *'} }`
+    ).translationToFailWith('project: not legal in grouping query');
+  });
 
-  test.skip(
-    'undefined field reference in top',
-    badModel(
-      markSource`query: a -> { group_by: one is 1; top: 1 by ${'xyz'} }`,
-      "'xyz' is not defined"
-    )
-  );
+  test.skip('undefined field reference in top', () => {
+    expect(
+      model`query: a -> { group_by: one is 1; top: 1 by ${'xyz'} }`
+    ).translationToFailWith("'xyz' is not defined");
+  });
 
-  test.skip(
-    'undefined field reference in order_by',
-    badModel(
-      markSource`query: a -> { group_by: one is 1; order_by: ${'xyz'} }`,
-      "'xyz' is not defined"
-    )
-  );
+  test.skip('undefined field reference in order_by', () => {
+    expect(
+      model`query: a -> { group_by: one is 1; order_by: ${'xyz'} }`
+    ).translationToFailWith("'xyz' is not defined");
+  });
 });
 
 describe('source references', () => {
@@ -2166,7 +2211,7 @@ describe('source references', () => {
       query: ${'na'} -> { project: * }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'exploreReference',
@@ -2185,7 +2230,7 @@ describe('source references', () => {
       query: t -> ${'q'}
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'fieldReference',
@@ -2202,7 +2247,7 @@ describe('source references', () => {
       query: na -> ${'x'}
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'fieldReference',
@@ -2219,14 +2264,14 @@ describe('source references', () => {
       source: na is from_sql(${'s'})
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelParsed();
+    expect(m).toParse();
     const compileSql = m.translate().compileSQL;
     expect(compileSql).toBeDefined();
     if (compileSql) {
       m.update({
         compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
       });
-      expect(m).modelCompiled();
+      expect(m).toTranslate();
       const ref = m.referenceAt(pos(source.locations[1]));
       expect(ref).toMatchObject({
         location: source.locations[1],
@@ -2246,7 +2291,7 @@ describe('source references', () => {
       source: na is from(-> ${'q'})
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'queryReference',
@@ -2263,7 +2308,7 @@ describe('source references', () => {
       query: q2 is -> ${'q'} -> { project: * }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'queryReference',
@@ -2280,7 +2325,7 @@ describe('source references', () => {
       query: q2 is -> ${'q'} { limit: 10 }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'queryReference',
@@ -2297,7 +2342,7 @@ describe('source references', () => {
       query: na -> { project: bbool is not ${'abool'} }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'fieldReference',
@@ -2316,7 +2361,7 @@ describe('source references', () => {
       query: na -> { project: ${'`name`'} }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'fieldReference',
@@ -2336,7 +2381,7 @@ describe('source references', () => {
       query: na -> { project: bstr is self.${'astr'} }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'fieldReference',
@@ -2355,7 +2400,7 @@ describe('source references', () => {
       query: na -> { project: bstr is ${'self'}.astr }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'joinReference',
@@ -2371,7 +2416,7 @@ describe('source references', () => {
       query: ${"table('aTable')"} -> { group_by: ${'abool'} }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'fieldReference',
@@ -2388,7 +2433,7 @@ describe('source references', () => {
       query: na -> { project: ${'abool'} }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'fieldReference',
@@ -2407,7 +2452,7 @@ describe('source references', () => {
       }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'fieldReference',
@@ -2426,7 +2471,7 @@ describe('source references', () => {
       }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'fieldReference',
@@ -2445,7 +2490,7 @@ describe('source references', () => {
       }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'fieldReference',
@@ -2464,7 +2509,7 @@ describe('source references', () => {
       }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'fieldReference',
@@ -2483,7 +2528,7 @@ describe('source references', () => {
       }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'fieldReference',
@@ -2502,7 +2547,7 @@ describe('source references', () => {
       }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'fieldReference',
@@ -2521,7 +2566,7 @@ describe('source references', () => {
       }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'fieldReference',
@@ -2538,7 +2583,7 @@ describe('source references', () => {
       query: na -> { aggregate: ai_sum is ${'ai'}.sum() }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'fieldReference',
@@ -2561,7 +2606,7 @@ describe('source references', () => {
       query: na -> { aggregate: ai_sum is ${'self'}.sum(self.ai) }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'joinReference',
@@ -2580,7 +2625,7 @@ describe('source references', () => {
       query: na -> { aggregate: ai_sum is self.sum(${'self'}.ai) }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'joinReference',
@@ -2599,7 +2644,7 @@ describe('source references', () => {
       }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'exploreReference',
@@ -2616,7 +2661,7 @@ describe('source references', () => {
       query: na -> { aggregate: ai_sum is sum(${'ai'}) }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'fieldReference',
@@ -2634,7 +2679,7 @@ describe('source references', () => {
       }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'fieldReference',
@@ -2653,7 +2698,7 @@ describe('source references', () => {
       }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'fieldReference',
@@ -2667,16 +2712,13 @@ describe('source references', () => {
 
 describe('translation need error locations', () => {
   test('import error location', () => {
-    const source = markSource`import ${'"badfile"'}`;
-    const m = new TestTranslator(source.code);
+    const source = model`import ${'"badfile"'}`;
+    const m = source.translator;
     const result = m.translate();
     m.update({
       errors: {urls: {[(result.urls || [])[0]]: 'Bad file!'}},
     });
-    expect(m).not.modelParsed();
-    const errList = m.problemResponse().problems;
-    expect(errList[0].at).isLocationIn(source.locations[0], source.code);
-    return undefined;
+    expect(source).translationToFailWith(/Bad file!/);
   });
 
   test('sql struct error location', () => {
@@ -2685,39 +2727,35 @@ describe('translation need error locations', () => {
       query: from_sql(bad_sql) -> { project: * }
     `;
     const m = new TestTranslator(source.code);
-    expect(m).modelParsed();
+    expect(m).toParse();
     const req = m.translate().compileSQL;
     expect(req).toBeDefined();
     if (req) {
       m.update({errors: {compileSQL: {[req.name]: 'Bad SQL!'}}});
     }
-    expect(m).not.modelCompiled();
-    const errList = m.problemResponse().problems;
+    expect(m).not.toTranslate();
+    const errList = m.problems();
     expect(errList[0].at).isLocationIn(source.locations[0], source.code);
   });
 
   test('table struct error location', () => {
-    const source = markSource`
+    const source = model`
       source: bad_explore is ${"table('malloy-data.bad.table')"}
     `;
-    const m = new TestTranslator(source.code);
+    const m = source.translator;
     const result = m.translate();
     m.update({
       errors: {
         tables: {[(result.tables || [])[0]]: 'Bad table!'},
       },
     });
-    expect(m).not.modelParsed();
-    const errList = m.problemResponse().problems;
-    expect(errList[0].at).isLocationIn(source.locations[0], source.code);
-    return undefined;
+    expect(m).translationToFailWith(/Bad table!/);
   });
 });
 
 describe('pipeline comprehension', () => {
-  test(
-    'second query gets namespace from first',
-    modelOK(`
+  test('second query gets namespace from first', () => {
+    expect(`
       source: aq is a {
         query: t1 is {
           group_by: t1int is ai, t1str is astr
@@ -2725,12 +2763,11 @@ describe('pipeline comprehension', () => {
           project: t1str, t1int
         }
       }
-    `)
-  );
-  test(
-    "second query doesn't have access to original fields",
-    badModel(
-      markSource`
+    `).toTranslate();
+  });
+  test("second query doesn't have access to original fields", () => {
+    expect(
+      model`
         source: aq is a {
           query: t1 is {
             group_by: t1int is ai, t1str is astr
@@ -2738,13 +2775,11 @@ describe('pipeline comprehension', () => {
             project: ${'ai'}
           }
         }
-      `,
-      "'ai' is not defined"
-    )
-  );
-  test(
-    'new query can append ops to existing query',
-    modelOK(`
+      `
+    ).translationToFailWith("'ai' is not defined");
+  });
+  test('new query can append ops to existing query', () => {
+    expect(`
       source: aq is a {
         query: t0 is {
           group_by: t1int is ai, t1str is astr
@@ -2753,11 +2788,10 @@ describe('pipeline comprehension', () => {
           project: t1str, t1int
         }
       }
-    `)
-  );
-  test(
-    'new query can refine and append to exisiting query',
-    modelOK(`
+    `).toTranslate();
+  });
+  test('new query can refine and append to exisiting query', () => {
+    expect(`
       source: aq is table('aTable') {
         query: by_region is { group_by: astr }
         query: by_region2 is by_region {
@@ -2766,27 +2800,25 @@ describe('pipeline comprehension', () => {
           project: astr, dateNest.ad
         }
       }
-    `)
-  );
-  test(
-    'reference to a query can include a refinement',
-    modelOK(`
+    `).toTranslate();
+  });
+  test('reference to a query can include a refinement', () => {
+    expect(`
       query: ab -> {
         group_by: ai
         nest: aturtle { limit: 1 }
       }
-    `)
-  );
-  test(
-    'Querying an sourcebased on a query',
-    modelOK(`
+    `).toTranslate();
+  });
+  test('Querying an sourcebased on a query', () => {
+    expect(`
       query: q is a -> { group_by: astr; aggregate: strsum is ai.sum() }
       source: aq is a {
         join_one: aq is from(->q) on astr = aq.astr
       }
       query: aqf is aq -> { project: * }
-    `)
-  );
+    `).toTranslate();
+  });
   test('new query appends to existing query', () => {
     const src = `
       query: s1 is table('malloytest.flights') -> {
@@ -2797,7 +2829,7 @@ describe('pipeline comprehension', () => {
       }
     `;
     const m = new TestTranslator(src);
-    expect(m).modelCompiled();
+    expect(m).toTranslate();
     const s2 = m.getQuery('s2');
     expect(s2?.pipeline.length).toBe(2);
   });

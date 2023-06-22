@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ExpressionValueType} from '../../../model';
+import {ExpressionValueType} from '../../../model/malloy_types';
 import {
   arg,
   overload,
