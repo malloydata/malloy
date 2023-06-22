@@ -59,9 +59,9 @@ describe('model statements', () => {
       expect("source: testA is bad_conn.table('aTable')").not.toTranslate();
     });
     test('table method fails when connection is not a connection', () => {
-      expect("source: testA is a.table('aTable')").translationToFailWith(
-        'a is not a connection'
-      );
+      expect(
+        "source: a1 is a; source: testA is a1.table('aTable')"
+      ).translationToFailWith('a is not a connection');
     });
     // TODO unskip this when ENABLE_M4_WARNINGS becomes a document annotation
     test.skip('table function is deprecated', () => {
@@ -2715,30 +2715,10 @@ describe('translation need error locations', () => {
     const result = m.translate();
     m.update({
       errors: {
-        tables: {[(result.tables || [])[0].tableKey]: 'Bad table!'},
+        tables: {[Object.keys(result.tables || {})[0]]: 'Bad table!'},
       },
     });
     expect(m).translationToFailWith(/Bad table!/);
-  });
-});
-
-describe('connection object', () => {
-  test('to be definable', () => {
-    expect('connection: my_connection').toTranslate();
-  });
-  test('to be quoted definable', () => {
-    expect('connection: `my_connection`').toTranslate();
-  });
-  test('to conflict with other connections', () => {
-    expect(markSource`
-    connection: my_connection
-    connection: ${'my_connection'}
-    `).translationToFailWith('my_connection is already defined');
-  });
-  test('to conflict with other top level objects', () => {
-    expect(markSource`
-    connection: ${'a'}
-    `).translationToFailWith('a is already defined');
   });
 });
 

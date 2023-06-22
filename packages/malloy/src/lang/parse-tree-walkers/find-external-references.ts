@@ -98,7 +98,9 @@ export function constructTableKey(
   connectionName: string | undefined,
   tablePath: string
 ): string {
-  return `${connectionName}:${tablePath}`;
+  return connectionName === undefined
+    ? tablePath
+    : `${connectionName}:${tablePath}`;
 }
 
 /**
