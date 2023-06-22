@@ -237,7 +237,10 @@ export class BigQueryConnection
     sqlCommand: string,
     options: Partial<BigQueryQueryOptions> = {},
     rowIndex = 0
-  ): Promise<{data: MalloyQueryData; schema: bigquery.ITableFieldSchema}> {
+  ): Promise<{
+    data: MalloyQueryData;
+    schema: bigquery.ITableFieldSchema | undefined;
+  }> {
     const defaultOptions = this.readQueryOptions();
     const pageSize = options.rowLimit ?? defaultOptions.rowLimit;
 
@@ -257,10 +260,6 @@ export class BigQueryConnection
         ? jobResult[2].totalRows
         : '0');
 
-      // TODO need to probably surface the cause of the schema not present error
-      if (jobResult[2]?.schema === undefined) {
-        throw new Error('Schema not present');
-      }
       // TODO even though we have 10 minute timeout limit, we still should confirm that resulting metadata has "jobComplete: true"
       const queryCostBytes = jobResult[2]?.totalBytesProcessed;
       const data: MalloyQueryData = {
@@ -295,6 +294,12 @@ export class BigQueryConnection
       sqlBlock.selectStr,
       options
     );
+
+    // TODO need to probably surface the cause of the schema not present error
+    if (schemaRaw === undefined) {
+      throw new Error('Schema not present');
+    }
+
     const schema = this.structDefFromSQLSchema(sqlBlock, schemaRaw);
     return {data, schema};
   }
