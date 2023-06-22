@@ -41,8 +41,8 @@ import {
 } from './types';
 
 export class MalloySQLParseError extends MalloyError {
-  constructor(message: string, log: LogMessage[] = []) {
-    super(message, log);
+  constructor(message: string, problems: LogMessage[] = []) {
+    super(message, problems);
   }
 }
 
@@ -89,6 +89,7 @@ export class MalloySQLParser {
         url,
         range: this.convertRange(range),
       },
+      severity: 'error',
     };
     return new MalloySQLParseError(message, [log]);
   }
@@ -113,6 +114,7 @@ export class MalloySQLParser {
               {
                 message: e.message,
                 at: {url, range: this.convertRange(e.location)},
+                severity: 'error',
               },
             ],
             e.expected,

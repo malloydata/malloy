@@ -194,7 +194,7 @@ describe('sql:', () => {
     );
     const tr = extModel.translate(modelDef);
     // because extModel is not a TestTranslator we can't use the hotness
-    expect(tr.errors).toEqual([]);
+    expect(tr.problems).toEqual([]);
     expect(tr.translated).toBeDefined();
   });
 });

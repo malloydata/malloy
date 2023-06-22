@@ -44,7 +44,7 @@ import {MalloyLexer} from './lib/Malloy/MalloyLexer';
 import {MalloyParser} from './lib/Malloy/MalloyParser';
 import * as ast from './ast';
 import {MalloyToAST} from './malloy-to-ast';
-import {MessageLog} from './parse-log';
+import {LogMessage, MessageLog} from './parse-log';
 import {findReferences} from './parse-tree-walkers/find-external-references';
 import {Zone, ZoneData} from './zone';
 import {walkForDocumentSymbols} from './parse-tree-walkers/document-symbol-walker';
@@ -67,7 +67,7 @@ import {
   ASTResponse,
   CompletionsResponse,
   DataRequestResponse,
-  ErrorResponse,
+  ProblemResponse,
   FatalResponse,
   FinalResponse,
   HelpContextResponse,
@@ -123,7 +123,7 @@ export interface MalloyParseRoot {
   malloyVersion: string;
 }
 
-interface ParseData extends ErrorResponse, NeedURLData, FinalResponse {
+interface ParseData extends ProblemResponse, NeedURLData, FinalResponse {
   parse: MalloyParseRoot;
 }
 export type ParseResponse = Partial<ParseData>;
@@ -154,11 +154,12 @@ class ParseStep implements TranslationStep {
         that.urlIsFullPath = false;
         that.root.logger.log({
           message: `Could not compute full path URL: ${msg}`,
+          severity: 'error',
         });
       }
     }
     if (!that.urlIsFullPath) {
-      return that.fatalErrors();
+      return that.fatalResponse();
     }
 
     const srcEnt = that.root.importZone.getEntry(that.sourceURL);
@@ -168,8 +169,8 @@ class ParseStep implements TranslationStep {
           ? `import error: ${srcEnt.message}`
           : `import '${that.sourceURL}' error: ${srcEnt.message}`;
         const at = srcEnt.firstReference || that.defaultLocation();
-        that.root.logger.log({message, at});
-        this.response = that.fatalErrors();
+        that.root.logger.log({message, at, severity: 'error'});
+        this.response = that.fatalResponse();
         return this.response;
       }
       return {urls: [that.sourceURL]};
@@ -183,6 +184,7 @@ class ParseStep implements TranslationStep {
     } catch (parseException) {
       that.root.logger.log({
         message: `Malloy internal parser exception [${parseException.message}]`,
+        severity: 'error',
       });
       parse = undefined;
     }
@@ -190,7 +192,7 @@ class ParseStep implements TranslationStep {
     if (that.root.logger.hasErrors()) {
       this.response = {
         parse,
-        ...that.fatalErrors(),
+        ...that.fatalResponse(),
       };
     } else {
       this.response = {parse};
@@ -308,6 +310,7 @@ class ImportsAndTablesStep implements TranslationStep {
             that.root.logger.log({
               message: `Malformed URL '${relativeRef}'"`,
               at: {url: that.sourceURL, range: firstRef},
+              severity: 'error',
             });
           }
         }
@@ -368,7 +371,7 @@ class ASTStep implements TranslationStep {
     const parseResponse = that.parseStep.response;
     // Errors in self or children will show up here ..
     if (that.root.logger.hasErrors()) {
-      this.response = that.fatalErrors();
+      this.response = that.fatalResponse();
       return this.response;
     }
 
@@ -381,7 +384,7 @@ class ASTStep implements TranslationStep {
     const secondPass = new MalloyToAST(parse, that.root.logger);
     const newAst = secondPass.visit(parse.root);
     if (that.root.logger.hasErrors()) {
-      this.response = that.fatalErrors();
+      this.response = that.fatalResponse();
       return this.response;
     }
 
@@ -412,7 +415,7 @@ class ASTStep implements TranslationStep {
     }
     // If there is a partial ast ...
     if (that.root.logger.hasErrors()) {
-      this.response = that.fatalErrors();
+      this.response = that.fatalResponse();
       return this.response;
     }
 
@@ -434,7 +437,7 @@ which has an SQL block ...
 
     newAst.setTranslator(that);
     this.response = {
-      ...that.errors(), // these errors will by definition all be warnings
+      ...that.problemResponse(), // these problems will by definition all be warnings
       ast: newAst,
       final: true,
     };
@@ -587,12 +590,13 @@ class TranslateStep implements TranslationStep {
         that.root.logger.log({
           message: `'${that.sourceURL}' did not parse to malloy document`,
           at: that.defaultLocation(),
+          severity: 'error',
         });
       }
     }
 
     if (that.root.logger.hasErrors()) {
-      this.response = that.fatalErrors();
+      this.response = that.fatalResponse();
     } else {
       this.response = {
         translated: {
@@ -600,7 +604,7 @@ class TranslateStep implements TranslationStep {
           queryList: that.queryList,
           sqlBlocks: that.sqlBlocks,
         },
-        ...that.errors(),
+        ...that.problemResponse(),
         final: true,
       };
     }
@@ -667,20 +671,28 @@ export abstract class MalloyTranslation {
     return this.references.find(position);
   }
 
-  fatalErrors(): FatalResponse {
+  /**
+   * This returns a *final* response containing all problems, for when there are
+   * errors and the translation needs to stop and report errors. When doing so,
+   * it also reports warnings.
+   */
+  fatalResponse(): FatalResponse {
     return {
       final: true,
-      errors: [...this.root.logger.getLog()],
+      ...this.problemResponse(),
     };
   }
 
   /**
-   * The error log can grow as progressively deeper questions are asked.
-   * When returning "errors so far", make a snapshot.
+   * The problem log can grow as progressively deeper questions are asked.
+   * When returning "problems so far", make a snapshot.
    */
-  errors(): ErrorResponse {
-    const errors = this.root.logger.getLog();
-    return {errors: [...errors]};
+  problemResponse(): ProblemResponse {
+    return {problems: this.problems()};
+  }
+
+  problems(): LogMessage[] {
+    return [...this.root.logger.getLog()];
   }
 
   getLineMap(url: string): string[] | undefined {

@@ -101,6 +101,12 @@ export class ExprFunc extends ExpressionDef {
       this.log(`Cannot call '${this.name}', which is of type ${func.type}`);
       return errorFor('called non function');
     }
+    if (func.name !== this.name) {
+      this.log(
+        `Case insensitivity for function names is deprecated, use '${func.name}' instead`,
+        'warn'
+      );
+    }
     // Find the 'implicit argument' for aggregate functions called like `some_join.some_field.agg(...args)`
     // where the full arg list is `(some_field, ...args)`.
     let implicitExpr: ExprValue | undefined = undefined;

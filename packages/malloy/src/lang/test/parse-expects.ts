@@ -31,8 +31,11 @@ import {
   TestTranslator,
 } from './test-translator';
 import {inspect} from 'util';
+import {LogSeverity} from '../parse-log';
 
-type ErrorSpec = string | RegExp;
+type SimpleProblemSpec = string | RegExp;
+type ComplexProblemSpec = {severity: LogSeverity; message: SimpleProblemSpec};
+type ProblemSpec = SimpleProblemSpec | ComplexProblemSpec;
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {
@@ -58,6 +61,19 @@ declare global {
        * the markings.
        */
       toTranslate(): R;
+      /**
+       * expect(X).toTranslateWithWarnings(expectedWarnings)
+       *
+       * Passes if the source compiles to code which could be used to
+       * generate SQL, and the specified warnings appear. If X is a marked
+       * source, the warnings which are found must match the locations of
+       * the markings.
+       *
+       * X can be a MarkedSource, a string, or a model. If it is a marked
+       * source, the errors which are found must match the locations of
+       * the markings.
+       */
+      toTranslateWithWarnings(...expectedWarnings: SimpleProblemSpec[]): R;
       toReturnType(tp: string): R;
       /**
        * expect(X).translateToFailWith(expectedErrors)
@@ -69,19 +85,19 @@ declare global {
        * @param expectedErrors varargs list of strings which must match
        *        exactly, or regular expressions.
        */
-      translationToFailWith(...expectedErrors: ErrorSpec[]): R;
+      translationToFailWith(...expectedErrors: ProblemSpec[]): R;
       isLocationIn(at: DocumentLocation, txt: string): R;
     }
   }
 }
 
-function checkForErrors(trans: MalloyTranslator) {
+function ensureNoProblems(trans: MalloyTranslator) {
   if (trans.logger === undefined) {
     throw new Error('JESTERY BROKEN, CANT FIND ERORR LOG');
   }
-  if (trans.logger.hasErrors()) {
+  if (!trans.logger.empty()) {
     return {
-      message: () => `Translation Errors:\n${trans.prettyErrors()}`,
+      message: () => `Translation problems:\n${trans.prettyErrors()}`,
       pass: false,
     };
   }
@@ -147,6 +163,20 @@ function highlightError(dl: DocumentLocation, txt: string): string {
   return output.join('\n');
 }
 
+function normalizeProblemSpec(
+  defaultSeverity: LogSeverity
+): (spec: ProblemSpec) => ComplexProblemSpec {
+  return function (spec: ProblemSpec) {
+    if (typeof spec === 'string') {
+      return {severity: defaultSeverity, message: spec};
+    } else if (spec instanceof RegExp) {
+      return {severity: defaultSeverity, message: spec};
+    } else {
+      return spec;
+    }
+  };
+}
+
 type TestSource = string | MarkedSource | TestTranslator;
 
 function isMarkedSource(ts: TestSource): ts is MarkedSource {
@@ -164,7 +194,7 @@ function xlator(ts: TestSource) {
 }
 
 function xlated(tt: TestTranslator) {
-  const errorCheck = checkForErrors(tt);
+  const errorCheck = ensureNoProblems(tt);
   if (!errorCheck.pass) {
     return errorCheck;
   }
@@ -176,7 +206,7 @@ expect.extend({
   toParse: function (tx: TestSource) {
     const x = xlator(tx);
     x.compile();
-    return checkForErrors(x);
+    return ensureNoProblems(x);
   },
   toTranslate: function (tx: TestSource) {
     const x = xlator(tx);
@@ -197,77 +227,14 @@ expect.extend({
     } $[returnType`;
     return {pass, message: () => msg};
   },
-  translationToFailWith: function (s: TestSource, ...msgs: ErrorSpec[]) {
-    let emsg = 'Compile Error expectation not met\nExpected message';
-    const mSrc = isMarkedSource(s) ? s : undefined;
-    const qmsgs = msgs.map(s => `error '${s}'`);
-    if (msgs.length === 1) {
-      emsg += ` ${qmsgs[0]}`;
-    } else {
-      emsg += `s [\n${qmsgs.join('\n')}\n]`;
-    }
-    const m = xlator(s);
-    const src = m.testSrc;
-    emsg += `\nSource:\n${src}`;
-    m.compile();
-    const t = m.translate();
-    if (t.translated) {
-      return {pass: false, message: () => emsg};
-    } else if (t.errors === undefined) {
-      return {
-        pass: false,
-        message: () =>
-          'TEST ERROR, not all objects resolved in source\n' +
-          pretty(t) +
-          '\n' +
-          emsg,
-      };
-    } else {
-      const explain: string[] = [];
-      const errList = m.errors().errors;
-      let i;
-      for (i = 0; i < msgs.length && errList[i]; i += 1) {
-        const msg = msgs[i];
-        const err = errList[i];
-        const matched =
-          typeof msg === 'string'
-            ? msg === err.message
-            : err.message.match(msg);
-        if (!matched) {
-          explain.push(`Expected: ${msg}\nGot: ${err.message}`);
-        } else {
-          if (mSrc?.locations[i]) {
-            const have = err.at?.range;
-            const want = mSrc.locations[i].range;
-            if (!this.equals(have, want)) {
-              explain.push(
-                `Expected '${msg}' at location: ${inspect(want)}\n` +
-                  `Actual location: ${inspect(have)}`
-              );
-            }
-          }
-        }
-      }
-      if (i !== msgs.length) {
-        explain.push(...msgs.slice(i).map(m => `Missing: ${m}`));
-      }
-      if (i !== errList.length) {
-        explain.push(
-          ...errList.slice(i).map(m => `Unexpected Error: ${m.message}`)
-        );
-      }
-      if (explain.length === 0) {
-        return {
-          pass: true,
-          message: () => `All expected errors found: ${pretty(msgs)}`,
-        };
-      }
-      return {
-        pass: false,
-        message: () =>
-          `Compiler did not generated expected errors\n${explain.join('\n')}`,
-      };
-    }
+  translationToFailWith: function (s: TestSource, ...msgs: ProblemSpec[]) {
+    return checkForProblems(this, false, s, 'error', ...msgs);
+  },
+  toTranslateWithWarnings: function (
+    s: TestSource,
+    ...msgs: SimpleProblemSpec[]
+  ) {
+    return checkForProblems(this, true, s, 'warn', ...msgs);
   },
   isLocationIn: function (
     checkAt: DocumentLocation,
@@ -290,3 +257,89 @@ expect.extend({
     };
   },
 });
+
+function checkForProblems(
+  context: jest.MatcherContext,
+  expectCompiles: boolean,
+  s: TestSource,
+  defaultSeverity: LogSeverity,
+  ...msgs: ProblemSpec[]
+) {
+  let emsg = `Expected ${expectCompiles ? 'to' : 'to not'} compile with: `;
+  const mSrc = isMarkedSource(s) ? s : undefined;
+  const normalize = normalizeProblemSpec(defaultSeverity);
+  const normMsgs = msgs.map(normalize);
+  const qmsgs = normMsgs.map(s => `${s.severity} '${s.message}'`);
+  if (msgs.length === 1) {
+    emsg += ` ${qmsgs[0]}`;
+  } else {
+    emsg += `s [\n${qmsgs.join('\n')}\n]`;
+  }
+  const m = xlator(s);
+  const src = m.testSrc;
+  emsg += `\nSource:\n${src}`;
+  m.compile();
+  const t = m.translate();
+  if (t.translated && !expectCompiles) {
+    return {pass: false, message: () => emsg};
+  } else if (t.problems === undefined) {
+    return {
+      pass: false,
+      message: () =>
+        'TEST ERROR, not all objects resolved in source\n' +
+        pretty(t) +
+        '\n' +
+        emsg,
+    };
+  } else {
+    const explain: string[] = [];
+    const errList = m.problemResponse().problems;
+    let i;
+    for (i = 0; i < normMsgs.length && errList[i]; i += 1) {
+      const msg = normMsgs[i];
+      const err = errList[i];
+      const matched =
+        typeof msg.message === 'string'
+          ? msg.message === err.message
+          : err.message.match(msg.message);
+      if (err.severity !== msg.severity) {
+        explain.push(
+          `Expected ${msg.severity}, got ${err.severity} ${err.message}`
+        );
+      }
+      if (!matched) {
+        explain.push(`Expected: ${msg.message}\nGot: ${err.message}`);
+      } else {
+        if (mSrc?.locations[i]) {
+          const have = err.at?.range;
+          const want = mSrc.locations[i].range;
+          if (!context.equals(have, want)) {
+            explain.push(
+              `Expected '${msg.message}' at location: ${inspect(want)}\n` +
+                `Actual location: ${inspect(have)}`
+            );
+          }
+        }
+      }
+    }
+    if (i !== msgs.length) {
+      explain.push(...msgs.slice(i).map(m => `Missing: ${m}`));
+    }
+    if (i !== errList.length) {
+      explain.push(
+        ...errList.slice(i).map(m => `Unexpected Error: ${m.message}`)
+      );
+    }
+    if (explain.length === 0) {
+      return {
+        pass: true,
+        message: () => `All expected errors found: ${pretty(msgs)}`,
+      };
+    }
+    return {
+      pass: false,
+      message: () =>
+        `Compiler did not generated expected errors\n${explain.join('\n')}`,
+    };
+  }
+}

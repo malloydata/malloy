@@ -31,7 +31,7 @@ import {
   SQLBlockStructDef,
 } from '../../../model/malloy_types';
 
-import {MessageLogger} from '../../parse-log';
+import {LogSeverity, MessageLogger} from '../../parse-log';
 import {MalloyTranslation} from '../../parse-malloy';
 import {ModelDataRequest} from '../../translate-response';
 import {DocumentCompileResult} from './document-compile-result';
@@ -172,7 +172,7 @@ export abstract class MalloyElement {
   }
 
   private readonly logged = new Set<string>();
-  log(message: string): void {
+  log(message: string, severity: LogSeverity = 'error'): void {
     if (this.codeLocation) {
       /*
        * If this element has a location, then don't report the same
@@ -184,7 +184,7 @@ export abstract class MalloyElement {
       this.logged.add(message);
     }
     const trans = this.translator();
-    const msg = {at: this.location, message};
+    const msg = {at: this.location, message, severity};
     const logTo = trans?.root.logger;
     if (logTo) {
       logTo.log(msg);
