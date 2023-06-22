@@ -147,15 +147,15 @@ exploreProperties
   ;
 
 exploreStatement
-  : defDimensions                      # defExploreDimension
-  | defMeasures                        # defExploreMeasure
+  : defDimensions                      # defExploreDimension_stub
+  | defMeasures                        # defExploreMeasure_stub
   | declareStatement                   # defDeclare_stub
   | joinStatement                      # defJoin_stub
-  | whereStatement                     # defExploreWhere
+  | whereStatement                     # defExploreWhere_stub
   | PRIMARY_KEY fieldName              # defExplorePrimaryKey
   | RENAME renameList                  # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList    # defExploreEditField
-  | QUERY subQueryDefList              # defExploreQuery
+  | QUERY subQueryDefList              # defExploreQuery_stub
   | timezoneStatement                  # defExploreTimezone
   ;
 
