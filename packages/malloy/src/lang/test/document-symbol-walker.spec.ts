@@ -72,6 +72,25 @@ test('query symbols are included', () => {
   );
 });
 
+test('run (def) symbols are included', () => {
+  testSymbol(
+    markSource`run: ${'flights -> by_carrier'}`,
+    'unnamed_query',
+    'unnamed_query',
+    [0]
+  );
+});
+
+test('run (ref) symbols are included', () => {
+  testSymbol(
+    markSource`query: by_carrier is flights -> by_carrier
+    run: ${'by_carrier'}`,
+    'by_carrier',
+    'query',
+    [1]
+  );
+});
+
 test('expression field defs are included', () => {
   testSymbol(
     markSource`

@@ -81,9 +81,31 @@ describe('model statements', () => {
     });
   });
   describe('query:', () => {
+    // Delete this when ENABLE_M4_WARNINGS is converted to an annotation
     test('anonymous query', () => {
-      expect("query: table('aTable') -> { group_by: astr }").toTranslate();
+      expect(
+        markSource`query: ${"table('aTable') -> { group_by: astr }"}`
+      ).toTranslate();
     });
+    // Unskip this when ENABLE_M4_WARNINGS is converted to an annotation
+    test.skip('anonymous query', () => {
+      expect(
+        markSource`query: ${"table('aTable') -> { group_by: astr }"}`
+      ).toTranslateWithWarnings(
+        'Anonymous `query:` statements are deprecated, use `run:` instead'
+      );
+    });
+    test('run query', () =>
+      expect("run: table('aTable') -> { group_by: astr }").toTranslate());
+    test('run query ref', () =>
+      expect(`
+        query: foo is table('aTable') -> { group_by: astr }
+        run: foo
+      `).toTranslate());
+    test('query', () =>
+      expect(
+        "query: name is table('aTable') -> { group_by: astr }"
+      ).toTranslate());
     test('query', () => {
       expect(
         "query: name is table('aTable') -> { group_by: astr }"
