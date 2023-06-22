@@ -28,7 +28,7 @@ import {
   TypeDesc,
   Expr,
   FunctionParamTypeDesc,
-} from '../..';
+} from '../../model/malloy_types';
 
 export interface DialectFunctionOverloadDef {
   // The expression type here is the MINIMUM return type
