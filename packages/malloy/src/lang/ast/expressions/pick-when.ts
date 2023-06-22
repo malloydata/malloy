@@ -43,7 +43,11 @@ interface Choice {
 }
 
 function typeCoalesce(ev1: ExprValue | undefined, ev2: ExprValue): ExprValue {
-  return ev1 === undefined || ev1.dataType === 'null' ? ev2 : ev1;
+  return ev1 === undefined ||
+    ev1.dataType === 'null' ||
+    ev1.dataType === 'error'
+    ? ev2
+    : ev1;
 }
 
 export class Pick extends ExpressionDef {

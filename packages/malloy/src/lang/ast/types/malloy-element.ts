@@ -333,14 +333,6 @@ export class RunList extends ListOf<DocStatement> {
   execCursor = 0;
   executeList(doc: Document): ModelDataRequest {
     while (this.execCursor < this.elements.length) {
-      if (doc.errorsExist()) {
-        // TODO make a better way to stop cascading errors -- this way means that if there are
-        // actual different errors in multiple places, we only see the first one. A better way
-        // might be to make things that have error pass all kinds of typechecks, which prevents
-        // the real cascade.
-        // This stops cascading errors
-        return;
-      }
       const el = this.elements[this.execCursor];
       if (isDocStatement(el)) {
         const resp = el.execute(doc);

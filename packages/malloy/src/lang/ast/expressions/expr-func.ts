@@ -96,20 +96,16 @@ export class ExprFunc extends ExpressionDef {
       this.log(
         `Unknown function '${this.name}'. Use '${this.name}!(...)' to call a SQL function directly.`
       );
-      return {
-        dataType: 'unknown',
-        expressionType: 'scalar',
-        value: [],
-        evalSpace: 'constant',
-      };
+      return errorFor('unknown function');
     } else if (func.type !== 'function') {
       this.log(`Cannot call '${this.name}', which is of type ${func.type}`);
-      return {
-        dataType: 'unknown',
-        expressionType: 'scalar',
-        value: [],
-        evalSpace: 'constant',
-      };
+      return errorFor('called non function');
+    }
+    if (func.name !== this.name) {
+      this.log(
+        `Case insensitivity for function names is deprecated, use '${func.name}' instead`,
+        'warn'
+      );
     }
     if (func.name !== this.name) {
       this.log(
@@ -158,12 +154,7 @@ export class ExprFunc extends ExpressionDef {
           .map(e => e.dataType)
           .join(', ')})`
       );
-      return {
-        dataType: 'unknown',
-        expressionType: 'scalar',
-        value: [],
-        evalSpace: 'constant',
-      };
+      return errorFor('no matching overload');
     }
     const {overload, expressionTypeErrors, evalSpaceErrors, nullabilityErrors} =
       result;
@@ -220,12 +211,7 @@ export class ExprFunc extends ExpressionDef {
           .map(e => e.dataType)
           .join(', ')}) with source`
       );
-      return {
-        dataType: 'unknown',
-        expressionType,
-        value: [],
-        evalSpace: 'constant',
-      };
+      return errorFor('cannot call with source');
     }
     const funcCall: Expr = [
       {
@@ -240,12 +226,7 @@ export class ExprFunc extends ExpressionDef {
       this.log(
         `Invalid return type ${type.dataType} for function '${this.name}'`
       );
-      return {
-        dataType: 'unknown',
-        expressionType,
-        value: [],
-        evalSpace: 'constant',
-      };
+      return errorFor('invalid return type');
     }
     const maxEvalSpace = mergeEvalSpaces(...argExprs.map(e => e.evalSpace));
     // If the merged eval space of all args is constant, the result is constant.
@@ -322,10 +303,7 @@ function findOverload(
           // does not make sense to limit function calls to not allow nulls, since have
           // so little control over nullability.
           arg.dataType === 'null' ||
-          // TODO I've included this because it means that errors cascade a bit less...
-          // I think we may want to add an `error` type for nodes generated from errors,
-          // then make `error` propagate without generating more errors.
-          arg.dataType === 'unknown';
+          arg.dataType === 'error';
         // Check expression type errors
         if (paramT.expressionType) {
           const expressionTypeMatch = isExpressionTypeLEQ(
