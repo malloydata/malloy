@@ -59,9 +59,18 @@ describe('model statements', () => {
       expect("source: testA is bad_conn.table('aTable')").not.toTranslate();
     });
     test('table method fails when connection is not a connection', () => {
-      expect(
-        "source: a1 is a; source: testA is a1.table('aTable')"
-      ).translationToFailWith('a is not a connection');
+      const m = model`source: a1 is a; source: testA is a1.table('aTable')`;
+      // This is a somewhat weird behavior from the translator. During the
+      // first phase of translation, we fetch "external references" (tables and
+      // imports). At that point we don't know that there will be an error
+      // "a1 is not a connection," so we attempt to fetch `aTable` from connection
+      // `a1` even though a1 is not a connection. The response from the application
+      // is basically ignored in the end, as we still eventually get the error
+      // that a1 is not a connection (it's a source).
+      m.translator.update({
+        errors: {tables: {'a1:aTable': 'invalid connection'}},
+      });
+      expect(m).translationToFailWith('a1 is not a connection');
     });
     // TODO unskip this when ENABLE_M4_WARNINGS becomes a document annotation
     test.skip('table function is deprecated', () => {
