@@ -40,14 +40,52 @@ declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jest {
     interface Matchers<R> {
-      modelParsed(): R;
-      toBeErrorless(): R;
-      toCompile(): R;
-      modelCompiled(): R;
-      modelCompiledWithWarnings(...expectedWarnings: SimpleProblemSpec[]): R;
-      expressionCompiled(): R;
+      /**
+       * expect(X).toParse()
+       *
+       * Passes if the source parses to an AST without errors.
+       *
+       * X can be a MarkedSource, a string, or a model. If it is a marked
+       * source, the errors which are found must match the locations of
+       * the markings.
+       */
+      toParse(): R;
+      /**
+       * expect(X).toTranslate()
+       *
+       * Passes if the source compiles to code which could be used to
+       * generate SQL.
+       *
+       * X can be a MarkedSource, a string, or a model. If it is a marked
+       * source, the errors which are found must match the locations of
+       * the markings.
+       */
+      toTranslate(): R;
+      /**
+       * expect(X).toTranslateWithWarnings(expectedWarnings)
+       *
+       * Passes if the source compiles to code which could be used to
+       * generate SQL, and the specified warnings appear. If X is a marked
+       * source, the warnings which are found must match the locations of
+       * the markings.
+       *
+       * X can be a MarkedSource, a string, or a model. If it is a marked
+       * source, the errors which are found must match the locations of
+       * the markings.
+       */
+      toTranslateWithWarnings(...expectedWarnings: SimpleProblemSpec[]): R;
       toReturnType(tp: string): R;
-      compileToFailWith(...expectedErrors: ProblemSpec[]): R;
+      /**
+       * expect(X).translateToFailWith(expectedErrors)
+       *
+       * X can be a MarkedSource, a string, or a model. If it is a marked
+       * source, the errors which are found must match the locations of
+       * the markings.
+       *
+       * @param expectedErrors varargs list of strings which must match
+       *        exactly, or regular expressions.
+       */
+      translationToFailWith(...expectedErrors: ProblemSpec[]): R;
       isLocationIn(at: DocumentLocation, txt: string): R;
     }
   }
@@ -139,66 +177,61 @@ function normalizeProblemSpec(
   };
 }
 
+type TestSource = string | MarkedSource | TestTranslator;
+
+function isMarkedSource(ts: TestSource): ts is MarkedSource {
+  return typeof ts !== 'string' && !(ts instanceof TestTranslator);
+}
+
+function xlator(ts: TestSource) {
+  if (ts instanceof TestTranslator) {
+    return ts;
+  }
+  if (typeof ts === 'string') {
+    return new TestTranslator(ts);
+  }
+  return ts.translator || new TestTranslator(ts.code);
+}
+
+function xlated(tt: TestTranslator) {
+  const errorCheck = ensureNoProblems(tt);
+  if (!errorCheck.pass) {
+    return errorCheck;
+  }
+  tt.translate();
+  return checkForNeededs(tt);
+}
+
 expect.extend({
-  toCompile: function (s: string) {
-    const x = new TestTranslator(s);
-    x.compile();
-    const errorCheck = ensureNoProblems(x);
-    if (!errorCheck.pass) {
-      return errorCheck;
-    }
-    x.translate();
-    return checkForNeededs(x);
-  },
-  modelParsed: function (x: TestTranslator) {
+  toParse: function (tx: TestSource) {
+    const x = xlator(tx);
     x.compile();
     return ensureNoProblems(x);
   },
-  modelCompiled: function (x: TestTranslator) {
+  toTranslate: function (tx: TestSource) {
+    const x = xlator(tx);
     x.compile();
-    const errorCheck = ensureNoProblems(x);
-    if (!errorCheck.pass) {
-      return errorCheck;
+    return xlated(x);
+  },
+  toReturnType: function (exprText: string, returnType: string) {
+    const exprModel = new BetaExpression(exprText);
+    exprModel.compile();
+    const ok = xlated(exprModel);
+    if (!ok.pass) {
+      return ok;
     }
-    x.translate();
-    return checkForNeededs(x);
+    const d = exprModel.generated();
+    const pass = d.dataType === returnType;
+    const msg = `Expression type ${d.dataType} ${
+      pass ? '=' : '!='
+    } $[returnType`;
+    return {pass, message: () => msg};
   },
-  expressionCompiled: function (src: string) {
-    const x = new BetaExpression(src);
-    x.compile();
-    const errorCheck = ensureNoProblems(x);
-    if (!errorCheck.pass) {
-      return errorCheck;
-    }
-    return checkForNeededs(x);
-  },
-  toBeErrorless: function (trans: MalloyTranslator) {
-    return ensureNoProblems(trans);
-  },
-  toReturnType: function (functionCall: string, returnType: string) {
-    const exprModel = new TestTranslator(
-      `source: x is a { dimension: d is ${functionCall} }`
-    );
-    expect(exprModel).modelCompiled();
-    const x = exprModel.getSourceDef('x');
-    expect(x).toBeDefined();
-    if (x) {
-      const d = x.fields.find(f => f.name === 'd');
-      expect(d?.type).toBe(returnType);
-    }
-    return {
-      pass: true,
-      message: () => '',
-    };
-  },
-  compileToFailWith: function (
-    s: MarkedSource | string | TestTranslator,
-    ...msgs: ProblemSpec[]
-  ) {
+  translationToFailWith: function (s: TestSource, ...msgs: ProblemSpec[]) {
     return checkForProblems(this, false, s, 'error', ...msgs);
   },
-  modelCompiledWithWarnings: function (
-    s: MarkedSource | string | TestTranslator,
+  toTranslateWithWarnings: function (
+    s: TestSource,
     ...msgs: SimpleProblemSpec[]
   ) {
     return checkForProblems(this, true, s, 'warn', ...msgs);
@@ -228,12 +261,12 @@ expect.extend({
 function checkForProblems(
   context: jest.MatcherContext,
   expectCompiles: boolean,
-  s: MarkedSource | string | TestTranslator,
+  s: TestSource,
   defaultSeverity: LogSeverity,
   ...msgs: ProblemSpec[]
 ) {
   let emsg = `Expected ${expectCompiles ? 'to' : 'to not'} compile with: `;
-  let mSrc: MarkedSource | undefined;
+  const mSrc = isMarkedSource(s) ? s : undefined;
   const normalize = normalizeProblemSpec(defaultSeverity);
   const normMsgs = msgs.map(normalize);
   const qmsgs = normMsgs.map(s => `${s.severity} '${s.message}'`);
@@ -242,20 +275,8 @@ function checkForProblems(
   } else {
     emsg += `s [\n${qmsgs.join('\n')}\n]`;
   }
-  let m: TestTranslator;
-  let src: string;
-  if (s instanceof TestTranslator) {
-    m = s;
-    src = m.testSrc;
-  } else {
-    if (typeof s === 'string') {
-      src = s;
-    } else {
-      src = s.code;
-      mSrc = s;
-    }
-    m = new TestTranslator(src);
-  }
+  const m = xlator(s);
+  const src = m.testSrc;
   emsg += `\nSource:\n${src}`;
   m.compile();
   const t = m.translate();
