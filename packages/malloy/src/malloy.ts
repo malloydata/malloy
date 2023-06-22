@@ -1495,6 +1495,7 @@ export enum AtomicFieldType {
   Timestamp = 'timestamp',
   Json = 'json',
   Unsupported = 'unsupported',
+  Error = 'error',
 }
 
 export class AtomicField extends Entity {
@@ -1527,6 +1528,8 @@ export class AtomicField extends Entity {
         return AtomicFieldType.Json;
       case 'unsupported':
         return AtomicFieldType.Unsupported;
+      case 'error':
+        return AtomicFieldType.Error;
     }
   }
 

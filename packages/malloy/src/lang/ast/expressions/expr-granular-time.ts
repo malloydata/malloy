@@ -22,6 +22,7 @@
  */
 
 import {
+  isDateUnit,
   isTimeFieldType,
   mkExpr,
   TimestampUnit,
@@ -81,8 +82,21 @@ export class ExprGranularTime extends ExpressionDef {
       }
       return tsVal;
     }
-    this.log(`Cannot do time truncation on type '${exprVal.dataType}'`);
-    return errorFor('granularity typecheck');
+    if (exprVal.dataType !== 'error') {
+      this.log(`Cannot do time truncation on type '${exprVal.dataType}'`);
+    }
+    const returnType =
+      exprVal.dataType === 'error'
+        ? isDateUnit(timeframe)
+          ? 'date'
+          : 'timestamp'
+        : exprVal.dataType;
+    return {
+      ...exprVal,
+      dataType: returnType,
+      value: errorFor('granularity typecheck').value,
+      evalSpace: 'constant',
+    };
   }
 
   apply(fs: FieldSpace, op: string, left: ExpressionDef): ExprValue {

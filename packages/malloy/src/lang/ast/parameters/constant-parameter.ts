@@ -38,7 +38,7 @@ export class ConstantParameter extends HasParameter {
       this.log(`Unexpected expression type '${cVal.dataType}'`);
       return {
         value: ['XXX-type-mismatch-error-XXX'],
-        type: 'string',
+        type: 'error',
         name: this.name,
         constant: true,
       };
