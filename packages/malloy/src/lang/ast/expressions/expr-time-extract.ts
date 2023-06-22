@@ -74,6 +74,19 @@ export class ExprTimeExtract extends ExpressionDef {
       if (from instanceof Range) {
         let first = from.first.getExpression(fs);
         let last = from.last.getExpression(fs);
+        const expressionType = maxExpressionType(
+          first.expressionType,
+          last.expressionType
+        );
+        const evalSpace = mergeEvalSpaces(first.evalSpace, last.evalSpace);
+        if (first.dataType === 'error' || last.dataType === 'error') {
+          return {
+            dataType: 'number',
+            expressionType,
+            evalSpace,
+            value: errorFor('extract from error').value,
+          };
+        }
         if (!isTimeFieldType(first.dataType)) {
           from.first.log(`Can't extract ${extractTo} from '${first.dataType}'`);
           return errorFor(`${extractTo} bad type ${first.dataType}`);
@@ -116,11 +129,8 @@ export class ExprTimeExtract extends ExpressionDef {
         }
         return {
           dataType: 'number',
-          expressionType: maxExpressionType(
-            first.expressionType,
-            last.expressionType
-          ),
-          evalSpace: mergeEvalSpaces(first.evalSpace, last.evalSpace),
+          expressionType,
+          evalSpace,
           value: [
             {
               type: 'dialect',
@@ -148,10 +158,18 @@ export class ExprTimeExtract extends ExpressionDef {
             ],
           };
         }
-        this.log(
-          `${this.extractText}() requires time type, not '${argV.dataType}'`
-        );
-        return errorFor(`${this.extractText} bad type ${argV.dataType}`);
+        if (argV.dataType !== 'error') {
+          this.log(
+            `${this.extractText}() requires time type, not '${argV.dataType}'`
+          );
+        }
+        return {
+          dataType: 'number',
+          expressionType: argV.expressionType,
+          evalSpace: argV.evalSpace,
+          value: errorFor(`${this.extractText} bad type ${argV.dataType}`)
+            .value,
+        };
       }
     }
     throw this.internalError(`Illegal extraction unit '${this.extractText}'`);
