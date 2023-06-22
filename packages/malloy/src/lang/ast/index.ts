@@ -76,6 +76,7 @@ export * from './elements/import-statement';
 export * from './query-properties/nest-reference';
 export * from './parameters/has-parameter';
 export * from './query-elements/anonymous-query';
+export * from './query-elements/run-query';
 export * from './query-elements/existing-query';
 export * from './query-elements/full-query';
 export * from './query-items/field-declaration';

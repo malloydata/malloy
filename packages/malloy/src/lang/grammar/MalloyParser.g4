@@ -31,6 +31,7 @@ malloyStatement
   | defineSQLStatement
   | defineQuery
   | importStatement
+  | runStatement
   ;
 
 defineSourceStatement
@@ -44,6 +45,11 @@ defineQuery
 
 topLevelAnonQueryDef
   : query
+  ;
+
+runStatement
+  : RUN topLevelAnonQueryDef     # runStatementDef
+  | RUN queryName                # runStatementRef
   ;
 
 defineSQLStatement
@@ -332,7 +338,11 @@ sampleStatement
   ;
 
 timezoneStatement
-  : TIMEZONE STRING_LITERAL
+  : TIMEZONE timezoneName
+  ;
+
+timezoneName
+  : STRING_LITERAL
   ;
 
 sampleSpec
