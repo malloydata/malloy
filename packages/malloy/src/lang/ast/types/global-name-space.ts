@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {getDialectFunction} from '../../../dialect';
+import {getDialectFunction} from '../../../dialect/dialect_map';
 import {ModelEntry} from './model-entry';
 import {NameSpace} from './name-space';
 
