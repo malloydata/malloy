@@ -3399,6 +3399,7 @@ class QueryQuery extends QueryField {
       // console.log(stageWriter.generateSQLStages());
       structDef = pipeOut.outputStruct;
     }
+    structDef.annotation = fi.turtleDef.annotation;
     return {
       structDef,
       pipeOut,
@@ -4248,6 +4249,7 @@ class QueryStruct extends QueryNode {
   flattenTurtleDef(turtleDef: TurtleDef | TurtleDefPlus): TurtleDef {
     let pipeline = turtleDef.pipeline;
     let pipeHead = turtleDef.pipeHead;
+    const annotation = turtleDef.annotation;
     while (pipeHead) {
       const field = this.getFieldByName(pipeHead.name);
       if (field instanceof QueryQuery) {
@@ -4271,6 +4273,7 @@ class QueryStruct extends QueryNode {
       type: 'turtle',
       name: turtleDef.name,
       pipeline,
+      annotation,
       location: turtleDef.location,
     };
     return flatTurtleDef;

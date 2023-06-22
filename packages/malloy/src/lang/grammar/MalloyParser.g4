@@ -302,8 +302,8 @@ nestedQueryList
   ;
 
 nestEntry
-  : queryName (refineOperator? queryProperties)?   # nestExisting
-  | tags queryName isDefine pipelineFromName       # nestDef
+  : tags queryName (refineOperator? queryProperties)?   # nestExisting
+  | tags queryName isDefine pipelineFromName            # nestDef
   ;
 
 aggregateStatement

@@ -262,7 +262,9 @@ export abstract class QuerySpace extends RefinedSpace {
 
   addQueryItems(...qiList: QueryItem[]): void {
     for (const qi of qiList) {
-      if (qi instanceof FieldReference || qi instanceof NestReference) {
+      if (qi instanceof NestReference) {
+        this.addReference(qi);
+      } else if (qi instanceof FieldReference) {
         this.addReference(qi);
       } else if (qi instanceof FieldDeclaration) {
         this.addField(qi);

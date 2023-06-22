@@ -29,6 +29,7 @@ import {FieldSpace} from '../types/field-space';
 export class QueryFieldStruct extends QueryField {
   constructor(fs: FieldSpace, protected turtleDef: TurtleDef) {
     super(fs);
+    this.haveFieldDef = turtleDef;
   }
 
   rename(name: string): void {

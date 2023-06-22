@@ -924,13 +924,17 @@ export class MalloyToAST
   visitNestExisting(pcx: parse.NestExistingContext): ast.NestedQuery {
     const name = this.getFieldName(pcx.queryName());
     const propsCx = pcx.queryProperties();
+    const notes = getNotes(pcx.tags());
     if (propsCx) {
       const nestRefine = new ast.NestRefinement(name);
       const queryDesc = this.visitQueryProperties(propsCx);
       nestRefine.refineHead(queryDesc);
+      nestRefine.extendNote({notes});
       return this.astAt(nestRefine, pcx);
     }
-    return this.astAt(new ast.NestReference(name), pcx);
+    const nestRef = this.astAt(new ast.NestReference(name), pcx);
+    nestRef.extendNote({notes});
+    return nestRef;
   }
 
   visitNestDef(pcx: parse.NestDefContext): ast.NestDefinition {

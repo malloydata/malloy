@@ -1867,7 +1867,7 @@ export class ExploreField extends Explore implements Taggable {
   }
 
   getTags(): Tags {
-    return new Tags(undefined);
+    return new Tags(this._structDef.annotation);
   }
 
   public isQueryField(): this is QueryField {

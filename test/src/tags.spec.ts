@@ -132,6 +132,7 @@ describe('tags in results', () => {
     const result = await loaded.run();
     expect(result.getTags().getTagList()).toEqual(wantTags);
   });
+  const wantTags = ['# <Q\n', '# >Q\n', '# >name\n', '# >is\n'];
   test('named query', async () => {
     const loaded = runtime.loadQuery(
       `
@@ -152,17 +153,23 @@ describe('tags in results', () => {
     const result = await loaded.run();
     expect(result.getTags().getTagList()).toEqual(wantTags);
   });
-  test.skip('turtle query', async () => {
+  test('turtle query', async () => {
     const loaded = runtime.loadQuery(
       `
         sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
-        # ZZZZZZ
-        query: # afterQuery
-          from_sql(one) -> { project: * }`
+        query: from_sql(one) + {
+          # <Q
+          query: # >Q
+            in_one
+            # >name
+            is
+            # >is
+            { project: one }
+          }
+        -> in_one`
     );
     const query = await loaded.getPreparedQuery();
     expect(query).toBeDefined();
-    const wantTags = ['# b4query\n', '# afterQuery\n'];
     expect(query.getTags().getTagList()).toEqual(wantTags);
     const result = await loaded.run();
     expect(result.getTags().getTagList()).toEqual(wantTags);
@@ -183,7 +190,7 @@ describe('tags in results', () => {
     expect(one).toBeDefined();
     expect(one.getTags().getTagList()).toEqual(['# note1\n']);
   });
-  test.skip('turtle field has tag', async () => {
+  test('nested query has tag', async () => {
     const loaded = runtime.loadQuery(
       `
         sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
@@ -194,7 +201,9 @@ describe('tags in results', () => {
           query: one_and_one is {
             group_by: one
             # note1
-            nest: in_one
+            nest:
+              # note2
+              in_one
           }
         }
         query: malloy_one -> one_and_one`
@@ -203,6 +212,6 @@ describe('tags in results', () => {
     const shape = result.resultExplore;
     const one = shape.getFieldByName('in_one');
     expect(one).toBeDefined();
-    expect(one.getTags().getTagList()).toEqual(['# note1\n']);
+    expect(one.getTags().getTagList()).toEqual(['# note1\n', '# note2\n']);
   });
 });
