@@ -25,8 +25,5 @@ import {DefinitionList} from '../types/definition-list';
 import {FieldCollectionMember} from '../types/field-collection-member';
 
 export class ProjectStatement extends DefinitionList<FieldCollectionMember> {
-  elementType = 'projectFields';
-  constructor(members: FieldCollectionMember[]) {
-    super(members);
-  }
+  elementType = 'projectStatement';
 }

@@ -26,7 +26,4 @@ import {DefinitionList} from '../types/definition-list';
 
 export class Turtles extends DefinitionList<TurtleDecl> {
   elementType = 'turtleDefList';
-  constructor(turtles: TurtleDecl[]) {
-    super(turtles);
-  }
 }

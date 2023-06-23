@@ -26,7 +26,4 @@ import {ListOf} from './malloy-element';
 
 export class SourceDesc extends ListOf<SourceProperty> {
   elementType = 'sourceDescription';
-  constructor(props: SourceProperty[]) {
-    super(props);
-  }
 }

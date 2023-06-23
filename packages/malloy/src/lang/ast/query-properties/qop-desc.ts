@@ -46,9 +46,6 @@ export class QOPDesc extends ListOf<QueryProperty> {
   elementType = 'queryOperation';
   opType: QOPType = 'grouping';
   private refineThis?: PipeSegment;
-  constructor(props: QueryProperty[]) {
-    super(props);
-  }
 
   protected computeType(): QOPType {
     let firstGuess: QOPType | undefined;
