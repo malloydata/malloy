@@ -426,7 +426,8 @@ fieldExpr
   | literal                                                # exprLiteral
   | fieldExpr timeframe                                    # exprDuration
   | fieldExpr DOT timeframe                                # exprTimeTrunc
-  | fieldExpr DOUBLECOLON malloyType                       # exprSafeCast
+  | fieldExpr DOUBLECOLON malloyType                       # exprCast
+  | fieldExpr TRIPLECOLON malloyType                       # exprSafeCast
   | MINUS fieldExpr                                        # exprMinus
   | fieldExpr ( STAR | SLASH | PERCENT ) fieldExpr         # exprMulDiv
   | fieldExpr ( PLUS | MINUS ) fieldExpr                   # exprAddSub

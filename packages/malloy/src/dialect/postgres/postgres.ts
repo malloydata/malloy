@@ -81,6 +81,7 @@ export class PostgresDialect extends Dialect {
   supportUnnestArrayAgg = true;
   supportsAggDistinct = true;
   supportsCTEinCoorelatedSubQueries = true;
+  supportsSafeCast = false;
   dontUnionIndex = false;
   supportsQualify = false;
   globalFunctions = POSTGRES_FUNCTIONS;
@@ -346,8 +347,13 @@ export class PostgresDialect extends Dialect {
     } else if (op === 'date::timestamp' && tz) {
       return mkExpr`CAST((${cast.expr})::TIMESTAMP AT TIME ZONE '${tz}' AS TIMESTAMP)`;
     }
-    if (cast.dstType !== cast.srcType) {
-      return mkExpr`CAST(${cast.expr} AS ${castTo})`;
+    if (cast.srcType !== cast.dstType) {
+      const dstType = castMap[cast.dstType] || cast.dstType;
+      if (cast.safe) {
+        throw new Error("Postgres dialect doesn't support Safe Cast");
+      }
+      const castFunc = 'CAST';
+      return mkExpr`${castFunc}(${cast.expr}  AS ${dstType})`;
     }
     return cast.expr;
   }
