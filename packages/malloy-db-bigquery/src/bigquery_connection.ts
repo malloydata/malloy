@@ -336,6 +336,14 @@ export class BigQueryConnection
     };
   }
 
+  private normalizeTablePath(tablePath: string): string {
+    if (tablePath.split('.').length === 2) {
+      return `${this.defaultProject}.${tablePath}`;
+    } else {
+      return tablePath;
+    }
+  }
+
   public async getTableFieldSchema(tablePath: string): Promise<SchemaInfo> {
     const segments = tablePath.split('.');
 
@@ -620,7 +628,7 @@ export class BigQueryConnection
     for (const tableKey in missing) {
       let inCache = this.schemaCache.get(tableKey);
       if (!inCache) {
-        const tablePath = missing[tableKey];
+        const tablePath = this.normalizeTablePath(missing[tableKey]);
         try {
           const tableFieldSchema = await this.getTableFieldSchema(tablePath);
           inCache = {
