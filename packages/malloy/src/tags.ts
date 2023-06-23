@@ -145,6 +145,7 @@ function parseTag(
 
 function tokenize(src: string): string[] {
   const parts: string[] = [];
+  src = src.trim();
   while (src) {
     const skipSpace = src.match(/^\s*(.+$)/);
     if (skipSpace === null) {

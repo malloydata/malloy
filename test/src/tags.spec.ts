@@ -214,4 +214,37 @@ describe('tags in results', () => {
     expect(one).toBeDefined();
     expect(one.getTags().getTagList()).toEqual(['# note1\n', '# note2\n']);
   });
+  test('render usage test case', async () => {
+    const loaded = runtime.loadQuery(
+      `
+      sql: one22 is { connection: "duckdb" select: """SELECT 1""" }
+      source: ages is from_sql(one22) + {
+        dimension: name is 'John'
+        query: height
+        # barchart
+         is {
+          project: heightd is 10
+         }
+
+        query: age
+        # barchart
+         is {
+          project: aged is 20
+         }
+
+      }
+      query: ages -> {
+         group_by: name
+         nest: height
+         nest: age
+      }
+      `
+    );
+    const result = await loaded.run();
+    const shape = result.resultExplore;
+    const ht = shape.getFieldByName('height').getTags().getMalloyTags();
+    const at = shape.getFieldByName('age').getTags().getMalloyTags();
+    expect(ht).toMatchObject({properties: {barchart: true}});
+    expect(at).toMatchObject({properties: {barchart: true}});
+  });
 });
