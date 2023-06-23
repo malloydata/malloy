@@ -350,7 +350,7 @@ export class PostgresDialect extends Dialect {
     if (cast.srcType !== cast.dstType) {
       const dstType = castMap[cast.dstType] || cast.dstType;
       if (cast.safe) {
-        throw new Error("Internal Error, dialect doesn't support Safe Cast");
+        throw new Error("Postgres dialect doesn't support Safe Cast");
       }
       const castFunc = 'CAST';
       return mkExpr`${castFunc}(${cast.expr}  AS ${dstType})`;
