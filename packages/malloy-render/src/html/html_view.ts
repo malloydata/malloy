@@ -200,10 +200,10 @@ export function makeRenderer(
   options: RendererOptions,
   styleDefaults: StyleDefaults,
   queryTimezone: string | undefined,
-  tagProperties: Record<string, string | boolean>
+  tagProperties?: Record<string, string | boolean>
 ): Renderer {
   const renderDef =
-    getRendererOptions(field, options.dataStyles, tagProperties) || {};
+    getRendererOptions(field, options.dataStyles, tagProperties ?? {}) || {};
   options.dataStyles[field.name] = renderDef;
 
   if (renderDef.renderer === 'shape_map') {
