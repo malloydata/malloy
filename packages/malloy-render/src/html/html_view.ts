@@ -21,7 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicFieldType, DataArray, Explore, Field} from '@malloydata/malloy';
+import {
+  AtomicFieldType,
+  DataArray,
+  Explore,
+  Field,
+  Result,
+  Tags,
+} from '@malloydata/malloy';
 import {TopLevelSpec} from 'vega-lite';
 import {DataStyles, RenderDef, StyleDefaults} from '../data_styles';
 import {ChildRenderers, Renderer} from '../renderer';
@@ -58,10 +65,8 @@ import {HTMLAreaSparkLineRenderer} from './area_sparkline';
 export class HTMLView {
   constructor(private document: Document) {}
 
-  async render(
-    table: DataArray,
-    options: RendererOptions
-  ): Promise<HTMLElement> {
+  async render(result: Result, options: RendererOptions): Promise<HTMLElement> {
+    const table = result.data;
     const renderer = makeRenderer(
       table.field,
       this.document,
@@ -69,7 +74,8 @@ export class HTMLView {
       {
         size: 'large',
       },
-      table.field.structDef.queryTimezone
+      table.field.structDef.queryTimezone,
+      result.getTags()
     );
     try {
       // TODO Implement row streaming capability for some renderers: some renderers should be usable
@@ -113,25 +119,30 @@ export class JSONView {
 }
 
 const suffixMap: Record<string, RenderDef['renderer']> = {
-  '_shape_map': 'shape_map',
-  '_point_map': 'point_map',
-  '_bar_chart': 'bar_chart',
-  '_image': 'image',
-  '_json': 'json',
-  '_segment_map': 'segment_map',
-  '_dashboard': 'dashboard',
-  '_line_chart': 'line_chart',
-  '_scatter_chart': 'scatter_chart',
-  '_url': 'link',
-  '_list': 'list',
-  '_list_detail': 'list_detail',
-  '_sparkline': 'sparkline',
-  '_sparkline_area': 'sparkline',
-  '_sparkline_column': 'sparkline',
-  '_sparkline_bar': 'sparkline',
+  'shape_map': 'shape_map',
+  'point_map': 'point_map',
+  'bar_chart': 'bar_chart',
+  'image': 'image',
+  'json': 'json',
+  'segment_map': 'segment_map',
+  'dashboard': 'dashboard',
+  'line_chart': 'line_chart',
+  'scatter_chart': 'scatter_chart',
+  'url': 'link',
+  'list': 'list',
+  'list_detail': 'list_detail',
+  'sparkline': 'sparkline',
+  'sparkline_area': 'sparkline',
+  'sparkline_column': 'sparkline',
+  'sparkline_bar': 'sparkline',
 };
 
-function getRendererOptions(field: Field | Explore, dataStyles: DataStyles) {
+function getRendererOptions(
+  field: Field | Explore,
+  dataStyles: DataStyles,
+  tags?: Tags
+) {
+  const tagProperties = tags?.getMalloyTags().properties ?? {};
   let renderer = dataStyles[field.name];
   if (!renderer) {
     for (const sourceClass of field.sourceClasses) {
@@ -141,25 +152,35 @@ function getRendererOptions(field: Field | Explore, dataStyles: DataStyles) {
     }
   }
 
+  const {name} = field;
   for (const suffix in suffixMap) {
-    const {name} = field;
-    if (name.endsWith(suffix)) {
-      const label = name.slice(0, name.length - suffix.length);
-      if (renderer) {
-        renderer.renderer ??= suffixMap[suffix];
-        renderer.data ??= {};
-        renderer.data.label ??= label;
-      } else {
-        renderer = {
-          renderer: suffixMap[suffix],
-          data: {
-            label,
-          },
-        };
-      }
-
-      break;
+    if (tagProperties[suffix] === true) {
+      return updateOrCreateRenderer(suffix, name, renderer);
     }
+
+    if (name.endsWith(`_${suffix}`)) {
+      const label = name.slice(0, name.length - suffix.length - 1);
+      return updateOrCreateRenderer(suffix, label, renderer);
+    }
+  }
+}
+
+function updateOrCreateRenderer(
+  rendererKey: string,
+  label: string,
+  renderer?: RenderDef
+) {
+  if (renderer) {
+    renderer.renderer ??= suffixMap[rendererKey];
+    renderer.data ??= {};
+    renderer.data.label ??= label;
+  } else {
+    renderer = {
+      renderer: suffixMap[rendererKey],
+      data: {
+        label,
+      },
+    };
   }
 
   return renderer;
@@ -180,9 +201,10 @@ export function makeRenderer(
   document: Document,
   options: RendererOptions,
   styleDefaults: StyleDefaults,
-  queryTimezone: string | undefined
+  queryTimezone: string | undefined,
+  tags?: Tags
 ): Renderer {
-  const renderDef = getRendererOptions(field, options.dataStyles) || {};
+  const renderDef = getRendererOptions(field, options.dataStyles, tags) || {};
   options.dataStyles[field.name] = renderDef;
 
   if (renderDef.renderer === 'shape_map') {
@@ -373,7 +395,8 @@ function makeContainerRenderer<Type extends ContainerRenderer>(
       document,
       options,
       c.defaultStylesForChildren,
-      explore.queryTimezone
+      explore.queryTimezone,
+      field.getTags()
     );
   });
   c.childRenderers = result;
