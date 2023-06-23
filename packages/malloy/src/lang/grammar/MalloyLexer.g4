@@ -140,6 +140,7 @@ CBRACK: ']' ;
 OCURLY: '{' ;
 CCURLY: '}' ;
 DOUBLECOLON: '::';
+TRIPLECOLON: ':::';
 EXCLAM: '!';
 COLON: ':' ;
 COMMA: ',';
