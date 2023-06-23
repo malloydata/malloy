@@ -21,7 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AtomicFieldType, DataArray, Explore, Field} from '@malloydata/malloy';
+import {
+  AtomicFieldType,
+  DataArray,
+  Explore,
+  Field,
+  Tags,
+} from '@malloydata/malloy';
 import {TopLevelSpec} from 'vega-lite';
 import {DataStyles, RenderDef, StyleDefaults} from '../data_styles';
 import {ChildRenderers, Renderer} from '../renderer';
@@ -61,7 +67,7 @@ export class HTMLView {
   async render(
     table: DataArray,
     options: RendererOptions,
-    tagProperties?: Record<string, string | boolean>
+    tags?: Tags
   ): Promise<HTMLElement> {
     const renderer = makeRenderer(
       table.field,
@@ -71,7 +77,7 @@ export class HTMLView {
         size: 'large',
       },
       table.field.structDef.queryTimezone,
-      tagProperties
+      tags
     );
     try {
       // TODO Implement row streaming capability for some renderers: some renderers should be usable
@@ -136,8 +142,9 @@ const suffixMap: Record<string, RenderDef['renderer']> = {
 function getRendererOptions(
   field: Field | Explore,
   dataStyles: DataStyles,
-  tagProperties: Record<string, string | boolean>
+  tags?: Tags
 ) {
+  const tagProperties = tags?.getMalloyTags().properties ?? {};
   let renderer = dataStyles[field.name];
   if (!renderer) {
     for (const sourceClass of field.sourceClasses) {
@@ -200,10 +207,9 @@ export function makeRenderer(
   options: RendererOptions,
   styleDefaults: StyleDefaults,
   queryTimezone: string | undefined,
-  tagProperties?: Record<string, string | boolean>
+  tags?: Tags
 ): Renderer {
-  const renderDef =
-    getRendererOptions(field, options.dataStyles, tagProperties ?? {}) || {};
+  const renderDef = getRendererOptions(field, options.dataStyles, tags) || {};
   options.dataStyles[field.name] = renderDef;
 
   if (renderDef.renderer === 'shape_map') {
@@ -395,7 +401,7 @@ function makeContainerRenderer<Type extends ContainerRenderer>(
       options,
       c.defaultStylesForChildren,
       explore.queryTimezone,
-      field.getTags().getMalloyTags().properties
+      field.getTags()
     );
   });
   c.childRenderers = result;
