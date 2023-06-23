@@ -1807,7 +1807,7 @@ export class QueryField extends Query implements Taggable {
   }
 
   getTags(): Tags {
-    return new Tags(undefined);
+    return new Tags(this.turtleDef.annotation);
   }
 
   public isQueryField(): this is QueryField {
