@@ -52,8 +52,4 @@ export class DuckDBWASMConnection extends DuckDBWASMConnectionBase {
   async createHash(sqlCommand: string): Promise<string> {
     return crypto.createHash('md5').update(sqlCommand).digest('hex');
   }
-
-  public async test(): Promise<void> {
-    await this.runRawSQL('SELECT 1');
-  }
 }
