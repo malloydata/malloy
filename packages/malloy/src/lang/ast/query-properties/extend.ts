@@ -25,7 +25,5 @@ import {ListOf} from '../types/malloy-element';
 import {QueryExtendProperty} from '../types/query-extend-property';
 
 export class ExtendBlock extends ListOf<QueryExtendProperty> {
-  constructor(properties: QueryExtendProperty[]) {
-    super('extend property', properties);
-  }
+  elementType = 'extendBlock';
 }
