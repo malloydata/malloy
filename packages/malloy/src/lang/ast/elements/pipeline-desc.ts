@@ -22,6 +22,7 @@
  */
 
 import {
+  Annotation,
   DocumentLocation,
   PipeSegment,
   Pipeline,
@@ -108,16 +109,21 @@ export abstract class PipelineDesc extends MalloyElement {
   ): {
     pipeline: PipeSegment[];
     location: DocumentLocation | undefined;
+    annotation: Annotation | undefined;
   } {
     const turtle = getStructFieldDef(fromStruct, turtleName);
+    let annotation: Annotation | undefined;
     if (!turtle) {
       this.log(`Query '${turtleName}' is not defined in source`);
     } else if (turtle.type !== 'turtle') {
       this.log(`'${turtleName}' is not a query`);
     } else {
-      return {pipeline: turtle.pipeline, location: turtle.location};
+      if (turtle.annotation) {
+        annotation = {inherits: turtle.annotation};
+      }
+      return {pipeline: turtle.pipeline, location: turtle.location, annotation};
     }
-    return {pipeline: [], location: undefined};
+    return {pipeline: [], location: undefined, annotation};
   }
 
   protected getOutputStruct(

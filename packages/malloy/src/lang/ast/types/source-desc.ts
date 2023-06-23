@@ -21,11 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDeclaration} from '../query-items/field-declaration';
-import {DeclareFields} from './declare-fields';
+import {SourceProperty} from './source-property';
+import {ListOf} from './malloy-element';
 
-export class Dimensions extends DeclareFields {
-  constructor(dimensions: FieldDeclaration[]) {
-    super(dimensions, 'dimension');
-  }
+export class SourceDesc extends ListOf<SourceProperty> {
+  elementType = 'sourceDescription';
 }

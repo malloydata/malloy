@@ -43,11 +43,9 @@ import {StaticSpace} from '../field-space/static-space';
 type QOPType = 'grouping' | 'aggregate' | 'project' | 'index';
 
 export class QOPDesc extends ListOf<QueryProperty> {
+  elementType = 'queryOperation';
   opType: QOPType = 'grouping';
   private refineThis?: PipeSegment;
-  constructor(props: QueryProperty[]) {
-    super('queryOperator', props);
-  }
 
   protected computeType(): QOPType {
     let firstGuess: QOPType | undefined;

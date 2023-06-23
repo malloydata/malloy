@@ -22,10 +22,8 @@
  */
 
 import {TurtleDecl} from '../query-properties/nest';
-import {ListOf} from '../types/malloy-element';
+import {DefinitionList} from '../types/definition-list';
 
-export class Turtles extends ListOf<TurtleDecl> {
-  constructor(turtles: TurtleDecl[]) {
-    super('turtleDeclarationList', turtles);
-  }
+export class Turtles extends DefinitionList<TurtleDecl> {
+  elementType = 'turtleDefList';
 }

@@ -21,11 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ListOf} from '../types/malloy-element';
+import {DefinitionList} from '../types/definition-list';
 import {QueryItem} from '../types/query-item';
 
-export class GroupBy extends ListOf<QueryItem> {
-  constructor(members: QueryItem[]) {
-    super('groupBy', members);
-  }
+export class GroupBy extends DefinitionList<QueryItem> {
+  elementType = 'groupBy';
 }

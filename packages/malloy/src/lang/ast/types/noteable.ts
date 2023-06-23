@@ -21,29 +21,31 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
+import {Annotation} from '../../../model/malloy_types';
 
-import {QueryField} from './query-space-field';
-import {FieldSpace} from '../types/field-space';
+/**
+ * An object which can receive annotations is "Noteable"
+ */
+export interface Noteable {
+  isNoteableObj: true;
+  note?: Annotation;
+  extendNote(ext: Partial<Annotation>): void;
+}
 
-export class QueryFieldStruct extends QueryField {
-  constructor(fs: FieldSpace, protected turtleDef: TurtleDef) {
-    super(fs);
-    this.haveFieldDef = turtleDef;
-  }
+export function isNoteable(el: unknown): el is Noteable {
+  return (el as Noteable).isNoteableObj;
+}
 
-  rename(name: string): void {
-    this.turtleDef = {
-      ...this.turtleDef,
-      as: name,
-    };
-  }
+export function extendNoteMethod(this: Noteable, ext: Partial<Annotation>) {
+  extendNoteHelper(this, ext);
+}
 
-  fieldDef(): TurtleDef {
-    return this.turtleDef;
-  }
-
-  getQueryFieldDef(_fs: FieldSpace): QueryFieldDef | undefined {
-    return this.fieldDef();
+export function extendNoteHelper(to: Noteable, ext: Partial<Annotation>) {
+  if (
+    (ext.notes && ext.notes.length > 0) ||
+    (ext.blockNotes && ext.blockNotes.length > 0) ||
+    ext.inherits !== undefined
+  ) {
+    to.note = {...to.note, ...ext};
   }
 }

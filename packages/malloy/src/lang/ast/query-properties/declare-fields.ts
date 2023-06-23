@@ -22,10 +22,11 @@
  */
 
 import {FieldDeclaration} from '../query-items/field-declaration';
-import {ListOf} from '../types/malloy-element';
+import {DefinitionList} from '../types/definition-list';
 
-export class DeclareFields extends ListOf<FieldDeclaration> {
-  constructor(fields: FieldDeclaration[], fieldType = 'declare') {
-    super(fieldType, fields);
+export class DeclareFields extends DefinitionList<FieldDeclaration> {
+  elementType = 'declareFields';
+  constructor(fields: FieldDeclaration[]) {
+    super(fields);
   }
 }

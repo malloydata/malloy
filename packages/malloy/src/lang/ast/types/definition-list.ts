@@ -21,29 +21,34 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {QueryFieldDef, TurtleDef} from '../../../model/malloy_types';
+import {Annotation} from '../../../model';
+import {ListOf, MalloyElement} from './malloy-element';
+import {Noteable, extendNoteHelper, isNoteable} from '../types/noteable';
 
-import {QueryField} from './query-space-field';
-import {FieldSpace} from '../types/field-space';
+export abstract class DefinitionList<DT extends MalloyElement>
+  extends ListOf<DT>
+  implements Noteable
+{
+  readonly isNoteableObj = true;
+  note?: Annotation;
 
-export class QueryFieldStruct extends QueryField {
-  constructor(fs: FieldSpace, protected turtleDef: TurtleDef) {
-    super(fs);
-    this.haveFieldDef = turtleDef;
+  extendNote(ext: Partial<Annotation>) {
+    extendNoteHelper(this, ext);
+    this.distributeAnnotation();
   }
 
-  rename(name: string): void {
-    this.turtleDef = {
-      ...this.turtleDef,
-      as: name,
-    };
+  distributeAnnotation() {
+    if (this.note) {
+      for (const el of this.elements) {
+        if (isNoteable(el)) {
+          el.extendNote(this.note);
+        }
+      }
+    }
   }
 
-  fieldDef(): TurtleDef {
-    return this.turtleDef;
-  }
-
-  getQueryFieldDef(_fs: FieldSpace): QueryFieldDef | undefined {
-    return this.fieldDef();
+  protected newContents(): void {
+    super.newContents();
+    this.distributeAnnotation();
   }
 }

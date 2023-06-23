@@ -26,15 +26,17 @@ import {FieldDef, FieldTypeDef, TypeDesc} from '../../../model/malloy_types';
 import {SpaceField} from '../types/space-field';
 
 export class ColumnSpaceField extends SpaceField {
-  constructor(protected def: FieldTypeDef) {
+  haveFieldDef: FieldDef;
+  constructor(def: FieldTypeDef) {
     super();
+    this.haveFieldDef = def;
   }
 
   fieldDef(): FieldDef {
-    return this.def;
+    return this.haveFieldDef;
   }
 
   typeDesc(): TypeDesc {
-    return this.fieldTypeFromFieldDef(this.def);
+    return this.fieldTypeFromFieldDef(this.haveFieldDef);
   }
 }

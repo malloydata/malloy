@@ -1,1 +1,0 @@
-  EXPLORE flights | REDUCE a, BC is (REDUCE b,c)

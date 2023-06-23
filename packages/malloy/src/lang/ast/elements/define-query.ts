@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {NamedQuery} from '../../../model/malloy_types';
+import {Annotation, NamedQuery} from '../../../model/malloy_types';
 
 import {ModelDataRequest} from '../../translate-response';
 
@@ -32,13 +32,21 @@ import {
   RunList,
 } from '../types/malloy-element';
 import {QueryElement} from '../types/query-element';
+import {Noteable, extendNoteMethod} from '../types/noteable';
 
-export class DefineQuery extends MalloyElement implements DocStatement {
+export class DefineQuery
+  extends MalloyElement
+  implements DocStatement, Noteable
+{
   elementType = 'defineQuery';
 
   constructor(readonly name: string, readonly queryDetails: QueryElement) {
     super({queryDetails: queryDetails});
   }
+
+  readonly isNoteableObj = true;
+  extendNote = extendNoteMethod;
+  note?: Annotation;
 
   execute(doc: Document): ModelDataRequest {
     const existing = doc.getEntry(this.name);
@@ -52,13 +60,19 @@ export class DefineQuery extends MalloyElement implements DocStatement {
       name: this.name,
       location: this.location,
     };
+    if (this.note) {
+      entry.annotation = entry.annotation
+        ? {...this.note, inherits: entry.annotation}
+        : this.note;
+    }
     doc.setEntry(this.name, {entry, exported: true});
   }
 }
 
 export class DefineQueryList extends RunList implements DocStatement {
+  elementType = 'defineQueries';
   constructor(queryList: DefineQuery[]) {
-    super('defineQueries', queryList);
+    super(queryList);
   }
 
   execute(doc: Document): ModelDataRequest {

@@ -23,6 +23,7 @@
 
 import {Dialect} from '../../../dialect/dialect';
 import {
+  Annotation,
   FieldTypeDef,
   isAtomicFieldType,
   StructDef,
@@ -46,6 +47,7 @@ import {
   typecheckMeasure,
   typecheckProject,
 } from './typecheck_utils';
+import {extendNoteMethod, Noteable} from '../types/noteable';
 
 export type FieldDeclarationConstructor = new (
   expr: ExpressionDef,
@@ -53,7 +55,14 @@ export type FieldDeclarationConstructor = new (
   exprSrc?: string
 ) => FieldDeclaration;
 
-export abstract class FieldDeclaration extends MalloyElement {
+export abstract class FieldDeclaration
+  extends MalloyElement
+  implements Noteable
+{
+  readonly isNoteableObj = true;
+  extendNote = extendNoteMethod;
+  note?: Annotation;
+
   constructor(
     readonly expr: ExpressionDef,
     readonly defineName: string,
@@ -122,6 +131,9 @@ export abstract class FieldDeclaration extends MalloyElement {
       // TODO this should work for dates too
       if (isGranularResult(exprValue) && template.type === 'timestamp') {
         template.timeframe = exprValue.timeframe;
+      }
+      if (this.note) {
+        template.annotation = this.note;
       }
       return template;
     }

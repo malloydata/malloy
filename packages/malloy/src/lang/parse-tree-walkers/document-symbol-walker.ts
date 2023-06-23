@@ -163,7 +163,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
   }
 
   enterQueryFieldEntry(pcx: parser.QueryFieldEntryContext) {
-    const fieldRef = pcx.fieldPath();
+    const fieldRef = pcx.taggedRef()?.fieldPath();
     if (fieldRef === undefined) return;
     const symbol = {
       range: this.translator.rangeFromContext(pcx),

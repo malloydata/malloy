@@ -60,9 +60,6 @@ export class Filter extends ListOf<FilterElement> {
   elementType = 'filter';
   // TODO(maden): Check this field usage/need
   private readonly havingClause?: boolean;
-  constructor(elements: FilterElement[] = []) {
-    super('filterElements', elements);
-  }
 
   set having(isHaving: boolean) {
     this.elementType = isHaving ? 'having' : 'where';

@@ -2478,6 +2478,7 @@ class QueryQuery extends QueryField {
           }
 
           const location = fi.f.fieldDef.location;
+          const annotation = fi.f.fieldDef.annotation;
 
           // build out the result fields...
           switch (fi.f.fieldDef.type) {
@@ -2489,6 +2490,7 @@ class QueryQuery extends QueryField {
                 type: fi.f.fieldDef.type,
                 resultMetadata,
                 location,
+                annotation,
               });
               break;
             case 'timestamp': {
@@ -2500,6 +2502,7 @@ class QueryQuery extends QueryField {
                   timeframe,
                   resultMetadata,
                   location,
+                  annotation,
                 });
               } else {
                 fields.push({
@@ -2507,6 +2510,7 @@ class QueryQuery extends QueryField {
                   type: 'timestamp',
                   resultMetadata,
                   location,
+                  annotation,
                 });
               }
               break;
@@ -2518,6 +2522,7 @@ class QueryQuery extends QueryField {
                 timeframe: fi.f.fieldDef.timeframe,
                 resultMetadata,
                 location,
+                annotation,
               });
               break;
             }
@@ -2528,6 +2533,7 @@ class QueryQuery extends QueryField {
                 type: 'number',
                 resultMetadata,
                 location,
+                annotation,
               });
               break;
             case 'unsupported':
@@ -3393,6 +3399,7 @@ class QueryQuery extends QueryField {
       // console.log(stageWriter.generateSQLStages());
       structDef = pipeOut.outputStruct;
     }
+    structDef.annotation = fi.turtleDef.annotation;
     return {
       structDef,
       pipeOut,
@@ -4242,6 +4249,7 @@ class QueryStruct extends QueryNode {
   flattenTurtleDef(turtleDef: TurtleDef | TurtleDefPlus): TurtleDef {
     let pipeline = turtleDef.pipeline;
     let pipeHead = turtleDef.pipeHead;
+    const annotation = turtleDef.annotation;
     while (pipeHead) {
       const field = this.getFieldByName(pipeHead.name);
       if (field instanceof QueryQuery) {
@@ -4265,6 +4273,7 @@ class QueryStruct extends QueryNode {
       type: 'turtle',
       name: turtleDef.name,
       pipeline,
+      annotation,
       location: turtleDef.location,
     };
     return flatTurtleDef;
@@ -4464,6 +4473,7 @@ export class QueryModel {
           ? query.pipeHead.name
           : undefined,
       connectionName: ret.connectionName,
+      annotation: query.annotation,
     };
   }
 

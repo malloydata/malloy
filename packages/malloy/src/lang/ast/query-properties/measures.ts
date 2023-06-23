@@ -21,11 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDeclaration} from '../query-items/field-declaration';
 import {DeclareFields} from './declare-fields';
 
 export class Measures extends DeclareFields {
-  constructor(measures: FieldDeclaration[]) {
-    super(measures, 'measure');
-  }
+  elementType = 'measureList';
 }
