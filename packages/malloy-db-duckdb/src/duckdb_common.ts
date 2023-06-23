@@ -23,7 +23,6 @@
 
 import {
   AtomicFieldTypeInner,
-  Connection,
   FieldTypeDef,
   MalloyQueryData,
   NamedStructDefs,
@@ -35,6 +34,7 @@ import {
   SQLBlock,
   StreamingConnection,
   StructDef,
+  TestableConnection,
   parseTableURI,
 } from '@malloydata/malloy';
 
@@ -74,7 +74,7 @@ const unquoteName = (name: string) => {
 };
 
 export abstract class DuckDBCommon
-  implements Connection, PersistSQLResults, StreamingConnection
+  implements TestableConnection, PersistSQLResults, StreamingConnection
 {
   static DEFAULT_QUERY_OPTIONS: DuckDBQueryOptions = {
     rowLimit: 10,
