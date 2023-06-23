@@ -61,7 +61,7 @@ export class HTMLView {
   async render(
     table: DataArray,
     options: RendererOptions,
-    tagProperties: Record<string, string | boolean>
+    tagProperties?: Record<string, string | boolean>
   ): Promise<HTMLElement> {
     const renderer = makeRenderer(
       table.field,
