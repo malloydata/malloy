@@ -239,6 +239,27 @@ describe.each(runtimes.runtimeList)(
       // expect(result.data.path(0, 'fieldValue').value).toBe('Organic Search');
       // expect(result.data.path(0, "weight").value).toBe(18);
     });
+
+    // this really shouldn't be here, we need to be able to test dialect capiblities
+    //  from the connection.
+    test(`safe_cast - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
+        source: eone is  table('malloytest.airports') {}
+
+        query: eone -> {
+          project:
+            bad_date is '123':::date
+            bad_number is 'abc':::number
+            limit: 1
+        }
+        `
+        )
+        .run();
+      expect(result.data.value[0]['bad_date']).toBe(null);
+      expect(result.data.value[0]['bad_number']).toBe(null);
+    });
   }
 );
 
