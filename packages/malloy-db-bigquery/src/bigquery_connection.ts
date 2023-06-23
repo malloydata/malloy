@@ -345,20 +345,14 @@ export class BigQueryConnection
   }
 
   public async getTableFieldSchema(tablePath: string): Promise<SchemaInfo> {
-    const segments = tablePath.split('.');
+    const segments = this.normalizeTablePath(tablePath).split('.');
 
-    // paths can have two or three segments
-    // if there are only two segments, assume the dataset is "local" to the current billing project
-    let projectId, datasetNamePart, tableNamePart;
-    if (segments.length === 2) {
-      [datasetNamePart, tableNamePart] = segments;
-      projectId = this.defaultProject;
-    } else if (segments.length === 3)
-      [projectId, datasetNamePart, tableNamePart] = segments;
-    else
+    if (segments.length !== 3) {
       throw new Error(
         `Improper table path: ${tablePath}. A table path requires 2 or 3 segments`
       );
+    }
+    const [projectId, datasetNamePart, tableNamePart] = segments;
 
     try {
       // TODO The `dataset` API has no way to set a different `projectId` than the one stored in the BQ
@@ -368,7 +362,8 @@ export class BigQueryConnection
       //      this is better than creating a new BQ instance every time we need to get a table schema.
       if (projectId) this.bigQuery.projectId = projectId;
       const needTableSuffixPseudoColumn =
-        tableNamePart && tableNamePart[tableNamePart.length - 1] === '*';
+        tableNamePart !== undefined &&
+        tableNamePart[tableNamePart.length - 1] === '*';
       const table = this.bigQuery.dataset(datasetNamePart).table(tableNamePart);
       const metadataPromise = table.getMetadata();
       this.bigQuery.projectId = this.projectId;
