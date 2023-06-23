@@ -138,6 +138,23 @@ describe('document annotation', () => {
       });
     }
   });
+  test('run statement annotation points', () => {
+    const m = new TestTranslator(`
+      # note1
+      run:
+        # note2
+        a -> {project: *}
+    `);
+    expect(m).toTranslate();
+    const note_a = m.getQuery(0);
+    expect(note_a).toBeDefined();
+    if (note_a) {
+      expect(note_a.annotation).toEqual({
+        blockNotes: ['# note1\n'],
+        notes: ['# note2\n'],
+      });
+    }
+  });
   test('multi line query annotation', () => {
     const m = new TestTranslator(`
       # note1
