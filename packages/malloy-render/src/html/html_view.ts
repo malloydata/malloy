@@ -26,6 +26,7 @@ import {
   DataArray,
   Explore,
   Field,
+  Result,
   Tags,
 } from '@malloydata/malloy';
 import {TopLevelSpec} from 'vega-lite';
@@ -64,11 +65,8 @@ import {HTMLAreaSparkLineRenderer} from './area_sparkline';
 export class HTMLView {
   constructor(private document: Document) {}
 
-  async render(
-    table: DataArray,
-    options: RendererOptions,
-    tags?: Tags
-  ): Promise<HTMLElement> {
+  async render(result: Result, options: RendererOptions): Promise<HTMLElement> {
+    const table = result.data;
     const renderer = makeRenderer(
       table.field,
       this.document,
@@ -77,7 +75,7 @@ export class HTMLView {
         size: 'large',
       },
       table.field.structDef.queryTimezone,
-      tags
+      result.getTags()
     );
     try {
       // TODO Implement row streaming capability for some renderers: some renderers should be usable
@@ -162,12 +160,9 @@ function getRendererOptions(
 
     if (name.endsWith(`_${suffix}`)) {
       const label = name.slice(0, name.length - suffix.length - 1);
-      updateOrCreateRenderer(suffix, label, renderer);
-      break;
+      return updateOrCreateRenderer(suffix, label, renderer);
     }
   }
-
-  return renderer;
 }
 
 function updateOrCreateRenderer(
