@@ -31,6 +31,7 @@ malloyStatement
   | defineSQLStatement
   | defineQuery
   | importStatement
+  | runStatement
   | docAnnotations
   | ignoredObjectAnnotations
   ;
@@ -54,6 +55,11 @@ tags
 
 isDefine
   : beforeIs=tags IS afterIs=tags
+  ;
+
+runStatement
+  : RUN topLevelAnonQueryDef     # runStatementDef
+  | RUN queryName                # runStatementRef
   ;
 
 defineSQLStatement
@@ -169,11 +175,11 @@ exploreProperties
   ;
 
 exploreStatement
-  : tags DIMENSION defList             # defExploreDimension
-  | tags MEASURE defList               # defExploreMeasure
+  : defDimensions                      # defExploreDimension_stub
+  | defMeasures                        # defExploreMeasure_stub
   | declareStatement                   # defDeclare_stub
   | joinStatement                      # defJoin_stub
-  | whereStatement                     # defExploreWhere
+  | whereStatement                     # defExploreWhere_stub
   | PRIMARY_KEY fieldName              # defExplorePrimaryKey
   | RENAME renameList                  # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList    # defExploreEditField
@@ -181,6 +187,14 @@ exploreStatement
   | timezoneStatement                  # defExploreTimezone
   | ANNOTATION+                        # defExploreAnnotation
   | ignoredModelAnnotations            # defIgnoreModel_stub
+  ;
+
+defMeasures
+  : tags MEASURE defList
+  ;
+
+defDimensions
+  : tags DIMENSION defList
   ;
 
 renameList
@@ -210,6 +224,20 @@ joinStatement
   : tags JOIN_ONE joinList                  # defJoinOne
   | tags JOIN_MANY joinList                 # defJoinMany
   | tags JOIN_CROSS joinList                # defJoinCross
+  ;
+
+queryExtend
+  : EXTENDQ queryExtendStatementList
+  ;
+
+queryExtendStatement
+  : defDimensions
+  | defMeasures
+  | joinStatement
+  ;
+
+queryExtendStatementList
+  : OCURLY (queryExtendStatement | SEMI)* CCURLY
   ;
 
 joinList
@@ -262,7 +290,8 @@ exploreQueryDef
 queryStatement
   : groupByStatement
   | declareStatement
-  | joinStatement
+  | queryJoinStatement
+  | queryExtend
   | projectStatement
   | indexStatement
   | aggregateStatement
@@ -277,6 +306,10 @@ queryStatement
   | timezoneStatement
   | queryAnnotation
   | ignoredModelAnnotations
+  ;
+
+queryJoinStatement
+  : joinStatement
   ;
 
 groupByStatement
@@ -362,7 +395,11 @@ sampleStatement
   ;
 
 timezoneStatement
-  : TIMEZONE STRING_LITERAL
+  : TIMEZONE timezoneName
+  ;
+
+timezoneName
+  : STRING_LITERAL
   ;
 
 queryAnnotation

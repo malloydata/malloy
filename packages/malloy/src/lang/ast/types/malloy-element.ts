@@ -32,7 +32,7 @@ import {
   SQLBlockStructDef,
 } from '../../../model/malloy_types';
 
-import {MessageLogger} from '../../parse-log';
+import {LogSeverity, MessageLogger} from '../../parse-log';
 import {MalloyTranslation} from '../../parse-malloy';
 import {ModelDataRequest} from '../../translate-response';
 import {DocumentCompileResult} from './document-compile-result';
@@ -174,7 +174,7 @@ export abstract class MalloyElement {
   }
 
   private readonly logged = new Set<string>();
-  log(message: string): void {
+  log(message: string, severity: LogSeverity = 'error'): void {
     if (this.codeLocation) {
       /*
        * If this element has a location, then don't report the same
@@ -186,7 +186,7 @@ export abstract class MalloyElement {
       this.logged.add(message);
     }
     const trans = this.translator();
-    const msg = {at: this.location, message};
+    const msg = {at: this.location, message, severity};
     const logTo = trans?.root.logger;
     if (logTo) {
       logTo.log(msg);
@@ -336,14 +336,6 @@ export class RunList extends ListOf<DocStatement> implements Noteable {
   noteCursor = 0;
   executeList(doc: Document): ModelDataRequest {
     while (this.execCursor < this.elements.length) {
-      if (doc.errorsExist()) {
-        // TODO make a better way to stop cascading errors -- this way means that if there are
-        // actual different errors in multiple places, we only see the first one. A better way
-        // might be to make things that have error pass all kinds of typechecks, which prevents
-        // the real cascade.
-        // This stops cascading errors
-        return;
-      }
       const el = this.elements[this.execCursor];
       if (this.noteCursor === this.execCursor) {
         // We only want to set the note on each element once,

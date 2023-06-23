@@ -21,33 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ANTLRErrorListener, Token} from 'antlr4ts';
-import {LogMessage, MessageLogger} from './parse-log';
-import {MalloyTranslation} from './parse-malloy';
+import {Dimensions} from '../query-properties/dimmensions';
+import {Joins} from '../query-properties/joins';
+import {Measures} from '../query-properties/measures';
+import {MalloyElement} from './malloy-element';
 
-export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
-  constructor(
-    readonly translator: MalloyTranslation,
-    readonly messages: MessageLogger
-  ) {}
-
-  syntaxError(
-    recognizer: unknown,
-    offendingSymbol: Token | undefined,
-    line: number,
-    charPositionInLine: number,
-    msg: string,
-    _e: unknown
-  ): void {
-    const errAt = {line: line - 1, character: charPositionInLine};
-    const range = offendingSymbol
-      ? this.translator.rangeFromToken(offendingSymbol)
-      : {start: errAt, end: errAt};
-    const error: LogMessage = {
-      message: msg,
-      at: {url: this.translator.sourceURL, range},
-      severity: 'error',
-    };
-    this.messages.log(error);
-  }
+export type QueryExtendProperty = Dimensions | Measures | Joins;
+export function isQueryExtendProperty(
+  q: MalloyElement
+): q is QueryExtendProperty {
+  return q instanceof Dimensions || q instanceof Measures || q instanceof Joins;
 }

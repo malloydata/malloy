@@ -50,6 +50,7 @@ import {
 } from '../field-space/query-spaces';
 import {Calculate} from '../query-properties/calculate';
 import {TimezoneStatement} from '../source-properties/timezone-statement';
+import {ExtendBlock} from '../query-properties/extend';
 
 export class ReduceExecutor implements Executor {
   inputFS: QueryInputSpace;
@@ -111,6 +112,12 @@ export class ReduceExecutor implements Executor {
     } else if (qp instanceof Joins || qp instanceof DeclareFields) {
       for (const qel of qp.list) {
         this.inputFS.extendSource(qel);
+      }
+    } else if (qp instanceof ExtendBlock) {
+      for (const block of qp.list) {
+        for (const qel of block.list) {
+          this.inputFS.extendSource(qel);
+        }
       }
     } else if (qp instanceof TimezoneStatement) {
       this.resultFS.setTimezone(qp.tz);

@@ -81,9 +81,31 @@ describe('model statements', () => {
     });
   });
   describe('query:', () => {
+    // Delete this when ENABLE_M4_WARNINGS is converted to an annotation
     test('anonymous query', () => {
-      expect("query: table('aTable') -> { group_by: astr }").toTranslate();
+      expect(
+        markSource`query: ${"table('aTable') -> { group_by: astr }"}`
+      ).toTranslate();
     });
+    // Unskip this when ENABLE_M4_WARNINGS is converted to an annotation
+    test.skip('anonymous query', () => {
+      expect(
+        markSource`query: ${"table('aTable') -> { group_by: astr }"}`
+      ).toTranslateWithWarnings(
+        'Anonymous `query:` statements are deprecated, use `run:` instead'
+      );
+    });
+    test('run query', () =>
+      expect("run: table('aTable') -> { group_by: astr }").toTranslate());
+    test('run query ref', () =>
+      expect(`
+        query: foo is table('aTable') -> { group_by: astr }
+        run: foo
+      `).toTranslate());
+    test('query', () =>
+      expect(
+        "query: name is table('aTable') -> { group_by: astr }"
+      ).toTranslate());
     test('query', () => {
       expect(
         "query: name is table('aTable') -> { group_by: astr }"
@@ -114,7 +136,7 @@ describe('model statements', () => {
     });
     test('from(query) refined into query', () => {
       expect(
-        'query: from(ab -> {group_by: astr}) { dimension: bigstr is UPPER(astr) } -> { group_by: bigstr }'
+        'query: from(ab -> {group_by: astr}) { dimension: bigstr is upper(astr) } -> { group_by: bigstr }'
       ).toTranslate();
     });
     test('query with shortcut filtered turtle', () => {
@@ -445,8 +467,7 @@ describe('model statements', () => {
             group_by: b is c2
           }`).translationToFailWith(
             // c2 is not defined because group_by doesn't know to look in the output space
-            "'c2' is not defined",
-            "Cannot define 'b', value has unknown type"
+            "'c2' is not defined"
           );
         });
         test('cannot use analytic in order_by, preserved over refinement', () => {
@@ -463,27 +484,20 @@ describe('model statements', () => {
             group_by: c is 1
             aggregate: c2 is all(all(sum(ai)))
           }`).translationToFailWith(
-            'all() expression must not already be ungrouped',
-            "Cannot define 'c2', value has unknown type"
+            'all() expression must not already be ungrouped'
           );
         });
         test('cannot aggregate an ungrouped', () => {
           expect(`query: a1 is a -> {
             group_by: c is 1
             aggregate: c2 is sum(all(sum(ai)))
-          }`).translationToFailWith(
-            'Aggregate expression cannot be aggregate',
-            "Cannot define 'c2', value has unknown type"
-          );
+          }`).translationToFailWith('Aggregate expression cannot be aggregate');
         });
         test('cannot aggregate an aggregate', () => {
           expect(`query: a1 is a -> {
             group_by: c is 1
             aggregate: c2 is sum(sum(ai))
-          }`).translationToFailWith(
-            'Aggregate expression cannot be aggregate',
-            "Cannot define 'c2', value has unknown type"
-          );
+          }`).translationToFailWith('Aggregate expression cannot be aggregate');
         });
         test('can use field def in group_by, preserved over refinement', () => {
           expect(`query: a1 is a -> {
@@ -509,20 +523,25 @@ describe('model statements', () => {
           group_by: s is concat('a', 'b')
         }`).toTranslate();
       });
+      test('function incorrect case', () => {
+        expect(`query: a -> {
+          group_by: s is CONCAT('a', 'b')
+        }`).toTranslateWithWarnings(
+          "Case insensitivity for function names is deprecated, use 'concat' instead"
+        );
+      });
       test('function no matching overload', () => {
         expect(`query: a -> {
           group_by: s is floor('a', 'b')
         }`).translationToFailWith(
-          'No matching overload for function floor(string, string)',
-          "Cannot define 's', value has unknown type"
+          'No matching overload for function floor(string, string)'
         );
       });
       test('unknown function', () => {
         expect(`query: a -> {
           group_by: s is asdfasdf()
         }`).translationToFailWith(
-          "Unknown function 'asdfasdf'. Use 'asdfasdf!(...)' to call a SQL function directly.",
-          "Cannot define 's', value has unknown type"
+          "Unknown function 'asdfasdf'. Use 'asdfasdf!(...)' to call a SQL function directly."
         );
       });
       test('can select different overload', () => {
@@ -546,8 +565,7 @@ describe('model statements', () => {
         expect(`query: a -> {
             group_by: s is floor(1.2) + 'a'
         }`).translationToFailWith(
-          "Non numeric('number,string') value with '+'",
-          "Cannot define 's', value has unknown type"
+          "Non numeric('number,string') value with '+'"
         );
       });
       test('can use output value in calculate', () => {
@@ -560,10 +578,7 @@ describe('model statements', () => {
         expect(`query: a -> {
           group_by: x is 1
           group_by: y is x
-        }`).translationToFailWith(
-          "'x' is not defined",
-          "Cannot define 'y', value has unknown type"
-        );
+        }`).translationToFailWith("'x' is not defined");
       });
       test('lag can check that other args are constant', () => {
         expect(`query: a -> {
@@ -634,8 +649,7 @@ describe('model statements', () => {
             calculate: foo is lag(b)
           }`
         ).translationToFailWith(
-          'No matching overload for function lag(struct)',
-          "Cannot define 'foo', value has unknown type"
+          'No matching overload for function lag(struct)'
         );
       });
       // TODO this doesn't work today, we're not rigorous enough with integer
@@ -651,10 +665,7 @@ describe('model statements', () => {
       test('cannot use stddev with no arguments', () => {
         expect(`query: a -> {
           aggregate: x is stddev()
-        }`).translationToFailWith(
-          'No matching overload for function stddev()',
-          "Cannot define 'x', value has unknown type"
-        );
+        }`).translationToFailWith('No matching overload for function stddev()');
       });
       test('can use stddev with postfix syntax', () => {
         expect(`query: a -> {
@@ -1155,7 +1166,7 @@ describe('qops', () => {
       }
     `).toTranslate();
   });
-  test('nest multiple', () => {
+  test('nest multiple', () =>
     expect(`
       query: a->{
         group_by: ai
@@ -1163,10 +1174,71 @@ describe('qops', () => {
           nestbystr is { group_by: astr; aggregate: N is count() },
           renest is { group_by: astr; aggregate: N is count() }
       }
-    `).toTranslate();
+    `).toTranslate());
+  test('nest ref', () =>
+    expect('query: ab->{group_by: ai; nest: aturtle}').toTranslate());
+  describe('extend block', () => {
+    test('works with dimension', () => {
+      expect(
+        'query: a -> { extend: { dimension: x is 1 }; group_by: x }'
+      ).toTranslate();
+    });
+    test('works with measure', () => {
+      expect(
+        'query: a -> { extend: { measure: x is count() }; aggregate: x }'
+      ).toTranslate();
+    });
+    test('works with join_one', () => {
+      expect(
+        'query: a -> { extend: { join_one: bb is b on bb.astr = astr }; group_by: bb.astr }'
+      ).toTranslate();
+    });
+    test('works with join_many', () => {
+      expect(
+        'query: a -> { extend: { join_many: b on astr = b.astr }; group_by: b.astr }'
+      ).toTranslate();
+    });
+    test('works with join_cross', () => {
+      expect(
+        'query: a -> { extend: { join_cross: b on true }; group_by: b.astr }'
+      ).toTranslate();
+    });
+    test('works with multiple in one block', () => {
+      expect(
+        'query: a -> { extend: { dimension: x is 1, y is 2 }; group_by: x, y }'
+      ).toTranslate();
+    });
+    test('works with multiple blocks', () => {
+      expect(
+        'query: a -> { extend: { dimension: x is 1; dimension: y is 2; measure: c is count() }; group_by: x, y; aggregate: c }'
+      ).toTranslate();
+    });
   });
-  test('nest ref', () => {
-    expect('query: ab->{group_by: ai; nest: aturtle}').toTranslate();
+  // TODO ENABLE_M4_WARNINGS: unskip when we have an M4 warning flag
+  describe.skip('declare/query join warnings', () => {
+    test('declare warning in query', () => {
+      expect(
+        markSource`query: a -> { declare: ${'x is 1'}; group_by: x, y }`
+      ).toTranslateWithWarnings(
+        '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
+      );
+    });
+    test('declare warning in source', () => {
+      expect(
+        markSource`source: a2 is a { declare: ${'x is 1'} }`
+      ).toTranslateWithWarnings(
+        '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
+      );
+    });
+    test('joins in query', () => {
+      expect(
+        markSource`query: a -> { ${'join_one: b on true'}; ${'join_many: c is b on true'}; ${'join_cross: d is b on true'}; group_by: b.astr }`
+      ).toTranslateWithWarnings(
+        'Joins in queries are deprecated, move into an `extend:` block.',
+        'Joins in queries are deprecated, move into an `extend:` block.',
+        'Joins in queries are deprecated, move into an `extend:` block.'
+      );
+    });
   });
   test('refine query with extended source', () => {
     const m = new TestTranslator(`
@@ -1445,6 +1517,11 @@ describe('expressions', () => {
     test('null-check (??)', () => {
       expect(expr`ai ?? 7`).toTranslate();
     });
+    test('coalesce type mismatch', () => {
+      expect(new BetaExpression('ai ?? @2003')).translationToFailWith(
+        'Mismatched types for coalesce (number, date)'
+      );
+    });
     test('disallow date OP number', () => {
       expect(new BetaExpression('@2001 = 7')).translationToFailWith(
         'Cannot compare a date to a number'
@@ -1589,10 +1666,7 @@ describe('expressions', () => {
         source: na is a + { dimension: d is
           pick 7 when true and true
         }
-      `).translationToFailWith(
-        "pick incomplete, missing 'else'",
-        "Cannot define 'd', value has unknown type"
-      );
+      `).translationToFailWith("pick incomplete, missing 'else'");
     });
     test('n-ary with mismatch when clauses', () => {
       expect(markSource`
@@ -1601,10 +1675,7 @@ describe('expressions', () => {
           pick '7' when true or true
           else 7
         }
-      `).translationToFailWith(
-        "pick type 'string', expected 'number'",
-        "Cannot define 'd', value has unknown type"
-      );
+      `).translationToFailWith("pick type 'string', expected 'number'");
     });
     test('n-ary with mismatched else clause', () => {
       expect(markSource`
@@ -1612,40 +1683,28 @@ describe('expressions', () => {
           pick 7 when true and true
           else '7'
         }
-      `).translationToFailWith(
-        "else type 'string', expected 'number'",
-        "Cannot define 'd', value has unknown type"
-      );
+      `).translationToFailWith("else type 'string', expected 'number'");
     });
     test('applied else mismatch', () => {
       expect(markSource`
         source: na is a + { dimension: d is
           7 ? pick 7 when 7 else 'not seven'
         }
-      `).translationToFailWith(
-        "else type 'string', expected 'number'",
-        "Cannot define 'd', value has unknown type"
-      );
+      `).translationToFailWith("else type 'string', expected 'number'");
     });
     test('applied default mismatch', () => {
       expect(markSource`
         source: na is a + { dimension: d is
           7 ? pick 'seven' when 7
         }
-      `).translationToFailWith(
-        "pick default type 'number', expected 'string'",
-        "Cannot define 'd', value has unknown type"
-      );
+      `).translationToFailWith("pick default type 'number', expected 'string'");
     });
     test('applied when mismatch', () => {
       expect(markSource`
         source: na is a + { dimension: d is
           7 ? pick 'seven' when 7 pick 6 when 6
         }
-      `).translationToFailWith(
-        "pick type 'number', expected 'string'",
-        "Cannot define 'd', value has unknown type"
-      );
+      `).translationToFailWith("pick type 'number', expected 'string'");
     });
   });
   test('paren and applied div', () => {
@@ -1804,7 +1863,7 @@ describe('error handling', () => {
   });
   test('reference to field in its definition', () => {
     expect(
-      'source: na is a { dimension: ustr is UPPER(ustr) } '
+      'source: na is a { dimension: ustr is upper(ustr) } '
     ).translationToFailWith("Circular reference to 'ustr' in definition");
   });
   test('empty model', () => {
@@ -2691,7 +2750,6 @@ describe('translation need error locations', () => {
       errors: {urls: {[(result.urls || [])[0]]: 'Bad file!'}},
     });
     expect(source).translationToFailWith(/Bad file!/);
-    return undefined;
   });
 
   test('sql struct error location', () => {
@@ -2707,7 +2765,7 @@ describe('translation need error locations', () => {
       m.update({errors: {compileSQL: {[req.name]: 'Bad SQL!'}}});
     }
     expect(m).not.toTranslate();
-    const errList = m.errors().errors;
+    const errList = m.problems();
     expect(errList[0].at).isLocationIn(source.locations[0], source.code);
   });
 
@@ -2723,6 +2781,294 @@ describe('translation need error locations', () => {
       },
     });
     expect(m).translationToFailWith(/Bad table!/);
+  });
+});
+
+describe('error cascading', () => {
+  test('errors can appear in multiple top level objects', () => {
+    expect(
+      markSource`
+        source: a1 is a { dimension: ${'x is count()'} }
+        source: a2 is a { dimension: ${'x is count()'} }
+      `
+    ).translationToFailWith(
+      'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?',
+      'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?'
+    );
+  });
+
+  const typedScalars = {
+    'err': 'error',
+    '@2003 ~ @2003 for err hours': 'boolean',
+    'err.hour': 'timestamp',
+    'err.month': 'date',
+    'day_of_week(err)': 'number',
+    'err::string': 'string',
+    '-err': 'number',
+    'err * 1': 'number',
+    '1 * err': 'number',
+    'err / 1': 'number',
+    '1 / err': 'number',
+    'err % 1': 'number',
+    '1 % err': 'number',
+    'err + 1': 'number',
+    '1 + err': 'number',
+    'err - 1': 'number',
+    '1 - err': 'number',
+    '@2003 ? err for 1 minute': 'boolean',
+    '@2003 ? @2003 for err minutes': 'boolean',
+    '3 ? > err & > 3': 'boolean',
+    '3 ? > 3 & > err': 'boolean',
+    '3 ? > err | > 3': 'boolean',
+    '3 ? > 3 | > err': 'boolean',
+    'err ? > 3': 'boolean',
+    '3 ? > err': 'boolean',
+    '1 > err': 'boolean',
+    'err > 1': 'boolean',
+    '1 >= err': 'boolean',
+    'err >= 1': 'boolean',
+    '1 < err': 'boolean',
+    'err < 1': 'boolean',
+    '1 <= err': 'boolean',
+    'err <= 1': 'boolean',
+    '1 = err': 'boolean',
+    'err = 1': 'boolean',
+    '1 != err': 'boolean',
+    'err != 1': 'boolean',
+    '1 ~ err': 'boolean',
+    'err ~ 1': 'boolean',
+    '1 !~ err': 'boolean',
+    'err !~ 1': 'boolean',
+    'not err': 'boolean',
+    'err and true': 'boolean',
+    'true and err': 'boolean',
+    'err or true': 'boolean',
+    'true or err': 'boolean',
+    'err ?? 1': 'number',
+    '1 ?? err': 'number',
+    'cast(err as number)': 'number',
+    '(err)': 'error',
+    'length(err)': 'number',
+    'pick err when true else false': 'boolean',
+    'pick true when err else false': 'boolean',
+    'pick true when true else err': 'boolean',
+    'days(err to @2003)': 'number',
+    'days(@2003 to err)': 'number',
+  };
+  const scalars = Object.keys(typedScalars);
+  const aggregates = [
+    'measure_err { where: true }',
+    'count(distinct err)',
+    'b.sum(err)',
+    'b.stddev(err)',
+  ];
+  const ungroupedAggregates = ['all(measure_err)'];
+
+  test('dependent errors do not cascade', () => {
+    expect(
+      `
+        source: a1 is a {
+          join_one: b with astr
+          dimension:
+            ${'err is null'}
+            ${scalars.map((d, i) => `e${i} is ${d}`).join('\n            ')}
+          measure:
+            measure_err is count(distinct foo),
+            ${[...aggregates, ...ungroupedAggregates]
+              .map((m, i) => `e${i + scalars.length} is ${m}`)
+              .join('\n            ')}
+        }
+      `
+    ).translationToFailWith(
+      "Cannot define 'err', unexpected type: null",
+      "'foo' is not defined"
+    );
+  });
+
+  test('error type inference is good', () => {
+    for (const scalar of scalars) {
+      const source = `
+          source: a1 is a {
+            dimension:
+              ${'err is null'}
+              dim is length(${scalar}, 1)
+          }
+        `;
+      expect(source).translationToFailWith(
+        "Cannot define 'err', unexpected type: null",
+        `No matching overload for function length(${typedScalars[scalar]}, number)`
+      );
+    }
+  });
+
+  test('eval space of errors is preserved', () => {
+    expect(
+      `
+        source: a1 is a {
+          join_one: b with astr
+        }
+        query: a1 -> {
+          group_by:
+            ${'err is null'}
+          aggregate:
+            measure_err is count(distinct foo)
+          calculate:
+            ${scalars
+              .map((d, i) => `e${i} is lag(${d})`)
+              .join('\n            ')}
+            ${aggregates
+              .map((m, i) => `e${i + scalars.length} is lag(${m})`)
+              .join('\n            ')}
+        }
+      `
+    ).translationToFailWith(
+      "Cannot define 'err', unexpected type: null",
+      "'foo' is not defined"
+    );
+  });
+});
+
+describe('error cascading', () => {
+  test('errors can appear in multiple top level objects', () => {
+    expect(
+      markSource`
+        source: a1 is a { dimension: ${'x is count()'} }
+        source: a2 is a { dimension: ${'x is count()'} }
+      `
+    ).translationToFailWith(
+      'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?',
+      'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?'
+    );
+  });
+
+  const typedScalars = {
+    'err': 'error',
+    '@2003 ~ @2003 for err hours': 'boolean',
+    'err.hour': 'timestamp',
+    'err.month': 'date',
+    'day_of_week(err)': 'number',
+    'err::string': 'string',
+    '-err': 'number',
+    'err * 1': 'number',
+    '1 * err': 'number',
+    'err / 1': 'number',
+    '1 / err': 'number',
+    'err % 1': 'number',
+    '1 % err': 'number',
+    'err + 1': 'number',
+    '1 + err': 'number',
+    'err - 1': 'number',
+    '1 - err': 'number',
+    '@2003 ? err for 1 minute': 'boolean',
+    '@2003 ? @2003 for err minutes': 'boolean',
+    '3 ? > err & > 3': 'boolean',
+    '3 ? > 3 & > err': 'boolean',
+    '3 ? > err | > 3': 'boolean',
+    '3 ? > 3 | > err': 'boolean',
+    'err ? > 3': 'boolean',
+    '3 ? > err': 'boolean',
+    '1 > err': 'boolean',
+    'err > 1': 'boolean',
+    '1 >= err': 'boolean',
+    'err >= 1': 'boolean',
+    '1 < err': 'boolean',
+    'err < 1': 'boolean',
+    '1 <= err': 'boolean',
+    'err <= 1': 'boolean',
+    '1 = err': 'boolean',
+    'err = 1': 'boolean',
+    '1 != err': 'boolean',
+    'err != 1': 'boolean',
+    '1 ~ err': 'boolean',
+    'err ~ 1': 'boolean',
+    '1 !~ err': 'boolean',
+    'err !~ 1': 'boolean',
+    'not err': 'boolean',
+    'err and true': 'boolean',
+    'true and err': 'boolean',
+    'err or true': 'boolean',
+    'true or err': 'boolean',
+    'err ?? 1': 'number',
+    '1 ?? err': 'number',
+    'cast(err as number)': 'number',
+    '(err)': 'error',
+    'length(err)': 'number',
+    'pick err when true else false': 'boolean',
+    'pick true when err else false': 'boolean',
+    'pick true when true else err': 'boolean',
+    'days(err to @2003)': 'number',
+    'days(@2003 to err)': 'number',
+  };
+  const scalars = Object.keys(typedScalars);
+  const aggregates = [
+    'measure_err { where: true }',
+    'count(distinct err)',
+    'b.sum(err)',
+    'b.stddev(err)',
+  ];
+  const ungroupedAggregates = ['all(measure_err)'];
+
+  test('dependent errors do not cascade', () => {
+    expect(
+      `
+        source: a1 is a {
+          join_one: b with astr
+          dimension:
+            ${'err is null'}
+            ${scalars.map((d, i) => `e${i} is ${d}`).join('\n            ')}
+          measure:
+            measure_err is count(distinct foo),
+            ${[...aggregates, ...ungroupedAggregates]
+              .map((m, i) => `e${i + scalars.length} is ${m}`)
+              .join('\n            ')}
+        }
+      `
+    ).translationToFailWith(
+      "Cannot define 'err', unexpected type: null",
+      "'foo' is not defined"
+    );
+  });
+
+  test('error type inference is good', () => {
+    for (const scalar of scalars) {
+      const source = `
+          source: a1 is a {
+            dimension:
+              ${'err is null'}
+              dim is length(${scalar}, 1)
+          }
+        `;
+      expect(source).translationToFailWith(
+        "Cannot define 'err', unexpected type: null",
+        `No matching overload for function length(${typedScalars[scalar]}, number)`
+      );
+    }
+  });
+
+  test('eval space of errors is preserved', () => {
+    expect(
+      `
+        source: a1 is a {
+          join_one: b with astr
+        }
+        query: a1 -> {
+          group_by:
+            ${'err is null'}
+          aggregate:
+            measure_err is count(distinct foo)
+          calculate:
+            ${scalars
+              .map((d, i) => `e${i} is lag(${d})`)
+              .join('\n            ')}
+            ${aggregates
+              .map((m, i) => `e${i + scalars.length} is lag(${m})`)
+              .join('\n            ')}
+        }
+      `
+    ).translationToFailWith(
+      "Cannot define 'err', unexpected type: null",
+      "'foo' is not defined"
+    );
   });
 });
 

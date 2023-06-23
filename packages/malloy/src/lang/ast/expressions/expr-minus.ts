@@ -39,9 +39,9 @@ export class ExprMinus extends ExpressionDef {
     const expr = this.expr.getExpression(fs);
     if (this.typeCheck(this.expr, expr)) {
       if (expr.value.length > 1) {
-        return {...expr, value: ['-(', ...expr.value, ')']};
+        return {...expr, dataType: 'number', value: ['-(', ...expr.value, ')']};
       }
-      return {...expr, value: ['-', ...expr.value]};
+      return {...expr, dataType: 'number', value: ['-', ...expr.value]};
     }
     return errorFor('negate requires number');
   }

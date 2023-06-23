@@ -60,7 +60,7 @@ export class ReferenceField extends SpaceField {
     if (this.res !== undefined) {
       return this.res.typeDesc();
     }
-    return {dataType: 'unknown', expressionType: 'scalar', evalSpace: 'input'};
+    return {dataType: 'error', expressionType: 'scalar', evalSpace: 'input'};
   }
 
   /**

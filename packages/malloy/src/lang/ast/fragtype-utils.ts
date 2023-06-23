@@ -73,11 +73,18 @@ export class FT {
    * @param right Right type
    * @param nullOk True if a NULL is an acceptable match
    */
-  static typeEq(left: TypeDesc, right: TypeDesc, nullOk = false): boolean {
+  static typeEq(
+    left: TypeDesc,
+    right: TypeDesc,
+    nullOk = false,
+    errorOk = true
+  ): boolean {
     const maybeEq = left.dataType === right.dataType;
     const nullEq =
       nullOk && (left.dataType === 'null' || right.dataType === 'null');
-    return maybeEq || nullEq;
+    const errorEq =
+      errorOk && (left.dataType === 'error' || right.dataType === 'error');
+    return maybeEq || nullEq || errorEq;
   }
 
   /**

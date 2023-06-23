@@ -550,7 +550,8 @@ export type AtomicFieldType =
   | TimeFieldType
   | 'boolean'
   | 'unsupported'
-  | 'json';
+  | 'json'
+  | 'error';
 export function isAtomicFieldType(s: string): s is AtomicFieldType {
   return [
     'string',
@@ -617,6 +618,9 @@ export interface FieldJSONDef extends FieldAtomicDef {
 export interface FieldUnsupportedDef extends FieldAtomicDef {
   type: 'unsupported';
   rawType?: string;
+}
+export interface FieldErrorDef extends FieldAtomicDef {
+  type: 'error';
 }
 export type DateUnit = 'day' | 'week' | 'month' | 'quarter' | 'year';
 export function isDateUnit(str: string): str is DateUnit {
@@ -870,7 +874,6 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
 export type ExpressionValueType =
   | AtomicFieldType
   | 'null'
-  | 'unknown'
   | 'duration'
   | 'any'
   | 'regular expression';
@@ -965,7 +968,8 @@ export type FieldTypeDef =
   | FieldNumberDef
   | FieldBooleanDef
   | FieldJSONDef
-  | FieldUnsupportedDef;
+  | FieldUnsupportedDef
+  | FieldErrorDef;
 
 export function isFieldTypeDef(f: FieldDef): f is FieldTypeDef {
   return (

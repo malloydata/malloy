@@ -192,11 +192,12 @@ export class Malloy {
             result.translated.modelDef,
             result.translated.queryList,
             result.translated.sqlBlocks,
+            result.problems || [],
             (position: ModelDocumentPosition) =>
               translator.referenceAt(position)
           );
         } else {
-          const errors = result.errors || [];
+          const errors = result.problems || [];
           const errText = translator.prettyErrors();
           throw new MalloyError(
             `Error(s) compiling model:\n${errText}`,
@@ -573,11 +574,8 @@ export class MalloyError extends Error {
   /**
    * An array of log messages produced during compilation.
    */
-  public readonly log: LogMessage[];
-
-  constructor(message: string, log: LogMessage[] = []) {
+  constructor(message: string, readonly problems: LogMessage[] = []) {
     super(message);
-    this.log = log;
   }
 }
 
@@ -591,11 +589,13 @@ export class Model {
   _referenceAt: (
     location: ModelDocumentPosition
   ) => DocumentReference | undefined;
+  readonly problems: LogMessage[];
 
   constructor(
     modelDef: ModelDef,
     queryList: InternalQuery[],
     sqlBlocks: SQLBlockStructDef[],
+    problems: LogMessage[],
     referenceAt: (
       location: ModelDocumentPosition
     ) => DocumentReference | undefined = () => undefined
@@ -604,6 +604,7 @@ export class Model {
     this.queryList = queryList;
     this.sqlBlocks = sqlBlocks;
     this._referenceAt = referenceAt;
+    this.problems = problems;
   }
 
   /**
@@ -1350,7 +1351,7 @@ export class Explore extends Entity {
   }
 
   public getSingleExploreModel(): Model {
-    return new Model(this.modelDef, [], []);
+    return new Model(this.modelDef, [], [], []);
   }
 
   private get fieldMap(): Map<string, Field> {
@@ -1500,6 +1501,7 @@ export enum AtomicFieldType {
   Timestamp = 'timestamp',
   Json = 'json',
   Unsupported = 'unsupported',
+  Error = 'error',
 }
 
 export class AtomicField extends Entity implements Taggable {
@@ -1532,6 +1534,8 @@ export class AtomicField extends Entity implements Taggable {
         return AtomicFieldType.Json;
       case 'unsupported':
         return AtomicFieldType.Unsupported;
+      case 'error':
+        return AtomicFieldType.Error;
     }
   }
 
@@ -1978,7 +1982,7 @@ export class Runtime {
   //      be used in tests.
   public _loadModelFromModelDef(modelDef: ModelDef): ModelMaterializer {
     return new ModelMaterializer(this, async () => {
-      return new Model(modelDef, [], []);
+      return new Model(modelDef, [], [], []);
     });
   }
 

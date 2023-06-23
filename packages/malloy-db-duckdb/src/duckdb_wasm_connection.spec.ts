@@ -45,6 +45,7 @@ describe('DuckDBWasmConnection', () => {
       .mockResolvedValue({
         error: 'mocked',
       });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     findTables = jest.spyOn(connection as any, 'findTables');
   });
 

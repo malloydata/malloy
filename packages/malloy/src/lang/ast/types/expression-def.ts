@@ -30,6 +30,8 @@ import {
   maxExpressionType,
   FieldValueType,
   mergeEvalSpaces,
+  maxOfExpressionTypes,
+  ExpressionValueType,
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
@@ -87,7 +89,7 @@ export abstract class ExpressionDef extends MalloyElement {
    * @param eVal ...list of expressions that must match legalChildTypes
    */
   typeCheck(eNode: ExpressionDef, eVal: ExprValue): boolean {
-    if (!FT.in(eVal, this.legalChildTypes)) {
+    if (eVal.dataType !== 'error' && !FT.in(eVal, this.legalChildTypes)) {
       eNode.log(`'${this.elementType}' Can't use type ${FT.inspect(eVal)}`);
       return false;
     }
@@ -292,6 +294,9 @@ function equality(
   const lhs = left.getExpression(fs);
   const rhs = right.getExpression(fs);
 
+  const err = errorCascade('boolean', lhs, rhs);
+  if (err) return err;
+
   // Unsupported types can be compare with null
   const checkUnsupport =
     lhs.dataType === 'unsupported' || rhs.dataType === 'unsupported';
@@ -308,7 +313,7 @@ function equality(
   let value =
     timeCompare(left, lhs, op, rhs) || compose(lhs.value, op, rhs.value);
 
-  if (lhs.dataType !== 'unknown' && rhs.dataType !== 'unknown') {
+  if (lhs.dataType !== 'error' && rhs.dataType !== 'error') {
     switch (op) {
       case '~':
       case '!~': {
@@ -358,6 +363,10 @@ function compare(
 ): ExprValue {
   const lhs = left.getExpression(fs);
   const rhs = right.getExpression(fs);
+
+  const err = errorCascade('boolean', lhs, rhs);
+  if (err) return err;
+
   const expressionType = maxExpressionType(
     lhs.expressionType,
     rhs.expressionType
@@ -398,6 +407,10 @@ function numeric(
 ): ExprValue {
   const lhs = left.getExpression(fs);
   const rhs = right.getExpression(fs);
+
+  const err = errorCascade('number', lhs, rhs);
+  if (err) return err;
+
   const noGo = unsupportError(left, lhs, right, rhs);
   if (noGo) {
     return noGo;
@@ -433,7 +446,12 @@ function delta(
     return noGo;
   }
 
-  if (isTimeFieldType(lhs.dataType)) {
+  const timeLHS = isTimeFieldType(lhs.dataType);
+
+  const err = errorCascade(timeLHS ? 'error' : 'number', lhs, rhs);
+  if (err) return err;
+
+  if (timeLHS) {
     let duration: ExpressionDef = right;
     if (rhs.dataType !== 'duration') {
       if (isGranularResult(lhs)) {
@@ -488,6 +506,9 @@ export function applyBinary(
       return noGo;
     }
 
+    const err = errorCascade('number', num, denom);
+    if (err) return err;
+
     if (num.dataType !== 'number') {
       left.log('Numerator for division must be a number');
     } else if (denom.dataType !== 'number') {
@@ -513,6 +534,17 @@ export function applyBinary(
   }
   left.log(`Cannot use ${op} operator here`);
   return errorFor('applybinary bad operator');
+}
+
+function errorCascade(dataType: ExpressionValueType, ...es: ExprValue[]) {
+  if (es.some(e => e.dataType === 'error')) {
+    return {
+      dataType,
+      expressionType: maxOfExpressionTypes(es.map(e => e.expressionType)),
+      value: ["'cascading error'"],
+      evalSpace: mergeEvalSpaces(...es.map(e => e.evalSpace)),
+    };
+  }
 }
 
 /**

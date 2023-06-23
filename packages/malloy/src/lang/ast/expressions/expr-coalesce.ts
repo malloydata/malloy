@@ -48,8 +48,15 @@ export class ExprCoalesce extends ExpressionDef {
      * SQL, but I decided that is will happen when the "expressions are true
      * trees" rewrite happens.
      */
+    if (!FT.typeEq(maybeNull, whenNull)) {
+      this.log(
+        `Mismatched types for coalesce (${maybeNull.dataType}, ${whenNull.dataType})`
+      );
+    }
     return {
       ...whenNull,
+      dataType:
+        maybeNull.dataType === 'error' ? whenNull.dataType : maybeNull.dataType,
       expressionType: maxExpressionType(
         maybeNull.expressionType,
         whenNull.expressionType

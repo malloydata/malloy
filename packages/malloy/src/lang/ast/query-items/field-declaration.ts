@@ -107,8 +107,8 @@ export abstract class FieldDeclaration
     } catch (error) {
       this.log(`Cannot define '${exprName}', ${error.message}`);
       return {
-        name: `error_defining_${exprName}`,
-        type: 'string',
+        name: exprName,
+        type: 'error',
       };
     }
     const compressValue = compressExpr(exprValue.value);
@@ -140,16 +140,14 @@ export abstract class FieldDeclaration
     }
     const circularDef = exprFS instanceof DefSpace && exprFS.foundCircle;
     if (!circularDef) {
-      if (exprValue.dataType === 'unknown') {
-        this.log(`Cannot define '${exprName}', value has unknown type`);
-      } else {
+      if (exprValue.dataType !== 'error') {
         const badType = FT.inspect(exprValue);
         this.log(`Cannot define '${exprName}', unexpected type: ${badType}`);
       }
     }
     return {
-      name: `error_defining_${exprName}`,
-      type: 'string',
+      name: exprName,
+      type: 'error',
     };
   }
 }
