@@ -45,7 +45,7 @@ async function runUnsupportedRenderTest(
     const result = await runtime.loadModel(src).loadQueryByName('q').run();
     // console.log("DATA", result.data.toObject());
     const document = new JSDOM().window.document;
-    const html = await new HTMLView(document).render(result.data, {
+    const html = await new HTMLView(document).render(result, {
       dataStyles: {},
     });
     expect(html.innerHTML).toContain('<thead>');
@@ -78,7 +78,7 @@ describe('rendering results', () => {
       `;
       const result = await runtime.loadQuery(src).run();
       const document = new JSDOM().window.document;
-      await new HTMLView(document).render(result.data, {
+      await new HTMLView(document).render(result, {
         dataStyles: {},
       });
     }
@@ -233,7 +233,7 @@ describe('rendering results', () => {
         await runtime!.loadModel(src).loadQueryByName('mexico_point_map')
       ).run();
       const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result.data, {
+      const html = await new HTMLView(document).render(result, {
         dataStyles: {},
       });
 
