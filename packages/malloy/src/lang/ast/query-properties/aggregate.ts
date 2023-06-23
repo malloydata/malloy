@@ -21,11 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ListOf} from '../types/malloy-element';
+import {DefinitionList} from '../types/definition-list';
 import {QueryItem} from '../types/query-item';
 
-export class Aggregate extends ListOf<QueryItem> {
-  constructor(members: QueryItem[]) {
-    super('aggregate', members);
-  }
+export class Aggregate extends DefinitionList<QueryItem> {
+  elementType = 'aggregateList';
 }

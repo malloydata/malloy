@@ -654,7 +654,7 @@ export class BigQueryConnection
       if (inCache.schema !== undefined) {
         schemas[tableURL] = inCache.schema;
       } else {
-        errors[tableURL] = inCache.error;
+        errors[tableURL] = inCache.error || 'Unknown schema fetch error';
       }
     }
     return {schemas, errors};

@@ -21,11 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {SourceProperty} from './source-property';
-import {ListOf} from './malloy-element';
+import {DeclareFields} from './declare-fields';
 
-export class ExploreDesc extends ListOf<SourceProperty> {
-  constructor(props: SourceProperty[]) {
-    super('exploreDesc', props);
-  }
+export class Dimensions extends DeclareFields {
+  elementType = 'dimensionList';
 }

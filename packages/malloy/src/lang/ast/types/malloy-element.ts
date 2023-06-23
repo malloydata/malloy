@@ -23,6 +23,7 @@
 import cloneDeep from 'lodash/cloneDeep';
 
 import {
+  Annotation,
   DocumentLocation,
   DocumentReference,
   isSQLBlockStruct,
@@ -38,6 +39,7 @@ import {DocumentCompileResult} from './document-compile-result';
 import {GlobalNameSpace} from './global-name-space';
 import {ModelEntry} from './model-entry';
 import {NameSpace} from './name-space';
+import {Noteable, isNoteable, extendNoteMethod} from './noteable';
 
 export abstract class MalloyElement {
   abstract elementType: string;
@@ -296,18 +298,14 @@ export function isDocStatement(e: MalloyElement): e is DocStatement {
   return (e as DocStatement).execute !== undefined;
 }
 
-export class ListOf<ET extends MalloyElement> extends MalloyElement {
-  elementType = 'genericElementList';
-  constructor(listDesc: string, protected elements: ET[]) {
+export abstract class ListOf<ET extends MalloyElement> extends MalloyElement {
+  constructor(protected elements: ET[]) {
     super();
-    if (this.elementType === 'genericElementList') {
-      this.elementType = listDesc;
-    }
     this.newContents();
   }
 
-  private newContents(): void {
-    this.has({[this.elementType]: this.elements});
+  protected newContents(): void {
+    this.has({listOf: this.elements});
   }
 
   get list(): ET[] {
@@ -329,18 +327,31 @@ export class ListOf<ET extends MalloyElement> extends MalloyElement {
   }
 }
 
-export class RunList extends ListOf<DocStatement> {
+export class RunList extends ListOf<DocStatement> implements Noteable {
+  elementType = 'topLevelStatements';
   execCursor = 0;
+  readonly isNoteableObj = true;
+  extendNote = extendNoteMethod;
+  note?: Annotation;
+  noteCursor = 0;
   executeList(doc: Document): ModelDataRequest {
     while (this.execCursor < this.elements.length) {
       const el = this.elements[this.execCursor];
-      if (isDocStatement(el)) {
-        const resp = el.execute(doc);
-        if (resp) {
-          return resp;
+      if (this.noteCursor === this.execCursor) {
+        // We only want to set the note on each element once,
+        // but we might execute a element multiple times
+        if (this.note && isNoteable(el)) {
+          el.extendNote(this.note);
         }
-        this.execCursor += 1;
+        this.noteCursor += 1;
       }
+      const resp = el.execute(doc);
+      if (resp) {
+        // Statment needs information (likely SQL schema) so we return
+        // the response, and will come back here later
+        return resp;
+      }
+      this.execCursor += 1;
     }
     return undefined;
   }
@@ -368,10 +379,11 @@ export class Document extends MalloyElement implements NameSpace {
   sqlBlocks: SQLBlockStructDef[] = [];
   statements: RunList;
   didInitModel = false;
+  notes: string[] = [];
 
   constructor(statements: DocStatement[]) {
     super();
-    this.statements = new RunList('topLevelStatements', statements);
+    this.statements = new RunList(statements);
     this.has({statements: statements});
   }
 
@@ -420,6 +432,9 @@ export class Document extends MalloyElement implements NameSpace {
         def.contents[entry] = cloneDeep(entryDef);
       }
     }
+    if (this.notes.length > 0) {
+      def.annotation = {notes: this.notes};
+    }
     return def;
   }
 
@@ -450,5 +465,21 @@ export class Document extends MalloyElement implements NameSpace {
       this.log(`Cannot redefine '${str}', which is in global namespace`);
     }
     this.documentModel[str] = ent;
+  }
+}
+
+export class ObjectAnnotation extends MalloyElement {
+  elementType = 'annotation';
+  constructor(readonly notes: string[]) {
+    super();
+  }
+}
+
+export class ModelAnnotation extends ObjectAnnotation implements DocStatement {
+  elementType = 'modelAnnotation';
+
+  execute(doc: Document): ModelDataRequest {
+    doc.notes = doc.notes.concat(this.notes);
+    return;
   }
 }

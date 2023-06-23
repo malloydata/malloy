@@ -75,6 +75,7 @@ import {
   URLReader,
 } from './runtime_types';
 import {DateTime} from 'luxon';
+import {Taggable, Tags} from './tags';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -742,7 +743,7 @@ export class Model {
 /**
  * A prepared query which has all the necessary information to produce its SQL.
  */
-export class PreparedQuery {
+export class PreparedQuery implements Taggable {
   public _modelDef: ModelDef;
   public _query: InternalQuery | NamedQuery;
   public name?: string;
@@ -751,6 +752,10 @@ export class PreparedQuery {
     this._query = query;
     this._modelDef = model;
     this.name = name;
+  }
+
+  getTags(): Tags {
+    return new Tags(this._query.annotation);
   }
 
   /**
@@ -1065,13 +1070,17 @@ export class DocumentCompletion {
 /**
  * A fully-prepared query containing SQL and metadata required to run the query.
  */
-export class PreparedResult {
+export class PreparedResult implements Taggable {
   protected inner: CompiledQuery;
   protected modelDef: ModelDef;
 
   constructor(query: CompiledQuery, modelDef: ModelDef) {
     this.inner = query;
     this.modelDef = modelDef;
+  }
+
+  public getTags(): Tags {
+    return new Tags(this.inner.annotation);
   }
 
   /**
@@ -1499,7 +1508,7 @@ export enum AtomicFieldType {
   Error = 'error',
 }
 
-export class AtomicField extends Entity {
+export class AtomicField extends Entity implements Taggable {
   protected fieldTypeDef: FieldTypeDef;
   protected parent: Explore;
 
@@ -1532,6 +1541,10 @@ export class AtomicField extends Entity {
       case 'error':
         return AtomicFieldType.Error;
     }
+  }
+
+  getTags(): Tags {
+    return new Tags(this.fieldTypeDef.annotation);
   }
 
   public isIntrinsic(): boolean {
@@ -1789,12 +1802,16 @@ export class Query extends Entity {
   }
 }
 
-export class QueryField extends Query {
+export class QueryField extends Query implements Taggable {
   protected parent: Explore;
 
   constructor(turtleDef: TurtleDef, parent: Explore, source?: Query) {
     super(turtleDef, parent, source);
     this.parent = parent;
+  }
+
+  getTags(): Tags {
+    return new Tags(this.turtleDef.annotation);
   }
 
   public isQueryField(): this is QueryField {
@@ -1833,7 +1850,7 @@ export enum JoinRelationship {
   ManyToOne = 'many_to_one',
 }
 
-export class ExploreField extends Explore {
+export class ExploreField extends Explore implements Taggable {
   protected _parentExplore: Explore;
 
   constructor(structDef: StructDef, parentExplore: Explore, source?: Explore) {
@@ -1855,6 +1872,10 @@ export class ExploreField extends Explore {
       default:
         throw new Error('A source field must have a join relationship.');
     }
+  }
+
+  getTags(): Tags {
+    return new Tags(this._structDef.annotation);
   }
 
   public isQueryField(): this is QueryField {

@@ -79,6 +79,9 @@ export class ExistingQuery extends PipelineDesc {
       structRef: isRefOk ? queryHead.structRef() : queryHead.structDef(),
       location: this.location,
     };
+    if (seedQuery.annotation) {
+      query.annotation = seedQuery.annotation;
+    }
     return {outputStruct: appended.structDef, query};
   }
 

@@ -33,7 +33,5 @@ export class RenameField extends MalloyElement {
 }
 
 export class Renames extends ListOf<RenameField> {
-  constructor(renames: RenameField[]) {
-    super('renameField', renames);
-  }
+  elementType = 'renameFields';
 }

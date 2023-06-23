@@ -32,6 +32,7 @@ import {FieldSpace} from './field-space';
 
 export abstract class SpaceField extends SpaceEntry {
   readonly refType = 'field';
+  haveFieldDef?: FieldDef;
 
   protected fieldTypeFromFieldDef(def: FieldDef): TypeDesc {
     const ref: TypeDesc = {

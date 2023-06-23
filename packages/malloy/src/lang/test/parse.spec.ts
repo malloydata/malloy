@@ -37,7 +37,7 @@ import {
   expr,
   TestTranslator,
   getExplore,
-  getField,
+  getFieldDef,
   getJoinField,
   getModelQuery,
   getQueryField,
@@ -1940,12 +1940,13 @@ describe('error handling', () => {
   });
 
   test('bad sql in sql block', () => {
-    const badModel = new TestTranslator('sql: { select: """)""" }');
-    expect(badModel).toParse();
-    const needSchema = badModel.translate();
+    const badSelect = model`sql: someName is { select: """)""" }`;
+    const badTrans = badSelect.translator;
+    expect(badSelect).toParse();
+    const needSchema = badTrans.translate();
     expect(needSchema.compileSQL).toBeDefined();
     if (needSchema.compileSQL) {
-      badModel.update({
+      badTrans.update({
         errors: {
           compileSQL: {
             [needSchema.compileSQL.name]: 'ZZZZ',
@@ -1953,7 +1954,7 @@ describe('error handling', () => {
         },
       });
     }
-    expect(badModel).translationToFailWith('Invalid SQL, ZZZZ');
+    expect(badTrans).translationToFailWith('Invalid SQL, ZZZZ');
   });
 });
 
@@ -2004,7 +2005,7 @@ describe('source locations', () => {
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
-    const x = getField(na, 'x');
+    const x = getFieldDef(na, 'x');
     expect(x.location).toMatchObject(source.locations[0]);
   });
 
@@ -2013,7 +2014,7 @@ describe('source locations', () => {
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
-    const x = getField(na, 'x');
+    const x = getFieldDef(na, 'x');
     expect(x.location).toMatchObject(source.locations[0]);
   });
 
@@ -2022,7 +2023,7 @@ describe('source locations', () => {
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
-    const x = getField(na, 'x');
+    const x = getFieldDef(na, 'x');
     expect(x.location).toMatchObject(source.locations[0]);
   });
 
@@ -2038,7 +2039,7 @@ describe('source locations', () => {
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
     const x = getQueryField(na, 'x');
-    const y = getField(x.pipeline[0], 'y');
+    const y = getFieldDef(x.pipeline[0], 'y');
     expect(y.location).toMatchObject(source.locations[0]);
   });
 
@@ -2055,7 +2056,7 @@ describe('source locations', () => {
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
     const x = getQueryField(na, 'x');
-    const z = getField(x.pipeline[0], 'z');
+    const z = getFieldDef(x.pipeline[0], 'z');
     expect(z.location).toMatchObject(source.locations[0]);
   });
 
@@ -2064,7 +2065,7 @@ describe('source locations', () => {
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
-    const abool = getField(na, 'abool');
+    const abool = getFieldDef(na, 'abool');
     expect(abool.location).toMatchObject(source.locations[0]);
   });
 
@@ -2083,7 +2084,7 @@ describe('source locations', () => {
       });
       expect(m).toTranslate();
       const na = getExplore(m.modelDef, 'na');
-      const one = getField(na, 'one');
+      const one = getFieldDef(na, 'one');
       expect(one.location).isLocationIn(source.locations[0], source.code);
     }
   });
@@ -2101,9 +2102,9 @@ describe('source locations', () => {
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
-    const abool = getField(na, 'abool');
+    const abool = getFieldDef(na, 'abool');
     expect(abool.location).toMatchObject(source.locations[0]);
-    const y = getField(na, 'y');
+    const y = getFieldDef(na, 'y');
     expect(y.location).toMatchObject(source.locations[1]);
   });
 
@@ -2120,7 +2121,7 @@ describe('source locations', () => {
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
     const q = getModelQuery(m.modelDef, 'q');
-    const a = getField(q.pipeline[0], 'b');
+    const a = getFieldDef(q.pipeline[0], 'b');
     expect(a.location).toMatchObject(source.locations[0]);
   });
 
@@ -2149,7 +2150,7 @@ describe('source locations', () => {
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
-    const bbool = getField(na, 'bbool');
+    const bbool = getFieldDef(na, 'bbool');
     expect(bbool.location).toMatchObject(source.locations[0]);
   });
 
@@ -2162,7 +2163,7 @@ describe('source locations', () => {
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
-    const x = getField(na, 'x');
+    const x = getFieldDef(na, 'x');
     expect(x.location).toMatchObject(source.locations[0]);
   });
 
@@ -2175,7 +2176,7 @@ describe('source locations', () => {
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
-    const x = getField(na, 'x');
+    const x = getFieldDef(na, 'x');
     expect(x.location).toMatchObject(source.locations[0]);
   });
 
@@ -2192,7 +2193,7 @@ describe('source locations', () => {
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
     const x = getJoinField(na, 'x');
-    const y = getField(x, 'y');
+    const y = getFieldDef(x, 'y');
     expect(y.location).toMatchObject(source.locations[0]);
   });
 

@@ -21,12 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {Annotation} from '../../../model';
 import {ModelDataRequest} from '../../translate-response';
 
 import {DocStatement, Document, MalloyElement} from '../types/malloy-element';
 import {QueryElement} from '../types/query-element';
+import {Noteable, extendNoteMethod} from '../types/noteable';
 
-export class AnonymousQuery extends MalloyElement implements DocStatement {
+export class AnonymousQuery
+  extends MalloyElement
+  implements DocStatement, Noteable
+{
   elementType = 'anonymousQuery';
 
   constructor(readonly theQuery: QueryElement) {
@@ -34,8 +39,17 @@ export class AnonymousQuery extends MalloyElement implements DocStatement {
     this.has({query: theQuery});
   }
 
+  readonly isNoteableObj = true;
+  extendNote = extendNoteMethod;
+  note?: Annotation;
+
   execute(doc: Document): ModelDataRequest {
     const modelQuery = this.theQuery.query();
+    if (this.note) {
+      modelQuery.annotation = modelQuery.annotation
+        ? {...this.note, inherits: modelQuery.annotation}
+        : this.note;
+    }
     doc.queryList.push(modelQuery);
     return undefined;
   }
