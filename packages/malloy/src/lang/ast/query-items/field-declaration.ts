@@ -59,7 +59,6 @@ export abstract class FieldDeclaration
   extends MalloyElement
   implements Noteable
 {
-  isMeasure?: boolean;
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
   note?: Annotation;
