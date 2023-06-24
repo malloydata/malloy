@@ -191,6 +191,60 @@ describe('rendering results', () => {
     );
   });
 
+  describe('html renderer', () => {
+    test('renders with annotations correctly', async () => {
+      const connectionName = 'duckdb';
+      const runtime = runtimes.runtimeMap.get(connectionName);
+      expect(runtime).toBeDefined();
+      const src = `sql: height_sql is { connection: "${connectionName}" select: """SELECT 'Pedro' as nm, 1 as monthy, 20 as height, 3 as wt
+      UNION ALL SELECT 'Pedro', 2, 25, 3.4
+      UNION ALL SELECT 'Pedro', 3, 38, 3.6
+      UNION ALL SELECT 'Pedro', 4, 45, 3.7
+      UNION ALL SELECT 'Sebastian', 1, 23, 2
+      UNION ALL SELECT 'Sebastian', 2, 28, 2.6
+      UNION ALL SELECT 'Sebastian', 3, 35, 3.6
+      UNION ALL SELECT 'Sebastian', 4, 47, 4.2
+      UNION ALL SELECT 'Alex', 1, 23, 2.5
+      UNION ALL SELECT 'Alex', 2, 28, 3
+      UNION ALL SELECT 'Alex', 3, 35, 3.2
+      UNION ALL SELECT 'Alex', 4, 47, 3.4
+      UNION ALL SELECT 'Miguel', 1, 23, 4
+      UNION ALL SELECT 'Miguel', 2, 28, 4.1
+      UNION ALL SELECT 'Miguel', 3, 35, 4.2
+      UNION ALL SELECT 'Miguel', 4, 47, 4.3 """ }
+
+    source: height
+      is from_sql(height_sql) + {
+      query: by_name is {
+        group_by: nm
+        nest: height_by_age
+          # line_chart
+        is {
+          project: monthy, height
+        }
+
+        nest: weight_by_age_bar_chart is {
+          project: monthy, wt
+        }
+      }
+    }
+
+    query: by_name is height -> by_name {
+
+    }
+      `;
+      const result = await (
+        await runtime!.loadModel(src).loadQueryByName('by_name')
+      ).run();
+      const document = new JSDOM().window.document;
+      const html = await new HTMLView(document).render(result, {
+        dataStyles: {},
+      });
+
+      expect(html).toMatchSnapshot();
+    });
+  });
+
   describe('date renderer', () => {
     test('date with timezone rendered correctly', async () => {
       const connectionName = 'duckdb';
