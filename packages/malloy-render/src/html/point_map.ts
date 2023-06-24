@@ -41,6 +41,8 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
         data.value,
         data.field.timeframe || TimestampTimeframe.Second,
         this.timezone
+        data.field.timeframe || TimestampTimeframe.Second,
+        this.timezone
       );
     }
     throw new Error('Invalid field type for point map chart.');
@@ -55,6 +57,16 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
       }
     }
     throw new Error('Invalid field type for point map.');
+  }
+
+  isTimeFieldDef(field: Field): boolean {
+    if (field.isAtomicField()) {
+      if (field.isDate() || field.isTimestamp()) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
@@ -82,8 +94,9 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
             axis: {
               title: formatTitle(
                 this.options,
-                colorField,
+                colorField.name,
                 undefined,
+                this.isTimeFieldDef(colorField),
                 this.timezone
               ),
             },
@@ -98,8 +111,9 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
           axis: {
             title: formatTitle(
               this.options,
-              sizeField,
+              sizeField.name,
               undefined,
+              this.isTimeFieldDef(sizeField),
               this.timezone
             ),
           },
@@ -113,8 +127,9 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
           axis: {
             title: formatTitle(
               this.options,
-              shapeField,
+              shapeField.name,
               undefined,
+              this.isTimeFieldDef(shapeField),
               this.timezone
             ),
           },

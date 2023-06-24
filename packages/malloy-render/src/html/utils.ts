@@ -228,6 +228,7 @@ export function createDrillIcon(document: Document): HTMLElement {
 
 export function formatTitle(
   options: RendererOptions,
+<<<<<<< HEAD
   field: Field,
   renderDef?: RenderDef | undefined,
   timezone?: string
@@ -239,6 +240,16 @@ export function formatTitle(
     (field.isDate() || field.isTimestamp()) &&
     timezone
   ) {
+=======
+  name: string,
+  renderDef?: RenderDef | undefined,
+  isTimeField?: boolean,
+  timezone?: string
+) {
+  const label = renderDef?.data?.label || name;
+  let title = options.titleCase ? startCase(label) : label;
+  if (isTimeField && timezone) {
+>>>>>>> 036cbb13 (Merge.)
     title = `${title} (${timezone})`;
   }
 
