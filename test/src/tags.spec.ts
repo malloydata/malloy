@@ -117,16 +117,20 @@ import {runtimeFor} from './runtimes';
 const runtime = runtimeFor('duckdb');
 
 describe('## top level', () => {
-  test.skip('top level tags are available in the model def', async () => {
-    // const model = await runtime.loadModel(`
-    //   ## propertyTag
-    //   ##" Doc String
-    // `);
-    // const modelDesc = model.getTags().getMalloyTags();
-    // expect(modelDesc).toEqual({
-    //   properties: {propertyTag: true},
-    //   docStrings: [ '##" Doc String\n'],
-    // });
+  test('top level tags are available in the model def', async () => {
+    const model = await runtime
+      .loadModel(
+        `
+      ## propertyTag
+      ##" Doc String
+    `
+      )
+      .getModel();
+    const modelDesc = model.getTags().getMalloyTags();
+    expect(modelDesc).toEqual({
+      properties: {propertyTag: true},
+      docStrings: ['Doc String\n'],
+    });
   });
 });
 describe('tags in results', () => {
