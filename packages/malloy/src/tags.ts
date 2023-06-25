@@ -95,10 +95,12 @@ function parseTag(
   src: string,
   tagProp: MalloyTagProperties
 ): MalloyTag | undefined {
-  if (src.startsWith('#" ')) {
-    return {docString: src.slice(3)};
+  const docMatch = src.match(/^##?" /);
+  if (docMatch) {
+    return {docString: src.slice(docMatch[0].length)};
   }
-  if (!src.startsWith('# ')) {
+  const propMatch = src.match(/^##? /);
+  if (!propMatch) {
     return;
   }
   /*
@@ -108,7 +110,7 @@ function parseTag(
    *
    * Seems wrong to be writing a parser though.
    */
-  const tokens = tokenize(src.slice(2));
+  const tokens = tokenize(src.slice(propMatch[0].length));
   let tn = 0;
   const lastToken = tokens.length - 1;
   while (tn <= lastToken) {

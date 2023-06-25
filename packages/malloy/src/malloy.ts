@@ -582,7 +582,7 @@ export class MalloyError extends Error {
 /**
  * A compiled Malloy document.
  */
-export class Model {
+export class Model implements Taggable {
   private modelDef: ModelDef;
   private queryList: InternalQuery[];
   private sqlBlocks: SQLBlockStructDef[];
@@ -605,6 +605,10 @@ export class Model {
     this.sqlBlocks = sqlBlocks;
     this._referenceAt = referenceAt;
     this.problems = problems;
+  }
+
+  getTags(): Tags {
+    return new Tags(this.modelDef.annotation);
   }
 
   /**
