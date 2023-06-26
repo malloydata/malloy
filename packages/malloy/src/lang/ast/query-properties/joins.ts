@@ -21,21 +21,27 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Expr, isJoinOn, StructDef} from '../../../model/malloy_types';
+import {
+  Annotation,
+  Expr,
+  isJoinOn,
+  StructDef,
+} from '../../../model/malloy_types';
 import {Source} from '../elements/source';
 import {compressExpr} from '../expressions/utils';
+import {DefinitionList} from '../types/definition-list';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
-import {
-  ListOf,
-  MalloyElement,
-  ModelEntryReference,
-} from '../types/malloy-element';
+import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
+import {extendNoteMethod, Noteable} from '../types/noteable';
 
-export abstract class Join extends MalloyElement {
+export abstract class Join extends MalloyElement implements Noteable {
   abstract name: ModelEntryReference;
   abstract structDef(): StructDef;
   abstract fixupJoinOn(outer: FieldSpace, inStruct: StructDef): void;
+  readonly isNoteableObj = true;
+  extendNote = extendNoteMethod;
+  note?: Annotation;
 }
 
 export class KeyJoin extends Join {
@@ -65,6 +71,9 @@ export class KeyJoin extends Join {
       joinStruct.as = this.name.refString;
     }
 
+    if (this.note) {
+      joinStruct.annotation = this.note;
+    }
     return joinStruct;
   }
 
@@ -149,12 +158,16 @@ export class ExpressionJoin extends Join {
     } else {
       joinStruct.as = this.name.refString;
     }
+    if (this.note) {
+      joinStruct.annotation = this.note;
+    }
     return joinStruct;
   }
 }
 
-export class Joins extends ListOf<Join> {
+export class Joins extends DefinitionList<Join> {
+  elementType = 'joinList';
   constructor(joins: Join[]) {
-    super('joinList', joins);
+    super(joins);
   }
 }

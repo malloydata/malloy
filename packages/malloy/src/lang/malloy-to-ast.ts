@@ -22,7 +22,7 @@
  */
 
 import {ParserRuleContext} from 'antlr4ts';
-import {ParseTree} from 'antlr4ts/tree';
+import {ParseTree, TerminalNode} from 'antlr4ts/tree';
 import {AbstractParseTreeVisitor} from 'antlr4ts/tree/AbstractParseTreeVisitor';
 import {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
 import * as parse from './lib/Malloy/MalloyParser';
@@ -33,6 +33,29 @@ import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
 import {FieldDeclarationConstructor, TableSource} from './ast';
 
 const ENABLE_M4_WARNINGS = false;
+
+class IgnoredElement extends ast.MalloyElement {
+  elementType = 'ignoredByParser';
+  malloySrc: string;
+  constructor(src: string) {
+    super();
+    this.malloySrc = src;
+  }
+}
+
+/**
+ * Get all the possibly missing annotations from this parse rule
+ * @param cx Any parse context which has an ANNOTATION* rules
+ * @returns Array of texts for the annotations
+ */
+function getNotes(cx: {ANNOTATION: () => TerminalNode[]}): string[] {
+  return cx.ANNOTATION().map(a => a.text);
+}
+
+function getIsNotes(cx: parse.IsDefineContext): string[] {
+  const before = getNotes(cx._beforeIs);
+  return before.concat(getNotes(cx._afterIs));
+}
 
 /**
  * ANTLR visitor pattern parse tree traversal. Generates a Malloy
@@ -89,72 +112,21 @@ export class MalloyToAST
     });
   }
 
-  protected onlyExploreProperties(
-    els: ast.MalloyElement[]
-  ): ast.SourceProperty[] {
-    const eps: ast.SourceProperty[] = [];
+  protected only<T extends ast.MalloyElement>(
+    els: ast.MalloyElement[],
+    isGood: (el: ast.MalloyElement) => T | false,
+    desc: string
+  ): T[] {
+    const acceptable: T[] = [];
     for (const el of els) {
-      if (ast.isSourceProperty(el)) {
-        eps.push(el);
-      } else {
-        this.astError(el, `Expected source property, not '${el.elementType}'`);
+      const checked = isGood(el);
+      if (checked) {
+        acceptable.push(checked);
+      } else if (!(el instanceof IgnoredElement)) {
+        this.astError(el, `Expected ${desc}, not '${el.elementType}'`);
       }
     }
-    return eps;
-  }
-
-  protected onlyJoins(els: ast.MalloyElement[]): ast.Join[] {
-    const eps: ast.Join[] = [];
-    for (const el of els) {
-      if (el instanceof ast.Join) {
-        eps.push(el);
-      } else {
-        this.astError(el, `Expected source property, not '${el.elementType}'`);
-      }
-    }
-    return eps;
-  }
-
-  protected onlyDocStatements(els: ast.MalloyElement[]): ast.DocStatement[] {
-    const eps: ast.DocStatement[] = [];
-    for (const el of els) {
-      if (ast.isDocStatement(el)) {
-        eps.push(el);
-      } else {
-        this.astError(el, `Expected statement, not '${el.elementType}'`);
-      }
-    }
-    return eps;
-  }
-
-  protected onlyNestedQueries(els: ast.MalloyElement[]): ast.NestedQuery[] {
-    const eps: ast.NestedQuery[] = [];
-    for (const el of els) {
-      if (ast.isNestedQuery(el)) {
-        eps.push(el);
-      } else {
-        this.astError(el, `Expected query, not '${el.elementType}'`);
-      }
-    }
-    return eps;
-  }
-
-  protected onlyQueryRefs(els: ast.MalloyElement[]): ast.QueryItem[] {
-    const eps: ast.QueryItem[] = [];
-    for (const el of els) {
-      if (
-        el instanceof ast.FieldReference ||
-        el instanceof ast.FieldDeclaration
-      ) {
-        eps.push(el);
-      } else {
-        const reported = el instanceof ast.Unimplemented && el.reported;
-        if (!reported) {
-          this.astError(el, `Expected query field, not '${el.elementType}'`);
-        }
-      }
-    }
-    return eps;
+    return acceptable;
   }
 
   protected getNumber(term: ParseTree): number {
@@ -197,6 +169,7 @@ export class MalloyToAST
     }
     return undefined;
   }
+
   defaultResult(): ast.MalloyElement {
     return new ast.Unimplemented();
   }
@@ -294,30 +267,34 @@ export class MalloyToAST
   }
 
   visitMalloyDocument(pcx: parse.MalloyDocumentContext): ast.Document {
-    const stmts = this.onlyDocStatements(
-      pcx.malloyStatement().map(scx => this.visit(scx))
+    const stmts = this.only<ast.DocStatement>(
+      pcx.malloyStatement().map(scx => this.visit(scx)),
+      x => ast.isDocStatement(x) && x,
+      'statement'
     );
     return new ast.Document(stmts);
   }
 
   visitDefineSourceStatement(
     pcx: parse.DefineSourceStatementContext
-  ): ast.DefineSourceList | ast.DefineSource {
+  ): ast.DefineSourceList {
     const defsCx = pcx.sourcePropertyList().sourceDefinition();
-    const defs = defsCx.map(dcx => this.visitsourceDefinition(dcx));
-    if (defs.length === 1) {
-      return defs[0];
-    }
-    return new ast.DefineSourceList(defs);
+    const defs = defsCx.map(dcx => this.visitSourceDefinition(dcx));
+    const blockNotes = getNotes(pcx.tags());
+    const defList = new ast.DefineSourceList(defs);
+    defList.extendNote({blockNotes});
+    return defList;
   }
 
-  visitsourceDefinition(pcx: parse.SourceDefinitionContext): ast.DefineSource {
+  visitSourceDefinition(pcx: parse.SourceDefinitionContext): ast.DefineSource {
     const exploreDef = new ast.DefineSource(
       this.getIdText(pcx.sourceNameDef()),
       this.visitExplore(pcx.explore()),
       true,
       []
     );
+    const notes = getNotes(pcx.tags()).concat(getIsNotes(pcx.isDefine()));
+    exploreDef.extendNote({notes});
     return this.astAt(exploreDef, pcx);
   }
 
@@ -333,10 +310,14 @@ export class MalloyToAST
     return source;
   }
 
-  visitExploreProperties(pcx: parse.ExplorePropertiesContext): ast.ExploreDesc {
+  visitExploreProperties(pcx: parse.ExplorePropertiesContext): ast.SourceDesc {
     const filterCx = pcx.filterShortcut();
-    const visited = pcx.exploreStatement().map(ecx => this.visit(ecx));
-    const propList = new ast.ExploreDesc(this.onlyExploreProperties(visited));
+    const visited = this.only<ast.SourceProperty>(
+      pcx.exploreStatement().map(ecx => this.visit(ecx)),
+      x => ast.isSourceProperty(x) && x,
+      'source property'
+    );
+    const propList = new ast.SourceDesc(visited);
     if (filterCx) {
       propList.push(this.getFilterShortcut(filterCx));
     }
@@ -409,7 +390,9 @@ export class MalloyToAST
         }
       }
     }
-    return new ast.Joins(joins);
+    const joinMany = new ast.Joins(joins);
+    joinMany.extendNote({blockNotes: getNotes(pcx.tags())});
+    return joinMany;
   }
 
   visitDefJoinOne(pcx: parse.DefJoinOneContext): ast.Joins {
@@ -423,7 +406,9 @@ export class MalloyToAST
         }
       }
     }
-    return new ast.Joins(joins);
+    const joinOne = new ast.Joins(joins);
+    joinOne.extendNote({blockNotes: getNotes(pcx.tags())});
+    return joinOne;
   }
 
   visitDefJoinCross(pcx: parse.DefJoinCrossContext): ast.Joins {
@@ -439,7 +424,9 @@ export class MalloyToAST
         }
       }
     }
-    return new ast.Joins(joins);
+    const joinCross = new ast.Joins(joins);
+    joinCross.extendNote({blockNotes: getNotes(pcx.tags())});
+    return joinCross;
   }
 
   protected getJoinList(pcx: parse.JoinListContext): ast.MalloyElement[] {
@@ -448,12 +435,14 @@ export class MalloyToAST
 
   protected getJoinSource(
     name: ast.ModelEntryReference,
-    ecx: parse.ExploreContext | undefined
-  ): ast.Source {
+    ecx: parse.IsExploreContext | undefined
+  ): {joinFrom: ast.Source; notes: string[]} {
     if (ecx) {
-      return this.visitExplore(ecx);
+      const joinSrc = this.visitExplore(ecx.explore());
+      const notes = getNotes(ecx._before_is).concat(getNotes(ecx._after_is));
+      return {joinFrom: joinSrc, notes};
     }
-    return new ast.NamedSource(name);
+    return {joinFrom: new ast.NamedSource(name), notes: []};
   }
 
   visitQueryJoinStatement(
@@ -472,20 +461,22 @@ export class MalloyToAST
 
   visitJoinOn(pcx: parse.JoinOnContext): ast.Join {
     const joinAs = this.getModelEntryName(pcx.joinNameDef());
-    const joinFrom = this.getJoinSource(joinAs, pcx.explore());
+    const {joinFrom, notes} = this.getJoinSource(joinAs, pcx.isExplore());
     const join = new ast.ExpressionJoin(joinAs, joinFrom);
     const onCx = pcx.joinExpression();
     if (onCx) {
       join.joinOn = this.getFieldExpr(onCx);
     }
+    join.extendNote({notes: getNotes(pcx).concat(notes)});
     return this.astAt(join, pcx);
   }
 
   visitJoinWith(pcx: parse.JoinWithContext): ast.Join {
     const joinAs = this.getModelEntryName(pcx.joinNameDef());
-    const joinFrom = this.getJoinSource(joinAs, pcx.explore());
+    const {joinFrom, notes} = this.getJoinSource(joinAs, pcx.isExplore());
     const joinOn = this.getFieldExpr(pcx.fieldExpr());
     const join = new ast.KeyJoin(joinAs, joinFrom, joinOn);
+    join.extendNote({notes: getNotes(pcx).concat(notes)});
     return this.astAt(join, pcx);
   }
 
@@ -497,6 +488,8 @@ export class MalloyToAST
     const fieldName = this.getIdText(pcx.fieldNameDef());
     const valExpr = this.getFieldExpr(defCx);
     const def = new makeFieldDef(valExpr, fieldName, this.getSourceCode(defCx));
+    const notes = getNotes(pcx.tags()).concat(getIsNotes(pcx.isDefine()));
+    def.extendNote({notes});
     return this.astAt(def, pcx);
   }
 
@@ -506,6 +499,7 @@ export class MalloyToAST
       ast.DimensionFieldDeclaration
     );
     const stmt = new ast.Dimensions(defs);
+    stmt.extendNote({blockNotes: getNotes(pcx.tags())});
     return this.astAt(stmt, pcx);
   }
 
@@ -515,6 +509,7 @@ export class MalloyToAST
       ast.MeasureFieldDeclaration
     );
     const stmt = new ast.Measures(defs);
+    stmt.extendNote({blockNotes: getNotes(pcx.tags())});
     return this.astAt(stmt, pcx);
   }
 
@@ -600,6 +595,13 @@ export class MalloyToAST
     return new ast.Turtles(babyTurtles);
   }
 
+  visitDefExploreQuery(pcx: parse.DefExploreQueryContext): ast.MalloyElement {
+    const queryDefs = this.visitSubQueryDefList(pcx.subQueryDefList());
+    const blockNotes = getNotes(pcx.tags());
+    queryDefs.extendNote({blockNotes});
+    return queryDefs;
+  }
+
   visitDefExplorePrimaryKey(
     pcx: parse.DefExplorePrimaryKeyContext
   ): ast.PrimaryKey {
@@ -650,16 +652,11 @@ export class MalloyToAST
   }
 
   visitQueryProperties(pcx: parse.QueryPropertiesContext): ast.QOPDesc {
-    const qProps = pcx
-      .queryStatement()
-      .map(qcx => this.astAt(this.visit(qcx), qcx))
-      .filter((p: ast.MalloyElement): p is ast.QueryProperty => {
-        if (ast.isQueryProperty(p)) {
-          return true;
-        }
-        p.log(`Unexpected statement type '${p.elementType}' in query`);
-        return false;
-      });
+    const qProps = this.only<ast.QueryProperty>(
+      pcx.queryStatement().map(qcx => this.astAt(this.visit(qcx), qcx)),
+      x => ast.isQueryProperty(x) && x,
+      'query statement'
+    );
     const fcx = pcx.filterShortcut();
     if (fcx) {
       qProps.push(this.getFilterShortcut(fcx));
@@ -683,23 +680,14 @@ export class MalloyToAST
     return this.astAt(dim, pcx);
   }
 
-  // visitQueryFieldNameless(
-  //   pcx: parse.QueryFieldNamelessContext
-  // ): ast.MalloyElement {
-  //   this.contextError(pcx, `Expressions in queries must have names`);
-  //   const noItem = new ast.Unimplemented();
-  //   noItem.reported = true;
-  //   return noItem;
-  // }
-
   getQueryFieldEntry(
     ctx: parse.QueryFieldEntryContext,
     makeFieldDef: ast.FieldDeclarationConstructor,
     makeFieldRef: ast.FieldReferenceConstructor
   ): ast.QueryItem {
-    const fieldPath = ctx.fieldPath();
-    if (fieldPath) {
-      return this.getFieldPath(fieldPath, makeFieldRef);
+    const refCx = ctx.taggedRef();
+    if (refCx) {
+      return this.getTaggedRef(refCx, makeFieldRef);
     }
     const def = ctx.fieldDef();
     if (def) {
@@ -715,40 +703,61 @@ export class MalloyToAST
     makeFieldDef: ast.FieldDeclarationConstructor,
     makeFieldRef: ast.FieldReferenceConstructor
   ): ast.QueryItem[] {
-    const itemList = pcx
-      .queryFieldEntry()
-      .map(e => this.getQueryFieldEntry(e, makeFieldDef, makeFieldRef));
-    return this.onlyQueryRefs(itemList);
+    return this.only<ast.QueryItem>(
+      pcx
+        .queryFieldEntry()
+        .map(e => this.getQueryFieldEntry(e, makeFieldDef, makeFieldRef)),
+      x =>
+        x instanceof ast.FieldReference || x instanceof ast.FieldDeclaration
+          ? x
+          : false,
+      'query field'
+    );
   }
 
   visitAggregateStatement(pcx: parse.AggregateStatementContext): ast.Aggregate {
-    return new ast.Aggregate(
+    const agStmt = new ast.Aggregate(
       this.getQueryItems(
         pcx.queryFieldList(),
         ast.AggregateFieldDeclaration,
         ast.AggregateFieldReference
       )
     );
+    agStmt.extendNote({blockNotes: getNotes(pcx.tags())});
+    return agStmt;
   }
 
   visitGroupByStatement(pcx: parse.GroupByStatementContext): ast.GroupBy {
-    return new ast.GroupBy(
+    const groupBy = new ast.GroupBy(
       this.getQueryItems(
         pcx.queryFieldList(),
         ast.GroupByFieldDeclaration,
         ast.GroupByFieldReference
       )
     );
+    groupBy.extendNote({blockNotes: getNotes(pcx.tags())});
+    return groupBy;
   }
 
   visitCalculateStatement(pcx: parse.CalculateStatementContext): ast.Calculate {
-    return new ast.Calculate(
+    const stmt = new ast.Calculate(
       this.getQueryItems(
         pcx.queryFieldList(),
         ast.CalculateFieldDeclaration,
         ast.CalculateFieldReference
       )
     );
+    stmt.extendNote({blockNotes: getNotes(pcx.tags())});
+    return stmt;
+  }
+
+  getTaggedRef(
+    pcx: parse.TaggedRefContext,
+    makeFieldRef: ast.FieldReferenceConstructor
+  ): ast.FieldReference {
+    const ref = this.getFieldPath(pcx.fieldPath(), makeFieldRef);
+    ref.extendNote({notes: getNotes(pcx.tags())});
+    return ref;
   }
 
   getFieldCollectionMember(
@@ -760,9 +769,9 @@ export class MalloyToAST
     if (fieldDef) {
       return this.getFieldDef(fieldDef, makeFieldDef);
     }
-    const fieldPath = pcx.fieldPath();
-    if (fieldPath) {
-      return this.getFieldPath(fieldPath, makeFieldRef);
+    const refCx = pcx.taggedRef();
+    if (refCx) {
+      return this.getTaggedRef(refCx, makeFieldRef);
     }
     const collectionWildcard = pcx.collectionWildCard();
     if (collectionWildcard) {
@@ -788,6 +797,14 @@ export class MalloyToAST
         )
       );
     return this.astAt(new ast.ProjectStatement(fields), pcx);
+  }
+
+  visitProjectStatement(
+    pcx: parse.ProjectStatementContext
+  ): ast.ProjectStatement {
+    const stmt = this.visitFieldCollection(pcx.fieldCollection());
+    stmt.extendNote({blockNotes: getNotes(pcx.tags())});
+    return stmt;
   }
 
   visitCollectionWildCard(
@@ -921,21 +938,24 @@ export class MalloyToAST
     const stmts = pcx
       .topLevelQueryDef()
       .map(cx => this.visitTopLevelQueryDef(cx));
-    if (stmts.length === 1) {
-      return stmts[0];
-    }
-    return new ast.DefineQueryList(stmts);
+    const blockNotes = getNotes(pcx.tags());
+    const queryDefs = new ast.DefineQueryList(stmts);
+    queryDefs.extendNote({blockNotes});
+    return queryDefs;
   }
 
   visitTopLevelQueryDef(pcx: parse.TopLevelQueryDefContext): ast.DefineQuery {
     const queryName = this.getIdText(pcx.queryName());
-    const queryDef = this.visit(pcx.query());
-    if (ast.isQueryElement(queryDef)) {
-      return this.astAt(new ast.DefineQuery(queryName, queryDef), pcx);
+    const queryExpr = this.visit(pcx.query());
+    if (ast.isQueryElement(queryExpr)) {
+      const notes = getNotes(pcx.tags()).concat(getIsNotes(pcx.isDefine()));
+      const queryDef = new ast.DefineQuery(queryName, queryExpr);
+      queryDef.extendNote({notes});
+      return this.astAt(queryDef, pcx);
     }
     throw this.internalError(
       pcx,
-      `Expect query definition, got a '${queryDef.elementType}'`
+      `Expected query definition, got a '${queryExpr.elementType}'`
     );
   }
 
@@ -943,15 +963,18 @@ export class MalloyToAST
     const defCx = pcx.topLevelAnonQueryDef();
     const query = this.visit(defCx.query());
     if (ast.isQueryElement(query)) {
-      const el = this.astAt(new ast.AnonymousQuery(query), defCx);
+      const theQuery = new ast.AnonymousQuery(query);
+      const notes = getNotes(pcx.topLevelAnonQueryDef().tags());
+      const blockNotes = getNotes(pcx.tags());
+      theQuery.extendNote({notes, blockNotes});
       if (ENABLE_M4_WARNINGS) {
         this.astError(
-          el,
+          theQuery,
           'Anonymous `query:` statements are deprecated, use `run:` instead',
           'warn'
         );
       }
-      return el;
+      return this.astAt(theQuery, pcx);
     }
     throw this.internalError(
       pcx,
@@ -963,6 +986,8 @@ export class MalloyToAST
     const query = this.visit(pcx.topLevelAnonQueryDef().query());
     if (ast.isQueryElement(query)) {
       const el = new ast.RunQueryDef(query);
+      el.extendNote({blockNotes: getNotes(pcx._blockTags)});
+      el.extendNote({notes: getNotes(pcx._noteTags)});
       return this.astAt(el, pcx);
     }
     throw this.internalError(
@@ -977,36 +1002,53 @@ export class MalloyToAST
     return this.astAt(el, pcx);
   }
 
-  visitNestedQueryList(pcx: parse.NestedQueryListContext): ast.MalloyElement {
-    const nestedList = pcx.nestEntry().map(cx => this.visit(cx));
-    if (nestedList.length === 1) {
-      return nestedList[0];
-    }
-    return new ast.Nests(this.onlyNestedQueries(nestedList));
+  visitNestStatement(pcx: parse.NestStatementContext): ast.Nests {
+    const nests = this.visitNestedQueryList(pcx.nestedQueryList());
+    nests.extendNote({blockNotes: getNotes(pcx.tags())});
+    return nests;
+  }
+
+  visitNestedQueryList(pcx: parse.NestedQueryListContext): ast.Nests {
+    return new ast.Nests(
+      this.only<ast.NestedQuery>(
+        pcx.nestEntry().map(cx => this.visit(cx)),
+        x => ast.isNestedQuery(x) && x,
+        'query'
+      )
+    );
   }
 
   visitNestExisting(pcx: parse.NestExistingContext): ast.NestedQuery {
     const name = this.getFieldName(pcx.queryName());
     const propsCx = pcx.queryProperties();
+    const notes = getNotes(pcx.tags());
     if (propsCx) {
       const nestRefine = new ast.NestRefinement(name);
       const queryDesc = this.visitQueryProperties(propsCx);
       nestRefine.refineHead(queryDesc);
+      nestRefine.extendNote({notes});
       return this.astAt(nestRefine, pcx);
     }
-    return this.astAt(new ast.NestReference(name), pcx);
+    const nestRef = this.astAt(new ast.NestReference(name), pcx);
+    nestRef.extendNote({notes});
+    return nestRef;
   }
 
   visitNestDef(pcx: parse.NestDefContext): ast.NestDefinition {
     const name = this.getIdText(pcx.queryName());
     const nestDef = new ast.NestDefinition(name);
     this.buildPipelineFromName(nestDef, pcx.pipelineFromName());
+    nestDef.extendNote({
+      notes: getNotes(pcx.tags()).concat(getIsNotes(pcx.isDefine())),
+    });
     return this.astAt(nestDef, pcx);
   }
 
   visitExploreQueryDef(pcx: parse.ExploreQueryDefContext): ast.TurtleDecl {
     const name = this.getIdText(pcx.exploreQueryNameDef());
     const queryDef = new ast.TurtleDecl(name);
+    const notes = getNotes(pcx).concat(getIsNotes(pcx.isDefine()));
+    queryDef.extendNote({notes});
     this.buildPipelineFromName(queryDef, pcx.pipelineFromName());
     return this.astAt(queryDef, pcx);
   }
@@ -1449,5 +1491,29 @@ export class MalloyToAST
     }
     const enabled = pcx.sampleSpec().TRUE() !== undefined;
     return new ast.SampleProperty({enable: enabled});
+  }
+
+  visitDocAnnotations(pcx: parse.DocAnnotationsContext): ast.ModelAnnotation {
+    const allNotes = pcx.DOC_ANNOTATION().map(note => note.text);
+    return new ast.ModelAnnotation(allNotes);
+  }
+
+  visitIgnoredObjectAnnotations(
+    pcx: parse.IgnoredObjectAnnotationsContext
+  ): IgnoredElement {
+    return new IgnoredElement(pcx.text);
+  }
+
+  visitIgnoredModelAnnotations(
+    pcx: parse.IgnoredModelAnnotationsContext
+  ): IgnoredElement {
+    return new IgnoredElement(pcx.text);
+  }
+
+  visitDefExploreAnnotation(
+    pcx: parse.DefExploreAnnotationContext
+  ): ast.ObjectAnnotation {
+    const allNotes = pcx.ANNOTATION().map(note => note.text);
+    return new ast.ObjectAnnotation(allNotes);
   }
 }

@@ -34,9 +34,11 @@ export interface DocumentSymbol {
   type: string;
   name: string;
   children: DocumentSymbol[];
+  lensRange?: DocumentRange;
 }
 
 class DocumentSymbolWalker implements MalloyParserListener {
+  private blockRange: DocumentRange | undefined;
   constructor(
     readonly translator: MalloyTranslation,
     readonly tokens: CommonTokenStream,
@@ -52,13 +54,26 @@ class DocumentSymbolWalker implements MalloyParserListener {
     return this.scopes[this.scopes.length - 1];
   }
 
+  enterTopLevelQueryDefs(pcx: parser.TopLevelQueryDefsContext) {
+    const blockRange = this.translator.rangeFromContext(pcx);
+    const defs = pcx.topLevelQueryDef();
+    if (defs.length === 1) {
+      this.blockRange = blockRange;
+    }
+  }
+
   enterTopLevelQueryDef(pcx: parser.TopLevelQueryDefContext) {
     this.symbols.push({
       range: this.translator.rangeFromContext(pcx),
       name: pcx.queryName().text,
       type: 'query',
       children: [],
+      lensRange: this.blockRange,
     });
+  }
+
+  exitTopLevelQueryDefs(_pcx: parser.TopLevelQueryDefsContext) {
+    this.blockRange = undefined;
   }
 
   enterRunStatementDef(pcx: parser.RunStatementDefContext) {
@@ -67,6 +82,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
       name: 'unnamed_query',
       type: 'unnamed_query',
       children: [],
+      lensRange: this.translator.rangeFromContext(pcx),
     });
   }
 
@@ -76,24 +92,43 @@ class DocumentSymbolWalker implements MalloyParserListener {
       name: pcx.queryName().id().text,
       type: 'query',
       children: [],
+      lensRange: this.translator.rangeFromContext(pcx),
     });
   }
 
-  enterTopLevelAnonQueryDef(pcx: parser.TopLevelAnonQueryDefContext) {
+  enterAnonymousQuery(pcx: parser.AnonymousQueryContext) {
     this.symbols.push({
-      range: this.translator.rangeFromContext(pcx),
+      range: this.translator.rangeFromContext(
+        pcx.topLevelAnonQueryDef().query()
+      ),
       name: 'unnamed_query',
       type: 'unnamed_query',
       children: [],
+      lensRange: this.translator.rangeFromContext(pcx),
     });
   }
 
+  enterDefineSourceStatement(pcx: parser.DefineSourceStatementContext) {
+    const blockRange = this.translator.rangeFromContext(pcx);
+    const sourcePl = pcx.sourcePropertyList();
+    const defs = sourcePl.sourceDefinition();
+    if (defs.length === 1) {
+      this.blockRange = blockRange;
+    }
+  }
+
+  exitDefineSourceStatement(_pcx: parser.DefineSourceStatementContext) {
+    this.blockRange = undefined;
+  }
+
   enterSourceDefinition(pcx: parser.SourceDefinitionContext) {
+    const range = this.translator.rangeFromContext(pcx);
     this.scopes.push({
-      range: this.translator.rangeFromContext(pcx),
+      range,
       name: pcx.sourceNameDef().id().text,
       type: 'explore',
       children: [],
+      lensRange: this.blockRange,
     });
   }
 
@@ -104,12 +139,21 @@ class DocumentSymbolWalker implements MalloyParserListener {
     }
   }
 
+  enterDefExploreQuery(pcx: parser.DefExploreQueryContext) {
+    const blockRange = this.translator.rangeFromContext(pcx);
+    const defs = pcx.subQueryDefList().exploreQueryDef();
+    if (defs.length === 1) {
+      this.blockRange = blockRange;
+    }
+  }
+
   enterExploreQueryDef(pcx: parser.ExploreQueryDefContext) {
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
       name: pcx.exploreQueryNameDef().id().text,
       type: 'query',
       children: [],
+      lensRange: this.blockRange,
     };
     const parent = this.peekScope();
     if (parent) {
@@ -120,6 +164,10 @@ class DocumentSymbolWalker implements MalloyParserListener {
 
   exitExploreQueryDef(_pcx: parser.ExploreQueryDefContext) {
     this.popScope();
+  }
+
+  exitDefExploreQuery(_pcx: parser.DefExploreQueryContext) {
+    this.blockRange = undefined;
   }
 
   handleNestEntry(pcx: parser.NestExistingContext | parser.NestDefContext) {
@@ -163,7 +211,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
   }
 
   enterQueryFieldEntry(pcx: parser.QueryFieldEntryContext) {
-    const fieldRef = pcx.fieldPath();
+    const fieldRef = pcx.taggedRef()?.fieldPath();
     if (fieldRef === undefined) return;
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
@@ -212,11 +260,11 @@ class DocumentSymbolWalker implements MalloyParserListener {
   }
 
   enterDefineSQLStatement(pcx: parser.DefineSQLStatementContext) {
-    const name = pcx.nameSQLBlock()?.text;
+    const name = pcx.nameSQLBlock().text;
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
-      name: name || 'unnamed_sql',
-      type: name === undefined ? 'unnamed_sql' : 'sql',
+      name: name,
+      type: 'sql',
       children: [],
     };
     this.symbols.push(symbol);

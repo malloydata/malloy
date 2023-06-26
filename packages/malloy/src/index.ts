@@ -71,6 +71,7 @@ export type {
   DocumentLocation,
   DocumentRange,
   DocumentPosition,
+  Annotation,
 } from './model';
 export {
   // Used in Composer Demo
@@ -147,3 +148,4 @@ export type {
 } from './runtime_types';
 export type {Loggable} from './malloy';
 export {toAsyncGenerator} from './connection_utils';
+export {Tags, type MalloyTags} from './tags';

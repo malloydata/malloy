@@ -129,6 +129,9 @@ STRING_ESCAPE
 
 HACKY_REGEX: ('/' | [rR]) '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
 STRING_LITERAL: '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
+fragment F_TO_EOL: ~[\r\n]* (('\r'? '\n') | EOF);
+DOC_ANNOTATION: '##' F_TO_EOL;
+ANNOTATION: '#' F_TO_EOL;
 
 AMPER: '&';
 ARROW: '->';
@@ -140,6 +143,7 @@ CBRACK: ']' ;
 OCURLY: '{' ;
 CCURLY: '}' ;
 DOUBLECOLON: '::';
+TRIPLECOLON: ':::';
 EXCLAM: '!';
 COLON: ':' ;
 COMMA: ',';
@@ -204,7 +208,7 @@ fragment U: [uU] ; fragment V: [vV] ; fragment W: [wW] ; fragment X: [xX] ;
 fragment Y: [yY] ; fragment Z: [zZ] ;
 
 BLOCK_COMMENT: '/*' .*? '*/' -> channel(HIDDEN);
-COMMENT_TO_EOL: ('--' | '//') ~[\r\n]* (('\r'? '\n') | EOF) -> channel(HIDDEN) ;
+COMMENT_TO_EOL: ('--' | '//') F_TO_EOL -> channel(HIDDEN) ;
 WHITE_SPACE: SPACE_CHAR -> skip ;
 
 SQL_BEGIN: '"""' -> pushMode(SQL_MODE);

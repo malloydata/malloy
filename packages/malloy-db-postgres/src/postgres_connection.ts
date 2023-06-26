@@ -179,7 +179,7 @@ export class PostgresConnection
       if (inCache.schema !== undefined) {
         schemas[tableKey] = inCache.schema;
       } else {
-        errors[tableKey] = inCache.error;
+        errors[tableKey] = inCache.error || 'Unknown schema fetch error';
       }
     }
     return {schemas, errors};

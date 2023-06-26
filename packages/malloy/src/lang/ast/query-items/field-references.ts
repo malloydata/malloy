@@ -21,11 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDef, TypeDesc} from '../../../model/malloy_types';
+import {Annotation, FieldDef, TypeDesc} from '../../../model/malloy_types';
+import {DefinitionList} from '../types/definition-list';
 
 import {FieldName, FieldSpace} from '../types/field-space';
 import {LookupResult} from '../types/lookup-result';
 import {ListOf, MalloyElement} from '../types/malloy-element';
+import {Noteable, extendNoteMethod} from '../types/noteable';
+
 import {
   typecheckAggregate,
   typecheckCalculate,
@@ -41,11 +44,16 @@ export type FieldReferenceConstructor = new (
   names: FieldName[]
 ) => FieldReference;
 
-export abstract class FieldReference extends ListOf<FieldName> {
-  elementType = 'fieldReference';
+export abstract class FieldReference
+  extends ListOf<FieldName>
+  implements Noteable
+{
+  readonly isNoteableObj = true;
+  note?: Annotation;
+  extendNote = extendNoteMethod;
 
   constructor(names: FieldName[]) {
-    super('fieldReference', names);
+    super(names);
   }
 
   get refString(): string {
@@ -157,8 +165,11 @@ export class DimensionFieldReference extends FieldReference {
   }
 }
 
-export class WildcardFieldReference extends MalloyElement {
+export class WildcardFieldReference extends MalloyElement implements Noteable {
   elementType = 'wildcardFieldReference';
+  note?: Annotation;
+  readonly isNoteableObj = true;
+  extendNote = extendNoteMethod;
   constructor(
     readonly joinPath: FieldReference | undefined,
     readonly star: '*' | '**'
@@ -180,8 +191,9 @@ export class WildcardFieldReference extends MalloyElement {
 
 export type FieldReferenceElement = FieldReference | WildcardFieldReference;
 
-export class FieldReferences extends ListOf<FieldReferenceElement> {
+export class FieldReferences extends DefinitionList<FieldReferenceElement> {
+  elementType = 'fieldReferenceList';
   constructor(members: FieldReferenceElement[]) {
-    super('fieldReferenceList', members);
+    super(members);
   }
 }

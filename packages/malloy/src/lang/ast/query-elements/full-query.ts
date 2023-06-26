@@ -59,10 +59,13 @@ export class FullQuery extends TurtleHeadedPipe {
       };
     }
     if (this.turtleName) {
-      const {error} = this.turtleName.getField(pipeFs);
-      if (error) this.log(error);
+      const lookFor = this.turtleName.getField(pipeFs);
+      if (lookFor.error) this.log(lookFor.error);
       const name = this.turtleName.refString;
-      const {pipeline, location} = this.expandTurtle(name, structDef);
+      const {pipeline, location, annotation} = this.expandTurtle(
+        name,
+        structDef
+      );
       destQuery.location = location;
       const refined = this.refinePipeline(pipeFs, {pipeline}).pipeline;
       if (this.headRefinement) {
@@ -72,6 +75,9 @@ export class FullQuery extends TurtleHeadedPipe {
         destQuery.pipeline = refined;
       } else {
         destQuery.pipeHead = {name};
+      }
+      if (annotation) {
+        destQuery.annotation = annotation;
       }
       const pipeStruct = this.getOutputStruct(structDef, refined);
       pipeFs = new StaticSpace(pipeStruct);

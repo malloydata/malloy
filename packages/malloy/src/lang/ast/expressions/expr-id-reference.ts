@@ -56,10 +56,10 @@ export class ExprIdReference extends ExpressionDef {
       const value = [{type: def.found.refType, path: this.refString}];
       const td = def.found.typeDesc();
       // We think that aggregates are more 'output' like, but maybe we will reconsider that...
-      if (expressionIsAggregate(td.expressionType)) {
-        td.evalSpace = 'output';
-      }
-      return {...td, value};
+      const evalSpace = expressionIsAggregate(td.expressionType)
+        ? 'output'
+        : td.evalSpace;
+      return {...td, value, evalSpace};
     }
     this.log(def.error);
     return errorFor(def.error);

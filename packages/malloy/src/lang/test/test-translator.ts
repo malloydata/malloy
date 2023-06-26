@@ -30,7 +30,6 @@ import {
   NamedModelObject,
   PipeSegment,
   Query,
-  QueryFieldDef,
   StructDef,
   TurtleDef,
   isFilteredAliasedName,
@@ -429,34 +428,39 @@ export function getModelQuery(modelDef: ModelDef, name: string): Query {
   return modelDef.contents[name] as Query;
 }
 
-export function getField(
+export function getFieldDef(
   thing: StructDef | PipeSegment,
   name: string
 ): FieldDef {
-  const result = thing.fields.find(
-    (field: QueryFieldDef) =>
-      typeof field !== 'string' && (field.as || field.name) === name
-  );
-  if (typeof result === 'string') {
-    throw new Error('Expected a def, got a ref.');
+  let found: FieldDef | undefined = undefined;
+  for (const f of thing.fields) {
+    if (typeof f === 'string') {
+      if (f === name) {
+        throw new Error(`Expected def for '${name}', found a ref`);
+      }
+    } else if ((f.as || f.name) === name) {
+      if (isFilteredAliasedName(f)) {
+        throw new Error(`FilteredAliasedName for '${name}' unexpected`);
+      }
+      found = f;
+      break;
+    }
   }
-  if (result === undefined) {
-    throw new Error('Expected a field, not undefined');
+  if (found === undefined) {
+    throw new Error(`Compiled code did not contain expected field '${name}'`);
+  } else {
+    return found;
   }
-  if (isFilteredAliasedName(result)) {
-    throw new Error('Ignoring these for now');
-  }
-  return result;
 }
 
 // TODO "as" is almost always a code smell ...
 export function getQueryField(structDef: StructDef, name: string): TurtleDef {
-  return getField(structDef, name) as TurtleDef;
+  return getFieldDef(structDef, name) as TurtleDef;
 }
 
 // TODO "as" is almost always a code smell ...
 export function getJoinField(structDef: StructDef, name: string): StructDef {
-  return getField(structDef, name) as StructDef;
+  return getFieldDef(structDef, name) as StructDef;
 }
 
 export interface MarkedSource {
@@ -465,17 +469,19 @@ export interface MarkedSource {
   translator?: TestTranslator;
 }
 
+interface HasTranslator extends MarkedSource {
+  translator: TestTranslator;
+}
+
 export function expr(
   unmarked: TemplateStringsArray,
   ...marked: string[]
-): MarkedSource {
+): HasTranslator {
   const ms = markSource(unmarked, ...marked);
-  ms.translator = new BetaExpression(ms.code);
-  return ms;
-}
-
-interface HasTranslator extends MarkedSource {
-  translator: TestTranslator;
+  return {
+    ...ms,
+    translator: new BetaExpression(ms.code),
+  };
 }
 
 export function model(
@@ -511,7 +517,9 @@ export function markSource(
         end: {
           line: start.line + bitLines.length - 1,
           character:
-            bitLines.length === 1 ? start.character + mark.length : mark.length,
+            bitLines.length === 1
+              ? start.character + mark.length
+              : bitLines[bitLines.length - 1].length,
         },
       },
     };

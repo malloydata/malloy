@@ -1,1 +1,0 @@
-EXPLORE a | REDUCE b,c,d ORDER BY 1

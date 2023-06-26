@@ -32,28 +32,38 @@ malloyStatement
   | defineQuery
   | importStatement
   | runStatement
+  | docAnnotations
+  | ignoredObjectAnnotations
   ;
 
 defineSourceStatement
-  : SOURCE sourcePropertyList
+  : tags SOURCE sourcePropertyList
   ;
 
 defineQuery
-  : QUERY topLevelQueryDefs      # namedQueries_stub
-  | QUERY topLevelAnonQueryDef   # anonymousQuery
+  : topLevelQueryDefs                 # use_top_level_query_defs
+  | tags QUERY topLevelAnonQueryDef   # anonymousQuery
   ;
 
 topLevelAnonQueryDef
-  : query
+  : tags query
+  ;
+
+tags
+  : ANNOTATION*
+  ;
+
+isDefine
+  : beforeIs=tags IS afterIs=tags
   ;
 
 runStatement
-  : RUN topLevelAnonQueryDef     # runStatementDef
-  | RUN queryName                # runStatementRef
+  : blockTags=tags RUN noteTags=tags topLevelAnonQueryDef     # runStatementDef
+  | RUN queryName                                             # runStatementRef
   ;
 
 defineSQLStatement
-  : SQL (nameSQLBlock IS)? sqlBlock
+  : SQL nameSQLBlock isDefine sqlBlock
   ;
 
 sqlBlock
@@ -81,12 +91,24 @@ importURL
   : JSON_STRING
   ;
 
+docAnnotations
+  : DOC_ANNOTATION+
+  ;
+
+ignoredObjectAnnotations
+  : ANNOTATION+
+  ;
+
+ignoredModelAnnotations
+  : DOC_ANNOTATION+
+  ;
+
 topLevelQueryDefs
-  : topLevelQueryDef (COMMA? topLevelQueryDef)* COMMA?
+  : tags QUERY topLevelQueryDef (COMMA? topLevelQueryDef)* COMMA?
   ;
 
 topLevelQueryDef
-  : queryName IS query
+  : tags queryName isDefine query
   ;
 
 refineOperator: PLUS ;
@@ -134,7 +156,7 @@ sourcePropertyList
   ;
 
 sourceDefinition
-  : sourceNameDef IS explore
+  : tags sourceNameDef isDefine explore
   ;
 
 explore
@@ -165,16 +187,18 @@ exploreStatement
   | PRIMARY_KEY fieldName              # defExplorePrimaryKey
   | RENAME renameList                  # defExploreRename
   | (ACCEPT | EXCEPT) fieldNameList    # defExploreEditField
-  | QUERY subQueryDefList              # defExploreQuery_stub
+  | tags QUERY subQueryDefList         # defExploreQuery
   | timezoneStatement                  # defExploreTimezone
-  ;
-
-defDimensions
-  : DIMENSION defList
+  | ANNOTATION+                        # defExploreAnnotation
+  | ignoredModelAnnotations            # defIgnoreModel_stub
   ;
 
 defMeasures
-  : MEASURE defList
+  : tags MEASURE defList
+  ;
+
+defDimensions
+  : tags DIMENSION defList
   ;
 
 renameList
@@ -182,7 +206,7 @@ renameList
   ;
 
 exploreRenameDef
-  : fieldName IS fieldName
+  : fieldName isDefine fieldName
   ;
 
 defList
@@ -190,7 +214,7 @@ defList
   ;
 
 fieldDef
-  : fieldNameDef IS fieldExpr
+  : tags fieldNameDef isDefine fieldExpr
   ;
 
 fieldNameDef: id;
@@ -201,9 +225,9 @@ declareStatement
   ;
 
 joinStatement
-  : JOIN_ONE joinList                  # defJoinOne
-  | JOIN_MANY joinList                 # defJoinMany
-  | JOIN_CROSS joinList                # defJoinCross
+  : tags JOIN_ONE joinList                  # defJoinOne
+  | tags JOIN_MANY joinList                 # defJoinMany
+  | tags JOIN_CROSS joinList                # defJoinCross
   ;
 
 queryExtend
@@ -224,9 +248,13 @@ joinList
   : joinDef (COMMA? joinDef)* COMMA?
   ;
 
+isExplore
+  : before_is=tags IS after_is=tags explore
+  ;
+
 joinDef
-  : joinNameDef (IS explore)? WITH fieldExpr        # joinWith
-  | joinNameDef (IS explore)? (ON joinExpression)?  # joinOn
+  : ANNOTATION* joinNameDef isExplore? WITH fieldExpr        # joinWith
+  | ANNOTATION* joinNameDef isExplore? (ON joinExpression)?  # joinOn
   ;
 
 joinExpression: fieldExpr;
@@ -260,7 +288,7 @@ subQueryDefList
 exploreQueryNameDef: id;
 
 exploreQueryDef
-  : exploreQueryNameDef IS pipelineFromName
+  : ANNOTATION* exploreQueryNameDef isDefine pipelineFromName
   ;
 
 queryStatement
@@ -280,6 +308,8 @@ queryStatement
   | nestStatement
   | sampleStatement
   | timezoneStatement
+  | queryAnnotation
+  | ignoredModelAnnotations
   ;
 
 queryJoinStatement
@@ -287,7 +317,7 @@ queryJoinStatement
   ;
 
 groupByStatement
-  : GROUP_BY queryFieldList
+  : tags GROUP_BY queryFieldList
   ;
 
 queryFieldList
@@ -296,12 +326,12 @@ queryFieldList
 
 
 queryFieldEntry
-  : fieldPath
+  : taggedRef
   | fieldDef
   ;
 
 nestStatement
-  : NEST nestedQueryList
+  : tags NEST nestedQueryList
   ;
 
 nestedQueryList
@@ -309,20 +339,20 @@ nestedQueryList
   ;
 
 nestEntry
-  : queryName (refineOperator? queryProperties)?      # nestExisting
-  | queryName IS pipelineFromName   # nestDef
+  : tags queryName (refineOperator? queryProperties)?   # nestExisting
+  | tags queryName isDefine pipelineFromName            # nestDef
   ;
 
 aggregateStatement
-  : AGGREGATE queryFieldList
+  : tags AGGREGATE queryFieldList
   ;
 
 calculateStatement
-  : CALCULATE queryFieldList
+  : tags CALCULATE queryFieldList
   ;
 
 projectStatement
-  : PROJECT fieldCollection
+  : tags PROJECT fieldCollection
   ;
 
 orderByStatement
@@ -374,6 +404,10 @@ timezoneStatement
 
 timezoneName
   : STRING_LITERAL
+  ;
+
+queryAnnotation
+  : ANNOTATION
   ;
 
 sampleSpec
@@ -433,7 +467,8 @@ fieldExpr
   | literal                                                # exprLiteral
   | fieldExpr timeframe                                    # exprDuration
   | fieldExpr DOT timeframe                                # exprTimeTrunc
-  | fieldExpr DOUBLECOLON malloyType                       # exprSafeCast
+  | fieldExpr DOUBLECOLON malloyType                       # exprCast
+  | fieldExpr TRIPLECOLON malloyType                       # exprSafeCast
   | MINUS fieldExpr                                        # exprMinus
   | fieldExpr ( STAR | SLASH | PERCENT ) fieldExpr         # exprMulDiv
   | fieldExpr ( PLUS | MINUS ) fieldExpr                   # exprAddSub
@@ -490,8 +525,12 @@ collectionWildCard
   : (fieldPath DOT)? (STAR|STARSTAR)
   ;
 
+taggedRef
+  : tags fieldPath
+  ;
+
 collectionMember
-  : fieldPath
+  : taggedRef
   | collectionWildCard
   | fieldDef
   ;

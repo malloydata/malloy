@@ -23,7 +23,11 @@
 
 import cloneDeep from 'lodash/cloneDeep';
 
-import {StructDef, expressionIsCalculation} from '../../../model/malloy_types';
+import {
+  Annotation,
+  StructDef,
+  expressionIsCalculation,
+} from '../../../model/malloy_types';
 
 import {RefinedSpace} from '../field-space/refined-space';
 import {HasParameter} from '../parameters/has-parameter';
@@ -34,19 +38,21 @@ import {FieldListEdit} from '../source-properties/field-list-edit';
 import {PrimaryKey} from '../source-properties/primary-key';
 import {Renames} from '../source-properties/renames';
 import {Turtles} from '../source-properties/turtles';
-import {ExploreDesc} from '../types/explore-desc';
+import {SourceDesc} from '../types/source-desc';
 import {ExploreField} from '../types/explore-field';
 
 import {Source} from './source';
 import {TimezoneStatement} from '../source-properties/timezone-statement';
+import {ObjectAnnotation} from '../types/malloy-element';
 
 /**
  * A Source made from a source reference and a set of refinements
  */
 export class RefinedSource extends Source {
   elementType = 'refinedSource';
+  currentAnnotation?: Annotation;
 
-  constructor(readonly source: Source, readonly refinement: ExploreDesc) {
+  constructor(readonly source: Source, readonly refinement: SourceDesc) {
     super({source: source, refinement: refinement});
   }
 
@@ -62,6 +68,10 @@ export class RefinedSource extends Source {
     let newTimezone: string | undefined;
 
     for (const el of this.refinement.list) {
+      if (el instanceof ObjectAnnotation) {
+        // Silently ignoring unclaimed annotations
+        continue;
+      }
       const errTo = el;
       if (el instanceof PrimaryKey) {
         if (primaryKey) {

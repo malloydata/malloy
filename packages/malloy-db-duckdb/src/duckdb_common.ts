@@ -23,7 +23,6 @@
 
 import {
   AtomicFieldTypeInner,
-  Connection,
   FieldTypeDef,
   MalloyQueryData,
   NamedStructDefs,
@@ -35,6 +34,7 @@ import {
   SQLBlock,
   StreamingConnection,
   StructDef,
+  TestableConnection,
 } from '@malloydata/malloy';
 
 const duckDBToMalloyTypes: {[key: string]: AtomicFieldTypeInner} = {
@@ -73,7 +73,7 @@ const unquoteName = (name: string) => {
 };
 
 export abstract class DuckDBCommon
-  implements Connection, PersistSQLResults, StreamingConnection
+  implements TestableConnection, PersistSQLResults, StreamingConnection
 {
   static DEFAULT_QUERY_OPTIONS: DuckDBQueryOptions = {
     rowLimit: 10,
@@ -360,7 +360,7 @@ export abstract class DuckDBCommon
       if (inCache.schema !== undefined) {
         schemas[tableKey] = inCache.schema;
       } else {
-        errors[tableKey] = inCache.error;
+        errors[tableKey] = inCache.error || 'Unknown schema fetch error';
       }
     }
     return {schemas, errors};

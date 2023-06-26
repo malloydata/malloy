@@ -75,6 +75,7 @@ import {
   URLReader,
 } from './runtime_types';
 import {DateTime} from 'luxon';
+import {Taggable, Tags} from './tags';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -578,7 +579,7 @@ export class MalloyError extends Error {
 /**
  * A compiled Malloy document.
  */
-export class Model {
+export class Model implements Taggable {
   private modelDef: ModelDef;
   private queryList: InternalQuery[];
   private sqlBlocks: SQLBlockStructDef[];
@@ -601,6 +602,10 @@ export class Model {
     this.sqlBlocks = sqlBlocks;
     this._referenceAt = referenceAt;
     this.problems = problems;
+  }
+
+  getTags(): Tags {
+    return new Tags(this.modelDef.annotation);
   }
 
   /**
@@ -735,7 +740,7 @@ export class Model {
 /**
  * A prepared query which has all the necessary information to produce its SQL.
  */
-export class PreparedQuery {
+export class PreparedQuery implements Taggable {
   public _modelDef: ModelDef;
   public _query: InternalQuery | NamedQuery;
   public name?: string;
@@ -744,6 +749,10 @@ export class PreparedQuery {
     this._query = query;
     this._modelDef = model;
     this.name = name;
+  }
+
+  getTags(): Tags {
+    return new Tags(this._query.annotation);
   }
 
   /**
@@ -933,6 +942,19 @@ export class DocumentRange {
       end: this.end.toJSON(),
     };
   }
+
+  /**
+   * Construct a DocumentRange from JSON.
+   */
+  public static fromJSON(json: {
+    start: {line: number; character: number};
+    end: {line: number; character: number};
+  }): DocumentRange {
+    return new DocumentRange(
+      new DocumentPosition(json.start.line, json.start.character),
+      new DocumentPosition(json.end.line, json.end.character)
+    );
+  }
 }
 
 /**
@@ -976,21 +998,16 @@ export class DocumentPosition {
  */
 export class DocumentSymbol {
   private _range: DocumentRange;
+  private _lensRange: DocumentRange | undefined;
   private _type: string;
   private _name: string;
   private _children: DocumentSymbol[];
 
   constructor(documentSymbol: DocumentSymbolDefinition) {
-    this._range = new DocumentRange(
-      new DocumentPosition(
-        documentSymbol.range.start.line,
-        documentSymbol.range.start.character
-      ),
-      new DocumentPosition(
-        documentSymbol.range.end.line,
-        documentSymbol.range.end.character
-      )
-    );
+    this._range = DocumentRange.fromJSON(documentSymbol.range);
+    this._lensRange = documentSymbol.lensRange
+      ? DocumentRange.fromJSON(documentSymbol.lensRange)
+      : undefined;
     this._type = documentSymbol.type;
     this._name = documentSymbol.name;
     this._children = documentSymbol.children.map(
@@ -1003,6 +1020,15 @@ export class DocumentSymbol {
    */
   public get range(): DocumentRange {
     return this._range;
+  }
+
+  /**
+   * @return The range of characters in the source Malloy document that define this symbol,
+   * including tags. Note: "block tags" are included if there is exactly one
+   * definition in the block.
+   */
+  public get lensRange(): DocumentRange {
+    return this._lensRange ?? this._range;
   }
 
   /**
@@ -1045,13 +1071,17 @@ export class DocumentCompletion {
 /**
  * A fully-prepared query containing SQL and metadata required to run the query.
  */
-export class PreparedResult {
+export class PreparedResult implements Taggable {
   protected inner: CompiledQuery;
   protected modelDef: ModelDef;
 
   constructor(query: CompiledQuery, modelDef: ModelDef) {
     this.inner = query;
     this.modelDef = modelDef;
+  }
+
+  public getTags(): Tags {
+    return new Tags(this.inner.annotation);
   }
 
   /**
@@ -1479,7 +1509,7 @@ export enum AtomicFieldType {
   Error = 'error',
 }
 
-export class AtomicField extends Entity {
+export class AtomicField extends Entity implements Taggable {
   protected fieldTypeDef: FieldTypeDef;
   protected parent: Explore;
 
@@ -1512,6 +1542,10 @@ export class AtomicField extends Entity {
       case 'error':
         return AtomicFieldType.Error;
     }
+  }
+
+  getTags(): Tags {
+    return new Tags(this.fieldTypeDef.annotation);
   }
 
   public isIntrinsic(): boolean {
@@ -1769,12 +1803,16 @@ export class Query extends Entity {
   }
 }
 
-export class QueryField extends Query {
+export class QueryField extends Query implements Taggable {
   protected parent: Explore;
 
   constructor(turtleDef: TurtleDef, parent: Explore, source?: Query) {
     super(turtleDef, parent, source);
     this.parent = parent;
+  }
+
+  getTags(): Tags {
+    return new Tags(this.turtleDef.annotation);
   }
 
   public isQueryField(): this is QueryField {
@@ -1813,7 +1851,7 @@ export enum JoinRelationship {
   ManyToOne = 'many_to_one',
 }
 
-export class ExploreField extends Explore {
+export class ExploreField extends Explore implements Taggable {
   protected _parentExplore: Explore;
 
   constructor(structDef: StructDef, parentExplore: Explore, source?: Explore) {
@@ -1835,6 +1873,10 @@ export class ExploreField extends Explore {
       default:
         throw new Error('A source field must have a join relationship.');
     }
+  }
+
+  getTags(): Tags {
+    return new Tags(this._structDef.annotation);
   }
 
   public isQueryField(): this is QueryField {

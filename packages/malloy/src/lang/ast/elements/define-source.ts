@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {Annotation, StructDef} from '../../../model/malloy_types';
 import {ModelDataRequest} from '../../translate-response';
 
 import {ErrorFactory} from '../error-factory';
@@ -31,10 +32,14 @@ import {
   MalloyElement,
   RunList,
 } from '../types/malloy-element';
+import {Noteable, extendNoteMethod} from '../types/noteable';
 
 import {Source} from './source';
 
-export class DefineSource extends MalloyElement implements DocStatement {
+export class DefineSource
+  extends MalloyElement
+  implements DocStatement, Noteable
+{
   elementType = 'defineSource';
   readonly parameters?: HasParameter[];
   constructor(
@@ -58,6 +63,9 @@ export class DefineSource extends MalloyElement implements DocStatement {
       this.has({parameters: this.parameters});
     }
   }
+  readonly isNoteableObj = true;
+  extendNote = extendNoteMethod;
+  note?: Annotation;
 
   execute(doc: Document): ModelDataRequest {
     if (doc.modelEntry(this.name)) {
@@ -67,21 +75,25 @@ export class DefineSource extends MalloyElement implements DocStatement {
       if (ErrorFactory.isErrorStructDef(structDef)) {
         return;
       }
-      doc.setEntry(this.name, {
-        entry: {
-          ...structDef,
-          as: this.name,
-          location: this.location,
-        },
-        exported: this.exported,
-      });
+      const entry: StructDef = {
+        ...structDef,
+        as: this.name,
+        location: this.location,
+      };
+      if (this.note) {
+        entry.annotation = structDef.annotation
+          ? {...this.note, inherits: structDef.annotation}
+          : this.note;
+      }
+      doc.setEntry(this.name, {entry, exported: this.exported});
     }
   }
 }
 
 export class DefineSourceList extends RunList implements DocStatement {
+  elementType = 'defineSources';
   constructor(sourceList: DefineSource[]) {
-    super('defineSources', sourceList);
+    super(sourceList);
   }
 
   execute(doc: Document): ModelDataRequest {

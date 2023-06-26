@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {Annotation} from '../../../model';
 import {ModelDataRequest} from '../../translate-response';
 import {
   DocStatement,
@@ -28,6 +29,7 @@ import {
   MalloyElement,
   ModelEntryReference,
 } from '../types/malloy-element';
+import {Noteable, extendNoteMethod} from '../types/noteable';
 import {QueryElement} from '../types/query-element';
 
 abstract class RunQuery extends MalloyElement implements DocStatement {
@@ -36,14 +38,24 @@ abstract class RunQuery extends MalloyElement implements DocStatement {
   abstract execute(doc: Document): ModelDataRequest;
 }
 
-export class RunQueryDef extends RunQuery {
+export class RunQueryDef extends RunQuery implements Noteable {
+  note?: Annotation;
+  readonly isNoteableObj = true;
+  extendNote = extendNoteMethod;
   constructor(readonly theQuery: QueryElement) {
     super();
     this.has({query: theQuery});
   }
 
   execute(doc: Document): ModelDataRequest {
-    const modelQuery = this.theQuery.query();
+    let modelQuery = this.theQuery.query();
+    const annotation = this.note || {};
+    if (modelQuery.annotation) {
+      annotation.inherits = modelQuery.annotation;
+    }
+    if (annotation.notes || annotation.blockNotes || annotation.inherits) {
+      modelQuery = {...modelQuery, annotation};
+    }
     doc.queryList.push(modelQuery);
     return undefined;
   }
