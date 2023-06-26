@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {default as madge} from 'madge';
+import madge from 'madge';
 
 describe('dependencies', () => {
   function getMessage(circles: string[][]): string {
@@ -37,15 +37,15 @@ describe('dependencies', () => {
   }
 
   it('typescript references should not be circular', async () => {
-    const deps = await madge('.', {
+    const deps = await madge('packages', {
       fileExtensions: ['ts'],
-      excludeRegExp: [/packages\/malloy\/src\/lang/, /\.d\.ts/],
+      excludeRegExp: [/malloy\/src\/lang/, /\.d\.ts/],
     });
     expect(deps.circular().length, getMessage(deps.circular())).toBe(0);
   });
 
   it('javascript references should not be circular', async () => {
-    const deps = await madge('.', {
+    const deps = await madge('packages', {
       fileExtensions: ['js'],
     });
     expect(deps.circular().length, getMessage(deps.circular())).toBe(0);
@@ -53,9 +53,9 @@ describe('dependencies', () => {
 
   // Enable more strict circular checks if we refactor lang again.
   it.skip('malloy/src/lang typescript should not be circular', async () => {
-    const deps = await madge('.', {
+    const deps = await madge('packages', {
       fileExtensions: ['ts'],
-      excludeRegExp: [/packages\/malloy\/src\/lang\/lib/, /\.d\.ts/],
+      excludeRegExp: [/malloy\/src\/lang\/lib/, /\.d\.ts/],
     });
     expect(deps.circular().length, getMessage(deps.circular())).toBe(0);
   });
