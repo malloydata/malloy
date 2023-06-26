@@ -516,7 +516,9 @@ export function markSource(
         end: {
           line: start.line + bitLines.length - 1,
           character:
-            bitLines.length === 1 ? start.character + mark.length : mark.length,
+            bitLines.length === 1
+              ? start.character + mark.length
+              : bitLines[bitLines.length - 1].length,
         },
       },
     };

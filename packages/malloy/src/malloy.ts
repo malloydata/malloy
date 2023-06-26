@@ -958,6 +958,19 @@ export class DocumentRange {
       end: this.end.toJSON(),
     };
   }
+
+  /**
+   * Construct a DocumentRange from JSON.
+   */
+  public static fromJSON(json: {
+    start: {line: number; character: number};
+    end: {line: number; character: number};
+  }): DocumentRange {
+    return new DocumentRange(
+      new DocumentPosition(json.start.line, json.start.character),
+      new DocumentPosition(json.end.line, json.end.character)
+    );
+  }
 }
 
 /**
@@ -1001,21 +1014,16 @@ export class DocumentPosition {
  */
 export class DocumentSymbol {
   private _range: DocumentRange;
+  private _lensRange: DocumentRange | undefined;
   private _type: string;
   private _name: string;
   private _children: DocumentSymbol[];
 
   constructor(documentSymbol: DocumentSymbolDefinition) {
-    this._range = new DocumentRange(
-      new DocumentPosition(
-        documentSymbol.range.start.line,
-        documentSymbol.range.start.character
-      ),
-      new DocumentPosition(
-        documentSymbol.range.end.line,
-        documentSymbol.range.end.character
-      )
-    );
+    this._range = DocumentRange.fromJSON(documentSymbol.range);
+    this._lensRange = documentSymbol.lensRange
+      ? DocumentRange.fromJSON(documentSymbol.lensRange)
+      : undefined;
     this._type = documentSymbol.type;
     this._name = documentSymbol.name;
     this._children = documentSymbol.children.map(
@@ -1028,6 +1036,15 @@ export class DocumentSymbol {
    */
   public get range(): DocumentRange {
     return this._range;
+  }
+
+  /**
+   * @return The range of characters in the source Malloy document that define this symbol,
+   * including tags. Note: "block tags" are included if there is exactly one
+   * definition in the block.
+   */
+  public get lensRange(): DocumentRange {
+    return this._lensRange ?? this._range;
   }
 
   /**
