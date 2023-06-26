@@ -137,6 +137,11 @@ const suffixMap: Record<string, RenderDef['renderer']> = {
   'sparkline_bar': 'sparkline',
 };
 
+const atomicFieldTagMap: Record<string, RenderDef['renderer']> = {
+  'percent': 'percent',
+  'currency': 'currency',
+};
+
 function getRendererOptions(
   field: Field | Explore,
   dataStyles: DataStyles,
@@ -153,14 +158,23 @@ function getRendererOptions(
   }
 
   const {name} = field;
+
+  if (field.hasParentExplore() && field.isAtomicField()) {
+    for (const tag in atomicFieldTagMap) {
+      if (tagProperties[tag] === true) {
+        return updateOrCreateRenderer(tag, name, atomicFieldTagMap, renderer);
+      }
+    }
+  }
+
   for (const suffix in suffixMap) {
     if (tagProperties[suffix] === true) {
-      return updateOrCreateRenderer(suffix, name, renderer);
+      return updateOrCreateRenderer(suffix, name, suffixMap, renderer);
     }
 
     if (name.endsWith(`_${suffix}`)) {
       const label = name.slice(0, name.length - suffix.length - 1);
-      return updateOrCreateRenderer(suffix, label, renderer);
+      return updateOrCreateRenderer(suffix, label, suffixMap, renderer);
     }
   }
 }
@@ -168,15 +182,16 @@ function getRendererOptions(
 function updateOrCreateRenderer(
   rendererKey: string,
   label: string,
+  rendererMap: Record<string, RenderDef['renderer']>,
   renderer?: RenderDef
 ) {
   if (renderer) {
-    renderer.renderer ??= suffixMap[rendererKey];
+    renderer.renderer ??= rendererMap[rendererKey];
     renderer.data ??= {};
     renderer.data.label ??= label;
   } else {
     renderer = {
-      renderer: suffixMap[rendererKey],
+      renderer: rendererMap[rendererKey],
       data: {
         label,
       },

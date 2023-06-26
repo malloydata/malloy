@@ -48,6 +48,16 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
       >
         weight_​by_​age
       </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        price
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        visitcount
+      </th>
     </tr>
   </thead>
   <tbody>
@@ -56,7 +66,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
         style="padding: 8px; vertical-align: top;"
       >
         <span>
-          Alex
+          Sebastian
         </span>
       </td>
       <td
@@ -625,9 +635,9 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
         <div>
           <svg
             class="marks"
-            height="222"
+            height="217"
             version="1.1"
-            viewBox="0 0 309 222"
+            viewBox="0 0 309 217"
             width="309"
             xmlns="http://www.w3.org/2000/svg"
             xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -635,7 +645,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
             <g
               fill="none"
               stroke-miterlimit="10"
-              transform="translate(53,10)"
+              transform="translate(53,5)"
             >
               <g
                 aria-roledescription="group mark container"
@@ -775,7 +785,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,156)"
+                              transform="translate(0,175)"
                               x2="250"
                               y2="0"
                             />
@@ -783,7 +793,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,117)"
+                              transform="translate(0,135)"
                               x2="250"
                               y2="0"
                             />
@@ -791,7 +801,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,78)"
+                              transform="translate(0,95)"
                               x2="250"
                               y2="0"
                             />
@@ -799,7 +809,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,39)"
+                              transform="translate(0,56)"
                               x2="250"
                               y2="0"
                             />
@@ -807,7 +817,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,0)"
+                              transform="translate(0,16)"
                               x2="250"
                               y2="0"
                             />
@@ -1050,7 +1060,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                       </g>
                     </g>
                     <g
-                      aria-label="Y-axis titled 'wt' for a linear scale with values from 2.5 to 3.4"
+                      aria-label="Y-axis titled 'wt' for a linear scale with values from 2.0 to 4.2"
                       aria-roledescription="axis"
                       class="mark-group role-axis"
                       role="graphics-symbol"
@@ -1073,7 +1083,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,156)"
+                              transform="translate(0,175)"
                               x2="-5"
                               y2="0"
                             />
@@ -1081,7 +1091,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,117)"
+                              transform="translate(0,135)"
                               x2="-5"
                               y2="0"
                             />
@@ -1089,7 +1099,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,78)"
+                              transform="translate(0,95)"
                               x2="-5"
                               y2="0"
                             />
@@ -1097,7 +1107,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,39)"
+                              transform="translate(0,56)"
                               x2="-5"
                               y2="0"
                             />
@@ -1105,7 +1115,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,0)"
+                              transform="translate(0,16)"
                               x2="-5"
                               y2="0"
                             />
@@ -1120,9 +1130,9 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,158.55555555555554)"
+                              transform="translate(-7,178)"
                             >
-                              2.6
+                              2.0
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -1130,9 +1140,9 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,119.6666666666667)"
+                              transform="translate(-7,138.22727272727272)"
                             >
-                              2.8
+                              2.5
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -1140,7 +1150,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,80.77777777777777)"
+                              transform="translate(-7,98.45454545454545)"
                             >
                               3.0
                             </text>
@@ -1150,9 +1160,9 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,41.88888888888885)"
+                              transform="translate(-7,58.681818181818194)"
                             >
-                              3.2
+                              3.5
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -1160,9 +1170,9 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,3)"
+                              transform="translate(-7,18.909090909090914)"
                             >
-                              3.4
+                              4.0
                             </text>
                           </g>
                           <g
@@ -1210,28 +1220,28 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                       role="graphics-object"
                     >
                       <path
-                        aria-label="monthy: 1; wt: 2.5"
+                        aria-label="monthy: 1; wt: 2"
                         aria-roledescription="bar"
                         d="M28.75,175h5v0h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
-                        aria-label="monthy: 2; wt: 3"
+                        aria-label="monthy: 2; wt: 2.6"
                         aria-roledescription="bar"
-                        d="M91.25,77.77777777777777h5v97.22222222222223h-5Z"
+                        d="M91.25,127.27272727272728h5v47.72727272727272h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
-                        aria-label="monthy: 3; wt: 3.2"
+                        aria-label="monthy: 3; wt: 3.6"
                         aria-roledescription="bar"
-                        d="M153.75,38.88888888888885h5v136.11111111111114h-5Z"
+                        d="M153.75,47.72727272727273h5v127.27272727272728h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
-                        aria-label="monthy: 4; wt: 3.4"
+                        aria-label="monthy: 4; wt: 4.2"
                         aria-roledescription="bar"
                         d="M216.25,0h5v175h-5Z"
                         fill="#4285F4"
@@ -1251,1258 +1261,19 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
           </svg>
         </div>
       </td>
-    </tr>
-    <tr>
       <td
         style="padding: 8px; vertical-align: top;"
       >
         <span>
-          Miguel
+          $1,620.00
         </span>
       </td>
       <td
-        style="padding: 8px; vertical-align: top;"
+        style="padding: 8px; vertical-align: top; text-align: right;"
       >
-        <div>
-          <svg
-            class="marks"
-            height="217"
-            version="1.1"
-            viewBox="0 0 302 217"
-            width="302"
-            xmlns="http://www.w3.org/2000/svg"
-            xmlns:xlink="http://www.w3.org/1999/xlink"
-          >
-            <g
-              fill="none"
-              stroke-miterlimit="10"
-              transform="translate(45,5)"
-            >
-              <g
-                aria-roledescription="group mark container"
-                class="mark-group role-frame root"
-                role="graphics-object"
-              >
-                <g
-                  transform="translate(0,0)"
-                >
-                  <path
-                    aria-hidden="true"
-                    class="background"
-                    d="M0.5,0.5h250v175h-250Z"
-                    stroke="#888"
-                  />
-                  <g>
-                    <g
-                      aria-hidden="true"
-                      class="mark-group role-axis"
-                    >
-                      <g
-                        transform="translate(0.5,175.5)"
-                      >
-                        <path
-                          aria-hidden="true"
-                          class="background"
-                          d="M0,0h0v0h0Z"
-                          pointer-events="none"
-                        />
-                        <g>
-                          <g
-                            class="mark-rule role-axis-grid"
-                            pointer-events="none"
-                          >
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(42,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(83,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(125,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(167,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(208,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(250,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                          </g>
-                        </g>
-                        <path
-                          aria-hidden="true"
-                          class="foreground"
-                          d=""
-                          display="none"
-                          pointer-events="none"
-                        />
-                      </g>
-                    </g>
-                    <g
-                      aria-hidden="true"
-                      class="mark-group role-axis"
-                    >
-                      <g
-                        transform="translate(0.5,0.5)"
-                      >
-                        <path
-                          aria-hidden="true"
-                          class="background"
-                          d="M0,0h0v0h0Z"
-                          pointer-events="none"
-                        />
-                        <g>
-                          <g
-                            class="mark-rule role-axis-grid"
-                            pointer-events="none"
-                          >
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,155)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,121)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,88)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,54)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,20)"
-                              x2="250"
-                              y2="0"
-                            />
-                          </g>
-                        </g>
-                        <path
-                          aria-hidden="true"
-                          class="foreground"
-                          d=""
-                          display="none"
-                          pointer-events="none"
-                        />
-                      </g>
-                    </g>
-                    <g
-                      aria-label="X-axis titled 'monthy' for a linear scale with values from 1.0 to 4.0"
-                      aria-roledescription="axis"
-                      class="mark-group role-axis"
-                      role="graphics-symbol"
-                    >
-                      <g
-                        transform="translate(0.5,175.5)"
-                      >
-                        <path
-                          aria-hidden="true"
-                          class="background"
-                          d="M0,0h0v0h0Z"
-                          pointer-events="none"
-                        />
-                        <g>
-                          <g
-                            class="mark-rule role-axis-tick"
-                            pointer-events="none"
-                          >
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(42,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(83,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(125,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(167,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(208,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(250,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                          </g>
-                          <g
-                            class="mark-text role-axis-label"
-                            pointer-events="none"
-                          >
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="start"
-                              transform="translate(0,15)"
-                            >
-                              1.0
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="middle"
-                              transform="translate(41.666666666666664,15)"
-                            >
-                              1.5
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="middle"
-                              transform="translate(83.33333333333333,15)"
-                            >
-                              2.0
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="middle"
-                              transform="translate(125,15)"
-                            >
-                              2.5
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="middle"
-                              transform="translate(166.66666666666666,15)"
-                            >
-                              3.0
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="middle"
-                              transform="translate(208.33333333333334,15)"
-                            >
-                              3.5
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(250,15)"
-                            >
-                              4.0
-                            </text>
-                          </g>
-                          <g
-                            class="mark-rule role-axis-domain"
-                            pointer-events="none"
-                          >
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,0)"
-                              x2="250"
-                              y2="0"
-                            />
-                          </g>
-                          <g
-                            class="mark-text role-axis-title"
-                            pointer-events="none"
-                          >
-                            <text
-                              fill="var(--malloy-title-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="12px"
-                              font-weight="500"
-                              opacity="1"
-                              text-anchor="middle"
-                              transform="translate(125,30)"
-                            >
-                              monthy
-                            </text>
-                          </g>
-                        </g>
-                        <path
-                          aria-hidden="true"
-                          class="foreground"
-                          d=""
-                          display="none"
-                          pointer-events="none"
-                        />
-                      </g>
-                    </g>
-                    <g
-                      aria-label="Y-axis titled 'height' for a linear scale with values from 22 to 48"
-                      aria-roledescription="axis"
-                      class="mark-group role-axis"
-                      role="graphics-symbol"
-                    >
-                      <g
-                        transform="translate(0.5,0.5)"
-                      >
-                        <path
-                          aria-hidden="true"
-                          class="background"
-                          d="M0,0h0v0h0Z"
-                          pointer-events="none"
-                        />
-                        <g>
-                          <g
-                            class="mark-rule role-axis-tick"
-                            pointer-events="none"
-                          >
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,155)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,121)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,88)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,54)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,20)"
-                              x2="-5"
-                              y2="0"
-                            />
-                          </g>
-                          <g
-                            class="mark-text role-axis-label"
-                            pointer-events="none"
-                          >
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,157.8076923076923)"
-                            >
-                              25
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,124.15384615384615)"
-                            >
-                              30
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,90.5)"
-                            >
-                              35
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,56.84615384615385)"
-                            >
-                              40
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,23.192307692307697)"
-                            >
-                              45
-                            </text>
-                          </g>
-                          <g
-                            class="mark-rule role-axis-domain"
-                            pointer-events="none"
-                          >
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,175)"
-                              x2="0"
-                              y2="-175"
-                            />
-                          </g>
-                          <g
-                            class="mark-text role-axis-title"
-                            pointer-events="none"
-                          >
-                            <text
-                              fill="var(--malloy-title-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="12px"
-                              font-weight="500"
-                              opacity="1"
-                              text-anchor="middle"
-                              transform="translate(-27,87.5) rotate(-90) translate(0,-3)"
-                            >
-                              height
-                            </text>
-                          </g>
-                        </g>
-                        <path
-                          aria-hidden="true"
-                          class="foreground"
-                          d=""
-                          display="none"
-                          pointer-events="none"
-                        />
-                      </g>
-                    </g>
-                    <g
-                      aria-roledescription="line mark container"
-                      class="mark-line role-mark marks"
-                      role="graphics-object"
-                    >
-                      <path
-                        aria-label="monthy: 1; height: 23"
-                        aria-roledescription="line mark"
-                        d="M0,168.269L83.333,134.615L166.667,87.5L250,6.731"
-                        role="graphics-symbol"
-                        stroke="#4285F4"
-                        stroke-width="2"
-                      />
-                    </g>
-                  </g>
-                  <path
-                    aria-hidden="true"
-                    class="foreground"
-                    d=""
-                    display="none"
-                  />
-                </g>
-              </g>
-            </g>
-          </svg>
-        </div>
-      </td>
-      <td
-        style="padding: 8px; vertical-align: top;"
-      >
-        <div>
-          <svg
-            class="marks"
-            height="222"
-            version="1.1"
-            viewBox="0 0 317 222"
-            width="317"
-            xmlns="http://www.w3.org/2000/svg"
-            xmlns:xlink="http://www.w3.org/1999/xlink"
-          >
-            <g
-              fill="none"
-              stroke-miterlimit="10"
-              transform="translate(61,10)"
-            >
-              <g
-                aria-roledescription="group mark container"
-                class="mark-group role-frame root"
-                role="graphics-object"
-              >
-                <g
-                  transform="translate(0,0)"
-                >
-                  <path
-                    aria-hidden="true"
-                    class="background"
-                    d="M0.5,0.5h250v175h-250Z"
-                    stroke="#888"
-                  />
-                  <g>
-                    <g
-                      aria-hidden="true"
-                      class="mark-group role-axis"
-                    >
-                      <g
-                        transform="translate(0.5,175.5)"
-                      >
-                        <path
-                          aria-hidden="true"
-                          class="background"
-                          d="M0,0h0v0h0Z"
-                          pointer-events="none"
-                        />
-                        <g>
-                          <g
-                            class="mark-rule role-axis-grid"
-                            pointer-events="none"
-                          >
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(31,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(63,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(94,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(125,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(156,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(188,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(219,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(250,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                          </g>
-                        </g>
-                        <path
-                          aria-hidden="true"
-                          class="foreground"
-                          d=""
-                          display="none"
-                          pointer-events="none"
-                        />
-                      </g>
-                    </g>
-                    <g
-                      aria-hidden="true"
-                      class="mark-group role-axis"
-                    >
-                      <g
-                        transform="translate(0.5,0.5)"
-                      >
-                        <path
-                          aria-hidden="true"
-                          class="background"
-                          d="M0,0h0v0h0Z"
-                          pointer-events="none"
-                        />
-                        <g>
-                          <g
-                            class="mark-rule role-axis-grid"
-                            pointer-events="none"
-                          >
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,175)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,146)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,117)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,87)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,58)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,29)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,0)"
-                              x2="250"
-                              y2="0"
-                            />
-                          </g>
-                        </g>
-                        <path
-                          aria-hidden="true"
-                          class="foreground"
-                          d=""
-                          display="none"
-                          pointer-events="none"
-                        />
-                      </g>
-                    </g>
-                    <g
-                      aria-label="X-axis titled 'monthy' for a linear scale with values from 1 to 5"
-                      aria-roledescription="axis"
-                      class="mark-group role-axis"
-                      role="graphics-symbol"
-                    >
-                      <g
-                        transform="translate(0.5,175.5)"
-                      >
-                        <path
-                          aria-hidden="true"
-                          class="background"
-                          d="M0,0h0v0h0Z"
-                          pointer-events="none"
-                        />
-                        <g>
-                          <g
-                            class="mark-rule role-axis-tick"
-                            pointer-events="none"
-                          >
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(31,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(63,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(94,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(125,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(156,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(188,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(219,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(250,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                          </g>
-                          <g
-                            class="mark-text role-axis-label"
-                            pointer-events="none"
-                          >
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="start"
-                              transform="translate(0,15)"
-                            >
-                              0.5
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="0"
-                              text-anchor="middle"
-                              transform="translate(31.25,15)"
-                            >
-                              1.0
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="middle"
-                              transform="translate(62.5,15)"
-                            >
-                              1.5
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="0"
-                              text-anchor="middle"
-                              transform="translate(93.75,15)"
-                            >
-                              2.0
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="middle"
-                              transform="translate(125,15)"
-                            >
-                              2.5
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="0"
-                              text-anchor="middle"
-                              transform="translate(156.25,15)"
-                            >
-                              3.0
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="middle"
-                              transform="translate(187.5,15)"
-                            >
-                              3.5
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="0"
-                              text-anchor="middle"
-                              transform="translate(218.75,15)"
-                            >
-                              4.0
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(250,15)"
-                            >
-                              4.5
-                            </text>
-                          </g>
-                          <g
-                            class="mark-rule role-axis-domain"
-                            pointer-events="none"
-                          >
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,0)"
-                              x2="250"
-                              y2="0"
-                            />
-                          </g>
-                          <g
-                            class="mark-text role-axis-title"
-                            pointer-events="none"
-                          >
-                            <text
-                              fill="var(--malloy-title-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="12px"
-                              font-weight="500"
-                              opacity="1"
-                              text-anchor="middle"
-                              transform="translate(125,30)"
-                            >
-                              monthy
-                            </text>
-                          </g>
-                        </g>
-                        <path
-                          aria-hidden="true"
-                          class="foreground"
-                          d=""
-                          display="none"
-                          pointer-events="none"
-                        />
-                      </g>
-                    </g>
-                    <g
-                      aria-label="Y-axis titled 'wt' for a linear scale with values from 4.00 to 4.30"
-                      aria-roledescription="axis"
-                      class="mark-group role-axis"
-                      role="graphics-symbol"
-                    >
-                      <g
-                        transform="translate(0.5,0.5)"
-                      >
-                        <path
-                          aria-hidden="true"
-                          class="background"
-                          d="M0,0h0v0h0Z"
-                          pointer-events="none"
-                        />
-                        <g>
-                          <g
-                            class="mark-rule role-axis-tick"
-                            pointer-events="none"
-                          >
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,175)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,146)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,117)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,87)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,58)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,29)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,0)"
-                              x2="-5"
-                              y2="0"
-                            />
-                          </g>
-                          <g
-                            class="mark-text role-axis-label"
-                            pointer-events="none"
-                          >
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,178)"
-                            >
-                              4.00
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,148.83333333333343)"
-                            >
-                              4.05
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,119.66666666666684)"
-                            >
-                              4.10
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,90.49999999999974)"
-                            >
-                              4.15
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,61.333333333333165)"
-                            >
-                              4.20
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,32.166666666666586)"
-                            >
-                              4.25
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,3)"
-                            >
-                              4.30
-                            </text>
-                          </g>
-                          <g
-                            class="mark-rule role-axis-domain"
-                            pointer-events="none"
-                          >
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,175)"
-                              x2="0"
-                              y2="-175"
-                            />
-                          </g>
-                          <g
-                            class="mark-text role-axis-title"
-                            pointer-events="none"
-                          >
-                            <text
-                              fill="var(--malloy-title-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="12px"
-                              font-weight="500"
-                              opacity="1"
-                              text-anchor="middle"
-                              transform="translate(-43,87.5) rotate(-90) translate(0,-3)"
-                            >
-                              wt
-                            </text>
-                          </g>
-                        </g>
-                        <path
-                          aria-hidden="true"
-                          class="foreground"
-                          d=""
-                          display="none"
-                          pointer-events="none"
-                        />
-                      </g>
-                    </g>
-                    <g
-                      aria-roledescription="rect mark container"
-                      class="mark-rect role-mark marks"
-                      role="graphics-object"
-                    >
-                      <path
-                        aria-label="monthy: 1; wt: 4"
-                        aria-roledescription="bar"
-                        d="M28.75,175h5v0h-5Z"
-                        fill="#4285F4"
-                        role="graphics-symbol"
-                      />
-                      <path
-                        aria-label="monthy: 2; wt: 4.1"
-                        aria-roledescription="bar"
-                        d="M91.25,116.66666666666684h5v58.33333333333316h-5Z"
-                        fill="#4285F4"
-                        role="graphics-symbol"
-                      />
-                      <path
-                        aria-label="monthy: 3; wt: 4.2"
-                        aria-roledescription="bar"
-                        d="M153.75,58.333333333333165h5v116.66666666666683h-5Z"
-                        fill="#4285F4"
-                        role="graphics-symbol"
-                      />
-                      <path
-                        aria-label="monthy: 4; wt: 4.3"
-                        aria-roledescription="bar"
-                        d="M216.25,0h5v175h-5Z"
-                        fill="#4285F4"
-                        role="graphics-symbol"
-                      />
-                    </g>
-                  </g>
-                  <path
-                    aria-hidden="true"
-                    class="foreground"
-                    d=""
-                    display="none"
-                  />
-                </g>
-              </g>
-            </g>
-          </svg>
-        </div>
+        <span>
+          75%
+        </span>
       </td>
     </tr>
     <tr>
@@ -3809,13 +2580,27 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
           </svg>
         </div>
       </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          $650.00
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          75%
+        </span>
+      </td>
     </tr>
     <tr>
       <td
         style="padding: 8px; vertical-align: top;"
       >
         <span>
-          Sebastian
+          Alex
         </span>
       </td>
       <td
@@ -4384,9 +3169,9 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
         <div>
           <svg
             class="marks"
-            height="217"
+            height="222"
             version="1.1"
-            viewBox="0 0 309 217"
+            viewBox="0 0 309 222"
             width="309"
             xmlns="http://www.w3.org/2000/svg"
             xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -4394,7 +3179,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
             <g
               fill="none"
               stroke-miterlimit="10"
-              transform="translate(53,5)"
+              transform="translate(53,10)"
             >
               <g
                 aria-roledescription="group mark container"
@@ -4534,7 +3319,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,175)"
+                              transform="translate(0,156)"
                               x2="250"
                               y2="0"
                             />
@@ -4542,7 +3327,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,135)"
+                              transform="translate(0,117)"
                               x2="250"
                               y2="0"
                             />
@@ -4550,7 +3335,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,95)"
+                              transform="translate(0,78)"
                               x2="250"
                               y2="0"
                             />
@@ -4558,7 +3343,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,56)"
+                              transform="translate(0,39)"
                               x2="250"
                               y2="0"
                             />
@@ -4566,7 +3351,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,16)"
+                              transform="translate(0,0)"
                               x2="250"
                               y2="0"
                             />
@@ -4809,7 +3594,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                       </g>
                     </g>
                     <g
-                      aria-label="Y-axis titled 'wt' for a linear scale with values from 2.0 to 4.2"
+                      aria-label="Y-axis titled 'wt' for a linear scale with values from 2.5 to 3.4"
                       aria-roledescription="axis"
                       class="mark-group role-axis"
                       role="graphics-symbol"
@@ -4832,7 +3617,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,175)"
+                              transform="translate(0,156)"
                               x2="-5"
                               y2="0"
                             />
@@ -4840,7 +3625,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,135)"
+                              transform="translate(0,117)"
                               x2="-5"
                               y2="0"
                             />
@@ -4848,7 +3633,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,95)"
+                              transform="translate(0,78)"
                               x2="-5"
                               y2="0"
                             />
@@ -4856,7 +3641,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,56)"
+                              transform="translate(0,39)"
                               x2="-5"
                               y2="0"
                             />
@@ -4864,7 +3649,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,16)"
+                              transform="translate(0,0)"
                               x2="-5"
                               y2="0"
                             />
@@ -4879,9 +3664,9 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,178)"
+                              transform="translate(-7,158.55555555555554)"
                             >
-                              2.0
+                              2.6
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -4889,9 +3674,9 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,138.22727272727272)"
+                              transform="translate(-7,119.6666666666667)"
                             >
-                              2.5
+                              2.8
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -4899,7 +3684,7 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,98.45454545454545)"
+                              transform="translate(-7,80.77777777777777)"
                             >
                               3.0
                             </text>
@@ -4909,9 +3694,9 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,58.681818181818194)"
+                              transform="translate(-7,41.88888888888885)"
                             >
-                              3.5
+                              3.2
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -4919,9 +3704,9 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,18.909090909090914)"
+                              transform="translate(-7,3)"
                             >
-                              4.0
+                              3.4
                             </text>
                           </g>
                           <g
@@ -4969,28 +3754,28 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
                       role="graphics-object"
                     >
                       <path
-                        aria-label="monthy: 1; wt: 2"
+                        aria-label="monthy: 1; wt: 2.5"
                         aria-roledescription="bar"
                         d="M28.75,175h5v0h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
-                        aria-label="monthy: 2; wt: 2.6"
+                        aria-label="monthy: 2; wt: 3"
                         aria-roledescription="bar"
-                        d="M91.25,127.27272727272728h5v47.72727272727272h-5Z"
+                        d="M91.25,77.77777777777777h5v97.22222222222223h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
-                        aria-label="monthy: 3; wt: 3.6"
+                        aria-label="monthy: 3; wt: 3.2"
                         aria-roledescription="bar"
-                        d="M153.75,47.72727272727273h5v127.27272727272728h-5Z"
+                        d="M153.75,38.88888888888885h5v136.11111111111114h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
-                        aria-label="monthy: 4; wt: 4.2"
+                        aria-label="monthy: 4; wt: 3.4"
                         aria-roledescription="bar"
                         d="M216.25,0h5v175h-5Z"
                         fill="#4285F4"
@@ -5009,6 +3794,1287 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
             </g>
           </svg>
         </div>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          $271.00
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          75%
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          Miguel
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <div>
+          <svg
+            class="marks"
+            height="217"
+            version="1.1"
+            viewBox="0 0 302 217"
+            width="302"
+            xmlns="http://www.w3.org/2000/svg"
+            xmlns:xlink="http://www.w3.org/1999/xlink"
+          >
+            <g
+              fill="none"
+              stroke-miterlimit="10"
+              transform="translate(45,5)"
+            >
+              <g
+                aria-roledescription="group mark container"
+                class="mark-group role-frame root"
+                role="graphics-object"
+              >
+                <g
+                  transform="translate(0,0)"
+                >
+                  <path
+                    aria-hidden="true"
+                    class="background"
+                    d="M0.5,0.5h250v175h-250Z"
+                    stroke="#888"
+                  />
+                  <g>
+                    <g
+                      aria-hidden="true"
+                      class="mark-group role-axis"
+                    >
+                      <g
+                        transform="translate(0.5,175.5)"
+                      >
+                        <path
+                          aria-hidden="true"
+                          class="background"
+                          d="M0,0h0v0h0Z"
+                          pointer-events="none"
+                        />
+                        <g>
+                          <g
+                            class="mark-rule role-axis-grid"
+                            pointer-events="none"
+                          >
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(42,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(83,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(125,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(167,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(208,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(250,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                          </g>
+                        </g>
+                        <path
+                          aria-hidden="true"
+                          class="foreground"
+                          d=""
+                          display="none"
+                          pointer-events="none"
+                        />
+                      </g>
+                    </g>
+                    <g
+                      aria-hidden="true"
+                      class="mark-group role-axis"
+                    >
+                      <g
+                        transform="translate(0.5,0.5)"
+                      >
+                        <path
+                          aria-hidden="true"
+                          class="background"
+                          d="M0,0h0v0h0Z"
+                          pointer-events="none"
+                        />
+                        <g>
+                          <g
+                            class="mark-rule role-axis-grid"
+                            pointer-events="none"
+                          >
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,155)"
+                              x2="250"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,121)"
+                              x2="250"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,88)"
+                              x2="250"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,54)"
+                              x2="250"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,20)"
+                              x2="250"
+                              y2="0"
+                            />
+                          </g>
+                        </g>
+                        <path
+                          aria-hidden="true"
+                          class="foreground"
+                          d=""
+                          display="none"
+                          pointer-events="none"
+                        />
+                      </g>
+                    </g>
+                    <g
+                      aria-label="X-axis titled 'monthy' for a linear scale with values from 1.0 to 4.0"
+                      aria-roledescription="axis"
+                      class="mark-group role-axis"
+                      role="graphics-symbol"
+                    >
+                      <g
+                        transform="translate(0.5,175.5)"
+                      >
+                        <path
+                          aria-hidden="true"
+                          class="background"
+                          d="M0,0h0v0h0Z"
+                          pointer-events="none"
+                        />
+                        <g>
+                          <g
+                            class="mark-rule role-axis-tick"
+                            pointer-events="none"
+                          >
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(42,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(83,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(125,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(167,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(208,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(250,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                          </g>
+                          <g
+                            class="mark-text role-axis-label"
+                            pointer-events="none"
+                          >
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="start"
+                              transform="translate(0,15)"
+                            >
+                              1.0
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="middle"
+                              transform="translate(41.666666666666664,15)"
+                            >
+                              1.5
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="middle"
+                              transform="translate(83.33333333333333,15)"
+                            >
+                              2.0
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="middle"
+                              transform="translate(125,15)"
+                            >
+                              2.5
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="middle"
+                              transform="translate(166.66666666666666,15)"
+                            >
+                              3.0
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="middle"
+                              transform="translate(208.33333333333334,15)"
+                            >
+                              3.5
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(250,15)"
+                            >
+                              4.0
+                            </text>
+                          </g>
+                          <g
+                            class="mark-rule role-axis-domain"
+                            pointer-events="none"
+                          >
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,0)"
+                              x2="250"
+                              y2="0"
+                            />
+                          </g>
+                          <g
+                            class="mark-text role-axis-title"
+                            pointer-events="none"
+                          >
+                            <text
+                              fill="var(--malloy-title-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="12px"
+                              font-weight="500"
+                              opacity="1"
+                              text-anchor="middle"
+                              transform="translate(125,30)"
+                            >
+                              monthy
+                            </text>
+                          </g>
+                        </g>
+                        <path
+                          aria-hidden="true"
+                          class="foreground"
+                          d=""
+                          display="none"
+                          pointer-events="none"
+                        />
+                      </g>
+                    </g>
+                    <g
+                      aria-label="Y-axis titled 'height' for a linear scale with values from 22 to 48"
+                      aria-roledescription="axis"
+                      class="mark-group role-axis"
+                      role="graphics-symbol"
+                    >
+                      <g
+                        transform="translate(0.5,0.5)"
+                      >
+                        <path
+                          aria-hidden="true"
+                          class="background"
+                          d="M0,0h0v0h0Z"
+                          pointer-events="none"
+                        />
+                        <g>
+                          <g
+                            class="mark-rule role-axis-tick"
+                            pointer-events="none"
+                          >
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,155)"
+                              x2="-5"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,121)"
+                              x2="-5"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,88)"
+                              x2="-5"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,54)"
+                              x2="-5"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,20)"
+                              x2="-5"
+                              y2="0"
+                            />
+                          </g>
+                          <g
+                            class="mark-text role-axis-label"
+                            pointer-events="none"
+                          >
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,157.8076923076923)"
+                            >
+                              25
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,124.15384615384615)"
+                            >
+                              30
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,90.5)"
+                            >
+                              35
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,56.84615384615385)"
+                            >
+                              40
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,23.192307692307697)"
+                            >
+                              45
+                            </text>
+                          </g>
+                          <g
+                            class="mark-rule role-axis-domain"
+                            pointer-events="none"
+                          >
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,175)"
+                              x2="0"
+                              y2="-175"
+                            />
+                          </g>
+                          <g
+                            class="mark-text role-axis-title"
+                            pointer-events="none"
+                          >
+                            <text
+                              fill="var(--malloy-title-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="12px"
+                              font-weight="500"
+                              opacity="1"
+                              text-anchor="middle"
+                              transform="translate(-27,87.5) rotate(-90) translate(0,-3)"
+                            >
+                              height
+                            </text>
+                          </g>
+                        </g>
+                        <path
+                          aria-hidden="true"
+                          class="foreground"
+                          d=""
+                          display="none"
+                          pointer-events="none"
+                        />
+                      </g>
+                    </g>
+                    <g
+                      aria-roledescription="line mark container"
+                      class="mark-line role-mark marks"
+                      role="graphics-object"
+                    >
+                      <path
+                        aria-label="monthy: 1; height: 23"
+                        aria-roledescription="line mark"
+                        d="M0,168.269L83.333,134.615L166.667,87.5L250,6.731"
+                        role="graphics-symbol"
+                        stroke="#4285F4"
+                        stroke-width="2"
+                      />
+                    </g>
+                  </g>
+                  <path
+                    aria-hidden="true"
+                    class="foreground"
+                    d=""
+                    display="none"
+                  />
+                </g>
+              </g>
+            </g>
+          </svg>
+        </div>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <div>
+          <svg
+            class="marks"
+            height="222"
+            version="1.1"
+            viewBox="0 0 317 222"
+            width="317"
+            xmlns="http://www.w3.org/2000/svg"
+            xmlns:xlink="http://www.w3.org/1999/xlink"
+          >
+            <g
+              fill="none"
+              stroke-miterlimit="10"
+              transform="translate(61,10)"
+            >
+              <g
+                aria-roledescription="group mark container"
+                class="mark-group role-frame root"
+                role="graphics-object"
+              >
+                <g
+                  transform="translate(0,0)"
+                >
+                  <path
+                    aria-hidden="true"
+                    class="background"
+                    d="M0.5,0.5h250v175h-250Z"
+                    stroke="#888"
+                  />
+                  <g>
+                    <g
+                      aria-hidden="true"
+                      class="mark-group role-axis"
+                    >
+                      <g
+                        transform="translate(0.5,175.5)"
+                      >
+                        <path
+                          aria-hidden="true"
+                          class="background"
+                          d="M0,0h0v0h0Z"
+                          pointer-events="none"
+                        />
+                        <g>
+                          <g
+                            class="mark-rule role-axis-grid"
+                            pointer-events="none"
+                          >
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(31,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(63,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(94,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(125,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(156,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(188,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(219,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(250,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                          </g>
+                        </g>
+                        <path
+                          aria-hidden="true"
+                          class="foreground"
+                          d=""
+                          display="none"
+                          pointer-events="none"
+                        />
+                      </g>
+                    </g>
+                    <g
+                      aria-hidden="true"
+                      class="mark-group role-axis"
+                    >
+                      <g
+                        transform="translate(0.5,0.5)"
+                      >
+                        <path
+                          aria-hidden="true"
+                          class="background"
+                          d="M0,0h0v0h0Z"
+                          pointer-events="none"
+                        />
+                        <g>
+                          <g
+                            class="mark-rule role-axis-grid"
+                            pointer-events="none"
+                          >
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,175)"
+                              x2="250"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,146)"
+                              x2="250"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,117)"
+                              x2="250"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,87)"
+                              x2="250"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,58)"
+                              x2="250"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,29)"
+                              x2="250"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,0)"
+                              x2="250"
+                              y2="0"
+                            />
+                          </g>
+                        </g>
+                        <path
+                          aria-hidden="true"
+                          class="foreground"
+                          d=""
+                          display="none"
+                          pointer-events="none"
+                        />
+                      </g>
+                    </g>
+                    <g
+                      aria-label="X-axis titled 'monthy' for a linear scale with values from 1 to 5"
+                      aria-roledescription="axis"
+                      class="mark-group role-axis"
+                      role="graphics-symbol"
+                    >
+                      <g
+                        transform="translate(0.5,175.5)"
+                      >
+                        <path
+                          aria-hidden="true"
+                          class="background"
+                          d="M0,0h0v0h0Z"
+                          pointer-events="none"
+                        />
+                        <g>
+                          <g
+                            class="mark-rule role-axis-tick"
+                            pointer-events="none"
+                          >
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(31,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(63,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(94,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(125,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(156,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(188,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(219,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(250,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                          </g>
+                          <g
+                            class="mark-text role-axis-label"
+                            pointer-events="none"
+                          >
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="start"
+                              transform="translate(0,15)"
+                            >
+                              0.5
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="0"
+                              text-anchor="middle"
+                              transform="translate(31.25,15)"
+                            >
+                              1.0
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="middle"
+                              transform="translate(62.5,15)"
+                            >
+                              1.5
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="0"
+                              text-anchor="middle"
+                              transform="translate(93.75,15)"
+                            >
+                              2.0
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="middle"
+                              transform="translate(125,15)"
+                            >
+                              2.5
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="0"
+                              text-anchor="middle"
+                              transform="translate(156.25,15)"
+                            >
+                              3.0
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="middle"
+                              transform="translate(187.5,15)"
+                            >
+                              3.5
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="0"
+                              text-anchor="middle"
+                              transform="translate(218.75,15)"
+                            >
+                              4.0
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(250,15)"
+                            >
+                              4.5
+                            </text>
+                          </g>
+                          <g
+                            class="mark-rule role-axis-domain"
+                            pointer-events="none"
+                          >
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,0)"
+                              x2="250"
+                              y2="0"
+                            />
+                          </g>
+                          <g
+                            class="mark-text role-axis-title"
+                            pointer-events="none"
+                          >
+                            <text
+                              fill="var(--malloy-title-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="12px"
+                              font-weight="500"
+                              opacity="1"
+                              text-anchor="middle"
+                              transform="translate(125,30)"
+                            >
+                              monthy
+                            </text>
+                          </g>
+                        </g>
+                        <path
+                          aria-hidden="true"
+                          class="foreground"
+                          d=""
+                          display="none"
+                          pointer-events="none"
+                        />
+                      </g>
+                    </g>
+                    <g
+                      aria-label="Y-axis titled 'wt' for a linear scale with values from 4.00 to 4.30"
+                      aria-roledescription="axis"
+                      class="mark-group role-axis"
+                      role="graphics-symbol"
+                    >
+                      <g
+                        transform="translate(0.5,0.5)"
+                      >
+                        <path
+                          aria-hidden="true"
+                          class="background"
+                          d="M0,0h0v0h0Z"
+                          pointer-events="none"
+                        />
+                        <g>
+                          <g
+                            class="mark-rule role-axis-tick"
+                            pointer-events="none"
+                          >
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,175)"
+                              x2="-5"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,146)"
+                              x2="-5"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,117)"
+                              x2="-5"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,87)"
+                              x2="-5"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,58)"
+                              x2="-5"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,29)"
+                              x2="-5"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,0)"
+                              x2="-5"
+                              y2="0"
+                            />
+                          </g>
+                          <g
+                            class="mark-text role-axis-label"
+                            pointer-events="none"
+                          >
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,178)"
+                            >
+                              4.00
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,148.83333333333343)"
+                            >
+                              4.05
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,119.66666666666684)"
+                            >
+                              4.10
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,90.49999999999974)"
+                            >
+                              4.15
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,61.333333333333165)"
+                            >
+                              4.20
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,32.166666666666586)"
+                            >
+                              4.25
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,3)"
+                            >
+                              4.30
+                            </text>
+                          </g>
+                          <g
+                            class="mark-rule role-axis-domain"
+                            pointer-events="none"
+                          >
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,175)"
+                              x2="0"
+                              y2="-175"
+                            />
+                          </g>
+                          <g
+                            class="mark-text role-axis-title"
+                            pointer-events="none"
+                          >
+                            <text
+                              fill="var(--malloy-title-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="12px"
+                              font-weight="500"
+                              opacity="1"
+                              text-anchor="middle"
+                              transform="translate(-43,87.5) rotate(-90) translate(0,-3)"
+                            >
+                              wt
+                            </text>
+                          </g>
+                        </g>
+                        <path
+                          aria-hidden="true"
+                          class="foreground"
+                          d=""
+                          display="none"
+                          pointer-events="none"
+                        />
+                      </g>
+                    </g>
+                    <g
+                      aria-roledescription="rect mark container"
+                      class="mark-rect role-mark marks"
+                      role="graphics-object"
+                    >
+                      <path
+                        aria-label="monthy: 1; wt: 4"
+                        aria-roledescription="bar"
+                        d="M28.75,175h5v0h-5Z"
+                        fill="#4285F4"
+                        role="graphics-symbol"
+                      />
+                      <path
+                        aria-label="monthy: 2; wt: 4.1"
+                        aria-roledescription="bar"
+                        d="M91.25,116.66666666666684h5v58.33333333333316h-5Z"
+                        fill="#4285F4"
+                        role="graphics-symbol"
+                      />
+                      <path
+                        aria-label="monthy: 3; wt: 4.2"
+                        aria-roledescription="bar"
+                        d="M153.75,58.333333333333165h5v116.66666666666683h-5Z"
+                        fill="#4285F4"
+                        role="graphics-symbol"
+                      />
+                      <path
+                        aria-label="monthy: 4; wt: 4.3"
+                        aria-roledescription="bar"
+                        d="M216.25,0h5v175h-5Z"
+                        fill="#4285F4"
+                        role="graphics-symbol"
+                      />
+                    </g>
+                  </g>
+                  <path
+                    aria-hidden="true"
+                    class="foreground"
+                    d=""
+                    display="none"
+                  />
+                </g>
+              </g>
+            </g>
+          </svg>
+        </div>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          $205.00
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          50%
+        </span>
       </td>
     </tr>
   </tbody>
