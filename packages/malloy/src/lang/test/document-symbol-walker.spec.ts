@@ -54,6 +54,23 @@ function testSymbol(
   });
 }
 
+function testLens(source: MarkedSource, path: number[]) {
+  const doc = new MalloyExplore(source.code);
+  let current: Partial<DocumentSymbol> & {children: DocumentSymbol[]} = {
+    children: doc.symbols,
+  };
+  path.forEach(segment => {
+    current = current.children[segment];
+  });
+  expect(doc.logger.hasErrors()).toBeFalsy();
+  const expectedLensRange = source.locations[0].range;
+  const expected =
+    'lensRange' in current && current.lensRange !== undefined
+      ? {lensRange: expectedLensRange}
+      : {range: expectedLensRange};
+  expect(current).toMatchObject(expected);
+}
+
 test('source symbols are included', () => {
   testSymbol(
     markSource`source: ${"flights is table('my.table.flights')"}`,
@@ -192,5 +209,73 @@ test('join ons are included', () => {
     'a',
     'join',
     [0, 0]
+  );
+});
+
+test('source lenses go before block annotations when one source', () => {
+  testLens(
+    markSource`${`# tag
+    # tag2
+    source:
+    # tag3
+    flights is table('my.table.flights')`}`,
+    [0]
+  );
+});
+
+test('source lenses go before individual annotations when more than one source', () => {
+  testLens(
+    markSource`# tag
+    source:
+      ${`# tag2
+      flights is table('my.table.flights')`}
+
+      flights2 is table('my.table.flights')`,
+    [0]
+  );
+});
+
+test('query lenses go before block annotations when one source', () => {
+  testLens(
+    markSource`${`# tag
+    # tag2
+    query:
+    # tag3
+    q is flights -> by_carrier`}`,
+    [0]
+  );
+});
+
+test('query lenses go before individual annotations when more than one source', () => {
+  testLens(
+    markSource`# tag
+    query:
+      ${`# tag2
+      q is flights -> by_carrier`}
+
+      q2 is flights -> by_carrier`,
+    [0]
+  );
+});
+
+test('anonymous query lenses go before block annotations', () => {
+  testLens(
+    markSource`${`# tag
+    # tag2
+    query:
+    # tag3
+    flights -> by_carrier`}`,
+    [0]
+  );
+});
+
+test('run lenses go before block annotations', () => {
+  testLens(
+    markSource`${`# tag
+    # tag2
+    run:
+    # tag3
+    flights -> by_carrier`}`,
+    [0]
   );
 });
