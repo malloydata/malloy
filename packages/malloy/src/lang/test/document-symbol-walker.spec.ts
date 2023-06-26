@@ -279,3 +279,14 @@ test('run lenses go before block annotations', () => {
     [0]
   );
 });
+
+test('(regression) query does not use source block range', () => {
+  testLens(
+    markSource`source: a is table('b') {
+      query:
+        ${'x is {project: *}'}
+        y is {project: *}
+    }`,
+    [0, 0]
+  );
+});

@@ -70,9 +70,6 @@ class DocumentSymbolWalker implements MalloyParserListener {
       children: [],
       lensRange: this.blockRange,
     });
-  }
-
-  exitTopLevelQueryDefs(_pcx: parser.TopLevelQueryDefsContext) {
     this.blockRange = undefined;
   }
 
@@ -117,10 +114,6 @@ class DocumentSymbolWalker implements MalloyParserListener {
     }
   }
 
-  exitDefineSourceStatement(_pcx: parser.DefineSourceStatementContext) {
-    this.blockRange = undefined;
-  }
-
   enterSourceDefinition(pcx: parser.SourceDefinitionContext) {
     const range = this.translator.rangeFromContext(pcx);
     this.scopes.push({
@@ -130,6 +123,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
       children: [],
       lensRange: this.blockRange,
     });
+    this.blockRange = undefined;
   }
 
   exitSourceDefinition(_pcx: parser.SourceDefinitionContext) {
@@ -160,14 +154,11 @@ class DocumentSymbolWalker implements MalloyParserListener {
       parent.children.push(symbol);
     }
     this.scopes.push(symbol);
+    this.blockRange = undefined;
   }
 
   exitExploreQueryDef(_pcx: parser.ExploreQueryDefContext) {
     this.popScope();
-  }
-
-  exitDefExploreQuery(_pcx: parser.DefExploreQueryContext) {
-    this.blockRange = undefined;
   }
 
   handleNestEntry(pcx: parser.NestExistingContext | parser.NestDefContext) {
