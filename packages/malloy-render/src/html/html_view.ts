@@ -186,7 +186,7 @@ function updateOrCreateRenderer(
   renderer?: RenderDef
 ) {
   if (renderer) {
-    renderer.renderer ??= suffixMap[rendererKey];
+    renderer.renderer ??= rendererMap[rendererKey];
     renderer.data ??= {};
     renderer.data.label ??= label;
   } else {
