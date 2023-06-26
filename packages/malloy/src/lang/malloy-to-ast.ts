@@ -30,7 +30,7 @@ import * as ast from './ast';
 import {LogSeverity, MessageLogger} from './parse-log';
 import {MalloyParseRoot} from './parse-malloy';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
-import {FieldDeclarationConstructor} from './ast';
+import {FieldDeclarationConstructor, TableSource} from './ast';
 
 const ENABLE_M4_WARNINGS = false;
 
@@ -324,13 +324,38 @@ export class MalloyToAST
     return propList;
   }
 
-  visitExploreTable(pcx: parse.ExploreTableContext): ast.TableSource {
-    const tableName = this.stripQuotes(pcx.tableName().text);
-    return this.astAt(new ast.TableSource(tableName), pcx);
+  visitTableFunction(pcx: parse.TableFunctionContext): ast.TableSource {
+    const tableURI = this.stripQuotes(pcx.tableURI().text);
+    const el = this.astAt(new ast.TableFunctionSource(tableURI), pcx);
+    if (ENABLE_M4_WARNINGS) {
+      this.astError(
+        el,
+        "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`",
+        'warn'
+      );
+    }
+    return el;
+  }
+
+  visitTableMethod(pcx: parse.TableMethodContext): ast.TableSource {
+    const connId = pcx.connectionId();
+    const connectionName = this.astAt(this.getModelEntryName(connId), connId);
+    const tablePath = this.stripQuotes(pcx.tablePath().text);
+    return this.astAt(
+      new ast.TableMethodSource(connectionName, tablePath),
+      pcx
+    );
   }
 
   visitTableSource(pcx: parse.TableSourceContext): ast.TableSource {
-    return this.visitExploreTable(pcx.exploreTable());
+    const result = this.visit(pcx.exploreTable());
+    if (result instanceof TableSource) {
+      return result;
+    }
+    throw this.internalError(
+      pcx,
+      `Table source matched, but ${result.elementType} found`
+    );
   }
 
   visitSQLSourceName(pcx: parse.SQLSourceNameContext): ast.SQLSource {

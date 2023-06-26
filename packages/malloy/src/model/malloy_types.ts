@@ -938,6 +938,10 @@ export interface FunctionDef extends NamedObject {
   overloads: FunctionOverloadDef[];
 }
 
+export interface ConnectionDef extends NamedObject {
+  type: 'connection';
+}
+
 export interface SQLBlockStructDef extends StructDef {
   structSource: SubquerySource;
   // This was added to that errors for structdefs created in sql: but NOT used in
@@ -1025,7 +1029,11 @@ export function getIdentifier(n: AliasedName): string {
   return n.name;
 }
 
-export type NamedModelObject = StructDef | NamedQuery | FunctionDef;
+export type NamedModelObject =
+  | StructDef
+  | NamedQuery
+  | FunctionDef
+  | ConnectionDef;
 
 /** Result of parsing a model file */
 export interface ModelDef {

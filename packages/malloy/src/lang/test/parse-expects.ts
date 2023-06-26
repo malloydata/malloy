@@ -111,7 +111,9 @@ function prettyNeeds(response: TranslateResponse) {
   let needString = '';
   if (response.tables) {
     needString += 'Tables:\n';
-    response.tables.forEach(table => (needString += `  - ${table}`));
+    for (const table in response.tables) {
+      needString += `  - ${table}`;
+    }
   }
   if (response.compileSQL) {
     needString += `Compile SQL: ${response.compileSQL.name}`;

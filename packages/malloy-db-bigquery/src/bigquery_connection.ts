@@ -48,7 +48,6 @@ import {
   SQLBlock,
   StreamingConnection,
   StructDef,
-  parseTableURI,
   toAsyncGenerator,
 } from '@malloydata/malloy';
 
@@ -337,33 +336,23 @@ export class BigQueryConnection
     };
   }
 
-  public async structDefFromSQL(sqlCommand: string): Promise<StructDef> {
-    const dryRunResults = await this.dryRunSQLQuery(sqlCommand);
-    const destinationTable =
-      dryRunResults.metadata.configuration.query.destinationTable;
-
-    return this.structDefFromTableSchema(
-      `${destinationTable.projectId}.${destinationTable.datasetId}.${destinationTable.tableId}`,
-      dryRunResults.metadata.statistics.query.schema
-    );
+  private normalizeTablePath(tablePath: string): string {
+    if (tablePath.split('.').length === 2) {
+      return `${this.defaultProject}.${tablePath}`;
+    } else {
+      return tablePath;
+    }
   }
 
-  public async getTableFieldSchema(tableURL: string): Promise<SchemaInfo> {
-    const {tablePath: tableName} = parseTableURI(tableURL);
-    const segments = tableName.split('.');
+  public async getTableFieldSchema(tablePath: string): Promise<SchemaInfo> {
+    const segments = this.normalizeTablePath(tablePath).split('.');
 
-    // paths can have two or three segments
-    // if there are only two segments, assume the dataset is "local" to the current billing project
-    let projectId, datasetNamePart, tableNamePart;
-    if (segments.length === 2) {
-      [datasetNamePart, tableNamePart] = segments;
-      projectId = this.defaultProject;
-    } else if (segments.length === 3)
-      [projectId, datasetNamePart, tableNamePart] = segments;
-    else
+    if (segments.length !== 3) {
       throw new Error(
-        `Improper table path: ${tableName}. A table path requires 2 or 3 segments`
+        `Improper table path: ${tablePath}. A table path requires 2 or 3 segments`
       );
+    }
+    const [projectId, datasetNamePart, tableNamePart] = segments;
 
     try {
       // TODO The `dataset` API has no way to set a different `projectId` than the one stored in the BQ
@@ -373,7 +362,8 @@ export class BigQueryConnection
       //      this is better than creating a new BQ instance every time we need to get a table schema.
       if (projectId) this.bigQuery.projectId = projectId;
       const needTableSuffixPseudoColumn =
-        tableNamePart && tableNamePart[tableNamePart.length - 1] === '*';
+        tableNamePart !== undefined &&
+        tableNamePart[tableNamePart.length - 1] === '*';
       const table = this.bigQuery.dataset(datasetNamePart).table(tableNamePart);
       const metadataPromise = table.getMetadata();
       this.bigQuery.projectId = this.projectId;
@@ -559,26 +549,18 @@ export class BigQueryConnection
     }
   }
 
-  private tableURLtoTablePath(tableURL: string): string {
-    const {tablePath} = parseTableURI(tableURL);
-    if (tablePath.split('.').length === 2) {
-      return `${this.defaultProject}.${tablePath}`;
-    } else {
-      return tablePath;
-    }
-  }
-
   private structDefFromTableSchema(
-    tableURL: string,
+    tableKey: string,
+    tablePath: string,
     schemaInfo: SchemaInfo
   ): StructDef {
     const structDef: StructDef = {
       type: 'struct',
-      name: tableURL,
+      name: tableKey,
       dialect: this.dialectName,
       structSource: {
         type: 'table',
-        tablePath: this.tableURLtoTablePath(tableURL),
+        tablePath,
       },
       structRelationship: {
         type: 'basetable',
@@ -631,30 +613,35 @@ export class BigQueryConnection
     return structDef;
   }
 
-  public async fetchSchemaForTables(missing: string[]): Promise<{
+  public async fetchSchemaForTables(missing: Record<string, string>): Promise<{
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;
   }> {
     const schemas: NamedStructDefs = {};
     const errors: {[name: string]: string} = {};
 
-    for (const tableURL of missing) {
-      let inCache = this.schemaCache.get(tableURL);
+    for (const tableKey in missing) {
+      let inCache = this.schemaCache.get(tableKey);
       if (!inCache) {
+        const tablePath = this.normalizeTablePath(missing[tableKey]);
         try {
-          const tableFieldSchema = await this.getTableFieldSchema(tableURL);
+          const tableFieldSchema = await this.getTableFieldSchema(tablePath);
           inCache = {
-            schema: this.structDefFromTableSchema(tableURL, tableFieldSchema),
+            schema: this.structDefFromTableSchema(
+              tableKey,
+              tablePath,
+              tableFieldSchema
+            ),
           };
-          this.schemaCache.set(tableURL, inCache);
+          this.schemaCache.set(tableKey, inCache);
         } catch (error) {
           inCache = {error: error.message};
         }
       }
       if (inCache.schema !== undefined) {
-        schemas[tableURL] = inCache.schema;
+        schemas[tableKey] = inCache.schema;
       } else {
-        errors[tableURL] = inCache.error || 'Unknown schema fetch error';
+        errors[tableKey] = inCache.error || 'Unknown schema fetch error';
       }
     }
     return {schemas, errors};

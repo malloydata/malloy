@@ -132,8 +132,12 @@ pipeElement
   ;
 
 exploreTable
-  : TABLE OPAREN tableName CPAREN
+  : TABLE OPAREN tableURI CPAREN                     # tableFunction
+  | connectionId DOT TABLE OPAREN tablePath CPAREN   # tableMethod
   ;
+
+connectionId
+  : id;
 
 queryProperties
   : filterShortcut
@@ -437,7 +441,10 @@ dateLiteral
   | LITERAL_YEAR           # literalYear
   ;
 
-tableName
+tablePath
+  : STRING_LITERAL;
+
+tableURI
   : STRING_LITERAL;
 
 id

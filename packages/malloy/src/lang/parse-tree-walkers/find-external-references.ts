@@ -29,22 +29,54 @@ import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
 import {DocumentRange} from '../../model/malloy_types';
 import {MalloyTranslation} from '../parse-malloy';
 
-type References = Record<string, DocumentRange>;
+type NeedImports = Record<string, DocumentRange>;
+type NeedTables = Record<
+  string,
+  {
+    connectionName: string | undefined;
+    tablePath: string;
+    firstReference: DocumentRange;
+  }
+>;
 
 class FindExternalReferences implements MalloyParserListener {
-  needTables: References = {};
-  needImports: References = {};
+  needTables: NeedTables = {};
+  needImports: NeedImports = {};
 
   constructor(
     readonly trans: MalloyTranslation,
     readonly tokens: CommonTokenStream
   ) {}
 
-  enterTableName(pcx: parser.TableNameContext) {
-    const tableName = this.tokens.getText(pcx).slice(1, -1);
-    if (!this.needTables[tableName]) {
-      this.needTables[tableName] = this.trans.rangeFromContext(pcx);
+  registerTableReference(
+    connectionName: string | undefined,
+    tablePath: string,
+    reference: DocumentRange
+  ) {
+    const key = constructTableKey(connectionName, tablePath);
+    if (!this.needTables[key]) {
+      this.needTables[key] = {
+        connectionName,
+        tablePath,
+        firstReference: reference,
+      };
     }
+  }
+
+  enterTableMethod(pcx: parser.TableMethodContext) {
+    const connectionName = this.stripIdQuotes(pcx.connectionId().text);
+    const tablePath = this.tokens.getText(pcx.tablePath()).slice(1, -1);
+    const reference = this.trans.rangeFromContext(pcx);
+    this.registerTableReference(connectionName, tablePath, reference);
+  }
+
+  enterTableFunction(pcx: parser.TableFunctionContext) {
+    const tableURI = this.tokens.getText(pcx.tableURI()).slice(1, -1);
+    // This use of `deprecatedParseTableURI` is ok because it is for handling the
+    // old, soon-to-be-deprecated table syntax.
+    const {connectionName, tablePath} = deprecatedParseTableURI(tableURI);
+    const reference = this.trans.rangeFromContext(pcx);
+    this.registerTableReference(connectionName, tablePath, reference);
   }
 
   enterImportURL(pcx: parser.ImportURLContext) {
@@ -53,27 +85,61 @@ class FindExternalReferences implements MalloyParserListener {
       this.needImports[url] = this.trans.rangeFromContext(pcx);
     }
   }
+
+  stripIdQuotes(id: string) {
+    if (id[0] === '`' && id[id.length - 1] === '`') {
+      return id.slice(1, -1);
+    }
+    return id;
+  }
 }
 
-interface FinderFound {
-  tables?: References;
-  urls?: References;
+export function constructTableKey(
+  connectionName: string | undefined,
+  tablePath: string
+): string {
+  return connectionName === undefined
+    ? tablePath
+    : `${connectionName}:${tablePath}`;
+}
+
+/**
+ * This function parses an old-style `tableURI` into a connection name and
+ * table path. The name includes `deprecated` because it should only be used
+ * in the (deprecated) old-style `table('conn:tab')` syntax. Any use of this
+ * anywhere else is bad.
+ * @param tableURI The sting that is passed into the `table('conn:tab')` syntax.
+ * @returns A connection name and table path.
+ * @deprecated
+ */
+export function deprecatedParseTableURI(tableURI: string): {
+  connectionName?: string;
+  tablePath: string;
+} {
+  const parts = tableURI.match(/^([^:]*):(.*)$/);
+  if (parts) {
+    const [, firstPart, secondPart] = parts;
+    return {connectionName: firstPart, tablePath: secondPart};
+  } else {
+    return {tablePath: tableURI};
+  }
+}
+
+export interface FindReferencesData {
+  tables: NeedTables;
+  urls: NeedImports;
 }
 export function findReferences(
   trans: MalloyTranslation,
   tokens: CommonTokenStream,
   parseTree: ParseTree
-): FinderFound | null {
+): FindReferencesData {
   const finder = new FindExternalReferences(trans, tokens);
   const listener: MalloyParserListener = finder;
   ParseTreeWalker.DEFAULT.walk(listener, parseTree);
 
-  let refs: FinderFound = {};
-  if (Object.keys(finder.needTables).length > 0) {
-    refs = {tables: finder.needTables};
-  }
-  if (Object.keys(finder.needImports).length > 0) {
-    refs = {...refs, urls: finder.needImports};
-  }
-  return Object.keys(refs).length > 0 ? refs : null;
+  return {
+    tables: finder.needTables,
+    urls: finder.needImports,
+  };
 }

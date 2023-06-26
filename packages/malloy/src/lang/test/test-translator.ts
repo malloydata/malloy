@@ -276,6 +276,7 @@ export class TestTranslator extends MalloyTranslator {
     this.importZone.define(testURI, testSrc);
     for (const tableName in mockSchema) {
       this.schemaZone.define(tableName, mockSchema[tableName]);
+      this.schemaZone.define('conn:' + tableName, mockSchema[tableName]);
     }
   }
 

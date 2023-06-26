@@ -48,6 +48,37 @@ import {isGranularResult} from '../ast/types/granular-result';
 import './parse-expects';
 
 describe('model statements', () => {
+  describe('table method', () => {
+    test('table method works', () => {
+      expect("source: testA is conn.table('aTable')").toTranslate();
+    });
+    test('table method works with quoted connection name', () => {
+      expect("source: testA is `conn`.table('aTable')").toTranslate();
+    });
+    test('table method fails when connection name is wrong', () => {
+      expect("source: testA is bad_conn.table('aTable')").not.toTranslate();
+    });
+    test('table method fails when connection is not a connection', () => {
+      const m = model`source: a1 is a; source: testA is a1.table('aTable')`;
+      // This is a somewhat weird behavior from the translator. During the
+      // first phase of translation, we fetch "external references" (tables and
+      // imports). At that point we don't know that there will be an error
+      // "a1 is not a connection," so we attempt to fetch `aTable` from connection
+      // `a1` even though a1 is not a connection. The response from the application
+      // is basically ignored in the end, as we still eventually get the error
+      // that a1 is not a connection (it's a source).
+      m.translator.update({
+        errors: {tables: {'a1:aTable': 'invalid connection'}},
+      });
+      expect(m).translationToFailWith('a1 is not a connection');
+    });
+    // TODO unskip this when ENABLE_M4_WARNINGS becomes a document annotation
+    test.skip('table function is deprecated', () => {
+      expect("testA is table('conn:aTable')").toTranslateWithWarnings(
+        "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`"
+      );
+    });
+  });
   describe('source:', () => {
     test('table', () => {
       expect("source: testA is table('aTable')").toTranslate();
@@ -2777,7 +2808,7 @@ describe('translation need error locations', () => {
     const result = m.translate();
     m.update({
       errors: {
-        tables: {[(result.tables || [])[0]]: 'Bad table!'},
+        tables: {[Object.keys(result.tables || {})[0]]: 'Bad table!'},
       },
     });
     expect(m).translationToFailWith(/Bad table!/);
