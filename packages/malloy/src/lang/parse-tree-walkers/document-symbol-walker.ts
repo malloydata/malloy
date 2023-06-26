@@ -212,11 +212,11 @@ class DocumentSymbolWalker implements MalloyParserListener {
   }
 
   enterDefineSQLStatement(pcx: parser.DefineSQLStatementContext) {
-    const name = pcx.nameSQLBlock()?.text;
+    const name = pcx.nameSQLBlock().text;
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
-      name: name || 'unnamed_sql',
-      type: name === undefined ? 'unnamed_sql' : 'sql',
+      name: name,
+      type: 'sql',
       children: [],
     };
     this.symbols.push(symbol);
