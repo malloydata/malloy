@@ -27,6 +27,7 @@ import {DataArray, DataColumn, Field} from '@malloydata/malloy';
 import {Renderer} from '../renderer';
 import {RendererOptions} from '../renderer_types';
 import {ChartRenderOptions, StyleDefaults} from '../data_styles';
+import {normalizeToTimezone} from '../html/utils';
 
 type MappedRow = {[p: string]: string | number | Date | undefined | null};
 
@@ -47,7 +48,12 @@ export abstract class HTMLChartRenderer implements Renderer {
         [p: string]: string | number | Date | undefined | null;
       } = {};
       for (const field of data.field.intrinsicFields) {
-        mappedRow[field.name] = this.getDataValue(row.cell(field));
+        let dataValue = this.getDataValue(row.cell(field));
+        if (dataValue instanceof Date) {
+          dataValue = normalizeToTimezone(dataValue, this.timezone);
+        }
+
+        mappedRow[field.name] = dataValue;
       }
       mappedRows.push(mappedRow);
     }
@@ -66,7 +72,8 @@ export abstract class HTMLChartRenderer implements Renderer {
     protected readonly document: Document,
     protected styleDefaults: StyleDefaults,
     protected options: RendererOptions,
-    chartOptions: ChartRenderOptions = {}
+    chartOptions: ChartRenderOptions = {},
+    protected timezone?: string
   ) {
     this.size = chartOptions.size || this.styleDefaults.size || 'medium';
   }

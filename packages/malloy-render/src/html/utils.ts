@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DateTimeframe, TimestampTimeframe} from '@malloydata/malloy';
+import {DateTimeframe, Field, TimestampTimeframe} from '@malloydata/malloy';
 import startCase from 'lodash/startCase';
 import {RenderDef} from '../data_styles';
 import {RendererOptions} from '../renderer_types';
@@ -146,6 +146,22 @@ export function timeToString(
   }
 }
 
+export function normalizeToTimezone(date: Date, timezone: string | undefined) {
+  const dateTime = DateTime.fromJSDate(date, {
+    zone: timezone ?? 'UTC',
+  });
+
+  return new Date(
+    dateTime.year,
+    dateTime.month - 1,
+    dateTime.day,
+    dateTime.hour,
+    dateTime.minute,
+    dateTime.second,
+    dateTime.millisecond
+  );
+}
+
 /**
  * Use this function to break up expensive computation over multiple tasks.
  *
@@ -212,9 +228,19 @@ export function createDrillIcon(document: Document): HTMLElement {
 
 export function formatTitle(
   options: RendererOptions,
-  name: string,
-  renderDef?: RenderDef | undefined
+  field: Field,
+  renderDef?: RenderDef | undefined,
+  timezone?: string
 ) {
-  const label = renderDef?.data?.label || name;
-  return options.titleCase ? startCase(label) : label;
+  const label = renderDef?.data?.label || field.name;
+  let title = options.titleCase ? startCase(label) : label;
+  if (
+    field.isAtomicField() &&
+    (field.isDate() || field.isTimestamp()) &&
+    timezone
+  ) {
+    title = `${title} (${timezone})`;
+  }
+
+  return title;
 }

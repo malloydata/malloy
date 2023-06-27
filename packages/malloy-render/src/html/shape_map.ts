@@ -94,7 +94,14 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
         ? {
             field: colorField.name,
             type: colorType,
-            axis: {title: formatTitle(this.options, colorField.name)},
+            axis: {
+              title: formatTitle(
+                this.options,
+                colorField,
+                undefined,
+                this.timezone
+              ),
+            },
             scale: getColorScale(colorType, false),
           }
         : undefined;

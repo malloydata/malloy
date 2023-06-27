@@ -51,7 +51,14 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
         ? {
             field: colorField.name,
             type: colorType,
-            axis: {title: formatTitle(this.options, colorField.name)},
+            axis: {
+              title: formatTitle(
+                this.options,
+                colorField,
+                undefined,
+                this.timezone
+              ),
+            },
             scale: getColorScale(colorType, mark === 'bar'),
           }
         : {value: '#4285F4'};
@@ -60,7 +67,14 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       ? {
           field: sizeField.name,
           type: sizeType,
-          axis: {title: formatTitle(this.options, sizeField.name)},
+          axis: {
+            title: formatTitle(
+              this.options,
+              sizeField,
+              undefined,
+              this.timezone
+            ),
+          },
         }
       : undefined;
 
@@ -68,7 +82,14 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       ? {
           field: shapeField.name,
           type: shapeType,
-          axis: {title: formatTitle(this.options, shapeField.name)},
+          axis: {
+            title: formatTitle(
+              this.options,
+              shapeField,
+              undefined,
+              this.timezone
+            ),
+          },
         }
       : undefined;
 
@@ -79,7 +100,9 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       field: xField.name,
       type: xType,
       sort: xSort,
-      axis: {title: formatTitle(this.options, xField.name)},
+      axis: {
+        title: formatTitle(this.options, xField, undefined, this.timezone),
+      },
       scale: {zero: false},
     };
 
@@ -87,7 +110,9 @@ export abstract class HTMLCartesianChartRenderer extends HTMLChartRenderer {
       field: yField.name,
       type: yType,
       sort: ySort,
-      axis: {title: formatTitle(this.options, yField.name)},
+      axis: {
+        title: formatTitle(this.options, yField, undefined, this.timezone),
+      },
       scale: {zero: false},
     };
 
