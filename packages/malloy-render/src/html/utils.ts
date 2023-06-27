@@ -80,9 +80,10 @@ function numberFixedDigits(value: number, digits: number) {
 
 export function timeToString(
   time: Date,
-  timeframe: DateTimeframe | TimestampTimeframe,
+  timeframe: DateTimeframe | TimestampTimeframe | undefined,
   timezone?: string
 ): string {
+  timeframe ||= TimestampTimeframe.Second;
   const dateTime = DateTime.fromJSDate(time, {zone: timezone});
 
   switch (timeframe) {

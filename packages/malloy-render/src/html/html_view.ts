@@ -27,7 +27,6 @@ import {
   Explore,
   Field,
   Result,
-  Result,
   Tags,
 } from '@malloydata/malloy';
 import {TopLevelSpec} from 'vega-lite';

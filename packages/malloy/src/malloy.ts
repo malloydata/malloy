@@ -633,11 +633,7 @@ export class Model implements Taggable {
       return new PreparedQuery(query, this.modelDef, queryName);
     }
 
-    throw new Error(
-      `Given query name does not refer to a named query. ${JSON.stringify(
-        this.modelDef.contents
-      )}`
-    );
+    throw new Error('Given query name does not refer to a named query.');
   }
 
   /**
