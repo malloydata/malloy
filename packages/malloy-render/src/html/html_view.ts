@@ -177,6 +177,7 @@ function getRendererOptions(
       return updateOrCreateRenderer(suffix, label, suffixMap, renderer);
     }
   }
+  return renderer;
 }
 
 function updateOrCreateRenderer(
