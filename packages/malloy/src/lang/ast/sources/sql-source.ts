@@ -125,7 +125,7 @@ export class SQLSource extends Source {
       return locStruct;
     } else {
       this.log(
-        'sql can currently only be used in a top level source/query definitions'
+        '`connection_name.sql(...)` can currently only be used in top level source/query definitions'
       );
       return ErrorFactory.structDef;
     }

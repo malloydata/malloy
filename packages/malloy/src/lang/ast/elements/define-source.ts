@@ -34,6 +34,7 @@ import {
   RunList,
 } from '../types/malloy-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
+import {RefinedSource} from './refined-source';
 
 import {Source} from './source';
 
@@ -72,13 +73,22 @@ export class DefineSource
     if (doc.modelEntry(this.name)) {
       this.log(`Cannot redefine '${this.name}'`);
     } else {
-      // TODO this whole if statement should be removed eventually. This
+      // TODO this whole sql source checking should be removed eventually. This
       // is a special case to compile SQL queries when they are written
       // `source: my_sql is conn.sql("""SELECT * FROM table""")`. Once
       // we implement some solution that allows for runtime needs to be
       // known ahead of time, we can remove this.
+      let sqlSource: SQLSource | undefined;
       if (this.theSource instanceof SQLSource) {
-        const needs = this.theSource.needs(doc);
+        sqlSource = this.theSource;
+      } else if (
+        this.theSource instanceof RefinedSource &&
+        this.theSource.source instanceof SQLSource
+      ) {
+        sqlSource = this.theSource.source;
+      }
+      if (sqlSource) {
+        const needs = sqlSource.needs(doc);
         if (needs) return needs;
       }
       const structDef = this.theSource.withParameters(this.parameters);
