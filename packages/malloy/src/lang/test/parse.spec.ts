@@ -1997,7 +1997,7 @@ function getSelectOneStruct(sqlBlock: SQLBlockSource): SQLBlockStructDef {
   return {
     type: 'struct',
     name: sqlBlock.name,
-    dialect: 'bigquery',
+    dialect: 'standardsql',
     structSource: {
       type: 'sql',
       method: 'subquery',
@@ -2344,6 +2344,69 @@ describe('source references', () => {
           location: source.locations[0],
         },
       });
+    }
+  });
+
+  // TODO unskip when ENABLE_M4_WARNINGS is turned into an annotation
+  test.skip('reference to sql expression in unextended source', () => {
+    const m = new TestTranslator(`
+      source: na is bigquery.sql("""SELECT 1 as one""")
+    `);
+    expect(m).toParse();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).toTranslate();
+    }
+  });
+
+  test('reference to sql expression in extended source', () => {
+    const m = new TestTranslator(`
+      source: na is bigquery.sql("""SELECT 1 as one""") {
+        dimension: two is one + one
+      }
+    `);
+    expect(m).toParse();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).toTranslate();
+    }
+  });
+
+  test('reference to sql expression in named query', () => {
+    const m = new TestTranslator(`
+      query: nq is bigquery.sql("""SELECT 1 as one""") -> { project: * }
+    `);
+    expect(m).toParse();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).toTranslate();
+    }
+  });
+
+  test('reference to sql expression in unnamed query', () => {
+    const m = new TestTranslator(`
+      query: bigquery.sql("""SELECT 1 as one""") -> { project: * }
+    `);
+    expect(m).toParse();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).toTranslate();
     }
   });
 
@@ -2798,6 +2861,21 @@ describe('translation need error locations', () => {
     expect(m).not.toTranslate();
     const errList = m.problems();
     expect(errList[0].at).isLocationIn(source.locations[0], source.code);
+  });
+
+  test('sql statement deprecation warning', () => {
+    const m = new TestTranslator(
+      'sql: bad_sql is {select: """SELECT 1 as one"""}'
+    );
+    const req = m.translate().compileSQL;
+    if (req) {
+      m.update({
+        compileSQL: {[req.name]: getSelectOneStruct(req)},
+      });
+    }
+    expect(m).toTranslateWithWarnings(
+      '`sql:` statement is deprecated, use `connection_name.sql(...)` instead'
+    );
   });
 
   test('table struct error location', () => {

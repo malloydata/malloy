@@ -358,9 +358,19 @@ export class MalloyToAST
     );
   }
 
-  visitSQLSourceName(pcx: parse.SQLSourceNameContext): ast.SQLSource {
+  visitSQLSourceName(pcx: parse.SQLSourceNameContext): ast.FromSQLSource {
     const name = this.getModelEntryName(pcx.sqlExploreNameRef());
-    return this.astAt(new ast.SQLSource(name), pcx);
+    return this.astAt(new ast.FromSQLSource(name), pcx);
+  }
+
+  visitSQLSource(pcx: parse.SQLSourceContext): ast.SQLSource {
+    const connId = pcx.connectionId();
+    const connectionName = this.astAt(this.getModelEntryName(connId), connId);
+    const sqlStr = new ast.SQLString();
+    const selCx = pcx.sqlString();
+    this.makeSqlString(selCx, sqlStr);
+    const expr = new ast.SQLSource(connectionName, sqlStr);
+    return this.astAt(expr, pcx);
   }
 
   visitQuerySource(pcx: parse.QuerySourceContext): ast.Source {
@@ -1477,7 +1487,15 @@ export class MalloyToAST
       stmt.connection = connectionName;
     }
     stmt.is = blockName;
-    return this.astAt(stmt, pcx);
+    const result = this.astAt(stmt, pcx);
+    if (ENABLE_M4_WARNINGS) {
+      this.astError(
+        result,
+        '`sql:` statement is deprecated, use `connection_name.sql(...)` instead',
+        'warn'
+      );
+    }
+    return result;
   }
 
   visitSampleStatement(pcx: parse.SampleStatementContext): ast.SampleProperty {

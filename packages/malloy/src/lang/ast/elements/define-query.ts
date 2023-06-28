@@ -33,6 +33,8 @@ import {
 } from '../types/malloy-element';
 import {QueryElement} from '../types/query-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
+import {FullQuery} from '../query-elements/full-query';
+import {SQLSource} from '../sources/sql-source';
 
 export class DefineQuery
   extends MalloyElement
@@ -53,6 +55,14 @@ export class DefineQuery
     if (existing) {
       this.log(`'${this.name}' is already defined, cannot redefine`);
       return;
+    }
+    // TODO this should be removed eventually when expressions using SQL
+    // sources can know their needs in the general case.
+    if (this.queryDetails instanceof FullQuery) {
+      if (this.queryDetails.explore instanceof SQLSource) {
+        const needs = this.queryDetails.explore.needs(doc);
+        if (needs) return needs;
+      }
     }
     const entry: NamedQuery = {
       ...this.queryDetails.query(),

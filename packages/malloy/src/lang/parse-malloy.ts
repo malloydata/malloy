@@ -356,7 +356,7 @@ class ImportsAndTablesStep implements TranslationStep {
 }
 
 interface SQLExploreRef {
-  ref?: ast.SQLSource;
+  ref?: ast.FromSQLSource;
   def?: ast.SQLStatement;
 }
 
@@ -403,7 +403,7 @@ class ASTStep implements TranslationStep {
     const sqlExplores: Record<string, SQLExploreRef> = {};
     if (!this.walked) {
       newAst.walk((walkedTo: ast.MalloyElement): void => {
-        if (walkedTo instanceof ast.SQLSource) {
+        if (walkedTo instanceof ast.FromSQLSource) {
           if (!sqlExplores[walkedTo.refName]) {
             sqlExplores[walkedTo.refName] = {};
           }

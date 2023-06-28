@@ -63,7 +63,7 @@ runStatement
   ;
 
 defineSQLStatement
-  : SQL nameSQLBlock isDefine sqlBlock
+  : SQLC nameSQLBlock isDefine sqlBlock
   ;
 
 sqlBlock
@@ -168,6 +168,11 @@ exploreSource
   | exploreTable                                  # TableSource
   | FROM OPAREN query CPAREN                      # QuerySource
   | FROM_SQL OPAREN sqlExploreNameRef CPAREN      # SQLSourceName
+  | sqlSource                                     # SQLSource_stub
+  ;
+
+sqlSource
+  : connectionId DOT SQL OPAREN sqlString CPAREN
   ;
 
 sourceNameDef: id;

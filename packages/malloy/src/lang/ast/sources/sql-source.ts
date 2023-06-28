@@ -24,40 +24,110 @@
 import {
   StructDef,
   StructRef,
-  isSQLBlockStruct,
+  SQLBlockSource,
 } from '../../../model/malloy_types';
-import {NamedSource} from './named-source';
+import {makeSQLBlock} from '../../../model/sql_block';
+import {NeedCompileSQL} from '../../translate-response';
+import {Source} from '../elements/source';
+import {ErrorFactory} from '../error-factory';
+import {SQLString} from '../sql-elements/sql-string';
+import {ModelEntryReference, Document} from '../types/malloy-element';
 
-export class SQLSource extends NamedSource {
+export class SQLSource extends Source {
   elementType = 'sqlSource';
+  requestBlock?: SQLBlockSource;
+  private connectionNameInvalid = false;
+  constructor(
+    readonly connectionName: ModelEntryReference,
+    readonly select: SQLString
+  ) {
+    super();
+    this.has({connectionName, select});
+  }
+
+  sqlBlock(): SQLBlockSource {
+    if (!this.requestBlock) {
+      this.requestBlock = makeSQLBlock(
+        this.select.sqlPhrases(),
+        this.connectionName.refString
+      );
+    }
+    return this.requestBlock;
+  }
+
   structRef(): StructRef {
     return this.structDef();
   }
 
-  modelStruct(): StructDef | undefined {
-    const modelEnt = this.modelEntry(this.ref);
-    const entry = modelEnt?.entry;
-    if (!entry) {
-      this.log(`Undefined from_sql source '${this.refName}'`);
+  validateConnectionName(): boolean {
+    const connection = this.modelEntry(this.connectionName);
+    const name = this.connectionName.refString;
+    if (this.connectionNameInvalid) return false;
+    if (connection === undefined) {
+      this.namespace()?.setEntry(
+        name,
+        {entry: {type: 'connection', name}, exported: true},
+        true
+      );
+    } else if (connection.entry.type !== 'connection') {
+      this.connectionName.log(
+        `${this.connectionName.refString} is not a connection`
+      );
+      this.connectionNameInvalid = true;
+      return false;
+    }
+    return true;
+  }
+
+  needs(doc: Document): NeedCompileSQL | undefined {
+    if (!this.validateConnectionName()) {
+      return undefined;
+    }
+    const sql = this.sqlBlock();
+    const sqlDefEntry = this.translator()?.root.sqlQueryZone;
+    if (!sqlDefEntry) {
+      this.log("Cant't look up schema for sql block");
       return;
     }
-    if (entry.type === 'function') {
-      this.log(`Cannot construct a source from a function '${this.refName}'`);
-      return;
-    } else if (entry.type === 'query') {
-      this.log(`Cannot use 'from_sql()' with a query '${this.refName}'`);
-      return;
-    } else if (entry.type === 'connection') {
-      this.log(`Cannot use 'from_sql()' with a connection '${this.refName}'`);
-      return;
-    } else if (isSQLBlockStruct(entry) && entry.declaredSQLBlock) {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const {declaredSQLBlock, ...newEntry} = entry;
-      return newEntry;
-    } else if (!isSQLBlockStruct(entry)) {
-      this.log(`Cannot use 'from_sql()' to reference '${this.refName}'`);
-      return;
+    sqlDefEntry.reference(sql.name, this.location);
+    const lookup = sqlDefEntry.getEntry(sql.name);
+    if (lookup.status === 'reference') {
+      return {
+        compileSQL: sql,
+        partialModel: this.select.containsQueries ? doc.modelDef() : undefined,
+      };
     }
-    this.log(`Cannot use 'from_sql()' to reference '${this.refName}'`);
+  }
+
+  structDef(): StructDef {
+    if (!this.validateConnectionName()) {
+      return ErrorFactory.structDef;
+    }
+    const sqlDefEntry = this.translator()?.root.sqlQueryZone;
+    if (!sqlDefEntry) {
+      this.log("Cant't look up schema for sql block");
+      return ErrorFactory.structDef;
+    }
+    const sql = this.sqlBlock();
+    sqlDefEntry.reference(sql.name, this.location);
+    const lookup = sqlDefEntry.getEntry(sql.name);
+    if (lookup.status === 'error') {
+      const msgLines = lookup.message.split(/\r?\n/);
+      this.select.log('Invalid SQL, ' + msgLines.join('\n    '));
+      return ErrorFactory.structDef;
+    } else if (lookup.status === 'present') {
+      const location = this.select.location;
+      const locStruct = {
+        ...lookup.value,
+        fields: lookup.value.fields.map(f => ({...f, location})),
+        location: this.location,
+      };
+      return locStruct;
+    } else {
+      this.log(
+        'sql can currently only be used in a top level source/query definitions'
+      );
+      return ErrorFactory.structDef;
+    }
   }
 }

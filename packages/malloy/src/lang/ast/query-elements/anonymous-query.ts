@@ -27,6 +27,8 @@ import {ModelDataRequest} from '../../translate-response';
 import {DocStatement, Document, MalloyElement} from '../types/malloy-element';
 import {QueryElement} from '../types/query-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
+import {FullQuery} from './full-query';
+import {SQLSource} from '../sources/sql-source';
 
 export class AnonymousQuery
   extends MalloyElement
@@ -44,6 +46,14 @@ export class AnonymousQuery
   note?: Annotation;
 
   execute(doc: Document): ModelDataRequest {
+    // TODO replace this with a more general way of getting needs
+    if (
+      this.theQuery instanceof FullQuery &&
+      this.theQuery.explore instanceof SQLSource
+    ) {
+      const needs = this.theQuery.explore.needs(doc);
+      if (needs) return needs;
+    }
     const modelQuery = this.theQuery.query();
     if (this.note) {
       modelQuery.annotation = modelQuery.annotation

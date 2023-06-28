@@ -26,6 +26,7 @@ import {ModelDataRequest} from '../../translate-response';
 
 import {ErrorFactory} from '../error-factory';
 import {HasParameter} from '../parameters/has-parameter';
+import {SQLSource} from '../sources/sql-source';
 import {
   DocStatement,
   Document,
@@ -71,6 +72,15 @@ export class DefineSource
     if (doc.modelEntry(this.name)) {
       this.log(`Cannot redefine '${this.name}'`);
     } else {
+      // TODO this whole if statement should be removed eventually. This
+      // is a special case to compile SQL queries when they are written
+      // `source: my_sql is conn.sql("""SELECT * FROM table""")`. Once
+      // we implement some solution that allows for runtime needs to be
+      // known ahead of time, we can remove this.
+      if (this.theSource instanceof SQLSource) {
+        const needs = this.theSource.needs(doc);
+        if (needs) return needs;
+      }
       const structDef = this.theSource.withParameters(this.parameters);
       if (ErrorFactory.isErrorStructDef(structDef)) {
         return;
