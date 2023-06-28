@@ -168,11 +168,7 @@ exploreSource
   | exploreTable                                  # TableSource
   | FROM OPAREN query CPAREN                      # QuerySource
   | FROM_SQL OPAREN sqlExploreNameRef CPAREN      # SQLSourceName
-  | sqlSource                                     # SQLSource_stub
-  ;
-
-sqlSource
-  : connectionId DOT SQL OPAREN sqlString CPAREN
+  | connectionId DOT SQL OPAREN sqlString CPAREN  # SQLSource
   ;
 
 sourceNameDef: id;
