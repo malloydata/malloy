@@ -339,7 +339,6 @@ export class PostgresDialect extends Dialect {
 
   sqlCast(qi: QueryInfo, cast: TypecastFragment): Expr {
     const op = `${cast.srcType}::${cast.dstType}`;
-    const castTo = castMap[cast.dstType] || cast.dstType;
     const tz = qtz(qi);
     if (op === 'timestamp::date' && tz) {
       const tstz = mkExpr`${cast.expr}::TIMESTAMPTZ`;
