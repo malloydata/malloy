@@ -25,12 +25,17 @@ import * as lite from 'vega-lite';
 import {
   DataArray,
   DataColumn,
+  Explore,
   Field,
   TimestampTimeframe,
 } from '@malloydata/malloy';
 import usAtlas from 'us-atlas/states-10m.json';
 import {HTMLChartRenderer} from './chart';
 import {formatTitle, getColorScale, timeToString} from './utils';
+import {RendererFactory} from '../renderer_factory';
+import {PointMapRenderOptions, StyleDefaults} from '../data_styles';
+import {RendererOptions} from '../renderer_types';
+import {Renderer} from '../renderer';
 
 export class HTMLPointMapRenderer extends HTMLChartRenderer {
   getDataValue(data: DataColumn): string | number {
@@ -196,5 +201,30 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
         },
       },
     };
+  }
+}
+
+export class PointMapRendererFactory extends RendererFactory<PointMapRenderOptions> {
+  public static readonly instance = new PointMapRendererFactory();
+
+  create(
+    document: Document,
+    styleDefaults: StyleDefaults,
+    rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    options: PointMapRenderOptions,
+    timezone?: string
+  ): Renderer {
+    return new HTMLPointMapRenderer(
+      document,
+      styleDefaults,
+      rendererOptions,
+      options,
+      timezone
+    );
+  }
+
+  get rendererName() {
+    return 'point_map';
   }
 }

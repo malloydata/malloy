@@ -21,8 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn} from '@malloydata/malloy';
+import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLTextRenderer} from './text';
+import {BytesRenderOptions, StyleDefaults} from '../data_styles';
+import {RendererOptions} from '../renderer_types';
+import {Renderer} from '../renderer';
+import {RendererFactory} from '../renderer_factory';
 
 export class HTMLBytesRenderer extends HTMLTextRenderer {
   override getText(data: DataColumn): string | null {
@@ -31,5 +35,23 @@ export class HTMLBytesRenderer extends HTMLTextRenderer {
     }
 
     return data.bytes.value.toString('base64');
+  }
+}
+
+export class BytesRendererFactory extends RendererFactory<BytesRenderOptions> {
+  public static readonly instance = new BytesRendererFactory();
+
+  create(
+    document: Document,
+    _styleDefaults: StyleDefaults,
+    _rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    _options: BytesRenderOptions
+  ): Renderer {
+    return new HTMLBytesRenderer(document);
+  }
+
+  get rendererName() {
+    return 'bytes';
   }
 }

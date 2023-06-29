@@ -21,11 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataArray} from '@malloydata/malloy';
+import {DataArray, Explore, Field} from '@malloydata/malloy';
 import * as lite from 'vega-lite';
 import {HTMLLineChartRenderer} from './line_chart';
 import {getColorScale} from './utils';
 import {DEFAULT_SPEC} from './vega_spec';
+import {SparkLineRenderOptions, StyleDefaults} from '../data_styles';
+import {RendererOptions} from '../renderer_types';
+import {Renderer} from '../renderer';
+import {RendererFactory} from '../renderer_factory';
 
 export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
   override getSize(): {height: number; width: number} {
@@ -111,5 +115,30 @@ export class HTMLSparkLineRenderer extends HTMLLineChartRenderer {
       },
       background: 'transparent',
     };
+  }
+}
+
+export class SparkLineRendererFactory extends RendererFactory<SparkLineRenderOptions> {
+  public static readonly instance = new SparkLineRendererFactory();
+
+  create(
+    document: Document,
+    styleDefaults: StyleDefaults,
+    rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    options: SparkLineRenderOptions,
+    timezone?: string
+  ): Renderer {
+    return new HTMLSparkLineRenderer(
+      document,
+      styleDefaults,
+      rendererOptions,
+      options,
+      timezone
+    );
+  }
+
+  get rendererName() {
+    return 'sparkline';
   }
 }

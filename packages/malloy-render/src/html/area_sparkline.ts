@@ -22,10 +22,14 @@
  */
 
 import {HTMLSparkLineRenderer} from './sparkline';
-import {DataArray} from '@malloydata/malloy';
+import {DataArray, Explore, Field} from '@malloydata/malloy';
 import * as lite from 'vega-lite';
 import {getColorScale} from './utils';
 import {DEFAULT_SPEC} from './vega_spec';
+import {RendererFactory} from '../renderer_factory';
+import {Renderer} from '../renderer';
+import {SparkLineRenderOptions, StyleDefaults} from '../data_styles';
+import {RendererOptions} from '../renderer_types';
 
 export class HTMLAreaSparkLineRenderer extends HTMLSparkLineRenderer {
   override getVegaLiteSpec(data: DataArray): lite.TopLevelSpec {
@@ -106,5 +110,34 @@ export class HTMLAreaSparkLineRenderer extends HTMLSparkLineRenderer {
       },
       background: 'transparent',
     };
+  }
+}
+
+export class AreaSparkLineRendererFactory extends RendererFactory<SparkLineRenderOptions> {
+  public static readonly instance = new AreaSparkLineRendererFactory();
+
+  isValidMatch(field: Field | Explore): boolean {
+    return field.name.endsWith('area');
+  }
+
+  create(
+    document: Document,
+    styleDefaults: StyleDefaults,
+    rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    options: SparkLineRenderOptions,
+    timezone?: string
+  ): Renderer {
+    return new HTMLAreaSparkLineRenderer(
+      document,
+      styleDefaults,
+      rendererOptions,
+      options,
+      timezone
+    );
+  }
+
+  get rendererName() {
+    return 'sparkline';
   }
 }

@@ -21,8 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Field} from '@malloydata/malloy';
+import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLCartesianChartRenderer} from './cartesian_chart';
+import {
+  LineChartRenderOptions,
+  ScatterChartRenderOptions,
+  StyleDefaults,
+} from '../data_styles';
+import {RendererOptions} from '../renderer_types';
+import {Renderer} from '../renderer';
+import {RendererFactory} from '../renderer_factory';
 
 export class HTMLScatterChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'point' {
@@ -57,5 +65,30 @@ export class HTMLScatterChartRenderer extends HTMLCartesianChartRenderer {
     } else {
       throw new Error('Invalid field type for scatter chart.');
     }
+  }
+}
+
+export class ScatterChartRendererFactory extends RendererFactory<ScatterChartRenderOptions> {
+  public static readonly instance = new ScatterChartRendererFactory();
+
+  create(
+    document: Document,
+    styleDefaults: StyleDefaults,
+    rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    options: LineChartRenderOptions,
+    timezone?: string
+  ): Renderer {
+    return new HTMLScatterChartRenderer(
+      document,
+      styleDefaults,
+      rendererOptions,
+      options,
+      timezone
+    );
+  }
+
+  get rendererName() {
+    return 'scatter_chart';
   }
 }

@@ -21,9 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn} from '@malloydata/malloy';
+import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {Renderer} from '../renderer';
 import {createNullElement} from './utils';
+import {
+  DataRenderOptions,
+  StyleDefaults,
+  TextRenderOptions,
+} from '../data_styles';
+import {RendererFactory} from '../renderer_factory';
+import {RendererOptions} from '../renderer_types';
 
 export class HTMLTextRenderer implements Renderer {
   constructor(private readonly document: Document) {}
@@ -41,5 +48,27 @@ export class HTMLTextRenderer implements Renderer {
     const element = this.document.createElement('span');
     element.appendChild(this.document.createTextNode(text));
     return element;
+  }
+}
+
+export class TextRendererFactory extends RendererFactory<TextRenderOptions> {
+  public static readonly instance = new TextRendererFactory();
+
+  activates(field: Field | Explore): boolean {
+    return field.hasParentExplore() && !field.isExploreField();
+  }
+
+  create(
+    document: Document,
+    _styleDefaults: StyleDefaults,
+    _rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    _options: DataRenderOptions
+  ): Renderer {
+    return new HTMLTextRenderer(document);
+  }
+
+  get rendererName() {
+    return undefined;
   }
 }

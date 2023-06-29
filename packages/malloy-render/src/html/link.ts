@@ -21,9 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn} from '@malloydata/malloy';
+import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {Renderer} from '../renderer';
 import {createErrorElement, createNullElement} from './utils';
+import {LinkRenderOptions, StyleDefaults} from '../data_styles';
+import {RendererOptions} from '../renderer_types';
+import {RendererFactory} from '../renderer_factory';
 
 export class HTMLLinkRenderer implements Renderer {
   constructor(private readonly document: Document) {}
@@ -47,5 +50,23 @@ export class HTMLLinkRenderer implements Renderer {
       this.document.createTextNode(data.value.replace(/\//g, '/\u200C'))
     );
     return element;
+  }
+}
+
+export class LinkRendererFactory extends RendererFactory<LinkRenderOptions> {
+  public static readonly instance = new LinkRendererFactory();
+
+  create(
+    document: Document,
+    _styleDefaults: StyleDefaults,
+    _rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    _options: LinkRenderOptions
+  ): Renderer {
+    return new HTMLLinkRenderer(document);
+  }
+
+  get rendererName() {
+    return 'link';
   }
 }

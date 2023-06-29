@@ -21,9 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn} from '@malloydata/malloy';
+import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {Renderer} from '../renderer';
 import {createErrorElement, createNullElement} from './utils';
+import {RendererFactory} from '../renderer_factory';
+import {ImageRenderOptions, StyleDefaults} from '../data_styles';
+import {RendererOptions} from '../renderer_types';
 
 export class HTMLImageRenderer implements Renderer {
   constructor(private readonly document: Document) {}
@@ -43,5 +46,23 @@ export class HTMLImageRenderer implements Renderer {
     const element = this.document.createElement('img');
     element.src = data.value;
     return element;
+  }
+}
+
+export class ImageRendererFactory extends RendererFactory<ImageRenderOptions> {
+  public static readonly instance = new ImageRendererFactory();
+
+  create(
+    document: Document,
+    _styleDefaults: StyleDefaults,
+    _rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    _options: ImageRenderOptions
+  ): Renderer {
+    return new HTMLImageRenderer(document);
+  }
+
+  get rendererName() {
+    return 'image';
   }
 }

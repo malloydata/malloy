@@ -26,8 +26,10 @@ import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLChartRenderer} from './chart';
 import cloneDeep from 'lodash/cloneDeep';
 import {getColorScale} from './utils';
-import {StyleDefaults} from '../data_styles';
+import {StyleDefaults, VegaRenderOptions} from '../data_styles';
 import {RendererOptions} from '../renderer_types';
+import {RendererFactory} from '../renderer_factory';
+import {Renderer} from '../renderer';
 
 type DataContainer = Array<unknown> | Record<string, unknown>;
 
@@ -453,10 +455,29 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
     document: Document,
     styleDefaults: StyleDefaults,
     options: RendererOptions,
-    spec: lite.TopLevelSpec
+    field: Field | Explore,
+    vegaRenderOptions: VegaRenderOptions
   ) {
     super(document, styleDefaults, options);
-    this.spec = spec;
+    const spec = vegaRenderOptions.spec;
+    if (spec) {
+      this.spec = spec;
+    } else if (vegaRenderOptions.spec_name) {
+      const vegaRenderer = options.dataStyles[vegaRenderOptions.spec_name];
+      if (vegaRenderer !== undefined && vegaRenderer.renderer === 'vega') {
+        if (vegaRenderer.spec) {
+          this.spec = vegaRenderer.spec;
+        } else {
+          throw new Error(`No spec defined on ${vegaRenderOptions.spec_name}`);
+        }
+      } else {
+        throw new Error(
+          `No Vega renderer named ${vegaRenderOptions.spec_name}`
+        );
+      }
+    } else {
+      throw new Error(`No top level vega spec defined for ${field.name}`);
+    }
   }
 
   getDataValue(data: DataColumn): Date | string | number | null {
@@ -545,5 +566,29 @@ export class HTMLVegaSpecRenderer extends HTMLChartRenderer {
     newSpec.data = rdata;
 
     return newSpec;
+  }
+}
+
+export class VegaRendererFactory extends RendererFactory<VegaRenderOptions> {
+  public static readonly instance = new VegaRendererFactory();
+
+  create(
+    document: Document,
+    styleDefaults: StyleDefaults,
+    rendererOptions: RendererOptions,
+    field: Field | Explore,
+    options: VegaRenderOptions
+  ): Renderer {
+    return new HTMLVegaSpecRenderer(
+      document,
+      styleDefaults,
+      rendererOptions,
+      field,
+      options
+    );
+  }
+
+  get rendererName() {
+    return 'vega';
   }
 }

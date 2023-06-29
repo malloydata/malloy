@@ -21,8 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn} from '@malloydata/malloy';
+import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLTextRenderer} from './text';
+import {RendererFactory} from '../renderer_factory';
+import {CurrencyRenderOptions, StyleDefaults} from '../data_styles';
+import {RendererOptions} from '../renderer_types';
+import {Renderer} from '../renderer';
 
 export class HTMLCurrencyRenderer extends HTMLTextRenderer {
   override getText(data: DataColumn): string | null {
@@ -39,5 +43,23 @@ export class HTMLCurrencyRenderer extends HTMLTextRenderer {
     });
 
     return `${unitText}${numText}`;
+  }
+}
+
+export class CurrencyRendererFactory extends RendererFactory<CurrencyRenderOptions> {
+  public static readonly instance = new CurrencyRendererFactory();
+
+  create(
+    document: Document,
+    _styleDefaults: StyleDefaults,
+    _rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    _options: CurrencyRenderOptions
+  ): Renderer {
+    return new HTMLCurrencyRenderer(document);
+  }
+
+  get rendererName() {
+    return 'currency';
   }
 }

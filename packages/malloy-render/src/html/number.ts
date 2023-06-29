@@ -21,8 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn} from '@malloydata/malloy';
+import {AtomicFieldType, DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLTextRenderer} from './text';
+import {NumberRenderOptions, StyleDefaults} from '../data_styles';
+import {RendererOptions} from '../renderer_types';
+import {Renderer} from '../renderer';
+import {RendererFactory} from '../renderer_factory';
 
 export class HTMLNumberRenderer extends HTMLTextRenderer {
   getNumber(data: DataColumn): number | null {
@@ -37,5 +41,31 @@ export class HTMLNumberRenderer extends HTMLTextRenderer {
     const num = this.getNumber(data);
 
     return num === null ? num : num.toLocaleString();
+  }
+}
+
+export class NumberRendererFactory extends RendererFactory<NumberRenderOptions> {
+  public static readonly instance = new NumberRendererFactory();
+
+  activates(field: Field | Explore): boolean {
+    return (
+      field.hasParentExplore() &&
+      field.isAtomicField() &&
+      field.type === AtomicFieldType.Number
+    );
+  }
+
+  create(
+    document: Document,
+    _styleDefaults: StyleDefaults,
+    _rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    _options: NumberRenderOptions
+  ): Renderer {
+    return new HTMLNumberRenderer(document);
+  }
+
+  get rendererName() {
+    return 'number';
   }
 }

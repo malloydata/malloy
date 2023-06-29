@@ -23,7 +23,6 @@
 
 import {DataColumn} from '@malloydata/malloy';
 import {RendererOptions} from './renderer_types';
-
 export type ChildRenderers = {[fieldName: string]: Renderer};
 
 export interface Renderer {

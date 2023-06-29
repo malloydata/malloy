@@ -21,11 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataArray} from '@malloydata/malloy';
+import {DataArray, Explore, Field} from '@malloydata/malloy';
 import * as lite from 'vega-lite';
 import {getColorScale} from './utils';
 import {DEFAULT_SPEC} from './vega_spec';
 import {HTMLBarChartRenderer} from './bar_chart';
+import {RendererFactory} from '../renderer_factory';
+import {ColumnSparkLineRenderOptions, StyleDefaults} from '../data_styles';
+import {RendererOptions} from '../renderer_types';
+import {Renderer} from '../renderer';
 
 export class HTMLColumnSparkLineRenderer extends HTMLBarChartRenderer {
   override getSize(): {height: number; width: number} {
@@ -109,5 +113,34 @@ export class HTMLColumnSparkLineRenderer extends HTMLBarChartRenderer {
       },
       background: 'transparent',
     };
+  }
+}
+
+export class ColumnSparkLineRendererFactory extends RendererFactory<ColumnSparkLineRenderOptions> {
+  public static readonly instance = new ColumnSparkLineRendererFactory();
+
+  isValidMatch(field: Field | Explore): boolean {
+    return field.name.endsWith('_column');
+  }
+
+  create(
+    document: Document,
+    styleDefaults: StyleDefaults,
+    rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    options: ColumnSparkLineRenderOptions,
+    timezone?: string
+  ): Renderer {
+    return new HTMLColumnSparkLineRenderer(
+      document,
+      styleDefaults,
+      rendererOptions,
+      options,
+      timezone
+    );
+  }
+
+  get rendererName() {
+    return 'sparkline';
   }
 }

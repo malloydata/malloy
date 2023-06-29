@@ -27,6 +27,10 @@ import usAtlas from 'us-atlas/states-10m.json';
 import {HTMLChartRenderer} from './chart';
 import {STATE_CODES} from './state_codes';
 import {formatTitle, getColorScale} from './utils';
+import {ShapeMapRenderOptions, StyleDefaults} from '../data_styles';
+import {RendererOptions} from '../renderer_types';
+import {Renderer} from '../renderer';
+import {RendererFactory} from '../renderer_factory';
 
 export class HTMLShapeMapRenderer extends HTMLChartRenderer {
   private getRegionField(explore: Explore): Field {
@@ -186,5 +190,30 @@ export class HTMLShapeMapRenderer extends HTMLChartRenderer {
         },
       },
     };
+  }
+}
+
+export class ShapeMapRendererFactory extends RendererFactory<ShapeMapRenderOptions> {
+  public static readonly instance = new ShapeMapRendererFactory();
+
+  create(
+    document: Document,
+    styleDefaults: StyleDefaults,
+    rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    options: ShapeMapRenderOptions,
+    timezone?: string
+  ): Renderer {
+    return new HTMLShapeMapRenderer(
+      document,
+      styleDefaults,
+      rendererOptions,
+      options,
+      timezone
+    );
+  }
+
+  get rendererName() {
+    return 'shape_map';
   }
 }
