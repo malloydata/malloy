@@ -23,7 +23,7 @@
 
 import {Annotation} from './model';
 
-type MalloyTagProperties = Record<string, string | boolean>;
+export type MalloyTagProperties = Record<string, string | boolean>;
 interface PropertyTag {
   properties: MalloyTagProperties;
 }

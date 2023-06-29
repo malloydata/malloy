@@ -21,21 +21,41 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
+import {
+  DataColumn,
+  Explore,
+  Field,
+  MalloyTagProperties,
+} from '@malloydata/malloy';
 import {HTMLTextRenderer} from './text';
 import {RendererFactory} from '../renderer_factory';
-import {CurrencyRenderOptions, StyleDefaults} from '../data_styles';
+import {Currency, CurrencyRenderOptions, StyleDefaults} from '../data_styles';
 import {RendererOptions} from '../renderer_types';
 import {Renderer} from '../renderer';
 
 export class HTMLCurrencyRenderer extends HTMLTextRenderer {
+  constructor(document: Document, readonly options: CurrencyRenderOptions) {
+    super(document);
+  }
+
   override getText(data: DataColumn): string | null {
     if (data.isNull()) {
       return null;
     }
 
     // TODO get this from renderer options
-    const unitText = '$';
+    let unitText = '$';
+    switch (this.options.currency) {
+      case Currency.Euros:
+        unitText = '€';
+        break;
+      case Currency.Pounds:
+        unitText = '£';
+        break;
+      case Currency.Dollars:
+        // Do nothing.
+        break;
+    }
 
     const numText = data.number.value.toLocaleString('en-US', {
       minimumFractionDigits: 2,
@@ -54,9 +74,17 @@ export class CurrencyRendererFactory extends RendererFactory<CurrencyRenderOptio
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
     _field: Field | Explore,
-    _options: CurrencyRenderOptions
+    options: CurrencyRenderOptions
   ): Renderer {
-    return new HTMLCurrencyRenderer(document);
+    return new HTMLCurrencyRenderer(document, options);
+  }
+
+  parseTagParameters(
+    tags: MalloyTagProperties
+  ): CurrencyRenderOptions | undefined {
+    return {
+      currency: (tags[this.rendererName] as Currency) ?? Currency.Dollars,
+    };
   }
 
   get rendererName() {

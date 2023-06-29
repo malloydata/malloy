@@ -1,4 +1,9 @@
-import {Field, Explore} from '@malloydata/malloy';
+import {
+  Field,
+  Explore,
+  MalloyTags,
+  MalloyTagProperties,
+} from '@malloydata/malloy';
 import {DataRenderOptions, RenderDef, StyleDefaults} from './data_styles';
 import {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
@@ -54,19 +59,22 @@ export class MainRendererFactory {
   ];
 
   create(
+    renderDef: RenderDef | undefined,
+    tags: MalloyTags | undefined,
     document: Document,
     styleDefaults: StyleDefaults,
     rendererOptions: RendererOptions,
     field: Field | Explore,
-    renderDef: RenderDef,
     timezone?: string | undefined
   ): Renderer | undefined {
+    const tagProperties = tags?.properties ?? {};
+
     let factory: RendererFactory<DataRenderOptions> | undefined;
 
     for (const f of MainRendererFactory.renderFactories) {
       if (
-        (f.rendererName &&
-          renderDef.renderer === f.rendererName &&
+        ((this.matchesRenderDef(renderDef, f) ||
+          this.matchesTag(tagProperties, f)) &&
           f.isValidMatch(field)) ||
         f.activates(field)
       ) {
@@ -80,8 +88,28 @@ export class MainRendererFactory {
       styleDefaults,
       rendererOptions,
       field,
-      renderDef,
+      renderDef || factory.parseTagParameters(tagProperties) || {},
       timezone
+    );
+  }
+
+  matchesRenderDef(
+    renderDef: RenderDef | undefined,
+    factory: RendererFactory<DataRenderOptions>
+  ) {
+    return (
+      renderDef &&
+      factory.rendererName &&
+      renderDef.renderer === factory.rendererName
+    );
+  }
+
+  matchesTag(
+    properties: MalloyTagProperties,
+    factory: RendererFactory<DataRenderOptions>
+  ) {
+    return (
+      properties && factory.rendererName && properties[factory.rendererName]
     );
   }
 }
