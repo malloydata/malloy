@@ -67,8 +67,6 @@ export class HTMLLineChartRenderer extends HTMLCartesianChartRenderer {
 export class LineChartRendererFactory extends RendererFactory<LineChartRenderOptions> {
   public static readonly instance = new LineChartRendererFactory();
 
-
-
   create(
     document: Document,
     styleDefaults: StyleDefaults,

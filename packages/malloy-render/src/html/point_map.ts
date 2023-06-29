@@ -207,8 +207,6 @@ export class HTMLPointMapRenderer extends HTMLChartRenderer {
 export class PointMapRendererFactory extends RendererFactory<PointMapRenderOptions> {
   public static readonly instance = new PointMapRendererFactory();
 
-
-
   create(
     document: Document,
     styleDefaults: StyleDefaults,
