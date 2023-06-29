@@ -45,7 +45,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             ${databaseName}.table('malloytest.state_facts') -> {
               aggregate: c is count()
             }
-          }%) """
+          }%) AS state_facts """
         ) -> {
           project: *
         }
@@ -63,7 +63,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             aggregate: c is count()
           }
           b is ${databaseName}.sql(
-            """SELECT * FROM (%{ -> a -> { project: * } }%) """
+            """SELECT * FROM (%{ -> a -> { project: * } }%) AS state_facts """
           ) -> {
             project: *
           }
