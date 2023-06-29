@@ -23,6 +23,7 @@
 
 import {DataColumn, Field} from '@malloydata/malloy';
 import {HTMLCartesianChartRenderer} from './cartesian_chart';
+import {timeToString} from './utils';
 
 export class HTMLBarChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'bar' {
@@ -45,12 +46,9 @@ export class HTMLBarChartRenderer extends HTMLCartesianChartRenderer {
   getDataValue(data: DataColumn): Date | string | number | null {
     if (data.isNull()) {
       return null;
-    } else if (
-      data.isTimestamp() ||
-      data.isDate() ||
-      data.isNumber() ||
-      data.isString()
-    ) {
+    } else if (data.isTimestamp() || data.isDate()) {
+      return timeToString(data.value, data.field.timeframe, this.timezone);
+    } else if (data.isNumber() || data.isString()) {
       return data.value;
     } else {
       throw new Error('Invalid field type for bar chart.');

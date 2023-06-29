@@ -73,7 +73,7 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
           this.document.createTextNode(
             formatTitle(
               this.options,
-              field.name,
+              field,
               this.options.dataStyles[field.name]
             )
           )
@@ -111,7 +111,7 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
             this.document.createTextNode(
               formatTitle(
                 this.options,
-                field.name,
+                field,
                 this.options.dataStyles[field.name]
               )
             )
@@ -134,7 +134,7 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
             this.document.createTextNode(
               formatTitle(
                 this.options,
-                field.name,
+                field,
                 this.options.dataStyles[field.name]
               )
             )

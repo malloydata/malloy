@@ -287,4 +287,56 @@ describe('rendering results', () => {
       expect(html).toMatchSnapshot();
     });
   });
+
+  describe('bar chart renderer', () => {
+    test('date with timezone rendered correctly', async () => {
+      const connectionName = 'duckdb';
+      const runtime = runtimes.runtimeMap.get(connectionName);
+      expect(runtime).toBeDefined();
+      const src = `sql: one is { connection: "${connectionName}"  select: """SELECT 1"""}
+      query: mex_query
+          # bar_chart
+          is from_sql(one) -> {
+          timezone: 'America/Mexico_City'
+          project: mex_time is @2021-02-24 03:05:06
+        }
+      `;
+      const result = await (
+        await runtime!.loadModel(src).loadQueryByName('mex_query')
+      ).run();
+      const document = new JSDOM().window.document;
+      const html = await new HTMLView(document).render(result, {
+        dataStyles: {},
+      });
+
+      expect(html).toMatchSnapshot();
+    });
+  });
+
+  describe('point map renderer', () => {
+    test('date with timezone rendered correctly', async () => {
+      const connectionName = 'duckdb';
+      const runtime = runtimes.runtimeMap.get(connectionName);
+      expect(runtime).toBeDefined();
+      const src = `sql: timeData is { connection: "${connectionName}"  select: """
+        SELECT 43.839187 as latitude, -113.849795 as longitude, CAST('2021-11-10' AS datetime) as times, 200 as size
+          UNION ALL SELECT 32.8647113, -117.1998042, CAST('2021-11-12' AS datetime), 400 as size"""}
+
+        query: mexico_point_map is from_sql(timeData) -> {
+          timezone: 'America/Mexico_City'
+          group_by: latitude, longitude, times
+            aggregate:
+              sizeSum is sum(size)
+        }`;
+      const result = await (
+        await runtime!.loadModel(src).loadQueryByName('mexico_point_map')
+      ).run();
+      const document = new JSDOM().window.document;
+      const html = await new HTMLView(document).render(result, {
+        dataStyles: {},
+      });
+
+      expect(html).toMatchSnapshot();
+    });
+  });
 });

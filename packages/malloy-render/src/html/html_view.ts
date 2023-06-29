@@ -228,14 +228,16 @@ export function makeRenderer(
       document,
       styleDefaults,
       options,
-      renderDef
+      renderDef,
+      queryTimezone
     );
   } else if (renderDef.renderer === 'point_map') {
     return new HTMLPointMapRenderer(
       document,
       styleDefaults,
       options,
-      renderDef
+      renderDef,
+      queryTimezone
     );
   } else if (renderDef.renderer === 'image') {
     return new HTMLImageRenderer(document);
@@ -244,7 +246,8 @@ export function makeRenderer(
       document,
       styleDefaults,
       options,
-      renderDef
+      renderDef,
+      queryTimezone
     );
   } else if (renderDef.renderer === 'dashboard') {
     return makeContainerRenderer(
@@ -260,7 +263,8 @@ export function makeRenderer(
       document,
       styleDefaults,
       options,
-      renderDef
+      renderDef,
+      queryTimezone
     );
   } else if (renderDef.renderer === 'sparkline') {
     if (field.name.endsWith('_column')) {
@@ -268,42 +272,48 @@ export function makeRenderer(
         document,
         styleDefaults,
         options,
-        renderDef
+        renderDef,
+        queryTimezone
       );
     } else if (field.name.endsWith('_bar')) {
       return new HTMLBarSparkLineRenderer(
         document,
         styleDefaults,
         options,
-        renderDef
+        renderDef,
+        queryTimezone
       );
     } else if (field.name.endsWith('area')) {
       return new HTMLAreaSparkLineRenderer(
         document,
         styleDefaults,
         options,
-        renderDef
+        renderDef,
+        queryTimezone
       );
     }
     return new HTMLSparkLineRenderer(
       document,
       styleDefaults,
       options,
-      renderDef
+      renderDef,
+      queryTimezone
     );
   } else if (renderDef.renderer === 'scatter_chart') {
     return new HTMLScatterChartRenderer(
       document,
       styleDefaults,
       options,
-      renderDef
+      renderDef,
+      queryTimezone
     );
   } else if (renderDef.renderer === 'bar_chart') {
     return new HTMLBarChartRenderer(
       document,
       styleDefaults,
       options,
-      renderDef
+      renderDef,
+      queryTimezone
     );
   } else if (renderDef.renderer === 'vega') {
     const spec = renderDef.spec;
