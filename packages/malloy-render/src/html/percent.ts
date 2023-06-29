@@ -41,8 +41,6 @@ export class HTMLPercentRenderer extends HTMLNumberRenderer {
 export class PercentRendererFactory extends RendererFactory<PercentRenderOptions> {
   public static readonly instance = new PercentRendererFactory();
 
-
-
   create(
     document: Document,
     _styleDefaults: StyleDefaults,

@@ -56,8 +56,6 @@ export class HTMLLinkRenderer implements Renderer {
 export class LinkRendererFactory extends RendererFactory<LinkRenderOptions> {
   public static readonly instance = new LinkRendererFactory();
 
-
-
   create(
     document: Document,
     _styleDefaults: StyleDefaults,
