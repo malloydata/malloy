@@ -43,11 +43,8 @@ export class HTMLJSONRenderer implements Renderer {
     return element;
   }
 }
-
 export class JSONRendererFactory extends RendererFactory<JSONRenderOptions> {
   public static readonly instance = new JSONRendererFactory();
-
-
 
   create(
     document: Document,
