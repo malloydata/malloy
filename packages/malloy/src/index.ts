@@ -148,4 +148,4 @@ export type {
 } from './runtime_types';
 export type {Loggable} from './malloy';
 export {toAsyncGenerator} from './connection_utils';
-export {Tags, type MalloyTags} from './tags';
+export {Tags, type MalloyTags, type MalloyTagProperties} from './tags';

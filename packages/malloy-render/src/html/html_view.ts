@@ -99,7 +99,7 @@ const suffixMap: Record<string, RenderDef['renderer']> = {
   'dashboard': 'dashboard',
   'line_chart': 'line_chart',
   'scatter_chart': 'scatter_chart',
-  'url': 'link',
+  'url': 'url',
   'list': 'list',
   'list_detail': 'list_detail',
   'sparkline': 'sparkline',
@@ -108,17 +108,7 @@ const suffixMap: Record<string, RenderDef['renderer']> = {
   'sparkline_bar': 'sparkline',
 };
 
-const atomicFieldTagMap: Record<string, RenderDef['renderer']> = {
-  'percent': 'percent',
-  'currency': 'currency',
-};
-
-function getRendererOptions(
-  field: Field | Explore,
-  dataStyles: DataStyles,
-  tags?: Tags
-) {
-  const tagProperties = tags?.getMalloyTags().properties ?? {};
+function getRendererOptions(field: Field | Explore, dataStyles: DataStyles) {
   let renderer = dataStyles[field.name];
   if (!renderer) {
     for (const sourceClass of field.sourceClasses) {
@@ -129,20 +119,7 @@ function getRendererOptions(
   }
 
   const {name} = field;
-
-  if (field.hasParentExplore() && field.isAtomicField()) {
-    for (const tag in atomicFieldTagMap) {
-      if (tagProperties[tag]) {
-        return updateOrCreateRenderer(tag, name, atomicFieldTagMap, renderer);
-      }
-    }
-  }
-
   for (const suffix in suffixMap) {
-    if (tagProperties[suffix]) {
-      return updateOrCreateRenderer(suffix, name, suffixMap, renderer);
-    }
-
     if (name.endsWith(`_${suffix}`)) {
       const label = name.slice(0, name.length - suffix.length - 1);
       return updateOrCreateRenderer(suffix, label, suffixMap, renderer);
@@ -191,15 +168,16 @@ export function makeRenderer(
   queryTimezone: string | undefined,
   tags?: Tags
 ): Renderer {
-  const renderDef = getRendererOptions(field, options.dataStyles, tags) || {};
+  const renderDef = getRendererOptions(field, options.dataStyles);
   options.dataStyles[field.name] = renderDef;
 
   const renderer = new MainRendererFactory().create(
+    renderDef,
+    tags?.getMalloyTags(),
     document,
     styleDefaults,
     options,
     field,
-    renderDef,
     queryTimezone
   );
 
@@ -207,14 +185,14 @@ export function makeRenderer(
     return renderer;
   }
 
-  if (renderDef.renderer === 'dashboard') {
+  if (renderDef?.renderer === 'dashboard') {
     return makeContainerRenderer(
       HTMLDashboardRenderer,
       document,
       isContainer(field),
       options
     );
-  } else if (renderDef.renderer === 'list_detail') {
+  } else if (renderDef?.renderer === 'list_detail') {
     return makeContainerRenderer(
       HTMLListDetailRenderer,
       document,
@@ -222,7 +200,7 @@ export function makeRenderer(
       options
     );
   } else if (
-    renderDef.renderer === 'table' ||
+    renderDef?.renderer === 'table' ||
     !field.hasParentExplore() ||
     field.isExploreField()
   ) {

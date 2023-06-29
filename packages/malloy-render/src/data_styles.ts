@@ -50,7 +50,7 @@ export type RenderDef =
   | ({renderer: 'boolean'} & BooleanRenderOptions)
   | ({renderer: 'sparkline'} & SparkLineRenderOptions)
   | ({renderer: 'bytes'} & BytesRenderOptions)
-  | ({renderer: 'link'} & LinkRenderOptions)
+  | ({renderer: 'url'} & LinkRenderOptions)
   | ({renderer: 'vega'} & VegaRenderOptions);
 
 export interface DataRenderOptions {
@@ -85,10 +85,14 @@ export interface BytesRenderOptions extends TextRenderOptions {
   bytes?: Record<string, unknown>;
 }
 
+export enum Currency {
+  Dollars = 'usd',
+  Euros = 'euro',
+  Pounds = 'pound',
+}
+
 export interface CurrencyRenderOptions extends TextRenderOptions {
-  currency?: {
-    unit?: 'dollars' | 'pounds';
-  };
+  currency?: Currency;
 }
 
 export interface TimeRenderOptions extends TextRenderOptions {
