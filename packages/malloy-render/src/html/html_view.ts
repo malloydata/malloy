@@ -21,46 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  AtomicFieldType,
-  DataArray,
-  Explore,
-  Field,
-  Result,
-  Tags,
-} from '@malloydata/malloy';
-import {TopLevelSpec} from 'vega-lite';
+import {DataArray, Explore, Field, Result, Tags} from '@malloydata/malloy';
 import {DataStyles, RenderDef, StyleDefaults} from '../data_styles';
 import {ChildRenderers, Renderer} from '../renderer';
 import {RendererOptions} from '../renderer_types';
-import {HTMLBarChartRenderer} from './bar_chart';
-import {HTMLBooleanRenderer} from './boolean';
 import {HTMLJSONRenderer} from './json';
-import {HTMLBytesRenderer} from './bytes';
-import {HTMLCurrencyRenderer} from './currency';
-import {HTMLPercentRenderer} from './percent';
 import {HTMLDashboardRenderer} from './dashboard';
-import {HTMLImageRenderer} from './image';
-import {HTMLDateRenderer} from './date';
-import {HTMLLineChartRenderer} from './line_chart';
-import {HTMLLinkRenderer} from './link';
-import {HTMLListRenderer} from './list';
 import {HTMLListDetailRenderer} from './list_detail';
-import {HTMLNumberRenderer} from './number';
-import {HTMLPointMapRenderer} from './point_map';
-import {HTMLScatterChartRenderer} from './scatter_chart';
-import {HTMLSegmentMapRenderer} from './segment_map';
-import {HTMLShapeMapRenderer} from './shape_map';
-import {HTMLSparkLineRenderer} from './sparkline';
 import {HTMLTableRenderer} from './table';
-import {HTMLTextRenderer} from './text';
-import {HTMLVegaSpecRenderer} from './vega_spec';
 import {ContainerRenderer} from './container';
 import {createErrorElement} from './utils';
-import {HTMLUnsupportedRenderer} from './unsupported';
-import {HTMLColumnSparkLineRenderer} from './column_sparkline';
-import {HTMLBarSparkLineRenderer} from './bar_sparkline';
-import {HTMLAreaSparkLineRenderer} from './area_sparkline';
+import {MainRendererFactory} from '../main_renderer_factory';
 
 export class HTMLView {
   constructor(private document: Document) {}
@@ -161,14 +132,14 @@ function getRendererOptions(
 
   if (field.hasParentExplore() && field.isAtomicField()) {
     for (const tag in atomicFieldTagMap) {
-      if (tagProperties[tag] === true) {
+      if (tagProperties[tag]) {
         return updateOrCreateRenderer(tag, name, atomicFieldTagMap, renderer);
       }
     }
   }
 
   for (const suffix in suffixMap) {
-    if (tagProperties[suffix] === true) {
+    if (tagProperties[suffix]) {
       return updateOrCreateRenderer(suffix, name, suffixMap, renderer);
     }
 
@@ -199,7 +170,7 @@ function updateOrCreateRenderer(
     };
   }
 
-  return renderer;
+  return renderer!;
 }
 
 function isContainer(field: Field | Explore): Explore {
@@ -223,188 +194,47 @@ export function makeRenderer(
   const renderDef = getRendererOptions(field, options.dataStyles, tags) || {};
   options.dataStyles[field.name] = renderDef;
 
-  if (renderDef.renderer === 'shape_map') {
-    return new HTMLShapeMapRenderer(
-      document,
-      styleDefaults,
-      options,
-      renderDef,
-      queryTimezone
-    );
-  } else if (renderDef.renderer === 'point_map') {
-    return new HTMLPointMapRenderer(
-      document,
-      styleDefaults,
-      options,
-      renderDef,
-      queryTimezone
-    );
-  } else if (renderDef.renderer === 'image') {
-    return new HTMLImageRenderer(document);
-  } else if (renderDef.renderer === 'segment_map') {
-    return new HTMLSegmentMapRenderer(
-      document,
-      styleDefaults,
-      options,
-      renderDef,
-      queryTimezone
-    );
-  } else if (renderDef.renderer === 'dashboard') {
+  const renderer = new MainRendererFactory().create(
+    document,
+    styleDefaults,
+    options,
+    field,
+    renderDef,
+    queryTimezone
+  );
+
+  if (renderer) {
+    return renderer;
+  }
+
+  if (renderDef.renderer === 'dashboard') {
     return makeContainerRenderer(
       HTMLDashboardRenderer,
       document,
       isContainer(field),
       options
     );
-  } else if (renderDef.renderer === 'json') {
-    return new HTMLJSONRenderer(document);
-  } else if (renderDef.renderer === 'line_chart') {
-    return new HTMLLineChartRenderer(
+  } else if (renderDef.renderer === 'list_detail') {
+    return makeContainerRenderer(
+      HTMLListDetailRenderer,
       document,
-      styleDefaults,
-      options,
-      renderDef,
-      queryTimezone
+      isContainer(field),
+      options
     );
-  } else if (renderDef.renderer === 'sparkline') {
-    if (field.name.endsWith('_column')) {
-      return new HTMLColumnSparkLineRenderer(
-        document,
-        styleDefaults,
-        options,
-        renderDef,
-        queryTimezone
-      );
-    } else if (field.name.endsWith('_bar')) {
-      return new HTMLBarSparkLineRenderer(
-        document,
-        styleDefaults,
-        options,
-        renderDef,
-        queryTimezone
-      );
-    } else if (field.name.endsWith('area')) {
-      return new HTMLAreaSparkLineRenderer(
-        document,
-        styleDefaults,
-        options,
-        renderDef,
-        queryTimezone
-      );
-    }
-    return new HTMLSparkLineRenderer(
+  } else if (
+    renderDef.renderer === 'table' ||
+    !field.hasParentExplore() ||
+    field.isExploreField()
+  ) {
+    return makeContainerRenderer(
+      HTMLTableRenderer,
       document,
-      styleDefaults,
-      options,
-      renderDef,
-      queryTimezone
+      isContainer(field),
+      options
     );
-  } else if (renderDef.renderer === 'scatter_chart') {
-    return new HTMLScatterChartRenderer(
-      document,
-      styleDefaults,
-      options,
-      renderDef,
-      queryTimezone
-    );
-  } else if (renderDef.renderer === 'bar_chart') {
-    return new HTMLBarChartRenderer(
-      document,
-      styleDefaults,
-      options,
-      renderDef,
-      queryTimezone
-    );
-  } else if (renderDef.renderer === 'vega') {
-    const spec = renderDef.spec;
-    if (spec) {
-      return new HTMLVegaSpecRenderer(
-        document,
-        styleDefaults,
-        options,
-        spec as TopLevelSpec
-      );
-    } else if (renderDef.spec_name) {
-      const vegaRenderer = options.dataStyles[renderDef.spec_name];
-      if (vegaRenderer !== undefined && vegaRenderer.renderer === 'vega') {
-        if (vegaRenderer.spec) {
-          return new HTMLVegaSpecRenderer(
-            document,
-            styleDefaults,
-            options,
-            vegaRenderer.spec as TopLevelSpec
-          );
-        } else {
-          throw new Error(`No spec defined on ${renderDef.spec_name}`);
-        }
-      } else {
-        throw new Error(`No Vega renderer named ${renderDef.spec_name}`);
-      }
-    } else {
-      throw new Error(`No top level vega spec defined for ${field.name}`);
-    }
-  } else {
-    if (
-      renderDef.renderer === 'time' ||
-      (field.hasParentExplore() &&
-        field.isAtomicField() &&
-        (field.type === AtomicFieldType.Date ||
-          field.type === AtomicFieldType.Timestamp))
-    ) {
-      return new HTMLDateRenderer(document, queryTimezone);
-    } else if (renderDef.renderer === 'currency') {
-      return new HTMLCurrencyRenderer(document);
-    } else if (renderDef.renderer === 'percent') {
-      return new HTMLPercentRenderer(document);
-    } else if (
-      renderDef.renderer === 'number' ||
-      (field.hasParentExplore() &&
-        field.isAtomicField() &&
-        field.type === AtomicFieldType.Number)
-    ) {
-      return new HTMLNumberRenderer(document);
-    } else if (renderDef.renderer === 'bytes') {
-      return new HTMLBytesRenderer(document);
-    } else if (
-      renderDef.renderer === 'boolean' ||
-      (field.hasParentExplore() &&
-        field.isAtomicField() &&
-        field.type === AtomicFieldType.Boolean)
-    ) {
-      return new HTMLBooleanRenderer(document);
-    } else if (renderDef.renderer === 'link') {
-      return new HTMLLinkRenderer(document);
-    } else if (renderDef.renderer === 'list') {
-      return makeContainerRenderer(
-        HTMLListRenderer,
-        document,
-        isContainer(field),
-        options
-      );
-    } else if (renderDef.renderer === 'list_detail') {
-      return makeContainerRenderer(
-        HTMLListDetailRenderer,
-        document,
-        isContainer(field),
-        options
-      );
-    } else if (
-      renderDef.renderer === 'table' ||
-      !field.hasParentExplore() ||
-      field.isExploreField()
-    ) {
-      return makeContainerRenderer(
-        HTMLTableRenderer,
-        document,
-        isContainer(field),
-        options
-      );
-    } else if (field.isAtomicField() && field.isUnsupported()) {
-      return new HTMLUnsupportedRenderer(document);
-    } else {
-      return new HTMLTextRenderer(document);
-    }
   }
+
+  throw new Error(`Could not find a proper renderer for field ${field.name}`);
 }
 
 function makeContainerRenderer<Type extends ContainerRenderer>(

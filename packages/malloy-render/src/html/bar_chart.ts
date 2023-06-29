@@ -21,9 +21,25 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Field} from '@malloydata/malloy';
+import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLCartesianChartRenderer} from './cartesian_chart';
+import {
+  BarChartRenderOptions,
+  SparkLineRenderOptions,
+  StyleDefaults,
+} from '../data_styles';
+import {RendererFactory} from '../renderer_factory';
+import {RendererOptions} from '../renderer_types';
+import {Renderer} from '../renderer';
 import {timeToString} from './utils';
+import {
+  BarChartRenderOptions,
+  SparkLineRenderOptions,
+  StyleDefaults,
+} from '../data_styles';
+import {RendererFactory} from '../renderer_factory';
+import {RendererOptions} from '../renderer_types';
+import {Renderer} from '../renderer';
 
 export class HTMLBarChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'bar' {
@@ -53,5 +69,29 @@ export class HTMLBarChartRenderer extends HTMLCartesianChartRenderer {
     } else {
       throw new Error('Invalid field type for bar chart.');
     }
+  }
+}
+
+export class BarChartRendererFactory extends RendererFactory<BarChartRenderOptions> {
+  public static readonly instance = new BarChartRendererFactory();
+  create(
+    document: Document,
+    styleDefaults: StyleDefaults,
+    rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    options: SparkLineRenderOptions,
+    timezone?: string
+  ): Renderer {
+    return new HTMLBarChartRenderer(
+      document,
+      styleDefaults,
+      rendererOptions,
+      options,
+      timezone
+    );
+  }
+
+  get rendererName() {
+    return 'bar_chart';
   }
 }

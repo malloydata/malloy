@@ -28,30 +28,126 @@ export type ChartSize = 'small' | 'medium' | 'large';
 
 export type RenderDef =
   | ({renderer?: undefined} & DataRenderOptions)
-  | ({renderer: 'table'} & TableRenderOptions)
-  | ({renderer: 'dashboard'} & DashboardRenderOptions)
-  | ({renderer: 'text'} & TextRenderOptions)
-  | ({renderer: 'currency'} & CurrencyRenderOptions)
-  | ({renderer: 'image'} & ImageRenderOptions)
-  | ({renderer: 'time'} & TimeRenderOptions)
-  | ({renderer: 'json'} & JSONRenderOptions)
-  | ({renderer: 'single_value'} & SingleValueRenderOptions)
-  | ({renderer: 'list'} & ListRenderOptions)
-  | ({renderer: 'list_detail'} & ListDetailRenderOptions)
-  | ({renderer: 'cartesian_chart'} & CartesianChartRenderOptions)
-  | ({renderer: 'bar_chart'} & BarChartRenderOptions)
-  | ({renderer: 'scatter_chart'} & ScatterChartRenderOptions)
-  | ({renderer: 'line_chart'} & LineChartRenderOptions)
-  | ({renderer: 'point_map'} & PointMapRenderOptions)
-  | ({renderer: 'segment_map'} & SegmentMapRenderOptions)
-  | ({renderer: 'shape_map'} & ShapeMapRenderOptions)
-  | ({renderer: 'number'} & NumberRenderOptions)
-  | ({renderer: 'percent'} & PercentRenderOptions)
-  | ({renderer: 'boolean'} & BooleanRenderOptions)
-  | ({renderer: 'sparkline'} & SparkLineRenderOptions)
-  | ({renderer: 'bytes'} & BytesRenderOptions)
-  | ({renderer: 'link'} & LinkRenderOptions)
-  | ({renderer: 'vega'} & VegaRenderOptions);
+  | TableRendererDef
+  | DashboardRendererDef
+  | TextRendererDef
+  | CurrencyRendererDef
+  | ImageRendererDef
+  | TimeRendererDef
+  | JSONRendererDef
+  | SingleValueRendererDef
+  | ListRendererDef
+  | ListDetailRendererDef
+  | CartesianChartRendererDef
+  | BarChartRendererDef
+  | ScatterChartRendererDef
+  | LineChartRendererDef
+  | PointMapRendererDef
+  | SegmentMapRendererDef
+  | ShapeMapRendererDef
+  | NumberRendererDef
+  | PercentRendererDef
+  | BooleanRendererDef
+  | SparkLineRendererDef
+  | BytesRendererDef
+  | LinkRendererDef
+  | VegaRendererDef;
+
+export type TableRendererDef = {
+  renderer: 'table';
+} & TableRenderOptions;
+
+export type DashboardRendererDef = {
+  renderer: 'dashboard';
+} & DashboardRenderOptions;
+
+export type TextRendererDef = {
+  renderer: 'text';
+} & TextRenderOptions;
+
+export type CurrencyRendererDef = {
+  renderer: 'currency';
+} & TextRenderOptions;
+
+export type ImageRendererDef = {
+  renderer: 'image';
+} & ImageRenderOptions;
+
+export type TimeRendererDef = {
+  renderer: 'time';
+} & TimeRenderOptions;
+
+export type JSONRendererDef = {
+  renderer: 'json';
+} & JSONRenderOptions;
+
+export type SingleValueRendererDef = {
+  renderer: 'single_value';
+} & SingleValueRenderOptions;
+
+export type ListRendererDef = {
+  renderer: 'list';
+} & ListRenderOptions;
+
+export type ListDetailRendererDef = {
+  renderer: 'list_detail';
+} & ListDetailRenderOptions;
+
+export type CartesianChartRendererDef = {
+  renderer: 'cartesian_chart';
+} & CartesianChartRenderOptions;
+
+export type BarChartRendererDef = {
+  renderer: 'bar_chart';
+} & BarChartRenderOptions;
+
+export type ScatterChartRendererDef = {
+  renderer: 'scatter_chart';
+} & ScatterChartRenderOptions;
+
+export type LineChartRendererDef = {
+  renderer: 'line_chart';
+} & LineChartRenderOptions;
+
+export type PointMapRendererDef = {
+  renderer: 'point_map';
+} & PointMapRenderOptions;
+
+export type SegmentMapRendererDef = {
+  renderer: 'segment_map';
+} & SegmentMapRenderOptions;
+
+export type ShapeMapRendererDef = {
+  renderer: 'shape_map';
+} & ShapeMapRenderOptions;
+
+export type NumberRendererDef = {
+  renderer: 'number';
+} & NumberRenderOptions;
+
+export type PercentRendererDef = {
+  renderer: 'percent';
+} & NumberRenderOptions;
+
+export type BooleanRendererDef = {
+  renderer: 'boolean';
+} & BooleanRenderOptions;
+
+export type SparkLineRendererDef = {
+  renderer: 'sparkline';
+} & SparkLineRenderOptions;
+
+export type BytesRendererDef = {
+  renderer: 'bytes';
+} & NumberRenderOptions;
+
+export type LinkRendererDef = {
+  renderer: 'link';
+} & LinkRenderOptions;
+
+export type VegaRendererDef = {
+  renderer: 'vega';
+} & VegaRenderOptions;
 
 export interface DataRenderOptions {
   data?: {

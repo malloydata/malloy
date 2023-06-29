@@ -21,8 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn} from '@malloydata/malloy';
+import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLNumberRenderer} from './number';
+import {PercentRenderOptions, StyleDefaults} from '../data_styles';
+import {RendererOptions} from '../renderer_types';
+import {Renderer} from '../renderer';
+import {RendererFactory} from '../renderer_factory';
 
 export class HTMLPercentRenderer extends HTMLNumberRenderer {
   override getText(data: DataColumn): string | null {
@@ -31,5 +35,25 @@ export class HTMLPercentRenderer extends HTMLNumberRenderer {
     return num === null
       ? num
       : (num * 100).toLocaleString('en', {maximumFractionDigits: 2}) + '%';
+  }
+}
+
+export class PercentRendererFactory extends RendererFactory<PercentRenderOptions> {
+  public static readonly instance = new PercentRendererFactory();
+
+
+
+  create(
+    document: Document,
+    _styleDefaults: StyleDefaults,
+    _rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    _options: PercentRenderOptions
+  ): Renderer {
+    return new HTMLPercentRenderer(document);
+  }
+
+  get rendererName() {
+    return 'percent';
   }
 }

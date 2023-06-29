@@ -21,9 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn} from '@malloydata/malloy';
+import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {Renderer} from '../renderer';
 import {createErrorElement} from './utils';
+import {JSONRenderOptions, StyleDefaults} from '../data_styles';
+import {RendererOptions} from '../renderer_types';
+import {RendererFactory} from '../renderer_factory';
 
 export class HTMLJSONRenderer implements Renderer {
   constructor(private readonly document: Document) {}
@@ -38,5 +41,25 @@ export class HTMLJSONRenderer implements Renderer {
       this.document.createTextNode(JSON.stringify(table.value, undefined, 2))
     );
     return element;
+  }
+}
+
+export class JSONRendererFactory extends RendererFactory<JSONRenderOptions> {
+  public static readonly instance = new JSONRendererFactory();
+
+
+
+  create(
+    document: Document,
+    _styleDefaults: StyleDefaults,
+    _rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    _options: JSONRenderOptions
+  ): Renderer {
+    return new HTMLJSONRenderer(document);
+  }
+
+  get rendererName() {
+    return 'json';
   }
 }

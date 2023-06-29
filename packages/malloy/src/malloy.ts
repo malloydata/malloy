@@ -2870,7 +2870,7 @@ abstract class Data<T> {
     if (this.isNumber()) {
       return this;
     }
-    throw new Error('Not a number.');
+    throw new Error(`Not a number. ${new Error('').stack} ${this.value}`);
   }
 
   isTimestamp(): this is DataTimestamp {

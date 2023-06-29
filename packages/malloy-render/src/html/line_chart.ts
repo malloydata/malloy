@@ -21,8 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Field} from '@malloydata/malloy';
+import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLCartesianChartRenderer} from './cartesian_chart';
+import {LineChartRenderOptions, StyleDefaults} from '../data_styles';
+import {RendererFactory} from '../renderer_factory';
+import {RendererOptions} from '../renderer_types';
+import {Renderer} from '../renderer';
 
 export class HTMLLineChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'line' {
@@ -57,5 +61,32 @@ export class HTMLLineChartRenderer extends HTMLCartesianChartRenderer {
     } else {
       throw new Error('Invalid field type for line chart.');
     }
+  }
+}
+
+export class LineChartRendererFactory extends RendererFactory<LineChartRenderOptions> {
+  public static readonly instance = new LineChartRendererFactory();
+
+
+
+  create(
+    document: Document,
+    styleDefaults: StyleDefaults,
+    rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    options: LineChartRenderOptions,
+    timezone?: string
+  ): Renderer {
+    return new HTMLLineChartRenderer(
+      document,
+      styleDefaults,
+      rendererOptions,
+      options,
+      timezone
+    );
+  }
+
+  get rendererName() {
+    return 'line_chart';
   }
 }

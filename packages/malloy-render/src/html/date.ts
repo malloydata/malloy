@@ -22,12 +22,18 @@
  */
 
 import {
+  AtomicFieldType,
   DataColumn,
   DateTimeframe,
+  Explore,
+  Field,
   TimestampTimeframe,
 } from '@malloydata/malloy';
 import {Renderer} from '../renderer';
 import {createErrorElement, createNullElement, timeToString} from './utils';
+import {StyleDefaults, TimeRenderOptions} from '../data_styles';
+import {RendererOptions} from '../renderer_types';
+import {RendererFactory} from '../renderer_factory';
 
 export class HTMLDateRenderer implements Renderer {
   constructor(
@@ -56,5 +62,33 @@ export class HTMLDateRenderer implements Renderer {
     const element = this.document.createElement('span');
     element.appendChild(this.document.createTextNode(timestring));
     return element;
+  }
+}
+
+export class DateRendererFactory extends RendererFactory<TimeRenderOptions> {
+  public static readonly instance = new DateRendererFactory();
+
+  activates(field: Field | Explore): boolean {
+    return (
+      field.hasParentExplore() &&
+      field.isAtomicField() &&
+      (field.type === AtomicFieldType.Date ||
+        field.type === AtomicFieldType.Timestamp)
+    );
+  }
+
+  create(
+    document: Document,
+    _styleDefaults: StyleDefaults,
+    _rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    _options: TimeRenderOptions,
+    timezone?: string
+  ): Renderer {
+    return new HTMLDateRenderer(document, timezone);
+  }
+
+  get rendererName() {
+    return 'time';
   }
 }

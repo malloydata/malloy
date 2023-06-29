@@ -21,11 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataArray} from '@malloydata/malloy';
+import {DataArray, Explore, Field} from '@malloydata/malloy';
 import * as lite from 'vega-lite';
 import {getColorScale} from './utils';
 import {DEFAULT_SPEC} from './vega_spec';
 import {HTMLBarChartRenderer} from './bar_chart';
+import {BarSparkLineRenderOptions, StyleDefaults} from '../data_styles';
+import {RendererFactory} from '../renderer_factory';
+import {RendererOptions} from '../renderer_types';
+import {Renderer} from '../renderer';
 
 export class HTMLBarSparkLineRenderer extends HTMLBarChartRenderer {
   override getSize(): {height: number; width: number} {
@@ -108,5 +112,34 @@ export class HTMLBarSparkLineRenderer extends HTMLBarChartRenderer {
       },
       background: 'transparent',
     };
+  }
+}
+
+export class BarSparkLineRendererFactory extends RendererFactory<BarSparkLineRenderOptions> {
+  public static readonly instance = new BarSparkLineRendererFactory();
+
+  isValidMatch(field: Field | Explore): boolean {
+    return field.name.endsWith('_bar');
+  }
+
+  create(
+    document: Document,
+    styleDefaults: StyleDefaults,
+    rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    options: BarSparkLineRenderOptions,
+    timezone?: string
+  ): Renderer {
+    return new HTMLBarSparkLineRenderer(
+      document,
+      styleDefaults,
+      rendererOptions,
+      options,
+      timezone
+    );
+  }
+
+  get rendererName() {
+    return 'sparkline';
   }
 }

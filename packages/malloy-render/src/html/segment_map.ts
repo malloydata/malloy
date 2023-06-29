@@ -22,10 +22,14 @@
  */
 
 import * as lite from 'vega-lite';
-import {DataArray, DataColumn, Field} from '@malloydata/malloy';
+import {DataArray, DataColumn, Explore, Field} from '@malloydata/malloy';
 import usAtlas from 'us-atlas/states-10m.json';
 import {HTMLChartRenderer} from './chart';
 import {formatTitle, getColorScale} from './utils';
+import {RendererFactory} from '../renderer_factory';
+import {SegmentMapRenderOptions, StyleDefaults} from '../data_styles';
+import {RendererOptions} from '../renderer_types';
+import {Renderer} from '../renderer';
 
 export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
   getDataValue(data: DataColumn): string | number | null {
@@ -144,5 +148,30 @@ export class HTMLSegmentMapRenderer extends HTMLChartRenderer {
         },
       },
     };
+  }
+}
+
+export class SegmentMapRendererFactory extends RendererFactory<SegmentMapRenderOptions> {
+  public static readonly instance = new SegmentMapRendererFactory();
+
+  create(
+    document: Document,
+    styleDefaults: StyleDefaults,
+    rendererOptions: RendererOptions,
+    _field: Field | Explore,
+    options: SegmentMapRenderOptions,
+    timezone?: string
+  ): Renderer {
+    return new HTMLSegmentMapRenderer(
+      document,
+      styleDefaults,
+      rendererOptions,
+      options,
+      timezone
+    );
+  }
+
+  get rendererName() {
+    return 'segment_map';
   }
 }
