@@ -32,14 +32,6 @@ import {RendererFactory} from '../renderer_factory';
 import {RendererOptions} from '../renderer_types';
 import {Renderer} from '../renderer';
 import {timeToString} from './utils';
-import {
-  BarChartRenderOptions,
-  SparkLineRenderOptions,
-  StyleDefaults,
-} from '../data_styles';
-import {RendererFactory} from '../renderer_factory';
-import {RendererOptions} from '../renderer_types';
-import {Renderer} from '../renderer';
 
 export class HTMLBarChartRenderer extends HTMLCartesianChartRenderer {
   getMark(): 'bar' {
