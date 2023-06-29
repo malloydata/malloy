@@ -43,7 +43,6 @@ export class HTMLCurrencyRenderer extends HTMLTextRenderer {
       return null;
     }
 
-    // TODO get this from renderer options
     let unitText = '$';
     switch (this.options.currency) {
       case Currency.Euros:
