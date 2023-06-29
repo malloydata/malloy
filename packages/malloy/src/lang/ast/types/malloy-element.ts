@@ -232,18 +232,26 @@ export abstract class MalloyElement {
     return asString;
   }
 
-  walk(callBack: (node: MalloyElement) => void): void {
-    callBack(this);
+  walk(callback: (node: MalloyElement) => void): void {
+    callback(this);
+    for (const child of this.flatChildren()) {
+      child.walk(callback);
+    }
+  }
+
+  private flatChildren(): MalloyElement[] {
+    const flatChildren: MalloyElement[] = [];
     for (const kidLabel of Object.keys(this.children)) {
       const kiddle = this.children[kidLabel];
       if (kiddle instanceof MalloyElement) {
-        kiddle.walk(callBack);
+        flatChildren.push(kiddle);
       } else {
         for (const k of kiddle) {
-          k.walk(callBack);
+          flatChildren.push(k);
         }
       }
     }
+    return flatChildren;
   }
 
   private varInfo(): string {
@@ -263,6 +271,13 @@ export abstract class MalloyElement {
   protected internalError(msg: string): Error {
     this.log(`INTERNAL ERROR IN TRANSLATION: ${msg}`);
     return new Error(msg);
+  }
+
+  needs(doc: Document): ModelDataRequest | undefined {
+    for (const child of this.flatChildren()) {
+      const childNeeds = child.needs(doc);
+      if (childNeeds) return childNeeds;
+    }
   }
 }
 
@@ -291,11 +306,17 @@ export class ModelEntryReference extends MalloyElement {
 }
 
 export interface DocStatement extends MalloyElement {
-  execute(doc: Document): ModelDataRequest;
+  execute(doc: Document): void;
 }
 
 export function isDocStatement(e: MalloyElement): e is DocStatement {
   return (e as DocStatement).execute !== undefined;
+}
+
+export function isDocStatementOrDocStatementList(
+  el: MalloyElement
+): el is DocStatement | DocStatementList {
+  return el instanceof DocStatementList || isDocStatement(el);
 }
 
 export abstract class ListOf<ET extends MalloyElement> extends MalloyElement {
@@ -325,9 +346,19 @@ export abstract class ListOf<ET extends MalloyElement> extends MalloyElement {
     this.newContents();
     return this.elements;
   }
+
+  needs(doc: Document): ModelDataRequest | undefined {
+    for (const element of this.elements) {
+      const elementNeeds = element.needs(doc);
+      if (elementNeeds) return elementNeeds;
+    }
+  }
 }
 
-export class RunList extends ListOf<DocStatement> implements Noteable {
+export class DocStatementList
+  extends ListOf<DocStatement | DocStatementList>
+  implements Noteable
+{
   elementType = 'topLevelStatements';
   execCursor = 0;
   readonly isNoteableObj = true;
@@ -345,11 +376,20 @@ export class RunList extends ListOf<DocStatement> implements Noteable {
         }
         this.noteCursor += 1;
       }
-      const resp = el.execute(doc);
-      if (resp) {
-        // Statment needs information (likely SQL schema) so we return
-        // the response, and will come back here later
-        return resp;
+      // For DocStatementLists, we want to incrementally execute
+      // the list, returning needs only when individual statements
+      // report needs, not when the whole list has needs (because
+      // the needs of one statement in a list may depend on those
+      // of another statement earlier in the list). For regular
+      // DocStatements, we first check their needs and return them
+      // if there are any; otherwise we execute the statement.
+      if (el instanceof DocStatementList) {
+        const needs = el.executeList(doc);
+        if (needs) return needs;
+      } else {
+        const needs = el.needs(doc);
+        if (needs) return needs;
+        el.execute(doc);
       }
       this.execCursor += 1;
     }
@@ -377,13 +417,13 @@ export class Document extends MalloyElement implements NameSpace {
   documentModel: Record<string, ModelEntry> = {};
   queryList: Query[] = [];
   sqlBlocks: SQLBlockStructDef[] = [];
-  statements: RunList;
+  statements: DocStatementList;
   didInitModel = false;
   notes: string[] = [];
 
-  constructor(statements: DocStatement[]) {
+  constructor(statements: (DocStatement | DocStatementList)[]) {
     super();
-    this.statements = new RunList(statements);
+    this.statements = new DocStatementList(statements);
     this.has({statements: statements});
   }
 
@@ -478,8 +518,7 @@ export class ObjectAnnotation extends MalloyElement {
 export class ModelAnnotation extends ObjectAnnotation implements DocStatement {
   elementType = 'modelAnnotation';
 
-  execute(doc: Document): ModelDataRequest {
+  execute(doc: Document): void {
     doc.notes = doc.notes.concat(this.notes);
-    return;
   }
 }

@@ -29,12 +29,10 @@ import {
   DocStatement,
   Document,
   MalloyElement,
-  RunList,
+  DocStatementList,
 } from '../types/malloy-element';
 import {QueryElement} from '../types/query-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
-import {FullQuery} from '../query-elements/full-query';
-import {SQLSource} from '../sources/sql-source';
 
 export class DefineQuery
   extends MalloyElement
@@ -50,19 +48,11 @@ export class DefineQuery
   extendNote = extendNoteMethod;
   note?: Annotation;
 
-  execute(doc: Document): ModelDataRequest {
+  execute(doc: Document): void {
     const existing = doc.getEntry(this.name);
     if (existing) {
       this.log(`'${this.name}' is already defined, cannot redefine`);
       return;
-    }
-    // TODO this should be removed eventually when expressions using SQL
-    // sources can know their needs in the general case.
-    if (this.queryDetails instanceof FullQuery) {
-      if (this.queryDetails.explore instanceof SQLSource) {
-        const needs = this.queryDetails.explore.needs(doc);
-        if (needs) return needs;
-      }
     }
     const entry: NamedQuery = {
       ...this.queryDetails.query(),
@@ -79,13 +69,9 @@ export class DefineQuery
   }
 }
 
-export class DefineQueryList extends RunList implements DocStatement {
+export class DefineQueryList extends DocStatementList {
   elementType = 'defineQueries';
   constructor(queryList: DefineQuery[]) {
     super(queryList);
-  }
-
-  execute(doc: Document): ModelDataRequest {
-    return this.executeList(doc);
   }
 }

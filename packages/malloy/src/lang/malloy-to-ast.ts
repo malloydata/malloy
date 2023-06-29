@@ -267,9 +267,9 @@ export class MalloyToAST
   }
 
   visitMalloyDocument(pcx: parse.MalloyDocumentContext): ast.Document {
-    const stmts = this.only<ast.DocStatement>(
+    const stmts = this.only<ast.DocStatement | ast.DocStatementList>(
       pcx.malloyStatement().map(scx => this.visit(scx)),
-      x => ast.isDocStatement(x) && x,
+      x => ast.isDocStatementOrDocStatementList(x) && x,
       'statement'
     );
     return new ast.Document(stmts);
@@ -944,7 +944,7 @@ export class MalloyToAST
 
   visitTopLevelQueryDefs(
     pcx: parse.TopLevelQueryDefsContext
-  ): ast.DocStatement {
+  ): ast.DefineQueryList {
     const stmts = pcx
       .topLevelQueryDef()
       .map(cx => this.visitTopLevelQueryDef(cx));

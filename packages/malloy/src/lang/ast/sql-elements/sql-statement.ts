@@ -21,10 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {SQLBlockSource} from '../../../model/malloy_types';
+import {SQLBlockSource, SQLBlockStructDef} from '../../../model/malloy_types';
 import {makeSQLBlock} from '../../../model/sql_block';
 
 import {ModelDataRequest} from '../../translate-response';
+import {ZoneEntry} from '../../zone';
 import {DocStatement, Document, MalloyElement} from '../types/malloy-element';
 import {SQLString} from './sql-string';
 
@@ -49,20 +50,38 @@ export class SQLStatement extends MalloyElement implements DocStatement {
     return this.requestBlock;
   }
 
+  private lookupCompiledSQL(
+    sql: SQLBlockSource
+  ): ZoneEntry<SQLBlockStructDef> | undefined {
+    const sqlDefEntry = this.translator()?.root.sqlQueryZone;
+    if (!sqlDefEntry) return;
+    sqlDefEntry.reference(sql.name, this.location);
+    return sqlDefEntry.getEntry(sql.name);
+  }
+
+  needs(doc: Document): ModelDataRequest {
+    const sql = this.sqlBlock();
+    const lookup = this.lookupCompiledSQL(sql);
+    if (lookup?.status === 'reference') {
+      return {
+        compileSQL: sql,
+        partialModel: this.select.containsQueries ? doc.modelDef() : undefined,
+      };
+    }
+  }
+
   /**
    * This is the one statement which pauses execution. First time through
    * it will generate a schema request, next time through it will either
    * record the error or record the schema.
    */
-  execute(doc: Document): ModelDataRequest {
-    const sqlDefEntry = this.translator()?.root.sqlQueryZone;
-    if (!sqlDefEntry) {
+  execute(doc: Document): void {
+    const sql = this.sqlBlock();
+    const lookup = this.lookupCompiledSQL(sql);
+    if (!lookup) {
       this.log("Cant't look up schema for sql block");
       return;
     }
-    const sql = this.sqlBlock();
-    sqlDefEntry.reference(sql.name, this.location);
-    const lookup = sqlDefEntry.getEntry(sql.name);
     if (lookup.status === 'error') {
       const msgLines = lookup.message.split(/\r?\n/);
       this.select.log('Invalid SQL, ' + msgLines.join('\n    '));
@@ -80,9 +99,5 @@ export class SQLStatement extends MalloyElement implements DocStatement {
       }
       return undefined;
     }
-    return {
-      compileSQL: sql,
-      partialModel: this.select.containsQueries ? doc.modelDef() : undefined,
-    };
   }
 }

@@ -3253,6 +3253,24 @@ describe('sql expressions', () => {
     }
   });
 
+  test('reference to sql expression in join', () => {
+    const m = model`
+      source: quux is a {
+        join_one: xyzzy is
+          duckdb.sql("""SELECT 1 as one""")
+          on ai = xyzzy.one
+      }
+    `;
+    const compileSql = m.translator.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.translator.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).toTranslate();
+    }
+  });
+
   // TODO unskip when ENABLE_M4_WARNINGS is turned into an annotation
   test.skip('sql statement deprecation warning', () => {
     const m = new TestTranslator(

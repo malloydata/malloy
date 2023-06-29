@@ -22,19 +22,16 @@
  */
 
 import {Annotation, StructDef} from '../../../model/malloy_types';
-import {ModelDataRequest} from '../../translate-response';
 
 import {ErrorFactory} from '../error-factory';
 import {HasParameter} from '../parameters/has-parameter';
-import {SQLSource} from '../sources/sql-source';
 import {
   DocStatement,
   Document,
   MalloyElement,
-  RunList,
+  DocStatementList,
 } from '../types/malloy-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
-import {RefinedSource} from './refined-source';
 
 import {Source} from './source';
 
@@ -69,28 +66,10 @@ export class DefineSource
   extendNote = extendNoteMethod;
   note?: Annotation;
 
-  execute(doc: Document): ModelDataRequest {
+  execute(doc: Document): void {
     if (doc.modelEntry(this.name)) {
       this.log(`Cannot redefine '${this.name}'`);
     } else {
-      // TODO this whole sql source checking should be removed eventually. This
-      // is a special case to compile SQL queries when they are written
-      // `source: my_sql is conn.sql("""SELECT * FROM table""")`. Once
-      // we implement some solution that allows for runtime needs to be
-      // known ahead of time, we can remove this.
-      let sqlSource: SQLSource | undefined;
-      if (this.theSource instanceof SQLSource) {
-        sqlSource = this.theSource;
-      } else if (
-        this.theSource instanceof RefinedSource &&
-        this.theSource.source instanceof SQLSource
-      ) {
-        sqlSource = this.theSource.source;
-      }
-      if (sqlSource) {
-        const needs = sqlSource.needs(doc);
-        if (needs) return needs;
-      }
       const structDef = this.theSource.withParameters(this.parameters);
       if (ErrorFactory.isErrorStructDef(structDef)) {
         return;
@@ -110,13 +89,9 @@ export class DefineSource
   }
 }
 
-export class DefineSourceList extends RunList implements DocStatement {
+export class DefineSourceList extends DocStatementList {
   elementType = 'defineSources';
   constructor(sourceList: DefineSource[]) {
     super(sourceList);
-  }
-
-  execute(doc: Document): ModelDataRequest {
-    return this.executeList(doc);
   }
 }

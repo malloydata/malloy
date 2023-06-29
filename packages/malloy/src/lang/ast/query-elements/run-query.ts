@@ -22,7 +22,6 @@
  */
 
 import {Annotation} from '../../../model';
-import {ModelDataRequest} from '../../translate-response';
 import {
   DocStatement,
   Document,
@@ -35,7 +34,7 @@ import {QueryElement} from '../types/query-element';
 abstract class RunQuery extends MalloyElement implements DocStatement {
   elementType = 'runQuery';
 
-  abstract execute(doc: Document): ModelDataRequest;
+  abstract execute(doc: Document): void;
 }
 
 export class RunQueryDef extends RunQuery implements Noteable {
@@ -47,7 +46,7 @@ export class RunQueryDef extends RunQuery implements Noteable {
     this.has({query: theQuery});
   }
 
-  execute(doc: Document): ModelDataRequest {
+  execute(doc: Document): void {
     let modelQuery = this.theQuery.query();
     const annotation = this.note || {};
     if (modelQuery.annotation) {
@@ -67,7 +66,7 @@ export class RunQueryRef extends RunQuery {
     this.has({queryName});
   }
 
-  execute(doc: Document): ModelDataRequest {
+  execute(doc: Document): void {
     const found = doc.getEntry(this.queryName.refString);
     if (found === undefined) {
       this.queryName.log(`${this.queryName} is not defined`);
