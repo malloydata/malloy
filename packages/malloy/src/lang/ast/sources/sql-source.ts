@@ -83,6 +83,8 @@ export class SQLSource extends Source {
     if (!this.validateConnectionName()) {
       return undefined;
     }
+    const childNeeds = super.needs(doc);
+    if (childNeeds) return childNeeds;
     const sql = this.sqlBlock();
     const sqlDefEntry = this.translator()?.root.sqlQueryZone;
     if (!sqlDefEntry) {

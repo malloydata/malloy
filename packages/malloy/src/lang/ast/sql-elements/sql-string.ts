@@ -31,6 +31,13 @@ export class SQLString extends MalloyElement {
   elementType = 'sqlString';
   elements: SQLStringSegment[] = [];
   containsQueries = false;
+
+  complete() {
+    this.has({
+      queries: this.elements.filter(isMalloyElement),
+    });
+  }
+
   push(el: string | MalloyElement): void {
     if (typeof el === 'string') {
       if (el.length > 0) {
@@ -53,4 +60,8 @@ export class SQLString extends MalloyElement {
       return el.query();
     });
   }
+}
+
+function isMalloyElement(x: SQLStringSegment): x is QueryElement {
+  return typeof x !== 'string' && isQueryElement(x);
 }

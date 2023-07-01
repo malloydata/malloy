@@ -246,6 +246,7 @@ export class MalloyToAST
     }
     const lastChars = pcx.SQL_END()?.text.slice(0, -3);
     sqlStr.push(lastChars || '');
+    sqlStr.complete();
     this.astAt(sqlStr, pcx);
   }
 
