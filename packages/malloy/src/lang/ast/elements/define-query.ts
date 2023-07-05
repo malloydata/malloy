@@ -23,8 +23,6 @@
 
 import {Annotation, NamedQuery} from '../../../model/malloy_types';
 
-import {ModelDataRequest} from '../../translate-response';
-
 import {
   DocStatement,
   Document,

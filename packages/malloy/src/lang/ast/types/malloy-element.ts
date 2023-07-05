@@ -232,26 +232,17 @@ export abstract class MalloyElement {
     return asString;
   }
 
-  walk(callback: (node: MalloyElement) => void): void {
-    callback(this);
-    for (const child of this.flatChildren()) {
-      child.walk(callback);
-    }
-  }
-
-  private flatChildren(): MalloyElement[] {
-    const flatChildren: MalloyElement[] = [];
+  *walk(): Generator<MalloyElement> {
     for (const kidLabel of Object.keys(this.children)) {
       const kiddle = this.children[kidLabel];
       if (kiddle instanceof MalloyElement) {
-        flatChildren.push(kiddle);
+        yield kiddle;
       } else {
         for (const k of kiddle) {
-          flatChildren.push(k);
+          yield k;
         }
       }
     }
-    return flatChildren;
   }
 
   private varInfo(): string {
@@ -274,7 +265,7 @@ export abstract class MalloyElement {
   }
 
   needs(doc: Document): ModelDataRequest | undefined {
-    for (const child of this.flatChildren()) {
+    for (const child of this.walk()) {
       const childNeeds = child.needs(doc);
       if (childNeeds) return childNeeds;
     }
