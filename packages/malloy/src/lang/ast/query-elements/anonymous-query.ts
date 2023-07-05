@@ -22,7 +22,6 @@
  */
 
 import {Annotation} from '../../../model';
-import {ModelDataRequest} from '../../translate-response';
 
 import {DocStatement, Document, MalloyElement} from '../types/malloy-element';
 import {QueryElement} from '../types/query-element';
@@ -43,7 +42,7 @@ export class AnonymousQuery
   extendNote = extendNoteMethod;
   note?: Annotation;
 
-  execute(doc: Document): ModelDataRequest {
+  execute(doc: Document): void {
     const modelQuery = this.theQuery.query();
     if (this.note) {
       modelQuery.annotation = modelQuery.annotation
@@ -51,6 +50,5 @@ export class AnonymousQuery
         : this.note;
     }
     doc.queryList.push(modelQuery);
-    return undefined;
   }
 }

@@ -23,13 +23,11 @@
 
 import {Annotation, NamedQuery} from '../../../model/malloy_types';
 
-import {ModelDataRequest} from '../../translate-response';
-
 import {
   DocStatement,
   Document,
   MalloyElement,
-  RunList,
+  DocStatementList,
 } from '../types/malloy-element';
 import {QueryElement} from '../types/query-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
@@ -48,7 +46,7 @@ export class DefineQuery
   extendNote = extendNoteMethod;
   note?: Annotation;
 
-  execute(doc: Document): ModelDataRequest {
+  execute(doc: Document): void {
     const existing = doc.getEntry(this.name);
     if (existing) {
       this.log(`'${this.name}' is already defined, cannot redefine`);
@@ -69,13 +67,9 @@ export class DefineQuery
   }
 }
 
-export class DefineQueryList extends RunList implements DocStatement {
+export class DefineQueryList extends DocStatementList {
   elementType = 'defineQueries';
   constructor(queryList: DefineQuery[]) {
     super(queryList);
-  }
-
-  execute(doc: Document): ModelDataRequest {
-    return this.executeList(doc);
   }
 }

@@ -246,6 +246,7 @@ export class MalloyToAST
     }
     const lastChars = pcx.SQL_END()?.text.slice(0, -3);
     sqlStr.push(lastChars || '');
+    sqlStr.complete();
     this.astAt(sqlStr, pcx);
   }
 
@@ -267,9 +268,9 @@ export class MalloyToAST
   }
 
   visitMalloyDocument(pcx: parse.MalloyDocumentContext): ast.Document {
-    const stmts = this.only<ast.DocStatement>(
+    const stmts = this.only<ast.DocStatement | ast.DocStatementList>(
       pcx.malloyStatement().map(scx => this.visit(scx)),
-      x => ast.isDocStatement(x) && x,
+      x => ast.isDocStatementOrDocStatementList(x) && x,
       'statement'
     );
     return new ast.Document(stmts);
@@ -358,9 +359,19 @@ export class MalloyToAST
     );
   }
 
-  visitSQLSourceName(pcx: parse.SQLSourceNameContext): ast.SQLSource {
+  visitSQLSourceName(pcx: parse.SQLSourceNameContext): ast.FromSQLSource {
     const name = this.getModelEntryName(pcx.sqlExploreNameRef());
-    return this.astAt(new ast.SQLSource(name), pcx);
+    return this.astAt(new ast.FromSQLSource(name), pcx);
+  }
+
+  visitSQLSource(pcx: parse.SQLSourceContext): ast.SQLSource {
+    const connId = pcx.connectionId();
+    const connectionName = this.astAt(this.getModelEntryName(connId), connId);
+    const sqlStr = new ast.SQLString();
+    const selCx = pcx.sqlString();
+    this.makeSqlString(selCx, sqlStr);
+    const expr = new ast.SQLSource(connectionName, sqlStr);
+    return this.astAt(expr, pcx);
   }
 
   visitQuerySource(pcx: parse.QuerySourceContext): ast.Source {
@@ -934,7 +945,7 @@ export class MalloyToAST
 
   visitTopLevelQueryDefs(
     pcx: parse.TopLevelQueryDefsContext
-  ): ast.DocStatement {
+  ): ast.DefineQueryList {
     const stmts = pcx
       .topLevelQueryDef()
       .map(cx => this.visitTopLevelQueryDef(cx));
@@ -1477,7 +1488,15 @@ export class MalloyToAST
       stmt.connection = connectionName;
     }
     stmt.is = blockName;
-    return this.astAt(stmt, pcx);
+    const result = this.astAt(stmt, pcx);
+    if (ENABLE_M4_WARNINGS) {
+      this.astError(
+        result,
+        '`sql:` statement is deprecated, use `connection_name.sql(...)` instead',
+        'warn'
+      );
+    }
+    return result;
   }
 
   visitSampleStatement(pcx: parse.SampleStatementContext): ast.SampleProperty {

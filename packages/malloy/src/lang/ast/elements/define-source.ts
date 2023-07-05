@@ -22,7 +22,6 @@
  */
 
 import {Annotation, StructDef} from '../../../model/malloy_types';
-import {ModelDataRequest} from '../../translate-response';
 
 import {ErrorFactory} from '../error-factory';
 import {HasParameter} from '../parameters/has-parameter';
@@ -30,7 +29,7 @@ import {
   DocStatement,
   Document,
   MalloyElement,
-  RunList,
+  DocStatementList,
 } from '../types/malloy-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
 
@@ -67,7 +66,7 @@ export class DefineSource
   extendNote = extendNoteMethod;
   note?: Annotation;
 
-  execute(doc: Document): ModelDataRequest {
+  execute(doc: Document): void {
     if (doc.modelEntry(this.name)) {
       this.log(`Cannot redefine '${this.name}'`);
     } else {
@@ -90,13 +89,9 @@ export class DefineSource
   }
 }
 
-export class DefineSourceList extends RunList implements DocStatement {
+export class DefineSourceList extends DocStatementList {
   elementType = 'defineSources';
   constructor(sourceList: DefineSource[]) {
     super(sourceList);
-  }
-
-  execute(doc: Document): ModelDataRequest {
-    return this.executeList(doc);
   }
 }

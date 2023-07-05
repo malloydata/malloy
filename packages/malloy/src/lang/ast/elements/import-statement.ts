@@ -46,17 +46,25 @@ export class ImportStatement extends MalloyElement implements DocStatement {
     }
   }
 
-  execute(doc: Document): ModelDataRequest {
+  needs(): ModelDataRequest {
+    const trans = this.translator();
+    if (trans && this.fullURL) {
+      const src = trans.root.importZone.getEntry(this.fullURL);
+      if (src.status === 'present') {
+        const childNeeds = trans.childRequest(this.fullURL);
+        if (childNeeds) return childNeeds;
+      }
+    }
+    return undefined;
+  }
+
+  execute(doc: Document): void {
     const trans = this.translator();
     if (!trans) {
       this.log('Cannot import without translation context');
     } else if (this.fullURL) {
       const src = trans.root.importZone.getEntry(this.fullURL);
       if (src.status === 'present') {
-        const childNeeds = trans.childRequest(this.fullURL);
-        if (childNeeds) {
-          return childNeeds;
-        }
         for (const [importing, entry] of Object.entries(
           trans.getChildExports(this.fullURL)
         )) {
@@ -72,6 +80,5 @@ export class ImportStatement extends MalloyElement implements DocStatement {
         this.log(`import failed with status: '${src.status}'`);
       }
     }
-    return undefined;
   }
 }

@@ -317,7 +317,7 @@ export class Malloy {
           }
           queryModel = new QueryModel(partialModel);
         }
-        return queryModel.compileQuery(segment).sql;
+        return queryModel.compileQuery(segment, false).sql;
       }
     });
     const {name, connection} = toCompile;

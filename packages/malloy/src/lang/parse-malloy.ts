@@ -356,7 +356,7 @@ class ImportsAndTablesStep implements TranslationStep {
 }
 
 interface SQLExploreRef {
-  ref?: ast.SQLSource;
+  ref?: ast.FromSQLSource;
   def?: ast.SQLStatement;
 }
 
@@ -402,8 +402,8 @@ class ASTStep implements TranslationStep {
     // instead of in the parse step. Note to myself, do that someday.
     const sqlExplores: Record<string, SQLExploreRef> = {};
     if (!this.walked) {
-      newAst.walk((walkedTo: ast.MalloyElement): void => {
-        if (walkedTo instanceof ast.SQLSource) {
+      for (const walkedTo of newAst.walk()) {
+        if (walkedTo instanceof ast.FromSQLSource) {
           if (!sqlExplores[walkedTo.refName]) {
             sqlExplores[walkedTo.refName] = {};
           }
@@ -416,7 +416,7 @@ class ASTStep implements TranslationStep {
         } else if (walkedTo instanceof ast.Unimplemented) {
           walkedTo.log('INTERNAL COMPILER ERROR: Untranslated parse node');
         }
-      });
+      }
       this.walked = true;
     }
     // If there is a partial ast ...

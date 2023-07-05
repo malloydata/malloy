@@ -100,6 +100,7 @@ export * from './query-properties/sampling';
 export * from './query-properties/top';
 export * from './sources/named-source';
 export * from './sources/query-source';
+export * from './sources/from-sql-source';
 export * from './sources/sql-source';
 export * from './sources/table-source';
 export * from './sql-elements/sql-statement';

@@ -47,7 +47,7 @@ interface EntryErrored extends AllEntries {
   message: string;
 }
 
-type ZoneEntry<T> = EntryPresent<T> | ReferenceEntry | EntryErrored;
+export type ZoneEntry<T> = EntryPresent<T> | ReferenceEntry | EntryErrored;
 
 /**
  * A Zone is a symbol table which may contain references to symbols
