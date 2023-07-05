@@ -57,6 +57,11 @@ export interface DocumentPosition {
   character: number;
 }
 
+export interface ImportLocation {
+  importURL: string;
+  location: DocumentLocation;
+}
+
 export interface DocumentLocation {
   url: string;
   range: DocumentRange;
