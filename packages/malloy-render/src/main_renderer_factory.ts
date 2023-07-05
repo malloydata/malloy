@@ -54,9 +54,9 @@ export class MainRendererFactory {
     DataVolumeRendererFactory.instance,
     BytesRendererFactory.instance,
     LinkRendererFactory.instance,
-    UnsupportedRendererFactory.instance,
     BooleanRendererFactory.instance,
     NumberRendererFactory.instance,
+    UnsupportedRendererFactory.instance,
     TextRendererFactory.instance,
   ];
 
