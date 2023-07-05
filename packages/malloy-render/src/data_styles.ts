@@ -100,7 +100,7 @@ export interface TimeRenderOptions extends TextRenderOptions {
 }
 
 export interface NumberRenderOptions extends TextRenderOptions {
-  number?: Record<string, unknown>;
+  value_format?: string;
 }
 
 export interface ImageRenderOptions extends TextRenderOptions {

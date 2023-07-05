@@ -192,7 +192,7 @@ describe('rendering results', () => {
   });
 
   describe('html renderer', () => {
-    test('renders with annotations correctly', async () => {
+    test('renders with tags correctly', async () => {
       const connectionName = 'duckdb';
       const runtime = runtimes.runtimeMap.get(connectionName);
       expect(runtime).toBeDefined();
@@ -330,6 +330,35 @@ describe('rendering results', () => {
         }`;
       const result = await (
         await runtime!.loadModel(src).loadQueryByName('mexico_point_map')
+      ).run();
+      const document = new JSDOM().window.document;
+      const html = await new HTMLView(document).render(result, {
+        dataStyles: {},
+      });
+
+      expect(html).toMatchSnapshot();
+    });
+  });
+
+  describe('number renderer', () => {
+    test('value format tags works correctly', async () => {
+      const connectionName = 'duckdb';
+      const runtime = runtimes.runtimeMap.get(connectionName);
+      expect(runtime).toBeDefined();
+      const src = `
+        sql: number_sql is { connection: "${connectionName}" select: """SELECT 12.345 as anumber""" }
+
+        query: number_query is from_sql(number_sql) -> {
+          project:
+          anumber
+          # number= "#,##0.0000"
+          larger is anumber
+          # number= "#,##0.00"
+          shorter is anumber
+        }
+      `;
+      const result = await (
+        await runtime!.loadModel(src).loadQueryByName('number_query')
       ).run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {

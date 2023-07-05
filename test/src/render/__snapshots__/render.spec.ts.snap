@@ -35,7 +35,7 @@ exports[`rendering results date renderer date with timezone rendered correctly 1
 </table>
 `;
 
-exports[`rendering results html renderer renders with annotations correctly 1`] = `
+exports[`rendering results html renderer renders with tags correctly 1`] = `
 <table
   style="vertical-align: top; border-collapse: collapse; width: 100%;"
 >
@@ -5082,6 +5082,57 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
       >
         <span>
           50%
+        </span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+`;
+
+exports[`rendering results number renderer value format tags works correctly 1`] = `
+<table
+  style="vertical-align: top; border-collapse: collapse; width: 100%;"
+>
+  <thead>
+    <tr>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        anumber
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        larger
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        shorter
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          12.345
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          12.345
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          12.345
         </span>
       </td>
     </tr>

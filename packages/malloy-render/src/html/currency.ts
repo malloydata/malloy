@@ -21,12 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  DataColumn,
-  Explore,
-  Field,
-  MalloyTagProperties,
-} from '@malloydata/malloy';
+import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLTextRenderer} from './text';
 import {RendererFactory} from '../renderer_factory';
 import {Currency, CurrencyRenderOptions, StyleDefaults} from '../data_styles';
@@ -68,6 +63,13 @@ export class HTMLCurrencyRenderer extends HTMLTextRenderer {
 export class CurrencyRendererFactory extends RendererFactory<CurrencyRenderOptions> {
   public static readonly instance = new CurrencyRendererFactory();
 
+  constructor() {
+    super();
+    this.addExtractor((options, value) => {
+      options.currency = (value as Currency) ?? Currency.Dollars;
+    }, this.rendererName);
+  }
+
   create(
     document: Document,
     _styleDefaults: StyleDefaults,
@@ -76,14 +78,6 @@ export class CurrencyRendererFactory extends RendererFactory<CurrencyRenderOptio
     options: CurrencyRenderOptions
   ): Renderer {
     return new HTMLCurrencyRenderer(document, options);
-  }
-
-  parseTagParameters(
-    tags: MalloyTagProperties
-  ): CurrencyRenderOptions | undefined {
-    return {
-      currency: (tags[this.rendererName] as Currency) ?? Currency.Dollars,
-    };
   }
 
   get rendererName() {

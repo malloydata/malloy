@@ -3,7 +3,25 @@ import {Renderer} from './renderer';
 import {DataRenderOptions, RenderDef, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 
+type TagPropertyExtractor<T extends DataRenderOptions> = (
+  options: T,
+  extractedValue: string
+) => void;
+
 export abstract class RendererFactory<T extends DataRenderOptions> {
+  readonly tagOptionExtractors: Record<string, TagPropertyExtractor<T>> = {};
+
+  protected addExtractor(
+    extractor: TagPropertyExtractor<T>,
+    ...tags: string[]
+  ) {
+    for (const tag in tags) {
+      if (tag) {
+        this.tagOptionExtractors[tag] = extractor;
+      }
+    }
+  }
+
   activates(_field: Field | Explore): boolean {
     // Does not activate by default.
     return false;
@@ -17,8 +35,17 @@ export abstract class RendererFactory<T extends DataRenderOptions> {
     return renderDef.renderer === this.rendererName;
   }
 
-  parseTagParameters(_tags: MalloyTagProperties): T | undefined {
-    return undefined;
+  parseTagParameters(tagProperties: MalloyTagProperties) {
+    const options = {} as T;
+    for (const tag in this.tagOptionExtractors) {
+      if (
+        tagProperties[tag] !== undefined &&
+        typeof tagProperties[tag] === 'string'
+      )
+        this.tagOptionExtractors[tag](options, tagProperties[tag] as string);
+    }
+
+    return options;
   }
 
   abstract get rendererName(): string | undefined;
