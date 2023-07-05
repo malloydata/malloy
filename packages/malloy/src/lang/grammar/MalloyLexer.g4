@@ -23,7 +23,7 @@
 
 lexer grammar MalloyLexer;
 
-JSON_STRING: '"' (ESC | SAFECODEPOINT)* '"';
+DQ_STRING: '"' (ESC | SAFECODEPOINT)* '"';
 
 fragment ESC: '\\' (["\\/bfnrt] | UNICODE);
 fragment UNICODE: 'u' HEX HEX HEX HEX;
@@ -128,7 +128,7 @@ STRING_ESCAPE
   ;
 
 HACKY_REGEX: ('/' | [rR]) '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
-STRING_LITERAL: '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
+SQ_STRING: '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
 fragment F_TO_EOL: ~[\r\n]* (('\r'? '\n') | EOF);
 DOC_ANNOTATION: '##' F_TO_EOL;
 ANNOTATION: '#' F_TO_EOL;

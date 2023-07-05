@@ -637,7 +637,7 @@ export class MalloyToAST
   ): ast.TimezoneStatement {
     const tz = cx.timezoneName();
     const timezoneStatement = this.astAt(
-      new ast.TimezoneStatement(this.stripQuotes(tz.STRING_LITERAL().text)),
+      new ast.TimezoneStatement(this.stripQuotes(tz.SQ_STRING().text)),
       tz
     );
 
@@ -1113,7 +1113,7 @@ export class MalloyToAST
   }
 
   visitExprString(pcx: parse.ExprStringContext): ast.ExprString {
-    return new ast.ExprString(pcx.STRING_LITERAL().text);
+    return new ast.ExprString(pcx.SQ_STRING().text);
   }
 
   visitExprRegex(pcx: parse.ExprRegexContext): ast.ExprRegEx {
