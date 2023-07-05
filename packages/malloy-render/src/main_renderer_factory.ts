@@ -30,6 +30,7 @@ import {BooleanRendererFactory} from './html/boolean';
 import {LinkRendererFactory} from './html/link';
 import {UnsupportedRendererFactory} from './html/unsupported';
 import {TextRendererFactory} from './html/text';
+import {DataVolumeRendererFactory} from './html/data_volume';
 
 export class MainRendererFactory {
   static renderFactories = [
@@ -50,11 +51,12 @@ export class MainRendererFactory {
     DateRendererFactory.instance,
     CurrencyRendererFactory.instance,
     PercentRendererFactory.instance,
-    NumberRendererFactory.instance,
+    DataVolumeRendererFactory.instance,
     BytesRendererFactory.instance,
-    BooleanRendererFactory.instance,
     LinkRendererFactory.instance,
     UnsupportedRendererFactory.instance,
+    BooleanRendererFactory.instance,
+    NumberRendererFactory.instance,
     TextRendererFactory.instance,
   ];
 
