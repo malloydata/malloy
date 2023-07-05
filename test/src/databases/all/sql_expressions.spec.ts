@@ -80,7 +80,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         run: ${databaseName}.sql("""
           SELECT * from (%{
             ${databaseName}.sql("""SELECT 1 as one""") -> { group_by: one }
-          }%)
+          }%) as the_table
         """) -> { group_by: one }
       `
       )
