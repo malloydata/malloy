@@ -63,12 +63,13 @@ export class NumberRendererFactory extends RendererFactory<NumberRenderOptions> 
 
   constructor() {
     super();
-    this.addExtractor((options, value) => {
-      options.value_format = value;
-    }, this.rendererName);
-    this.addExtractor((options, value) => {
-      options.value_format = value;
-    }, 'value_format');
+    this.addExtractor(
+      (options, value) => {
+        options.value_format = value;
+      },
+      this.rendererName,
+      'value_format'
+    );
   }
 
   activates(field: Field | Explore): boolean {
