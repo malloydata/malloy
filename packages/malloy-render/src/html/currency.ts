@@ -21,12 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  DataColumn,
-  Explore,
-  Field,
-  MalloyTagProperties,
-} from '@malloydata/malloy';
+import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {HTMLTextRenderer} from './text';
 import {RendererFactory} from '../renderer_factory';
 import {Currency, CurrencyRenderOptions, StyleDefaults} from '../data_styles';

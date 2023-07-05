@@ -40,7 +40,12 @@ export class HTMLNumberRenderer extends HTMLTextRenderer {
     }
 
     if (this.options.value_format) {
-      return numfmt.format(this.options.value_format, data.number.value);
+      try {
+        return numfmt.format(this.options.value_format, data.number.value);
+      } catch {
+        // TODO: explore surfacing invalid format error, ignoring it for now.
+        return data.number.value;
+      }
     }
 
     return data.number.value;
