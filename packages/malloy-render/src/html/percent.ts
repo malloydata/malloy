@@ -46,9 +46,9 @@ export class PercentRendererFactory extends RendererFactory<PercentRenderOptions
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
     _field: Field | Explore,
-    _options: PercentRenderOptions
+    options: PercentRenderOptions
   ): Renderer {
-    return new HTMLPercentRenderer(document);
+    return new HTMLPercentRenderer(document, options);
   }
 
   get rendererName() {

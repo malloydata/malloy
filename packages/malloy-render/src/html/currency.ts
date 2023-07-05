@@ -68,6 +68,13 @@ export class HTMLCurrencyRenderer extends HTMLTextRenderer {
 export class CurrencyRendererFactory extends RendererFactory<CurrencyRenderOptions> {
   public static readonly instance = new CurrencyRendererFactory();
 
+  constructor() {
+    super();
+    this.addExtractor((options, value) => {
+      options.currency = (value as Currency) ?? Currency.Dollars;
+    }, this.rendererName);
+  }
+
   create(
     document: Document,
     _styleDefaults: StyleDefaults,
@@ -76,14 +83,6 @@ export class CurrencyRendererFactory extends RendererFactory<CurrencyRenderOptio
     options: CurrencyRenderOptions
   ): Renderer {
     return new HTMLCurrencyRenderer(document, options);
-  }
-
-  parseTagParameters(
-    tags: MalloyTagProperties
-  ): CurrencyRenderOptions | undefined {
-    return {
-      currency: (tags[this.rendererName] as Currency) ?? Currency.Dollars,
-    };
   }
 
   get rendererName() {

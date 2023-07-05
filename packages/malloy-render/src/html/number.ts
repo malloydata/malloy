@@ -27,11 +27,20 @@ import {NumberRenderOptions, StyleDefaults} from '../data_styles';
 import {RendererOptions} from '../renderer_types';
 import {Renderer} from '../renderer';
 import {RendererFactory} from '../renderer_factory';
+import numfmt from 'numfmt';
 
 export class HTMLNumberRenderer extends HTMLTextRenderer {
+  constructor(document: Document, readonly options: NumberRenderOptions) {
+    super(document);
+  }
+
   getNumber(data: DataColumn): number | null {
     if (data.isNull()) {
       return null;
+    }
+
+    if (this.options.value_format) {
+      return numfmt.format(this.options.value_format, data.number.value);
     }
 
     return data.number.value;
@@ -47,6 +56,16 @@ export class HTMLNumberRenderer extends HTMLTextRenderer {
 export class NumberRendererFactory extends RendererFactory<NumberRenderOptions> {
   public static readonly instance = new NumberRendererFactory();
 
+  constructor() {
+    super();
+    this.addExtractor((options, value) => {
+      options.value_format = value;
+    }, this.rendererName);
+    this.addExtractor((options, value) => {
+      options.value_format = value;
+    }, 'value_format');
+  }
+
   activates(field: Field | Explore): boolean {
     return (
       field.hasParentExplore() &&
@@ -60,9 +79,9 @@ export class NumberRendererFactory extends RendererFactory<NumberRenderOptions> 
     _styleDefaults: StyleDefaults,
     _rendererOptions: RendererOptions,
     _field: Field | Explore,
-    _options: NumberRenderOptions
+    options: NumberRenderOptions
   ): Renderer {
-    return new HTMLNumberRenderer(document);
+    return new HTMLNumberRenderer(document, options);
   }
 
   get rendererName() {
