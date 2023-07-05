@@ -341,7 +341,7 @@ describe('rendering results', () => {
   });
 
   describe('number renderer', () => {
-    test.only('value format tags works correctly', async () => {
+    test('value format tags works correctly', async () => {
       const connectionName = 'duckdb';
       const runtime = runtimes.runtimeMap.get(connectionName);
       expect(runtime).toBeDefined();

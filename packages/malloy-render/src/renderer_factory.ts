@@ -11,11 +11,14 @@ type TagPropertyExtractor<T extends DataRenderOptions> = (
 export abstract class RendererFactory<T extends DataRenderOptions> {
   readonly tagOptionExtractors: Record<string, TagPropertyExtractor<T>> = {};
 
-  protected addExtractor(extractor: TagPropertyExtractor<T>, ...tags: string[]) {
+  protected addExtractor(
+    extractor: TagPropertyExtractor<T>,
+    ...tags: string[]
+  ) {
     for (const tag in tags) {
-    if (tag) {
-      this.tagOptionExtractors[tag] = extractor;
-    }
+      if (tag) {
+        this.tagOptionExtractors[tag] = extractor;
+      }
     }
   }
 
