@@ -103,18 +103,6 @@ export interface NumberRenderOptions extends TextRenderOptions {
   value_format?: string;
 }
 
-export enum DataVolumeUnit {
-  Bytes = 'bytes',
-  Kilobytes = 'kb',
-  Megabytes = 'mb',
-  Gigabytes = 'gb',
-  Terabytes = 'tb',
-}
-
-export interface DataVolumeRenderOptions extends TextRenderOptions {
-  data_volume_unit?: DataVolumeUnit;
-}
-
 export interface ImageRenderOptions extends TextRenderOptions {
   border?: boolean;
 }
