@@ -225,14 +225,6 @@ export class MalloyToAST
     return new ast.Filter([el]);
   }
 
-  protected getExploreSource(pcx: parse.ExploreSourceContext): ast.Source {
-    const element = this.visit(pcx);
-    if (element instanceof ast.Source) {
-      return element;
-    }
-    throw this.internalError(pcx, `'${element.elementType}': illegal source`);
-  }
-
   protected makeSqlString(
     pcx: parse.SqlStringContext,
     sqlStr: ast.SQLString
@@ -287,10 +279,21 @@ export class MalloyToAST
     return defList;
   }
 
+  getSource(pcx: parse.ExploreContext) {
+    const source = this.visit(pcx);
+    if (source instanceof ast.Source) {
+      return source;
+    }
+    throw this.internalError(
+      pcx,
+      `Source expected, but ${source.elementType} found`
+    );
+  }
+
   visitSourceDefinition(pcx: parse.SourceDefinitionContext): ast.DefineSource {
     const exploreDef = new ast.DefineSource(
       this.getIdText(pcx.sourceNameDef()),
-      this.visitExplore(pcx.explore()),
+      this.getSource(pcx.explore()),
       true,
       []
     );
@@ -299,16 +302,87 @@ export class MalloyToAST
     return this.astAt(exploreDef, pcx);
   }
 
-  visitExplore(pcx: parse.ExploreContext): ast.Source {
-    const source = this.getExploreSource(pcx.exploreSource());
-    const refineCx = pcx.exploreProperties();
-    if (refineCx) {
-      return this.astAt(
-        new ast.RefinedSource(source, this.visitExploreProperties(refineCx)),
-        pcx
-      );
+  visitQueryFromSource(pcx: parse.QueryFromSourceContext): ast.QueryElement {
+    const root = this.visitUnextendableSource(pcx.unextendableSource());
+    const query = new ast.FullQuery(root);
+    query.addSegments(...this.getSegments(pcx.pipeElement()));
+    return this.astAt(query, pcx);
+  }
+
+  visitRefinedQuery(pcx: parse.RefinedQueryContext): ast.QueryElement {
+    const base = this.visit(pcx.refinableQuery());
+    if (ast.isQueryElement(base)) {
+      const refinement = pcx.queryRefinement();
+      if (refinement) {
+        const properties = this.visitQueryProperties(
+          refinement.queryProperties()
+        );
+        base.refineHead(properties);
+      }
+      return base;
     }
-    return source;
+    throw this.internalError(
+      pcx,
+      `Query expected, but ${base.elementType} found`
+    );
+  }
+
+  visitQueryByTurtleName(
+    pcx: parse.QueryByTurtleNameContext
+  ): ast.QueryElement {
+    const source = this.visitUnextendableSource(pcx.unextendableSource());
+    const query = new ast.FullQuery(source);
+    query.turtleName = this.getFieldName(pcx.id());
+    return this.astAt(query, pcx);
+  }
+
+  visitQueryByName(pcx: parse.QueryByNameContext): ast.QueryElement {
+    const query = new ast.ReferenceHeadedQuery();
+    query.head = this.getModelEntryName(pcx.id());
+    return this.astAt(query, pcx);
+  }
+
+  visitUnextendableSource(pcx: parse.UnextendableSourceContext) {
+    const unextendedSource = this.visit(pcx.extendableSource());
+    if (unextendedSource instanceof ast.Source) {
+      const extensions = pcx.sourceExtension()?.exploreProperties();
+      if (extensions) {
+        return new ast.RefinedSource(
+          unextendedSource,
+          this.visitExploreProperties(extensions)
+        );
+      } else {
+        return unextendedSource;
+      }
+    }
+    throw this.internalError(
+      pcx,
+      `Source expected, but ${unextendedSource.elementType} found`
+    );
+  }
+
+  visitQuery(pcx: parse.QueryContext): ast.QueryElement {
+    const query = this.visit(pcx.unrefinableQuery());
+    if (ast.isQueryElement(query)) {
+      query.addSegments(...this.getSegments(pcx.pipeElement()));
+      return this.astAt(query, pcx);
+    }
+    throw this.internalError(
+      pcx,
+      `Expected query, but ${query.elementType} found`
+    );
+  }
+
+  visitExtendedQuery(pcx: parse.ExtendedQueryContext) {
+    const query = this.visitQuery(pcx.query());
+    const source = new ast.QuerySource(query);
+    return this.astAt(
+      new ast.RefinedSource(
+        source,
+        this.visitExploreProperties(pcx.sourceExtension().exploreProperties())
+      ),
+      pcx
+    );
   }
 
   visitExploreProperties(pcx: parse.ExplorePropertiesContext): ast.SourceDesc {
@@ -449,7 +523,7 @@ export class MalloyToAST
     ecx: parse.IsExploreContext | undefined
   ): {joinFrom: ast.Source; notes: string[]} {
     if (ecx) {
-      const joinSrc = this.visitExplore(ecx.explore());
+      const joinSrc = this.getSource(ecx.explore());
       const notes = getNotes(ecx._before_is).concat(getNotes(ecx._after_is));
       return {joinFrom: joinSrc, notes};
     }
@@ -923,24 +997,6 @@ export class MalloyToAST
     }
     const tail = this.getSegments(pipeCx.pipeElement());
     pipe.addSegments(...tail);
-  }
-
-  visitExploreArrowQuery(pcx: parse.ExploreArrowQueryContext): ast.FullQuery {
-    const root = this.visitExplore(pcx.explore());
-    const query = new ast.FullQuery(root);
-    this.buildPipelineFromName(query, pcx.pipelineFromName());
-    return this.astAt(query, pcx);
-  }
-
-  visitArrowQuery(pcx: parse.ArrowQueryContext): ast.ExistingQuery {
-    const query = new ast.ExistingQuery();
-    query.head = this.getModelEntryName(pcx.queryName());
-    const refCx = pcx.queryProperties();
-    if (refCx) {
-      query.refineHead(this.visitQueryProperties(refCx));
-    }
-    query.addSegments(...this.getSegments(pcx.pipeElement()));
-    return this.astAt(query, pcx);
   }
 
   visitTopLevelQueryDefs(

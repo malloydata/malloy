@@ -113,9 +113,40 @@ topLevelQueryDef
 
 refineOperator: PLUS ;
 
+queryRefinement
+  : refineOperator? queryProperties
+  | REFINE queryProperties
+  ;
+
+sourceExtension
+  : refineOperator? exploreProperties
+  | EXTEND exploreProperties
+  ;
+
 query
-  : explore ARROW pipelineFromName                  # exploreArrowQuery
-  | ARROW queryName (refineOperator? queryProperties)? pipeElement*   # arrowQuery
+  : unrefinableQuery pipeElement*
+  ;
+
+unrefinableQuery
+  : unextendableSource pipeElement*  # QueryFromSource
+  | refinableQuery queryRefinement?  # RefinedQuery
+  ;
+
+refinableQuery
+  : ARROW? id                       # QueryByName
+  | unextendableSource ARROW id     # QueryByTurtleName
+  ;
+
+unextendableSource
+  : extendableSource sourceExtension?
+  ;
+
+extendableSource
+  : sourceID                                      # NamedSource
+  | exploreTable                                  # TableSource
+  | FROM OPAREN query CPAREN                      # QuerySource
+  | FROM_SQL OPAREN sqlExploreNameRef CPAREN      # SQLSourceName
+  | connectionId DOT SQL OPAREN sqlString CPAREN  # SQLSource
   ;
 
 pipelineFromName
@@ -160,15 +191,8 @@ sourceDefinition
   ;
 
 explore
-  : exploreSource (refineOperator? exploreProperties)?
-  ;
-
-exploreSource
-  : sourceID                                      # NamedSource
-  | exploreTable                                  # TableSource
-  | FROM OPAREN query CPAREN                      # QuerySource
-  | FROM_SQL OPAREN sqlExploreNameRef CPAREN      # SQLSourceName
-  | connectionId DOT SQL OPAREN sqlString CPAREN  # SQLSource
+  : unextendableSource           # BareExtendedSource_stub
+  | query sourceExtension        # ExtendedQuery
   ;
 
 sourceNameDef: id;
