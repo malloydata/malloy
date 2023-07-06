@@ -8,6 +8,81 @@ exports[`rendering results bar chart renderer date with timezone rendered correc
 </span>
 `;
 
+exports[`rendering results data volume renderer data volume tags works correctly 1`] = `
+<table
+  style="vertical-align: top; border-collapse: collapse; width: 100%;"
+>
+  <thead>
+    <tr>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        usage_​b
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        usage_​kb
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        usage_​mb
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        usage_​gb
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        usage_​tb
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          3,758 Bytes
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          3.67 KB
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          3.584 MB
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          3.5 GB
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          3.418 TB
+        </span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+`;
+
 exports[`rendering results date renderer date with timezone rendered correctly 1`] = `
 <table
   style="vertical-align: top; border-collapse: collapse; width: 100%;"

@@ -89,7 +89,6 @@ export class DataVolumeRendererFactory extends RendererFactory<DataVolumeRenderO
   constructor() {
     super();
     this.addExtractor((options, value) => {
-      throw new Error(`----a> ${options.data_volume_unit}`);
       options.data_volume_unit =
         (value as DataVolumeUnit) ?? DataVolumeUnit.Bytes;
     }, this.rendererName);
