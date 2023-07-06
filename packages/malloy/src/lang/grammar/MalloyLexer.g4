@@ -126,8 +126,10 @@ fragment ESC: '\\' (["\\/bfnrt] | UNICODE);
 fragment UNICODE: 'u' HEX HEX HEX HEX;
 fragment HEX: [0-9a-fA-F];
 fragment SAFECODEPOINT: ~ ["\\\u0000-\u001F];
+fragment ESC2: '\\' (['\\/bfnrt] | UNICODE);
+fragment SAFECODEPOINT2: ~ ['\\\u0000-\u001F];
 DQ_STRING: '"'  (ESC | SAFECODEPOINT)* '"';
-SQ_STRING: '\'' (ESC | SAFECODEPOINT)* '\'';
+SQ_STRING: '\'' (ESC2 | SAFECODEPOINT2)* '\'';
 
 fragment F_TO_EOL: ~[\r\n]* (('\r'? '\n') | EOF);
 DOC_ANNOTATION: '##' F_TO_EOL;
