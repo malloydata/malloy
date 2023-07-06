@@ -23,12 +23,6 @@
 
 lexer grammar MalloyLexer;
 
-DQ_STRING: '"' (ESC | SAFECODEPOINT)* '"';
-
-fragment ESC: '\\' (["\\/bfnrt] | UNICODE);
-fragment UNICODE: 'u' HEX HEX HEX HEX;
-fragment HEX: [0-9a-fA-F];
-fragment SAFECODEPOINT: ~ ["\\\u0000-\u001F];
 fragment SPACE_CHAR: [ \u000B\t\r\n];
 
 // colon keywords ...
@@ -126,9 +120,15 @@ STRING_ESCAPE
   | '\\' '\\'
   | '\\' .
   ;
-
 HACKY_REGEX: ('/' | [rR]) '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
-SQ_STRING: '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
+
+fragment ESC: '\\' (["\\/bfnrt] | UNICODE);
+fragment UNICODE: 'u' HEX HEX HEX HEX;
+fragment HEX: [0-9a-fA-F];
+fragment SAFECODEPOINT: ~ ["\\\u0000-\u001F];
+DQ_STRING: '"'  (ESC | SAFECODEPOINT)* '"';
+SQ_STRING: '\'' (ESC | SAFECODEPOINT)* '\'';
+
 fragment F_TO_EOL: ~[\r\n]* (('\r'? '\n') | EOF);
 DOC_ANNOTATION: '##' F_TO_EOL;
 ANNOTATION: '#' F_TO_EOL;
