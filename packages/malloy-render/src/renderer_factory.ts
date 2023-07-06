@@ -15,10 +15,8 @@ export abstract class RendererFactory<T extends DataRenderOptions> {
     extractor: TagPropertyExtractor<T>,
     ...tags: string[]
   ) {
-    for (const tag in tags) {
-      if (tag) {
-        this.tagOptionExtractors[tag] = extractor;
-      }
+    for (const index in tags) {
+      this.tagOptionExtractors[tags[index]] = extractor;
     }
   }
 
