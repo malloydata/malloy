@@ -337,7 +337,7 @@ export class MalloyToAST
   }
 
   visitQueryByName(pcx: parse.QueryByNameContext): ast.QueryElement {
-    const query = new ast.ReferenceHeadedQuery();
+    const query = new ast.ExistingQuery();
     query.head = this.getModelEntryName(pcx.id());
     return this.astAt(query, pcx);
   }

@@ -30,7 +30,7 @@ import {ModelEntryReference} from '../types/malloy-element';
 import {QueryComp} from '../types/query-comp';
 import {QueryHeadStruct} from './query-head-struct';
 
-export class ReferenceHeadedQuery extends PipelineDesc {
+export class ExistingQuery extends PipelineDesc {
   _head?: ModelEntryReference;
 
   set head(head: ModelEntryReference | undefined) {
@@ -83,26 +83,9 @@ export class ReferenceHeadedQuery extends PipelineDesc {
         query.annotation = head.annotation;
       }
       return {outputStruct: appended.structDef, query};
-    } else if (head.type === 'struct') {
-      const structRef = this.head.refString;
-      const destQuery: Query = {
-        type: 'query',
-        structRef,
-        pipeline: [],
-        location: this.location,
-      };
-      const structDef = head;
-      const pipeFs = new StaticSpace(structDef);
-      if (ErrorFactory.isErrorStructDef(structDef)) {
-        return oops();
-      }
-      const appended = this.appendOps(destQuery.pipeline, pipeFs);
-      destQuery.pipeline = appended.opList;
-      return {outputStruct: appended.structDef, query: destQuery};
-    } else {
-      this.log(`Illegal reference to '${this.head}', query expected`);
-      return oops();
     }
+    this.log(`Illegal reference to '${this.head}', query expected`);
+    return oops();
   }
 
   query(): Query {

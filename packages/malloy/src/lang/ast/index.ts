@@ -78,7 +78,7 @@ export * from './query-properties/extend';
 export * from './parameters/has-parameter';
 export * from './query-elements/anonymous-query';
 export * from './query-elements/run-query';
-export * from './query-elements/reference-headed-query';
+export * from './query-elements/existing-query';
 export * from './query-elements/full-query';
 export * from './query-items/field-declaration';
 export * from './query-items/field-references';

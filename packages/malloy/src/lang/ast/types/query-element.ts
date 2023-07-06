@@ -22,10 +22,10 @@
  */
 
 import {MalloyElement} from './malloy-element';
-import {ReferenceHeadedQuery} from '../query-elements/reference-headed-query';
+import {ExistingQuery} from '../query-elements/existing-query';
 import {FullQuery} from '../query-elements/full-query';
 
-export type QueryElement = FullQuery | ReferenceHeadedQuery;
+export type QueryElement = FullQuery | ExistingQuery;
 export function isQueryElement(e: MalloyElement): e is QueryElement {
-  return e instanceof FullQuery || e instanceof ReferenceHeadedQuery;
+  return e instanceof FullQuery || e instanceof ExistingQuery;
 }
