@@ -23,7 +23,7 @@
 
 import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {Renderer} from '../renderer';
-import {createNullElement} from './utils';
+import {createErrorElement, createNullElement} from './utils';
 import {
   DataRenderOptions,
   StyleDefaults,
@@ -40,7 +40,13 @@ export class HTMLTextRenderer implements Renderer {
   }
 
   async render(data: DataColumn): Promise<HTMLElement> {
-    const text = this.getText(data);
+    let text: string | null = null;
+    try {
+      text = this.getText(data);
+    } catch (e) {
+      createErrorElement(this.document, e);
+    }
+
     if (text === null) {
       return createNullElement(this.document);
     }
