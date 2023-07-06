@@ -791,22 +791,24 @@ export abstract class MalloyTranslation {
   }
 
   importAt(position: DocumentPosition): ImportLocation | undefined {
-    // Here we assume that imports DO NOT overlap. And then we do a binary
+    // Here we assume that imports DO NOT overlap. And then we do a linear
     // search to find the one we're looking for.
-    const index = this.findIndexBefore(position);
-    if (index === this.imports.length) {
-      return undefined;
-    }
-    const imp = this.imports[index];
-    if (
-      imp.location.range.start.line <= position.line &&
-      imp.location.range.end.line >= position.line &&
-      (position.line !== imp.location.range.start.line ||
-        position.character >= imp.location.range.start.character) &&
-      (position.line !== imp.location.range.end.line ||
-        position.character <= imp.location.range.end.character)
-    ) {
-      return imp;
+    for (let index = 0; index < this.imports.length; index++) {
+      const imp = this.imports[index];
+      // Ignore any import in another file
+      if (imp.location.url !== this.sourceURL) {
+        return;
+      }
+      if (
+        imp.location.range.start.line <= position.line &&
+        imp.location.range.end.line >= position.line &&
+        (position.line !== imp.location.range.start.line ||
+          position.character >= imp.location.range.start.character) &&
+        (position.line !== imp.location.range.end.line ||
+          position.character <= imp.location.range.end.character)
+      ) {
+        return imp;
+      }
     }
     return undefined;
   }
@@ -815,48 +817,6 @@ export abstract class MalloyTranslation {
     for (const [key, value] of Object.entries(this.root.importZone.location)) {
       this.imports.push({importURL: key, location: value});
     }
-    // Sort list of imports by end position so that we can do a binary
-    // search to find an import at a given position.
-    this.imports.sort((i1, i2) => {
-      return this.comparePosition(i1.location.range.end, i2.location.range.end);
-    });
-  }
-
-  private comparePosition(p1: DocumentPosition, p2: DocumentPosition): number {
-    if (p1.line > p2.line) {
-      return 1;
-    }
-    if (p1.line < p2.line) {
-      return -1;
-    }
-    if (p1.character > p2.character) {
-      return 1;
-    }
-    if (p1.character < p2.character) {
-      return -1;
-    }
-    return 0;
-  }
-
-  private findIndexBefore(position: DocumentPosition): number {
-    let low = 0;
-    let high = this.imports.length;
-
-    while (low < high) {
-      const middle = Math.floor((low + high) / 2);
-      const compare = this.imports[middle].location.range.end;
-      if (
-        compare.line < position.line ||
-        (compare.line === position.line &&
-          compare.character < position.character)
-      ) {
-        low = middle + 1;
-      } else {
-        high = middle;
-      }
-    }
-
-    return low;
   }
 
   metadata(): MetadataResponse {

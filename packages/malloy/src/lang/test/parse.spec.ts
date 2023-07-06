@@ -2789,7 +2789,7 @@ describe('translate imports', () => {
     const im = m.importAt({line: 0, character: 10});
     expect(im?.importURL).toEqual('internal://test/langtests/myfile.malloy');
     expect(im?.location.url).toEqual('internal://test/langtests/root.malloy');
-    expect(im?.location.range.start).toEqual({line: 0, character: 7});
+    expect(im?.location).toMatchObject(source.locations[0]);
   });
 });
 
