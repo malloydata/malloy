@@ -22,22 +22,12 @@
  */
 
 import {Annotation} from '../../../model';
-import {
-  DocStatement,
-  Document,
-  MalloyElement,
-  ModelEntryReference,
-} from '../types/malloy-element';
+import {DocStatement, Document, MalloyElement} from '../types/malloy-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
 import {QueryElement} from '../types/query-element';
 
-abstract class RunQuery extends MalloyElement implements DocStatement {
+export class RunQuery extends MalloyElement implements DocStatement, Noteable {
   elementType = 'runQuery';
-
-  abstract execute(doc: Document): void;
-}
-
-export class RunQueryDef extends RunQuery implements Noteable {
   note?: Annotation;
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
@@ -57,25 +47,5 @@ export class RunQueryDef extends RunQuery implements Noteable {
     }
     doc.queryList.push(modelQuery);
     return undefined;
-  }
-}
-
-export class RunQueryRef extends RunQuery {
-  constructor(readonly queryName: ModelEntryReference) {
-    super();
-    this.has({queryName});
-  }
-
-  execute(doc: Document): void {
-    const found = doc.getEntry(this.queryName.refString);
-    if (found === undefined) {
-      this.queryName.log(`${this.queryName} is not defined`);
-    }
-    if (found.entry.type === 'query') {
-      doc.queryList.push(found.entry);
-      return undefined;
-    } else {
-      this.queryName.log(`${this.queryName} is not a query`);
-    }
   }
 }

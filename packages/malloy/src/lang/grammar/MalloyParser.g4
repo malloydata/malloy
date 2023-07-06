@@ -58,8 +58,7 @@ isDefine
   ;
 
 runStatement
-  : blockTags=tags RUN noteTags=tags topLevelAnonQueryDef     # runStatementDef
-  | RUN queryName                                             # runStatementRef
+  : blockTags=tags RUN noteTags=tags topLevelAnonQueryDef
   ;
 
 defineSQLStatement

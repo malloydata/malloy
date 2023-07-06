@@ -1049,10 +1049,10 @@ export class MalloyToAST
     );
   }
 
-  visitRunStatementDef(pcx: parse.RunStatementDefContext): ast.RunQueryDef {
+  visitRunStatement(pcx: parse.RunStatementContext): ast.RunQuery {
     const query = this.visit(pcx.topLevelAnonQueryDef().query());
     if (ast.isQueryElement(query)) {
-      const el = new ast.RunQueryDef(query);
+      const el = new ast.RunQuery(query);
       el.extendNote({blockNotes: getNotes(pcx._blockTags)});
       el.extendNote({notes: getNotes(pcx._noteTags)});
       return this.astAt(el, pcx);
@@ -1061,12 +1061,6 @@ export class MalloyToAST
       pcx,
       `Run query matched, but ${query.elementType} found`
     );
-  }
-
-  visitRunStatementRef(pcx: parse.RunStatementRefContext): ast.RunQueryRef {
-    const name = this.getModelEntryName(pcx.queryName());
-    const el = this.astAt(new ast.RunQueryRef(name), pcx.queryName());
-    return this.astAt(el, pcx);
   }
 
   visitNestStatement(pcx: parse.NestStatementContext): ast.Nests {

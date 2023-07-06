@@ -102,8 +102,8 @@ test('run (ref) symbols are included', () => {
   testSymbol(
     markSource`query: by_carrier is flights -> by_carrier
     run: ${'by_carrier'}`,
-    'by_carrier',
-    'query',
+    'unnamed_query',
+    'unnamed_query',
     [1]
   );
 });
