@@ -1124,7 +1124,7 @@ export class MalloyToAST
 
   visitExprString(pcx: parse.ExprStringContext): ast.ExprString {
     const str = getShortString(pcx);
-    if (str) {
+    if (str !== undefined) {
       return new ast.ExprString(str);
     }
     this.contextError(pcx, 'Illegal string');
