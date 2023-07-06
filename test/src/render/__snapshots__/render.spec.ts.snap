@@ -35,6 +35,129 @@ exports[`rendering results date renderer date with timezone rendered correctly 1
 </table>
 `;
 
+exports[`rendering results date renderer truncated date no explicit timezone rendered correctly 1`] = `
+<table
+  style="vertical-align: top; border-collapse: collapse; width: 100%;"
+>
+  <thead>
+    <tr>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        yr
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        qt
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        mt
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        dy
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-Q4
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-12
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-12-11
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-Q1
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-01
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-01-01
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-Q2
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-04
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-04-01
+        </span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+`;
+
 exports[`rendering results html renderer renders with tags correctly 1`] = `
 <table
   style="vertical-align: top; border-collapse: collapse; width: 100%;"
