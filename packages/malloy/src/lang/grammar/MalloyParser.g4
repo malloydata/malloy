@@ -128,7 +128,7 @@ query
   ;
 
 unrefinableQuery
-  : unextendableSource pipeElement*  # QueryFromSource
+  : unextendableSource pipeElement+  # QueryFromSource
   | refinableQuery queryRefinement?  # RefinedQuery
   ;
 
