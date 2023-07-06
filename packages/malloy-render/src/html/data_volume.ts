@@ -49,8 +49,9 @@ export class HTMLDataVolumeRenderer extends HTMLTextRenderer {
     }
 
     if (!data.isNumber()) {
-      // TODO: check if this is proper way to throw.
-      throw new Error('');
+      throw new Error(
+        `Cannot format field ${data.field.name} as data volume since its not a number`
+      );
     }
 
     let data_volume = data.number.value;
