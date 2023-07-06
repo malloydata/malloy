@@ -84,11 +84,11 @@ sqlInterpolation
   ;
 
 importStatement
-  : IMPORT shortString
+  : IMPORT importURL
   ;
 
 importURL
-  : DQ_STRING
+  : shortString
   ;
 
 docAnnotations
@@ -399,11 +399,7 @@ sampleStatement
   ;
 
 timezoneStatement
-  : TIMEZONE timezoneName
-  ;
-
-timezoneName
-  : SQ_STRING
+  : TIMEZONE shortString
   ;
 
 queryAnnotation

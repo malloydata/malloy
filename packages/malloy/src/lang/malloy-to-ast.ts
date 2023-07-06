@@ -646,10 +646,9 @@ export class MalloyToAST
   visitTimezoneStatement(
     cx: parse.TimezoneStatementContext
   ): ast.TimezoneStatement {
-    const tz = cx.timezoneName();
     const timezoneStatement = this.astAt(
-      new ast.TimezoneStatement(this.stripQuotes(tz.SQ_STRING().text)),
-      tz
+      new ast.TimezoneStatement(getShortString(cx) || 'UTC'),
+      cx.shortString()
     );
 
     if (!timezoneStatement.isValid) {
@@ -1446,7 +1445,7 @@ export class MalloyToAST
   }
 
   visitImportStatement(pcx: parse.ImportStatementContext): ast.ImportStatement {
-    const url = getShortString(pcx) || 'BAD_URL_FOR_IMPORT';
+    const url = getShortString(pcx.importURL()) || 'BAD_URL_FOR_IMPORT';
     return this.astAt(
       new ast.ImportStatement(url, this.parse.subTranslator.sourceURL),
       pcx
