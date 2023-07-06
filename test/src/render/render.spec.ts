@@ -286,6 +286,33 @@ describe('rendering results', () => {
 
       expect(html).toMatchSnapshot();
     });
+
+    test('truncated date no explicit timezone rendered correctly', async () => {
+      const connectionName = 'duckdb';
+      const runtime = runtimes.runtimeMap.get(connectionName);
+      expect(runtime).toBeDefined();
+      const src = `
+      sql: timeDataTrunc is { connection: "duckdb"  select: """
+                    SELECT CAST('2021-12-11 10:20:00' AS datetime) as times
+          UNION ALL SELECT CAST('2021-01-01 05:40:00' AS datetime)
+          UNION ALL SELECT CAST('2021-04-01 00:59:00' AS datetime)"""}
+
+
+        query:
+          data_trunc is from_sql(timeDataTrunc) -> {
+            project: yr is times.year, qt is times.quarter, mt is times.month, dy is times.day
+        }
+      `;
+      const result = await (
+        await runtime!.loadModel(src).loadQueryByName('data_trunc')
+      ).run();
+      const document = new JSDOM().window.document;
+      const html = await new HTMLView(document).render(result, {
+        dataStyles: {},
+      });
+
+      expect(html).toMatchSnapshot();
+    });
   });
 
   describe('bar chart renderer', () => {
