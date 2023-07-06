@@ -395,4 +395,38 @@ describe('rendering results', () => {
       expect(html).toMatchSnapshot();
     });
   });
+
+  describe('data volume renderer', () => {
+    test('data volume tags works correctly', async () => {
+      const connectionName = 'duckdb';
+      const runtime = runtimes.runtimeMap.get(connectionName);
+      expect(runtime).toBeDefined();
+      const src = `
+        sql: number_sql is { connection: "${connectionName}" select: """SELECT 1""" }
+
+        query: bytes_query is from_sql(number_sql) -> {
+          project:
+          # data_volume = bytes
+          usage_b is 3758
+          # data_volume = kb
+          usage_kb is 3758
+          # data_volume = mb
+          usage_mb is 3758096
+          # data_volume = gb
+          usage_gb is 3758096384
+          # data_volume = tb
+          usage_tb is 3758096384000
+        }
+      `;
+      const result = await (
+        await runtime!.loadModel(src).loadQueryByName('bytes_query')
+      ).run();
+      const document = new JSDOM().window.document;
+      const html = await new HTMLView(document).render(result, {
+        dataStyles: {},
+      });
+
+      expect(html).toMatchSnapshot();
+    });
+  });
 });
