@@ -5125,14 +5125,14 @@ exports[`rendering results number renderer value format tags works correctly 1`]
         style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <span>
-          12.345
+          12.3450
         </span>
       </td>
       <td
         style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <span>
-          12.345
+          12.35
         </span>
       </td>
     </tr>
