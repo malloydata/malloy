@@ -84,7 +84,19 @@ export function timeToString(
   timezone?: string
 ): string {
   timeframe ||= TimestampTimeframe.Second;
-  const dateTime = DateTime.fromJSDate(time, {zone: timezone});
+
+  let shouldNormalize = false;
+  switch (timeframe) {
+    case TimestampTimeframe.Hour:
+    case TimestampTimeframe.Minute:
+    case TimestampTimeframe.Second:
+      shouldNormalize = true;
+      break;
+  }
+
+  const dateTime = DateTime.fromJSDate(time, {
+    zone: shouldNormalize && timezone ? timezone : 'UTC',
+  });
 
   switch (timeframe) {
     case TimestampTimeframe.Year:
