@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {ModelMaterializer} from '@malloydata/malloy';
 import {RuntimeList} from '../runtimes';
 import {describeIfDatabaseAvailable} from '../util';
 import {HTMLView} from '@malloydata/render';
@@ -262,6 +263,87 @@ describe('rendering results', () => {
       });
 
       expect(html).toMatchSnapshot();
+    });
+
+    describe('hidden tags', () => {
+      let modelMaterializer: ModelMaterializer;
+      beforeAll(() => {
+        const connectionName = 'duckdb';
+        const runtime = runtimes.runtimeMap.get(connectionName);
+        expect(runtime).toBeDefined();
+        const src = `
+        sql: height_sql is { connection: "duckdb" select: """
+                      SELECT 'Pedro' as nm, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine
+            UNION ALL SELECT 'Pedro', 2, 25, 3.4, 100, 1
+            UNION ALL SELECT 'Sebastian', 1, 23, 2, 400, 1
+            UNION ALL SELECT 'Sebastian', 2, 28, 2.6, 500, 1 """ }
+
+          source: height
+          # line_chart
+            is from_sql(height_sql) + {
+
+            measure: visitcount is sum(vaccine) / count();
+
+            # currency
+            # hidden
+            dimension: price is apptcost
+
+            query: by_name is {
+              group_by: nm
+              nest: height_by_age
+              is {
+                project:
+                  # hidden
+                  monthy,
+                  height
+              }
+
+              # hidden
+              nest: height_by_age_hidden
+              is {
+                project: monthy, height
+              }
+
+              nest: monthy_list is {
+                project: price
+              }
+
+              aggregate:
+                visitcount
+                # hidden
+                noshowvc is visitcount
+            }
+
+            query: by_name_dashboard is by_name {}
+          }
+
+          query: by_name is height -> by_name {}
+          query: by_name_dashboard is height -> by_name_dashboard {}
+        `;
+        modelMaterializer = runtime!.loadModel(src);
+      });
+
+      test('rendered correctly table', async () => {
+        const result = await modelMaterializer.loadQueryByName('by_name').run();
+        const document = new JSDOM().window.document;
+        const html = await new HTMLView(document).render(result, {
+          dataStyles: {},
+        });
+
+        expect(html).toMatchSnapshot();
+      });
+
+      test('rendered correctly dashboard', async () => {
+        const result = await modelMaterializer
+          .loadQueryByName('by_name_dashboard')
+          .run();
+        const document = new JSDOM().window.document;
+        const html = await new HTMLView(document).render(result, {
+          dataStyles: {},
+        });
+
+        expect(html).toMatchSnapshot();
+      });
     });
   });
 
