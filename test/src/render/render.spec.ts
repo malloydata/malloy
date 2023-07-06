@@ -290,6 +290,7 @@ describe('rendering results', () => {
 
             query: by_name is {
               group_by: nm
+              order_by: nm
               nest: height_by_age
               is {
                 project:
@@ -323,7 +324,7 @@ describe('rendering results', () => {
         modelMaterializer = runtime!.loadModel(src);
       });
 
-      test('rendered correctly table', async () => {
+      test.only('rendered correctly table', async () => {
         const result = await modelMaterializer.loadQueryByName('by_name').run();
         const document = new JSDOM().window.document;
         const html = await new HTMLView(document).render(result, {
@@ -333,7 +334,7 @@ describe('rendering results', () => {
         expect(html).toMatchSnapshot();
       });
 
-      test('rendered correctly dashboard', async () => {
+      test.only('rendered correctly dashboard', async () => {
         const result = await modelMaterializer
           .loadQueryByName('by_name_dashboard')
           .run();

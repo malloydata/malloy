@@ -479,72 +479,6 @@ exports[`rendering results html renderer hidden tags rendered correctly table 1`
         style="padding: 8px; vertical-align: top;"
       >
         <span>
-          Sebastian
-        </span>
-      </td>
-      <td
-        style="padding: 0px; vertical-align: top;"
-      >
-        <table
-          style="vertical-align: top; border-collapse: collapse; width: 100%;"
-        >
-          <thead>
-            <tr>
-              <th
-                style="padding: 8px; text-align: right;"
-              >
-                height
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td
-                style="padding: 8px; vertical-align: top; text-align: right;"
-              >
-                <span>
-                  23
-                </span>
-              </td>
-            </tr>
-            <tr>
-              <td
-                style="padding: 8px; vertical-align: top; text-align: right;"
-              >
-                <span>
-                  28
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </td>
-      <td
-        style="padding: 8px; vertical-align: top;"
-      >
-        <span>
-          <span>
-            $400.00
-          </span>
-          , 
-          <span>
-            $500.00
-          </span>
-        </span>
-      </td>
-      <td
-        style="padding: 8px; vertical-align: top; text-align: right;"
-      >
-        <span>
-          1
-        </span>
-      </td>
-    </tr>
-    <tr>
-      <td
-        style="padding: 8px; vertical-align: top;"
-      >
-        <span>
           Pedro
         </span>
       </td>
@@ -595,6 +529,72 @@ exports[`rendering results html renderer hidden tags rendered correctly table 1`
           , 
           <span>
             $100.00
+          </span>
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          1
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          Sebastian
+        </span>
+      </td>
+      <td
+        style="padding: 0px; vertical-align: top;"
+      >
+        <table
+          style="vertical-align: top; border-collapse: collapse; width: 100%;"
+        >
+          <thead>
+            <tr>
+              <th
+                style="padding: 8px; text-align: right;"
+              >
+                height
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td
+                style="padding: 8px; vertical-align: top; text-align: right;"
+              >
+                <span>
+                  23
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="padding: 8px; vertical-align: top; text-align: right;"
+              >
+                <span>
+                  28
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          <span>
+            $400.00
+          </span>
+          , 
+          <span>
+            $500.00
           </span>
         </span>
       </td>
