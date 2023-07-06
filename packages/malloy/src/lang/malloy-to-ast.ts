@@ -31,6 +31,7 @@ import {LogSeverity, MessageLogger} from './parse-log';
 import {MalloyParseRoot} from './parse-malloy';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
 import {FieldDeclarationConstructor, TableSource} from './ast';
+import {parseString} from './string-parser';
 
 const ENABLE_M4_WARNINGS = false;
 
@@ -55,6 +56,16 @@ function getNotes(cx: {ANNOTATION: () => TerminalNode[]}): string[] {
 function getIsNotes(cx: parse.IsDefineContext): string[] {
   const before = getNotes(cx._beforeIs);
   return before.concat(getNotes(cx._afterIs));
+}
+
+function getShortString(cx: {
+  shortString: () => parse.ShortStringContext;
+}): string | undefined {
+  const scx = cx.shortString();
+  const str = scx.DQ_STRING()?.text || scx.SQ_STRING()?.text;
+  if (str) {
+    return parseString(str, str[0]);
+  }
 }
 
 /**
@@ -1113,7 +1124,12 @@ export class MalloyToAST
   }
 
   visitExprString(pcx: parse.ExprStringContext): ast.ExprString {
-    return new ast.ExprString(pcx.SQ_STRING().text);
+    const str = getShortString(pcx);
+    if (str) {
+      return new ast.ExprString(str);
+    }
+    this.contextError(pcx, 'Illegal string');
+    return new ast.ExprString('');
   }
 
   visitExprRegex(pcx: parse.ExprRegexContext): ast.ExprRegEx {
@@ -1126,17 +1142,7 @@ export class MalloyToAST
   }
 
   visitExprNumber(pcx: parse.ExprNumberContext): ast.ExprNumber {
-    const number = pcx.INTEGER_LITERAL()?.text || pcx.NUMERIC_LITERAL()?.text;
-    /*
-     * I "know" one of these is true because grammar, but Typescript
-     * rightly points out that grammvisitExprFieldPathar can change in unexpected ways
-     */
-    if (number) {
-      return new ast.ExprNumber(number);
-    } else {
-      this.contextError(pcx, `'${pcx.text}' is not a number`);
-      return new ast.ExprNumber('42');
-    }
+    return new ast.ExprNumber(pcx.text);
   }
 
   visitExprFieldPath(pcx: parse.ExprFieldPathContext): ast.ExprIdReference {
@@ -1440,7 +1446,7 @@ export class MalloyToAST
   }
 
   visitImportStatement(pcx: parse.ImportStatementContext): ast.ImportStatement {
-    const url = this.stripQuotes(pcx.importURL().text);
+    const url = getShortString(pcx) || 'BAD_URL_FOR_IMPORT';
     return this.astAt(
       new ast.ImportStatement(url, this.parse.subTranslator.sourceURL),
       pcx

@@ -84,7 +84,7 @@ sqlInterpolation
   ;
 
 importStatement
-  : IMPORT importURL
+  : IMPORT shortString
   ;
 
 importURL
@@ -421,18 +421,16 @@ aggregate: SUM | COUNT | AVG | MIN | MAX;
 malloyType: STRING | NUMBER | BOOLEAN | DATE | TIMESTAMP;
 compareOp: MATCH | NOT_MATCH | GT | LT | GTE | LTE | EQ | NE;
 
-stringLiteral
-  : SQ_STRING
-  | DQ_STRING
+shortString
+  : (SQ_STRING | DQ_STRING)
   ;
 
 numericLiteral
-  : NUMERIC_LITERAL
-  | INTEGER_LITERAL
+  : (NUMERIC_LITERAL | INTEGER_LITERAL)
   ;
 
 literal
-  : stringLiteral                               # exprString
+  : shortString                               # exprString
   | numericLiteral                              # exprNumber
   | dateLiteral                                 # exprTime
   | NULL                                        # exprNULL
