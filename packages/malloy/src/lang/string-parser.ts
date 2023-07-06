@@ -41,7 +41,7 @@ export function parseString(str: string, surround = ''): string {
   let inner = str.slice(surround.length);
   let state = ParseState.Normal;
   if (surround.length) {
-    inner = inner.slice(-surround.length);
+    inner = inner.slice(0, -surround.length);
   }
   let out = '';
   let unicode = '';

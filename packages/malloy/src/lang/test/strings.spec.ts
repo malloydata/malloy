@@ -55,4 +55,7 @@ describe('test internal string parsing', () => {
       'one thing\nnext thing'
     );
   });
+  test('quote stripping works', () => {
+    expect(parseString('|42|', '|')).toEqual('42');
+  });
 });

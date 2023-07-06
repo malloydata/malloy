@@ -1345,8 +1345,12 @@ describe('literals', () => {
     expect(expr`42`).toTranslate();
   });
   test('string', () => {
-    expect(expr`'fortywo-two'`).toTranslate();
+    const m = new BetaExpression("'forty two'");
+    expect(m).toTranslate();
+    const m42 = m.generated().value[0];
+    expect(m42).toMatchObject({literal: 'forty two'});
   });
+
   test('string with quoted quote', () => {
     const str = "'Isn" + '\\' + "'t this nice'";
     expect(new BetaExpression(str)).toTranslate();

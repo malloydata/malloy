@@ -31,9 +31,7 @@ export class ExprString extends ExpressionDef {
   value: string;
   constructor(src: string) {
     super();
-    const bareStr = src.slice(1, -1);
-    const val = bareStr.replace(/\\(.)/g, '$1');
-    this.value = val;
+    this.value = src;
   }
 
   getExpression(_fs: FieldSpace): ExprValue {
