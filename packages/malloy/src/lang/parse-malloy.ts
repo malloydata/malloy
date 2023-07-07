@@ -82,7 +82,7 @@ import {
   isNeedResponse,
 } from './translate-response';
 import {MalloyParserErrorHandler} from './parse-error-handler';
-import { locationContainsPosition } from './utils';
+import {locationContainsPosition} from './utils';
 
 export type StepResponses =
   | DataRequestResponse

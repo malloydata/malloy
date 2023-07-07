@@ -22,7 +22,7 @@
  */
 
 import {DocumentPosition, DocumentReference} from '../model';
-import { locationContainsPosition } from './utils';
+import {locationContainsPosition} from './utils';
 
 export class ReferenceList {
   constructor(private readonly sourceURL: string) {}
