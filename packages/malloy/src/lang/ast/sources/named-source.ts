@@ -32,8 +32,10 @@ import {
 import {Source} from '../elements/source';
 import {ErrorFactory} from '../error-factory';
 import {ConstantSubExpression} from '../expressions/constant-sub-expression';
+import {ExistingQuery} from '../query-elements/existing-query';
 import {castTo} from '../time-utils';
 import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
+import {QuerySource} from './query-source';
 
 export class IsValueBlock extends MalloyElement {
   elementType = 'isValueBlock';
@@ -88,16 +90,19 @@ export class NamedSource extends Source {
       return;
     }
     if (entry.type === 'query') {
-      this.log(`Must use 'from()' for query source '${this.refName}`);
-      return;
+      const existingQuery = new ExistingQuery();
+      existingQuery.head = this.ref;
+      const querySource = new QuerySource(existingQuery);
+      this.has({existingQuery, querySource});
+      return querySource.structDef();
     } else if (entry.type === 'function') {
-      this.log(`Cannot construct a source from a function '${this.refName}`);
+      this.log(`Cannot construct a source from a function '${this.refName}'`);
       return;
     } else if (entry.type === 'connection') {
-      this.log(`Cannot construct a source from a connection '${this.refName}`);
+      this.log(`Cannot construct a source from a connection '${this.refName}'`);
       return;
     } else if (isSQLBlockStruct(entry) && entry.declaredSQLBlock) {
-      this.log(`Must use 'from_sql()' for sql source '${this.refName}`);
+      this.log(`Must use 'from_sql()' for sql source '${this.refName}'`);
       return;
     }
     return {...entry};

@@ -3287,3 +3287,165 @@ describe('sql expressions', () => {
     );
   });
 });
+
+describe('extend and refine', () => {
+  describe('extend and refine, new syntax', () => {
+    test('query name with query refinements', () => {
+      expect(
+        `
+        query: q is a -> { group_by: ai }
+        run: q refine { group_by: ai2 is ai }
+        `
+      ).toTranslate();
+    });
+
+    test('query name with source refinements', () => {
+      expect(
+        `
+        query: q is a -> { group_by: ai }
+        source: s is q extend { dimension: ai_2 is ai + ai }
+        `
+      ).toTranslate();
+    });
+
+    test('source name with query refinements', () => {
+      expect('run: a refine { group_by: ai }').translationToFailWith(
+        "Illegal reference to 'a', query expected"
+      );
+    });
+
+    test('source name with source refinements', () => {
+      expect(
+        'source: s is a extend { dimension: ai_2 is ai + ai }'
+      ).toTranslate();
+    });
+
+    test('query with source refinements', () => {
+      expect(
+        'source: s is a -> { group_by: ai } extend { dimension: ai_2 is ai + ai }'
+      ).toTranslate();
+    });
+
+    test('query with extension then new stage', () => {
+      expect('run: a { dimension: x is 1 } -> { group_by: x }').toTranslate();
+    });
+  });
+
+  describe('extend and refine, old syntax', () => {
+    test('query name with query refinements', () => {
+      expect(
+        `
+        query: q is a -> { group_by: ai }
+        run: q { group_by: ai2 is ai }
+        `
+      ).toTranslate();
+    });
+
+    test('query name with source refinements', () => {
+      expect(
+        `
+        query: q is a -> { group_by: ai }
+        source: s is q { dimension: ai_2 is ai + ai }
+        `
+      ).toTranslate();
+    });
+
+    test('source name with query refinements', () => {
+      expect('run: a { group_by: one }').translationToFailWith(
+        "Illegal reference to 'a', query expected"
+      );
+    });
+
+    test('source name with source refinements', () => {
+      expect('source: s is a { dimension: ai_2 is ai + ai }').toTranslate();
+    });
+
+    test('source name with ambiguous refinements', () => {
+      // Ambiguous refinements are assumed to be source extensions
+      expect(
+        'run: a { join_one: b on b.ai = ai } -> { project: b.* }'
+      ).toTranslate();
+      expect('run: a { where: 1 = 1 } -> { project: * }').toTranslate();
+      expect('run: a { declare: three is 3 } -> { project: * }').toTranslate();
+      expect('source: s is a { join_one: b on b.ai = ai }').toTranslate();
+      expect('source: s is a { where: 1 = 1 }').toTranslate();
+      expect('source: s is a { declare: three is 3 }').toTranslate();
+    });
+
+    test('query name with ambiguous refinements', () => {
+      // Here we implicitly convert the query into a source.
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: q { join_one: b on 1 = 1 } -> { project: b.* }
+      `).toTranslate();
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: q { where: 1 = 1 } -> { project: * }
+      `).toTranslate();
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: q { declare: three is 3 } -> { project: * }
+      `).toTranslate();
+      // Without the new stage we automatically recognize this as a query refinement
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: q { join_one: b on 1 = 1 }
+      `).toTranslate();
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: q { where: 1 = 1 }
+      `).toTranslate();
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: q { declare: three is 3 }
+      `).toTranslate();
+      // Can also just add from() to use as a source
+      // TODO add a warning when you use from() -- "`from()` is deprecated; to apply source extensions to a query, use `extend`"
+      expect(`
+        query: q is a -> { group_by: ai }
+        source: s is from(q) { join_one: b on b.ai = ai }
+      `).toTranslate();
+      // Can also add an arrow to clarify that it's a query
+      // Of course, number 1 and 3 are actually useless because you're defining
+      // something and then not using it...
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: -> q { join_one: b on b.ai = ai } -> { project: * }
+      `).toTranslate();
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: -> q { where: 1 = 1 } -> { project: * }
+      `).toTranslate();
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: -> q { declare: three is 3 } -> { project: * }
+      `).toTranslate();
+      // Alternatively, fix 1 and 3 by actually using the declared thing
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: q { join_one: b on b.ai = ai; group_by: ai2 is b.ai }
+      `).toTranslate();
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: q { declare: three is 3; group_by: three }
+      `).toTranslate();
+    });
+  });
+
+  describe('extend and refine fallout', () => {
+    test('syntactically valid to run a source, but still illegal', () => {
+      expect('run: a').translationToFailWith(
+        "Illegal reference to 'a', query expected"
+      );
+    });
+
+    test('syntactically valid to refine a source, but illegal', () => {
+      expect('run: a { group_by: ai } ').translationToFailWith(
+        "Illegal reference to 'a', query expected"
+      );
+      expect('run: a refine { group_by: ai } ').translationToFailWith(
+        "Illegal reference to 'a', query expected"
+      );
+    });
+  });
+});

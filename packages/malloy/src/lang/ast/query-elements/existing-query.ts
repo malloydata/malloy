@@ -31,14 +31,16 @@ import {QueryComp} from '../types/query-comp';
 import {QueryHeadStruct} from './query-head-struct';
 
 export class ExistingQuery extends PipelineDesc {
-  _head?: ModelEntryReference;
+  _head?: ModelEntryReference | string;
 
-  set head(head: ModelEntryReference | undefined) {
+  set head(head: ModelEntryReference | string | undefined) {
     this._head = head;
-    this.has({head: head});
+    if (head && typeof head !== 'string') {
+      this.has({head: head});
+    }
   }
 
-  get head(): ModelEntryReference | undefined {
+  get head(): ModelEntryReference | string | undefined {
     return this._head;
   }
 
