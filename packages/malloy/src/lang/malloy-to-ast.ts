@@ -61,10 +61,14 @@ function getIsNotes(cx: parse.IsDefineContext): string[] {
 type ContainsString = ParserRuleContext & {
   shortString: () => parse.ShortStringContext;
 };
-// function constainsString(cx: ParserRuleContext): cx is ContainsString {
-//   return 'shortString' in cx;
-// }
 
+/**
+ * Take the text of a matched string, including the matching quote
+ * characters, and return the actual contents of the string after
+ * \ processing.
+ * @param cx Any parse context which contains a string
+ * @returns Decocded string
+ */
 function getShortString(cx: ContainsString): string {
   const scx = cx.shortString();
   const str = scx.DQ_STRING()?.text || scx.SQ_STRING()?.text;
@@ -74,17 +78,18 @@ function getShortString(cx: ContainsString): string {
   // shortString: DQ_STRING | SQ_STRING; So this will never happen
   return '';
 }
-// function getOptionalString(cx: ParserRuleContext): string | undefined {
-//   if (cx && constainsString(cx)) {
-//     return getShortString(cx);
-//   }
-// }
 
 type ContainsID = ParserRuleContext & {id: () => parse.IdContext};
 function containsID(cx: ParserRuleContext): cx is ContainsID {
   return 'id' in cx;
 }
 
+/**
+ * An identifier is either a sequence of id characters or a `quoted`
+ * This parses either to simply the resulting text.
+ * @param cx A context which has an identifier
+ * @returns The indenftifier text
+ */
 function getId(cx: ContainsID): string {
   const quoted = cx.id().BQ_STRING();
   if (quoted) {
