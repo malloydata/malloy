@@ -23,12 +23,6 @@
 
 lexer grammar MalloyLexer;
 
-JSON_STRING: '"' (ESC | SAFECODEPOINT)* '"';
-
-fragment ESC: '\\' (["\\/bfnrt] | UNICODE);
-fragment UNICODE: 'u' HEX HEX HEX HEX;
-fragment HEX: [0-9a-fA-F];
-fragment SAFECODEPOINT: ~ ["\\\u0000-\u001F];
 fragment SPACE_CHAR: [ \u000B\t\r\n];
 
 // colon keywords ...
@@ -127,9 +121,16 @@ STRING_ESCAPE
   | '\\' '\\'
   | '\\' .
   ;
-
 HACKY_REGEX: ('/' | [rR]) '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
-STRING_LITERAL: '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
+
+fragment HEX: [0-9a-fA-F];
+fragment UNICODE: '\\u' HEX HEX HEX HEX;
+fragment SAFE_NON_QUOTE: ~ ['"`\\\u0000-\u001F];
+fragment ESCAPED: '\\' .;
+SQ_STRING: '\'' (UNICODE | ESCAPED | SAFE_NON_QUOTE | ["`])* '\'';
+DQ_STRING: '"' (UNICODE | ESCAPED | SAFE_NON_QUOTE | ['`])* '"';
+BQ_STRING: '`' (UNICODE | ESCAPED | SAFE_NON_QUOTE | ['"])* '`';
+
 fragment F_TO_EOL: ~[\r\n]* (('\r'? '\n') | EOF);
 DOC_ANNOTATION: '##' F_TO_EOL;
 ANNOTATION: '#' F_TO_EOL;
@@ -195,8 +196,6 @@ NUMERIC_LITERAL
   : DIGIT+ ( DOT DIGIT* ) ?
   | DOT DIGIT+ (E [-+]? DIGIT+)?
   ;
-
-OBJECT_NAME_LITERAL: '`' ~[`]+ '`';
 
 fragment ID_CHAR: [\p{Alphabetic}_] ;
 fragment DIGIT: [0-9];

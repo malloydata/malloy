@@ -87,7 +87,10 @@ interface InitValues {
 }
 
 function sqlSafe(str: string): string {
-  return str.replace(/'/g, '{single-quote}').replace(/\\/g, '{backslash}');
+  return str
+    .replace(/'/g, '{single-quote}')
+    .replace(/\\/g, '{backslash}')
+    .replace(/"/g, '{double-quote}');
 }
 export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types

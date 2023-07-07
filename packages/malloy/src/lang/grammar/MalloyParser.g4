@@ -88,7 +88,7 @@ importStatement
   ;
 
 importURL
-  : JSON_STRING
+  : shortString
   ;
 
 docAnnotations
@@ -400,11 +400,7 @@ sampleStatement
   ;
 
 timezoneStatement
-  : TIMEZONE timezoneName
-  ;
-
-timezoneName
-  : STRING_LITERAL
+  : TIMEZONE shortString
   ;
 
 queryAnnotation
@@ -422,9 +418,17 @@ aggregate: SUM | COUNT | AVG | MIN | MAX;
 malloyType: STRING | NUMBER | BOOLEAN | DATE | TIMESTAMP;
 compareOp: MATCH | NOT_MATCH | GT | LT | GTE | LTE | EQ | NE;
 
+shortString
+  : (SQ_STRING | DQ_STRING)
+  ;
+
+numericLiteral
+  : (NUMERIC_LITERAL | INTEGER_LITERAL)
+  ;
+
 literal
-  : STRING_LITERAL                              # exprString
-  | (NUMERIC_LITERAL | INTEGER_LITERAL)         # exprNumber
+  : shortString                               # exprString
+  | numericLiteral                              # exprNumber
   | dateLiteral                                 # exprTime
   | NULL                                        # exprNULL
   | (TRUE | FALSE)                              # exprBool
@@ -442,15 +446,12 @@ dateLiteral
   | LITERAL_YEAR           # literalYear
   ;
 
-tablePath
-  : STRING_LITERAL;
-
-tableURI
-  : STRING_LITERAL;
+tablePath: shortString;
+tableURI: shortString;
 
 id
   : IDENTIFIER
-  | OBJECT_NAME_LITERAL
+  | BQ_STRING
   ;
 
 
@@ -545,35 +546,6 @@ fieldName: id;
 
 justExpr: fieldExpr EOF;
 
-json
-  : jsonValue
-  ;
-
-jsonValue
-   : JSON_STRING
-   | INTEGER_LITERAL
-   | NUMERIC_LITERAL
-   | jsonObject
-   | jsonArray
-   | TRUE
-   | FALSE
-   | NULL
-   ;
-
-jsonObject
-   : OCURLY jsonProperty (COMMA jsonProperty)* CCURLY
-   | OCURLY CCURLY
-   ;
-
-jsonProperty
-   : JSON_STRING COLON jsonValue
-   ;
-
-jsonArray
-   : OBRACK jsonValue (COMMA jsonValue)* CBRACK
-   | OBRACK CBRACK
-   ;
-
 sqlExploreNameRef: id;
 nameSQLBlock: id;
-connectionName: JSON_STRING;
+connectionName: shortString;

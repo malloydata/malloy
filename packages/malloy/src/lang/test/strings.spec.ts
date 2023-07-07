@@ -21,30 +21,41 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ExpressionDef} from '../types/expression-def';
-import {FieldSpace} from '../types/field-space';
-import {ExprValue} from '../types/expr-value';
-import {FT} from '../fragtype-utils';
+import './parse-expects';
+import {parseString} from '../string-parser';
 
-export class ExprString extends ExpressionDef {
-  elementType = 'string literal';
-  value: string;
-  constructor(src: string) {
-    super();
-    this.value = src;
-  }
-
-  getExpression(_fs: FieldSpace): ExprValue {
-    return {
-      ...FT.stringT,
-      value: [
-        {
-          type: 'dialect',
-          function: 'stringLiteral',
-          literal: this.value,
-        },
-      ],
-      evalSpace: 'literal',
-    };
-  }
-}
+describe('test internal string parsing', () => {
+  test('\\b', () => {
+    expect(parseString('\\b')).toEqual('\b');
+  });
+  test('\\f', () => {
+    expect(parseString('\\f')).toEqual('\f');
+  });
+  test('\\n', () => {
+    expect(parseString('\\n')).toEqual('\n');
+  });
+  test('\\r', () => {
+    expect(parseString('\\r')).toEqual('\r');
+  });
+  test('\\t', () => {
+    expect(parseString('\\t')).toEqual('\t');
+  });
+  test('unicode ?', () => {
+    expect(parseString('\\u003f')).toEqual('?');
+    expect(parseString('\\u003F')).toEqual('?');
+  });
+  test('normal stuff', () => {
+    expect(parseString('normal stuff')).toEqual('normal stuff');
+  });
+  test('stuff & nonsense', () => {
+    expect(parseString('stuff \\u0026 nonsense')).toEqual('stuff & nonsense');
+  });
+  test('one thing\\nnext thing', () => {
+    expect(parseString('one thing\\nnext thing')).toEqual(
+      'one thing\nnext thing'
+    );
+  });
+  test('quote stripping works', () => {
+    expect(parseString('|42|', '|')).toEqual('42');
+  });
+});

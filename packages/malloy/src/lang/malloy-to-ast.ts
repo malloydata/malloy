@@ -31,6 +31,7 @@ import {LogSeverity, MessageLogger} from './parse-log';
 import {MalloyParseRoot} from './parse-malloy';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
 import {FieldDeclarationConstructor, TableSource} from './ast';
+import {parseString} from './string-parser';
 
 const ENABLE_M4_WARNINGS = false;
 
@@ -55,6 +56,52 @@ function getNotes(cx: {ANNOTATION: () => TerminalNode[]}): string[] {
 function getIsNotes(cx: parse.IsDefineContext): string[] {
   const before = getNotes(cx._beforeIs);
   return before.concat(getNotes(cx._afterIs));
+}
+
+type ContainsString = ParserRuleContext & {
+  shortString: () => parse.ShortStringContext;
+};
+
+/**
+ * Take the text of a matched string, including the matching quote
+ * characters, and return the actual contents of the string after
+ * \ processing.
+ * @param cx Any parse context which contains a string
+ * @returns Decocded string
+ */
+function getShortString(cx: ContainsString): string {
+  const scx = cx.shortString();
+  const str = scx.DQ_STRING()?.text || scx.SQ_STRING()?.text;
+  if (str) {
+    return parseString(str, str[0]);
+  }
+  // shortString: DQ_STRING | SQ_STRING; So this will never happen
+  return '';
+}
+
+type ContainsID = ParserRuleContext & {id: () => parse.IdContext};
+function containsID(cx: ParserRuleContext): cx is ContainsID {
+  return 'id' in cx;
+}
+
+/**
+ * An identifier is either a sequence of id characters or a `quoted`
+ * This parses either to simply the resulting text.
+ * @param cx A context which has an identifier
+ * @returns The indenftifier text
+ */
+function getId(cx: ContainsID): string {
+  const quoted = cx.id().BQ_STRING();
+  if (quoted) {
+    return parseString(quoted.text, '`');
+  }
+  return cx.id().text;
+}
+
+function getOptionalId(cx: ParserRuleContext): string | undefined {
+  if (containsID(cx) && cx.id()) {
+    return getId(cx);
+  }
 }
 
 /**
@@ -133,41 +180,12 @@ export class MalloyToAST
     return Number.parseInt(term.text);
   }
 
-  protected optionalString(
-    fromTerm: ParseTree | undefined
-  ): string | undefined {
-    if (fromTerm) {
-      return this.stripQuotes(fromTerm.text);
-    }
-    return undefined;
+  protected getFieldName(cx: ContainsID): ast.FieldName {
+    return this.astAt(new ast.FieldName(getId(cx)), cx);
   }
 
-  protected getIdText(fromTerm: ParseTree): string {
-    return this.stripQuotes(fromTerm.text);
-  }
-
-  protected getFieldName(cx: ParserRuleContext): ast.FieldName {
-    return this.astAt(new ast.FieldName(this.getIdText(cx)), cx);
-  }
-
-  protected getModelEntryName(cx: ParserRuleContext): ast.ModelEntryReference {
-    return this.astAt(new ast.ModelEntryReference(this.getIdText(cx)), cx);
-  }
-
-  protected stripQuotes(s: string): string {
-    if (s[0] === '`' || s[0] === "'" || s[0] === '"') {
-      if (s[0] === s[s.length - 1]) {
-        return s.slice(1, -1);
-      }
-    }
-    return s;
-  }
-
-  protected optionalText(idCx: ParseTree | undefined): string | undefined {
-    if (idCx) {
-      return this.getIdText(idCx);
-    }
-    return undefined;
+  protected getModelEntryName(cx: ContainsID): ast.ModelEntryReference {
+    return this.astAt(new ast.ModelEntryReference(getId(cx)), cx);
   }
 
   defaultResult(): ast.MalloyElement {
@@ -289,7 +307,7 @@ export class MalloyToAST
 
   visitSourceDefinition(pcx: parse.SourceDefinitionContext): ast.DefineSource {
     const exploreDef = new ast.DefineSource(
-      this.getIdText(pcx.sourceNameDef()),
+      getId(pcx.sourceNameDef()),
       this.visitExplore(pcx.explore()),
       true,
       []
@@ -326,7 +344,7 @@ export class MalloyToAST
   }
 
   visitTableFunction(pcx: parse.TableFunctionContext): ast.TableSource {
-    const tableURI = this.stripQuotes(pcx.tableURI().text);
+    const tableURI = getShortString(pcx.tableURI());
     const el = this.astAt(new ast.TableFunctionSource(tableURI), pcx);
     if (ENABLE_M4_WARNINGS) {
       this.astError(
@@ -341,7 +359,7 @@ export class MalloyToAST
   visitTableMethod(pcx: parse.TableMethodContext): ast.TableSource {
     const connId = pcx.connectionId();
     const connectionName = this.astAt(this.getModelEntryName(connId), connId);
-    const tablePath = this.stripQuotes(pcx.tablePath().text);
+    const tablePath = getShortString(pcx.tablePath());
     return this.astAt(
       new ast.TableMethodSource(connectionName, tablePath),
       pcx
@@ -496,7 +514,7 @@ export class MalloyToAST
     makeFieldDef: ast.FieldDeclarationConstructor
   ): ast.FieldDeclaration {
     const defCx = pcx.fieldExpr();
-    const fieldName = this.getIdText(pcx.fieldNameDef());
+    const fieldName = getId(pcx.fieldNameDef());
     const valExpr = this.getFieldExpr(defCx);
     const def = new makeFieldDef(valExpr, fieldName, this.getSourceCode(defCx));
     const notes = getNotes(pcx.tags()).concat(getIsNotes(pcx.isDefine()));
@@ -562,10 +580,10 @@ export class MalloyToAST
   }
 
   visitExploreRenameDef(pcx: parse.ExploreRenameDefContext): ast.RenameField {
-    const newName = pcx.fieldName(0).id();
-    const oldName = pcx.fieldName(1).id();
+    const newName = pcx.fieldName(0);
+    const oldName = pcx.fieldName(1);
     const rename = new ast.RenameField(
-      this.getIdText(newName),
+      getId(newName),
       this.getFieldName(oldName)
     );
     return this.astAt(rename, pcx);
@@ -646,10 +664,9 @@ export class MalloyToAST
   visitTimezoneStatement(
     cx: parse.TimezoneStatementContext
   ): ast.TimezoneStatement {
-    const tz = cx.timezoneName();
     const timezoneStatement = this.astAt(
-      new ast.TimezoneStatement(this.stripQuotes(tz.STRING_LITERAL().text)),
-      tz
+      new ast.TimezoneStatement(getShortString(cx)),
+      cx.shortString()
     );
 
     if (!timezoneStatement.isValid) {
@@ -899,8 +916,7 @@ export class MalloyToAST
   }
 
   visitSourceID(pcx: parse.SourceIDContext): ast.NamedSource {
-    const name = this.getModelEntryName(pcx.id());
-    return this.astAt(new ast.NamedSource(name), pcx);
+    return this.astAt(new ast.NamedSource(getId(pcx)), pcx);
   }
 
   protected buildPipelineFromName(
@@ -956,7 +972,7 @@ export class MalloyToAST
   }
 
   visitTopLevelQueryDef(pcx: parse.TopLevelQueryDefContext): ast.DefineQuery {
-    const queryName = this.getIdText(pcx.queryName());
+    const queryName = getId(pcx.queryName());
     const queryExpr = this.visit(pcx.query());
     if (ast.isQueryElement(queryExpr)) {
       const notes = getNotes(pcx.tags()).concat(getIsNotes(pcx.isDefine()));
@@ -1046,7 +1062,7 @@ export class MalloyToAST
   }
 
   visitNestDef(pcx: parse.NestDefContext): ast.NestDefinition {
-    const name = this.getIdText(pcx.queryName());
+    const name = getId(pcx.queryName());
     const nestDef = new ast.NestDefinition(name);
     this.buildPipelineFromName(nestDef, pcx.pipelineFromName());
     nestDef.extendNote({
@@ -1056,7 +1072,7 @@ export class MalloyToAST
   }
 
   visitExploreQueryDef(pcx: parse.ExploreQueryDefContext): ast.TurtleDecl {
-    const name = this.getIdText(pcx.exploreQueryNameDef());
+    const name = getId(pcx.exploreQueryNameDef());
     const queryDef = new ast.TurtleDecl(name);
     const notes = getNotes(pcx).concat(getIsNotes(pcx.isDefine()));
     queryDef.extendNote({notes});
@@ -1124,12 +1140,12 @@ export class MalloyToAST
   }
 
   visitExprString(pcx: parse.ExprStringContext): ast.ExprString {
-    return new ast.ExprString(pcx.STRING_LITERAL().text);
+    return new ast.ExprString(getShortString(pcx));
   }
 
   visitExprRegex(pcx: parse.ExprRegexContext): ast.ExprRegEx {
     const malloyRegex = pcx.HACKY_REGEX().text;
-    return new ast.ExprRegEx(this.stripQuotes(malloyRegex.slice(1)));
+    return new ast.ExprRegEx(malloyRegex.slice(2, -1));
   }
 
   visitExprNow(_pcx: parse.ExprNowContext): ast.ExprNow {
@@ -1137,17 +1153,7 @@ export class MalloyToAST
   }
 
   visitExprNumber(pcx: parse.ExprNumberContext): ast.ExprNumber {
-    const number = pcx.INTEGER_LITERAL()?.text || pcx.NUMERIC_LITERAL()?.text;
-    /*
-     * I "know" one of these is true because grammar, but Typescript
-     * rightly points out that grammvisitExprFieldPathar can change in unexpected ways
-     */
-    if (number) {
-      return new ast.ExprNumber(number);
-    } else {
-      this.contextError(pcx, `'${pcx.text}' is not a number`);
-      return new ast.ExprNumber('42');
-    }
+    return new ast.ExprNumber(pcx.text);
   }
 
   visitExprFieldPath(pcx: parse.ExprFieldPathContext): ast.ExprIdReference {
@@ -1208,7 +1214,7 @@ export class MalloyToAST
 
   visitExprUngroup(pcx: parse.ExprUngroupContext): ast.ExprUngroup {
     const flist = pcx.fieldName().map(fcx => this.getFieldName(fcx));
-    const kw = this.getIdText(pcx.ungroup()).toLocaleLowerCase();
+    const kw = pcx.ungroup().text.toLowerCase();
     return this.astAt(
       new ast.ExprUngroup(
         kw === 'all' ? kw : 'exclude',
@@ -1322,8 +1328,7 @@ export class MalloyToAST
     const argsCx = pcx.argumentList();
     const args = argsCx ? this.allFieldExpressions(argsCx.fieldExpr()) : [];
 
-    const idCx = pcx.id();
-    const fn = this.getIdText(idCx);
+    const fn = getId(pcx);
 
     const pathCx = pcx.fieldPath();
     const path = pathCx
@@ -1359,15 +1364,9 @@ export class MalloyToAST
       }
     }
 
-    const idCx = pcx.id();
-    const dCx = pcx.timeframe();
-    let fn: string;
-    if (idCx) {
-      fn = this.getIdText(idCx);
-    } else if (dCx) {
-      fn = dCx.text;
-    } else {
-      this.contextError(pcx, 'Funciton name error');
+    let fn = getOptionalId(pcx) || pcx.timeframe()?.text;
+    if (fn === undefined) {
+      this.contextError(pcx, 'Function name error');
       fn = 'FUNCTION_NAME_ERROR';
     }
 
@@ -1451,7 +1450,7 @@ export class MalloyToAST
   }
 
   visitImportStatement(pcx: parse.ImportStatementContext): ast.ImportStatement {
-    const url = this.stripQuotes(pcx.importURL().text);
+    const url = getShortString(pcx.importURL());
     return this.astAt(
       new ast.ImportStatement(url, this.parse.subTranslator.sourceURL),
       pcx
@@ -1475,7 +1474,7 @@ export class MalloyToAST
         if (connectionName) {
           this.contextError(nmCx, 'Cannot redefine connection');
         } else {
-          connectionName = this.getIdText(nmCx);
+          connectionName = getShortString(nmCx);
         }
       }
       const selCx = blockEnt.sqlString();

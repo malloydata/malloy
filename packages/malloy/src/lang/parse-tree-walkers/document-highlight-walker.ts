@@ -224,8 +224,8 @@ export function passForHighlights(
       case MalloyParser.FROM_SQL:
         register(token, HighlightType.Call.FromSQL);
         break;
-      case MalloyParser.STRING_LITERAL:
-      case MalloyParser.JSON_STRING:
+      case MalloyParser.SQ_STRING:
+      case MalloyParser.DQ_STRING:
         register(token, HighlightType.Literal.String);
         break;
       case MalloyParser.NUMERIC_LITERAL:
@@ -312,7 +312,7 @@ export function passForHighlights(
         register(token, HighlightType.Call.Aggregate);
         break;
       case MalloyParser.IDENTIFIER:
-      case MalloyParser.OBJECT_NAME_LITERAL:
+      case MalloyParser.BQ_STRING:
         register(token, HighlightType.Identifier);
         break;
       case MalloyParser.STRING:

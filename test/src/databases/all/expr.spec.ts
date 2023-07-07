@@ -630,6 +630,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   describe('string literal quoting', () => {
+    const dq = '"';
     const tick = "'";
     const back = '\\';
     test('quote single character', async () => {
@@ -637,6 +638,16 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
     test('quote single quote', async () => {
       expect(await sqlEq(`'${back}${tick}'`, tick)).isSqlEq();
+    });
+    test('quote double quote', async () => {
+      await expect(runtime).queryMatches(
+        `sql: x is {connection:"${databaseName}" select:"""SELECT 1 as x"""}
+        query: from_sql(x) -> {
+          project: double_quote is "${back}${dq}"
+        }
+      `,
+        {double_quote: '"'}
+      );
     });
     test('quote backslash', async () => {
       expect(await sqlEq(`'${back}${back}'`, back)).isSqlEq();

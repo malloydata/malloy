@@ -46,7 +46,7 @@ scalarValue
   | scalarValue ARROW scalarValue
   | scalarValue refinement
   | refinement
-  | TABLE STRING_LITERAL
+  | TABLE SQ_STRING
   | OPAREN scalarValue CPAREN
   ;
 
@@ -73,7 +73,7 @@ malloyType: STRING | NUMBER | BOOLEAN | DATE | TIMESTAMP;
 compareOp: MATCH | NOT_MATCH | GT | LT | GTE | LTE | EQ | NE;
 
 literal
-  : STRING_LITERAL                              # exprString
+  : SQ_STRING                              # exprString
   | (NUMERIC_LITERAL | INTEGER_LITERAL)         # exprNumber
   | dateLiteral                                 # exprTime
   | NULL                                        # exprNULL
@@ -207,7 +207,7 @@ STRING_ESCAPE
   | '\\' '\\'
   | '\\' .;
 HACKY_REGEX: ('/' | [rR]) '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
-STRING_LITERAL: '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
+SQ_STRING: '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
 
 fragment SPACE_CHAR: [ \u000B\t\r\n];
 
