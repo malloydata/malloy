@@ -28,7 +28,12 @@ import * as parser from '../lib/Malloy/MalloyParser';
 import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
 import {DocumentRange} from '../../model/malloy_types';
 import {MalloyTranslation} from '../parse-malloy';
-import {ContainsString, getOptionalString} from '../malloy-to-ast';
+import {
+  HasString,
+  getId,
+  getStringIfShort,
+  getStringParts,
+} from '../parse-utils';
 
 type NeedImports = Record<string, DocumentRange>;
 type NeedTables = Record<
@@ -40,24 +45,20 @@ type NeedTables = Record<
   }
 >;
 
-// not entirely happy with this copy of this code here ...
-function getString(cx: ContainsString): string {
-  const shortStr = getOptionalString(cx);
+function getString(cx: HasString): string {
+  const shortStr = getStringIfShort(cx);
   if (shortStr) {
     return shortStr;
   }
+  const safeParts: string[] = [];
   const multiLineStr = cx.string().sqlString();
   if (multiLineStr) {
-    const strParts: string[] = [];
-    for (const part of multiLineStr.sqlInterpolation()) {
-      const upToOpen = part.OPEN_CODE().text;
-      if (upToOpen.length > 2) {
-        strParts.push(upToOpen.slice(0, upToOpen.length - 2));
+    for (const part of getStringParts(multiLineStr)) {
+      if (typeof part === 'string') {
+        safeParts.push(part);
       }
     }
-    const lastChars = multiLineStr.SQL_END()?.text.slice(0, -3);
-    strParts.push(lastChars || '');
-    return strParts.join('');
+    return safeParts.join('');
   }
   // string: shortString | sqlString; So this will never happen
   return '';
@@ -88,14 +89,14 @@ class FindExternalReferences implements MalloyParserListener {
   }
 
   enterTableMethod(pcx: parser.TableMethodContext) {
-    const connectionName = this.stripIdQuotes(pcx.connectionId().text);
-    const tablePath = this.tokens.getText(pcx.tablePath()).slice(1, -1);
+    const connId = getId(pcx.connectionId());
+    const tablePath = getString(pcx.tablePath());
     const reference = this.trans.rangeFromContext(pcx);
-    this.registerTableReference(connectionName, tablePath, reference);
+    this.registerTableReference(connId, tablePath, reference);
   }
 
   enterTableFunction(pcx: parser.TableFunctionContext) {
-    const tableURI = this.tokens.getText(pcx.tableURI()).slice(1, -1);
+    const tableURI = getString(pcx.tableURI());
     // This use of `deprecatedParseTableURI` is ok because it is for handling the
     // old, soon-to-be-deprecated table syntax.
     const {connectionName, tablePath} = deprecatedParseTableURI(tableURI);
@@ -108,13 +109,6 @@ class FindExternalReferences implements MalloyParserListener {
     if (!this.needImports[url]) {
       this.needImports[url] = this.trans.rangeFromContext(pcx);
     }
-  }
-
-  stripIdQuotes(id: string) {
-    if (id[0] === '`' && id[id.length - 1] === '`') {
-      return id.slice(1, -1);
-    }
-    return id;
   }
 }
 

@@ -22,7 +22,7 @@
  */
 
 import {ParserRuleContext} from 'antlr4ts';
-import {ParseTree, TerminalNode} from 'antlr4ts/tree';
+import {ParseTree} from 'antlr4ts/tree';
 import {AbstractParseTreeVisitor} from 'antlr4ts/tree/AbstractParseTreeVisitor';
 import {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
 import * as parse from './lib/Malloy/MalloyParser';
@@ -31,7 +31,17 @@ import {LogSeverity, MessageLogger} from './parse-log';
 import {MalloyParseRoot} from './parse-malloy';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
 import {FieldDeclarationConstructor, TableSource} from './ast';
-import {parseString} from './string-parser';
+import {
+  getId,
+  getOptionalId,
+  getNotes,
+  getIsNotes,
+  HasString,
+  HasID,
+  getStringParts,
+  getShortString,
+  getStringIfShort,
+} from './parse-utils';
 
 const ENABLE_M4_WARNINGS = false;
 
@@ -41,79 +51,6 @@ class IgnoredElement extends ast.MalloyElement {
   constructor(src: string) {
     super();
     this.malloySrc = src;
-  }
-}
-
-/**
- * Get all the possibly missing annotations from this parse rule
- * @param cx Any parse context which has an ANNOTATION* rules
- * @returns Array of texts for the annotations
- */
-function getNotes(cx: {ANNOTATION: () => TerminalNode[]}): string[] {
-  return cx.ANNOTATION().map(a => a.text);
-}
-
-function getIsNotes(cx: parse.IsDefineContext): string[] {
-  const before = getNotes(cx._beforeIs);
-  return before.concat(getNotes(cx._afterIs));
-}
-
-type ContainsShortString = ParserRuleContext & {
-  shortString: () => parse.ShortStringContext;
-};
-
-/**
- * Take the text of a matched string, including the matching quote
- * characters, and return the actual contents of the string after
- * \ processing.
- * @param cx Any parse context which contains a string
- * @returns Decocded string
- */
-function getShortString(cx: ContainsShortString): string {
-  const scx = cx.shortString();
-  const str = scx.DQ_STRING()?.text || scx.SQ_STRING()?.text;
-  if (str) {
-    return parseString(str, str[0]);
-  }
-  // shortString: DQ_STRING | SQ_STRING; So this will never happen
-  return '';
-}
-
-export type ContainsString = ParserRuleContext & {
-  string: () => parse.StringContext;
-};
-
-export function getOptionalString(cx: ParserRuleContext): string | undefined {
-  function isShort(cx: ParserRuleContext): cx is ContainsShortString {
-    return 'shortString' in cx;
-  }
-  if (isShort(cx) && cx.shortString()) {
-    return getShortString(cx);
-  }
-}
-
-type ContainsID = ParserRuleContext & {id: () => parse.IdContext};
-
-/**
- * An identifier is either a sequence of id characters or a `quoted`
- * This parses either to simply the resulting text.
- * @param cx A context which has an identifier
- * @returns The indenftifier text
- */
-function getId(cx: ContainsID): string {
-  const quoted = cx.id().BQ_STRING();
-  if (quoted) {
-    return parseString(quoted.text, '`');
-  }
-  return cx.id().text;
-}
-
-function getOptionalId(cx: ParserRuleContext): string | undefined {
-  function containsID(cx: ParserRuleContext): cx is ContainsID {
-    return 'id' in cx;
-  }
-  if (containsID(cx) && cx.id()) {
-    return getId(cx);
   }
 }
 
@@ -193,11 +130,11 @@ export class MalloyToAST
     return Number.parseInt(term.text);
   }
 
-  protected getFieldName(cx: ContainsID): ast.FieldName {
+  protected getFieldName(cx: HasID): ast.FieldName {
     return this.astAt(new ast.FieldName(getId(cx)), cx);
   }
 
-  protected getModelEntryName(cx: ContainsID): ast.ModelEntryReference {
+  protected getModelEntryName(cx: HasID): ast.ModelEntryReference {
     return this.astAt(new ast.ModelEntryReference(getId(cx)), cx);
   }
 
@@ -264,26 +201,22 @@ export class MalloyToAST
     throw this.internalError(pcx, `'${element.elementType}': illegal source`);
   }
 
-  protected getString(cx: ContainsString): string {
-    const shortStr = getOptionalString(cx);
+  protected getString(cx: HasString): string {
+    const shortStr = getStringIfShort(cx);
     if (shortStr) {
       return shortStr;
     }
+    const safeParts: string[] = [];
     const multiLineStr = cx.string().sqlString();
     if (multiLineStr) {
-      const strParts: string[] = [];
-      for (const part of multiLineStr.sqlInterpolation()) {
-        const upToOpen = part.OPEN_CODE().text;
-        if (upToOpen.length > 2) {
-          strParts.push(upToOpen.slice(0, upToOpen.length - 2));
-        }
-        if (part.query()) {
+      for (const part of getStringParts(multiLineStr)) {
+        if (part instanceof ParserRuleContext) {
           this.contextError(part, '%{ query }% illegal in this string');
+        } else {
+          safeParts.push(part);
         }
       }
-      const lastChars = multiLineStr.SQL_END()?.text.slice(0, -3);
-      strParts.push(lastChars || '');
-      return strParts.join('');
+      return safeParts.join('');
     }
     // string: shortString | sqlString; So this will never happen
     return '';
@@ -293,15 +226,13 @@ export class MalloyToAST
     pcx: parse.SqlStringContext,
     sqlStr: ast.SQLString
   ): void {
-    for (const part of pcx.sqlInterpolation()) {
-      const upToOpen = part.OPEN_CODE().text;
-      if (upToOpen.length > 2) {
-        sqlStr.push(upToOpen.slice(0, upToOpen.length - 2));
+    for (const part of getStringParts(pcx)) {
+      if (part instanceof ParserRuleContext) {
+        sqlStr.push(this.visit(part));
+      } else {
+        sqlStr.push(part);
       }
-      sqlStr.push(this.visit(part.query()));
     }
-    const lastChars = pcx.SQL_END()?.text.slice(0, -3);
-    sqlStr.push(lastChars || '');
     sqlStr.complete();
     this.astAt(sqlStr, pcx);
   }
@@ -428,9 +359,9 @@ export class MalloyToAST
     if (selCx) {
       this.makeSqlString(selCx, sqlStr);
     }
-    const shortSelect = getOptionalString(pcx);
-    if (shortSelect) {
-      sqlStr.push(shortSelect);
+    const shortCX = pcx.shortString();
+    if (shortCX) {
+      sqlStr.push(getShortString(shortCX));
     }
     const expr = new ast.SQLSource(connectionName, sqlStr);
     return this.astAt(expr, pcx);

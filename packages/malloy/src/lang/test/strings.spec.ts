@@ -22,7 +22,7 @@
  */
 
 import './parse-expects';
-import {parseString} from '../string-parser';
+import {parseString} from '../parse-utils';
 
 describe('test internal string parsing', () => {
   test('\\b', () => {
