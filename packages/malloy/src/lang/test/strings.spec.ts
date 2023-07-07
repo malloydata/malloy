@@ -22,7 +22,8 @@
  */
 
 import './parse-expects';
-import {parseString} from '../string-parser';
+import {parseString} from '../parse-utils';
+import {BetaExpression, TestTranslator} from './test-translator';
 
 describe('test internal string parsing', () => {
   test('\\b', () => {
@@ -57,5 +58,74 @@ describe('test internal string parsing', () => {
   });
   test('quote stripping works', () => {
     expect(parseString('|42|', '|')).toEqual('42');
+  });
+});
+
+describe('all strings are parsed in all places', () => {
+  const tz = 'America/Mexico_City';
+  test('timezone single quote', () => {
+    const m = new TestTranslator(`run: a-> {timezone: '${tz}'; project: *}`);
+    expect(m).toParse();
+  });
+  test('timezone double quote', () => {
+    const m = new TestTranslator(`run: a-> {timezone: "${tz}"; project: *}`);
+    expect(m).toParse();
+  });
+  test('timezone triple quote', () => {
+    const m = new TestTranslator(`run: a->{timezone: """${tz}"""; project: *}`);
+    expect(m).toParse();
+  });
+  test('timezone with illegal query', () => {
+    expect(
+      `run: a->{timezone: """${tz}%{ab->aturtle}%"""; project: *}`
+    ).translationToFailWith('%{ query }% illegal in this string');
+  });
+  test('table single quote', () => {
+    const m = new TestTranslator("source: n is bigquery.table('n')");
+    expect(m).toParse();
+  });
+  test('table double quote', () => {
+    const m = new TestTranslator('source: n is bigquery.table("n")');
+    expect(m).toParse();
+  });
+  test('table triple quote', () => {
+    const m = new TestTranslator('source: n is bigquery.table("""n""")');
+    expect(m).toParse();
+  });
+  test('sql single quote', () => {
+    const m = new TestTranslator("source: n is bigquery.sql('n')");
+    expect(m).toParse();
+  });
+  test('sql double quote', () => {
+    const m = new TestTranslator('source: n is bigquery.sql("n")');
+    expect(m).toParse();
+  });
+  test('sql triple quote', () => {
+    const m = new TestTranslator('source: n is bigquery.sql("""n""")');
+    expect(m).toParse();
+  });
+  test('import single quote', () => {
+    const m = new TestTranslator("import 'a'");
+    expect(m).toParse();
+  });
+  test('import double quote', () => {
+    const m = new TestTranslator('import "a"');
+    expect(m).toParse();
+  });
+  test('import triple quote', () => {
+    const m = new TestTranslator('import """a"""');
+    expect(m).toParse();
+  });
+  test('literal single quote', () => {
+    const x = new BetaExpression("'x'");
+    expect(x).toParse();
+  });
+  test('literal double quote', () => {
+    const x = new BetaExpression('"x"');
+    expect(x).toParse();
+  });
+  test('literal triple quote', () => {
+    const x = new BetaExpression('"""x"""');
+    expect(x).toParse();
   });
 });
