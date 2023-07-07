@@ -53,7 +53,11 @@ export class FullQuery extends TurtleHeadedPipe {
     // which just runs the SQL. This would also allow us in ExistingQuery
     // to error on `my_sql_query refine { ... }` by checking if it is a 0
     // stage query.
-    if (structDef.structSource.type === 'sql' && this.qops.length === 0) {
+    if (
+      structDef.structSource.type === 'sql' &&
+      this.qops.length === 0 &&
+      !this.turtleName
+    ) {
       destQuery.pipeline.push({
         type: 'project',
         fields: ['*'],
