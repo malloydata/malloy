@@ -795,10 +795,6 @@ export abstract class MalloyTranslation {
     // search to find the one we're looking for.
     for (let index = 0; index < this.imports.length; index++) {
       const imp = this.imports[index];
-      // Ignore any import in another file
-      if (imp.location.url !== this.sourceURL) {
-        return;
-      }
       if (
         imp.location.range.start.line <= position.line &&
         imp.location.range.end.line >= position.line &&
@@ -815,6 +811,10 @@ export abstract class MalloyTranslation {
 
   private buildImports(): void {
     for (const [key, value] of Object.entries(this.root.importZone.location)) {
+      // Ignore any import in another file
+      if (value.url !== this.sourceURL) {
+        continue;
+      }
       this.imports.push({importURL: key, location: value});
     }
   }
