@@ -302,6 +302,13 @@ export class MalloyToAST
     return this.astAt(exploreDef, pcx);
   }
 
+  visitQueryFromSQLSource(
+    pcx: parse.QueryFromSQLSourceContext
+  ): ast.QueryElement {
+    const query = new ast.FullQuery(this.visitSqlSource(pcx.sqlSource()));
+    return this.astAt(query, pcx);
+  }
+
   visitQueryFromSource(pcx: parse.QueryFromSourceContext): ast.QueryElement {
     const root = this.visitUnextendableSource(pcx.unextendableSource());
     const query = new ast.FullQuery(root);
@@ -361,7 +368,7 @@ export class MalloyToAST
     );
   }
 
-  visitQuery(pcx: parse.QueryContext): ast.QueryElement {
+  visitNormalQuery(pcx: parse.NormalQueryContext): ast.QueryElement {
     const query = this.visit(pcx.unrefinableQuery());
     if (ast.isQueryElement(query)) {
       query.addSegments(...this.getSegments(pcx.pipeElement()));
@@ -374,7 +381,13 @@ export class MalloyToAST
   }
 
   visitExtendedQuery(pcx: parse.ExtendedQueryContext) {
-    const query = this.visitQuery(pcx.query());
+    const query = this.visit(pcx.query());
+    if (!ast.isQueryElement(query)) {
+      throw this.internalError(
+        pcx,
+        `Query expected, but ${query.elementType} found`
+      );
+    }
     const source = new ast.QuerySource(query);
     return this.astAt(
       new ast.RefinedSource(
@@ -438,7 +451,7 @@ export class MalloyToAST
     return this.astAt(new ast.FromSQLSource(name), pcx);
   }
 
-  visitSQLSource(pcx: parse.SQLSourceContext): ast.SQLSource {
+  visitSqlSource(pcx: parse.SqlSourceContext): ast.SQLSource {
     const connId = pcx.connectionId();
     const connectionName = this.astAt(this.getModelEntryName(connId), connId);
     const sqlStr = new ast.SQLString();

@@ -3286,6 +3286,70 @@ describe('sql expressions', () => {
       '`sql:` statement is deprecated, use `connection_name.sql(...)` instead'
     );
   });
+
+  test('reference to sql expression in run', () => {
+    const m = new TestTranslator(`
+      run: bigquery.sql("""select 1 as one""")
+    `);
+    expect(m).toParse();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).toTranslate();
+    }
+  });
+
+  test('reference to sql expression in query def', () => {
+    const m = new TestTranslator(`
+      query: q is bigquery.sql("""select 1 as one""")
+    `);
+    expect(m).toParse();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).toTranslate();
+    }
+  });
+
+  test('reference to sql expression in anonymous query', () => {
+    const m = new TestTranslator(`
+      query: bigquery.sql("""select 1 as one""")
+    `);
+    expect(m).toParse();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).toTranslate();
+    }
+  });
+
+  // TODO this is not possible to implement yet unless we
+  // can distinguish between the generated IR of `conn.sql(...)`
+  // and `conn.sql(...) -> { project: * }`.
+  test.skip('cannot refine a SQL query', () => {
+    const m = new TestTranslator(`
+      query: q1 is bigquery.sql("""select 1 as one""")
+      run: q1 refine { where: 1 = 1 }
+    `);
+    expect(m).toParse();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).translationToFailWith('Cannot refine a SQL query');
+    }
+  });
 });
 
 describe('extend and refine', () => {

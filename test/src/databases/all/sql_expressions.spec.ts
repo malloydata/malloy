@@ -87,4 +87,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
     expect(result.data.value[0]['one']).toBe(1);
   });
+  it(`run sql expression as query - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(`run: ${databaseName}.sql("""SELECT 1 as one""")`)
+      .run();
+    expect(result.data.value[0]['one']).toBe(1);
+  });
 });

@@ -49,6 +49,17 @@ export class FullQuery extends TurtleHeadedPipe {
       : this.explore.structDef();
     let pipeFs = new StaticSpace(structDef);
 
+    // TODO update the compiler to allow for a SQL-headed query with 0 stages,
+    // which just runs the SQL. This would also allow us in ExistingQuery
+    // to error on `my_sql_query refine { ... }` by checking if it is a 0
+    // stage query.
+    if (structDef.structSource.type === 'sql' && this.qops.length === 0) {
+      destQuery.pipeline.push({
+        type: 'project',
+        fields: ['*'],
+      });
+    }
+
     if (ErrorFactory.isErrorStructDef(structDef)) {
       return {
         outputStruct: structDef,
