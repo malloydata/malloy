@@ -1921,7 +1921,7 @@ describe('error handling', () => {
   test('query on source with errors', () => {
     expect(markSource`
         source: na is a { join_one: ${'n'} on astr }
-      `).translationToFailWith("Undefined query or source 'n'");
+      `).translationToFailWith("Undefined source 'n'");
   });
   test('detect duplicate output field names', () => {
     expect(
