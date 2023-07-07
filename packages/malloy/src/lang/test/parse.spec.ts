@@ -1345,8 +1345,12 @@ describe('literals', () => {
     expect(expr`42`).toTranslate();
   });
   test('string', () => {
-    expect(expr`'fortywo-two'`).toTranslate();
+    const m = new BetaExpression("'forty two'");
+    expect(m).toTranslate();
+    const m42 = m.generated().value[0];
+    expect(m42).toMatchObject({literal: 'forty two'});
   });
+
   test('string with quoted quote', () => {
     const str = "'Isn" + '\\' + "'t this nice'";
     expect(new BetaExpression(str)).toTranslate();
@@ -3195,6 +3199,36 @@ describe('sql expressions', () => {
   test('reference to sql expression in unextended source', () => {
     const m = model`
       source: na is bigquery.sql("""SELECT 1 as one""")
+    `;
+    expect(m).toParse();
+    const compileSql = m.translator.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.translator.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).toTranslate();
+    }
+  });
+
+  test('sql expression legal with single quote', () => {
+    const m = model`
+      source: na is bigquery.sql('SELECT 1 as one')
+    `;
+    expect(m).toParse();
+    const compileSql = m.translator.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.translator.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).toTranslate();
+    }
+  });
+
+  test('sql expression legal with double quote', () => {
+    const m = model`
+      source: na is bigquery.sql("SELECT 1 as one")
     `;
     expect(m).toParse();
     const compileSql = m.translator.translate().compileSQL;

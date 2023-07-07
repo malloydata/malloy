@@ -32,6 +32,7 @@ import {
   yieldTask,
   formatTitle,
 } from './utils';
+import {isFieldHidden} from '../tags_utils';
 
 export class HTMLDashboardRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
@@ -47,6 +48,7 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
     }
 
     const fields = table.field.intrinsicFields;
+
     const dimensions = fields.filter(
       field => field.isAtomicField() && field.sourceWasDimension()
     );
@@ -62,7 +64,11 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
       dimensionsContainer.style.flexWrap = 'wrap';
       const rowElement = this.document.createElement('div');
       rowElement.style.position = 'relative';
+
       for (const field of dimensions) {
+        if (isFieldHidden(field)) {
+          continue;
+        }
         const renderer = this.childRenderers[field.name];
         const rendered = await renderer.render(row.cell(field));
         const renderedDimension = this.document.createElement('div');
@@ -97,6 +103,9 @@ export class HTMLDashboardRenderer extends ContainerRenderer {
       const measuresContainer = this.document.createElement('div');
       measuresContainer.style.cssText = MEASURE_BOXES;
       for (const field of measures) {
+        if (isFieldHidden(field)) {
+          continue;
+        }
         const childRenderer = this.childRenderers[field.name];
         await yieldTask();
         const rendered = await childRenderer.render(row.cell(field));

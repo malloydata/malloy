@@ -21,37 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
-import {HTMLNumberRenderer} from './number';
-import {PercentRenderOptions, StyleDefaults} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
-import {Renderer} from '../renderer';
-import {RendererFactory} from '../renderer_factory';
+import {Field} from '@malloydata/malloy';
 
-export class HTMLPercentRenderer extends HTMLNumberRenderer {
-  override getText(data: DataColumn): string | null {
-    const num = this.getNumber(data);
-
-    return num === null
-      ? num
-      : (num * 100).toLocaleString('en', {maximumFractionDigits: 2}) + '%';
-  }
-}
-
-export class PercentRendererFactory extends RendererFactory<PercentRenderOptions> {
-  public static readonly instance = new PercentRendererFactory();
-
-  create(
-    document: Document,
-    _styleDefaults: StyleDefaults,
-    _rendererOptions: RendererOptions,
-    _field: Field | Explore,
-    options: PercentRenderOptions
-  ): Renderer {
-    return new HTMLPercentRenderer(document, options);
-  }
-
-  get rendererName() {
-    return 'percent';
-  }
+export function isFieldHidden(field: Field) {
+  return field.getTags().getMalloyTags().properties['hidden'];
 }

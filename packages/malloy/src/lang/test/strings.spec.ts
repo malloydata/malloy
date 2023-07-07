@@ -21,37 +21,41 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Explore, Field} from '@malloydata/malloy';
-import {HTMLNumberRenderer} from './number';
-import {PercentRenderOptions, StyleDefaults} from '../data_styles';
-import {RendererOptions} from '../renderer_types';
-import {Renderer} from '../renderer';
-import {RendererFactory} from '../renderer_factory';
+import './parse-expects';
+import {parseString} from '../string-parser';
 
-export class HTMLPercentRenderer extends HTMLNumberRenderer {
-  override getText(data: DataColumn): string | null {
-    const num = this.getNumber(data);
-
-    return num === null
-      ? num
-      : (num * 100).toLocaleString('en', {maximumFractionDigits: 2}) + '%';
-  }
-}
-
-export class PercentRendererFactory extends RendererFactory<PercentRenderOptions> {
-  public static readonly instance = new PercentRendererFactory();
-
-  create(
-    document: Document,
-    _styleDefaults: StyleDefaults,
-    _rendererOptions: RendererOptions,
-    _field: Field | Explore,
-    options: PercentRenderOptions
-  ): Renderer {
-    return new HTMLPercentRenderer(document, options);
-  }
-
-  get rendererName() {
-    return 'percent';
-  }
-}
+describe('test internal string parsing', () => {
+  test('\\b', () => {
+    expect(parseString('\\b')).toEqual('\b');
+  });
+  test('\\f', () => {
+    expect(parseString('\\f')).toEqual('\f');
+  });
+  test('\\n', () => {
+    expect(parseString('\\n')).toEqual('\n');
+  });
+  test('\\r', () => {
+    expect(parseString('\\r')).toEqual('\r');
+  });
+  test('\\t', () => {
+    expect(parseString('\\t')).toEqual('\t');
+  });
+  test('unicode ?', () => {
+    expect(parseString('\\u003f')).toEqual('?');
+    expect(parseString('\\u003F')).toEqual('?');
+  });
+  test('normal stuff', () => {
+    expect(parseString('normal stuff')).toEqual('normal stuff');
+  });
+  test('stuff & nonsense', () => {
+    expect(parseString('stuff \\u0026 nonsense')).toEqual('stuff & nonsense');
+  });
+  test('one thing\\nnext thing', () => {
+    expect(parseString('one thing\\nnext thing')).toEqual(
+      'one thing\nnext thing'
+    );
+  });
+  test('quote stripping works', () => {
+    expect(parseString('|42|', '|')).toEqual('42');
+  });
+});

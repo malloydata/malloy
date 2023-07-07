@@ -8,6 +8,81 @@ exports[`rendering results bar chart renderer date with timezone rendered correc
 </span>
 `;
 
+exports[`rendering results data volume renderer data volume tags works correctly 1`] = `
+<table
+  style="vertical-align: top; border-collapse: collapse; width: 100%;"
+>
+  <thead>
+    <tr>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        usage_​b
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        usage_​kb
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        usage_​mb
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        usage_​gb
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        usage_​tb
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          3,758 Bytes
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          3.67 KB
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          3.584 MB
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          3.5 GB
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          3.418 TB
+        </span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+`;
+
 exports[`rendering results date renderer date with timezone rendered correctly 1`] = `
 <table
   style="vertical-align: top; border-collapse: collapse; width: 100%;"
@@ -35,7 +110,582 @@ exports[`rendering results date renderer date with timezone rendered correctly 1
 </table>
 `;
 
-exports[`rendering results html renderer renders with annotations correctly 1`] = `
+exports[`rendering results date renderer truncated date no explicit timezone rendered correctly 1`] = `
+<table
+  style="vertical-align: top; border-collapse: collapse; width: 100%;"
+>
+  <thead>
+    <tr>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        yr
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        qt
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        mt
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        dy
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-Q4
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-12
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-12-11
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-Q1
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-01
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-01-01
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-Q2
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-04
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2021-04-01
+        </span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+`;
+
+exports[`rendering results html renderer hidden tags rendered correctly dashboard 1`] = `
+<div>
+  <div
+    style="position: relative;"
+  >
+    <div
+      class="dimensions"
+      style="display: flex; flex-wrap: wrap;"
+    >
+      <div
+        style="margin: 6px; border-radius: 5px; padding: 10px; box-shadow: 0 1px 5px 0 var(--malloy-border-color, #f3f3f3);"
+      >
+        <div
+          style="font-size: 12px; font-weight: 500; margin-bottom: 5px; font-family: var(--malloy-font-family, "Roboto");"
+        >
+          nm
+        </div>
+        <div
+          style="display: flex; flex-direction: column; justify-content: center; flex: 1 0 auto;"
+        >
+          <span>
+            Pedro
+          </span>
+        </div>
+      </div>
+      <div
+        class="row-separator-outer"
+        style="display: flex; flex-direction: column; justify-content: flex-end; flex: 1 0 auto;"
+      >
+        <div
+          style="min-height: 11px; max-height: 11px; margin: 6px; flex: 1 0 auto; border-radius: 4px;"
+        />
+      </div>
+    </div>
+    <div
+      class="dashboard-outer"
+      style="display: flex; flex-direction: row; font-size: 11px;"
+    >
+      <div
+        style="min-height: 100%; min-width: 11px; margin: 6px; border-radius: 4px;"
+      />
+      <div
+        style="display: flex; flex-wrap: wrap;"
+      >
+        <div
+          style="margin: 6px; border-radius: 5px; padding: 10px; flex: 1 0 auto; box-shadow: 0 1px 5px 0 var(--malloy-tile-background-color, #f3f3f3); max-width: calc(100% - 11px); display: flex; flex-direction: column; overflow: hidden;"
+        >
+          <div
+            style="font-size: 11px; font-family: var(--malloy-font-family, "Roboto"); font-weight: 500;"
+          >
+            height_by_age
+          </div>
+          <div
+            style="display: flex; flex-direction: column; justify-content: center; flex: 1 0 auto;"
+          >
+            <div
+              style="display: flex; justify-content: center; align-items: center; flex-direction: column;"
+            >
+              <table
+                style="vertical-align: top; border-collapse: collapse; width: 100%;"
+              >
+                <thead>
+                  <tr>
+                    <th
+                      style="padding: 8px; text-align: right;"
+                    >
+                      height
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td
+                      style="padding: 8px; vertical-align: top; text-align: right;"
+                    >
+                      <span>
+                        20
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="padding: 8px; vertical-align: top; text-align: right;"
+                    >
+                      <span>
+                        25
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div
+          style="margin: 6px; border-radius: 5px; padding: 10px; flex: 1 0 auto; box-shadow: 0 1px 5px 0 var(--malloy-tile-background-color, #f3f3f3); max-width: calc(100% - 11px); display: flex; flex-direction: column; overflow: hidden;"
+        >
+          <div
+            style="font-size: 11px; font-family: var(--malloy-font-family, "Roboto"); font-weight: 500;"
+          >
+            monthy
+          </div>
+          <div
+            style="display: flex; flex-direction: column; justify-content: center; flex: 1 0 auto;"
+          >
+            <div
+              style="display: flex; justify-content: center; align-items: center; flex-direction: column;"
+            >
+              <span>
+                <span>
+                  $50.00
+                </span>
+                , 
+                <span>
+                  $100.00
+                </span>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div
+          style="margin: 6px; border-radius: 5px; padding: 10px; flex: 1 0 auto; box-shadow: 0 1px 5px 0 var(--malloy-tile-background-color, #f3f3f3); max-width: calc(100% - 11px); display: flex; flex-direction: column; overflow: hidden;"
+        >
+          <div
+            style="font-size: 11px; font-family: var(--malloy-font-family, "Roboto"); font-weight: 500;"
+          >
+            visitcount
+          </div>
+          <div
+            style="display: flex; flex-direction: column; justify-content: center; flex: 1 0 auto;"
+          >
+            <div
+              style="font-size: 20px; display: flex; justify-content: center; align-items: center; margin-top: 5px;"
+            >
+              <span>
+                1
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div
+    style="position: relative;"
+  >
+    <div
+      class="dimensions"
+      style="display: flex; flex-wrap: wrap;"
+    >
+      <div
+        style="margin: 6px; border-radius: 5px; padding: 10px; box-shadow: 0 1px 5px 0 var(--malloy-border-color, #f3f3f3);"
+      >
+        <div
+          style="font-size: 12px; font-weight: 500; margin-bottom: 5px; font-family: var(--malloy-font-family, "Roboto");"
+        >
+          nm
+        </div>
+        <div
+          style="display: flex; flex-direction: column; justify-content: center; flex: 1 0 auto;"
+        >
+          <span>
+            Sebastian
+          </span>
+        </div>
+      </div>
+      <div
+        class="row-separator-outer"
+        style="display: flex; flex-direction: column; justify-content: flex-end; flex: 1 0 auto;"
+      >
+        <div
+          style="min-height: 11px; max-height: 11px; margin: 6px; flex: 1 0 auto; border-radius: 4px;"
+        />
+      </div>
+    </div>
+    <div
+      class="dashboard-outer"
+      style="display: flex; flex-direction: row; font-size: 11px;"
+    >
+      <div
+        style="min-height: 100%; min-width: 11px; margin: 6px; border-radius: 4px;"
+      />
+      <div
+        style="display: flex; flex-wrap: wrap;"
+      >
+        <div
+          style="margin: 6px; border-radius: 5px; padding: 10px; flex: 1 0 auto; box-shadow: 0 1px 5px 0 var(--malloy-tile-background-color, #f3f3f3); max-width: calc(100% - 11px); display: flex; flex-direction: column; overflow: hidden;"
+        >
+          <div
+            style="font-size: 11px; font-family: var(--malloy-font-family, "Roboto"); font-weight: 500;"
+          >
+            height_by_age
+          </div>
+          <div
+            style="display: flex; flex-direction: column; justify-content: center; flex: 1 0 auto;"
+          >
+            <div
+              style="display: flex; justify-content: center; align-items: center; flex-direction: column;"
+            >
+              <table
+                style="vertical-align: top; border-collapse: collapse; width: 100%;"
+              >
+                <thead>
+                  <tr>
+                    <th
+                      style="padding: 8px; text-align: right;"
+                    >
+                      height
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td
+                      style="padding: 8px; vertical-align: top; text-align: right;"
+                    >
+                      <span>
+                        23
+                      </span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td
+                      style="padding: 8px; vertical-align: top; text-align: right;"
+                    >
+                      <span>
+                        28
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div
+          style="margin: 6px; border-radius: 5px; padding: 10px; flex: 1 0 auto; box-shadow: 0 1px 5px 0 var(--malloy-tile-background-color, #f3f3f3); max-width: calc(100% - 11px); display: flex; flex-direction: column; overflow: hidden;"
+        >
+          <div
+            style="font-size: 11px; font-family: var(--malloy-font-family, "Roboto"); font-weight: 500;"
+          >
+            monthy
+          </div>
+          <div
+            style="display: flex; flex-direction: column; justify-content: center; flex: 1 0 auto;"
+          >
+            <div
+              style="display: flex; justify-content: center; align-items: center; flex-direction: column;"
+            >
+              <span>
+                <span>
+                  $400.00
+                </span>
+                , 
+                <span>
+                  $500.00
+                </span>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div
+          style="margin: 6px; border-radius: 5px; padding: 10px; flex: 1 0 auto; box-shadow: 0 1px 5px 0 var(--malloy-tile-background-color, #f3f3f3); max-width: calc(100% - 11px); display: flex; flex-direction: column; overflow: hidden;"
+        >
+          <div
+            style="font-size: 11px; font-family: var(--malloy-font-family, "Roboto"); font-weight: 500;"
+          >
+            visitcount
+          </div>
+          <div
+            style="display: flex; flex-direction: column; justify-content: center; flex: 1 0 auto;"
+          >
+            <div
+              style="font-size: 20px; display: flex; justify-content: center; align-items: center; margin-top: 5px;"
+            >
+              <span>
+                1
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`rendering results html renderer hidden tags rendered correctly table 1`] = `
+<table
+  style="vertical-align: top; border-collapse: collapse; width: 100%;"
+>
+  <thead>
+    <tr>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        nm
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        height_​by_​age
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        monthy
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        visitcount
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          Pedro
+        </span>
+      </td>
+      <td
+        style="padding: 0px; vertical-align: top;"
+      >
+        <table
+          style="vertical-align: top; border-collapse: collapse; width: 100%;"
+        >
+          <thead>
+            <tr>
+              <th
+                style="padding: 8px; text-align: right;"
+              >
+                height
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td
+                style="padding: 8px; vertical-align: top; text-align: right;"
+              >
+                <span>
+                  20
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="padding: 8px; vertical-align: top; text-align: right;"
+              >
+                <span>
+                  25
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          <span>
+            $50.00
+          </span>
+          , 
+          <span>
+            $100.00
+          </span>
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          1
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          Sebastian
+        </span>
+      </td>
+      <td
+        style="padding: 0px; vertical-align: top;"
+      >
+        <table
+          style="vertical-align: top; border-collapse: collapse; width: 100%;"
+        >
+          <thead>
+            <tr>
+              <th
+                style="padding: 8px; text-align: right;"
+              >
+                height
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td
+                style="padding: 8px; vertical-align: top; text-align: right;"
+              >
+                <span>
+                  23
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td
+                style="padding: 8px; vertical-align: top; text-align: right;"
+              >
+                <span>
+                  28
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          <span>
+            $400.00
+          </span>
+          , 
+          <span>
+            $500.00
+          </span>
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          1
+        </span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+`;
+
+exports[`rendering results html renderer renders with tags correctly 1`] = `
 <table
   style="vertical-align: top; border-collapse: collapse; width: 100%;"
 >
@@ -5082,6 +5732,57 @@ exports[`rendering results html renderer renders with annotations correctly 1`] 
       >
         <span>
           50%
+        </span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+`;
+
+exports[`rendering results number renderer value format tags works correctly 1`] = `
+<table
+  style="vertical-align: top; border-collapse: collapse; width: 100%;"
+>
+  <thead>
+    <tr>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        anumber
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        larger
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        shorter
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          12.345
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          12.3450
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          12.35
         </span>
       </td>
     </tr>

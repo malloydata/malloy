@@ -27,6 +27,7 @@ import {getDrillQuery} from '../drill';
 import {ContainerRenderer} from './container';
 import {HTMLNumberRenderer} from './number';
 import {createDrillIcon, formatTitle, yieldTask} from './utils';
+import {isFieldHidden} from '../tags_utils';
 
 export class HTMLTableRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
@@ -39,6 +40,10 @@ export class HTMLTableRenderer extends ContainerRenderer {
     }
     const header = this.document.createElement('tr');
     table.field.intrinsicFields.forEach(field => {
+      if (isFieldHidden(field)) {
+        return;
+      }
+
       let name = formatTitle(
         this.options,
         field,
@@ -75,6 +80,9 @@ export class HTMLTableRenderer extends ContainerRenderer {
     for (const row of table) {
       const rowElement = this.document.createElement('tr');
       for (const field of table.field.intrinsicFields) {
+        if (isFieldHidden(field)) {
+          continue;
+        }
         const childRenderer = this.childRenderers[field.name];
         const isNumeric = childRenderer instanceof HTMLNumberRenderer;
         await yieldTask();

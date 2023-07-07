@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {ModelMaterializer} from '@malloydata/malloy';
 import {RuntimeList} from '../runtimes';
 import {describeIfDatabaseAvailable} from '../util';
 import {HTMLView} from '@malloydata/render';
@@ -192,7 +193,7 @@ describe('rendering results', () => {
   });
 
   describe('html renderer', () => {
-    test('renders with annotations correctly', async () => {
+    test('renders with tags correctly', async () => {
       const connectionName = 'duckdb';
       const runtime = runtimes.runtimeMap.get(connectionName);
       expect(runtime).toBeDefined();
@@ -263,6 +264,88 @@ describe('rendering results', () => {
 
       expect(html).toMatchSnapshot();
     });
+
+    describe('hidden tags', () => {
+      let modelMaterializer: ModelMaterializer;
+      beforeAll(() => {
+        const connectionName = 'duckdb';
+        const runtime = runtimes.runtimeMap.get(connectionName);
+        expect(runtime).toBeDefined();
+        const src = `
+        sql: height_sql is { connection: "duckdb" select: """
+                      SELECT 'Pedro' as nm, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine
+            UNION ALL SELECT 'Pedro', 2, 25, 3.4, 100, 1
+            UNION ALL SELECT 'Sebastian', 1, 23, 2, 400, 1
+            UNION ALL SELECT 'Sebastian', 2, 28, 2.6, 500, 1 """ }
+
+          source: height
+          # line_chart
+            is from_sql(height_sql) + {
+
+            measure: visitcount is sum(vaccine) / count();
+
+            # currency
+            # hidden
+            dimension: price is apptcost
+
+            query: by_name is {
+              group_by: nm
+              order_by: nm
+              nest: height_by_age
+              is {
+                project:
+                  # hidden
+                  monthy,
+                  height
+              }
+
+              # hidden
+              nest: height_by_age_hidden
+              is {
+                project: monthy, height
+              }
+
+              nest: monthy_list is {
+                project: price
+              }
+
+              aggregate:
+                visitcount
+                # hidden
+                noshowvc is visitcount
+            }
+
+            query: by_name_dashboard is by_name {}
+          }
+
+          query: by_name is height -> by_name {}
+          query: by_name_dashboard is height -> by_name_dashboard {}
+        `;
+        modelMaterializer = runtime!.loadModel(src);
+      });
+
+      test.only('rendered correctly table', async () => {
+        const result = await modelMaterializer.loadQueryByName('by_name').run();
+        const document = new JSDOM().window.document;
+        const html = await new HTMLView(document).render(result, {
+          dataStyles: {},
+        });
+
+        expect(html).toMatchSnapshot();
+      });
+
+      test.only('rendered correctly dashboard', async () => {
+        const result = await modelMaterializer
+          .loadQueryByName('by_name_dashboard')
+          .run();
+        const document = new JSDOM().window.document;
+        const html = await new HTMLView(document).render(result, {
+          dataStyles: {},
+        });
+
+        expect(html).toMatchSnapshot();
+      });
+    });
   });
 
   describe('date renderer', () => {
@@ -278,6 +361,33 @@ describe('rendering results', () => {
       `;
       const result = await (
         await runtime!.loadModel(src).loadQueryByName('mex_query')
+      ).run();
+      const document = new JSDOM().window.document;
+      const html = await new HTMLView(document).render(result, {
+        dataStyles: {},
+      });
+
+      expect(html).toMatchSnapshot();
+    });
+
+    test('truncated date no explicit timezone rendered correctly', async () => {
+      const connectionName = 'duckdb';
+      const runtime = runtimes.runtimeMap.get(connectionName);
+      expect(runtime).toBeDefined();
+      const src = `
+      sql: timeDataTrunc is { connection: "duckdb"  select: """
+                    SELECT CAST('2021-12-11 10:20:00' AS datetime) as times
+          UNION ALL SELECT CAST('2021-01-01 05:40:00' AS datetime)
+          UNION ALL SELECT CAST('2021-04-01 00:59:00' AS datetime)"""}
+
+
+        query:
+          data_trunc is from_sql(timeDataTrunc) -> {
+            project: yr is times.year, qt is times.quarter, mt is times.month, dy is times.day
+        }
+      `;
+      const result = await (
+        await runtime!.loadModel(src).loadQueryByName('data_trunc')
       ).run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
@@ -330,6 +440,69 @@ describe('rendering results', () => {
         }`;
       const result = await (
         await runtime!.loadModel(src).loadQueryByName('mexico_point_map')
+      ).run();
+      const document = new JSDOM().window.document;
+      const html = await new HTMLView(document).render(result, {
+        dataStyles: {},
+      });
+
+      expect(html).toMatchSnapshot();
+    });
+  });
+
+  describe('number renderer', () => {
+    test('value format tags works correctly', async () => {
+      const connectionName = 'duckdb';
+      const runtime = runtimes.runtimeMap.get(connectionName);
+      expect(runtime).toBeDefined();
+      const src = `
+        sql: number_sql is { connection: "${connectionName}" select: """SELECT 12.345 as anumber""" }
+
+        query: number_query is from_sql(number_sql) -> {
+          project:
+          anumber
+          # number= "#,##0.0000"
+          larger is anumber
+          # number= "#,##0.00"
+          shorter is anumber
+        }
+      `;
+      const result = await (
+        await runtime!.loadModel(src).loadQueryByName('number_query')
+      ).run();
+      const document = new JSDOM().window.document;
+      const html = await new HTMLView(document).render(result, {
+        dataStyles: {},
+      });
+
+      expect(html).toMatchSnapshot();
+    });
+  });
+
+  describe('data volume renderer', () => {
+    test('data volume tags works correctly', async () => {
+      const connectionName = 'duckdb';
+      const runtime = runtimes.runtimeMap.get(connectionName);
+      expect(runtime).toBeDefined();
+      const src = `
+        sql: number_sql is { connection: "${connectionName}" select: """SELECT 1""" }
+
+        query: bytes_query is from_sql(number_sql) -> {
+          project:
+          # data_volume = bytes
+          usage_b is 3758
+          # data_volume = kb
+          usage_kb is 3758
+          # data_volume = mb
+          usage_mb is 3758096
+          # data_volume = gb
+          usage_gb is 3758096384
+          # data_volume = tb
+          usage_tb is 3758096384000
+        }
+      `;
+      const result = await (
+        await runtime!.loadModel(src).loadQueryByName('bytes_query')
       ).run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {

@@ -100,7 +100,19 @@ export interface TimeRenderOptions extends TextRenderOptions {
 }
 
 export interface NumberRenderOptions extends TextRenderOptions {
-  number?: Record<string, unknown>;
+  value_format?: string;
+}
+
+export enum DataVolumeUnit {
+  Bytes = 'bytes',
+  Kilobytes = 'kb',
+  Megabytes = 'mb',
+  Gigabytes = 'gb',
+  Terabytes = 'tb',
+}
+
+export interface DataVolumeRenderOptions extends TextRenderOptions {
+  data_volume_unit?: DataVolumeUnit;
 }
 
 export interface ImageRenderOptions extends TextRenderOptions {

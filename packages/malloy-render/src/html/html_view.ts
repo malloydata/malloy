@@ -32,6 +32,7 @@ import {HTMLTableRenderer} from './table';
 import {ContainerRenderer} from './container';
 import {createErrorElement} from './utils';
 import {MainRendererFactory} from '../main_renderer_factory';
+import {HTMLListRenderer} from './list';
 
 export class HTMLView {
   constructor(private document: Document) {}
@@ -188,6 +189,13 @@ export function makeRenderer(
   if (renderDef?.renderer === 'dashboard') {
     return makeContainerRenderer(
       HTMLDashboardRenderer,
+      document,
+      isContainer(field),
+      options
+    );
+  } else if (renderDef?.renderer === 'list') {
+    return makeContainerRenderer(
+      HTMLListRenderer,
       document,
       isContainer(field),
       options
