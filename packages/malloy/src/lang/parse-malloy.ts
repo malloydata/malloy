@@ -82,6 +82,7 @@ import {
   isNeedResponse,
 } from './translate-response';
 import {MalloyParserErrorHandler} from './parse-error-handler';
+import { locationContainsPosition } from './utils';
 
 export type StepResponses =
   | DataRequestResponse
@@ -795,14 +796,7 @@ export abstract class MalloyTranslation {
     // search to find the one we're looking for.
     for (let index = 0; index < this.imports.length; index++) {
       const imp = this.imports[index];
-      if (
-        imp.location.range.start.line <= position.line &&
-        imp.location.range.end.line >= position.line &&
-        (position.line !== imp.location.range.start.line ||
-          position.character >= imp.location.range.start.character) &&
-        (position.line !== imp.location.range.end.line ||
-          position.character <= imp.location.range.end.character)
-      ) {
+      if (locationContainsPosition(imp.location, position)) {
         return imp;
       }
     }
