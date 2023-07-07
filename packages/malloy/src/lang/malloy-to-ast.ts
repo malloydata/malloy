@@ -201,7 +201,7 @@ export class MalloyToAST
     throw this.internalError(pcx, `'${element.elementType}': illegal source`);
   }
 
-  protected getString(cx: HasString): string {
+  protected getPlainString(cx: HasString): string {
     const shortStr = getStringIfShort(cx);
     if (shortStr) {
       return shortStr;
@@ -313,7 +313,7 @@ export class MalloyToAST
   }
 
   visitTableFunction(pcx: parse.TableFunctionContext): ast.TableSource {
-    const tableURI = this.getString(pcx.tableURI());
+    const tableURI = this.getPlainString(pcx.tableURI());
     const el = this.astAt(new ast.TableFunctionSource(tableURI), pcx);
     if (ENABLE_M4_WARNINGS) {
       this.astError(
@@ -328,7 +328,7 @@ export class MalloyToAST
   visitTableMethod(pcx: parse.TableMethodContext): ast.TableSource {
     const connId = pcx.connectionId();
     const connectionName = this.astAt(this.getModelEntryName(connId), connId);
-    const tablePath = this.getString(pcx.tablePath());
+    const tablePath = this.getPlainString(pcx.tablePath());
     return this.astAt(
       new ast.TableMethodSource(connectionName, tablePath),
       pcx
@@ -639,7 +639,7 @@ export class MalloyToAST
   visitTimezoneStatement(
     cx: parse.TimezoneStatementContext
   ): ast.TimezoneStatement {
-    const timezone = this.getString(cx);
+    const timezone = this.getPlainString(cx);
     const timezoneStatement = this.astAt(
       new ast.TimezoneStatement(timezone),
       cx.string()
@@ -1116,7 +1116,7 @@ export class MalloyToAST
   }
 
   visitExprString(pcx: parse.ExprStringContext): ast.ExprString {
-    const str = this.getString(pcx);
+    const str = this.getPlainString(pcx);
     return new ast.ExprString(str);
   }
 
@@ -1427,7 +1427,7 @@ export class MalloyToAST
   }
 
   visitImportStatement(pcx: parse.ImportStatementContext): ast.ImportStatement {
-    const url = this.getString(pcx.importURL());
+    const url = this.getPlainString(pcx.importURL());
     return this.astAt(
       new ast.ImportStatement(url, this.parse.subTranslator.sourceURL),
       pcx
@@ -1451,7 +1451,7 @@ export class MalloyToAST
         if (connectionName) {
           this.contextError(nmCx, 'Cannot redefine connection');
         } else {
-          connectionName = this.getString(nmCx);
+          connectionName = this.getPlainString(nmCx);
         }
       }
       const selCx = blockEnt.sqlString();

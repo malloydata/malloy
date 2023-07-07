@@ -45,7 +45,10 @@ type NeedTables = Record<
   }
 >;
 
-function getString(cx: HasString): string {
+// Copy of the version in the parser which also errors on each non-string in a
+// multi-line string collection. No need to error here, which is well, because
+// we don't have access to the error log.
+function getPlainString(cx: HasString): string {
   const shortStr = getStringIfShort(cx);
   if (shortStr) {
     return shortStr;
@@ -60,7 +63,6 @@ function getString(cx: HasString): string {
     }
     return safeParts.join('');
   }
-  // string: shortString | sqlString; So this will never happen
   return '';
 }
 
@@ -90,13 +92,13 @@ class FindExternalReferences implements MalloyParserListener {
 
   enterTableMethod(pcx: parser.TableMethodContext) {
     const connId = getId(pcx.connectionId());
-    const tablePath = getString(pcx.tablePath());
+    const tablePath = getPlainString(pcx.tablePath());
     const reference = this.trans.rangeFromContext(pcx);
     this.registerTableReference(connId, tablePath, reference);
   }
 
   enterTableFunction(pcx: parser.TableFunctionContext) {
-    const tableURI = getString(pcx.tableURI());
+    const tableURI = getPlainString(pcx.tableURI());
     // This use of `deprecatedParseTableURI` is ok because it is for handling the
     // old, soon-to-be-deprecated table syntax.
     const {connectionName, tablePath} = deprecatedParseTableURI(tableURI);
@@ -105,7 +107,7 @@ class FindExternalReferences implements MalloyParserListener {
   }
 
   enterImportURL(pcx: parser.ImportURLContext) {
-    const url = getString(pcx);
+    const url = getPlainString(pcx);
     if (!this.needImports[url]) {
       this.needImports[url] = this.trans.rangeFromContext(pcx);
     }
