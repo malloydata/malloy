@@ -32,10 +32,8 @@ import {
 import {Source} from '../elements/source';
 import {ErrorFactory} from '../error-factory';
 import {ConstantSubExpression} from '../expressions/constant-sub-expression';
-import {ExistingQuery} from '../query-elements/existing-query';
 import {castTo} from '../time-utils';
 import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
-import {QuerySource} from './query-source';
 
 export class IsValueBlock extends MalloyElement {
   elementType = 'isValueBlock';
