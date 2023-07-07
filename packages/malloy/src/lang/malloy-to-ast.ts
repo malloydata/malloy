@@ -79,10 +79,16 @@ function getShortString(cx: ContainsString): string {
   return '';
 }
 
-type ContainsID = ParserRuleContext & {id: () => parse.IdContext};
-function containsID(cx: ParserRuleContext): cx is ContainsID {
-  return 'id' in cx;
+function getOptionalString(cx: ParserRuleContext): string | undefined {
+  function containsString(cx: ParserRuleContext): cx is ContainsString {
+    return 'shortString' in cx;
+  }
+  if (containsString(cx) && cx.shortString()) {
+    return getShortString(cx);
+  }
 }
+
+type ContainsID = ParserRuleContext & {id: () => parse.IdContext};
 
 /**
  * An identifier is either a sequence of id characters or a `quoted`
@@ -99,6 +105,9 @@ function getId(cx: ContainsID): string {
 }
 
 function getOptionalId(cx: ParserRuleContext): string | undefined {
+  function containsID(cx: ParserRuleContext): cx is ContainsID {
+    return 'id' in cx;
+  }
   if (containsID(cx) && cx.id()) {
     return getId(cx);
   }
@@ -387,7 +396,13 @@ export class MalloyToAST
     const connectionName = this.astAt(this.getModelEntryName(connId), connId);
     const sqlStr = new ast.SQLString();
     const selCx = pcx.sqlString();
-    this.makeSqlString(selCx, sqlStr);
+    if (selCx) {
+      this.makeSqlString(selCx, sqlStr);
+    }
+    const shortSelect = getOptionalString(pcx);
+    if (shortSelect) {
+      sqlStr.push(shortSelect);
+    }
     const expr = new ast.SQLSource(connectionName, sqlStr);
     return this.astAt(expr, pcx);
   }

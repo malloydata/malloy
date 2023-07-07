@@ -3211,6 +3211,36 @@ describe('sql expressions', () => {
     }
   });
 
+  test('sql expression legal with single quote', () => {
+    const m = model`
+      source: na is bigquery.sql('SELECT 1 as one')
+    `;
+    expect(m).toParse();
+    const compileSql = m.translator.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.translator.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).toTranslate();
+    }
+  });
+
+  test('sql expression legal with double quote', () => {
+    const m = model`
+      source: na is bigquery.sql("SELECT 1 as one")
+    `;
+    expect(m).toParse();
+    const compileSql = m.translator.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.translator.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).toTranslate();
+    }
+  });
+
   test('reference to sql expression in extended source', () => {
     const m = model`
       source: na is bigquery.sql("""SELECT 1 as one""") {
