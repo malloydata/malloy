@@ -99,6 +99,7 @@ export * from './query-properties/qop-desc';
 export * from './query-properties/sampling';
 export * from './query-properties/top';
 export * from './sources/named-source';
+export * from './sources/named-source-or-query';
 export * from './sources/query-source';
 export * from './sources/from-sql-source';
 export * from './sources/sql-source';

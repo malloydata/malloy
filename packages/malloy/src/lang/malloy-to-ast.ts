@@ -1461,7 +1461,9 @@ export class MalloyToAST
     return new ast.Pick(picks);
   }
 
-  visitNamedSource(pcx: parse.NamedSourceContext): ast.NamedSource {
+  visitSourceFromNamedModelEntry(
+    pcx: parse.SourceFromNamedModelEntryContext
+  ): ast.Source {
     const name = this.getModelEntryName(pcx.sourceID());
     // Parameters ... coming ...
     // const paramListCx = pcx.isParam();
@@ -1474,7 +1476,8 @@ export class MalloyToAST
     //   }
     //   return this.astAt(new ast.NamedSource(name, paramInit), pcx);
     // }
-    return this.astAt(new ast.NamedSource(name), pcx);
+    const source = new ast.NamedSourceOrQuery(name);
+    return this.astAt(source, pcx);
   }
 
   visitExprFilter(pcx: parse.ExprFilterContext): ast.ExprFilter {

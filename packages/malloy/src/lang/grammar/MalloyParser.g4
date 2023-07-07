@@ -142,7 +142,7 @@ unextendableSource
   ;
 
 extendableSource
-  : sourceID                                      # NamedSource
+  : sourceID                                      # SourceFromNamedModelEntry
   | exploreTable                                  # TableSource
   | FROM OPAREN query CPAREN                      # QuerySource
   | FROM_SQL OPAREN sqlExploreNameRef CPAREN      # SQLSourceName

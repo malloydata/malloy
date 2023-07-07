@@ -90,11 +90,8 @@ export class NamedSource extends Source {
       return;
     }
     if (entry.type === 'query') {
-      const existingQuery = new ExistingQuery();
-      existingQuery.head = this.ref;
-      const querySource = new QuerySource(existingQuery);
-      this.has({existingQuery, querySource});
-      return querySource.structDef();
+      this.log(`Cannot construct a source from a query '${this.refName}'`);
+      return;
     } else if (entry.type === 'function') {
       this.log(`Cannot construct a source from a function '${this.refName}'`);
       return;
