@@ -445,15 +445,12 @@ dateLiteral
   | LITERAL_YEAR           # literalYear
   ;
 
-tablePath
-  : SQ_STRING;
-
-tableURI
-  : SQ_STRING;
+tablePath: shortString;
+tableURI: shortString;
 
 id
   : IDENTIFIER
-  | OBJECT_NAME_LITERAL
+  | BQ_STRING
   ;
 
 
@@ -550,4 +547,4 @@ justExpr: fieldExpr EOF;
 
 sqlExploreNameRef: id;
 nameSQLBlock: id;
-connectionName: DQ_STRING;
+connectionName: shortString;

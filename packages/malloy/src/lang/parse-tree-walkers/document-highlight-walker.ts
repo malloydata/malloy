@@ -312,7 +312,7 @@ export function passForHighlights(
         register(token, HighlightType.Call.Aggregate);
         break;
       case MalloyParser.IDENTIFIER:
-      case MalloyParser.OBJECT_NAME_LITERAL:
+      case MalloyParser.BQ_STRING:
         register(token, HighlightType.Identifier);
         break;
       case MalloyParser.STRING:
