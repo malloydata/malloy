@@ -1869,7 +1869,7 @@ describe('error handling', () => {
   });
   test('query from undefined source', () => {
     expect(markSource`query: ${'x'}->{ project: y }`).translationToFailWith(
-      "Undefined source 'x'"
+      "Undefined query or source 'x'"
     );
   });
   test('query with expression from undefined source', () => {
@@ -1877,7 +1877,7 @@ describe('error handling', () => {
     // when "query: x->{ group_by: y}" (above) generated the correct error.
     expect(
       markSource`query: ${'x'}->{ project: y is z / 2 }`
-    ).translationToFailWith("Undefined source 'x'");
+    ).translationToFailWith("Undefined query or source 'x'");
   });
   test('join reference before definition', () => {
     expect(
@@ -1885,7 +1885,7 @@ describe('error handling', () => {
         source: newAB is a { join_one: newB is ${'bb'} on astring }
         source: newB is b
       `
-    ).translationToFailWith("Undefined source 'bb'");
+    ).translationToFailWith("Undefined query or source 'bb'");
   });
   test('non-rename rename', () => {
     expect('source: na is a { rename: astr is astr }').translationToFailWith(
@@ -1921,7 +1921,7 @@ describe('error handling', () => {
   test('query on source with errors', () => {
     expect(markSource`
         source: na is a { join_one: ${'n'} on astr }
-      `).translationToFailWith("Undefined source 'n'");
+      `).translationToFailWith("Undefined query or source 'n'");
   });
   test('detect duplicate output field names', () => {
     expect(
