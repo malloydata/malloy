@@ -28,6 +28,7 @@ import * as parser from '../lib/Malloy/MalloyParser';
 import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
 import {DocumentRange} from '../../model/malloy_types';
 import {MalloyTranslation} from '../parse-malloy';
+import {ContainsString, getOptionalString} from '../malloy-to-ast';
 
 type NeedImports = Record<string, DocumentRange>;
 type NeedTables = Record<
@@ -38,6 +39,29 @@ type NeedTables = Record<
     firstReference: DocumentRange;
   }
 >;
+
+// not entirely happy with this copy of this code here ...
+function getString(cx: ContainsString): string {
+  const shortStr = getOptionalString(cx);
+  if (shortStr) {
+    return shortStr;
+  }
+  const multiLineStr = cx.string().sqlString();
+  if (multiLineStr) {
+    const strParts: string[] = [];
+    for (const part of multiLineStr.sqlInterpolation()) {
+      const upToOpen = part.OPEN_CODE().text;
+      if (upToOpen.length > 2) {
+        strParts.push(upToOpen.slice(0, upToOpen.length - 2));
+      }
+    }
+    const lastChars = multiLineStr.SQL_END()?.text.slice(0, -3);
+    strParts.push(lastChars || '');
+    return strParts.join('');
+  }
+  // string: shortString | sqlString; So this will never happen
+  return '';
+}
 
 class FindExternalReferences implements MalloyParserListener {
   needTables: NeedTables = {};
@@ -80,7 +104,7 @@ class FindExternalReferences implements MalloyParserListener {
   }
 
   enterImportURL(pcx: parser.ImportURLContext) {
-    const url = JSON.parse(pcx.shortString().text);
+    const url = getString(pcx);
     if (!this.needImports[url]) {
       this.needImports[url] = this.trans.rangeFromContext(pcx);
     }

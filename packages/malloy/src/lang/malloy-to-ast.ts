@@ -58,7 +58,7 @@ function getIsNotes(cx: parse.IsDefineContext): string[] {
   return before.concat(getNotes(cx._afterIs));
 }
 
-type ContainsString = ParserRuleContext & {
+type ContainsShortString = ParserRuleContext & {
   shortString: () => parse.ShortStringContext;
 };
 
@@ -69,7 +69,7 @@ type ContainsString = ParserRuleContext & {
  * @param cx Any parse context which contains a string
  * @returns Decocded string
  */
-function getShortString(cx: ContainsString): string {
+function getShortString(cx: ContainsShortString): string {
   const scx = cx.shortString();
   const str = scx.DQ_STRING()?.text || scx.SQ_STRING()?.text;
   if (str) {
@@ -79,11 +79,15 @@ function getShortString(cx: ContainsString): string {
   return '';
 }
 
-function getOptionalString(cx: ParserRuleContext): string | undefined {
-  function containsString(cx: ParserRuleContext): cx is ContainsString {
+export type ContainsString = ParserRuleContext & {
+  string: () => parse.StringContext;
+};
+
+export function getOptionalString(cx: ParserRuleContext): string | undefined {
+  function isShort(cx: ParserRuleContext): cx is ContainsShortString {
     return 'shortString' in cx;
   }
-  if (containsString(cx) && cx.shortString()) {
+  if (isShort(cx) && cx.shortString()) {
     return getShortString(cx);
   }
 }
@@ -260,6 +264,31 @@ export class MalloyToAST
     throw this.internalError(pcx, `'${element.elementType}': illegal source`);
   }
 
+  protected getString(cx: ContainsString): string {
+    const shortStr = getOptionalString(cx);
+    if (shortStr) {
+      return shortStr;
+    }
+    const multiLineStr = cx.string().sqlString();
+    if (multiLineStr) {
+      const strParts: string[] = [];
+      for (const part of multiLineStr.sqlInterpolation()) {
+        const upToOpen = part.OPEN_CODE().text;
+        if (upToOpen.length > 2) {
+          strParts.push(upToOpen.slice(0, upToOpen.length - 2));
+        }
+        if (part.query()) {
+          this.contextError(part, '%{ query }% illegal in this string');
+        }
+      }
+      const lastChars = multiLineStr.SQL_END()?.text.slice(0, -3);
+      strParts.push(lastChars || '');
+      return strParts.join('');
+    }
+    // string: shortString | sqlString; So this will never happen
+    return '';
+  }
+
   protected makeSqlString(
     pcx: parse.SqlStringContext,
     sqlStr: ast.SQLString
@@ -353,7 +382,7 @@ export class MalloyToAST
   }
 
   visitTableFunction(pcx: parse.TableFunctionContext): ast.TableSource {
-    const tableURI = getShortString(pcx.tableURI());
+    const tableURI = this.getString(pcx.tableURI());
     const el = this.astAt(new ast.TableFunctionSource(tableURI), pcx);
     if (ENABLE_M4_WARNINGS) {
       this.astError(
@@ -368,7 +397,7 @@ export class MalloyToAST
   visitTableMethod(pcx: parse.TableMethodContext): ast.TableSource {
     const connId = pcx.connectionId();
     const connectionName = this.astAt(this.getModelEntryName(connId), connId);
-    const tablePath = getShortString(pcx.tablePath());
+    const tablePath = this.getString(pcx.tablePath());
     return this.astAt(
       new ast.TableMethodSource(connectionName, tablePath),
       pcx
@@ -679,9 +708,10 @@ export class MalloyToAST
   visitTimezoneStatement(
     cx: parse.TimezoneStatementContext
   ): ast.TimezoneStatement {
+    const timezone = this.getString(cx);
     const timezoneStatement = this.astAt(
-      new ast.TimezoneStatement(getShortString(cx)),
-      cx.shortString()
+      new ast.TimezoneStatement(timezone),
+      cx.string()
     );
 
     if (!timezoneStatement.isValid) {
@@ -1155,7 +1185,8 @@ export class MalloyToAST
   }
 
   visitExprString(pcx: parse.ExprStringContext): ast.ExprString {
-    return new ast.ExprString(getShortString(pcx));
+    const str = this.getString(pcx);
+    return new ast.ExprString(str);
   }
 
   visitExprRegex(pcx: parse.ExprRegexContext): ast.ExprRegEx {
@@ -1465,7 +1496,7 @@ export class MalloyToAST
   }
 
   visitImportStatement(pcx: parse.ImportStatementContext): ast.ImportStatement {
-    const url = getShortString(pcx.importURL());
+    const url = this.getString(pcx.importURL());
     return this.astAt(
       new ast.ImportStatement(url, this.parse.subTranslator.sourceURL),
       pcx
@@ -1489,7 +1520,7 @@ export class MalloyToAST
         if (connectionName) {
           this.contextError(nmCx, 'Cannot redefine connection');
         } else {
-          connectionName = getShortString(nmCx);
+          connectionName = this.getString(nmCx);
         }
       }
       const selCx = blockEnt.sqlString();
