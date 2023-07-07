@@ -63,6 +63,7 @@ import {
   isSQLFragment,
   FieldUnsupportedDef,
   QueryRunStats,
+  ImportLocation,
 } from './model';
 import {
   Connection,
@@ -194,7 +195,8 @@ export class Malloy {
             result.translated.sqlBlocks,
             result.problems || [],
             (position: ModelDocumentPosition) =>
-              translator.referenceAt(position)
+              translator.referenceAt(position),
+            (position: ModelDocumentPosition) => translator.importAt(position)
           );
         } else {
           const errors = result.problems || [];
@@ -586,6 +588,7 @@ export class Model implements Taggable {
   _referenceAt: (
     location: ModelDocumentPosition
   ) => DocumentReference | undefined;
+  _importAt: (location: ModelDocumentPosition) => ImportLocation | undefined;
   readonly problems: LogMessage[];
 
   constructor(
@@ -595,12 +598,16 @@ export class Model implements Taggable {
     problems: LogMessage[],
     referenceAt: (
       location: ModelDocumentPosition
-    ) => DocumentReference | undefined = () => undefined
+    ) => DocumentReference | undefined = () => undefined,
+    importAt: (
+      location: ModelDocumentPosition
+    ) => ImportLocation | undefined = () => undefined
   ) {
     this.modelDef = modelDef;
     this.queryList = queryList;
     this.sqlBlocks = sqlBlocks;
     this._referenceAt = referenceAt;
+    this._importAt = importAt;
     this.problems = problems;
   }
 
@@ -619,6 +626,19 @@ export class Model implements Taggable {
     position: ModelDocumentPosition
   ): DocumentReference | undefined {
     return this._referenceAt(position);
+  }
+
+  /**
+   * Retrieve an import for the token at the given position within
+   * the document that produced this model.
+   *
+   * @param position A position within the document.
+   * @return An `ImportLocation` at that position if one exists.
+   */
+  public getImport(
+    position: ModelDocumentPosition
+  ): ImportLocation | undefined {
+    return this._importAt(position);
   }
 
   /**

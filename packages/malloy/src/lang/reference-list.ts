@@ -22,6 +22,7 @@
  */
 
 import {DocumentPosition, DocumentReference} from '../model';
+import {locationContainsPosition} from './utils';
 
 export class ReferenceList {
   constructor(private readonly sourceURL: string) {}
@@ -88,14 +89,7 @@ export class ReferenceList {
       return undefined;
     }
     const reference = this.references[index];
-    if (
-      reference.location.range.start.line <= position.line &&
-      reference.location.range.end.line >= position.line &&
-      (position.line !== reference.location.range.start.line ||
-        position.character >= reference.location.range.start.character) &&
-      (position.line !== reference.location.range.end.line ||
-        position.character <= reference.location.range.end.character)
-    ) {
+    if (locationContainsPosition(reference.location, position)) {
       return reference;
     }
     return undefined;
