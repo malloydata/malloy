@@ -192,3 +192,60 @@ export function getOptionalId(cx: ParserRuleContext): string | undefined {
     return getId(cx);
   }
 }
+
+function* linesOf(allText: string): Generator<string> {
+  while (allText.length > 0) {
+    const lineMatch = allText.match(/^.*?\r?\n/);
+    let nextLine = allText;
+    if (lineMatch) {
+      nextLine = lineMatch[0];
+    }
+    yield nextLine;
+    allText = allText.slice(nextLine.length);
+  }
+}
+
+function minIndent(allText: string) {
+  let leftMost: number | undefined;
+  for (const line of linesOf(allText)) {
+    // look for lines starting with spaces, that have a non blank character somewhere
+    const leadingMatch = line.match(/^( *).*[^\s]/);
+    if (leadingMatch) {
+      const indentBy = leadingMatch[1].length;
+      if (leftMost === undefined || indentBy < leftMost) {
+        leftMost = indentBy;
+      }
+    }
+  }
+  return leftMost;
+}
+
+export function unIndent(parts: (string | unknown)[]): void {
+  let removeSpaces: number | undefined;
+  for (const part of parts) {
+    if (typeof part === 'string') {
+      const newLeft = minIndent(part);
+      if (
+        newLeft !== undefined &&
+        (removeSpaces === undefined || newLeft < removeSpaces)
+      ) {
+        removeSpaces = newLeft;
+      }
+    }
+  }
+  if (removeSpaces) {
+    for (let i = 0; i <= parts.length; i += 1) {
+      const ent = parts[i];
+      if (typeof ent === 'string') {
+        let newEnt = '';
+        for (let line of linesOf(ent)) {
+          if (line[0] === ' ') {
+            line = line.slice(removeSpaces);
+          }
+          newEnt += line;
+        }
+        parts[i] = newEnt;
+      }
+    }
+  }
+}

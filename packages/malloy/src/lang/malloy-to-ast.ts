@@ -41,6 +41,7 @@ import {
   getStringParts,
   getShortString,
   getStringIfShort,
+  unIndent,
 } from './parse-utils';
 
 const ENABLE_M4_WARNINGS = false;
@@ -216,30 +217,8 @@ export class MalloyToAST
           safeParts.push(part);
         }
       }
-      let allText = safeParts.join('');
-      let minIndent = allText.length;
-      const lines: string[] = [];
-      while (allText.length > 0) {
-        const lineMatch = allText.match(/^.*?\r?\n/);
-        let nextLine: string;
-        if (lineMatch) {
-          nextLine = lineMatch[0];
-          lines.push(nextLine);
-        } else {
-          lines.push(allText);
-          nextLine = allText;
-        }
-        allText = allText.slice(nextLine.length);
-        // look for lines starting with spaces, that have a non blank character somewhere
-        const leadingMatch = nextLine.match(/^( *).*[^\s]/);
-        if (leadingMatch) {
-          const indentBy = leadingMatch[1].length;
-          if (indentBy < minIndent) {
-            minIndent = indentBy;
-          }
-        }
-      }
-      return lines.map(s => (s[0] === ' ' ? s.slice(minIndent) : s)).join('');
+      unIndent(safeParts);
+      return safeParts.join('');
     }
     // string: shortString | sqlString; So this will never happen
     return '';
@@ -249,7 +228,9 @@ export class MalloyToAST
     pcx: parse.SqlStringContext,
     sqlStr: ast.SQLString
   ): void {
-    for (const part of getStringParts(pcx)) {
+    const allParts = getStringParts(pcx);
+    unIndent(allParts);
+    for (const part of allParts) {
       if (part instanceof ParserRuleContext) {
         sqlStr.push(this.visit(part));
       } else {
