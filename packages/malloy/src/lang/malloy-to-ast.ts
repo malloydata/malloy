@@ -216,7 +216,30 @@ export class MalloyToAST
           safeParts.push(part);
         }
       }
-      return safeParts.join('');
+      let allText = safeParts.join('');
+      let minIndent = allText.length;
+      const lines: string[] = [];
+      while (allText.length > 0) {
+        const lineMatch = allText.match(/^.*?\r?\n/);
+        let nextLine: string;
+        if (lineMatch) {
+          nextLine = lineMatch[0];
+          lines.push(nextLine);
+        } else {
+          lines.push(allText);
+          nextLine = allText;
+        }
+        allText = allText.slice(nextLine.length);
+        // look for lines starting with spaces, that have a non blank character somewhere
+        const leadingMatch = nextLine.match(/^( *).*[^\s]/);
+        if (leadingMatch) {
+          const indentBy = leadingMatch[1].length;
+          if (indentBy < minIndent) {
+            minIndent = indentBy;
+          }
+        }
+      }
+      return lines.map(s => (s[0] === ' ' ? s.slice(minIndent) : s)).join('');
     }
     // string: shortString | sqlString; So this will never happen
     return '';
