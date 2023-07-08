@@ -1007,6 +1007,9 @@ describe('qops', () => {
   test('aggregate single', () => {
     expect('query: a->{ aggregate: num is count() }').toTranslate();
   });
+  test('aggregate reference', () => {
+    expect('query: a->{ aggregate:  ai.sum() }').toTranslate();
+  });
   test('aggregate multiple', () => {
     expect(`
       query: a->{
