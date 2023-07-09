@@ -228,17 +228,16 @@ export class MalloyToAST
     pcx: parse.SqlStringContext,
     sqlStr: ast.SQLString
   ): void {
-    const allParts = getStringParts(pcx);
-    // Until SQL writer properly indents turducken, it actually looks better
-    // in the output to NOT de-indent the SQL sources
-    // unIndent(allParts);
-    for (const part of allParts) {
+    for (const part of getStringParts(pcx)) {
       if (part instanceof ParserRuleContext) {
         sqlStr.push(this.visit(part));
       } else {
         sqlStr.push(part);
       }
     }
+    // Until SQL writer properly indents turducken, it actually looks better
+    // in the output to NOT de-indent the SQL sources
+    // unIndent(sqlStr.elements);
     sqlStr.complete();
     this.astAt(sqlStr, pcx);
   }

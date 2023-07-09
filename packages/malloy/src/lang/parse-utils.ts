@@ -59,25 +59,22 @@ export type HasString = ParserRuleContext & {
 };
 type StringPart = ParserRuleContext | string;
 
-export function getStringParts(cx: SqlStringContext): StringPart[] {
+export function* getStringParts(cx: SqlStringContext): Generator<StringPart> {
   if (cx) {
-    const strParts: StringPart[] = [];
     for (const part of cx.sqlInterpolation()) {
       const upToOpen = part.OPEN_CODE().text;
       if (upToOpen.length > 2) {
-        strParts.push(upToOpen.slice(0, upToOpen.length - 2));
+        yield upToOpen.slice(0, upToOpen.length - 2);
       }
       if (part.query()) {
-        strParts.push(part.query());
+        yield part.query();
       }
     }
     const lastChars = cx.SQL_END()?.text.slice(0, -3);
     if (lastChars && lastChars.length > 0) {
-      strParts.push(lastChars);
+      yield lastChars;
     }
-    return strParts;
   }
-  return [];
 }
 
 enum ParseState {
