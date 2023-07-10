@@ -3381,6 +3381,24 @@ describe('sql expressions', () => {
     );
   });
 
+  test('from_sql deprecation warning', () => {
+    const m = new TestTranslator(
+      `##! m4warnings
+      sql: bad_sql is {select: """SELECT 1 as one"""}
+      source: foo is from_sql(bad_sql)`
+    );
+    const req = m.translate().compileSQL;
+    if (req) {
+      m.update({
+        compileSQL: {[req.name]: getSelectOneStruct(req)},
+      });
+    }
+    expect(m).toTranslateWithWarnings(
+      '`sql:` statement is deprecated, use `connection_name.sql(...)` instead',
+      '`from_sql` is deprecated; use `connection_name.sql(...)` as a source directly'
+    );
+  });
+
   test('reference to sql expression in run', () => {
     const m = new TestTranslator(`
       run: bigquery.sql("""select 1 as one""")
