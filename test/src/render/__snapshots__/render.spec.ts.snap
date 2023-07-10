@@ -233,6 +233,285 @@ exports[`rendering results date renderer truncated date no explicit timezone ren
 </table>
 `;
 
+exports[`rendering results duration renderer duration tags works correctly 1`] = `
+<table
+  style="vertical-align: top; border-collapse: collapse; width: 100%;"
+>
+  <thead>
+    <tr>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        ns1
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        ns2
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        ns3
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        mis1
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        mis2
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        mis3
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        ms1
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        ms2
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        ms3
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        s1
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        s2
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        s3
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        s4
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        s5
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        m1
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        m2
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        m3
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        h1
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        h2
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        h3
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        d1
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        d2
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          1 nanosecond
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          1 microsecond 2 nanoseconds
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          1 millisecond 2 microseconds
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          1 microsecond
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          1 millisecond 2 microseconds
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          1 second 2 milliseconds
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          1 millisecond
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          1 second 2 milliseconds
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          16 minutes 42 seconds
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          1 second
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          1 minute 1 second
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2 minutes 1 second
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          1 hour 10 seconds
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          20 days 15 seconds
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          1 minute
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          1 hour 2 minutes
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          1 day 5 minutes
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          1 hour
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          1 day 2 hours
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          2 days
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          1 day
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          300 days
+        </span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+`;
+
 exports[`rendering results html renderer hidden tags rendered correctly dashboard 1`] = `
 <div>
   <div

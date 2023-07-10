@@ -87,6 +87,14 @@ describe('model statements', () => {
     test('shorcut fitlered table', () => {
       expect("source: xA is table('aTable') {? astr ~ 'a%' }").toTranslate();
     });
+    test('shorcut fitlered table m4warning', () => {
+      expect(`
+        ##! m4warnings
+        source: xA is conn.table('aTable') extend {? astr ~ 'a%' }
+      `).toTranslateWithWarnings(
+        'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
+      );
+    });
     test('fitlered table', () => {
       expect(
         "source: testA is table('aTable') { where: astr ~ 'a%' }"
@@ -172,6 +180,14 @@ describe('model statements', () => {
     });
     test('query with shortcut filtered turtle', () => {
       expect("query: allA is ab->aturtle {? astr ~ 'a%' }").toTranslate();
+    });
+    test('query with shortcut filtered turtle m4warning', () => {
+      expect(`
+        ##! m4warnings
+        query: allA is ab->aturtle refine {? astr ~ 'a%' }
+      `).toTranslateWithWarnings(
+        'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
+      );
     });
     test('query with filtered turtle', () => {
       expect("query: allA is ab->aturtle { where: astr ~ 'a%' }").toTranslate();
@@ -971,6 +987,16 @@ describe('source properties', () => {
       }
     `).toTranslate();
   });
+  test('refined explore-query m4warning', () => {
+    expect(`
+      ##! m4warnings
+      source: abNew is ab extend {
+        query: for1 is aturtle refine {? ai = 1 }
+      }
+    `).toTranslateWithWarnings(
+      'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
+    );
+  });
   test('chained explore-query', () => {
     expect(`
       source: c is a {
@@ -1599,6 +1625,17 @@ describe('expressions', () => {
           aggregate: x is all(avg(ai)) { where: true }
         }
       `).toTranslate();
+  });
+  test('shortcut filtered measure m4warning', () => {
+    expect(`
+      ##! m4warnings
+      run: a -> {
+        group_by: ai
+        aggregate: x is avg(ai) {? astr = 'why?' }
+      }
+    `).toTranslateWithWarnings(
+      'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
+    );
   });
   test('correctly flags filtered scalar', () => {
     const e = new BetaExpression('ai { where: true }');
@@ -3344,6 +3381,24 @@ describe('sql expressions', () => {
     );
   });
 
+  test('from_sql deprecation warning', () => {
+    const m = new TestTranslator(
+      `##! m4warnings
+      sql: bad_sql is {select: """SELECT 1 as one"""}
+      source: foo is from_sql(bad_sql)`
+    );
+    const req = m.translate().compileSQL;
+    if (req) {
+      m.update({
+        compileSQL: {[req.name]: getSelectOneStruct(req)},
+      });
+    }
+    expect(m).toTranslateWithWarnings(
+      '`sql:` statement is deprecated, use `connection_name.sql(...)` instead',
+      '`from_sql` is deprecated; use `connection_name.sql(...)` as a source directly'
+    );
+  });
+
   test('reference to sql expression in run', () => {
     const m = new TestTranslator(`
       run: bigquery.sql("""select 1 as one""")
@@ -3406,6 +3461,17 @@ describe('sql expressions', () => {
       });
       expect(m).translationToFailWith('Cannot refine a SQL query');
     }
+  });
+});
+
+describe('turtle with leading arrow', () => {
+  test('optional leading arrow for defining a turtle', () => {
+    expect(`
+      source: c is a extend {
+        query: x is -> { project: * }
+        query: y is { project: * }
+      }
+    `).toTranslate();
   });
 });
 
@@ -3651,6 +3717,7 @@ describe('extend and refine', () => {
     });
   });
 });
+
 describe('miscellaneous m4 warnings', () => {
   test('from() is deprecated', () => {
     expect(`
@@ -3667,5 +3734,32 @@ describe('miscellaneous m4 warnings', () => {
       source: c is q extend {
         dimension: x is 1
     }`).toTranslate();
+  });
+  
+  test('query leading arrow', () => {
+    expect(`
+      ##! m4warnings
+      query: x is a -> { project: * }
+      run: x
+    `).toTranslate();
+    expect(`
+      ##! m4warnings
+      query: x is a -> { project: * }
+      run: x -> { project: * }
+    `).toTranslate();
+    expect(`
+      ##! m4warnings
+      query: x is a -> { project: * }
+      run: -> x
+    `).toTranslateWithWarnings(
+      'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow'
+    );
+    expect(`
+      ##! m4warnings
+      query: x is a -> { project: * }
+      run: -> x -> { project: * }
+    `).toTranslateWithWarnings(
+      'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow'
+    );
   });
 });

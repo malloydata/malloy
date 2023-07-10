@@ -31,6 +31,7 @@ import {LinkRendererFactory} from './html/link';
 import {UnsupportedRendererFactory} from './html/unsupported';
 import {TextRendererFactory} from './html/text';
 import {DataVolumeRendererFactory} from './html/data_volume';
+import {DurationRendererFactory} from './html/duration';
 
 export class MainRendererFactory {
   static renderFactories = [
@@ -54,6 +55,7 @@ export class MainRendererFactory {
     DataVolumeRendererFactory.instance,
     BytesRendererFactory.instance,
     LinkRendererFactory.instance,
+    DurationRendererFactory.instance,
     BooleanRendererFactory.instance,
     NumberRendererFactory.instance,
     UnsupportedRendererFactory.instance,

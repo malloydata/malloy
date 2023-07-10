@@ -195,6 +195,13 @@ export class MalloyToAST
 
   protected getFilterShortcut(cx: parse.FilterShortcutContext): ast.Filter {
     const el = this.getFilterElement(cx.fieldExpr());
+    if (this.m4WarningsEnabled()) {
+      this.astError(
+        el,
+        'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead',
+        'warn'
+      );
+    }
     return new ast.Filter([el]);
   }
 
@@ -357,7 +364,15 @@ export class MalloyToAST
   visitQueryByName(pcx: parse.QueryByNameContext): ast.QueryElement {
     const query = new ast.ExistingQuery();
     query.head = this.getModelEntryName(pcx);
-    return this.astAt(query, pcx);
+    const res = this.astAt(query, pcx);
+    if (this.m4WarningsEnabled() && pcx.ARROW()) {
+      this.astError(
+        res,
+        'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow',
+        'warn'
+      );
+    }
+    return res;
   }
 
   protected getSourceExtensions(
@@ -467,7 +482,15 @@ export class MalloyToAST
 
   visitSQLSourceName(pcx: parse.SQLSourceNameContext): ast.FromSQLSource {
     const name = this.getModelEntryName(pcx.sqlExploreNameRef());
-    return this.astAt(new ast.FromSQLSource(name), pcx);
+    const res = this.astAt(new ast.FromSQLSource(name), pcx);
+    if (this.m4WarningsEnabled()) {
+      this.astError(
+        res,
+        '`from_sql` is deprecated; use `connection_name.sql(...)` as a source directly',
+        'warn'
+      );
+    }
+    return res;
   }
 
   visitSqlSource(pcx: parse.SqlSourceContext): ast.SQLSource {
@@ -704,7 +727,15 @@ export class MalloyToAST
 
   visitFilterByShortcut(pcx: parse.FilterByShortcutContext): ast.Filter {
     const el = this.getFilterElement(pcx.fieldExpr());
-    return this.astAt(new ast.Filter([el]), pcx);
+    const res = this.astAt(new ast.Filter([el]), pcx);
+    if (this.m4WarningsEnabled()) {
+      this.astError(
+        el,
+        'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead',
+        'warn'
+      );
+    }
+    return res;
   }
 
   visitWhereStatement(pcx: parse.WhereStatementContext): ast.Filter {
