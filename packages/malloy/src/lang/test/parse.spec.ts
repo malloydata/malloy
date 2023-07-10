@@ -3409,6 +3409,17 @@ describe('sql expressions', () => {
   });
 });
 
+describe('turtle with leading arrow', () => {
+  test('optional leading arrow for defining a turtle', () => {
+    expect(`
+      source: c is a extend {
+        query: x is -> { project: * }
+        query: y is { project: * }
+      }
+    `).toTranslate();
+  });
+});
+
 describe('extend and refine', () => {
   describe('extend and refine, new syntax', () => {
     test('query name with query refinements', () => {
