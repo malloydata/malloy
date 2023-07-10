@@ -103,6 +103,16 @@ function parseTag(
   if (!propMatch) {
     return;
   }
+  const newProps = parseTagProperties(src.slice(propMatch[0].length), tagProp);
+  if (newProps) {
+    return {properties: newProps};
+  }
+}
+
+export function parseTagProperties(
+  src: string,
+  tagProp: MalloyTagProperties
+): MalloyTagProperties | undefined {
   /*
    * I went back and forth if the grammar for these annotations should be
    * in the parser or the lexer. Eventually the fact that the lexer ate
@@ -110,7 +120,7 @@ function parseTag(
    *
    * Seems wrong to be writing a parser though.
    */
-  const tokens = tokenize(src.slice(propMatch[0].length));
+  const tokens = tokenize(src);
   let tn = 0;
   const lastToken = tokens.length - 1;
   while (tn <= lastToken) {
@@ -142,7 +152,7 @@ function parseTag(
     }
     tn += 1;
   }
-  return {properties: tagProp};
+  return tagProp;
 }
 
 function tokenize(src: string): string[] {

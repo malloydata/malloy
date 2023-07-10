@@ -58,8 +58,7 @@ isDefine
   ;
 
 runStatement
-  : blockTags=tags RUN noteTags=tags topLevelAnonQueryDef     # runStatementDef
-  | RUN queryName                                             # runStatementRef
+  : blockTags=tags RUN noteTags=tags topLevelAnonQueryDef
   ;
 
 defineSQLStatement
@@ -113,9 +112,45 @@ topLevelQueryDef
 
 refineOperator: PLUS ;
 
+queryRefinement
+  : refineOperator? queryProperties
+  | REFINE queryProperties
+  ;
+
+sourceExtension
+  : refineOperator? exploreProperties
+  | EXTEND exploreProperties
+  ;
+
 query
-  : explore ARROW pipelineFromName                  # exploreArrowQuery
-  | ARROW queryName (refineOperator? queryProperties)? pipeElement*   # arrowQuery
+  : unrefinableQuery pipeElement*    # NormalQuery
+  | sqlSource                        # QueryFromSQLSource
+  ;
+
+unrefinableQuery
+  : unextendableSource pipeElement+  # QueryFromSource
+  | refinableQuery queryRefinement?  # RefinedQuery
+  ;
+
+refinableQuery
+  : ARROW? id                       # QueryByName
+  | unextendableSource ARROW id     # QueryByTurtleName
+  ;
+
+unextendableSource
+  : extendableSource sourceExtension?
+  ;
+
+extendableSource
+  : sourceID                                      # SourceFromNamedModelEntry
+  | exploreTable                                  # TableSource
+  | FROM OPAREN query CPAREN                      # QuerySource
+  | FROM_SQL OPAREN sqlExploreNameRef CPAREN      # SQLSourceName
+  | sqlSource                                     # SQLSource_stub
+  ;
+
+sqlSource
+  : connectionId DOT SQL OPAREN (sqlString|shortString) CPAREN
   ;
 
 pipelineFromName
@@ -124,7 +159,7 @@ pipelineFromName
 
 firstSegment
   : queryProperties
-  | exploreQueryName (refineOperator? queryProperties)?
+  | exploreQueryName queryRefinement?
   ;
 
 pipeElement
@@ -160,15 +195,8 @@ sourceDefinition
   ;
 
 explore
-  : exploreSource (refineOperator? exploreProperties)?
-  ;
-
-exploreSource
-  : sourceID                                                    # NamedSource
-  | exploreTable                                                # TableSource
-  | FROM OPAREN query CPAREN                                    # QuerySource
-  | FROM_SQL OPAREN sqlExploreNameRef CPAREN                    # SQLSourceName
-  | connectionId DOT SQL OPAREN (sqlString|shortString) CPAREN  # SQLSource
+  : unextendableSource           # BareExtendedSource_stub
+  | query sourceExtension        # ExtendedQuery
   ;
 
 sourceNameDef: id;
@@ -340,7 +368,7 @@ nestedQueryList
   ;
 
 nestEntry
-  : tags queryName (refineOperator? queryProperties)?   # nestExisting
+  : tags queryName queryRefinement?   # nestExisting
   | tags queryName isDefine pipelineFromName            # nestDef
   ;
 
