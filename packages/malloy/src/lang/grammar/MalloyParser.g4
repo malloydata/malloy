@@ -158,7 +158,7 @@ pipelineFromName
   ;
 
 firstSegment
-  : queryProperties
+  : ARROW? queryProperties
   | exploreQueryName queryRefinement?
   ;
 
