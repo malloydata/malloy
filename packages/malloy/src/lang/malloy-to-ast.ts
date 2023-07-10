@@ -467,7 +467,15 @@ export class MalloyToAST
 
   visitSQLSourceName(pcx: parse.SQLSourceNameContext): ast.FromSQLSource {
     const name = this.getModelEntryName(pcx.sqlExploreNameRef());
-    return this.astAt(new ast.FromSQLSource(name), pcx);
+    const res = this.astAt(new ast.FromSQLSource(name), pcx);
+    if (this.m4WarningsEnabled()) {
+      this.astError(
+        res,
+        '`from_sql` is deprecated; use `connection_name.sql(...)` as a source directly',
+        'warn'
+      );
+    }
+    return res;
   }
 
   visitSqlSource(pcx: parse.SqlSourceContext): ast.SQLSource {
