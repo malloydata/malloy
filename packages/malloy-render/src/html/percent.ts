@@ -30,7 +30,10 @@ import {RendererFactory} from '../renderer_factory';
 
 export class HTMLPercentRenderer extends HTMLNumberRenderer {
   override getText(data: DataColumn): string | null {
-    const num = this.getNumber(data);
+    if (data.isNull()) {
+      return null;
+    }
+    const num = data.number.value;
 
     return num === null
       ? num

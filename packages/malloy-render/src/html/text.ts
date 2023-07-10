@@ -44,7 +44,7 @@ export class HTMLTextRenderer implements Renderer {
     try {
       text = this.getText(data);
     } catch (e) {
-      createErrorElement(this.document, e);
+      return createErrorElement(this.document, e);
     }
 
     if (text === null) {
