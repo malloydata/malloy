@@ -80,7 +80,7 @@ sqlString
   ;
 
 sqlInterpolation
-  : OPEN_CODE query CLOSE_CODE
+  : OPEN_CODE query (CCURLY | CLOSE_CODE)
   ;
 
 importStatement

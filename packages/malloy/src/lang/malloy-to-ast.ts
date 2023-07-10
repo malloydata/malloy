@@ -212,7 +212,7 @@ export class MalloyToAST
     if (multiLineStr) {
       for (const part of getStringParts(multiLineStr)) {
         if (part instanceof ParserRuleContext) {
-          this.contextError(part, '%{ query }% illegal in this string');
+          this.contextError(part, '%{ query } illegal in this string');
         } else {
           safeParts.push(part);
         }

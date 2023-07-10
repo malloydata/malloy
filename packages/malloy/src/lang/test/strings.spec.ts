@@ -105,8 +105,8 @@ describe('string parsing in language', () => {
   });
   test('timezone with illegal query', () => {
     expect(
-      `run: a->{timezone: """${tz}%{ab->aturtle}%"""; project: *}`
-    ).translationToFailWith('%{ query }% illegal in this string');
+      `run: a->{timezone: """${tz}%{ab->aturtle}"""; project: *}`
+    ).translationToFailWith('%{ query } illegal in this string');
   });
   test('table single quote', () => {
     const m = new TestTranslator("source: n is bigquery.table('n')");
