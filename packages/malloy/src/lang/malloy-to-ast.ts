@@ -357,7 +357,15 @@ export class MalloyToAST
   visitQueryByName(pcx: parse.QueryByNameContext): ast.QueryElement {
     const query = new ast.ExistingQuery();
     query.head = this.getModelEntryName(pcx);
-    return this.astAt(query, pcx);
+    const res = this.astAt(query, pcx);
+    if (this.m4WarningsEnabled() && pcx.ARROW()) {
+      this.astError(
+        res,
+        'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow',
+        'warn'
+      );
+    }
+    return res;
   }
 
   protected getSourceExtensions(
