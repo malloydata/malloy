@@ -44,7 +44,7 @@ export class HTMLNumberRenderer extends HTMLTextRenderer {
         return numfmt.format(this.options.value_format, data.number.value);
       } catch {
         // TODO: explore surfacing invalid format error, ignoring it for now.
-        return 'failing';
+        throw new Error(`Invalid value format: ${this.options.value_format}`);
       }
     }
 
