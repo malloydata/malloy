@@ -115,6 +115,20 @@ export interface DataVolumeRenderOptions extends TextRenderOptions {
   data_volume_unit?: DataVolumeUnit;
 }
 
+export enum DurationUnit {
+  Nanoseconds = 'nanoseconds',
+  Microseconds = 'microseconds',
+  Milliseconds = 'milliseconds',
+  Seconds = 'seconds',
+  Minutes = 'minutes',
+  Hours = 'hours',
+  Days = 'days',
+}
+
+export interface DurationRenderOptions extends TextRenderOptions {
+  duration_unit?: DurationUnit;
+}
+
 export interface ImageRenderOptions extends TextRenderOptions {
   border?: boolean;
 }
