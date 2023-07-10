@@ -34,7 +34,7 @@ export class HTMLNumberRenderer extends HTMLTextRenderer {
     super(document);
   }
 
-  getNumber(data: DataColumn): number | null {
+  override getText(data: DataColumn): string | null {
     if (data.isNull()) {
       return null;
     }
@@ -44,17 +44,11 @@ export class HTMLNumberRenderer extends HTMLTextRenderer {
         return numfmt.format(this.options.value_format, data.number.value);
       } catch {
         // TODO: explore surfacing invalid format error, ignoring it for now.
-        return data.number.value;
+        return 'failing';
       }
     }
 
-    return data.number.value;
-  }
-
-  override getText(data: DataColumn): string | null {
-    const num = this.getNumber(data);
-
-    return num === null ? num : num.toLocaleString();
+    return data.number.value.toLocaleString();
   }
 }
 

@@ -37,13 +37,13 @@ export abstract class RendererFactory<T extends DataRenderOptions> {
     const options = {} as T;
     for (const tag in this.tagOptionExtractors) {
       let tagValue: string | undefined = undefined;
-      if (
-        tagProperties[tag] !== undefined &&
-        typeof tagProperties[tag] === 'string'
-      ) {
-        tagValue = tagProperties[tag] as string;
+      if (tagProperties[tag]) {
+        if (typeof tagProperties[tag] === 'string') {
+          tagValue = tagProperties[tag] as string;
+        }
+
+        this.tagOptionExtractors[tag](options, tagValue);
       }
-      this.tagOptionExtractors[tag](options, tagValue);
     }
 
     return options;
