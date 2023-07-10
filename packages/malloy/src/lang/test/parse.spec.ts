@@ -87,6 +87,14 @@ describe('model statements', () => {
     test('shorcut fitlered table', () => {
       expect("source: xA is table('aTable') {? astr ~ 'a%' }").toTranslate();
     });
+    test('shorcut fitlered table m4warning', () => {
+      expect(`
+        ##! m4warnings
+        source: xA is conn.table('aTable') extend {? astr ~ 'a%' }
+      `).toTranslateWithWarnings(
+        'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
+      );
+    });
     test('fitlered table', () => {
       expect(
         "source: testA is table('aTable') { where: astr ~ 'a%' }"
@@ -172,6 +180,14 @@ describe('model statements', () => {
     });
     test('query with shortcut filtered turtle', () => {
       expect("query: allA is ab->aturtle {? astr ~ 'a%' }").toTranslate();
+    });
+    test('query with shortcut filtered turtle m4warning', () => {
+      expect(`
+        ##! m4warnings
+        query: allA is ab->aturtle refine {? astr ~ 'a%' }
+      `).toTranslateWithWarnings(
+        'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
+      );
     });
     test('query with filtered turtle', () => {
       expect("query: allA is ab->aturtle { where: astr ~ 'a%' }").toTranslate();
@@ -971,6 +987,16 @@ describe('source properties', () => {
       }
     `).toTranslate();
   });
+  test('refined explore-query m4warning', () => {
+    expect(`
+      ##! m4warnings
+      source: abNew is ab extend {
+        query: for1 is aturtle refine {? ai = 1 }
+      }
+    `).toTranslateWithWarnings(
+      'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
+    );
+  });
   test('chained explore-query', () => {
     expect(`
       source: c is a {
@@ -1599,6 +1625,17 @@ describe('expressions', () => {
           aggregate: x is all(avg(ai)) { where: true }
         }
       `).toTranslate();
+  });
+  test('shortcut filtered measure m4warning', () => {
+    expect(`
+      ##! m4warnings
+      run: a -> {
+        group_by: ai
+        aggregate: x is avg(ai) {? astr = 'why?' }
+      }
+    `).toTranslateWithWarnings(
+      'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
+    );
   });
   test('correctly flags filtered scalar', () => {
     const e = new BetaExpression('ai { where: true }');

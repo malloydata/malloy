@@ -195,6 +195,13 @@ export class MalloyToAST
 
   protected getFilterShortcut(cx: parse.FilterShortcutContext): ast.Filter {
     const el = this.getFilterElement(cx.fieldExpr());
+    if (this.m4WarningsEnabled()) {
+      this.astError(
+        el,
+        'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead',
+        'warn'
+      );
+    }
     return new ast.Filter([el]);
   }
 
@@ -704,7 +711,15 @@ export class MalloyToAST
 
   visitFilterByShortcut(pcx: parse.FilterByShortcutContext): ast.Filter {
     const el = this.getFilterElement(pcx.fieldExpr());
-    return this.astAt(new ast.Filter([el]), pcx);
+    const res = this.astAt(new ast.Filter([el]), pcx);
+    if (this.m4WarningsEnabled()) {
+      this.astError(
+        el,
+        'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead',
+        'warn'
+      );
+    }
+    return res;
   }
 
   visitWhereStatement(pcx: parse.WhereStatementContext): ast.Filter {
