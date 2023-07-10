@@ -28,6 +28,12 @@ import * as parser from '../lib/Malloy/MalloyParser';
 import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
 import {DocumentRange} from '../../model/malloy_types';
 import {MalloyTranslation} from '../parse-malloy';
+import {
+  HasString,
+  getId,
+  getStringIfShort,
+  getStringParts,
+} from '../parse-utils';
 
 type NeedImports = Record<string, DocumentRange>;
 type NeedTables = Record<
@@ -38,6 +44,27 @@ type NeedTables = Record<
     firstReference: DocumentRange;
   }
 >;
+
+// Copy of the version in the parser which also errors on each non-string in a
+// multi-line string collection. No need to error here, which is well, because
+// we don't have access to the error log.
+function getPlainString(cx: HasString): string {
+  const shortStr = getStringIfShort(cx);
+  if (shortStr) {
+    return shortStr;
+  }
+  const safeParts: string[] = [];
+  const multiLineStr = cx.string().sqlString();
+  if (multiLineStr) {
+    for (const part of getStringParts(multiLineStr)) {
+      if (typeof part === 'string') {
+        safeParts.push(part);
+      }
+    }
+    return safeParts.join('');
+  }
+  return '';
+}
 
 class FindExternalReferences implements MalloyParserListener {
   needTables: NeedTables = {};
@@ -64,14 +91,14 @@ class FindExternalReferences implements MalloyParserListener {
   }
 
   enterTableMethod(pcx: parser.TableMethodContext) {
-    const connectionName = this.stripIdQuotes(pcx.connectionId().text);
-    const tablePath = this.tokens.getText(pcx.tablePath()).slice(1, -1);
+    const connId = getId(pcx.connectionId());
+    const tablePath = getPlainString(pcx.tablePath());
     const reference = this.trans.rangeFromContext(pcx);
-    this.registerTableReference(connectionName, tablePath, reference);
+    this.registerTableReference(connId, tablePath, reference);
   }
 
   enterTableFunction(pcx: parser.TableFunctionContext) {
-    const tableURI = this.tokens.getText(pcx.tableURI()).slice(1, -1);
+    const tableURI = getPlainString(pcx.tableURI());
     // This use of `deprecatedParseTableURI` is ok because it is for handling the
     // old, soon-to-be-deprecated table syntax.
     const {connectionName, tablePath} = deprecatedParseTableURI(tableURI);
@@ -80,17 +107,10 @@ class FindExternalReferences implements MalloyParserListener {
   }
 
   enterImportURL(pcx: parser.ImportURLContext) {
-    const url = JSON.parse(pcx.shortString().text);
+    const url = getPlainString(pcx);
     if (!this.needImports[url]) {
       this.needImports[url] = this.trans.rangeFromContext(pcx);
     }
-  }
-
-  stripIdQuotes(id: string) {
-    if (id[0] === '`' && id[id.length - 1] === '`') {
-      return id.slice(1, -1);
-    }
-    return id;
   }
 }
 

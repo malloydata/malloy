@@ -21,6 +21,65 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {ParserRuleContext} from 'antlr4ts';
+import {
+  StringContext,
+  ShortStringContext,
+  SqlStringContext,
+  IsDefineContext,
+  IdContext,
+} from './lib/Malloy/MalloyParser';
+import {TerminalNode} from 'antlr4ts/tree/TerminalNode';
+
+/**
+ * Take the text of a matched string, including the matching quote
+ * characters, and return the actual contents of the string after
+ * \ processing.
+ * @param cx Any parse context which contains a string
+ * @returns Decocded string
+ */
+export function getShortString(scx: ShortStringContext): string {
+  const str = scx.DQ_STRING()?.text || scx.SQ_STRING()?.text;
+  if (str) {
+    return parseString(str, str[0]);
+  }
+  // shortString: DQ_STRING | SQ_STRING; So this will never happen
+  return '';
+}
+
+export function getStringIfShort(cx: HasString): string | undefined {
+  const scx = cx.string().shortString();
+  if (scx) {
+    return getShortString(scx);
+  }
+}
+
+export type HasString = ParserRuleContext & {
+  string: () => StringContext;
+};
+type StringPart = ParserRuleContext | string;
+
+export function getStringParts(cx: SqlStringContext): StringPart[] {
+  if (cx) {
+    const strParts: StringPart[] = [];
+    for (const part of cx.sqlInterpolation()) {
+      const upToOpen = part.OPEN_CODE().text;
+      if (upToOpen.length > 2) {
+        strParts.push(upToOpen.slice(0, upToOpen.length - 2));
+      }
+      if (part.query()) {
+        strParts.push(part.query());
+      }
+    }
+    const lastChars = cx.SQL_END()?.text.slice(0, -3);
+    if (lastChars && lastChars.length > 0) {
+      strParts.push(lastChars);
+    }
+    return strParts;
+  }
+  return [];
+}
+
 enum ParseState {
   Normal,
   ReverseVirgule,
@@ -92,4 +151,44 @@ export function parseString(str: string, surround = ''): string {
     }
   }
   return out;
+}
+
+type HasAnnotations = ParserRuleContext & {ANNOTATION: () => TerminalNode[]};
+/**
+ * Get all the possibly missing annotations from this parse rule
+ * @param cx Any parse context which has an ANNOTATION* rules
+ * @returns Array of texts for the annotations
+ */
+export function getNotes(cx: HasAnnotations): string[] {
+  return cx.ANNOTATION().map(a => a.text);
+}
+
+export function getIsNotes(cx: IsDefineContext): string[] {
+  const before = getNotes(cx._beforeIs);
+  return before.concat(getNotes(cx._afterIs));
+}
+
+export type HasID = ParserRuleContext & {id: () => IdContext};
+
+/**
+ * An identifier is either a sequence of id characters or a `quoted`
+ * This parses either to simply the resulting text.
+ * @param cx A context which has an identifier
+ * @returns The indenftifier text
+ */
+export function getId(cx: HasID): string {
+  const quoted = cx.id().BQ_STRING();
+  if (quoted) {
+    return parseString(quoted.text, '`');
+  }
+  return cx.id().text;
+}
+
+export function getOptionalId(cx: ParserRuleContext): string | undefined {
+  function containsID(cx: ParserRuleContext): cx is HasID {
+    return 'id' in cx;
+  }
+  if (containsID(cx) && cx.id()) {
+    return getId(cx);
+  }
 }

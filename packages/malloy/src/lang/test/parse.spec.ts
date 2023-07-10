@@ -2776,6 +2776,27 @@ describe('source references', () => {
   });
 });
 
+describe('translate imports', () => {
+  test('import at', () => {
+    const source = markSource`import ${'"myfile.malloy"'}`;
+    const m = new TestTranslator(source.code);
+    const resp1 = m.translate();
+    expect(resp1.final).toBeUndefined();
+    m.update({
+      urls: {
+        'internal://test/langtests/myfile.malloy':
+          'query: ab -> { project: * }',
+      },
+    });
+    const resp2 = m.translate();
+    expect(resp2.final).toBeDefined();
+    const im = m.importAt({line: 0, character: 10});
+    expect(im?.importURL).toEqual('internal://test/langtests/myfile.malloy');
+    expect(im?.location.url).toEqual('internal://test/langtests/root.malloy');
+    expect(im?.location).toMatchObject(source.locations[0]);
+  });
+});
+
 describe('translation need error locations', () => {
   test('import error location', () => {
     const source = model`import ${'"badfile"'}`;

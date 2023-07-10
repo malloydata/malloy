@@ -34,6 +34,7 @@ import {
   DocumentPosition,
   DocumentRange,
   DocumentReference,
+  ImportLocation,
   ModelDef,
   NamedModelObject,
   Query,
@@ -81,6 +82,7 @@ import {
   isNeedResponse,
 } from './translate-response';
 import {MalloyParserErrorHandler} from './parse-error-handler';
+import {locationContainsPosition} from './utils';
 
 export type StepResponses =
   | DataRequestResponse
@@ -625,6 +627,7 @@ export abstract class MalloyTranslation {
   queryList: Query[] = [];
   sqlBlocks: SQLBlockStructDef[] = [];
   modelDef: ModelDef;
+  imports: ImportLocation[] = [];
 
   readonly parseStep: ParseStep;
   readonly importsAndTablesStep: ImportsAndTablesStep;
@@ -783,8 +786,31 @@ export abstract class MalloyTranslation {
     const attempt = this.translateStep.step(this, extendingModel);
     if (attempt.final) {
       this.finalAnswer = attempt;
+      this.buildImports();
     }
     return attempt;
+  }
+
+  importAt(position: DocumentPosition): ImportLocation | undefined {
+    // Here we assume that imports DO NOT overlap. And then we do a linear
+    // search to find the one we're looking for.
+    for (let index = 0; index < this.imports.length; index++) {
+      const imp = this.imports[index];
+      if (locationContainsPosition(imp.location, position)) {
+        return imp;
+      }
+    }
+    return undefined;
+  }
+
+  private buildImports(): void {
+    for (const [key, value] of Object.entries(this.root.importZone.location)) {
+      // Ignore any import in another file
+      if (value.url !== this.sourceURL) {
+        continue;
+      }
+      this.imports.push({importURL: key, location: value});
+    }
   }
 
   metadata(): MetadataResponse {
