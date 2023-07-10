@@ -159,7 +159,7 @@ pipelineFromName
 
 firstSegment
   : queryProperties
-  | exploreQueryName (refineOperator? queryProperties)?
+  | exploreQueryName queryRefinement?
   ;
 
 pipeElement
@@ -368,7 +368,7 @@ nestedQueryList
   ;
 
 nestEntry
-  : tags queryName (refineOperator? queryProperties)?   # nestExisting
+  : tags queryName queryRefinement?   # nestExisting
   | tags queryName isDefine pipelineFromName            # nestDef
   ;
 

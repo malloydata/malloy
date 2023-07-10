@@ -3567,4 +3567,83 @@ describe('extend and refine', () => {
       );
     });
   });
+
+  describe('turtles', () => {
+    test('explicit refine in turtle works', () => {
+      expect(`source: c is a extend {
+        query: x is { project: * }
+        query: y is x refine { limit: 1 }
+      }`).toTranslate();
+    });
+
+    test('implicit refine in turtle works', () => {
+      expect(`source: c is a extend {
+        query: x is { project: * }
+        query: y is x { limit: 1 }
+      }`).toTranslate();
+    });
+  });
+
+  describe('nests', () => {
+    test('explicit refine in nest', () => {
+      expect(`source: c is a extend {
+        query: x is { project: * }
+      }
+
+      run: c -> {
+        nest: x refine { limit: 1 }
+      }`).toTranslate();
+    });
+
+    test('implicit refine in nest', () => {
+      expect(`source: c is a extend {
+        query: x is { project: * }
+      }
+
+      run: c -> {
+        nest: x { limit: 1 }
+      }`).toTranslate();
+    });
+  });
+
+  // TODO unskip this when ENABLE_M4_WARNINGS becomes a document annotation
+  describe.skip('m4 warnings', () => {
+    test('implicit refine in nest', () => {
+      expect(`source: c is a extend {
+        query: x is { project: * }
+      }
+
+      run: c -> {
+        nest: x { limit: 1 }
+      }`).toTranslateWithWarnings(
+        'Implicit query refinement is deprecated, use the `refine` operator.'
+      );
+    });
+
+    test('implicit refine in turtle works', () => {
+      expect(`source: c is a extend {
+        query: x is { project: * }
+        query: y is x { limit: 1 }
+      }`).toTranslateWithWarnings(
+        'Implicit query refinement is deprecated, use the `refine` operator.'
+      );
+    });
+
+    test('implicit query refinement', () => {
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: q { group_by: three is 3 }
+      `).toTranslateWithWarnings(
+        'Implicit query refinement is deprecated, use the `refine` operator.'
+      );
+    });
+
+    test('implicit source extension', () => {
+      expect(
+        'source: s is a { dimension: ai_2 is ai + ai }'
+      ).toTranslateWithWarnings(
+        'Implicit source extension is deprecated, use the `extend` operator.'
+      );
+    });
+  });
 });

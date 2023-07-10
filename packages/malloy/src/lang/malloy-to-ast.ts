@@ -43,7 +43,7 @@ import {
   getStringIfShort,
 } from './parse-utils';
 
-const ENABLE_M4_WARNINGS = false;
+const ENABLE_M4_WARNINGS = true;
 
 class IgnoredElement extends ast.MalloyElement {
   elementType = 'ignoredByParser';
@@ -303,14 +303,29 @@ export class MalloyToAST
     return this.astAt(query, pcx);
   }
 
+  protected getQueryRefinements(
+    pcx: parse.QueryRefinementContext
+  ): ast.QOPDesc {
+    const properties = this.astAt(
+      this.visitQueryProperties(pcx.queryProperties()),
+      pcx
+    );
+    if (ENABLE_M4_WARNINGS && pcx.REFINE() === undefined) {
+      this.astError(
+        properties,
+        'Implicit query refinement is deprecated, use the `refine` operator.',
+        'warn'
+      );
+    }
+    return properties;
+  }
+
   visitRefinedQuery(pcx: parse.RefinedQueryContext): ast.QueryElement {
     const base = this.visit(pcx.refinableQuery());
     if (ast.isQueryElement(base)) {
-      const refinement = pcx.queryRefinement();
-      if (refinement) {
-        const properties = this.visitQueryProperties(
-          refinement.queryProperties()
-        );
+      const rcx = pcx.queryRefinement();
+      if (rcx) {
+        const properties = this.getQueryRefinements(rcx);
         base.refineHead(properties);
       }
       return base;
@@ -336,15 +351,28 @@ export class MalloyToAST
     return this.astAt(query, pcx);
   }
 
+  protected getSourceExtensions(
+    pcx: parse.SourceExtensionContext
+  ): ast.SourceDesc {
+    const extensions = pcx?.exploreProperties();
+    const sourceDesc = this.astAt(this.visitExploreProperties(extensions), pcx);
+    if (ENABLE_M4_WARNINGS && pcx.EXTEND() === undefined) {
+      this.astError(
+        sourceDesc,
+        'Implicit source extension is deprecated, use the `extend` operator.',
+        'warn'
+      );
+    }
+    return sourceDesc;
+  }
+
   visitUnextendableSource(pcx: parse.UnextendableSourceContext) {
     const unextendedSource = this.visit(pcx.extendableSource());
     if (unextendedSource instanceof ast.Source) {
-      const extensions = pcx.sourceExtension()?.exploreProperties();
-      if (extensions) {
-        return new ast.RefinedSource(
-          unextendedSource,
-          this.visitExploreProperties(extensions)
-        );
+      const ecx = pcx.sourceExtension();
+      if (ecx) {
+        const sourceDesc = this.getSourceExtensions(ecx);
+        return new ast.RefinedSource(unextendedSource, sourceDesc);
       } else {
         return unextendedSource;
       }
@@ -376,13 +404,8 @@ export class MalloyToAST
       );
     }
     const source = new ast.QuerySource(query);
-    return this.astAt(
-      new ast.RefinedSource(
-        source,
-        this.visitExploreProperties(pcx.sourceExtension().exploreProperties())
-      ),
-      pcx
-    );
+    const sourceDesc = this.getSourceExtensions(pcx.sourceExtension());
+    return this.astAt(new ast.RefinedSource(source, sourceDesc), pcx);
   }
 
   visitExploreProperties(pcx: parse.ExplorePropertiesContext): ast.SourceDesc {
@@ -994,11 +1017,12 @@ export class MalloyToAST
     const propsCx = firstCx.queryProperties();
     if (propsCx) {
       const queryDesc = this.visitQueryProperties(propsCx);
-      if (nameCx) {
-        pipe.refineHead(queryDesc);
-      } else {
-        pipe.addSegments(queryDesc);
-      }
+      pipe.addSegments(queryDesc);
+    }
+    const rcx = firstCx.queryRefinement();
+    if (rcx) {
+      const queryDesc = this.getQueryRefinements(rcx);
+      pipe.refineHead(queryDesc);
     }
     const tail = this.getSegments(pipeCx.pipeElement());
     pipe.addSegments(...tail);
@@ -1086,11 +1110,11 @@ export class MalloyToAST
 
   visitNestExisting(pcx: parse.NestExistingContext): ast.NestedQuery {
     const name = this.getFieldName(pcx.queryName());
-    const propsCx = pcx.queryProperties();
+    const rcx = pcx.queryRefinement();
     const notes = getNotes(pcx.tags());
-    if (propsCx) {
+    if (rcx) {
       const nestRefine = new ast.NestRefinement(name);
-      const queryDesc = this.visitQueryProperties(propsCx);
+      const queryDesc = this.getQueryRefinements(rcx);
       nestRefine.refineHead(queryDesc);
       nestRefine.extendNote({notes});
       return this.astAt(nestRefine, pcx);
