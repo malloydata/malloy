@@ -41,6 +41,7 @@ import {
   getStringParts,
   getShortString,
   getStringIfShort,
+  unIndent,
 } from './parse-utils';
 
 const ENABLE_M4_WARNINGS = false;
@@ -216,6 +217,7 @@ export class MalloyToAST
           safeParts.push(part);
         }
       }
+      unIndent(safeParts);
       return safeParts.join('');
     }
     // string: shortString | sqlString; So this will never happen
@@ -233,6 +235,9 @@ export class MalloyToAST
         sqlStr.push(part);
       }
     }
+    // Until SQL writer properly indents turducken, it actually looks better
+    // in the output to NOT de-indent the SQL sources
+    // unIndent(sqlStr.elements);
     sqlStr.complete();
     this.astAt(sqlStr, pcx);
   }
