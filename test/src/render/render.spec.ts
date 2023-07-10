@@ -324,7 +324,7 @@ describe('rendering results', () => {
         modelMaterializer = runtime!.loadModel(src);
       });
 
-      test.only('rendered correctly table', async () => {
+      test('rendered correctly table', async () => {
         const result = await modelMaterializer.loadQueryByName('by_name').run();
         const document = new JSDOM().window.document;
         const html = await new HTMLView(document).render(result, {
@@ -334,7 +334,7 @@ describe('rendering results', () => {
         expect(html).toMatchSnapshot();
       });
 
-      test.only('rendered correctly dashboard', async () => {
+      test('rendered correctly dashboard', async () => {
         const result = await modelMaterializer
           .loadQueryByName('by_name_dashboard')
           .run();
@@ -503,6 +503,74 @@ describe('rendering results', () => {
       `;
       const result = await (
         await runtime!.loadModel(src).loadQueryByName('bytes_query')
+      ).run();
+      const document = new JSDOM().window.document;
+      const html = await new HTMLView(document).render(result, {
+        dataStyles: {},
+      });
+
+      expect(html).toMatchSnapshot();
+    });
+  });
+
+  describe('duration renderer', () => {
+    test.only('duration tags works correctly', async () => {
+      const connectionName = 'duckdb';
+      const runtime = runtimes.runtimeMap.get(connectionName);
+      expect(runtime).toBeDefined();
+      const src = `
+        sql: number_sql is { connection: "${connectionName}" select: """SELECT 1""" }
+
+        query: duration_query is from_sql(number_sql) -> {
+          project:
+          # duration = nanoseconds
+          ns1 is 1
+          # duration = nanoseconds
+          ns2 is 1002
+          # duration = nanoseconds
+          ns3 is 1002003
+          # duration = microseconds
+          mis1 is 1
+          # duration = microseconds
+          mis2 is 1002
+          # duration = microseconds
+          mis3 is 1002003
+          # duration = milliseconds
+          ms1 is 1
+          # duration = milliseconds
+          ms2 is 1002
+          # duration = milliseconds
+          ms3 is 1002003
+          # duration = seconds
+          s1 is 1
+          # duration = seconds
+          s2 is 61
+          # duration = seconds
+          s3 is 121
+          # duration = seconds
+          s4 is 3610
+          # duration = seconds
+          s5 is 1728015
+          # duration = minutes
+          m1 is 1
+          # duration = minutes
+          m2 is 62
+          # duration = minutes
+          m3 is 1445
+          # duration = hours
+          h1 is 1
+          # duration = hours
+          h2 is 26
+          # duration = hours
+          h3 is 48
+          # duration = days
+          d1 is 1
+          # duration = days
+          d2 is 300
+        }
+      `;
+      const result = await (
+        await runtime!.loadModel(src).loadQueryByName('duration_query')
       ).run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
