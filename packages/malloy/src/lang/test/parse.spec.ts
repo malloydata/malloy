@@ -3662,3 +3662,32 @@ describe('extend and refine', () => {
     });
   });
 });
+
+describe('miscellaneous m4 warnings', () => {
+  test('query leading arrow', () => {
+    expect(`
+      ##! m4warnings
+      query: x is a -> { project: * }
+      run: x
+    `).toTranslate();
+    expect(`
+      ##! m4warnings
+      query: x is a -> { project: * }
+      run: x -> { project: * }
+    `).toTranslate();
+    expect(`
+      ##! m4warnings
+      query: x is a -> { project: * }
+      run: -> x
+    `).toTranslateWithWarnings(
+      'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow'
+    );
+    expect(`
+      ##! m4warnings
+      query: x is a -> { project: * }
+      run: -> x -> { project: * }
+    `).toTranslateWithWarnings(
+      'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow'
+    );
+  });
+});
