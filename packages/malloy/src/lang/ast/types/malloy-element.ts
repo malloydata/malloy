@@ -31,6 +31,7 @@ import {
   Query,
   SQLBlockStructDef,
 } from '../../../model/malloy_types';
+import {MalloyTagProperties, parseTagProperties} from '../../../tags';
 
 import {LogSeverity, MessageLogger} from '../../parse-log';
 import {MalloyTranslation} from '../../parse-malloy';
@@ -508,6 +509,19 @@ export class ObjectAnnotation extends MalloyElement {
 
 export class ModelAnnotation extends ObjectAnnotation implements DocStatement {
   elementType = 'modelAnnotation';
+
+  getCompilerFlags(existing: MalloyTagProperties): MalloyTagProperties {
+    let flags = {...existing};
+    for (const note of this.notes) {
+      if (note.startsWith('##! ')) {
+        const parsed = parseTagProperties(note, flags);
+        if (parsed) {
+          flags = parsed;
+        }
+      }
+    }
+    return flags;
+  }
 
   execute(doc: Document): void {
     doc.notes = doc.notes.concat(this.notes);

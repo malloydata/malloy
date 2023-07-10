@@ -83,6 +83,7 @@ import {
 } from './translate-response';
 import {MalloyParserErrorHandler} from './parse-error-handler';
 import {locationContainsPosition} from './utils';
+import {MalloyTagProperties} from '../tags';
 
 export type StepResponses =
   | DataRequestResponse
@@ -391,6 +392,7 @@ class ASTStep implements TranslationStep {
     }
     const secondPass = new MalloyToAST(parse, that.root.logger);
     const newAst = secondPass.visit(parse.root);
+    that.root.compilerFlags = secondPass.compilerFlags;
     if (that.root.logger.hasErrors()) {
       this.response = that.fatalResponse();
       return this.response;
@@ -904,6 +906,7 @@ export class MalloyTranslator extends MalloyTranslation {
   importZone = new Zone<string>();
   sqlQueryZone = new Zone<SQLBlockStructDef>();
   logger = new MessageLog();
+  compilerFlags: MalloyTagProperties = {};
   readonly root: MalloyTranslator;
   constructor(rootURL: string, preload: ParseUpdate | null = null) {
     super(rootURL);

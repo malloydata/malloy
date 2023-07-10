@@ -72,9 +72,10 @@ describe('model statements', () => {
       });
       expect(m).translationToFailWith('a1 is not a connection');
     });
-    // TODO unskip this when ENABLE_M4_WARNINGS becomes a document annotation
-    test.skip('table function is deprecated', () => {
-      expect("testA is table('conn:aTable')").toTranslateWithWarnings(
+    test('table function is deprecated', () => {
+      expect(`##! m4warnings
+      source: testA is table('conn:aTable')
+    `).toTranslateWithWarnings(
         "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`"
       );
     });
@@ -112,16 +113,15 @@ describe('model statements', () => {
     });
   });
   describe('query:', () => {
-    // Delete this when ENABLE_M4_WARNINGS is converted to an annotation
     test('anonymous query', () => {
       expect(
         markSource`query: ${"table('aTable') -> { group_by: astr }"}`
       ).toTranslate();
     });
-    // Unskip this when ENABLE_M4_WARNINGS is converted to an annotation
-    test.skip('anonymous query', () => {
+    test('anonymous query', () => {
       expect(
-        markSource`query: ${"table('aTable') -> { group_by: astr }"}`
+        markSource`##! m4warnings
+        query: ${"conn.table('aTable') -> { group_by: astr }"}`
       ).toTranslateWithWarnings(
         'Anonymous `query:` statements are deprecated, use `run:` instead'
       );
@@ -1245,25 +1245,27 @@ describe('qops', () => {
       ).toTranslate();
     });
   });
-  // TODO ENABLE_M4_WARNINGS: unskip when we have an M4 warning flag
-  describe.skip('declare/query join warnings', () => {
+  describe('declare/query join warnings', () => {
     test('declare warning in query', () => {
       expect(
-        markSource`query: a -> { declare: ${'x is 1'}; group_by: x, y }`
+        markSource`##! m4warnings
+        run: a -> { ${'declare: x is 1'}; group_by: x }`
       ).toTranslateWithWarnings(
         '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
       );
     });
     test('declare warning in source', () => {
       expect(
-        markSource`source: a2 is a { declare: ${'x is 1'} }`
+        markSource`##! m4warnings
+        source: a2 is a extend { ${'declare: x is 1'} }`
       ).toTranslateWithWarnings(
         '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
       );
     });
     test('joins in query', () => {
       expect(
-        markSource`query: a -> { ${'join_one: b on true'}; ${'join_many: c is b on true'}; ${'join_cross: d is b on true'}; group_by: b.astr }`
+        markSource`##! m4warnings
+        run: a -> { ${'join_one: b on true'}; ${'join_many: c is b on true'}; ${'join_cross: d is b on true'}; group_by: b.astr }`
       ).toTranslateWithWarnings(
         'Joins in queries are deprecated, move into an `extend:` block.',
         'Joins in queries are deprecated, move into an `extend:` block.',
@@ -3326,10 +3328,10 @@ describe('sql expressions', () => {
     }
   });
 
-  // TODO unskip when ENABLE_M4_WARNINGS is turned into an annotation
-  test.skip('sql statement deprecation warning', () => {
+  test('sql statement deprecation warning', () => {
     const m = new TestTranslator(
-      'sql: bad_sql is {select: """SELECT 1 as one"""}'
+      `##! m4warnings
+      sql: bad_sql is {select: """SELECT 1 as one"""}`
     );
     const req = m.translate().compileSQL;
     if (req) {
@@ -3606,10 +3608,10 @@ describe('extend and refine', () => {
     });
   });
 
-  // TODO unskip this when ENABLE_M4_WARNINGS becomes a document annotation
-  describe.skip('m4 warnings', () => {
+  describe('m4 warnings', () => {
     test('implicit refine in nest', () => {
-      expect(`source: c is a extend {
+      expect(`##! m4warnings
+      source: c is a extend {
         query: x is { project: * }
       }
 
@@ -3621,7 +3623,8 @@ describe('extend and refine', () => {
     });
 
     test('implicit refine in turtle works', () => {
-      expect(`source: c is a extend {
+      expect(`##! m4warnings
+      source: c is a extend {
         query: x is { project: * }
         query: y is x { limit: 1 }
       }`).toTranslateWithWarnings(
@@ -3630,7 +3633,7 @@ describe('extend and refine', () => {
     });
 
     test('implicit query refinement', () => {
-      expect(`
+      expect(`##! m4warnings
         query: q is a -> { group_by: ai }
         run: q { group_by: three is 3 }
       `).toTranslateWithWarnings(
@@ -3640,7 +3643,8 @@ describe('extend and refine', () => {
 
     test('implicit source extension', () => {
       expect(
-        'source: s is a { dimension: ai_2 is ai + ai }'
+        `##! m4warnings
+        source: s is a { dimension: ai_2 is ai + ai }`
       ).toTranslateWithWarnings(
         'Implicit source extension is deprecated, use the `extend` operator.'
       );
