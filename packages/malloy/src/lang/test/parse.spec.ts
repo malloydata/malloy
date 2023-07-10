@@ -3735,7 +3735,7 @@ describe('miscellaneous m4 warnings', () => {
         dimension: x is 1
     }`).toTranslate();
   });
-  
+
   test('query leading arrow', () => {
     expect(`
       ##! m4warnings
