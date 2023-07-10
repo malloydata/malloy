@@ -514,7 +514,7 @@ export class ModelAnnotation extends ObjectAnnotation implements DocStatement {
     let flags = {...existing};
     for (const note of this.notes) {
       if (note.startsWith('##! ')) {
-        const parsed = parseTagProperties(note, flags);
+        const parsed = parseTagProperties(note.slice(4), flags);
         if (parsed) {
           flags = parsed;
         }
