@@ -514,7 +514,7 @@ describe('rendering results', () => {
   });
 
   describe('duration renderer', () => {
-    test.only('duration tags works correctly', async () => {
+    test('duration tags works correctly', async () => {
       const connectionName = 'duckdb';
       const runtime = runtimes.runtimeMap.get(connectionName);
       expect(runtime).toBeDefined();
