@@ -42,8 +42,7 @@ import {
   getShortString,
   getStringIfShort,
 } from './parse-utils';
-
-const ENABLE_M4_WARNINGS = true;
+import {MalloyTagProperties} from '../tags';
 
 class IgnoredElement extends ast.MalloyElement {
   elementType = 'ignoredByParser';
@@ -62,6 +61,7 @@ export class MalloyToAST
   extends AbstractParseTreeVisitor<ast.MalloyElement>
   implements MalloyParserVisitor<ast.MalloyElement>
 {
+  compilerFlags: MalloyTagProperties = {};
   constructor(readonly parse: MalloyParseRoot, readonly msgLog: MessageLogger) {
     super();
   }
@@ -124,6 +124,10 @@ export class MalloyToAST
       }
     }
     return acceptable;
+  }
+
+  protected m4WarningsEnabled(): boolean {
+    return !!this.compilerFlags['m4warnings'];
   }
 
   protected getNumber(term: ParseTree): number {
@@ -310,7 +314,7 @@ export class MalloyToAST
       this.visitQueryProperties(pcx.queryProperties()),
       pcx
     );
-    if (ENABLE_M4_WARNINGS && pcx.REFINE() === undefined) {
+    if (this.m4WarningsEnabled() && pcx.REFINE() === undefined) {
       this.astError(
         properties,
         'Implicit query refinement is deprecated, use the `refine` operator.',
@@ -356,7 +360,7 @@ export class MalloyToAST
   ): ast.SourceDesc {
     const extensions = pcx?.exploreProperties();
     const sourceDesc = this.astAt(this.visitExploreProperties(extensions), pcx);
-    if (ENABLE_M4_WARNINGS && pcx.EXTEND() === undefined) {
+    if (this.m4WarningsEnabled() && pcx.EXTEND() === undefined) {
       this.astError(
         sourceDesc,
         'Implicit source extension is deprecated, use the `extend` operator.',
@@ -425,7 +429,7 @@ export class MalloyToAST
   visitTableFunction(pcx: parse.TableFunctionContext): ast.TableSource {
     const tableURI = this.getPlainString(pcx.tableURI());
     const el = this.astAt(new ast.TableFunctionSource(tableURI), pcx);
-    if (ENABLE_M4_WARNINGS) {
+    if (this.m4WarningsEnabled()) {
       this.astError(
         el,
         "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`",
@@ -563,7 +567,7 @@ export class MalloyToAST
     pcx: parse.QueryJoinStatementContext
   ): ast.MalloyElement {
     const result = this.astAt(this.visit(pcx.joinStatement()), pcx);
-    if (ENABLE_M4_WARNINGS) {
+    if (this.m4WarningsEnabled()) {
       this.astError(
         result,
         'Joins in queries are deprecated, move into an `extend:` block.',
@@ -654,7 +658,7 @@ export class MalloyToAST
     );
     const stmt = new ast.DeclareFields(defs);
     const result = this.astAt(stmt, pcx);
-    if (ENABLE_M4_WARNINGS) {
+    if (this.m4WarningsEnabled()) {
       this.astError(
         result,
         '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block',
@@ -1059,11 +1063,11 @@ export class MalloyToAST
     const defCx = pcx.topLevelAnonQueryDef();
     const query = this.visit(defCx.query());
     if (ast.isQueryElement(query)) {
-      const theQuery = new ast.AnonymousQuery(query);
+      const theQuery = this.astAt(new ast.AnonymousQuery(query), defCx);
       const notes = getNotes(pcx.topLevelAnonQueryDef().tags());
       const blockNotes = getNotes(pcx.tags());
       theQuery.extendNote({notes, blockNotes});
-      if (ENABLE_M4_WARNINGS) {
+      if (this.m4WarningsEnabled()) {
         this.astError(
           theQuery,
           'Anonymous `query:` statements are deprecated, use `run:` instead',
@@ -1555,7 +1559,7 @@ export class MalloyToAST
     }
     stmt.is = blockName;
     const result = this.astAt(stmt, pcx);
-    if (ENABLE_M4_WARNINGS) {
+    if (this.m4WarningsEnabled()) {
       this.astError(
         result,
         '`sql:` statement is deprecated, use `connection_name.sql(...)` instead',
@@ -1580,7 +1584,9 @@ export class MalloyToAST
 
   visitDocAnnotations(pcx: parse.DocAnnotationsContext): ast.ModelAnnotation {
     const allNotes = pcx.DOC_ANNOTATION().map(note => note.text);
-    return new ast.ModelAnnotation(allNotes);
+    const tags = new ast.ModelAnnotation(allNotes);
+    this.compilerFlags = tags.getCompilerFlags(this.compilerFlags);
+    return tags;
   }
 
   visitIgnoredObjectAnnotations(
