@@ -512,7 +512,15 @@ export class MalloyToAST
   visitQuerySource(pcx: parse.QuerySourceContext): ast.Source {
     const query = this.visit(pcx.query());
     if (ast.isQueryElement(query)) {
-      return this.astAt(new ast.QuerySource(query), pcx);
+      const el = this.astAt(new ast.QuerySource(query), pcx);
+      if (this.m4WarningsEnabled()) {
+        this.astError(
+          el,
+          '`from(some_query)` is deprecated; use `some_query` directly',
+          'warn'
+        );
+      }
+      return el;
     }
     throw this.internalError(
       pcx,

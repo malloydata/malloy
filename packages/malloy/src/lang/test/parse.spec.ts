@@ -3719,6 +3719,23 @@ describe('extend and refine', () => {
 });
 
 describe('miscellaneous m4 warnings', () => {
+  test('from() is deprecated', () => {
+    expect(`
+      ##! m4warnings
+      query: q is a -> { project: * }
+      source: c is from(q) extend {
+        dimension: x is 1
+    }`).toTranslateWithWarnings(
+      '`from(some_query)` is deprecated; use `some_query` directly'
+    );
+    expect(`
+      ##! m4warnings
+      query: q is a -> { project: * }
+      source: c is q extend {
+        dimension: x is 1
+    }`).toTranslate();
+  });
+
   test('query leading arrow', () => {
     expect(`
       ##! m4warnings
