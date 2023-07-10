@@ -59,7 +59,7 @@ export class HTMLDurationRenderer extends HTMLTextRenderer {
       );
     }
 
-    const targetUnit = this.options.duration_unit;
+    const targetUnit = this.options.duration_unit ?? DurationUnit.Seconds;
     let currentDuration = data.number.value;
     let currentUnitValue = 0;
     let durationParts: string[] = [];
@@ -89,7 +89,11 @@ export class HTMLDurationRenderer extends HTMLTextRenderer {
       }
     }
 
-    return durationParts.slice(0, 2).join(' ');
+    if (durationParts.length > 0) {
+      return durationParts.slice(0, 2).join(' ');
+    }
+
+    return this.formatTimeUnit(0, targetUnit);
   }
 
   formatTimeUnit(value: number, unit: DurationUnit) {
