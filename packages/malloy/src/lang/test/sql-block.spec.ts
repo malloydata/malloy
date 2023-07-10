@@ -142,10 +142,10 @@ describe('sql:', () => {
     expect(model).toTranslate();
   });
 
-  it('turducken', () => {
+  it('simple turducken', () => {
     const m = new TestTranslator(`
       sql: someSql is {
-        select: """SELECT * FROM %{ a -> { group_by: astr } }% WHERE 1=1"""
+        select: """SELECT * FROM %{ a -> { group_by: astr } } WHERE 1=1"""
       }
     `);
     expect(m).toParse();
@@ -159,6 +159,56 @@ describe('sql:', () => {
       expect(isSQLFragment(star)).toBeFalsy();
       expect(where).toEqual({sql: ' WHERE 1=1'});
     }
+  });
+  it('old style ', () => {
+    const m = new TestTranslator(`
+      sql: someSql is {
+        select: """SELECT * FROM %{ a -> { group_by: astr } } WHERE 1=1"""
+      }
+    `);
+    expect(m).toParse();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      const select = compileSql.select[0];
+      const star = compileSql.select[1];
+      const where = compileSql.select[2];
+      expect(select).toEqual({sql: 'SELECT * FROM '});
+      expect(isSQLFragment(star)).toBeFalsy();
+      expect(where).toEqual({sql: ' WHERE 1=1'});
+    }
+  });
+  it('turduckenzilla', () => {
+    const m = new TestTranslator(`
+      run: duckdb.sql("""
+        SELECT * from (%{
+          duckdb.sql("""SELECT 2 as two""") {
+            query: b is {
+              nest: c is {
+                extend: {
+                  join_one: d is duckdb.sql("""
+                    SELECT * from (%{
+                      duckdb.sql("""SELECT 3 as three""") {
+                        query: b is {
+                          nest: c is {
+                            extend: {
+                              join_one: d is duckdb.sql("""SELECT 4 as four""") on three = d.four - 1
+                            }
+                            group_by: three
+                          }
+                        }
+                      } -> { group_by: three }
+                    })
+                  """) on two = d.three
+                }
+                group_by: two
+              }
+            }
+          } -> { group_by: two }
+        })
+      """) -> { group_by: two }
+    `);
+    expect(m).toParse();
   });
   it('model preserved', () => {
     const shouldBeOK = `
