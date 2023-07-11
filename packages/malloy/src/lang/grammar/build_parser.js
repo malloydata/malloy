@@ -22,21 +22,22 @@
  */
 
 // Runs antlr to generate the compiler from the compiler spec.
-// It also notices (using an md5 checksum) if the compiler spec
+// It also notices (using a checksum) if the compiler spec
 // has changed, to avoid re-running antlr when there are no changes.
 
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-var-requires */
 const {readFileSync, writeFileSync, existsSync, rmSync} = require('fs');
-const md5 = require('md5');
+const {v5: uuidv5} = require('uuid');
 const path = require('path');
 const {execSync} = require('child_process');
 
 const langSrc = path.dirname(__dirname);
 const libDir = path.join(langSrc, 'lib', 'Malloy');
-const digestFile = path.join(libDir, 'Malloy.md5');
+const digestFile = path.join(libDir, 'Malloy.checksum');
 const digestSrcFiles = [__filename, 'MalloyLexer.g4', 'MalloyParser.g4'];
 const compilerSrcs = ['MalloyLexer.ts', 'MalloyParser.ts'];
+const MALLOY_UUID = '76c17e9d-f3ce-5f2d-bfde-98ad3d2a37f6';
 
 function oldDigest() {
   return existsSync(digestFile)
@@ -55,8 +56,9 @@ function run(cmd) {
 }
 
 process.chdir(path.join(langSrc, 'grammar'));
-const versionDigest = md5(
-  digestSrcFiles.map(fn => readFileSync(fn, 'utf-8')).join('')
+const versionDigest = uuidv5(
+  digestSrcFiles.map(fn => readFileSync(fn, 'utf-8')).join(''),
+  MALLOY_UUID
 );
 let rebuild = versionDigest !== oldDigest();
 
