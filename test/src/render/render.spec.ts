@@ -272,8 +272,8 @@ describe('rendering results', () => {
         expect(html).toMatchSnapshot();
       });
 
-      test('tansposed table', async () => {
-        const result = await model.loadQueryByName('by_name').run();
+      test('transposed table', async () => {
+        const result = await model.loadQueryByName('by_name_transposed').run();
         const document = new JSDOM().window.document;
         const html = await new HTMLView(document).render(result, {
           dataStyles: {},

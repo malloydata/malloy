@@ -5566,7 +5566,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
 </table>
 `;
 
-exports[`rendering results html renderer complex query with tags tansposed table 1`] = `
+exports[`rendering results html renderer complex query with tags transposed table 1`] = `
 <table
   style="vertical-align: top; border-collapse: collapse; width: 100%;"
 >
