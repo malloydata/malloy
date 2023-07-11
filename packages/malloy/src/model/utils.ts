@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { v5 as uuidv5 } from 'uuid';
+import {v5 as uuidv5} from 'uuid';
 import {Expr, Fragment} from './malloy_types';
 
 /** simple indent function */

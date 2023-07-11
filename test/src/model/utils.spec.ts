@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+// eslint-disable-next-line no-restricted-imports
 import { generateHash } from "@malloydata/malloy/src/model/utils";
 
 describe('model/utils', () => {
@@ -30,7 +31,7 @@ describe('model/utils', () => {
   });
   it('should generate unique hashes', () => {
     const hash1 = generateHash('test-content');
-    const hash2 = generateHash('test-content-different')
+    const hash2 = generateHash('test-content-different');
     expect(hash1).not.toEqual(hash2);
   });
-})
+});
