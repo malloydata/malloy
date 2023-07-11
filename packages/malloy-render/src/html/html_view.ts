@@ -191,21 +191,24 @@ export function makeRenderer(
       HTMLDashboardRenderer,
       document,
       isContainer(field),
-      options
+      options,
+      tags
     );
   } else if (renderDef?.renderer === 'list') {
     return makeContainerRenderer(
       HTMLListRenderer,
       document,
       isContainer(field),
-      options
+      options,
+      tags
     );
   } else if (renderDef?.renderer === 'list_detail') {
     return makeContainerRenderer(
       HTMLListDetailRenderer,
       document,
       isContainer(field),
-      options
+      options,
+      tags
     );
   } else if (
     renderDef?.renderer === 'table' ||
@@ -216,7 +219,8 @@ export function makeRenderer(
       HTMLTableRenderer,
       document,
       isContainer(field),
-      options
+      options,
+      tags
     );
   }
 
@@ -224,12 +228,17 @@ export function makeRenderer(
 }
 
 function makeContainerRenderer<Type extends ContainerRenderer>(
-  cType: new (document: Document, options: RendererOptions) => Type,
+  cType: new (
+    document: Document,
+    options: RendererOptions,
+    tags?: Tags
+  ) => Type,
   document: Document,
   explore: Explore,
-  options: RendererOptions
+  options: RendererOptions,
+  tags?: Tags
 ): ContainerRenderer {
-  const c = ContainerRenderer.make(cType, document, explore, options);
+  const c = ContainerRenderer.make(cType, document, explore, options, tags);
   const result: ChildRenderers = {};
   explore.intrinsicFields.forEach((field: Field) => {
     result[field.name] = makeRenderer(

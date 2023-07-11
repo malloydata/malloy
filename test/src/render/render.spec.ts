@@ -193,11 +193,14 @@ describe('rendering results', () => {
   });
 
   describe('html renderer', () => {
-    test('renders with tags correctly', async () => {
-      const connectionName = 'duckdb';
-      const runtime = runtimes.runtimeMap.get(connectionName);
-      expect(runtime).toBeDefined();
-      const src = `
+    describe('complex query with tags', () => {
+      let model: ModelMaterializer;
+
+      beforeAll(async () => {
+        const connectionName = 'duckdb';
+        const runtime = runtimes.runtimeMap.get(connectionName);
+        expect(runtime).toBeDefined();
+        const src = `
       sql: names_sql is { connection: "duckdb" select: """SELECT 'Pedro' as nm
         UNION ALL SELECT 'Sebastian'
         UNION ALL SELECT 'Alex'
@@ -246,23 +249,38 @@ describe('rendering results', () => {
       }
 
       query: by_name is height -> by_name {
-
       }
 
+      # transpose
+      query: by_name_transposed is height -> by_name {
+      }
 
       source: names is from_sql(names_sql) + {
         join_many: height on nm = height.nm
       }
       `;
-      const result = await (
-        await runtime!.loadModel(src).loadQueryByName('by_name')
-      ).run();
-      const document = new JSDOM().window.document;
-      const html = await new HTMLView(document).render(result, {
-        dataStyles: {},
+        model = await runtime!.loadModel(src);
       });
 
-      expect(html).toMatchSnapshot();
+      test('regular table', async () => {
+        const result = await model.loadQueryByName('by_name').run();
+        const document = new JSDOM().window.document;
+        const html = await new HTMLView(document).render(result, {
+          dataStyles: {},
+        });
+
+        expect(html).toMatchSnapshot();
+      });
+
+      test('transposed table', async () => {
+        const result = await model.loadQueryByName('by_name_transposed').run();
+        const document = new JSDOM().window.document;
+        const html = await new HTMLView(document).render(result, {
+          dataStyles: {},
+        });
+
+        expect(html).toMatchSnapshot();
+      });
     });
 
     describe('hidden tags', () => {

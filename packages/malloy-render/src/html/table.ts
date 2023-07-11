@@ -38,10 +38,22 @@ export class HTMLTableRenderer extends ContainerRenderer {
     if (!table.isArray() && !table.isRecord()) {
       throw new Error('Invalid type for Table Renderer');
     }
-    const header = this.document.createElement('tr');
-    table.field.intrinsicFields.forEach(field => {
+
+    const shouldTranspose = this.tags
+      ? this.tags.getMalloyTags().properties['transpose'] === true
+      : false;
+
+    if (shouldTranspose && table.field.intrinsicFields.length > 20) {
+      throw new Error('Transpose limit of 20 columns exceeded.');
+    }
+
+    let rowIndex = 0;
+    let columnIndex = 0;
+    const cells: HTMLTableCellElement[][] = [];
+    cells[rowIndex] = [];
+    for (const field of table.field.intrinsicFields) {
       if (isFieldHidden(field)) {
-        return;
+        continue;
       }
 
       let name = formatTitle(
@@ -57,14 +69,16 @@ export class HTMLTableRenderer extends ContainerRenderer {
         padding: 8px;
         color: var(--malloy-title-color, #505050);
         border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
-        text-align: ${isNumeric ? 'right' : 'left'};
+        text-align: ${!isNumeric || shouldTranspose ? 'left' : 'right'};
       `;
 
       name = name.replace(/_/g, '_&#8203;');
       headerCell.innerHTML = name;
-      header.appendChild(headerCell);
-    });
-    if (this.options.isDrillingEnabled) {
+      cells[rowIndex][columnIndex] = headerCell;
+      columnIndex++;
+    }
+
+    if (!shouldTranspose && this.options.isDrillingEnabled) {
       const drillHeader = this.document.createElement('th');
       drillHeader.style.cssText = `
         padding: 8px;
@@ -72,13 +86,14 @@ export class HTMLTableRenderer extends ContainerRenderer {
         border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
         width: 25px;
       `;
-      header.appendChild(drillHeader);
+      cells[rowIndex][columnIndex] = drillHeader;
+      columnIndex++;
     }
 
-    const tableBody = this.document.createElement('tbody');
-
+    rowIndex++;
     for (const row of table) {
-      const rowElement = this.document.createElement('tr');
+      cells[rowIndex] = [];
+      columnIndex = 0;
       for (const field of table.field.intrinsicFields) {
         if (isFieldHidden(field)) {
           continue;
@@ -95,9 +110,12 @@ export class HTMLTableRenderer extends ContainerRenderer {
           ${isNumeric ? 'text-align: right;' : ''}
         `;
         cellElement.appendChild(rendered);
-        rowElement.appendChild(cellElement);
+        cells[rowIndex][columnIndex] = cellElement;
+        columnIndex++;
       }
-      if (this.options.isDrillingEnabled) {
+
+      // TODO(figutierrez): Deal with drill when transpose is on.
+      if (!shouldTranspose && this.options.isDrillingEnabled) {
         const drillCell = this.document.createElement('td');
         const drillIcon = createDrillIcon(this.document);
         drillCell.appendChild(drillIcon);
@@ -114,11 +132,35 @@ export class HTMLTableRenderer extends ContainerRenderer {
             this.options.onDrill(drillQuery, drillIcon, drillFilters);
           }
         };
-        rowElement.appendChild(drillCell);
+        cells[rowIndex][columnIndex] = drillCell;
+        columnIndex++;
       }
-      tableBody.appendChild(rowElement);
+
+      rowIndex++;
     }
+
     const tableElement = this.document.createElement('table');
+    let tableSection = this.document.createElement('thead');
+
+    for (let row = 0; row < (shouldTranspose ? columnIndex : rowIndex); row++) {
+      if (row === 1) {
+        tableElement.appendChild(tableSection);
+        tableSection = this.document.createElement('tbody');
+      }
+      const currentRow = this.document.createElement('tr');
+      for (
+        let column = 0;
+        column < (shouldTranspose ? rowIndex : columnIndex);
+        column++
+      ) {
+        currentRow.appendChild(
+          shouldTranspose ? cells[column][row] : cells[row][column]
+        );
+      }
+      tableSection.appendChild(currentRow);
+    }
+    tableElement.appendChild(tableSection);
+
     tableElement.style.cssText = `
       border: 1px solid var(--malloy-border-color, #eaeaea);
       vertical-align: top;
@@ -126,10 +168,6 @@ export class HTMLTableRenderer extends ContainerRenderer {
       border-collapse: collapse;
       width: 100%;
     `;
-    const tableHead = this.document.createElement('thead');
-    tableHead.appendChild(header);
-    tableElement.appendChild(tableHead);
-    tableElement.appendChild(tableBody);
     return tableElement;
   }
 }
