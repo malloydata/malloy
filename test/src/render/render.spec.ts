@@ -246,13 +246,16 @@ describe('rendering results', () => {
             # percent
             visitcount is sum(vaccine) / count()
         }
+
+        # transposed
+        query: by_name_transposed is by_name {
+        }
       }
 
       query: by_name is height -> by_name {
       }
 
-      # transposed
-      query: by_name_transposed is height -> by_name {
+      query: by_name_transposed is height -> by_name_transposed {
       }
 
       source: names is from_sql(names_sql) + {
