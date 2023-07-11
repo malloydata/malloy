@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import md5 from 'md5';
+import { v5 as uuidv5 } from 'uuid';
 import {Expr, Fragment} from './malloy_types';
 
 /** simple indent function */
@@ -101,7 +101,8 @@ export class AndChain {
 }
 
 export function generateHash(input: string): string {
-  return md5(input);
+  const MALLOY_UUID = '76c17e9d-f3ce-5f2d-bfde-98ad3d2a37f6';
+  return uuidv5(input, MALLOY_UUID);
 }
 
 export function exprMap(expr: Expr, func: (fragment: Fragment) => Expr): Expr {

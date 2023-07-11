@@ -47,6 +47,7 @@
     "@types/fs-extra": "^9.0.13",
     "@types/jest-expect-message": "^1.0.3",
     "@types/node": "^16.6.2",
+    "@types/uuid": "^9.0.2",
     "@typescript-eslint/eslint-plugin": "^5.51.0",
     "@typescript-eslint/parser": "^5.51.0",
     "axios": "^1.4.0",
@@ -67,7 +68,8 @@
     "ts-jest": "^29.0.3",
     "ts-node": "^10.9.1",
     "typescript": "4.8.4",
-    "unified": "^10.1.2"
+    "unified": "^10.1.2",
+    "uuid": "^9.0.0"
   },
   "resolutions": {
     "simple-get": "3.1.1",
