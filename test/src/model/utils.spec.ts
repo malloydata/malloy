@@ -22,7 +22,7 @@
  */
 
 // eslint-disable-next-line no-restricted-imports
-import { generateHash } from "@malloydata/malloy/src/model/utils";
+import {generateHash} from '@malloydata/malloy/src/model/utils';
 
 describe('model/utils', () => {
   it('should generate deterministic hashes', () => {
