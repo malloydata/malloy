@@ -22,11 +22,26 @@
  */
 
 import {DefinitionList} from '../types/definition-list';
+import {Executor} from '../types/executor';
 import {NestedQuery} from '../types/nested-query';
+import {
+  QueryClass,
+  LegalRefinementStage,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
 
-export class Nests extends DefinitionList<NestedQuery> {
+export class Nests
+  extends DefinitionList<NestedQuery>
+  implements QueryPropertyInterface
+{
   elementType = 'nestedQueries';
+  queryRefinementStage = LegalRefinementStage.Single;
+  forceQueryClass = QueryClass.Grouping;
   constructor(nests: NestedQuery[]) {
     super(nests);
+  }
+
+  queryExecute(executeFor: Executor) {
+    executeFor.resultFS.addQueryItems(...this.list);
   }
 }

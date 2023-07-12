@@ -24,11 +24,8 @@
 import {StructDef} from '../../../model/malloy_types';
 import {FieldListEdit} from '../source-properties/field-list-edit';
 import {RenameField} from '../source-properties/renames';
-import {Join} from '../query-properties/joins';
+import {Join, TurtleDecl} from '../query-properties/index-query-properties';
 import {DynamicSpace} from './dynamic-space';
-import {QueryFieldAST, TurtleDecl} from '../query-properties/nest';
-import {FieldDefinitionValue} from './field-definition-value';
-import {JoinSpaceField} from './join-space-field';
 import {RenameSpaceField} from './rename-space-field';
 import {FieldDeclaration} from '../query-items/field-declaration';
 import {SpaceField} from '../types/space-field';
@@ -64,11 +61,11 @@ export class RefinedSpace extends DynamicSpace {
       const elseLog = def.log;
       const elseType = def.elementType;
       if (def instanceof FieldDeclaration) {
-        const exprField = new FieldDefinitionValue(this, def);
-        this.newEntry(exprField.name, def, exprField);
+        const [name, ent] = def.getSpaceEntry(this);
+        this.newEntry(name, def, ent);
       } else if (def instanceof TurtleDecl) {
-        const name = def.name;
-        this.newEntry(name, def, new QueryFieldAST(this, def, name));
+        const [name, ent] = def.getSpaceEntry(this);
+        this.newEntry(name, def, ent);
       } else if (def instanceof RenameField) {
         if (def.oldName.refString === def.newName) {
           def.log("Can't rename field to itself");
@@ -89,7 +86,8 @@ export class RefinedSpace extends DynamicSpace {
           def.log(`Can't rename '${def.oldName}', no such field`);
         }
       } else if (def instanceof Join) {
-        this.newEntry(def.name.refString, def, new JoinSpaceField(this, def));
+        const [name, ent] = def.getSpaceEntry(this);
+        this.newEntry(name, def, ent);
       } else {
         elseLog(
           `Internal error: Expected expression, query, or rename, got '${elseType}'`

@@ -22,8 +22,21 @@
  */
 
 import {DefinitionList} from '../types/definition-list';
+import {Executor} from '../types/executor';
 import {QueryItem} from '../types/query-item';
+import {
+  LegalRefinementStage,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
 
-export class Calculate extends DefinitionList<QueryItem> {
+export class Calculate
+  extends DefinitionList<QueryItem>
+  implements QueryPropertyInterface
+{
   elementType = 'calculate';
+  forceQueryClass = undefined;
+  queryRefinementStage = LegalRefinementStage.Single;
+  queryExecute(executeFor: Executor) {
+    executeFor.resultFS.addQueryItems(...this.list);
+  }
 }

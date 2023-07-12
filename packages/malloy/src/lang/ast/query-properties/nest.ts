@@ -30,9 +30,16 @@ import {Noteable, extendNoteMethod} from '../types/noteable';
 import {NestReference} from './nest-reference';
 import {QueryField} from '../field-space/query-space-field';
 import {opOutputStruct} from '../struct-utils';
-import {TurtleHeadedPipe} from '../types/turtle-headed-pipe';
+import {TurtleHeadedPipe} from '../elements/pipeline-desc';
 import {QueryInputSpace} from '../field-space/query-spaces';
 import {StaticSpace} from '../field-space/static-space';
+import {
+  LegalRefinementStage,
+  QueryClass,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
+import {Executor} from '../types/executor';
+import {SpaceEntry} from '../types/space-entry';
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
@@ -59,7 +66,7 @@ export class TurtleDecl extends TurtleHeadedPipe implements Noteable {
       } else if (headEnt.found instanceof QueryField) {
         const headDef = headEnt.found.getQueryFieldDef(fs);
         if (isTurtle(headDef)) {
-          const newPipe = this.refinePipeline(fs, headDef);
+          const newPipe = this.refinePipelineHead(fs, headDef);
           modelPipe.pipeline = [...newPipe.pipeline];
           if (headDef.annotation) {
             this.extendNote({inherits: headDef.annotation});
@@ -70,7 +77,7 @@ export class TurtleDecl extends TurtleHeadedPipe implements Noteable {
       if (reportWrongType) {
         this.log(`Expected '${this.turtleName}' to be a query`);
       }
-    } else if (this.headRefinement) {
+    } else if (this.withRefinement) {
       throw this.internalError(
         "Can't refine the head of a turtle in its definition"
       );
@@ -108,20 +115,44 @@ export class TurtleDecl extends TurtleHeadedPipe implements Noteable {
     }
     return turtle;
   }
+
+  getSpaceEntry(fs: FieldSpace): [string, SpaceEntry] {
+    return [this.name, new QueryFieldAST(fs, this, this.name)];
+  }
 }
 
-export class NestRefinement extends TurtleDecl {
+export class NestRefinement
+  extends TurtleDecl
+  implements QueryPropertyInterface
+{
   elementType = 'nestRefinement';
+  queryRefinementStage = LegalRefinementStage.Single;
+  forceQueryClass = QueryClass.Grouping;
+
   constructor(turtleName: FieldName) {
     super(turtleName.refString);
     this.turtleName = turtleName;
   }
+
+  queryExecute(executeFor: Executor) {
+    executeFor.resultFS.addQueryItems(this);
+  }
 }
 
-export class NestDefinition extends TurtleDecl {
+export class NestDefinition
+  extends TurtleDecl
+  implements QueryPropertyInterface
+{
   elementType = 'nestDefinition';
+  queryRefinementStage = LegalRefinementStage.Single;
+  forceQueryClass = QueryClass.Grouping;
+
   constructor(name: string) {
     super(name);
+  }
+
+  queryExecute(executeFor: Executor) {
+    executeFor.resultFS.addQueryItems(this);
   }
 }
 

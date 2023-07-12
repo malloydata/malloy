@@ -28,7 +28,7 @@ import {MalloyParserVisitor} from './lib/Malloy/MalloyParserVisitor';
 import * as parse from './lib/Malloy/MalloyParser';
 import * as ast from './ast';
 import {LogSeverity, MessageLogger} from './parse-log';
-import {MalloyParseRoot} from './parse-malloy';
+import {MalloyParseInfo} from './malloy-parse-info';
 import {Interval as StreamInterval} from 'antlr4ts/misc/Interval';
 import {FieldDeclarationConstructor, TableSource} from './ast';
 import {
@@ -63,7 +63,10 @@ export class MalloyToAST
   implements MalloyParserVisitor<ast.MalloyElement>
 {
   compilerFlags: MalloyTagProperties = {};
-  constructor(readonly parse: MalloyParseRoot, readonly msgLog: MessageLogger) {
+  constructor(
+    readonly parseInfo: MalloyParseInfo,
+    readonly msgLog: MessageLogger
+  ) {
     super();
   }
 
@@ -103,8 +106,8 @@ export class MalloyToAST
     this.msgLog.log({
       message: msg,
       at: {
-        url: this.parse.subTranslator.sourceURL,
-        range: this.parse.subTranslator.rangeFromContext(cx),
+        url: this.parseInfo.sourceURL,
+        range: this.parseInfo.rangeFromContext(cx),
       },
       severity: sev,
     });
@@ -152,8 +155,8 @@ export class MalloyToAST
     cx: ParserRuleContext
   ): MT {
     el.location = {
-      url: this.parse.subTranslator.sourceURL,
-      range: this.parse.subTranslator.rangeFromContext(cx),
+      url: this.parseInfo.sourceURL,
+      range: this.parseInfo.rangeFromContext(cx),
     };
     return el;
   }
@@ -162,7 +165,7 @@ export class MalloyToAST
     const from = cx.start.startIndex;
     const lastToken = cx.stop || cx.start;
     const sourceRange = new StreamInterval(from, lastToken.stopIndex);
-    return this.parse.sourceStream.getText(sourceRange);
+    return this.parseInfo.sourceStream.getText(sourceRange);
   }
 
   protected getFilterElement(cx: parse.FieldExprContext): ast.FilterElement {
@@ -342,7 +345,7 @@ export class MalloyToAST
       const rcx = pcx.queryRefinement();
       if (rcx) {
         const properties = this.getQueryRefinements(rcx);
-        base.refineHead(properties);
+        base.refineWith(properties);
       }
       return base;
     }
@@ -1070,7 +1073,7 @@ export class MalloyToAST
     const rcx = firstCx.queryRefinement();
     if (rcx) {
       const queryDesc = this.getQueryRefinements(rcx);
-      pipe.refineHead(queryDesc);
+      pipe.refineWith(queryDesc);
     }
     const tail = this.getSegments(pipeCx.pipeElement());
     pipe.addSegments(...tail);
@@ -1163,7 +1166,7 @@ export class MalloyToAST
     if (rcx) {
       const nestRefine = new ast.NestRefinement(name);
       const queryDesc = this.getQueryRefinements(rcx);
-      nestRefine.refineHead(queryDesc);
+      nestRefine.refineWith(queryDesc);
       nestRefine.extendNote({notes});
       return this.astAt(nestRefine, pcx);
     }
@@ -1567,7 +1570,7 @@ export class MalloyToAST
   visitImportStatement(pcx: parse.ImportStatementContext): ast.ImportStatement {
     const url = this.getPlainString(pcx.importURL());
     return this.astAt(
-      new ast.ImportStatement(url, this.parse.subTranslator.sourceURL),
+      new ast.ImportStatement(url, this.parseInfo.sourceURL),
       pcx
     );
   }

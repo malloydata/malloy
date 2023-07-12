@@ -21,64 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {NestDefinition, isNestedQuery} from '../query-properties/nest';
-import {NestReference} from '../query-properties/nest-reference';
-import {MalloyElement, ObjectAnnotation} from './malloy-element';
-import {Aggregate} from '../query-properties/aggregate';
-import {DeclareFields} from '../query-properties/declare-fields';
-import {Filter} from '../query-properties/filters';
-import {GroupBy} from '../query-properties/group-by';
-import {Index} from '../query-properties/indexing';
-import {Joins} from '../query-properties/joins';
-import {Limit} from '../query-properties/limit';
-import {Nests} from '../query-properties/nests';
-import {Ordering} from '../query-properties/ordering';
-import {ProjectStatement} from '../query-properties/project-statement';
-import {SampleProperty} from '../query-properties/sampling';
-import {Top} from '../query-properties/top';
-import {TimezoneStatement} from '../source-properties/timezone-statement';
-import {Calculate} from '../query-properties/calculate';
-import {ExtendBlock} from '../query-properties/extend';
+import {MalloyElement} from './malloy-element';
+import {QueryPropertyInterface} from './query-property-interface';
 
-export type QueryProperty =
-  | Ordering
-  | Top
-  | Limit
-  | Filter
-  | Index
-  | SampleProperty
-  | Joins
-  | DeclareFields
-  | ProjectStatement
-  | NestReference
-  | NestDefinition
-  | NestReference
-  | Nests
-  | Aggregate
-  | GroupBy
-  | ObjectAnnotation
-  | TimezoneStatement
-  | GroupBy
-  | ExtendBlock;
+export type QueryProperty = MalloyElement & QueryPropertyInterface;
 
 export function isQueryProperty(q: MalloyElement): q is QueryProperty {
   return (
-    q instanceof Ordering ||
-    q instanceof Top ||
-    q instanceof Limit ||
-    q instanceof Filter ||
-    q instanceof Index ||
-    q instanceof SampleProperty ||
-    q instanceof Joins ||
-    q instanceof DeclareFields ||
-    q instanceof ProjectStatement ||
-    q instanceof Aggregate ||
-    q instanceof Calculate ||
-    q instanceof Nests ||
-    q instanceof ExtendBlock ||
-    q instanceof ObjectAnnotation ||
-    isNestedQuery(q) ||
-    q instanceof GroupBy ||
-    q instanceof TimezoneStatement
+    Object.prototype.hasOwnProperty.call(q, 'queryRefinementStage') &&
+    Object.prototype.hasOwnProperty.call(q, 'forceQueryClass')
   );
 }

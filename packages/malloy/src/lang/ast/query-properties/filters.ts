@@ -30,6 +30,10 @@ import {compressExpr} from '../expressions/utils';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {ListOf, MalloyElement} from '../types/malloy-element';
+import {
+  LegalRefinementStage,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
 
 export class FilterElement extends MalloyElement {
   elementType = 'filterElement';
@@ -56,19 +60,31 @@ export class FilterElement extends MalloyElement {
   }
 }
 
-export class Filter extends ListOf<FilterElement> {
+export class Filter
+  extends ListOf<FilterElement>
+  implements QueryPropertyInterface
+{
   elementType = 'filter';
   // TODO(maden): Check this field usage/need
   private readonly havingClause?: boolean;
+  forceQueryClass = undefined;
+  queryRefinementStage = LegalRefinementStage.Head;
 
   set having(isHaving: boolean) {
     this.elementType = isHaving ? 'having' : 'where';
+    this.queryRefinementStage = isHaving
+      ? LegalRefinementStage.Tail
+      : LegalRefinementStage.Head;
   }
 
   getFilterList(fs: FieldSpace): FilterExpression[] {
     const checked: FilterExpression[] = [];
     for (const oneElement of this.list) {
       const fExpr = oneElement.filterExpression(fs);
+
+      // mtoy todo is having we never set then queryRefinementStage might be wrong
+      // ... calculations and aggregations must go last
+
       // Aggregates are ALSO checked at SQL generation time, but checking
       // here allows better reflection of errors back to user.
       if (this.havingClause !== undefined) {
@@ -95,4 +111,6 @@ export class Filter extends ListOf<FilterElement> {
     }
     return checked;
   }
+
+  queryExecute() {}
 }

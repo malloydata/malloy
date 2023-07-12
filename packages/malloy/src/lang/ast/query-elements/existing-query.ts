@@ -65,7 +65,7 @@ export class ExistingQuery extends PipelineDesc {
       this.has({queryHead: queryHead});
       const exploreStruct = queryHead.structDef();
       const exploreFS = new StaticSpace(exploreStruct);
-      const sourcePipe = this.refinePipeline(exploreFS, head);
+      const sourcePipe = this.refinePipelineHead(exploreFS, head);
       const walkStruct = this.getOutputStruct(
         exploreStruct,
         sourcePipe.pipeline

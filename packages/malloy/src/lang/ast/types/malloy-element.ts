@@ -41,6 +41,7 @@ import {GlobalNameSpace} from './global-name-space';
 import {ModelEntry} from './model-entry';
 import {NameSpace} from './name-space';
 import {Noteable, isNoteable, extendNoteMethod} from './noteable';
+import {QueryPropertyInterface} from './query-property-interface';
 
 export abstract class MalloyElement {
   abstract elementType: string;
@@ -500,11 +501,19 @@ export class Document extends MalloyElement implements NameSpace {
   }
 }
 
-export class ObjectAnnotation extends MalloyElement {
+export class ObjectAnnotation
+  extends MalloyElement
+  implements QueryPropertyInterface
+{
   elementType = 'annotation';
+  forceQueryClass = undefined;
+  queryRefinementStage = undefined;
+
   constructor(readonly notes: string[]) {
     super();
   }
+
+  queryExecute() {}
 }
 
 export class ModelAnnotation extends ObjectAnnotation implements DocStatement {

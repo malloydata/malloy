@@ -29,72 +29,46 @@ import {ReduceExecutor} from '../executors/reduce-executor';
 import {FieldSpace} from '../types/field-space';
 import {ListOf} from '../types/malloy-element';
 import {OpDesc} from '../types/op-desc';
-import {PipelineDesc} from '../elements/pipeline-desc';
-import {Aggregate} from './aggregate';
-import {GroupBy} from './group-by';
-import {Index} from './indexing';
-import {Nests} from './nests';
-import {ProjectStatement} from './project-statement';
 import {opOutputStruct} from '../struct-utils';
 import {QueryProperty} from '../types/query-property';
-import {isNestedQuery} from './nest';
 import {StaticSpace} from '../field-space/static-space';
-
-type QOPType = 'grouping' | 'aggregate' | 'project' | 'index';
+import {PipelineDescInterface} from '../types/pipeline-desc-interface';
+import {QueryClass} from '../types/query-property-interface';
 
 export class QOPDesc extends ListOf<QueryProperty> {
   elementType = 'queryOperation';
-  opType: QOPType = 'grouping';
+  opClass = QueryClass.Grouping;
   private refineThis?: PipeSegment;
 
-  protected computeType(): QOPType {
-    let firstGuess: QOPType | undefined;
+  protected computeType(): QueryClass {
+    let firstGuess: QueryClass | undefined;
     if (this.refineThis) {
       if (this.refineThis.type === 'reduce') {
-        firstGuess = 'grouping';
+        firstGuess = QueryClass.Grouping;
+      } else if (this.refineThis.type === 'project') {
+        firstGuess = QueryClass.Project;
       } else {
-        firstGuess = this.refineThis.type;
+        firstGuess = QueryClass.Index;
       }
     }
-    let anyGrouping = false;
     for (const el of this.list) {
-      if (el instanceof Index) {
-        firstGuess ||= 'index';
-        if (firstGuess !== 'index') {
-          el.log(`index: not legal in ${firstGuess} query`);
-        }
-      } else if (
-        el instanceof Nests ||
-        isNestedQuery(el) ||
-        el instanceof GroupBy
-      ) {
-        firstGuess ||= 'grouping';
-        anyGrouping = true;
-        if (firstGuess === 'project' || firstGuess === 'index') {
-          el.log(`group_by: not legal in ${firstGuess} query`);
-        }
-      } else if (el instanceof Aggregate) {
-        firstGuess ||= 'aggregate';
-        if (firstGuess === 'project' || firstGuess === 'index') {
-          el.log(`aggregate: not legal in ${firstGuess} query`);
-        }
-      } else if (el instanceof ProjectStatement) {
-        firstGuess ||= 'project';
-        if (firstGuess !== 'project') {
-          el.log(`project: not legal in ${firstGuess} query`);
+      if (!firstGuess) {
+        firstGuess = el.forceQueryClass;
+      } else {
+        const thisType = el.forceQueryClass;
+        if (thisType !== firstGuess) {
+          el.log(`Not legal in ${firstGuess} query`);
+          continue;
         }
       }
-    }
-    if (firstGuess === 'aggregate' && anyGrouping) {
-      firstGuess = 'grouping';
     }
     if (!firstGuess) {
       this.log(
         "Can't determine query type (group_by/aggregate/nest,project,index)"
       );
     }
-    const guessType = firstGuess || 'grouping';
-    this.opType = guessType;
+    const guessType = firstGuess || QueryClass.Grouping;
+    this.opClass = guessType;
     return guessType;
   }
 
@@ -104,17 +78,19 @@ export class QOPDesc extends ListOf<QueryProperty> {
 
   private getExecutor(baseFS: FieldSpace): Executor {
     switch (this.computeType()) {
-      case 'aggregate':
-      case 'grouping':
+      case QueryClass.Grouping:
         return new ReduceExecutor(baseFS, this.refineThis);
-      case 'project':
+      case QueryClass.Project:
         return new ProjectExecutor(baseFS, this.refineThis);
-      case 'index':
+      case QueryClass.Index:
         return new IndexExecutor(baseFS, this.refineThis);
     }
   }
 
-  getOp(inputFS: FieldSpace, forPipeline: PipelineDesc | null): OpDesc {
+  getOp(
+    inputFS: FieldSpace,
+    forPipeline: PipelineDescInterface | null
+  ): OpDesc {
     const qex = this.getExecutor(inputFS);
     if (forPipeline?.nestedInQuerySpace) {
       qex.inputFS.nestParent = forPipeline.nestedInQuerySpace;

@@ -28,11 +28,9 @@ import {
 } from '../../../model/malloy_types';
 
 import {ErrorFactory} from '../error-factory';
-import {Measures} from '../query-properties/measures';
 import {FieldSpace} from '../types/field-space';
 import {Filter} from '../query-properties/filters';
 import {GroupBy} from '../query-properties/group-by';
-import {ProjectStatement} from '../query-properties/project-statement';
 import {ProjectFieldSpace} from '../field-space/project-field-space';
 import {QueryProperty} from '../types/query-property';
 import {ReduceExecutor} from './reduce-executor';
@@ -45,11 +43,8 @@ export class ProjectExecutor extends ReduceExecutor {
     return new ProjectFieldSpace(fs, refineThis);
   }
   execute(qp: QueryProperty): void {
-    if (qp instanceof ProjectStatement) {
-      this.resultFS.addMembers(qp.list);
-    } else if (
+    if (
       (qp instanceof Filter && qp.elementType === 'having') ||
-      qp instanceof Measures ||
       qp instanceof GroupBy
     ) {
       qp.log('Illegal statement in a project query operation');

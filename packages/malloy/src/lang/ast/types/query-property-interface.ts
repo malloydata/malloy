@@ -21,33 +21,29 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ANTLRErrorListener, Token} from 'antlr4ts';
-import {LogMessage, MessageLogger} from './parse-log';
-import {MalloyTranslation} from './parse-malloy';
+import {Executor} from './executor';
 
-export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
-  constructor(
-    readonly translator: MalloyTranslation,
-    readonly messages: MessageLogger
-  ) {}
+export enum QueryClass {
+  Index = 'index',
+  Project = 'project',
+  Grouping = 'grouping',
+}
 
-  syntaxError(
-    recognizer: unknown,
-    offendingSymbol: Token | undefined,
-    line: number,
-    charPositionInLine: number,
-    msg: string,
-    _e: unknown
-  ): void {
-    const errAt = {line: line - 1, character: charPositionInLine};
-    const range = offendingSymbol
-      ? this.translator.rangeFromToken(offendingSymbol)
-      : {start: errAt, end: errAt};
-    const error: LogMessage = {
-      message: msg,
-      at: {url: this.translator.sourceURL, range},
-      severity: 'error',
-    };
-    this.messages.log(error);
-  }
+/**
+ * A QueryProperty can have these responses to appearing in a refinement
+ *   Head -- Legal in all queries, apply it to the first segment
+ *   Tail -- Legal in all queries,, apply it to the last segment
+ *   Single -- Only legal in queries with exactly one segment
+ *   undefined -- Not legal in a refinement
+ */
+export enum LegalRefinementStage {
+  Single,
+  Head,
+  Tail,
+}
+
+export interface QueryPropertyInterface {
+  queryRefinementStage: LegalRefinementStage | undefined;
+  forceQueryClass: QueryClass | undefined;
+  queryExecute: (executeFor: Executor) => void;
 }

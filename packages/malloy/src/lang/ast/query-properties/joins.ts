@@ -29,11 +29,18 @@ import {
 } from '../../../model/malloy_types';
 import {Source} from '../elements/source';
 import {compressExpr} from '../expressions/utils';
+import {JoinSpaceField} from '../field-space/join-space-field';
 import {DefinitionList} from '../types/definition-list';
+import {Executor} from '../types/executor';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
 import {extendNoteMethod, Noteable} from '../types/noteable';
+import {
+  LegalRefinementStage,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
+import {SpaceEntry} from '../types/space-entry';
 
 export abstract class Join extends MalloyElement implements Noteable {
   abstract name: ModelEntryReference;
@@ -42,6 +49,10 @@ export abstract class Join extends MalloyElement implements Noteable {
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
   note?: Annotation;
+
+  getSpaceEntry(fs: FieldSpace): [string, SpaceEntry] {
+    return [this.name.refString, new JoinSpaceField(fs, this)];
+  }
 }
 
 export class KeyJoin extends Join {
@@ -165,9 +176,22 @@ export class ExpressionJoin extends Join {
   }
 }
 
-export class Joins extends DefinitionList<Join> {
+// mtoy todo m0 goes away
+export class Joins
+  extends DefinitionList<Join>
+  implements QueryPropertyInterface
+{
   elementType = 'joinList';
+  forceQueryClass = undefined;
+  queryRefinementStage = LegalRefinementStage.Single;
+
   constructor(joins: Join[]) {
     super(joins);
+  }
+
+  queryExecute(executeFor: Executor) {
+    for (const qel of this.list) {
+      executeFor.inputFS.extendSource(qel);
+    }
   }
 }

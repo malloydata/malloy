@@ -21,13 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment} from '../../../model/malloy_types';
-import {QueryProperty} from './query-property';
-import {QueryInputSpace, QuerySpace} from '../field-space/query-spaces';
+import {
+  CodePointCharStream,
+  CommonTokenStream,
+  ParserRuleContext,
+} from 'antlr4ts';
+import {ParseTree} from 'antlr4ts/tree';
+import {DocumentRange} from '../model/malloy_types';
 
-export interface Executor {
-  inputFS: QueryInputSpace;
-  resultFS: QuerySpace;
-  execute(qp: QueryProperty): void;
-  finalize(refineFrom: PipeSegment | undefined): PipeSegment;
+export interface MalloyParseInfo {
+  root: ParseTree;
+  tokenStream: CommonTokenStream;
+  sourceStream: CodePointCharStream;
+  sourceURL: string;
+  rangeFromContext: (pcx: ParserRuleContext) => DocumentRange;
+  malloyVersion: string;
 }

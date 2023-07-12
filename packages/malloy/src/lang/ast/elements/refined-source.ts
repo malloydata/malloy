@@ -69,7 +69,7 @@ export class RefinedSource extends Source {
 
     for (const el of this.refinement.list) {
       if (el instanceof ObjectAnnotation) {
-        // Silently ignoring unclaimed annotations
+        // Treat lone annotations as comments
         continue;
       }
       const errTo = el;

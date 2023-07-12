@@ -21,10 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {Executor} from '../types/executor';
 import {MalloyElement} from '../types/malloy-element';
+import {QueryPropertyInterface} from '../types/query-property-interface';
 
-export class TimezoneStatement extends MalloyElement {
+export class TimezoneStatement
+  extends MalloyElement
+  implements QueryPropertyInterface
+{
   elementType = 'timezone';
+  forceQueryClass = undefined;
+  queryRefinementStage = undefined;
   constructor(readonly tz: string) {
     super();
   }
@@ -36,5 +43,9 @@ export class TimezoneStatement extends MalloyElement {
     } catch {
       return false;
     }
+  }
+
+  queryExecute(executeFor: Executor) {
+    executeFor.resultFS.setTimezone(this.tz);
   }
 }

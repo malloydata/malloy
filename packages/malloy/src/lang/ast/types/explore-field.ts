@@ -21,11 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {FieldDef} from '../../../model';
 import {RenameField} from '../source-properties/renames';
 import {FieldDecl, isFieldDecl} from './field-decl';
+import {FieldSpace} from './field-space';
 import {MalloyElement} from './malloy-element';
 
 export type ExploreField = FieldDecl | RenameField;
 export function isExploreField(f: MalloyElement): f is ExploreField {
-  return isFieldDecl(f) || f instanceof RenameField;
+  return (
+    (isFieldDecl(f) || f instanceof RenameField) &&
+    Object.prototype.hasOwnProperty.call(f, 'getSourceFieldDef')
+  );
+}
+export interface SourceFieldInterface {
+  getSourceFieldDef: (fs: FieldSpace) => FieldDef;
 }

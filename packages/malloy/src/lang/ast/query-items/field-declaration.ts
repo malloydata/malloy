@@ -48,6 +48,7 @@ import {
   typecheckProject,
 } from './typecheck_utils';
 import {extendNoteMethod, Noteable} from '../types/noteable';
+import {FieldDefinitionValue} from '../field-space/field-definition-value';
 
 export type FieldDeclarationConstructor = new (
   expr: ExpressionDef,
@@ -148,6 +149,10 @@ export abstract class FieldDeclaration
       name: exprName,
       type: 'error',
     };
+  }
+
+  getSpaceEntry(fs: FieldSpace): [string, SpaceEntry] {
+    return [this.defineName, new FieldDefinitionValue(fs, this)];
   }
 }
 

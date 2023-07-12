@@ -28,10 +28,22 @@ import {
   TypeDesc,
 } from '../../../model';
 import {FieldReference} from '../query-items/field-references';
+import {Executor} from '../types/executor';
 import {FieldName} from '../types/field-space';
+import {
+  LegalRefinementStage,
+  QueryClass,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
 
-export class NestReference extends FieldReference {
+export class NestReference
+  extends FieldReference
+  implements QueryPropertyInterface
+{
   elementType = 'nestReference';
+  forceQueryClass = QueryClass.Grouping;
+  queryRefinementStage = LegalRefinementStage.Single;
+
   constructor(readonly name: FieldName) {
     super([name]);
   }
@@ -55,5 +67,9 @@ export class NestReference extends FieldReference {
         `Cannot use ${kind} field in a nest operation, did you mean to use ${useInstead} operation instead?`
       );
     }
+  }
+
+  queryExecute(executeFor: Executor) {
+    executeFor.resultFS.addQueryItems(this);
   }
 }

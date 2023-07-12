@@ -27,7 +27,7 @@ import {Source} from '../elements/source';
 import {ErrorFactory} from '../error-factory';
 import {StaticSpace} from '../field-space/static-space';
 import {QueryComp} from '../types/query-comp';
-import {TurtleHeadedPipe} from '../types/turtle-headed-pipe';
+import {TurtleHeadedPipe} from '../elements/pipeline-desc';
 
 export class FullQuery extends TurtleHeadedPipe {
   constructor(readonly explore: Source) {
@@ -82,8 +82,8 @@ export class FullQuery extends TurtleHeadedPipe {
         structDef
       );
       destQuery.location = location;
-      const refined = this.refinePipeline(pipeFs, {pipeline}).pipeline;
-      if (this.headRefinement) {
+      const refined = this.refinePipelineHead(pipeFs, {pipeline}).pipeline;
+      if (this.withRefinement) {
         // TODO there is an issue with losing the name of the turtle
         // which we need to fix, possibly adding a "name:" field to a segment
         // TODO there was mention of promoting filters to the query

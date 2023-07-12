@@ -22,10 +22,18 @@
  */
 
 import {MalloyElement} from '../types/malloy-element';
+import {
+  LegalRefinementStage,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
 
-export class Limit extends MalloyElement {
+export class Limit extends MalloyElement implements QueryPropertyInterface {
   elementType = 'limit';
+  queryRefinementStage = LegalRefinementStage.Tail;
+  forceQueryClass = undefined;
+
   constructor(readonly limit: number) {
     super();
   }
+  queryExecute() {}
 }

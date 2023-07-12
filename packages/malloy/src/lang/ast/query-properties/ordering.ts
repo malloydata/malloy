@@ -28,6 +28,10 @@ import {
 
 import {FieldName, FieldSpace} from '../types/field-space';
 import {ListOf, MalloyElement} from '../types/malloy-element';
+import {
+  LegalRefinementStage,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
 
 export class OrderBy extends MalloyElement {
   elementType = 'orderBy';
@@ -69,8 +73,14 @@ export class OrderBy extends MalloyElement {
   }
 }
 
-export class Ordering extends ListOf<OrderBy> {
+export class Ordering
+  extends ListOf<OrderBy>
+  implements QueryPropertyInterface
+{
   elementType = 'ordering';
+  queryRefinementStage = LegalRefinementStage.Tail;
+  forceQueryClass = undefined;
+
   constructor(list: OrderBy[]) {
     super(list);
   }
@@ -78,4 +88,6 @@ export class Ordering extends ListOf<OrderBy> {
   getOrderBy(fs: FieldSpace): ModelOrderBy[] {
     return this.list.map(el => el.getOrderBy(fs));
   }
+
+  queryExecute() {}
 }

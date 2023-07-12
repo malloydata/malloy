@@ -29,11 +29,12 @@ import {
   StructDef,
 } from '../../../model/malloy_types';
 
-import {FieldSpace} from '../types/field-space';
+import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
-import {QOPDesc} from '../query-properties/qop-desc';
+import {QOPDesc} from '../query-properties/index-query-properties';
 import {getStructFieldDef, opOutputStruct} from '../struct-utils';
 import {QueryInputSpace} from '../field-space/query-spaces';
+import {LegalRefinementStage} from '../types/query-property-interface';
 
 interface AppendResult {
   opList: PipeSegment[];
@@ -47,13 +48,13 @@ interface AppendResult {
  */
 export abstract class PipelineDesc extends MalloyElement {
   elementType = 'pipelineDesc';
-  protected headRefinement?: QOPDesc;
+  protected withRefinement?: QOPDesc;
   protected qops: QOPDesc[] = [];
   nestedInQuerySpace?: QueryInputSpace;
 
-  refineHead(refinement: QOPDesc): void {
-    this.headRefinement = refinement;
-    this.has({headRefinement: refinement});
+  refineWith(refinement: QOPDesc): void {
+    this.withRefinement = refinement;
+    this.has({withRefinement: refinement});
   }
 
   addSegments(...segDesc: QOPDesc[]): void {
@@ -66,24 +67,43 @@ export abstract class PipelineDesc extends MalloyElement {
     existingEndSpace: FieldSpace
   ): AppendResult {
     let nextFS = existingEndSpace;
-    let returnPipe: PipeSegment[] | undefined;
+    const returnPipe: PipeSegment[] = [];
+    const lastSeg = this.qops[this.qops.length - 1];
     for (const qop of this.qops) {
-      const qopIsNested = modelPipe.length === 0;
-      const next = qop.getOp(nextFS, qopIsNested ? this : null);
-      if (returnPipe === undefined) {
-        returnPipe = [...modelPipe];
+      const thisIfNested = modelPipe.length === 0 ? this : null;
+      let next = qop.getOp(nextFS, thisIfNested);
+      if (qop === lastSeg && this.withRefinement) {
+        const tailRefinements = this.withRefinement.list.filter(qProp => {
+          const refineIn = qProp.queryRefinementStage;
+          if (
+            returnPipe.length > 0 &&
+            refineIn === LegalRefinementStage.Single
+          ) {
+            qProp.log('Illegal refinement in multi stage query');
+            return false;
+          }
+          return (
+            refineIn === LegalRefinementStage.Single ||
+            refineIn === LegalRefinementStage.Tail
+          );
+        });
+        if (tailRefinements.length > 0) {
+          const tailQOP = new QOPDesc(tailRefinements);
+          tailQOP.refineFrom(next.segment);
+          next = tailQOP.getOp(nextFS, thisIfNested);
+        }
       }
       returnPipe.push(next.segment);
       nextFS = next.outputSpace();
     }
     return {
-      opList: returnPipe || modelPipe,
+      opList: returnPipe.length === 0 ? modelPipe : returnPipe,
       structDef: nextFS.structDef(),
     };
   }
 
-  protected refinePipeline(fs: FieldSpace, modelPipe: Pipeline): Pipeline {
-    if (!this.headRefinement) {
+  protected refinePipelineHead(fs: FieldSpace, modelPipe: Pipeline): Pipeline {
+    if (!this.withRefinement) {
       return modelPipe;
     }
     const pipeline: PipeSegment[] = [];
@@ -96,10 +116,26 @@ export abstract class PipelineDesc extends MalloyElement {
     }
     pipeline.push(...modelPipe.pipeline);
     const firstSeg = pipeline[0];
-    if (firstSeg) {
-      this.headRefinement.refineFrom(firstSeg);
+    const headRefinements = new QOPDesc([]);
+    for (const qop of this.withRefinement.list) {
+      switch (qop.queryRefinementStage) {
+        case LegalRefinementStage.Head:
+          headRefinements.push(qop);
+          break;
+        case LegalRefinementStage.Single:
+        case LegalRefinementStage.Tail:
+          break;
+        default:
+          qop.log('Illegal query refinement');
+      }
     }
-    pipeline[0] = this.headRefinement.getOp(fs, this).segment;
+    if (headRefinements.list.length > 0) {
+      this.has({headRefinements});
+      if (firstSeg) {
+        headRefinements.refineFrom(firstSeg);
+      }
+      pipeline[0] = headRefinements.getOp(fs, this).segment;
+    }
     return {pipeline};
   }
 
@@ -134,5 +170,18 @@ export abstract class PipelineDesc extends MalloyElement {
       walkStruct = opOutputStruct(this, walkStruct, modelQop);
     }
     return walkStruct;
+  }
+}
+
+export abstract class TurtleHeadedPipe extends PipelineDesc {
+  _turtleName?: FieldName;
+
+  set turtleName(turtleName: FieldName | undefined) {
+    this._turtleName = turtleName;
+    this.has({turtleName: turtleName});
+  }
+
+  get turtleName(): FieldName | undefined {
+    return this._turtleName;
   }
 }

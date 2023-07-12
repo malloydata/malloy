@@ -22,8 +22,22 @@
  */
 
 import {DefinitionList} from '../types/definition-list';
+import {Executor} from '../types/executor';
 import {FieldCollectionMember} from '../types/field-collection-member';
+import {
+  QueryClass,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
 
-export class ProjectStatement extends DefinitionList<FieldCollectionMember> {
+export class ProjectStatement
+  extends DefinitionList<FieldCollectionMember>
+  implements QueryPropertyInterface
+{
   elementType = 'projectStatement';
+  forceQueryClass = QueryClass.Project;
+  queryRefinementStage = undefined;
+
+  queryExecute(executeFor: Executor) {
+    executeFor.resultFS.addMembers(this.list);
+  }
 }

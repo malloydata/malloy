@@ -31,26 +31,17 @@ import {
 
 import {ErrorFactory} from '../error-factory';
 import {FieldSpace} from '../types/field-space';
-import {Aggregate} from '../query-properties/aggregate';
-import {DeclareFields} from '../query-properties/declare-fields';
 import {Filter} from '../query-properties/filters';
-import {GroupBy} from '../query-properties/group-by';
-import {Joins} from '../query-properties/joins';
 import {Limit} from '../query-properties/limit';
 import {Ordering} from '../query-properties/ordering';
 import {Top} from '../query-properties/top';
 import {QueryProperty} from '../types/query-property';
 import {Executor} from '../types/executor';
-import {Nests} from '../query-properties/nests';
-import {isNestedQuery} from '../query-properties/nest';
 import {
   QueryInputSpace,
   QuerySpace,
   ReduceFieldSpace,
 } from '../field-space/query-spaces';
-import {Calculate} from '../query-properties/calculate';
-import {TimezoneStatement} from '../source-properties/timezone-statement';
-import {ExtendBlock} from '../query-properties/extend';
 
 export class ReduceExecutor implements Executor {
   inputFS: QueryInputSpace;
@@ -72,17 +63,8 @@ export class ReduceExecutor implements Executor {
   }
 
   execute(qp: QueryProperty): void {
-    if (
-      qp instanceof GroupBy ||
-      qp instanceof Aggregate ||
-      qp instanceof Nests
-    ) {
-      this.resultFS.addQueryItems(...qp.list);
-    } else if (qp instanceof Calculate) {
-      this.resultFS.addQueryItems(...qp.list);
-    } else if (isNestedQuery(qp)) {
-      this.resultFS.addQueryItems(qp);
-    } else if (qp instanceof Filter) {
+    qp.queryExecute(this);
+    if (qp instanceof Filter) {
       this.filters.push(...qp.getFilterList(this.inputFS));
     } else if (qp instanceof Top) {
       if (this.limit) {
@@ -109,18 +91,6 @@ export class ReduceExecutor implements Executor {
       } else {
         this.order = qp;
       }
-    } else if (qp instanceof Joins || qp instanceof DeclareFields) {
-      for (const qel of qp.list) {
-        this.inputFS.extendSource(qel);
-      }
-    } else if (qp instanceof ExtendBlock) {
-      for (const block of qp.list) {
-        for (const qel of block.list) {
-          this.inputFS.extendSource(qel);
-        }
-      }
-    } else if (qp instanceof TimezoneStatement) {
-      this.resultFS.setTimezone(qp.tz);
     }
   }
 

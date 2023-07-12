@@ -22,8 +22,23 @@
  */
 
 import {DefinitionList} from '../types/definition-list';
+import {Executor} from '../types/executor';
 import {QueryItem} from '../types/query-item';
+import {
+  QueryPropertyInterface,
+  LegalRefinementStage,
+  QueryClass,
+} from '../types/query-property-interface';
 
-export class GroupBy extends DefinitionList<QueryItem> {
+export class GroupBy
+  extends DefinitionList<QueryItem>
+  implements QueryPropertyInterface
+{
   elementType = 'groupBy';
+  queryRefinementStage = LegalRefinementStage.Single;
+  forceQueryClass = QueryClass.Grouping;
+
+  queryExecute(executeFor: Executor) {
+    executeFor.resultFS.addQueryItems(...this.list);
+  }
 }
