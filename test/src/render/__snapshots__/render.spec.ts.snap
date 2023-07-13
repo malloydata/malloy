@@ -5578,28 +5578,28 @@ exports[`rendering results html renderer complex query with tags transposed tabl
         nm
       </th>
       <td
-        style="padding: 8px; vertical-align: top;"
+        style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <span>
           Sebastian
         </span>
       </td>
       <td
-        style="padding: 8px; vertical-align: top;"
+        style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <span>
           Pedro
         </span>
       </td>
       <td
-        style="padding: 8px; vertical-align: top;"
+        style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <span>
           Alex
         </span>
       </td>
       <td
-        style="padding: 8px; vertical-align: top;"
+        style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <span>
           Miguel
@@ -5615,7 +5615,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
         height_​by_​age
       </th>
       <td
-        style="padding: 8px; vertical-align: top;"
+        style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <div>
           <svg
@@ -6175,7 +6175,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
         </div>
       </td>
       <td
-        style="padding: 8px; vertical-align: top;"
+        style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <div>
           <svg
@@ -6761,7 +6761,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
         </div>
       </td>
       <td
-        style="padding: 8px; vertical-align: top;"
+        style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <div>
           <svg
@@ -7321,7 +7321,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
         </div>
       </td>
       <td
-        style="padding: 8px; vertical-align: top;"
+        style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <div>
           <svg
@@ -7888,7 +7888,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
         weight_​by_​age
       </th>
       <td
-        style="padding: 8px; vertical-align: top;"
+        style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <div>
           <svg
@@ -8520,7 +8520,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
         </div>
       </td>
       <td
-        style="padding: 8px; vertical-align: top;"
+        style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <div>
           <svg
@@ -9230,7 +9230,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
         </div>
       </td>
       <td
-        style="padding: 8px; vertical-align: top;"
+        style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <div>
           <svg
@@ -9862,7 +9862,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
         </div>
       </td>
       <td
-        style="padding: 8px; vertical-align: top;"
+        style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <div>
           <svg
@@ -10553,28 +10553,28 @@ exports[`rendering results html renderer complex query with tags transposed tabl
         price
       </th>
       <td
-        style="padding: 8px; vertical-align: top;"
+        style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <span>
           $1,620.00
         </span>
       </td>
       <td
-        style="padding: 8px; vertical-align: top;"
+        style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <span>
           $650.00
         </span>
       </td>
       <td
-        style="padding: 8px; vertical-align: top;"
+        style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <span>
           $271.00
         </span>
       </td>
       <td
-        style="padding: 8px; vertical-align: top;"
+        style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <span>
           $205.00
