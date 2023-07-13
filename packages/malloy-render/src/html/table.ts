@@ -107,7 +107,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
           padding: ${childRenderer instanceof HTMLTableRenderer ? '0' : '8px'};
           vertical-align: top;
           border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
-          ${isNumeric ? 'text-align: right;' : ''}
+          ${isNumeric || shouldTranspose ? 'text-align: right;' : ''}
         `;
         cellElement.appendChild(rendered);
         cells[rowIndex][columnIndex] = cellElement;
