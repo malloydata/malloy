@@ -213,6 +213,11 @@ export class HTMLTableRenderer extends ContainerRenderer {
       for (const row of table) {
         cells[rowIndex] = [];
         columnIndex = 0;
+        let currentPivotedFieldKey = '';
+        let pivotedCells: Map<
+          string,
+          Map<string, HTMLTableCellElement>
+        > = new Map();
         for (const field of columnFields) {
           if (field instanceof PivotedColumnField) {
             const childRenderer = this.childRenderers[
@@ -220,19 +225,20 @@ export class HTMLTableRenderer extends ContainerRenderer {
             ] as HTMLTableRenderer;
             const childTableRecord = row.cell(field.pivotedField.parentField);
             await yieldTask();
-            const pivotedCells = await childRenderer.generatePivotedCells(
-              childTableRecord
-            );
+            if (field.pivotedField.key !== currentPivotedFieldKey) {
+              pivotedCells = await childRenderer.generatePivotedCells(
+                childTableRecord
+              );
+              currentPivotedFieldKey = field.pivotedField.key;
+            }
             const pfKey = field.pivotedField.key;
             if (
               pivotedCells.has(pfKey) &&
               pivotedCells.get(pfKey)?.has(field.field.name)
             ) {
-              const record = pivotedCells.get(pfKey)!.get(field.field.name)!;
-              cells[rowIndex][columnIndex] = await this.createCellAndRender(
-                record.childRenderer,
-                record.dataRecord
-              );
+              cells[rowIndex][columnIndex] = pivotedCells
+                .get(pfKey)!
+                .get(field.field.name)!;
             } else {
               cells[rowIndex][columnIndex] = childRenderer.generateNoValueCell(
                 childTableRecord,
@@ -314,17 +320,10 @@ export class HTMLTableRenderer extends ContainerRenderer {
     return tableElement;
   }
 
-  private pivotedCells:
-    | Map<string, Map<string, RendereableDataRecord>>
-    | undefined;
-
   async generatePivotedCells(
     table: DataColumn
-  ): Promise<Map<string, Map<string, RendereableDataRecord>>> {
-    /*if (this.pivotedCells) {
-      return this.pivotedCells;
-    }*/
-    const result: Map<string, Map<string, RendereableDataRecord>> = new Map();
+  ): Promise<Map<string, Map<string, HTMLTableCellElement>>> {
+    const result: Map<string, Map<string, HTMLTableCellElement>> = new Map();
     if (!table.isArray() && !table.isRecord()) {
       throw new Error(`Could not pivot ${table.field.name}`);
     }
@@ -335,21 +334,22 @@ export class HTMLTableRenderer extends ContainerRenderer {
         table.field as Field,
         dimensions.map(f => row.cell(f.name))
       );
-      const renderedCells: Map<string, RendereableDataRecord> = new Map();
+      const renderedCells: Map<string, HTMLTableCellElement> = new Map();
       for (const nonDimension of table.field.allFields.filter(
         f => dimensions.indexOf(f) < 0
       )) {
         const childRenderer = this.childRenderers[nonDimension.name];
-        renderedCells.set(nonDimension.name, {
-          childRenderer,
-          dataRecord: row.cell(nonDimension.name),
-        });
+        renderedCells.set(
+          nonDimension.name,
+          await this.createCellAndRender(
+            childRenderer,
+            row.cell(nonDimension.name)
+          )
+        );
       }
 
       result.set(pf.key, renderedCells);
     }
-
-    this.pivotedCells = result;
     return result;
   }
 
