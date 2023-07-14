@@ -1439,10 +1439,16 @@ export class Explore extends Entity {
     return [...this.fieldMap.values()].filter(f => f.isIntrinsic());
   }
 
+  public get dimensions(): Field[] {
+    return [...this.fieldMap.values()].filter(
+      f => f.isAtomicField() && f.sourceWasDimension()
+    );
+  }
+
   public getFieldByName(fieldName: string): Field {
     const field = this.fieldMap.get(fieldName);
     if (field === undefined) {
-      throw new Error(`No such field ${fieldName}.`);
+      throw new Error(`No such field ${fieldName} ${new Error('').stack}.`);
     }
     return field;
   }
@@ -1609,6 +1615,10 @@ export class AtomicField extends Entity implements Taggable {
       this.fieldTypeDef.resultMetadata?.fieldKind === 'measure' ||
       this.fieldTypeDef.resultMetadata?.fieldKind === 'struct'
     );
+  }
+
+  public fk(): string | undefined {
+    return this.fieldTypeDef.resultMetadata?.fieldKind;
   }
 
   public sourceWasDimension(): boolean {
