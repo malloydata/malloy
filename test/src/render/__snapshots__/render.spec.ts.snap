@@ -5573,7 +5573,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
   <thead>
     <tr>
       <th
-        style="padding: 8px; text-align: left;"
+        style="padding: 8px; text-align: right;"
       >
         nm
       </th>
@@ -5610,7 +5610,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
   <tbody>
     <tr>
       <th
-        style="padding: 8px; text-align: left;"
+        style="padding: 8px; text-align: right;"
       >
         height_​by_​age
       </th>
@@ -7883,7 +7883,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
     </tr>
     <tr>
       <th
-        style="padding: 8px; text-align: left;"
+        style="padding: 8px; text-align: right;"
       >
         weight_​by_​age
       </th>
@@ -10548,7 +10548,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
     </tr>
     <tr>
       <th
-        style="padding: 8px; text-align: left;"
+        style="padding: 8px; text-align: right;"
       >
         price
       </th>
@@ -10583,7 +10583,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
     </tr>
     <tr>
       <th
-        style="padding: 8px; text-align: left;"
+        style="padding: 8px; text-align: right;"
       >
         visitcount
       </th>
