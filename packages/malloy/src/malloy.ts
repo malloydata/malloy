@@ -2979,9 +2979,13 @@ abstract class Data<T> {
     }
     throw new Error('No Array or Record');
   }
+
+  public isScalar(): this is ScalarData<T> {
+    return true;
+  }
 }
 
-class ScalarData<T> extends Data<T> {
+abstract class ScalarData<T> extends Data<T> {
   protected _value: T;
   protected _field: AtomicField;
 
@@ -2998,6 +3002,12 @@ class ScalarData<T> extends Data<T> {
   get field(): AtomicField {
     return this._field;
   }
+
+  abstract get key(): string;
+
+  isScalar(): this is ScalarData<T> {
+    return this instanceof ScalarData;
+  }
 }
 
 class DataString extends ScalarData<string> {
@@ -3010,6 +3020,10 @@ class DataString extends ScalarData<string> {
 
   get field(): StringField {
     return this._field;
+  }
+
+  get key(): string {
+    return this.value;
   }
 }
 
@@ -3024,6 +3038,10 @@ class DataUnsupported extends ScalarData<unknown> {
   get field(): UnsupportedField {
     return this._field;
   }
+
+  get key(): string {
+    return '<unsupported>';
+  }
 }
 
 class DataBoolean extends ScalarData<boolean> {
@@ -3036,6 +3054,10 @@ class DataBoolean extends ScalarData<boolean> {
 
   get field(): BooleanField {
     return this._field;
+  }
+
+  get key(): string {
+    return `${this.value}`;
   }
 }
 
@@ -3050,6 +3072,10 @@ class DataJSON extends ScalarData<string> {
   get field(): JSONField {
     return this._field;
   }
+
+  get key(): string {
+    return this.value;
+  }
 }
 
 class DataNumber extends ScalarData<number> {
@@ -3062,6 +3088,10 @@ class DataNumber extends ScalarData<number> {
 
   get field(): NumberField {
     return this._field;
+  }
+
+  get key(): string {
+    return `${this.value}`;
   }
 }
 
@@ -3106,6 +3136,10 @@ class DataTimestamp extends ScalarData<Date> {
   get field(): TimestampField {
     return this._field;
   }
+
+  get key(): string {
+    return `${this.value.toLocaleString()}`;
+  }
 }
 
 class DataDate extends ScalarData<Date> {
@@ -3123,13 +3157,25 @@ class DataDate extends ScalarData<Date> {
   get field(): DateField {
     return this._field;
   }
+
+  get key(): string {
+    return `${this.value.toLocaleString()}`;
+  }
 }
 
-class DataBytes extends ScalarData<Buffer> {}
+class DataBytes extends ScalarData<Buffer> {
+  get key(): string {
+    return this.value.toString();
+  }
+}
 
 class DataNull extends Data<null> {
   public get value(): null {
     return null;
+  }
+
+  get key(): string {
+    return '<null>';
   }
 }
 

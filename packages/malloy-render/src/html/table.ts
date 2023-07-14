@@ -28,16 +28,15 @@ import {ContainerRenderer} from './container';
 import {HTMLNumberRenderer} from './number';
 import {createDrillIcon, formatTitle, yieldTask} from './utils';
 import {isFieldHidden} from '../tags_utils';
+import {Renderer} from '../renderer';
 
 class PivotedField {
-  constructor(readonly parentField: Field, readonly values: DataColumn[]) {}
-
-  // TODO: this should hash.
-  toString() {
-    return `parentField:${this.parentField.name};values:${this.values
-      // TODO: implement value.tostring.
-      .map(v => v.string.value)
-      .join(',')}`;
+  readonly key: string;
+  constructor(readonly parentField: Field, readonly values: DataColumn[]) {
+    this.key = JSON.stringify({
+      parentField: this.parentField.name,
+      values: this.values.filter(v => (v.isScalar() ? v.key : '')),
+    });
   }
 }
 
@@ -49,6 +48,11 @@ class PivotedColumnField {
 }
 
 type TableField = Field | PivotedColumnField;
+
+type RendereableDataRecord = {
+  childRenderer: Renderer;
+  dataRecord: DataColumn;
+};
 
 export class HTMLTableRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
@@ -68,23 +72,17 @@ export class HTMLTableRenderer extends ContainerRenderer {
 
     let rowIndex = 0;
     let columnIndex = 0;
-    const cells: HTMLTableCellElement[][] = [];
+    let cells: HTMLTableCellElement[][] = [];
     cells[rowIndex] = [];
 
     const columnFields: TableField[] = [];
+    let pivotDepth = 0;
     for (const field of table.field.intrinsicFields) {
       if (isFieldHidden(field)) {
         continue;
       }
 
-      let name = formatTitle(
-        this.options,
-        field,
-        this.options.dataStyles[field.name],
-        field.parentExplore.queryTimezone
-      );
-      const childRenderer = this.childRenderers[name];
-
+      const childRenderer = this.childRenderers[field.name];
       const shouldPivot =
         childRenderer instanceof HTMLTableRenderer &&
         this.tagIsPresent(childRenderer.tags, 'pivot');
@@ -120,9 +118,9 @@ export class HTMLTableRenderer extends ContainerRenderer {
               dimensions.map(d => innerRow.cell(d))
             );
 
-            const pfHash = pivotedField.toString();
-            if (!pivotedFields[pfHash]) {
-              pivotedFields.set(pfHash, pivotedField);
+            const pfKey = pivotedField.key;
+            if (!pivotedFields[pfKey]) {
+              pivotedFields.set(pfKey, pivotedField);
             }
           }
         }
@@ -130,41 +128,29 @@ export class HTMLTableRenderer extends ContainerRenderer {
         for (const pf of pivotedFields) {
           for (const nonDimension of nonDimensions) {
             columnFields.push(new PivotedColumnField(pf[1], nonDimension));
-
-            // TODO: CLEAN THIS up
-            const headerCell = this.document.createElement('th');
-            headerCell.style.cssText = `
-              padding: 8px;
-              color: var(--malloy-title-color, #505050);
-              border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
-            `;
-
-            name = `${pf[1].toString()} -- ${nonDimension.name}`;
-            name = name.replace(/_/g, '_&#8203;');
-            headerCell.innerHTML = name;
-            cells[rowIndex][columnIndex] = headerCell;
-
+            cells[rowIndex][columnIndex] = childRenderer.createHeaderCell(
+              nonDimension,
+              shouldTranspose
+            );
             columnIndex++;
           }
         }
 
+        pivotDepth = Math.max(pivotDepth, dimensions!.length);
+
         // TODO: END extract this.
       } else {
-        const isNumeric = childRenderer instanceof HTMLNumberRenderer;
-        const headerCell = this.document.createElement('th');
-        headerCell.style.cssText = `
-          padding: 8px;
-          color: var(--malloy-title-color, #505050);
-          border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
-          text-align: ${!isNumeric || shouldTranspose ? 'left' : 'right'};
-        `;
-
-        name = name.replace(/_/g, '_&#8203;');
-        headerCell.innerHTML = name;
-        cells[rowIndex][columnIndex] = headerCell;
+        cells[rowIndex][columnIndex] = this.createHeaderCell(
+          field,
+          shouldTranspose
+        );
         columnFields.push(field);
         columnIndex++;
       }
+    }
+
+    if (columnFields.length > 20) {
+      throw new Error('Pivot limit of 20 columns exceeded.');
     }
 
     if (!shouldTranspose && this.options.isDrillingEnabled) {
@@ -180,6 +166,53 @@ export class HTMLTableRenderer extends ContainerRenderer {
     }
 
     rowIndex++;
+
+    const pivotHeaderCells: HTMLTableCellElement[][] = [];
+    for (let r = 0; r < pivotDepth; r++) {
+      const row: HTMLTableCellElement[] = [];
+      let lastPivotedColumnHash: string | null = null;
+      for (const field of columnFields) {
+        if (field instanceof PivotedColumnField) {
+          const headerCell = this.document.createElement('th');
+          headerCell.style.cssText = `
+              padding: 8px;
+              color: var(--malloy-title-color, #505050);
+              border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
+            `;
+
+          const pfKey = field.pivotedField.key;
+          const valueIndex = field.pivotedField.values.length - pivotDepth + r;
+          if (lastPivotedColumnHash !== pfKey && valueIndex >= 0) {
+            // TODO: this should use renderer instead.
+            const value = field.pivotedField.values[valueIndex];
+            headerCell.appendChild(
+              await (
+                this.childRenderers[
+                  field.pivotedField.parentField.name
+                ] as HTMLTableRenderer
+              ).renderChild(value)
+            );
+            lastPivotedColumnHash = pfKey;
+          }
+
+          row.push(headerCell);
+        } else {
+          const headerCell = this.document.createElement('th');
+          headerCell.style.cssText = `
+          padding: 8px;
+          color: var(--malloy-title-color, #505050);
+          border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
+        `;
+          row.push(headerCell);
+        }
+      }
+
+      pivotHeaderCells.push(row);
+      rowIndex++;
+    }
+
+    cells = [...pivotHeaderCells, ...cells];
+
     try {
       for (const row of table) {
         cells[rowIndex] = [];
@@ -192,25 +225,24 @@ export class HTMLTableRenderer extends ContainerRenderer {
             const childTableRecord = row.cell(field.pivotedField.parentField);
             await yieldTask();
             const pivotedCells = await childRenderer.generatePivotedCells(
-              childTableRecord,
-              field
+              childTableRecord
             );
-            const cellElement = this.document.createElement('td');
-            if (pivotedCells.has(field.pivotedField.toString())) {
-              throw new Error(
-                `past this problem ${field.field.name} ${pivotedCells[
-                  field.pivotedField.toString()
-                ].has(field.field.name)}`
+            const pfKey = field.pivotedField.key;
+            if (
+              pivotedCells.has(pfKey) &&
+              pivotedCells.get(pfKey)?.has(field.field.name)
+            ) {
+              const record = pivotedCells.get(pfKey)!.get(field.field.name)!;
+              cells[rowIndex][columnIndex] = await this.createCellAndRender(
+                record.childRenderer,
+                record.dataRecord
               );
-              /*cellElement.appendChild(
-                pivotedCells[field.pivotedField.toString()][field.field.name]
-              );*/
             } else {
-              const nv = this.document.createElement('span');
-              nv.innerText = 'NV';
-              cellElement.appendChild(nv);
+              cells[rowIndex][columnIndex] = childRenderer.generateNoValueCell(
+                childTableRecord,
+                field.field
+              );
             }
-            cells[rowIndex][columnIndex] = cellElement;
             columnIndex++;
             // back
           } else {
@@ -218,21 +250,10 @@ export class HTMLTableRenderer extends ContainerRenderer {
               continue;
             }
             const childRenderer = this.childRenderers[field.name];
-            const isNumeric = childRenderer instanceof HTMLNumberRenderer;
-            await yieldTask();
-
-            const rendered = await childRenderer.render(row.cell(field));
-            const cellElement = this.document.createElement('td');
-            cellElement.style.cssText = `
-            padding: ${
-              childRenderer instanceof HTMLTableRenderer ? '0' : '8px'
-            };
-            vertical-align: top;
-            border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
-            ${isNumeric ? 'text-align: right;' : ''}
-          `;
-            cellElement.appendChild(rendered);
-            cells[rowIndex][columnIndex] = cellElement;
+            cells[rowIndex][columnIndex] = await this.createCellAndRender(
+              childRenderer,
+              row.cell(field)
+            );
             columnIndex++;
           }
         }
@@ -269,7 +290,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
     let tableSection = this.document.createElement('thead');
 
     for (let row = 0; row < (shouldTranspose ? columnIndex : rowIndex); row++) {
-      if (row === 1) {
+      if (row === 1 + pivotDepth) {
         tableElement.appendChild(tableSection);
         tableSection = this.document.createElement('tbody');
       }
@@ -297,12 +318,17 @@ export class HTMLTableRenderer extends ContainerRenderer {
     return tableElement;
   }
 
+  private pivotedCells:
+    | Map<string, Map<string, RendereableDataRecord>>
+    | undefined;
+
   async generatePivotedCells(
-    table: DataColumn,
-    pivotedColumnField: PivotedColumnField
-  ): Promise<Map<string, Map<string, HTMLElement>>> {
-    // TODO: hash result accordingly.
-    const result: Map<string, Map<string, HTMLElement>> = new Map();
+    table: DataColumn
+  ): Promise<Map<string, Map<string, RendereableDataRecord>>> {
+    /*if (this.pivotedCells) {
+      return this.pivotedCells;
+    }*/
+    const result: Map<string, Map<string, RendereableDataRecord>> = new Map();
     if (!table.isArray() && !table.isRecord()) {
       throw new Error(`Could not pivot ${table.field.name}`);
     }
@@ -313,27 +339,88 @@ export class HTMLTableRenderer extends ContainerRenderer {
         table.field as Field,
         dimensions.map(f => row.cell(f.name))
       );
-      // TODO: Consider using map instead.
-      const renderedCells: Map<string, HTMLElement> = new Map();
+      const renderedCells: Map<string, RendereableDataRecord> = new Map();
       for (const nonDimension of table.field.allFields.filter(
         f => dimensions.indexOf(f) < 0
       )) {
         const childRenderer = this.childRenderers[nonDimension.name];
-        // TODO: this should reuse logic above to render and add styles.
-        await yieldTask();
-        renderedCells.set(
-          nonDimension.name,
-          await childRenderer.render(row.cell(nonDimension.name))
-        );
+        renderedCells.set(nonDimension.name, {
+          childRenderer,
+          dataRecord: row.cell(nonDimension.name),
+        });
       }
 
-      result.set(pf.toString(), renderedCells);
+      result.set(pf.key, renderedCells);
     }
 
+    this.pivotedCells = result;
     return result;
+  }
+
+  generateNoValueCell(table: DataColumn, field: Field): HTMLTableCellElement {
+    if (!table.isArray() && !table.isRecord()) {
+      throw new Error(`Could not pivot ${table.field.name}`);
+    }
+
+    const cell = this.createCell(this.childRenderers[field.name]);
+    cell.innerHTML = '-';
+    return cell;
   }
 
   tagIsPresent(tags: Tags | undefined, tag: string): boolean {
     return tags ? tags.getMalloyTags().properties[tag] === true : false;
+  }
+
+  async createCellAndRender(
+    childRenderer: Renderer,
+    value: DataColumn
+  ): Promise<HTMLTableCellElement> {
+    const cell = this.createCell(childRenderer);
+    cell.appendChild(await childRenderer.render(value));
+    return cell;
+  }
+
+  createHeaderCell(
+    field: Field,
+    shouldTranspose: boolean
+  ): HTMLTableCellElement {
+    let name = formatTitle(
+      this.options,
+      field,
+      this.options.dataStyles[field.name],
+      field.parentExplore.queryTimezone
+    );
+
+    const isNumeric =
+      this.childRenderers[field.name] instanceof HTMLNumberRenderer;
+    const headerCell = this.document.createElement('th');
+    headerCell.style.cssText = `
+      padding: 8px;
+      color: var(--malloy-title-color, #505050);
+      border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
+      text-align: ${!isNumeric || shouldTranspose ? 'left' : 'right'};
+    `;
+
+    name = name.replace(/_/g, '_&#8203;');
+    headerCell.innerHTML = name;
+    return headerCell;
+  }
+
+  createCell(childRenderer: Renderer): HTMLTableCellElement {
+    const isNumeric = childRenderer instanceof HTMLNumberRenderer;
+    yieldTask();
+    const cellElement = this.document.createElement('td');
+    cellElement.style.cssText = `
+      padding: ${childRenderer instanceof HTMLTableRenderer ? '0' : '8px'};
+      vertical-align: top;
+      border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
+      ${isNumeric ? 'text-align: right;' : ''}
+    `;
+
+    return cellElement;
+  }
+
+  async renderChild(value: DataColumn) {
+    return this.childRenderers[value.field.name].render(value);
   }
 }
