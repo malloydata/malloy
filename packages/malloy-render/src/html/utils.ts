@@ -21,7 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DateTimeframe, Field, TimestampTimeframe} from '@malloydata/malloy';
+import {
+  DateTimeframe,
+  Field,
+  MalloyTags,
+  Tags,
+  TimestampTimeframe,
+} from '@malloydata/malloy';
 import startCase from 'lodash/startCase';
 import {RenderDef} from '../data_styles';
 import {RendererOptions} from '../renderer_types';
@@ -256,4 +262,12 @@ export function formatTitle(
   }
 
   return title;
+}
+
+export function tagIsPresent(
+  tags: Tags | undefined,
+  tagToCheck: string
+): boolean {
+  const tagProperty = tags?.getMalloyTags().properties[tagToCheck];
+  return tagProperty !== undefined && tagProperty !== false;
 }

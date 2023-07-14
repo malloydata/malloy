@@ -323,7 +323,8 @@ describe('rendering results', () => {
                 project: monthy, height
               }
 
-              nest: monthy_list is {
+              # list
+              nest: monthy is {
                 project: price
               }
 
@@ -333,11 +334,12 @@ describe('rendering results', () => {
                 noshowvc is visitcount
             }
 
-            query: by_name_dashboard is by_name {}
+            # dashboard
+            query: by_name_db is by_name {}
           }
 
           query: by_name is height -> by_name {}
-          query: by_name_dashboard is height -> by_name_dashboard {}
+          query: by_name_db is height -> by_name_db {}
         `;
         modelMaterializer = runtime!.loadModel(src);
       });
