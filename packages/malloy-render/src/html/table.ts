@@ -222,7 +222,8 @@ export class HTMLTableRenderer extends ContainerRenderer {
             await yieldTask();
             if (field.pivotedField.key !== currentPivotedFieldKey) {
               pivotedCells = await childRenderer.generatePivotedCells(
-                childTableRecord
+                childTableRecord,
+                shouldTranspose
               );
               currentPivotedFieldKey = field.pivotedField.key;
             }
@@ -237,7 +238,8 @@ export class HTMLTableRenderer extends ContainerRenderer {
             } else {
               cells[rowIndex][columnIndex] = childRenderer.generateNoValueCell(
                 childTableRecord,
-                field.field
+                field.field,
+                shouldTranspose
               );
             }
             columnIndex++;
@@ -249,7 +251,8 @@ export class HTMLTableRenderer extends ContainerRenderer {
             const childRenderer = this.childRenderers[field.name];
             cells[rowIndex][columnIndex] = await this.createCellAndRender(
               childRenderer,
-              row.cell(field)
+              row.cell(field),
+              shouldTranspose
             );
             columnIndex++;
           }
@@ -316,7 +319,8 @@ export class HTMLTableRenderer extends ContainerRenderer {
   }
 
   async generatePivotedCells(
-    table: DataColumn
+    table: DataColumn,
+    shouldTranspose: boolean
   ): Promise<Map<string, Map<string, HTMLTableCellElement>>> {
     const result: Map<string, Map<string, HTMLTableCellElement>> = new Map();
     if (!table.isArray() && !table.isRecord()) {
@@ -338,7 +342,8 @@ export class HTMLTableRenderer extends ContainerRenderer {
           nonDimension.name,
           await this.createCellAndRender(
             childRenderer,
-            row.cell(nonDimension.name)
+            row.cell(nonDimension.name),
+            shouldTranspose
           )
         );
       }
@@ -348,12 +353,19 @@ export class HTMLTableRenderer extends ContainerRenderer {
     return result;
   }
 
-  generateNoValueCell(table: DataColumn, field: Field): HTMLTableCellElement {
+  generateNoValueCell(
+    table: DataColumn,
+    field: Field,
+    shouldTranspose: boolean
+  ): HTMLTableCellElement {
     if (!table.isArray() && !table.isRecord()) {
       throw new Error(`Could not pivot ${table.field.name}`);
     }
 
-    const cell = this.createCell(this.childRenderers[field.name]);
+    const cell = this.createCell(
+      this.childRenderers[field.name],
+      shouldTranspose
+    );
     cell.innerHTML = '-';
     return cell;
   }
@@ -364,9 +376,10 @@ export class HTMLTableRenderer extends ContainerRenderer {
 
   async createCellAndRender(
     childRenderer: Renderer,
-    value: DataColumn
+    value: DataColumn,
+    shouldTranspose: boolean
   ): Promise<HTMLTableCellElement> {
-    const cell = this.createCell(childRenderer);
+    const cell = this.createCell(childRenderer, shouldTranspose);
     cell.appendChild(await childRenderer.render(value));
     return cell;
   }
@@ -389,7 +402,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
       padding: 8px;
       color: var(--malloy-title-color, #505050);
       border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
-      text-align: ${!isNumeric || shouldTranspose ? 'left' : 'right'};
+      text-align: ${isNumeric || shouldTranspose ? 'right' : 'left'};
     `;
 
     name = name.replace(/_/g, '_&#8203;');
@@ -397,7 +410,10 @@ export class HTMLTableRenderer extends ContainerRenderer {
     return headerCell;
   }
 
-  createCell(childRenderer: Renderer): HTMLTableCellElement {
+  createCell(
+    childRenderer: Renderer,
+    shouldTranspose: boolean
+  ): HTMLTableCellElement {
     const isNumeric = childRenderer instanceof HTMLNumberRenderer;
     yieldTask();
     const cellElement = this.document.createElement('td');
@@ -405,7 +421,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
       padding: ${childRenderer instanceof HTMLTableRenderer ? '0' : '8px'};
       vertical-align: top;
       border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
-      ${isNumeric ? 'text-align: right;' : ''}
+      ${isNumeric || shouldTranspose ? 'text-align: right;' : ''}
     `;
 
     return cellElement;

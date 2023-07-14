@@ -24,7 +24,6 @@
 import {
   DateTimeframe,
   Field,
-  MalloyTags,
   Tags,
   TimestampTimeframe,
 } from '@malloydata/malloy';
