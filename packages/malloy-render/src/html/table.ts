@@ -141,8 +141,8 @@ export class HTMLTableRenderer extends ContainerRenderer {
       }
     }
 
-    if (columnFields.length > 20) {
-      throw new Error('Pivot limit of 20 columns exceeded.');
+    if (pivotDepth > 0 && columnFields.length > 30) {
+      throw new Error('Pivot limit of 30 columns exceeded.');
     }
 
     if (!shouldTranspose && this.options.isDrillingEnabled) {
