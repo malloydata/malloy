@@ -86,7 +86,7 @@ const sourceMirrorLicenses = [
 const licenseFoundElsewhere: {[id: string]: string} = {
   'agent-base':
     'https://github.com/TooTallNate/node-agent-base/blob/master/README.md',
-  'crypt': 'https://github.com/pvorb/node-crypt/blob/master/LICENSE.mkd',
+  // 'crypt': 'https://github.com/pvorb/node-crypt/blob/master/LICENSE.mkd',
   'http-proxy-agent': 'https://github.com/TooTallNate/node-http-proxy-agent',
   'https-proxy-agent': 'https://github.com/TooTallNate/node-https-proxy-agent',
 };
