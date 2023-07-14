@@ -88,7 +88,6 @@ export class HTMLTableRenderer extends ContainerRenderer {
         this.tagIsPresent(childRenderer.tags, 'pivot');
 
       if (shouldPivot) {
-        // TODO: START extract this.
         const pivotedFields: Map<string, PivotedField> = new Map();
 
         let dimensions: Field[] | undefined = undefined;
@@ -137,8 +136,6 @@ export class HTMLTableRenderer extends ContainerRenderer {
         }
 
         pivotDepth = Math.max(pivotDepth, dimensions!.length);
-
-        // TODO: END extract this.
       } else {
         cells[rowIndex][columnIndex] = this.createHeaderCell(
           field,
@@ -183,7 +180,6 @@ export class HTMLTableRenderer extends ContainerRenderer {
           const pfKey = field.pivotedField.key;
           const valueIndex = field.pivotedField.values.length - pivotDepth + r;
           if (lastPivotedColumnHash !== pfKey && valueIndex >= 0) {
-            // TODO: this should use renderer instead.
             const value = field.pivotedField.values[valueIndex];
             headerCell.appendChild(
               await (
