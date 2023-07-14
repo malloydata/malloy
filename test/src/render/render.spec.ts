@@ -365,7 +365,7 @@ describe('rendering results', () => {
       });
     });
 
-    test.only('pivot table renders correctly', async () => {
+    test('pivot table renders correctly', async () => {
       const connectionName = 'duckdb';
       const runtime = runtimes.runtimeMap.get(connectionName);
       expect(runtime).toBeDefined();
