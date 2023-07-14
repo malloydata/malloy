@@ -356,7 +356,7 @@ describe('rendering results', () => {
 
       test('rendered correctly dashboard', async () => {
         const result = await modelMaterializer
-          .loadQueryByName('by_name_dashboard')
+          .loadQueryByName('by_name_db')
           .run();
         const document = new JSDOM().window.document;
         const html = await new HTMLView(document).render(result, {
