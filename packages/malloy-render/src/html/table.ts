@@ -49,11 +49,6 @@ class PivotedColumnField {
 
 type TableField = Field | PivotedColumnField;
 
-type RendereableDataRecord = {
-  childRenderer: Renderer;
-  dataRecord: DataColumn;
-};
-
 export class HTMLTableRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
     size: 'medium',
