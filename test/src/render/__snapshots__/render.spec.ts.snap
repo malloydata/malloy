@@ -5573,7 +5573,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
   <thead>
     <tr>
       <th
-        style="padding: 8px; text-align: left;"
+        style="padding: 8px; text-align: right;"
       >
         nm
       </th>
@@ -5610,7 +5610,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
   <tbody>
     <tr>
       <th
-        style="padding: 8px; text-align: left;"
+        style="padding: 8px; text-align: right;"
       >
         height_​by_​age
       </th>
@@ -7883,7 +7883,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
     </tr>
     <tr>
       <th
-        style="padding: 8px; text-align: left;"
+        style="padding: 8px; text-align: right;"
       >
         weight_​by_​age
       </th>
@@ -10548,7 +10548,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
     </tr>
     <tr>
       <th
-        style="padding: 8px; text-align: left;"
+        style="padding: 8px; text-align: right;"
       >
         price
       </th>
@@ -10583,7 +10583,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
     </tr>
     <tr>
       <th
-        style="padding: 8px; text-align: left;"
+        style="padding: 8px; text-align: right;"
       >
         visitcount
       </th>
@@ -11065,6 +11065,643 @@ exports[`rendering results html renderer hidden tags rendered correctly table 1`
       >
         <span>
           1
+        </span>
+      </td>
+    </tr>
+  </tbody>
+</table>
+`;
+
+exports[`rendering results html renderer pivot table renders correctly 1`] = `
+<table
+  style="vertical-align: top; border-collapse: collapse; width: 100%;"
+>
+  <thead>
+    <tr>
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      >
+        <span>
+          $1.00
+        </span>
+      </th>
+      <th
+        style="padding: 8px;"
+      />
+    </tr>
+    <tr>
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      >
+        <span>
+          Monday
+        </span>
+      </th>
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      >
+        <span>
+          Thursday
+        </span>
+      </th>
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      >
+        <span>
+          Wednesday
+        </span>
+      </th>
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      >
+        <span>
+          Tuesday
+        </span>
+      </th>
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      />
+      <th
+        style="padding: 8px;"
+      >
+        <span>
+          200%
+        </span>
+      </th>
+      <th
+        style="padding: 8px;"
+      />
+    </tr>
+    <tr>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        nm
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        ht
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        price
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        mbtype
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        ht
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        price
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        mbtype
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        ht
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        price
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        mbtype
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        ht
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        price
+      </th>
+      <th
+        style="padding: 8px; text-align: left;"
+      >
+        mbtype
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        pricepu
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        ht
+      </th>
+      <th
+        style="padding: 8px; text-align: right;"
+      >
+        price
+      </th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          Sebastian
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          41
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          720
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          B
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          25.5
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          900
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          C
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          1,620
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          33.25
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          1,620
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          Pedro
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          20
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          50
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          A
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          45
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          300
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          O
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          31.5
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          300
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          B
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          650
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          32
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          650
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          Alex
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          47
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          81
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          D
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          31.5
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          105
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          P
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          23
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          85
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          X
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          271
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          33.25
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          271
+        </span>
+      </td>
+    </tr>
+    <tr>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          Miguel
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          25.5
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          98
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          R
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          41
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          107
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          F
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          205
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          33.25
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          205
         </span>
       </td>
     </tr>
