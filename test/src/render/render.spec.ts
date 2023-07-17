@@ -401,7 +401,7 @@ describe('rendering results', () => {
 
             query: by_name is {
               group_by: nm
-              # pivot
+              # pivot pivotDimensions='dayito'
               nest: pivot_f is {
                 group_by: dayito
                 aggregate:
