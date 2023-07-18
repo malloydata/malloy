@@ -21,12 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Field, Tags} from '@malloydata/malloy';
+import {DataColumn, Field} from '@malloydata/malloy';
 import {StyleDefaults} from '../data_styles';
 import {getDrillQuery} from '../drill';
 import {ContainerRenderer} from './container';
 import {HTMLNumberRenderer} from './number';
-import {createDrillIcon, formatTitle, yieldTask} from './utils';
+import {
+  createDrillIcon,
+  formatTitle,
+  parseCommaSeparatedParameterTagValue,
+  tagIsPresent,
+  yieldTask,
+} from './utils';
 import {isFieldHidden} from '../tags_utils';
 import {Renderer} from '../renderer';
 
@@ -59,7 +65,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
       throw new Error('Invalid type for Table Renderer');
     }
 
-    const shouldTranspose = this.tagIsPresent(this.tags, 'transpose');
+    const shouldTranspose = tagIsPresent(this.tags, 'transpose');
 
     if (shouldTranspose && table.field.intrinsicFields.length > 20) {
       throw new Error('Transpose limit of 20 columns exceeded.');
@@ -80,7 +86,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
       const childRenderer = this.childRenderers[field.name];
       const shouldPivot =
         childRenderer instanceof HTMLTableRenderer &&
-        this.tagIsPresent(childRenderer.tags, 'pivot');
+        tagIsPresent(childRenderer.tags, 'pivot');
 
       if (shouldPivot) {
         const pivotedFields: Map<string, PivotedField> = new Map();
@@ -89,21 +95,18 @@ export class HTMLTableRenderer extends ContainerRenderer {
         let nonDimensions: Field[] = [];
         for (const row of table) {
           const dc = row.cell(field);
+          if (dc.isNull()) {
+            continue;
+          }
+
           if (!dc.isArray() && !dc.isRecord()) {
-            throw new Error(`Cannot pivot field ${field.name}.`);
+            throw new Error(`Can not pivot field ${field.name}.`);
           }
 
           if (!dimensions) {
-            const fieldi = dc.field;
-            dimensions = fieldi.dimensions;
-            nonDimensions = fieldi.allFields.filter(
-              f => dimensions!.indexOf(f) < 0
-            );
-            if (nonDimensions.length === 0) {
-              throw new Error(
-                `Can not pivot ${field.name} since all of its fields are dimensions.`
-              );
-            }
+            const dimensionsResult = childRenderer.calculatePivotDimensions(dc);
+            dimensions = dimensionsResult.dimensions;
+            nonDimensions = dimensionsResult.nonDimensions;
           }
 
           for (const innerRow of dc) {
@@ -117,6 +120,10 @@ export class HTMLTableRenderer extends ContainerRenderer {
               pivotedFields.set(pfKey, pivotedField);
             }
           }
+        }
+
+        if (!dimensions) {
+          throw new Error(`Could not pivot ${field.name}, no data found.`);
         }
 
         for (const pf of pivotedFields) {
@@ -204,86 +211,81 @@ export class HTMLTableRenderer extends ContainerRenderer {
 
     cells = [...pivotHeaderCells, ...cells];
 
-    try {
-      for (const row of table) {
-        cells[rowIndex] = [];
-        columnIndex = 0;
-        let currentPivotedFieldKey = '';
-        let pivotedCells: Map<
-          string,
-          Map<string, HTMLTableCellElement>
-        > = new Map();
-        for (const field of columnFields) {
-          if (field instanceof PivotedColumnField) {
-            const childRenderer = this.childRenderers[
-              field.pivotedField.parentField.name
-            ] as HTMLTableRenderer;
-            const childTableRecord = row.cell(field.pivotedField.parentField);
-            await yieldTask();
-            if (field.pivotedField.key !== currentPivotedFieldKey) {
-              pivotedCells = await childRenderer.generatePivotedCells(
-                childTableRecord,
-                shouldTranspose
-              );
-              currentPivotedFieldKey = field.pivotedField.key;
-            }
-            const pfKey = field.pivotedField.key;
-            if (
-              pivotedCells.has(pfKey) &&
-              pivotedCells.get(pfKey)?.has(field.field.name)
-            ) {
-              cells[rowIndex][columnIndex] = pivotedCells
-                .get(pfKey)!
-                .get(field.field.name)!;
-            } else {
-              cells[rowIndex][columnIndex] = childRenderer.generateNoValueCell(
-                childTableRecord,
-                field.field,
-                shouldTranspose
-              );
-            }
-            columnIndex++;
-            // back
-          } else {
-            if (isFieldHidden(field)) {
-              continue;
-            }
-            const childRenderer = this.childRenderers[field.name];
-            cells[rowIndex][columnIndex] = await this.createCellAndRender(
-              childRenderer,
-              row.cell(field),
+    for (const row of table) {
+      cells[rowIndex] = [];
+      columnIndex = 0;
+      let currentPivotedFieldKey = '';
+      let pivotedCells: Map<
+        string,
+        Map<string, HTMLTableCellElement>
+      > = new Map();
+      for (const field of columnFields) {
+        if (field instanceof PivotedColumnField) {
+          const childRenderer = this.childRenderers[
+            field.pivotedField.parentField.name
+          ] as HTMLTableRenderer;
+          const childTableRecord = row.cell(field.pivotedField.parentField);
+          await yieldTask();
+          if (field.pivotedField.key !== currentPivotedFieldKey) {
+            pivotedCells = await childRenderer.generatePivotedCells(
+              childTableRecord,
               shouldTranspose
             );
-            columnIndex++;
+            currentPivotedFieldKey = field.pivotedField.key;
           }
+          const pfKey = field.pivotedField.key;
+          if (
+            pivotedCells.has(pfKey) &&
+            pivotedCells.get(pfKey)?.has(field.field.name)
+          ) {
+            cells[rowIndex][columnIndex] = pivotedCells
+              .get(pfKey)!
+              .get(field.field.name)!;
+          } else {
+            cells[rowIndex][columnIndex] = childRenderer.generateNoValueCell(
+              field.field,
+              shouldTranspose
+            );
+          }
+          columnIndex++;
+          // back
+        } else {
+          if (isFieldHidden(field)) {
+            continue;
+          }
+          const childRenderer = this.childRenderers[field.name];
+          cells[rowIndex][columnIndex] = await this.createCellAndRender(
+            childRenderer,
+            row.cell(field),
+            shouldTranspose
+          );
+          columnIndex++;
         }
+      }
 
-        // TODO(figutierrez): Deal with drill when transpose is on.
-        if (!shouldTranspose && this.options.isDrillingEnabled) {
-          const drillCell = this.document.createElement('td');
-          const drillIcon = createDrillIcon(this.document);
-          drillCell.appendChild(drillIcon);
-          drillCell.style.cssText = `
+      // TODO(figutierrez): Deal with drill when transpose is on.
+      if (!shouldTranspose && this.options.isDrillingEnabled) {
+        const drillCell = this.document.createElement('td');
+        const drillIcon = createDrillIcon(this.document);
+        drillCell.appendChild(drillIcon);
+        drillCell.style.cssText = `
           padding: 8px;
           vertical-align: top;
           border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
           width: 25px;
           cursor: pointer
         `;
-          drillCell.onclick = () => {
-            if (this.options.onDrill) {
-              const {drillQuery, drillFilters} = getDrillQuery(row);
-              this.options.onDrill(drillQuery, drillIcon, drillFilters);
-            }
-          };
-          cells[rowIndex][columnIndex] = drillCell;
-          columnIndex++;
-        }
-
-        rowIndex++;
+        drillCell.onclick = () => {
+          if (this.options.onDrill) {
+            const {drillQuery, drillFilters} = getDrillQuery(row);
+            this.options.onDrill(drillQuery, drillIcon, drillFilters);
+          }
+        };
+        cells[rowIndex][columnIndex] = drillCell;
+        columnIndex++;
       }
-    } catch (e) {
-      throw new Error(`${e.toString()} ${e.stack}`);
+
+      rowIndex++;
     }
 
     const tableElement = this.document.createElement('table');
@@ -318,16 +320,62 @@ export class HTMLTableRenderer extends ContainerRenderer {
     return tableElement;
   }
 
+  calculatePivotDimensions(table: DataColumn): {
+    dimensions: Field[];
+    nonDimensions: Field[];
+  } {
+    if (!table.isArray() && !table.isRecord()) {
+      throw new Error(`Could not pivot ${table.field.name}`);
+    }
+    let dimensions: Field[] | undefined = undefined;
+    const userSpecifiedDimensions = parseCommaSeparatedParameterTagValue(
+      this.tags,
+      'pivotDimensions'
+    );
+    if (userSpecifiedDimensions) {
+      dimensions = table.field.allFields.filter(
+        f => userSpecifiedDimensions.indexOf(f.name) >= 0
+      );
+      if (dimensions.length !== userSpecifiedDimensions.length) {
+        for (const dim of userSpecifiedDimensions) {
+          if (table.field.allFields.filter(f => f.name === dim).length === 0) {
+            throw new Error(
+              `Could not pivot ${table.field.name} since ${dim} is not a valid field.`
+            );
+          }
+        }
+      }
+    } else {
+      dimensions = table.field.dimensions;
+    }
+
+    const nonDimensions = table.field.allFields.filter(
+      f => dimensions!.indexOf(f) < 0
+    );
+    if (nonDimensions.length === 0) {
+      throw new Error(
+        `Can not pivot ${table.field.name} since all of its fields are dimensions.`
+      );
+    }
+
+    return {dimensions, nonDimensions};
+  }
+
   async generatePivotedCells(
     table: DataColumn,
     shouldTranspose: boolean
   ): Promise<Map<string, Map<string, HTMLTableCellElement>>> {
     const result: Map<string, Map<string, HTMLTableCellElement>> = new Map();
+
+    if (table.isNull()) {
+      return result;
+    }
+
     if (!table.isArray() && !table.isRecord()) {
       throw new Error(`Could not pivot ${table.field.name}`);
     }
 
-    const dimensions = table.field.dimensions;
+    const {dimensions} = this.calculatePivotDimensions(table);
     for (const row of table) {
       const pf = new PivotedField(
         table.field as Field,
@@ -348,30 +396,26 @@ export class HTMLTableRenderer extends ContainerRenderer {
         );
       }
 
+      if (result.has(pf.key)) {
+        throw new Error(
+          `Can not pivot ${table.field.name} dimensions lead to non unique pivots.`
+        );
+      }
       result.set(pf.key, renderedCells);
     }
     return result;
   }
 
   generateNoValueCell(
-    table: DataColumn,
     field: Field,
     shouldTranspose: boolean
   ): HTMLTableCellElement {
-    if (!table.isArray() && !table.isRecord()) {
-      throw new Error(`Could not pivot ${table.field.name}`);
-    }
-
     const cell = this.createCell(
       this.childRenderers[field.name],
       shouldTranspose
     );
     cell.innerHTML = '-';
     return cell;
-  }
-
-  tagIsPresent(tags: Tags | undefined, tag: string): boolean {
-    return tags ? tags.getMalloyTags().properties[tag] === true : false;
   }
 
   async createCellAndRender(
