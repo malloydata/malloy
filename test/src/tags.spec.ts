@@ -66,7 +66,7 @@ describe('tag utilities', () => {
   test('quoted property with " and space', () => {
     const annotation = '# "a \\"chart\\""';
     const a = tstTagParse(annotation);
-    expect(a.properties).toHaveProperty('a \\"chart\\"', true);
+    expect(a.properties).toHaveProperty('a "chart"', true);
   });
   test('quoted property with value', () => {
     const a = tstTagParse('# "linechart"=yes');
