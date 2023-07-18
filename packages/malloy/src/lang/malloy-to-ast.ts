@@ -744,6 +744,12 @@ export class MalloyToAST
     return this.astAt(where, pcx);
   }
 
+  visitQueryWhereStatement(pcx: parse.QueryWhereStatementContext): ast.Filter {
+    const where = this.visitFilterClauseList(pcx.filterClauseList());
+    where.having = false;
+    return this.astAt(where, pcx);
+  }
+
   visitHavingStatement(pcx: parse.HavingStatementContext): ast.Filter {
     const having = this.visitFilterClauseList(pcx.filterClauseList());
     having.having = true;
@@ -796,6 +802,25 @@ export class MalloyToAST
 
   visitTimezoneStatement(
     cx: parse.TimezoneStatementContext
+  ): ast.TimezoneStatement {
+    const timezone = this.getPlainString(cx);
+    const timezoneStatement = this.astAt(
+      new ast.TimezoneStatement(timezone),
+      cx.string()
+    );
+
+    if (!timezoneStatement.isValid) {
+      this.astError(
+        timezoneStatement,
+        `Invalid timezone: ${timezoneStatement.tz}`
+      );
+    }
+
+    return this.astAt(timezoneStatement, cx);
+  }
+
+  visitQueryTimezoneStatement(
+    cx: parse.QueryTimezoneStatementContext
   ): ast.TimezoneStatement {
     const timezone = this.getPlainString(cx);
     const timezoneStatement = this.astAt(

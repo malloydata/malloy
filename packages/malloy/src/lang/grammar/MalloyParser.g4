@@ -177,6 +177,9 @@ connectionId
 queryProperties
   : filterShortcut
   | OCURLY (queryStatement | SEMI)* CCURLY
+  | OPAREN (queryStatement | SEMI)* CPAREN
+  | (queryStatement | SEMI)* END
+  | (queryStatement | SEMI)+
   ;
 
 filterShortcut
@@ -260,7 +263,7 @@ joinStatement
   ;
 
 queryExtend
-  : EXTENDQ queryExtendStatementList
+  : EXTEND queryExtendStatementList
   ;
 
 queryExtendStatement
@@ -306,6 +309,10 @@ whereStatement
   : WHERE filterClauseList
   ;
 
+queryWhereStatement
+  : WHEREQ filterClauseList
+  ;
+
 havingStatement
   : HAVING filterClauseList
   ;
@@ -332,11 +339,11 @@ queryStatement
   | topStatement
   | limitStatement
   | orderByStatement
-  | whereStatement
+  | queryWhereStatement
   | havingStatement
   | nestStatement
   | sampleStatement
-  | timezoneStatement
+  | queryTimezoneStatement
   | queryAnnotation
   | ignoredModelAnnotations
   ;
@@ -429,6 +436,10 @@ sampleStatement
 
 timezoneStatement
   : TIMEZONE string
+  ;
+
+queryTimezoneStatement
+  : TIMEZONEQ string
   ;
 
 queryAnnotation
