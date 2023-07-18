@@ -31,7 +31,6 @@ import {
   Query,
   SQLBlockStructDef,
 } from '../../../model/malloy_types';
-import {MalloyTagProperties, parseTagProperties} from '../../../tags';
 
 import {LogSeverity, MessageLogger} from '../../parse-log';
 import {MalloyTranslation} from '../../parse-malloy';
@@ -41,7 +40,6 @@ import {GlobalNameSpace} from './global-name-space';
 import {ModelEntry} from './model-entry';
 import {NameSpace} from './name-space';
 import {Noteable, isNoteable, extendNoteMethod} from './noteable';
-import {QueryPropertyInterface} from './query-property-interface';
 
 export abstract class MalloyElement {
   abstract elementType: string;
@@ -498,41 +496,5 @@ export class Document extends MalloyElement implements NameSpace {
       this.log(`Cannot redefine '${str}', which is in global namespace`);
     }
     this.documentModel[str] = ent;
-  }
-}
-
-export class ObjectAnnotation
-  extends MalloyElement
-  implements QueryPropertyInterface
-{
-  elementType = 'annotation';
-  forceQueryClass = undefined;
-  queryRefinementStage = undefined;
-
-  constructor(readonly notes: string[]) {
-    super();
-  }
-
-  queryExecute() {}
-}
-
-export class ModelAnnotation extends ObjectAnnotation implements DocStatement {
-  elementType = 'modelAnnotation';
-
-  getCompilerFlags(existing: MalloyTagProperties): MalloyTagProperties {
-    let flags = {...existing};
-    for (const note of this.notes) {
-      if (note.startsWith('##! ')) {
-        const parsed = parseTagProperties(note.slice(4), flags);
-        if (parsed) {
-          flags = parsed;
-        }
-      }
-    }
-    return flags;
-  }
-
-  execute(doc: Document): void {
-    doc.notes = doc.notes.concat(this.notes);
   }
 }

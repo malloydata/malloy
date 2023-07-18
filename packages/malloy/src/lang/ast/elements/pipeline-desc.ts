@@ -31,7 +31,7 @@ import {
 
 import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
-import {QOPDesc} from '../query-properties/index-query-properties';
+import {QOPDesc} from '../query-properties/qop-desc';
 import {getStructFieldDef, opOutputStruct} from '../struct-utils';
 import {QueryInputSpace} from '../field-space/query-spaces';
 import {LegalRefinementStage} from '../types/query-property-interface';

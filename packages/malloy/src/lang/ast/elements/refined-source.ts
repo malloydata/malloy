@@ -43,7 +43,7 @@ import {ExploreField} from '../types/explore-field';
 
 import {Source} from './source';
 import {TimezoneStatement} from '../source-properties/timezone-statement';
-import {ObjectAnnotation} from '../types/malloy-element';
+import {ObjectAnnotation} from '../types/annotation-elements';
 
 /**
  * A Source made from a source reference and a set of refinements

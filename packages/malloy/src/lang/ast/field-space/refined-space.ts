@@ -24,7 +24,8 @@
 import {StructDef} from '../../../model/malloy_types';
 import {FieldListEdit} from '../source-properties/field-list-edit';
 import {RenameField} from '../source-properties/renames';
-import {Join, TurtleDecl} from '../query-properties/index-query-properties';
+import {Join} from '../query-properties/joins';
+import {TurtleDecl} from '../query-properties/nest';
 import {DynamicSpace} from './dynamic-space';
 import {RenameSpaceField} from './rename-space-field';
 import {FieldDeclaration} from '../query-items/field-declaration';
