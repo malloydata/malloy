@@ -423,9 +423,6 @@ export class HTMLTableRenderer extends ContainerRenderer {
     value: DataColumn,
     shouldTranspose: boolean
   ): Promise<HTMLTableCellElement> {
-    if (value.isNull()) {
-      return this.generateNoValueCell(value.field as Field, shouldTranspose);
-    }
     const cell = this.createCell(childRenderer, shouldTranspose);
     cell.appendChild(await childRenderer.render(value));
     return cell;
