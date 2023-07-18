@@ -330,7 +330,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
     let dimensions: Field[] | undefined = undefined;
     const userSpecifiedDimensions = parseCommaSeparatedParameterTagValue(
       this.tags,
-      'pivotDimensions'
+      'pivot_dimensions'
     );
     if (userSpecifiedDimensions) {
       dimensions = table.field.allFields.filter(
