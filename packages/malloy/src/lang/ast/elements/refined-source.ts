@@ -36,7 +36,6 @@ import {Filter} from '../query-properties/filters';
 import {Joins} from '../query-properties/joins';
 import {FieldListEdit} from '../source-properties/field-list-edit';
 import {PrimaryKey} from '../source-properties/primary-key';
-import {Renames} from '../source-properties/renames';
 import {Turtles} from '../source-properties/turtles';
 import {SourceDesc} from '../types/source-desc';
 import {ExploreField} from '../types/explore-field';
@@ -44,6 +43,7 @@ import {ExploreField} from '../types/explore-field';
 import {Source} from './source';
 import {TimezoneStatement} from '../source-properties/timezone-statement';
 import {ObjectAnnotation} from '../types/annotation-elements';
+import {Renames} from '../source-properties/renames';
 
 /**
  * A Source made from a source reference and a set of refinements
@@ -109,7 +109,7 @@ export class RefinedSource extends Source {
     if (newTimezone) {
       fs.setTimezone(newTimezone);
     }
-    fs.addField(...fields);
+    fs.pushFields(...fields);
     if (pList) {
       fs.addParameters(pList);
     }

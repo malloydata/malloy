@@ -27,8 +27,5 @@ import {QueryPropertyInterface} from './query-property-interface';
 export type QueryProperty = MalloyElement & QueryPropertyInterface;
 
 export function isQueryProperty(q: MalloyElement): q is QueryProperty {
-  return (
-    Object.prototype.hasOwnProperty.call(q, 'queryRefinementStage') &&
-    Object.prototype.hasOwnProperty.call(q, 'forceQueryClass')
-  );
+  return 'queryRefinementStage' in q && 'forceQueryClass' in q;
 }

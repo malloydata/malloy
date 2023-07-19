@@ -23,7 +23,8 @@
 
 import {PipeSegment} from '../../../model/malloy_types';
 import {QueryProperty} from './query-property';
-import {QueryInputSpace, QuerySpace} from '../field-space/query-spaces';
+import {QueryInputSpace} from '../field-space/query-input-space';
+import {QuerySpace} from '../field-space/query-spaces';
 
 export interface Executor {
   inputFS: QueryInputSpace;

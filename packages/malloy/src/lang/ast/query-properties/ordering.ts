@@ -88,6 +88,4 @@ export class Ordering
   getOrderBy(fs: FieldSpace): ModelOrderBy[] {
     return this.list.map(el => el.getOrderBy(fs));
   }
-
-  queryExecute() {}
 }

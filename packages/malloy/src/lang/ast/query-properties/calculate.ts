@@ -22,7 +22,6 @@
  */
 
 import {DefinitionList} from '../types/definition-list';
-import {Executor} from '../types/executor';
 import {QueryItem} from '../types/query-item';
 import {
   LegalRefinementStage,
@@ -36,7 +35,4 @@ export class Calculate
   elementType = 'calculate';
   forceQueryClass = undefined;
   queryRefinementStage = LegalRefinementStage.Single;
-  queryExecute(executeFor: Executor) {
-    executeFor.resultFS.addQueryItems(...this.list);
-  }
 }

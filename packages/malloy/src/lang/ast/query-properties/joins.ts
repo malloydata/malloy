@@ -29,6 +29,7 @@ import {
 } from '../../../model/malloy_types';
 import {Source} from '../elements/source';
 import {compressExpr} from '../expressions/utils';
+import {DynamicSpace} from '../field-space/dynamic-space';
 import {JoinSpaceField} from '../field-space/join-space-field';
 import {DefinitionList} from '../types/definition-list';
 import {Executor} from '../types/executor';
@@ -40,9 +41,12 @@ import {
   LegalRefinementStage,
   QueryPropertyInterface,
 } from '../types/query-property-interface';
-import {SpaceEntry} from '../types/space-entry';
+import {MakeEntry} from '../types/space-entry';
 
-export abstract class Join extends MalloyElement implements Noteable {
+export abstract class Join
+  extends MalloyElement
+  implements Noteable, MakeEntry
+{
   abstract name: ModelEntryReference;
   abstract structDef(): StructDef;
   abstract fixupJoinOn(outer: FieldSpace, inStruct: StructDef): void;
@@ -50,8 +54,8 @@ export abstract class Join extends MalloyElement implements Noteable {
   extendNote = extendNoteMethod;
   note?: Annotation;
 
-  getSpaceEntry(fs: FieldSpace): [string, SpaceEntry] {
-    return [this.name.refString, new JoinSpaceField(fs, this)];
+  makeEntry(fs: DynamicSpace) {
+    fs.newEntry(this.name.refString, this, new JoinSpaceField(fs, this));
   }
 }
 

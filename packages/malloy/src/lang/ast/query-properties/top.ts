@@ -82,5 +82,4 @@ export class Top extends MalloyElement implements QueryPropertyInterface {
     }
     return undefined;
   }
-  queryExecute() {}
 }

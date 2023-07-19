@@ -1033,6 +1033,14 @@ describe('qops', () => {
   test('aggregate single', () => {
     expect('query: a->{ aggregate: num is count() }').toTranslate();
   });
+  test('calculate in reduce', () => {
+    expect(
+      'query: a->{ group_by: astr calculate: num is lag(ai) }'
+    ).toTranslate();
+  });
+  test('calculate in project', () => {
+    expect('query: a->{ project: ai calculate: num is lag(ai) }').toTranslate();
+  });
   test('aggregate multiple', () => {
     expect(`
       query: a->{
@@ -3559,63 +3567,67 @@ describe('extend and refine', () => {
       expect('source: s is a { declare: three is 3 }').toTranslate();
     });
 
-    test('query name with ambiguous refinements', () => {
-      // Here we implicitly convert the query into a source.
-      expect(`
-        query: q is a -> { group_by: ai }
-        run: q { join_one: b on 1 = 1 } -> { project: b.* }
-      `).toTranslate();
-      expect(`
-        query: q is a -> { group_by: ai }
-        run: q { where: 1 = 1 } -> { project: * }
-      `).toTranslate();
-      expect(`
-        query: q is a -> { group_by: ai }
-        run: q { declare: three is 3 } -> { project: * }
-      `).toTranslate();
-      // Without the new stage we automatically recognize this as a query refinement
-      expect(`
-        query: q is a -> { group_by: ai }
-        run: q { join_one: b on 1 = 1 }
-      `).toTranslate();
-      expect(`
-        query: q is a -> { group_by: ai }
-        run: q { where: 1 = 1 }
-      `).toTranslate();
-      expect(`
-        query: q is a -> { group_by: ai }
-        run: q { declare: three is 3 }
-      `).toTranslate();
-      // Can also just add from() to use as a source
-      // TODO add a warning when you use from() -- "`from()` is deprecated; to apply source extensions to a query, use `extend`"
-      expect(`
-        query: q is a -> { group_by: ai }
-        source: s is from(q) { join_one: b on b.ai = ai }
-      `).toTranslate();
-      // Can also add an arrow to clarify that it's a query
-      // Of course, number 1 and 3 are actually useless because you're defining
-      // something and then not using it...
-      expect(`
-        query: q is a -> { group_by: ai }
-        run: -> q { join_one: b on b.ai = ai } -> { project: * }
-      `).toTranslate();
-      expect(`
-        query: q is a -> { group_by: ai }
-        run: -> q { where: 1 = 1 } -> { project: * }
-      `).toTranslate();
-      expect(`
-        query: q is a -> { group_by: ai }
-        run: -> q { declare: three is 3 } -> { project: * }
-      `).toTranslate();
-      // Alternatively, fix 1 and 3 by actually using the declared thing
-      expect(`
-        query: q is a -> { group_by: ai }
-        run: q { join_one: b on b.ai = ai; group_by: ai2 is b.ai }
-      `).toTranslate();
-      expect(`
-        query: q is a -> { group_by: ai }
-        run: q { declare: three is 3; group_by: three }
-      `).toTranslate();
+    describe('query name with ambiguous refinements', () => {
+      test('implicitly convert the query into a source', () => {
+        expect(`
+          query: q is a -> { group_by: ai }
+          run: q { join_one: b on 1 = 1 } -> { project: b.* }
+        `).toTranslate();
+        expect(`
+          query: q is a -> { group_by: ai }
+          run: q { where: 1 = 1 } -> { project: * }
+        `).toTranslate();
+        expect(`
+          query: q is a -> { group_by: ai }
+          run: q { declare: three is 3 } -> { project: * }
+        `).toTranslate();
+      });
+      test('automatically recognize this as a query refinement without new stage', () => {
+        expect(`
+          query: q is a -> { group_by: ai }
+          run: q { join_one: b on 1 = 1 }
+        `).toTranslate();
+        expect(`
+          query: q is a -> { group_by: ai }
+          run: q { where: 1 = 1 }
+        `).toTranslate();
+        expect(`
+          query: q is a -> { group_by: ai }
+          run: q { declare: three is 3 }
+        `).toTranslate();
+      });
+      test('can also just add from() to use as a source', () => {
+        // TODO add a warning when you use from() -- "`from()` is deprecated; to apply source extensions to a query, use `extend`"
+        expect(`
+          query: q is a -> { group_by: ai }
+          source: s is from(q) { join_one: b on b.ai = ai }
+        `).toTranslate();
+      });
+      test('can also add an arrow to clarify that it is a query', () => {
+        // Of course, number 1 and 3 are actually useless because you're defining
+        // something and then not using it...
+        expect(`
+          query: q is a -> { group_by: ai }
+          run: -> q { join_one: b on b.ai = ai } -> { project: * }
+        `).toTranslate();
+        expect(`
+          query: q is a -> { group_by: ai }
+          run: -> q { where: 1 = 1 } -> { project: * }
+        `).toTranslate();
+        expect(`
+          query: q is a -> { group_by: ai }
+          run: -> q { declare: three is 3 } -> { project: * }
+        `).toTranslate();
+        // Alternatively, fix 1 and 3 by actually using the declared thing
+        expect(`
+          query: q is a -> { group_by: ai }
+          run: q { join_one: b on b.ai = ai; group_by: ai2 is b.ai }
+        `).toTranslate();
+        expect(`
+          query: q is a -> { group_by: ai }
+          run: q { declare: three is 3; group_by: three }
+        `).toTranslate();
+      });
     });
   });
 

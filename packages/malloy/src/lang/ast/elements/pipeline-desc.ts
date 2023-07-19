@@ -33,7 +33,7 @@ import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {QOPDesc} from '../query-properties/qop-desc';
 import {getStructFieldDef, opOutputStruct} from '../struct-utils';
-import {QueryInputSpace} from '../field-space/query-spaces';
+import {QueryInputSpace} from '../field-space/query-input-space';
 import {LegalRefinementStage} from '../types/query-property-interface';
 
 interface AppendResult {
@@ -70,8 +70,9 @@ export abstract class PipelineDesc extends MalloyElement {
     const returnPipe: PipeSegment[] = [];
     const lastSeg = this.qops[this.qops.length - 1];
     for (const qop of this.qops) {
-      const thisIfNested = modelPipe.length === 0 ? this : null;
-      let next = qop.getOp(nextFS, thisIfNested);
+      const nestedIn =
+        modelPipe.length === 0 ? this.nestedInQuerySpace : undefined;
+      let next = qop.getOp(nextFS, nestedIn);
       if (qop === lastSeg && this.withRefinement) {
         const tailRefinements = this.withRefinement.list.filter(qProp => {
           const refineIn = qProp.queryRefinementStage;
@@ -89,8 +90,9 @@ export abstract class PipelineDesc extends MalloyElement {
         });
         if (tailRefinements.length > 0) {
           const tailQOP = new QOPDesc(tailRefinements);
+          this.has({tailQOP});
           tailQOP.refineFrom(next.segment);
-          next = tailQOP.getOp(nextFS, thisIfNested);
+          next = tailQOP.getOp(nextFS, nestedIn);
         }
       }
       returnPipe.push(next.segment);
@@ -134,7 +136,7 @@ export abstract class PipelineDesc extends MalloyElement {
       if (firstSeg) {
         headRefinements.refineFrom(firstSeg);
       }
-      pipeline[0] = headRefinements.getOp(fs, this).segment;
+      pipeline[0] = headRefinements.getOp(fs, this.nestedInQuerySpace).segment;
     }
     return {pipeline};
   }

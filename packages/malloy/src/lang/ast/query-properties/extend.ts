@@ -37,7 +37,7 @@ export class ExtendBlock
   forceQueryClass = undefined;
   queryRefinementStage = LegalRefinementStage.Tail;
 
-  queryExecute(executeFor: Executor) {
+  queryExecute(executeFor: Executor): void {
     for (const block of this.list) {
       for (const qel of block.list) {
         executeFor.inputFS.extendSource(qel);

@@ -31,7 +31,7 @@ import {NestReference} from './nest-reference';
 import {QueryField} from '../field-space/query-space-field';
 import {opOutputStruct} from '../struct-utils';
 import {TurtleHeadedPipe} from '../elements/pipeline-desc';
-import {QueryInputSpace} from '../field-space/query-spaces';
+import {QueryInputSpace} from '../field-space/query-input-space';
 import {StaticSpace} from '../field-space/static-space';
 import {
   LegalRefinementStage,
@@ -39,7 +39,9 @@ import {
   QueryPropertyInterface,
 } from '../types/query-property-interface';
 import {Executor} from '../types/executor';
-import {SpaceEntry} from '../types/space-entry';
+import {MakeEntry} from '../types/space-entry';
+import {DynamicSpace} from '../field-space/dynamic-space';
+import {QuerySpace} from '../field-space/query-spaces';
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
@@ -47,7 +49,10 @@ function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   return !!ret;
 }
 
-export class TurtleDecl extends TurtleHeadedPipe implements Noteable {
+export class TurtleDecl
+  extends TurtleHeadedPipe
+  implements Noteable, MakeEntry
+{
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
   note?: model.Annotation;
@@ -116,8 +121,8 @@ export class TurtleDecl extends TurtleHeadedPipe implements Noteable {
     return turtle;
   }
 
-  getSpaceEntry(fs: FieldSpace): [string, SpaceEntry] {
-    return [this.name, new QueryFieldAST(fs, this, this.name)];
+  makeEntry(fs: DynamicSpace) {
+    fs.newEntry(this.name, this, new QueryFieldAST(fs, this, this.name));
   }
 }
 
@@ -135,7 +140,17 @@ export class NestRefinement
   }
 
   queryExecute(executeFor: Executor) {
-    executeFor.resultFS.addQueryItems(this);
+    executeFor.resultFS.pushFields(this);
+  }
+
+  makeEntry(fs: DynamicSpace) {
+    if (fs instanceof QuerySpace) {
+      const qf = new QueryFieldAST(fs, this, this.name);
+      qf.nestParent = fs.exprSpace;
+      fs.newEntry(this.name, this, qf);
+      return;
+    }
+    throw this.internalError('Unexpected namespace for nest');
   }
 }
 
@@ -152,7 +167,7 @@ export class NestDefinition
   }
 
   queryExecute(executeFor: Executor) {
-    executeFor.resultFS.addQueryItems(this);
+    executeFor.resultFS.pushFields(this);
   }
 }
 

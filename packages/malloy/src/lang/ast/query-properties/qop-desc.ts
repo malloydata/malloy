@@ -32,8 +32,8 @@ import {OpDesc} from '../types/op-desc';
 import {opOutputStruct} from '../struct-utils';
 import {QueryProperty} from '../types/query-property';
 import {StaticSpace} from '../field-space/static-space';
-import {PipelineDescInterface} from '../types/pipeline-desc-interface';
 import {QueryClass} from '../types/query-property-interface';
+import {QueryInputSpace} from '../field-space/query-input-space';
 
 export class QOPDesc extends ListOf<QueryProperty> {
   elementType = 'queryOperation';
@@ -41,33 +41,33 @@ export class QOPDesc extends ListOf<QueryProperty> {
   private refineThis?: PipeSegment;
 
   protected computeType(): QueryClass {
-    let firstGuess: QueryClass | undefined;
+    let mustBe: QueryClass | undefined;
     if (this.refineThis) {
       if (this.refineThis.type === 'reduce') {
-        firstGuess = QueryClass.Grouping;
+        mustBe = QueryClass.Grouping;
       } else if (this.refineThis.type === 'project') {
-        firstGuess = QueryClass.Project;
+        mustBe = QueryClass.Project;
       } else {
-        firstGuess = QueryClass.Index;
+        mustBe = QueryClass.Index;
       }
     }
     for (const el of this.list) {
-      if (!firstGuess) {
-        firstGuess = el.forceQueryClass;
-      } else {
-        const thisType = el.forceQueryClass;
-        if (thisType !== firstGuess) {
-          el.log(`Not legal in ${firstGuess} query`);
-          continue;
+      if (el.forceQueryClass) {
+        if (mustBe) {
+          if (mustBe !== el.forceQueryClass) {
+            el.log(`Not legal in ${mustBe} query`);
+          }
+        } else {
+          mustBe = el.forceQueryClass;
         }
       }
     }
-    if (!firstGuess) {
+    if (mustBe === undefined) {
       this.log(
         "Can't determine query type (group_by/aggregate/nest,project,index)"
       );
     }
-    const guessType = firstGuess || QueryClass.Grouping;
+    const guessType = mustBe || QueryClass.Grouping;
     this.opClass = guessType;
     return guessType;
   }
@@ -89,11 +89,11 @@ export class QOPDesc extends ListOf<QueryProperty> {
 
   getOp(
     inputFS: FieldSpace,
-    forPipeline: PipelineDescInterface | null
+    headFieldSpace: QueryInputSpace | undefined
   ): OpDesc {
     const qex = this.getExecutor(inputFS);
-    if (forPipeline?.nestedInQuerySpace) {
-      qex.inputFS.nestParent = forPipeline.nestedInQuerySpace;
+    if (headFieldSpace) {
+      qex.inputFS.nestParent = headFieldSpace;
     }
     qex.resultFS.astEl = this;
     for (const qp of this.list) {

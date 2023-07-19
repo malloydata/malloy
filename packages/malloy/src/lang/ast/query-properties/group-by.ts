@@ -37,8 +37,4 @@ export class GroupBy
   elementType = 'groupBy';
   queryRefinementStage = LegalRefinementStage.Single;
   forceQueryClass = QueryClass.Grouping;
-
-  queryExecute(executeFor: Executor) {
-    executeFor.resultFS.addQueryItems(...this.list);
-  }
 }

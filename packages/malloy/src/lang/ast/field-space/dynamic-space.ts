@@ -26,7 +26,6 @@ import * as model from '../../../model/malloy_types';
 import {nameOf} from '../../field-utils';
 import {SpaceEntry} from '../types/space-entry';
 import {ErrorFactory} from '../error-factory';
-import {FieldSpace} from '../types/field-space';
 import {HasParameter} from '../parameters/has-parameter';
 import {MalloyElement} from '../types/malloy-element';
 import {Join} from '../query-properties/joins';
@@ -41,7 +40,6 @@ import {StructSpaceFieldBase} from './struct-space-field-base';
 export abstract class DynamicSpace extends StaticSpace {
   protected final: model.StructDef | undefined;
   protected source: SpaceSeed;
-  outputFS?: FieldSpace;
   completions: (() => void)[] = [];
   private complete = false;
   protected newTimezone?: string;
@@ -83,12 +81,21 @@ export abstract class DynamicSpace extends StaticSpace {
     return this;
   }
 
-  newEntry(name: string, astEl: MalloyElement, entry: SpaceEntry): void {
-    if (this.entry(name)) {
-      astEl.log(`Cannot redefine '${name}'`);
+  newEntry(
+    name: string,
+    cannotRedefine: MalloyElement | undefined,
+    entry: SpaceEntry
+  ): void {
+    if (cannotRedefine && this.entry(name)) {
+      cannotRedefine.log(`Cannot redefine '${name}'`);
       return;
     }
     this.setEntry(name, entry);
+  }
+
+  renameEntry(oldName: string, newName: string, entry: SpaceEntry) {
+    this.dropEntry(oldName);
+    this.setEntry(newName, entry);
   }
 
   addFieldDef(fd: model.FieldDef): void {

@@ -111,6 +111,4 @@ export class Filter
     }
     return checked;
   }
-
-  queryExecute() {}
 }

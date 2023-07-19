@@ -22,8 +22,20 @@
  */
 
 import {TypeDesc} from '../../../model';
+import {DynamicSpace} from '../field-space/dynamic-space';
+import {MalloyElement} from './malloy-element';
 
 export abstract class SpaceEntry {
   abstract typeDesc(): TypeDesc;
   abstract refType: 'field' | 'parameter';
+}
+
+export interface MakeEntry {
+  makeEntry: (fs: DynamicSpace) => void;
+}
+
+export function canMakeEntry<T extends MalloyElement>(
+  me: T
+): me is T & MakeEntry {
+  return 'makeEntry' in me;
 }

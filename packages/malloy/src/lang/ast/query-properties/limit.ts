@@ -35,5 +35,4 @@ export class Limit extends MalloyElement implements QueryPropertyInterface {
   constructor(readonly limit: number) {
     super();
   }
-  queryExecute() {}
 }

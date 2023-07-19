@@ -35,10 +35,11 @@ import {
   QueryClass,
   QueryPropertyInterface,
 } from '../types/query-property-interface';
+import {MakeEntry} from '../types/space-entry';
 
 export class NestReference
   extends FieldReference
-  implements QueryPropertyInterface
+  implements QueryPropertyInterface, MakeEntry
 {
   elementType = 'nestReference';
   forceQueryClass = QueryClass.Grouping;
@@ -70,6 +71,6 @@ export class NestReference
   }
 
   queryExecute(executeFor: Executor) {
-    executeFor.resultFS.addQueryItems(this);
+    executeFor.resultFS.pushFields(this);
   }
 }

@@ -43,6 +43,4 @@ export class Index extends MalloyElement implements QueryPropertyInterface {
     this.has({weightBy: fn});
     this.weightBy = fn;
   }
-
-  queryExecute() {}
 }

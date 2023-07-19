@@ -45,5 +45,5 @@ export enum LegalRefinementStage {
 export interface QueryPropertyInterface {
   queryRefinementStage: LegalRefinementStage | undefined;
   forceQueryClass: QueryClass | undefined;
-  queryExecute: (executeFor: Executor) => void;
+  queryExecute?: (executeFor: Executor) => void;
 }

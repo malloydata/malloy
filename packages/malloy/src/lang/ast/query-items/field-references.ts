@@ -22,12 +22,15 @@
  */
 
 import {Annotation, FieldDef, TypeDesc} from '../../../model/malloy_types';
+import {DynamicSpace} from '../field-space/dynamic-space';
+import {ReferenceField} from '../field-space/reference-field';
 import {DefinitionList} from '../types/definition-list';
 
 import {FieldName, FieldSpace} from '../types/field-space';
 import {LookupResult} from '../types/lookup-result';
 import {ListOf, MalloyElement} from '../types/malloy-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
+import {MakeEntry} from '../types/space-entry';
 
 import {
   typecheckAggregate,
@@ -46,7 +49,7 @@ export type FieldReferenceConstructor = new (
 
 export abstract class FieldReference
   extends ListOf<FieldName>
-  implements Noteable
+  implements Noteable, MakeEntry
 {
   readonly isNoteableObj = true;
   note?: Annotation;
@@ -54,6 +57,10 @@ export abstract class FieldReference
 
   constructor(names: FieldName[]) {
     super(names);
+  }
+
+  makeEntry(fs: DynamicSpace) {
+    fs.newEntry(this.refString, this, new ReferenceField(this));
   }
 
   get refString(): string {

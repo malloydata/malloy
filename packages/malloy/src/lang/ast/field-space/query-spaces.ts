@@ -23,21 +23,15 @@
 
 import * as model from '../../../model/malloy_types';
 import {mergeFields, nameOf} from '../../field-utils';
-import {FieldDeclaration} from '../query-items/field-declaration';
 import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
-import {Join} from '../query-properties/joins';
 import {SpaceField} from '../types/space-field';
-import {SourceSpec, SpaceSeed} from '../space-seed';
 
-import {QueryFieldAST, isNestedQuery} from '../query-properties/nest';
-import {NestReference} from '../query-properties/nest-reference';
 import {
   FieldReference,
   WildcardFieldReference,
 } from '../query-items/field-references';
 import {FieldCollectionMember} from '../types/field-collection-member';
-import {QueryItem} from '../types/query-item';
 import {ReferenceField} from './reference-field';
 import {WildSpaceField} from './wild-space-field';
 import {RefinedSpace} from './refined-space';
@@ -45,43 +39,14 @@ import {LookupResult} from '../types/lookup-result';
 import {SpaceEntry} from '../types/space-entry';
 import {ColumnSpaceField} from './column-space-field';
 import {StructSpaceField} from './static-space';
+import {QueryInputSpace} from './query-input-space';
 
 /**
- * Unlike a source, which is a refinement of a namespace, a query
- * is creating a new unrelated namespace. The query starts with a
- * source, which it might modify. This set of fields used to resolve
- * expressions in the query is called the "input space". There is a
- * specialized QuerySpace for each type of query operation.
+ * The output space of a query operation, it is not named "QueryOutputSpace"
+ * because this is the namespace of the Query. This is the one which is constructed
+ * with the query. The QueryInputSpace is created and paired when a
+ * QuerySpace is created.
  */
-
-export class QueryInputSpace extends RefinedSpace {
-  nestParent?: QueryInputSpace;
-  extendList: string[] = [];
-
-  constructor(input: SourceSpec, readonly result: QuerySpace) {
-    const inputSpace = new SpaceSeed(input);
-    super(inputSpace.structDef);
-  }
-
-  extendSource(extendField: Join | FieldDeclaration): void {
-    this.addField(extendField);
-    if (extendField instanceof Join) {
-      this.extendList.push(extendField.name.refString);
-    } else {
-      this.extendList.push(extendField.defineName);
-    }
-  }
-
-  isQueryFieldSpace() {
-    return true;
-  }
-
-  outputSpace() {
-    return this.result;
-  }
-}
-
-// TODO maybe rename QueryOutputSpace
 export abstract class QuerySpace extends RefinedSpace {
   readonly exprSpace: QueryInputSpace;
   astEl?: MalloyElement | undefined;
@@ -131,7 +96,7 @@ export abstract class QuerySpace extends RefinedSpace {
       } else if (member instanceof WildcardFieldReference) {
         this.addWild(member);
       } else {
-        this.addField(member);
+        this.pushFields(member);
       }
     }
   }
@@ -251,30 +216,15 @@ export abstract class QuerySpace extends RefinedSpace {
       if (isExclude && this.exprSpace.nestParent) {
         const parent = this.exprSpace.nestParent;
         parent.whenComplete(() => {
-          parent.result.checkUngroup(fn, isExclude);
+          const pOut = parent.outputSpace();
+          // a little ugly, but it breaks a circularity problem
+          if (pOut instanceof QuerySpace) {
+            pOut.checkUngroup(fn, isExclude);
+          }
         });
       } else {
         const uName = isExclude ? 'exclude()' : 'all()';
         fn.log(`${uName} '${fn.refString}' is missing from query output`);
-      }
-    }
-  }
-
-  addQueryItems(...qiList: QueryItem[]): void {
-    for (const qi of qiList) {
-      if (qi instanceof NestReference) {
-        this.addReference(qi);
-      } else if (qi instanceof FieldReference) {
-        this.addReference(qi);
-      } else if (qi instanceof FieldDeclaration) {
-        this.addField(qi);
-      } else if (isNestedQuery(qi)) {
-        const qf = new QueryFieldAST(this, qi, qi.name);
-        qf.nestParent = this.exprSpace;
-        this.setEntry(qi.name, qf);
-      } else {
-        // Compiler will error if we don't handle all cases
-        const _itemNotHandled: never = qi;
       }
     }
   }

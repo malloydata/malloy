@@ -41,7 +41,7 @@ export class DeclareFields
     super(fields);
   }
 
-  queryExecute(executeFor: Executor) {
+  queryExecute(executeFor: Executor): void {
     for (const qel of this.list) {
       executeFor.inputFS.extendSource(qel);
     }

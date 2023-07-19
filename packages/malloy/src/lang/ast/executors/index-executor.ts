@@ -36,7 +36,7 @@ import {SampleProperty} from '../query-properties/sampling';
 import {IndexFieldSpace} from '../field-space/index-field-space';
 import {QueryProperty} from '../types/query-property';
 import {Executor} from '../types/executor';
-import {QueryInputSpace} from '../field-space/query-spaces';
+import {QueryInputSpace} from '../field-space/query-input-space';
 
 export class IndexExecutor implements Executor {
   filters: FilterExpression[] = [];

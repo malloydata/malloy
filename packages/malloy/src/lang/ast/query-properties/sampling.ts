@@ -44,5 +44,4 @@ export class SampleProperty
   sampling(): Sampling {
     return this.sample;
   }
-  queryExecute() {}
 }

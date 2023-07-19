@@ -37,7 +37,7 @@ import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {isGranularResult} from '../types/granular-result';
 import {LookupResult} from '../types/lookup-result';
 import {MalloyElement} from '../types/malloy-element';
-import {SpaceEntry} from '../types/space-entry';
+import {MakeEntry, SpaceEntry} from '../types/space-entry';
 import {
   typecheckAggregate,
   typecheckCalculate,
@@ -49,6 +49,7 @@ import {
 } from './typecheck_utils';
 import {extendNoteMethod, Noteable} from '../types/noteable';
 import {FieldDefinitionValue} from '../field-space/field-definition-value';
+import {DynamicSpace} from '../field-space/dynamic-space';
 
 export type FieldDeclarationConstructor = new (
   expr: ExpressionDef,
@@ -58,7 +59,7 @@ export type FieldDeclarationConstructor = new (
 
 export abstract class FieldDeclaration
   extends MalloyElement
-  implements Noteable
+  implements Noteable, MakeEntry
 {
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
@@ -151,8 +152,8 @@ export abstract class FieldDeclaration
     };
   }
 
-  getSpaceEntry(fs: FieldSpace): [string, SpaceEntry] {
-    return [this.defineName, new FieldDefinitionValue(fs, this)];
+  makeEntry(fs: DynamicSpace) {
+    fs.newEntry(this.defineName, this, new FieldDefinitionValue(fs, this));
   }
 }
 

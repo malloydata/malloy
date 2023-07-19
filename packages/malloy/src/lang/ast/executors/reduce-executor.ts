@@ -37,11 +37,9 @@ import {Ordering} from '../query-properties/ordering';
 import {Top} from '../query-properties/top';
 import {QueryProperty} from '../types/query-property';
 import {Executor} from '../types/executor';
-import {
-  QueryInputSpace,
-  QuerySpace,
-  ReduceFieldSpace,
-} from '../field-space/query-spaces';
+import {QuerySpace, ReduceFieldSpace} from '../field-space/query-spaces';
+import {DefinitionList} from '../types/definition-list';
+import {QueryInputSpace} from '../field-space/query-input-space';
 
 export class ReduceExecutor implements Executor {
   inputFS: QueryInputSpace;
@@ -63,8 +61,13 @@ export class ReduceExecutor implements Executor {
   }
 
   execute(qp: QueryProperty): void {
-    qp.queryExecute(this);
-    if (qp instanceof Filter) {
+    if (qp.queryExecute) {
+      qp.queryExecute(this);
+      return;
+    }
+    if (qp instanceof DefinitionList) {
+      this.resultFS.pushFields(...qp.list);
+    } else if (qp instanceof Filter) {
       this.filters.push(...qp.getFilterList(this.inputFS));
     } else if (qp instanceof Top) {
       if (this.limit) {
@@ -136,7 +139,7 @@ export class ReduceExecutor implements Executor {
       if (isReduceSegment(fromSeg)) {
         from = fromSeg;
       } else {
-        this.inputFS.result.log(`Can't refine reduce with ${fromSeg.type}`);
+        this.resultFS.log(`Can't refine reduce with ${fromSeg.type}`);
         return ErrorFactory.reduceSegment;
       }
     }

@@ -22,7 +22,6 @@
  */
 
 import {DefinitionList} from '../types/definition-list';
-import {Executor} from '../types/executor';
 import {QueryItem} from '../types/query-item';
 import {
   LegalRefinementStage,
@@ -37,8 +36,4 @@ export class Aggregate
   elementType = 'aggregateList';
   readonly queryRefinementStage = LegalRefinementStage.Single;
   readonly forceQueryClass = QueryClass.Grouping;
-
-  queryExecute(executeFor: Executor) {
-    executeFor.resultFS.addQueryItems(...this.list);
-  }
 }

@@ -22,7 +22,6 @@
  */
 
 import {DefinitionList} from '../types/definition-list';
-import {Executor} from '../types/executor';
 import {NestedQuery} from '../types/nested-query';
 import {
   QueryClass,
@@ -39,9 +38,5 @@ export class Nests
   forceQueryClass = QueryClass.Grouping;
   constructor(nests: NestedQuery[]) {
     super(nests);
-  }
-
-  queryExecute(executeFor: Executor) {
-    executeFor.resultFS.addQueryItems(...this.list);
   }
 }
