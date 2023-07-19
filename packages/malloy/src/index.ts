@@ -117,6 +117,7 @@ export type {
   AtomicField,
   ExploreField,
   QueryField,
+  SortableField,
   DataArray,
   DataRecord,
   DataColumn,

@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Field} from '@malloydata/malloy';
+import {DataColumn, Field, SortableField} from '@malloydata/malloy';
 import {StyleDefaults} from '../data_styles';
 import {getDrillQuery} from '../drill';
 import {ContainerRenderer} from './container';
@@ -35,10 +35,10 @@ import {
 } from './utils';
 import {isFieldHidden} from '../tags_utils';
 import {Renderer} from '../renderer';
-import {SortableField} from '@malloydata/malloy/src/malloy';
 
 class PivotedField {
   readonly key: string;
+  readonly fieldValueMap: Map<string, DataColumn>;
   constructor(
     readonly parentField: Field,
     readonly values: DataColumn[],
@@ -48,6 +48,10 @@ class PivotedField {
       parentField: this.parentField.name,
       values: this.values.map(v => (v.isScalar() ? v.key : '')),
     });
+    this.fieldValueMap = new Map();
+    for (const value of this.values) {
+      this.fieldValueMap.set(value.field.name, value);
+    }
   }
 }
 
@@ -133,17 +137,12 @@ export class HTMLTableRenderer extends ContainerRenderer {
         if (!dimensions) {
           throw new Error(`Could not pivot ${field.name}, no data found.`);
         }
+
         const sortedPivotedFields = Array.from(pivotedFields.values()).sort(
           (a, b) => {
             for (const d of dimensions!) {
-              // TODO: should use ASC and DESC
-              // TODO: consider using a map of values.
-              const aValue = a.values
-                .filter(v => v.field.name === d.field.name)
-                .at(0);
-              const bValue = b.values
-                .filter(v => v.field.name === d.field.name)
-                .at(0);
+              const aValue = a.fieldValueMap.get(d.field.name);
+              const bValue = b.fieldValueMap.get(d.field.name);
               if (
                 aValue?.isScalar() &&
                 bValue?.isScalar() &&
