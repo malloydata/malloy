@@ -35,13 +35,18 @@ import {
 } from './utils';
 import {isFieldHidden} from '../tags_utils';
 import {Renderer} from '../renderer';
+import {SortableField} from '@malloydata/malloy/src/malloy';
 
 class PivotedField {
   readonly key: string;
-  constructor(readonly parentField: Field, readonly values: DataColumn[]) {
+  constructor(
+    readonly parentField: Field,
+    readonly values: DataColumn[],
+    readonly span: number
+  ) {
     this.key = JSON.stringify({
       parentField: this.parentField.name,
-      values: this.values.filter(v => (v.isScalar() ? v.key : '')),
+      values: this.values.map(v => (v.isScalar() ? v.key : '')),
     });
   }
 }
@@ -54,6 +59,8 @@ class PivotedColumnField {
 }
 
 type TableField = Field | PivotedColumnField;
+
+type SpannableCell = HTMLTableCellElement | undefined;
 
 export class HTMLTableRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
@@ -73,7 +80,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
 
     let rowIndex = 0;
     let columnIndex = 0;
-    let cells: HTMLTableCellElement[][] = [];
+    let cells: SpannableCell[][] = [];
     cells[rowIndex] = [];
 
     const columnFields: TableField[] = [];
@@ -91,8 +98,8 @@ export class HTMLTableRenderer extends ContainerRenderer {
       if (shouldPivot) {
         const pivotedFields: Map<string, PivotedField> = new Map();
 
-        let dimensions: Field[] | undefined = undefined;
-        let nonDimensions: Field[] = [];
+        let dimensions: SortableField[] | undefined = undefined;
+        let nonDimensions: SortableField[] = [];
         for (const row of table) {
           const dc = row.cell(field);
           if (dc.isNull()) {
@@ -112,7 +119,8 @@ export class HTMLTableRenderer extends ContainerRenderer {
           for (const innerRow of dc) {
             const pivotedField = new PivotedField(
               field,
-              dimensions.map(d => innerRow.cell(d))
+              dimensions.map(d => innerRow.cell(d.field)),
+              nonDimensions.length
             );
 
             const pfKey = pivotedField.key;
@@ -125,18 +133,44 @@ export class HTMLTableRenderer extends ContainerRenderer {
         if (!dimensions) {
           throw new Error(`Could not pivot ${field.name}, no data found.`);
         }
+        const sortedPivotedFields = Array.from(pivotedFields.values()).sort(
+          (a, b) => {
+            for (const d of dimensions!) {
+              // TODO: should use ASC and DESC
+              // TODO: consider using a map of values.
+              const aValue = a.values
+                .filter(v => v.field.name === d.field.name)
+                .at(0);
+              const bValue = b.values
+                .filter(v => v.field.name === d.field.name)
+                .at(0);
+              if (
+                aValue?.isScalar() &&
+                bValue?.isScalar() &&
+                typeof aValue === typeof bValue
+              ) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const compValue = aValue.compareTo(bValue as any);
+                if (compValue !== 0) {
+                  return d.dir !== 'desc' ? compValue : -compValue;
+                }
+              }
+            }
 
-        for (const pf of pivotedFields) {
+            return 0;
+          }
+        );
+
+        for (const pf of sortedPivotedFields) {
           for (const nonDimension of nonDimensions) {
-            columnFields.push(new PivotedColumnField(pf[1], nonDimension));
+            columnFields.push(new PivotedColumnField(pf, nonDimension.field));
             cells[rowIndex][columnIndex] = childRenderer.createHeaderCell(
-              nonDimension,
+              nonDimension.field,
               shouldTranspose
             );
             columnIndex++;
           }
         }
-
         pivotDepth = Math.max(pivotDepth, dimensions!.length);
       } else {
         cells[rowIndex][columnIndex] = this.createHeaderCell(
@@ -165,24 +199,34 @@ export class HTMLTableRenderer extends ContainerRenderer {
     }
 
     rowIndex++;
-
-    const pivotHeaderCells: HTMLTableCellElement[][] = [];
+    const pivotHeaderCells: SpannableCell[][] = [];
     for (let r = 0; r < pivotDepth; r++) {
-      const row: HTMLTableCellElement[] = [];
+      const row: SpannableCell[] = [];
       let lastPivotedColumnHash: string | null = null;
       for (const field of columnFields) {
         if (field instanceof PivotedColumnField) {
-          const headerCell = this.document.createElement('th');
-          headerCell.style.cssText = `
-              padding: 8px;
-              color: var(--malloy-title-color, #505050);
-              border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
-            `;
-
           const pfKey = field.pivotedField.key;
           const valueIndex = field.pivotedField.values.length - pivotDepth + r;
-          if (lastPivotedColumnHash !== pfKey && valueIndex >= 0) {
+          if (valueIndex < 0) {
+            row.push(this.createEmptyHeaderCell());
+          } else if (lastPivotedColumnHash !== pfKey) {
+            const headerCell = this.document.createElement('th');
+            if (!shouldTranspose) {
+              headerCell.colSpan = field.pivotedField.span;
+            } else {
+              headerCell.rowSpan = field.pivotedField.span;
+            }
+
+            headerCell.style.cssText = `
+                padding: 8px;
+                color: var(--malloy-title-color, #505050);
+                border-bottom: 1px solid var(--malloy-border-color, #eaeaeb);
+                text-align: left;
+              `;
             const value = field.pivotedField.values[valueIndex];
+            headerCell.appendChild(
+              document.createTextNode(`${value.field.name}: `)
+            );
             headerCell.appendChild(
               await (
                 this.childRenderers[
@@ -191,17 +235,12 @@ export class HTMLTableRenderer extends ContainerRenderer {
               ).renderChild(value)
             );
             lastPivotedColumnHash = pfKey;
+            row.push(headerCell);
+          } else {
+            row.push(undefined);
           }
-
-          row.push(headerCell);
         } else {
-          const headerCell = this.document.createElement('th');
-          headerCell.style.cssText = `
-          padding: 8px;
-          color: var(--malloy-title-color, #505050);
-          border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
-        `;
-          row.push(headerCell);
+          row.push(this.createEmptyHeaderCell());
         }
       }
 
@@ -273,7 +312,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
           vertical-align: top;
           border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
           width: 25px;
-          cursor: pointer
+          cursor: pointer;
         `;
         drillCell.onclick = () => {
           if (this.options.onDrill) {
@@ -302,9 +341,10 @@ export class HTMLTableRenderer extends ContainerRenderer {
         column < (shouldTranspose ? rowIndex : columnIndex);
         column++
       ) {
-        currentRow.appendChild(
-          shouldTranspose ? cells[column][row] : cells[row][column]
-        );
+        const cell = shouldTranspose ? cells[column][row] : cells[row][column];
+        if (cell) {
+          currentRow.appendChild(cell);
+        }
       }
       tableSection.appendChild(currentRow);
     }
@@ -317,28 +357,32 @@ export class HTMLTableRenderer extends ContainerRenderer {
       border-collapse: collapse;
       width: 100%;
     `;
+
     return tableElement;
   }
 
   calculatePivotDimensions(table: DataColumn): {
-    dimensions: Field[];
-    nonDimensions: Field[];
+    dimensions: SortableField[];
+    nonDimensions: SortableField[];
   } {
     if (!table.isArray() && !table.isRecord()) {
       throw new Error(`Could not pivot ${table.field.name}`);
     }
-    let dimensions: Field[] | undefined = undefined;
+    let dimensions: SortableField[] | undefined = undefined;
     const userSpecifiedDimensions = parseCommaSeparatedParameterTagValue(
       this.tags,
       'pivot_dimensions'
     );
     if (userSpecifiedDimensions) {
-      dimensions = table.field.allFields.filter(
-        f => userSpecifiedDimensions.indexOf(f.name) >= 0
+      dimensions = table.field.allFieldsWithOrder.filter(
+        f => userSpecifiedDimensions.indexOf(f.field.name) >= 0
       );
       if (dimensions.length !== userSpecifiedDimensions.length) {
         for (const dim of userSpecifiedDimensions) {
-          if (table.field.allFields.filter(f => f.name === dim).length === 0) {
+          if (
+            table.field.allFieldsWithOrder.filter(f => f.field.name === dim)
+              .length === 0
+          ) {
             throw new Error(
               `Could not pivot ${table.field.name} since ${dim} is not a valid field.`
             );
@@ -349,7 +393,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
       dimensions = table.field.dimensions;
     }
 
-    const nonDimensions = table.field.allFields.filter(
+    const nonDimensions = table.field.allFieldsWithOrder.filter(
       f => dimensions!.indexOf(f) < 0
     );
     if (nonDimensions.length === 0) {
@@ -375,22 +419,23 @@ export class HTMLTableRenderer extends ContainerRenderer {
       throw new Error(`Could not pivot ${table.field.name}`);
     }
 
-    const {dimensions} = this.calculatePivotDimensions(table);
+    const {dimensions, nonDimensions} = this.calculatePivotDimensions(table);
     for (const row of table) {
       const pf = new PivotedField(
         table.field as Field,
-        dimensions.map(f => row.cell(f.name))
+        dimensions.map(f => row.cell(f.field.name)),
+        nonDimensions.length
       );
       const renderedCells: Map<string, HTMLTableCellElement> = new Map();
-      for (const nonDimension of table.field.allFields.filter(
+      for (const nonDimension of table.field.allFieldsWithOrder.filter(
         f => dimensions.indexOf(f) < 0
       )) {
-        const childRenderer = this.childRenderers[nonDimension.name];
+        const childRenderer = this.childRenderers[nonDimension.field.name];
         renderedCells.set(
-          nonDimension.name,
+          nonDimension.field.name,
           await this.createCellAndRender(
             childRenderer,
-            row.cell(nonDimension.name),
+            row.cell(nonDimension.field.name),
             shouldTranspose
           )
         );
@@ -426,6 +471,16 @@ export class HTMLTableRenderer extends ContainerRenderer {
     const cell = this.createCell(childRenderer, shouldTranspose);
     cell.appendChild(await childRenderer.render(value));
     return cell;
+  }
+
+  createEmptyHeaderCell(): HTMLTableCellElement {
+    const headerCell = this.document.createElement('th');
+    headerCell.style.cssText = `
+      padding: 8px;
+      color: var(--malloy-title-color, #505050);
+      border-bottom: 1px solid var(--malloy-border-color, #eaeaea);
+    `;
+    return headerCell;
   }
 
   createHeaderCell(
