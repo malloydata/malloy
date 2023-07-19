@@ -72,6 +72,10 @@ export class HTMLTableRenderer extends ContainerRenderer {
   };
 
   async render(table: DataColumn): Promise<HTMLElement> {
+    if (table.isNull()) {
+      return this.document.createElement('span');
+    }
+
     if (!table.isArray() && !table.isRecord()) {
       throw new Error('Invalid type for Table Renderer');
     }
@@ -224,7 +228,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
               `;
             const value = field.pivotedField.values[valueIndex];
             headerCell.appendChild(
-              document.createTextNode(`${value.field.name}: `)
+              this.document.createTextNode(`${value.field.name}: `)
             );
             headerCell.appendChild(
               await (
