@@ -60,7 +60,7 @@ export class IndexExecutor implements Executor {
       }
       this.limit = qp;
     } else if (qp instanceof Index) {
-      this.resultFS.addMembers(qp.fields.list);
+      this.resultFS.pushFields(...qp.fields.list);
       if (qp.weightBy) {
         if (this.indexOn) {
           this.indexOn.log('Ignoring previous BY');

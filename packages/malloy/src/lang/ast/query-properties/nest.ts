@@ -169,6 +169,16 @@ export class NestDefinition
   queryExecute(executeFor: Executor) {
     executeFor.resultFS.pushFields(this);
   }
+
+  makeEntry(fs: DynamicSpace) {
+    if (fs instanceof QuerySpace) {
+      const qf = new QueryFieldAST(fs, this, this.name);
+      qf.nestParent = fs.exprSpace;
+      fs.newEntry(this.name, this, qf);
+      return;
+    }
+    throw this.internalError('Unexpected namespace for nest');
+  }
 }
 
 export function isNestedQuery(me: MalloyElement): me is NestedQuery {

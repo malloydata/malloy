@@ -38,6 +38,6 @@ export class ProjectStatement
   queryRefinementStage = undefined;
 
   queryExecute(executeFor: Executor) {
-    executeFor.resultFS.addMembers(this.list);
+    executeFor.resultFS.pushFields(...this.list);
   }
 }

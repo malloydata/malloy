@@ -42,11 +42,9 @@ export class ProjectExecutor extends ReduceExecutor {
   ): ProjectFieldSpace {
     return new ProjectFieldSpace(fs, refineThis);
   }
+
   execute(qp: QueryProperty): void {
-    if (
-      (qp instanceof Filter && qp.elementType === 'having') ||
-      qp instanceof GroupBy
-    ) {
+    if (qp.elementType === 'having' || qp instanceof GroupBy) {
       qp.log('Illegal statement in a project query operation');
     } else {
       super.execute(qp);

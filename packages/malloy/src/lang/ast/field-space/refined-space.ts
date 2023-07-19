@@ -56,7 +56,7 @@ export class RefinedSpace extends DynamicSpace {
         me.makeEntry(this);
       } else {
         me.log(
-          `Internal error: Expected expression, query, or rename, got '${me.elementType}'`
+          `Internal error, ${me.elementType} not expected in this context`
         );
       }
     }

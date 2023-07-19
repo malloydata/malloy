@@ -27,12 +27,7 @@ import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {SpaceField} from '../types/space-field';
 
-import {
-  FieldReference,
-  WildcardFieldReference,
-} from '../query-items/field-references';
-import {FieldCollectionMember} from '../types/field-collection-member';
-import {ReferenceField} from './reference-field';
+import {WildcardFieldReference} from '../query-items/field-references';
 import {WildSpaceField} from './wild-space-field';
 import {RefinedSpace} from './refined-space';
 import {LookupResult} from '../types/lookup-result';
@@ -89,28 +84,17 @@ export abstract class QuerySpace extends RefinedSpace {
     }
   }
 
-  addMembers(members: FieldCollectionMember[]): void {
-    for (const member of members) {
-      if (member instanceof FieldReference) {
-        this.addReference(member);
-      } else if (member instanceof WildcardFieldReference) {
-        this.addWild(member);
+  pushFields(...defs: MalloyElement[]): void {
+    for (const f of defs) {
+      if (f instanceof WildcardFieldReference) {
+        this.addWild(f);
       } else {
-        this.pushFields(member);
+        super.pushFields(f);
       }
     }
   }
 
-  addReference(ref: FieldReference): void {
-    const refName = ref.outputName;
-    if (this.entry(refName)) {
-      ref.log(`Output already has a field named '${refName}'`);
-    } else {
-      this.setEntry(refName, new ReferenceField(ref));
-    }
-  }
-
-  addWild(wild: WildcardFieldReference): void {
+  protected addWild(wild: WildcardFieldReference): void {
     let success = true;
     let current = this.exprSpace as FieldSpace;
     const parts = wild.refString.split('.');
@@ -213,13 +197,15 @@ export abstract class QuerySpace extends RefinedSpace {
    */
   checkUngroup(fn: FieldName, isExclude: boolean): void {
     if (!this.entry(fn.refString)) {
-      if (isExclude && this.exprSpace.nestParent) {
-        const parent = this.exprSpace.nestParent;
+      const parent = this.exprSpace.nestParent;
+      if (isExclude && parent) {
         parent.whenComplete(() => {
           const pOut = parent.outputSpace();
           // a little ugly, but it breaks a circularity problem
           if (pOut instanceof QuerySpace) {
             pOut.checkUngroup(fn, isExclude);
+          } else {
+            throw new Error('OUCH');
           }
         });
       } else {
