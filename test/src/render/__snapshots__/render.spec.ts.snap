@@ -11121,49 +11121,51 @@ exports[`rendering results html renderer pivot table renders correctly 1`] = `
         style="padding: 8px;"
       />
       <th
-        style="padding: 8px;"
+        colspan="2"
+        style="padding: 8px; text-align: left;"
       >
+        floc: 
         <span>
           $1.00
         </span>
       </th>
-      <th
-        style="padding: 8px;"
-      />
     </tr>
     <tr>
       <th
         style="padding: 8px;"
       />
       <th
-        style="padding: 8px;"
+        colspan="3"
+        style="padding: 8px; text-align: left;"
       >
+        dayito: 
         <span>
           Monday
         </span>
       </th>
       <th
-        style="padding: 8px;"
-      />
-      <th
-        style="padding: 8px;"
-      />
-      <th
-        style="padding: 8px;"
+        colspan="3"
+        style="padding: 8px; text-align: left;"
       >
+        dayito: 
         <span>
           Thursday
         </span>
       </th>
       <th
-        style="padding: 8px;"
-      />
-      <th
-        style="padding: 8px;"
-      />
-      <th
-        style="padding: 8px;"
+        colspan="3"
+        style="padding: 8px; text-align: left;"
       >
+        dayito: 
+        <span>
+          Tuesday
+        </span>
+      </th>
+      <th
+        colspan="3"
+        style="padding: 8px; text-align: left;"
+      >
+        dayito: 
         <span>
           Wednesday
         </span>
@@ -11172,34 +11174,14 @@ exports[`rendering results html renderer pivot table renders correctly 1`] = `
         style="padding: 8px;"
       />
       <th
-        style="padding: 8px;"
-      />
-      <th
-        style="padding: 8px;"
+        colspan="2"
+        style="padding: 8px; text-align: left;"
       >
-        <span>
-          Tuesday
-        </span>
-      </th>
-      <th
-        style="padding: 8px;"
-      />
-      <th
-        style="padding: 8px;"
-      />
-      <th
-        style="padding: 8px;"
-      />
-      <th
-        style="padding: 8px;"
-      >
+        flac: 
         <span>
           200%
         </span>
       </th>
-      <th
-        style="padding: 8px;"
-      />
     </tr>
     <tr>
       <th
@@ -11435,27 +11417,6 @@ exports[`rendering results html renderer pivot table renders correctly 1`] = `
         style="padding: 8px; vertical-align: top; text-align: right;"
       >
         <span>
-          45
-        </span>
-      </td>
-      <td
-        style="padding: 8px; vertical-align: top; text-align: right;"
-      >
-        <span>
-          300
-        </span>
-      </td>
-      <td
-        style="padding: 8px; vertical-align: top;"
-      >
-        <span>
-          O
-        </span>
-      </td>
-      <td
-        style="padding: 8px; vertical-align: top; text-align: right;"
-      >
-        <span>
           31.5
         </span>
       </td>
@@ -11471,6 +11432,27 @@ exports[`rendering results html renderer pivot table renders correctly 1`] = `
       >
         <span>
           B
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          45
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <span>
+          300
+        </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        <span>
+          O
         </span>
       </td>
       <td
@@ -11548,21 +11530,6 @@ exports[`rendering results html renderer pivot table renders correctly 1`] = `
       <td
         style="padding: 8px; vertical-align: top; text-align: right;"
       >
-        -
-      </td>
-      <td
-        style="padding: 8px; vertical-align: top; text-align: right;"
-      >
-        -
-      </td>
-      <td
-        style="padding: 8px; vertical-align: top;"
-      >
-        -
-      </td>
-      <td
-        style="padding: 8px; vertical-align: top; text-align: right;"
-      >
         <span>
           23
         </span>
@@ -11580,6 +11547,21 @@ exports[`rendering results html renderer pivot table renders correctly 1`] = `
         <span>
           X
         </span>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        -
       </td>
       <td
         style="padding: 8px; vertical-align: top; text-align: right;"
@@ -11650,6 +11632,21 @@ exports[`rendering results html renderer pivot table renders correctly 1`] = `
       <td
         style="padding: 8px; vertical-align: top; text-align: right;"
       >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top;"
+      >
+        -
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
         <span>
           41
         </span>
@@ -11667,21 +11664,6 @@ exports[`rendering results html renderer pivot table renders correctly 1`] = `
         <span>
           F
         </span>
-      </td>
-      <td
-        style="padding: 8px; vertical-align: top; text-align: right;"
-      >
-        -
-      </td>
-      <td
-        style="padding: 8px; vertical-align: top; text-align: right;"
-      >
-        -
-      </td>
-      <td
-        style="padding: 8px; vertical-align: top;"
-      >
-        -
       </td>
       <td
         style="padding: 8px; vertical-align: top; text-align: right;"
