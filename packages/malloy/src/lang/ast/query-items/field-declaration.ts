@@ -27,6 +27,9 @@ import {
   FieldTypeDef,
   isAtomicFieldType,
   StructDef,
+  TypeDesc,
+  FieldDef,
+  QueryFieldDef,
 } from '../../../model/malloy_types';
 
 import {compressExpr} from '../expressions/utils';
@@ -48,8 +51,8 @@ import {
   typecheckProject,
 } from './typecheck_utils';
 import {extendNoteMethod, Noteable} from '../types/noteable';
-import {FieldDefinitionValue} from '../field-space/field-definition-value';
 import {DynamicSpace} from '../field-space/dynamic-space';
+import {SpaceField} from '../types/space-field';
 
 export type FieldDeclarationConstructor = new (
   expr: ExpressionDef,
@@ -257,5 +260,44 @@ export class DefSpace implements FieldSpace {
       return this.realFS.outputSpace();
     }
     throw new Error('Not a query field space');
+  }
+}
+
+export class FieldDefinitionValue extends SpaceField {
+  fieldName: string;
+  constructor(readonly space: FieldSpace, readonly exprDef: FieldDeclaration) {
+    super();
+    this.fieldName = exprDef.defineName;
+  }
+
+  get name(): string {
+    return this.fieldName;
+  }
+
+  // A source will call this when it defines the field
+  fieldDef(): FieldDef {
+    if (!this.haveFieldDef) {
+      this.haveFieldDef = this.exprDef.fieldDef(this.space, this.name);
+    }
+    return this.haveFieldDef;
+  }
+
+  // A query will call this when it defined the field
+  private qfd?: FieldTypeDef;
+  getQueryFieldDef(fs: FieldSpace): QueryFieldDef {
+    if (!this.qfd) {
+      const def = this.exprDef.queryFieldDef(fs, this.name);
+      this.qfd = def;
+    }
+    return this.qfd;
+  }
+
+  // If this is called before the expression has been evaluated, we don't
+  // really know what type we have. However since we have the FieldSpace,
+  // we can compile the expression to find out, this might result in
+  // some expressions being compiled twice.
+  typeDesc(): TypeDesc {
+    const typeFrom = this.qfd || this.fieldDef();
+    return this.fieldTypeFromFieldDef(typeFrom);
   }
 }

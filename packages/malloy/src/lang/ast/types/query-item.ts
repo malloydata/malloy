@@ -23,9 +23,8 @@
 
 import {FieldDeclaration} from '../query-items/field-declaration';
 import {FieldReference} from '../query-items/field-references';
-import {NestReference} from '../query-properties/nest-reference';
 
-import {NestDefinition} from '../query-properties/nest';
+import {NestDefinition, NestReference} from '../query-properties/nest';
 
 export type QueryItem =
   | FieldDeclaration
