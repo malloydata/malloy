@@ -1325,11 +1325,14 @@ export type SerializedExplore = {
   _parentExplore?: SerializedExplore;
 };
 
+export type SortableField = {field: Field; dir: 'asc' | 'desc' | undefined};
+
 export class Explore extends Entity {
   protected readonly _structDef: StructDef;
   protected readonly _parentExplore?: Explore;
   private _fieldMap: Map<string, Field> | undefined;
   private sourceExplore: Explore | undefined;
+  private _allFieldsWithOrder: SortableField[] | undefined;
 
   constructor(structDef: StructDef, parentExplore?: Explore, source?: Explore) {
     super(structDef.as || structDef.name, parentExplore, source);
@@ -1435,13 +1438,46 @@ export class Explore extends Entity {
     return [...this.fieldMap.values()];
   }
 
+  public get allFieldsWithOrder(): SortableField[] {
+    if (!this._allFieldsWithOrder) {
+      const orderByFields = [
+        ...(this.structDef.resultMetadata?.orderBy?.map(f => {
+          if (typeof f.field === 'string') {
+            const a = {
+              field: this.fieldMap.get(f.field as string)!,
+              dir: f.dir,
+            };
+            return a;
+          }
+
+          throw new Error('Does not support mapping order by from number.');
+        }) || []),
+      ];
+
+      const orderByFieldSet = new Set(orderByFields.map(f => f.field.name));
+      this._allFieldsWithOrder = [
+        ...orderByFields,
+        ...this.allFields
+          .filter(f => !orderByFieldSet.has(f.name))
+          .map<SortableField>(field => {
+            return {
+              field,
+              dir: 'asc',
+            };
+          }),
+      ];
+    }
+
+    return this._allFieldsWithOrder;
+  }
+
   public get intrinsicFields(): Field[] {
     return [...this.fieldMap.values()].filter(f => f.isIntrinsic());
   }
 
-  public get dimensions(): Field[] {
-    return [...this.fieldMap.values()].filter(
-      f => f.isAtomicField() && f.sourceWasDimension()
+  public get dimensions(): SortableField[] {
+    return [...this.allFieldsWithOrder].filter(
+      f => f.field.isAtomicField() && f.field.sourceWasDimension()
     );
   }
 
@@ -3004,6 +3040,8 @@ abstract class ScalarData<T> extends Data<T> {
   isScalar(): this is ScalarData<T> {
     return this instanceof ScalarData;
   }
+
+  abstract compareTo(other: ScalarData<T>): number;
 }
 
 class DataString extends ScalarData<string> {
@@ -3020,6 +3058,12 @@ class DataString extends ScalarData<string> {
 
   get key(): string {
     return this.value;
+  }
+
+  compareTo(other: ScalarData<string>) {
+    return this.value
+      .toLocaleLowerCase()
+      .localeCompare(other.value.toLocaleLowerCase());
   }
 }
 
@@ -3038,6 +3082,10 @@ class DataUnsupported extends ScalarData<unknown> {
   get key(): string {
     return '<unsupported>';
   }
+
+  compareTo(_other: ScalarData<unknown>) {
+    return 0;
+  }
 }
 
 class DataBoolean extends ScalarData<boolean> {
@@ -3054,6 +3102,17 @@ class DataBoolean extends ScalarData<boolean> {
 
   get key(): string {
     return `${this.value}`;
+  }
+
+  compareTo(other: ScalarData<boolean>) {
+    if (this.value === other.value) {
+      return 0;
+    }
+    if (this.value) {
+      return 1;
+    }
+
+    return -1;
   }
 }
 
@@ -3072,6 +3131,18 @@ class DataJSON extends ScalarData<string> {
   get key(): string {
     return this.value;
   }
+
+  compareTo(other: ScalarData<string>) {
+    const value = this.value.toString();
+    const otherValue = other.toString();
+    if (value === otherValue) {
+      return 0;
+    } else if (value > otherValue) {
+      return 1;
+    } else {
+      return -1;
+    }
+  }
 }
 
 class DataNumber extends ScalarData<number> {
@@ -3088,6 +3159,17 @@ class DataNumber extends ScalarData<number> {
 
   get key(): string {
     return `${this.value}`;
+  }
+
+  compareTo(other: ScalarData<number>) {
+    const difference = this.value - other.value;
+    if (difference > 0) {
+      return 1;
+    } else if (difference === 0) {
+      return 0;
+    }
+
+    return -1;
   }
 }
 
@@ -3136,6 +3218,16 @@ class DataTimestamp extends ScalarData<Date> {
   get key(): string {
     return `${this.value.toLocaleString()}`;
   }
+
+  compareTo(other: ScalarData<Date>) {
+    if (this.value > other.value) {
+      return 1;
+    } else if (this.value < other.value) {
+      return -1;
+    }
+
+    return 0;
+  }
 }
 
 class DataDate extends ScalarData<Date> {
@@ -3157,11 +3249,33 @@ class DataDate extends ScalarData<Date> {
   get key(): string {
     return `${this.value.toLocaleString()}`;
   }
+
+  compareTo(other: ScalarData<Date>) {
+    if (this.value > other.value) {
+      return 1;
+    } else if (this.value < other.value) {
+      return -1;
+    }
+
+    return 0;
+  }
 }
 
 class DataBytes extends ScalarData<Buffer> {
   get key(): string {
     return this.value.toString();
+  }
+
+  compareTo(other: ScalarData<Buffer>) {
+    const value = this.value.toString();
+    const otherValue = other.toString();
+    if (value === otherValue) {
+      return 0;
+    } else if (value > otherValue) {
+      return 1;
+    } else {
+      return -1;
+    }
   }
 }
 
