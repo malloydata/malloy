@@ -68,6 +68,16 @@ describe('tag utilities', () => {
     const a = tstTagParse(annotation);
     expect(a.properties).toHaveProperty('a "chart"', true);
   });
+  test('escaped non-quote', () => {
+    const annotation = '# "\\x"';
+    const a = tstTagParse(annotation);
+    expect(a.properties).toHaveProperty('x', true);
+  });
+  test('non-terminated string', () => {
+    const annotation = '# x="\\"';
+    const a = tstTagParse(annotation);
+    expect(a.properties).not.toHaveProperty('x', true);
+  });
   test('quoted property with value', () => {
     const a = tstTagParse('# "linechart"=yes');
     expect(a.properties).toHaveProperty('linechart', 'yes');
