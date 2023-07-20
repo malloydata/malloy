@@ -68,7 +68,6 @@ export abstract class PipelineDesc extends MalloyElement {
   ): AppendResult {
     let nextFS = existingEndSpace;
     const returnPipe: PipeSegment[] = [...modelPipe];
-    const lastSeg = this.qops[this.qops.length - 1];
     const tailRefinements = this.withRefinement?.list.filter(qProp => {
       const refineIn = qProp.queryRefinementStage;
       // Single refinements have all been applied to the head
@@ -82,20 +81,26 @@ export abstract class PipelineDesc extends MalloyElement {
       }
       return refineIn === LegalRefinementStage.Tail;
     });
+    const nestedIn =
+      modelPipe.length === 0 ? this.nestedInQuerySpace : undefined;
+    let tailQOP: QOPDesc | undefined;
+    if (tailRefinements && tailRefinements.length > 0) {
+      tailQOP = new QOPDesc(tailRefinements);
+      this.has({tailQOP});
+    }
+    let lastInput = nextFS;
     for (const qop of this.qops) {
-      const nestedIn =
-        modelPipe.length === 0 ? this.nestedInQuerySpace : undefined;
-      let next = qop.getOp(nextFS, nestedIn);
-      if (qop === lastSeg && tailRefinements) {
-        if (tailRefinements.length > 0) {
-          const tailQOP = new QOPDesc(tailRefinements);
-          this.has({tailQOP});
-          tailQOP.refineFrom(next.segment);
-          next = tailQOP.getOp(nextFS, nestedIn);
-        }
-      }
+      const next = qop.getOp(nextFS, nestedIn);
       returnPipe.push(next.segment);
+      lastInput = nextFS;
       nextFS = next.outputSpace();
+    }
+    if (tailQOP) {
+      const last = returnPipe.length - 1;
+      tailQOP.refineFrom(returnPipe[last]);
+      const lastRefined = tailQOP.getOp(lastInput, nestedIn);
+      returnPipe[last] = lastRefined.segment;
+      nextFS = lastRefined.outputSpace();
     }
     return {
       opList: returnPipe,
