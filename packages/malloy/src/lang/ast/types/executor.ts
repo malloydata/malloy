@@ -27,6 +27,7 @@ import {QueryInputSpace} from '../field-space/query-input-space';
 import {QuerySpace} from '../field-space/query-spaces';
 
 export interface Executor {
+  type: 'grouping' | 'index' | 'project';
   inputFS: QueryInputSpace;
   resultFS: QuerySpace;
   execute(qp: QueryProperty): void;

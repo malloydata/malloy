@@ -29,13 +29,13 @@ import {
 
 import {ErrorFactory} from '../error-factory';
 import {FieldSpace} from '../types/field-space';
-import {Filter} from '../query-properties/filters';
 import {GroupBy} from '../query-properties/group-by';
 import {ProjectFieldSpace} from '../field-space/project-field-space';
 import {QueryProperty} from '../types/query-property';
 import {ReduceExecutor} from './reduce-executor';
 
 export class ProjectExecutor extends ReduceExecutor {
+  readonly type = 'project';
   getResultSpace(
     fs: FieldSpace,
     refineThis: PipeSegment | undefined

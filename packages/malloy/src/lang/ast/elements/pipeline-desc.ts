@@ -67,27 +67,26 @@ export abstract class PipelineDesc extends MalloyElement {
     existingEndSpace: FieldSpace
   ): AppendResult {
     let nextFS = existingEndSpace;
-    const returnPipe: PipeSegment[] = [];
+    const returnPipe: PipeSegment[] = [...modelPipe];
     const lastSeg = this.qops[this.qops.length - 1];
+    const tailRefinements = this.withRefinement?.list.filter(qProp => {
+      const refineIn = qProp.queryRefinementStage;
+      // Single refinements have all been applied to the head
+      // now we just errror because that was a mistake
+      if (refineIn === LegalRefinementStage.Single) {
+        if (returnPipe.length > 1) {
+          qProp.log(
+            'This refinement illegal after the first stage of a multi stage query'
+          );
+        }
+      }
+      return refineIn === LegalRefinementStage.Tail;
+    });
     for (const qop of this.qops) {
       const nestedIn =
         modelPipe.length === 0 ? this.nestedInQuerySpace : undefined;
       let next = qop.getOp(nextFS, nestedIn);
-      if (qop === lastSeg && this.withRefinement) {
-        const tailRefinements = this.withRefinement.list.filter(qProp => {
-          const refineIn = qProp.queryRefinementStage;
-          if (
-            returnPipe.length > 0 &&
-            refineIn === LegalRefinementStage.Single
-          ) {
-            qProp.log('Illegal refinement in multi stage query');
-            return false;
-          }
-          return (
-            refineIn === LegalRefinementStage.Single ||
-            refineIn === LegalRefinementStage.Tail
-          );
-        });
+      if (qop === lastSeg && tailRefinements) {
         if (tailRefinements.length > 0) {
           const tailQOP = new QOPDesc(tailRefinements);
           this.has({tailQOP});
@@ -99,7 +98,7 @@ export abstract class PipelineDesc extends MalloyElement {
       nextFS = next.outputSpace();
     }
     return {
-      opList: returnPipe.length === 0 ? modelPipe : returnPipe,
+      opList: returnPipe,
       structDef: nextFS.structDef(),
     };
   }
@@ -122,9 +121,11 @@ export abstract class PipelineDesc extends MalloyElement {
     for (const qop of this.withRefinement.list) {
       switch (qop.queryRefinementStage) {
         case LegalRefinementStage.Head:
+        case LegalRefinementStage.Single:
+          // single refinements will generate an error later if the pipe won't accept them
+          // but right now is the time to apply them -- ugly i know
           headRefinements.push(qop);
           break;
-        case LegalRefinementStage.Single:
         case LegalRefinementStage.Tail:
           break;
         default:

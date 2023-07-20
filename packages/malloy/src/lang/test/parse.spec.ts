@@ -2301,7 +2301,7 @@ describe('source locations', () => {
   test('bad query', () => {
     expect(
       model`query: a -> { group_by: astr; ${'project: *'} }`
-    ).translationToFailWith('project: not legal in grouping query');
+    ).translationToFailWith(/Not legal in grouping query/);
   });
 
   test.skip('undefined field reference in top', () => {

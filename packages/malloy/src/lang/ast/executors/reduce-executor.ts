@@ -47,10 +47,12 @@ export class ReduceExecutor implements Executor {
   filters: FilterExpression[] = [];
   order?: Top | Ordering;
   limit?: number;
+  type: 'grouping' | 'project';
 
   constructor(baseFS: FieldSpace, refineThis: PipeSegment | undefined) {
     this.resultFS = this.getResultSpace(baseFS, refineThis);
     this.inputFS = this.resultFS.exprSpace;
+    this.type = 'grouping';
   }
 
   getResultSpace(

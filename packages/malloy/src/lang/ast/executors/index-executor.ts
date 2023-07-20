@@ -45,6 +45,7 @@ export class IndexExecutor implements Executor {
   sample?: Sampling;
   resultFS: IndexFieldSpace;
   inputFS: QueryInputSpace;
+  readonly type = 'index';
 
   constructor(inputFS: FieldSpace, refineThis: PipeSegment | undefined) {
     this.resultFS = new IndexFieldSpace(inputFS, refineThis);
