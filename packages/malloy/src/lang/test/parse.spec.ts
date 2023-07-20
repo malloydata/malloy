@@ -1959,9 +1959,9 @@ describe('error handling', () => {
       "Can't determine query type (group_by/aggregate/nest,project,index)"
     );
   });
-  test("refine can't change query type", () => {
+  test('refine cannot change query type', () => {
     expect('query: ab -> aturtle { project: astr }').translationToFailWith(
-      'project: not legal in grouping query'
+      /Not legal in grouping query/
     );
   });
   test('undefined field ref in query', () => {

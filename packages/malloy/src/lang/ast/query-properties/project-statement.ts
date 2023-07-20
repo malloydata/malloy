@@ -25,6 +25,7 @@ import {DefinitionList} from '../types/definition-list';
 import {Executor} from '../types/executor';
 import {FieldCollectionMember} from '../types/field-collection-member';
 import {
+  LegalRefinementStage,
   QueryClass,
   QueryPropertyInterface,
 } from '../types/query-property-interface';
@@ -35,7 +36,7 @@ export class ProjectStatement
 {
   elementType = 'projectStatement';
   forceQueryClass = QueryClass.Project;
-  queryRefinementStage = undefined;
+  queryRefinementStage = LegalRefinementStage.Single;
 
   queryExecute(executeFor: Executor) {
     if (executeFor.type === 'project') {

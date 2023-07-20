@@ -22,7 +22,6 @@
  */
 
 import {DefinitionList} from '../types/definition-list';
-import {Executor} from '../types/executor';
 import {QueryItem} from '../types/query-item';
 import {
   QueryPropertyInterface,
