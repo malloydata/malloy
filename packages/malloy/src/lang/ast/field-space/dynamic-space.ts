@@ -81,13 +81,9 @@ export abstract class DynamicSpace extends StaticSpace {
     return this;
   }
 
-  newEntry(
-    name: string,
-    cannotRedefine: MalloyElement | undefined,
-    entry: SpaceEntry
-  ): void {
-    if (cannotRedefine && this.entry(name)) {
-      cannotRedefine.log(`Cannot redefine '${name}'`);
+  newEntry(name: string, logTo: MalloyElement, entry: SpaceEntry): void {
+    if (this.entry(name)) {
+      logTo.log(`Cannot redefine '${name}'`);
       return;
     }
     this.setEntry(name, entry);

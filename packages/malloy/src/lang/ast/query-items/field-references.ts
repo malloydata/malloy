@@ -60,9 +60,12 @@ export abstract class FieldReference
   }
 
   makeEntry(fs: DynamicSpace) {
-    // force a type check
-    // this.getField(fs);
-    fs.newEntry(this.refString, this, new ReferenceField(this));
+    const refName = this.outputName;
+    if (fs.entry(refName)) {
+      this.log(`Output already has a field named '${refName}'`);
+    } else {
+      fs.newEntry(this.refString, this, new ReferenceField(this));
+    }
   }
 
   get refString(): string {
