@@ -68,16 +68,14 @@ export abstract class PipelineDesc extends MalloyElement {
     modelPipe: PipeSegment[]
   ): AppendResult {
     const returnPipe: PipeSegment[] = [...modelPipe];
+    const singleStageQuery = modelPipe.length + this.qops.length === 1;
     const tailRefinements = this.withRefinement?.list.filter(qProp => {
       const refineIn = qProp.queryRefinementStage;
-      // Single refinements have all been applied to the head
-      // now we just errror because that was a mistake
-      if (refineIn === LegalRefinementStage.Single) {
-        if (returnPipe.length > 1) {
-          qProp.log(
-            'This refinement illegal after the first stage of a multi stage query'
-          );
-        }
+      // Single refinements have all been applied to the head with the head refinements
+      // Just errror because that was a mistake maybe todo someday check this earlier somehow
+      if (refineIn === LegalRefinementStage.Single && !singleStageQuery) {
+        qProp.log('Illegal in refinment of a query with more than one stage');
+        return false;
       }
       return refineIn === LegalRefinementStage.Tail;
     });

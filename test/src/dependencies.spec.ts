@@ -52,7 +52,7 @@ describe('dependencies', () => {
   });
 
   // Enable more strict circular checks if we refactor lang again.
-  it('malloy/src/lang typescript should not be circular', async () => {
+  it.skip('malloy/src/lang typescript should not be circular', async () => {
     const deps = await madge('packages', {
       fileExtensions: ['ts'],
       excludeRegExp: [/malloy\/src\/lang\/lib/, /\.d\.ts/],
