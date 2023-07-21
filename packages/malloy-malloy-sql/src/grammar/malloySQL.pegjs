@@ -31,7 +31,7 @@ delimiter =
     return {type: t, config: c ? c.trim() : '', range:location()}
   }
 delimiter_start = '>>>'
-statement_type = 'sql' / 'malloy'
+statement_type = 'sql' / 'malloy' / 'markdown'
 optional_config = $(!comment !EOL .)*
 
 initial_comments "initial comments" = $(_ / EOL / comment)*

@@ -44,7 +44,7 @@ export interface ParsedMalloySQLStatement {
   range: MalloySQLParseRange;
   delimiterRange: MalloySQLParseRange;
   statementText: string;
-  statementType: 'sql' | 'malloy';
+  statementType: 'sql' | 'malloy' | 'markdown';
   config: string;
 }
 
@@ -79,6 +79,7 @@ export interface MalloySQLStatmentConfig {
 export enum MalloySQLStatementType {
   SQL = 'sql',
   MALLOY = 'malloy',
+  MARKDOWN = 'markdown',
 }
 
 export interface MalloySQLStatementBase {
@@ -107,6 +108,11 @@ export interface MalloySQLSQLStatement extends MalloySQLStatementBase {
   embeddedMalloyQueries: EmbeddedMalloyQuery[];
 }
 
+export interface MalloySQLMarkdownStatement extends MalloySQLStatementBase {
+  type: MalloySQLStatementType.MARKDOWN;
+}
+
 export type MalloySQLStatement =
   | MalloySQLSQLStatement
-  | MalloySQLMalloyStatement;
+  | MalloySQLMalloyStatement
+  | MalloySQLMarkdownStatement;
