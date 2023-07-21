@@ -70,7 +70,8 @@ export class ReduceExecutor implements Executor {
     if (qp instanceof DefinitionList) {
       this.resultFS.pushFields(...qp.list);
     } else if (qp instanceof Filter) {
-      this.filters.push(...qp.getFilterList(this.inputFS));
+      const filterFS = qp.havingClause ? this.resultFS : this.inputFS;
+      this.filters.push(...qp.getFilterList(filterFS));
     } else if (qp instanceof Top) {
       if (this.limit) {
         qp.log('Query operation already limited');

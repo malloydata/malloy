@@ -36,10 +36,11 @@ import {SpaceEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
 
 export class ReferenceField extends SpaceField {
-  res?: SpaceEntry;
+  referenceTo: SpaceEntry | undefined;
   private queryFieldDef?: QueryFieldDef;
-  constructor(readonly fieldRef: FieldReference) {
+  constructor(readonly fieldRef: FieldReference, inFS: FieldSpace) {
     super();
+    this.referenceTo = inFS.lookup(fieldRef.list).found;
   }
 
   getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined {
@@ -48,7 +49,6 @@ export class ReferenceField extends SpaceField {
       if (check.error) {
         this.fieldRef.log(check.error);
       }
-      this.res = check.found;
       this.queryFieldDef = this.maybeAnnotate();
     }
     return this.queryFieldDef;
@@ -57,8 +57,9 @@ export class ReferenceField extends SpaceField {
   typeDesc(): TypeDesc {
     // Remember the actual type of the field that was looked up so it can be used for
     // type checking.
-    if (this.res !== undefined) {
-      return this.res.typeDesc();
+    const refTo = this.referenceTo;
+    if (refTo) {
+      return refTo.typeDesc();
     }
     return {dataType: 'error', expressionType: 'scalar', evalSpace: 'input'};
   }
@@ -69,12 +70,13 @@ export class ReferenceField extends SpaceField {
    */
   maybeAnnotate(): QueryFieldDef {
     const path = this.fieldRef.refString;
+    const refTo = this.referenceTo;
     if (
-      this.res instanceof SpaceField &&
-      this.res.haveFieldDef &&
-      typeof this.res.haveFieldDef !== 'string'
+      refTo instanceof SpaceField &&
+      refTo.haveFieldDef &&
+      typeof refTo.haveFieldDef !== 'string'
     ) {
-      const origFd = this.res.haveFieldDef;
+      const origFd = refTo.haveFieldDef;
       if (isFilteredAliasedName(origFd)) {
         return origFd;
       }

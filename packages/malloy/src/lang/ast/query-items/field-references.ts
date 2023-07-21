@@ -64,7 +64,7 @@ export abstract class FieldReference
     if (fs.entry(refName)) {
       this.log(`Output already has a field named '${refName}'`);
     } else {
-      fs.newEntry(this.refString, this, new ReferenceField(this));
+      fs.newEntry(this.refString, this, new ReferenceField(this, fs));
     }
   }
 
@@ -91,7 +91,7 @@ export abstract class FieldReference
     return this.list[this.list.length - 1].refString;
   }
 
-  abstract typecheck(type: TypeDesc);
+  abstract typecheck(type: TypeDesc): void;
 
   getField(fs: FieldSpace): LookupResult {
     const result = fs.lookup(this.list);

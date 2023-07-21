@@ -65,13 +65,13 @@ export class Filter
   implements QueryPropertyInterface
 {
   elementType = 'filter';
-  // TODO(maden): Check this field usage/need
-  private readonly havingClause?: boolean;
+  havingClause?: boolean;
   forceQueryClass = undefined;
   queryRefinementStage = LegalRefinementStage.Head;
 
   set having(isHaving: boolean) {
     this.elementType = isHaving ? 'having' : 'where';
+    this.havingClause = isHaving;
     this.queryRefinementStage = isHaving
       ? LegalRefinementStage.Tail
       : LegalRefinementStage.Head;
@@ -88,18 +88,16 @@ export class Filter
       // Aggregates are ALSO checked at SQL generation time, but checking
       // here allows better reflection of errors back to user.
       if (this.havingClause !== undefined) {
+        const needHaving = expressionIsCalculation(fExpr.expressionType);
         if (this.havingClause) {
-          // TODO I don't understand how this is working currently? This seems to imply
-          // that a calculation is NOT allowed, but it is...? It appears maybe this code
-          // just isn't being called.
-          if (expressionIsCalculation(fExpr.expressionType)) {
+          if (!needHaving) {
             oneElement.log(
               'Aggregate or analytic expression expected in HAVING filter'
             );
             continue;
           }
         } else {
-          if (expressionIsCalculation(fExpr.expressionType)) {
+          if (needHaving) {
             oneElement.log(
               'Aggregate or analytic expressions not allowed in WHERE'
             );

@@ -63,10 +63,10 @@ export abstract class PipelineDesc extends MalloyElement {
   }
 
   protected appendOps(
-    modelPipe: PipeSegment[],
-    existingEndSpace: FieldSpace
+    lastSegmentInput: FieldSpace,
+    pipelineOutput: FieldSpace,
+    modelPipe: PipeSegment[]
   ): AppendResult {
-    let nextFS = existingEndSpace;
     const returnPipe: PipeSegment[] = [...modelPipe];
     const tailRefinements = this.withRefinement?.list.filter(qProp => {
       const refineIn = qProp.queryRefinementStage;
@@ -88,19 +88,18 @@ export abstract class PipelineDesc extends MalloyElement {
       tailQOP = new QOPDesc(tailRefinements);
       this.has({tailQOP});
     }
-    let lastInput = nextFS;
+    let nextFS: FieldSpace = pipelineOutput;
     for (const qop of this.qops) {
       const next = qop.getOp(nextFS, nestedIn);
       returnPipe.push(next.segment);
-      lastInput = nextFS;
       nextFS = next.outputSpace();
     }
     if (tailQOP) {
-      const last = returnPipe.length - 1;
-      tailQOP.refineFrom(returnPipe[last]);
-      const lastRefined = tailQOP.getOp(lastInput, nestedIn);
-      returnPipe[last] = lastRefined.segment;
-      nextFS = lastRefined.outputSpace();
+      const lastIndex = returnPipe.length - 1;
+      tailQOP.refineFrom(returnPipe[lastIndex]);
+      const last = tailQOP.getOp(lastSegmentInput, nestedIn);
+      returnPipe[lastIndex] = last.segment;
+      nextFS = last.outputSpace();
     }
     return {
       opList: returnPipe,
@@ -170,14 +169,16 @@ export abstract class PipelineDesc extends MalloyElement {
     return {pipeline: [], location: undefined, annotation};
   }
 
-  protected getOutputStruct(
+  protected getFinalStruct(
     walkStruct: StructDef,
     pipeline: PipeSegment[]
-  ): StructDef {
+  ): [StructDef, StructDef] {
+    let lastInput = walkStruct;
     for (const modelQop of pipeline) {
+      lastInput = walkStruct;
       walkStruct = opOutputStruct(this, walkStruct, modelQop);
     }
-    return walkStruct;
+    return [lastInput, walkStruct];
   }
 }
 

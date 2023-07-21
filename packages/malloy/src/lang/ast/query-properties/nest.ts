@@ -27,7 +27,6 @@ import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
 import {QueryField} from '../field-space/query-space-field';
-import {opOutputStruct} from '../struct-utils';
 import {TurtleHeadedPipe} from '../elements/pipeline-desc';
 import {QueryInputSpace} from '../field-space/query-input-space';
 import {StaticSpace} from '../field-space/static-space';
@@ -86,15 +85,17 @@ export class TurtleDecl
       );
     }
 
-    let appendInput = fs;
+    let lastInFS = fs;
+    let pipeOutFS = fs;
     if (modelPipe.pipeline.length > 0) {
-      let endStruct = appendInput.structDef();
-      for (const existingSeg of modelPipe.pipeline) {
-        endStruct = opOutputStruct(this, endStruct, existingSeg);
-      }
-      appendInput = new StaticSpace(endStruct);
+      const [lastIn, lastOut] = this.getFinalStruct(
+        fs.structDef(),
+        modelPipe.pipeline
+      );
+      lastInFS = new StaticSpace(lastIn);
+      pipeOutFS = new StaticSpace(lastOut);
     }
-    const appended = this.appendOps(modelPipe.pipeline, appendInput);
+    const appended = this.appendOps(lastInFS, pipeOutFS, modelPipe.pipeline);
     modelPipe.pipeline = appended.opList;
     return modelPipe;
   }
