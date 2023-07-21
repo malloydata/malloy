@@ -1071,11 +1071,13 @@ describe('qops', () => {
   });
   test('calculate in reduce', () => {
     expect(
-      'query: a->{ group_by: astr calculate: num is lag(ai) }'
+      'query: a->{ group_by: astr, ai calculate: num is lag(ai) }'
     ).toTranslate();
   });
   test('calculate in project', () => {
-    expect('query: a->{ project: ai calculate: num is lag(ai) }').toTranslate();
+    expect(
+      'query: a->{ project: astr, ai calculate: num is lag(ai) }'
+    ).toTranslate();
   });
   test('aggregate multiple', () => {
     expect(`
