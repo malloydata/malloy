@@ -851,6 +851,14 @@ describe('model statements', () => {
           calculate: s is lag(ai)
         }`).toTranslate();
       });
+      test('can reference implied output entries in calculate', () => {
+        expect(`source: aaa is a extend { dimension: big_i is ai+10 }
+        query: a extend { join_one: aaa on astr=aaa.astr } -> {
+          group_by: aaa.big_i
+          aggregate: s is aaa.big_i.sum()
+          calculate: a is lag(big_i.sum())
+        }`).toTranslate();
+      });
     });
   });
   test('errors on redefinition of query', () => {

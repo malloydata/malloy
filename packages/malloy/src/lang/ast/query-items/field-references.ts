@@ -64,7 +64,7 @@ export abstract class FieldReference
     if (fs.entry(refName)) {
       this.log(`Output already has a field named '${refName}'`);
     } else {
-      fs.newEntry(this.refString, this, new ReferenceField(this, fs));
+      fs.newEntry(refName, this, new ReferenceField(this, fs));
     }
   }
 
