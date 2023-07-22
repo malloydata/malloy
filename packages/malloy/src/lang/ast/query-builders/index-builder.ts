@@ -35,10 +35,10 @@ import {Limit} from '../query-properties/limit';
 import {SampleProperty} from '../query-properties/sampling';
 import {IndexFieldSpace} from '../field-space/index-field-space';
 import {QueryProperty} from '../types/query-property';
-import {Executor} from '../types/executor';
+import {QueryBuilder} from '../types/query-builder';
 import {QueryInputSpace} from '../field-space/query-input-space';
 
-export class IndexExecutor implements Executor {
+export class IndexBuilder implements QueryBuilder {
   filters: FilterExpression[] = [];
   limit?: Limit;
   indexOn?: FieldName;

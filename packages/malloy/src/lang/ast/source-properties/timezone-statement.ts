@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Executor} from '../types/executor';
+import {QueryBuilder} from '../types/query-builder';
 import {MalloyElement} from '../types/malloy-element';
 import {QueryPropertyInterface} from '../types/query-property-interface';
 
@@ -45,7 +45,7 @@ export class TimezoneStatement
     }
   }
 
-  queryExecute(executeFor: Executor) {
+  queryExecute(executeFor: QueryBuilder) {
     executeFor.resultFS.setTimezone(this.tz);
   }
 }

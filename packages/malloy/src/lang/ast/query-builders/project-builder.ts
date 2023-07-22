@@ -32,9 +32,9 @@ import {FieldSpace} from '../types/field-space';
 import {GroupBy} from '../query-properties/group-by';
 import {ProjectFieldSpace} from '../field-space/project-field-space';
 import {QueryProperty} from '../types/query-property';
-import {ReduceExecutor} from './reduce-executor';
+import {ReduceBuilder} from './reduce-builder';
 
-export class ProjectExecutor extends ReduceExecutor {
+export class ProjectBuilder extends ReduceBuilder {
   readonly type = 'project';
   getResultSpace(
     fs: FieldSpace,

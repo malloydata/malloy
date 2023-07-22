@@ -22,10 +22,10 @@
  */
 
 import {PipeSegment} from '../../../model/malloy_types';
-import {Executor} from '../types/executor';
-import {IndexExecutor} from '../executors/index-executor';
-import {ProjectExecutor} from '../executors/project-executor';
-import {ReduceExecutor} from '../executors/reduce-executor';
+import {QueryBuilder} from '../types/query-builder';
+import {IndexBuilder} from '../query-builders/index-builder';
+import {ProjectBuilder} from '../query-builders/project-builder';
+import {ReduceBuilder} from '../query-builders/reduce-builder';
 import {FieldSpace} from '../types/field-space';
 import {ListOf} from '../types/malloy-element';
 import {OpDesc} from '../types/op-desc';
@@ -76,14 +76,14 @@ export class QOPDesc extends ListOf<QueryProperty> {
     this.refineThis = existing;
   }
 
-  private getExecutor(baseFS: FieldSpace): Executor {
+  private getExecutor(baseFS: FieldSpace): QueryBuilder {
     switch (this.computeType()) {
       case QueryClass.Grouping:
-        return new ReduceExecutor(baseFS, this.refineThis);
+        return new ReduceBuilder(baseFS, this.refineThis);
       case QueryClass.Project:
-        return new ProjectExecutor(baseFS, this.refineThis);
+        return new ProjectBuilder(baseFS, this.refineThis);
       case QueryClass.Index:
-        return new IndexExecutor(baseFS, this.refineThis);
+        return new IndexBuilder(baseFS, this.refineThis);
     }
   }
 

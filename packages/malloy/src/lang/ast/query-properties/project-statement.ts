@@ -22,7 +22,7 @@
  */
 
 import {DefinitionList} from '../types/definition-list';
-import {Executor} from '../types/executor';
+import {QueryBuilder} from '../types/query-builder';
 import {FieldCollectionMember} from '../types/field-collection-member';
 import {
   LegalRefinementStage,
@@ -38,7 +38,7 @@ export class ProjectStatement
   forceQueryClass = QueryClass.Project;
   queryRefinementStage = LegalRefinementStage.Single;
 
-  queryExecute(executeFor: Executor) {
+  queryExecute(executeFor: QueryBuilder) {
     if (executeFor.type === 'project') {
       executeFor.resultFS.pushFields(...this.list);
     }

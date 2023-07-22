@@ -32,7 +32,7 @@ import {compressExpr} from '../expressions/utils';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {JoinSpaceField} from '../field-space/join-space-field';
 import {DefinitionList} from '../types/definition-list';
-import {Executor} from '../types/executor';
+import {QueryBuilder} from '../types/query-builder';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
@@ -193,7 +193,7 @@ export class Joins
     super(joins);
   }
 
-  queryExecute(executeFor: Executor) {
+  queryExecute(executeFor: QueryBuilder) {
     for (const qel of this.list) {
       executeFor.inputFS.extendSource(qel);
     }

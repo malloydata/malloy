@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Executor} from './executor';
+import {QueryBuilder} from './query-builder';
 
 export enum QueryClass {
   Index = 'index',
@@ -45,5 +45,5 @@ export enum LegalRefinementStage {
 export interface QueryPropertyInterface {
   queryRefinementStage: LegalRefinementStage | undefined;
   forceQueryClass: QueryClass | undefined;
-  queryExecute?: (executeFor: Executor) => void;
+  queryExecute?: (executeFor: QueryBuilder) => void;
 }

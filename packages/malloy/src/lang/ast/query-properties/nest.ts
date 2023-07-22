@@ -35,7 +35,7 @@ import {
   QueryClass,
   QueryPropertyInterface,
 } from '../types/query-property-interface';
-import {Executor} from '../types/executor';
+import {QueryBuilder} from '../types/query-builder';
 import {MakeEntry} from '../types/space-entry';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {QuerySpace} from '../field-space/query-spaces';
@@ -202,7 +202,7 @@ export class NestRefinement
     this.turtleName = turtleName;
   }
 
-  queryExecute(executeFor: Executor) {
+  queryExecute(executeFor: QueryBuilder) {
     executeFor.resultFS.pushFields(this);
   }
 
@@ -229,7 +229,7 @@ export class NestDefinition
     super(name);
   }
 
-  queryExecute(executeFor: Executor) {
+  queryExecute(executeFor: QueryBuilder) {
     executeFor.resultFS.pushFields(this);
   }
 
@@ -322,7 +322,7 @@ export class NestReference
     }
   }
 
-  queryExecute(executeFor: Executor) {
+  queryExecute(executeFor: QueryBuilder) {
     executeFor.resultFS.pushFields(this);
   }
 }

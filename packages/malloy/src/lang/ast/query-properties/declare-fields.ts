@@ -23,7 +23,7 @@
 
 import {FieldDeclaration} from '../query-items/field-declaration';
 import {DefinitionList} from '../types/definition-list';
-import {Executor} from '../types/executor';
+import {QueryBuilder} from '../types/query-builder';
 import {
   LegalRefinementStage,
   QueryPropertyInterface,
@@ -41,7 +41,7 @@ export class DeclareFields
     super(fields);
   }
 
-  queryExecute(executeFor: Executor): void {
+  queryExecute(executeFor: QueryBuilder): void {
     for (const qel of this.list) {
       executeFor.inputFS.extendSource(qel);
     }

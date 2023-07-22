@@ -36,12 +36,12 @@ import {Limit} from '../query-properties/limit';
 import {Ordering} from '../query-properties/ordering';
 import {Top} from '../query-properties/top';
 import {QueryProperty} from '../types/query-property';
-import {Executor} from '../types/executor';
+import {QueryBuilder} from '../types/query-builder';
 import {QuerySpace, ReduceFieldSpace} from '../field-space/query-spaces';
 import {DefinitionList} from '../types/definition-list';
 import {QueryInputSpace} from '../field-space/query-input-space';
 
-export class ReduceExecutor implements Executor {
+export class ReduceBuilder implements QueryBuilder {
   inputFS: QueryInputSpace;
   resultFS: QuerySpace;
   filters: FilterExpression[] = [];

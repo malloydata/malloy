@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Executor} from '../types/executor';
+import {QueryBuilder} from '../types/query-builder';
 import {ListOf} from '../types/malloy-element';
 import {QueryExtendProperty} from '../types/query-extend-property';
 import {
@@ -37,7 +37,7 @@ export class ExtendBlock
   forceQueryClass = undefined;
   queryRefinementStage = LegalRefinementStage.Tail;
 
-  queryExecute(executeFor: Executor): void {
+  queryExecute(executeFor: QueryBuilder): void {
     for (const block of this.list) {
       for (const qel of block.list) {
         executeFor.inputFS.extendSource(qel);
