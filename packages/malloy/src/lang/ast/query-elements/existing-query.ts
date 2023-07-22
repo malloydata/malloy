@@ -31,6 +31,7 @@ import {QueryComp} from '../types/query-comp';
 import {QueryHeadStruct} from './query-head-struct';
 
 export class ExistingQuery extends PipelineDesc {
+  elementType = 'exisitingQUery';
   _head?: ModelEntryReference | string;
 
   set head(head: ModelEntryReference | string | undefined) {
@@ -65,13 +66,12 @@ export class ExistingQuery extends PipelineDesc {
       this.has({queryHead: queryHead});
       const exploreStruct = queryHead.structDef();
       const exploreFS = new StaticSpace(exploreStruct);
-      const sourcePipe = this.refinePipelineHead(exploreFS, head);
-      const [lastInput, walkStruct] = this.getFinalStruct(
+      const sourcePipe = this.refinePipeline(exploreFS, head);
+      const walkStruct = this.getFinalStruct(
         exploreStruct,
         sourcePipe.pipeline
       );
       const appended = this.appendOps(
-        new StaticSpace(lastInput),
         new StaticSpace(walkStruct),
         sourcePipe.pipeline
       );

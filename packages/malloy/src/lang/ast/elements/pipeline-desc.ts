@@ -35,6 +35,7 @@ import {QOPDesc} from '../query-properties/qop-desc';
 import {getStructFieldDef, opOutputStruct} from '../struct-utils';
 import {QueryInputSpace} from '../field-space/query-input-space';
 import {LegalRefinementStage} from '../types/query-property-interface';
+import {StaticSpace} from '../field-space/static-space';
 
 interface AppendResult {
   opList: PipeSegment[];
@@ -47,7 +48,6 @@ interface AppendResult {
  * is refers to the first segment of the composed pipeline.
  */
 export abstract class PipelineDesc extends MalloyElement {
-  elementType = 'pipelineDesc';
   protected withRefinement?: QOPDesc;
   protected qops: QOPDesc[] = [];
   nestedInQuerySpace?: QueryInputSpace;
@@ -63,41 +63,17 @@ export abstract class PipelineDesc extends MalloyElement {
   }
 
   protected appendOps(
-    lastSegmentInput: FieldSpace,
     pipelineOutput: FieldSpace,
     modelPipe: PipeSegment[]
   ): AppendResult {
     const returnPipe: PipeSegment[] = [...modelPipe];
-    const singleStageQuery = modelPipe.length + this.qops.length === 1;
-    const tailRefinements = this.withRefinement?.list.filter(qProp => {
-      const refineIn = qProp.queryRefinementStage;
-      // Single refinements have all been applied to the head with the head refinements
-      // Just errror because that was a mistake maybe todo someday check this earlier somehow
-      if (refineIn === LegalRefinementStage.Single && !singleStageQuery) {
-        qProp.log('Illegal in refinment of a query with more than one stage');
-        return false;
-      }
-      return refineIn === LegalRefinementStage.Tail;
-    });
     const nestedIn =
       modelPipe.length === 0 ? this.nestedInQuerySpace : undefined;
-    let tailQOP: QOPDesc | undefined;
-    if (tailRefinements && tailRefinements.length > 0) {
-      tailQOP = new QOPDesc(tailRefinements);
-      this.has({tailQOP});
-    }
-    let nextFS: FieldSpace = pipelineOutput;
+    let nextFS = pipelineOutput;
     for (const qop of this.qops) {
       const next = qop.getOp(nextFS, nestedIn);
       returnPipe.push(next.segment);
       nextFS = next.outputSpace();
-    }
-    if (tailQOP) {
-      const lastIndex = returnPipe.length - 1;
-      tailQOP.refineFrom(returnPipe[lastIndex]);
-      const last = tailQOP.getOp(lastSegmentInput, nestedIn);
-      returnPipe[lastIndex] = last.segment;
-      nextFS = last.outputSpace();
     }
     return {
       opList: returnPipe,
@@ -105,11 +81,20 @@ export abstract class PipelineDesc extends MalloyElement {
     };
   }
 
-  protected refinePipelineHead(fs: FieldSpace, modelPipe: Pipeline): Pipeline {
+  private refineSegment(
+    fs: FieldSpace,
+    refinement: QOPDesc,
+    seg: PipeSegment
+  ): PipeSegment {
+    refinement.refineFrom(seg);
+    return refinement.getOp(fs, this.nestedInQuerySpace).segment;
+  }
+
+  protected refinePipeline(fs: FieldSpace, modelPipe: Pipeline): Pipeline {
     if (!this.withRefinement) {
       return modelPipe;
     }
-    const pipeline: PipeSegment[] = [];
+    let pipeline: PipeSegment[] = [];
     if (modelPipe.pipeHead) {
       const {pipeline: turtlePipe} = this.expandTurtle(
         modelPipe.pipeHead.name,
@@ -119,28 +104,45 @@ export abstract class PipelineDesc extends MalloyElement {
     }
     pipeline.push(...modelPipe.pipeline);
     const firstSeg = pipeline[0];
-    const headRefinements = new QOPDesc([]);
-    for (const qop of this.withRefinement.list) {
-      switch (qop.queryRefinementStage) {
-        case LegalRefinementStage.Head:
-        case LegalRefinementStage.Single:
-          // single refinements will generate an error later if the pipe won't accept them
-          // but right now is the time to apply them -- ugly i know
-          headRefinements.push(qop);
-          break;
-        case LegalRefinementStage.Tail:
-          break;
-        default:
-          qop.log('Illegal query refinement');
+    if (pipeline.length === 1) {
+      // I could let everything fall through to the head/tail case, it should be the
+      // same, but this does less computation and is the most common case.
+      pipeline = [this.refineSegment(fs, this.withRefinement, firstSeg)];
+      this.withRefinement = undefined;
+    } else {
+      const headRefinements = new QOPDesc([]);
+      const tailRefinements = new QOPDesc([]);
+      for (const qop of this.withRefinement.list) {
+        switch (qop.queryRefinementStage) {
+          case LegalRefinementStage.Head:
+            headRefinements.push(qop);
+            break;
+          case LegalRefinementStage.Single:
+            qop.log('Illegal in refinment of a query with more than one stage');
+            break;
+          case LegalRefinementStage.Tail:
+            tailRefinements.push(qop);
+            break;
+          default:
+            qop.log('Illegal query refinement');
+        }
+      }
+      if (headRefinements.notEmpty()) {
+        this.has({headRefinements});
+        pipeline[0] = this.refineSegment(fs, headRefinements, firstSeg);
+      }
+      if (tailRefinements.notEmpty()) {
+        const last = pipeline.length - 1;
+        this.has({tailRefinements});
+        const finalIn = this.getFinalStruct(fs.structDef(), pipeline.slice(-1));
+        pipeline[last] = this.refineSegment(
+          new StaticSpace(finalIn),
+          tailRefinements,
+          pipeline[last]
+        );
       }
     }
-    if (headRefinements.list.length > 0) {
-      this.has({headRefinements});
-      if (firstSeg) {
-        headRefinements.refineFrom(firstSeg);
-      }
-      pipeline[0] = headRefinements.getOp(fs, this.nestedInQuerySpace).segment;
-    }
+    this.withRefinement = undefined;
     return {pipeline};
   }
 
@@ -170,13 +172,11 @@ export abstract class PipelineDesc extends MalloyElement {
   protected getFinalStruct(
     walkStruct: StructDef,
     pipeline: PipeSegment[]
-  ): [StructDef, StructDef] {
-    let lastInput = walkStruct;
+  ): StructDef {
     for (const modelQop of pipeline) {
-      lastInput = walkStruct;
       walkStruct = opOutputStruct(this, walkStruct, modelQop);
     }
-    return [lastInput, walkStruct];
+    return walkStruct;
   }
 }
 

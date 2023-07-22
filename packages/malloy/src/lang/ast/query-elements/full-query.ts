@@ -30,6 +30,7 @@ import {QueryComp} from '../types/query-comp';
 import {TurtleHeadedPipe} from '../elements/pipeline-desc';
 
 export class FullQuery extends TurtleHeadedPipe {
+  elementType = 'fullQuery';
   constructor(readonly explore: Source) {
     super({explore: explore});
   }
@@ -47,8 +48,7 @@ export class FullQuery extends TurtleHeadedPipe {
     const structDef = refIsStructDef(structRef)
       ? structRef
       : this.explore.structDef();
-    let lastInputFS = new StaticSpace(structDef);
-    let pipeFS = lastInputFS;
+    let pipeFS = new StaticSpace(structDef);
 
     // TODO update the compiler to allow for a SQL-headed query with 0 stages,
     // which just runs the SQL. This would also allow us in ExistingQuery
@@ -83,8 +83,8 @@ export class FullQuery extends TurtleHeadedPipe {
         structDef
       );
       destQuery.location = location;
-      const refined = this.refinePipelineHead(pipeFS, {pipeline}).pipeline;
       if (this.withRefinement) {
+        const refined = this.refinePipeline(pipeFS, {pipeline}).pipeline;
         // TODO there is an issue with losing the name of the turtle
         // which we need to fix, possibly adding a "name:" field to a segment
         // TODO there was mention of promoting filters to the query
@@ -95,11 +95,10 @@ export class FullQuery extends TurtleHeadedPipe {
       if (annotation) {
         destQuery.annotation = annotation;
       }
-      const [lastInput, pipeOutput] = this.getFinalStruct(structDef, refined);
+      const pipeOutput = this.getFinalStruct(structDef, destQuery.pipeline);
       pipeFS = new StaticSpace(pipeOutput);
-      lastInputFS = new StaticSpace(lastInput);
     }
-    const appended = this.appendOps(lastInputFS, pipeFS, destQuery.pipeline);
+    const appended = this.appendOps(pipeFS, destQuery.pipeline);
     destQuery.pipeline = appended.opList;
     return {outputStruct: appended.structDef, query: destQuery};
   }

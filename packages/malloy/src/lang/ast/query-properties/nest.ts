@@ -46,7 +46,7 @@ function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   return !!ret;
 }
 
-export class TurtleDecl
+abstract class TurtleDeclRoot
   extends TurtleHeadedPipe
   implements Noteable, MakeEntry
 {
@@ -68,7 +68,7 @@ export class TurtleDecl
       } else if (headEnt.found instanceof QueryField) {
         const headDef = headEnt.found.getQueryFieldDef(fs);
         if (isTurtle(headDef)) {
-          const newPipe = this.refinePipelineHead(fs, headDef);
+          const newPipe = this.refinePipeline(fs, headDef);
           modelPipe.pipeline = [...newPipe.pipeline];
           if (headDef.annotation) {
             this.extendNote({inherits: headDef.annotation});
@@ -85,19 +85,81 @@ export class TurtleDecl
       );
     }
 
-    let lastInFS = fs;
     let pipeOutFS = fs;
     if (modelPipe.pipeline.length > 0) {
-      const [lastIn, lastOut] = this.getFinalStruct(
-        fs.structDef(),
-        modelPipe.pipeline
-      );
-      lastInFS = new StaticSpace(lastIn);
+      const lastOut = this.getFinalStruct(fs.structDef(), modelPipe.pipeline);
       pipeOutFS = new StaticSpace(lastOut);
     }
-    const appended = this.appendOps(lastInFS, pipeOutFS, modelPipe.pipeline);
+    const appended = this.appendOps(pipeOutFS, modelPipe.pipeline);
     modelPipe.pipeline = appended.opList;
     return modelPipe;
+  }
+
+  protected refineTurtleHead(
+    fs: FieldSpace,
+    modelPipe: model.Pipeline
+  ): model.Pipeline {
+    if (!this.withRefinement) {
+      return modelPipe;
+    }
+    let pipeline: model.PipeSegment[] = [];
+    if (modelPipe.pipeHead) {
+      const {pipeline: turtlePipe} = this.expandTurtle(
+        modelPipe.pipeHead.name,
+        fs.structDef()
+      );
+      pipeline.push(...turtlePipe);
+    }
+    pipeline.push(...modelPipe.pipeline);
+    const firstSeg = pipeline[0];
+    if (pipeline.length === 1) {
+      // refinement is simple, everything must go
+      this.withRefinement.refineFrom(firstSeg);
+      pipeline = [
+        this.withRefinement.getOp(fs, this.nestedInQuerySpace).segment,
+      ];
+      this.withRefinement = undefined;
+    } else {
+      const headRefinements = new QOPDesc([]);
+      const tailRefinements = new QOPDesc([]);
+      for (const qop of this.withRefinement.list) {
+        switch (qop.queryRefinementStage) {
+          case LegalRefinementStage.Head:
+            headRefinements.push(qop);
+            break;
+          case LegalRefinementStage.Single:
+            qop.log('Illegal in refinment of a query with more than one stage');
+            break;
+          case LegalRefinementStage.Tail:
+            tailRefinements.push(qop);
+            break;
+          default:
+            qop.log('Illegal query refinement');
+        }
+      }
+      if (headRefinements.notEmpty()) {
+        this.has({headRefinements});
+        if (firstSeg) {
+          headRefinements.refineFrom(firstSeg);
+        }
+        pipeline[0] = headRefinements.getOp(
+          fs,
+          this.nestedInQuerySpace
+        ).segment;
+      }
+      if (tailRefinements.notEmpty()) {
+        const last = pipeline.length - 1;
+        this.has({tailRefinements});
+        const finalIn = this.getFinalStruct(fs.structDef(), pipeline.slice(-1));
+        tailRefinements.refineFrom(pipeline[last]);
+        pipeline[last] = tailRefinements.getOp(
+          new StaticSpace(finalIn),
+          this.nestedInQuerySpace
+        ).segment;
+      }
+    }
+    this.withRefinement = undefined;
+    return {pipeline};
   }
 
   getFieldDef(
@@ -125,8 +187,12 @@ export class TurtleDecl
   }
 }
 
+export class TurtleDecl extends TurtleDeclRoot {
+  elementType = 'turtleDecl';
+}
+
 export class NestRefinement
-  extends TurtleDecl
+  extends TurtleDeclRoot
   implements QueryPropertyInterface
 {
   elementType = 'nestRefinement';
@@ -154,7 +220,7 @@ export class NestRefinement
 }
 
 export class NestDefinition
-  extends TurtleDecl
+  extends TurtleDeclRoot
   implements QueryPropertyInterface
 {
   elementType = 'nestDefinition';
@@ -223,6 +289,7 @@ import {
   TypeDesc,
 } from '../../../model';
 import {FieldReference} from '../query-items/field-references';
+import {QOPDesc} from './qop-desc';
 
 export class NestReference
   extends FieldReference
