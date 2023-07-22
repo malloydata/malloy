@@ -188,7 +188,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
       .loadQuery(
         `
         source: popular_names is from(models->{
-          where: model_count > 100
+          having: model_count > 100
           group_by: manufacturer
           aggregate: model_count
         })
@@ -208,7 +208,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
       .loadQuery(
         `
         source: popular_names is from(models->{
-          where: model_count > 100
+          having: model_count > 100
           group_by: manufacturer
           aggregate: model_count
           nest: l is {
