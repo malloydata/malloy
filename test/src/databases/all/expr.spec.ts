@@ -22,7 +22,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import * as malloy from '@malloydata/malloy';
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
 import {databasesFromEnvironmentOr, mkSqlEqWith} from '../../util';
@@ -30,7 +29,7 @@ import {databasesFromEnvironmentOr, mkSqlEqWith} from '../../util';
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 const expressionModelText = `
-source: aircraft_models is table('malloytest.aircraft_models'){
+source: aircraft_models is table('malloytest.aircraft_models') extend {
   primary_key: aircraft_model_code
   measure:
     airport_count is count(*),
@@ -38,11 +37,11 @@ source: aircraft_models is table('malloytest.aircraft_models'){
     total_seats is sum(seats),
     boeing_seats is sum(seats) {? manufacturer ? 'BOEING'},
     percent_boeing is boeing_seats / total_seats * 100,
-    percent_boeing_floor is FLOOR(boeing_seats / total_seats * 100),
-  dimension: seats_bucketed is FLOOR(seats/20)*20.0
+    percent_boeing_floor is floor(boeing_seats / total_seats * 100),
+  dimension: seats_bucketed is floor(seats/20)*20.0
 }
 
-source: aircraft is table('malloytest.aircraft'){
+source: aircraft is table('malloytest.aircraft') extend {
   primary_key: tail_num
   join_one: aircraft_models with aircraft_model_code
   measure: aircraft_count is count(*)
@@ -54,14 +53,8 @@ source: aircraft is table('malloytest.aircraft'){
 }
 `;
 
-const expressionModels: Array<
-  [name: string, expressionModel: malloy.ModelMaterializer]
-> = [];
-runtimes.runtimeMap.forEach((runtime, databaseName) =>
-  expressionModels.push([databaseName, runtime.loadModel(expressionModelText)])
-);
-
-describe.each(expressionModels)('%s', (databaseName, expressionModel) => {
+describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
+  const expressionModel = runtime.loadModel(expressionModelText);
   // basic calculations for sum, filtered sum, without a join.
   it('basic calculations', async () => {
     const result = await expressionModel
@@ -230,23 +223,21 @@ describe.each(expressionModels)('%s', (databaseName, expressionModel) => {
 
   // bigquery doesn't like to partition by floats,
   it('model: having float group by partition', async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
+    await expect(runtime).queryMatches(
+      `${expressionModelText}
       query: aircraft_models->{
         order_by: 1
-        having: seats_bucketed > 0 and aircraft_model_count > 400
+        where: seats_bucketed > 0
+        having: aircraft_model_count > 400
         group_by: seats_bucketed
         aggregate: aircraft_model_count
         nest: foo is {
           group_by: engines
           aggregate: aircraft_model_count
         }
-      }
-      `
-      )
-      .run();
-    expect(result.data.path(0, 'aircraft_model_count').value).toBe(448);
+      }`,
+      {aircraft_model_count: 448}
+    );
   });
 
   it('model: aggregate functions distinct min max', async () => {
