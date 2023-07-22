@@ -29,10 +29,7 @@ import {databasesFromEnvironmentOr} from '../../util';
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
-const runtimes = new RuntimeList(
-  databasesFromEnvironmentOr(['duckdb'] || allDatabases)
-);
-// const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 const splitFunction: Record<string, string> = {
   'bigquery': 'split',

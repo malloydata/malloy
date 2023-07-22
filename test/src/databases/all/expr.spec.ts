@@ -235,7 +235,7 @@ describe.each(expressionModels)('%s', (databaseName, expressionModel) => {
         `
       query: aircraft_models->{
         order_by: 1
-        having: seats_bucketed > 0, aircraft_model_count > 400
+        having: seats_bucketed > 0 and aircraft_model_count > 400
         group_by: seats_bucketed
         aggregate: aircraft_model_count
         nest: foo is {
