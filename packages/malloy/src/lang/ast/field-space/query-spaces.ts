@@ -34,6 +34,7 @@ import {LookupResult} from '../types/lookup-result';
 import {ColumnSpaceField} from './column-space-field';
 import {StructSpaceField} from './static-space';
 import {QueryInputSpace} from './query-input-space';
+import {SpaceEntry} from '../types/space-entry';
 
 /**
  * The output space of a query operation, it is not named "QueryOutputSpace"
@@ -94,6 +95,12 @@ export abstract class QuerySpace
         super.pushFields(f);
       }
     }
+  }
+
+  setEntry(name: string, value: SpaceEntry): void {
+    super.setEntry(name, value);
+    // Everything in this namespace is and output field
+    value.outputField = true;
   }
 
   protected addWild(wild: WildcardFieldReference): void {
@@ -309,7 +316,6 @@ export abstract class QuerySpace
   lookup(path: FieldName[]): LookupResult {
     const result = super.lookup(path);
     if (result.found) {
-      result.found.outputField = true;
       return result;
     }
     return this.exprSpace.lookup(path);
