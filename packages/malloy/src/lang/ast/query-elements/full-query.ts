@@ -83,18 +83,21 @@ export class FullQuery extends TurtleHeadedPipe {
         structDef
       );
       destQuery.location = location;
-      destQuery.pipeline = pipeline;
+      let walkPipe = pipeline;
       if (this.withRefinement) {
         const refined = this.refinePipeline(pipeFS, {pipeline}).pipeline;
         // TODO there is an issue with losing the name of the turtle
         // which we need to fix, possibly adding a "name:" field to a segment
         // TODO there was mention of promoting filters to the query
         destQuery.pipeline = refined;
+        walkPipe = refined;
+      } else {
+        destQuery.pipeHead = {name};
       }
       if (annotation) {
         destQuery.annotation = annotation;
       }
-      const pipeOutput = this.getFinalStruct(structDef, destQuery.pipeline);
+      const pipeOutput = this.getFinalStruct(structDef, walkPipe);
       pipeFS = new StaticSpace(pipeOutput);
     }
     const appended = this.appendOps(pipeFS, destQuery.pipeline);
