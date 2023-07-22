@@ -64,7 +64,9 @@ export abstract class FieldReference
     if (fs.entry(refName)) {
       this.log(`Output already has a field named '${refName}'`);
     } else {
-      fs.newEntry(refName, this, new ReferenceField(this, fs));
+      // In a QuerySpace, this needs to be able to find the thing to which it refers
+      const fromFS = fs.isQueryFieldSpace() ? fs.inputSpace() : fs;
+      fs.newEntry(refName, this, new ReferenceField(this, fromFS));
     }
   }
 

@@ -49,7 +49,7 @@ export class IndexExecutor implements Executor {
 
   constructor(inputFS: FieldSpace, refineThis: PipeSegment | undefined) {
     this.resultFS = new IndexFieldSpace(inputFS, refineThis);
-    this.inputFS = this.resultFS.exprSpace;
+    this.inputFS = this.resultFS.inputSpace();
   }
 
   execute(qp: QueryProperty): void {

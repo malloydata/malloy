@@ -36,7 +36,7 @@ export class IndexFieldSpace extends QuerySpace {
   pushFields(...defs: MalloyElement[]) {
     for (const indexField of defs) {
       if (indexField instanceof FieldReference) {
-        if (indexField.getField(this.exprSpace).found) {
+        if (indexField.getField(this.inputSpace()).found) {
           this.fieldList.add(indexField.refString);
         }
         // mtoy TODO else error ???

@@ -118,7 +118,6 @@ abstract class TurtleDeclRoot
       pipeline = [
         this.withRefinement.getOp(fs, this.nestedInQuerySpace).segment,
       ];
-      this.withRefinement = undefined;
     } else {
       const headRefinements = new QOPDesc([]);
       const tailRefinements = new QOPDesc([]);
@@ -158,7 +157,6 @@ abstract class TurtleDeclRoot
         ).segment;
       }
     }
-    this.withRefinement = undefined;
     return {pipeline};
   }
 
@@ -211,7 +209,7 @@ export class NestRefinement
   makeEntry(fs: DynamicSpace) {
     if (fs instanceof QuerySpace) {
       const qf = new QueryFieldAST(fs, this, this.name);
-      qf.nestParent = fs.exprSpace;
+      qf.nestParent = fs.inputSpace();
       fs.newEntry(this.name, this, qf);
       return;
     }
@@ -238,7 +236,7 @@ export class NestDefinition
   makeEntry(fs: DynamicSpace) {
     if (fs instanceof QuerySpace) {
       const qf = new QueryFieldAST(fs, this, this.name);
-      qf.nestParent = fs.exprSpace;
+      qf.nestParent = fs.inputSpace();
       fs.newEntry(this.name, this, qf);
       return;
     }

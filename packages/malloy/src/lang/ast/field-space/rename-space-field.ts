@@ -50,7 +50,7 @@ export class RenameSpaceField extends SpaceField {
     };
   }
 
-  typeDesc(): TypeDesc {
+  internalTypeDesc(): TypeDesc {
     return this.otherField.typeDesc();
   }
 }

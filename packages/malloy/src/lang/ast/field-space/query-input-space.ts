@@ -9,10 +9,10 @@
 import {FieldDeclaration} from '../query-items/field-declaration';
 import {Join} from '../query-properties/joins';
 import {SourceSpec, SpaceSeed} from '../space-seed';
-import {FieldSpace} from '../types/field-space';
+import {FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {RefinedSpace} from './refined-space';
 
-export class QueryInputSpace extends RefinedSpace {
+export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
   nestParent?: QueryInputSpace;
   extendList: string[] = [];
 
@@ -42,5 +42,9 @@ export class QueryInputSpace extends RefinedSpace {
 
   outputSpace() {
     return this.queryOutput;
+  }
+
+  inputSpace() {
+    return this;
   }
 }

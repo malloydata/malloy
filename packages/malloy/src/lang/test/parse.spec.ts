@@ -3822,3 +3822,17 @@ describe('miscellaneous m4 warnings', () => {
     );
   });
 });
+
+test('this thang', () => {
+  expect(`
+  source: foo is a extend {
+    query: hasp1 is {
+      extend: { dimension: p1 is ai + 1 }
+      project: p1
+    }
+    // query: hasp2 is hasp1 refine {
+    //   extend: { dimension: p2 is p1 + 2 }
+    //   project: p2
+    // }
+  }`).toTranslate();
+});

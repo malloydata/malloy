@@ -261,6 +261,13 @@ export class DefSpace implements FieldSpace {
     }
     throw new Error('Not a query field space');
   }
+
+  inputSpace() {
+    if (this.realFS.isQueryFieldSpace()) {
+      return this.realFS.inputSpace();
+    }
+    throw new Error('Not a query field space');
+  }
 }
 
 export class FieldDefinitionValue extends SpaceField {
@@ -296,7 +303,7 @@ export class FieldDefinitionValue extends SpaceField {
   // really know what type we have. However since we have the FieldSpace,
   // we can compile the expression to find out, this might result in
   // some expressions being compiled twice.
-  typeDesc(): TypeDesc {
+  internalTypeDesc(): TypeDesc {
     const typeFrom = this.qfd || this.fieldDef();
     return this.fieldTypeFromFieldDef(typeFrom);
   }

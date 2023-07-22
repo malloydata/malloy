@@ -51,7 +51,7 @@ export class ReduceExecutor implements Executor {
 
   constructor(baseFS: FieldSpace, refineThis: PipeSegment | undefined) {
     this.resultFS = this.getResultSpace(baseFS, refineThis);
-    this.inputFS = this.resultFS.exprSpace;
+    this.inputFS = this.resultFS.inputSpace();
     this.type = 'grouping';
   }
 

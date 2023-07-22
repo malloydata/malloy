@@ -26,8 +26,20 @@ import {DynamicSpace} from '../field-space/dynamic-space';
 import {MalloyElement} from './malloy-element';
 
 export abstract class SpaceEntry {
-  abstract typeDesc(): TypeDesc;
+  abstract internalTypeDesc(): TypeDesc;
   abstract refType: 'field' | 'parameter';
+  outputField = false;
+
+  typeDesc(): TypeDesc {
+    const type = this.internalTypeDesc();
+    if (this.outputField) {
+      return {
+        ...type,
+        evalSpace: type.evalSpace === 'constant' ? 'constant' : 'output',
+      };
+    }
+    return type;
+  }
 }
 
 export interface MakeEntry {

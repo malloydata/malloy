@@ -36,7 +36,7 @@ export abstract class StructSpaceFieldBase extends SpaceField {
     return this.sourceDef;
   }
 
-  typeDesc(): TypeDesc {
+  internalTypeDesc(): TypeDesc {
     return {dataType: 'struct', expressionType: 'scalar', evalSpace: 'input'};
   }
 }

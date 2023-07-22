@@ -23,7 +23,7 @@
 
 import * as model from '../../../model/malloy_types';
 import {mergeFields, nameOf} from '../../field-utils';
-import {FieldName, FieldSpace} from '../types/field-space';
+import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {SpaceField} from '../types/space-field';
 
@@ -31,7 +31,6 @@ import {WildcardFieldReference} from '../query-items/field-references';
 import {WildSpaceField} from './wild-space-field';
 import {RefinedSpace} from './refined-space';
 import {LookupResult} from '../types/lookup-result';
-import {SpaceEntry} from '../types/space-entry';
 import {ColumnSpaceField} from './column-space-field';
 import {StructSpaceField} from './static-space';
 import {QueryInputSpace} from './query-input-space';
@@ -42,8 +41,11 @@ import {QueryInputSpace} from './query-input-space';
  * with the query. The QueryInputSpace is created and paired when a
  * QuerySpace is created.
  */
-export abstract class QuerySpace extends RefinedSpace {
-  readonly exprSpace: QueryInputSpace;
+export abstract class QuerySpace
+  extends RefinedSpace
+  implements QueryFieldSpace
+{
+  private exprSpace: QueryInputSpace;
   astEl?: MalloyElement | undefined;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
   constructor(
@@ -307,10 +309,8 @@ export abstract class QuerySpace extends RefinedSpace {
   lookup(path: FieldName[]): LookupResult {
     const result = super.lookup(path);
     if (result.found) {
-      return {
-        error: undefined,
-        found: new OutputSpaceEntry(result.found),
-      };
+      result.found.outputField = true;
+      return result;
     }
     return this.exprSpace.lookup(path);
   }
@@ -322,24 +322,12 @@ export abstract class QuerySpace extends RefinedSpace {
   outputSpace() {
     return this;
   }
+
+  inputSpace() {
+    return this.exprSpace;
+  }
 }
 
 export class ReduceFieldSpace extends QuerySpace {
   readonly segmentType = 'reduce';
-}
-
-export class OutputSpaceEntry extends SpaceEntry {
-  refType: 'field' | 'parameter';
-  constructor(readonly inputSpaceEntry: SpaceEntry) {
-    super();
-    this.refType = inputSpaceEntry.refType;
-  }
-
-  typeDesc(): model.TypeDesc {
-    const type = this.inputSpaceEntry.typeDesc();
-    return {
-      ...type,
-      evalSpace: type.evalSpace === 'constant' ? 'constant' : 'output',
-    };
-  }
 }

@@ -35,12 +35,25 @@ import {FieldSpace} from '../types/field-space';
 import {SpaceEntry} from '../types/space-entry';
 import {SpaceField} from '../types/space-field';
 
+/*
+  the problem is hard to understand ... in the old days we would just push a reference
+  onto the output field list, in the new days we wrap this entry in an OutputSpaceEntry
+*/
+
 export class ReferenceField extends SpaceField {
-  referenceTo: SpaceEntry | undefined;
+  private didLookup = false;
+  _referenceTo: SpaceEntry | undefined;
   private queryFieldDef?: QueryFieldDef;
-  constructor(readonly fieldRef: FieldReference, inFS: FieldSpace) {
+  constructor(readonly fieldRef: FieldReference, readonly inFS: FieldSpace) {
     super();
-    this.referenceTo = inFS.lookup(fieldRef.list).found;
+  }
+
+  get referenceTo(): SpaceEntry | undefined {
+    if (!this.didLookup) {
+      this._referenceTo = this.inFS.lookup(this.fieldRef.list).found;
+      this.didLookup = true;
+    }
+    return this._referenceTo;
   }
 
   getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined {
@@ -54,12 +67,12 @@ export class ReferenceField extends SpaceField {
     return this.queryFieldDef;
   }
 
-  typeDesc(): TypeDesc {
+  internalTypeDesc(): TypeDesc {
     // Remember the actual type of the field that was looked up so it can be used for
     // type checking.
     const refTo = this.referenceTo;
     if (refTo) {
-      return refTo.typeDesc();
+      return refTo.internalTypeDesc();
     }
     return {dataType: 'error', expressionType: 'scalar', evalSpace: 'input'};
   }
