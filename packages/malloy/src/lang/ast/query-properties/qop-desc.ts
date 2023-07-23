@@ -76,7 +76,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
     this.refineThis = existing;
   }
 
-  private getExecutor(baseFS: FieldSpace): QueryBuilder {
+  private getBuilder(baseFS: FieldSpace): QueryBuilder {
     switch (this.computeType()) {
       case QueryClass.Grouping:
         return new ReduceBuilder(baseFS, this.refineThis);
@@ -91,15 +91,15 @@ export class QOPDesc extends ListOf<QueryProperty> {
     inputFS: FieldSpace,
     headFieldSpace: QueryInputSpace | undefined
   ): OpDesc {
-    const qex = this.getExecutor(inputFS);
+    const build = this.getBuilder(inputFS);
     if (headFieldSpace) {
-      qex.inputFS.nestParent = headFieldSpace;
+      build.inputFS.nestParent = headFieldSpace;
     }
-    qex.resultFS.astEl = this;
+    build.resultFS.astEl = this;
     for (const qp of this.list) {
-      qex.execute(qp);
+      build.execute(qp);
     }
-    const segment = qex.finalize(this.refineThis);
+    const segment = build.finalize(this.refineThis);
     return {
       segment,
       outputSpace: () =>
