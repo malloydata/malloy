@@ -118,7 +118,9 @@ export abstract class PipelineDesc extends MalloyElement {
             headRefinements.push(qop);
             break;
           case LegalRefinementStage.Single:
-            qop.log('Illegal in refinment of a query with more than one stage');
+            qop.log(
+              'Illegal in refinement of a query with more than one stage'
+            );
             break;
           case LegalRefinementStage.Tail:
             tailRefinements.push(qop);

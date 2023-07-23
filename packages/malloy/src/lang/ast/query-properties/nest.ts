@@ -22,7 +22,6 @@
  */
 
 import * as model from '../../../model/malloy_types';
-
 import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
@@ -93,71 +92,6 @@ abstract class TurtleDeclRoot
     const appended = this.appendOps(pipeOutFS, modelPipe.pipeline);
     modelPipe.pipeline = appended.opList;
     return modelPipe;
-  }
-
-  protected refineTurtleHead(
-    fs: FieldSpace,
-    modelPipe: model.Pipeline
-  ): model.Pipeline {
-    if (!this.withRefinement) {
-      return modelPipe;
-    }
-    let pipeline: model.PipeSegment[] = [];
-    if (modelPipe.pipeHead) {
-      const {pipeline: turtlePipe} = this.expandTurtle(
-        modelPipe.pipeHead.name,
-        fs.structDef()
-      );
-      pipeline.push(...turtlePipe);
-    }
-    pipeline.push(...modelPipe.pipeline);
-    const firstSeg = pipeline[0];
-    if (pipeline.length === 1) {
-      // refinement is simple, everything must go
-      this.withRefinement.refineFrom(firstSeg);
-      pipeline = [
-        this.withRefinement.getOp(fs, this.nestedInQuerySpace).segment,
-      ];
-    } else {
-      const headRefinements = new QOPDesc([]);
-      const tailRefinements = new QOPDesc([]);
-      for (const qop of this.withRefinement.list) {
-        switch (qop.queryRefinementStage) {
-          case LegalRefinementStage.Head:
-            headRefinements.push(qop);
-            break;
-          case LegalRefinementStage.Single:
-            qop.log('Illegal in refinment of a query with more than one stage');
-            break;
-          case LegalRefinementStage.Tail:
-            tailRefinements.push(qop);
-            break;
-          default:
-            qop.log('Illegal query refinement');
-        }
-      }
-      if (headRefinements.notEmpty()) {
-        this.has({headRefinements});
-        if (firstSeg) {
-          headRefinements.refineFrom(firstSeg);
-        }
-        pipeline[0] = headRefinements.getOp(
-          fs,
-          this.nestedInQuerySpace
-        ).segment;
-      }
-      if (tailRefinements.notEmpty()) {
-        const last = pipeline.length - 1;
-        this.has({tailRefinements});
-        const finalIn = this.getFinalStruct(fs.structDef(), pipeline.slice(-1));
-        tailRefinements.refineFrom(pipeline[last]);
-        pipeline[last] = tailRefinements.getOp(
-          new StaticSpace(finalIn),
-          this.nestedInQuerySpace
-        ).segment;
-      }
-    }
-    return {pipeline};
   }
 
   getFieldDef(

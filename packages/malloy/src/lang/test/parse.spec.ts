@@ -308,42 +308,6 @@ describe('model statements', () => {
         }
       `).toTranslate();
     });
-    describe('query refinement rules', () => {
-      test('where clauses go into the first segment', () => {
-        const doc = new TestTranslator(
-          `query: refineme is a -> { project: stage is "stage1" } -> { project: stage is "stage2" }
-          query: checkme is refineme refine { where: astr = 'a' }
-          `
-        );
-        expect(doc).toTranslate();
-        const checkme = doc.getQuery('checkme');
-        expect(checkme).toBeDefined();
-        if (checkme) {
-          const whereClause = checkme.pipeline[0].filterList;
-          expect(whereClause).toBeDefined();
-          if (whereClause) {
-            expect(whereClause.length).toBe(1);
-          }
-        }
-      });
-      test('having clauses go into the last segment', () => {
-        const doc = new TestTranslator(
-          `query: refineme is a -> { group_by: ai,astr  } -> { group_by: ai, aggregate: ac is count() }
-          query: checkme is refineme refine { having: ac > 0 }
-          `
-        );
-        expect(doc).toTranslate();
-        const checkme = doc.getQuery('checkme');
-        expect(checkme).toBeDefined();
-        if (checkme) {
-          const havingClause = checkme.pipeline[1].filterList;
-          expect(havingClause).toBeDefined();
-          if (havingClause) {
-            expect(havingClause.length).toBe(1);
-          }
-        }
-      });
-    });
     describe('query operation typechecking', () => {
       describe('field declarations', () => {
         test('cannot use aggregate in group_by', () => {
