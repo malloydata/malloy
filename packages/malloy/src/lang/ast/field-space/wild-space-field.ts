@@ -31,7 +31,7 @@ export class WildSpaceField extends SpaceField {
     super();
   }
 
-  internalTypeDesc(): TypeDesc {
+  describeType(): TypeDesc {
     throw new Error('should never ask a wild field for its type');
   }
 
