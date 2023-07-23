@@ -35,7 +35,7 @@ export class ExtendBlock
 {
   elementType = 'extendBlock';
   forceQueryClass = undefined;
-  queryRefinementStage = LegalRefinementStage.Tail;
+  queryRefinementStage = LegalRefinementStage.Single;
 
   queryExecute(executeFor: QueryBuilder): void {
     for (const block of this.list) {
