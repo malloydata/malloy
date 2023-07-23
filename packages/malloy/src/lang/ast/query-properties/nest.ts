@@ -38,6 +38,13 @@ import {QueryBuilder} from '../types/query-builder';
 import {MakeEntry} from '../types/space-entry';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {QuerySpace} from '../field-space/query-spaces';
+import {
+  expressionIsAggregate,
+  expressionIsAnalytic,
+  expressionIsScalar,
+  TypeDesc,
+} from '../../../model';
+import {FieldReference} from '../query-items/field-references';
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
@@ -213,15 +220,6 @@ export class QueryFieldAST extends QueryField {
     return def;
   }
 }
-
-import {
-  expressionIsAggregate,
-  expressionIsAnalytic,
-  expressionIsScalar,
-  TypeDesc,
-} from '../../../model';
-import {FieldReference} from '../query-items/field-references';
-import {QOPDesc} from './qop-desc';
 
 export class NestReference
   extends FieldReference
