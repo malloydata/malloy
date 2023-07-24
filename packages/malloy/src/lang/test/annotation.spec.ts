@@ -21,8 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TestTranslator, getFieldDef} from './test-translator';
+import {TestTranslator, getFieldDef, model} from './test-translator';
 import './parse-expects';
+import {Tags} from '../../tags';
 
 const defaultTags = {
   blockNotes: ['# blockNote\n'],
@@ -198,6 +199,18 @@ describe('document annotation', () => {
     const note_a = m.getQuery(0);
     expect(note_a?.annotation).toBeDefined();
     expect(note_a?.annotation).toEqual({inherits: defaultTags});
+  });
+  test('strings in property annotations', () => {
+    const m = model`## stmt="This is the \\"new\\" way to write a string"`;
+    expect(m).toTranslate();
+    const doc = m.translator?.translate()?.translated?.modelDef;
+    expect(doc).toBeDefined();
+    if (doc) {
+      const tags = new Tags(doc.annotation).getMalloyTags();
+      expect(tags.properties).toEqual({
+        stmt: 'This is the "new" way to write a string',
+      });
+    }
   });
   test('model annotations', () => {
     const m = new TestTranslator(`
