@@ -22,38 +22,18 @@
  */
 
 import {
-  expressionIsAggregate,
-  expressionIsAnalytic,
-  expressionIsScalar,
-  TypeDesc,
-} from '../../../model';
-import {FieldReference} from '../query-items/field-references';
-import {FieldName} from '../types/field-space';
+  CodePointCharStream,
+  CommonTokenStream,
+  ParserRuleContext,
+} from 'antlr4ts';
+import {ParseTree} from 'antlr4ts/tree';
+import {DocumentRange} from '../model/malloy_types';
 
-export class NestReference extends FieldReference {
-  elementType = 'nestReference';
-  constructor(readonly name: FieldName) {
-    super([name]);
-  }
-  typecheck(type: TypeDesc) {
-    if (type.dataType !== 'turtle') {
-      let useInstead: string;
-      let kind: string;
-      if (expressionIsAnalytic(type.expressionType)) {
-        useInstead = 'a calculate';
-        kind = 'an analytic';
-      } else if (expressionIsScalar(type.expressionType)) {
-        useInstead = 'a group_by or project';
-        kind = 'a scalar';
-      } else if (expressionIsAggregate(type.expressionType)) {
-        useInstead = 'an aggregate';
-        kind = 'an aggregate';
-      } else {
-        throw new Error(`Unexpected expression type ${type} not handled here`);
-      }
-      this.log(
-        `Cannot use ${kind} field in a nest operation, did you mean to use ${useInstead} operation instead?`
-      );
-    }
-  }
+export interface MalloyParseInfo {
+  root: ParseTree;
+  tokenStream: CommonTokenStream;
+  sourceStream: CodePointCharStream;
+  sourceURL: string;
+  rangeFromContext: (pcx: ParserRuleContext) => DocumentRange;
+  malloyVersion: string;
 }

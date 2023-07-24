@@ -23,7 +23,17 @@
 
 import {DefinitionList} from '../types/definition-list';
 import {QueryItem} from '../types/query-item';
+import {
+  LegalRefinementStage,
+  QueryClass,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
 
-export class Aggregate extends DefinitionList<QueryItem> {
+export class Aggregate
+  extends DefinitionList<QueryItem>
+  implements QueryPropertyInterface
+{
   elementType = 'aggregateList';
+  readonly queryRefinementStage = LegalRefinementStage.Single;
+  readonly forceQueryClass = QueryClass.Grouping;
 }

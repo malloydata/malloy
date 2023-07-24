@@ -22,8 +22,37 @@
  */
 
 import {TypeDesc} from '../../../model';
+import {DynamicSpace} from '../field-space/dynamic-space';
+import {MalloyElement} from './malloy-element';
 
 export abstract class SpaceEntry {
-  abstract typeDesc(): TypeDesc;
+  /**
+   * Once upon a time this was called `typeDesc()` but now that is implemented here
+   * as a wrapper which knows about output spaces. Individual entries should describe
+   * themselves with describeType() and the typeDesc() here will call that.
+   */
+  abstract describeType(): TypeDesc;
   abstract refType: 'field' | 'parameter';
+  outputField = false;
+
+  typeDesc(): TypeDesc {
+    const type = this.describeType();
+    if (this.outputField) {
+      return {
+        ...type,
+        evalSpace: type.evalSpace === 'constant' ? 'constant' : 'output',
+      };
+    }
+    return type;
+  }
+}
+
+export interface MakeEntry {
+  makeEntry: (fs: DynamicSpace) => void;
+}
+
+export function canMakeEntry<T extends MalloyElement>(
+  me: T
+): me is T & MakeEntry {
+  return 'makeEntry' in me;
 }

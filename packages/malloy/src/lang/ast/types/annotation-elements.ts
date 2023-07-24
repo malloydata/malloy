@@ -21,33 +21,42 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ANTLRErrorListener, Token} from 'antlr4ts';
-import {LogMessage, MessageLogger} from './parse-log';
-import {MalloyTranslation} from './parse-malloy';
+import {MalloyTagProperties, parseTagProperties} from '../../../tags';
+import {Document, DocStatement, MalloyElement} from './malloy-element';
+import {QueryPropertyInterface} from './query-property-interface';
 
-export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
-  constructor(
-    readonly translator: MalloyTranslation,
-    readonly messages: MessageLogger
-  ) {}
+export class ObjectAnnotation
+  extends MalloyElement
+  implements QueryPropertyInterface
+{
+  elementType = 'annotation';
+  forceQueryClass = undefined;
+  queryRefinementStage = undefined;
 
-  syntaxError(
-    recognizer: unknown,
-    offendingSymbol: Token | undefined,
-    line: number,
-    charPositionInLine: number,
-    msg: string,
-    _e: unknown
-  ): void {
-    const errAt = {line: line - 1, character: charPositionInLine};
-    const range = offendingSymbol
-      ? this.translator.rangeFromToken(offendingSymbol)
-      : {start: errAt, end: errAt};
-    const error: LogMessage = {
-      message: msg,
-      at: {url: this.translator.sourceURL, range},
-      severity: 'error',
-    };
-    this.messages.log(error);
+  constructor(readonly notes: string[]) {
+    super();
+  }
+
+  queryExecute() {}
+}
+
+export class ModelAnnotation extends ObjectAnnotation implements DocStatement {
+  elementType = 'modelAnnotation';
+
+  getCompilerFlags(existing: MalloyTagProperties): MalloyTagProperties {
+    let flags = {...existing};
+    for (const note of this.notes) {
+      if (note.startsWith('##! ')) {
+        const parsed = parseTagProperties(note.slice(4), flags);
+        if (parsed) {
+          flags = parsed;
+        }
+      }
+    }
+    return flags;
+  }
+
+  execute(doc: Document): void {
+    doc.notes = doc.notes.concat(this.notes);
   }
 }

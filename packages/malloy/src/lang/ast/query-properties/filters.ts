@@ -30,6 +30,10 @@ import {compressExpr} from '../expressions/utils';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {ListOf, MalloyElement} from '../types/malloy-element';
+import {
+  LegalRefinementStage,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
 
 export class FilterElement extends MalloyElement {
   elementType = 'filterElement';
@@ -56,34 +60,44 @@ export class FilterElement extends MalloyElement {
   }
 }
 
-export class Filter extends ListOf<FilterElement> {
+export class Filter
+  extends ListOf<FilterElement>
+  implements QueryPropertyInterface
+{
   elementType = 'filter';
-  // TODO(maden): Check this field usage/need
-  private readonly havingClause?: boolean;
+  havingClause?: boolean;
+  forceQueryClass = undefined;
+  queryRefinementStage = LegalRefinementStage.Head;
 
   set having(isHaving: boolean) {
     this.elementType = isHaving ? 'having' : 'where';
+    this.havingClause = isHaving;
+    this.queryRefinementStage = isHaving
+      ? LegalRefinementStage.Tail
+      : LegalRefinementStage.Head;
   }
 
   getFilterList(fs: FieldSpace): FilterExpression[] {
     const checked: FilterExpression[] = [];
     for (const oneElement of this.list) {
       const fExpr = oneElement.filterExpression(fs);
+
+      // mtoy todo is having we never set then queryRefinementStage might be wrong
+      // ... calculations and aggregations must go last
+
       // Aggregates are ALSO checked at SQL generation time, but checking
       // here allows better reflection of errors back to user.
       if (this.havingClause !== undefined) {
+        const needHaving = expressionIsCalculation(fExpr.expressionType);
         if (this.havingClause) {
-          // TODO I don't understand how this is working currently? This seems to imply
-          // that a calculation is NOT allowed, but it is...? It appears maybe this code
-          // just isn't being called.
-          if (expressionIsCalculation(fExpr.expressionType)) {
+          if (!needHaving) {
             oneElement.log(
               'Aggregate or analytic expression expected in HAVING filter'
             );
             continue;
           }
         } else {
-          if (expressionIsCalculation(fExpr.expressionType)) {
+          if (needHaving) {
             oneElement.log(
               'Aggregate or analytic expressions not allowed in WHERE'
             );

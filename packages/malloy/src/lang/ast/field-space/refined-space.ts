@@ -23,16 +23,9 @@
 
 import {StructDef} from '../../../model/malloy_types';
 import {FieldListEdit} from '../source-properties/field-list-edit';
-import {RenameField} from '../source-properties/renames';
-import {Join} from '../query-properties/joins';
 import {DynamicSpace} from './dynamic-space';
-import {QueryFieldAST, TurtleDecl} from '../query-properties/nest';
-import {FieldDefinitionValue} from './field-definition-value';
-import {JoinSpaceField} from './join-space-field';
-import {RenameSpaceField} from './rename-space-field';
-import {FieldDeclaration} from '../query-items/field-declaration';
-import {SpaceField} from '../types/space-field';
-import {ExploreField} from '../types/explore-field';
+import {canMakeEntry} from '../types/space-entry';
+import {MalloyElement} from '../types/malloy-element';
 
 export class RefinedSpace extends DynamicSpace {
   /**
@@ -57,42 +50,13 @@ export class RefinedSpace extends DynamicSpace {
     return edited;
   }
 
-  addField(...defs: ExploreField[]): void {
-    for (const def of defs) {
-      // TODO express the "three fields kinds" in a typesafe way
-      // one of three kinds of fields are legal in an explore: expressions ...
-      const elseLog = def.log;
-      const elseType = def.elementType;
-      if (def instanceof FieldDeclaration) {
-        const exprField = new FieldDefinitionValue(this, def);
-        this.newEntry(exprField.name, def, exprField);
-      } else if (def instanceof TurtleDecl) {
-        const name = def.name;
-        this.newEntry(name, def, new QueryFieldAST(this, def, name));
-      } else if (def instanceof RenameField) {
-        if (def.oldName.refString === def.newName) {
-          def.log("Can't rename field to itself");
-          continue;
-        }
-        const oldValue = def.oldName.getField(this);
-        if (oldValue.found) {
-          if (oldValue.found instanceof SpaceField) {
-            this.setEntry(
-              def.newName,
-              new RenameSpaceField(oldValue.found, def.newName, def.location)
-            );
-            this.dropEntry(def.oldName.refString);
-          } else {
-            def.log(`'${def.oldName}' cannot be renamed`);
-          }
-        } else {
-          def.log(`Can't rename '${def.oldName}', no such field`);
-        }
-      } else if (def instanceof Join) {
-        this.newEntry(def.name.refString, def, new JoinSpaceField(this, def));
+  pushFields(...defs: MalloyElement[]): void {
+    for (const me of defs) {
+      if (canMakeEntry(me)) {
+        me.makeEntry(this);
       } else {
-        elseLog(
-          `Internal error: Expected expression, query, or rename, got '${elseType}'`
+        me.log(
+          `Internal error, ${me.elementType} not expected in this context`
         );
       }
     }
