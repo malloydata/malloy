@@ -21,20 +21,17 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDef, QueryFieldDef, TypeDesc} from '../../../model/malloy_types';
+// eslint-disable-next-line no-restricted-imports
+import {generateHash} from '@malloydata/malloy/src/model/utils';
 
-import {FieldSpace} from '../types/field-space';
-import {SpaceField} from '../types/space-field';
-
-export abstract class QueryField extends SpaceField {
-  constructor(protected inSpace: FieldSpace) {
-    super();
-  }
-
-  abstract getQueryFieldDef(fs: FieldSpace): QueryFieldDef | undefined;
-  abstract fieldDef(): FieldDef;
-
-  describeType(): TypeDesc {
-    return {dataType: 'turtle', expressionType: 'scalar', evalSpace: 'input'};
-  }
-}
+describe('model/utils', () => {
+  it('should generate deterministic hashes', () => {
+    const hash1 = generateHash('test-content');
+    expect(hash1).toEqual('ab17568f-0362-503d-a9c6-76fb0b203636');
+  });
+  it('should generate unique hashes', () => {
+    const hash1 = generateHash('test-content');
+    const hash2 = generateHash('test-content-different');
+    expect(hash1).not.toEqual(hash2);
+  });
+});

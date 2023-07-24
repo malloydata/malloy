@@ -22,12 +22,12 @@
  */
 
 import {PipeSegment} from '../../../model/malloy_types';
-
 import {QueryProperty} from './query-property';
+import {QueryInputSpace} from '../field-space/query-input-space';
+import {QuerySpace} from '../field-space/query-spaces';
 
-import {QueryInputSpace, QuerySpace} from '../field-space/query-spaces';
-
-export interface Executor {
+export interface QueryBuilder {
+  type: 'grouping' | 'index' | 'project';
   inputFS: QueryInputSpace;
   resultFS: QuerySpace;
   execute(qp: QueryProperty): void;

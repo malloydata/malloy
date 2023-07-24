@@ -21,14 +21,38 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {DynamicSpace} from '../field-space/dynamic-space';
+import {RenameSpaceField} from '../field-space/rename-space-field';
 import {FieldName} from '../types/field-space';
 import {ListOf, MalloyElement} from '../types/malloy-element';
+import {MakeEntry} from '../types/space-entry';
+import {SpaceField} from '../types/space-field';
 
-export class RenameField extends MalloyElement {
+export class RenameField extends MalloyElement implements MakeEntry {
   elementType = 'renameField';
   constructor(readonly newName: string, readonly oldName: FieldName) {
     super();
     this.has({oldName: oldName});
+  }
+  makeEntry(fs: DynamicSpace) {
+    if (this.oldName.refString === this.newName) {
+      this.log("Can't rename field to itself");
+      return;
+    }
+    const oldValue = this.oldName.getField(fs);
+    if (oldValue.found) {
+      if (oldValue.found instanceof SpaceField) {
+        fs.renameEntry(
+          this.oldName.refString,
+          this.newName,
+          new RenameSpaceField(oldValue.found, this.newName, this.location)
+        );
+      } else {
+        this.log(`'${this.oldName}' cannot be renamed`);
+      }
+    } else {
+      this.log(`Can't rename '${this.oldName}', no such field`);
+    }
   }
 }
 

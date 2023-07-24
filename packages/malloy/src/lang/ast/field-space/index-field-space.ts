@@ -26,20 +26,26 @@ import {
   FieldReference,
   WildcardFieldReference,
 } from '../query-items/field-references';
+import {MalloyElement} from '../types/malloy-element';
 import {QuerySpace} from './query-spaces';
 
 export class IndexFieldSpace extends QuerySpace {
   readonly segmentType = 'index';
   fieldList = new Set<string>();
 
-  addReference(ref: FieldReference): void {
-    if (ref.getField(this.exprSpace).found) {
-      this.fieldList.add(ref.refString);
+  pushFields(...defs: MalloyElement[]) {
+    for (const indexField of defs) {
+      if (indexField instanceof FieldReference) {
+        if (indexField.getField(this.inputSpace()).found) {
+          this.fieldList.add(indexField.refString);
+        }
+        // mtoy TODO else error ???
+      } else if (indexField instanceof WildcardFieldReference) {
+        this.fieldList.add(indexField.refString);
+      } else {
+        indexField.log('Internal error, not expected in index query');
+      }
     }
-  }
-
-  addWild(wild: WildcardFieldReference): void {
-    this.fieldList.add(wild.refString);
   }
 
   getPipeSegment(refineIndex?: PipeSegment): IndexSegment {

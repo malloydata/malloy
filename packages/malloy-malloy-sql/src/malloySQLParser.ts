@@ -170,7 +170,13 @@ export class MalloySQLParser {
       };
       statementIndex += 1;
 
-      if (parsedStatement.statementType === 'malloy') {
+      if (parsedStatement.statementType === 'markdown') {
+        statements.push({
+          ...base,
+          config,
+          type: MalloySQLStatementType.MARKDOWN,
+        });
+      } else if (parsedStatement.statementType === 'malloy') {
         statements.push({
           ...base,
           config,

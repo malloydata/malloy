@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy",
-  "version": "0.0.57",
+  "version": "0.0.61",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -26,12 +26,11 @@
     "assert": "^2.0.0",
     "lodash": "^4.17.20",
     "luxon": "^1.26.0",
-    "md5": "^2.3.0"
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "@types/lodash": "^4.14.165",
     "@types/luxon": "^1.26.4",
-    "@types/md5": "^2.3.1",
     "antlr4ts-cli": "^0.5.0-alpha.4"
   }
 }

@@ -170,11 +170,11 @@ function tokenize(src: string): string[] {
       continue;
     }
     if (src[0] === '"') {
-      const matchString = src.match(/^"(\\"|[^"])*"/);
+      const matchString = src.match(/^"(\\.|[^"\\])*"/);
       if (!matchString) {
         break;
       }
-      parts.push(matchString[0]);
+      parts.push(matchString[0].replace(/\\/g, ''));
       src = src.slice(matchString[0].length);
       continue;
     }

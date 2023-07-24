@@ -29,19 +29,34 @@ import {
 } from '../../../model/malloy_types';
 import {Source} from '../elements/source';
 import {compressExpr} from '../expressions/utils';
+import {DynamicSpace} from '../field-space/dynamic-space';
+import {JoinSpaceField} from '../field-space/join-space-field';
 import {DefinitionList} from '../types/definition-list';
+import {QueryBuilder} from '../types/query-builder';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
 import {extendNoteMethod, Noteable} from '../types/noteable';
+import {
+  LegalRefinementStage,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
+import {MakeEntry} from '../types/space-entry';
 
-export abstract class Join extends MalloyElement implements Noteable {
+export abstract class Join
+  extends MalloyElement
+  implements Noteable, MakeEntry
+{
   abstract name: ModelEntryReference;
   abstract structDef(): StructDef;
   abstract fixupJoinOn(outer: FieldSpace, inStruct: StructDef): void;
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
   note?: Annotation;
+
+  makeEntry(fs: DynamicSpace) {
+    fs.newEntry(this.name.refString, this, new JoinSpaceField(fs, this));
+  }
 }
 
 export class KeyJoin extends Join {
@@ -165,9 +180,22 @@ export class ExpressionJoin extends Join {
   }
 }
 
-export class Joins extends DefinitionList<Join> {
+// mtoy todo m0 goes away
+export class Joins
+  extends DefinitionList<Join>
+  implements QueryPropertyInterface
+{
   elementType = 'joinList';
+  forceQueryClass = undefined;
+  queryRefinementStage = LegalRefinementStage.Single;
+
   constructor(joins: Join[]) {
     super(joins);
+  }
+
+  queryExecute(executeFor: QueryBuilder) {
+    for (const qel of this.list) {
+      executeFor.inputFS.extendSource(qel);
+    }
   }
 }

@@ -22,8 +22,25 @@
  */
 
 import {DefinitionList} from '../types/definition-list';
+import {QueryBuilder} from '../types/query-builder';
 import {FieldCollectionMember} from '../types/field-collection-member';
+import {
+  LegalRefinementStage,
+  QueryClass,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
 
-export class ProjectStatement extends DefinitionList<FieldCollectionMember> {
+export class ProjectStatement
+  extends DefinitionList<FieldCollectionMember>
+  implements QueryPropertyInterface
+{
   elementType = 'projectStatement';
+  forceQueryClass = QueryClass.Project;
+  queryRefinementStage = LegalRefinementStage.Single;
+
+  queryExecute(executeFor: QueryBuilder) {
+    if (executeFor.type === 'project') {
+      executeFor.resultFS.pushFields(...this.list);
+    }
+  }
 }

@@ -22,8 +22,8 @@
  */
 
 import {
+  ANTLRErrorListener,
   CharStreams,
-  CodePointCharStream,
   CommonTokenStream,
   ParserRuleContext,
   Token,
@@ -45,7 +45,7 @@ import {MalloyLexer} from './lib/Malloy/MalloyLexer';
 import {MalloyParser} from './lib/Malloy/MalloyParser';
 import * as ast from './ast';
 import {MalloyToAST} from './malloy-to-ast';
-import {LogMessage, MessageLog} from './parse-log';
+import {LogMessage, MessageLog, MessageLogger} from './parse-log';
 import {
   findReferences,
   FindReferencesData,
@@ -81,9 +81,9 @@ import {
   TranslateResponse,
   isNeedResponse,
 } from './translate-response';
-import {MalloyParserErrorHandler} from './parse-error-handler';
 import {locationContainsPosition} from './utils';
 import {MalloyTagProperties} from '../tags';
+import {MalloyParseInfo} from './malloy-parse-info';
 
 export type StepResponses =
   | DataRequestResponse
@@ -121,16 +121,8 @@ interface TranslationStep {
   step(that: MalloyTranslation): StepResponses;
 }
 
-export interface MalloyParseRoot {
-  root: ParseTree;
-  tokenStream: CommonTokenStream;
-  sourceStream: CodePointCharStream;
-  subTranslator: MalloyTranslation;
-  malloyVersion: string;
-}
-
 interface ParseData extends ProblemResponse, NeedURLData, FinalResponse {
-  parse: MalloyParseRoot;
+  parse: MalloyParseInfo;
 }
 export type ParseResponse = Partial<ParseData>;
 
@@ -184,7 +176,7 @@ class ParseStep implements TranslationStep {
     const source = srcEnt.value === '' ? '\n' : srcEnt.value;
     this.sourceInfo = this.getSourceInfo(source);
 
-    let parse: MalloyParseRoot | undefined;
+    let parse: MalloyParseInfo | undefined;
     try {
       parse = this.runParser(source, that);
     } catch (parseException) {
@@ -241,7 +233,7 @@ class ParseStep implements TranslationStep {
     return info;
   }
 
-  private runParser(source: string, that: MalloyTranslation): MalloyParseRoot {
+  private runParser(source: string, that: MalloyTranslation): MalloyParseInfo {
     const inputStream = CharStreams.fromString(source);
     const lexer = new HandlesOverpoppingLexer(inputStream);
     const tokenStream = new CommonTokenStream(lexer);
@@ -263,9 +255,10 @@ class ParseStep implements TranslationStep {
       root: parseFunc.call(malloyParser) as ParseTree,
       tokenStream: tokenStream,
       sourceStream: inputStream,
+      sourceURL: that.sourceURL,
+      rangeFromContext: cx => that.rangeFromContext(cx),
       // TODO put the real version here
-      malloyVersion: '?.?.?-????',
-      subTranslator: that,
+      malloyVersion: '0.0.0-m4',
     };
   }
 }
@@ -942,3 +935,30 @@ export interface UpdateData extends URLData, SchemaData, SQLBlockData {
   errors: Partial<ErrorData>;
 }
 export type ParseUpdate = Partial<UpdateData>;
+
+export class MalloyParserErrorHandler implements ANTLRErrorListener<Token> {
+  constructor(
+    readonly translator: MalloyTranslation,
+    readonly messages: MessageLogger
+  ) {}
+
+  syntaxError(
+    recognizer: unknown,
+    offendingSymbol: Token | undefined,
+    line: number,
+    charPositionInLine: number,
+    msg: string,
+    _e: unknown
+  ): void {
+    const errAt = {line: line - 1, character: charPositionInLine};
+    const range = offendingSymbol
+      ? this.translator.rangeFromToken(offendingSymbol)
+      : {start: errAt, end: errAt};
+    const error: LogMessage = {
+      message: msg,
+      at: {url: this.translator.sourceURL, range},
+      severity: 'error',
+    };
+    this.messages.log(error);
+  }
+}

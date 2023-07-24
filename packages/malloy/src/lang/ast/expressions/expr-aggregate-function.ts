@@ -29,7 +29,6 @@ import {
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
-import {OutputSpaceEntry} from '../field-space/query-spaces';
 import {ReferenceField} from '../field-space/reference-field';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 import {FT} from '../fragtype-utils';
@@ -82,11 +81,8 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           };
           // If you reference an output field as the foot, then we need to get the
           // source from that field, rather than using the default source.
-          if (
-            sourceFoot instanceof OutputSpaceEntry &&
-            sourceFoot.inputSpaceEntry instanceof ReferenceField
-          ) {
-            structPath = sourceFoot.inputSpaceEntry.fieldRef.sourceString;
+          if (sourceFoot.outputField && sourceFoot instanceof ReferenceField) {
+            structPath = sourceFoot.fieldRef.sourceString;
           } else {
             structPath = this.source.sourceString;
           }
