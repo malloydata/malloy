@@ -1069,6 +1069,13 @@ export class MalloyToAST
     const topN = this.getNumber(pcx.INTEGER_LITERAL());
     let top: ast.Top | undefined;
     if (byCx) {
+      if (this.m4WarningsEnabled()) {
+        this.contextError(
+          byCx,
+          'by clause of top statement unupported. Use order_by instead',
+          'warn'
+        );
+      }
       const nameCx = byCx.fieldName();
       if (nameCx) {
         const name = this.getFieldName(nameCx);
