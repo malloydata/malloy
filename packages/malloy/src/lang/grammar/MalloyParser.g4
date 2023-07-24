@@ -179,7 +179,7 @@ queryProperties
   | OCURLY (queryStatement | SEMI)* CCURLY
   | OPAREN (queryStatement | SEMI)* CPAREN
   | (queryStatement | SEMI)* END
-  | (queryStatement | SEMI)+
+  | queryStatement (queryStatement | SEMI)*
   ;
 
 filterShortcut

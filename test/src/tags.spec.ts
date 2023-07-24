@@ -244,25 +244,17 @@ describe('tags in results', () => {
   test('render usage test case', async () => {
     const loaded = runtime.loadQuery(
       `
-      sql: one22 is { connection: "duckdb" select: """SELECT 1""" }
-      source: ages is from_sql(one22) + {
-        dimension: name is 'John'
-        query: height
-        # barchart
-         is {
-          project: heightd is 10
-         }
+      source: ages is duckdb.sql("SELECT 'John' as name") extend {
+        query: height # barchart
+         is { project: heightd is 10 }
 
-        query: age
-        # barchart
-         is {
-          project: aged is 20
-         }
-
+        query: age # barchart
+         is { project: aged is 20 }
       }
+
       query: ages -> {
          group_by: name
-         nest: height
+         nest: height;
          nest: age
       }
       `

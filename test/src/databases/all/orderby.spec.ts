@@ -136,7 +136,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       query: models->{
         nest: withx is {
-          group_by: select is UPPER(manufacturer)
+          group_by: \`select\` is UPPER(manufacturer)
           aggregate: fetch is count()
         }
       } -> {
@@ -156,7 +156,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
       query: models->{
         nest: withx is {
-          group_by: is select is UPPER(manufacturer)
+          group_by: is \`select\` is UPPER(manufacturer)
           aggregate: fetch is count()
         }
       } -> {

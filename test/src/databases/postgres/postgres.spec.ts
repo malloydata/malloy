@@ -94,8 +94,8 @@ describe('Postgres tests', () => {
 
       query: from_sql(one) -> {
         project:
-          select
-          create is select + 1
+          \`select\`
+          create is \`select\` + 1
       }
       `
       )
