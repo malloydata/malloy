@@ -125,6 +125,7 @@ sourceExtension
 query
   : unrefinableQuery pipeElement*    # NormalQuery
   | sqlSource                        # QueryFromSQLSource
+  | OPAREN query CPAREN              # ContainedQuery
   ;
 
 unrefinableQuery

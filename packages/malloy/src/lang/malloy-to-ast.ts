@@ -308,6 +308,10 @@ export class MalloyToAST
     return this.astAt(exploreDef, pcx);
   }
 
+  visitContainedQuery(ctx: parse.ContainedQueryContext): ast.MalloyElement {
+    return this.visit(ctx.query());
+  }
+
   visitQueryFromSQLSource(
     pcx: parse.QueryFromSQLSourceContext
   ): ast.QueryElement {
