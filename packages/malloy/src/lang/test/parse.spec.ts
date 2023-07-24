@@ -1039,7 +1039,11 @@ describe('qops', () => {
     const q = doc.translator.getQuery(0);
     expect(q).toBeDefined();
     const ai = q?.pipeline[0]?.fields[0];
-    expect(ai).toMatchObject({name: 'ai', type: 'number'});
+    expect(ai).toMatchObject({
+      name: 'ai',
+      type: 'number',
+      expressionType: 'aggregate',
+    });
   });
   test('timeunit reference', () => {
     const doc = model`query: a->{ group_by:  ats.day }`;
