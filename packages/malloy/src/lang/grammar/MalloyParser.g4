@@ -561,7 +561,12 @@ collectionWildCard
   ;
 
 taggedRef
-  : tags fieldPath
+  : tags fieldPath refExpr?
+  ;
+
+refExpr
+  : DOT timeframe
+  | DOT aggregate OPAREN CPAREN
   ;
 
 collectionMember

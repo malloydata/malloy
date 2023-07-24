@@ -852,7 +852,7 @@ export class MalloyToAST
   ): ast.QueryItem {
     const refCx = ctx.taggedRef();
     if (refCx) {
-      return this.getTaggedRef(refCx, makeFieldRef);
+      return this.getTaggedRef(refCx, makeFieldDef, makeFieldRef);
     }
     const def = ctx.fieldDef();
     if (def) {
@@ -918,8 +918,41 @@ export class MalloyToAST
 
   getTaggedRef(
     pcx: parse.TaggedRefContext,
+    makeFieldDef: FieldDeclarationConstructor,
     makeFieldRef: ast.FieldReferenceConstructor
-  ): ast.FieldReference {
+  ): ast.FieldReference | ast.FieldDeclaration {
+    const refExpr = pcx.refExpr();
+    if (refExpr) {
+      const ref = this.getFieldPath(
+        pcx.fieldPath(),
+        ast.ExpressionFieldReference
+      );
+      let expr;
+      const timeframe = refExpr.timeframe();
+      if (timeframe) {
+        expr = new ast.ExprGranularTime(
+          new ast.ExprIdReference(ref),
+          this.visitTimeframe(timeframe).text,
+          true
+        );
+      }
+      const agg = refExpr.aggregate();
+      if (agg) {
+        const aggFunc = agg.text.toLowerCase();
+        if (aggFunc === 'sum') {
+          expr = new ast.ExprSum(undefined, ref);
+        } else {
+          this.contextError(
+            agg,
+            "'${aggFunc}' is not legal in a reference-only aggregation"
+          );
+          return ref;
+        }
+      }
+      const def = new makeFieldDef(expr, ref.outputName);
+      def.extendNote({notes: getNotes(pcx.tags())});
+      return def;
+    }
     const ref = this.getFieldPath(pcx.fieldPath(), makeFieldRef);
     ref.extendNote({notes: getNotes(pcx.tags())});
     return ref;
@@ -936,7 +969,7 @@ export class MalloyToAST
     }
     const refCx = pcx.taggedRef();
     if (refCx) {
-      return this.getTaggedRef(refCx, makeFieldRef);
+      return this.getTaggedRef(refCx, makeFieldDef, makeFieldRef);
     }
     const collectionWildcard = pcx.collectionWildCard();
     if (collectionWildcard) {
