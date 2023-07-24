@@ -156,6 +156,7 @@ sqlSource
 
 pipelineFromName
   : firstSegment pipeElement*
+  | OPAREN firstSegment pipeElement* CPAREN
   ;
 
 firstSegment
