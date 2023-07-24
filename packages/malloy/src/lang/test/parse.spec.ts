@@ -1034,7 +1034,20 @@ describe('qops', () => {
     expect('query: a->{ aggregate: num is count() }').toTranslate();
   });
   test('aggregate reference', () => {
-    expect('query: a->{ aggregate:  ai.sum() }').toTranslate();
+    const doc = model`query: a->{ aggregate: ai.sum() }`;
+    expect(doc).toTranslate();
+    const q = doc.translator.getQuery(0);
+    expect(q).toBeDefined();
+    const ai = q?.pipeline[0]?.fields[0];
+    expect(ai).toMatchObject({name: 'ai', type: 'number'});
+  });
+  test('timeunit reference', () => {
+    const doc = model`query: a->{ group_by:  ats.day }`;
+    expect(doc).toTranslate();
+    const q = doc.translator.getQuery(0);
+    expect(q).toBeDefined();
+    const ats = q?.pipeline[0]?.fields[0];
+    expect(ats).toMatchObject({name: 'ats', type: 'timestamp'});
   });
   test('aggregate multiple', () => {
     expect(`
