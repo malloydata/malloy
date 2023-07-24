@@ -152,6 +152,16 @@ export class HTMLTableRenderer extends ContainerRenderer {
                 bValue?.isScalar() &&
                 typeof aValue === typeof bValue
               ) {
+                if (aValue.isNull()) {
+                  if (bValue.isNull()) {
+                    return 0;
+                  } else {
+                    return 1;
+                  }
+                } else if (bValue.isNull()) {
+                  return -1;
+                }
+
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const compValue = aValue.compareTo(bValue as any);
                 if (compValue !== 0) {
