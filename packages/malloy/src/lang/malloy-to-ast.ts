@@ -245,6 +245,11 @@ export class MalloyToAST
     pcx: parse.SqlStringContext,
     sqlStr: ast.SQLString
   ): void {
+    for (const part of pcx.sqlInterpolation()) {
+      if (part.CLOSE_CODE() && this.m4WarningsEnabled()) {
+        this.contextError(part, 'Use %{ ... } instead of %{ ... }%', 'warn');
+      }
+    }
     for (const part of getStringParts(pcx)) {
       if (part instanceof ParserRuleContext) {
         sqlStr.push(this.visit(part));
