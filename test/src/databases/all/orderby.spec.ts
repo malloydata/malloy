@@ -141,7 +141,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
         }
       } -> {
         project:
-          withxz is lower(withx.select)
+          withxz is lower(withx.\`select\`)
           fetch is withx.fetch
       }
       `
