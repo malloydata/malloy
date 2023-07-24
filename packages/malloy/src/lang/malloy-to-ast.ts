@@ -927,7 +927,6 @@ export class MalloyToAST
         pcx.fieldPath(),
         ast.ExpressionFieldReference
       );
-      ref.extendNote({notes: getNotes(pcx.tags())});
       let expr;
       const timeframe = refExpr.timeframe();
       if (timeframe) {
@@ -950,7 +949,9 @@ export class MalloyToAST
           return ref;
         }
       }
-      return new makeFieldDef(expr, ref.outputName);
+      const def = new makeFieldDef(expr, ref.outputName);
+      def.extendNote({notes: getNotes(pcx.tags())});
+      return def;
     }
     const ref = this.getFieldPath(pcx.fieldPath(), makeFieldRef);
     ref.extendNote({notes: getNotes(pcx.tags())});
