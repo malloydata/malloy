@@ -1064,7 +1064,7 @@ describe('qops', () => {
     });
   });
   test('timeunit reference', () => {
-    const doc = model`query: a->{ group_by:  ats.day }`;
+    const doc = model`query: a->{ group_by: ats.day }`;
     expect(doc).toTranslate();
     const q = doc.translator.getQuery(0);
     expect(q).toBeDefined();
