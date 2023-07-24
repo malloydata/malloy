@@ -73,21 +73,11 @@ class DocumentSymbolWalker implements MalloyParserListener {
     this.blockRange = undefined;
   }
 
-  enterRunStatementDef(pcx: parser.RunStatementDefContext) {
+  enterRunStatement(pcx: parser.RunStatementContext) {
     this.symbols.push({
       range: this.translator.rangeFromContext(pcx.topLevelAnonQueryDef()),
       name: 'unnamed_query',
       type: 'unnamed_query',
-      children: [],
-      lensRange: this.translator.rangeFromContext(pcx),
-    });
-  }
-
-  enterRunStatementRef(pcx: parser.RunStatementRefContext) {
-    this.symbols.push({
-      range: this.translator.rangeFromContext(pcx.queryName()),
-      name: pcx.queryName().id().text,
-      type: 'query',
       children: [],
       lensRange: this.translator.rangeFromContext(pcx),
     });

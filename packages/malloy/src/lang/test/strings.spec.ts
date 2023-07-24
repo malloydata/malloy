@@ -25,7 +25,7 @@ import './parse-expects';
 import {parseString} from '../parse-utils';
 import {BetaExpression, TestTranslator} from './test-translator';
 
-describe('test internal string parsing', () => {
+describe('quote comprehension inside strings', () => {
   test('\\b', () => {
     expect(parseString('\\b')).toEqual('\b');
   });
@@ -61,8 +61,36 @@ describe('test internal string parsing', () => {
   });
 });
 
-describe('all strings are parsed in all places', () => {
+describe('string parsing in language', () => {
   const tz = 'America/Mexico_City';
+  test('multi-line indent increasing', () => {
+    const checking = new BetaExpression(`"""
+      left
+        mid
+          right
+    """`);
+    expect(checking).toTranslate();
+    const v = checking.generated().value[0];
+    expect(v).toMatchObject({literal: '\nleft\n  mid\n    right\n'});
+  });
+  test('multi-line indent decreasing', () => {
+    const checking = new BetaExpression(`"""
+          right
+        mid
+      left
+    """`);
+    expect(checking).toTranslate();
+    const v = checking.generated().value[0];
+    expect(v).toMatchObject({literal: '\n    right\n  mid\nleft\n'});
+  });
+  test('multi-line indent keep', () => {
+    const checking = new BetaExpression(`"""right
+        mid
+      left"""`);
+    expect(checking).toTranslate();
+    const v = checking.generated().value[0];
+    expect(v).toMatchObject({literal: 'right\n        mid\n      left'});
+  });
   test('timezone single quote', () => {
     const m = new TestTranslator(`run: a-> {timezone: '${tz}'; project: *}`);
     expect(m).toParse();
@@ -77,8 +105,8 @@ describe('all strings are parsed in all places', () => {
   });
   test('timezone with illegal query', () => {
     expect(
-      `run: a->{timezone: """${tz}%{ab->aturtle}%"""; project: *}`
-    ).translationToFailWith('%{ query }% illegal in this string');
+      `run: a->{timezone: """${tz}%{ab->aturtle}"""; project: *}`
+    ).translationToFailWith('%{ query } illegal in this string');
   });
   test('table single quote', () => {
     const m = new TestTranslator("source: n is bigquery.table('n')");

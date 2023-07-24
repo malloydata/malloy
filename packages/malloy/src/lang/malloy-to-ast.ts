@@ -41,9 +41,9 @@ import {
   getStringParts,
   getShortString,
   getStringIfShort,
+  unIndent,
 } from './parse-utils';
-
-const ENABLE_M4_WARNINGS = false;
+import {MalloyTagProperties} from '../tags';
 
 class IgnoredElement extends ast.MalloyElement {
   elementType = 'ignoredByParser';
@@ -62,6 +62,7 @@ export class MalloyToAST
   extends AbstractParseTreeVisitor<ast.MalloyElement>
   implements MalloyParserVisitor<ast.MalloyElement>
 {
+  compilerFlags: MalloyTagProperties = {};
   constructor(readonly parse: MalloyParseRoot, readonly msgLog: MessageLogger) {
     super();
   }
@@ -126,16 +127,20 @@ export class MalloyToAST
     return acceptable;
   }
 
+  protected m4WarningsEnabled(): boolean {
+    return !!this.compilerFlags['m4warnings'];
+  }
+
   protected getNumber(term: ParseTree): number {
     return Number.parseInt(term.text);
   }
 
   protected getFieldName(cx: HasID): ast.FieldName {
-    return this.astAt(new ast.FieldName(getId(cx)), cx);
+    return this.astAt(new ast.FieldName(getId(cx)), cx.id());
   }
 
   protected getModelEntryName(cx: HasID): ast.ModelEntryReference {
-    return this.astAt(new ast.ModelEntryReference(getId(cx)), cx);
+    return this.astAt(new ast.ModelEntryReference(getId(cx)), cx.id());
   }
 
   defaultResult(): ast.MalloyElement {
@@ -190,15 +195,14 @@ export class MalloyToAST
 
   protected getFilterShortcut(cx: parse.FilterShortcutContext): ast.Filter {
     const el = this.getFilterElement(cx.fieldExpr());
-    return new ast.Filter([el]);
-  }
-
-  protected getExploreSource(pcx: parse.ExploreSourceContext): ast.Source {
-    const element = this.visit(pcx);
-    if (element instanceof ast.Source) {
-      return element;
+    if (this.m4WarningsEnabled()) {
+      this.astError(
+        el,
+        'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead',
+        'warn'
+      );
     }
-    throw this.internalError(pcx, `'${element.elementType}': illegal source`);
+    return new ast.Filter([el]);
   }
 
   protected getPlainString(cx: HasString): string {
@@ -211,15 +215,27 @@ export class MalloyToAST
     if (multiLineStr) {
       for (const part of getStringParts(multiLineStr)) {
         if (part instanceof ParserRuleContext) {
-          this.contextError(part, '%{ query }% illegal in this string');
+          this.contextError(part, '%{ query } illegal in this string');
         } else {
           safeParts.push(part);
         }
       }
+      unIndent(safeParts);
       return safeParts.join('');
     }
     // string: shortString | sqlString; So this will never happen
     return '';
+  }
+
+  protected getSource(pcx: parse.ExploreContext) {
+    const source = this.visit(pcx);
+    if (source instanceof ast.Source) {
+      return source;
+    }
+    throw this.internalError(
+      pcx,
+      `Source expected, but ${source.elementType} found`
+    );
   }
 
   protected makeSqlString(
@@ -233,6 +249,9 @@ export class MalloyToAST
         sqlStr.push(part);
       }
     }
+    // Until SQL writer properly indents turducken, it actually looks better
+    // in the output to NOT de-indent the SQL sources
+    // unIndent(sqlStr.elements);
     sqlStr.complete();
     this.astAt(sqlStr, pcx);
   }
@@ -277,7 +296,7 @@ export class MalloyToAST
   visitSourceDefinition(pcx: parse.SourceDefinitionContext): ast.DefineSource {
     const exploreDef = new ast.DefineSource(
       getId(pcx.sourceNameDef()),
-      this.visitExplore(pcx.explore()),
+      this.getSource(pcx.explore()),
       true,
       []
     );
@@ -286,16 +305,131 @@ export class MalloyToAST
     return this.astAt(exploreDef, pcx);
   }
 
-  visitExplore(pcx: parse.ExploreContext): ast.Source {
-    const source = this.getExploreSource(pcx.exploreSource());
-    const refineCx = pcx.exploreProperties();
-    if (refineCx) {
-      return this.astAt(
-        new ast.RefinedSource(source, this.visitExploreProperties(refineCx)),
-        pcx
+  visitQueryFromSQLSource(
+    pcx: parse.QueryFromSQLSourceContext
+  ): ast.QueryElement {
+    const query = new ast.FullQuery(this.visitSqlSource(pcx.sqlSource()));
+    return this.astAt(query, pcx);
+  }
+
+  visitQueryFromSource(pcx: parse.QueryFromSourceContext): ast.QueryElement {
+    const root = this.visitUnextendableSource(pcx.unextendableSource());
+    const query = new ast.FullQuery(root);
+    query.addSegments(...this.getSegments(pcx.pipeElement()));
+    return this.astAt(query, pcx);
+  }
+
+  protected getQueryRefinements(
+    pcx: parse.QueryRefinementContext
+  ): ast.QOPDesc {
+    const properties = this.astAt(
+      this.visitQueryProperties(pcx.queryProperties()),
+      pcx
+    );
+    if (this.m4WarningsEnabled() && pcx.REFINE() === undefined) {
+      this.astError(
+        properties,
+        'Implicit query refinement is deprecated, use the `refine` operator.',
+        'warn'
       );
     }
-    return source;
+    return properties;
+  }
+
+  visitRefinedQuery(pcx: parse.RefinedQueryContext): ast.QueryElement {
+    const base = this.visit(pcx.refinableQuery());
+    if (ast.isQueryElement(base)) {
+      const rcx = pcx.queryRefinement();
+      if (rcx) {
+        const properties = this.getQueryRefinements(rcx);
+        base.refineHead(properties);
+      }
+      return base;
+    }
+    throw this.internalError(
+      pcx,
+      `Query expected, but ${base.elementType} found`
+    );
+  }
+
+  visitQueryByTurtleName(
+    pcx: parse.QueryByTurtleNameContext
+  ): ast.QueryElement {
+    const source = this.visitUnextendableSource(pcx.unextendableSource());
+    const query = new ast.FullQuery(source);
+    query.turtleName = this.getFieldName(pcx);
+    return this.astAt(query, pcx);
+  }
+
+  visitQueryByName(pcx: parse.QueryByNameContext): ast.QueryElement {
+    const query = new ast.ExistingQuery();
+    query.head = this.getModelEntryName(pcx);
+    const res = this.astAt(query, pcx);
+    if (this.m4WarningsEnabled() && pcx.ARROW()) {
+      this.astError(
+        res,
+        'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow',
+        'warn'
+      );
+    }
+    return res;
+  }
+
+  protected getSourceExtensions(
+    pcx: parse.SourceExtensionContext
+  ): ast.SourceDesc {
+    const extensions = pcx?.exploreProperties();
+    const sourceDesc = this.astAt(this.visitExploreProperties(extensions), pcx);
+    if (this.m4WarningsEnabled() && pcx.EXTEND() === undefined) {
+      this.astError(
+        sourceDesc,
+        'Implicit source extension is deprecated, use the `extend` operator.',
+        'warn'
+      );
+    }
+    return sourceDesc;
+  }
+
+  visitUnextendableSource(pcx: parse.UnextendableSourceContext) {
+    const unextendedSource = this.visit(pcx.extendableSource());
+    if (unextendedSource instanceof ast.Source) {
+      const ecx = pcx.sourceExtension();
+      if (ecx) {
+        const sourceDesc = this.getSourceExtensions(ecx);
+        return new ast.RefinedSource(unextendedSource, sourceDesc);
+      } else {
+        return unextendedSource;
+      }
+    }
+    throw this.internalError(
+      pcx,
+      `Source expected, but ${unextendedSource.elementType} found`
+    );
+  }
+
+  visitNormalQuery(pcx: parse.NormalQueryContext): ast.QueryElement {
+    const query = this.visit(pcx.unrefinableQuery());
+    if (ast.isQueryElement(query)) {
+      query.addSegments(...this.getSegments(pcx.pipeElement()));
+      return this.astAt(query, pcx);
+    }
+    throw this.internalError(
+      pcx,
+      `Expected query, but ${query.elementType} found`
+    );
+  }
+
+  visitExtendedQuery(pcx: parse.ExtendedQueryContext) {
+    const query = this.visit(pcx.query());
+    if (!ast.isQueryElement(query)) {
+      throw this.internalError(
+        pcx,
+        `Query expected, but ${query.elementType} found`
+      );
+    }
+    const source = new ast.QuerySource(query);
+    const sourceDesc = this.getSourceExtensions(pcx.sourceExtension());
+    return this.astAt(new ast.RefinedSource(source, sourceDesc), pcx);
   }
 
   visitExploreProperties(pcx: parse.ExplorePropertiesContext): ast.SourceDesc {
@@ -315,7 +449,7 @@ export class MalloyToAST
   visitTableFunction(pcx: parse.TableFunctionContext): ast.TableSource {
     const tableURI = this.getPlainString(pcx.tableURI());
     const el = this.astAt(new ast.TableFunctionSource(tableURI), pcx);
-    if (ENABLE_M4_WARNINGS) {
+    if (this.m4WarningsEnabled()) {
       this.astError(
         el,
         "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`",
@@ -348,10 +482,18 @@ export class MalloyToAST
 
   visitSQLSourceName(pcx: parse.SQLSourceNameContext): ast.FromSQLSource {
     const name = this.getModelEntryName(pcx.sqlExploreNameRef());
-    return this.astAt(new ast.FromSQLSource(name), pcx);
+    const res = this.astAt(new ast.FromSQLSource(name), pcx);
+    if (this.m4WarningsEnabled()) {
+      this.astError(
+        res,
+        '`from_sql` is deprecated; use `connection_name.sql(...)` as a source directly',
+        'warn'
+      );
+    }
+    return res;
   }
 
-  visitSQLSource(pcx: parse.SQLSourceContext): ast.SQLSource {
+  visitSqlSource(pcx: parse.SqlSourceContext): ast.SQLSource {
     const connId = pcx.connectionId();
     const connectionName = this.astAt(this.getModelEntryName(connId), connId);
     const sqlStr = new ast.SQLString();
@@ -370,7 +512,15 @@ export class MalloyToAST
   visitQuerySource(pcx: parse.QuerySourceContext): ast.Source {
     const query = this.visit(pcx.query());
     if (ast.isQueryElement(query)) {
-      return this.astAt(new ast.QuerySource(query), pcx);
+      const el = this.astAt(new ast.QuerySource(query), pcx);
+      if (this.m4WarningsEnabled()) {
+        this.astError(
+          el,
+          '`from(some_query)` is deprecated; use `some_query` directly',
+          'warn'
+        );
+      }
+      return el;
     }
     throw this.internalError(
       pcx,
@@ -442,7 +592,7 @@ export class MalloyToAST
     ecx: parse.IsExploreContext | undefined
   ): {joinFrom: ast.Source; notes: string[]} {
     if (ecx) {
-      const joinSrc = this.visitExplore(ecx.explore());
+      const joinSrc = this.getSource(ecx.explore());
       const notes = getNotes(ecx._before_is).concat(getNotes(ecx._after_is));
       return {joinFrom: joinSrc, notes};
     }
@@ -453,7 +603,7 @@ export class MalloyToAST
     pcx: parse.QueryJoinStatementContext
   ): ast.MalloyElement {
     const result = this.astAt(this.visit(pcx.joinStatement()), pcx);
-    if (ENABLE_M4_WARNINGS) {
+    if (this.m4WarningsEnabled()) {
       this.astError(
         result,
         'Joins in queries are deprecated, move into an `extend:` block.',
@@ -544,7 +694,7 @@ export class MalloyToAST
     );
     const stmt = new ast.DeclareFields(defs);
     const result = this.astAt(stmt, pcx);
-    if (ENABLE_M4_WARNINGS) {
+    if (this.m4WarningsEnabled()) {
       this.astError(
         result,
         '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block',
@@ -577,7 +727,15 @@ export class MalloyToAST
 
   visitFilterByShortcut(pcx: parse.FilterByShortcutContext): ast.Filter {
     const el = this.getFilterElement(pcx.fieldExpr());
-    return this.astAt(new ast.Filter([el]), pcx);
+    const res = this.astAt(new ast.Filter([el]), pcx);
+    if (this.m4WarningsEnabled()) {
+      this.astError(
+        el,
+        'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead',
+        'warn'
+      );
+    }
+    return res;
   }
 
   visitWhereStatement(pcx: parse.WhereStatementContext): ast.Filter {
@@ -936,32 +1094,15 @@ export class MalloyToAST
     const propsCx = firstCx.queryProperties();
     if (propsCx) {
       const queryDesc = this.visitQueryProperties(propsCx);
-      if (nameCx) {
-        pipe.refineHead(queryDesc);
-      } else {
-        pipe.addSegments(queryDesc);
-      }
+      pipe.addSegments(queryDesc);
+    }
+    const rcx = firstCx.queryRefinement();
+    if (rcx) {
+      const queryDesc = this.getQueryRefinements(rcx);
+      pipe.refineHead(queryDesc);
     }
     const tail = this.getSegments(pipeCx.pipeElement());
     pipe.addSegments(...tail);
-  }
-
-  visitExploreArrowQuery(pcx: parse.ExploreArrowQueryContext): ast.FullQuery {
-    const root = this.visitExplore(pcx.explore());
-    const query = new ast.FullQuery(root);
-    this.buildPipelineFromName(query, pcx.pipelineFromName());
-    return this.astAt(query, pcx);
-  }
-
-  visitArrowQuery(pcx: parse.ArrowQueryContext): ast.ExistingQuery {
-    const query = new ast.ExistingQuery();
-    query.head = this.getModelEntryName(pcx.queryName());
-    const refCx = pcx.queryProperties();
-    if (refCx) {
-      query.refineHead(this.visitQueryProperties(refCx));
-    }
-    query.addSegments(...this.getSegments(pcx.pipeElement()));
-    return this.astAt(query, pcx);
   }
 
   visitTopLevelQueryDefs(
@@ -995,11 +1136,11 @@ export class MalloyToAST
     const defCx = pcx.topLevelAnonQueryDef();
     const query = this.visit(defCx.query());
     if (ast.isQueryElement(query)) {
-      const theQuery = new ast.AnonymousQuery(query);
+      const theQuery = this.astAt(new ast.AnonymousQuery(query), defCx);
       const notes = getNotes(pcx.topLevelAnonQueryDef().tags());
       const blockNotes = getNotes(pcx.tags());
       theQuery.extendNote({notes, blockNotes});
-      if (ENABLE_M4_WARNINGS) {
+      if (this.m4WarningsEnabled()) {
         this.astError(
           theQuery,
           'Anonymous `query:` statements are deprecated, use `run:` instead',
@@ -1014,10 +1155,10 @@ export class MalloyToAST
     );
   }
 
-  visitRunStatementDef(pcx: parse.RunStatementDefContext): ast.RunQueryDef {
+  visitRunStatement(pcx: parse.RunStatementContext): ast.RunQuery {
     const query = this.visit(pcx.topLevelAnonQueryDef().query());
     if (ast.isQueryElement(query)) {
-      const el = new ast.RunQueryDef(query);
+      const el = new ast.RunQuery(query);
       el.extendNote({blockNotes: getNotes(pcx._blockTags)});
       el.extendNote({notes: getNotes(pcx._noteTags)});
       return this.astAt(el, pcx);
@@ -1026,12 +1167,6 @@ export class MalloyToAST
       pcx,
       `Run query matched, but ${query.elementType} found`
     );
-  }
-
-  visitRunStatementRef(pcx: parse.RunStatementRefContext): ast.RunQueryRef {
-    const name = this.getModelEntryName(pcx.queryName());
-    const el = this.astAt(new ast.RunQueryRef(name), pcx.queryName());
-    return this.astAt(el, pcx);
   }
 
   visitNestStatement(pcx: parse.NestStatementContext): ast.Nests {
@@ -1052,11 +1187,11 @@ export class MalloyToAST
 
   visitNestExisting(pcx: parse.NestExistingContext): ast.NestedQuery {
     const name = this.getFieldName(pcx.queryName());
-    const propsCx = pcx.queryProperties();
+    const rcx = pcx.queryRefinement();
     const notes = getNotes(pcx.tags());
-    if (propsCx) {
+    if (rcx) {
       const nestRefine = new ast.NestRefinement(name);
-      const queryDesc = this.visitQueryProperties(propsCx);
+      const queryDesc = this.getQueryRefinements(rcx);
       nestRefine.refineHead(queryDesc);
       nestRefine.extendNote({notes});
       return this.astAt(nestRefine, pcx);
@@ -1403,7 +1538,9 @@ export class MalloyToAST
     return new ast.Pick(picks);
   }
 
-  visitNamedSource(pcx: parse.NamedSourceContext): ast.NamedSource {
+  visitSourceFromNamedModelEntry(
+    pcx: parse.SourceFromNamedModelEntryContext
+  ): ast.Source {
     const name = this.getModelEntryName(pcx.sourceID());
     // Parameters ... coming ...
     // const paramListCx = pcx.isParam();
@@ -1416,7 +1553,8 @@ export class MalloyToAST
     //   }
     //   return this.astAt(new ast.NamedSource(name, paramInit), pcx);
     // }
-    return this.astAt(new ast.NamedSource(name), pcx);
+    const source = new ast.NamedSourceOrQuery(name);
+    return this.astAt(source, pcx);
   }
 
   visitExprFilter(pcx: parse.ExprFilterContext): ast.ExprFilter {
@@ -1494,7 +1632,7 @@ export class MalloyToAST
     }
     stmt.is = blockName;
     const result = this.astAt(stmt, pcx);
-    if (ENABLE_M4_WARNINGS) {
+    if (this.m4WarningsEnabled()) {
       this.astError(
         result,
         '`sql:` statement is deprecated, use `connection_name.sql(...)` instead',
@@ -1519,7 +1657,9 @@ export class MalloyToAST
 
   visitDocAnnotations(pcx: parse.DocAnnotationsContext): ast.ModelAnnotation {
     const allNotes = pcx.DOC_ANNOTATION().map(note => note.text);
-    return new ast.ModelAnnotation(allNotes);
+    const tags = new ast.ModelAnnotation(allNotes);
+    this.compilerFlags = tags.getCompilerFlags(this.compilerFlags);
+    return tags;
   }
 
   visitIgnoredObjectAnnotations(

@@ -72,9 +72,10 @@ describe('model statements', () => {
       });
       expect(m).translationToFailWith('a1 is not a connection');
     });
-    // TODO unskip this when ENABLE_M4_WARNINGS becomes a document annotation
-    test.skip('table function is deprecated', () => {
-      expect("testA is table('conn:aTable')").toTranslateWithWarnings(
+    test('table function is deprecated', () => {
+      expect(`##! m4warnings
+      source: testA is table('conn:aTable')
+    `).toTranslateWithWarnings(
         "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`"
       );
     });
@@ -85,6 +86,14 @@ describe('model statements', () => {
     });
     test('shorcut fitlered table', () => {
       expect("source: xA is table('aTable') {? astr ~ 'a%' }").toTranslate();
+    });
+    test('shorcut fitlered table m4warning', () => {
+      expect(`
+        ##! m4warnings
+        source: xA is conn.table('aTable') extend {? astr ~ 'a%' }
+      `).toTranslateWithWarnings(
+        'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
+      );
     });
     test('fitlered table', () => {
       expect(
@@ -112,16 +121,15 @@ describe('model statements', () => {
     });
   });
   describe('query:', () => {
-    // Delete this when ENABLE_M4_WARNINGS is converted to an annotation
     test('anonymous query', () => {
       expect(
         markSource`query: ${"table('aTable') -> { group_by: astr }"}`
       ).toTranslate();
     });
-    // Unskip this when ENABLE_M4_WARNINGS is converted to an annotation
-    test.skip('anonymous query', () => {
+    test('anonymous query', () => {
       expect(
-        markSource`query: ${"table('aTable') -> { group_by: astr }"}`
+        markSource`##! m4warnings
+        query: ${"conn.table('aTable') -> { group_by: astr }"}`
       ).toTranslateWithWarnings(
         'Anonymous `query:` statements are deprecated, use `run:` instead'
       );
@@ -172,6 +180,14 @@ describe('model statements', () => {
     });
     test('query with shortcut filtered turtle', () => {
       expect("query: allA is ab->aturtle {? astr ~ 'a%' }").toTranslate();
+    });
+    test('query with shortcut filtered turtle m4warning', () => {
+      expect(`
+        ##! m4warnings
+        query: allA is ab->aturtle refine {? astr ~ 'a%' }
+      `).toTranslateWithWarnings(
+        'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
+      );
     });
     test('query with filtered turtle', () => {
       expect("query: allA is ab->aturtle { where: astr ~ 'a%' }").toTranslate();
@@ -971,6 +987,16 @@ describe('source properties', () => {
       }
     `).toTranslate();
   });
+  test('refined explore-query m4warning', () => {
+    expect(`
+      ##! m4warnings
+      source: abNew is ab extend {
+        query: for1 is aturtle refine {? ai = 1 }
+      }
+    `).toTranslateWithWarnings(
+      'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
+    );
+  });
   test('chained explore-query', () => {
     expect(`
       source: c is a {
@@ -1248,25 +1274,27 @@ describe('qops', () => {
       ).toTranslate();
     });
   });
-  // TODO ENABLE_M4_WARNINGS: unskip when we have an M4 warning flag
-  describe.skip('declare/query join warnings', () => {
+  describe('declare/query join warnings', () => {
     test('declare warning in query', () => {
       expect(
-        markSource`query: a -> { declare: ${'x is 1'}; group_by: x, y }`
+        markSource`##! m4warnings
+        run: a -> { ${'declare: x is 1'}; group_by: x }`
       ).toTranslateWithWarnings(
         '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
       );
     });
     test('declare warning in source', () => {
       expect(
-        markSource`source: a2 is a { declare: ${'x is 1'} }`
+        markSource`##! m4warnings
+        source: a2 is a extend { ${'declare: x is 1'} }`
       ).toTranslateWithWarnings(
         '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
       );
     });
     test('joins in query', () => {
       expect(
-        markSource`query: a -> { ${'join_one: b on true'}; ${'join_many: c is b on true'}; ${'join_cross: d is b on true'}; group_by: b.astr }`
+        markSource`##! m4warnings
+        run: a -> { ${'join_one: b on true'}; ${'join_many: c is b on true'}; ${'join_cross: d is b on true'}; group_by: b.astr }`
       ).toTranslateWithWarnings(
         'Joins in queries are deprecated, move into an `extend:` block.',
         'Joins in queries are deprecated, move into an `extend:` block.',
@@ -1601,6 +1629,17 @@ describe('expressions', () => {
         }
       `).toTranslate();
   });
+  test('shortcut filtered measure m4warning', () => {
+    expect(`
+      ##! m4warnings
+      run: a -> {
+        group_by: ai
+        aggregate: x is avg(ai) {? astr = 'why?' }
+      }
+    `).toTranslateWithWarnings(
+      'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
+    );
+  });
   test('correctly flags filtered scalar', () => {
     const e = new BetaExpression('ai { where: true }');
     expect(e).translationToFailWith(
@@ -1876,7 +1915,7 @@ describe('error handling', () => {
   });
   test('query from undefined source', () => {
     expect(markSource`query: ${'x'}->{ project: y }`).translationToFailWith(
-      "Undefined source 'x'"
+      "Undefined query or source 'x'"
     );
   });
   test('query with expression from undefined source', () => {
@@ -1884,7 +1923,7 @@ describe('error handling', () => {
     // when "query: x->{ group_by: y}" (above) generated the correct error.
     expect(
       markSource`query: ${'x'}->{ project: y is z / 2 }`
-    ).translationToFailWith("Undefined source 'x'");
+    ).translationToFailWith("Undefined query or source 'x'");
   });
   test('join reference before definition', () => {
     expect(
@@ -1892,7 +1931,7 @@ describe('error handling', () => {
         source: newAB is a { join_one: newB is ${'bb'} on astring }
         source: newB is b
       `
-    ).translationToFailWith("Undefined source 'bb'");
+    ).translationToFailWith("Undefined query or source 'bb'");
   });
   test('non-rename rename', () => {
     expect('source: na is a { rename: astr is astr }').translationToFailWith(
@@ -3329,10 +3368,10 @@ describe('sql expressions', () => {
     }
   });
 
-  // TODO unskip when ENABLE_M4_WARNINGS is turned into an annotation
-  test.skip('sql statement deprecation warning', () => {
+  test('sql statement deprecation warning', () => {
     const m = new TestTranslator(
-      'sql: bad_sql is {select: """SELECT 1 as one"""}'
+      `##! m4warnings
+      sql: bad_sql is {select: """SELECT 1 as one"""}`
     );
     const req = m.translate().compileSQL;
     if (req) {
@@ -3342,6 +3381,388 @@ describe('sql expressions', () => {
     }
     expect(m).toTranslateWithWarnings(
       '`sql:` statement is deprecated, use `connection_name.sql(...)` instead'
+    );
+  });
+
+  test('from_sql deprecation warning', () => {
+    const m = new TestTranslator(
+      `##! m4warnings
+      sql: bad_sql is {select: """SELECT 1 as one"""}
+      source: foo is from_sql(bad_sql)`
+    );
+    const req = m.translate().compileSQL;
+    if (req) {
+      m.update({
+        compileSQL: {[req.name]: getSelectOneStruct(req)},
+      });
+    }
+    expect(m).toTranslateWithWarnings(
+      '`sql:` statement is deprecated, use `connection_name.sql(...)` instead',
+      '`from_sql` is deprecated; use `connection_name.sql(...)` as a source directly'
+    );
+  });
+
+  test('reference to sql expression in run', () => {
+    const m = new TestTranslator(`
+      run: bigquery.sql("""select 1 as one""")
+    `);
+    expect(m).toParse();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).toTranslate();
+    }
+  });
+
+  test('reference to sql expression in query def', () => {
+    const m = new TestTranslator(`
+      query: q is bigquery.sql("""select 1 as one""")
+    `);
+    expect(m).toParse();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).toTranslate();
+    }
+  });
+
+  test('reference to sql expression in anonymous query', () => {
+    const m = new TestTranslator(`
+      query: bigquery.sql("""select 1 as one""")
+    `);
+    expect(m).toParse();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).toTranslate();
+    }
+  });
+
+  // TODO this is not possible to implement yet unless we
+  // can distinguish between the generated IR of `conn.sql(...)`
+  // and `conn.sql(...) -> { project: * }`.
+  test.skip('cannot refine a SQL query', () => {
+    const m = new TestTranslator(`
+      query: q1 is bigquery.sql("""select 1 as one""")
+      run: q1 refine { where: 1 = 1 }
+    `);
+    expect(m).toParse();
+    const compileSql = m.translate().compileSQL;
+    expect(compileSql).toBeDefined();
+    if (compileSql) {
+      m.update({
+        compileSQL: {[compileSql.name]: getSelectOneStruct(compileSql)},
+      });
+      expect(m).translationToFailWith('Cannot refine a SQL query');
+    }
+  });
+});
+
+describe('turtle with leading arrow', () => {
+  test('optional leading arrow for defining a turtle', () => {
+    expect(`
+      source: c is a extend {
+        query: x is -> { project: * }
+        query: y is { project: * }
+      }
+    `).toTranslate();
+  });
+});
+
+describe('extend and refine', () => {
+  describe('extend and refine, new syntax', () => {
+    test('query name with query refinements', () => {
+      expect(
+        `
+        query: q is a -> { group_by: ai }
+        run: q refine { group_by: ai2 is ai }
+        `
+      ).toTranslate();
+    });
+
+    test('query name with source refinements', () => {
+      expect(
+        `
+        query: q is a -> { group_by: ai }
+        source: s is q extend { dimension: ai_2 is ai + ai }
+        `
+      ).toTranslate();
+    });
+
+    test('source name with query refinements', () => {
+      expect('run: a refine { group_by: ai }').translationToFailWith(
+        "Illegal reference to 'a', query expected"
+      );
+    });
+
+    test('source name with source refinements', () => {
+      expect(
+        'source: s is a extend { dimension: ai_2 is ai + ai }'
+      ).toTranslate();
+    });
+
+    test('query with source refinements', () => {
+      expect(
+        'source: s is a -> { group_by: ai } extend { dimension: ai_2 is ai + ai }'
+      ).toTranslate();
+    });
+
+    test('query with extension then new stage', () => {
+      expect('run: a { dimension: x is 1 } -> { group_by: x }').toTranslate();
+    });
+  });
+
+  describe('extend and refine, old syntax', () => {
+    test('query name with query refinements', () => {
+      expect(
+        `
+        query: q is a -> { group_by: ai }
+        run: q { group_by: ai2 is ai }
+        `
+      ).toTranslate();
+    });
+
+    test('query name with source refinements', () => {
+      expect(
+        `
+        query: q is a -> { group_by: ai }
+        source: s is q { dimension: ai_2 is ai + ai }
+        `
+      ).toTranslate();
+    });
+
+    test('source name with query refinements', () => {
+      expect('run: a { group_by: one }').translationToFailWith(
+        "Illegal reference to 'a', query expected"
+      );
+    });
+
+    test('source name with source refinements', () => {
+      expect('source: s is a { dimension: ai_2 is ai + ai }').toTranslate();
+    });
+
+    test('source name with ambiguous refinements', () => {
+      // Ambiguous refinements are assumed to be source extensions
+      expect(
+        'run: a { join_one: b on b.ai = ai } -> { project: b.* }'
+      ).toTranslate();
+      expect('run: a { where: 1 = 1 } -> { project: * }').toTranslate();
+      expect('run: a { declare: three is 3 } -> { project: * }').toTranslate();
+      expect('source: s is a { join_one: b on b.ai = ai }').toTranslate();
+      expect('source: s is a { where: 1 = 1 }').toTranslate();
+      expect('source: s is a { declare: three is 3 }').toTranslate();
+    });
+
+    test('query name with ambiguous refinements', () => {
+      // Here we implicitly convert the query into a source.
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: q { join_one: b on 1 = 1 } -> { project: b.* }
+      `).toTranslate();
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: q { where: 1 = 1 } -> { project: * }
+      `).toTranslate();
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: q { declare: three is 3 } -> { project: * }
+      `).toTranslate();
+      // Without the new stage we automatically recognize this as a query refinement
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: q { join_one: b on 1 = 1 }
+      `).toTranslate();
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: q { where: 1 = 1 }
+      `).toTranslate();
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: q { declare: three is 3 }
+      `).toTranslate();
+      // Can also just add from() to use as a source
+      // TODO add a warning when you use from() -- "`from()` is deprecated; to apply source extensions to a query, use `extend`"
+      expect(`
+        query: q is a -> { group_by: ai }
+        source: s is from(q) { join_one: b on b.ai = ai }
+      `).toTranslate();
+      // Can also add an arrow to clarify that it's a query
+      // Of course, number 1 and 3 are actually useless because you're defining
+      // something and then not using it...
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: -> q { join_one: b on b.ai = ai } -> { project: * }
+      `).toTranslate();
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: -> q { where: 1 = 1 } -> { project: * }
+      `).toTranslate();
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: -> q { declare: three is 3 } -> { project: * }
+      `).toTranslate();
+      // Alternatively, fix 1 and 3 by actually using the declared thing
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: q { join_one: b on b.ai = ai; group_by: ai2 is b.ai }
+      `).toTranslate();
+      expect(`
+        query: q is a -> { group_by: ai }
+        run: q { declare: three is 3; group_by: three }
+      `).toTranslate();
+    });
+  });
+
+  describe('extend and refine fallout', () => {
+    test('syntactically valid to run a source, but still illegal', () => {
+      expect('run: a').translationToFailWith(
+        "Illegal reference to 'a', query expected"
+      );
+    });
+
+    test('syntactically valid to refine a source, but illegal', () => {
+      expect('run: a { group_by: ai } ').translationToFailWith(
+        "Illegal reference to 'a', query expected"
+      );
+      expect('run: a refine { group_by: ai } ').translationToFailWith(
+        "Illegal reference to 'a', query expected"
+      );
+    });
+  });
+
+  describe('turtles', () => {
+    test('explicit refine in turtle works', () => {
+      expect(`source: c is a extend {
+        query: x is { project: * }
+        query: y is x refine { limit: 1 }
+      }`).toTranslate();
+    });
+
+    test('implicit refine in turtle works', () => {
+      expect(`source: c is a extend {
+        query: x is { project: * }
+        query: y is x { limit: 1 }
+      }`).toTranslate();
+    });
+  });
+
+  describe('nests', () => {
+    test('explicit refine in nest', () => {
+      expect(`source: c is a extend {
+        query: x is { project: * }
+      }
+
+      run: c -> {
+        nest: x refine { limit: 1 }
+      }`).toTranslate();
+    });
+
+    test('implicit refine in nest', () => {
+      expect(`source: c is a extend {
+        query: x is { project: * }
+      }
+
+      run: c -> {
+        nest: x { limit: 1 }
+      }`).toTranslate();
+    });
+  });
+
+  describe('m4 warnings', () => {
+    test('implicit refine in nest', () => {
+      expect(`##! m4warnings
+      source: c is a extend {
+        query: x is { project: * }
+      }
+
+      run: c -> {
+        nest: x { limit: 1 }
+      }`).toTranslateWithWarnings(
+        'Implicit query refinement is deprecated, use the `refine` operator.'
+      );
+    });
+
+    test('implicit refine in turtle works', () => {
+      expect(`##! m4warnings
+      source: c is a extend {
+        query: x is { project: * }
+        query: y is x { limit: 1 }
+      }`).toTranslateWithWarnings(
+        'Implicit query refinement is deprecated, use the `refine` operator.'
+      );
+    });
+
+    test('implicit query refinement', () => {
+      expect(`##! m4warnings
+        query: q is a -> { group_by: ai }
+        run: q { group_by: three is 3 }
+      `).toTranslateWithWarnings(
+        'Implicit query refinement is deprecated, use the `refine` operator.'
+      );
+    });
+
+    test('implicit source extension', () => {
+      expect(
+        `##! m4warnings
+        source: s is a { dimension: ai_2 is ai + ai }`
+      ).toTranslateWithWarnings(
+        'Implicit source extension is deprecated, use the `extend` operator.'
+      );
+    });
+  });
+});
+
+describe('miscellaneous m4 warnings', () => {
+  test('from() is deprecated', () => {
+    expect(`
+      ##! m4warnings
+      query: q is a -> { project: * }
+      source: c is from(q) extend {
+        dimension: x is 1
+    }`).toTranslateWithWarnings(
+      '`from(some_query)` is deprecated; use `some_query` directly'
+    );
+    expect(`
+      ##! m4warnings
+      query: q is a -> { project: * }
+      source: c is q extend {
+        dimension: x is 1
+    }`).toTranslate();
+  });
+
+  test('query leading arrow', () => {
+    expect(`
+      ##! m4warnings
+      query: x is a -> { project: * }
+      run: x
+    `).toTranslate();
+    expect(`
+      ##! m4warnings
+      query: x is a -> { project: * }
+      run: x -> { project: * }
+    `).toTranslate();
+    expect(`
+      ##! m4warnings
+      query: x is a -> { project: * }
+      run: -> x
+    `).toTranslateWithWarnings(
+      'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow'
+    );
+    expect(`
+      ##! m4warnings
+      query: x is a -> { project: * }
+      run: -> x -> { project: * }
+    `).toTranslateWithWarnings(
+      'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow'
     );
   });
 });
