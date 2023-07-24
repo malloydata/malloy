@@ -263,7 +263,7 @@ joinStatement
   ;
 
 queryExtend
-  : EXTEND queryExtendStatementList
+  : (EXTEND | EXTEND_COLON) queryExtendStatementList
   ;
 
 queryExtendStatement
@@ -306,11 +306,11 @@ filterClauseList
   ;
 
 whereStatement
-  : WHERE filterClauseList
+  : WHERE_COLON filterClauseList
   ;
 
-queryWhereStatement
-  : WHEREQ filterClauseList
+queryWhere
+  : (WHERE | WHERE_COLON) filterClauseList
   ;
 
 havingStatement
@@ -339,11 +339,11 @@ queryStatement
   | topStatement
   | limitStatement
   | orderByStatement
-  | queryWhereStatement
+  | queryWhere
   | havingStatement
   | nestStatement
   | sampleStatement
-  | queryTimezoneStatement
+  | timezoneStatement
   | queryAnnotation
   | ignoredModelAnnotations
   ;
@@ -436,10 +436,6 @@ sampleStatement
 
 timezoneStatement
   : TIMEZONE string
-  ;
-
-queryTimezoneStatement
-  : TIMEZONEQ string
   ;
 
 queryAnnotation
