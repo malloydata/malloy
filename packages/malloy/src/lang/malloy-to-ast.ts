@@ -936,8 +936,6 @@ export class MalloyToAST
         const aggFunc = agg.text.toLowerCase();
         if (aggFunc === 'sum') {
           expr = new ast.ExprSum(undefined, ref);
-        } else if (aggFunc === 'avg') {
-          expr = new ast.ExprAvg(undefined, ref);
         } else {
           this.contextError(
             agg,
