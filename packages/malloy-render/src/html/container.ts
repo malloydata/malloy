@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Explore} from '@malloydata/malloy';
+import {Explore, Tags} from '@malloydata/malloy';
 import {StyleDefaults} from '../data_styles';
 import {ChildRenderers, RenderTree} from '../renderer';
 import {RendererOptions} from '../renderer_types';
@@ -38,12 +38,13 @@ export abstract class ContainerRenderer extends RenderTree {
   //  we need to be fully constructed before we construct
   //  our children.
   static make<Type extends ContainerRenderer>(
-    c: new (document: Document, options: RendererOptions) => Type,
+    c: new (document: Document, options: RendererOptions, tags?: Tags) => Type,
     document: Document,
     exploreField: Explore,
-    options: RendererOptions
+    options: RendererOptions,
+    tags?: Tags
   ): Type {
-    const n = new c(document, options);
+    const n = new c(document, options, tags);
     return n;
   }
 }

@@ -23,10 +23,27 @@
 
 import {FieldDeclaration} from '../query-items/field-declaration';
 import {DefinitionList} from '../types/definition-list';
+import {QueryBuilder} from '../types/query-builder';
+import {
+  LegalRefinementStage,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
 
-export class DeclareFields extends DefinitionList<FieldDeclaration> {
+export class DeclareFields
+  extends DefinitionList<FieldDeclaration>
+  implements QueryPropertyInterface
+{
   elementType = 'declareFields';
+  queryRefinementStage = LegalRefinementStage.Single;
+  forceQueryClass = undefined;
+
   constructor(fields: FieldDeclaration[]) {
     super(fields);
+  }
+
+  queryExecute(executeFor: QueryBuilder): void {
+    for (const qel of this.list) {
+      executeFor.inputFS.extendSource(qel);
+    }
   }
 }

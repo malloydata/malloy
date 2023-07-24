@@ -31,11 +31,18 @@ import {compressExpr} from '../expressions/utils';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
+import {
+  LegalRefinementStage,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
 
 type TopInit = FieldName | ExpressionDef;
 
-export class Top extends MalloyElement {
+export class Top extends MalloyElement implements QueryPropertyInterface {
   elementType = 'top';
+  queryRefinementStage = LegalRefinementStage.Tail;
+  forceQueryClass = undefined;
+
   constructor(readonly limit: number, readonly by?: TopInit) {
     super();
     this.has({by: by});

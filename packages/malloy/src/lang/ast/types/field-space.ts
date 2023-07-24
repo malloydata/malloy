@@ -46,6 +46,7 @@ export interface FieldSpace {
 
 export interface QueryFieldSpace extends FieldSpace {
   outputSpace(): FieldSpace;
+  inputSpace(): FieldSpace;
 }
 
 export class FieldName extends MalloyElement {

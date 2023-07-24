@@ -22,17 +22,29 @@
  */
 
 import * as model from '../../../model/malloy_types';
-
-import {NestedQuery} from '../types/nested-query';
 import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
-import {NestReference} from './nest-reference';
 import {QueryField} from '../field-space/query-space-field';
-import {opOutputStruct} from '../struct-utils';
-import {TurtleHeadedPipe} from '../types/turtle-headed-pipe';
-import {QueryInputSpace} from '../field-space/query-spaces';
+import {TurtleHeadedPipe} from '../elements/pipeline-desc';
+import {QueryInputSpace} from '../field-space/query-input-space';
 import {StaticSpace} from '../field-space/static-space';
+import {
+  LegalRefinementStage,
+  QueryClass,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
+import {QueryBuilder} from '../types/query-builder';
+import {MakeEntry} from '../types/space-entry';
+import {DynamicSpace} from '../field-space/dynamic-space';
+import {QuerySpace} from '../field-space/query-spaces';
+import {
+  expressionIsAggregate,
+  expressionIsAnalytic,
+  expressionIsScalar,
+  TypeDesc,
+} from '../../../model';
+import {FieldReference} from '../query-items/field-references';
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
@@ -40,7 +52,10 @@ function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   return !!ret;
 }
 
-export class TurtleDecl extends TurtleHeadedPipe implements Noteable {
+abstract class TurtleDeclRoot
+  extends TurtleHeadedPipe
+  implements Noteable, MakeEntry
+{
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
   note?: model.Annotation;
@@ -70,21 +85,18 @@ export class TurtleDecl extends TurtleHeadedPipe implements Noteable {
       if (reportWrongType) {
         this.log(`Expected '${this.turtleName}' to be a query`);
       }
-    } else if (this.headRefinement) {
+    } else if (this.withRefinement) {
       throw this.internalError(
         "Can't refine the head of a turtle in its definition"
       );
     }
 
-    let appendInput = fs;
+    let pipeOutFS = fs;
     if (modelPipe.pipeline.length > 0) {
-      let endStruct = appendInput.structDef();
-      for (const existingSeg of modelPipe.pipeline) {
-        endStruct = opOutputStruct(this, endStruct, existingSeg);
-      }
-      appendInput = new StaticSpace(endStruct);
+      const lastOut = this.getFinalStruct(fs.structDef(), modelPipe.pipeline);
+      pipeOutFS = new StaticSpace(lastOut);
     }
-    const appended = this.appendOps(modelPipe.pipeline, appendInput);
+    const appended = this.appendOps(pipeOutFS, modelPipe.pipeline);
     modelPipe.pipeline = appended.opList;
     return modelPipe;
   }
@@ -108,20 +120,68 @@ export class TurtleDecl extends TurtleHeadedPipe implements Noteable {
     }
     return turtle;
   }
+
+  makeEntry(fs: DynamicSpace) {
+    fs.newEntry(this.name, this, new QueryFieldAST(fs, this, this.name));
+  }
 }
 
-export class NestRefinement extends TurtleDecl {
+export class TurtleDecl extends TurtleDeclRoot {
+  elementType = 'turtleDecl';
+}
+
+export class NestRefinement
+  extends TurtleDeclRoot
+  implements QueryPropertyInterface
+{
   elementType = 'nestRefinement';
+  queryRefinementStage = LegalRefinementStage.Single;
+  forceQueryClass = QueryClass.Grouping;
+
   constructor(turtleName: FieldName) {
     super(turtleName.refString);
     this.turtleName = turtleName;
   }
+
+  queryExecute(executeFor: QueryBuilder) {
+    executeFor.resultFS.pushFields(this);
+  }
+
+  makeEntry(fs: DynamicSpace) {
+    if (fs instanceof QuerySpace) {
+      const qf = new QueryFieldAST(fs, this, this.name);
+      qf.nestParent = fs.inputSpace();
+      fs.newEntry(this.name, this, qf);
+      return;
+    }
+    throw this.internalError('Unexpected namespace for nest');
+  }
 }
 
-export class NestDefinition extends TurtleDecl {
+export class NestDefinition
+  extends TurtleDeclRoot
+  implements QueryPropertyInterface
+{
   elementType = 'nestDefinition';
+  queryRefinementStage = LegalRefinementStage.Single;
+  forceQueryClass = QueryClass.Grouping;
+
   constructor(name: string) {
     super(name);
+  }
+
+  queryExecute(executeFor: QueryBuilder) {
+    executeFor.resultFS.pushFields(this);
+  }
+
+  makeEntry(fs: DynamicSpace) {
+    if (fs instanceof QuerySpace) {
+      const qf = new QueryFieldAST(fs, this, this.name);
+      qf.nestParent = fs.inputSpace();
+      fs.newEntry(this.name, this, qf);
+      return;
+    }
+    throw this.internalError('Unexpected namespace for nest');
   }
 }
 
@@ -160,3 +220,43 @@ export class QueryFieldAST extends QueryField {
     return def;
   }
 }
+
+export class NestReference
+  extends FieldReference
+  implements QueryPropertyInterface, MakeEntry
+{
+  elementType = 'nestReference';
+  forceQueryClass = QueryClass.Grouping;
+  queryRefinementStage = LegalRefinementStage.Single;
+
+  constructor(readonly name: FieldName) {
+    super([name]);
+  }
+  typecheck(type: TypeDesc) {
+    if (type.dataType !== 'turtle') {
+      let useInstead: string;
+      let kind: string;
+      if (expressionIsAnalytic(type.expressionType)) {
+        useInstead = 'a calculate';
+        kind = 'an analytic';
+      } else if (expressionIsScalar(type.expressionType)) {
+        useInstead = 'a group_by or project';
+        kind = 'a scalar';
+      } else if (expressionIsAggregate(type.expressionType)) {
+        useInstead = 'an aggregate';
+        kind = 'an aggregate';
+      } else {
+        throw new Error(`Unexpected expression type ${type} not handled here`);
+      }
+      this.log(
+        `Cannot use ${kind} field in a nest operation, did you mean to use ${useInstead} operation instead?`
+      );
+    }
+  }
+
+  queryExecute(executeFor: QueryBuilder) {
+    executeFor.resultFS.pushFields(this);
+  }
+}
+
+export type NestedQuery = NestReference | NestDefinition | NestRefinement;

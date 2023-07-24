@@ -31,37 +31,28 @@ import {
 
 import {ErrorFactory} from '../error-factory';
 import {FieldSpace} from '../types/field-space';
-import {Aggregate} from '../query-properties/aggregate';
-import {DeclareFields} from '../query-properties/declare-fields';
 import {Filter} from '../query-properties/filters';
-import {GroupBy} from '../query-properties/group-by';
-import {Joins} from '../query-properties/joins';
 import {Limit} from '../query-properties/limit';
 import {Ordering} from '../query-properties/ordering';
 import {Top} from '../query-properties/top';
 import {QueryProperty} from '../types/query-property';
-import {Executor} from '../types/executor';
-import {Nests} from '../query-properties/nests';
-import {isNestedQuery} from '../query-properties/nest';
-import {
-  QueryInputSpace,
-  QuerySpace,
-  ReduceFieldSpace,
-} from '../field-space/query-spaces';
-import {Calculate} from '../query-properties/calculate';
-import {TimezoneStatement} from '../source-properties/timezone-statement';
-import {ExtendBlock} from '../query-properties/extend';
+import {QueryBuilder} from '../types/query-builder';
+import {QuerySpace, ReduceFieldSpace} from '../field-space/query-spaces';
+import {DefinitionList} from '../types/definition-list';
+import {QueryInputSpace} from '../field-space/query-input-space';
 
-export class ReduceExecutor implements Executor {
+export class ReduceBuilder implements QueryBuilder {
   inputFS: QueryInputSpace;
   resultFS: QuerySpace;
   filters: FilterExpression[] = [];
   order?: Top | Ordering;
   limit?: number;
+  type: 'grouping' | 'project';
 
   constructor(baseFS: FieldSpace, refineThis: PipeSegment | undefined) {
     this.resultFS = this.getResultSpace(baseFS, refineThis);
-    this.inputFS = this.resultFS.exprSpace;
+    this.inputFS = this.resultFS.inputSpace();
+    this.type = 'grouping';
   }
 
   getResultSpace(
@@ -72,18 +63,15 @@ export class ReduceExecutor implements Executor {
   }
 
   execute(qp: QueryProperty): void {
-    if (
-      qp instanceof GroupBy ||
-      qp instanceof Aggregate ||
-      qp instanceof Nests
-    ) {
-      this.resultFS.addQueryItems(...qp.list);
-    } else if (qp instanceof Calculate) {
-      this.resultFS.addQueryItems(...qp.list);
-    } else if (isNestedQuery(qp)) {
-      this.resultFS.addQueryItems(qp);
+    if (qp.queryExecute) {
+      qp.queryExecute(this);
+      return;
+    }
+    if (qp instanceof DefinitionList) {
+      this.resultFS.pushFields(...qp.list);
     } else if (qp instanceof Filter) {
-      this.filters.push(...qp.getFilterList(this.inputFS));
+      const filterFS = qp.havingClause ? this.resultFS : this.inputFS;
+      this.filters.push(...qp.getFilterList(filterFS));
     } else if (qp instanceof Top) {
       if (this.limit) {
         qp.log('Query operation already limited');
@@ -109,18 +97,6 @@ export class ReduceExecutor implements Executor {
       } else {
         this.order = qp;
       }
-    } else if (qp instanceof Joins || qp instanceof DeclareFields) {
-      for (const qel of qp.list) {
-        this.inputFS.extendSource(qel);
-      }
-    } else if (qp instanceof ExtendBlock) {
-      for (const block of qp.list) {
-        for (const qel of block.list) {
-          this.inputFS.extendSource(qel);
-        }
-      }
-    } else if (qp instanceof TimezoneStatement) {
-      this.resultFS.setTimezone(qp.tz);
     }
   }
 
@@ -166,7 +142,7 @@ export class ReduceExecutor implements Executor {
       if (isReduceSegment(fromSeg)) {
         from = fromSeg;
       } else {
-        this.inputFS.result.log(`Can't refine reduce with ${fromSeg.type}`);
+        this.resultFS.log(`Can't refine reduce with ${fromSeg.type}`);
         return ErrorFactory.reduceSegment;
       }
     }

@@ -151,6 +151,7 @@ export interface ResultMetadataDef {
 // struct specific metadta
 export interface ResultStructMetadataDef extends ResultMetadataDef {
   limit?: number;
+  orderBy?: OrderBy[];
 }
 
 export interface ResultMetadata {

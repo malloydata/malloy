@@ -24,10 +24,17 @@
 import {FieldReferences} from '../query-items/field-references';
 import {FieldName} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
+import {
+  QueryClass,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
 
-export class Index extends MalloyElement {
+export class Index extends MalloyElement implements QueryPropertyInterface {
   elementType = 'index';
   weightBy?: FieldName;
+  forceQueryClass = QueryClass.Index;
+  queryRefinementStage = undefined;
+
   constructor(readonly fields: FieldReferences) {
     super({fields: fields});
   }

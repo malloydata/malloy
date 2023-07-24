@@ -30,7 +30,7 @@ import {HTMLDashboardRenderer} from './dashboard';
 import {HTMLListDetailRenderer} from './list_detail';
 import {HTMLTableRenderer} from './table';
 import {ContainerRenderer} from './container';
-import {createErrorElement} from './utils';
+import {createErrorElement, tagIsPresent} from './utils';
 import {MainRendererFactory} from '../main_renderer_factory';
 import {HTMLListRenderer} from './list';
 
@@ -186,29 +186,36 @@ export function makeRenderer(
     return renderer;
   }
 
-  if (renderDef?.renderer === 'dashboard') {
+  if (renderDef?.renderer === 'dashboard' || tagIsPresent(tags, 'dashboard')) {
     return makeContainerRenderer(
       HTMLDashboardRenderer,
       document,
       isContainer(field),
-      options
+      options,
+      tags
     );
-  } else if (renderDef?.renderer === 'list') {
+  } else if (renderDef?.renderer === 'list' || tagIsPresent(tags, 'list')) {
     return makeContainerRenderer(
       HTMLListRenderer,
       document,
       isContainer(field),
-      options
+      options,
+      tags
     );
-  } else if (renderDef?.renderer === 'list_detail') {
+  } else if (
+    renderDef?.renderer === 'list_detail' ||
+    tagIsPresent(tags, 'list_detail')
+  ) {
     return makeContainerRenderer(
       HTMLListDetailRenderer,
       document,
       isContainer(field),
-      options
+      options,
+      tags
     );
   } else if (
     renderDef?.renderer === 'table' ||
+    tagIsPresent(tags, 'table') ||
     !field.hasParentExplore() ||
     field.isExploreField()
   ) {
@@ -216,7 +223,8 @@ export function makeRenderer(
       HTMLTableRenderer,
       document,
       isContainer(field),
-      options
+      options,
+      tags
     );
   }
 
@@ -224,12 +232,17 @@ export function makeRenderer(
 }
 
 function makeContainerRenderer<Type extends ContainerRenderer>(
-  cType: new (document: Document, options: RendererOptions) => Type,
+  cType: new (
+    document: Document,
+    options: RendererOptions,
+    tags?: Tags
+  ) => Type,
   document: Document,
   explore: Explore,
-  options: RendererOptions
+  options: RendererOptions,
+  tags?: Tags
 ): ContainerRenderer {
-  const c = ContainerRenderer.make(cType, document, explore, options);
+  const c = ContainerRenderer.make(cType, document, explore, options, tags);
   const result: ChildRenderers = {};
   explore.intrinsicFields.forEach((field: Field) => {
     result[field.name] = makeRenderer(

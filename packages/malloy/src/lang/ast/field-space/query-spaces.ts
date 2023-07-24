@@ -23,67 +23,30 @@
 
 import * as model from '../../../model/malloy_types';
 import {mergeFields, nameOf} from '../../field-utils';
-import {FieldDeclaration} from '../query-items/field-declaration';
-import {FieldName, FieldSpace} from '../types/field-space';
+import {FieldName, FieldSpace, QueryFieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
-import {Join} from '../query-properties/joins';
 import {SpaceField} from '../types/space-field';
-import {SourceSpec, SpaceSeed} from '../space-seed';
 
-import {QueryFieldAST, isNestedQuery} from '../query-properties/nest';
-import {NestReference} from '../query-properties/nest-reference';
-import {
-  FieldReference,
-  WildcardFieldReference,
-} from '../query-items/field-references';
-import {FieldCollectionMember} from '../types/field-collection-member';
-import {QueryItem} from '../types/query-item';
-import {ReferenceField} from './reference-field';
+import {WildcardFieldReference} from '../query-items/field-references';
 import {WildSpaceField} from './wild-space-field';
 import {RefinedSpace} from './refined-space';
 import {LookupResult} from '../types/lookup-result';
-import {SpaceEntry} from '../types/space-entry';
 import {ColumnSpaceField} from './column-space-field';
 import {StructSpaceField} from './static-space';
+import {QueryInputSpace} from './query-input-space';
+import {SpaceEntry} from '../types/space-entry';
 
 /**
- * Unlike a source, which is a refinement of a namespace, a query
- * is creating a new unrelated namespace. The query starts with a
- * source, which it might modify. This set of fields used to resolve
- * expressions in the query is called the "input space". There is a
- * specialized QuerySpace for each type of query operation.
+ * The output space of a query operation, it is not named "QueryOutputSpace"
+ * because this is the namespace of the Query. This is the one which is constructed
+ * with the query. The QueryInputSpace is created and paired when a
+ * QuerySpace is created.
  */
-
-export class QueryInputSpace extends RefinedSpace {
-  nestParent?: QueryInputSpace;
-  extendList: string[] = [];
-
-  constructor(input: SourceSpec, readonly result: QuerySpace) {
-    const inputSpace = new SpaceSeed(input);
-    super(inputSpace.structDef);
-  }
-
-  extendSource(extendField: Join | FieldDeclaration): void {
-    this.addField(extendField);
-    if (extendField instanceof Join) {
-      this.extendList.push(extendField.name.refString);
-    } else {
-      this.extendList.push(extendField.defineName);
-    }
-  }
-
-  isQueryFieldSpace() {
-    return true;
-  }
-
-  outputSpace() {
-    return this.result;
-  }
-}
-
-// TODO maybe rename QueryOutputSpace
-export abstract class QuerySpace extends RefinedSpace {
-  readonly exprSpace: QueryInputSpace;
+export abstract class QuerySpace
+  extends RefinedSpace
+  implements QueryFieldSpace
+{
+  private exprSpace: QueryInputSpace;
   astEl?: MalloyElement | undefined;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
   constructor(
@@ -124,28 +87,23 @@ export abstract class QuerySpace extends RefinedSpace {
     }
   }
 
-  addMembers(members: FieldCollectionMember[]): void {
-    for (const member of members) {
-      if (member instanceof FieldReference) {
-        this.addReference(member);
-      } else if (member instanceof WildcardFieldReference) {
-        this.addWild(member);
+  pushFields(...defs: MalloyElement[]): void {
+    for (const f of defs) {
+      if (f instanceof WildcardFieldReference) {
+        this.addWild(f);
       } else {
-        this.addField(member);
+        super.pushFields(f);
       }
     }
   }
 
-  addReference(ref: FieldReference): void {
-    const refName = ref.outputName;
-    if (this.entry(refName)) {
-      ref.log(`Output already has a field named '${refName}'`);
-    } else {
-      this.setEntry(refName, new ReferenceField(ref));
-    }
+  setEntry(name: string, value: SpaceEntry): void {
+    super.setEntry(name, value);
+    // Everything in this namespace is and output field
+    value.outputField = true;
   }
 
-  addWild(wild: WildcardFieldReference): void {
+  protected addWild(wild: WildcardFieldReference): void {
     let success = true;
     let current = this.exprSpace as FieldSpace;
     const parts = wild.refString.split('.');
@@ -248,33 +206,20 @@ export abstract class QuerySpace extends RefinedSpace {
    */
   checkUngroup(fn: FieldName, isExclude: boolean): void {
     if (!this.entry(fn.refString)) {
-      if (isExclude && this.exprSpace.nestParent) {
-        const parent = this.exprSpace.nestParent;
+      const parent = this.exprSpace.nestParent;
+      if (isExclude && parent) {
         parent.whenComplete(() => {
-          parent.result.checkUngroup(fn, isExclude);
+          const pOut = parent.outputSpace();
+          // a little ugly, but it breaks a circularity problem
+          if (pOut instanceof QuerySpace) {
+            pOut.checkUngroup(fn, isExclude);
+          } else {
+            throw new Error('OUCH');
+          }
         });
       } else {
         const uName = isExclude ? 'exclude()' : 'all()';
         fn.log(`${uName} '${fn.refString}' is missing from query output`);
-      }
-    }
-  }
-
-  addQueryItems(...qiList: QueryItem[]): void {
-    for (const qi of qiList) {
-      if (qi instanceof NestReference) {
-        this.addReference(qi);
-      } else if (qi instanceof FieldReference) {
-        this.addReference(qi);
-      } else if (qi instanceof FieldDeclaration) {
-        this.addField(qi);
-      } else if (isNestedQuery(qi)) {
-        const qf = new QueryFieldAST(this, qi, qi.name);
-        qf.nestParent = this.exprSpace;
-        this.setEntry(qi.name, qf);
-      } else {
-        // Compiler will error if we don't handle all cases
-        const _itemNotHandled: never = qi;
       }
     }
   }
@@ -371,10 +316,7 @@ export abstract class QuerySpace extends RefinedSpace {
   lookup(path: FieldName[]): LookupResult {
     const result = super.lookup(path);
     if (result.found) {
-      return {
-        error: undefined,
-        found: new OutputSpaceEntry(result.found),
-      };
+      return result;
     }
     return this.exprSpace.lookup(path);
   }
@@ -386,24 +328,12 @@ export abstract class QuerySpace extends RefinedSpace {
   outputSpace() {
     return this;
   }
+
+  inputSpace() {
+    return this.exprSpace;
+  }
 }
 
 export class ReduceFieldSpace extends QuerySpace {
   readonly segmentType = 'reduce';
-}
-
-export class OutputSpaceEntry extends SpaceEntry {
-  refType: 'field' | 'parameter';
-  constructor(readonly inputSpaceEntry: SpaceEntry) {
-    super();
-    this.refType = inputSpaceEntry.refType;
-  }
-
-  typeDesc(): model.TypeDesc {
-    const type = this.inputSpaceEntry.typeDesc();
-    return {
-      ...type,
-      evalSpace: type.evalSpace === 'constant' ? 'constant' : 'output',
-    };
-  }
 }

@@ -24,9 +24,20 @@
 import {Sampling} from '../../../model/malloy_types';
 
 import {MalloyElement} from '../types/malloy-element';
+import {
+  LegalRefinementStage,
+  QueryClass,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
 
-export class SampleProperty extends MalloyElement {
+export class SampleProperty
+  extends MalloyElement
+  implements QueryPropertyInterface
+{
   elementType = 'sampleProperty';
+  queryRefinementStage = LegalRefinementStage.Tail;
+  forceQueryClass = QueryClass.Index;
+
   constructor(readonly sample: Sampling) {
     super();
   }

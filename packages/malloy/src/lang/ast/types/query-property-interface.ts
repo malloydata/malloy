@@ -21,7 +21,29 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {NestDefinition, NestRefinement} from '../query-properties/nest';
-import {NestReference} from '../query-properties/nest-reference';
+import {QueryBuilder} from './query-builder';
 
-export type NestedQuery = NestReference | NestDefinition | NestRefinement;
+export enum QueryClass {
+  Index = 'index',
+  Project = 'project',
+  Grouping = 'grouping',
+}
+
+/**
+ * A QueryProperty can have these responses to appearing in a refinement
+ *   Head -- Legal in all queries, apply it to the first segment
+ *   Tail -- Legal in all queries,, apply it to the last segment
+ *   Single -- Only legal in queries with exactly one segment
+ *   undefined -- Not legal in a refinement
+ */
+export enum LegalRefinementStage {
+  Single,
+  Head,
+  Tail,
+}
+
+export interface QueryPropertyInterface {
+  queryRefinementStage: LegalRefinementStage | undefined;
+  forceQueryClass: QueryClass | undefined;
+  queryExecute?: (executeFor: QueryBuilder) => void;
+}

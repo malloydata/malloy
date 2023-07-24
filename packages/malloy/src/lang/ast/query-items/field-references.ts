@@ -22,12 +22,15 @@
  */
 
 import {Annotation, FieldDef, TypeDesc} from '../../../model/malloy_types';
+import {DynamicSpace} from '../field-space/dynamic-space';
+import {ReferenceField} from '../field-space/reference-field';
 import {DefinitionList} from '../types/definition-list';
 
 import {FieldName, FieldSpace} from '../types/field-space';
 import {LookupResult} from '../types/lookup-result';
 import {ListOf, MalloyElement} from '../types/malloy-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
+import {MakeEntry} from '../types/space-entry';
 
 import {
   typecheckAggregate,
@@ -46,7 +49,7 @@ export type FieldReferenceConstructor = new (
 
 export abstract class FieldReference
   extends ListOf<FieldName>
-  implements Noteable
+  implements Noteable, MakeEntry
 {
   readonly isNoteableObj = true;
   note?: Annotation;
@@ -54,6 +57,17 @@ export abstract class FieldReference
 
   constructor(names: FieldName[]) {
     super(names);
+  }
+
+  makeEntry(fs: DynamicSpace) {
+    const refName = this.outputName;
+    if (fs.entry(refName)) {
+      this.log(`Output already has a field named '${refName}'`);
+    } else {
+      // In a QuerySpace, this needs to be able to find the thing to which it refers
+      const fromFS = fs.isQueryFieldSpace() ? fs.inputSpace() : fs;
+      fs.newEntry(refName, this, new ReferenceField(this, fromFS));
+    }
   }
 
   get refString(): string {
@@ -79,7 +93,7 @@ export abstract class FieldReference
     return this.list[this.list.length - 1].refString;
   }
 
-  abstract typecheck(type: TypeDesc);
+  abstract typecheck(type: TypeDesc): void;
 
   getField(fs: FieldSpace): LookupResult {
     const result = fs.lookup(this.list);

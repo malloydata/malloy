@@ -2413,8 +2413,15 @@ class QueryQuery extends QueryField {
       const sourceField = fi.turtleDef.name || fi.turtleDef.as;
       const sourceClasses = sourceField ? [sourceField] : [];
       const filterList = fi.firstSegment.filterList;
-      const limit =
-        fi.turtleDef.pipeline[fi.turtleDef.pipeline.length - 1].limit;
+
+      const lastSegment =
+        fi.turtleDef.pipeline[fi.turtleDef.pipeline.length - 1];
+      const limit = lastSegment.limit;
+      let orderBy: OrderBy[] | undefined = undefined;
+      if (isQuerySegment(lastSegment)) {
+        orderBy = lastSegment.orderBy;
+      }
+
       if (sourceField) {
         return {
           sourceField,
@@ -2422,6 +2429,7 @@ class QueryQuery extends QueryField {
           sourceClasses,
           fieldKind: 'struct',
           limit,
+          orderBy,
         };
       }
     }

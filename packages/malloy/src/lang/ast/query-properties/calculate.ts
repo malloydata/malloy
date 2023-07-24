@@ -23,7 +23,16 @@
 
 import {DefinitionList} from '../types/definition-list';
 import {QueryItem} from '../types/query-item';
+import {
+  LegalRefinementStage,
+  QueryPropertyInterface,
+} from '../types/query-property-interface';
 
-export class Calculate extends DefinitionList<QueryItem> {
+export class Calculate
+  extends DefinitionList<QueryItem>
+  implements QueryPropertyInterface
+{
   elementType = 'calculate';
+  forceQueryClass = undefined;
+  queryRefinementStage = LegalRefinementStage.Single;
 }

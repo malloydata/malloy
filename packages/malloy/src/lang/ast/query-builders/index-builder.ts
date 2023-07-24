@@ -35,20 +35,21 @@ import {Limit} from '../query-properties/limit';
 import {SampleProperty} from '../query-properties/sampling';
 import {IndexFieldSpace} from '../field-space/index-field-space';
 import {QueryProperty} from '../types/query-property';
-import {Executor} from '../types/executor';
-import {QueryInputSpace} from '../field-space/query-spaces';
+import {QueryBuilder} from '../types/query-builder';
+import {QueryInputSpace} from '../field-space/query-input-space';
 
-export class IndexExecutor implements Executor {
+export class IndexBuilder implements QueryBuilder {
   filters: FilterExpression[] = [];
   limit?: Limit;
   indexOn?: FieldName;
   sample?: Sampling;
   resultFS: IndexFieldSpace;
   inputFS: QueryInputSpace;
+  readonly type = 'index';
 
   constructor(inputFS: FieldSpace, refineThis: PipeSegment | undefined) {
     this.resultFS = new IndexFieldSpace(inputFS, refineThis);
-    this.inputFS = this.resultFS.exprSpace;
+    this.inputFS = this.resultFS.inputSpace();
   }
 
   execute(qp: QueryProperty): void {
@@ -60,7 +61,7 @@ export class IndexExecutor implements Executor {
       }
       this.limit = qp;
     } else if (qp instanceof Index) {
-      this.resultFS.addMembers(qp.fields.list);
+      this.resultFS.pushFields(...qp.fields.list);
       if (qp.weightBy) {
         if (this.indexOn) {
           this.indexOn.log('Ignoring previous BY');
