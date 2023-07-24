@@ -944,7 +944,7 @@ export class MalloyToAST
         } else {
           this.contextError(
             agg,
-            "'${aggFunc}' is not a legal in a reference-only aggregation"
+            "'${aggFunc}' is not legal in a reference-only aggregation"
           );
           return ref;
         }
