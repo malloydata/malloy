@@ -16,5 +16,6 @@
   },
   "cSpell.words": ["antlr"],
   "typescript.tsdk": "node_modules/typescript/lib",
-  "task.allowAutomaticTasks": "on"
+  "task.allowAutomaticTasks": "on",
+  "workbench.colorTheme": "Winter is Coming (Dark Black)"
 }

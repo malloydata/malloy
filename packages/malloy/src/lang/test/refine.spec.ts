@@ -122,3 +122,54 @@ describe('refinement location rules', () => {
     ).toTranslate();
   });
 });
+
+// MTOY TODO delete this when you fix generateSQLJoins in malloy-query
+test('and now this', () => {
+  const docOK = model`
+  source: airports is a extend {
+    query: by_region is
+      { group_by: faa_region is astr }
+    query: by_region2 is by_region
+      refine {
+        nest: add_state is
+          { group_by: state is astr }
+      }
+      ->
+      { project: faa_region, add_state.state }
+  }`;
+  expect(docOK).toTranslate();
+
+  const docOldBad = model`
+  source: airports is a extend {
+    query: by_region is
+      { group_by: faa_region is astr }
+    query: by_region2 is by_region
+      refine {
+        nest: add_state is
+          { group_by: state is astr }
+          ->
+          { project: faa_region, add_state.state }
+      }
+  }`;
+  expect(docOldBad).translationToFailWith(
+    "'faa_region' is not defined",
+    "'add_state' is not defined"
+  );
+
+  const docNewBad = model`
+  source: airports is a extend {
+    query: by_region is
+      { group_by: faa_region is astr }
+    query: by_region2 is by_region
+      refine (
+        nest add_state is
+          ( group_by: state is astr
+          ->
+          select faa_region, add_state.state)
+      )
+  }`;
+  expect(docNewBad).translationToFailWith(
+    "'faa_region' is not defined",
+    "'add_state' is not defined"
+  );
+});

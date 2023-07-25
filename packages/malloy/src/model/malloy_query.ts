@@ -2695,6 +2695,8 @@ class QueryQuery extends QueryField {
 
   generateSQLJoins(stageWriter: StageWriter): string {
     let s = '';
+    // mtoy TODO review this before merge DO NOT MERGE
+    if (this.rootResult.joins.size === 0) return s;
     // get the first value from the map (weird, I know)
     const [[, ji]] = this.rootResult.joins;
     const qs = ji.queryStruct;
