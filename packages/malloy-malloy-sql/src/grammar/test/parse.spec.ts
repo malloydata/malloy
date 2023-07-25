@@ -191,8 +191,6 @@ SELECT 1
 >>>malloy
 import "airports.malloy"`);
 
-      console.log(JSON.stringify(parse.statements, null, 2));
-
       expect(parse.statements).toHaveLength(4);
 
       expect(parse.statements[0].type).toBe(MalloySQLStatementType.MARKDOWN);

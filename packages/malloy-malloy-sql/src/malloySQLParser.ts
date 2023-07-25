@@ -34,11 +34,11 @@ import {
   MalloySQLStatement,
   MalloySQLParseResults,
   MalloySQLStatementType,
-  ParsedMalloySQLMalloyStatementPart,
   MalloySQLParseRange,
   MalloySQLParseErrorExpected,
   MalloySQLParseLocation,
 } from './types';
+import {MalloySQLSQLParser} from './malloySQLSQLParser';
 
 export class MalloySQLParseError extends MalloyError {
   constructor(message: string, problems: LogMessage[] = []) {
@@ -196,19 +196,14 @@ export class MalloySQLParser {
         }
 
         previousConnection = config.connection;
-        const embeddedMalloyQueries = parsedStatement.parts
-          .filter((part): part is ParsedMalloySQLMalloyStatementPart => {
-            return part.type === 'malloy';
-          })
-          .map(part => {
-            return {
-              query: part.malloy,
-              parenthized: part.parenthized,
-              range: this.convertRange(part.range),
-              text: part.text,
-              malloyRange: this.convertRange(part.malloyRange),
-            };
-          });
+
+        const parsedMalloySQLSQL = MalloySQLSQLParser.parse(
+          parsedStatement.statementText,
+          url,
+          parsedStatement.range.start
+        );
+
+        const embeddedMalloyQueries = parsedMalloySQLSQL.embeddedMalloyQueries;
 
         statements.push({
           ...base,
