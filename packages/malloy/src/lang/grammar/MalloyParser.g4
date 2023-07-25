@@ -123,9 +123,14 @@ sourceExtension
   ;
 
 query
-  : unrefinableQuery pipeElement*    # NormalQuery
+  : anyUnrefineable pipeElement*     # NormalQuery
   | sqlSource                        # QueryFromSQLSource
   | OPAREN query CPAREN              # ContainedQuery
+  ;
+
+anyUnrefineable
+  : OPAREN unrefinableQuery CPAREN
+  | unrefinableQuery
   ;
 
 unrefinableQuery
@@ -162,6 +167,7 @@ pipelineFromName
 firstSegment
   : ARROW? queryProperties
   | exploreQueryName queryRefinement?
+  | OPAREN firstSegment CPAREN
   ;
 
 pipeElement

@@ -415,7 +415,7 @@ export class MalloyToAST
   }
 
   visitNormalQuery(pcx: parse.NormalQueryContext): ast.QueryElement {
-    const query = this.visit(pcx.unrefinableQuery());
+    const query = this.visit(pcx.anyUnrefineable());
     if (ast.isQueryElement(query)) {
       query.addSegments(...this.getSegments(pcx.pipeElement()));
       return this.astAt(query, pcx);
