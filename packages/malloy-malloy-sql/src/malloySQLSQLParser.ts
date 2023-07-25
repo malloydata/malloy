@@ -30,7 +30,7 @@ import {
   MalloySQLParseLocation,
   EmbeddedMalloyQuery,
 } from './types';
-import {MalloySQLParseError, MalloySQLSyntaxError} from './malloySQLParser';
+import {MalloySQLParseError, MalloySQLSyntaxError} from './malloySQLErrors';
 
 export class MalloySQLSQLParser {
   private static convertLocation(

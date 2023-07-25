@@ -21,12 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  LogMessage,
-  MalloyError,
-  DocumentRange,
-  DocumentPosition,
-} from '@malloydata/malloy';
+import {LogMessage, DocumentRange, DocumentPosition} from '@malloydata/malloy';
 import * as parser from './grammar/malloySQL';
 import {
   MalloySQLStatmentConfig,
@@ -35,32 +30,10 @@ import {
   MalloySQLParseResults,
   MalloySQLStatementType,
   MalloySQLParseRange,
-  MalloySQLParseErrorExpected,
   MalloySQLParseLocation,
 } from './types';
 import {MalloySQLSQLParser} from './malloySQLSQLParser';
-
-export class MalloySQLParseError extends MalloyError {
-  constructor(message: string, problems: LogMessage[] = []) {
-    super(message, problems);
-  }
-}
-
-export class MalloySQLSyntaxError extends MalloySQLParseError {
-  public expected: MalloySQLParseErrorExpected[];
-  public found: string;
-
-  constructor(
-    message: string,
-    log: LogMessage[],
-    expected: MalloySQLParseErrorExpected[],
-    found: string
-  ) {
-    super(message, log);
-    this.expected = expected;
-    this.found = found;
-  }
-}
+import {MalloySQLParseError, MalloySQLSyntaxError} from './malloySQLErrors';
 
 export class MalloySQLParser {
   private static convertLocation(
