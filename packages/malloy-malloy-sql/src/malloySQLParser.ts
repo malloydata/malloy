@@ -21,12 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  LogMessage,
-  MalloyError,
-  DocumentRange,
-  DocumentPosition,
-} from '@malloydata/malloy';
+import {LogMessage, DocumentRange, DocumentPosition} from '@malloydata/malloy';
 import * as parser from './grammar/malloySQL';
 import {
   MalloySQLStatmentConfig,
@@ -34,33 +29,11 @@ import {
   MalloySQLStatement,
   MalloySQLParseResults,
   MalloySQLStatementType,
-  ParsedMalloySQLMalloyStatementPart,
   MalloySQLParseRange,
-  MalloySQLParseErrorExpected,
   MalloySQLParseLocation,
 } from './types';
-
-export class MalloySQLParseError extends MalloyError {
-  constructor(message: string, problems: LogMessage[] = []) {
-    super(message, problems);
-  }
-}
-
-export class MalloySQLSyntaxError extends MalloySQLParseError {
-  public expected: MalloySQLParseErrorExpected[];
-  public found: string;
-
-  constructor(
-    message: string,
-    log: LogMessage[],
-    expected: MalloySQLParseErrorExpected[],
-    found: string
-  ) {
-    super(message, log);
-    this.expected = expected;
-    this.found = found;
-  }
-}
+import {MalloySQLSQLParser} from './malloySQLSQLParser';
+import {MalloySQLParseError, MalloySQLSyntaxError} from './malloySQLErrors';
 
 export class MalloySQLParser {
   private static convertLocation(
@@ -196,19 +169,14 @@ export class MalloySQLParser {
         }
 
         previousConnection = config.connection;
-        const embeddedMalloyQueries = parsedStatement.parts
-          .filter((part): part is ParsedMalloySQLMalloyStatementPart => {
-            return part.type === 'malloy';
-          })
-          .map(part => {
-            return {
-              query: part.malloy,
-              parenthized: part.parenthized,
-              range: this.convertRange(part.range),
-              text: part.text,
-              malloyRange: this.convertRange(part.malloyRange),
-            };
-          });
+
+        const parsedMalloySQLSQL = MalloySQLSQLParser.parse(
+          parsedStatement.statementText,
+          url,
+          parsedStatement.range.start
+        );
+
+        const embeddedMalloyQueries = parsedMalloySQLSQL.embeddedMalloyQueries;
 
         statements.push({
           ...base,

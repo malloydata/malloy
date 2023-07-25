@@ -10,7 +10,9 @@
     "url": "https://github.com/malloydata/malloy"
   },
   "scripts": {
-    "build-grammar": "peggy -o src/grammar/malloySQL.js src/grammar/malloySQL.pegjs",
+    "build-malloysql-grammar": "peggy -o src/grammar/malloySQL.js src/grammar/malloySQL.pegjs",
+    "build-malloysqlsql-grammar": "peggy -o src/grammar/malloySQLSQL.js src/grammar/malloySQLSQL.pegjs",
+    "build-grammar": "npm run build-malloysql-grammar && npm run build-malloysqlsql-grammar",
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "npm run build-grammar && jest --config=../../jest.config.js",

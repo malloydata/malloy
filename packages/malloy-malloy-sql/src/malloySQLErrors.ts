@@ -20,15 +20,28 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-export {MalloySQLParser} from './malloySQLParser';
-export {MalloySQLParseError} from './malloySQLErrors';
-export {MalloySQLSQLParser} from './malloySQLSQLParser';
-export type {MalloySQLParse} from './malloySQLParser';
-export type {MalloySQLSQLParse} from './malloySQLSQLParser';
-export type {
-  MalloySQLMalloyStatement,
-  MalloySQLSQLStatement,
-  MalloySQLStatement,
-  MalloySQLParseErrorExpected,
-} from './types';
-export {MalloySQLStatementType} from './types';
+
+import {LogMessage, MalloyError} from '@malloydata/malloy';
+import {MalloySQLParseErrorExpected} from './types';
+
+export class MalloySQLParseError extends MalloyError {
+  constructor(message: string, problems: LogMessage[] = []) {
+    super(message, problems);
+  }
+}
+
+export class MalloySQLSyntaxError extends MalloySQLParseError {
+  public expected: MalloySQLParseErrorExpected[];
+  public found: string;
+
+  constructor(
+    message: string,
+    log: LogMessage[],
+    expected: MalloySQLParseErrorExpected[],
+    found: string
+  ) {
+    super(message, log);
+    this.expected = expected;
+    this.found = found;
+  }
+}

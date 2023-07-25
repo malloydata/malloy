@@ -72,6 +72,10 @@ export interface MalloySQLParseResults {
   statements: ParsedMalloySQLStatement[];
 }
 
+export interface MalloySQLSQLParseResults {
+  parts: ParsedMalloySQLMalloyStatementPart[];
+}
+
 export interface MalloySQLStatmentConfig {
   connection?: string;
 }
