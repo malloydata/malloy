@@ -54,7 +54,7 @@ export function getStringIfShort(cx: HasString): string | undefined {
   }
 }
 
-export type HasString = ParserRuleContext & {
+export type HasString = {
   string: () => StringContext;
 };
 type StringPart = ParserRuleContext | string;

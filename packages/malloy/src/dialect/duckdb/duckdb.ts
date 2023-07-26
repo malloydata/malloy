@@ -36,6 +36,7 @@ import {
   isSamplingPercent,
   isSamplingRows,
   mkExpr,
+  CastType,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
 import {DialectFunctionOverloadDef} from '../functions';
@@ -53,6 +54,26 @@ const castMap: Record<string, string> = {
 const pgExtractionMap: Record<string, string> = {
   'day_of_week': 'dow',
   'day_of_year': 'doy',
+};
+
+// TODO this should not be duplicated between duckdb dialect and duckdb connection
+const duckDBToMalloyTypes: {[key: string]: CastType} = {
+  'BIGINT': 'number',
+  'INTEGER': 'number',
+  'TINYINT': 'number',
+  'SMALLINT': 'number',
+  'UBIGINT': 'number',
+  'UINTEGER': 'number',
+  'UTINYINT': 'number',
+  'USMALLINT': 'number',
+  'HUGEINT': 'number',
+  'DOUBLE': 'number',
+  'VARCHAR': 'string',
+  'DATE': 'date',
+  'TIMESTAMP': 'timestamp',
+  'TIME': 'string',
+  'DECIMAL': 'number',
+  'BOOLEAN': 'boolean',
 };
 
 export class DuckDBDialect extends Dialect {
@@ -338,9 +359,12 @@ export class DuckDBDialect extends Dialect {
       return mkExpr`CAST((${cast.expr})::TIMESTAMP AT TIME ZONE '${tz}' AS TIMESTAMP)`;
     }
     if (cast.srcType !== cast.dstType) {
-      const dstType = castMap[cast.dstType] || cast.dstType;
+      const dstType =
+        typeof cast.dstType === 'string'
+          ? this.malloyTypeToSQLType(cast.dstType)
+          : cast.dstType.raw;
       const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
-      return mkExpr`${castFunc}(${cast.expr}  AS ${dstType})`;
+      return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
     }
     return cast.expr;
   }
@@ -428,5 +452,13 @@ export class DuckDBDialect extends Dialect {
 
   getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
     return DUCKDB_FUNCTIONS.get(name);
+  }
+
+  malloyTypeToSQLType(malloyType: CastType): string {
+    return castMap[malloyType] ?? malloyType;
+  }
+
+  sqlTypeToMalloyType(sqlType: string): CastType | undefined {
+    return duckDBToMalloyTypes[sqlType];
   }
 }

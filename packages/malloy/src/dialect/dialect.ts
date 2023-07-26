@@ -32,6 +32,7 @@ import {
   TimestampUnit,
   TypecastFragment,
   mkExpr,
+  CastType,
 } from '../model/malloy_types';
 import {DialectFunctionOverloadDef} from './functions';
 
@@ -303,4 +304,7 @@ export abstract class Dialect {
   sqlTzStr(qi: QueryInfo): string {
     return `"${qi.queryTimezone}"`;
   }
+
+  abstract sqlTypeToMalloyType(sqlType: string): CastType | undefined;
+  abstract malloyTypeToSQLType(malloyType: CastType): string;
 }

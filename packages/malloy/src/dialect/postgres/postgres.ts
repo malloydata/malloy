@@ -35,6 +35,7 @@ import {
   isSamplingPercent,
   isSamplingRows,
   mkExpr,
+  CastType,
 } from '../../model/malloy_types';
 import {POSTGRES_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
@@ -66,6 +67,33 @@ const inSeconds: Record<string, number> = {
   'hour': 3600,
   'day': 24 * 3600,
   'week': 7 * 24 * 3600,
+};
+
+// TODO this is duplicated in dialect and connection
+const postgresToMalloyTypes: {[key: string]: CastType} = {
+  'character varying': 'string',
+  'name': 'string',
+  'text': 'string',
+  'date': 'date',
+  'integer': 'number',
+  'bigint': 'number',
+  'double precision': 'number',
+  'timestamp without time zone': 'timestamp', // maybe not
+  'oid': 'string',
+  'boolean': 'boolean',
+  // ARRAY: "string",
+  'timestamp': 'timestamp',
+  '"char"': 'string',
+  'character': 'string',
+  'smallint': 'number',
+  'xid': 'string',
+  'real': 'number',
+  'interval': 'string',
+  'inet': 'string',
+  'regtype': 'string',
+  'numeric': 'number',
+  'bytea': 'string',
+  'pg_ndistinct': 'number',
 };
 
 export class PostgresDialect extends Dialect {
@@ -347,12 +375,15 @@ export class PostgresDialect extends Dialect {
       return mkExpr`CAST((${cast.expr})::TIMESTAMP AT TIME ZONE '${tz}' AS TIMESTAMP)`;
     }
     if (cast.srcType !== cast.dstType) {
-      const dstType = castMap[cast.dstType] || cast.dstType;
+      const dstType =
+        typeof cast.dstType === 'string'
+          ? this.malloyTypeToSQLType(cast.dstType)
+          : cast.dstType.raw;
       if (cast.safe) {
         throw new Error("Postgres dialect doesn't support Safe Cast");
       }
       const castFunc = 'CAST';
-      return mkExpr`${castFunc}(${cast.expr}  AS ${dstType})`;
+      return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
     }
     return cast.expr;
   }
@@ -447,5 +478,13 @@ export class PostgresDialect extends Dialect {
 
   getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
     return POSTGRES_FUNCTIONS.get(name);
+  }
+
+  malloyTypeToSQLType(malloyType: CastType): string {
+    return castMap[malloyType] ?? malloyType;
+  }
+
+  sqlTypeToMalloyType(sqlType: string): CastType | undefined {
+    return postgresToMalloyTypes[sqlType];
   }
 }

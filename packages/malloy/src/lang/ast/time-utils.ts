@@ -55,7 +55,7 @@ export function timeOffset(
 }
 
 export function castTo(
-  castType: AtomicFieldType,
+  castType: AtomicFieldType | {raw: string},
   from: Expr,
   fromType: FieldValueType,
   safe = false

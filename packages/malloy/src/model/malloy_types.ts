@@ -324,7 +324,7 @@ export interface TypecastFragment extends DialectFragmentBase {
   function: 'cast';
   safe: boolean;
   expr: Expr;
-  dstType: AtomicFieldType;
+  dstType: CastType | {raw: string};
   srcType?: AtomicFieldType;
 }
 
@@ -550,14 +550,8 @@ export type TimeFieldType = 'date' | 'timestamp';
 export function isTimeFieldType(s: string): s is TimeFieldType {
   return s === 'date' || s === 'timestamp';
 }
-export type AtomicFieldType =
-  | 'string'
-  | 'number'
-  | TimeFieldType
-  | 'boolean'
-  | 'unsupported'
-  | 'json'
-  | 'error';
+export type CastType = 'string' | 'number' | TimeFieldType | 'boolean';
+export type AtomicFieldType = CastType | 'json' | 'unsupported' | 'error';
 export function isAtomicFieldType(s: string): s is AtomicFieldType {
   return [
     'string',

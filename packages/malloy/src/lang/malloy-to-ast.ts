@@ -44,6 +44,7 @@ import {
   unIndent,
 } from './parse-utils';
 import {MalloyTagProperties} from '../tags';
+import {CastType} from '../model';
 
 class IgnoredElement extends ast.MalloyElement {
   elementType = 'ignoredByParser';
@@ -1403,21 +1404,34 @@ export class MalloyToAST
   }
 
   visitExprCast(pcx: parse.ExprCastContext): ast.ExpressionDef {
-    const type = pcx.malloyType().text;
-    if (ast.isCastType(type)) {
-      return new ast.ExprCast(this.getFieldExpr(pcx.fieldExpr()), type);
+    const type = this.getMalloyOrSQLType(pcx.malloyOrSQLType());
+    return new ast.ExprCast(this.getFieldExpr(pcx.fieldExpr()), type);
+  }
+
+  getMalloyOrSQLType(
+    pcx: parse.MalloyOrSQLTypeContext
+  ): CastType | {raw: string} {
+    const mtcx = pcx.malloyType();
+    if (mtcx) {
+      const type = mtcx.text;
+      if (ast.isCastType(type)) {
+        return type;
+      }
+      throw this.internalError(pcx, `unknown type '${type}'`);
     }
-    this.contextError(pcx, `CAST to unknown type '${type}'`);
-    return new ast.ExprNULL();
+    const rtcx = pcx.string();
+    if (rtcx) {
+      return {raw: this.getPlainString({string: () => rtcx})};
+    }
+    throw this.internalError(
+      pcx,
+      'Expected Malloy or SQL type to either be a Malloy type or a string'
+    );
   }
 
   visitExprSafeCast(pcx: parse.ExprSafeCastContext): ast.ExpressionDef {
-    const type = pcx.malloyType().text;
-    if (ast.isCastType(type)) {
-      return new ast.ExprCast(this.getFieldExpr(pcx.fieldExpr()), type, true);
-    }
-    this.contextError(pcx, `'::' cast to unknown type '${type}'`);
-    return new ast.ExprNULL();
+    const type = this.getMalloyOrSQLType(pcx.malloyOrSQLType());
+    return new ast.ExprCast(this.getFieldExpr(pcx.fieldExpr()), type, true);
   }
 
   visitExprTimeTrunc(pcx: parse.ExprTimeTruncContext): ast.ExprGranularTime {
@@ -1466,7 +1480,7 @@ export class MalloyToAST
 
     const isRaw = pcx.EXCLAM() !== undefined;
     const rawRawType = pcx.malloyType()?.text;
-    let rawType: ast.CastType | undefined = undefined;
+    let rawType: CastType | undefined = undefined;
     if (rawRawType) {
       if (ast.isCastType(rawRawType)) {
         rawType = rawRawType;

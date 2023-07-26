@@ -33,6 +33,8 @@ import {
   isSamplingPercent,
   isSamplingRows,
   mkExpr,
+  FieldTypeDef,
+  CastType,
 } from '../../model/malloy_types';
 import {STANDARDSQL_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
@@ -77,6 +79,27 @@ declare interface TimeMeasure {
   use: string;
   ratio: number;
 }
+
+// TODO this is duplicated in dialect and connection
+const bqToMalloyTypes: {[key: string]: CastType} = {
+  'DATE': 'date',
+  'STRING': 'string',
+  'INTEGER': 'number',
+  'INT64': 'number',
+  'FLOAT': 'number',
+  'FLOAT64': 'number',
+  'NUMERIC': 'number',
+  'BIGNUMERIC': 'number',
+  'TIMESTAMP': 'timestamp',
+  'BOOLEAN': 'boolean',
+  'BOOL': 'boolean',
+  'JSON': 'json',
+  // TODO (https://cloud.google.com/bigquery/docs/reference/rest/v2/tables#tablefieldschema):
+  // BYTES
+  // DATETIME
+  // TIME
+  // GEOGRAPHY
+};
 
 export class StandardSQLDialect extends Dialect {
   name = 'standardsql';
@@ -407,9 +430,12 @@ ${indent(sql)}
       return mkExpr`TIMESTAMP(${cast.expr}, '${tz}')`;
     }
     if (cast.srcType !== cast.dstType) {
-      const dstType = castMap[cast.dstType] || cast.dstType;
+      const dstType =
+        typeof cast.dstType === 'string'
+          ? this.malloyTypeToSQLType(cast.dstType)
+          : cast.dstType.raw;
       const castFunc = cast.safe ? 'SAFE_CAST' : 'CAST';
-      return mkExpr`${castFunc}(${cast.expr}  AS ${dstType})`;
+      return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
     }
     return cast.expr;
   }
@@ -499,5 +525,14 @@ ${indent(sql)}
 
   getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
     return STANDARDSQL_FUNCTIONS.get(name);
+  }
+
+  malloyTypeToSQLType(malloyType: CastType): string {
+    return castMap[malloyType] ?? malloyType;
+  }
+
+  sqlTypeToMalloyType(sqlType: string): CastType | undefined {
+    // TODO the version in connection also supports number type, should we here?
+    return bqToMalloyTypes[sqlType];
   }
 }
