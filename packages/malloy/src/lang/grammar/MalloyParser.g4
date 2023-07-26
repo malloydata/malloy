@@ -62,7 +62,7 @@ runStatement
   ;
 
 defineSQLStatement
-  : SQLC nameSQLBlock isDefine sqlBlock
+  : SQL nameSQLBlock isDefine sqlBlock
   ;
 
 sqlBlock
@@ -271,7 +271,7 @@ joinStatement
   ;
 
 queryExtend
-  : (EXTEND | EXTEND_COLON) queryExtendStatementList
+  : EXTEND? queryExtendStatementList
   ;
 
 queryExtendStatement
@@ -314,11 +314,11 @@ filterClauseList
   ;
 
 whereStatement
-  : WHERE_COLON filterClauseList
+  : WHERE filterClauseList
   ;
 
 queryWhere
-  : (WHERE | WHERE_COLON) filterClauseList
+  : WHERE filterClauseList
   ;
 
 havingStatement
