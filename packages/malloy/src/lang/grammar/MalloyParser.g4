@@ -271,7 +271,7 @@ joinStatement
   ;
 
 queryExtend
-  : EXTEND? queryExtendStatementList
+  : (EXTEND | EXTEND_COLON) queryExtendStatementList
   ;
 
 queryExtendStatement
@@ -314,11 +314,11 @@ filterClauseList
   ;
 
 whereStatement
-  : WHERE filterClauseList
+  : WHERE_COLON filterClauseList
   ;
 
 queryWhere
-  : (WHERE | WHERE) filterClauseList
+  : (WHERE | WHERE_COLON) filterClauseList
   ;
 
 havingStatement
