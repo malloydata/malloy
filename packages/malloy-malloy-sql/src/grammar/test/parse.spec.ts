@@ -138,13 +138,14 @@ describe('MalloySQL parse', () => {
       );
     });
 
-    test('Should handle a connection in a delimeter', () => {
+    test('Should handle a connection in a delimiter', () => {
       const parse = MalloySQLParser.parse(`\
 >>>malloy
 import "foo"
 >>>sql connection:bigquery
 SELECT 1`);
       expect(parse.statements[1].config?.connection).toBe('bigquery');
+      expect(parse.statements[1].config?.fromDelimiter).toBe(true);
     });
 
     test('Should handle a connection in a comment', () => {
@@ -155,30 +156,31 @@ import "foo"
 -- connection:bigquery
 SELECT 1`);
       expect(parse.statements[1].config?.connection).toBe('bigquery');
+      expect(parse.statements[1].config?.fromDelimiter).not.toBe(true);
     });
   });
 
   describe('Embedded Malloy', () => {
-    test('Parenthized embedded malloy can handle space between ( and {%', () => {
+    test('Parenthesized embedded malloy can handle space between ( and {%', () => {
       const parse = MalloySQLParser.parse(
         '>>>sql connection:bigquery\nSELECT (  %{ malloy }%  )'
       );
       const stmt = parse.statements[0] as MalloySQLSQLStatement;
       const embeddedMalloy = stmt.embeddedMalloyQueries[0];
       expect(embeddedMalloy.query).toBe(' malloy ');
-      expect(embeddedMalloy.parenthized).toBeTruthy();
+      expect(embeddedMalloy.parenthesized).toBeTruthy();
       expect(embeddedMalloy.range.start.character).toBe(7);
       expect(embeddedMalloy.malloyRange.start.character).toBe(12);
     });
 
-    test('Non-parenthized embedded malloy', () => {
+    test('Non-parenthesized embedded malloy', () => {
       const parse = MalloySQLParser.parse(
         '>>>sql connection:bigquery\nSELECT %{ malloy }%'
       );
       const stmt = parse.statements[0] as MalloySQLSQLStatement;
       const embeddedMalloy = stmt.embeddedMalloyQueries[0];
       expect(embeddedMalloy.query).toBe(' malloy ');
-      expect(embeddedMalloy.parenthized).toBeFalsy();
+      expect(embeddedMalloy.parenthesized).toBeFalsy();
       expect(embeddedMalloy.range.start.character).toBe(7);
       expect(embeddedMalloy.malloyRange.start.character).toBe(9);
     });
@@ -275,7 +277,7 @@ import "airports.malloy"`);
       const embeddedMalloy = (parse.statements[1] as MalloySQLSQLStatement)
         .embeddedMalloyQueries;
       expect(embeddedMalloy).toHaveLength(1);
-      expect(embeddedMalloy[0].parenthized).toBeFalsy();
+      expect(embeddedMalloy[0].parenthesized).toBeFalsy();
       expect(embeddedMalloy[0].query).toBe(' malloy-here ');
       expect(embeddedMalloy[0].text).toBe('%{ malloy-here }%');
       expect(embeddedMalloy[0].range.start.line).toBe(3);
