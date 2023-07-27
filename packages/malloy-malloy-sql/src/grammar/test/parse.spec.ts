@@ -137,6 +137,25 @@ describe('MalloySQL parse', () => {
         1
       );
     });
+
+    test('Should handle a connection in a delimeter', () => {
+      const parse = MalloySQLParser.parse(`\
+>>>malloy
+import "foo"
+>>>sql connection:bigquery
+SELECT 1`);
+      expect(parse.statements[1].config?.connection).toBe('bigquery');
+    });
+
+    test('Should handle a connection in a comment', () => {
+      const parse = MalloySQLParser.parse(`\
+>>>malloy
+import "foo"
+>>>sql
+-- connection:bigquery
+SELECT 1`);
+      expect(parse.statements[1].config?.connection).toBe('bigquery');
+    });
   });
 
   describe('Embedded Malloy', () => {
