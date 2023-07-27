@@ -73,7 +73,7 @@ export interface MalloySQLParseResults {
 }
 
 export interface MalloySQLSQLParseResults {
-  parts: ParsedMalloySQLMalloyStatementPart[];
+  parts: ParsedMalloySQLStatementPart[];
 }
 
 export interface MalloySQLStatmentConfig {
@@ -100,6 +100,11 @@ export interface EmbeddedMalloyQuery {
   range: DocumentRange; // the entire wrapped embedded malloy, i.e. "(%{ malloy }%)"
   malloyRange: DocumentRange; // the malloy text only, i.e. " malloy "
   parenthized: boolean;
+}
+
+export interface EmbeddedComment {
+  text: string;
+  range: DocumentRange;
 }
 
 export interface MalloySQLMalloyStatement extends MalloySQLStatementBase {

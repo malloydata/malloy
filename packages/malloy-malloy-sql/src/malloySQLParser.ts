@@ -156,12 +156,21 @@ export class MalloySQLParser {
           type: MalloySQLStatementType.MALLOY,
         });
       } else {
-        const match = /^--\s*connection:\s*(?<connectionName>\S+)/.exec(
-          parsedStatement.statementText
+        const parsedMalloySQLSQL = MalloySQLSQLParser.parse(
+          parsedStatement.statementText,
+          url,
+          parsedStatement.range.start
         );
-        if (match && match.groups) {
-          config.connection = match.groups['connectionName'];
+
+        for (const comment of parsedMalloySQLSQL.comments) {
+          const match = /\bconnection:\s*(?<connectionName>\S*)/.exec(
+            comment.text
+          );
+          if (match && match.groups) {
+            config.connection = match.groups['connectionName'];
+          }
         }
+
         if (!config.connection) {
           if (!previousConnection)
             errors.push(
@@ -175,12 +184,6 @@ export class MalloySQLParser {
         }
 
         previousConnection = config.connection;
-
-        const parsedMalloySQLSQL = MalloySQLSQLParser.parse(
-          parsedStatement.statementText,
-          url,
-          parsedStatement.range.start
-        );
 
         const embeddedMalloyQueries = parsedMalloySQLSQL.embeddedMalloyQueries;
 
