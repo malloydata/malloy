@@ -24,7 +24,7 @@
 import {LogMessage, DocumentRange, DocumentPosition} from '@malloydata/malloy';
 import * as parser from './grammar/malloySQL';
 import {
-  MalloySQLStatmentConfig,
+  MalloySQLStatementConfig,
   MalloySQLStatementBase,
   MalloySQLStatement,
   MalloySQLParseResults,
@@ -102,12 +102,13 @@ export class MalloySQLParser {
     const initialCommentsLineCount =
       parsed.initialComments.split(/\r\n|\r|\n/).length - 1;
     let statementIndex = 0;
-    let config: MalloySQLStatmentConfig = {};
     const errors: MalloySQLParseError[] = [];
 
     if (!parsed.statements) return {statements, errors};
 
     for (const parsedStatement of parsed.statements) {
+      let config: MalloySQLStatementConfig = {};
+
       if (
         parsedStatement.statementType === 'malloy' &&
         parsedStatement.config !== ''
@@ -124,7 +125,7 @@ export class MalloySQLParser {
       if (parsedStatement.config.startsWith('connection:')) {
         const splitConfig = parsedStatement.config.split('connection:');
         if (splitConfig.length > 0)
-          config = {connection: splitConfig[1].trim()};
+          config = {connection: splitConfig[1].trim(), fromDelimiter: true};
         else
           errors.push(
             this.createParseError(
@@ -162,14 +163,7 @@ export class MalloySQLParser {
           parsedStatement.range.start
         );
 
-        for (const comment of parsedMalloySQLSQL.comments) {
-          const match = /\bconnection:\s*(?<connectionName>\S*)/.exec(
-            comment.text
-          );
-          if (match && match.groups) {
-            config.connection = match.groups['connectionName'];
-          }
-        }
+        config = {...config, ...parsedMalloySQLSQL.config};
 
         if (!config.connection) {
           if (!previousConnection)
