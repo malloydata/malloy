@@ -156,11 +156,26 @@ export class MalloySQLParser {
           type: MalloySQLStatementType.MALLOY,
         });
       } else {
+        const parsedMalloySQLSQL = MalloySQLSQLParser.parse(
+          parsedStatement.statementText,
+          url,
+          parsedStatement.range.start
+        );
+
+        for (const comment of parsedMalloySQLSQL.comments) {
+          const match = /\bconnection:\s*(?<connectionName>\S*)/.exec(
+            comment.text
+          );
+          if (match && match.groups) {
+            config.connection = match.groups['connectionName'];
+          }
+        }
+
         if (!config.connection) {
           if (!previousConnection)
             errors.push(
               this.createParseError(
-                'No connection configuration specified, add "connection: my_connection_name" to this >>>sql line or to an above one',
+                'No connection configuration specified',
                 parsedStatement.delimiterRange,
                 url
               )
@@ -169,12 +184,6 @@ export class MalloySQLParser {
         }
 
         previousConnection = config.connection;
-
-        const parsedMalloySQLSQL = MalloySQLSQLParser.parse(
-          parsedStatement.statementText,
-          url,
-          parsedStatement.range.start
-        );
 
         const embeddedMalloyQueries = parsedMalloySQLSQL.embeddedMalloyQueries;
 

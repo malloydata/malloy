@@ -29,6 +29,8 @@ import {
   MalloySQLParseRange,
   MalloySQLParseLocation,
   EmbeddedMalloyQuery,
+  ParsedMalloySQLOtherStatementPart,
+  EmbeddedComment,
 } from './types';
 import {MalloySQLParseError, MalloySQLSyntaxError} from './malloySQLErrors';
 
@@ -70,6 +72,7 @@ export class MalloySQLSQLParser {
       parsed = parser.parse(document);
     } catch (e) {
       return {
+        comments: [],
         embeddedMalloyQueries: [],
         errors: [
           new MalloySQLSyntaxError(
@@ -88,7 +91,19 @@ export class MalloySQLSQLParser {
       };
     }
 
-    if (!parsed.parts) return {embeddedMalloyQueries: [], errors: []};
+    if (!parsed.parts)
+      return {comments: [], embeddedMalloyQueries: [], errors: []};
+
+    const comments = parsed.parts
+      .filter((part): part is ParsedMalloySQLOtherStatementPart => {
+        return part.type === 'comment';
+      })
+      .map(part => {
+        return {
+          range: this.convertRange(part.range, start),
+          text: part.text,
+        };
+      });
 
     const embeddedMalloyQueries = parsed.parts
       .filter((part): part is ParsedMalloySQLMalloyStatementPart => {
@@ -105,6 +120,7 @@ export class MalloySQLSQLParser {
       });
 
     return {
+      comments,
       embeddedMalloyQueries,
       errors: [],
     };
@@ -112,6 +128,7 @@ export class MalloySQLSQLParser {
 }
 
 export interface MalloySQLSQLParse {
+  comments: EmbeddedComment[];
   embeddedMalloyQueries: EmbeddedMalloyQuery[];
   errors: MalloySQLParseError[];
 }
