@@ -36,6 +36,7 @@ import * as googleCommon from '@google-cloud/common';
 import {GaxiosError} from 'gaxios';
 import {
   Connection,
+  DialectProviderConnection,
   FieldTypeDef,
   Malloy,
   MalloyQueryData,
@@ -231,6 +232,10 @@ export class BigQueryConnection
 
   public canStream(): this is StreamingConnection {
     return true;
+  }
+
+  public providesDialect(): this is DialectProviderConnection {
+    return false;
   }
 
   private async _runSQL(

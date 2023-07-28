@@ -29,6 +29,7 @@ import {
   SQLBlock,
   StructDef,
 } from './model/malloy_types';
+import {Dialect} from './dialect';
 
 /**
  * The contents of a Malloy query document.
@@ -122,6 +123,8 @@ export interface Connection extends InfoConnection {
 
   canStream(): this is StreamingConnection;
 
+  providesDialect(): this is DialectProviderConnection;
+
   close(): Promise<void>;
 
   estimateQueryCost(sqlCommand: string): Promise<QueryRunStats>;
@@ -151,6 +154,10 @@ export interface StreamingConnection extends Connection {
   ): AsyncIterableIterator<QueryDataRow>;
 }
 
+export interface DialectProviderConnection extends Connection {
+  dialect(): Dialect;
+}
+
 /**
  * A mapping of connection names to connections.
  */
@@ -160,4 +167,9 @@ export interface LookupConnection<T extends InfoConnection> {
    * @return A promise to a `Connection` for the connection named `connectionName`.
    */
   lookupConnection(connectionName?: string): Promise<T>;
+
+  /**
+   * @return A list of registered connections.
+   */
+  listConnections(): T[];
 }
