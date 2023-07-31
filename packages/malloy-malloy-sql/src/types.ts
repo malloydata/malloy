@@ -79,6 +79,7 @@ export interface MalloySQLSQLParseResults {
 export interface MalloySQLStatementConfig {
   connection?: string;
   fromDelimiter?: boolean;
+  inheritedConnection?: boolean;
 }
 
 export enum MalloySQLStatementType {
