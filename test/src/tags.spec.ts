@@ -21,7 +21,52 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Tags, Annotation, MalloyTags} from '@malloydata/malloy';
+import {Tags, Annotation, MalloyTags, TagDict, Tag} from '@malloydata/malloy';
+import {runtimeFor} from './runtimes';
+
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace jest {
+    interface Matchers<R> {
+      tagsAre(t: TagDict): R;
+    }
+  }
+}
+
+expect.extend({
+  /**
+   * Check the return of `sqlEQ(expr1,expr2)` and error if the database
+   * does not find those two expressions to be equal.
+   */
+  tagsAre(src: string, result: Tag) {
+    if (!(typeof src === 'string')) {
+      throw new Error('Expected string to parse');
+    }
+    const {properties, log} = Tag.fromTagline(src);
+    const errs = log.map(e => e.message);
+    if (log.length > 0) {
+      return {
+        pass: false,
+        message: () => `${src}: Tag Parsing Error(s)\n${errs.join('\n')}`,
+      };
+    }
+    const got = properties.properties;
+    if (this.equals(got, result)) {
+      return {
+        pass: true,
+        message: () => 'Parse returned expected object',
+      };
+    }
+    const expected = this.utils.printExpected(result);
+    const received = this.utils.printReceived(got);
+    return {
+      pass: false,
+      message: () => `Expected: ${expected}\nReceived: ${received}`,
+    };
+  },
+});
+
+const runtime = runtimeFor('duckdb');
 
 function tstTaglist(a: Annotation): string[] {
   return new Tags(a).getTagList();
@@ -122,18 +167,65 @@ describe('tag utilities', () => {
   });
 });
 
-import {runtimeFor} from './runtimes';
-
-const runtime = runtimeFor('duckdb');
+type TagTestTuple = [string, TagDict];
+describe('expanded tag language', () => {
+  const tagTests: TagTestTuple[] = [
+    ['just_name', {just_name: {}}],
+    ['name=bare_string', {name: {eq: 'bare_string'}}],
+    ['name="quoted_string"', {name: {eq: 'quoted_string'}}],
+    ['name {prop1}', {name: {properties: {prop1: {}}}}],
+    [
+      'name {prop1 prop2=value}',
+      {
+        name: {
+          properties: {
+            prop1: {},
+            prop2: {eq: 'value'},
+          },
+        },
+      },
+    ],
+    ['name.prop', {name: {properties: {prop: {}}}}],
+    ['name.prop=value', {name: {properties: {prop: {eq: 'value'}}}}],
+    [
+      'name.prop.sub=value',
+      {name: {properties: {prop: {properties: {sub: {eq: 'value'}}}}}},
+    ],
+    ['name=[v1 {v2}]', {name: {eq: [{eq: 'v1'}, {properties: {v2: {}}}]}}],
+    [
+      'name{first3=[a b c]}',
+      {name: {properties: {first3: {eq: [{eq: 'a'}, {eq: 'b'}, {eq: 'c'}]}}}},
+    ],
+    ['name=value {prop}', {name: {eq: 'value', properties: {prop: {}}}}],
+    [
+      'name.prop={prop2}',
+      {name: {properties: {prop: {properties: {prop2: {}}}}}},
+    ],
+    ['no yes -no', {yes: {}}],
+    ['x={y z} -x.y', {x: {properties: {z: {}}}}],
+    ['x={y z} x {-y}', {x: {properties: {z: {}}}}],
+    ['x=1 x {xx=11}', {x: {eq: '1', properties: {xx: {eq: '11'}}}}],
+    ['x.y=xx x=1 {...}', {x: {eq: '1', properties: {y: {eq: 'xx'}}}}],
+    ['a {b c} a=1', {a: {eq: '1'}}],
+    ['a=1 a=...{b}', {a: {eq: '1', properties: {b: {}}}}],
+  ];
+  test.each(tagTests)('tag %s', (expression: string, expected: TagDict) => {
+    expect(expression).tagsAre(expected);
+  });
+  test.skip('uncomment to debug just one of the expressions', () => {
+    const x: TagTestTuple = ['x={y z} x {-y}', {x: {properties: {z: {}}}}];
+    expect(x[0]).tagsAre(x[1]);
+  });
+});
 
 describe('## top level', () => {
   test('top level tags are available in the model def', async () => {
     const model = await runtime
       .loadModel(
         `
-      ## propertyTag
-      ##" Doc String
-    `
+        ## propertyTag
+        ##" Doc String
+      `
       )
       .getModel();
     const modelDesc = model.getTags().getMalloyTags();
@@ -147,10 +239,10 @@ describe('tags in results', () => {
   test('nameless query', async () => {
     const loaded = runtime.loadQuery(
       `
-        sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
-        # b4query
-        query: # afterQuery
-          from_sql(one) -> { project: * }`
+          sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
+          # b4query
+          query: # afterQuery
+            from_sql(one) -> { project: * }`
     );
     const query = await loaded.getPreparedQuery();
     expect(query).toBeDefined();
@@ -163,15 +255,15 @@ describe('tags in results', () => {
   test('named query', async () => {
     const loaded = runtime.loadQuery(
       `
-        sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
-        # <Q
-        query: # >Q
-          theName
-          # >name
-          is
-          # >is
-          from_sql(one) -> { project: * }
-        query: -> theName`
+          sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
+          # <Q
+          query: # >Q
+            theName
+            # >name
+            is
+            # >is
+            from_sql(one) -> { project: * }
+          query: -> theName`
     );
     const query = await loaded.getPreparedQuery();
     expect(query).toBeDefined();
@@ -183,17 +275,17 @@ describe('tags in results', () => {
   test('turtle query', async () => {
     const loaded = runtime.loadQuery(
       `
-        sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
-        query: from_sql(one) + {
-          # <Q
-          query: # >Q
-            in_one
-            # >name
-            is
-            # >is
-            { project: one }
-          }
-        -> in_one`
+          sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
+          query: from_sql(one) + {
+            # <Q
+            query: # >Q
+              in_one
+              # >name
+              is
+              # >is
+              { project: one }
+            }
+          -> in_one`
     );
     const query = await loaded.getPreparedQuery();
     expect(query).toBeDefined();
@@ -204,12 +296,12 @@ describe('tags in results', () => {
   test('atomic field has tag', async () => {
     const loaded = runtime.loadQuery(
       `
-        sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
-        query: from_sql(one) -> {
-          project:
-            # note1
-            one
-        }`
+          sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
+          query: from_sql(one) -> {
+            project:
+              # note1
+              one
+          }`
     );
     const result = await loaded.run();
     const shape = result.resultExplore;
@@ -220,20 +312,20 @@ describe('tags in results', () => {
   test('nested query has tag', async () => {
     const loaded = runtime.loadQuery(
       `
-        sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
-        source: malloy_one is from_sql(one) + {
-          query: in_one is {
-            project: one
+          sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
+          source: malloy_one is from_sql(one) + {
+            query: in_one is {
+              project: one
+            }
+            query: one_and_one is {
+              group_by: one
+              # note1
+              nest:
+                # note2
+                in_one
+            }
           }
-          query: one_and_one is {
-            group_by: one
-            # note1
-            nest:
-              # note2
-              in_one
-          }
-        }
-        query: malloy_one -> one_and_one`
+          query: malloy_one -> one_and_one`
     );
     const result = await loaded.run();
     const shape = result.resultExplore;
@@ -244,28 +336,28 @@ describe('tags in results', () => {
   test('render usage test case', async () => {
     const loaded = runtime.loadQuery(
       `
-      sql: one22 is { connection: "duckdb" select: """SELECT 1""" }
-      source: ages is from_sql(one22) + {
-        dimension: name is 'John'
-        query: height
-        # barchart
-         is {
-          project: heightd is 10
-         }
+        sql: one22 is { connection: "duckdb" select: """SELECT 1""" }
+        source: ages is from_sql(one22) + {
+          dimension: name is 'John'
+          query: height
+          # barchart
+          is {
+            project: heightd is 10
+          }
 
-        query: age
-        # barchart
-         is {
-          project: aged is 20
-         }
+          query: age
+          # barchart
+          is {
+            project: aged is 20
+          }
 
-      }
-      query: ages -> {
-         group_by: name
-         nest: height
-         nest: age
-      }
-      `
+        }
+        query: ages -> {
+          group_by: name
+          nest: height
+          nest: age
+        }
+        `
     );
     const result = await loaded.run();
     const shape = result.resultExplore;

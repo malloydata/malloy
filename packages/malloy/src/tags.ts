@@ -23,6 +23,119 @@
 
 import {Annotation} from './model';
 
+// The distinction between the interface and the class exists solely to
+// make it possible to write tests and specify expected results This
+// is why only TagDict is exported.
+export type TagDict = Record<string, TagInterface>;
+type TagValue = string | TagInterface[];
+interface TagInterface {
+  eq?: TagValue;
+  properties?: TagDict;
+}
+
+/**
+ * Class for interacting with the parsed outpout of an annotation
+ * containing the malloy tag language. Used by the parser to
+ * generate parsed data, and as an API to that data.
+ * ```
+ * tag.txt        => string value of tag or undefined
+ * tag.text       => string value of tag or ''
+ * tag.arr        => Tag[] value of tag or undefined
+ * tag.array      => Tag[] value of tag of []
+ * tag.dict       => Record<string, Tag> of tag properties
+ * tag.has(p)     => true if tag has named property
+ * tag.lookup(p)  => Tag (value) of named property or undefined
+ * ```
+ */
+export class Tag implements TagInterface {
+  eq?: TagValue;
+  properties?: TagDict;
+
+  static tagFrom(from: TagInterface = {}) {
+    if (from instanceof Tag) {
+      return from;
+    }
+    return new Tag(from);
+  }
+
+  // mtoy todo pass in defaults as a tag or string?
+  static fromTagline(str: string): TagParse {
+    return parseTagline(str);
+  }
+
+  constructor(from: TagInterface = {}) {
+    if (from.eq) {
+      this.eq = from.eq;
+    }
+    if (from.properties) {
+      this.properties = from.properties;
+    }
+  }
+
+  get txt(): string | undefined {
+    const str = this.eq;
+    if (typeof str === 'string') {
+      return str;
+    }
+  }
+
+  get text(): string {
+    return this.txt || '';
+  }
+
+  lookup(fullPath: string): Tag | undefined {
+    let lookIn = this.properties;
+    let found: Tag | undefined;
+    for (const step of fullPath.split('.')) {
+      if (lookIn === undefined) {
+        return undefined;
+      }
+      const found = lookIn[step];
+      if (found === undefined) {
+        return undefined;
+      }
+      lookIn = found.properties;
+    }
+    return found ? Tag.tagFrom(found) : undefined;
+  }
+
+  has(fullPath: string): boolean {
+    return this.lookup(fullPath) !== undefined;
+  }
+
+  get dict(): Record<string, Tag> {
+    const newDict: Record<string, Tag> = {};
+    if (this.properties) {
+      for (const key in this.properties) {
+        newDict[key] = Tag.tagFrom(this.properties[key]);
+      }
+    }
+    return newDict;
+  }
+
+  get arr(): Tag[] | undefined {
+    const array = this.eq;
+    if (array === undefined || typeof array === 'string') {
+      return;
+    }
+    return array.map(el =>
+      typeof el === 'string' ? new Tag({eq: el}) : Tag.tagFrom(el)
+    );
+  }
+
+  get array(): Tag[] {
+    return this.arr || [];
+  }
+
+  // Has the sometimes desireable side effect of initalizing properties
+  getProperties(): TagDict {
+    if (this.properties === undefined) {
+      this.properties = {};
+    }
+    return this.properties;
+  }
+}
+
 export type MalloyTagProperties = Record<string, string | boolean>;
 interface PropertyTag {
   properties: MalloyTagProperties;
@@ -187,4 +300,200 @@ function tokenize(src: string): string[] {
     break;
   }
   return parts;
+}
+
+import {AbstractParseTreeVisitor} from 'antlr4ts/tree';
+import {MalloyTagLexer} from './lang/lib/Malloy/MalloyTagLexer';
+import {
+  ArrayValueContext,
+  MalloyTagParser,
+  PropNameContext,
+  PropertiesContext,
+  StringContext,
+  TagDefContext,
+  TagEqContext,
+  TagLineContext,
+  TagReplacePropertiesContext,
+  TagSpecContext,
+  TagUpdatePropertiesContext,
+} from './lang/lib/Malloy/MalloyTagParser';
+import {MalloyTagVisitor} from './lang/lib/Malloy/MalloyTagVisitor';
+import {
+  ANTLRErrorListener,
+  CharStreams,
+  CommonTokenStream,
+  ParserRuleContext,
+  Token,
+} from 'antlr4ts';
+import {parseString} from './lang/parse-utils';
+import {LogMessage} from './lang';
+
+class TagErrorListener implements ANTLRErrorListener<Token> {
+  log: LogMessage[] = [];
+  syntaxError(
+    recognizer: unknown,
+    offendingSymbol: Token | undefined,
+    line: number,
+    charPositionInLine: number,
+    msg: string,
+    _e: unknown
+  ): void {
+    const errAt = {line: 0, character: charPositionInLine};
+    const range = {start: errAt, end: errAt};
+    const logMsg: LogMessage = {
+      message: msg,
+      at: {url: '', range},
+      severity: 'error',
+    };
+    this.log.push(logMsg);
+  }
+}
+
+function getBuildOn(ctx: ParserRuleContext): Tag {
+  const buildOn = ctx['buildOn'];
+  if (buildOn instanceof Tag) {
+    return buildOn;
+  }
+  return new Tag();
+}
+
+function parsePath(buildOn: Tag, path: string[]): [string, TagDict] {
+  let writeInto = buildOn.getProperties();
+  for (const p of path.slice(0, path.length - 1)) {
+    let next: Tag;
+    if (writeInto[p] === undefined) {
+      next = new Tag({});
+      writeInto[p] = next;
+    } else {
+      next = Tag.tagFrom(writeInto[p]);
+    }
+    writeInto = next.getProperties();
+  }
+  return [path[path.length - 1], writeInto];
+}
+
+function getString(ctx: StringContext) {
+  return ctx.BARE_STRING() ? ctx.text : parseString(ctx.text, ctx.text[0]);
+}
+
+interface TagParse {
+  properties: Tag;
+  log: LogMessage[];
+}
+
+export function parseTagline(source: string): TagParse {
+  const inputStream = CharStreams.fromString(source);
+  const lexer = new MalloyTagLexer(inputStream);
+  const tokenStream = new CommonTokenStream(lexer);
+  const taglineParser = new MalloyTagParser(tokenStream);
+  taglineParser.removeErrorListeners();
+  const pLog = new TagErrorListener();
+  taglineParser.addErrorListener(pLog);
+  const tagTree = taglineParser.tagLine();
+  const treeWalker = new TaglineParser();
+  const properties = treeWalker.visit(tagTree);
+  return {properties, log: pLog.log};
+}
+
+class TaglineParser
+  extends AbstractParseTreeVisitor<Tag>
+  implements MalloyTagVisitor<Tag>
+{
+  defaultResult() {
+    return new Tag();
+  }
+
+  visitString(ctx: StringContext): Tag {
+    return new Tag({eq: getString(ctx)});
+  }
+
+  protected getPropName(ctx: PropNameContext): string[] {
+    return ctx.string().map(cx => getString(cx));
+  }
+
+  getTags(tags: TagSpecContext[], tagLine: Tag): Tag {
+    for (const tagSpec of tags) {
+      // Stash the current state of this tag in the context and then visit it
+      // visit functions should alter the tagLine
+      tagSpec['buildOn'] = tagLine;
+      this.visit(tagSpec);
+    }
+    return tagLine;
+  }
+
+  visitTagLine(ctx: TagLineContext): Tag {
+    return this.getTags(ctx.tagSpec(), getBuildOn(ctx));
+  }
+
+  visitProperties(ctx: PropertiesContext): Tag {
+    return this.getTags(ctx.tagSpec(), getBuildOn(ctx));
+  }
+
+  visitArrayValue(ctx: ArrayValueContext): Tag {
+    const val = ctx.actualValue().map(v => this.visit(v));
+    return new Tag({eq: val});
+  }
+
+  visitTagEq(ctx: TagEqContext): Tag {
+    const buildOn = getBuildOn(ctx);
+    const name = this.getPropName(ctx.propName());
+    const [writeKey, writeInto] = parsePath(buildOn, name);
+    const eq = this.visit(ctx.eqValue());
+    const propCx = ctx.properties();
+    if (propCx) {
+      // a.b.c { -y } means i want to do -y on
+      if (propCx.DOTTY() === undefined) {
+        const properties = this.visitProperties(propCx).dict;
+        // Add new properties old value
+        writeInto[writeKey] = {...eq, properties};
+      } else {
+        // preserve old properties, add new value
+        writeInto[writeKey] = {...writeInto[writeKey], ...eq};
+      }
+    } else {
+      writeInto[writeKey] = eq;
+    }
+    return buildOn;
+  }
+
+  visitTagReplaceProperties(ctx: TagReplacePropertiesContext): Tag {
+    const buildOn = getBuildOn(ctx);
+    const name = this.getPropName(ctx.propName());
+    const [writeKey, writeInto] = parsePath(buildOn, name);
+    const propCx = ctx.properties();
+    const props = this.visitProperties(propCx);
+    if (ctx.DOTTY() === undefined) {
+      // No dots, thropw away the value
+      writeInto[writeKey] = {properties: props.dict};
+    } else {
+      /// DOTS, just update the properties
+      writeInto[writeKey].properties = props.dict;
+    }
+    return buildOn;
+  }
+
+  visitTagUpdateProperties(ctx: TagUpdatePropertiesContext): Tag {
+    const buildOn = getBuildOn(ctx);
+    const name = this.getPropName(ctx.propName());
+    const [writeKey, writeInto] = parsePath(buildOn, name);
+    const propCx = ctx.properties();
+    propCx['buildOn'] = Tag.tagFrom(writeInto[writeKey]);
+    const props = this.visitProperties(propCx);
+    const thisObj = writeInto[writeKey] || {};
+    const properties = {...thisObj.properties, ...props.dict};
+    writeInto[writeKey] = {...thisObj, properties};
+    return buildOn;
+  }
+
+  visitTagDef(ctx: TagDefContext): Tag {
+    const buildOn = getBuildOn(ctx);
+    const path = this.getPropName(ctx.propName());
+    const [writeKey, writeInto] = parsePath(buildOn, path);
+    if (ctx.MINUS()) {
+      delete writeInto[writeKey];
+    } else {
+      writeInto[writeKey] = {};
+    }
+    return buildOn;
+  }
 }
