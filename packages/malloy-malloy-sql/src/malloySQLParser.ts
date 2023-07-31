@@ -175,6 +175,7 @@ export class MalloySQLParser {
               )
             );
           config.connection = previousConnection;
+          config.inheritedConnection = true;
         }
 
         previousConnection = config.connection;

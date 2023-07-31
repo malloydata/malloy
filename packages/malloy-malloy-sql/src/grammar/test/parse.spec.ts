@@ -156,7 +156,26 @@ import "foo"
 -- connection:bigquery
 SELECT 1`);
       expect(parse.statements[1].config?.connection).toBe('bigquery');
-      expect(parse.statements[1].config?.fromDelimiter).not.toBe(true);
+      expect(parse.statements[1].config?.fromDelimiter).toBeFalsy();
+      expect(parse.statements[1].config?.inheritedConnection).toBeFalsy();
+    });
+
+    test('Should mark a connection as inherited', () => {
+      const parse = MalloySQLParser.parse(`\
+>>>malloy
+import "foo"
+>>>sql
+-- connection:bigquery
+SELECT 1
+>>>sql
+SELECT 2
+`);
+      expect(parse.statements[1].config?.connection).toBe('bigquery');
+      expect(parse.statements[1].config?.fromDelimiter).toBeFalsy();
+      expect(parse.statements[1].config?.inheritedConnection).toBeFalsy();
+      expect(parse.statements[2].config?.connection).toBe('bigquery');
+      expect(parse.statements[2].config?.fromDelimiter).toBeFalsy();
+      expect(parse.statements[2].config?.inheritedConnection).toBe(true);
     });
   });
 
