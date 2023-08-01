@@ -1,5 +1,5 @@
 start
-  = initial_comments delimiter_and_statement*
+  = initial_comments delimiter_and_statement |.., EOL|
 
 delimiter_and_statement
   = c:delimiter s:statement {
@@ -18,7 +18,7 @@ statement
   }
 }
 
-cell "cell" = s:$(!delimiter_start !comment .)+ {
+cell "cell" = s:$(!(EOL delimiter_start) !comment .)+ {
   return {
     type: "other",
     text: s,
