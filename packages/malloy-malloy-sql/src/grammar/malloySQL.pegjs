@@ -10,15 +10,15 @@ delimiter_and_statement
 }
 
 statement
-  = p:(comment / cell)* {
+  = p:cell {
   return {
     parts: p,
     range: location(),
-    statementText: p.map((s) => { return s.text }).join('')
+    statementText: p.text
   }
 }
 
-cell "cell" = s:$(!(EOL delimiter_start) !comment .)+ {
+cell "cell" = s:$(!(EOL delimiter_start) .)* {
   return {
     type: "other",
     text: s,

@@ -338,5 +338,31 @@ SELECT 1
       expect(parse.statements[1].range.start.character).toBe(0);
       expect(parse.statements[1].range.end.character).toBe(25);
     });
+
+    test('Should provide correct output for cells that contain only comments', () => {
+      const parse = MalloySQLParser.parse(`\
+>>>sql connection:bigquery
+-- Nothing to see here, move along
+>>>markdown
+# I'm my own cell`);
+      expect(parse.statements).toHaveLength(2);
+
+      expect(parse.statements[0].type).toBe(MalloySQLStatementType.SQL);
+      expect(parse.statements[0].text).toBe(
+        '-- Nothing to see here, move along'
+      );
+      expect(parse.statements[0].config?.connection).toBe('bigquery');
+      expect(parse.statements[0].index).toBe(0);
+      expect(parse.statements[0].range.start.line).toBe(1);
+      expect(parse.statements[0].range.start.character).toBe(0);
+      expect(parse.statements[0].range.end.character).toBe(34);
+
+      expect(parse.statements[1].type).toBe(MalloySQLStatementType.MARKDOWN);
+      expect(parse.statements[1].text).toBe(`# I'm my own cell`);
+      expect(parse.statements[1].index).toBe(1);
+      expect(parse.statements[1].range.start.line).toBe(3);
+      expect(parse.statements[1].range.start.character).toBe(0);
+      expect(parse.statements[1].range.end.character).toBe(17);
+    });
   });
 });
