@@ -220,7 +220,7 @@ SELECT 1`);
       expect(parse.statements[0].range.end.character).toBe(8);
     });
 
-    test('Should provide correct output for mulitple statements', () => {
+    test('Should provide correct output for multiple statements', () => {
       const parse = MalloySQLParser.parse(`\
 >>>markdown
 # Hello SQL
@@ -234,26 +234,26 @@ import "airports.malloy"`);
       expect(parse.statements).toHaveLength(4);
 
       expect(parse.statements[0].type).toBe(MalloySQLStatementType.MARKDOWN);
-      expect(parse.statements[0].text).toBe('# Hello SQL\n');
+      expect(parse.statements[0].text).toBe('# Hello SQL');
       expect(parse.statements[0].index).toBe(0);
       expect(parse.statements[0].range.start.line).toBe(1);
       expect(parse.statements[0].range.start.character).toBe(0);
-      expect(parse.statements[0].range.end.character).toBe(0);
+      expect(parse.statements[0].range.end.character).toBe(11);
 
       expect(parse.statements[1].type).toBe(MalloySQLStatementType.SQL);
-      expect(parse.statements[1].text).toBe('SELECT 1\n');
+      expect(parse.statements[1].text).toBe('SELECT 1');
       expect(parse.statements[1].config?.connection).toBe('bigquery');
       expect(parse.statements[1].index).toBe(1);
       expect(parse.statements[1].range.start.line).toBe(3);
       expect(parse.statements[1].range.start.character).toBe(0);
-      expect(parse.statements[1].range.end.character).toBe(0);
+      expect(parse.statements[1].range.end.character).toBe(8);
 
       expect(parse.statements[2].type).toBe(MalloySQLStatementType.MARKDOWN);
-      expect(parse.statements[2].text).toBe('# Hello Malloy\n');
+      expect(parse.statements[2].text).toBe('# Hello Malloy');
       expect(parse.statements[2].index).toBe(2);
       expect(parse.statements[2].range.start.line).toBe(5);
       expect(parse.statements[2].range.start.character).toBe(0);
-      expect(parse.statements[2].range.end.character).toBe(0);
+      expect(parse.statements[2].range.end.character).toBe(14);
 
       expect(parse.statements[3].type).toBe(MalloySQLStatementType.MALLOY);
       expect(parse.statements[3].text).toBe('import "airports.malloy"');
@@ -277,21 +277,19 @@ import "airports.malloy"`);
       expect(parse.statements).toHaveLength(4);
 
       expect(parse.statements[0].type).toBe(MalloySQLStatementType.MARKDOWN);
-      expect(parse.statements[0].text).toBe('# Hello SQL\n');
+      expect(parse.statements[0].text).toBe('# Hello SQL');
       expect(parse.statements[0].index).toBe(0);
       expect(parse.statements[0].range.start.line).toBe(1);
       expect(parse.statements[0].range.start.character).toBe(0);
-      expect(parse.statements[0].range.end.character).toBe(0);
+      expect(parse.statements[0].range.end.character).toBe(11);
 
       expect(parse.statements[1].type).toBe(MalloySQLStatementType.SQL);
-      expect(parse.statements[1].text).toBe(
-        'SELECT 1 FROM %{ malloy-here }%;\n'
-      );
+      expect(parse.statements[1].text).toBe('SELECT 1 FROM %{ malloy-here }%;');
       expect(parse.statements[1].config?.connection).toBe('bigquery');
       expect(parse.statements[1].index).toBe(1);
       expect(parse.statements[1].range.start.line).toBe(3);
       expect(parse.statements[1].range.start.character).toBe(0);
-      expect(parse.statements[1].range.end.character).toBe(0);
+      expect(parse.statements[1].range.end.character).toBe(32);
 
       const embeddedMalloy = (parse.statements[1] as MalloySQLSQLStatement)
         .embeddedMalloyQueries;
@@ -303,11 +301,11 @@ import "airports.malloy"`);
       expect(embeddedMalloy[0].range.start.character).toBe(14);
 
       expect(parse.statements[2].type).toBe(MalloySQLStatementType.MARKDOWN);
-      expect(parse.statements[2].text).toBe('# Hello Malloy\n');
+      expect(parse.statements[2].text).toBe('# Hello Malloy');
       expect(parse.statements[2].index).toBe(2);
       expect(parse.statements[2].range.start.line).toBe(5);
       expect(parse.statements[2].range.start.character).toBe(0);
-      expect(parse.statements[2].range.end.character).toBe(0);
+      expect(parse.statements[2].range.end.character).toBe(14);
 
       expect(parse.statements[3].type).toBe(MalloySQLStatementType.MALLOY);
       expect(parse.statements[3].text).toBe('import "airports.malloy"');
@@ -315,6 +313,30 @@ import "airports.malloy"`);
       expect(parse.statements[3].range.start.line).toBe(7);
       expect(parse.statements[3].range.start.character).toBe(0);
       expect(parse.statements[3].range.end.character).toBe(24);
+    });
+
+    test('Should provide correct output for embedded >>>', () => {
+      const parse = MalloySQLParser.parse(`\
+>>>sql connection:bigquery
+SELECT 1
+>>>markdown
+# >>> I'm not a delimiter`);
+      expect(parse.statements).toHaveLength(2);
+
+      expect(parse.statements[0].type).toBe(MalloySQLStatementType.SQL);
+      expect(parse.statements[0].text).toBe('SELECT 1');
+      expect(parse.statements[0].config?.connection).toBe('bigquery');
+      expect(parse.statements[0].index).toBe(0);
+      expect(parse.statements[0].range.start.line).toBe(1);
+      expect(parse.statements[0].range.start.character).toBe(0);
+      expect(parse.statements[0].range.end.character).toBe(8);
+
+      expect(parse.statements[1].type).toBe(MalloySQLStatementType.MARKDOWN);
+      expect(parse.statements[1].text).toBe(`# >>> I'm not a delimiter`);
+      expect(parse.statements[1].index).toBe(1);
+      expect(parse.statements[1].range.start.line).toBe(3);
+      expect(parse.statements[1].range.start.character).toBe(0);
+      expect(parse.statements[1].range.end.character).toBe(25);
     });
   });
 });
