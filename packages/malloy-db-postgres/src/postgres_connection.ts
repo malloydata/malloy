@@ -31,7 +31,6 @@ import * as crypto from 'crypto';
 import {
   AtomicFieldTypeInner,
   Connection,
-  DialectProviderConnection,
   MalloyQueryData,
   NamedStructDefs,
   PersistSQLResults,
@@ -155,10 +154,6 @@ export class PostgresConnection
 
   public canStream(): this is StreamingConnection {
     return true;
-  }
-
-  public providesDialect(): this is DialectProviderConnection {
-    return false;
   }
 
   public async fetchSchemaForTables(missing: Record<string, string>): Promise<{

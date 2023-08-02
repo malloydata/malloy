@@ -23,7 +23,6 @@
 
 import {
   AtomicFieldTypeInner,
-  DialectProviderConnection,
   FieldTypeDef,
   MalloyQueryData,
   NamedStructDefs,
@@ -117,10 +116,6 @@ export abstract class DuckDBCommon
 
   public canPersist(): this is PersistSQLResults {
     return true;
-  }
-
-  public providesDialect(): this is DialectProviderConnection {
-    return false;
   }
 
   protected abstract setup(): Promise<void>;

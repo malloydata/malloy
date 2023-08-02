@@ -138,7 +138,7 @@ export type {
   InfoConnection,
   LookupConnection,
   Connection,
-  DialectProviderConnection,
+  DialectProvider,
   QueryString,
   ModelString,
   QueryURL,
