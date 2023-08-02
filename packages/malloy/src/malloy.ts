@@ -77,7 +77,6 @@ import {
 } from './runtime_types';
 import {DateTime} from 'luxon';
 import {Taggable, Tags} from './tags';
-import {registerDialect} from './dialect';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1998,7 +1997,6 @@ export class Runtime {
       } else {
         connections = {
           lookupConnection: () => Promise.resolve(arg),
-          listConnections: () => [arg],
         };
       }
     }
@@ -2012,11 +2010,6 @@ export class Runtime {
     }
     this._urlReader = urlReader;
     this._connections = connections;
-    for (const connection of this._connections.listConnections()) {
-      if (connection.providesDialect()) {
-        registerDialect(connection.dialect());
-      }
-    }
   }
 
   /**
