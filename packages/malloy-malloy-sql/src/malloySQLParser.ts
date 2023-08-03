@@ -99,8 +99,9 @@ export class MalloySQLParser {
 
     let previousConnection = '';
     const statements: MalloySQLStatement[] = [];
+    const {initialComments} = parsed;
     const initialCommentsLineCount =
-      parsed.initialComments.split(/\r\n|\r|\n/).length - 1;
+      initialComments.split(/\r\n|\r|\n/).length - 1;
     let statementIndex = 0;
     const errors: MalloySQLParseError[] = [];
 
@@ -195,6 +196,7 @@ export class MalloySQLParser {
       statements,
       errors,
       initialCommentsLineCount,
+      initialComments,
     };
   }
 }
@@ -203,4 +205,5 @@ export interface MalloySQLParse {
   statements: MalloySQLStatement[];
   errors: MalloySQLParseError[];
   initialCommentsLineCount?: number;
+  initialComments?: string;
 }
