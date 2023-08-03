@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /*
  * Copyright 2023 Google LLC
  *
@@ -27,7 +28,15 @@ import {Annotation} from './model';
 // make it possible to write tests and specify expected results This
 // is why only TagDict is exported.
 export type TagDict = Record<string, TagInterface>;
-type TagValue = string | TagInterface[];
+interface TagReference {
+  ref: string[];
+}
+
+type TagValue = string | TagInterface[] | TagReference;
+function isTagReference(tv: TagValue): tv is TagReference {
+  return 'ref' in (tv as TagReference);
+}
+
 interface TagInterface {
   eq?: TagValue;
   properties?: TagDict;
@@ -38,13 +47,11 @@ interface TagInterface {
  * containing the malloy tag language. Used by the parser to
  * generate parsed data, and as an API to that data.
  * ```
- * tag.txt        => string value of tag or undefined
- * tag.text       => string value of tag or ''
- * tag.arr        => Tag[] value of tag or undefined
- * tag.array      => Tag[] value of tag of []
- * tag.dict       => Record<string, Tag> of tag properties
- * tag.has(p)     => true if tag has named property
- * tag.lookup(p)  => Tag (value) of named property or undefined
+ * tag.text(p?)        => string value of tag.p or ''
+ * tag.array(p?)       => Tag[] value of tag.p or []
+ * tag.numeric(p?)     => numeric value of tag.p or NaN
+ * tag.dict            => Record<string, Tag> of tag properties
+ * tag.tag(p)          => Tag value of tag.p
  * ```
  */
 export class Tag implements TagInterface {
@@ -72,35 +79,32 @@ export class Tag implements TagInterface {
     }
   }
 
-  get txt(): string | undefined {
-    const str = this.eq;
+  tag(at: string[]): Tag | undefined {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    let findIn: Tag | undefined = this;
+    for (const seg of at) {
+      findIn = findIn.properties && Tag.tagFrom(findIn.properties[seg]);
+      if (!findIn) {
+        return undefined;
+      }
+    }
+    return findIn;
+  }
+
+  text(at: string[] = []): string {
+    const str = this.tag(at)?.eq;
     if (typeof str === 'string') {
       return str;
     }
+    return '';
   }
 
-  get text(): string {
-    return this.txt || '';
-  }
-
-  lookup(fullPath: string): Tag | undefined {
-    let lookIn = this.properties;
-    let found: Tag | undefined;
-    for (const step of fullPath.split('.')) {
-      if (lookIn === undefined) {
-        return undefined;
-      }
-      const found = lookIn[step];
-      if (found === undefined) {
-        return undefined;
-      }
-      lookIn = found.properties;
+  numeric(at: string[] = []): number {
+    const str = this.tag(at)?.eq;
+    if (typeof str === 'string') {
+      return Number.parseFloat(str);
     }
-    return found ? Tag.tagFrom(found) : undefined;
-  }
-
-  has(fullPath: string): boolean {
-    return this.lookup(fullPath) !== undefined;
+    return NaN;
   }
 
   get dict(): Record<string, Tag> {
@@ -113,18 +117,18 @@ export class Tag implements TagInterface {
     return newDict;
   }
 
-  get arr(): Tag[] | undefined {
-    const array = this.eq;
-    if (array === undefined || typeof array === 'string') {
-      return;
+  array(at: string[] = []): Tag[] {
+    const array = this.tag(at)?.eq;
+    if (
+      array === undefined ||
+      typeof array === 'string' ||
+      isTagReference(array)
+    ) {
+      return [];
     }
     return array.map(el =>
       typeof el === 'string' ? new Tag({eq: el}) : Tag.tagFrom(el)
     );
-  }
-
-  get array(): Tag[] {
-    return this.arr || [];
   }
 
   // Has the sometimes desireable side effect of initalizing properties
@@ -305,10 +309,12 @@ function tokenize(src: string): string[] {
 import {AbstractParseTreeVisitor} from 'antlr4ts/tree';
 import {MalloyTagLexer} from './lang/lib/Malloy/MalloyTagLexer';
 import {
+  ArrayElementContext,
   ArrayValueContext,
   MalloyTagParser,
   PropNameContext,
   PropertiesContext,
+  ReferenceContext,
   StringContext,
   TagDefContext,
   TagEqContext,
@@ -377,11 +383,25 @@ function getString(ctx: StringContext) {
 }
 
 interface TagParse {
-  properties: Tag;
+  tag: Tag;
   log: LogMessage[];
 }
 
+/**
+ * If the string starts with #, then it skips all characters up to the first space
+ * and parses the rest of the line, otherwise it parses the whole line.
+ * @param source The source line to be parsed
+ * @returns { tag: Parsed Properties, log: Parse Errors[] }
+ */
 export function parseTagline(source: string): TagParse {
+  if (source[0] === '#') {
+    const skipTo = source.indexOf(' ');
+    if (skipTo > 0) {
+      source = source.slice(skipTo);
+    } else {
+      source = '';
+    }
+  }
   const inputStream = CharStreams.fromString(source);
   const lexer = new MalloyTagLexer(inputStream);
   const tokenStream = new CommonTokenStream(lexer);
@@ -391,8 +411,8 @@ export function parseTagline(source: string): TagParse {
   taglineParser.addErrorListener(pLog);
   const tagTree = taglineParser.tagLine();
   const treeWalker = new TaglineParser();
-  const properties = treeWalker.visit(tagTree);
-  return {properties, log: pLog.log};
+  const tag = treeWalker.visit(tagTree);
+  return {tag, log: pLog.log};
 }
 
 class TaglineParser
@@ -430,8 +450,40 @@ class TaglineParser
   }
 
   visitArrayValue(ctx: ArrayValueContext): Tag {
-    const val = ctx.actualValue().map(v => this.visit(v));
-    return new Tag({eq: val});
+    return new Tag({eq: this.getArray(ctx)});
+  }
+
+  getArray(ctx: ArrayValueContext): Tag[] {
+    return ctx.arrayElement().map(v => this.visit(v));
+  }
+
+  visitArrayElement(ctx: ArrayElementContext): Tag {
+    const propCx = ctx.properties();
+    const properties = propCx ? this.visitProperties(propCx) : undefined;
+    const strCx = ctx.string();
+    let value: TagValue | undefined = strCx ? getString(strCx) : undefined;
+
+    const arrayCx = ctx.arrayValue();
+    if (arrayCx) {
+      value = this.getArray(arrayCx);
+    }
+
+    if (properties) {
+      if (value) {
+        properties.eq = value;
+      }
+      return properties;
+    }
+
+    const refCx = ctx.reference();
+    if (refCx) {
+      return this.visitReference(refCx);
+    }
+    return new Tag({eq: value});
+  }
+
+  visitReference(ctx: ReferenceContext): Tag {
+    return new Tag({eq: {ref: this.getPropName(ctx.propName())}});
   }
 
   visitTagEq(ctx: TagEqContext): Tag {

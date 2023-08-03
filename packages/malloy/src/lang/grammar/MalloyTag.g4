@@ -42,24 +42,31 @@ propName: string (DOT string)*;
 eqValue
   : string
   | arrayValue
+  | reference
   ;
 
-actualValue
-  : string
+arrayElement
+  : string properties?
   | properties
   | arrayValue
+  | reference
   ;
 
-arrayValue: AR_BEG actualValue* AR_END;
+reference: RF_BEG propName RF_END;
+
+arrayValue: AR_BEG arrayElement (COMMA arrayElement)* COMMA? AR_END;
 properties: PR_BEG (DOTTY | (tagSpec*)) PR_END;
 
 DOTTY: '...';
 DOT: '.';
 MINUS: '-';
 EQ: '=';
+RF_BEG: '$(';
+RF_END: ')';
 PR_BEG: '{';
 PR_END: '}';
 AR_BEG: '[';
+COMMA: ',';
 AR_END: ']';
 
 fragment ID_CHAR: [\p{Alphabetic}_] ;

@@ -42,7 +42,7 @@ expect.extend({
     if (!(typeof src === 'string')) {
       throw new Error('Expected string to parse');
     }
-    const {properties, log} = Tag.fromTagline(src);
+    const {tag, log} = Tag.fromTagline(src);
     const errs = log.map(e => e.message);
     if (log.length > 0) {
       return {
@@ -50,7 +50,7 @@ expect.extend({
         message: () => `${src}: Tag Parsing Error(s)\n${errs.join('\n')}`,
       };
     }
-    const got = properties.properties;
+    const got = tag.properties;
     if (this.equals(got, result)) {
       return {
         pass: true,
@@ -191,10 +191,18 @@ describe('expanded tag language', () => {
       'name.prop.sub=value',
       {name: {properties: {prop: {properties: {sub: {eq: 'value'}}}}}},
     ],
-    ['name=[v1 {v2}]', {name: {eq: [{eq: 'v1'}, {properties: {v2: {}}}]}}],
     [
-      'name{first3=[a b c]}',
+      'name{first3=[a, b, c]}',
       {name: {properties: {first3: {eq: [{eq: 'a'}, {eq: 'b'}, {eq: 'c'}]}}}},
+    ],
+    ['name{first1=[a,]}', {name: {properties: {first1: {eq: [{eq: 'a'}]}}}}],
+    [
+      'name{first=[a {A}]}',
+      {name: {properties: {first: {eq: [{eq: 'a', properties: {A: {}}}]}}}},
+    ],
+    [
+      'name{first=[{A}]}',
+      {name: {properties: {first: {eq: [{properties: {A: {}}}]}}}},
     ],
     ['name=value {prop}', {name: {eq: 'value', properties: {prop: {}}}}],
     [
@@ -208,12 +216,27 @@ describe('expanded tag language', () => {
     ['x.y=xx x=1 {...}', {x: {eq: '1', properties: {y: {eq: 'xx'}}}}],
     ['a {b c} a=1', {a: {eq: '1'}}],
     ['a=1 a=...{b}', {a: {eq: '1', properties: {b: {}}}}],
+    [
+      'a=red { shade=dark } color=$(a) shade=$(a.shade)',
+      {
+        a: {eq: 'red', properties: {shade: {eq: 'dark'}}},
+        color: {eq: {ref: ['a']}},
+        shade: {eq: {ref: ['a', 'shade']}},
+      },
+    ],
   ];
   test.each(tagTests)('tag %s', (expression: string, expected: TagDict) => {
     expect(expression).tagsAre(expected);
   });
   test.skip('uncomment to debug just one of the expressions', () => {
-    const x: TagTestTuple = ['x={y z} x {-y}', {x: {properties: {z: {}}}}];
+    const x: TagTestTuple = [
+      'a=red { shade=dark } color=$(a) shade=$(a.shade)',
+      {
+        a: {eq: 'red', properties: {shade: {eq: 'dark'}}},
+        color: {eq: {ref: ['a']}},
+        shade: {eq: {ref: ['a', 'shade']}},
+      },
+    ];
     expect(x[0]).tagsAre(x[1]);
   });
 });
