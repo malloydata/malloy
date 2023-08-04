@@ -220,23 +220,16 @@ describe('expanded tag language', () => {
       'a=red { shade=dark } color=$(a) shade=$(a.shade)',
       {
         a: {eq: 'red', properties: {shade: {eq: 'dark'}}},
-        color: {eq: {ref: ['a']}},
-        shade: {eq: {ref: ['a', 'shade']}},
+        color: {eq: 'red', properties: {shade: {eq: 'dark'}}},
+        shade: {eq: 'dark'},
       },
     ],
   ];
   test.each(tagTests)('tag %s', (expression: string, expected: TagDict) => {
     expect(expression).tagsAre(expected);
   });
-  test.skip('uncomment to debug just one of the expressions', () => {
-    const x: TagTestTuple = [
-      'a=red { shade=dark } color=$(a) shade=$(a.shade)',
-      {
-        a: {eq: 'red', properties: {shade: {eq: 'dark'}}},
-        color: {eq: {ref: ['a']}},
-        shade: {eq: {ref: ['a', 'shade']}},
-      },
-    ];
+  test('uncomment to debug just one of the expressions', () => {
+    const x: TagTestTuple = ['a=a b=$(a)', {a: {eq: 'a'}, b: {eq: 'a'}}];
     expect(x[0]).tagsAre(x[1]);
   });
 });

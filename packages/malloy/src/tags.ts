@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /*
  * Copyright 2023 Google LLC
  *
@@ -28,14 +27,8 @@ import {Annotation} from './model';
 // make it possible to write tests and specify expected results This
 // is why only TagDict is exported.
 export type TagDict = Record<string, TagInterface>;
-interface TagReference {
-  ref: string[];
-}
 
-type TagValue = string | TagInterface[] | TagReference;
-function isTagReference(tv: TagValue): tv is TagReference {
-  return 'ref' in (tv as TagReference);
-}
+type TagValue = string | TagInterface[];
 
 interface TagInterface {
   eq?: TagValue;
@@ -65,9 +58,39 @@ export class Tag implements TagInterface {
     return new Tag(from);
   }
 
+  // --- Just for debugging ---
+  static ids = new Map<Tag, number>();
+  static nextTagId = 1000;
+  static id(t: Tag): number {
+    let thisTagId = Tag.ids.get(t);
+    if (thisTagId === undefined) {
+      thisTagId = Tag.nextTagId;
+      Tag.ids.set(t, thisTagId);
+      Tag.nextTagId += 1;
+    }
+    return thisTagId;
+  }
+  peek(): string {
+    let str = `#${Tag.id(this)}`;
+    if (this.eq) {
+      if (typeof this.eq === 'string') {
+        str += `=${this.eq}`;
+      } else {
+        str += '=[]';
+      }
+    }
+    if (this.properties) {
+      const propStr = Object.keys(this.properties)
+        .map(k => `${k}:`)
+        .join(', ');
+      str += `{${propStr}}`;
+    }
+    return str;
+  }
+
   // mtoy todo pass in defaults as a tag or string?
   static fromTagline(str: string): TagParse {
-    return parseTagline(str);
+    return parseTagline(str, undefined, undefined);
   }
 
   constructor(from: TagInterface = {}) {
@@ -119,11 +142,7 @@ export class Tag implements TagInterface {
 
   array(at: string[] = []): Tag[] {
     const array = this.tag(at)?.eq;
-    if (
-      array === undefined ||
-      typeof array === 'string' ||
-      isTagReference(array)
-    ) {
+    if (array === undefined || typeof array === 'string') {
       return [];
     }
     return array.map(el =>
@@ -137,6 +156,10 @@ export class Tag implements TagInterface {
       this.properties = {};
     }
     return this.properties;
+  }
+
+  clone(): Tag {
+    return new Tag(cloneDeep(this));
   }
 }
 
@@ -333,6 +356,7 @@ import {
 } from 'antlr4ts';
 import {parseString} from './lang/parse-utils';
 import {LogMessage} from './lang';
+import cloneDeep from 'lodash/cloneDeep';
 
 class TagErrorListener implements ANTLRErrorListener<Token> {
   log: LogMessage[] = [];
@@ -393,7 +417,11 @@ interface TagParse {
  * @param source The source line to be parsed
  * @returns { tag: Parsed Properties, log: Parse Errors[] }
  */
-export function parseTagline(source: string): TagParse {
+export function parseTagline(
+  source: string,
+  extending: Tag | undefined,
+  outerScope: Tag | undefined
+): TagParse {
   if (source[0] === '#') {
     const skipTo = source.indexOf(' ');
     if (skipTo > 0) {
@@ -410,8 +438,8 @@ export function parseTagline(source: string): TagParse {
   const pLog = new TagErrorListener();
   taglineParser.addErrorListener(pLog);
   const tagTree = taglineParser.tagLine();
-  const treeWalker = new TaglineParser();
-  const tag = treeWalker.visit(tagTree);
+  const treeWalker = new TaglineParser(outerScope);
+  const tag = treeWalker.tagLineToTag(tagTree, extending);
   return {tag, log: pLog.log};
 }
 
@@ -419,6 +447,14 @@ class TaglineParser
   extends AbstractParseTreeVisitor<Tag>
   implements MalloyTagVisitor<Tag>
 {
+  scopes: Tag[] = [];
+  constructor(outerScope: Tag | undefined) {
+    super();
+    if (outerScope) {
+      this.scopes.push(outerScope);
+    }
+  }
+
   defaultResult() {
     return new Tag();
   }
@@ -441,8 +477,16 @@ class TaglineParser
     return tagLine;
   }
 
-  visitTagLine(ctx: TagLineContext): Tag {
-    return this.getTags(ctx.tagSpec(), getBuildOn(ctx));
+  tagLineToTag(ctx: TagLineContext, extending: Tag | undefined): Tag {
+    extending = extending?.clone() || new Tag({});
+    this.scopes.unshift(extending);
+    this.getTags(ctx.tagSpec(), extending);
+    return extending;
+  }
+
+  visitTagLine(_ctx: TagLineContext): Tag {
+    throw new Error('INTERNAL: ERROR: Call tagLineToTag, not vistTagLine');
+    return this.defaultResult();
   }
 
   visitProperties(ctx: PropertiesContext): Tag {
@@ -483,7 +527,19 @@ class TaglineParser
   }
 
   visitReference(ctx: ReferenceContext): Tag {
-    return new Tag({eq: {ref: this.getPropName(ctx.propName())}});
+    const path = this.getPropName(ctx.propName());
+    for (const scope of this.scopes) {
+      // first scope which has the first component gets to resolve the whole path
+      if (scope.tag([path[0]])) {
+        const refTo = scope.tag(path);
+        if (refTo) {
+          return refTo.clone();
+        }
+        break;
+      }
+    }
+    // MTOY TODO SYNTAX ERROR NOT FOUND
+    return this.defaultResult();
   }
 
   visitTagEq(ctx: TagEqContext): Tag {
