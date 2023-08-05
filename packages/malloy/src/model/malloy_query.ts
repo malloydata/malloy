@@ -4243,9 +4243,7 @@ class QueryStruct extends QueryNode {
     if (struct instanceof QueryStruct) {
       return struct;
     } else {
-      throw new Error(
-        `Error: Path to structure not found '${name}' ${JSON.stringify(struct)}`
-      );
+      throw new Error(`Error: Path to structure not found '${name}'`);
     }
   }
 

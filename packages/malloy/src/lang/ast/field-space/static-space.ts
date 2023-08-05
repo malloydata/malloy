@@ -124,10 +124,7 @@ export class StaticSpace implements FieldSpace {
     const rest = path.slice(1);
     const found = this.entry(head.refString);
     if (!found) {
-      return {
-        error: `'${head}' is not defined ${JSON.stringify(this.map)}`,
-        found,
-      };
+      return {error: `'${head}' is not defined`, found};
     }
     if (found instanceof SpaceField) {
       /*
