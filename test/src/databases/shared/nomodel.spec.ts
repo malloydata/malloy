@@ -992,7 +992,7 @@ export const noModelSharedTests = (
         sql: atitle is {select:"""
           SELECT
             city,
-            ${getSplitFunction(databaseName)}(city,' ') as words
+            ${getSplitFunction(databaseName)!('city', ' ')} as words
           FROM ${rootDbPath(databaseName)}malloytest.aircraft
           """}
 
@@ -1017,8 +1017,8 @@ export const noModelSharedTests = (
         sql: atitle is {select: """
           SELECT
             city,
-            ${getSplitFunction(databaseName)}(city,' ') as words,
-            ${getSplitFunction(databaseName)}(city,'A') as abreak
+            ${getSplitFunction(databaseName)!('city', ' ')} as words,
+            ${getSplitFunction(databaseName)!('city', 'A')} as abreak
           FROM ${rootDbPath(databaseName)}malloytest.aircraft
           where city IS NOT null
         """}

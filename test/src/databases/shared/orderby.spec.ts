@@ -25,8 +25,10 @@
 import * as malloy from '@malloydata/malloy';
 import {RuntimeList} from '../../runtimes';
 
-export const orderBySharedTests = (runtimes: RuntimeList,
-  _splitFunction?: (column: string, splitChar: string) => string) => {
+export const orderBySharedTests = (
+  runtimes: RuntimeList,
+  _splitFunction?: (column: string, splitChar: string) => string
+) => {
   afterAll(async () => {
     await runtimes.closeAll();
   });

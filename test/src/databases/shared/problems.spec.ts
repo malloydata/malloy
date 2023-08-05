@@ -24,8 +24,10 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import {RuntimeList} from '../../runtimes';
 
-export const problemsSharedTests = (runtimes: RuntimeList,
-  _splitFunction?: (column: string, splitChar: string) => string) => {
+export const problemsSharedTests = (
+  runtimes: RuntimeList,
+  _splitFunction?: (column: string, splitChar: string) => string
+) => {
   afterAll(async () => {
     await runtimes.closeAll();
   });

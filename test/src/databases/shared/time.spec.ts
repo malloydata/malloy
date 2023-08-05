@@ -27,8 +27,10 @@ import '../../util/db-jest-matchers';
 import {mkSqlEqWith, runQuery, testIf} from '../../util';
 import {DateTime as LuxonDateTime} from 'luxon';
 
-export const timeSharedTests = (runtimes: RuntimeList,
-  _splitFunction?: (column: string, splitChar: string) => string) => {
+export const timeSharedTests = (
+  runtimes: RuntimeList,
+  _splitFunction?: (column: string, splitChar: string) => string
+) => {
   const timeSQL =
     "SELECT DATE '2021-02-24' as t_date, TIMESTAMP '2021-02-24 03:05:06' as t_timestamp";
 

@@ -26,8 +26,10 @@
 
 import {RuntimeList} from '../../runtimes';
 
-export const indexSharedTests = (runtimes: RuntimeList,
-  _splitFunction?: (column: string, splitChar: string) => string) => {
+export const indexSharedTests = (
+  runtimes: RuntimeList,
+  _splitFunction?: (column: string, splitChar: string) => string
+) => {
   // No prebuilt shared model, each test is complete.  Makes debugging easier.
   afterAll(async () => {
     await runtimes.closeAll();

@@ -28,8 +28,10 @@ import {RuntimeList} from '../../runtimes';
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
-export const sqlExpressionsSharedTests = (runtimes: RuntimeList,
-  _splitFunction?: (column: string, splitChar: string) => string) => {
+export const sqlExpressionsSharedTests = (
+  runtimes: RuntimeList,
+  _splitFunction?: (column: string, splitChar: string) => string
+) => {
   afterAll(async () => {
     await runtimes.closeAll();
   });
