@@ -21,11 +21,39 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {AbstractParseTreeVisitor} from 'antlr4ts/tree';
+import {MalloyTagLexer} from './lang/lib/Malloy/MalloyTagLexer';
+import {
+  ArrayElementContext,
+  ArrayValueContext,
+  MalloyTagParser,
+  PropNameContext,
+  PropertiesContext,
+  ReferenceContext,
+  StringContext,
+  TagDefContext,
+  TagEqContext,
+  TagLineContext,
+  TagReplacePropertiesContext,
+  TagSpecContext,
+  TagUpdatePropertiesContext,
+} from './lang/lib/Malloy/MalloyTagParser';
+import {MalloyTagVisitor} from './lang/lib/Malloy/MalloyTagVisitor';
+import {
+  ANTLRErrorListener,
+  CharStreams,
+  CommonTokenStream,
+  ParserRuleContext,
+  Token,
+} from 'antlr4ts';
+import {parseString} from './lang/parse-utils';
+import {LogMessage} from './lang';
+import cloneDeep from 'lodash/cloneDeep';
 import {Annotation} from './model';
 
-// The distinction between the interface and the class exists solely to
+// The distinction between the interface and the Tag class exists solely to
 // make it possible to write tests and specify expected results This
-// is why only TagDict is exported.
+// is why only TagDict interface is exported.
 export type TagDict = Record<string, TagInterface>;
 
 type TagValue = string | TagInterface[];
@@ -36,8 +64,8 @@ interface TagInterface {
 }
 
 /**
- * Class for interacting with the parsed outpout of an annotation
- * containing the malloy tag language. Used by the parser to
+ * Class for interacting with the parsed output of an annotation
+ * containing the Malloy tag language. Used by the parser to
  * generate parsed data, and as an API to that data.
  * ```
  * tag.text(p?)        => string value of tag.p or ''
@@ -88,9 +116,20 @@ export class Tag implements TagInterface {
     return str;
   }
 
-  // mtoy todo pass in defaults as a tag or string?
-  static fromTagline(str: string): TagParse {
-    return parseTagline(str, undefined, undefined);
+  /**
+   * Parse a line of Malloy tag language into a Tag which can be queried
+   * @param source -- The source line to be parsed. If the string starts with #, then it skips
+   *   all characters up to the first space.
+   * @param extending A tag which this line will be extending
+   * @param importing Outer "scopes" for $() references
+   * @returns Something shaped like { tag: Tag  , log: ParseErrors[] }
+   */
+  static fromTagline(
+    str: string,
+    extending: Tag | undefined,
+    ...importing: Tag[]
+  ): TagParse {
+    return parseTagline(str, extending, importing);
   }
 
   constructor(from: TagInterface = {}) {
@@ -253,13 +292,6 @@ export function parseTagProperties(
   src: string,
   tagProp: MalloyTagProperties
 ): MalloyTagProperties | undefined {
-  /*
-   * I went back and forth if the grammar for these annotations should be
-   * in the parser or the lexer. Eventually the fact that the lexer ate
-   * newlines meant I couldn't figure out how to do it in the parser.
-   *
-   * Seems wrong to be writing a parser though.
-   */
   const tokens = tokenize(src);
   let tn = 0;
   const lastToken = tokens.length - 1;
@@ -329,35 +361,6 @@ function tokenize(src: string): string[] {
   return parts;
 }
 
-import {AbstractParseTreeVisitor} from 'antlr4ts/tree';
-import {MalloyTagLexer} from './lang/lib/Malloy/MalloyTagLexer';
-import {
-  ArrayElementContext,
-  ArrayValueContext,
-  MalloyTagParser,
-  PropNameContext,
-  PropertiesContext,
-  ReferenceContext,
-  StringContext,
-  TagDefContext,
-  TagEqContext,
-  TagLineContext,
-  TagReplacePropertiesContext,
-  TagSpecContext,
-  TagUpdatePropertiesContext,
-} from './lang/lib/Malloy/MalloyTagParser';
-import {MalloyTagVisitor} from './lang/lib/Malloy/MalloyTagVisitor';
-import {
-  ANTLRErrorListener,
-  CharStreams,
-  CommonTokenStream,
-  ParserRuleContext,
-  Token,
-} from 'antlr4ts';
-import {parseString} from './lang/parse-utils';
-import {LogMessage} from './lang';
-import cloneDeep from 'lodash/cloneDeep';
-
 class TagErrorListener implements ANTLRErrorListener<Token> {
   log: LogMessage[] = [];
   syntaxError(
@@ -411,16 +414,10 @@ interface TagParse {
   log: LogMessage[];
 }
 
-/**
- * If the string starts with #, then it skips all characters up to the first space
- * and parses the rest of the line, otherwise it parses the whole line.
- * @param source The source line to be parsed
- * @returns { tag: Parsed Properties, log: Parse Errors[] }
- */
-export function parseTagline(
+function parseTagline(
   source: string,
   extending: Tag | undefined,
-  outerScope: Tag | undefined
+  outerScope: Tag[]
 ): TagParse {
   if (source[0] === '#') {
     const skipTo = source.indexOf(' ');
@@ -448,11 +445,9 @@ class TaglineParser
   implements MalloyTagVisitor<Tag>
 {
   scopes: Tag[] = [];
-  constructor(outerScope: Tag | undefined) {
+  constructor(outerScopes: Tag[] = []) {
     super();
-    if (outerScope) {
-      this.scopes.push(outerScope);
-    }
+    this.scopes.unshift(...outerScopes);
   }
 
   defaultResult() {

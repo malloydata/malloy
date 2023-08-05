@@ -42,7 +42,7 @@ expect.extend({
     if (!(typeof src === 'string')) {
       throw new Error('Expected string to parse');
     }
-    const {tag, log} = Tag.fromTagline(src);
+    const {tag, log} = Tag.fromTagline(src, undefined);
     const errs = log.map(e => e.message);
     if (log.length > 0) {
       return {
