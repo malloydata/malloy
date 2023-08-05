@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /*
  * Copyright 2023 Google LLC
  *
@@ -22,14 +21,37 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {RuntimeList, allDatabases} from '../../runtimes';
-import {databasesFromEnvironmentOr} from '../../util';
-import {functionsSharedTests} from '../shared/functions.spec';
+import {DateTime} from 'luxon';
+import {RuntimeList} from '../../runtimes';
+import {describeIfDatabaseAvailable} from '../../util';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+const [describe, databases] = describeIfDatabaseAvailable(['bigquery']);
+describe('BigQuery double truncation', () => {
+  const runtimes = new RuntimeList(databases);
+  const runtime = runtimes.runtimeMap.get('bigquery');
 
-/*
- * This test file reuses common tests definitions.
- * For actual test development please go to: test/src/databases/shared/functions.spec.ts
- */
-functionsSharedTests(runtimes);
+  afterAll(async () => {
+    await runtimes.closeAll();
+  });
+
+  const utc_2020 = DateTime.fromObject({
+    year: 2020,
+    month: 2,
+    day: 20,
+    hour: 0,
+    minute: 0,
+    second: 0,
+    zone: 'UTC',
+  });
+  test('can use unsupported types', async () => {
+    await expect(runtime).queryMatches(
+      `sql: timeData is { connection: "postgres" select: """
+      SELECT DATETIME '2020-02-20 00:00:00' as t_datetime
+      """}
+    query: from_sql(timeData) -> {
+      project: mex_220 is t_datetime::timestamp
+    }`,
+      {mex_220: utc_2020.toJSDate()}
+    );
+  });
+});

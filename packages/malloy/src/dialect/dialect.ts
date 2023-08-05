@@ -86,9 +86,9 @@ export type DialectFieldList = DialectField[];
 export abstract class Dialect {
   abstract name: string;
   abstract defaultNumberType: string;
+  abstract defaultDecimalType: string;
   abstract udfPrefix: string;
   abstract hasFinalStage: boolean;
-  abstract stringTypeName: string;
   abstract divisionIsInteger: boolean;
   abstract supportsSumDistinctFunction: boolean;
   abstract unnestWithNumbers: boolean;
@@ -99,6 +99,7 @@ export abstract class Dialect {
   abstract dontUnionIndex: boolean;
   abstract supportsQualify: boolean;
   abstract supportsSafeCast: boolean;
+  abstract supportsNesting: boolean;
 
   // return the definition of a function with the given name
   abstract getGlobalFunctionDef(
@@ -183,7 +184,7 @@ export abstract class Dialect {
 
   // default implementation will probably work most of the time
   sqlDateToString(sqlDateExp: string): string {
-    return `CAST(DATE(${sqlDateExp}) AS ${this.stringTypeName} )`;
+    return this.castToString(`DATE(${sqlDateExp})`);
   }
   abstract sqlMaybeQuoteIdentifier(identifier: string): string;
 
@@ -231,6 +232,8 @@ export abstract class Dialect {
   abstract sqlLiteralRegexp(literal: string): string;
 
   abstract sqlRegexpMatch(expr: Expr, regex: Expr): Expr;
+
+  abstract castToString(expression: string): string;
 
   sqlLiteralNumber(literal: string): string {
     return literal;

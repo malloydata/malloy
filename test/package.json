@@ -1,6 +1,14 @@
 {
-  "name": "test",
-  "private": true,
+  "name": "@malloydata/malloy-tests",
+  "version": "0.0.63",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "homepage": "https://github.com/malloydata/malloy#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",

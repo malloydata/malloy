@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {DateTime} from 'luxon';
 import {RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
 
@@ -96,6 +97,30 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
       "SELECT current_setting('TimeZone')"
     );
     expect(result.rows[0]).toEqual({"current_setting('TimeZone')": 'CET'});
+  });
+
+  describe('time', () => {
+    const zone = 'America/Mexico_City'; // -06:00 no DST
+    const zone_2020 = DateTime.fromObject({
+      year: 2020,
+      month: 2,
+      day: 20,
+      hour: 0,
+      minute: 0,
+      second: 0,
+      zone,
+    });
+    test('can use unsupported types', async () => {
+      await expect(runtime).queryMatches(
+        `sql: timeData is { connection: "duckdb"  select: """
+          SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
+        """}
+      query: from_sql(timeData) -> {
+        project: mex_220 is t_tstz::timestamp
+      }`,
+        {mex_220: zone_2020.toJSDate()}
+      );
+    });
   });
 });
 

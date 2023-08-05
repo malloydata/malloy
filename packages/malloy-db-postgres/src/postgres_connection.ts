@@ -156,6 +156,10 @@ export class PostgresConnection
     return true;
   }
 
+  public get supportsNesting(): boolean {
+    return true;
+  }
+
   public async fetchSchemaForTables(missing: Record<string, string>): Promise<{
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;

@@ -22,6 +22,7 @@
  */
 
 import {
+  Connection,
   EmptyURLReader,
   MalloyQueryData,
   QueryDataRow,
@@ -138,21 +139,37 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
     default:
       throw new Error(`Unknown runtime "${dbName}`);
   }
+  return testRuntimeFor(connection);
+}
+
+export function testRuntimeFor(connection: Connection) {
   return new SingleConnectionRuntime(files, connection);
 }
 
-export const allDatabases = ['postgres', 'bigquery', 'duckdb', 'duckdb_wasm'];
+export const allDatabases = [
+  /* 'postgres', */ 'duckdb' /*'bigquery' /*, 'duckdb_wasm'*/,
+];
 type RuntimeDatabaseNames = typeof allDatabases[number];
 
 export class RuntimeList {
   runtimeMap = new Map<string, SingleConnectionRuntime>();
   runtimeList: Array<[string, SingleConnectionRuntime]> = [];
 
-  constructor(databaseList: RuntimeDatabaseNames[] | undefined = undefined) {
-    for (const dbName of databaseList || allDatabases) {
-      const rt = runtimeFor(dbName);
-      this.runtimeMap.set(dbName, rt);
-      this.runtimeList.push([dbName, rt]);
+  constructor();
+  constructor(databaseList: RuntimeDatabaseNames[]);
+  constructor(externalConnections: SingleConnectionRuntime[]);
+  constructor(
+    ...args: (RuntimeDatabaseNames[] | undefined | SingleConnectionRuntime[])[]
+  ) {
+    const databases: RuntimeDatabaseNames[] | SingleConnectionRuntime[] =
+      args.length > 0 && args[0] !== undefined ? args[0] : allDatabases;
+    for (const database of databases) {
+      const rt: SingleConnectionRuntime =
+        database instanceof SingleConnectionRuntime
+          ? database
+          : runtimeFor(database);
+      this.runtimeMap.set(rt.connection.name, rt);
+      this.runtimeList.push([rt.connection.name, rt]);
     }
   }
 
