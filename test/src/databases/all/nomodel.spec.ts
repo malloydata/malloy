@@ -33,7 +33,7 @@ export const noModelSharedTests = (
   splitFunction?: (column: string, splitChar: string) => string
 ) => {
   function rootDbPath(databaseName: string) {
-    return databaseName === 'bigquery' ? 'malloydata.' : '';
+    return databaseName === 'bigquery' ? 'malloy-303216.' : '';
   }
 
   // TODO: Figure out how to generalize this.
