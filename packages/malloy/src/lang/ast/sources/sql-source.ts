@@ -115,9 +115,7 @@ export class SQLSource extends Source {
     const lookup = sqlDefEntry.getEntry(sql.name);
     if (lookup.status === 'error') {
       const msgLines = lookup.message.split(/\r?\n/);
-      this.select.log(
-        `Invalid SQL,  ${JSON.stringify(sql)}` + msgLines.join('\n    ')
-      );
+      this.select.log('Invalid SQL, ' + msgLines.join('\n    '));
       return ErrorFactory.structDef;
     } else if (lookup.status === 'present') {
       const location = this.select.location;
