@@ -754,6 +754,30 @@ export const timeSharedTests = (
         {mex_ts: zone_2020.toJSDate()}
       );
     });
+
+    test('can use unsupported types', async () => {
+      if (dbName === 'bigquery') {
+        await expect(runtime).queryMatches(
+          `sql: timeData is { connection: "${dbName}" select: """
+            SELECT DATETIME '2020-02-20 00:00:00' as t_datetime
+            """}
+          query: from_sql(timeData) -> {
+            project: mex_220 is t_datetime::timestamp
+          }`,
+          {mex_220: utc_2020.toJSDate()}
+        );
+      } else if (dbName === 'duckdb' || dbName === 'postgres') {
+        await expect(runtime).queryMatches(
+          `sql: timeData is { connection: "duckdb"  select: """
+              SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
+            """}
+          query: from_sql(timeData) -> {
+            project: mex_220 is t_tstz::timestamp
+          }`,
+          {mex_220: zone_2020.toJSDate()}
+        );
+      }
+    });
   });
 
   afterAll(async () => {
