@@ -23,6 +23,7 @@
 
 import {DateTime} from 'luxon';
 import {RuntimeList} from '../../runtimes';
+import '../../util/db-jest-matchers';
 import {describeIfDatabaseAvailable} from '../../util';
 
 const [describe, databases] = describeIfDatabaseAvailable(['bigquery']);

@@ -25,6 +25,7 @@
 
 import {RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
+import '../../util/db-jest-matchers';
 import {DateTime} from 'luxon';
 
 const [describe] = describeIfDatabaseAvailable(['postgres']);
