@@ -161,6 +161,7 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
               else concat('sqlEq failed', CHR(10), '    Expected: ${qExpr} == ${qResult}', CHR(10), '    Received: ', got::string)
           }`;
     }
+
     return runtime.loadQuery(query).run();
   };
 }
@@ -184,3 +185,7 @@ export async function runQuery(runtime: Runtime, querySrc: string) {
 
   return result;
 }
+
+export const testIf = (condition: boolean) => {
+  return condition ? test : test.skip;
+};

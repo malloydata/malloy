@@ -122,6 +122,7 @@ export type {
   DataRecord,
   DataColumn,
   DataArrayOrRecord,
+  Loggable,
   ModelMaterializer,
   DocumentSymbol,
   DocumentHighlight,
@@ -133,12 +134,12 @@ export type {
   SerializedExplore,
 } from './malloy';
 export type {RunSQLOptions} from './run_sql_options';
+export {DialectProvider} from './runtime_types';
 export type {
   URLReader,
   InfoConnection,
   LookupConnection,
   Connection,
-  DialectProvider,
   QueryString,
   ModelString,
   QueryURL,
@@ -148,6 +149,5 @@ export type {
   PersistSQLResults,
   StreamingConnection,
 } from './runtime_types';
-export type {Loggable} from './malloy';
 export {toAsyncGenerator} from './connection_utils';
 export {Tags, type MalloyTags, type MalloyTagProperties} from './tags';

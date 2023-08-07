@@ -81,9 +81,9 @@ declare interface TimeMeasure {
 export class StandardSQLDialect extends Dialect {
   name = 'standardsql';
   defaultNumberType = 'FLOAT64';
+  defaultDecimalType = 'NUMERIC';
   udfPrefix = '__udf';
   hasFinalStage = false;
-  stringTypeName = 'STRING';
   divisionIsInteger = false;
   supportsSumDistinctFunction = false;
   unnestWithNumbers = false;
@@ -94,6 +94,7 @@ export class StandardSQLDialect extends Dialect {
   dontUnionIndex = true; // bigquery can't use a sample table more than once in a query.
   supportsQualify = true;
   supportsSafeCast = true;
+  supportsNesting = true;
 
   quoteTablePath(tablePath: string): string {
     return `\`${tablePath}\``;
@@ -499,5 +500,9 @@ ${indent(sql)}
 
   getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
     return STANDARDSQL_FUNCTIONS.get(name);
+  }
+
+  castToString(expression: string): string {
+    return `CAST(${expression} as STRING)`;
   }
 }

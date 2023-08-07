@@ -25,36 +25,44 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import {databasesFromEnvironmentOr} from '../../util';
+import {databasesFromEnvironmentOr, testIf} from '../../util';
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
+export const noModelSharedTests = (
+  runtimes: RuntimeList,
+  splitFunction?: (column: string, splitChar: string) => string
+) => {
+  function rootDbPath(databaseName: string) {
+    return databaseName === 'bigquery' ? 'malloy-data.' : '';
+  }
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+  // TODO: Figure out how to generalize this.
+  function getSplitFunction(db: string) {
+    return (
+      splitFunction ??
+      {
+        'bigquery': (column: string, splitChar: string) =>
+          `split(${column}, '${splitChar}')`,
+        'postgres': (column: string, splitChar: string) =>
+          `string_to_array(${column}, '${splitChar}')`,
+        'duckdb': (column: string, splitChar: string) =>
+          `string_to_array(${column}, '${splitChar}')`,
+        'duckdb_wasm': (column: string, splitChar: string) =>
+          `string_to_array(${column}, '${splitChar}')`,
+      }[db]
+    );
+  }
 
-const splitFunction: Record<string, string> = {
-  'bigquery': 'split',
-  'postgres': 'string_to_array',
-  'duckdb': 'string_to_array',
-  'duckdb_wasm': 'string_to_array',
-};
+  afterAll(async () => {
+    await runtimes.closeAll();
+  });
 
-const rootDbPath: Record<string, string> = {
-  'bigquery': 'malloy-data.',
-  'postgres': '',
-  'duckdb': '',
-  'duckdb_wasm': '',
-};
-
-afterAll(async () => {
-  await runtimes.closeAll();
-});
-
-runtimes.runtimeMap.forEach((runtime, databaseName) => {
-  // Issue: #151
-  it(`unknown dialect  - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+  runtimes.runtimeMap.forEach((runtime, databaseName) => {
+    // Issue: #151
+    it(`unknown dialect  - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
         query: q is table('malloytest.aircraft')->{
           where: state != null
           group_by: state
@@ -69,17 +77,17 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
         query: r->foo
     `
-      )
-      .run();
-    // console.log(result.data.toObject());
-    expect(result.data.path(0, 'state').value).toBe('WY');
-  });
+        )
+        .run();
+      // console.log(result.data.toObject());
+      expect(result.data.path(0, 'state').value).toBe('WY');
+    });
 
-  // Issue #149
-  it(`refine query from query  - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    // Issue #149
+    it(`refine query from query  - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
         query: from(
           table('malloytest.state_facts')->{group_by: state; order_by: 1 desc; limit: 1}
           )
@@ -88,35 +96,35 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           }
           -> {project: lower_state}
         `
-      )
-      .run();
-    // console.log(result.data.toObject());
-    expect(result.data.path(0, 'lower_state').value).toBe('wy');
-  });
+        )
+        .run();
+      // console.log(result.data.toObject());
+      expect(result.data.path(0, 'lower_state').value).toBe('wy');
+    });
 
-  // issue #157
-  it(`source- not -found  - ${databaseName}`, async () => {
-    // console.log(result.data.toObject());
-    let error;
-    try {
-      await runtime
-        .loadQuery(
-          `
+    // issue #157
+    it(`source- not -found  - ${databaseName}`, async () => {
+      // console.log(result.data.toObject());
+      let error;
+      try {
+        await runtime
+          .loadQuery(
+            `
         source: foo is table('malloytest.state_facts'){primary_key: state}
         query: foox->{aggregate: c is count()}
        `
-        )
-        .run();
-    } catch (e) {
-      error = e;
-    }
-    expect(error.toString()).not.toContain('Unknown Dialect');
-  });
+          )
+          .run();
+      } catch (e) {
+        error = e;
+      }
+      expect(error.toString()).not.toContain('Unknown Dialect');
+    });
 
-  it(`join_many - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`join_many - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
       source: a is table('malloytest.aircraft'){
         measure: avg_year is floor(avg(year_built))
       }
@@ -126,31 +134,31 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
       query: m->{aggregate: avg_seats, a.avg_year}
       `
-      )
-      .run();
-    expect(result.data.value[0]['avg_year']).toBe(1969);
-    expect(result.data.value[0]['avg_seats']).toBe(7);
-  });
+        )
+        .run();
+      expect(result.data.value[0]['avg_year']).toBe(1969);
+      expect(result.data.value[0]['avg_seats']).toBe(7);
+    });
 
-  it(`join_many condition no primary key - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`join_many condition no primary key - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
       source: a is table('malloytest.airports'){}
       source: b is table('malloytest.state_facts') {
         join_many: a on state=a.state
       }
       query: b->{aggregate: c is airport_count.sum()}
       `
-      )
-      .run();
-    expect(result.data.value[0]['c']).toBe(19701);
-  });
+        )
+        .run();
+      expect(result.data.value[0]['c']).toBe(19701);
+    });
 
-  it(`join_many filter multiple values - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`join_many filter multiple values - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
       source: a is table('malloytest.airports'){
         where: state = 'NH' | 'CA'
       }
@@ -162,20 +170,20 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         group_by: a.state
       }
       `
-      )
-      .run();
-    expect(result.data.value[0]['c']).toBe(18605);
-    expect(result.data.value[0]['state']).toBeNull();
-    expect(result.data.value[1]['c']).toBe(984);
-    expect(result.data.value[1]['state']).toBe('CA');
-    expect(result.data.value[2]['c']).toBe(112);
-    expect(result.data.value[2]['state']).toBe('NH');
-  });
+        )
+        .run();
+      expect(result.data.value[0]['c']).toBe(18605);
+      expect(result.data.value[0]['state']).toBeNull();
+      expect(result.data.value[1]['c']).toBe(984);
+      expect(result.data.value[1]['state']).toBe('CA');
+      expect(result.data.value[2]['c']).toBe(112);
+      expect(result.data.value[2]['state']).toBe('NH');
+    });
 
-  it(`join_one condition no primary key - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`join_one condition no primary key - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
       source: a is table('malloytest.state_facts'){}
       source: b is table('malloytest.airports') {
         join_one: a on state=a.state
@@ -183,15 +191,15 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       query: b->{aggregate: c is a.airport_count.sum()}
 
       `
-      )
-      .run();
-    expect(result.data.value[0]['c']).toBe(19701);
-  });
+        )
+        .run();
+      expect(result.data.value[0]['c']).toBe(19701);
+    });
 
-  it(`join_one filter multiple values - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`join_one filter multiple values - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
       source: a is table('malloytest.state_facts'){
         where: state = 'TX' | 'LA'
       }
@@ -203,22 +211,22 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         group_by: a.state
       }
       `
-      )
-      .run();
-    // https://github.com/malloydata/malloy/pull/501#discussion_r861022857
-    expect(result.data.value).toHaveLength(3);
-    expect(result.data.value).toContainEqual({c: 1845, state: 'TX'});
-    expect(result.data.value).toContainEqual({c: 500, state: 'LA'});
-    expect(result.data.value).toContainEqual({c: 0, state: null});
-  });
+        )
+        .run();
+      // https://github.com/malloydata/malloy/pull/501#discussion_r861022857
+      expect(result.data.value).toHaveLength(3);
+      expect(result.data.value).toContainEqual({c: 1845, state: 'TX'});
+      expect(result.data.value).toContainEqual({c: 500, state: 'LA'});
+      expect(result.data.value).toContainEqual({c: 0, state: null});
+    });
 
-  it(`join_many cross from  - ${databaseName}`, async () => {
-    // a cross join produces a Many to Many result.
-    // symmetric aggregate are needed on both sides of the join
-    // Check the row count and that sums on each side work properly.
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`join_many cross from  - ${databaseName}`, async () => {
+      // a cross join produces a Many to Many result.
+      // symmetric aggregate are needed on both sides of the join
+      // Check the row count and that sums on each side work properly.
+      const result = await runtime
+        .loadQuery(
+          `
       source: a is table('malloytest.state_facts')
       source: f is a{
         join_cross: a
@@ -232,20 +240,20 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           right_sum is a.airport_count.sum()
       }
       `
-      )
-      .run();
-    expect(result.data.value[0]['row_count']).toBe(51 * 51);
-    expect(result.data.value[0]['left_sum']).toBe(19701);
-    expect(result.data.value[0]['right_sum']).toBe(19701);
-  });
+        )
+        .run();
+      expect(result.data.value[0]['row_count']).toBe(51 * 51);
+      expect(result.data.value[0]['left_sum']).toBe(19701);
+      expect(result.data.value[0]['right_sum']).toBe(19701);
+    });
 
-  it(`join_one only  - ${databaseName}`, async () => {
-    // a cross join produces a Many to Many result.
-    // symmetric aggregate are needed on both sides of the join
-    // Check the row count and that sums on each side work properly.
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`join_one only  - ${databaseName}`, async () => {
+      // a cross join produces a Many to Many result.
+      // symmetric aggregate are needed on both sides of the join
+      // Check the row count and that sums on each side work properly.
+      const result = await runtime
+        .loadQuery(
+          `
       query: q is table('malloytest.state_facts')->{
         aggregate: r is airport_count.sum()
       }
@@ -260,21 +268,21 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           sum_sum is sum(airport_count + a.r)
       }
       `
-      )
-      .run();
-    expect(result.data.value[0]['row_count']).toBe(51);
-    expect(result.data.value[0]['left_sum']).toBe(19701);
-    expect(result.data.value[0]['right_sum']).toBe(19701);
-    expect(result.data.value[0]['sum_sum']).toBe(19701 + 51 * 19701);
-  });
+        )
+        .run();
+      expect(result.data.value[0]['row_count']).toBe(51);
+      expect(result.data.value[0]['left_sum']).toBe(19701);
+      expect(result.data.value[0]['right_sum']).toBe(19701);
+      expect(result.data.value[0]['sum_sum']).toBe(19701 + 51 * 19701);
+    });
 
-  it(`join_many cross ON  - ${databaseName}`, async () => {
-    // a cross join produces a Many to Many result.
-    // symmetric aggregate are needed on both sides of the join
-    // Check the row count and that sums on each side work properly.
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`join_many cross ON  - ${databaseName}`, async () => {
+      // a cross join produces a Many to Many result.
+      // symmetric aggregate are needed on both sides of the join
+      // Check the row count and that sums on each side work properly.
+      const result = await runtime
+        .loadQuery(
+          `
       source: a is table('malloytest.state_facts')
       source: f is a{
         join_cross: a on a.state = 'CA' | 'NY'
@@ -286,38 +294,40 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           right_sum is a.airport_count.sum()
       }
       `
-      )
-      .run();
-    expect(result.data.value[0]['row_count']).toBe(51 * 2);
-    expect(result.data.value[0]['left_sum']).toBe(19701);
-    expect(result.data.value[0]['right_sum']).toBe(1560);
-  });
+        )
+        .run();
+      expect(result.data.value[0]['row_count']).toBe(51 * 2);
+      expect(result.data.value[0]['left_sum']).toBe(19701);
+      expect(result.data.value[0]['right_sum']).toBe(1560);
+    });
 
-  it(`limit - provided - ${databaseName}`, async () => {
-    // a cross join produces a Many to Many result.
-    // symmetric aggregate are needed on both sides of the join
-    // Check the row count and that sums on each side work properly.
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`limit - provided - ${databaseName}`, async () => {
+      // a cross join produces a Many to Many result.
+      // symmetric aggregate are needed on both sides of the join
+      // Check the row count and that sums on each side work properly.
+      const result = await runtime
+        .loadQuery(
+          `
       query: table('malloytest.state_facts') -> {
         group_by: state
         aggregate: c is count()
         limit: 3
       }
       `
-      )
-      .run();
-    expect(result.resultExplore.limit).toBe(3);
-  });
+        )
+        .run();
+      expect(result.resultExplore.limit).toBe(3);
+    });
 
-  it(`number as null- ${databaseName}`, async () => {
-    // a cross join produces a Many to Many result.
-    // symmetric aggregate are needed on both sides of the join
-    // Check the row count and that sums on each side work properly.
-    const result = await runtime
-      .loadQuery(
-        `
+    testIf(runtime.supportsNesting)(
+      `number as null- ${databaseName}`,
+      async () => {
+        // a cross join produces a Many to Many result.
+        // symmetric aggregate are needed on both sides of the join
+        // Check the row count and that sums on each side work properly.
+        const result = await runtime
+          .loadQuery(
+            `
         source: s is table('malloytest.state_facts') + {
         }
         query: s-> {
@@ -328,16 +338,17 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           }
         }
       `
-      )
-      .run();
-    expect(result.data.path(0, 'ugly', 0, 'foo').value).toBe(null);
-  });
+          )
+          .run();
+        expect(result.data.path(0, 'ugly', 0, 'foo').value).toBe(null);
+      }
+    );
 
-  // average should only include non-null values in the denominator
-  it(`avg ignore null- ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    // average should only include non-null values in the denominator
+    it(`avg ignore null- ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
       sql: one is { select: """
         SELECT 2 as a
         UNION ALL SELECT 4
@@ -351,35 +362,35 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           avg_b is b.a.avg()
       }
       `
-      )
-      .run();
-    expect(result.data.value[0]['avg_a']).toBe(3);
-  });
+        )
+        .run();
+      expect(result.data.value[0]['avg_a']).toBe(3);
+    });
 
-  it(`limit - not provided - ${databaseName}`, async () => {
-    // a cross join produces a Many to Many result.
-    // symmetric aggregate are needed on both sides of the join
-    // Check the row count and that sums on each side work properly.
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`limit - not provided - ${databaseName}`, async () => {
+      // a cross join produces a Many to Many result.
+      // symmetric aggregate are needed on both sides of the join
+      // Check the row count and that sums on each side work properly.
+      const result = await runtime
+        .loadQuery(
+          `
       query: table('malloytest.state_facts') -> {
         group_by: state
         aggregate: c is count()
       }
       `
-      )
-      .run();
-    expect(result.resultExplore.limit).toBe(undefined);
-  });
+        )
+        .run();
+      expect(result.resultExplore.limit).toBe(undefined);
+    });
 
-  it(`limit pipeline - provided - ${databaseName}`, async () => {
-    // a cross join produces a Many to Many result.
-    // symmetric aggregate are needed on both sides of the join
-    // Check the row count and that sums on each side work properly.
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`limit pipeline - provided - ${databaseName}`, async () => {
+      // a cross join produces a Many to Many result.
+      // symmetric aggregate are needed on both sides of the join
+      // Check the row count and that sums on each side work properly.
+      const result = await runtime
+        .loadQuery(
+          `
       query: table('malloytest.state_facts') -> {
         project: state
         limit: 10
@@ -389,15 +400,15 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         limit: 3
       }
       `
-      )
-      .run();
-    expect(result.resultExplore.limit).toBe(3);
-  });
+        )
+        .run();
+      expect(result.resultExplore.limit).toBe(3);
+    });
 
-  it(`ungrouped top level - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`ungrouped top level - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
           measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
@@ -408,16 +419,18 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           aggregate: births_per_100k
         }
       `
-      )
-      .run();
-    // console.log(result.sql);
-    expect(result.data.path(0, 'births_per_100k').value).toBe(9742);
-  });
+        )
+        .run();
+      // console.log(result.sql);
+      expect(result.data.path(0, 'births_per_100k').value).toBe(9742);
+    });
 
-  it(`ungrouped top level with nested  - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    testIf(runtime.supportsNesting)(
+      `ungrouped top level with nested  - ${databaseName}`,
+      async () => {
+        const result = await runtime
+          .loadQuery(
+            `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
           measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
@@ -433,16 +446,17 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           limit: 1000
         }
       `
-      )
-      .run();
-    // console.log(result.sql);
-    expect(result.data.path(0, 'births_per_100k').value).toBe(9742);
-  });
+          )
+          .run();
+        // console.log(result.sql);
+        expect(result.data.path(0, 'births_per_100k').value).toBe(9742);
+      }
+    );
 
-  it(`ungrouped - eliminate rows  - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`ungrouped - eliminate rows  - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
         source: s is table('malloytest.state_facts') + {
           measure: m is all(births.sum())
           where: state='CA' | 'NY'
@@ -453,16 +467,18 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           aggregate: m
         }
       `
-      )
-      .run();
-    // console.log(result.sql);
-    expect(result.data.toObject().length).toBe(2);
-  });
+        )
+        .run();
+      // console.log(result.sql);
+      expect(result.data.toObject().length).toBe(2);
+    });
 
-  it(`ungrouped nested with no grouping above - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    testIf(runtime.supportsNesting)(
+      `ungrouped nested with no grouping above - ${databaseName}`,
+      async () => {
+        const result = await runtime
+          .loadQuery(
+            `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
           measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
@@ -477,18 +493,21 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         }
 
       `
-      )
-      .run();
-    // console.log(result.sql);
-    expect(result.data.path(0, 'by_name', 0, 'births_per_100k').value).toBe(
-      66703
+          )
+          .run();
+        // console.log(result.sql);
+        expect(result.data.path(0, 'by_name', 0, 'births_per_100k').value).toBe(
+          66703
+        );
+      }
     );
-  });
 
-  it(`ungrouped - partial grouping - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    testIf(runtime.supportsNesting)(
+      `ungrouped - partial grouping - ${databaseName}`,
+      async () => {
+        const result = await runtime
+          .loadQuery(
+            `
         source: airports is table('malloytest.airports') {
           measure: c is count()
         }
@@ -515,23 +534,26 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         }
 
       `
-      )
-      .run();
-    // console.log(result.sql);
-    expect(result.data.path(0, 'fac_type', 0, 'all_').value).toBe(1845);
-    expect(result.data.path(0, 'fac_type', 0, 'all_state_region').value).toBe(
-      1845
+          )
+          .run();
+        // console.log(result.sql);
+        expect(result.data.path(0, 'fac_type', 0, 'all_').value).toBe(1845);
+        expect(
+          result.data.path(0, 'fac_type', 0, 'all_state_region').value
+        ).toBe(1845);
+        expect(
+          result.data.path(0, 'fac_type', 0, 'all_of_this_type').value
+        ).toBe(1782);
+        expect(result.data.path(0, 'fac_type', 0, 'all_top').value).toBe(2421);
+      }
     );
-    expect(result.data.path(0, 'fac_type', 0, 'all_of_this_type').value).toBe(
-      1782
-    );
-    expect(result.data.path(0, 'fac_type', 0, 'all_top').value).toBe(2421);
-  });
 
-  it(`ungrouped - all nested - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    testIf(runtime.supportsNesting)(
+      `ungrouped - all nested - ${databaseName}`,
+      async () => {
+        const result = await runtime
+          .loadQuery(
+            `
         source: airports is table('malloytest.airports') {
           measure: c is count()
         }
@@ -556,17 +578,22 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
 
       `
-      )
-      .run();
-    // console.log(result.sql);
-    expect(result.data.path(0, 'fac_type', 0, 'all_').value).toBe(1845);
-    expect(result.data.path(0, 'fac_type', 0, 'all_major').value).toBe(1819);
-  });
+          )
+          .run();
+        // console.log(result.sql);
+        expect(result.data.path(0, 'fac_type', 0, 'all_').value).toBe(1845);
+        expect(result.data.path(0, 'fac_type', 0, 'all_major').value).toBe(
+          1819
+        );
+      }
+    );
 
-  it(`ungrouped nested  - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    testIf(runtime.supportsNesting)(
+      `ungrouped nested  - ${databaseName}`,
+      async () => {
+        const result = await runtime
+          .loadQuery(
+            `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
           measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
@@ -581,18 +608,21 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         }
 
       `
-      )
-      .run();
-    // console.log(result.sql);
-    expect(result.data.path(0, 'by_state', 0, 'births_per_100k').value).toBe(
-      36593
+          )
+          .run();
+        // console.log(result.sql);
+        expect(
+          result.data.path(0, 'by_state', 0, 'births_per_100k').value
+        ).toBe(36593);
+      }
     );
-  });
 
-  it(`ungrouped nested expression  - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    testIf(runtime.supportsNesting)(
+      `ungrouped nested expression  - ${databaseName}`,
+      async () => {
+        const result = await runtime
+          .loadQuery(
+            `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
           measure: births_per_100k is floor(total_births/ all(total_births) * 100000)
@@ -607,18 +637,21 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         }
 
       `
-      )
-      .run();
-    // console.log(result.sql);
-    expect(result.data.path(0, 'by_state', 0, 'births_per_100k').value).toBe(
-      36593
+          )
+          .run();
+        // console.log(result.sql);
+        expect(
+          result.data.path(0, 'by_state', 0, 'births_per_100k').value
+        ).toBe(36593);
+      }
     );
-  });
 
-  it(`ungrouped nested group by float  - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    testIf(runtime.supportsNesting)(
+      `ungrouped nested group by float  - ${databaseName}`,
+      async () => {
+        const result = await runtime
+          .loadQuery(
+            `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
           measure: ug is all(total_births)
@@ -633,17 +666,18 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         }
 
       `
-      )
-      .run();
-    // console.log(result.sql);
-    // console.log(JSON.stringify(result.data.toObject(), null, 2));
-    expect(result.data.path(0, 'by_state', 0, 'ug').value).toBe(62742230);
-  });
+          )
+          .run();
+        // console.log(result.sql);
+        // console.log(JSON.stringify(result.data.toObject(), null, 2));
+        expect(result.data.path(0, 'by_state', 0, 'ug').value).toBe(62742230);
+      }
+    );
 
-  it(`all with parameters - basic  - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`all with parameters - basic  - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
         }
@@ -657,18 +691,20 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         }
 
       `
-      )
-      .run();
-    // console.log(result.sql);
-    // console.log(JSON.stringify(result.data.toObject(), null, 2));
-    expect(result.data.path(0, 'all_births').value).toBe(295727065);
-    expect(result.data.path(0, 'all_name').value).toBe(197260594);
-  });
+        )
+        .run();
+      // console.log(result.sql);
+      // console.log(JSON.stringify(result.data.toObject(), null, 2));
+      expect(result.data.path(0, 'all_births').value).toBe(295727065);
+      expect(result.data.path(0, 'all_name').value).toBe(197260594);
+    });
 
-  it(`all with parameters - nest  - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    testIf(runtime.supportsNesting)(
+      `all with parameters - nest  - ${databaseName}`,
+      async () => {
+        const result = await runtime
+          .loadQuery(
+            `
         source: s is table('malloytest.state_facts') + {
           measure: total_births is births.sum()
           dimension: abc is floor(airport_count/300)
@@ -687,20 +723,25 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         }
 
       `
-      )
-      .run();
-    // console.log(result.sql);
-    // console.log(JSON.stringify(result.data.toObject(), null, 2));
-    expect(result.data.path(0, 'by_stuff', 0, 'all_births').value).toBe(
-      119809719
+          )
+          .run();
+        // console.log(result.sql);
+        // console.log(JSON.stringify(result.data.toObject(), null, 2));
+        expect(result.data.path(0, 'by_stuff', 0, 'all_births').value).toBe(
+          119809719
+        );
+        expect(result.data.path(0, 'by_stuff', 0, 'all_name').value).toBe(
+          61091215
+        );
+      }
     );
-    expect(result.data.path(0, 'by_stuff', 0, 'all_name').value).toBe(61091215);
-  });
 
-  it(`single value to udf - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    testIf(runtime.supportsNesting)(
+      `single value to udf - ${databaseName}`,
+      async () => {
+        const result = await runtime
+          .loadQuery(
+            `
       source: f is  table('malloytest.state_facts') {
         query: fun is {
           aggregate: t is count()
@@ -713,16 +754,19 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         nest: fun
       }
       `
-      )
-      .run();
-    // console.log(result.sql);
-    expect(result.data.path(0, 'fun', 0, 't1').value).toBe(52);
-  });
+          )
+          .run();
+        // console.log(result.sql);
+        expect(result.data.path(0, 'fun', 0, 't1').value).toBe(52);
+      }
+    );
 
-  it(`Multi value to udf - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    testIf(runtime.supportsNesting)(
+      `Multi value to udf - ${databaseName}`,
+      async () => {
+        const result = await runtime
+          .loadQuery(
+            `
       source: f is  table('malloytest.state_facts') {
         query: fun is {
           group_by: one is 1
@@ -736,17 +780,20 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         nest: fun
       }
       `
-      )
-      .run();
-    // console.log(result.sql);
-    // console.log(result.data.toObject());
-    expect(result.data.path(0, 'fun', 0, 't1').value).toBe(52);
-  });
+          )
+          .run();
+        // console.log(result.sql);
+        // console.log(result.data.toObject());
+        expect(result.data.path(0, 'fun', 0, 't1').value).toBe(52);
+      }
+    );
 
-  it(`Multi value to udf group by - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    testIf(runtime.supportsNesting)(
+      `Multi value to udf group by - ${databaseName}`,
+      async () => {
+        const result = await runtime
+          .loadQuery(
+            `
       source: f is  table('malloytest.state_facts') {
         query: fun is {
           group_by: one is 1
@@ -760,48 +807,49 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         nest: fun
       }
       `
-      )
-      .run();
-    // console.log(result.sql);
-    // console.log(result.data.toObject());
-    expect(result.data.path(0, 'fun', 0, 't1').value).toBe(52);
-  });
+          )
+          .run();
+        // console.log(result.sql);
+        // console.log(result.data.toObject());
+        expect(result.data.path(0, 'fun', 0, 't1').value).toBe(52);
+      }
+    );
 
-  const sql1234 = `
+    const sql1234 = `
   sql: one is {select: """
     SELECT 1 as a, 2 as b
     UNION ALL SELECT 3, 4
   """}`;
 
-  it(`sql_block - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`sql_block - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
       ${sql1234}
       source: eone is  from_sql(one) {}
 
       query: eone -> { project: a }
       `
-      )
-      .run();
-    expect(result.data.value[0]['a']).toBe(1);
-  });
+        )
+        .run();
+      expect(result.data.value[0]['a']).toBe(1);
+    });
 
-  it(`sql_block no explore- ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`sql_block no explore- ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
           ${sql1234}
           query: from_sql(one) -> { project: a }
       `
-      )
-      .run();
-    expect(result.data.value[0]['a']).toBe(1);
-  });
+        )
+        .run();
+      expect(result.data.value[0]['a']).toBe(1);
+    });
 
-  it(`sql_block with turducken- ${databaseName}`, async () => {
-    if (databaseName !== 'postgres') {
-      const turduckenQuery = `
+    it(`sql_block with turducken- ${databaseName}`, async () => {
+      if (databaseName !== 'postgres') {
+        const turduckenQuery = `
         sql: state_as_sql is {
           select: """
             SELECT
@@ -819,46 +867,46 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         query: from_sql(state_as_sql) -> {
           project: *; where: popular_name = 'Emma'
         }`;
-      const result = await runtime.loadQuery(turduckenQuery).run();
-      expect(result.data.value[0]['state_count']).toBe(6);
-    }
-  });
+        const result = await runtime.loadQuery(turduckenQuery).run();
+        expect(result.data.value[0]['state_count']).toBe(6);
+      }
+    });
 
-  // it(`sql_block version- ${databaseName}`, async () => {
-  //   const result = await runtime
-  //     .loadQuery(
-  //       `
-  //     sql: one is ||
-  //       select version() as version
-  //     ;;
+    // it(`sql_block version- ${databaseName}`, async () => {
+    //   const result = await runtime
+    //     .loadQuery(
+    //       `
+    //     sql: one is ||
+    //       select version() as version
+    //     ;;
 
-  //     query: from_sql(one) -> { project: version }
-  //     `
-  //     )
-  //     .run();
-  //   expect(result.data.value[0].version).toBe("something");
-  // });
+    //     query: from_sql(one) -> { project: version }
+    //     `
+    //     )
+    //     .run();
+    //   expect(result.data.value[0].version).toBe("something");
+    // });
 
-  // local declarations
-  it(`local declarations external query - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    // local declarations
+    it(`local declarations external query - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
       ${sql1234}
       query: from_sql(one) -> {
         declare: c is a + 1
         project: c
       }
       `
-      )
-      .run();
-    expect(result.data.value[0]['c']).toBe(2);
-  });
+        )
+        .run();
+      expect(result.data.value[0]['c']).toBe(2);
+    });
 
-  it(`local declarations named query - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`local declarations named query - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
       ${sql1234}
       source: foo is from_sql(one) + {
         query: bar is {
@@ -869,15 +917,15 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
       query: foo-> bar
       `
-      )
-      .run();
-    expect(result.data.value[0]['c']).toBe(2);
-  });
+        )
+        .run();
+      expect(result.data.value[0]['c']).toBe(2);
+    });
 
-  it(`local declarations refined named query - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`local declarations refined named query - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
       ${sql1234}
       source: foo is from_sql(one) + {
         query: bar is {
@@ -893,15 +941,15 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
       query: foo-> baz
       `
-      )
-      .run();
-    expect(result.data.value[0]['d']).toBe(3);
-  });
+        )
+        .run();
+      expect(result.data.value[0]['d']).toBe(3);
+    });
 
-  it(`regexp match- ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`regexp match- ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
       sql: one is { select: """
         SELECT 'hello mom' as a, 'cheese tastes good' as b
         UNION ALL SELECT 'lloyd is a bozo', 'michael likes poetry'
@@ -912,16 +960,16 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         aggregate: m2 is count() {? a !~ r'bozo'}
       }
       `
-      )
-      .run();
-    expect(result.data.value[0]['llo']).toBe(2);
-    expect(result.data.value[0]['m2']).toBe(1);
-  });
+        )
+        .run();
+      expect(result.data.value[0]['llo']).toBe(2);
+      expect(result.data.value[0]['m2']).toBe(1);
+    });
 
-  it(`substitution precidence- ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`substitution precidence- ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
       sql: one is {select: """
         SELECT 5 as a, 2 as b
         UNION ALL SELECT 3, 4
@@ -932,20 +980,20 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         project: x is a * c
       }
       `
-      )
-      .run();
-    expect(result.data.value[0]['x']).toBe(30);
-  });
+        )
+        .run();
+      expect(result.data.value[0]['x']).toBe(30);
+    });
 
-  it(`array unnest - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    it(`array unnest - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
         sql: atitle is {select:"""
           SELECT
             city,
-            ${splitFunction[databaseName]}(city,' ') as words
-          FROM ${rootDbPath[databaseName]}malloytest.aircraft
+            ${getSplitFunction(databaseName)!('city', ' ')} as words
+          FROM ${rootDbPath(databaseName)}malloytest.aircraft
           """}
 
         source: title is from_sql(atitle){}
@@ -956,22 +1004,22 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           aggregate: c is count()
         }
       `
-      )
-      .run();
-    expect(result.data.value[0]['c']).toBe(145);
-  });
+        )
+        .run();
+      expect(result.data.value[0]['c']).toBe(145);
+    });
 
-  // make sure we can count the total number of elements when fanning out.
-  it(`array unnest x 2 - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    // make sure we can count the total number of elements when fanning out.
+    it(`array unnest x 2 - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
         sql: atitle is {select: """
           SELECT
             city,
-            ${splitFunction[databaseName]}(city,' ') as words,
-            ${splitFunction[databaseName]}(city,'A') as abreak
-          FROM ${rootDbPath[databaseName]}malloytest.aircraft
+            ${getSplitFunction(databaseName)!('city', ' ')} as words,
+            ${getSplitFunction(databaseName)!('city', 'A')} as abreak
+          FROM ${rootDbPath(databaseName)}malloytest.aircraft
           where city IS NOT null
         """}
 
@@ -984,17 +1032,17 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
             a is abreak.count()
         }
       `
-      )
-      .run();
-    expect(result.data.value[0]['b']).toBe(3552);
-    expect(result.data.value[0]['c']).toBe(4586);
-    expect(result.data.value[0]['a']).toBe(6601);
-  });
+        )
+        .run();
+      expect(result.data.value[0]['b']).toBe(3552);
+      expect(result.data.value[0]['c']).toBe(4586);
+      expect(result.data.value[0]['a']).toBe(6601);
+    });
 
-  it(`nest null - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    testIf(runtime.supportsNesting)(`nest null - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
         query: table('malloytest.airports') -> {
           where: faa_region = null
           group_by: faa_region
@@ -1012,19 +1060,21 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           }
         }
       `
-      )
-      .run();
+        )
+        .run();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const d: any = result.data.toObject();
-    expect(d[0]['by_state']).not.toBe(null);
-    expect(d[0]['by_state1']).not.toBe(null);
-  });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const d: any = result.data.toObject();
+      expect(d[0]['by_state']).not.toBe(null);
+      expect(d[0]['by_state1']).not.toBe(null);
+    });
 
-  it(`number as null- ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+    testIf(runtime.supportsNesting)(
+      `number as null- ${databaseName}`,
+      async () => {
+        const result = await runtime
+          .loadQuery(
+            `
         source: s is table('malloytest.state_facts') + {
         }
         query: s-> {
@@ -1035,43 +1085,44 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           }
         }
       `
-      )
-      .run();
-    expect(result.data.path(0, 'ugly', 0, 'foo').value).toBe(null);
-  });
+          )
+          .run();
+        expect(result.data.path(0, 'ugly', 0, 'foo').value).toBe(null);
+      }
+    );
 
-  describe('quoting and strings', () => {
-    const tick = "'";
-    const back = '\\';
-    test('backslash quote', async () => {
-      const result = await runtime
-        .loadQuery(
-          `
+    describe('quoting and strings', () => {
+      const tick = "'";
+      const back = '\\';
+      test('backslash quote', async () => {
+        const result = await runtime
+          .loadQuery(
+            `
             query: table('malloytest.state_facts') -> {
               project: tick is '${back}${tick}'
             }
         `
-        )
-        .run();
-      expect(result.data.value[0]['tick']).toBe(tick);
-    });
-    test('backslash backslash', async () => {
-      const result = await runtime
-        .loadQuery(
-          `
+          )
+          .run();
+        expect(result.data.value[0]['tick']).toBe(tick);
+      });
+      test('backslash backslash', async () => {
+        const result = await runtime
+          .loadQuery(
+            `
             query: table('malloytest.state_facts') -> {
               project: back is '${back}${back}'
             }
         `
-        )
-        .run();
-      expect(result.data.value[0]['back']).toBe(back);
-    });
+          )
+          .run();
+        expect(result.data.value[0]['back']).toBe(back);
+      });
 
-    test('spaces in names', async () => {
-      const result = await runtime
-        .loadQuery(
-          `
+      testIf(runtime.supportsNesting)('spaces in names', async () => {
+        const result = await runtime
+          .loadQuery(
+            `
             source: \`space race\` is table('malloytest.state_facts') {
               join_one: \`j space\` is table('malloytest.state_facts') on \`j space\`.state=state
               query: \`q u e r y\` is {
@@ -1091,9 +1142,18 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
             query: \`space race\` -> \`q u e r y\`
         `
-        )
-        .run();
-      expect(result.data.value[0]['c o u n t']).toBe(24);
+          )
+          .run();
+        expect(result.data.value[0]['c o u n t']).toBe(24);
+      });
     });
   });
-});
+};
+
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+
+/*
+ * This test file reuses common tests definitions.
+ * For actual test development please go to: test/src/databases/shared/nomodel.spec.ts
+ */
+noModelSharedTests(runtimes);

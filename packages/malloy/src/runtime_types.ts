@@ -126,6 +126,8 @@ export interface Connection extends InfoConnection {
   close(): Promise<void>;
 
   estimateQueryCost(sqlCommand: string): Promise<QueryRunStats>;
+
+  get dialectName(): string;
 }
 
 // TODO feature-sql-block Comment

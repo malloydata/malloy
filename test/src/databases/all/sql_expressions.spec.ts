@@ -29,17 +29,19 @@ import {databasesFromEnvironmentOr} from '../../util';
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+export const sqlExpressionsSharedTests = (
+  runtimes: RuntimeList,
+  _splitFunction?: (column: string, splitChar: string) => string
+) => {
+  afterAll(async () => {
+    await runtimes.closeAll();
+  });
 
-afterAll(async () => {
-  await runtimes.closeAll();
-});
-
-runtimes.runtimeMap.forEach((runtime, databaseName) => {
-  it(`sql expression with turducken - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+  runtimes.runtimeMap.forEach((runtime, databaseName) => {
+    it(`sql expression with turducken - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
         run: ${databaseName}.sql(
           """SELECT * FROM (%{
             ${databaseName}.table('malloytest.state_facts') -> {
@@ -50,14 +52,14 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           project: *
         }
       `
-      )
-      .run();
-    expect(result.data.value[0]['c']).toBe(51);
-  });
-  it(`sql expression in second of two queries in same block, dependent on first query - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+        )
+        .run();
+      expect(result.data.value[0]['c']).toBe(51);
+    });
+    it(`sql expression in second of two queries in same block, dependent on first query - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
         query:
           a is ${databaseName}.table('malloytest.state_facts') -> {
             aggregate: c is count()
@@ -69,28 +71,37 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           }
         run: b
       `
-      )
-      .run();
-    expect(result.data.value[0]['c']).toBe(51);
-  });
-  it(`sql expression in other sql expression - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
+        )
+        .run();
+      expect(result.data.value[0]['c']).toBe(51);
+    });
+    it(`sql expression in other sql expression - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(
+          `
         run: ${databaseName}.sql("""
           SELECT * from (%{
             ${databaseName}.sql("""SELECT 1 as one""") -> { group_by: one }
           }) as the_table
         """) -> { group_by: one }
       `
-      )
-      .run();
-    expect(result.data.value[0]['one']).toBe(1);
+        )
+        .run();
+      expect(result.data.value[0]['one']).toBe(1);
+    });
+    it(`run sql expression as query - ${databaseName}`, async () => {
+      const result = await runtime
+        .loadQuery(`run: ${databaseName}.sql("""SELECT 1 as one""")`)
+        .run();
+      expect(result.data.value[0]['one']).toBe(1);
+    });
   });
-  it(`run sql expression as query - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(`run: ${databaseName}.sql("""SELECT 1 as one""")`)
-      .run();
-    expect(result.data.value[0]['one']).toBe(1);
-  });
-});
+};
+
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+
+/*
+ * This test file reuses common tests definitions.
+ * For actual test development please go to: test/src/databases/shared/sql_expressions.spec.ts
+ */
+sqlExpressionsSharedTests(runtimes);

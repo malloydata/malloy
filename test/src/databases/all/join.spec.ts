@@ -51,24 +51,26 @@ const joinModelText = `
   }
 `;
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
-
-afterAll(async () => {
-  await runtimes.closeAll();
-});
-
 // const models = new Map<string, malloy.ModelMaterializer>();
 // runtimes.runtimeMap.forEach((runtime, key) => {
 //   models.set(key, runtime.loadModel(joinModelText));
 // });
 
-describe('join expression tests', () => {
-  runtimes.runtimeMap.forEach((runtime, database) => {
-    it(`model source refine join - ${database}`, async () => {
-      const result = await runtime
-        .loadModel(joinModelText)
-        .loadQuery(
-          `
+export const joinSharedTests = (
+  runtimes: RuntimeList,
+  _splitFunction?: (column: string, splitChar: string) => string
+) => {
+  afterAll(async () => {
+    await runtimes.closeAll();
+  });
+
+  describe('join expression tests', () => {
+    runtimes.runtimeMap.forEach((runtime, database) => {
+      it(`model source refine join - ${database}`, async () => {
+        const result = await runtime
+          .loadModel(joinModelText)
+          .loadQuery(
+            `
       source: a2 is aircraft {
         join_one: aircraft_models with aircraft_model_code
       }
@@ -79,16 +81,16 @@ describe('join expression tests', () => {
           aircraft_models.model_count
       }
       `
-        )
-        .run();
-      expect(result.data.value[0]['model_count']).toBe(1416);
-    });
+          )
+          .run();
+        expect(result.data.value[0]['model_count']).toBe(1416);
+      });
 
-    it(`model source refine in query join - ${database}`, async () => {
-      const result = await runtime
-        .loadModel(joinModelText)
-        .loadQuery(
-          `
+      it(`model source refine in query join - ${database}`, async () => {
+        const result = await runtime
+          .loadModel(joinModelText)
+          .loadQuery(
+            `
       query: aircraft {
         join_one: aircraft_models with aircraft_model_code
       } -> {
@@ -97,16 +99,16 @@ describe('join expression tests', () => {
           aircraft_models.model_count
       }
       `
-        )
-        .run();
-      expect(result.data.value[0]['model_count']).toBe(1416);
-    });
+          )
+          .run();
+        expect(result.data.value[0]['model_count']).toBe(1416);
+      });
 
-    it(`model: join fact table query - ${database}`, async () => {
-      const result = await runtime
-        .loadModel(joinModelText)
-        .loadQuery(
-          `
+      it(`model: join fact table query - ${database}`, async () => {
+        const result = await runtime
+          .loadModel(joinModelText)
+          .loadQuery(
+            `
       query: aircraft_models {
         join_one: am_facts is from(
           aircraft_models->{
@@ -121,16 +123,16 @@ describe('join expression tests', () => {
         limit: 1
       }
     `
-        )
-        .run();
-      expect(result.data.value[0]['num_models']).toBe(1147);
-    });
+          )
+          .run();
+        expect(result.data.value[0]['num_models']).toBe(1147);
+      });
 
-    it(`model: source based on query - ${database}`, async () => {
-      const result = await runtime
-        .loadModel(joinModelText)
-        .loadQuery(
-          `
+      it(`model: source based on query - ${database}`, async () => {
+        const result = await runtime
+          .loadModel(joinModelText)
+          .loadQuery(
+            `
       query:
           aircraft_models-> {
             group_by: m is manufacturer
@@ -144,16 +146,16 @@ describe('join expression tests', () => {
         limit: 1
       }
         `
-        )
-        .run();
-      expect(result.data.value[0]['num_models']).toBe(1147);
-    });
+          )
+          .run();
+        expect(result.data.value[0]['num_models']).toBe(1147);
+      });
 
-    it(`model: funnel - merge two queries - ${database}`, async () => {
-      const result = await runtime
-        .loadModel(joinModelText)
-        .loadQuery(
-          `
+      it(`model: funnel - merge two queries - ${database}`, async () => {
+        const result = await runtime
+          .loadModel(joinModelText)
+          .loadQuery(
+            `
           query: from(aircraft_models->{
             group_by: m is manufacturer
             aggregate: num_models is count(*)
@@ -174,17 +176,17 @@ describe('join expression tests', () => {
             limit: 1
           }
         `
-        )
-        .run();
-      expect(result.data.value[0]['num_models']).toBe(1147);
-      expect(result.data.value[0]['total_seats']).toBe(252771);
-    });
+          )
+          .run();
+        expect(result.data.value[0]['num_models']).toBe(1147);
+        expect(result.data.value[0]['total_seats']).toBe(252771);
+      });
 
-    it(`model: modeled funnel - ${database}`, async () => {
-      const result = await runtime
-        .loadModel(joinModelText)
-        .loadQuery(
-          `
+      it(`model: modeled funnel - ${database}`, async () => {
+        const result = await runtime
+          .loadModel(joinModelText)
+          .loadQuery(
+            `
       source: foo is from(aircraft_models-> manufacturer_models){
         join_one: seats is from(aircraft_models->manufacturer_seats)
           with manufacturer
@@ -198,17 +200,17 @@ describe('join expression tests', () => {
         limit: 1
       }
         `
-        )
-        .run();
-      expect(result.data.value[0]['num_models']).toBe(1147);
-      expect(result.data.value[0]['total_seats']).toBe(252771);
-    });
+          )
+          .run();
+        expect(result.data.value[0]['num_models']).toBe(1147);
+        expect(result.data.value[0]['total_seats']).toBe(252771);
+      });
 
-    it(`model: modeled funnel2 - ${database}`, async () => {
-      const result = await runtime
-        .loadModel(joinModelText)
-        .loadQuery(
-          `
+      it(`model: modeled funnel2 - ${database}`, async () => {
+        const result = await runtime
+          .loadModel(joinModelText)
+          .loadQuery(
+            `
       query: funnel->{
         project:
          manufacturer
@@ -218,17 +220,17 @@ describe('join expression tests', () => {
         limit: 1
       }
         `
-        )
-        .run();
-      expect(result.data.value[0]['num_models']).toBe(1147);
-      expect(result.data.value[0]['total_seats']).toBe(252771);
-    });
+          )
+          .run();
+        expect(result.data.value[0]['num_models']).toBe(1147);
+        expect(result.data.value[0]['total_seats']).toBe(252771);
+      });
 
-    it(`model: double_pipe - ${database}`, async () => {
-      const result = await runtime
-        .loadModel(joinModelText)
-        .loadQuery(
-          `
+      it(`model: double_pipe - ${database}`, async () => {
+        const result = await runtime
+          .loadModel(joinModelText)
+          .loadQuery(
+            `
       query: aircraft_models->{
         group_by: manufacturer
         aggregate: f is count(*)
@@ -238,16 +240,16 @@ describe('join expression tests', () => {
         project: f_sum2 is f_sum+1
       }
     `
-        )
-        .run();
-      expect(result.data.value[0]['f_sum2']).toBe(60462);
-    });
+          )
+          .run();
+        expect(result.data.value[0]['f_sum2']).toBe(60462);
+      });
 
-    it(`model: unnest is left join - ${database}`, async () => {
-      const result = await runtime
-        .loadModel(joinModelText)
-        .loadQuery(
-          `
+      test(`model: unnest is left join - ${database}`, async () => {
+        const result = await runtime
+          .loadModel(joinModelText)
+          .loadQuery(
+            `
           // produce a table with 4 rows that has a nested element
           query: a_states is table('malloytest.state_facts')-> {
             where: state ? ~ 'A%'
@@ -269,17 +271,17 @@ describe('join expression tests', () => {
             }
           }
     `
-        )
-        .run();
-      // console.log(result.data.toObject());
-      expect(result.data.rowCount).toBeGreaterThan(4);
-    });
+          )
+          .run();
+        // console.log(result.data.toObject());
+        expect(result.data.rowCount).toBeGreaterThan(4);
+      });
 
-    // not sure how to solve this one yet.
-    it(`All joins at the same level - ${database}`, async () => {
-      const result = await runtime
-        .loadQuery(
-          `
+      // not sure how to solve this one yet.
+      it(`All joins at the same level - ${database}`, async () => {
+        const result = await runtime
+          .loadQuery(
+            `
         source: flights is table('malloytest.flights') {
           join_one: aircraft is table('malloytest.aircraft')
             on tail_num = aircraft.tail_num
@@ -292,16 +294,16 @@ describe('join expression tests', () => {
           aggregate: flight_count is count()
         }
         `
-        )
-        .run();
-      // console.log(result.data.toObject());
-      expect(result.data.rowCount).toBeGreaterThan(4);
-    });
+          )
+          .run();
+        // console.log(result.data.toObject());
+        expect(result.data.rowCount).toBeGreaterThan(4);
+      });
 
-    it(`join issue440 - ${database}`, async () => {
-      const result = await runtime
-        .loadQuery(
-          `
+      it(`join issue440 - ${database}`, async () => {
+        const result = await runtime
+          .loadQuery(
+            `
         source: aircraft_models is table('malloytest.aircraft_models')
 
         source: aircraft is table('malloytest.aircraft')
@@ -315,25 +317,34 @@ describe('join expression tests', () => {
           group_by: testingtwo is aircraft_models.model
         }
       `
-        )
-        .run();
-      // console.log(result.data.toObject());
-      expect(result.data.rowCount).toBeGreaterThan(4);
-    });
+          )
+          .run();
+        // console.log(result.data.toObject());
+        expect(result.data.rowCount).toBeGreaterThan(4);
+      });
 
-    it(`join issue1092 - ${database}`, async () => {
-      const result = await runtime
-        .loadQuery(
-          `
+      it(`join issue1092 - ${database}`, async () => {
+        const result = await runtime
+          .loadQuery(
+            `
           query: table('malloytest.state_facts') -> {
             join_one: sf is table('malloytest.state_facts') on sf.state = state
             aggregate: x is sf.births.sum() { ? state = 'CA' }
           }
           `
-        )
-        .run();
-      // console.log(result.data.toObject());
-      expect(result.data.rowCount).toBe(1);
+          )
+          .run();
+        // console.log(result.data.toObject());
+        expect(result.data.rowCount).toBe(1);
+      });
     });
   });
-});
+};
+
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+
+/*
+ * This test file reuses common tests definitions.
+ * For actual test development please go to: test/src/databases/shared/join.spec.ts
+ */
+joinSharedTests(runtimes);

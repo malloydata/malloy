@@ -233,6 +233,10 @@ export class BigQueryConnection
     return true;
   }
 
+  public get supportsNesting(): boolean {
+    return true;
+  }
+
   private async _runSQL(
     sqlCommand: string,
     options: Partial<BigQueryQueryOptions> = {},
@@ -725,7 +729,6 @@ export class BigQueryConnection
           lastFetchError = fetchError;
         }
       }
-
       throw lastFetchError;
     } catch (e) {
       throw maybeRewriteError(e);

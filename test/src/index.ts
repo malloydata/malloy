@@ -21,17 +21,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {DialectFunctionOverloadDef} from './functions/util';
-export {
-  anyExprType,
-  makeParam,
-  overload,
-  minScalar,
-  sql,
-} from './functions/util';
-export {Dialect} from './dialect';
-export type {DialectFieldList} from './dialect';
-export {StandardSQLDialect} from './standardsql';
-export {PostgresDialect} from './postgres';
-export {DuckDBDialect} from './duckdb';
-export {getDialect, registerDialect, getDialectFunction} from './dialect_map';
+export {RuntimeList, testRuntimeFor} from './runtimes';
+
+export {allDatabaseTestSets} from './databases/shared/test_list';
+
+export {exprSharedTests} from './databases/all/expr.spec';
+export {functionsSharedTests} from './databases/all/functions.spec';
+export {indexSharedTests} from './databases/all/index.spec';
+export {joinSharedTests} from './databases/all/join.spec';
+export {noModelSharedTests} from './databases/all/nomodel.spec';
+export {orderBySharedTests} from './databases/all/orderby.spec';
+export {problemsSharedTests} from './databases/all/problems.spec';
+export {sqlExpressionsSharedTests} from './databases/all/sql_expressions.spec';
+export {timeSharedTests} from './databases/all/time.spec';
