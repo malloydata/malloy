@@ -729,7 +729,6 @@ export class BigQueryConnection
           lastFetchError = fetchError;
         }
       }
-
       throw lastFetchError;
     } catch (e) {
       throw maybeRewriteError(e);
