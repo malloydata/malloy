@@ -39,7 +39,7 @@ const splitFunction: Record<string, string> = {
 };
 
 const rootDbPath: Record<string, string> = {
-  'bigquery': 'malloy-data.',
+  'bigquery': 'malloy-data.' /**/,
   'postgres': '',
   'duckdb': '',
   'duckdb_wasm': '',
