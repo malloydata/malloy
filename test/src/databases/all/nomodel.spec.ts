@@ -37,6 +37,7 @@ const splitFunction: Record<string, string> = {
   'duckdb': 'string_to_array',
   'duckdb_wasm': 'string_to_array',
 };
+/* */
 
 const rootDbPath: Record<string, string> = {
   'bigquery': 'malloy-data.' /**/,
