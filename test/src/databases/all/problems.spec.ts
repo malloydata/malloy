@@ -24,7 +24,93 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
-import {problemsSharedTests} from '../shared/problems.spec';
+
+export const problemsSharedTests = (
+  runtimes: RuntimeList,
+  _splitFunction?: (column: string, splitChar: string) => string
+) => {
+  afterAll(async () => {
+    await runtimes.closeAll();
+  });
+
+  async function getError<T>(fn: () => Promise<T>) {
+    try {
+      await fn();
+    } catch (error) {
+      return error;
+    }
+  }
+
+  runtimes.runtimeMap.forEach((runtime, databaseName) => {
+    describe('warnings', () => {
+      // Today we don't show errors after the first model entry with an error,
+      // so this can't work yet.
+      it.skip(`can appear after errors - ${databaseName}`, async () => {
+        const source = `
+        source: foo is table('asdfds');
+        source: bar is table('malloytest.state_facts') {
+          dimension: a is LENGTH('foo')
+        }
+      `;
+        const error = await getError(() => runtime.getModel(source));
+        expect(error).not.toBeUndefined();
+        expect(error).toMatchObject({
+          problems: [
+            {
+              severity: 'error',
+            },
+            {
+              message:
+                "Case insensitivity for function names is deprecated, use 'length' instead",
+              severity: 'warn',
+            },
+          ],
+        });
+      });
+
+      it(`can appear before errors - ${databaseName}`, async () => {
+        const source = `
+        source: bar is table('malloytest.state_facts') {
+          dimension: a is LENGTH('foo')
+        }
+        source: foo is table('asdfds');
+      `;
+        const error = await getError(() => runtime.getModel(source));
+        expect(error).not.toBeUndefined();
+        expect(error).toMatchObject({
+          problems: [
+            {
+              message:
+                "Case insensitivity for function names is deprecated, use 'length' instead",
+              severity: 'warn',
+            },
+            {
+              severity: 'error',
+            },
+          ],
+        });
+      });
+
+      it(`can appear alone - ${databaseName}`, async () => {
+        const source = `
+        source: bar is table('malloytest.state_facts') {
+          dimension: a is LENGTH('foo')
+        }
+      `;
+        const model = await runtime.getModel(source);
+        expect(model).toMatchObject({
+          problems: [
+            {
+              message:
+                "Case insensitivity for function names is deprecated, use 'length' instead",
+              severity: 'warn',
+            },
+          ],
+        });
+      });
+    });
+  });
+};
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 

@@ -25,12 +25,12 @@ export {RuntimeList, testRuntimeFor} from './runtimes';
 
 export {allDatabaseTestSets} from './databases/shared/test_list';
 
-export {exprSharedTests} from './databases/shared/expr.spec';
-export {functionsSharedTests} from './databases/shared/functions.spec';
-export {indexSharedTests} from './databases/shared/index.spec';
-export {joinSharedTests} from './databases/shared/join.spec';
-export {noModelSharedTests} from './databases/shared/nomodel.spec';
-export {orderBySharedTests} from './databases/shared/orderby.spec';
-export {problemsSharedTests} from './databases/shared/problems.spec';
-export {sqlExpressionsSharedTests} from './databases/shared/sql_expressions.spec';
-export {timeSharedTests} from './databases/shared/time.spec';
+export {exprSharedTests} from './databases/all/expr.spec';
+export {functionsSharedTests} from './databases/all/functions.spec';
+export {indexSharedTests} from './databases/all/index.spec';
+export {joinSharedTests} from './databases/all/join.spec';
+export {noModelSharedTests} from './databases/all/nomodel.spec';
+export {orderBySharedTests} from './databases/all/orderby.spec';
+export {problemsSharedTests} from './databases/all/problems.spec';
+export {sqlExpressionsSharedTests} from './databases/all/sql_expressions.spec';
+export {timeSharedTests} from './databases/all/time.spec';
