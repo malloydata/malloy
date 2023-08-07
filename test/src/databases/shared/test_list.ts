@@ -7,7 +7,7 @@ import {noModelSharedTests} from '../all/nomodel.spec';
 import {orderBySharedTests} from '../all/orderby.spec';
 import {problemsSharedTests} from '../all/problems.spec';
 import {sqlExpressionsSharedTests} from '../all/sql_expressions.spec';
-import {timeSharedTests} from './time.spec';
+import {timeSharedTests} from '../all/time.spec';
 
 export type DatabaseTestSet = (runtimeList: RuntimeList) => void;
 
