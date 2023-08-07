@@ -84,7 +84,9 @@ export class SQLStatement extends MalloyElement implements DocStatement {
     }
     if (lookup.status === 'error') {
       const msgLines = lookup.message.split(/\r?\n/);
-      this.select.log('Invalid SQL, ' + msgLines.join('\n    '));
+      this.select.log(
+        `Invalid SQL, ${JSON.stringify(sql)}` + msgLines.join('\n    ')
+      );
       return undefined;
     }
     if (lookup.status === 'present') {
