@@ -24,7 +24,7 @@ nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --keep BRANCH_NAME --command "
   VERSION=\$(jq -r .version ./lerna.json)
   for package in \$PACKAGES; do
     echo Publishing \$package \$VERSION
-    npm publish -w \$package
+    npm publish -w \$package --access=public
   done
   # Tag current version
   git tag v\$VERSION
