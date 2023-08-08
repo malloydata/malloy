@@ -23,7 +23,7 @@
  */
 
 import {RuntimeList} from '../../runtimes';
-import { testIf } from '../../util';
+import {testIf} from '../../util';
 import '../../util/db-jest-matchers';
 
 // No prebuilt shared model, each test is complete.  Makes debugging easier.

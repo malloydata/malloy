@@ -1,4 +1,3 @@
-
 /* eslint-disable no-console */
 /*
  * Copyright 2023 Google LLC
