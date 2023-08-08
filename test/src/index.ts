@@ -9,28 +9,27 @@
  * and to permit persons to whom the Software is furnished to do so,
  * subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
+ * The above copyright notice and this permission notice shshared be
+ * included in shared copies or substantial portions of the Software.
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+ * IN NO EVENT SHshared THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
  * CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export {RuntimeList, testRuntimeFor} from './runtimes';
-
 export {allDatabaseTestSets} from './databases/shared/test_list';
 
-export {exprSharedTests} from './databases/all/expr.spec';
-export {functionsSharedTests} from './databases/all/functions.spec';
-export {indexSharedTests} from './databases/all/index.spec';
-export {joinSharedTests} from './databases/all/join.spec';
-export {noModelSharedTests} from './databases/all/nomodel.spec';
-export {orderBySharedTests} from './databases/all/orderby.spec';
-export {problemsSharedTests} from './databases/all/problems.spec';
-export {sqlExpressionsSharedTests} from './databases/all/sql_expressions.spec';
-export {timeSharedTests} from './databases/all/time.spec';
+export {RuntimeList, testRuntimeFor} from './runtimes';
+
+export {exprSharedTests} from './databases/shared/expr';
+export {indexSharedTests} from './databases/shared/db_index';
+export {joinSharedTests} from './databases/shared/join';
+export {noModelSharedTests} from './databases/shared/nomodel';
+export {orderBySharedTests} from './databases/shared/orderby';
+export {problemsSharedTests} from './databases/shared/problems';
+export {sqlExpressionsSharedTests} from './databases/shared/sql_expressions';
+export {timeSharedTests} from './databases/shared/time';

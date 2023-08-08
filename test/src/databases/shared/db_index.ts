@@ -21,11 +21,8 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-
-import {RuntimeList, allDatabases} from '../../runtimes';
-import {databasesFromEnvironmentOr} from '../../util';
+import {RuntimeList} from '../../runtimes';
+import '../../util/db-jest-matchers';
 
 export const indexSharedTests = (
   runtimes: RuntimeList,
@@ -168,11 +165,3 @@ export const indexSharedTests = (
     // });
   });
 };
-
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
-
-/*
- * This test file reuses common tests definitions.
- * For actual test development please go to: test/src/databases/shared/index.spec.ts
- */
-indexSharedTests(runtimes);
