@@ -21,16 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export {RuntimeList, testRuntimeFor} from './runtimes';
-
 export {allDatabaseTestSets} from './databases/shared/test_list';
 
-export {exprSharedTests} from './databases/all/expr.spec';
-export {functionsSharedTests} from './databases/all/functions.spec';
-export {indexSharedTests} from './databases/all/index.spec';
-export {joinSharedTests} from './databases/all/join.spec';
-export {noModelSharedTests} from './databases/all/nomodel.spec';
-export {orderBySharedTests} from './databases/all/orderby.spec';
-export {problemsSharedTests} from './databases/all/problems.spec';
-export {sqlExpressionsSharedTests} from './databases/all/sql_expressions.spec';
-export {timeSharedTests} from './databases/all/time.spec';
+export {RuntimeList, testRuntimeFor} from './runtimes';
+
+export {exprSharedTests} from './databases/shared/expr';
+export {indexSharedTests} from './databases/shared/db_index';
+export {joinSharedTests} from './databases/shared/join';
+export {noModelSharedTests} from './databases/shared/nomodel';
+export {orderBySharedTests} from './databases/shared/orderby';
+export {problemsSharedTests} from './databases/shared/problems';
+export {sqlExpressionsSharedTests} from './databases/shared/sql_expressions';
+export {timeSharedTests} from './databases/shared/time';

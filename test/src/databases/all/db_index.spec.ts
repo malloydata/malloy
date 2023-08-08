@@ -22,15 +22,16 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+
 import {RuntimeList, allDatabases} from '../../runtimes';
-import '../../util/db-jest-matchers';
 import {databasesFromEnvironmentOr} from '../../util';
-import {exprSharedTests} from '../..';
+import {indexSharedTests} from '../shared/db_index';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 /*
  * This test file reuses common tests definitions.
- * For actual test development please go to: test/src/databases/shared/expr.spec.ts
+ * For actual test development please go to: test/src/databases/shared/index.spec.ts
  */
-exprSharedTests(runtimes);
+indexSharedTests(runtimes);
