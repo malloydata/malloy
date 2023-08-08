@@ -49,7 +49,7 @@ import {
 import {parseString} from './lang/parse-utils';
 import {LogMessage} from './lang';
 import cloneDeep from 'lodash/cloneDeep';
-import {Annotation} from './model';
+import {Annotation, Note} from './model';
 
 // The distinction between the interface and the Tag class exists solely to
 // make it possible to write tests and specify expected results This
@@ -129,7 +129,22 @@ export class Tag implements TagInterface {
     extending: Tag | undefined,
     ...importing: Tag[]
   ): TagParse {
-    return parseTagline(str, extending, importing);
+    return parseTagline(str, extending, importing, __filename, 0, 0);
+  }
+
+  static fromNote(
+    note: Note,
+    extending: Tag | undefined,
+    ...importing: Tag[]
+  ): TagParse {
+    return parseTagline(
+      note.text,
+      extending,
+      importing,
+      note.at.url,
+      note.at.range.start.line,
+      note.at.range.start.character
+    );
   }
 
   constructor(from: TagInterface = {}) {
@@ -141,6 +156,7 @@ export class Tag implements TagInterface {
     }
   }
 
+  // mtoy todo ... maybe accept an array of strings or varargs or both
   tag(at: string[]): Tag | undefined {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     let findIn: Tag | undefined = this;
@@ -151,6 +167,10 @@ export class Tag implements TagInterface {
       }
     }
     return findIn;
+  }
+
+  has(prop: string): boolean {
+    return !!this.tag([prop]);
   }
 
   text(at: string[] = []): string {
@@ -199,6 +219,10 @@ export class Tag implements TagInterface {
 
   clone(): Tag {
     return new Tag(cloneDeep(this));
+  }
+
+  json(): unknown {
+    throw new Error('mtoy todo implement json');
   }
 }
 
@@ -251,11 +275,12 @@ function tagList(tagNode: Annotation | undefined): string[] {
   if (!tagNode) {
     return [];
   }
-  return [
-    ...(tagNode.inherits ? tagList(tagNode.inherits) : []),
+  const fromParent = tagNode.inherits ? tagList(tagNode.inherits) : [];
+  const fromThisTag = [
     ...(tagNode.blockNotes || []),
     ...(tagNode.notes || []),
-  ];
+  ].map(n => n.text);
+  return [...fromParent, ...fromThisTag];
 }
 
 /**
@@ -363,6 +388,12 @@ function tokenize(src: string): string[] {
 
 class TagErrorListener implements ANTLRErrorListener<Token> {
   log: LogMessage[] = [];
+  constructor(
+    readonly sourceURL: string,
+    readonly atLine: number,
+    readonly fromChar: number
+  ) {}
+
   syntaxError(
     recognizer: unknown,
     offendingSymbol: Token | undefined,
@@ -371,11 +402,14 @@ class TagErrorListener implements ANTLRErrorListener<Token> {
     msg: string,
     _e: unknown
   ): void {
-    const errAt = {line: 0, character: charPositionInLine};
+    const errAt = {
+      line: this.atLine,
+      character: this.fromChar + charPositionInLine,
+    };
     const range = {start: errAt, end: errAt};
     const logMsg: LogMessage = {
       message: msg,
-      at: {url: '', range},
+      at: {url: this.sourceURL, range},
       severity: 'error',
     };
     this.log.push(logMsg);
@@ -417,7 +451,10 @@ interface TagParse {
 function parseTagline(
   source: string,
   extending: Tag | undefined,
-  outerScope: Tag[]
+  outerScope: Tag[],
+  sourceURL: string,
+  onLine: number,
+  atChar: number
 ): TagParse {
   if (source[0] === '#') {
     const skipTo = source.indexOf(' ');
@@ -432,7 +469,7 @@ function parseTagline(
   const tokenStream = new CommonTokenStream(lexer);
   const taglineParser = new MalloyTagParser(tokenStream);
   taglineParser.removeErrorListeners();
-  const pLog = new TagErrorListener();
+  const pLog = new TagErrorListener(sourceURL, onLine, atChar);
   taglineParser.addErrorListener(pLog);
   const tagTree = taglineParser.tagLine();
   const treeWalker = new TaglineParser(outerScope);

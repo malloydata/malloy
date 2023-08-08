@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {Note} from '../../../model/malloy_types';
 import {MalloyTagProperties, parseTagProperties} from '../../../tags';
 import {Document, DocStatement, MalloyElement} from './malloy-element';
 import {QueryPropertyInterface} from './query-property-interface';
@@ -33,7 +34,7 @@ export class ObjectAnnotation
   forceQueryClass = undefined;
   queryRefinementStage = undefined;
 
-  constructor(readonly notes: string[]) {
+  constructor(readonly notes: Note[]) {
     super();
   }
 
@@ -46,8 +47,8 @@ export class ModelAnnotation extends ObjectAnnotation implements DocStatement {
   getCompilerFlags(existing: MalloyTagProperties): MalloyTagProperties {
     let flags = {...existing};
     for (const note of this.notes) {
-      if (note.startsWith('##! ')) {
-        const parsed = parseTagProperties(note.slice(4), flags);
+      if (note.text.startsWith('##! ')) {
+        const parsed = parseTagProperties(note.text.slice(4), flags);
         if (parsed) {
           flags = parsed;
         }

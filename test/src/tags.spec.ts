@@ -64,12 +64,45 @@ expect.extend({
 
 const runtime = runtimeFor('duckdb');
 
-function tstTaglist(a: Annotation): string[] {
-  return new Tags(a).getTagList();
+interface TestAnnotation {
+  inherits?: TestAnnotation;
+  blockNotes?: string[];
+  notes: string[];
+}
+
+function unTestify(ta: TestAnnotation): Annotation {
+  const dloc = {
+    url: __filename,
+    range: {start: {character: 0, line: 0}, end: {character: 0, line: 0}},
+  };
+  const ret: Annotation = {
+    notes: ta.notes.map(t => {
+      return {text: t, at: dloc};
+    }),
+  };
+  if (ta.blockNotes) {
+    ret.blockNotes = ta.blockNotes.map(t => {
+      return {text: t, at: dloc};
+    });
+  }
+  if (ta.inherits) {
+    ret.inherits = unTestify(ta.inherits);
+  }
+  return ret;
+}
+
+class TestTags extends Tags {
+  constructor(ta: TestAnnotation) {
+    super(unTestify(ta));
+  }
+}
+
+function tstTaglist(a: TestAnnotation): string[] {
+  return new TestTags(a).getTagList();
 }
 
 function tstTagParse(s: string): MalloyTags {
-  return new Tags({notes: [s]}).getMalloyTags();
+  return new TestTags({notes: [s]}).getMalloyTags();
 }
 
 describe('tag utilities', () => {

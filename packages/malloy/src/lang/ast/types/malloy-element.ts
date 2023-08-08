@@ -28,6 +28,7 @@ import {
   DocumentReference,
   isSQLBlockStruct,
   ModelDef,
+  Note,
   Query,
   SQLBlockStructDef,
 } from '../../../model/malloy_types';
@@ -410,7 +411,7 @@ export class Document extends MalloyElement implements NameSpace {
   sqlBlocks: SQLBlockStructDef[] = [];
   statements: DocStatementList;
   didInitModel = false;
-  notes: string[] = [];
+  notes: Note[] = [];
 
   constructor(statements: (DocStatement | DocStatementList)[]) {
     super();
