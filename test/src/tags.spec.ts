@@ -34,10 +34,6 @@ declare global {
 }
 
 expect.extend({
-  /**
-   * Check the return of `sqlEQ(expr1,expr2)` and error if the database
-   * does not find those two expressions to be equal.
-   */
   tagsAre(src: string, result: Tag) {
     if (!(typeof src === 'string')) {
       throw new Error('Expected string to parse');
@@ -231,6 +227,83 @@ describe('expanded tag language', () => {
   test('uncomment to debug just one of the expressions', () => {
     const x: TagTestTuple = ['a=a b=$(a)', {a: {eq: 'a'}, b: {eq: 'a'}}];
     expect(x[0]).tagsAre(x[1]);
+  });
+});
+
+describe('test tag api', () => {
+  test('just text', () => {
+    const strToParse = 'a=b';
+    const getTags = Tag.fromTagline(strToParse, undefined);
+    expect(getTags.log).toEqual([]);
+    const a = getTags.tag.tag(['a']);
+    expect(a).toBeDefined();
+    expect(a?.text()).toEqual('b');
+  });
+  test('tag path', () => {
+    const strToParse = 'a.b.c.d.e=f';
+    const getTags = Tag.fromTagline(strToParse, undefined);
+    expect(getTags.log).toEqual([]);
+    const abcde = getTags.tag.tag('a.b.c.d.e'.split('.'));
+    expect(abcde).toBeDefined();
+    expect(abcde?.text()).toEqual('f');
+  });
+  test('just array', () => {
+    const strToParse = 'a=[b]';
+    const getTags = Tag.fromTagline(strToParse, undefined);
+    expect(getTags.log).toEqual([]);
+    const a = getTags.tag.tag(['a']);
+    const aval = a?.array();
+    expect(aval).toBeDefined();
+    if (aval) {
+      expect(aval.length).toEqual(1);
+      expect(aval[0].text()).toEqual('b');
+    }
+  });
+  test('array as text', () => {
+    const strToParse = 'a=[b]';
+    const getTags = Tag.fromTagline(strToParse, undefined);
+    expect(getTags.log).toEqual([]);
+    const a = getTags.tag.tag(['a']);
+    expect(a).toBeDefined();
+    expect(a?.text()).toEqual('');
+  });
+  test('text as array', () => {
+    const strToParse = 'a=b';
+    const getTags = Tag.fromTagline(strToParse, undefined);
+    expect(getTags.log).toEqual([]);
+    const a = getTags.tag.tag(['a']);
+    expect(a).toBeDefined();
+    expect(a?.array()).toEqual([]);
+  });
+  test('just numeric', () => {
+    const strToParse = 'a=7';
+    const getTags = Tag.fromTagline(strToParse, undefined);
+    expect(getTags.log).toEqual([]);
+    const a = getTags.tag.tag(['a']);
+    expect(a).toBeDefined();
+    const n = a?.numeric();
+    expect(typeof n).toBe('number');
+    expect(n).toEqual(7);
+  });
+  test('text as numeric', () => {
+    const strToParse = 'a=seven';
+    const getTags = Tag.fromTagline(strToParse, undefined);
+    expect(getTags.log).toEqual([]);
+    const a = getTags.tag.tag(['a']);
+    expect(a).toBeDefined();
+    const n = a?.numeric();
+    expect(typeof n).toBe('number');
+    expect(n).toBeNaN();
+  });
+  test('array as numeric', () => {
+    const strToParse = 'a=[seven]';
+    const getTags = Tag.fromTagline(strToParse, undefined);
+    expect(getTags.log).toEqual([]);
+    const a = getTags.tag.tag(['a']);
+    expect(a).toBeDefined();
+    const n = a?.numeric();
+    expect(typeof n).toBe('number');
+    expect(n).toBeNaN();
   });
 });
 
