@@ -1,0 +1,59 @@
+name: Bug report
+description: Create a report to help us improve
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Malloy has several repositories, please make sure you're raising your issue in the correct one:
+         * [Our docs/website](https://github.com/malloydata/malloydata.github.io/issues/new)
+         * [VSCode Extension](https://github.com/malloydata/malloy-vscode-extension/issues/new)
+         * [CLI Tool](https://github.com/malloydata/malloy-cli/issues/new)
+         * [Python Package](https://github.com/malloydata/malloy-py/issues/new)
+
+        If none of the above repositories are applicable, feel free to raise it in this one
+
+  - type: textarea
+    attributes:
+      label: What happens?
+      description: >
+        A clear and concise description the bug. Please include relevant information about queries you are trying
+        to run, such as amount of data processed or the size of the query text. Include the query itself if possible.
+    validations:
+      required: true
+
+  - type: textarea
+    attributes:
+      label: To Reproduce
+      description: Steps to reproduce the behavior.
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: "# Environment (please complete the following information):"
+  - type: input
+    attributes:
+      label: "OS:"
+      placeholder: e.g. macOS
+      description: Please include operating system version and architecture (eg, aarch64, x86, x64, etc)
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: "Malloy Client:"
+      placeholder: e.g. local VSCode, web-based VSCode, CLI tool, Python package
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: "Malloy Client Version:"
+      placeholder: e.g. VSCode Extension v0.2.1691507880
+    validations:
+      required: true
+  - type: input
+    attributes:
+      label: "Database Connection:"
+      placeholder: e.g. BigQuery, DuckDB
+      description: Please include the type of database connection
+    validations:
+      required: true
