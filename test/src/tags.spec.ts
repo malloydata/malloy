@@ -268,15 +268,15 @@ describe('test tag api', () => {
     const strToParse = 'a=b';
     const getTags = Tag.fromTagline(strToParse, undefined);
     expect(getTags.log).toEqual([]);
-    const a = getTags.tag.tag(['a']);
+    const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
     expect(a?.text()).toEqual('b');
   });
   test('tag path', () => {
     const strToParse = 'a.b.c.d.e=f';
-    const getTags = Tag.fromTagline(strToParse, undefined);
-    expect(getTags.log).toEqual([]);
-    const abcde = getTags.tag.tag('a.b.c.d.e'.split('.'));
+    const tagParse = Tag.fromTagline(strToParse, undefined);
+    expect(tagParse.log).toEqual([]);
+    const abcde = tagParse.tag.tag('a', 'b', 'c', 'd', 'e');
     expect(abcde).toBeDefined();
     expect(abcde?.text()).toEqual('f');
   });
@@ -284,7 +284,7 @@ describe('test tag api', () => {
     const strToParse = 'a=[b]';
     const getTags = Tag.fromTagline(strToParse, undefined);
     expect(getTags.log).toEqual([]);
-    const a = getTags.tag.tag(['a']);
+    const a = getTags.tag.tag('a');
     const aval = a?.array();
     expect(aval).toBeDefined();
     if (aval) {
@@ -296,7 +296,7 @@ describe('test tag api', () => {
     const strToParse = 'a=[b]';
     const getTags = Tag.fromTagline(strToParse, undefined);
     expect(getTags.log).toEqual([]);
-    const a = getTags.tag.tag(['a']);
+    const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
     expect(a?.text()).toEqual('');
   });
@@ -304,7 +304,7 @@ describe('test tag api', () => {
     const strToParse = 'a=b';
     const getTags = Tag.fromTagline(strToParse, undefined);
     expect(getTags.log).toEqual([]);
-    const a = getTags.tag.tag(['a']);
+    const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
     expect(a?.array()).toEqual([]);
   });
@@ -312,7 +312,7 @@ describe('test tag api', () => {
     const strToParse = 'a=7';
     const getTags = Tag.fromTagline(strToParse, undefined);
     expect(getTags.log).toEqual([]);
-    const a = getTags.tag.tag(['a']);
+    const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
     const n = a?.numeric();
     expect(typeof n).toBe('number');
@@ -322,7 +322,7 @@ describe('test tag api', () => {
     const strToParse = 'a=seven';
     const getTags = Tag.fromTagline(strToParse, undefined);
     expect(getTags.log).toEqual([]);
-    const a = getTags.tag.tag(['a']);
+    const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
     const n = a?.numeric();
     expect(typeof n).toBe('number');
@@ -332,7 +332,7 @@ describe('test tag api', () => {
     const strToParse = 'a=[seven]';
     const getTags = Tag.fromTagline(strToParse, undefined);
     expect(getTags.log).toEqual([]);
-    const a = getTags.tag.tag(['a']);
+    const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
     const n = a?.numeric();
     expect(typeof n).toBe('number');

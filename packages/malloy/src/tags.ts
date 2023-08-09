@@ -180,8 +180,7 @@ export class Tag implements TagInterface {
     }
   }
 
-  // mtoy todo ... maybe accept an array of strings or varargs or both
-  tag(at: string[]): Tag | undefined {
+  private find(at: string[]): Tag | undefined {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     let findIn: Tag | undefined = this;
     for (const seg of at) {
@@ -193,20 +192,24 @@ export class Tag implements TagInterface {
     return findIn;
   }
 
-  has(prop: string): boolean {
-    return !!this.tag([prop]);
+  tag(...at: string[]): Tag | undefined {
+    return this.find(at);
   }
 
-  text(at: string[] = []): string {
-    const str = this.tag(at)?.eq;
+  has(...at: string[]): boolean {
+    return !!this.find(at);
+  }
+
+  text(...at: string[]): string {
+    const str = this.find(at)?.eq;
     if (typeof str === 'string') {
       return str;
     }
     return '';
   }
 
-  numeric(at: string[] = []): number {
-    const str = this.tag(at)?.eq;
+  numeric(...at: string[]): number {
+    const str = this.find(at)?.eq;
     if (typeof str === 'string') {
       return Number.parseFloat(str);
     }
@@ -223,8 +226,8 @@ export class Tag implements TagInterface {
     return newDict;
   }
 
-  array(at: string[] = []): Tag[] {
-    const array = this.tag(at)?.eq;
+  array(...at: string[]): Tag[] {
+    const array = this.find(at)?.eq;
     if (array === undefined || typeof array === 'string') {
       return [];
     }
@@ -243,10 +246,6 @@ export class Tag implements TagInterface {
 
   clone(): Tag {
     return new Tag(cloneDeep(this));
-  }
-
-  json(): unknown {
-    throw new Error('mtoy todo implement json');
   }
 }
 
@@ -589,8 +588,8 @@ class TaglineParser
     const path = this.getPropName(ctx.propName());
     for (const scope of this.scopes) {
       // first scope which has the first component gets to resolve the whole path
-      if (scope.tag([path[0]])) {
-        const refTo = scope.tag(path);
+      if (scope.has(path[0])) {
+        const refTo = scope.tag(...path);
         if (refTo) {
           return refTo.clone();
         }
