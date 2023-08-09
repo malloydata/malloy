@@ -71,16 +71,6 @@ interface CredentialBody {
   private_key?: string;
 }
 
-interface BigQueryConnectionConfiguration {
-  defaultProject?: string;
-  serviceAccountKeyPath?: string;
-  location?: string;
-  maximumBytesBilled?: string;
-  timeoutMs?: string;
-  projectId?: string;
-  credentials?: CredentialBody;
-}
-
 interface SchemaInfo {
   schema: bigquery.ITableFieldSchema;
   needsTableSuffixPseudoColumn: boolean;
@@ -129,6 +119,17 @@ const MAXIMUM_BYTES_BILLED = String(25 * 1024 * 1024 * 1024);
  * Default timeoutMs value, 10 Mins
  */
 const TIMEOUT_MS = 1000 * 60 * 10;
+
+interface BigQueryConnectionConfiguration {
+  name?: string;
+  defaultProject?: string;
+  serviceAccountKeyPath?: string;
+  location?: string;
+  maximumBytesBilled?: string;
+  timeoutMs?: string;
+  projectId?: string;
+  credentials?: CredentialBody;
+}
 
 // manage access to BQ, control costs, enforce global data/API limits
 export class BigQueryConnection
@@ -230,10 +231,6 @@ export class BigQueryConnection
   }
 
   public canStream(): this is StreamingConnection {
-    return true;
-  }
-
-  public get supportsNesting(): boolean {
     return true;
   }
 
@@ -729,6 +726,7 @@ export class BigQueryConnection
           lastFetchError = fetchError;
         }
       }
+
       throw lastFetchError;
     } catch (e) {
       throw maybeRewriteError(e);

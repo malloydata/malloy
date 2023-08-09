@@ -170,3 +170,26 @@ export interface LookupConnection<T extends InfoConnection> {
    */
   lookupConnection(connectionName?: string): Promise<T>;
 }
+
+export interface BaseConfigParameter<C, T> {
+  name: string;
+  required: boolean;
+  setValue: (config: C, value: T) => void;
+  defaultValue?: T;
+}
+
+export type StringConfigParameter<C> = BaseConfigParameter<C, string>;
+
+export type FileConfigParameter<C> = BaseConfigParameter<C, string>;
+
+export type NumberConfigParameter<C> = BaseConfigParameter<C, number>;
+
+export type ConfigParameter<C> =
+  | StringConfigParameter<C>
+  | FileConfigParameter<C>
+  | NumberConfigParameter<C>;
+
+export interface ConnectionConfigSchema<C> {
+  name: string;
+  parameters: Array<ConfigParameter<C>>;
+}

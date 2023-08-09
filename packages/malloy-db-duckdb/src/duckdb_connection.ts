@@ -22,7 +22,11 @@
  */
 
 import crypto from 'crypto';
-import {DuckDBCommon, QueryOptionsReader} from './duckdb_common';
+import {
+  DuckDBCommon,
+  DuckDBConnectionConfiguration,
+  QueryOptionsReader,
+} from './duckdb_common';
 import {Connection, Database, OPEN_READWRITE, Row} from 'duckdb';
 import {QueryDataRow, RunSQLOptions} from '@malloydata/malloy';
 
@@ -32,13 +36,17 @@ export class DuckDBConnection extends DuckDBCommon {
   protected database: Database | null = null;
   protected isSetup: Promise<void> | undefined;
 
+  public readonly name: string;
+  private workingDirectory: string;
+
   constructor(
-    public readonly name: string,
+    config: DuckDBConnectionConfiguration,
     private databasePath = ':memory:',
-    private workingDirectory = '.',
     queryOptions?: QueryOptionsReader
   ) {
     super(queryOptions);
+    this.name = config.name;
+    this.workingDirectory = config.workingDirectory ?? '.';
     this.connecting = this.init();
   }
 

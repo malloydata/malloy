@@ -23,6 +23,7 @@
 
 import {
   AtomicFieldTypeInner,
+  ConnectionConfigSchema,
   FieldTypeDef,
   MalloyQueryData,
   NamedStructDefs,
@@ -72,9 +73,33 @@ const unquoteName = (name: string) => {
   return name;
 };
 
+export interface DuckDBConnectionConfiguration {
+  name: string;
+  workingDirectory?: string;
+}
+
 export abstract class DuckDBCommon
   implements TestableConnection, PersistSQLResults, StreamingConnection
 {
+  static duckDBConnectionConfigurationSchema: ConnectionConfigSchema<DuckDBConnectionConfiguration> =
+    {
+      name: 'DuckDB',
+      parameters: [
+        {
+          name: 'Name',
+          setValue: (c: DuckDBConnectionConfiguration, v: string) =>
+            (c.name = v),
+          required: true,
+        },
+        {
+          name: 'Working Directory',
+          setValue: (c: DuckDBConnectionConfiguration, v: string) =>
+            (c.name = v),
+          required: false,
+        },
+      ],
+    };
+
   static DEFAULT_QUERY_OPTIONS: DuckDBQueryOptions = {
     rowLimit: 10,
   };

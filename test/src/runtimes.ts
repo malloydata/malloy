@@ -73,7 +73,7 @@ export class DuckDBTestConnection extends DuckDBConnection {
   // we probably need a better way to do this.
 
   constructor(name: string) {
-    super(name, 'test/data/duckdb/duckdb_test.db');
+    super({name}, 'test/data/duckdb/duckdb_test.db');
   }
 
   public async runSQL(
@@ -94,7 +94,7 @@ export class DuckDBWASMTestConnection extends DuckDBWASMConnection {
   // we probably need a better way to do this.
 
   constructor(name: string) {
-    super(name, 'test/data/duckdb/duckdb_test.db');
+    super({name}, 'test/data/duckdb/duckdb_test.db');
   }
 
   public async runSQL(

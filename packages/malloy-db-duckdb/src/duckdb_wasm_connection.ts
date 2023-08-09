@@ -30,7 +30,11 @@ import {
   SQLBlock,
 } from '@malloydata/malloy';
 import {StructRow, Table, Vector} from 'apache-arrow';
-import {DuckDBCommon, QueryOptionsReader} from './duckdb_common';
+import {
+  DuckDBCommon,
+  DuckDBConnectionConfiguration,
+  QueryOptionsReader,
+} from './duckdb_common';
 
 const TABLE_MATCH = /FROM\s*('([^']*)'|"([^"]*)")/gi;
 const TABLE_FUNCTION_MATCH = /FROM\s+[a-z0-9_]+\(('([^']*)'|"([^"]*)")/gi;
@@ -112,13 +116,17 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   private remoteFileCallbacks: RemoteFileCallback[] = [];
   private remoteFileStatus: Record<string, Promise<boolean>> = {};
 
+  public readonly name: string;
+  protected readonly workingDirectory;
+
   constructor(
-    public readonly name: string,
+    config: DuckDBConnectionConfiguration,
     private databasePath: string | null = null,
-    protected workingDirectory = '/',
     queryOptions?: QueryOptionsReader
   ) {
     super(queryOptions);
+    this.name = config.name;
+    this.workingDirectory = config.workingDirectory ?? '/';
     this.connecting = this.init();
   }
 

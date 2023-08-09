@@ -30,7 +30,7 @@ describe('DuckDBWasmConnection', () => {
   let findTables: jest.SpyInstance;
 
   beforeAll(async () => {
-    connection = new DuckDBWASMConnection('duckdb');
+    connection = new DuckDBWASMConnection({name: 'duckdb'});
     await connection.runSQL('SELECT 1');
   });
 

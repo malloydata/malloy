@@ -134,6 +134,13 @@ export type {
   SerializedExplore,
 } from './malloy';
 export type {RunSQLOptions} from './run_sql_options';
+export type {
+  StringConfigParameter,
+  NumberConfigParameter,
+  FileConfigParameter,
+  ConfigParameter,
+  ConnectionConfigSchema,
+} from './runtime_types';
 export {DialectProvider} from './runtime_types';
 export type {
   URLReader,
