@@ -24,12 +24,3 @@
 export {allDatabaseTestSets} from './databases/shared/test_list';
 
 export {RuntimeList, testRuntimeFor} from './runtimes';
-
-export {exprSharedTests} from './databases/shared/expr';
-export {indexSharedTests} from './databases/shared/db_index';
-export {joinSharedTests} from './databases/shared/join';
-export {noModelSharedTests} from './databases/shared/nomodel';
-export {orderBySharedTests} from './databases/shared/orderby';
-export {problemsSharedTests} from './databases/shared/problems';
-export {sqlExpressionsSharedTests} from './databases/shared/sql_expressions';
-export {timeSharedTests} from './databases/shared/time';
