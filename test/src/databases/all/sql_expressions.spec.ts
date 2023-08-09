@@ -26,12 +26,71 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
-import {sqlExpressionsSharedTests} from '../shared/sql_expressions';
+import '../../util/db-jest-matchers';
+// No prebuilt shared model, each test is complete.  Makes debugging easier.
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
-/*
- * This test file reuses common tests definitions.
- * For actual test development please go to: test/src/databases/shared/sql_expressions.spec.ts
- */
-sqlExpressionsSharedTests(runtimes);
+afterAll(async () => {
+  await runtimes.closeAll();
+});
+
+runtimes.runtimeMap.forEach((runtime, databaseName) => {
+  it(`sql expression with turducken - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        run: ${databaseName}.sql(
+          """SELECT * FROM (%{
+            ${databaseName}.table('malloytest.state_facts') -> {
+              aggregate: c is count()
+            }
+          }) AS state_facts """
+        ) -> {
+          project: *
+        }
+      `
+      )
+      .run();
+    expect(result.data.value[0]['c']).toBe(51);
+  });
+  it(`sql expression in second of two queries in same block, dependent on first query - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        query:
+          a is ${databaseName}.table('malloytest.state_facts') -> {
+            aggregate: c is count()
+          }
+          b is ${databaseName}.sql(
+            """SELECT * FROM (%{ -> a -> { project: * } }) AS state_facts """
+          ) -> {
+            project: *
+          }
+        run: b
+      `
+      )
+      .run();
+    expect(result.data.value[0]['c']).toBe(51);
+  });
+  it(`sql expression in other sql expression - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+        run: ${databaseName}.sql("""
+          SELECT * from (%{
+            ${databaseName}.sql("""SELECT 1 as one""") -> { group_by: one }
+          }) as the_table
+        """) -> { group_by: one }
+      `
+      )
+      .run();
+    expect(result.data.value[0]['one']).toBe(1);
+  });
+  it(`run sql expression as query - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(`run: ${databaseName}.sql("""SELECT 1 as one""")`)
+      .run();
+    expect(result.data.value[0]['one']).toBe(1);
+  });
+});
