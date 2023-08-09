@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.69",
+  "version": "0.0.70",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -18,7 +18,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.69",
+    "@malloydata/malloy": "^0.0.70",
     "@types/luxon": "^2.4.0",
     "lodash": "^4.17.20",
     "luxon": "^2.4.0",
