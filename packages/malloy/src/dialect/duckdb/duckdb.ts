@@ -58,8 +58,8 @@ const pgExtractionMap: Record<string, string> = {
 export class DuckDBDialect extends Dialect {
   name = 'duckdb';
   defaultNumberType = 'DOUBLE';
+  defaultDecimalType = 'NUMERIC';
   hasFinalStage = false;
-  stringTypeName = 'VARCHAR';
   divisionIsInteger = true;
   supportsSumDistinctFunction = true;
   unnestWithNumbers = true;
@@ -70,6 +70,7 @@ export class DuckDBDialect extends Dialect {
   dontUnionIndex = true;
   supportsQualify = true;
   supportsSafeCast = true;
+  supportsNesting = true;
 
   // hack until they support temporary macros.
   get udfPrefix(): string {
@@ -428,5 +429,9 @@ export class DuckDBDialect extends Dialect {
 
   getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
     return DUCKDB_FUNCTIONS.get(name);
+  }
+
+  castToString(expression: string): string {
+    return `CAST(${expression} as VARCHAR)`;
   }
 }

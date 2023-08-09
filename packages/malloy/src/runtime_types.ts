@@ -29,6 +29,7 @@ import {
   SQLBlock,
   StructDef,
 } from './model/malloy_types';
+import {Dialect, registerDialect} from './dialect';
 
 /**
  * The contents of a Malloy query document.
@@ -125,6 +126,8 @@ export interface Connection extends InfoConnection {
   close(): Promise<void>;
 
   estimateQueryCost(sqlCommand: string): Promise<QueryRunStats>;
+
+  get dialectName(): string;
 }
 
 // TODO feature-sql-block Comment
@@ -149,6 +152,12 @@ export interface StreamingConnection extends Connection {
     sqlCommand: string,
     options?: {rowLimit?: number}
   ): AsyncIterableIterator<QueryDataRow>;
+}
+
+export abstract class DialectProvider {
+  constructor(dialect: Dialect) {
+    registerDialect(dialect);
+  }
 }
 
 /**

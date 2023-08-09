@@ -24,7 +24,7 @@
 import {LogMessage, DocumentRange, DocumentPosition} from '@malloydata/malloy';
 import * as parser from './grammar/malloySQL';
 import {
-  MalloySQLStatmentConfig,
+  MalloySQLStatementConfig,
   MalloySQLStatementBase,
   MalloySQLStatement,
   MalloySQLParseResults,
@@ -99,15 +99,17 @@ export class MalloySQLParser {
 
     let previousConnection = '';
     const statements: MalloySQLStatement[] = [];
+    const {initialComments} = parsed;
     const initialCommentsLineCount =
-      parsed.initialComments.split(/\r\n|\r|\n/).length - 1;
+      initialComments.split(/\r\n|\r|\n/).length - 1;
     let statementIndex = 0;
-    let config: MalloySQLStatmentConfig = {};
     const errors: MalloySQLParseError[] = [];
 
     if (!parsed.statements) return {statements, errors};
 
     for (const parsedStatement of parsed.statements) {
+      let config: MalloySQLStatementConfig = {};
+
       if (
         parsedStatement.statementType === 'malloy' &&
         parsedStatement.config !== ''
@@ -124,7 +126,7 @@ export class MalloySQLParser {
       if (parsedStatement.config.startsWith('connection:')) {
         const splitConfig = parsedStatement.config.split('connection:');
         if (splitConfig.length > 0)
-          config = {connection: splitConfig[1].trim()};
+          config = {connection: splitConfig[1].trim(), fromDelimiter: true};
         else
           errors.push(
             this.createParseError(
@@ -156,25 +158,28 @@ export class MalloySQLParser {
           type: MalloySQLStatementType.MALLOY,
         });
       } else {
-        if (!config.connection) {
-          if (!previousConnection)
-            errors.push(
-              this.createParseError(
-                'No connection configuration specified, add "connection: my_connection_name" to this >>>sql line or to an above one',
-                parsedStatement.delimiterRange,
-                url
-              )
-            );
-          config.connection = previousConnection;
-        }
-
-        previousConnection = config.connection;
-
         const parsedMalloySQLSQL = MalloySQLSQLParser.parse(
           parsedStatement.statementText,
           url,
           parsedStatement.range.start
         );
+
+        config = {...config, ...parsedMalloySQLSQL.config};
+
+        if (!config.connection) {
+          if (!previousConnection)
+            errors.push(
+              this.createParseError(
+                'No connection configuration specified',
+                parsedStatement.delimiterRange,
+                url
+              )
+            );
+          config.connection = previousConnection;
+          config.inheritedConnection = true;
+        }
+
+        previousConnection = config.connection;
 
         const embeddedMalloyQueries = parsedMalloySQLSQL.embeddedMalloyQueries;
 
@@ -191,6 +196,7 @@ export class MalloySQLParser {
       statements,
       errors,
       initialCommentsLineCount,
+      initialComments,
     };
   }
 }
@@ -199,4 +205,5 @@ export interface MalloySQLParse {
   statements: MalloySQLStatement[];
   errors: MalloySQLParseError[];
   initialCommentsLineCount?: number;
+  initialComments?: string;
 }

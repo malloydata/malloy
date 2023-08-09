@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euxo pipefail
 
-export PACKAGES="packages/malloy packages/malloy-db-bigquery packages/malloy-db-duckdb packages/malloy-db-postgres packages/malloy-render packages/malloy-malloy-sql"
+export PACKAGES="packages/malloy packages/malloy-db-bigquery packages/malloy-db-duckdb packages/malloy-db-postgres packages/malloy-render packages/malloy-malloy-sql test"
 
 nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --keep BRANCH_NAME --command "$(cat <<NIXCMD
   set -euxo pipefail
@@ -24,7 +24,7 @@ nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --keep BRANCH_NAME --command "
   VERSION=\$(jq -r .version ./lerna.json)
   for package in \$PACKAGES; do
     echo Publishing \$package \$VERSION
-    npm publish -w \$package
+    npm publish -w \$package --access=public
   done
   # Tag current version
   git tag v\$VERSION

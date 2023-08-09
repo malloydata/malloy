@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /*
  * Copyright 2023 Google LLC
  *
@@ -22,15 +21,15 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {RuntimeList, allDatabases} from '../../runtimes';
-import '../../util/db-jest-matchers';
-import {databasesFromEnvironmentOr} from '../../util';
-import {exprSharedTests} from '../..';
+export {allDatabaseTestSets} from './databases/shared/test_list';
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
+export {RuntimeList, testRuntimeFor} from './runtimes';
 
-/*
- * This test file reuses common tests definitions.
- * For actual test development please go to: test/src/databases/shared/expr.spec.ts
- */
-exprSharedTests(runtimes);
+export {exprSharedTests} from './databases/shared/expr';
+export {indexSharedTests} from './databases/shared/db_index';
+export {joinSharedTests} from './databases/shared/join';
+export {noModelSharedTests} from './databases/shared/nomodel';
+export {orderBySharedTests} from './databases/shared/orderby';
+export {problemsSharedTests} from './databases/shared/problems';
+export {sqlExpressionsSharedTests} from './databases/shared/sql_expressions';
+export {timeSharedTests} from './databases/shared/time';

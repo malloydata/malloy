@@ -71,9 +71,9 @@ const inSeconds: Record<string, number> = {
 export class PostgresDialect extends Dialect {
   name = 'postgres';
   defaultNumberType = 'DOUBLE PRECISION';
+  defaultDecimalType = 'NUMERIC';
   udfPrefix = 'pg_temp.__udf';
   hasFinalStage = true;
-  stringTypeName = 'VARCHAR';
   divisionIsInteger = true;
   supportsSumDistinctFunction = false;
   unnestWithNumbers = false;
@@ -85,6 +85,7 @@ export class PostgresDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   globalFunctions = POSTGRES_FUNCTIONS;
+  supportsNesting = true;
 
   quoteTablePath(tablePath: string): string {
     return tablePath
@@ -447,5 +448,9 @@ export class PostgresDialect extends Dialect {
 
   getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
     return POSTGRES_FUNCTIONS.get(name);
+  }
+
+  castToString(expression: string): string {
+    return `CAST(${expression} as VARCHAR)`;
   }
 }

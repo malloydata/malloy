@@ -29,6 +29,9 @@ import {
   MalloySQLParseRange,
   MalloySQLParseLocation,
   EmbeddedMalloyQuery,
+  ParsedMalloySQLOtherStatementPart,
+  EmbeddedComment,
+  MalloySQLStatementConfig,
 } from './types';
 import {MalloySQLParseError, MalloySQLSyntaxError} from './malloySQLErrors';
 
@@ -70,6 +73,8 @@ export class MalloySQLSQLParser {
       parsed = parser.parse(document);
     } catch (e) {
       return {
+        comments: [],
+        config: {},
         embeddedMalloyQueries: [],
         errors: [
           new MalloySQLSyntaxError(
@@ -88,7 +93,19 @@ export class MalloySQLSQLParser {
       };
     }
 
-    if (!parsed.parts) return {embeddedMalloyQueries: [], errors: []};
+    if (!parsed.parts)
+      return {comments: [], config: {}, embeddedMalloyQueries: [], errors: []};
+
+    const comments = parsed.parts
+      .filter((part): part is ParsedMalloySQLOtherStatementPart => {
+        return part.type === 'comment';
+      })
+      .map(part => {
+        return {
+          range: this.convertRange(part.range, start),
+          text: part.text,
+        };
+      });
 
     const embeddedMalloyQueries = parsed.parts
       .filter((part): part is ParsedMalloySQLMalloyStatementPart => {
@@ -97,14 +114,25 @@ export class MalloySQLSQLParser {
       .map(part => {
         return {
           query: part.malloy,
-          parenthized: part.parenthized,
+          parenthesized: part.parenthesized,
           range: this.convertRange(part.range, start),
           text: part.text,
           malloyRange: this.convertRange(part.malloyRange, start),
         };
       });
 
+    const config: MalloySQLStatementConfig = {};
+
+    for (const comment of comments) {
+      const match = /\bconnection:\s*(?<connectionName>\S*)/.exec(comment.text);
+      if (match && match.groups) {
+        config.connection = match.groups['connectionName'];
+      }
+    }
+
     return {
+      comments,
+      config,
       embeddedMalloyQueries,
       errors: [],
     };
@@ -112,6 +140,8 @@ export class MalloySQLSQLParser {
 }
 
 export interface MalloySQLSQLParse {
+  comments: EmbeddedComment[];
+  config: MalloySQLStatementConfig;
   embeddedMalloyQueries: EmbeddedMalloyQuery[];
   errors: MalloySQLParseError[];
 }

@@ -1186,7 +1186,7 @@ function sqlSumDistinct(
   const sumSQL = `
   (
     SUM(DISTINCT
-      (CAST(ROUND(COALESCE(${sqlExp},0)*(${multiplier}*1.0), ${NUMERIC_DECIMAL_PRECISION}) AS NUMERIC) +
+      (CAST(ROUND(COALESCE(${sqlExp},0)*(${multiplier}*1.0), ${NUMERIC_DECIMAL_PRECISION}) AS ${dialect.defaultDecimalType}) +
       ${uniqueInt}
     ))
     -
@@ -2581,7 +2581,7 @@ class QueryQuery extends QueryField {
     if (isJoinOn(structRelationship)) {
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * ${passKeys} FROM ${structSQL} as x)`;
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, x.* ${passKeys} FROM ${structSQL} as x)`;
       }
       let onCondition = '';
       if (qs.parent === undefined) {
@@ -2715,7 +2715,7 @@ class QueryQuery extends QueryField {
     if (structRelationship.type === 'basetable') {
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
-        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, * ${passKeys} FROM ${structSQL} as x)`;
+        structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, x.* ${passKeys} FROM ${structSQL} as x)`;
       }
       s += `FROM ${structSQL} as ${ji.alias}\n`;
     } else {
@@ -2978,7 +2978,7 @@ class QueryQuery extends QueryField {
           )}) THEN __delete__${
             result.groupSet
           } END) OVER(partition by ${dimensions
-            .map(x => `CAST(${x} AS ${this.parent.dialect.stringTypeName}) `)
+            .map(this.parent.dialect.castToString)
             .join(',')}) as __shaving__${result.groupSet}`
         );
       }
@@ -3586,7 +3586,11 @@ class QueryQueryIndexStage extends QueryQuery {
     s += "  CASE group_set\n    WHEN 99999 THEN ''";
     for (let i = 0; i < fields.length; i++) {
       if (fields[i].type === 'number') {
-        s += `    WHEN ${i} THEN CAST(MIN(${fields[i].expression}) AS ${dialect.stringTypeName}) || ' to ' || CAST(MAX(${fields[i].expression}) AS ${dialect.stringTypeName})\n`;
+        s += `    WHEN ${i} THEN ${dialect.castToString(
+          `MIN(${fields[i].expression})`
+        )} || ' to ' || ${dialect.castToString(
+          `MAX(${fields[i].expression})`
+        )}\n`;
       }
       if (fields[i].type === 'timestamp' || fields[i].type === 'date') {
         s += `    WHEN ${i} THEN MIN(${dialect.sqlDateToString(

@@ -17,8 +17,8 @@ other "query string" = s:$(!comment !embedded_malloy .)+ {
 }
 
 embedded_malloy
-  = parenthized_embedded_malloy / plain_embedded_malloy
-parenthized_embedded_malloy
+  = parenthesized_embedded_malloy / plain_embedded_malloy
+parenthesized_embedded_malloy
   = '(' __ em:plain_embedded_malloy __ ')' {
   return {
     type: "malloy",
@@ -26,7 +26,7 @@ parenthized_embedded_malloy
     malloy:em.malloy,
     malloyRange: em.malloyRange,
     range:location(),
-    parenthized: true
+    parenthesized: true
   }
 }
 plain_embedded_malloy
@@ -37,7 +37,7 @@ plain_embedded_malloy
     malloy:m.text,
     malloyRange: m.malloyRange,
     range:location(),
-    parenthized: false
+    parenthesized: false
   }
 }
 malloy

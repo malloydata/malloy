@@ -77,6 +77,7 @@ import {
 } from './runtime_types';
 import {DateTime} from 'luxon';
 import {Tag, Taggable, Tags} from './tags';
+import {getDialect} from './dialect';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1259,6 +1260,15 @@ export class FixedConnectionMap implements LookupConnection<Connection> {
     }
   }
 
+  /**
+   * Gets a list of registered connections.
+   *
+   * @return The list of registered connections.
+   */
+  listConnections(): Connection[] {
+    return Array.from(this.connections.values());
+  }
+
   public async lookupConnection(connectionName?: string): Promise<Connection> {
     return this.getConnection(connectionName);
   }
@@ -2304,6 +2314,10 @@ export class SingleConnectionRuntime<
       super(urlsOrConnections as URLReader, connection);
       this.connection = connection;
     }
+  }
+
+  get supportsNesting(): boolean {
+    return getDialect(this.connection.dialectName).supportsNesting;
   }
 }
 
