@@ -76,7 +76,7 @@ import {
   URLReader,
 } from './runtime_types';
 import {DateTime} from 'luxon';
-import {Taggable, Tags} from './tags';
+import {Tag, Taggable, Tags} from './tags';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -615,6 +615,14 @@ export class Model implements Taggable {
     return new Tags(this.modelDef.annotation);
   }
 
+  static getTag(md: ModelDef): Tag {
+    return Tag.fromAnnotation(md.annotation || {}, undefined, undefined).tag;
+  }
+
+  getTag(): Tag {
+    return Model.getTag(this.modelDef);
+  }
+
   /**
    * Retrieve a document reference for the token at the given position within
    * the document that produced this model.
@@ -773,6 +781,13 @@ export class PreparedQuery implements Taggable {
 
   getTags(): Tags {
     return new Tags(this._query.annotation);
+  }
+
+  getTag(): Tag {
+    // mtoy todo const mTag = Model.getTag(somehow.find.modelDef);
+    const mTag = undefined;
+    const {tag} = Tag.fromAnnotation(this._query.annotation, undefined, mTag);
+    return tag;
   }
 
   /**
@@ -1102,6 +1117,11 @@ export class PreparedResult implements Taggable {
 
   public getTags(): Tags {
     return new Tags(this.inner.annotation);
+  }
+
+  public getTag(): Tag {
+    const mTag = Model.getTag(this.modelDef);
+    return Tag.fromAnnotation(this.inner.annotation, undefined, mTag).tag;
   }
 
   /**
@@ -1610,6 +1630,17 @@ export class AtomicField extends Entity implements Taggable {
     return new Tags(this.fieldTypeDef.annotation);
   }
 
+  public getTag(): Tag {
+    // mtoy todo const mTag = Model.getTag(somehow.find.modelDef);
+    const mTag = undefined;
+    const {tag} = Tag.fromAnnotation(
+      this.fieldTypeDef.annotation,
+      undefined,
+      mTag
+    );
+    return tag;
+  }
+
   public isIntrinsic(): boolean {
     return FieldIsIntrinsic(this.fieldTypeDef);
   }
@@ -1877,6 +1908,17 @@ export class QueryField extends Query implements Taggable {
     return new Tags(this.turtleDef.annotation);
   }
 
+  public getTag(): Tag {
+    // mtoy todo const mTag = Model.getTag(somehow.find.modelDef);
+    const mTag = undefined;
+    const {tag} = Tag.fromAnnotation(
+      this.turtleDef.annotation,
+      undefined,
+      mTag
+    );
+    return tag;
+  }
+
   public isQueryField(): this is QueryField {
     return true;
   }
@@ -1939,6 +1981,17 @@ export class ExploreField extends Explore implements Taggable {
 
   getTags(): Tags {
     return new Tags(this._structDef.annotation);
+  }
+
+  public getTag(): Tag {
+    // mtoy todo const mTag = Model.getTag(somehow.find.modelDef);
+    const mTag = undefined;
+    const {tag} = Tag.fromAnnotation(
+      this._structDef.annotation,
+      undefined,
+      mTag
+    );
+    return tag;
   }
 
   public isQueryField(): this is QueryField {

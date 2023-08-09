@@ -132,19 +132,43 @@ export class Tag implements TagInterface {
     return parseTagline(str, extending, importing, __filename, 0, 0);
   }
 
-  static fromNote(
-    note: Note,
+  static fromAnnotation(
+    annote: Annotation | undefined,
     extending: Tag | undefined,
-    ...importing: Tag[]
+    modelScope: Tag | undefined
   ): TagParse {
-    return parseTagline(
-      note.text,
-      extending,
-      importing,
-      note.at.url,
-      note.at.range.start.line,
-      note.at.range.start.character
-    );
+    annote ||= {};
+    const allErrs: LogMessage[] = [];
+    if (annote.inherits) {
+      const inherits = Tag.fromAnnotation(
+        annote.inherits,
+        extending,
+        modelScope
+      );
+      allErrs.push(...inherits.log);
+      extending = inherits.tag;
+    }
+    const allNotes: Note[] = [];
+    if (annote.blockNotes) {
+      allNotes.push(...annote.blockNotes);
+    }
+    if (annote.notes) {
+      allNotes.push(...annote.notes);
+    }
+    const scopeList = modelScope ? [modelScope] : [];
+    for (const note of allNotes) {
+      const noteParse = parseTagline(
+        note.text,
+        extending,
+        scopeList,
+        note.at.url,
+        note.at.range.start.line,
+        note.at.range.start.character
+      );
+      extending = noteParse.tag;
+      allErrs.push(...noteParse.log);
+    }
+    return {tag: extending || new Tag(), log: allErrs};
   }
 
   constructor(from: TagInterface = {}) {
@@ -244,6 +268,7 @@ export interface MalloyTags extends PropertyTag {
 
 export interface Taggable {
   getTags: () => Tags;
+  getTag(modelScope?: Tag): Tag;
 }
 
 /**
@@ -275,12 +300,14 @@ function tagList(tagNode: Annotation | undefined): string[] {
   if (!tagNode) {
     return [];
   }
-  const fromParent = tagNode.inherits ? tagList(tagNode.inherits) : [];
-  const fromThisTag = [
-    ...(tagNode.blockNotes || []),
-    ...(tagNode.notes || []),
-  ].map(n => n.text);
-  return [...fromParent, ...fromThisTag];
+  const justText = tagNode.inherits ? tagList(tagNode.inherits) : [];
+  if (tagNode.blockNotes) {
+    justText.push(...tagNode.blockNotes.map(bn => bn.text));
+  }
+  if (tagNode.notes) {
+    justText.push(...tagNode.notes.map(n => n.text));
+  }
+  return justText;
 }
 
 /**
