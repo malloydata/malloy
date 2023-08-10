@@ -382,18 +382,19 @@ describe('source definition annotations', () => {
         ## model1
       }
     `);
-    expect(m).toTranslate();
+    expect(m).translationToFailWith(
+      'Model annotations not allowed at this scope'
+    );
   });
 });
 describe('query operation annotations', () => {
   test('ignores model annotation', () => {
-    const m = new TestTranslator(`
+    expect(`
       query: a -> {
         ## model1
         project: *
       }
-    `);
-    expect(m).toTranslate();
+    `).translationToFailWith('Model annotations not allowed at this scope');
   });
   test('project new definition annotation', () => {
     const m = new TestTranslator(`
