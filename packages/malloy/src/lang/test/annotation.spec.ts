@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TestTranslator, getFieldDef} from './test-translator';
+import {TestTranslator, getFieldDef, model} from './test-translator';
 import './parse-expects';
 import {diff} from 'jest-diff';
 import {Annotation} from '../../model/malloy_types';
@@ -264,6 +264,18 @@ describe('document annotation', () => {
     expect(m).translationToFailWith(
       'Object annotation not connected to any object'
     );
+  });
+  test('errors reported from compiler flags', () => {
+    expect(`
+      ##! missingCloseQuote="...
+    `).translationToFailWith(/no viable alternative at input/);
+  });
+  test('checking compiler flags', () => {
+    const m = model`
+      ##! flagThis
+    `;
+    expect(m).toTranslate();
+    expect(m.translator.compilerFlags.has('flagThis')).toBeTruthy();
   });
 });
 describe('source definition annotations', () => {

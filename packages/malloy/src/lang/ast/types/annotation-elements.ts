@@ -23,6 +23,7 @@
 
 import {Note} from '../../../model/malloy_types';
 import {Tag} from '../../../tags';
+import {MessageLogger} from '../../parse-log';
 import {Document, DocStatement, MalloyElement} from './malloy-element';
 import {QueryPropertyInterface} from './query-property-interface';
 
@@ -44,7 +45,7 @@ export class ObjectAnnotation
 export class ModelAnnotation extends ObjectAnnotation implements DocStatement {
   elementType = 'modelAnnotation';
 
-  getCompilerFlags(existing: Tag): Tag {
+  getCompilerFlags(existing: Tag, logTo: MessageLogger): Tag {
     const tagParse = Tag.annotationToTag(
       {notes: this.notes},
       {
@@ -52,10 +53,7 @@ export class ModelAnnotation extends ObjectAnnotation implements DocStatement {
         extending: existing,
       }
     );
-    const logTo = this.logger();
-    if (logTo) {
-      tagParse.log.forEach(err => logTo.log(err));
-    }
+    tagParse.log.forEach(err => logTo.log(err));
     return tagParse.tag;
   }
 

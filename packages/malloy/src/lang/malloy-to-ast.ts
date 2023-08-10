@@ -1714,7 +1714,7 @@ export class MalloyToAST
       };
     });
     const tags = new ast.ModelAnnotation(allNotes);
-    this.compilerFlags = tags.getCompilerFlags(this.compilerFlags);
+    this.compilerFlags = tags.getCompilerFlags(this.compilerFlags, this.msgLog);
     return tags;
   }
 
