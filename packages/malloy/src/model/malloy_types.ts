@@ -1054,10 +1054,14 @@ export type NamedStructDefs = Record<string, StructDef>;
 export type NamedModelObjects = Record<string, NamedModelObject>;
 
 /** Malloy source annotations attached to objects */
+export interface Note {
+  text: string;
+  at: DocumentLocation;
+}
 export interface Annotation {
   inherits?: Annotation;
-  blockNotes?: string[];
-  notes?: string[];
+  blockNotes?: Note[];
+  notes?: Note[];
 }
 
 export type QueryScalar = string | boolean | number | Date | Buffer | null;

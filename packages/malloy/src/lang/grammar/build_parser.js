@@ -35,7 +35,12 @@ const {execSync} = require('child_process');
 const langSrc = path.dirname(__dirname);
 const libDir = path.join(langSrc, 'lib', 'Malloy');
 const digestFile = path.join(libDir, 'Malloy.checksum');
-const digestSrcFiles = [__filename, 'MalloyLexer.g4', 'MalloyParser.g4'];
+const digestSrcFiles = [
+  __filename,
+  'MalloyLexer.g4',
+  'MalloyParser.g4',
+  'MalloyTag.g4',
+];
 const compilerSrcs = ['MalloyLexer.ts', 'MalloyParser.ts'];
 const MALLOY_UUID = '76c17e9d-f3ce-5f2d-bfde-98ad3d2a37f6';
 
@@ -71,7 +76,8 @@ if (rebuild) {
   const antlr = 'antlr4ts -Xexact-output-dir -o ../lib/Malloy';
   if (
     run(`${antlr} MalloyLexer.g4`) &&
-    run(`${antlr} -visitor MalloyParser.g4`)
+    run(`${antlr} -visitor MalloyParser.g4`) &&
+    run(`${antlr} -visitor MalloyTag.g4`)
   ) {
     writeFileSync(digestFile, versionDigest);
   } else {

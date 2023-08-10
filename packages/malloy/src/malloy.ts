@@ -76,7 +76,7 @@ import {
   URLReader,
 } from './runtime_types';
 import {DateTime} from 'luxon';
-import {Taggable, Tags} from './tags';
+import {Tag, TagParse, TagParseSpec, Taggable, Tags} from './tags';
 import {getDialect} from './dialect';
 
 export interface Loggable {
@@ -616,6 +616,14 @@ export class Model implements Taggable {
     return new Tags(this.modelDef.annotation);
   }
 
+  tagParse(spec?: TagParseSpec): TagParse {
+    return Tag.annotationToTag(this.modelDef.annotation, spec);
+  }
+
+  getTaglines(prefix?: RegExp) {
+    return Tag.annotationToTaglines(this.modelDef.annotation, prefix);
+  }
+
   /**
    * Retrieve a document reference for the token at the given position within
    * the document that produced this model.
@@ -774,6 +782,15 @@ export class PreparedQuery implements Taggable {
 
   getTags(): Tags {
     return new Tags(this._query.annotation);
+  }
+
+  tagParse(spec?: TagParseSpec) {
+    // mtoy todo spec.scopes ||= [Model.getTag(somehow.find.modelDef)] ;
+    return Tag.annotationToTag(this._query.annotation, spec);
+  }
+
+  getTaglines(prefix?: RegExp) {
+    return Tag.annotationToTaglines(this._query.annotation, prefix);
   }
 
   /**
@@ -1103,6 +1120,15 @@ export class PreparedResult implements Taggable {
 
   public getTags(): Tags {
     return new Tags(this.inner.annotation);
+  }
+
+  tagParse(spec?: TagParseSpec) {
+    // mtoy todo spec.scopes ||= [Model.getTag(somehow.find.modelDef)] ;
+    return Tag.annotationToTag(this.inner.annotation, spec);
+  }
+
+  getTaglines(prefix?: RegExp) {
+    return Tag.annotationToTaglines(this.inner.annotation, prefix);
   }
 
   /**
@@ -1620,6 +1646,15 @@ export class AtomicField extends Entity implements Taggable {
     return new Tags(this.fieldTypeDef.annotation);
   }
 
+  tagParse(spec?: TagParseSpec) {
+    // mtoy todo spec.scopes ||= [Model.getTag(somehow.find.modelDef)] ;
+    return Tag.annotationToTag(this.fieldTypeDef.annotation, spec);
+  }
+
+  getTaglines(prefix?: RegExp) {
+    return Tag.annotationToTaglines(this.fieldTypeDef.annotation, prefix);
+  }
+
   public isIntrinsic(): boolean {
     return FieldIsIntrinsic(this.fieldTypeDef);
   }
@@ -1887,6 +1922,15 @@ export class QueryField extends Query implements Taggable {
     return new Tags(this.turtleDef.annotation);
   }
 
+  tagParse(spec?: TagParseSpec) {
+    // mtoy todo spec.scopes ||= [Model.getTag(somehow.find.modelDef)] ;
+    return Tag.annotationToTag(this.turtleDef.annotation, spec);
+  }
+
+  getTaglines(prefix?: RegExp) {
+    return Tag.annotationToTaglines(this.turtleDef.annotation, prefix);
+  }
+
   public isQueryField(): this is QueryField {
     return true;
   }
@@ -1949,6 +1993,15 @@ export class ExploreField extends Explore implements Taggable {
 
   getTags(): Tags {
     return new Tags(this._structDef.annotation);
+  }
+
+  tagParse(spec?: TagParseSpec) {
+    // mtoy todo spec.scopes ||= [Model.getTag(somehow.find.modelDef)] ;
+    return Tag.annotationToTag(this._structDef.annotation, spec);
+  }
+
+  getTaglines(prefix?: RegExp) {
+    return Tag.annotationToTaglines(this._structDef.annotation, prefix);
   }
 
   public isQueryField(): this is QueryField {

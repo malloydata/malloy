@@ -28,6 +28,7 @@ import {
   DocumentReference,
   isSQLBlockStruct,
   ModelDef,
+  Note,
   Query,
   SQLBlockStructDef,
 } from '../../../model/malloy_types';
@@ -46,7 +47,6 @@ export abstract class MalloyElement {
   codeLocation?: DocumentLocation;
   children: ElementChildren = {};
   parent: MalloyElement | null = null;
-  private readonly logger?: MessageLogger;
 
   /**
    * @param kids All children passed to the constructor are not optional
@@ -166,11 +166,11 @@ export abstract class MalloyElement {
   }
 
   errorsExist(): boolean {
-    const logger = this.translator()?.root.logger;
+    const logger = this.logger();
     if (logger) {
       return logger.hasErrors();
     }
-    return true;
+    return false;
   }
 
   private readonly logged = new Set<string>();
@@ -185,9 +185,8 @@ export abstract class MalloyElement {
       }
       this.logged.add(message);
     }
-    const trans = this.translator();
     const msg = {at: this.location, message, severity};
-    const logTo = trans?.root.logger;
+    const logTo = this.logger();
     if (logTo) {
       logTo.log(msg);
       return;
@@ -199,6 +198,10 @@ export abstract class MalloyElement {
         2
       )}`
     );
+  }
+
+  logger(): MessageLogger | undefined {
+    return this.translator()?.root.logger;
   }
 
   /**
@@ -410,7 +413,7 @@ export class Document extends MalloyElement implements NameSpace {
   sqlBlocks: SQLBlockStructDef[] = [];
   statements: DocStatementList;
   didInitModel = false;
-  notes: string[] = [];
+  notes: Note[] = [];
 
   constructor(statements: (DocStatement | DocStatementList)[]) {
     super();
