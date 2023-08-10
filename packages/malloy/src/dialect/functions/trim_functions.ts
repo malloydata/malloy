@@ -34,12 +34,12 @@ import {
 function trimFn(fn: string): DialectFunctionOverloadDef[] {
   return [
     overload(
-      minScalar('number'),
+      minScalar('string'),
       [param('value', anyExprType('string'))],
       [sqlFragment(`${fn}(`, arg('value'), ')')]
     ),
     overload(
-      minScalar('number'),
+      minScalar('string'),
       [
         param('value', anyExprType('string')),
         param('trim_characters', anyExprType('string')),
