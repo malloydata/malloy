@@ -261,7 +261,9 @@ describe('document annotation', () => {
       # note1
       ## model1
     `);
-    expect(m).toTranslate();
+    expect(m).translationToFailWith(
+      'Object annotation not connected to any object'
+    );
   });
 });
 describe('source definition annotations', () => {
