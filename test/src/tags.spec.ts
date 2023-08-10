@@ -355,7 +355,7 @@ describe('## top level', () => {
       properties: {propertyTag: true},
       docStrings: ['Doc String\n'],
     });
-    const modelTagLine = model.getTag();
+    const modelTagLine = model.tagParse().tag;
     expect(modelTagLine.has('propertyTag')).toBeTruthy();
   });
 });
@@ -374,7 +374,7 @@ describe('tags in results', () => {
     expect(query.getTags().getTagList()).toEqual(wantTags);
     const result = await loaded.run();
     expect(result.getTags().getTagList()).toEqual(wantTags);
-    const queryTags = result.getTag();
+    const queryTags = result.tagParse().tag;
     expect(queryTags).tagsAre({b4query: {}, afterQuery: {}});
   });
   const wantTags = ['# BQ\n', '# AQ\n', '# Bis\n', '# Ais\n'];
@@ -397,7 +397,7 @@ describe('tags in results', () => {
     expect(query.getTags().getTagList()).toEqual(wantTags);
     const result = await loaded.run();
     expect(result.getTags().getTagList()).toEqual(wantTags);
-    expect(result.getTag()).tagsAre(wantTag);
+    expect(result.tagParse().tag).tagsAre(wantTag);
   });
   test('turtle query', async () => {
     const loaded = runtime.loadQuery(
@@ -417,11 +417,11 @@ describe('tags in results', () => {
     const query = await loaded.getPreparedQuery();
     expect(query).toBeDefined();
     expect(query.getTags().getTagList()).toEqual(wantTags);
-    expect(query.getTag()).tagsAre(wantTag);
+    expect(query.tagParse().tag).tagsAre(wantTag);
     const result = await loaded.run();
     const tl = result.getTags().getTagList();
     expect(tl).toEqual(wantTags);
-    expect(result.getTag()).tagsAre(wantTag);
+    expect(result.tagParse().tag).tagsAre(wantTag);
   });
   test('atomic field has tag', async () => {
     const loaded = runtime.loadQuery(
@@ -438,7 +438,7 @@ describe('tags in results', () => {
     const one = shape.getFieldByName('one');
     expect(one).toBeDefined();
     expect(one.getTags().getTagList()).toEqual(['# note1\n']);
-    expect(one.getTag()).tagsAre({note1: {}});
+    expect(one.tagParse().tag).tagsAre({note1: {}});
   });
   test('nested query has tag', async () => {
     const loaded = runtime.loadQuery(
@@ -463,7 +463,7 @@ describe('tags in results', () => {
     const one = shape.getFieldByName('in_one');
     expect(one).toBeDefined();
     expect(one.getTags().getTagList()).toEqual(['# note1\n', '# note2\n']);
-    expect(one.getTag()).tagsAre({note1: {}, note2: {}});
+    expect(one.tagParse().tag).tagsAre({note1: {}, note2: {}});
   });
   test('render usage test case', async () => {
     const loaded = runtime.loadQuery(
@@ -498,10 +498,10 @@ describe('tags in results', () => {
     expect(height.getTags().getMalloyTags()).toMatchObject({
       properties: {barchart: true},
     });
-    expect(height.getTag()).tagsAre({barchart: {}});
+    expect(height.tagParse().tag).tagsAre({barchart: {}});
     expect(age.getTags().getMalloyTags()).toMatchObject({
       properties: {barchart: true},
     });
-    expect(age.getTag()).tagsAre({barchart: {}});
+    expect(age.tagParse().tag).tagsAre({barchart: {}});
   });
 });

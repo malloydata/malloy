@@ -63,6 +63,23 @@ interface TagInterface {
   properties?: TagDict;
 }
 
+export interface TagParse {
+  tag: Tag;
+  log: LogMessage[];
+}
+
+export interface TagParseSpec {
+  prefix?: RegExp;
+  extending?: Tag;
+  scopes?: Tag[];
+}
+
+export interface Taggable {
+  getTags: () => Tags;
+  tagParse: (spec?: TagParseSpec) => TagParse;
+  getTaglines: (prefix?: RegExp) => string[];
+}
+
 /**
  * Class for interacting with the parsed output of an annotation
  * containing the Malloy tag language. Used by the parser to
@@ -132,19 +149,35 @@ export class Tag implements TagInterface {
     return parseTagline(str, extending, importing, __filename, 0, 0);
   }
 
-  static fromAnnotation(
+  static annotationToTaglines(
     annote: Annotation | undefined,
-    extending: Tag | undefined,
-    modelScope: Tag | undefined
+    prefix?: RegExp
+  ): string[] {
+    annote ||= {};
+    const tagLines = annote.inherits
+      ? Tag.annotationToTaglines(annote.inherits, prefix)
+      : [];
+    function prefixed(na: Note[] | undefined): string[] {
+      const ret: string[] = [];
+      for (const n of na || []) {
+        if (prefix === undefined || n.text.match(prefix)) {
+          ret.push(n.text);
+        }
+      }
+      return ret;
+    }
+    return tagLines.concat(prefixed(annote.blockNotes), prefixed(annote.notes));
+  }
+
+  static annotationToTag(
+    annote: Annotation | undefined,
+    spec: TagParseSpec = {}
   ): TagParse {
+    let extending = spec.extending || new Tag();
     annote ||= {};
     const allErrs: LogMessage[] = [];
     if (annote.inherits) {
-      const inherits = Tag.fromAnnotation(
-        annote.inherits,
-        extending,
-        modelScope
-      );
+      const inherits = Tag.annotationToTag(annote.inherits, spec);
       allErrs.push(...inherits.log);
       extending = inherits.tag;
     }
@@ -155,12 +188,17 @@ export class Tag implements TagInterface {
     if (annote.notes) {
       allNotes.push(...annote.notes);
     }
-    const scopeList = modelScope ? [modelScope] : [];
     for (const note of allNotes) {
+      if (spec.prefix) {
+        const found = note.text.match(spec.prefix);
+        if (!found) {
+          continue;
+        }
+      }
       const noteParse = parseTagline(
         note.text,
         extending,
-        scopeList,
+        spec.scopes || [],
         note.at.url,
         note.at.range.start.line,
         note.at.range.start.character
@@ -168,7 +206,7 @@ export class Tag implements TagInterface {
       extending = noteParse.tag;
       allErrs.push(...noteParse.log);
     }
-    return {tag: extending || new Tag(), log: allErrs};
+    return {tag: extending, log: allErrs};
   }
 
   constructor(from: TagInterface = {}) {
@@ -263,11 +301,6 @@ function isDocTag(a: MalloyTag | undefined): a is DocTag {
 
 export interface MalloyTags extends PropertyTag {
   docStrings: string[];
-}
-
-export interface Taggable {
-  getTags: () => Tags;
-  getTag(modelScope?: Tag): Tag;
 }
 
 /**
@@ -467,11 +500,6 @@ function parsePath(buildOn: Tag, path: string[]): [string, TagDict] {
 
 function getString(ctx: StringContext) {
   return ctx.BARE_STRING() ? ctx.text : parseString(ctx.text, ctx.text[0]);
-}
-
-interface TagParse {
-  tag: Tag;
-  log: LogMessage[];
 }
 
 function parseTagline(
