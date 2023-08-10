@@ -22,7 +22,7 @@
  */
 
 import {Note} from '../../../model/malloy_types';
-import {MalloyTagProperties, parseTagProperties} from '../../../tags';
+import {Tag} from '../../../tags';
 import {Document, DocStatement, MalloyElement} from './malloy-element';
 import {QueryPropertyInterface} from './query-property-interface';
 
@@ -44,17 +44,19 @@ export class ObjectAnnotation
 export class ModelAnnotation extends ObjectAnnotation implements DocStatement {
   elementType = 'modelAnnotation';
 
-  getCompilerFlags(existing: MalloyTagProperties): MalloyTagProperties {
-    let flags = {...existing};
-    for (const note of this.notes) {
-      if (note.text.startsWith('##! ')) {
-        const parsed = parseTagProperties(note.text.slice(4), flags);
-        if (parsed) {
-          flags = parsed;
-        }
+  getCompilerFlags(existing: Tag): Tag {
+    const tagParse = Tag.annotationToTag(
+      {notes: this.notes},
+      {
+        prefix: /^##! /,
+        extending: existing,
       }
+    );
+    const logTo = this.logger();
+    if (logTo) {
+      tagParse.log.forEach(err => logTo.log(err));
     }
-    return flags;
+    return tagParse.tag;
   }
 
   execute(doc: Document): void {

@@ -41,7 +41,7 @@ import {
   getStringIfShort,
   unIndent,
 } from './parse-utils';
-import {MalloyTagProperties} from '../tags';
+import {Tag} from '../tags';
 import {DocumentLocation, Note} from '../model/malloy_types';
 
 class IgnoredElement extends ast.MalloyElement {
@@ -63,7 +63,7 @@ export class MalloyToAST
   extends AbstractParseTreeVisitor<ast.MalloyElement>
   implements MalloyParserVisitor<ast.MalloyElement>
 {
-  compilerFlags: MalloyTagProperties = {};
+  compilerFlags = new Tag();
   constructor(
     readonly parseInfo: MalloyParseInfo,
     readonly msgLog: MessageLogger
@@ -136,7 +136,7 @@ export class MalloyToAST
   }
 
   protected m4WarningsEnabled(): boolean {
-    return !!this.compilerFlags['m4warnings'];
+    return this.compilerFlags.has('m4warnings');
   }
 
   protected getNumber(term: ParseTree): number {
@@ -1721,12 +1721,14 @@ export class MalloyToAST
   visitIgnoredObjectAnnotations(
     pcx: parse.IgnoredObjectAnnotationsContext
   ): IgnoredElement {
+    this.contextError(pcx, 'Object annotation not connected to any object');
     return new IgnoredElement(pcx.text);
   }
 
   visitIgnoredModelAnnotations(
     pcx: parse.IgnoredModelAnnotationsContext
   ): IgnoredElement {
+    this.contextError(pcx, 'Model annotations not allowed at this scope');
     return new IgnoredElement(pcx.text);
   }
 

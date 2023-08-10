@@ -174,6 +174,7 @@ export class Tag implements TagInterface {
     spec: TagParseSpec = {}
   ): TagParse {
     let extending = spec.extending || new Tag();
+    const prefix = spec.prefix || /^##? /;
     annote ||= {};
     const allErrs: LogMessage[] = [];
     if (annote.inherits) {
@@ -189,22 +190,18 @@ export class Tag implements TagInterface {
       allNotes.push(...annote.notes);
     }
     for (const note of allNotes) {
-      if (spec.prefix) {
-        const found = note.text.match(spec.prefix);
-        if (!found) {
-          continue;
-        }
+      if (note.text.match(prefix)) {
+        const noteParse = parseTagline(
+          note.text,
+          extending,
+          spec.scopes || [],
+          note.at.url,
+          note.at.range.start.line,
+          note.at.range.start.character
+        );
+        extending = noteParse.tag;
+        allErrs.push(...noteParse.log);
       }
-      const noteParse = parseTagline(
-        note.text,
-        extending,
-        spec.scopes || [],
-        note.at.url,
-        note.at.range.start.line,
-        note.at.range.start.character
-      );
-      extending = noteParse.tag;
-      allErrs.push(...noteParse.log);
     }
     return {tag: extending, log: allErrs};
   }

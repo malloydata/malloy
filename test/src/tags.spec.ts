@@ -197,7 +197,7 @@ describe('tag utilities', () => {
 });
 
 type TagTestTuple = [string, TagDict];
-describe('expanded tag language', () => {
+describe('tagParse to Tag', () => {
   const tagTests: TagTestTuple[] = [
     ['just_name', {just_name: {}}],
     ['name=bare_string', {name: {eq: 'bare_string'}}],
@@ -263,7 +263,7 @@ describe('expanded tag language', () => {
   });
 });
 
-describe('test tag api', () => {
+describe('Tag access', () => {
   test('just text', () => {
     const strToParse = 'a=b';
     const getTags = Tag.fromTagline(strToParse, undefined);
