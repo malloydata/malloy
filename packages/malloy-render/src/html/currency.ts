@@ -65,8 +65,8 @@ export class CurrencyRendererFactory extends RendererFactory<CurrencyRenderOptio
 
   constructor() {
     super();
-    this.addExtractor((options, value) => {
-      options.currency = (value as Currency) ?? Currency.Dollars;
+    this.addExtractor((options, tag) => {
+      options.currency = (tag?.text() as Currency) ?? Currency.Dollars;
     }, this.rendererName);
   }
 

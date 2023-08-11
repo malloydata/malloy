@@ -154,6 +154,7 @@ export {
   Tags,
   type MalloyTags,
   type MalloyTagProperties,
+  type TagParse,
   Tag,
   type TagDict,
 } from './tags';

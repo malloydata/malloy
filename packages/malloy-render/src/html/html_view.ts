@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataArray, Explore, Field, Result, Tags} from '@malloydata/malloy';
+import {DataArray, Explore, Field, Result, TagParse} from '@malloydata/malloy';
 import {DataStyles, RenderDef, StyleDefaults} from '../data_styles';
 import {ChildRenderers, Renderer} from '../renderer';
 import {RendererOptions} from '../renderer_types';
@@ -47,7 +47,7 @@ export class HTMLView {
         size: 'large',
       },
       table.field.structDef.queryTimezone,
-      result.getTags()
+      result.tagParse()
     );
     try {
       // TODO Implement row streaming capability for some renderers: some renderers should be usable
@@ -167,14 +167,14 @@ export function makeRenderer(
   options: RendererOptions,
   styleDefaults: StyleDefaults,
   queryTimezone: string | undefined,
-  tags?: Tags
+  tags?: TagParse
 ): Renderer {
   const renderDef = getRendererOptions(field, options.dataStyles);
   options.dataStyles[field.name] = renderDef;
 
   const renderer = new MainRendererFactory().create(
     renderDef,
-    tags?.getMalloyTags(),
+    tags,
     document,
     styleDefaults,
     options,
@@ -235,12 +235,12 @@ function makeContainerRenderer<Type extends ContainerRenderer>(
   cType: new (
     document: Document,
     options: RendererOptions,
-    tags?: Tags
+    tags?: TagParse
   ) => Type,
   document: Document,
   explore: Explore,
   options: RendererOptions,
-  tags?: Tags
+  tags?: TagParse
 ): ContainerRenderer {
   const c = ContainerRenderer.make(cType, document, explore, options, tags);
   const result: ChildRenderers = {};
@@ -251,7 +251,7 @@ function makeContainerRenderer<Type extends ContainerRenderer>(
       options,
       c.defaultStylesForChildren,
       explore.queryTimezone,
-      field.getTags()
+      field.tagParse()
     );
   });
   c.childRenderers = result;
