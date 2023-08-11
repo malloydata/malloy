@@ -58,7 +58,7 @@ export type TagDict = Record<string, TagInterface>;
 
 type TagValue = string | TagInterface[];
 
-interface TagInterface {
+export interface TagInterface {
   eq?: TagValue;
   properties?: TagDict;
 }

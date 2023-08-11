@@ -24,6 +24,7 @@
 import {
   DateTimeframe,
   Field,
+  TagParse,
   Tags,
   TimestampTimeframe,
 } from '@malloydata/malloy';
@@ -264,11 +265,11 @@ export function formatTitle(
 }
 
 export function tagIsPresent(
-  tags: Tags | undefined,
+  tags: TagParse | undefined,
   tagToCheck: string
 ): boolean {
-  const tagProperty = tags?.getMalloyTags().properties[tagToCheck];
-  return tagProperty !== undefined && tagProperty !== false;
+  const tagProperty = tags?.tag?.properties?.[tagToCheck];
+  return tagProperty !== undefined;
 }
 
 export function parameterTagValue(

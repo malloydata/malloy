@@ -21,18 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Field, SortableField} from '@malloydata/malloy';
+import {DataColumn, Field, SortableField, Tag} from '@malloydata/malloy';
 import {StyleDefaults} from '../data_styles';
 import {getDrillQuery} from '../drill';
 import {ContainerRenderer} from './container';
 import {HTMLNumberRenderer} from './number';
-import {
-  createDrillIcon,
-  formatTitle,
-  parseCommaSeparatedParameterTagValue,
-  tagIsPresent,
-  yieldTask,
-} from './utils';
+import {createDrillIcon, formatTitle, tagIsPresent, yieldTask} from './utils';
 import {isFieldHidden} from '../tags_utils';
 import {Renderer} from '../renderer';
 
@@ -56,7 +50,11 @@ class PivotedField {
 }
 
 class PivotedColumnField {
-  constructor(readonly pivotedField: PivotedField, readonly field: Field) {}
+  constructor(
+    readonly pivotedField: PivotedField,
+    readonly field: Field,
+    readonly userDefinedPivotDimensions?: Array<string>
+  ) {}
   isPivotedColumnField(): this is PivotedColumnField {
     return this instanceof PivotedColumnField;
   }
@@ -104,10 +102,17 @@ export class HTMLTableRenderer extends ContainerRenderer {
         tagIsPresent(childRenderer.tags, 'pivot');
 
       if (shouldPivot) {
-        const pivotedFields: Map<string, PivotedField> = new Map();
+        const dimensionsTag =
+          childRenderer.tags?.tag?.properties?.['pivot'].properties?.[
+            'dimensions'
+          ];
+        const userDefinedDimensions = dimensionsTag
+          ? new Tag(dimensionsTag).array().map(dimension => dimension.text())
+          : undefined;
 
         let dimensions: SortableField[] | undefined = undefined;
         let nonDimensions: SortableField[] = [];
+        const pivotedFields: Map<string, PivotedField> = new Map();
         for (const row of table) {
           const dc = row.cell(field);
           if (dc.isNull()) {
@@ -119,7 +124,10 @@ export class HTMLTableRenderer extends ContainerRenderer {
           }
 
           if (!dimensions) {
-            const dimensionsResult = childRenderer.calculatePivotDimensions(dc);
+            const dimensionsResult = childRenderer.calculatePivotDimensions(
+              dc,
+              userDefinedDimensions
+            );
             dimensions = dimensionsResult.dimensions;
             nonDimensions = dimensionsResult.nonDimensions;
           }
@@ -176,7 +184,13 @@ export class HTMLTableRenderer extends ContainerRenderer {
 
         for (const pf of sortedPivotedFields) {
           for (const nonDimension of nonDimensions) {
-            columnFields.push(new PivotedColumnField(pf, nonDimension.field));
+            columnFields.push(
+              new PivotedColumnField(
+                pf,
+                nonDimension.field,
+                userDefinedDimensions
+              )
+            );
             cells[rowIndex][columnIndex] = childRenderer.createHeaderCell(
               nonDimension.field,
               shouldTranspose
@@ -281,7 +295,8 @@ export class HTMLTableRenderer extends ContainerRenderer {
           if (field.pivotedField.key !== currentPivotedFieldKey) {
             pivotedCells = await childRenderer.generatePivotedCells(
               childTableRecord,
-              shouldTranspose
+              shouldTranspose,
+              field.userDefinedPivotDimensions
             );
             currentPivotedFieldKey = field.pivotedField.key;
           }
@@ -374,7 +389,10 @@ export class HTMLTableRenderer extends ContainerRenderer {
     return tableElement;
   }
 
-  calculatePivotDimensions(table: DataColumn): {
+  calculatePivotDimensions(
+    table: DataColumn,
+    userSpecifiedDimensions?: Array<string>
+  ): {
     dimensions: SortableField[];
     nonDimensions: SortableField[];
   } {
@@ -382,10 +400,6 @@ export class HTMLTableRenderer extends ContainerRenderer {
       throw new Error(`Could not pivot ${table.field.name}`);
     }
     let dimensions: SortableField[] | undefined = undefined;
-    const userSpecifiedDimensions = parseCommaSeparatedParameterTagValue(
-      this.tags,
-      'pivot_dimensions'
-    );
     if (userSpecifiedDimensions) {
       dimensions = table.field.allFieldsWithOrder.filter(
         f => userSpecifiedDimensions.indexOf(f.field.name) >= 0
@@ -420,7 +434,8 @@ export class HTMLTableRenderer extends ContainerRenderer {
 
   async generatePivotedCells(
     table: DataColumn,
-    shouldTranspose: boolean
+    shouldTranspose: boolean,
+    userSpecifiedDimensions?: Array<string>
   ): Promise<Map<string, Map<string, HTMLTableCellElement>>> {
     const result: Map<string, Map<string, HTMLTableCellElement>> = new Map();
 
@@ -432,7 +447,10 @@ export class HTMLTableRenderer extends ContainerRenderer {
       throw new Error(`Could not pivot ${table.field.name}`);
     }
 
-    const {dimensions, nonDimensions} = this.calculatePivotDimensions(table);
+    const {dimensions, nonDimensions} = this.calculatePivotDimensions(
+      table,
+      userSpecifiedDimensions
+    );
     for (const row of table) {
       const pf = new PivotedField(
         table.field as Field,
