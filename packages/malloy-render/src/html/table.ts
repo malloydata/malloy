@@ -107,7 +107,11 @@ export class HTMLTableRenderer extends ContainerRenderer {
             'dimensions'
           ];
         const userDefinedDimensions = dimensionsTag
-          ? new Tag(dimensionsTag).array().map(dimension => dimension.text())
+          ? new Tag(dimensionsTag)
+              .array()
+              ?.map(dimension => dimension.text())
+              .filter(dimension => dimension !== undefined)
+              .map(dimension => dimension!)
           : undefined;
 
         let dimensions: SortableField[] | undefined = undefined;
