@@ -235,20 +235,21 @@ export class Tag implements TagInterface {
     return !!this.find(at);
   }
 
-  text(...at: string[]): string {
+  text(...at: string[]): string | undefined {
     const str = this.find(at)?.eq;
     if (typeof str === 'string') {
       return str;
     }
-    return '';
   }
 
-  numeric(...at: string[]): number {
+  numeric(...at: string[]): number | undefined {
     const str = this.find(at)?.eq;
     if (typeof str === 'string') {
-      return Number.parseFloat(str);
+      const num = Number.parseFloat(str);
+      if (!Number.isNaN(num)) {
+        return num;
+      }
     }
-    return NaN;
   }
 
   get dict(): Record<string, Tag> {
@@ -261,10 +262,10 @@ export class Tag implements TagInterface {
     return newDict;
   }
 
-  array(...at: string[]): Tag[] {
+  array(...at: string[]): Tag[] | undefined {
     const array = this.find(at)?.eq;
     if (array === undefined || typeof array === 'string') {
-      return [];
+      return undefined;
     }
     return array.map(el =>
       typeof el === 'string' ? new Tag({eq: el}) : Tag.tagFrom(el)
@@ -496,7 +497,10 @@ function parsePath(buildOn: Tag, path: string[]): [string, TagDict] {
 }
 
 function getString(ctx: StringContext) {
-  return ctx.BARE_STRING() ? ctx.text : parseString(ctx.text, ctx.text[0]);
+  if (ctx.SQ_STRING() || ctx.DQ_STRING()) {
+    return parseString(ctx.text, ctx.text[0]);
+  }
+  return ctx.text;
 }
 
 function parseTagline(
