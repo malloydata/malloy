@@ -34,20 +34,28 @@ const {execSync} = require('child_process');
 
 const langSrc = path.dirname(__dirname);
 const libDir = path.join(langSrc, 'lib', 'Malloy');
-const digestFile = path.join(libDir, 'Malloy.checksum');
-const digestSrcFiles = [
-  __filename,
-  'MalloyLexer.g4',
-  'MalloyParser.g4',
-  'MalloyTag.g4',
+const antlr = 'antlr4ts -Xexact-output-dir -o ../lib/Malloy';
+const digestFile = path.join(libDir, '_BUILD_DIGEST_');
+const build = [
+  {src: 'MalloyLexer.g4', makes: 'MalloyLexer.ts', run: antlr},
+  {src: 'MalloyParser.g4', makes: 'MalloyParser.ts', run: `${antlr} -visitor`},
+  {
+    src: 'MalloyTag.g4',
+    makes: 'MalloyTagParser.ts',
+    run: `${antlr} -visitor -no-listener`,
+  },
 ];
-const compilerSrcs = ['MalloyLexer.ts', 'MalloyParser.ts'];
 const MALLOY_UUID = '76c17e9d-f3ce-5f2d-bfde-98ad3d2a37f6';
 
 function oldDigest() {
-  return existsSync(digestFile)
-    ? readFileSync(digestFile, 'utf-8')
-    : '__DIGEST_FILE_NOT_FOUND__';
+  try {
+    if (existsSync(digestFile)) {
+      return JSON.parse(readFileSync(digestFile, 'utf-8'));
+    }
+  } catch (e) {
+    // nothing to do
+  }
+  return {};
 }
 
 function run(cmd) {
@@ -61,28 +69,32 @@ function run(cmd) {
 }
 
 process.chdir(path.join(langSrc, 'grammar'));
-const versionDigest = uuidv5(
-  digestSrcFiles.map(fn => readFileSync(fn, 'utf-8')).join(''),
-  MALLOY_UUID
-);
-let rebuild = versionDigest !== oldDigest();
 
-for (const fn of compilerSrcs) {
-  rebuild = rebuild || !existsSync(path.join(libDir, fn));
+function version(fn) {
+  return uuidv5(readFileSync(fn, 'utf-8'), MALLOY_UUID);
 }
 
-if (rebuild) {
-  console.log('-- Constructing Malloy parser from antlr specification ...');
-  const antlr = 'antlr4ts -Xexact-output-dir -o ../lib/Malloy';
+const prevDigest = oldDigest();
+const buildDigest = {[__filename]: version(__filename)};
+let newDigest = false;
+for (const target of build) {
+  buildDigest[target.src] = version(target.src);
   if (
-    run(`${antlr} MalloyLexer.g4`) &&
-    run(`${antlr} -visitor MalloyParser.g4`) &&
-    run(`${antlr} -visitor MalloyTag.g4`)
+    prevDigest[__filename] === buildDigest[__filename] &&
+    existsSync(path.join(libDir, target.makes)) &&
+    prevDigest[target.src] === buildDigest[target.src]
   ) {
-    writeFileSync(digestFile, versionDigest);
-  } else {
-    rmSync(digestFile);
+    console.log(`-- ${target.makes} up to date`);
+    continue;
   }
-} else {
-  console.log('-- Using existing Malloy parser');
+  console.log(`-- Create ${target.makes} from ${target.src}`);
+  if (!run(`${target.run} ${target.src}`)) {
+    rmSync(digestFile);
+    // eslint-disable-next-line no-process-exit
+    process.exit(1);
+  }
+  newDigest = true;
+}
+if (newDigest) {
+  writeFileSync(digestFile, JSON.stringify(buildDigest));
 }

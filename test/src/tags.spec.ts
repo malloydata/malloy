@@ -253,6 +253,13 @@ describe('tagParse to Tag', () => {
         shade: {eq: 'dark'},
       },
     ],
+    ['x=.01', {x: {eq: '.01'}}],
+    ['x=-7', {x: {eq: '-7'}}],
+    ['x=7', {x: {eq: '7'}}],
+    ['x=7.0', {x: {eq: '7.0'}}],
+    ['x=.7', {x: {eq: '.7'}}],
+    ['x=.7e2', {x: {eq: '.7e2'}}],
+    ['x=7E2', {x: {eq: '7E2'}}],
   ];
   test.each(tagTests)('tag %s', (expression: string, expected: TagDict) => {
     expect(expression).tagsAre(expected);
@@ -298,7 +305,7 @@ describe('Tag access', () => {
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
-    expect(a?.text()).toEqual('');
+    expect(a?.text()).toBeUndefined();
   });
   test('text as array', () => {
     const strToParse = 'a=b';
@@ -306,7 +313,7 @@ describe('Tag access', () => {
     expect(getTags.log).toEqual([]);
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
-    expect(a?.array()).toEqual([]);
+    expect(a?.array()).toBeUndefined();
   });
   test('just numeric', () => {
     const strToParse = 'a=7';
@@ -325,8 +332,7 @@ describe('Tag access', () => {
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
     const n = a?.numeric();
-    expect(typeof n).toBe('number');
-    expect(n).toBeNaN();
+    expect(n).toBeUndefined();
   });
   test('array as numeric', () => {
     const strToParse = 'a=[seven]';
@@ -335,8 +341,7 @@ describe('Tag access', () => {
     const a = getTags.tag.tag('a');
     expect(a).toBeDefined();
     const n = a?.numeric();
-    expect(typeof n).toBe('number');
-    expect(n).toBeNaN();
+    expect(n).toBeUndefined();
   });
 });
 
@@ -468,8 +473,8 @@ describe('tags in results', () => {
   test('render usage test case', async () => {
     const loaded = runtime.loadQuery(
       `
-        sql: one22 is { connection: "duckdb" select: """SELECT 1""" }
-        source: ages is from_sql(one22) + {
+        source: ages is duckdb.sql('SELECT 1 as one') extend {
+          # name
           dimension: name is 'John'
           query: height
           # barchart
@@ -495,6 +500,7 @@ describe('tags in results', () => {
     const shape = result.resultExplore;
     const height = shape.getFieldByName('height');
     const age = shape.getFieldByName('age');
+    const name = shape.getFieldByName('name');
     expect(height.getTags().getMalloyTags()).toMatchObject({
       properties: {barchart: true},
     });
@@ -503,5 +509,6 @@ describe('tags in results', () => {
       properties: {barchart: true},
     });
     expect(age.tagParse().tag).tagsAre({barchart: {}});
+    expect(name.tagParse().tag).tagsAre({name: {}});
   });
 });
