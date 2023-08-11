@@ -785,7 +785,10 @@ export class PreparedQuery implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    // mtoy todo spec.scopes ||= [Model.getTag(somehow.find.modelDef)] ;
+    if (spec === undefined) {
+      const modelScope = Tag.annotationToTag(this._modelDef.annotation);
+      spec = {scopes: [modelScope.tag]};
+    }
     return Tag.annotationToTag(this._query.annotation, spec);
   }
 
@@ -1123,7 +1126,10 @@ export class PreparedResult implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    // mtoy todo spec.scopes ||= [Model.getTag(somehow.find.modelDef)] ;
+    if (spec === undefined) {
+      const modelScope = Tag.annotationToTag(this.modelDef.annotation);
+      spec = {scopes: [modelScope.tag]};
+    }
     return Tag.annotationToTag(this.inner.annotation, spec);
   }
 

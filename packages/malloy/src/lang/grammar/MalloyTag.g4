@@ -34,6 +34,7 @@ tagSpec
 
 string
   : SQ_STRING
+  | NUMERIC_LITERAL
   | DQ_STRING
   | BARE_STRING;
 
@@ -77,6 +78,13 @@ fragment SAFE_NON_QUOTE: ~ ['"`\\\u0000-\u001F];
 fragment ESCAPED: '\\' .;
 SQ_STRING: '\'' (UNICODE | ESCAPED | SAFE_NON_QUOTE | ["`])* '\'';
 DQ_STRING: '"' (UNICODE | ESCAPED | SAFE_NON_QUOTE | ['`])* '"';
+fragment INTEGER_LITERAL: MINUS? DIGIT+;
+fragment EXPONENT: [Ee] [+-]? DIGIT+;
+NUMERIC_LITERAL
+  : INTEGER_LITERAL? DOT DIGIT+ EXPONENT?
+  | INTEGER_LITERAL EXPONENT?
+  ;
+
 BARE_STRING: (DIGIT | ID_CHAR)+;
 
 // mtoy todo understand why the ? needs to be here
