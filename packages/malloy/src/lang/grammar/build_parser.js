@@ -76,23 +76,25 @@ function version(fn) {
 
 const prevDigest = oldDigest();
 const buildDigest = {[__filename]: version(__filename)};
+let newDigest = false;
 for (const target of build) {
   buildDigest[target.src] = version(target.src);
-  let mustBuild = prevDigest[__filename] !== buildDigest[__filename];
-  if (!existsSync(path.join(libDir, target.makes))) {
-    mustBuild = true;
-  } else if (prevDigest[target.src] !== buildDigest[target.src]) {
-    mustBuild = true;
-  }
-  if (mustBuild) {
-    console.log(`-- Create ${target.makes} from ${target.src}`);
-    if (!run(`${target.run} ${target.src}`)) {
-      rmSync(digestFile);
-      // eslint-disable-next-line no-process-exit
-      process.exit(1);
-    }
-  } else {
+  if (
+    prevDigest[__filename] === buildDigest[__filename] &&
+    existsSync(path.join(libDir, target.makes)) &&
+    prevDigest[target.src] === buildDigest[target.src]
+  ) {
     console.log(`-- ${target.makes} up to date`);
+    continue;
   }
+  console.log(`-- Create ${target.makes} from ${target.src}`);
+  if (!run(`${target.run} ${target.src}`)) {
+    rmSync(digestFile);
+    // eslint-disable-next-line no-process-exit
+    process.exit(1);
+  }
+  newDigest = true;
+}
+if (newDigest) {
   writeFileSync(digestFile, JSON.stringify(buildDigest));
 }
