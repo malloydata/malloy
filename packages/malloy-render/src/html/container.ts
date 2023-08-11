@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Explore, TagParse, Tags} from '@malloydata/malloy';
+import {Explore, TagParse} from '@malloydata/malloy';
 import {StyleDefaults} from '../data_styles';
 import {ChildRenderers, RenderTree} from '../renderer';
 import {RendererOptions} from '../renderer_types';

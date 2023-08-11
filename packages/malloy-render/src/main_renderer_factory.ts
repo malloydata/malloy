@@ -1,4 +1,4 @@
-import {Field, Explore, TagDict, TagParse} from '@malloydata/malloy';
+import {Field, Explore, TagParse} from '@malloydata/malloy';
 import {DataRenderOptions, RenderDef, StyleDefaults} from './data_styles';
 import {Renderer} from './renderer';
 import {RendererFactory} from './renderer_factory';
