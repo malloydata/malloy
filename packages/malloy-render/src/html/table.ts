@@ -21,12 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Field, SortableField, Tag} from '@malloydata/malloy';
+import {DataColumn, Field, SortableField} from '@malloydata/malloy';
 import {StyleDefaults} from '../data_styles';
 import {getDrillQuery} from '../drill';
 import {ContainerRenderer} from './container';
 import {HTMLNumberRenderer} from './number';
-import {createDrillIcon, formatTitle, tagIsPresent, yieldTask} from './utils';
+import {createDrillIcon, formatTitle, yieldTask} from './utils';
 import {isFieldHidden} from '../tags_utils';
 import {Renderer} from '../renderer';
 
@@ -78,7 +78,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
       throw new Error('Invalid type for Table Renderer');
     }
 
-    const shouldTranspose = tagIsPresent(this.tags, 'transpose');
+    const shouldTranspose = this.tagged.has('transpose');
 
     if (shouldTranspose && table.field.intrinsicFields.length > 20) {
       throw new Error('Transpose limit of 20 columns exceeded.');
@@ -99,20 +99,13 @@ export class HTMLTableRenderer extends ContainerRenderer {
       const childRenderer = this.childRenderers[field.name];
       const shouldPivot =
         childRenderer instanceof HTMLTableRenderer &&
-        tagIsPresent(childRenderer.tags, 'pivot');
+        childRenderer.tagged.has('pivot');
 
       if (shouldPivot) {
-        const dimensionsTag =
-          childRenderer.tags?.tag?.properties?.['pivot'].properties?.[
-            'dimensions'
-          ];
-        const userDefinedDimensions = dimensionsTag
-          ? new Tag(dimensionsTag)
-              .array()
-              ?.map(dimension => dimension.text())
-              .filter(dimension => dimension !== undefined)
-              .map(dimension => dimension!)
-          : undefined;
+        const userDefinedDimensions = childRenderer.tagged.textArray(
+          'pivot',
+          'dimensions'
+        );
 
         let dimensions: SortableField[] | undefined = undefined;
         let nonDimensions: SortableField[] = [];

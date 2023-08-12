@@ -1,4 +1,4 @@
-import {Explore, Field, Tag, TagParse} from '@malloydata/malloy';
+import {Explore, Field, Tag} from '@malloydata/malloy';
 import {Renderer} from './renderer';
 import {DataRenderOptions, RenderDef, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
@@ -33,15 +33,12 @@ export abstract class RendererFactory<T extends DataRenderOptions> {
     return renderDef.renderer === this.rendererName;
   }
 
-  parseTagParameters(tagParse: TagParse | undefined) {
+  parseTagParameters(tags: Tag) {
     const options = {} as T;
-    for (const tag in this.tagOptionExtractors) {
-      const tagValue = tagParse?.tag.properties?.[tag];
+    for (const tagName in this.tagOptionExtractors) {
+      const tagValue = tags.tag(tagName);
       if (tagValue) {
-        this.tagOptionExtractors[tag](
-          options,
-          tagValue ? new Tag(tagValue) : undefined
-        );
+        this.tagOptionExtractors[tagName](options, tagValue);
       }
     }
 
