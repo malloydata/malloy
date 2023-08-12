@@ -261,7 +261,7 @@ describe('## top level', () => {
       .getModel();
     const modelTagLine = model.tagParse().tag;
     expect(modelTagLine.has('propertyTag')).toBeTruthy();
-    expect(model.getTaglines()).toEqual(['##" Doc String\n']);
+    expect(model.getTaglines(/^##"/)).toEqual(['##" Doc String\n']);
   });
 });
 describe('tags in results', () => {
