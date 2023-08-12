@@ -150,11 +150,4 @@ export type {
   StreamingConnection,
 } from './runtime_types';
 export {toAsyncGenerator} from './connection_utils';
-export {
-  Tags,
-  type MalloyTags,
-  type MalloyTagProperties,
-  type TagParse,
-  Tag,
-  type TagDict,
-} from './tags';
+export {type TagParse, Tag, type TagDict} from './tags';

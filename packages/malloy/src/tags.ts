@@ -75,7 +75,6 @@ export interface TagParseSpec {
 }
 
 export interface Taggable {
-  getTags: () => Tags;
   tagParse: (spec?: TagParseSpec) => TagParse;
   getTaglines: (prefix?: RegExp) => string[];
 }
@@ -85,11 +84,14 @@ export interface Taggable {
  * containing the Malloy tag language. Used by the parser to
  * generate parsed data, and as an API to that data.
  * ```
- * tag.text(p?)        => string value of tag.p or ''
- * tag.array(p?)       => Tag[] value of tag.p or []
- * tag.numeric(p?)     => numeric value of tag.p or NaN
- * tag.dict            => Record<string, Tag> of tag properties
- * tag.tag(p)          => Tag value of tag.p
+ * tag.text(p?)         => string value of tag.p or undefined
+ * tag.array(p?)        => Tag[] value of tag.p or undefined
+ * tag.numeric(p?)      => numeric value of tag.p or undefined
+ * tag.textArray(p ?)   => string[] value of elements in tag.p or undefined
+ * tag.numericArray(p?) => string[] value of elements in tag.p or undefined
+ * tag.tag(p)           => Tag value of tag.p
+ * tag.has(p)           => boolean "tag contains tag.p"
+ * tag.dict             => Record<string,Tag> of tag properties
  * ```
  */
 export class Tag implements TagInterface {
@@ -272,6 +274,34 @@ export class Tag implements TagInterface {
     );
   }
 
+  textArray(...at: string[]): string[] | undefined {
+    const array = this.find(at)?.eq;
+    if (array === undefined || typeof array === 'string') {
+      return undefined;
+    }
+    return array.reduce<string[]>(
+      (allStrs, el) =>
+        typeof el.eq === 'string' ? allStrs.concat(el.eq) : allStrs,
+      []
+    );
+  }
+
+  numericArray(...at: string[]): number[] | undefined {
+    const array = this.find(at)?.eq;
+    if (array === undefined || typeof array === 'string') {
+      return undefined;
+    }
+    return array.reduce<number[]>((allNums, el) => {
+      if (typeof el.eq === 'string') {
+        const num = Number.parseFloat(el.eq);
+        if (!Number.isNaN(num)) {
+          return allNums.concat(num);
+        }
+      }
+      return allNums;
+    }, []);
+  }
+
   // Has the sometimes desireable side effect of initalizing properties
   getProperties(): TagDict {
     if (this.properties === undefined) {
@@ -283,164 +313,6 @@ export class Tag implements TagInterface {
   clone(): Tag {
     return new Tag(cloneDeep(this));
   }
-}
-
-export type MalloyTagProperties = Record<string, string | boolean>;
-interface PropertyTag {
-  properties: MalloyTagProperties;
-}
-interface DocTag {
-  docString: string;
-}
-type MalloyTag = DocTag | PropertyTag;
-function isDocTag(a: MalloyTag | undefined): a is DocTag {
-  return (a as DocTag)?.docString !== undefined;
-}
-
-export interface MalloyTags extends PropertyTag {
-  docStrings: string[];
-}
-
-/**
- * Collection of useful functions for handing tag data ...
- */
-export class Tags {
-  private tags: Annotation | undefined;
-  constructor(annotation: Annotation | undefined) {
-    this.tags = annotation;
-  }
-
-  getMalloyTags(): MalloyTags {
-    const ret: MalloyTags = {docStrings: [], properties: {}};
-    for (const tagLine of tagList(this.tags)) {
-      const tag = parseTag(tagLine, ret.properties);
-      if (isDocTag(tag)) {
-        ret.docStrings.push(tag.docString);
-      }
-    }
-    return ret;
-  }
-
-  getTagList(): string[] {
-    return tagList(this.tags);
-  }
-}
-
-function tagList(tagNode: Annotation | undefined): string[] {
-  if (!tagNode) {
-    return [];
-  }
-  const justText = tagNode.inherits ? tagList(tagNode.inherits) : [];
-  if (tagNode.blockNotes) {
-    justText.push(...tagNode.blockNotes.map(bn => bn.text));
-  }
-  if (tagNode.notes) {
-    justText.push(...tagNode.notes.map(n => n.text));
-  }
-  return justText;
-}
-
-/**
- * Lines which start '#"' are doc strings
- * Lines which start '# ' are property lines ... The property parser is
- * pretty simple, the langauge is:
- * Property can be
- *   name       -- set the value to "true"
- *   -name      -- delete a value from the property
- *   name=value -- assign value to the name
- * Name can be any sequence of non space characters, or a string
- * A value is any sequence of non space characters, or a string
- * A string is " enclosing and ending in " with \" allowed inside
- */
-function parseTag(
-  src: string,
-  tagProp: MalloyTagProperties
-): MalloyTag | undefined {
-  const docMatch = src.match(/^##?" /);
-  if (docMatch) {
-    return {docString: src.slice(docMatch[0].length)};
-  }
-  const propMatch = src.match(/^##? /);
-  if (!propMatch) {
-    return;
-  }
-  const newProps = parseTagProperties(src.slice(propMatch[0].length), tagProp);
-  if (newProps) {
-    return {properties: newProps};
-  }
-}
-
-export function parseTagProperties(
-  src: string,
-  tagProp: MalloyTagProperties
-): MalloyTagProperties | undefined {
-  const tokens = tokenize(src);
-  let tn = 0;
-  const lastToken = tokens.length - 1;
-  while (tn <= lastToken) {
-    let token = tokens[tn];
-    if (token === '=') {
-      return undefined;
-    }
-    if (token[0] === '"') {
-      token = token.slice(1, -1);
-    }
-    if (tn !== lastToken && tokens[tn + 1] === '=') {
-      if (tn + 2 <= lastToken) {
-        let value = tokens[tn + 2];
-        if (value !== '=') {
-          if (value[0] === '"') {
-            value = value.slice(1, -1);
-          }
-          tagProp[token] = value;
-          tn += 3;
-          continue;
-        }
-      }
-      return undefined;
-    }
-    if (token.startsWith('-')) {
-      delete tagProp[token.slice(1)];
-    } else {
-      tagProp[token] = true;
-    }
-    tn += 1;
-  }
-  return tagProp;
-}
-
-function tokenize(src: string): string[] {
-  const parts: string[] = [];
-  src = src.trim();
-  while (src) {
-    const skipSpace = src.match(/^\s*(.+$)/);
-    if (skipSpace === null) {
-      break;
-    }
-    src = skipSpace[1];
-    if (src[0] === '=') {
-      parts.push('=');
-      src = src.slice(1);
-      continue;
-    }
-    if (src[0] === '"') {
-      const matchString = src.match(/^"(\\.|[^"\\])*"/);
-      if (!matchString) {
-        break;
-      }
-      parts.push(matchString[0].replace(/\\/g, ''));
-      src = src.slice(matchString[0].length);
-      continue;
-    }
-    const token = src.match(/^[^\s "=]+/);
-    if (token) {
-      parts.push(token[0]);
-      src = src.slice(token[0].length);
-      continue;
-    }
-    break;
-  }
-  return parts;
 }
 
 class TagErrorListener implements ANTLRErrorListener<Token> {

@@ -76,7 +76,7 @@ import {
   URLReader,
 } from './runtime_types';
 import {DateTime} from 'luxon';
-import {Tag, TagParse, TagParseSpec, Taggable, Tags} from './tags';
+import {Tag, TagParse, TagParseSpec, Taggable} from './tags';
 import {getDialect} from './dialect';
 
 export interface Loggable {
@@ -612,10 +612,6 @@ export class Model implements Taggable {
     this.problems = problems;
   }
 
-  getTags(): Tags {
-    return new Tags(this.modelDef.annotation);
-  }
-
   tagParse(spec?: TagParseSpec): TagParse {
     return Tag.annotationToTag(this.modelDef.annotation, spec);
   }
@@ -778,10 +774,6 @@ export class PreparedQuery implements Taggable {
     this._query = query;
     this._modelDef = model;
     this.name = name;
-  }
-
-  getTags(): Tags {
-    return new Tags(this._query.annotation);
   }
 
   tagParse(spec?: TagParseSpec) {
@@ -1121,11 +1113,7 @@ export class PreparedResult implements Taggable {
     this.modelDef = modelDef;
   }
 
-  public getTags(): Tags {
-    return new Tags(this.inner.annotation);
-  }
-
-  tagParse(spec?: TagParseSpec) {
+  tagParse(spec?: TagParseSpec): TagParse {
     if (spec === undefined) {
       const modelScope = Tag.annotationToTag(this.modelDef.annotation);
       spec = {scopes: [modelScope.tag]};
@@ -1648,10 +1636,6 @@ export class AtomicField extends Entity implements Taggable {
     }
   }
 
-  getTags(): Tags {
-    return new Tags(this.fieldTypeDef.annotation);
-  }
-
   tagParse(spec?: TagParseSpec) {
     // mtoy todo spec.scopes ||= [Model.getTag(somehow.find.modelDef)] ;
     return Tag.annotationToTag(this.fieldTypeDef.annotation, spec);
@@ -1924,10 +1908,6 @@ export class QueryField extends Query implements Taggable {
     this.parent = parent;
   }
 
-  getTags(): Tags {
-    return new Tags(this.turtleDef.annotation);
-  }
-
   tagParse(spec?: TagParseSpec) {
     // mtoy todo spec.scopes ||= [Model.getTag(somehow.find.modelDef)] ;
     return Tag.annotationToTag(this.turtleDef.annotation, spec);
@@ -1995,10 +1975,6 @@ export class ExploreField extends Explore implements Taggable {
       default:
         throw new Error('A source field must have a join relationship.');
     }
-  }
-
-  getTags(): Tags {
-    return new Tags(this._structDef.annotation);
   }
 
   tagParse(spec?: TagParseSpec) {
