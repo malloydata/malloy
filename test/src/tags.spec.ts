@@ -248,12 +248,11 @@ describe('Tag access', () => {
     expect(ais).toEqual([1, 2]);
   });
   test('has', () => {
-    const strToParse = 'a b d';
+    const strToParse = 'a b.d';
     const getTags = Tag.fromTagline(strToParse, undefined);
     expect(getTags.log).toEqual([]);
     expect(getTags.tag.has('a')).toBeTruthy();
-    expect(getTags.tag.has('b')).toBeTruthy();
-    expect(getTags.tag.has('d')).toBeTruthy();
+    expect(getTags.tag.has('b', 'd')).toBeTruthy();
     expect(getTags.tag.has('c')).toBeFalsy();
   });
 });
