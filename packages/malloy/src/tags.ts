@@ -218,16 +218,15 @@ export class Tag implements TagInterface {
   }
 
   private find(at: string[]): Tag | undefined {
-    let inTag = Tag.tagFrom(this);
+    let lookAt = Tag.tagFrom(this);
     for (const seg of at) {
-      const next = inTag.properties && inTag.properties[seg];
-      if (next) {
-        inTag = Tag.tagFrom(next);
-      } else {
+      const lookup = lookAt.properties && lookAt.properties[seg];
+      if (!lookup) {
         return;
       }
+      lookAt = Tag.tagFrom(lookup);
     }
-    return inTag;
+    return lookAt;
   }
 
   tag(...at: string[]): Tag | undefined {
