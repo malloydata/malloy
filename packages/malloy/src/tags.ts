@@ -218,15 +218,16 @@ export class Tag implements TagInterface {
   }
 
   private find(at: string[]): Tag | undefined {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
-    let findIn: Tag | undefined = this;
+    let inTag = Tag.tagFrom(this);
     for (const seg of at) {
-      findIn = findIn.properties && Tag.tagFrom(findIn.properties[seg]);
-      if (!findIn) {
-        return undefined;
+      const next = inTag.properties && inTag.properties[seg];
+      if (next) {
+        inTag = Tag.tagFrom(next);
+      } else {
+        return;
       }
     }
-    return findIn;
+    return inTag;
   }
 
   tag(...at: string[]): Tag | undefined {
@@ -234,7 +235,7 @@ export class Tag implements TagInterface {
   }
 
   has(...at: string[]): boolean {
-    return !!this.find(at);
+    return this.find(at) !== undefined;
   }
 
   text(...at: string[]): string | undefined {
