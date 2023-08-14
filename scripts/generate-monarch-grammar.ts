@@ -3,6 +3,8 @@
  * A script to generate the Monarch syntax highlighting grammar
  * from the TextMate grammar
  *
+ * TODO: Add current limitations to a README.md
+ *
  * Current limitations:
  * 1. The TextMate grammar must
  *     - be written in TextMate 1.5.x
