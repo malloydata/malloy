@@ -1,0 +1,257 @@
+{
+  "scopeName": "source.malloy",
+  "patterns": [
+    {"include": "#malloy_language"}
+  ],
+  "repository": {
+    "malloy_language": {
+      "patterns": [
+        {"include": "#sql_string"},
+        {"include": "#comments"},
+        {"include": "#strings"},
+        {"include": "#numbers"},
+        {"include": "#keywords"},
+        {"include": "#functions"},
+        {"include": "#datetimes"},
+        {"include": "#identifiers_quoted"},
+        {"include": "#types"},
+        {"include": "#constants"},
+        {"include": "#timeframes"},
+        {"include": "#identifiers_unquoted"}
+      ]
+    },
+    "malloy_matched": {
+      "begin": "{",
+      "end": "}",
+      "patterns": [
+        {"include": "#malloy_matched"},
+        {"include": "#malloy_language"}
+      ]
+    },
+    "malloy_in_sql": {
+      "begin": "%{",
+      "name": "source.malloy-in-sql",
+      "end": "}%?",
+      "patterns": [
+        {"include": "#malloy_matched"},
+        {"include": "#malloy_language"}
+      ]
+    },
+    "sql_string": {
+      "patterns":
+        [
+          {
+            "begin": "\\b(select)(\\s*:\\s*)(\"\"\")",
+            "end": "\"\"\"",
+            "beginCaptures": {
+              "1": {"name": "keyword"},
+              "3": {"name": "punctuation.sql-block.open"}
+            },
+            "endCaptures": {
+              "0": {"name": "punctuation.sql-block.close"}
+            },
+            "name": "source.sql",
+            "patterns": [{"include": "#malloy_in_sql"}, {"include": "source.sql"}]
+        },
+        {
+          "begin": "(\\b[A-Za-z_][A-Za-z_0-9]*)(\\s*\\.\\s*)(sql)(\\s*\\(\\s*)(\"\"\")",
+          "end": "\"\"\"",
+          "beginCaptures": {
+            "1": {"name": "variable.other"},
+            "3": {"name": "keyword"},
+            "5": {"name": "punctuation.sql-block.open"}
+          },
+          "endCaptures": {
+            "0": {"name": "punctuation.sql-block.close"}
+          },
+          "name": "source.sql",
+          "patterns": [{"include": "#malloy_in_sql"}, {"include": "source.sql"}]
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "match": "(?i)\\b(count)(\\s*\\()(distinct)",
+          "captures": {
+            "1": {"name": "entity.name.function"},
+            "3": {"name": "entity.name.function.modifier"}
+          }
+        },
+        {
+          "match": "(?i)\\b(AVG|COUNT|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE|TABLE|FROM|FROM_SQL|UNGROUPED)(\\s*\\()",
+          "captures": {
+            "1": {"name": "entity.name.function"}
+          }
+        },
+        {
+          "match": "(?i)\b([a-zA-Z_][a-zA-Z_0-9]*)(\\s*\\!?\\s*\\()",
+          "captures": {
+            "1": {"name": "entity.name.function"}
+          }
+        },
+        {
+          "match": "(?i)\\b([a-zA-Z_][a-zA-Z_0-9]*)(\\!)(timestamp|number|string|boolean|date)(\\s*\\()",
+          "captures": {
+            "1": { "name": "entity.name.function" },
+            "3": { "name": "entity.name.type" }
+          }
+        }
+      ]
+    },
+    "datetimes": {
+      "patterns": [
+        {
+          "match": "(?i)@[0-9]{4}-[0-9]{2}-[0-9]{2}[ T][0-9]{2}:[0-9]{2}((:[0-9]{2})(([\\.,][0-9]+)(\\[[A-Za-z_/]+\\])?)?)?",
+          "name": "constant.numeric.timestamp"
+        },
+        {
+          "match": "(?i)@[0-9]{4}(-Q[1-4]|-[0-9]{2}(-[0-9]{2}(-WK)?)?)?",
+          "name": "constant.numeric.date"
+        }
+      ]
+    },
+    "identifiers_quoted": {
+      "patterns": [
+        {
+          "match": "`[^`]*`",
+          "name": "variable.other.quoted"
+        }
+      ]
+    },
+    "identifiers_unquoted": {
+      "patterns": [
+        {
+          "match": "(?i)\\b[A-Za-z_][A-Za-z_0-9]*\\b",
+          "name": "variable.other"
+        }
+      ]
+    },
+    "timeframes": {
+      "patterns": [
+        {
+          "match": "(?i)\\b((year|quarter|month|week|day|hour|minute|second)s?)\\b",
+          "name": "keyword.other.timeframe"
+        },
+        {
+          "match": "(?i)\\b(day_of_year|day_of_month)\\b",
+          "name": "keyword.other.timeframe"
+        }
+      ]
+    },
+    "comments": {
+      "patterns": [
+        {
+          "begin": "/\\*",
+          "end": "\\*/",
+          "beginCaptures": {
+            "0": {"name": "punctuation.definition.comment.begin"}
+          },
+          "endCaptures": {
+            "0": {"name": "punctuation.definition.comment.end"}
+          },
+          "name": "comment.block"
+        },
+        {
+          "begin": "//",
+          "end": "\\n",
+          "beginCaptures": {
+            "0": {"name": "punctuation.definition.comment"}
+          },
+          "name": "comment.line.double-slash"
+        },
+        {
+          "begin": "--",
+          "end": "\\n",
+          "beginCaptures": {
+            "0": {"name": "punctuation.definition.comment"}
+          },
+          "name": "comment.line.double-hyphen"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "begin": "'",
+          "end": "'",
+          "beginCaptures": {
+            "0": {"name": "punctuation.definition.string.begin"}
+          },
+          "endCaptures": {
+            "0": {"name": "punctuation.definition.string.end"}
+          },
+          "name": "string.quoted.single",
+          "patterns": [{"include": "#escapes"}]
+        },
+        {
+          "begin": "\"",
+          "end": "\"",
+          "beginCaptures": {
+            "0": {"name": "punctuation.definition.string.begin"}
+          },
+          "endCaptures": {
+            "0": {"name": "punctuation.definition.string.end"}
+          },
+          "name": "string.quoted.double",
+          "patterns": [{"include": "#escapes"}]
+        },
+        {
+          "begin": "\"\"\"",
+          "end": "\"\"\"",
+          "beginCaptures": {
+            "0": {"name": "punctuation.definition.string.begin"}
+          },
+          "endCaptures": {
+            "0": {"name": "punctuation.definition.string.end"}
+          },
+          "name": "string.quoted.triple"
+        },
+        {
+          "begin": "(?i)[r|/]'",
+          "end": "'",
+          "name": "string.regexp",
+          "patterns": [{"include": "#regex_escapes"}]
+        }
+      ],
+      "repository": {
+        "escapes": {
+          "name": "constant.character.escape",
+          "match": "\\\\(u[A-Fa-f0-9]{4}|.)"
+        },
+        "regex_escapes": {
+          "name": "constant.character.escape",
+          "match": "\\\\."
+        }
+      }
+    },
+    "numbers": {
+      "match": "(?i)(\\b(0|[1-9][0-9]*(E[+-]?[0-9]+|\\.[0-9]*)?)|\\.[0-9]+)",
+      "name": "constant.numeric"
+    },
+    "constants": {
+      "patterns": [
+        {
+          "match": "(?i)\\b(null|true|false)\\b",
+          "name": "constant.language"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "match": "(?i)\\b(string|number|date|timestamp|boolean)\\b",
+          "name": "entity.name.type"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "match": "(?i)\\b(accept|sql|select|connection|run|extend|refine|aggregate|sample|calculate|timezone|dimension|except|source|group_by|having|index|join_one|with|join_many|join_cross|limit|measure|nest|order_by|primary_key|project|query|rename|top|where|declare|is|on|desc|by|asc|import|day_of_year|day_of_month|not|or|and|for|else|to|when|pick)\\b",
+          "name": "keyword"
+        }
+      ]
+    }
+  }
+}
