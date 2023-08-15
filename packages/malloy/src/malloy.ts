@@ -1379,6 +1379,14 @@ export class Explore extends Entity {
     return FieldIsIntrinsic(this._structDef);
   }
 
+  private parsedModelTag?: Tag;
+  public get modelTag(): Tag {
+    this.parsedModelTag ||= Tag.annotationToTag(
+      this._structDef.modelAnnotation
+    ).tag;
+    return this.parsedModelTag;
+  }
+
   /**
    * @return The name of the entity.
    */
@@ -1637,7 +1645,9 @@ export class AtomicField extends Entity implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    // mtoy todo spec.scopes ||= [Model.getTag(somehow.find.modelDef)] ;
+    if (spec === undefined) {
+      spec = {scopes: [this.parent.modelTag]};
+    }
     return Tag.annotationToTag(this.fieldTypeDef.annotation, spec);
   }
 
@@ -1909,7 +1919,9 @@ export class QueryField extends Query implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    // mtoy todo spec.scopes ||= [Model.getTag(somehow.find.modelDef)] ;
+    if (spec === undefined) {
+      spec = {scopes: [this.parent.modelTag]};
+    }
     return Tag.annotationToTag(this.turtleDef.annotation, spec);
   }
 
@@ -1978,7 +1990,9 @@ export class ExploreField extends Explore implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    // mtoy todo spec.scopes ||= [Model.getTag(somehow.find.modelDef)] ;
+    if (spec === undefined) {
+      spec = {scopes: [this._parentExplore.modelTag]};
+    }
     return Tag.annotationToTag(this._structDef.annotation, spec);
   }
 

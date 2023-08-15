@@ -276,25 +276,28 @@ describe('tags in results', () => {
   test('nameless query', async () => {
     const loaded = runtime.loadQuery(
       `
+          ## modelDef=ok
           sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
           # b4query
-          query: # afterQuery
+          query: # afterQuery import=$(modelDef)
             from_sql(one) -> { project: * }`
     );
-    const qTag = {b4query: {}, afterQuery: {}};
+    const qTag = {b4query: {}, afterQuery: {}, import: {eq: 'ok'}};
     const query = await loaded.getPreparedQuery();
     expect(query).toBeDefined();
     expect(query.tagParse().tag).tagsAre(qTag);
     const result = await loaded.run();
     expect(result.tagParse().tag).tagsAre(qTag);
   });
-  const wantTag = {BQ: {}, AQ: {}, Bis: {}, Ais: {}};
+  const wantTag = {BQ: {}, AQ: {}, Bis: {}, Ais: {}, import: {eq: 'ok'}};
   test('named query', async () => {
     const loaded = runtime.loadQuery(
       `
           sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
+          ## modelDef=ok
           # BQ
           query: # AQ
+            # import=$(modelDef)
             theName
             # Bis
             is
@@ -311,9 +314,10 @@ describe('tags in results', () => {
   test('turtle query', async () => {
     const loaded = runtime.loadQuery(
       `
+          ## modelDef=ok
           sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
           query: from_sql(one) + {
-            # BQ
+            # BQ import=$(modelDef)
             query: # AQ
               in_one
               # Bis
@@ -332,10 +336,11 @@ describe('tags in results', () => {
   test('atomic field has tag', async () => {
     const loaded = runtime.loadQuery(
       `
+          ## modelDef=ok
           sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
           query: from_sql(one) -> {
             project:
-              # note1
+              # note1 import=$(modelDef)
               one
           }`
     );
@@ -343,11 +348,14 @@ describe('tags in results', () => {
     const shape = result.resultExplore;
     const one = shape.getFieldByName('one');
     expect(one).toBeDefined();
-    expect(one.tagParse().tag).tagsAre({note1: {}});
+    const tp = one.tagParse();
+    expect(tp.log).toEqual([]);
+    expect(tp.tag).tagsAre({note1: {}, import: {eq: 'ok'}});
   });
   test('nested query has tag', async () => {
     const loaded = runtime.loadQuery(
       `
+          ## modelDef=ok
           sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
           source: malloy_one is from_sql(one) + {
             query: in_one is {
@@ -357,7 +365,7 @@ describe('tags in results', () => {
               group_by: one
               # note1
               nest:
-                # note2
+                # note2 import=$(modelDef)
                 in_one
             }
           }
@@ -367,7 +375,11 @@ describe('tags in results', () => {
     const shape = result.resultExplore;
     const one = shape.getFieldByName('in_one');
     expect(one).toBeDefined();
-    expect(one.tagParse().tag).tagsAre({note1: {}, note2: {}});
+    expect(one.tagParse().tag).tagsAre({
+      note1: {},
+      note2: {},
+      import: {eq: 'ok'},
+    });
   });
   test('render usage test case', async () => {
     const loaded = runtime.loadQuery(
