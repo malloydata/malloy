@@ -21,6 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+<<<<<<< Updated upstream
+=======
+export {mkSqlEqWith, runQuery} from './util';
+
+export * from './util/db-jest-matchers';
+
+>>>>>>> Stashed changes
 export {allDatabaseTestSets} from './databases/shared/test_list';
 
 export {RuntimeList, testRuntimeFor} from './runtimes';
