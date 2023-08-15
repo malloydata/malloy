@@ -157,7 +157,6 @@ export interface StreamingConnection extends Connection {
 export abstract class DialectProvider {
   constructor(dialect: Dialect) {
     registerDialect(dialect);
-    console.log('Registered');
   }
 }
 

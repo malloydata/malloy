@@ -33,9 +33,7 @@ const dialectMap = new Map<string, Dialect>();
 export function getDialect(name: string): Dialect {
   const d = dialectMap.get(name);
   if (d === undefined) {
-    throw new Error(
-      `Unknown Dialect ${name} none ${JSON.stringify(dialectMap)}`
-    );
+    throw new Error(`Unknown Dialect ${name}`);
   }
   return d;
 }
