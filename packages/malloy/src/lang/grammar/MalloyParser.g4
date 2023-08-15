@@ -533,7 +533,8 @@ fieldExpr
   ;
 
 partialAllowedFieldExpr
-  : compareOp? fieldExpr
+  : OPAREN compareOp? fieldExpr CPAREN
+  | compareOp? fieldExpr
   ;
 
 pickStatement

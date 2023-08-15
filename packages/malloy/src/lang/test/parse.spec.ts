@@ -1652,6 +1652,9 @@ describe('expressions', () => {
         `Cannot offset date by ${unit}`
       );
     });
+    test('apply with parens', () => {
+      expect(expr`ai ? (> 1 & < 100)`).toTranslate();
+    });
   });
 
   test('filtered measure', () => {
