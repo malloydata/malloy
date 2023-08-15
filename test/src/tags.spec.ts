@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Tags, Annotation, MalloyTags, TagDict, Tag} from '@malloydata/malloy';
+import {TagDict, Tag} from '@malloydata/malloy';
 import {runtimeFor} from './runtimes';
 
 declare global {
@@ -63,138 +63,6 @@ expect.extend({
 });
 
 const runtime = runtimeFor('duckdb');
-
-interface TestAnnotation {
-  inherits?: TestAnnotation;
-  blockNotes?: string[];
-  notes: string[];
-}
-
-function unTestify(ta: TestAnnotation): Annotation {
-  const dloc = {
-    url: __filename,
-    range: {start: {character: 0, line: 0}, end: {character: 0, line: 0}},
-  };
-  const ret: Annotation = {
-    notes: ta.notes.map(t => {
-      return {text: t, at: dloc};
-    }),
-  };
-  if (ta.blockNotes) {
-    ret.blockNotes = ta.blockNotes.map(t => {
-      return {text: t, at: dloc};
-    });
-  }
-  if (ta.inherits) {
-    ret.inherits = unTestify(ta.inherits);
-  }
-  return ret;
-}
-
-class TestTags extends Tags {
-  constructor(ta: TestAnnotation) {
-    super(unTestify(ta));
-  }
-}
-
-function tstTaglist(a: TestAnnotation): string[] {
-  return new TestTags(a).getTagList();
-}
-
-function tstTagParse(s: string): MalloyTags {
-  return new TestTags({notes: [s]}).getMalloyTags();
-}
-
-describe('tag utilities', () => {
-  test('own/block ordering is correct', () => {
-    const testA = tstTaglist({
-      notes: ['#tag'],
-      blockNotes: ['#blockTag'],
-    });
-    expect(testA).toEqual(['#blockTag', '#tag']);
-  });
-  test('inherit ordering is correct', () => {
-    const testA = tstTaglist({
-      inherits: {notes: ['#inherited']},
-      notes: ['#tag'],
-    });
-    expect(testA).toEqual(['#inherited', '#tag']);
-  });
-  test.todo('check that results are annotated');
-  test('doc annotations', () => {
-    const a = tstTagParse('#" This is a doc string');
-    expect(a).toMatchObject({docStrings: ['This is a doc string']});
-  });
-  test('simple property', () => {
-    const a = tstTagParse('# linechart');
-    expect(a.properties).toHaveProperty('linechart', true);
-  });
-  test('negated property', () => {
-    const a = tstTagParse('# linechart -linechart');
-    expect(a.properties).not.toHaveProperty('linechart', true);
-  });
-  test('simple quoted property', () => {
-    const a = tstTagParse('# "linechart"');
-    expect(a.properties).toHaveProperty('linechart', true);
-  });
-  test('quoted property with " and space', () => {
-    const annotation = '# "a \\"chart\\""';
-    const a = tstTagParse(annotation);
-    expect(a.properties).toHaveProperty('a "chart"', true);
-  });
-  test('escaped non-quote', () => {
-    const annotation = '# "\\x"';
-    const a = tstTagParse(annotation);
-    expect(a.properties).toHaveProperty('x', true);
-  });
-  test('non-terminated string', () => {
-    const annotation = '# x="\\"';
-    const a = tstTagParse(annotation);
-    expect(a.properties).not.toHaveProperty('x', true);
-  });
-  test('quoted property with value', () => {
-    const a = tstTagParse('# "linechart"=yes');
-    expect(a.properties).toHaveProperty('linechart', 'yes');
-  });
-  test('property with simple value', () => {
-    const a = tstTagParse('# chart=line');
-    expect(a.properties).toHaveProperty('chart', 'line');
-  });
-  test('property with quoted value', () => {
-    const a = tstTagParse('# chart="line"');
-    expect(a.properties).toHaveProperty('chart', 'line');
-  });
-  test('spaces ignored', () => {
-    const a = tstTagParse('#     chart =  line ');
-    expect(a.properties).toHaveProperty('chart', 'line');
-  });
-  test('= with no value', () => {
-    expect(tstTagParse('# name =  ')).toMatchObject({properties: {}});
-  });
-  test('multiple = with no value', () => {
-    expect(tstTagParse('# name =  = me')).toMatchObject({properties: {}});
-  });
-  test('missing quote', () => {
-    expect(tstTagParse('# name =  "no quote')).toMatchObject({properties: {}});
-  });
-  test('leading =', () => {
-    expect(tstTagParse('#  =name  ')).toMatchObject({properties: {}});
-  });
-  test('complex line', () => {
-    const a = tstTagParse('# a b=c "d"=e f="g" "h"="i" "j" k -a');
-    expect(a).toBeDefined();
-    if (a) {
-      expect(a.properties).toEqual({
-        b: 'c',
-        d: 'e',
-        f: 'g',
-        h: 'i',
-        j: true,
-        k: true,
-      });
-    }
-  });
-});
 
 type TagTestTuple = [string, TagDict];
 describe('tagParse to Tag', () => {
@@ -343,6 +211,50 @@ describe('Tag access', () => {
     const n = a?.numeric();
     expect(n).toBeUndefined();
   });
+  test('full text array', () => {
+    const strToParse = 'a=[b,c]';
+    const getTags = Tag.fromTagline(strToParse, undefined);
+    expect(getTags.log).toEqual([]);
+    const a = getTags.tag.tag('a');
+    expect(a).toBeDefined();
+    const ais = a?.textArray();
+    expect(ais).toEqual(['b', 'c']);
+  });
+  test('filtered text array', () => {
+    const strToParse = 'a=[b,c,{d}]';
+    const getTags = Tag.fromTagline(strToParse, undefined);
+    expect(getTags.log).toEqual([]);
+    const a = getTags.tag.tag('a');
+    expect(a).toBeDefined();
+    const ais = a?.textArray();
+    expect(ais).toEqual(['b', 'c']);
+  });
+  test('full numeric array', () => {
+    const strToParse = 'a=[1,2]';
+    const getTags = Tag.fromTagline(strToParse, undefined);
+    expect(getTags.log).toEqual([]);
+    const a = getTags.tag.tag('a');
+    expect(a).toBeDefined();
+    const ais = a?.numericArray();
+    expect(ais).toEqual([1, 2]);
+  });
+  test('filtered numeric array', () => {
+    const strToParse = 'a=[1,2,three]';
+    const getTags = Tag.fromTagline(strToParse, undefined);
+    expect(getTags.log).toEqual([]);
+    const a = getTags.tag.tag('a');
+    expect(a).toBeDefined();
+    const ais = a?.numericArray();
+    expect(ais).toEqual([1, 2]);
+  });
+  test('has', () => {
+    const strToParse = 'a b.d';
+    const getTags = Tag.fromTagline(strToParse, undefined);
+    expect(getTags.log).toEqual([]);
+    expect(getTags.tag.has('a')).toBeTruthy();
+    expect(getTags.tag.has('b', 'd')).toBeTruthy();
+    expect(getTags.tag.has('c')).toBeFalsy();
+  });
 });
 
 describe('## top level', () => {
@@ -355,41 +267,37 @@ describe('## top level', () => {
       `
       )
       .getModel();
-    const modelDesc = model.getTags().getMalloyTags();
-    expect(modelDesc).toEqual({
-      properties: {propertyTag: true},
-      docStrings: ['Doc String\n'],
-    });
     const modelTagLine = model.tagParse().tag;
     expect(modelTagLine.has('propertyTag')).toBeTruthy();
+    expect(model.getTaglines(/^##"/)).toEqual(['##" Doc String\n']);
   });
 });
 describe('tags in results', () => {
   test('nameless query', async () => {
     const loaded = runtime.loadQuery(
       `
+          ## modelDef=ok
           sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
           # b4query
-          query: # afterQuery
+          query: # afterQuery import=$(modelDef)
             from_sql(one) -> { project: * }`
     );
+    const qTag = {b4query: {}, afterQuery: {}, import: {eq: 'ok'}};
     const query = await loaded.getPreparedQuery();
     expect(query).toBeDefined();
-    const wantTags = ['# b4query\n', '# afterQuery\n'];
-    expect(query.getTags().getTagList()).toEqual(wantTags);
+    expect(query.tagParse().tag).tagsAre(qTag);
     const result = await loaded.run();
-    expect(result.getTags().getTagList()).toEqual(wantTags);
-    const queryTags = result.tagParse().tag;
-    expect(queryTags).tagsAre({b4query: {}, afterQuery: {}});
+    expect(result.tagParse().tag).tagsAre(qTag);
   });
-  const wantTags = ['# BQ\n', '# AQ\n', '# Bis\n', '# Ais\n'];
-  const wantTag = {BQ: {}, AQ: {}, Bis: {}, Ais: {}};
+  const wantTag = {BQ: {}, AQ: {}, Bis: {}, Ais: {}, import: {eq: 'ok'}};
   test('named query', async () => {
     const loaded = runtime.loadQuery(
       `
           sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
+          ## modelDef=ok
           # BQ
           query: # AQ
+            # import=$(modelDef)
             theName
             # Bis
             is
@@ -399,17 +307,17 @@ describe('tags in results', () => {
     );
     const query = await loaded.getPreparedQuery();
     expect(query).toBeDefined();
-    expect(query.getTags().getTagList()).toEqual(wantTags);
+    expect(query.tagParse().tag).tagsAre(wantTag);
     const result = await loaded.run();
-    expect(result.getTags().getTagList()).toEqual(wantTags);
     expect(result.tagParse().tag).tagsAre(wantTag);
   });
   test('turtle query', async () => {
     const loaded = runtime.loadQuery(
       `
+          ## modelDef=ok
           sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
           query: from_sql(one) + {
-            # BQ
+            # BQ import=$(modelDef)
             query: # AQ
               in_one
               # Bis
@@ -421,20 +329,18 @@ describe('tags in results', () => {
     );
     const query = await loaded.getPreparedQuery();
     expect(query).toBeDefined();
-    expect(query.getTags().getTagList()).toEqual(wantTags);
     expect(query.tagParse().tag).tagsAre(wantTag);
     const result = await loaded.run();
-    const tl = result.getTags().getTagList();
-    expect(tl).toEqual(wantTags);
     expect(result.tagParse().tag).tagsAre(wantTag);
   });
   test('atomic field has tag', async () => {
     const loaded = runtime.loadQuery(
       `
+          ## modelDef=ok
           sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
           query: from_sql(one) -> {
             project:
-              # note1
+              # note1 import=$(modelDef)
               one
           }`
     );
@@ -442,12 +348,14 @@ describe('tags in results', () => {
     const shape = result.resultExplore;
     const one = shape.getFieldByName('one');
     expect(one).toBeDefined();
-    expect(one.getTags().getTagList()).toEqual(['# note1\n']);
-    expect(one.tagParse().tag).tagsAre({note1: {}});
+    const tp = one.tagParse();
+    expect(tp.log).toEqual([]);
+    expect(tp.tag).tagsAre({note1: {}, import: {eq: 'ok'}});
   });
   test('nested query has tag', async () => {
     const loaded = runtime.loadQuery(
       `
+          ## modelDef=ok
           sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
           source: malloy_one is from_sql(one) + {
             query: in_one is {
@@ -457,7 +365,7 @@ describe('tags in results', () => {
               group_by: one
               # note1
               nest:
-                # note2
+                # note2 import=$(modelDef)
                 in_one
             }
           }
@@ -467,8 +375,11 @@ describe('tags in results', () => {
     const shape = result.resultExplore;
     const one = shape.getFieldByName('in_one');
     expect(one).toBeDefined();
-    expect(one.getTags().getTagList()).toEqual(['# note1\n', '# note2\n']);
-    expect(one.tagParse().tag).tagsAre({note1: {}, note2: {}});
+    expect(one.tagParse().tag).tagsAre({
+      note1: {},
+      note2: {},
+      import: {eq: 'ok'},
+    });
   });
   test('render usage test case', async () => {
     const loaded = runtime.loadQuery(
@@ -501,14 +412,32 @@ describe('tags in results', () => {
     const height = shape.getFieldByName('height');
     const age = shape.getFieldByName('age');
     const name = shape.getFieldByName('name');
-    expect(height.getTags().getMalloyTags()).toMatchObject({
-      properties: {barchart: true},
-    });
     expect(height.tagParse().tag).tagsAre({barchart: {}});
-    expect(age.getTags().getMalloyTags()).toMatchObject({
-      properties: {barchart: true},
-    });
     expect(age.tagParse().tag).tagsAre({barchart: {}});
     expect(name.tagParse().tag).tagsAre({name: {}});
+  });
+  test('User defines scopes nest properly', async () => {
+    const loaded = runtime.loadQuery(
+      `
+          ## scope=model
+          sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
+          query: from_sql(one) -> {
+            project:
+              # valueFrom=$(scope)
+              one
+          }`
+    );
+    const result = await loaded.run();
+    const shape = result.resultExplore;
+    const field = shape.getFieldByName('one');
+    expect(field).toBeDefined();
+    let tp = field.tagParse().tag;
+    expect(tp).tagsAre({valueFrom: {eq: 'model'}});
+    const sessionScope = Tag.fromTagline('# scope=session', undefined).tag;
+    tp = field.tagParse({scopes: [sessionScope]}).tag;
+    expect(tp).tagsAre({valueFrom: {eq: 'session'}});
+    const globalScope = Tag.fromTagline('# scope=global', undefined).tag;
+    tp = field.tagParse({scopes: [globalScope, sessionScope]}).tag;
+    expect(tp).tagsAre({valueFrom: {eq: 'global'}});
   });
 });

@@ -31,6 +31,7 @@ import {
   Note,
   Query,
   SQLBlockStructDef,
+  StructDef,
 } from '../../../model/malloy_types';
 
 import {LogSeverity, MessageLogger} from '../../parse-log';
@@ -41,6 +42,7 @@ import {GlobalNameSpace} from './global-name-space';
 import {ModelEntry} from './model-entry';
 import {NameSpace} from './name-space';
 import {Noteable, isNoteable, extendNoteMethod} from './noteable';
+import {v5 as uuidv5} from 'uuid';
 
 export abstract class MalloyElement {
   abstract elementType: string;
@@ -96,6 +98,13 @@ export abstract class MalloyElement {
 
   set location(loc: DocumentLocation | undefined) {
     this.codeLocation = loc;
+  }
+
+  protected document(): Document | undefined {
+    if (this instanceof Document) {
+      return this;
+    }
+    return this.parent?.document();
   }
 
   protected namespace(): NameSpace | undefined {
@@ -391,6 +400,24 @@ export class DocStatementList
   }
 }
 
+const docAnnotationNameSpace = '5a79a191-06bc-43cf-9b12-58741cd82970';
+
+function annotationNotes(an: Annotation): string[] {
+  const ret = an.inherits ? annotationNotes(an.inherits) : [];
+  if (an.blockNotes) {
+    ret.push(...an.blockNotes.map(n => n.text));
+  }
+  if (an.notes) {
+    ret.push(...an.notes.map(n => n.text));
+  }
+  return ret;
+}
+
+function annotationID(a: Annotation): string {
+  const allStrs = annotationNotes(a).join('');
+  return uuidv5(allStrs, docAnnotationNameSpace);
+}
+
 /**
  * The Document class is a little weird because we might need to bounce back
  * to the requestor, which might be on the other side of a wire, to get
@@ -446,8 +473,26 @@ export class Document extends MalloyElement implements NameSpace {
 
   compile(): DocumentCompileResult {
     const needs = this.statements.executeList(this);
+    const modelDef = this.modelDef();
+    if (needs === undefined) {
+      for (const q of this.queryList) {
+        if (q.modelAnnotation === undefined && modelDef.annotation) {
+          q.modelAnnotation = modelDef.annotation;
+        }
+      }
+      for (const q of this.sqlBlocks) {
+        if (q.modelAnnotation === undefined && modelDef.annotation) {
+          q.modelAnnotation = modelDef.annotation;
+        }
+      }
+    }
+    if (modelDef.annotation) {
+      for (const sd of this.modelAnnotationTodoList) {
+        sd.modelAnnotation ||= modelDef.annotation;
+      }
+    }
     const ret: DocumentCompileResult = {
-      modelDef: this.modelDef(),
+      modelDef,
       queryList: this.queryList,
       sqlBlocks: this.sqlBlocks,
       needs,
@@ -455,8 +500,17 @@ export class Document extends MalloyElement implements NameSpace {
     return ret;
   }
 
+  private modelAnnotationTodoList: StructDef[] = [];
+  rememberToAddModelAnnotations(sd: StructDef) {
+    this.modelAnnotationTodoList.push(sd);
+  }
+
   modelDef(): ModelDef {
     const def: ModelDef = {name: '', exports: [], contents: {}};
+    if (this.notes.length > 0) {
+      def.annotation = {id: '', notes: this.notes};
+      def.annotation.id = annotationID(def.annotation);
+    }
     for (const entry in this.documentModel) {
       const entryDef = this.documentModel[entry].entry;
       if (entryDef.type === 'struct' || entryDef.type === 'query') {
@@ -464,10 +518,10 @@ export class Document extends MalloyElement implements NameSpace {
           def.exports.push(entry);
         }
         def.contents[entry] = cloneDeep(entryDef);
+        if (entryDef.modelAnnotation === undefined && def.annotation) {
+          entryDef.modelAnnotation = def.annotation;
+        }
       }
-    }
-    if (this.notes.length > 0) {
-      def.annotation = {notes: this.notes};
     }
     return def;
   }

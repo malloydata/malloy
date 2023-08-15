@@ -2569,6 +2569,9 @@ class QueryQuery extends QueryField {
       type: 'struct',
       queryTimezone: resultStruct.getQueryInfo().queryTimezone,
     };
+    if (this.parent.fieldDef.modelAnnotation) {
+      outputStruct.modelAnnotation = this.parent.fieldDef.modelAnnotation;
+    }
 
     return outputStruct;
   }
@@ -3765,7 +3768,7 @@ class QueryQueryIndex extends QueryQuery {
 
   /**  All Indexes have the same output schema */
   getResultStructDef(): StructDef {
-    return {
+    const ret: StructDef = {
       type: 'struct',
       name: this.resultStage || 'result',
       dialect: this.parent.fieldDef.dialect,
@@ -3781,6 +3784,10 @@ class QueryQueryIndex extends QueryQuery {
       },
       structSource: {type: 'query_result'},
     };
+    if (this.parent.fieldDef.modelAnnotation) {
+      ret.modelAnnotation = this.parent.fieldDef.modelAnnotation;
+    }
+    return ret;
   }
 }
 

@@ -76,7 +76,7 @@ import {
   URLReader,
 } from './runtime_types';
 import {DateTime} from 'luxon';
-import {Tag, TagParse, TagParseSpec, Taggable, Tags} from './tags';
+import {Tag, TagParse, TagParseSpec, Taggable} from './tags';
 import {getDialect} from './dialect';
 
 export interface Loggable {
@@ -612,10 +612,6 @@ export class Model implements Taggable {
     this.problems = problems;
   }
 
-  getTags(): Tags {
-    return new Tags(this.modelDef.annotation);
-  }
-
   tagParse(spec?: TagParseSpec): TagParse {
     return Tag.annotationToTag(this.modelDef.annotation, spec);
   }
@@ -780,15 +776,9 @@ export class PreparedQuery implements Taggable {
     this.name = name;
   }
 
-  getTags(): Tags {
-    return new Tags(this._query.annotation);
-  }
-
   tagParse(spec?: TagParseSpec) {
-    if (spec === undefined) {
-      const modelScope = Tag.annotationToTag(this._modelDef.annotation);
-      spec = {scopes: [modelScope.tag]};
-    }
+    const modelScope = Tag.annotationToTag(this._modelDef.annotation).tag;
+    spec = Tag.addModelScope(spec, modelScope);
     return Tag.annotationToTag(this._query.annotation, spec);
   }
 
@@ -1121,15 +1111,9 @@ export class PreparedResult implements Taggable {
     this.modelDef = modelDef;
   }
 
-  public getTags(): Tags {
-    return new Tags(this.inner.annotation);
-  }
-
-  tagParse(spec?: TagParseSpec) {
-    if (spec === undefined) {
-      const modelScope = Tag.annotationToTag(this.modelDef.annotation);
-      spec = {scopes: [modelScope.tag]};
-    }
+  tagParse(spec?: TagParseSpec): TagParse {
+    const modelScope = Tag.annotationToTag(this.modelDef.annotation).tag;
+    spec = Tag.addModelScope(spec, modelScope);
     return Tag.annotationToTag(this.inner.annotation, spec);
   }
 
@@ -1391,6 +1375,14 @@ export class Explore extends Entity {
     return FieldIsIntrinsic(this._structDef);
   }
 
+  private parsedModelTag?: Tag;
+  public get modelTag(): Tag {
+    this.parsedModelTag ||= Tag.annotationToTag(
+      this._structDef.modelAnnotation
+    ).tag;
+    return this.parsedModelTag;
+  }
+
   /**
    * @return The name of the entity.
    */
@@ -1648,12 +1640,8 @@ export class AtomicField extends Entity implements Taggable {
     }
   }
 
-  getTags(): Tags {
-    return new Tags(this.fieldTypeDef.annotation);
-  }
-
   tagParse(spec?: TagParseSpec) {
-    // mtoy todo spec.scopes ||= [Model.getTag(somehow.find.modelDef)] ;
+    spec = Tag.addModelScope(spec, this.parent.modelTag);
     return Tag.annotationToTag(this.fieldTypeDef.annotation, spec);
   }
 
@@ -1924,12 +1912,8 @@ export class QueryField extends Query implements Taggable {
     this.parent = parent;
   }
 
-  getTags(): Tags {
-    return new Tags(this.turtleDef.annotation);
-  }
-
   tagParse(spec?: TagParseSpec) {
-    // mtoy todo spec.scopes ||= [Model.getTag(somehow.find.modelDef)] ;
+    spec = Tag.addModelScope(spec, this.parent.modelTag);
     return Tag.annotationToTag(this.turtleDef.annotation, spec);
   }
 
@@ -1997,12 +1981,8 @@ export class ExploreField extends Explore implements Taggable {
     }
   }
 
-  getTags(): Tags {
-    return new Tags(this._structDef.annotation);
-  }
-
   tagParse(spec?: TagParseSpec) {
-    // mtoy todo spec.scopes ||= [Model.getTag(somehow.find.modelDef)] ;
+    spec = Tag.addModelScope(spec, this._parentExplore.modelTag);
     return Tag.annotationToTag(this._structDef.annotation, spec);
   }
 
