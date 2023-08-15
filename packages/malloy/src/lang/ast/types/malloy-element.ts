@@ -108,9 +108,10 @@ export abstract class MalloyElement {
   }
 
   protected namespace(): NameSpace | undefined {
-    const doc = this.document();
-    if (doc) {
-      return doc;
+    if (this instanceof Document) {
+      return this;
+    } else if (this.parent) {
+      return this.parent.namespace();
     }
     throw new Error('INTERNAL ERROR: Translation without document scope');
   }
