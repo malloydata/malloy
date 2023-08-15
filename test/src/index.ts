@@ -24,3 +24,5 @@
 export {allDatabaseTestSets} from './databases/shared/test_list';
 
 export {RuntimeList, testRuntimeFor} from './runtimes';
+
+export * from './util/db-jest-matchers';
