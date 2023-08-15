@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataArray, Explore, Field, Result, Tags} from '@malloydata/malloy';
+import {DataArray, Explore, Field, Result, Tag} from '@malloydata/malloy';
 import {DataStyles, RenderDef, StyleDefaults} from '../data_styles';
 import {ChildRenderers, Renderer} from '../renderer';
 import {RendererOptions} from '../renderer_types';
@@ -30,7 +30,7 @@ import {HTMLDashboardRenderer} from './dashboard';
 import {HTMLListDetailRenderer} from './list_detail';
 import {HTMLTableRenderer} from './table';
 import {ContainerRenderer} from './container';
-import {createErrorElement, tagIsPresent} from './utils';
+import {createErrorElement} from './utils';
 import {MainRendererFactory} from '../main_renderer_factory';
 import {HTMLListRenderer} from './list';
 
@@ -47,7 +47,7 @@ export class HTMLView {
         size: 'large',
       },
       table.field.structDef.queryTimezone,
-      result.getTags()
+      result.tagParse().tag
     );
     try {
       // TODO Implement row streaming capability for some renderers: some renderers should be usable
@@ -167,14 +167,14 @@ export function makeRenderer(
   options: RendererOptions,
   styleDefaults: StyleDefaults,
   queryTimezone: string | undefined,
-  tags?: Tags
+  tagged: Tag
 ): Renderer {
   const renderDef = getRendererOptions(field, options.dataStyles);
   options.dataStyles[field.name] = renderDef;
 
   const renderer = new MainRendererFactory().create(
     renderDef,
-    tags?.getMalloyTags(),
+    tagged,
     document,
     styleDefaults,
     options,
@@ -186,36 +186,36 @@ export function makeRenderer(
     return renderer;
   }
 
-  if (renderDef?.renderer === 'dashboard' || tagIsPresent(tags, 'dashboard')) {
+  if (renderDef?.renderer === 'dashboard' || tagged.has('dashboard')) {
     return makeContainerRenderer(
       HTMLDashboardRenderer,
       document,
       isContainer(field),
       options,
-      tags
+      tagged
     );
-  } else if (renderDef?.renderer === 'list' || tagIsPresent(tags, 'list')) {
+  } else if (renderDef?.renderer === 'list' || tagged.has('list')) {
     return makeContainerRenderer(
       HTMLListRenderer,
       document,
       isContainer(field),
       options,
-      tags
+      tagged
     );
   } else if (
     renderDef?.renderer === 'list_detail' ||
-    tagIsPresent(tags, 'list_detail')
+    tagged.has('list_detail')
   ) {
     return makeContainerRenderer(
       HTMLListDetailRenderer,
       document,
       isContainer(field),
       options,
-      tags
+      tagged
     );
   } else if (
     renderDef?.renderer === 'table' ||
-    tagIsPresent(tags, 'table') ||
+    tagged.has('table') ||
     !field.hasParentExplore() ||
     field.isExploreField()
   ) {
@@ -224,7 +224,7 @@ export function makeRenderer(
       document,
       isContainer(field),
       options,
-      tags
+      tagged
     );
   }
 
@@ -235,14 +235,14 @@ function makeContainerRenderer<Type extends ContainerRenderer>(
   cType: new (
     document: Document,
     options: RendererOptions,
-    tags?: Tags
+    tagged: Tag
   ) => Type,
   document: Document,
   explore: Explore,
   options: RendererOptions,
-  tags?: Tags
+  tagged: Tag
 ): ContainerRenderer {
-  const c = ContainerRenderer.make(cType, document, explore, options, tags);
+  const c = ContainerRenderer.make(cType, document, explore, options, tagged);
   const result: ChildRenderers = {};
   explore.intrinsicFields.forEach((field: Field) => {
     result[field.name] = makeRenderer(
@@ -251,7 +251,7 @@ function makeContainerRenderer<Type extends ContainerRenderer>(
       options,
       c.defaultStylesForChildren,
       explore.queryTimezone,
-      field.getTags()
+      field.tagParse().tag
     );
   });
   c.childRenderers = result;

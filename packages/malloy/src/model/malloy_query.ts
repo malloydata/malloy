@@ -2569,6 +2569,9 @@ class QueryQuery extends QueryField {
       type: 'struct',
       queryTimezone: resultStruct.getQueryInfo().queryTimezone,
     };
+    if (this.parent.fieldDef.modelAnnotation) {
+      outputStruct.modelAnnotation = this.parent.fieldDef.modelAnnotation;
+    }
 
     return outputStruct;
   }
@@ -3586,18 +3589,18 @@ class QueryQueryIndexStage extends QueryQuery {
     s += "  CASE group_set\n    WHEN 99999 THEN ''";
     for (let i = 0; i < fields.length; i++) {
       if (fields[i].type === 'number') {
-        s += `    WHEN ${i} THEN ${dialect.castToString(
-          `MIN(${fields[i].expression})`
-        )} || ' to ' || ${dialect.castToString(
-          `MAX(${fields[i].expression})`
+        s += `    WHEN ${i} THEN ${dialect.concat(
+          `MIN(${dialect.castToString(fields[i].expression)})`,
+          "' to '",
+          dialect.castToString(`MAX(${fields[i].expression})`)
         )}\n`;
       }
       if (fields[i].type === 'timestamp' || fields[i].type === 'date') {
-        s += `    WHEN ${i} THEN MIN(${dialect.sqlDateToString(
-          fields[i].expression
-        )}) || ' to ' || MAX(${dialect.sqlDateToString(
-          fields[i].expression
-        )})\n`;
+        s += `    WHEN ${i} THEN ${dialect.concat(
+          `MIN(${dialect.sqlDateToString(fields[i].expression)}`,
+          "' to '",
+          `MAX(${dialect.sqlDateToString(fields[i].expression)})`
+        )}\n`;
       }
     }
     s += `  END as ${fieldRangeColumn}\n`;
@@ -3765,7 +3768,7 @@ class QueryQueryIndex extends QueryQuery {
 
   /**  All Indexes have the same output schema */
   getResultStructDef(): StructDef {
-    return {
+    const ret: StructDef = {
       type: 'struct',
       name: this.resultStage || 'result',
       dialect: this.parent.fieldDef.dialect,
@@ -3781,6 +3784,10 @@ class QueryQueryIndex extends QueryQuery {
       },
       structSource: {type: 'query_result'},
     };
+    if (this.parent.fieldDef.modelAnnotation) {
+      ret.modelAnnotation = this.parent.fieldDef.modelAnnotation;
+    }
+    return ret;
   }
 }
 

@@ -158,6 +158,7 @@ export class NamedSource extends Source {
         this.log(`Value not provided for required parameter ${checkDef}`);
       }
     }
+    this.document()?.rememberToAddModelAnnotations(ret);
     return ret;
   }
 }

@@ -58,11 +58,11 @@ export class NumberRendererFactory extends RendererFactory<NumberRenderOptions> 
   constructor() {
     super();
     this.addExtractor(
-      (options, value) => {
-        options.value_format = value;
+      (options, tagObj) => {
+        options.value_format = tagObj?.text();
       },
       this.rendererName,
-      'value_format'
+      'format'
     );
   }
 

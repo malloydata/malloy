@@ -505,4 +505,8 @@ ${indent(sql)}
   castToString(expression: string): string {
     return `CAST(${expression} as STRING)`;
   }
+
+  concat(...values: string[]): string {
+    return values.join(' || ');
+  }
 }

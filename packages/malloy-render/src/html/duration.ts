@@ -111,7 +111,8 @@ export class DurationRendererFactory extends RendererFactory<DurationRenderOptio
   constructor() {
     super();
     this.addExtractor((options, value) => {
-      options.duration_unit = (value as DurationUnit) ?? DurationUnit.Seconds;
+      options.duration_unit =
+        (value?.text() as DurationUnit) ?? DurationUnit.Seconds;
     }, this.rendererName);
   }
 

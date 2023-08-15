@@ -235,6 +235,8 @@ export abstract class Dialect {
 
   abstract castToString(expression: string): string;
 
+  abstract concat(...values: string[]): string;
+
   sqlLiteralNumber(literal: string): string {
     return literal;
   }

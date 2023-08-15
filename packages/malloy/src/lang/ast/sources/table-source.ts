@@ -49,7 +49,7 @@ export abstract class TableSource extends Source {
         tableDefEntry.value.fields.forEach(field => {
           field.location = this.location;
         });
-        return {
+        const ret = {
           ...tableDefEntry.value,
           fields: tableDefEntry.value.fields.map(field => ({
             ...field,
@@ -57,6 +57,8 @@ export abstract class TableSource extends Source {
           })),
           location: this.location,
         };
+        this.document()?.rememberToAddModelAnnotations(ret);
+        return ret;
       }
       if (tableDefEntry.status === 'error') {
         msg = tableDefEntry.message;
