@@ -151,6 +151,19 @@ export class Tag implements TagInterface {
     return parseTagline(str, extending, importing, __filename, 0, 0);
   }
 
+  static addModelScope(
+    spec: TagParseSpec | undefined,
+    modelScope: Tag
+  ): TagParseSpec {
+    const useSpec = spec ? {...spec} : {};
+    if (useSpec.scopes) {
+      useSpec.scopes = useSpec.scopes.concat(modelScope);
+    } else {
+      useSpec.scopes = [modelScope];
+    }
+    return useSpec;
+  }
+
   static annotationToTaglines(
     annote: Annotation | undefined,
     prefix?: RegExp

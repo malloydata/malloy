@@ -777,10 +777,8 @@ export class PreparedQuery implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    if (spec === undefined) {
-      const modelScope = Tag.annotationToTag(this._modelDef.annotation);
-      spec = {scopes: [modelScope.tag]};
-    }
+    const modelScope = Tag.annotationToTag(this._modelDef.annotation).tag;
+    spec = Tag.addModelScope(spec, modelScope);
     return Tag.annotationToTag(this._query.annotation, spec);
   }
 
@@ -1114,10 +1112,8 @@ export class PreparedResult implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec): TagParse {
-    if (spec === undefined) {
-      const modelScope = Tag.annotationToTag(this.modelDef.annotation);
-      spec = {scopes: [modelScope.tag]};
-    }
+    const modelScope = Tag.annotationToTag(this.modelDef.annotation).tag;
+    spec = Tag.addModelScope(spec, modelScope);
     return Tag.annotationToTag(this.inner.annotation, spec);
   }
 
@@ -1645,9 +1641,7 @@ export class AtomicField extends Entity implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    if (spec === undefined) {
-      spec = {scopes: [this.parent.modelTag]};
-    }
+    spec = Tag.addModelScope(spec, this.parent.modelTag);
     return Tag.annotationToTag(this.fieldTypeDef.annotation, spec);
   }
 
@@ -1919,9 +1913,7 @@ export class QueryField extends Query implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    if (spec === undefined) {
-      spec = {scopes: [this.parent.modelTag]};
-    }
+    spec = Tag.addModelScope(spec, this.parent.modelTag);
     return Tag.annotationToTag(this.turtleDef.annotation, spec);
   }
 
@@ -1990,9 +1982,7 @@ export class ExploreField extends Explore implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    if (spec === undefined) {
-      spec = {scopes: [this._parentExplore.modelTag]};
-    }
+    spec = Tag.addModelScope(spec, this._parentExplore.modelTag);
     return Tag.annotationToTag(this._structDef.annotation, spec);
   }
 

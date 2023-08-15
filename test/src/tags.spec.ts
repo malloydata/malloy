@@ -416,4 +416,28 @@ describe('tags in results', () => {
     expect(age.tagParse().tag).tagsAre({barchart: {}});
     expect(name.tagParse().tag).tagsAre({name: {}});
   });
+  test('User defines scopes nest properly', async () => {
+    const loaded = runtime.loadQuery(
+      `
+          ## scope=model
+          sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
+          query: from_sql(one) -> {
+            project:
+              # valueFrom=$(scope)
+              one
+          }`
+    );
+    const result = await loaded.run();
+    const shape = result.resultExplore;
+    const field = shape.getFieldByName('one');
+    expect(field).toBeDefined();
+    let tp = field.tagParse().tag;
+    expect(tp).tagsAre({valueFrom: {eq: 'model'}});
+    const sessionScope = Tag.fromTagline('# scope=session', undefined).tag;
+    tp = field.tagParse({scopes: [sessionScope]}).tag;
+    expect(tp).tagsAre({valueFrom: {eq: 'session'}});
+    const globalScope = Tag.fromTagline('# scope=global', undefined).tag;
+    tp = field.tagParse({scopes: [globalScope, sessionScope]}).tag;
+    expect(tp).tagsAre({valueFrom: {eq: 'global'}});
+  });
 });
