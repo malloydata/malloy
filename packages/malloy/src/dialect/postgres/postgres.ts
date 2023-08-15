@@ -453,4 +453,8 @@ export class PostgresDialect extends Dialect {
   castToString(expression: string): string {
     return `CAST(${expression} as VARCHAR)`;
   }
+
+  concat(...values: string[]): string {
+    return values.join(' || ');
+  }
 }

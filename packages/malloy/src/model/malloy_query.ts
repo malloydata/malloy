@@ -3589,11 +3589,11 @@ class QueryQueryIndexStage extends QueryQuery {
     s += "  CASE group_set\n    WHEN 99999 THEN ''";
     for (let i = 0; i < fields.length; i++) {
       if (fields[i].type === 'number') {
-        s += `    WHEN ${i} THEN ${dialect.castToString(
+        s += `    WHEN ${i} THEN ${dialect.concat(dialect.castToString(
           `MIN(${fields[i].expression})`
-        )} || ' to ' || ${dialect.castToString(
+        ), ' to ', dialect.castToString(
           `MAX(${fields[i].expression})`
-        )}\n`;
+        ))}\n`;
       }
       if (fields[i].type === 'timestamp' || fields[i].type === 'date') {
         s += `    WHEN ${i} THEN MIN(${dialect.sqlDateToString(

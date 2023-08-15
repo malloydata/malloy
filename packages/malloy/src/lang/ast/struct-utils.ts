@@ -41,8 +41,9 @@ export function opOutputStruct(
       return Segment.nextStructDef(inputStruct, opDesc);
     } catch (e) {
       logTo.log(
-        `INTERNAL ERROR model/Segment.nextStructDef: ${e.message}\n` +
-          `QUERY: ${inspect(opDesc, {breakLength: 72, depth: Infinity})}`
+        `INTERNAL ERROR model/Segment.nextStructDef: ${e.message} ${
+          (e as Error).stack
+        }\n` + `QUERY: ${inspect(opDesc, {breakLength: 72, depth: Infinity})}`
       );
     }
   }
