@@ -21,6 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+export * from './util/db-jest-matchers';
+
 export {allDatabaseTestSets} from './databases/shared/test_list';
 
 export {RuntimeList, testRuntimeFor} from './runtimes';
