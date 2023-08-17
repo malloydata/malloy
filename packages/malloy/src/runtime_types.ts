@@ -107,9 +107,9 @@ export type ConnectionParameterValue = string | number | boolean;
 export interface ConnectionParameter {
   name: string;
   type: 'string' | 'number' | 'boolean';
-  isRequired: boolean;
-  isSecret: boolean;
-  defaultValue: ConnectionParameterValue;
+  isOptional?: boolean;
+  isSecret?: boolean;
+  defaultValue?: ConnectionParameterValue;
 }
 
 export type ConnectionSchema = ConnectionParameter[];
