@@ -106,6 +106,7 @@ export type ConnectionParameterValue = string | number | boolean;
 
 export interface ConnectionParameter {
   name: string;
+  label: string;
   type: 'string' | 'number' | 'boolean';
   isRequired: boolean;
   isSecret: boolean;
