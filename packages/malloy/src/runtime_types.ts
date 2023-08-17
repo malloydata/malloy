@@ -112,13 +112,13 @@ export interface ConnectionParameter {
   defaultValue?: ConnectionParameterValue;
 }
 
-export type ConnectionSchema = ConnectionParameter[];
+export type ConnectionConfigSchema = ConnectionParameter[];
 
 export type ConnectionConfig = Record<string, ConnectionParameterValue>;
 
 export interface ConnectionFactory {
   connectionName: string;
-  connectionSchema: ConnectionSchema;
+  configSchema: ConnectionConfigSchema;
   createConnection(
     connectionConfig: ConnectionConfig,
     dialectRegistrar?: (dialect: Dialect) => void

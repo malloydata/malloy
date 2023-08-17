@@ -141,7 +141,7 @@ export type {
   ConnectionFactory,
   ConnectionParameter,
   ConnectionParameterValue,
-  ConnectionSchema,
+  ConnectionConfigSchema,
   InfoConnection,
   LookupConnection,
   ModelString,
