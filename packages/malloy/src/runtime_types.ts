@@ -173,7 +173,6 @@ export interface StreamingConnection extends Connection {
     options?: {rowLimit?: number}
   ): AsyncIterableIterator<QueryDataRow>;
 }
-
 export abstract class DialectProvider {
   constructor(dialect: Dialect) {
     registerDialect(dialect);
