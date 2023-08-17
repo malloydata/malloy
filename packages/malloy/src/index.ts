@@ -37,6 +37,7 @@ export type {
   TimestampUnit,
   TimeFieldType,
   QueryData,
+  QueryValue,
   FieldTypeDef,
   Expr,
   DialectFragment,
