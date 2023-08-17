@@ -136,18 +136,23 @@ export type {
 export type {RunSQLOptions} from './run_sql_options';
 export {DialectProvider} from './runtime_types';
 export type {
-  URLReader,
+  Connection,
+  ConnectionConfig,
+  ConnectionFactory,
+  ConnectionParameter,
+  ConnectionParameterValue,
+  ConnectionConfigSchema,
   InfoConnection,
   LookupConnection,
-  Connection,
-  QueryString,
   ModelString,
-  QueryURL,
   ModelURL,
-  PooledConnection,
-  TestableConnection,
   PersistSQLResults,
+  PooledConnection,
+  QueryString,
+  QueryURL,
+  TestableConnection,
   StreamingConnection,
+  URLReader,
 } from './runtime_types';
 export {toAsyncGenerator} from './connection_utils';
 export {type TagParse, Tag, type TagDict} from './tags';
