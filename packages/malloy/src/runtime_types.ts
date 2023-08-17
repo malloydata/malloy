@@ -102,6 +102,26 @@ export interface InfoConnection {
   get name(): string;
 }
 
+export type ConnectionParameterValue = string | number | boolean;
+
+export interface ConnectionParameter {
+  name: string;
+  type: 'string' | 'number' | 'boolean';
+  isRequired: boolean;
+  isSecret: boolean;
+  defaultValue: ConnectionParameterValue;
+}
+
+export type ConnectionSchema = ConnectionParameter[];
+
+export interface ConnectionFactory {
+  connectionName: string;
+  createConnection(
+    connectionSchema: ConnectionSchema,
+    dialectRegistrar?: (dialect: Dialect) => void
+  ): Connection & TestableConnection;
+}
+
 /**
  * An object capable of running SQL.
  */
