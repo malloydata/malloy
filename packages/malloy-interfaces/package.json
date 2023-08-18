@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/malloy-interfaces",
-  "version": "0.0.78",
+  "version": "0.0.79",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,9 +17,5 @@
     "clean": "tsc --build --clean",
     "build": "tsc --build",
     "prepublishOnly": "npm run clean && npm run build"
-  },
-  "dependencies": {
-  },
-  "devDependencies": {
   }
 }
