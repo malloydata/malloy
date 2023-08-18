@@ -128,6 +128,7 @@ describe('tagParse to Tag', () => {
     ['x=.7', {x: {eq: '.7'}}],
     ['x=.7e2', {x: {eq: '.7e2'}}],
     ['x=7E2', {x: {eq: '7E2'}}],
+    ['`spacey name`=Zaphod', {'spacey name': {eq: 'Zaphod'}}],
   ];
   test.each(tagTests)('tag %s', (expression: string, expected: TagDict) => {
     expect(expression).tagsAre(expected);

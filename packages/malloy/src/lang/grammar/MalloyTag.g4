@@ -34,11 +34,17 @@ tagSpec
 
 string
   : SQ_STRING
-  | NUMERIC_LITERAL
   | DQ_STRING
-  | BARE_STRING;
+  | BARE_STRING
+  | NUMERIC_LITERAL
+  ;
 
-propName: string (DOT string)*;
+identifier
+  : BQ_STRING
+  | BARE_STRING
+  ;
+
+propName: identifier (DOT identifier)*;
 
 eqValue
   : string
@@ -77,7 +83,8 @@ fragment UNICODE: '\\u' HEX HEX HEX HEX;
 fragment SAFE_NON_QUOTE: ~ ['"`\\\u0000-\u001F];
 fragment ESCAPED: '\\' .;
 SQ_STRING: '\'' (UNICODE | ESCAPED | SAFE_NON_QUOTE | ["`])* '\'';
-DQ_STRING: '"' (UNICODE | ESCAPED | SAFE_NON_QUOTE | ['`])* '"';
+DQ_STRING: '"'  (UNICODE | ESCAPED | SAFE_NON_QUOTE | ['`])* '"';
+BQ_STRING: '`'  (UNICODE | ESCAPED | SAFE_NON_QUOTE | ['"])* '`';
 fragment INTEGER_LITERAL: MINUS? DIGIT+;
 fragment EXPONENT: [Ee] [+-]? DIGIT+;
 NUMERIC_LITERAL
