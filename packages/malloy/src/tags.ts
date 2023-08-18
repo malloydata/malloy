@@ -436,7 +436,11 @@ class TaglineParser
   }
 
   protected getPropName(ctx: PropNameContext): string[] {
-    return ctx.string().map(cx => getString(cx));
+    return ctx
+      .identifier()
+      .map(cx =>
+        cx.BARE_STRING() ? cx.text : parseString(cx.text, cx.text[0])
+      );
   }
 
   getTags(tags: TagSpecContext[], tagLine: Tag): Tag {
