@@ -71,8 +71,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .run();
     const bare = result.data.path(0, 'zero_bare').number.value;
     const paren = result.data.path(0, 'zero_paren').number.value;
-    expect(bare).toBe(1);
-    expect(paren).toBe(1);
+    expect(bare).toBe(0);
+    expect(paren).toBe(0);
   });
 
   // Issue: #151
