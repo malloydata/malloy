@@ -36,7 +36,11 @@ import {
 } from '../../model/malloy_types';
 import {STANDARDSQL_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
-import {Dialect, DialectFieldList, QueryInfo} from '../dialect';
+import {
+  Dialect,
+  DialectFieldList,
+  QueryInfo,
+} from '@malloydata/malloy-interfaces';
 
 const castMap: Record<string, string> = {
   'number': 'float64',

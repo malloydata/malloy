@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Dialect} from '../../../dialect/dialect';
+import {Dialect} from '@malloydata/malloy-interfaces';
 import {StructDef} from '../../../model/malloy_types';
 
 import {LookupResult} from './lookup-result';

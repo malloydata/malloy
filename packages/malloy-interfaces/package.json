@@ -1,0 +1,28 @@
+{
+  "name": "@malloydata/malloy-interfaces",
+  "version": "0.0.76",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "homepage": "https://github.com/malloydata/malloy#readme",
+  "engines": {
+    "node": ">=10"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/malloydata/malloy"
+  },
+  "scripts": {
+    "test": "jest --config=../../jest.config.js",
+    "build-parser": "node src/lang/grammar/build_parser.js",
+    "testLang": "npm run test --testPathPattern=packages/malloy/src/lang",
+    "clean": "tsc --build --clean && rm -rf src/lang/lib dist",
+    "build": "npm run build-parser && tsc --build",
+    "malloyc": "ts-node ../../scripts/malloy-to-json",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "dependencies": {
+  },
+  "devDependencies": {
+  }
+}

@@ -135,25 +135,5 @@ export type {
   SerializedExplore,
 } from './malloy';
 export type {RunSQLOptions} from './run_sql_options';
-export {DialectProvider} from './runtime_types';
-export type {
-  Connection,
-  ConnectionConfig,
-  ConnectionFactory,
-  ConnectionParameter,
-  ConnectionParameterValue,
-  ConnectionConfigSchema,
-  InfoConnection,
-  LookupConnection,
-  ModelString,
-  ModelURL,
-  PersistSQLResults,
-  PooledConnection,
-  QueryString,
-  QueryURL,
-  TestableConnection,
-  StreamingConnection,
-  URLReader,
-} from './runtime_types';
 export {toAsyncGenerator} from './connection_utils';
 export {type TagParse, Tag, type TagDict} from './tags';

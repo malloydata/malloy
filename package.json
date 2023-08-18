@@ -5,6 +5,7 @@
   "name": "malloy",
   "workspaces": {
     "packages": [
+      "packages/malloy-interfaces",
       "packages/malloy",
       "packages/malloy-db-bigquery",
       "packages/malloy-db-duckdb",

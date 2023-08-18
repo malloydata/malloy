@@ -22,7 +22,7 @@
  */
 
 import {DuckDBDialect} from './duckdb';
-import {Dialect} from './dialect';
+import {Dialect} from '@malloydata/malloy-interfaces';
 import {PostgresDialect} from './postgres';
 import {StandardSQLDialect} from './standardsql';
 import {FunctionDef, FunctionOverloadDef} from '../model/malloy_types';

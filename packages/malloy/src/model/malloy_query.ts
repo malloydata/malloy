@@ -22,7 +22,6 @@
  */
 
 import cloneDeep from 'lodash/cloneDeep';
-import {Dialect, DialectFieldList, getDialect} from '../dialect';
 import {StandardSQLDialect} from '../dialect/standardsql/standardsql';
 import {
   AggregateFragment,
@@ -90,7 +89,13 @@ import {
   UngroupFragment,
 } from './malloy_types';
 
-import {Connection} from '../runtime_types';
+import {
+  Connection,
+  QueryInfo,
+  Dialect,
+  DialectFieldList,
+  getDialect,
+} from '@malloydata/malloy-interfaces';
 import {
   AndChain,
   exprMap,
@@ -99,7 +104,6 @@ import {
   joinWith,
   range,
 } from './utils';
-import {QueryInfo} from '../dialect/dialect';
 
 interface TurtleDefPlus extends TurtleDef, Filtered {}
 

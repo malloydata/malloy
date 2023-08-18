@@ -108,20 +108,17 @@ export interface ConnectionParameter {
   name: string;
   label: string;
   type: 'string' | 'number' | 'boolean';
-  isOptional?: boolean;
-  isSecret?: boolean;
-  defaultValue?: ConnectionParameterValue;
+  isRequired: boolean;
+  isSecret: boolean;
+  defaultValue: ConnectionParameterValue;
 }
 
-export type ConnectionConfigSchema = ConnectionParameter[];
-
-export type ConnectionConfig = Record<string, ConnectionParameterValue>;
+export type ConnectionSchema = ConnectionParameter[];
 
 export interface ConnectionFactory {
   connectionName: string;
-  configSchema: ConnectionConfigSchema;
   createConnection(
-    connectionConfig: ConnectionConfig,
+    connectionSchema: ConnectionSchema,
     dialectRegistrar?: (dialect: Dialect) => void
   ): Connection & TestableConnection;
 }

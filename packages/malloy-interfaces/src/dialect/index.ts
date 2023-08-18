@@ -21,15 +21,4 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-export type {DialectFunctionOverloadDef} from './functions/util';
-export {
-  anyExprType,
-  makeParam,
-  overload,
-  minScalar,
-  sql,
-} from './functions/util';
-export {StandardSQLDialect} from './standardsql';
-export {PostgresDialect} from './postgres';
-export {DuckDBDialect} from './duckdb';
-export {getDialect, registerDialect, getDialectFunction} from './dialect_map';
+export {Dialect} from './dialect';
