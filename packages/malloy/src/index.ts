@@ -135,7 +135,6 @@ export type {
   SerializedExplore,
 } from './malloy';
 export type {RunSQLOptions} from './run_sql_options';
-export {DialectProvider} from './runtime_types';
 export type {
   Connection,
   ConnectionConfig,
