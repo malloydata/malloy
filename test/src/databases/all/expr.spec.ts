@@ -396,6 +396,23 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     expect(result.data.path(0, 'm_count').value).toBe(63);
   });
 
+  it('sql casts', async () => {
+    const result = await expressionModel
+      .loadQuery(
+        `
+        query: aircraft -> {
+          group_by: a is "312"::"integer"
+          group_by: b is "312":::"integer"
+        }
+        `
+      )
+      .run();
+    expect(result.data.path(0, 'a').isNumber()).toBe(true);
+    expect(result.data.path(0, 'b').isNumber()).toBe(true);
+    expect(result.data.path(0, 'a').number.value).toBe(312);
+    expect(result.data.path(0, 'b').number.value).toBe(312);
+  });
+
   testIf(runtime.supportsNesting)(
     'query with aliasname used twice',
     async () => {

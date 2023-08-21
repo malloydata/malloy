@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+export {DuckDBDialect, StandardSQLDialect, PostgresDialect} from './dialect';
 // TODO tighten up exports
 export type {
   QueryDataRow,

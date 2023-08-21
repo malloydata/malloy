@@ -1934,6 +1934,26 @@ describe('unspported fields in schema', () => {
   });
 });
 
+describe('cast', () => {
+  // The "+ 1"s are there to make sure the result is of type 'number'
+  test('sql cast', () => {
+    expect(expr`ai::'integer' + 1`).toTranslate();
+    expect(expr`ai::"integer" + 1`).toTranslate();
+    expect(expr`ai::"""integer""" + 1`).toTranslate();
+  });
+  test('sql safe cast', () => {
+    expect(expr`astr:::'integer' + 1`).toTranslate();
+    expect(expr`astr:::"integer" + 1`).toTranslate();
+    expect(expr`astr:::"""integer""" + 1`).toTranslate();
+  });
+  test('malloy cast', () => {
+    expect(expr`astr::number + 1`).toTranslate();
+  });
+  test('malloy safe cast', () => {
+    expect(expr`astr:::number + 1`).toTranslate();
+  });
+});
+
 describe('error handling', () => {
   test('field and query with same name does not overflow', () => {
     expect(`

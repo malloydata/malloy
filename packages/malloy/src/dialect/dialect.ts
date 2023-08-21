@@ -32,7 +32,7 @@ import {
   TimestampUnit,
   TypecastFragment,
   mkExpr,
-  CastType,
+  FieldAtomicTypeDef,
 } from '../model/malloy_types';
 import {DialectFunctionOverloadDef} from './functions';
 
@@ -310,6 +310,6 @@ export abstract class Dialect {
     return `"${qi.queryTimezone}"`;
   }
 
-  abstract sqlTypeToMalloyType(sqlType: string): CastType | undefined;
-  abstract malloyTypeToSQLType(malloyType: CastType): string;
+  abstract sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined;
+  abstract malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string;
 }

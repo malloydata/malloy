@@ -33,16 +33,11 @@ import {
   isSamplingPercent,
   isSamplingRows,
   mkExpr,
-  FieldTypeDef,
-  CastType,
+  FieldAtomicTypeDef,
 } from '../../model/malloy_types';
 import {STANDARDSQL_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
 import {Dialect, DialectFieldList, QueryInfo} from '../dialect';
-
-const castMap: Record<string, string> = {
-  'number': 'float64',
-};
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
 function timestampMeasureable(units: string): boolean {
@@ -81,19 +76,19 @@ declare interface TimeMeasure {
 }
 
 // TODO this is duplicated in dialect and connection
-const bqToMalloyTypes: {[key: string]: CastType} = {
-  'DATE': 'date',
-  'STRING': 'string',
-  'INTEGER': 'number',
-  'INT64': 'number',
-  'FLOAT': 'number',
-  'FLOAT64': 'number',
-  'NUMERIC': 'number',
-  'BIGNUMERIC': 'number',
-  'TIMESTAMP': 'timestamp',
-  'BOOLEAN': 'boolean',
-  'BOOL': 'boolean',
-  'JSON': 'json',
+const bqToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
+  'DATE': {type: 'date'},
+  'STRING': {type: 'string'},
+  'INTEGER': {type: 'number', numberType: 'integer'},
+  'INT64': {type: 'number', numberType: 'integer'},
+  'FLOAT': {type: 'number', numberType: 'float'},
+  'FLOAT64': {type: 'number', numberType: 'float'},
+  'NUMERIC': {type: 'number', numberType: 'float'},
+  'BIGNUMERIC': {type: 'number', numberType: 'float'},
+  'TIMESTAMP': {type: 'timestamp'},
+  'BOOLEAN': {type: 'boolean'},
+  'BOOL': {type: 'boolean'},
+  'JSON': {type: 'json'},
   // TODO (https://cloud.google.com/bigquery/docs/reference/rest/v2/tables#tablefieldschema):
   // BYTES
   // DATETIME
@@ -433,7 +428,7 @@ ${indent(sql)}
     if (cast.srcType !== cast.dstType) {
       const dstType =
         typeof cast.dstType === 'string'
-          ? this.malloyTypeToSQLType(cast.dstType)
+          ? this.malloyTypeToSQLType({type: cast.dstType})
           : cast.dstType.raw;
       const castFunc = cast.safe ? 'SAFE_CAST' : 'CAST';
       return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
@@ -528,13 +523,19 @@ ${indent(sql)}
     return STANDARDSQL_FUNCTIONS.get(name);
   }
 
-  malloyTypeToSQLType(malloyType: CastType): string {
-    return castMap[malloyType] ?? malloyType;
+  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
+    if (malloyType.type === 'number') {
+      if (malloyType.numberType === 'integer') {
+        return 'INT64';
+      } else {
+        return 'FLOAT64';
+      }
+    }
+    return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): CastType | undefined {
-    // TODO the version in connection also supports number type, should we here?
-    return bqToMalloyTypes[sqlType];
+  sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
+    return bqToMalloyTypes[sqlType.toUpperCase()];
   }
 
   castToString(expression: string): string {

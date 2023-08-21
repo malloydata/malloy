@@ -22,7 +22,6 @@
  */
 
 import {
-  AtomicFieldType,
   Expr,
   Fragment,
   TimeFieldType,
@@ -30,6 +29,7 @@ import {
   TypecastFragment,
   isAtomicFieldType,
   FieldValueType,
+  CastType,
 } from '../../model/malloy_types';
 
 import {compressExpr} from './expressions/utils';
@@ -55,7 +55,7 @@ export function timeOffset(
 }
 
 export function castTo(
-  castType: AtomicFieldType | {raw: string},
+  castType: CastType | {raw: string},
   from: Expr,
   fromType: FieldValueType,
   safe = false

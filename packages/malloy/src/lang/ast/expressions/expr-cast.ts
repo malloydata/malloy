@@ -28,10 +28,6 @@ import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {compressExpr} from './utils';
 
-export function isCastType(t: string): t is CastType {
-  return ['string', 'number', 'boolean', 'date', 'timestamp'].includes(t);
-}
-
 export class ExprCast extends ExpressionDef {
   elementType = 'cast';
   constructor(
@@ -48,8 +44,10 @@ export class ExprCast extends ExpressionDef {
     if (typeof this.castType === 'string') {
       dataType = this.castType;
     } else {
+      // TODO theoretically `sqlTypeToMalloyType` can get number subtypes,
+      // but `TypeDesc` does not support them.
       dataType =
-        fs.dialectObj()?.sqlTypeToMalloyType(this.castType.raw) ??
+        fs.dialectObj()?.sqlTypeToMalloyType(this.castType.raw)?.type ??
         'unsupported';
     }
     return {

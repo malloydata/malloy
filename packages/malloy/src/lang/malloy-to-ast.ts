@@ -42,7 +42,7 @@ import {
   unIndent,
 } from './parse-utils';
 import {CastType} from '../model';
-import {DocumentLocation, Note} from '../model/malloy_types';
+import {DocumentLocation, isCastType, Note} from '../model/malloy_types';
 import {Tag} from '../tags';
 
 class IgnoredElement extends ast.MalloyElement {
@@ -1491,7 +1491,7 @@ export class MalloyToAST
     const mtcx = pcx.malloyType();
     if (mtcx) {
       const type = mtcx.text;
-      if (ast.isCastType(type)) {
+      if (isCastType(type)) {
         return type;
       }
       throw this.internalError(pcx, `unknown type '${type}'`);
@@ -1559,7 +1559,7 @@ export class MalloyToAST
     const rawRawType = pcx.malloyType()?.text;
     let rawType: CastType | undefined = undefined;
     if (rawRawType) {
-      if (ast.isCastType(rawRawType)) {
+      if (isCastType(rawRawType)) {
         rawType = rawRawType;
       } else {
         this.contextError(

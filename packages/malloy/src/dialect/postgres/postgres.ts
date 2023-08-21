@@ -35,16 +35,11 @@ import {
   isSamplingPercent,
   isSamplingRows,
   mkExpr,
-  CastType,
+  FieldAtomicTypeDef,
 } from '../../model/malloy_types';
 import {POSTGRES_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
 import {Dialect, DialectFieldList, QueryInfo, qtz} from '../dialect';
-
-const castMap: Record<string, string> = {
-  'number': 'double precision',
-  'string': 'varchar',
-};
 
 const pgExtractionMap: Record<string, string> = {
   'day_of_week': 'dow',
@@ -70,30 +65,30 @@ const inSeconds: Record<string, number> = {
 };
 
 // TODO this is duplicated in dialect and connection
-const postgresToMalloyTypes: {[key: string]: CastType} = {
-  'character varying': 'string',
-  'name': 'string',
-  'text': 'string',
-  'date': 'date',
-  'integer': 'number',
-  'bigint': 'number',
-  'double precision': 'number',
-  'timestamp without time zone': 'timestamp', // maybe not
-  'oid': 'string',
-  'boolean': 'boolean',
+const postgresToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
+  'character varying': {type: 'string'},
+  'name': {type: 'string'},
+  'text': {type: 'string'},
+  'date': {type: 'date'},
+  'integer': {type: 'number', numberType: 'integer'},
+  'bigint': {type: 'number', numberType: 'integer'},
+  'double precision': {type: 'number', numberType: 'float'},
+  'timestamp without time zone': {type: 'timestamp'}, // maybe not
+  'oid': {type: 'string'},
+  'boolean': {type: 'boolean'},
   // ARRAY: "string",
-  'timestamp': 'timestamp',
-  '"char"': 'string',
-  'character': 'string',
-  'smallint': 'number',
-  'xid': 'string',
-  'real': 'number',
-  'interval': 'string',
-  'inet': 'string',
-  'regtype': 'string',
-  'numeric': 'number',
-  'bytea': 'string',
-  'pg_ndistinct': 'number',
+  'timestamp': {type: 'timestamp'},
+  '"char"': {type: 'string'},
+  'character': {type: 'string'},
+  'smallint': {type: 'number', numberType: 'integer'},
+  'xid': {type: 'string'},
+  'real': {type: 'number', numberType: 'float'},
+  'interval': {type: 'string'},
+  'inet': {type: 'string'},
+  'regtype': {type: 'string'},
+  'numeric': {type: 'number', numberType: 'float'},
+  'bytea': {type: 'string'},
+  'pg_ndistinct': {type: 'number', numberType: 'integer'},
 };
 
 export class PostgresDialect extends Dialect {
@@ -378,7 +373,7 @@ export class PostgresDialect extends Dialect {
     if (cast.srcType !== cast.dstType) {
       const dstType =
         typeof cast.dstType === 'string'
-          ? this.malloyTypeToSQLType(cast.dstType)
+          ? this.malloyTypeToSQLType({type: cast.dstType})
           : cast.dstType.raw;
       if (cast.safe) {
         throw new Error("Postgres dialect doesn't support Safe Cast");
@@ -481,12 +476,21 @@ export class PostgresDialect extends Dialect {
     return POSTGRES_FUNCTIONS.get(name);
   }
 
-  malloyTypeToSQLType(malloyType: CastType): string {
-    return castMap[malloyType] ?? malloyType;
+  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
+    if (malloyType.type === 'number') {
+      if (malloyType.numberType === 'integer') {
+        return 'integer';
+      } else {
+        return 'double precision';
+      }
+    } else if (malloyType.type === 'string') {
+      return 'varchar';
+    }
+    return malloyType.type;
   }
 
-  sqlTypeToMalloyType(sqlType: string): CastType | undefined {
-    return postgresToMalloyTypes[sqlType];
+  sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
+    return postgresToMalloyTypes[sqlType.toLowerCase()];
   }
 
   castToString(expression: string): string {
