@@ -64,7 +64,6 @@ const inSeconds: Record<string, number> = {
   'week': 7 * 24 * 3600,
 };
 
-// TODO this is duplicated in dialect and connection
 const postgresToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'character varying': {type: 'string'},
   'name': {type: 'string'},

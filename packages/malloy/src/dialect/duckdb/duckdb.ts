@@ -51,7 +51,6 @@ const pgExtractionMap: Record<string, string> = {
   'day_of_year': 'doy',
 };
 
-// TODO this should not be duplicated between duckdb dialect and duckdb connection
 const duckDBToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'BIGINT': {type: 'number', numberType: 'integer'},
   'INTEGER': {type: 'number', numberType: 'integer'},

@@ -75,7 +75,6 @@ declare interface TimeMeasure {
   ratio: number;
 }
 
-// TODO this is duplicated in dialect and connection
 const bqToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'DATE': {type: 'date'},
   'STRING': {type: 'string'},
