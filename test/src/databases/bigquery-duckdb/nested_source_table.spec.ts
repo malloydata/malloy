@@ -50,8 +50,8 @@ source:ga_sessions is table('malloytest.ga_sample'){
     sold_count is hits.count() { where: hits.product.productQuantity > 0 }
 
   query: by_source is {
-    where: trafficSource.source != '(direct)'
-    group_by: trafficSource.source
+    where: trafficSource.\`source\` != '(direct)'
+    group_by: trafficSource.\`source\`
     aggregate: hits_count
     limit: 10
   }
