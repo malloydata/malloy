@@ -26,11 +26,11 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
-
-// No prebuilt shared model, each test is complete.  Makes debugging easier.
+import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
+// No prebuilt shared model, each test is complete.  Makes debugging easier.
 afterAll(async () => {
   await runtimes.closeAll();
 });

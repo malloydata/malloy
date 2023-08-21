@@ -21,7 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {QueryMaterializer, Result, Runtime} from '@malloydata/malloy';
+import {
+  QueryMaterializer,
+  Result,
+  SingleConnectionRuntime,
+} from '@malloydata/malloy';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -57,7 +61,10 @@ expect.extend({
     if (wantEq !== '=') {
       return {
         pass: false,
-        message: () => `${wantEq}\nSQL:\n    ${sql}`,
+        message: () =>
+          `Got '${wantEq}' ${Object.prototype.toString.call(
+            wantEq
+          )} instead of '='\nSQL:\n    ${sql}`,
       };
     }
     return {
@@ -67,10 +74,18 @@ expect.extend({
   },
 
   async queryMatches(
-    runtime: Runtime,
+    runtime: SingleConnectionRuntime,
     querySrc: string,
     expected: Record<string, unknown>
   ) {
+    if (!runtime.supportsNesting && querySrc.indexOf('nest:') >= 0) {
+      return {
+        pass: true,
+        message: () =>
+          'Test was skipped since connection does not support nesting.',
+      };
+    }
+
     let query: QueryMaterializer;
     try {
       query = runtime.loadQuery(querySrc);

@@ -27,7 +27,7 @@ import {NumberRenderOptions, StyleDefaults} from '../data_styles';
 import {RendererOptions} from '../renderer_types';
 import {Renderer} from '../renderer';
 import {RendererFactory} from '../renderer_factory';
-import numfmt from 'numfmt';
+import {format} from 'ssf';
 
 export class HTMLNumberRenderer extends HTMLTextRenderer {
   constructor(document: Document, readonly options: NumberRenderOptions) {
@@ -41,7 +41,7 @@ export class HTMLNumberRenderer extends HTMLTextRenderer {
 
     if (this.options.value_format) {
       try {
-        return numfmt.format(this.options.value_format, data.number.value);
+        return format(this.options.value_format, data.number.value);
       } catch {
         // TODO: explore surfacing invalid format error, ignoring it for now.
         throw new Error(`Invalid value format: ${this.options.value_format}`);
@@ -58,11 +58,11 @@ export class NumberRendererFactory extends RendererFactory<NumberRenderOptions> 
   constructor() {
     super();
     this.addExtractor(
-      (options, value) => {
-        options.value_format = value;
+      (options, tagObj) => {
+        options.value_format = tagObj?.text();
       },
       this.rendererName,
-      'value_format'
+      'format'
     );
   }
 

@@ -538,7 +538,8 @@ fieldExpr
   ;
 
 partialAllowedFieldExpr
-  : compareOp? fieldExpr
+  : OPAREN compareOp? fieldExpr CPAREN
+  | compareOp? fieldExpr
   ;
 
 pickStatement
@@ -566,7 +567,12 @@ collectionWildCard
   ;
 
 taggedRef
-  : tags fieldPath
+  : tags fieldPath refExpr?
+  ;
+
+refExpr
+  : DOT timeframe
+  | DOT aggregate OPAREN CPAREN
   ;
 
 collectionMember

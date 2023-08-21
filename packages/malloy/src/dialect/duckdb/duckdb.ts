@@ -79,8 +79,8 @@ const duckDBToMalloyTypes: {[key: string]: CastType} = {
 export class DuckDBDialect extends Dialect {
   name = 'duckdb';
   defaultNumberType = 'DOUBLE';
+  defaultDecimalType = 'NUMERIC';
   hasFinalStage = false;
-  stringTypeName = 'VARCHAR';
   divisionIsInteger = true;
   supportsSumDistinctFunction = true;
   unnestWithNumbers = true;
@@ -91,6 +91,7 @@ export class DuckDBDialect extends Dialect {
   dontUnionIndex = true;
   supportsQualify = true;
   supportsSafeCast = true;
+  supportsNesting = true;
 
   // hack until they support temporary macros.
   get udfPrefix(): string {
@@ -460,5 +461,13 @@ export class DuckDBDialect extends Dialect {
 
   sqlTypeToMalloyType(sqlType: string): CastType | undefined {
     return duckDBToMalloyTypes[sqlType];
+  }
+
+  castToString(expression: string): string {
+    return `CAST(${expression} as VARCHAR)`;
+  }
+
+  concat(...values: string[]): string {
+    return values.join(' || ');
   }
 }

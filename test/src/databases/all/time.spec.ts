@@ -24,10 +24,11 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
-import {mkSqlEqWith, runQuery} from '../../util';
+import {mkSqlEqWith, runQuery, testIf} from '../../util';
 import {DateTime as LuxonDateTime} from 'luxon';
 
 const runtimes = new RuntimeList(allDatabases);
+
 const timeSQL =
   "SELECT DATE '2021-02-24' as t_date, TIMESTAMP '2021-02-24 03:05:06' as t_timestamp";
 
@@ -469,30 +470,6 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
     );
   });
 
-  test('can use unsupported types', async () => {
-    if (dbName === 'bigquery') {
-      await expect(runtime).queryMatches(
-        `sql: timeData is { connection: "${dbName}" select: """
-          SELECT DATETIME '2020-02-20 00:00:00' as t_datetime
-          """}
-        query: from_sql(timeData) -> {
-          project: mex_220 is t_datetime::timestamp
-        }`,
-        {mex_220: utc_2020.toJSDate()}
-      );
-    } else {
-      await expect(runtime).queryMatches(
-        `sql: timeData is { connection: "${dbName}"  select: """
-            SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
-          """}
-        query: from_sql(timeData) -> {
-          project: mex_220 is t_tstz::timestamp
-        }`,
-        {mex_220: zone_2020.toJSDate()}
-      );
-    }
-  });
-
   describe('timezone set correctly', () => {
     test('timezone set in source used by query', async () => {
       expect(
@@ -513,12 +490,14 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
       ).toBe('America/Los_Angeles');
     });
 
-    test('timezone set in query inside source', async () => {
-      expect(
-        (
-          await runQuery(
-            runtime,
-            `sql: timeData is { connection: "${dbName}"  select: """SELECT 1"""}
+    testIf(runtime.supportsNesting)(
+      'timezone set in query inside source',
+      async () => {
+        expect(
+          (
+            await runQuery(
+              runtime,
+              `sql: timeData is { connection: "${dbName}"  select: """SELECT 1"""}
         source: timezone is from_sql(timeData) + {
           dimension: default_time is @2021-02-24 03:05:06
           query: la_query is {
@@ -532,19 +511,25 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
            nest: la_query
         }
         `
-          )
-        ).resultExplore.structDef
-      ).toMatchObject({
-        fields: [{}, {name: 'la_query', queryTimezone: 'America/Los_Angeles'}],
-      });
-    });
+            )
+          ).resultExplore.structDef
+        ).toMatchObject({
+          fields: [
+            {},
+            {name: 'la_query', queryTimezone: 'America/Los_Angeles'},
+          ],
+        });
+      }
+    );
 
-    test('timezone set in query using source', async () => {
-      expect(
-        (
-          await runQuery(
-            runtime,
-            `sql: timeData is { connection: "${dbName}"  select: """SELECT 1"""}
+    testIf(runtime.supportsNesting)(
+      'timezone set in query using source',
+      async () => {
+        expect(
+          (
+            await runQuery(
+              runtime,
+              `sql: timeData is { connection: "${dbName}"  select: """SELECT 1"""}
         source: timezone is from_sql(timeData) + {
           dimension: default_time is @2021-02-24 03:05:06
           query: undef_query is {
@@ -558,12 +543,13 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
            nest: undef_query
         }
         `
-          )
-        ).resultExplore.queryTimezone
-      ).toBe('America/Los_Angeles');
-    });
+            )
+          ).resultExplore.queryTimezone
+        ).toBe('America/Los_Angeles');
+      }
+    );
 
-    test('multiple timezones', async () => {
+    testIf(runtime.supportsNesting)('multiple timezones', async () => {
       expect(
         (
           await runQuery(
@@ -744,6 +730,30 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
       }`,
       {mex_ts: zone_2020.toJSDate()}
     );
+  });
+
+  test('can use unsupported types', async () => {
+    if (dbName === 'bigquery') {
+      await expect(runtime).queryMatches(
+        `sql: timeData is { connection: "${dbName}" select: """
+            SELECT DATETIME '2020-02-20 00:00:00' as t_datetime
+            """}
+          query: from_sql(timeData) -> {
+            project: mex_220 is t_datetime::timestamp
+          }`,
+        {mex_220: utc_2020.toJSDate()}
+      );
+    } else if (dbName === 'duckdb' || dbName === 'postgres') {
+      await expect(runtime).queryMatches(
+        `sql: timeData is { connection: "duckdb"  select: """
+              SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
+            """}
+          query: from_sql(timeData) -> {
+            project: mex_220 is t_tstz::timestamp
+          }`,
+        {mex_220: zone_2020.toJSDate()}
+      );
+    }
   });
 });
 

@@ -54,7 +54,7 @@ export interface ParsedMalloySQLMalloyStatementPart {
   malloy: string;
   range: MalloySQLParseRange;
   malloyRange: MalloySQLParseRange;
-  parenthized: boolean;
+  parenthesized: boolean;
 }
 
 export interface ParsedMalloySQLOtherStatementPart {
@@ -72,8 +72,14 @@ export interface MalloySQLParseResults {
   statements: ParsedMalloySQLStatement[];
 }
 
-export interface MalloySQLStatmentConfig {
+export interface MalloySQLSQLParseResults {
+  parts: ParsedMalloySQLStatementPart[];
+}
+
+export interface MalloySQLStatementConfig {
   connection?: string;
+  fromDelimiter?: boolean;
+  inheritedConnection?: boolean;
 }
 
 export enum MalloySQLStatementType {
@@ -85,7 +91,7 @@ export enum MalloySQLStatementType {
 export interface MalloySQLStatementBase {
   index: number;
   text: string;
-  config?: MalloySQLStatmentConfig;
+  config?: MalloySQLStatementConfig;
   range: DocumentRange;
   delimiterRange: DocumentRange;
 }
@@ -95,7 +101,12 @@ export interface EmbeddedMalloyQuery {
   text: string; // the entire wrapped embedded malloy text i.e. "(%{ malloy }%)"
   range: DocumentRange; // the entire wrapped embedded malloy, i.e. "(%{ malloy }%)"
   malloyRange: DocumentRange; // the malloy text only, i.e. " malloy "
-  parenthized: boolean;
+  parenthesized: boolean;
+}
+
+export interface EmbeddedComment {
+  text: string;
+  range: DocumentRange;
 }
 
 export interface MalloySQLMalloyStatement extends MalloySQLStatementBase {

@@ -1051,6 +1051,26 @@ describe('qops', () => {
       'query: a->{ project: astr, ai calculate: num is lag(ai) }'
     ).toTranslate();
   });
+  test('aggregate reference', () => {
+    const doc = model`query: a->{ aggregate: ai.sum() }`;
+    expect(doc).toTranslate();
+    const q = doc.translator.getQuery(0);
+    expect(q).toBeDefined();
+    const ai = q?.pipeline[0]?.fields[0];
+    expect(ai).toMatchObject({
+      name: 'ai',
+      type: 'number',
+      expressionType: 'aggregate',
+    });
+  });
+  test('timeunit reference', () => {
+    const doc = model`query: a->{ group_by: ats.day }`;
+    expect(doc).toTranslate();
+    const q = doc.translator.getQuery(0);
+    expect(q).toBeDefined();
+    const ats = q?.pipeline[0]?.fields[0];
+    expect(ats).toMatchObject({name: 'ats', type: 'timestamp'});
+  });
   test('aggregate multiple', () => {
     expect(`
       query: a->{
@@ -1631,6 +1651,9 @@ describe('expressions', () => {
       expect(new BetaExpression(`ad + 10 ${unit}s`)).translationToFailWith(
         `Cannot offset date by ${unit}`
       );
+    });
+    test('apply with parens', () => {
+      expect(expr`ai ? (> 1 & < 100)`).toTranslate();
     });
   });
 

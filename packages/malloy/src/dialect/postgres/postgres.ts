@@ -99,9 +99,9 @@ const postgresToMalloyTypes: {[key: string]: CastType} = {
 export class PostgresDialect extends Dialect {
   name = 'postgres';
   defaultNumberType = 'DOUBLE PRECISION';
+  defaultDecimalType = 'NUMERIC';
   udfPrefix = 'pg_temp.__udf';
   hasFinalStage = true;
-  stringTypeName = 'VARCHAR';
   divisionIsInteger = true;
   supportsSumDistinctFunction = false;
   unnestWithNumbers = false;
@@ -113,6 +113,7 @@ export class PostgresDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   globalFunctions = POSTGRES_FUNCTIONS;
+  supportsNesting = true;
 
   quoteTablePath(tablePath: string): string {
     return tablePath
@@ -486,5 +487,13 @@ export class PostgresDialect extends Dialect {
 
   sqlTypeToMalloyType(sqlType: string): CastType | undefined {
     return postgresToMalloyTypes[sqlType];
+  }
+
+  castToString(expression: string): string {
+    return `CAST(${expression} as VARCHAR)`;
+  }
+
+  concat(...values: string[]): string {
+    return values.join(' || ');
   }
 }

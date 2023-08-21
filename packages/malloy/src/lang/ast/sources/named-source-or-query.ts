@@ -65,6 +65,8 @@ export class NamedSourceOrQuery extends Source {
     if (source === undefined) {
       return ErrorFactory.structDef;
     }
-    return source.structDef();
+    const ret = source.structDef();
+    this.document()?.rememberToAddModelAnnotations(ret);
+    return ret;
   }
 }

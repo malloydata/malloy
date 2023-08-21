@@ -718,6 +718,7 @@ export interface Query extends Pipeline, Filtered, HasLocation {
   type?: 'query';
   structRef: StructRef;
   annotation?: Annotation;
+  modelAnnotation?: Annotation;
 }
 
 export type NamedQuery = Query & NamedObject;
@@ -869,6 +870,7 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
   queryTimezone?: string;
   dialect: string;
   annotation?: Annotation;
+  modelAnnotation?: ModelAnnotation;
 }
 
 export type ExpressionValueType =
@@ -1040,7 +1042,7 @@ export interface ModelDef {
   name: string;
   exports: string[];
   contents: Record<string, NamedModelObject>;
-  annotation?: Annotation;
+  annotation?: ModelAnnotation;
 }
 
 /** Very common record type */
@@ -1050,8 +1052,16 @@ export type NamedModelObjects = Record<string, NamedModelObject>;
 /** Malloy source annotations attached to objects */
 export interface Annotation {
   inherits?: Annotation;
-  blockNotes?: string[];
-  notes?: string[];
+  blockNotes?: Note[];
+  notes?: Note[];
+}
+export interface Note {
+  text: string;
+  at: DocumentLocation;
+}
+/** Annotations with a uuid to make it easier to stream */
+export interface ModelAnnotation extends Annotation {
+  id: string;
 }
 
 export type QueryScalar = string | boolean | number | Date | Buffer | null;

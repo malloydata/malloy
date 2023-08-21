@@ -22,7 +22,7 @@
  */
 
 import {ModelMaterializer} from '@malloydata/malloy';
-import {RuntimeList} from '../runtimes';
+import {RuntimeList, runtimeFor} from '../runtimes';
 import {describeIfDatabaseAvailable} from '../util';
 import {HTMLView} from '@malloydata/render';
 import {JSDOM} from 'jsdom';
@@ -37,11 +37,9 @@ async function runUnsupportedRenderTest(
   expect(runtime).toBeDefined();
   if (runtime) {
     const src = `
-      sql: sql_block is {
-        select: """SELECT ${expr} AS test"""
-        connection: "${connectionName}"
-      }
-      query: q is from_sql(sql_block)->{ project: *}
+      query: q is
+        ${connectionName}.sql("""SELECT ${expr} AS test""")
+        -> { project: * }
     `;
     const result = await runtime.loadModel(src).loadQueryByName('q').run();
     // console.log("DATA", result.data.toObject());
@@ -60,6 +58,7 @@ const [describe, databases] = describeIfDatabaseAvailable([
   'postgres',
   'duckdb',
 ]);
+const duckdb = runtimeFor('duckdb');
 describe('rendering results', () => {
   const runtimes = new RuntimeList(databases);
 
@@ -197,17 +196,10 @@ describe('rendering results', () => {
       let model: ModelMaterializer;
 
       beforeAll(async () => {
-        const connectionName = 'duckdb';
-        const runtime = runtimes.runtimeMap.get(connectionName);
-        expect(runtime).toBeDefined();
         const src = `
-      sql: names_sql is { connection: "duckdb" select: """SELECT 'Pedro' as nm
-        UNION ALL SELECT 'Sebastian'
-        UNION ALL SELECT 'Alex'
-        UNION ALL SELECT 'Miguel'""" }
-
-
-      sql: height_sql is { connection: "duckdb" select: """SELECT 'Pedro' as nm, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine
+      # line_chart
+      source: height is duckdb.sql("""
+        SELECT 'Pedro' as nm, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine
         UNION ALL SELECT 'Pedro', 2, 25, 3.4, 100, 1
         UNION ALL SELECT 'Pedro', 3, 38, 3.6, 200, 0
         UNION ALL SELECT 'Pedro', 4, 45, 3.7, 300, 1
@@ -222,11 +214,7 @@ describe('rendering results', () => {
         UNION ALL SELECT 'Miguel', 1, 23, 4, 34, 0
         UNION ALL SELECT 'Miguel', 2, 28, 4.1, 64, 1
         UNION ALL SELECT 'Miguel', 3, 35, 4.2, 31, 1
-        UNION ALL SELECT 'Miguel', 4, 47, 4.3, 76, 0 """ }
-
-      source: height
-      # line_chart
-        is from_sql(height_sql) + {
+        UNION ALL SELECT 'Miguel', 4, 47, 4.3, 76, 0 """) extend {
 
         query: by_name is {
           group_by: nm
@@ -255,11 +243,14 @@ describe('rendering results', () => {
       query: by_name_transposed is height -> by_name {
       }
 
-      source: names is from_sql(names_sql) + {
+      source: names is duckdb.sql("""SELECT 'Pedro' as nm
+      UNION ALL SELECT 'Sebastian'
+      UNION ALL SELECT 'Alex'
+      UNION ALL SELECT 'Miguel'""") extend {
         join_many: height on nm = height.nm
       }
       `;
-        model = await runtime!.loadModel(src);
+        model = await duckdb.loadModel(src);
       });
 
       test('regular table', async () => {
@@ -286,19 +277,13 @@ describe('rendering results', () => {
     describe('hidden tags', () => {
       let modelMaterializer: ModelMaterializer;
       beforeAll(() => {
-        const connectionName = 'duckdb';
-        const runtime = runtimes.runtimeMap.get(connectionName);
-        expect(runtime).toBeDefined();
         const src = `
-        sql: height_sql is { connection: "duckdb" select: """
-                      SELECT 'Pedro' as nm, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine
+          source: height
+            # line_chart
+            is duckdb.sql("""SELECT 'Pedro' as nm, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine
             UNION ALL SELECT 'Pedro', 2, 25, 3.4, 100, 1
             UNION ALL SELECT 'Sebastian', 1, 23, 2, 400, 1
-            UNION ALL SELECT 'Sebastian', 2, 28, 2.6, 500, 1 """ }
-
-          source: height
-          # line_chart
-            is from_sql(height_sql) + {
+            UNION ALL SELECT 'Sebastian', 2, 28, 2.6, 500, 1 """) extend {
 
             measure: visitcount is sum(vaccine) / count();
 
@@ -341,7 +326,7 @@ describe('rendering results', () => {
           query: by_name is height -> by_name {}
           query: by_name_db is height -> by_name_db {}
         `;
-        modelMaterializer = runtime!.loadModel(src);
+        modelMaterializer = duckdb.loadModel(src);
       });
 
       test('rendered correctly table', async () => {
@@ -368,11 +353,9 @@ describe('rendering results', () => {
     });
 
     test('pivot table renders correctly', async () => {
-      const connectionName = 'duckdb';
-      const runtime = runtimes.runtimeMap.get(connectionName);
-      expect(runtime).toBeDefined();
       const src = `
-      sql: height_sql is { connection: "${connectionName}" select: """SELECT 'Pedro' as nm, 'Monday' as dayito, 1 as loc, 2 as lac, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine, 'A' as btype
+          source: height
+          is duckdb.sql("""SELECT 'Pedro' as nm, 'Monday' as dayito, 1 as loc, 2 as lac, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine, 'A' as btype
           UNION ALL SELECT 'Pedro', 'Tuesday', 1, 2, 2, 25, 3.4, 100, 1, 'B'
           UNION ALL SELECT 'Pedro', 'Tuesday', 1, 2, 3, 38, 3.6, 200, 0, 'A'
           UNION ALL SELECT 'Pedro', 'Wednesday', 1, 2, 4, 45, 3.7, 300, 1, 'O'
@@ -387,11 +370,7 @@ describe('rendering results', () => {
           UNION ALL SELECT 'Miguel', 'Monday', 1, 2, 1, 23, 4, 34, 0, 'E'
           UNION ALL SELECT 'Miguel', 'Monday', 1, 2, 2, 28, 4.1, 64, 1, 'R'
           UNION ALL SELECT 'Miguel', 'Wednesday', 1, 2, 3, 35, 4.2, 31, 1, 'E'
-          UNION ALL SELECT 'Miguel', 'Wednesday', 1, 2, 4, 47, 4.3, 76, 0, 'F' """ }
-
-
-          source: height
-          is from_sql(height_sql) + {
+          UNION ALL SELECT 'Miguel', 'Wednesday', 1, 2, 4, 47, 4.3, 76, 0, 'F' """) extend {
 
             # percent
             dimension: flac is lac
@@ -401,7 +380,7 @@ describe('rendering results', () => {
 
             query: by_name is {
               group_by: nm
-              # pivot pivot_dimensions="dayito"
+              # pivot  { dimensions=["dayito"] }
               nest: pivot_f is {
                 group_by: dayito
                 aggregate:
@@ -424,7 +403,7 @@ describe('rendering results', () => {
           query: by_name is height -> by_name {}
       `;
       const result = await (
-        await runtime!.loadModel(src).loadQueryByName('by_name')
+        await duckdb.loadModel(src).loadQueryByName('by_name')
       ).run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
@@ -437,17 +416,14 @@ describe('rendering results', () => {
 
   describe('date renderer', () => {
     test('date with timezone rendered correctly', async () => {
-      const connectionName = 'duckdb';
-      const runtime = runtimes.runtimeMap.get(connectionName);
-      expect(runtime).toBeDefined();
-      const src = `sql: one is { connection: "${connectionName}"  select: """SELECT 1"""}
-      query: mex_query is from_sql(one) -> {
+      const src = `
+        query: mex_query is duckdb.sql('SELECT 1') -> {
           timezone: 'America/Mexico_City'
           project: mex_time is @2021-02-24 03:05:06
         }
       `;
       const result = await (
-        await runtime!.loadModel(src).loadQueryByName('mex_query')
+        await duckdb.loadModel(src).loadQueryByName('mex_query')
       ).run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
@@ -458,23 +434,20 @@ describe('rendering results', () => {
     });
 
     test('truncated date no explicit timezone rendered correctly', async () => {
-      const connectionName = 'duckdb';
-      const runtime = runtimes.runtimeMap.get(connectionName);
-      expect(runtime).toBeDefined();
       const src = `
-      sql: timeDataTrunc is { connection: "duckdb"  select: """
+      source: timeDataTrunc is duckdb.sql("""
                     SELECT CAST('2021-12-11 10:20:00' AS datetime) as times
           UNION ALL SELECT CAST('2021-01-01 05:40:00' AS datetime)
-          UNION ALL SELECT CAST('2021-04-01 00:59:00' AS datetime)"""}
+          UNION ALL SELECT CAST('2021-04-01 00:59:00' AS datetime)""")
 
 
         query:
-          data_trunc is from_sql(timeDataTrunc) -> {
+          data_trunc is timeDataTrunc -> {
             project: yr is times.year, qt is times.quarter, mt is times.month, dy is times.day
         }
       `;
       const result = await (
-        await runtime!.loadModel(src).loadQueryByName('data_trunc')
+        await duckdb.loadModel(src).loadQueryByName('data_trunc')
       ).run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
@@ -487,19 +460,15 @@ describe('rendering results', () => {
 
   describe('bar chart renderer', () => {
     test('date with timezone rendered correctly', async () => {
-      const connectionName = 'duckdb';
-      const runtime = runtimes.runtimeMap.get(connectionName);
-      expect(runtime).toBeDefined();
-      const src = `sql: one is { connection: "${connectionName}"  select: """SELECT 1"""}
-      query: mex_query
-          # bar_chart
-          is from_sql(one) -> {
-          timezone: 'America/Mexico_City'
-          project: mex_time is @2021-02-24 03:05:06
-        }
+      const src = `
+        query: mex_query # bar_chart
+          is duckdb.sql('SELECT 1') -> {
+            timezone: 'America/Mexico_City'
+            project: mex_time is @2021-02-24 03:05:06
+          }
       `;
       const result = await (
-        await runtime!.loadModel(src).loadQueryByName('mex_query')
+        await duckdb.loadModel(src).loadQueryByName('mex_query')
       ).run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
@@ -512,21 +481,18 @@ describe('rendering results', () => {
 
   describe('point map renderer', () => {
     test('date with timezone rendered correctly', async () => {
-      const connectionName = 'duckdb';
-      const runtime = runtimes.runtimeMap.get(connectionName);
-      expect(runtime).toBeDefined();
-      const src = `sql: timeData is { connection: "${connectionName}"  select: """
+      const src = `source: timeData is duckdb.sql("""
         SELECT 43.839187 as latitude, -113.849795 as longitude, CAST('2021-11-10' AS datetime) as times, 200 as size
-          UNION ALL SELECT 32.8647113, -117.1998042, CAST('2021-11-12' AS datetime), 400 as size"""}
+          UNION ALL SELECT 32.8647113, -117.1998042, CAST('2021-11-12' AS datetime), 400 as size""")
 
-        query: mexico_point_map is from_sql(timeData) -> {
+        query: mexico_point_map is timeData -> {
           timezone: 'America/Mexico_City'
           group_by: latitude, longitude, times
             aggregate:
               sizeSum is sum(size)
         }`;
       const result = await (
-        await runtime!.loadModel(src).loadQueryByName('mexico_point_map')
+        await duckdb.loadModel(src).loadQueryByName('mexico_point_map')
       ).run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
@@ -539,23 +505,18 @@ describe('rendering results', () => {
 
   describe('number renderer', () => {
     test('value format tags works correctly', async () => {
-      const connectionName = 'duckdb';
-      const runtime = runtimes.runtimeMap.get(connectionName);
-      expect(runtime).toBeDefined();
       const src = `
-        sql: number_sql is { connection: "${connectionName}" select: """SELECT 12.345 as anumber""" }
-
-        query: number_query is from_sql(number_sql) -> {
+        query: number_query is duckdb.sql('SELECT 12.345 as anumber') -> {
           project:
-          anumber
-          # number= "#,##0.0000"
-          larger is anumber
-          # number= "#,##0.00"
-          shorter is anumber
+            anumber
+            # number= "#,##0.0000"
+            larger is anumber
+            # number= "#,##0.00"
+            shorter is anumber
         }
       `;
       const result = await (
-        await runtime!.loadModel(src).loadQueryByName('number_query')
+        await duckdb.loadModel(src).loadQueryByName('number_query')
       ).run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
@@ -568,13 +529,8 @@ describe('rendering results', () => {
 
   describe('data volume renderer', () => {
     test('data volume tags works correctly', async () => {
-      const connectionName = 'duckdb';
-      const runtime = runtimes.runtimeMap.get(connectionName);
-      expect(runtime).toBeDefined();
       const src = `
-        sql: number_sql is { connection: "${connectionName}" select: """SELECT 1""" }
-
-        query: bytes_query is from_sql(number_sql) -> {
+        query: bytes_query is duckdb.sql('SELECT 1') -> {
           project:
           # data_volume = bytes
           usage_b is 3758
@@ -589,7 +545,7 @@ describe('rendering results', () => {
         }
       `;
       const result = await (
-        await runtime!.loadModel(src).loadQueryByName('bytes_query')
+        await duckdb.loadModel(src).loadQueryByName('bytes_query')
       ).run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {
@@ -602,13 +558,8 @@ describe('rendering results', () => {
 
   describe('duration renderer', () => {
     test('duration tags works correctly', async () => {
-      const connectionName = 'duckdb';
-      const runtime = runtimes.runtimeMap.get(connectionName);
-      expect(runtime).toBeDefined();
       const src = `
-        sql: number_sql is { connection: "${connectionName}" select: """SELECT 1""" }
-
-        query: duration_query is from_sql(number_sql) -> {
+        query: duration_query is duckdb.sql('SELECT 1') -> {
           project:
           # duration = nanoseconds
           ns1 is 1
@@ -657,7 +608,7 @@ describe('rendering results', () => {
         }
       `;
       const result = await (
-        await runtime!.loadModel(src).loadQueryByName('duration_query')
+        await duckdb.loadModel(src).loadQueryByName('duration_query')
       ).run();
       const document = new JSDOM().window.document;
       const html = await new HTMLView(document).render(result, {

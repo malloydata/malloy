@@ -25,7 +25,9 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
+import '../../util/db-jest-matchers';
 
+const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 const joinModelText = `
   source: aircraft_models is table('malloytest.aircraft_models') {
     primary_key: aircraft_model_code
@@ -51,16 +53,14 @@ const joinModelText = `
   }
 `;
 
-const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
-
-afterAll(async () => {
-  await runtimes.closeAll();
-});
-
 // const models = new Map<string, malloy.ModelMaterializer>();
 // runtimes.runtimeMap.forEach((runtime, key) => {
 //   models.set(key, runtime.loadModel(joinModelText));
 // });
+
+afterAll(async () => {
+  await runtimes.closeAll();
+});
 
 describe('join expression tests', () => {
   runtimes.runtimeMap.forEach((runtime, database) => {
@@ -243,7 +243,7 @@ describe('join expression tests', () => {
       expect(result.data.value[0]['f_sum2']).toBe(60462);
     });
 
-    it(`model: unnest is left join - ${database}`, async () => {
+    test(`model: unnest is left join - ${database}`, async () => {
       const result = await runtime
         .loadModel(joinModelText)
         .loadQuery(

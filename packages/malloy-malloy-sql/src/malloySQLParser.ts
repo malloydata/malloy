@@ -21,46 +21,19 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  LogMessage,
-  MalloyError,
-  DocumentRange,
-  DocumentPosition,
-} from '@malloydata/malloy';
+import {LogMessage, DocumentRange, DocumentPosition} from '@malloydata/malloy';
 import * as parser from './grammar/malloySQL';
 import {
-  MalloySQLStatmentConfig,
+  MalloySQLStatementConfig,
   MalloySQLStatementBase,
   MalloySQLStatement,
   MalloySQLParseResults,
   MalloySQLStatementType,
-  ParsedMalloySQLMalloyStatementPart,
   MalloySQLParseRange,
-  MalloySQLParseErrorExpected,
   MalloySQLParseLocation,
 } from './types';
-
-export class MalloySQLParseError extends MalloyError {
-  constructor(message: string, problems: LogMessage[] = []) {
-    super(message, problems);
-  }
-}
-
-export class MalloySQLSyntaxError extends MalloySQLParseError {
-  public expected: MalloySQLParseErrorExpected[];
-  public found: string;
-
-  constructor(
-    message: string,
-    log: LogMessage[],
-    expected: MalloySQLParseErrorExpected[],
-    found: string
-  ) {
-    super(message, log);
-    this.expected = expected;
-    this.found = found;
-  }
-}
+import {MalloySQLSQLParser} from './malloySQLSQLParser';
+import {MalloySQLParseError, MalloySQLSyntaxError} from './malloySQLErrors';
 
 export class MalloySQLParser {
   private static convertLocation(
@@ -126,15 +99,17 @@ export class MalloySQLParser {
 
     let previousConnection = '';
     const statements: MalloySQLStatement[] = [];
+    const {initialComments} = parsed;
     const initialCommentsLineCount =
-      parsed.initialComments.split(/\r\n|\r|\n/).length - 1;
+      initialComments.split(/\r\n|\r|\n/).length - 1;
     let statementIndex = 0;
-    let config: MalloySQLStatmentConfig = {};
     const errors: MalloySQLParseError[] = [];
 
     if (!parsed.statements) return {statements, errors};
 
     for (const parsedStatement of parsed.statements) {
+      let config: MalloySQLStatementConfig = {};
+
       if (
         parsedStatement.statementType === 'malloy' &&
         parsedStatement.config !== ''
@@ -151,7 +126,7 @@ export class MalloySQLParser {
       if (parsedStatement.config.startsWith('connection:')) {
         const splitConfig = parsedStatement.config.split('connection:');
         if (splitConfig.length > 0)
-          config = {connection: splitConfig[1].trim()};
+          config = {connection: splitConfig[1].trim(), fromDelimiter: true};
         else
           errors.push(
             this.createParseError(
@@ -183,32 +158,30 @@ export class MalloySQLParser {
           type: MalloySQLStatementType.MALLOY,
         });
       } else {
+        const parsedMalloySQLSQL = MalloySQLSQLParser.parse(
+          parsedStatement.statementText,
+          url,
+          parsedStatement.range.start
+        );
+
+        config = {...config, ...parsedMalloySQLSQL.config};
+
         if (!config.connection) {
           if (!previousConnection)
             errors.push(
               this.createParseError(
-                'No connection configuration specified, add "connection: my_connection_name" to this >>>sql line or to an above one',
+                'No connection configuration specified',
                 parsedStatement.delimiterRange,
                 url
               )
             );
           config.connection = previousConnection;
+          config.inheritedConnection = true;
         }
 
         previousConnection = config.connection;
-        const embeddedMalloyQueries = parsedStatement.parts
-          .filter((part): part is ParsedMalloySQLMalloyStatementPart => {
-            return part.type === 'malloy';
-          })
-          .map(part => {
-            return {
-              query: part.malloy,
-              parenthized: part.parenthized,
-              range: this.convertRange(part.range),
-              text: part.text,
-              malloyRange: this.convertRange(part.malloyRange),
-            };
-          });
+
+        const embeddedMalloyQueries = parsedMalloySQLSQL.embeddedMalloyQueries;
 
         statements.push({
           ...base,
@@ -223,6 +196,7 @@ export class MalloySQLParser {
       statements,
       errors,
       initialCommentsLineCount,
+      initialComments,
     };
   }
 }
@@ -231,4 +205,5 @@ export interface MalloySQLParse {
   statements: MalloySQLStatement[];
   errors: MalloySQLParseError[];
   initialCommentsLineCount?: number;
+  initialComments?: string;
 }
