@@ -1449,6 +1449,24 @@ export class MalloyToAST
   visitExprPathlessAggregate(
     pcx: parse.ExprPathlessAggregateContext
   ): ast.ExpressionDef {
+    const exprDef = pcx.fieldExpr();
+    const expr = exprDef ? this.getFieldExpr(exprDef) : undefined;
+    if (pcx.aggregate().MIN()) {
+      if (expr) {
+        return new ast.ExprMin(expr);
+      } else {
+        this.contextError(pcx, 'Missing expression for min');
+        return new ast.ExprNULL();
+      }
+    } else if (pcx.aggregate().MAX()) {
+      if (expr) {
+        return new ast.ExprMax(expr);
+      } else {
+        this.contextError(pcx, 'Missing expression for max');
+        return new ast.ExprNULL();
+      }
+    }
+
     if (this.m4WarningsEnabled()) {
       this.contextError(
         pcx,
@@ -1456,7 +1474,6 @@ export class MalloyToAST
         'warn'
       );
     }
-    const exprDef = pcx.fieldExpr();
     const source = undefined;
     if (pcx.aggregate().COUNT()) {
       if (exprDef) {
@@ -1465,21 +1482,7 @@ export class MalloyToAST
       return new ast.ExprCount(source);
     }
 
-    const expr = exprDef ? this.getFieldExpr(exprDef) : undefined;
-
-    if (pcx.aggregate().MIN()) {
-      if (expr) {
-        return new ast.ExprMin(expr);
-      } else {
-        this.contextError(pcx, 'Missing expression for min');
-      }
-    } else if (pcx.aggregate().MAX()) {
-      if (expr) {
-        return new ast.ExprMax(expr);
-      } else {
-        this.contextError(pcx, 'Missing expression for max');
-      }
-    } else if (pcx.aggregate().AVG()) {
+    if (pcx.aggregate().AVG()) {
       return new ast.ExprAvg(expr, source);
     } else if (pcx.aggregate().SUM()) {
       return new ast.ExprSum(expr, source);

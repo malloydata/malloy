@@ -531,11 +531,6 @@ fieldExpr
   | ungroup OPAREN fieldExpr (COMMA fieldName)* CPAREN     # exprUngroup
   ;
 
-aggregatePath
-  : SOURCE_KW DOT
-  | fieldPath DOT
-  ;
-
 partialAllowedFieldExpr
   : OPAREN compareOp? fieldExpr CPAREN
   | compareOp? fieldExpr
