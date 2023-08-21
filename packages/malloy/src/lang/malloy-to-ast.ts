@@ -1419,79 +1419,106 @@ export class MalloyToAST
 
   visitExprAggregate(pcx: parse.ExprAggregateContext): ast.ExpressionDef {
     const pathCx = pcx.fieldPath();
-    const path = pathCx
-      ? this.getFieldPath(pathCx, ast.ExpressionFieldReference)
-      : undefined;
+    const path = this.getFieldPath(pathCx, ast.ExpressionFieldReference);
     const source = pathCx && path ? this.astAt(path, pathCx) : undefined;
-
+    const aggFunc = pcx.aggregate().text.toLowerCase();
     const exprDef = pcx.fieldExpr();
+
     if (pcx.aggregate().COUNT()) {
       if (exprDef) {
-        this.contextError(exprDef, 'Ignored expression inside COUNT()');
+        this.contextError(exprDef, 'Expression illegal inside count()');
       }
       return new ast.ExprCount(source);
     }
 
     const expr = exprDef ? this.getFieldExpr(exprDef) : undefined;
 
-    if (pcx.aggregate().MIN()) {
-      this.contextError(pcx, 'Path not legal for min()');
-    } else if (pcx.aggregate().MAX()) {
-      this.contextError(pcx, 'Path not legal for max()');
-    } else if (pcx.aggregate().AVG()) {
+    if (aggFunc === 'min' || aggFunc === 'max') {
+      if (expr) {
+        this.contextError(
+          pcx,
+          `Cannot have an expression and an aggregate path for ${aggFunc}()`
+        );
+      } else {
+        const idRef = this.astAt(new ast.ExprIdReference(path), pathCx);
+        return aggFunc === 'min'
+          ? new ast.ExprMin(idRef)
+          : new ast.ExprMax(idRef);
+      }
+    } else if (aggFunc === 'avg') {
       return new ast.ExprAvg(expr, source);
-    } else if (pcx.aggregate().SUM()) {
+    } else if (aggFunc === 'sum') {
       return new ast.ExprSum(expr, source);
+    } else {
+      this.contextError(pcx, `Cannot parse aggregate function ${aggFunc}`);
     }
     return new ast.ExprNULL();
   }
 
+  /*
+   * error toodos
+   * for an aggregate function being called with no path predeeding ...
+   * [X] sum/avg() -- always an error
+   * [X}sum/avg(fieldName) -- suggest fieldName.sum
+   * [X}sum/avg(anything else) -- suggest source.sum
+   * source.count()
+   * source.sum/avg
+   * source.min/max(expr)
+   * [X]min/max() -- always an error
+   * [X] min/max(expr) -- OK
+   * [X] count() -- OK
+   * [X] count(anything) -- always an error
+   */
   visitExprPathlessAggregate(
     pcx: parse.ExprPathlessAggregateContext
   ): ast.ExpressionDef {
     const exprDef = pcx.fieldExpr();
     const expr = exprDef ? this.getFieldExpr(exprDef) : undefined;
-    if (pcx.aggregate().MIN()) {
+    const source = undefined;
+    const aggFunc = pcx.aggregate().text.toLowerCase();
+
+    if (this.m4WarningsEnabled()) {
+      if (pcx.STAR()) {
+        this.contextError(pcx, `* illegal inside ${aggFunc}()`, 'warn');
+      }
+    }
+    if (aggFunc === 'count') {
+      if (exprDef) {
+        this.contextError(exprDef, 'Expression illegal inside count()');
+      }
+      return new ast.ExprCount(source);
+    } else if (aggFunc === 'min') {
       if (expr) {
         return new ast.ExprMin(expr);
       } else {
         this.contextError(pcx, 'Missing expression for min');
-        return new ast.ExprNULL();
       }
-    } else if (pcx.aggregate().MAX()) {
+    } else if (aggFunc === 'max') {
       if (expr) {
         return new ast.ExprMax(expr);
       } else {
         this.contextError(pcx, 'Missing expression for max');
-        return new ast.ExprNULL();
       }
-    }
-
-    if (this.m4WarningsEnabled()) {
-      const aggFunc = pcx.aggregate().text;
-      if (pcx.STAR()) {
-        this.contextError(pcx, `* illegal inside ${aggFunc}()`, 'warn');
-      }
-      if (!pcx.SOURCE_KW()) {
+    } else {
+      if (expr === undefined) {
         this.contextError(
           pcx,
-          `Aggregate function missing context. Use 'source.${aggFunc}()' for top level aggregation.`,
-          'warn'
+          `Should be fieldName.${aggFunc}() or source.${aggFunc}(expression)`
         );
+        return new ast.ExprNULL();
       }
-    }
-    const source = undefined;
-    if (pcx.aggregate().COUNT()) {
-      if (exprDef) {
-        this.contextError(exprDef, 'Ignored expression inside COUNT()');
+      if (this.m4WarningsEnabled() && !pcx.SOURCE_KW()) {
+        const msg =
+          expr instanceof ast.ExprIdReference
+            ? `Aggregate function missing context. Use '${exprDef?.text}.${aggFunc}()'`
+            : `Aggregate function missing context. Use 'source.${aggFunc}(expression)' for top level aggregation.`;
+        this.contextError(pcx, msg, 'warn');
       }
-      return new ast.ExprCount(source);
-    }
-
-    if (pcx.aggregate().AVG()) {
-      return new ast.ExprAvg(expr, source);
-    } else if (pcx.aggregate().SUM()) {
-      return new ast.ExprSum(expr, source);
+      if (aggFunc === 'avg') {
+        return new ast.ExprAvg(expr, source);
+      } else if (aggFunc === 'sum') {
+        return new ast.ExprSum(expr, source);
+      }
     }
     return new ast.ExprNULL();
   }
