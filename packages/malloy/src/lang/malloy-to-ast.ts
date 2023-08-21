@@ -1432,27 +1432,49 @@ export class MalloyToAST
       return new ast.ExprCount(source);
     }
 
-    // * was ok in count, not ok now ... this should be in grammer but at
-    // the moment while things are still changing its right to be caught here
-    const star = pcx.STAR();
-    if (star) {
-      this.contextError(pcx, "'*' is not a valid expression");
+    const expr = exprDef ? this.getFieldExpr(exprDef) : undefined;
+
+    if (pcx.aggregate().MIN()) {
+      this.contextError(pcx, 'Path not legal for min()');
+    } else if (pcx.aggregate().MAX()) {
+      this.contextError(pcx, 'Path not legal for max()');
+    } else if (pcx.aggregate().AVG()) {
+      return new ast.ExprAvg(expr, source);
+    } else if (pcx.aggregate().SUM()) {
+      return new ast.ExprSum(expr, source);
+    }
+    return new ast.ExprNULL();
+  }
+
+  visitExprPathlessAggregate(
+    pcx: parse.ExprPathlessAggregateContext
+  ): ast.ExpressionDef {
+    if (this.m4WarningsEnabled()) {
+      this.contextError(
+        pcx,
+        'Aggregate function missing context. Use `source.FUNCTION_NAME()` for top level aggregation.',
+        'warn'
+      );
+    }
+    const exprDef = pcx.fieldExpr();
+    const source = undefined;
+    if (pcx.aggregate().COUNT()) {
+      if (exprDef) {
+        this.contextError(exprDef, 'Ignored expression inside COUNT()');
+      }
+      return new ast.ExprCount(source);
     }
 
     const expr = exprDef ? this.getFieldExpr(exprDef) : undefined;
 
     if (pcx.aggregate().MIN()) {
-      if (path) {
-        this.contextError(pcx, 'Path not legal for min()');
-      } else if (expr) {
+      if (expr) {
         return new ast.ExprMin(expr);
       } else {
         this.contextError(pcx, 'Missing expression for min');
       }
     } else if (pcx.aggregate().MAX()) {
-      if (path) {
-        this.contextError(pcx, 'Path not legal for max()');
-      } else if (expr) {
+      if (expr) {
         return new ast.ExprMax(expr);
       } else {
         this.contextError(pcx, 'Missing expression for max');
