@@ -1469,6 +1469,9 @@ export class MalloyToAST
 
     if (this.m4WarningsEnabled()) {
       const aggFunc = pcx.aggregate().text;
+      if (pcx.STAR()) {
+        this.contextError(pcx, `* illegal inside ${aggFunc}()`, 'warn');
+      }
       this.contextError(
         pcx,
         `Aggregate function missing context. Use 'source.${aggFunc}()' for top level aggregation.`,
