@@ -1468,9 +1468,10 @@ export class MalloyToAST
     }
 
     if (this.m4WarningsEnabled()) {
+      const aggFunc = pcx.aggregate().text;
       this.contextError(
         pcx,
-        'Aggregate function missing context. Use `source.FUNCTION_NAME()` for top level aggregation.',
+        `Aggregate function missing context. Use 'source.${aggFunc}()' for top level aggregation.`,
         'warn'
       );
     }
