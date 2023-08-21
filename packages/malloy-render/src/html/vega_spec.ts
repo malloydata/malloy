@@ -111,7 +111,7 @@ const sizeLarge = {
 
 // bar with text in the bars.
 const bar_SM: lite.TopLevelSpec = {
-  ...DEFAULT_SPEC,
+  config: {...DEFAULT_SPEC.config},
   encoding: {
     y: {field: '#{1}', type: 'nominal', axis: null, sort: null},
   },
