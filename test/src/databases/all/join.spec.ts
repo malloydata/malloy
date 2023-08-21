@@ -31,10 +31,10 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 const joinModelText = `
   source: aircraft_models is table('malloytest.aircraft_models') {
     primary_key: aircraft_model_code
-    measure: model_count is count(*)
+    measure: model_count is count()
     query: manufacturer_models is {
       group_by: manufacturer
-      aggregate: num_models is count(*)
+      aggregate: num_models is count()
     }
     query: manufacturer_seats is {
       group_by: manufacturer
@@ -44,7 +44,7 @@ const joinModelText = `
 
   source: aircraft is table('malloytest.aircraft'){
     primary_key: tail_num
-    measure: aircraft_count is count(*)
+    measure: aircraft_count is count()
   }
 
   source: funnel is from(aircraft_models->manufacturer_models) {
@@ -111,7 +111,7 @@ describe('join expression tests', () => {
         join_one: am_facts is from(
           aircraft_models->{
             group_by: m is manufacturer
-            aggregate: num_models is count(*)
+            aggregate: num_models is count()
           }) with manufacturer
       } -> {
         project:
@@ -134,7 +134,7 @@ describe('join expression tests', () => {
       query:
           aircraft_models-> {
             group_by: m is manufacturer
-            aggregate: num_models is count(*)
+            aggregate: num_models is count()
           }
       -> {
         project:
@@ -156,7 +156,7 @@ describe('join expression tests', () => {
           `
           query: from(aircraft_models->{
             group_by: m is manufacturer
-            aggregate: num_models is count(*)
+            aggregate: num_models is count()
             }){
             join_one: seats is from(
               aircraft_models->{
@@ -231,7 +231,7 @@ describe('join expression tests', () => {
           `
       query: aircraft_models->{
         group_by: manufacturer
-        aggregate: f is count(*)
+        aggregate: f is count()
       }->{
         aggregate: f_sum is f.sum()
       }->{

@@ -32,7 +32,6 @@ const expressionModelText = `
 source: aircraft_models is table('malloytest.aircraft_models') extend {
   primary_key: aircraft_model_code
   measure:
-    airport_count is count(*),
     aircraft_model_count is count(),
     total_seats is sum(seats),
     boeing_seats is sum(seats) {? manufacturer ? 'BOEING'},
@@ -44,7 +43,7 @@ source: aircraft_models is table('malloytest.aircraft_models') extend {
 source: aircraft is table('malloytest.aircraft') extend {
   primary_key: tail_num
   join_one: aircraft_models with aircraft_model_code
-  measure: aircraft_count is count(*)
+  measure: aircraft_count is count()
   query: by_manufacturer is {
     top: 5
     group_by: aircraft_models.manufacturer
@@ -330,17 +329,6 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       );
     }
   );
-
-  it.skip('defines in model', async () => {
-    // const result1 = await model.makeQuery(`
-    //   define a is ('malloytest.alltypes');
-    //   explore a | reduce x is count(*)
-    //   `);
-    // const result = await model.makeQuery(`
-    //     define a is ('malloytest.alltypes');
-    //     explore a | reduce x is count(*)
-    //     `);
-  });
 
   it('named query metadata undefined', async () => {
     const result = await expressionModel
