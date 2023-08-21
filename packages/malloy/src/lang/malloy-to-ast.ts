@@ -1472,11 +1472,13 @@ export class MalloyToAST
       if (pcx.STAR()) {
         this.contextError(pcx, `* illegal inside ${aggFunc}()`, 'warn');
       }
-      this.contextError(
-        pcx,
-        `Aggregate function missing context. Use 'source.${aggFunc}()' for top level aggregation.`,
-        'warn'
-      );
+      if (!pcx.SOURCE_KW()) {
+        this.contextError(
+          pcx,
+          `Aggregate function missing context. Use 'source.${aggFunc}()' for top level aggregation.`,
+          'warn'
+        );
+      }
     }
     const source = undefined;
     if (pcx.aggregate().COUNT()) {

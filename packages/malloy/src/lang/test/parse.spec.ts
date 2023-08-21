@@ -1673,7 +1673,7 @@ describe('expressions', () => {
       ##! m4warnings
       run: a -> {
         group_by: ai
-        aggregate: x is avg(ai) {? astr = 'why?' }
+        aggregate: x is source.avg(ai) {? astr = 'why?' }
       }
     `).toTranslateWithWarnings(
       'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
