@@ -1426,7 +1426,7 @@ export class MalloyToAST
 
     if (pcx.aggregate().COUNT()) {
       if (exprDef) {
-        this.contextError(exprDef, 'Expression illegal inside count()');
+        this.contextError(exprDef, 'Expression illegal inside path.count()');
       }
       return new ast.ExprCount(source);
     }
@@ -1459,15 +1459,14 @@ export class MalloyToAST
    * error toodos
    * for an aggregate function being called with no path predeeding ...
    * [X] sum/avg() -- always an error
-   * [X}sum/avg(fieldName) -- suggest fieldName.sum
-   * [X}sum/avg(anything else) -- suggest source.sum
-   * source.count()
-   * source.sum/avg
-   * source.min/max(expr)
-   * [X]min/max() -- always an error
-   * [X] min/max(expr) -- OK
+   * [X] sum/avg(fieldName) -- suggest fieldName.sum
+   * [X] sum/avg(expr) -- suggest source.sum(expr)
    * [X] count() -- OK
-   * [X] count(anything) -- always an error
+   * [X] count(anything) OK
+   * ?? source.count()
+   * [X] min/max() -- always an error
+   * [X] min/max(expr) -- OK
+   * ?? source.min/max(expr)
    */
   visitExprPathlessAggregate(
     pcx: parse.ExprPathlessAggregateContext
@@ -1483,21 +1482,21 @@ export class MalloyToAST
       }
     }
     if (aggFunc === 'count') {
-      if (exprDef) {
-        this.contextError(exprDef, 'Expression illegal inside count()');
-      }
-      return new ast.ExprCount(source);
+      return this.astAt(
+        expr ? new ast.ExprCountDistinct(expr) : new ast.ExprCount(),
+        pcx
+      );
     } else if (aggFunc === 'min') {
       if (expr) {
         return new ast.ExprMin(expr);
       } else {
-        this.contextError(pcx, 'Missing expression for min');
+        this.contextError(pcx, 'Missing expression for min()');
       }
     } else if (aggFunc === 'max') {
       if (expr) {
         return new ast.ExprMax(expr);
       } else {
-        this.contextError(pcx, 'Missing expression for max');
+        this.contextError(pcx, 'Missing expression for max()');
       }
     } else {
       if (expr === undefined) {
@@ -1511,7 +1510,7 @@ export class MalloyToAST
         const msg =
           expr instanceof ast.ExprIdReference
             ? `Aggregate function missing context. Use '${exprDef?.text}.${aggFunc}()'`
-            : `Aggregate function missing context. Use 'source.${aggFunc}(expression)' for top level aggregation.`;
+            : `Aggregate function missing context. Use 'source.${aggFunc}(expression)' for top level aggregation`;
         this.contextError(pcx, msg, 'warn');
       }
       if (aggFunc === 'avg') {

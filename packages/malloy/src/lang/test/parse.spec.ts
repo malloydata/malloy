@@ -1697,31 +1697,67 @@ describe('expressions', () => {
   });
 
   describe('aggregate forms', () => {
-    test('count', () => {
+    test('min with path', () => {
+      expect(expr`b.ai.min()`).toTranslate();
+    });
+    test('min without path', () => {
+      expect(expr`min(b.ai)`).toTranslate();
+    });
+    test('min requires expr', () => {
+      expect(expr`min()`).translationToFailWith(/Missing expression for min/);
+    });
+    test('source.min expr', () => {
+      expect(expr`source.min(ai)`).toTranslate();
+    });
+    test('max with path', () => {
+      expect(expr`b.ai.max()`).toTranslate();
+    });
+    test('max without path', () => {
+      expect(expr`max(b.ai)`).toTranslate();
+    });
+    test('max requires expr', () => {
+      expect(expr`max()`).translationToFailWith(/Missing expression for max/);
+    });
+    test('source.max expr', () => {
+      expect(expr`source.max(ai)`).toTranslate();
+    });
+    test('count with path', () => {
+      expect(expr`b.ai.count()`).toTranslate();
+    });
+    test('count normal', () => {
       expect(expr`count()`).toTranslate();
     });
-    test('count distinct', () => {
-      expect(expr`count(distinct astr)`).toTranslate();
+    test('count with expr', () => {
+      expect(expr`count(ai)`).toTranslate();
     });
-    test('join.count()', () => {
-      expect(expr`b.count()`).toTranslate();
+    test('source.count', () => {
+      expect(expr`source.count()`).toTranslate();
     });
-    for (const f of ['sum', 'min', 'max', 'avg']) {
-      const fOfT = `${f}(af)`;
-      test(fOfT, () => {
-        expect(new BetaExpression(fOfT)).toTranslate();
-      });
-      if (f !== 'min' && f !== 'max') {
-        const joinDot = `b.af.${f}()`;
-        test(joinDot, () => {
-          expect(new BetaExpression(joinDot)).toTranslate();
-        });
-        const joinAgg = `b.${f}(af)`;
-        test(joinAgg, () => {
-          expect(new BetaExpression(joinAgg)).toTranslate();
-        });
-      }
-    }
+    test('sum()', () => {
+      expect(expr`sum()`).translationToFailWith(
+        'Should be fieldName.sum() or source.sum(expression)'
+      );
+    });
+    test('sum field', () => {
+      expect(`##! m4warnings
+        run: ab -> { aggregate: t is sum(b.ai) }
+    `).toTranslateWithWarnings(
+        "Aggregate function missing context. Use 'b.ai.sum()'"
+      );
+    });
+    test('sum expr', () => {
+      expect(`##! m4warnings
+        run: a -> { aggregate: t is sum(ai * 2) }
+    `).toTranslateWithWarnings(
+        "Aggregate function missing context. Use 'source.sum(expression)' for top level aggregation"
+      );
+    });
+    test('sum path', () => {
+      expect(expr`ai.sum()`).toTranslate();
+    });
+    test('source.sum expr', () => {
+      expect(expr`source.sum(ai)`).toTranslate();
+    });
   });
 
   describe('pick statements', () => {
