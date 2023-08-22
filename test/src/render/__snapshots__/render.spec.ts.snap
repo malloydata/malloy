@@ -1122,15 +1122,15 @@ exports[`rendering results html renderer complex query with tags regular table 1
             class="marks"
             height="217"
             version="1.1"
-            viewBox="0 0 309 217"
-            width="309"
+            viewBox="0 0 293 217"
+            width="293"
             xmlns="http://www.w3.org/2000/svg"
             xmlns:xlink="http://www.w3.org/1999/xlink"
           >
             <g
               fill="none"
               stroke-miterlimit="10"
-              transform="translate(53,5)"
+              transform="translate(37,5)"
             >
               <g
                 aria-roledescription="group mark container"
@@ -1278,7 +1278,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,135)"
+                              transform="translate(0,136)"
                               x2="250"
                               y2="0"
                             />
@@ -1286,7 +1286,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,95)"
+                              transform="translate(0,97)"
                               x2="250"
                               y2="0"
                             />
@@ -1294,7 +1294,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,56)"
+                              transform="translate(0,58)"
                               x2="250"
                               y2="0"
                             />
@@ -1302,7 +1302,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,16)"
+                              transform="translate(0,19)"
                               x2="250"
                               y2="0"
                             />
@@ -1545,7 +1545,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                       </g>
                     </g>
                     <g
-                      aria-label="Y-axis titled 'wt' for a linear scale with values from 2.0 to 4.2"
+                      aria-label="Y-axis titled 'wt' for a linear scale with values from 0 to 5"
                       aria-roledescription="axis"
                       class="mark-group role-axis"
                       role="graphics-symbol"
@@ -1576,7 +1576,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,135)"
+                              transform="translate(0,136)"
                               x2="-5"
                               y2="0"
                             />
@@ -1584,7 +1584,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,95)"
+                              transform="translate(0,97)"
                               x2="-5"
                               y2="0"
                             />
@@ -1592,7 +1592,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,56)"
+                              transform="translate(0,58)"
                               x2="-5"
                               y2="0"
                             />
@@ -1600,7 +1600,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,16)"
+                              transform="translate(0,19)"
                               x2="-5"
                               y2="0"
                             />
@@ -1617,7 +1617,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               text-anchor="end"
                               transform="translate(-7,178)"
                             >
-                              2.0
+                              0
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -1625,9 +1625,9 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,138.22727272727272)"
+                              transform="translate(-7,139.11111111111111)"
                             >
-                              2.5
+                              1
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -1635,9 +1635,9 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,98.45454545454545)"
+                              transform="translate(-7,100.22222222222223)"
                             >
-                              3.0
+                              2
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -1645,9 +1645,9 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,58.681818181818194)"
+                              transform="translate(-7,61.33333333333334)"
                             >
-                              3.5
+                              3
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -1655,9 +1655,9 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,18.909090909090914)"
+                              transform="translate(-7,22.444444444444454)"
                             >
-                              4.0
+                              4
                             </text>
                           </g>
                           <g
@@ -1684,7 +1684,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               font-weight="500"
                               opacity="1"
                               text-anchor="middle"
-                              transform="translate(-35,87.5) rotate(-90) translate(0,-3)"
+                              transform="translate(-19,87.5) rotate(-90) translate(0,-3)"
                             >
                               wt
                             </text>
@@ -1707,28 +1707,28 @@ exports[`rendering results html renderer complex query with tags regular table 1
                       <path
                         aria-label="monthy: 1; wt: 2"
                         aria-roledescription="bar"
-                        d="M28.75,175h5v0h-5Z"
+                        d="M28.75,97.22222222222223h5v77.77777777777777h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 2; wt: 2.6"
                         aria-roledescription="bar"
-                        d="M91.25,127.27272727272728h5v47.72727272727272h-5Z"
+                        d="M91.25,73.88888888888889h5v101.11111111111111h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 3; wt: 3.6"
                         aria-roledescription="bar"
-                        d="M153.75,47.72727272727273h5v127.27272727272728h-5Z"
+                        d="M153.75,34.99999999999999h5v140h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 4; wt: 4.2"
                         aria-roledescription="bar"
-                        d="M216.25,0h5v175h-5Z"
+                        d="M216.25,11.666666666666664h5v163.33333333333334h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
@@ -2363,15 +2363,15 @@ exports[`rendering results html renderer complex query with tags regular table 1
             class="marks"
             height="222"
             version="1.1"
-            viewBox="0 0 309 222"
-            width="309"
+            viewBox="0 0 293 222"
+            width="293"
             xmlns="http://www.w3.org/2000/svg"
             xmlns:xlink="http://www.w3.org/1999/xlink"
           >
             <g
               fill="none"
               stroke-miterlimit="10"
-              transform="translate(53,10)"
+              transform="translate(37,10)"
             >
               <g
                 aria-roledescription="group mark container"
@@ -2519,7 +2519,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,150)"
+                              transform="translate(0,131)"
                               x2="250"
                               y2="0"
                             />
@@ -2527,7 +2527,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,125)"
+                              transform="translate(0,88)"
                               x2="250"
                               y2="0"
                             />
@@ -2535,31 +2535,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,100)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,75)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,50)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,25)"
+                              transform="translate(0,44)"
                               x2="250"
                               y2="0"
                             />
@@ -2810,7 +2786,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                       </g>
                     </g>
                     <g
-                      aria-label="Y-axis titled 'wt' for a linear scale with values from 3.0 to 3.7"
+                      aria-label="Y-axis titled 'wt' for a linear scale with values from 0 to 4"
                       aria-roledescription="axis"
                       class="mark-group role-axis"
                       role="graphics-symbol"
@@ -2841,7 +2817,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,150)"
+                              transform="translate(0,131)"
                               x2="-5"
                               y2="0"
                             />
@@ -2849,7 +2825,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,125)"
+                              transform="translate(0,88)"
                               x2="-5"
                               y2="0"
                             />
@@ -2857,31 +2833,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,100)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,75)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,50)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,25)"
+                              transform="translate(0,44)"
                               x2="-5"
                               y2="0"
                             />
@@ -2906,7 +2858,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               text-anchor="end"
                               transform="translate(-7,178)"
                             >
-                              3.0
+                              0
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -2914,9 +2866,9 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,152.99999999999997)"
+                              transform="translate(-7,134.25)"
                             >
-                              3.1
+                              1
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -2924,9 +2876,9 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,127.99999999999996)"
+                              transform="translate(-7,90.5)"
                             >
-                              3.2
+                              2
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -2934,39 +2886,9 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,103.00000000000007)"
+                              transform="translate(-7,46.75)"
                             >
-                              3.3
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,78.00000000000004)"
-                            >
-                              3.4
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,53.000000000000036)"
-                            >
-                              3.5
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,28.000000000000007)"
-                            >
-                              3.6
+                              3
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -2976,7 +2898,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               text-anchor="end"
                               transform="translate(-7,3)"
                             >
-                              3.7
+                              4
                             </text>
                           </g>
                           <g
@@ -3003,7 +2925,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               font-weight="500"
                               opacity="1"
                               text-anchor="middle"
-                              transform="translate(-35,87.5) rotate(-90) translate(0,-3)"
+                              transform="translate(-19,87.5) rotate(-90) translate(0,-3)"
                             >
                               wt
                             </text>
@@ -3026,28 +2948,28 @@ exports[`rendering results html renderer complex query with tags regular table 1
                       <path
                         aria-label="monthy: 1; wt: 3"
                         aria-roledescription="bar"
-                        d="M28.75,175h5v0h-5Z"
+                        d="M28.75,43.75h5v131.25h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 2; wt: 3.4"
                         aria-roledescription="bar"
-                        d="M91.25,75.00000000000004h5v99.99999999999996h-5Z"
+                        d="M91.25,26.250000000000004h5v148.75h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 3; wt: 3.6"
                         aria-roledescription="bar"
-                        d="M153.75,25.000000000000007h5v150h-5Z"
+                        d="M153.75,17.499999999999996h5v157.5h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 4; wt: 3.7"
                         aria-roledescription="bar"
-                        d="M216.25,0h5v175h-5Z"
+                        d="M216.25,13.124999999999993h5v161.875h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
@@ -3804,7 +3726,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,156)"
+                              transform="translate(0,175)"
                               x2="250"
                               y2="0"
                             />
@@ -3812,7 +3734,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,117)"
+                              transform="translate(0,150)"
                               x2="250"
                               y2="0"
                             />
@@ -3820,7 +3742,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,78)"
+                              transform="translate(0,125)"
                               x2="250"
                               y2="0"
                             />
@@ -3828,7 +3750,31 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,39)"
+                              transform="translate(0,100)"
+                              x2="250"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,75)"
+                              x2="250"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,50)"
+                              x2="250"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,25)"
                               x2="250"
                               y2="0"
                             />
@@ -4079,7 +4025,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                       </g>
                     </g>
                     <g
-                      aria-label="Y-axis titled 'wt' for a linear scale with values from 2.5 to 3.4"
+                      aria-label="Y-axis titled 'wt' for a linear scale with values from 0.0 to 3.5"
                       aria-roledescription="axis"
                       class="mark-group role-axis"
                       role="graphics-symbol"
@@ -4102,7 +4048,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,156)"
+                              transform="translate(0,175)"
                               x2="-5"
                               y2="0"
                             />
@@ -4110,7 +4056,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,117)"
+                              transform="translate(0,150)"
                               x2="-5"
                               y2="0"
                             />
@@ -4118,7 +4064,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,78)"
+                              transform="translate(0,125)"
                               x2="-5"
                               y2="0"
                             />
@@ -4126,7 +4072,31 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,39)"
+                              transform="translate(0,100)"
+                              x2="-5"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,75)"
+                              x2="-5"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,50)"
+                              x2="-5"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,25)"
                               x2="-5"
                               y2="0"
                             />
@@ -4149,9 +4119,9 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,158.55555555555554)"
+                              transform="translate(-7,178)"
                             >
-                              2.6
+                              0.0
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -4159,9 +4129,9 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,119.6666666666667)"
+                              transform="translate(-7,153)"
                             >
-                              2.8
+                              0.5
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -4169,7 +4139,47 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,80.77777777777777)"
+                              transform="translate(-7,128)"
+                            >
+                              1.0
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,103)"
+                            >
+                              1.5
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,78)"
+                            >
+                              2.0
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,53)"
+                            >
+                              2.5
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,28.000000000000007)"
                             >
                               3.0
                             </text>
@@ -4179,19 +4189,9 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,41.88888888888885)"
-                            >
-                              3.2
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
                               transform="translate(-7,3)"
                             >
-                              3.4
+                              3.5
                             </text>
                           </g>
                           <g
@@ -4241,28 +4241,28 @@ exports[`rendering results html renderer complex query with tags regular table 1
                       <path
                         aria-label="monthy: 1; wt: 2.5"
                         aria-roledescription="bar"
-                        d="M28.75,175h5v0h-5Z"
+                        d="M28.75,50h5v125h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 2; wt: 3"
                         aria-roledescription="bar"
-                        d="M91.25,77.77777777777777h5v97.22222222222223h-5Z"
+                        d="M91.25,25.000000000000007h5v150h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 3; wt: 3.2"
                         aria-roledescription="bar"
-                        d="M153.75,38.88888888888885h5v136.11111111111114h-5Z"
+                        d="M153.75,14.999999999999986h5v160h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 4; wt: 3.4"
                         aria-roledescription="bar"
-                        d="M216.25,0h5v175h-5Z"
+                        d="M216.25,5.000000000000002h5v170h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
@@ -4869,17 +4869,17 @@ exports[`rendering results html renderer complex query with tags regular table 1
         <div>
           <svg
             class="marks"
-            height="222"
+            height="217"
             version="1.1"
-            viewBox="0 0 317 222"
-            width="317"
+            viewBox="0 0 293 217"
+            width="293"
             xmlns="http://www.w3.org/2000/svg"
             xmlns:xlink="http://www.w3.org/1999/xlink"
           >
             <g
               fill="none"
               stroke-miterlimit="10"
-              transform="translate(61,10)"
+              transform="translate(37,5)"
             >
               <g
                 aria-roledescription="group mark container"
@@ -5027,7 +5027,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,146)"
+                              transform="translate(0,136)"
                               x2="250"
                               y2="0"
                             />
@@ -5035,15 +5035,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,117)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,87)"
+                              transform="translate(0,97)"
                               x2="250"
                               y2="0"
                             />
@@ -5059,15 +5051,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,29)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,0)"
+                              transform="translate(0,19)"
                               x2="250"
                               y2="0"
                             />
@@ -5310,7 +5294,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                       </g>
                     </g>
                     <g
-                      aria-label="Y-axis titled 'wt' for a linear scale with values from 4.00 to 4.30"
+                      aria-label="Y-axis titled 'wt' for a linear scale with values from 0 to 5"
                       aria-roledescription="axis"
                       class="mark-group role-axis"
                       role="graphics-symbol"
@@ -5341,7 +5325,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,146)"
+                              transform="translate(0,136)"
                               x2="-5"
                               y2="0"
                             />
@@ -5349,15 +5333,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,117)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,87)"
+                              transform="translate(0,97)"
                               x2="-5"
                               y2="0"
                             />
@@ -5373,15 +5349,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,29)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,0)"
+                              transform="translate(0,19)"
                               x2="-5"
                               y2="0"
                             />
@@ -5398,7 +5366,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               text-anchor="end"
                               transform="translate(-7,178)"
                             >
-                              4.00
+                              0
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -5406,9 +5374,9 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,148.83333333333343)"
+                              transform="translate(-7,139.11111111111111)"
                             >
-                              4.05
+                              1
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -5416,9 +5384,9 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,119.66666666666684)"
+                              transform="translate(-7,100.22222222222223)"
                             >
-                              4.10
+                              2
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -5426,9 +5394,9 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,90.49999999999974)"
+                              transform="translate(-7,61.33333333333334)"
                             >
-                              4.15
+                              3
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -5436,29 +5404,9 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,61.333333333333165)"
+                              transform="translate(-7,22.444444444444454)"
                             >
-                              4.20
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,32.166666666666586)"
-                            >
-                              4.25
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,3)"
-                            >
-                              4.30
+                              4
                             </text>
                           </g>
                           <g
@@ -5485,7 +5433,7 @@ exports[`rendering results html renderer complex query with tags regular table 1
                               font-weight="500"
                               opacity="1"
                               text-anchor="middle"
-                              transform="translate(-43,87.5) rotate(-90) translate(0,-3)"
+                              transform="translate(-19,87.5) rotate(-90) translate(0,-3)"
                             >
                               wt
                             </text>
@@ -5508,28 +5456,28 @@ exports[`rendering results html renderer complex query with tags regular table 1
                       <path
                         aria-label="monthy: 1; wt: 4"
                         aria-roledescription="bar"
-                        d="M28.75,175h5v0h-5Z"
+                        d="M28.75,19.444444444444454h5v155.55555555555554h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 2; wt: 4.1"
                         aria-roledescription="bar"
-                        d="M91.25,116.66666666666684h5v58.33333333333316h-5Z"
+                        d="M91.25,15.555555555555578h5v159.44444444444443h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 3; wt: 4.2"
                         aria-roledescription="bar"
-                        d="M153.75,58.333333333333165h5v116.66666666666683h-5Z"
+                        d="M153.75,11.666666666666664h5v163.33333333333334h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 4; wt: 4.3"
                         aria-roledescription="bar"
-                        d="M216.25,0h5v175h-5Z"
+                        d="M216.25,7.777777777777789h5v167.2222222222222h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
@@ -7895,15 +7843,15 @@ exports[`rendering results html renderer complex query with tags transposed tabl
             class="marks"
             height="217"
             version="1.1"
-            viewBox="0 0 309 217"
-            width="309"
+            viewBox="0 0 293 217"
+            width="293"
             xmlns="http://www.w3.org/2000/svg"
             xmlns:xlink="http://www.w3.org/1999/xlink"
           >
             <g
               fill="none"
               stroke-miterlimit="10"
-              transform="translate(53,5)"
+              transform="translate(37,5)"
             >
               <g
                 aria-roledescription="group mark container"
@@ -8051,7 +7999,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,135)"
+                              transform="translate(0,136)"
                               x2="250"
                               y2="0"
                             />
@@ -8059,7 +8007,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,95)"
+                              transform="translate(0,97)"
                               x2="250"
                               y2="0"
                             />
@@ -8067,7 +8015,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,56)"
+                              transform="translate(0,58)"
                               x2="250"
                               y2="0"
                             />
@@ -8075,7 +8023,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,16)"
+                              transform="translate(0,19)"
                               x2="250"
                               y2="0"
                             />
@@ -8318,7 +8266,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                       </g>
                     </g>
                     <g
-                      aria-label="Y-axis titled 'wt' for a linear scale with values from 2.0 to 4.2"
+                      aria-label="Y-axis titled 'wt' for a linear scale with values from 0 to 5"
                       aria-roledescription="axis"
                       class="mark-group role-axis"
                       role="graphics-symbol"
@@ -8349,7 +8297,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,135)"
+                              transform="translate(0,136)"
                               x2="-5"
                               y2="0"
                             />
@@ -8357,7 +8305,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,95)"
+                              transform="translate(0,97)"
                               x2="-5"
                               y2="0"
                             />
@@ -8365,7 +8313,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,56)"
+                              transform="translate(0,58)"
                               x2="-5"
                               y2="0"
                             />
@@ -8373,7 +8321,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,16)"
+                              transform="translate(0,19)"
                               x2="-5"
                               y2="0"
                             />
@@ -8390,7 +8338,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               text-anchor="end"
                               transform="translate(-7,178)"
                             >
-                              2.0
+                              0
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -8398,9 +8346,9 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,138.22727272727272)"
+                              transform="translate(-7,139.11111111111111)"
                             >
-                              2.5
+                              1
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -8408,9 +8356,9 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,98.45454545454545)"
+                              transform="translate(-7,100.22222222222223)"
                             >
-                              3.0
+                              2
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -8418,9 +8366,9 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,58.681818181818194)"
+                              transform="translate(-7,61.33333333333334)"
                             >
-                              3.5
+                              3
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -8428,9 +8376,9 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,18.909090909090914)"
+                              transform="translate(-7,22.444444444444454)"
                             >
-                              4.0
+                              4
                             </text>
                           </g>
                           <g
@@ -8457,7 +8405,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               font-weight="500"
                               opacity="1"
                               text-anchor="middle"
-                              transform="translate(-35,87.5) rotate(-90) translate(0,-3)"
+                              transform="translate(-19,87.5) rotate(-90) translate(0,-3)"
                             >
                               wt
                             </text>
@@ -8480,28 +8428,660 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                       <path
                         aria-label="monthy: 1; wt: 2"
                         aria-roledescription="bar"
-                        d="M28.75,175h5v0h-5Z"
+                        d="M28.75,97.22222222222223h5v77.77777777777777h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 2; wt: 2.6"
                         aria-roledescription="bar"
-                        d="M91.25,127.27272727272728h5v47.72727272727272h-5Z"
+                        d="M91.25,73.88888888888889h5v101.11111111111111h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 3; wt: 3.6"
                         aria-roledescription="bar"
-                        d="M153.75,47.72727272727273h5v127.27272727272728h-5Z"
+                        d="M153.75,34.99999999999999h5v140h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 4; wt: 4.2"
                         aria-roledescription="bar"
-                        d="M216.25,0h5v175h-5Z"
+                        d="M216.25,11.666666666666664h5v163.33333333333334h-5Z"
+                        fill="#4285F4"
+                        role="graphics-symbol"
+                      />
+                    </g>
+                  </g>
+                  <path
+                    aria-hidden="true"
+                    class="foreground"
+                    d=""
+                    display="none"
+                  />
+                </g>
+              </g>
+            </g>
+          </svg>
+        </div>
+      </td>
+      <td
+        style="padding: 8px; vertical-align: top; text-align: right;"
+      >
+        <div>
+          <svg
+            class="marks"
+            height="222"
+            version="1.1"
+            viewBox="0 0 293 222"
+            width="293"
+            xmlns="http://www.w3.org/2000/svg"
+            xmlns:xlink="http://www.w3.org/1999/xlink"
+          >
+            <g
+              fill="none"
+              stroke-miterlimit="10"
+              transform="translate(37,10)"
+            >
+              <g
+                aria-roledescription="group mark container"
+                class="mark-group role-frame root"
+                role="graphics-object"
+              >
+                <g
+                  transform="translate(0,0)"
+                >
+                  <path
+                    aria-hidden="true"
+                    class="background"
+                    d="M0.5,0.5h250v175h-250Z"
+                    stroke="#888"
+                  />
+                  <g>
+                    <g
+                      aria-hidden="true"
+                      class="mark-group role-axis"
+                    >
+                      <g
+                        transform="translate(0.5,175.5)"
+                      >
+                        <path
+                          aria-hidden="true"
+                          class="background"
+                          d="M0,0h0v0h0Z"
+                          pointer-events="none"
+                        />
+                        <g>
+                          <g
+                            class="mark-rule role-axis-grid"
+                            pointer-events="none"
+                          >
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(31,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(63,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(94,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(125,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(156,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(188,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(219,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(250,-175)"
+                              x2="0"
+                              y2="175"
+                            />
+                          </g>
+                        </g>
+                        <path
+                          aria-hidden="true"
+                          class="foreground"
+                          d=""
+                          display="none"
+                          pointer-events="none"
+                        />
+                      </g>
+                    </g>
+                    <g
+                      aria-hidden="true"
+                      class="mark-group role-axis"
+                    >
+                      <g
+                        transform="translate(0.5,0.5)"
+                      >
+                        <path
+                          aria-hidden="true"
+                          class="background"
+                          d="M0,0h0v0h0Z"
+                          pointer-events="none"
+                        />
+                        <g>
+                          <g
+                            class="mark-rule role-axis-grid"
+                            pointer-events="none"
+                          >
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,175)"
+                              x2="250"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,131)"
+                              x2="250"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,88)"
+                              x2="250"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,44)"
+                              x2="250"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#888"
+                              stroke-width="1"
+                              transform="translate(0,0)"
+                              x2="250"
+                              y2="0"
+                            />
+                          </g>
+                        </g>
+                        <path
+                          aria-hidden="true"
+                          class="foreground"
+                          d=""
+                          display="none"
+                          pointer-events="none"
+                        />
+                      </g>
+                    </g>
+                    <g
+                      aria-label="X-axis titled 'monthy' for a linear scale with values from 1 to 5"
+                      aria-roledescription="axis"
+                      class="mark-group role-axis"
+                      role="graphics-symbol"
+                    >
+                      <g
+                        transform="translate(0.5,175.5)"
+                      >
+                        <path
+                          aria-hidden="true"
+                          class="background"
+                          d="M0,0h0v0h0Z"
+                          pointer-events="none"
+                        />
+                        <g>
+                          <g
+                            class="mark-rule role-axis-tick"
+                            pointer-events="none"
+                          >
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(31,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(63,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(94,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(125,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(156,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(188,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(219,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(250,0)"
+                              x2="0"
+                              y2="5"
+                            />
+                          </g>
+                          <g
+                            class="mark-text role-axis-label"
+                            pointer-events="none"
+                          >
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="start"
+                              transform="translate(0,15)"
+                            >
+                              0.5
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="0"
+                              text-anchor="middle"
+                              transform="translate(31.25,15)"
+                            >
+                              1.0
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="middle"
+                              transform="translate(62.5,15)"
+                            >
+                              1.5
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="0"
+                              text-anchor="middle"
+                              transform="translate(93.75,15)"
+                            >
+                              2.0
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="middle"
+                              transform="translate(125,15)"
+                            >
+                              2.5
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="0"
+                              text-anchor="middle"
+                              transform="translate(156.25,15)"
+                            >
+                              3.0
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="middle"
+                              transform="translate(187.5,15)"
+                            >
+                              3.5
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="0"
+                              text-anchor="middle"
+                              transform="translate(218.75,15)"
+                            >
+                              4.0
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(250,15)"
+                            >
+                              4.5
+                            </text>
+                          </g>
+                          <g
+                            class="mark-rule role-axis-domain"
+                            pointer-events="none"
+                          >
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,0)"
+                              x2="250"
+                              y2="0"
+                            />
+                          </g>
+                          <g
+                            class="mark-text role-axis-title"
+                            pointer-events="none"
+                          >
+                            <text
+                              fill="var(--malloy-title-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="12px"
+                              font-weight="500"
+                              opacity="1"
+                              text-anchor="middle"
+                              transform="translate(125,30)"
+                            >
+                              monthy
+                            </text>
+                          </g>
+                        </g>
+                        <path
+                          aria-hidden="true"
+                          class="foreground"
+                          d=""
+                          display="none"
+                          pointer-events="none"
+                        />
+                      </g>
+                    </g>
+                    <g
+                      aria-label="Y-axis titled 'wt' for a linear scale with values from 0 to 4"
+                      aria-roledescription="axis"
+                      class="mark-group role-axis"
+                      role="graphics-symbol"
+                    >
+                      <g
+                        transform="translate(0.5,0.5)"
+                      >
+                        <path
+                          aria-hidden="true"
+                          class="background"
+                          d="M0,0h0v0h0Z"
+                          pointer-events="none"
+                        />
+                        <g>
+                          <g
+                            class="mark-rule role-axis-tick"
+                            pointer-events="none"
+                          >
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,175)"
+                              x2="-5"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,131)"
+                              x2="-5"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,88)"
+                              x2="-5"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,44)"
+                              x2="-5"
+                              y2="0"
+                            />
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,0)"
+                              x2="-5"
+                              y2="0"
+                            />
+                          </g>
+                          <g
+                            class="mark-text role-axis-label"
+                            pointer-events="none"
+                          >
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,178)"
+                            >
+                              0
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,134.25)"
+                            >
+                              1
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,90.5)"
+                            >
+                              2
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,46.75)"
+                            >
+                              3
+                            </text>
+                            <text
+                              fill="var(--malloy-label-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="10px"
+                              opacity="1"
+                              text-anchor="end"
+                              transform="translate(-7,3)"
+                            >
+                              4
+                            </text>
+                          </g>
+                          <g
+                            class="mark-rule role-axis-domain"
+                            pointer-events="none"
+                          >
+                            <line
+                              opacity="1"
+                              stroke="#ddd"
+                              stroke-width="1"
+                              transform="translate(0,175)"
+                              x2="0"
+                              y2="-175"
+                            />
+                          </g>
+                          <g
+                            class="mark-text role-axis-title"
+                            pointer-events="none"
+                          >
+                            <text
+                              fill="var(--malloy-title-color, #505050)"
+                              font-family="var(--malloy-font-family, 'Roboto')"
+                              font-size="12px"
+                              font-weight="500"
+                              opacity="1"
+                              text-anchor="middle"
+                              transform="translate(-19,87.5) rotate(-90) translate(0,-3)"
+                            >
+                              wt
+                            </text>
+                          </g>
+                        </g>
+                        <path
+                          aria-hidden="true"
+                          class="foreground"
+                          d=""
+                          display="none"
+                          pointer-events="none"
+                        />
+                      </g>
+                    </g>
+                    <g
+                      aria-roledescription="rect mark container"
+                      class="mark-rect role-mark marks"
+                      role="graphics-object"
+                    >
+                      <path
+                        aria-label="monthy: 1; wt: 3"
+                        aria-roledescription="bar"
+                        d="M28.75,43.75h5v131.25h-5Z"
+                        fill="#4285F4"
+                        role="graphics-symbol"
+                      />
+                      <path
+                        aria-label="monthy: 2; wt: 3.4"
+                        aria-roledescription="bar"
+                        d="M91.25,26.250000000000004h5v148.75h-5Z"
+                        fill="#4285F4"
+                        role="graphics-symbol"
+                      />
+                      <path
+                        aria-label="monthy: 3; wt: 3.6"
+                        aria-roledescription="bar"
+                        d="M153.75,17.499999999999996h5v157.5h-5Z"
+                        fill="#4285F4"
+                        role="graphics-symbol"
+                      />
+                      <path
+                        aria-label="monthy: 4; wt: 3.7"
+                        aria-roledescription="bar"
+                        d="M216.25,13.124999999999993h5v161.875h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
@@ -8974,7 +9554,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                       </g>
                     </g>
                     <g
-                      aria-label="Y-axis titled 'wt' for a linear scale with values from 3.0 to 3.7"
+                      aria-label="Y-axis titled 'wt' for a linear scale with values from 0.0 to 3.5"
                       aria-roledescription="axis"
                       class="mark-group role-axis"
                       role="graphics-symbol"
@@ -9070,7 +9650,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               text-anchor="end"
                               transform="translate(-7,178)"
                             >
-                              3.0
+                              0.0
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -9078,9 +9658,9 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,152.99999999999997)"
+                              transform="translate(-7,153)"
                             >
-                              3.1
+                              0.5
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -9088,9 +9668,9 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,127.99999999999996)"
+                              transform="translate(-7,128)"
                             >
-                              3.2
+                              1.0
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -9098,9 +9678,9 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,103.00000000000007)"
+                              transform="translate(-7,103)"
                             >
-                              3.3
+                              1.5
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -9108,9 +9688,9 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,78.00000000000004)"
+                              transform="translate(-7,78)"
                             >
-                              3.4
+                              2.0
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -9118,9 +9698,9 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,53.000000000000036)"
+                              transform="translate(-7,53)"
                             >
-                              3.5
+                              2.5
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -9130,7 +9710,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               text-anchor="end"
                               transform="translate(-7,28.000000000000007)"
                             >
-                              3.6
+                              3.0
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -9139,640 +9719,8 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               opacity="1"
                               text-anchor="end"
                               transform="translate(-7,3)"
-                            >
-                              3.7
-                            </text>
-                          </g>
-                          <g
-                            class="mark-rule role-axis-domain"
-                            pointer-events="none"
-                          >
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,175)"
-                              x2="0"
-                              y2="-175"
-                            />
-                          </g>
-                          <g
-                            class="mark-text role-axis-title"
-                            pointer-events="none"
-                          >
-                            <text
-                              fill="var(--malloy-title-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="12px"
-                              font-weight="500"
-                              opacity="1"
-                              text-anchor="middle"
-                              transform="translate(-35,87.5) rotate(-90) translate(0,-3)"
-                            >
-                              wt
-                            </text>
-                          </g>
-                        </g>
-                        <path
-                          aria-hidden="true"
-                          class="foreground"
-                          d=""
-                          display="none"
-                          pointer-events="none"
-                        />
-                      </g>
-                    </g>
-                    <g
-                      aria-roledescription="rect mark container"
-                      class="mark-rect role-mark marks"
-                      role="graphics-object"
-                    >
-                      <path
-                        aria-label="monthy: 1; wt: 3"
-                        aria-roledescription="bar"
-                        d="M28.75,175h5v0h-5Z"
-                        fill="#4285F4"
-                        role="graphics-symbol"
-                      />
-                      <path
-                        aria-label="monthy: 2; wt: 3.4"
-                        aria-roledescription="bar"
-                        d="M91.25,75.00000000000004h5v99.99999999999996h-5Z"
-                        fill="#4285F4"
-                        role="graphics-symbol"
-                      />
-                      <path
-                        aria-label="monthy: 3; wt: 3.6"
-                        aria-roledescription="bar"
-                        d="M153.75,25.000000000000007h5v150h-5Z"
-                        fill="#4285F4"
-                        role="graphics-symbol"
-                      />
-                      <path
-                        aria-label="monthy: 4; wt: 3.7"
-                        aria-roledescription="bar"
-                        d="M216.25,0h5v175h-5Z"
-                        fill="#4285F4"
-                        role="graphics-symbol"
-                      />
-                    </g>
-                  </g>
-                  <path
-                    aria-hidden="true"
-                    class="foreground"
-                    d=""
-                    display="none"
-                  />
-                </g>
-              </g>
-            </g>
-          </svg>
-        </div>
-      </td>
-      <td
-        style="padding: 8px; vertical-align: top; text-align: right;"
-      >
-        <div>
-          <svg
-            class="marks"
-            height="222"
-            version="1.1"
-            viewBox="0 0 309 222"
-            width="309"
-            xmlns="http://www.w3.org/2000/svg"
-            xmlns:xlink="http://www.w3.org/1999/xlink"
-          >
-            <g
-              fill="none"
-              stroke-miterlimit="10"
-              transform="translate(53,10)"
-            >
-              <g
-                aria-roledescription="group mark container"
-                class="mark-group role-frame root"
-                role="graphics-object"
-              >
-                <g
-                  transform="translate(0,0)"
-                >
-                  <path
-                    aria-hidden="true"
-                    class="background"
-                    d="M0.5,0.5h250v175h-250Z"
-                    stroke="#888"
-                  />
-                  <g>
-                    <g
-                      aria-hidden="true"
-                      class="mark-group role-axis"
-                    >
-                      <g
-                        transform="translate(0.5,175.5)"
-                      >
-                        <path
-                          aria-hidden="true"
-                          class="background"
-                          d="M0,0h0v0h0Z"
-                          pointer-events="none"
-                        />
-                        <g>
-                          <g
-                            class="mark-rule role-axis-grid"
-                            pointer-events="none"
-                          >
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(31,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(63,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(94,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(125,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(156,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(188,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(219,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(250,-175)"
-                              x2="0"
-                              y2="175"
-                            />
-                          </g>
-                        </g>
-                        <path
-                          aria-hidden="true"
-                          class="foreground"
-                          d=""
-                          display="none"
-                          pointer-events="none"
-                        />
-                      </g>
-                    </g>
-                    <g
-                      aria-hidden="true"
-                      class="mark-group role-axis"
-                    >
-                      <g
-                        transform="translate(0.5,0.5)"
-                      >
-                        <path
-                          aria-hidden="true"
-                          class="background"
-                          d="M0,0h0v0h0Z"
-                          pointer-events="none"
-                        />
-                        <g>
-                          <g
-                            class="mark-rule role-axis-grid"
-                            pointer-events="none"
-                          >
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,156)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,117)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,78)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,39)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,0)"
-                              x2="250"
-                              y2="0"
-                            />
-                          </g>
-                        </g>
-                        <path
-                          aria-hidden="true"
-                          class="foreground"
-                          d=""
-                          display="none"
-                          pointer-events="none"
-                        />
-                      </g>
-                    </g>
-                    <g
-                      aria-label="X-axis titled 'monthy' for a linear scale with values from 1 to 5"
-                      aria-roledescription="axis"
-                      class="mark-group role-axis"
-                      role="graphics-symbol"
-                    >
-                      <g
-                        transform="translate(0.5,175.5)"
-                      >
-                        <path
-                          aria-hidden="true"
-                          class="background"
-                          d="M0,0h0v0h0Z"
-                          pointer-events="none"
-                        />
-                        <g>
-                          <g
-                            class="mark-rule role-axis-tick"
-                            pointer-events="none"
-                          >
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(31,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(63,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(94,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(125,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(156,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(188,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(219,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(250,0)"
-                              x2="0"
-                              y2="5"
-                            />
-                          </g>
-                          <g
-                            class="mark-text role-axis-label"
-                            pointer-events="none"
-                          >
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="start"
-                              transform="translate(0,15)"
-                            >
-                              0.5
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="0"
-                              text-anchor="middle"
-                              transform="translate(31.25,15)"
-                            >
-                              1.0
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="middle"
-                              transform="translate(62.5,15)"
-                            >
-                              1.5
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="0"
-                              text-anchor="middle"
-                              transform="translate(93.75,15)"
-                            >
-                              2.0
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="middle"
-                              transform="translate(125,15)"
-                            >
-                              2.5
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="0"
-                              text-anchor="middle"
-                              transform="translate(156.25,15)"
-                            >
-                              3.0
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="middle"
-                              transform="translate(187.5,15)"
                             >
                               3.5
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="0"
-                              text-anchor="middle"
-                              transform="translate(218.75,15)"
-                            >
-                              4.0
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(250,15)"
-                            >
-                              4.5
-                            </text>
-                          </g>
-                          <g
-                            class="mark-rule role-axis-domain"
-                            pointer-events="none"
-                          >
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,0)"
-                              x2="250"
-                              y2="0"
-                            />
-                          </g>
-                          <g
-                            class="mark-text role-axis-title"
-                            pointer-events="none"
-                          >
-                            <text
-                              fill="var(--malloy-title-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="12px"
-                              font-weight="500"
-                              opacity="1"
-                              text-anchor="middle"
-                              transform="translate(125,30)"
-                            >
-                              monthy
-                            </text>
-                          </g>
-                        </g>
-                        <path
-                          aria-hidden="true"
-                          class="foreground"
-                          d=""
-                          display="none"
-                          pointer-events="none"
-                        />
-                      </g>
-                    </g>
-                    <g
-                      aria-label="Y-axis titled 'wt' for a linear scale with values from 2.5 to 3.4"
-                      aria-roledescription="axis"
-                      class="mark-group role-axis"
-                      role="graphics-symbol"
-                    >
-                      <g
-                        transform="translate(0.5,0.5)"
-                      >
-                        <path
-                          aria-hidden="true"
-                          class="background"
-                          d="M0,0h0v0h0Z"
-                          pointer-events="none"
-                        />
-                        <g>
-                          <g
-                            class="mark-rule role-axis-tick"
-                            pointer-events="none"
-                          >
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,156)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,117)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,78)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,39)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,0)"
-                              x2="-5"
-                              y2="0"
-                            />
-                          </g>
-                          <g
-                            class="mark-text role-axis-label"
-                            pointer-events="none"
-                          >
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,158.55555555555554)"
-                            >
-                              2.6
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,119.6666666666667)"
-                            >
-                              2.8
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,80.77777777777777)"
-                            >
-                              3.0
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,41.88888888888885)"
-                            >
-                              3.2
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,3)"
-                            >
-                              3.4
                             </text>
                           </g>
                           <g
@@ -9822,28 +9770,28 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                       <path
                         aria-label="monthy: 1; wt: 2.5"
                         aria-roledescription="bar"
-                        d="M28.75,175h5v0h-5Z"
+                        d="M28.75,50h5v125h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 2; wt: 3"
                         aria-roledescription="bar"
-                        d="M91.25,77.77777777777777h5v97.22222222222223h-5Z"
+                        d="M91.25,25.000000000000007h5v150h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 3; wt: 3.2"
                         aria-roledescription="bar"
-                        d="M153.75,38.88888888888885h5v136.11111111111114h-5Z"
+                        d="M153.75,14.999999999999986h5v160h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 4; wt: 3.4"
                         aria-roledescription="bar"
-                        d="M216.25,0h5v175h-5Z"
+                        d="M216.25,5.000000000000002h5v170h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
@@ -9867,17 +9815,17 @@ exports[`rendering results html renderer complex query with tags transposed tabl
         <div>
           <svg
             class="marks"
-            height="222"
+            height="217"
             version="1.1"
-            viewBox="0 0 317 222"
-            width="317"
+            viewBox="0 0 293 217"
+            width="293"
             xmlns="http://www.w3.org/2000/svg"
             xmlns:xlink="http://www.w3.org/1999/xlink"
           >
             <g
               fill="none"
               stroke-miterlimit="10"
-              transform="translate(61,10)"
+              transform="translate(37,5)"
             >
               <g
                 aria-roledescription="group mark container"
@@ -10025,7 +9973,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,146)"
+                              transform="translate(0,136)"
                               x2="250"
                               y2="0"
                             />
@@ -10033,15 +9981,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,117)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,87)"
+                              transform="translate(0,97)"
                               x2="250"
                               y2="0"
                             />
@@ -10057,15 +9997,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               opacity="1"
                               stroke="#888"
                               stroke-width="1"
-                              transform="translate(0,29)"
-                              x2="250"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#888"
-                              stroke-width="1"
-                              transform="translate(0,0)"
+                              transform="translate(0,19)"
                               x2="250"
                               y2="0"
                             />
@@ -10308,7 +10240,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                       </g>
                     </g>
                     <g
-                      aria-label="Y-axis titled 'wt' for a linear scale with values from 4.00 to 4.30"
+                      aria-label="Y-axis titled 'wt' for a linear scale with values from 0 to 5"
                       aria-roledescription="axis"
                       class="mark-group role-axis"
                       role="graphics-symbol"
@@ -10339,7 +10271,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,146)"
+                              transform="translate(0,136)"
                               x2="-5"
                               y2="0"
                             />
@@ -10347,15 +10279,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,117)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,87)"
+                              transform="translate(0,97)"
                               x2="-5"
                               y2="0"
                             />
@@ -10371,15 +10295,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               opacity="1"
                               stroke="#ddd"
                               stroke-width="1"
-                              transform="translate(0,29)"
-                              x2="-5"
-                              y2="0"
-                            />
-                            <line
-                              opacity="1"
-                              stroke="#ddd"
-                              stroke-width="1"
-                              transform="translate(0,0)"
+                              transform="translate(0,19)"
                               x2="-5"
                               y2="0"
                             />
@@ -10396,7 +10312,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               text-anchor="end"
                               transform="translate(-7,178)"
                             >
-                              4.00
+                              0
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -10404,9 +10320,9 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,148.83333333333343)"
+                              transform="translate(-7,139.11111111111111)"
                             >
-                              4.05
+                              1
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -10414,9 +10330,9 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,119.66666666666684)"
+                              transform="translate(-7,100.22222222222223)"
                             >
-                              4.10
+                              2
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -10424,9 +10340,9 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,90.49999999999974)"
+                              transform="translate(-7,61.33333333333334)"
                             >
-                              4.15
+                              3
                             </text>
                             <text
                               fill="var(--malloy-label-color, #505050)"
@@ -10434,29 +10350,9 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               font-size="10px"
                               opacity="1"
                               text-anchor="end"
-                              transform="translate(-7,61.333333333333165)"
+                              transform="translate(-7,22.444444444444454)"
                             >
-                              4.20
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,32.166666666666586)"
-                            >
-                              4.25
-                            </text>
-                            <text
-                              fill="var(--malloy-label-color, #505050)"
-                              font-family="var(--malloy-font-family, 'Roboto')"
-                              font-size="10px"
-                              opacity="1"
-                              text-anchor="end"
-                              transform="translate(-7,3)"
-                            >
-                              4.30
+                              4
                             </text>
                           </g>
                           <g
@@ -10483,7 +10379,7 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                               font-weight="500"
                               opacity="1"
                               text-anchor="middle"
-                              transform="translate(-43,87.5) rotate(-90) translate(0,-3)"
+                              transform="translate(-19,87.5) rotate(-90) translate(0,-3)"
                             >
                               wt
                             </text>
@@ -10506,28 +10402,28 @@ exports[`rendering results html renderer complex query with tags transposed tabl
                       <path
                         aria-label="monthy: 1; wt: 4"
                         aria-roledescription="bar"
-                        d="M28.75,175h5v0h-5Z"
+                        d="M28.75,19.444444444444454h5v155.55555555555554h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 2; wt: 4.1"
                         aria-roledescription="bar"
-                        d="M91.25,116.66666666666684h5v58.33333333333316h-5Z"
+                        d="M91.25,15.555555555555578h5v159.44444444444443h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 3; wt: 4.2"
                         aria-roledescription="bar"
-                        d="M153.75,58.333333333333165h5v116.66666666666683h-5Z"
+                        d="M153.75,11.666666666666664h5v163.33333333333334h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
                       <path
                         aria-label="monthy: 4; wt: 4.3"
                         aria-roledescription="bar"
-                        d="M216.25,0h5v175h-5Z"
+                        d="M216.25,7.777777777777789h5v167.2222222222222h-5Z"
                         fill="#4285F4"
                         role="graphics-symbol"
                       />
