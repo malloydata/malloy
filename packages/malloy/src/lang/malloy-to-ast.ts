@@ -1398,6 +1398,12 @@ export class MalloyToAST
   visitExprCountDisinct(
     pcx: parse.ExprCountDisinctContext
   ): ast.ExprCountDistinct {
+    if (this.m4WarningsEnabled()) {
+      this.contextError(
+        pcx,
+        "'count(DISTINCT expression)' deprecated, use 'count(expression)' instead"
+      );
+    }
     return this.astAt(
       new ast.ExprCountDistinct(this.getFieldExpr(pcx.fieldExpr())),
       pcx
