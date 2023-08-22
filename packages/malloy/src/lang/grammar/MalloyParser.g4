@@ -381,7 +381,7 @@ calculateStatement
   ;
 
 projectStatement
-  : tags PROJECT fieldCollection
+  : tags (SELECT | PROJECT) fieldCollection
   ;
 
 orderByStatement
