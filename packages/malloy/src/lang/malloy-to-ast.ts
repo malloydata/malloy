@@ -1036,7 +1036,11 @@ export class MalloyToAST
     pcx: parse.ProjectStatementContext
   ): ast.ProjectStatement {
     if (this.m4WarningsEnabled() && pcx.PROJECT()) {
-      this.contextError(pcx, 'project: deprecated, use select:');
+      this.contextError(
+        pcx,
+        'project: keyword is deprecated, use select:',
+        'warn'
+      );
     }
     const stmt = this.visitFieldCollection(pcx.fieldCollection());
     stmt.extendNote({blockNotes: this.getNotes(pcx.tags())});

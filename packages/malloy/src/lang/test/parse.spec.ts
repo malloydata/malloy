@@ -3724,7 +3724,7 @@ describe('extend and refine', () => {
     test('implicit refine in nest', () => {
       expect(`##! m4warnings
       source: c is a extend {
-        query: x is { project: * }
+        query: x is { select: * }
       }
 
       run: c -> {
@@ -3737,7 +3737,7 @@ describe('extend and refine', () => {
     test('implicit refine in turtle works', () => {
       expect(`##! m4warnings
       source: c is a extend {
-        query: x is { project: * }
+        query: x is { select: * }
         query: y is x { limit: 1 }
       }`).toTranslateWithWarnings(
         'Implicit query refinement is deprecated, use the `refine` operator.'
@@ -3768,7 +3768,7 @@ describe('miscellaneous m4 warnings', () => {
   test('from() is deprecated', () => {
     expect(`
       ##! m4warnings
-      query: q is a -> { project: * }
+      query: q is a -> { select: * }
       source: c is from(q) extend {
         dimension: x is 1
     }`).toTranslateWithWarnings(
@@ -3776,34 +3776,39 @@ describe('miscellaneous m4 warnings', () => {
     );
     expect(`
       ##! m4warnings
-      query: q is a -> { project: * }
+      query: q is a -> { select: * }
       source: c is q extend {
         dimension: x is 1
     }`).toTranslate();
   });
-
+  test('project is deprecated', () => {
+    expect(`
+      ##! m4warnings
+      query: q is a -> { project: * }
+    `).toTranslateWithWarnings('project: keyword is deprecated, use select:');
+  });
   test('query leading arrow', () => {
     expect(`
       ##! m4warnings
-      query: x is a -> { project: * }
+      query: x is a -> { select: * }
       run: x
     `).toTranslate();
     expect(`
       ##! m4warnings
-      query: x is a -> { project: * }
-      run: x -> { project: * }
+      query: x is a -> { select: * }
+      run: x -> { select: * }
     `).toTranslate();
     expect(`
       ##! m4warnings
-      query: x is a -> { project: * }
+      query: x is a -> { select: * }
       run: -> x
     `).toTranslateWithWarnings(
       'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow'
     );
     expect(`
       ##! m4warnings
-      query: x is a -> { project: * }
-      run: -> x -> { project: * }
+      query: x is a -> { select: * }
+      run: -> x -> { select: * }
     `).toTranslateWithWarnings(
       'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow'
     );
