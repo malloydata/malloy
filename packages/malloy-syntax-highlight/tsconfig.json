@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "downlevelIteration": true,
+    "noPropertyAccessFromIndexSignature": false,
+    "lib": [
+      "ES2021.String"
+    ]
+  }
+}

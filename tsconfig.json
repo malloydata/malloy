@@ -14,10 +14,6 @@
   "include": [],
   "exclude": ["**/node_modules"],
   "compilerOptions": {
-    "noPropertyAccessFromIndexSignature": false,
-    "downlevelIteration": true,
-    "lib": [
-      "ES2021.String"
-    ]
+    "downlevelIteration": true
   }
 }
