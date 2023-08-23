@@ -499,4 +499,13 @@ export class PostgresDialect extends Dialect {
   concat(...values: string[]): string {
     return values.join(' || ');
   }
+
+  validateTypeName(sqlType: string): boolean {
+    // Letters:              BIGINT
+    // Numbers:              INT8
+    // Spaces:               TIMESTAMP WITH TIME ZONE
+    // Parentheses, Commas:  NUMERIC(5, 2)
+    // Square Brackets:      INT64[]
+    return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
+  }
 }

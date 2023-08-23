@@ -312,4 +312,6 @@ export abstract class Dialect {
 
   abstract sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined;
   abstract malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string;
+
+  abstract validateTypeName(sqlType: string): boolean;
 }

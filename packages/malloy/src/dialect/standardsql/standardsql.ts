@@ -544,4 +544,13 @@ ${indent(sql)}
   concat(...values: string[]): string {
     return values.join(' || ');
   }
+
+  validateTypeName(sqlType: string): boolean {
+    // Letters:              BIGINT
+    // Numbers:              INT8
+    // Spaces,
+    // Parentheses, Commas:  NUMERIC(5, 2)
+    // Angle Brackets:       ARRAY<INT64>
+    return sqlType.match(/^[A-Za-z\s(),<>0-9]*$/) !== null;
+  }
 }

@@ -40,15 +40,24 @@ export class ExprCast extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
-    let dataType: AtomicFieldType;
+    let dataType: AtomicFieldType = 'unsupported';
     if (typeof this.castType === 'string') {
       dataType = this.castType;
     } else {
-      // TODO theoretically `sqlTypeToMalloyType` can get number subtypes,
-      // but `TypeDesc` does not support them.
-      dataType =
-        fs.dialectObj()?.sqlTypeToMalloyType(this.castType.raw)?.type ??
-        'unsupported';
+      const dialect = fs.dialectObj();
+      if (dialect) {
+        if (dialect.validateTypeName(this.castType.raw)) {
+          // TODO theoretically `sqlTypeToMalloyType` can get number subtypes,
+          // but `TypeDesc` does not support them.
+          dataType =
+            fs.dialectObj()?.sqlTypeToMalloyType(this.castType.raw)?.type ??
+            'unsupported';
+        } else {
+          this.log(
+            `Cast type \`${this.castType.raw}\` is invalid for ${dialect.name} dialect`
+          );
+        }
+      }
     }
     return {
       dataType,

@@ -1952,6 +1952,12 @@ describe('cast', () => {
   test('malloy safe cast', () => {
     expect(expr`astr:::number + 1`).toTranslate();
   });
+
+  test('sql cast illegal type name', () => {
+    expect(expr`astr::"stuff 'n' things"`).translationToFailWith(
+      "Cast type `stuff 'n' things` is invalid for standardsql dialect"
+    );
+  });
 });
 
 describe('error handling', () => {

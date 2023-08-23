@@ -473,4 +473,13 @@ export class DuckDBDialect extends Dialect {
   concat(...values: string[]): string {
     return values.join(' || ');
   }
+
+  validateTypeName(sqlType: string): boolean {
+    // Letters:              BIGINT
+    // Numbers:              INT8
+    // Spaces:               TIMESTAMP WITH TIME ZONE
+    // Parentheses, Commas:  DECIMAL(1, 1)
+    // Brackets:             INT[ ]
+    return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
+  }
 }
