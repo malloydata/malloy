@@ -8,39 +8,39 @@ export default [
           type: [
             'source.malloy',
             'comment.line.double-slash',
-            'punctuation.definition.comment'
+            'punctuation.definition.comment',
           ],
-          color: '#6A9955'
+          color: '#6A9955',
         },
         {
           startIndex: 2,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
-        }
-      ]
-    }
+          type: ['source.malloy', 'comment.line.double-slash'],
+          color: '#6A9955',
+        },
+      ],
+    },
   ],
   [
     {
       line: ' -- a different -- line comment',
       tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 0, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 1,
           type: [
             'source.malloy',
             'comment.line.double-hyphen',
-            'punctuation.definition.comment'
+            'punctuation.definition.comment',
           ],
-          color: '#6A9955'
+          color: '#6A9955',
         },
         {
           startIndex: 3,
-          type: [ 'source.malloy', 'comment.line.double-hyphen' ],
-          color: '#6A9955'
-        }
-      ]
-    }
+          type: ['source.malloy', 'comment.line.double-hyphen'],
+          color: '#6A9955',
+        },
+      ],
+    },
   ],
   [
     {
@@ -51,9 +51,9 @@ export default [
           type: [
             'source.malloy',
             'comment.line.double-slash',
-            'support.type.property-name.json'
+            'support.type.property-name.json',
           ],
-          color: '#9CDCFE'
+          color: '#9CDCFE',
         },
         {
           startIndex: 2,
@@ -61,14 +61,14 @@ export default [
             'source.malloy',
             'comment.line.double-slash',
             'support.type.property-name.json',
-            'support.type.property-name.json'
+            'support.type.property-name.json',
           ],
-          color: '#9CDCFE'
+          color: '#9CDCFE',
         },
         {
           startIndex: 11,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
+          type: ['source.malloy', 'comment.line.double-slash'],
+          color: '#6A9955',
         },
         {
           startIndex: 12,
@@ -76,14 +76,14 @@ export default [
             'source.malloy',
             'comment.line.double-slash',
             'support.type.property-name.json',
-            'support.type.property-name.json'
+            'support.type.property-name.json',
           ],
-          color: '#9CDCFE'
+          color: '#9CDCFE',
         },
         {
           startIndex: 17,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
+          type: ['source.malloy', 'comment.line.double-slash'],
+          color: '#6A9955',
         },
         {
           startIndex: 18,
@@ -91,14 +91,14 @@ export default [
             'source.malloy',
             'comment.line.double-slash',
             'support.type.property-name.json',
-            'support.type.property-name.json'
+            'support.type.property-name.json',
           ],
-          color: '#9CDCFE'
+          color: '#9CDCFE',
         },
         {
           startIndex: 21,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
+          type: ['source.malloy', 'comment.line.double-slash'],
+          color: '#6A9955',
         },
         {
           startIndex: 22,
@@ -106,14 +106,14 @@ export default [
             'source.malloy',
             'comment.line.double-slash',
             'support.type.property-name.json',
-            'support.type.property-name.json'
+            'support.type.property-name.json',
           ],
-          color: '#9CDCFE'
+          color: '#9CDCFE',
         },
         {
           startIndex: 26,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
+          type: ['source.malloy', 'comment.line.double-slash'],
+          color: '#6A9955',
         },
         {
           startIndex: 27,
@@ -121,14 +121,14 @@ export default [
             'source.malloy',
             'comment.line.double-slash',
             'support.type.property-name.json',
-            'support.type.property-name.json'
+            'support.type.property-name.json',
           ],
-          color: '#9CDCFE'
+          color: '#9CDCFE',
         },
         {
           startIndex: 35,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
+          type: ['source.malloy', 'comment.line.double-slash'],
+          color: '#6A9955',
         },
         {
           startIndex: 36,
@@ -136,14 +136,14 @@ export default [
             'source.malloy',
             'comment.line.double-slash',
             'support.type.property-name.json',
-            'support.type.property-name.json'
+            'support.type.property-name.json',
           ],
-          color: '#9CDCFE'
+          color: '#9CDCFE',
         },
         {
           startIndex: 39,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
+          type: ['source.malloy', 'comment.line.double-slash'],
+          color: '#6A9955',
         },
         {
           startIndex: 40,
@@ -151,14 +151,14 @@ export default [
             'source.malloy',
             'comment.line.double-slash',
             'support.type.property-name.json',
-            'support.type.property-name.json'
+            'support.type.property-name.json',
           ],
-          color: '#9CDCFE'
+          color: '#9CDCFE',
         },
         {
           startIndex: 43,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
+          type: ['source.malloy', 'comment.line.double-slash'],
+          color: '#6A9955',
         },
         {
           startIndex: 44,
@@ -166,14 +166,14 @@ export default [
             'source.malloy',
             'comment.line.double-slash',
             'support.type.property-name.json',
-            'support.type.property-name.json'
+            'support.type.property-name.json',
           ],
-          color: '#9CDCFE'
+          color: '#9CDCFE',
         },
         {
           startIndex: 48,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
+          type: ['source.malloy', 'comment.line.double-slash'],
+          color: '#6A9955',
         },
         {
           startIndex: 49,
@@ -181,102 +181,102 @@ export default [
             'source.malloy',
             'comment.line.double-slash',
             'support.type.property-name.json',
-            'support.type.property-name.json'
+            'support.type.property-name.json',
           ],
-          color: '#9CDCFE'
+          color: '#9CDCFE',
         },
         {
           startIndex: 55,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
-        }
-      ]
-    }
+          type: ['source.malloy', 'comment.line.double-slash'],
+          color: '#6A9955',
+        },
+      ],
+    },
   ],
   [
     {
       line: `    /* *** / * // " " ' \\'`,
       tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 0, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 4,
           type: [
             'source.malloy',
             'comment.block',
-            'punctuation.definition.comment.begin'
+            'punctuation.definition.comment.begin',
           ],
-          color: '#6A9955'
+          color: '#6A9955',
         },
         {
           startIndex: 6,
-          type: [ 'source.malloy', 'comment.block' ],
-          color: '#6A9955'
-        }
-      ]
+          type: ['source.malloy', 'comment.block'],
+          color: '#6A9955',
+        },
+      ],
     },
     {
       line: '   """ multi-line * /*',
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'comment.block' ],
-          color: '#6A9955'
-        }
-      ]
+          type: ['source.malloy', 'comment.block'],
+          color: '#6A9955',
+        },
+      ],
     },
     {
       line: '" */  -- escaped block',
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'comment.block' ],
-          color: '#6A9955'
+          type: ['source.malloy', 'comment.block'],
+          color: '#6A9955',
         },
         {
           startIndex: 2,
           type: [
             'source.malloy',
             'comment.block',
-            'punctuation.definition.comment.end'
+            'punctuation.definition.comment.end',
           ],
-          color: '#6A9955'
+          color: '#6A9955',
         },
-        { startIndex: 4, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 4, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 6,
           type: [
             'source.malloy',
             'comment.line.double-hyphen',
-            'punctuation.definition.comment'
+            'punctuation.definition.comment',
           ],
-          color: '#6A9955'
+          color: '#6A9955',
         },
         {
           startIndex: 8,
-          type: [ 'source.malloy', 'comment.line.double-hyphen' ],
-          color: '#6A9955'
-        }
-      ]
-    }
+          type: ['source.malloy', 'comment.line.double-hyphen'],
+          color: '#6A9955',
+        },
+      ],
+    },
   ],
   [
     {
       line: '  sample: true',
       tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 0, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 2,
-          type: [ 'source.malloy', 'keyword.control.sample' ],
-          color: '#C586C0'
+          type: ['source.malloy', 'keyword.control.sample'],
+          color: '#C586C0',
         },
-        { startIndex: 8, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 8, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 10,
-          type: [ 'source.malloy', 'constant.language.true' ],
-          color: '#569CD6'
-        }
-      ]
-    }
+          type: ['source.malloy', 'constant.language.true'],
+          color: '#569CD6',
+        },
+      ],
+    },
   ],
   [
     {
@@ -284,71 +284,71 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
+          type: ['source.malloy', 'variable.other'],
+          color: '#9CDCFE',
         },
-        { startIndex: 11, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 11, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 12,
-          type: [ 'source.malloy', 'keyword.control.is' ],
-          color: '#C586C0'
+          type: ['source.malloy', 'keyword.control.is'],
+          color: '#C586C0',
         },
-        { startIndex: 14, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 14, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 15,
-          type: [ 'source.malloy', 'variable.other.quoted' ],
-          color: '#9CDCFE'
+          type: ['source.malloy', 'variable.other.quoted'],
+          color: '#9CDCFE',
         },
-        { startIndex: 40, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 40, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 42,
           type: [
             'source.malloy',
             'comment.line.double-hyphen',
-            'punctuation.definition.comment'
+            'punctuation.definition.comment',
           ],
-          color: '#6A9955'
+          color: '#6A9955',
         },
         {
           startIndex: 44,
-          type: [ 'source.malloy', 'comment.line.double-hyphen' ],
-          color: '#6A9955'
-        }
-      ]
-    }
+          type: ['source.malloy', 'comment.line.double-hyphen'],
+          color: '#6A9955',
+        },
+      ],
+    },
   ],
   [
     {
       line: '`Year',
       tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 0, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 1,
-          type: [ 'source.malloy', 'keyword.other.timeframe' ],
-          color: '#569CD6'
-        }
-      ]
+          type: ['source.malloy', 'keyword.other.timeframe'],
+          color: '#569CD6',
+        },
+      ],
     },
     {
       line: '  -- escapes quoted identifier at newline',
       tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 0, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 2,
           type: [
             'source.malloy',
             'comment.line.double-hyphen',
-            'punctuation.definition.comment'
+            'punctuation.definition.comment',
           ],
-          color: '#6A9955'
+          color: '#6A9955',
         },
         {
           startIndex: 4,
-          type: [ 'source.malloy', 'comment.line.double-hyphen' ],
-          color: '#6A9955'
-        }
-      ]
-    }
+          type: ['source.malloy', 'comment.line.double-hyphen'],
+          color: '#6A9955',
+        },
+      ],
+    },
   ],
   [
     {
@@ -356,103 +356,103 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'variable.other.quoted' ],
-          color: '#9CDCFE'
+          type: ['source.malloy', 'variable.other.quoted'],
+          color: '#9CDCFE',
         },
-        { startIndex: 19, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 19, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 20,
-          type: [ 'source.malloy', 'keyword.control.is' ],
-          color: '#C586C0'
+          type: ['source.malloy', 'keyword.control.is'],
+          color: '#C586C0',
         },
-        { startIndex: 22, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 22, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 24,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric'],
+          color: '#B5CEA8',
         },
         {
           startIndex: 25,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric'],
+          color: '#B5CEA8',
         },
-        { startIndex: 28, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 28, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 31,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
+          type: ['source.malloy', 'variable.other'],
+          color: '#9CDCFE',
         },
-        { startIndex: 33, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 33, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 37,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric'],
+          color: '#B5CEA8',
         },
-        { startIndex: 39, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 39, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 42,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric'],
+          color: '#B5CEA8',
         },
-        { startIndex: 48, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 48, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 51,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
+          type: ['source.malloy', 'variable.other'],
+          color: '#9CDCFE',
         },
-        { startIndex: 53, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 53, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 57,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric'],
+          color: '#B5CEA8',
         },
-        { startIndex: 60, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 60, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 63,
-          type: [ 'source.malloy', 'variable.other.quoted' ],
-          color: '#9CDCFE'
+          type: ['source.malloy', 'variable.other.quoted'],
+          color: '#9CDCFE',
         },
-        { startIndex: 67, type: [ 'source.malloy' ], color: '#000000' }
-      ]
-    }
+        {startIndex: 67, type: ['source.malloy'], color: '#000000'},
+      ],
+    },
   ],
   [
     {
       line: '(123E4, 1E-27, E4, 0E+1)',
       tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 0, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 1,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric'],
+          color: '#B5CEA8',
         },
-        { startIndex: 6, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 6, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 8,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric'],
+          color: '#B5CEA8',
         },
-        { startIndex: 13, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 13, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 15,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
+          type: ['source.malloy', 'variable.other'],
+          color: '#9CDCFE',
         },
-        { startIndex: 17, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 17, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 19,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric'],
+          color: '#B5CEA8',
         },
-        { startIndex: 20, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 20, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 22,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric'],
+          color: '#B5CEA8',
         },
-        { startIndex: 23, type: [ 'source.malloy' ], color: '#000000' }
-      ]
-    }
+        {startIndex: 23, type: ['source.malloy'], color: '#000000'},
+      ],
+    },
   ],
   [
     {
@@ -460,30 +460,30 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'entity.name.function' ],
-          color: '#DCDCAA'
+          type: ['source.malloy', 'entity.name.function'],
+          color: '#DCDCAA',
         },
-        { startIndex: 3, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 3, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 4,
-          type: [ 'source.malloy', 'entity.name.function' ],
-          color: '#DCDCAA'
+          type: ['source.malloy', 'entity.name.function'],
+          color: '#DCDCAA',
         },
-        { startIndex: 9, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 9, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 10,
-          type: [ 'source.malloy', 'entity.name.function.modifier' ],
-          color: '#DCDCAA'
+          type: ['source.malloy', 'entity.name.function.modifier'],
+          color: '#DCDCAA',
         },
-        { startIndex: 18, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 18, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 19,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
+          type: ['source.malloy', 'variable.other'],
+          color: '#9CDCFE',
         },
-        { startIndex: 29, type: [ 'source.malloy' ], color: '#000000' }
-      ]
-    }
+        {startIndex: 29, type: ['source.malloy'], color: '#000000'},
+      ],
+    },
   ],
   [
     {
@@ -491,50 +491,50 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'variable.other.quoted' ],
-          color: '#9CDCFE'
+          type: ['source.malloy', 'variable.other.quoted'],
+          color: '#9CDCFE',
         },
-        { startIndex: 6, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 6, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 7,
-          type: [ 'source.malloy', 'keyword.control.is' ],
-          color: '#C586C0'
+          type: ['source.malloy', 'keyword.control.is'],
+          color: '#C586C0',
         },
-        { startIndex: 9, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 9, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 10,
-          type: [ 'source.malloy', 'entity.name.function' ],
-          color: '#DCDCAA'
+          type: ['source.malloy', 'entity.name.function'],
+          color: '#DCDCAA',
         },
-        { startIndex: 14, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 14, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 15,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
+          type: ['source.malloy', 'variable.other'],
+          color: '#9CDCFE',
         },
-        { startIndex: 23, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 23, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 26,
-          type: [ 'source.malloy', 'entity.name.type.string' ],
-          color: '#4EC9B0'
+          type: ['source.malloy', 'entity.name.type.string'],
+          color: '#4EC9B0',
         },
-        { startIndex: 32, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 32, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 34,
           type: [
             'source.malloy',
             'comment.line.double-slash',
-            'punctuation.definition.comment'
+            'punctuation.definition.comment',
           ],
-          color: '#6A9955'
+          color: '#6A9955',
         },
         {
           startIndex: 36,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
-        }
-      ]
-    }
+          type: ['source.malloy', 'comment.line.double-slash'],
+          color: '#6A9955',
+        },
+      ],
+    },
   ],
   [
     {
@@ -542,80 +542,80 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'keyword.control.is' ],
-          color: '#C586C0'
+          type: ['source.malloy', 'keyword.control.is'],
+          color: '#C586C0',
         },
-        { startIndex: 2, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 2, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 3,
-          type: [ 'source.malloy', 'entity.name.function' ],
-          color: '#DCDCAA'
+          type: ['source.malloy', 'entity.name.function'],
+          color: '#DCDCAA',
         },
-        { startIndex: 7, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 7, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 8,
-          type: [ 'source.malloy', 'entity.name.type' ],
-          color: '#4EC9B0'
+          type: ['source.malloy', 'entity.name.type'],
+          color: '#4EC9B0',
         },
-        { startIndex: 14, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 14, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 15,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
+          type: ['source.malloy', 'variable.other'],
+          color: '#9CDCFE',
         },
-        { startIndex: 24, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 24, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 27,
           type: [
             'source.malloy',
             'comment.line.double-hyphen',
-            'punctuation.definition.comment'
+            'punctuation.definition.comment',
           ],
-          color: '#6A9955'
+          color: '#6A9955',
         },
         {
           startIndex: 29,
-          type: [ 'source.malloy', 'comment.line.double-hyphen' ],
-          color: '#6A9955'
-        }
-      ]
-    }
+          type: ['source.malloy', 'comment.line.double-hyphen'],
+          color: '#6A9955',
+        },
+      ],
+    },
   ],
   [
     {
       line: '(@2001-02-03 04:05:06.001[America/Mexico_City], @2005-01-28 12:12:12.999, @1961-02-14 09:30:15, @2017-10-03 07:23) ',
       tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 0, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 1,
-          type: [ 'source.malloy', 'constant.numeric.timestamp' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric.timestamp'],
+          color: '#B5CEA8',
         },
-        { startIndex: 46, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 46, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 48,
-          type: [ 'source.malloy', 'constant.numeric.timestamp' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric.timestamp'],
+          color: '#B5CEA8',
         },
-        { startIndex: 72, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 72, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 74,
-          type: [ 'source.malloy', 'constant.numeric.timestamp' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric.timestamp'],
+          color: '#B5CEA8',
         },
-        { startIndex: 94, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 94, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 96,
-          type: [ 'source.malloy', 'constant.numeric.timestamp' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric.timestamp'],
+          color: '#B5CEA8',
         },
         {
           startIndex: 113,
-          type: [ 'source.malloy' ],
-          color: '#000000'
-        }
-      ]
-    }
+          type: ['source.malloy'],
+          color: '#000000',
+        },
+      ],
+    },
   ],
   [
     {
@@ -623,67 +623,67 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
+          type: ['source.malloy', 'variable.other'],
+          color: '#9CDCFE',
         },
-        { startIndex: 10, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 10, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 13,
-          type: [ 'source.malloy', 'constant.numeric.date' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric.date'],
+          color: '#B5CEA8',
         },
-        { startIndex: 21, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 21, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 22,
-          type: [ 'source.malloy', 'keyword.other.for' ],
-          color: '#569CD6'
+          type: ['source.malloy', 'keyword.other.for'],
+          color: '#569CD6',
         },
-        { startIndex: 25, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 25, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 26,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric'],
+          color: '#B5CEA8',
         },
-        { startIndex: 27, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 27, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 28,
-          type: [ 'source.malloy', 'keyword.other.timeframe' ],
-          color: '#569CD6'
-        }
-      ]
-    }
+          type: ['source.malloy', 'keyword.other.timeframe'],
+          color: '#569CD6',
+        },
+      ],
+    },
   ],
   [
     {
       line: '(@2021, @2022-06, @2022-09-09, @2023-06-25-WK)',
       tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 0, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 1,
-          type: [ 'source.malloy', 'constant.numeric.date' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric.date'],
+          color: '#B5CEA8',
         },
-        { startIndex: 6, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 6, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 8,
-          type: [ 'source.malloy', 'constant.numeric.date' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric.date'],
+          color: '#B5CEA8',
         },
-        { startIndex: 16, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 16, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 18,
-          type: [ 'source.malloy', 'constant.numeric.date' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric.date'],
+          color: '#B5CEA8',
         },
-        { startIndex: 29, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 29, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 31,
-          type: [ 'source.malloy', 'constant.numeric.date' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'constant.numeric.date'],
+          color: '#B5CEA8',
         },
-        { startIndex: 45, type: [ 'source.malloy' ], color: '#000000' }
-      ]
-    }
+        {startIndex: 45, type: ['source.malloy'], color: '#000000'},
+      ],
+    },
   ],
   [
     {
@@ -694,14 +694,14 @@ export default [
           type: [
             'source.malloy',
             'string.quoted.single',
-            'punctuation.definition.string.begin'
+            'punctuation.definition.string.begin',
           ],
-          color: '#CE9178'
+          color: '#CE9178',
         },
         {
           startIndex: 1,
-          type: [ 'source.malloy', 'string.quoted.single' ],
-          color: '#CE9178'
+          type: ['source.malloy', 'string.quoted.single'],
+          color: '#CE9178',
         },
         {
           startIndex: 15,
@@ -709,14 +709,14 @@ export default [
             'source.malloy',
             'string.quoted.single',
             'constant.character.escape',
-            'constant.character.escape'
+            'constant.character.escape',
           ],
-          color: '#D7BA7D'
+          color: '#D7BA7D',
         },
         {
           startIndex: 17,
-          type: [ 'source.malloy', 'string.quoted.single' ],
-          color: '#CE9178'
+          type: ['source.malloy', 'string.quoted.single'],
+          color: '#CE9178',
         },
         {
           startIndex: 23,
@@ -724,14 +724,14 @@ export default [
             'source.malloy',
             'string.quoted.single',
             'constant.character.escape',
-            'constant.character.escape'
+            'constant.character.escape',
           ],
-          color: '#D7BA7D'
+          color: '#D7BA7D',
         },
         {
           startIndex: 29,
-          type: [ 'source.malloy', 'string.quoted.single' ],
-          color: '#CE9178'
+          type: ['source.malloy', 'string.quoted.single'],
+          color: '#CE9178',
         },
         {
           startIndex: 30,
@@ -739,17 +739,17 @@ export default [
             'source.malloy',
             'string.quoted.single',
             'constant.character.escape',
-            'constant.character.escape'
+            'constant.character.escape',
           ],
-          color: '#D7BA7D'
+          color: '#D7BA7D',
         },
         {
           startIndex: 32,
-          type: [ 'source.malloy', 'string.quoted.single' ],
-          color: '#CE9178'
-        }
-      ]
-    }
+          type: ['source.malloy', 'string.quoted.single'],
+          color: '#CE9178',
+        },
+      ],
+    },
   ],
   [
     {
@@ -757,65 +757,65 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
+          type: ['source.malloy', 'variable.other'],
+          color: '#9CDCFE',
         },
-        { startIndex: 5, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 5, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 8,
           type: [
             'source.malloy',
             'string.quoted.double',
-            'punctuation.definition.string.begin'
+            'punctuation.definition.string.begin',
           ],
-          color: '#CE9178'
+          color: '#CE9178',
         },
         {
           startIndex: 9,
           type: [
             'source.malloy',
             'string.quoted.double',
-            'punctuation.definition.string.end'
+            'punctuation.definition.string.end',
           ],
-          color: '#CE9178'
+          color: '#CE9178',
         },
         {
           startIndex: 10,
           type: [
             'source.malloy',
             'string.quoted.double',
-            'punctuation.definition.string.begin'
+            'punctuation.definition.string.begin',
           ],
-          color: '#CE9178'
+          color: '#CE9178',
         },
         {
           startIndex: 11,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
+          type: ['source.malloy', 'string.quoted.double'],
+          color: '#CE9178',
         },
         {
           startIndex: 21,
           type: [
             'source.malloy',
             'string.quoted.double',
-            'punctuation.definition.string.end'
+            'punctuation.definition.string.end',
           ],
-          color: '#CE9178'
+          color: '#CE9178',
         },
-        { startIndex: 22, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 22, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 23,
           type: [
             'source.malloy',
             'string.quoted.double',
-            'punctuation.definition.string.begin'
+            'punctuation.definition.string.begin',
           ],
-          color: '#CE9178'
+          color: '#CE9178',
         },
         {
           startIndex: 24,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
+          type: ['source.malloy', 'string.quoted.double'],
+          color: '#CE9178',
         },
         {
           startIndex: 25,
@@ -823,37 +823,37 @@ export default [
             'source.malloy',
             'string.quoted.double',
             'constant.character.escape',
-            'constant.character.escape'
+            'constant.character.escape',
           ],
-          color: '#D7BA7D'
+          color: '#D7BA7D',
         },
         {
           startIndex: 27,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
+          type: ['source.malloy', 'string.quoted.double'],
+          color: '#CE9178',
         },
         {
           startIndex: 28,
           type: [
             'source.malloy',
             'string.quoted.double',
-            'punctuation.definition.string.end'
+            'punctuation.definition.string.end',
           ],
-          color: '#CE9178'
+          color: '#CE9178',
         },
         {
           startIndex: 29,
           type: [
             'source.malloy',
             'string.quoted.double',
-            'punctuation.definition.string.begin'
+            'punctuation.definition.string.begin',
           ],
-          color: '#CE9178'
+          color: '#CE9178',
         },
         {
           startIndex: 30,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
+          type: ['source.malloy', 'string.quoted.double'],
+          color: '#CE9178',
         },
         {
           startIndex: 31,
@@ -861,77 +861,77 @@ export default [
             'source.malloy',
             'string.quoted.double',
             'constant.character.escape',
-            'constant.character.escape'
+            'constant.character.escape',
           ],
-          color: '#D7BA7D'
+          color: '#D7BA7D',
         },
         {
           startIndex: 37,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
+          type: ['source.malloy', 'string.quoted.double'],
+          color: '#CE9178',
         },
         {
           startIndex: 49,
           type: [
             'source.malloy',
             'string.quoted.double',
-            'punctuation.definition.string.end'
+            'punctuation.definition.string.end',
           ],
-          color: '#CE9178'
+          color: '#CE9178',
         },
-        { startIndex: 50, type: [ 'source.malloy' ], color: '#000000' }
-      ]
+        {startIndex: 50, type: ['source.malloy'], color: '#000000'},
+      ],
     },
     {
       line: ' lines ',
       tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 0, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 1,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
+          type: ['source.malloy', 'variable.other'],
+          color: '#9CDCFE',
         },
-        { startIndex: 6, type: [ 'source.malloy' ], color: '#000000' }
-      ]
+        {startIndex: 6, type: ['source.malloy'], color: '#000000'},
+      ],
     },
     {
       line: ' """  -- exited',
       tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 0, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 1,
           type: [
             'source.malloy',
             'string.quoted.double',
-            'punctuation.definition.string.begin'
+            'punctuation.definition.string.begin',
           ],
-          color: '#CE9178'
+          color: '#CE9178',
         },
         {
           startIndex: 2,
           type: [
             'source.malloy',
             'string.quoted.double',
-            'punctuation.definition.string.end'
+            'punctuation.definition.string.end',
           ],
-          color: '#CE9178'
+          color: '#CE9178',
         },
         {
           startIndex: 3,
           type: [
             'source.malloy',
             'string.quoted.double',
-            'punctuation.definition.string.begin'
+            'punctuation.definition.string.begin',
           ],
-          color: '#CE9178'
+          color: '#CE9178',
         },
         {
           startIndex: 4,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
-        }
-      ]
-    }
+          type: ['source.malloy', 'string.quoted.double'],
+          color: '#CE9178',
+        },
+      ],
+    },
   ],
   [
     {
@@ -939,13 +939,13 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
+          type: ['source.malloy', 'string.regexp'],
+          color: '#D16969',
         },
         {
           startIndex: 2,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
+          type: ['source.malloy', 'string.regexp'],
+          color: '#D16969',
         },
         {
           startIndex: 21,
@@ -953,14 +953,14 @@ export default [
             'source.malloy',
             'string.regexp',
             'constant.character.escape',
-            'constant.character.escape'
+            'constant.character.escape',
           ],
-          color: '#D7BA7D'
+          color: '#D7BA7D',
         },
         {
           startIndex: 23,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
+          type: ['source.malloy', 'string.regexp'],
+          color: '#D16969',
         },
         {
           startIndex: 29,
@@ -968,14 +968,14 @@ export default [
             'source.malloy',
             'string.regexp',
             'constant.character.escape',
-            'constant.character.escape'
+            'constant.character.escape',
           ],
-          color: '#D7BA7D'
+          color: '#D7BA7D',
         },
         {
           startIndex: 31,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
+          type: ['source.malloy', 'string.regexp'],
+          color: '#D16969',
         },
         {
           startIndex: 36,
@@ -983,17 +983,17 @@ export default [
             'source.malloy',
             'string.regexp',
             'constant.character.escape',
-            'constant.character.escape'
+            'constant.character.escape',
           ],
-          color: '#D7BA7D'
+          color: '#D7BA7D',
         },
         {
           startIndex: 38,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
-        }
-      ]
-    }
+          type: ['source.malloy', 'string.regexp'],
+          color: '#D16969',
+        },
+      ],
+    },
   ],
   [
     {
@@ -1004,14 +1004,14 @@ export default [
           type: [
             'source.malloy',
             'string.quoted.double',
-            'punctuation.definition.string.begin'
+            'punctuation.definition.string.begin',
           ],
-          color: '#CE9178'
+          color: '#CE9178',
         },
         {
           startIndex: 1,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
+          type: ['source.malloy', 'string.quoted.double'],
+          color: '#CE9178',
         },
         {
           startIndex: 7,
@@ -1019,9 +1019,9 @@ export default [
             'source.malloy',
             'string.quoted.double',
             'constant.character.escape',
-            'constant.character.escape'
+            'constant.character.escape',
           ],
-          color: '#D7BA7D'
+          color: '#D7BA7D',
         },
         {
           startIndex: 9,
@@ -1029,14 +1029,14 @@ export default [
             'source.malloy',
             'string.quoted.double',
             'constant.character.escape',
-            'constant.character.escape'
+            'constant.character.escape',
           ],
-          color: '#D7BA7D'
+          color: '#D7BA7D',
         },
         {
           startIndex: 15,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
+          type: ['source.malloy', 'string.quoted.double'],
+          color: '#CE9178',
         },
         {
           startIndex: 16,
@@ -1044,17 +1044,17 @@ export default [
             'source.malloy',
             'string.quoted.double',
             'constant.character.escape',
-            'constant.character.escape'
+            'constant.character.escape',
           ],
-          color: '#D7BA7D'
+          color: '#D7BA7D',
         },
         {
           startIndex: 18,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
-        }
-      ]
-    }
+          type: ['source.malloy', 'string.quoted.double'],
+          color: '#CE9178',
+        },
+      ],
+    },
   ],
   [
     {
@@ -1062,106 +1062,106 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
+          type: ['source.malloy', 'variable.other'],
+          color: '#9CDCFE',
         },
-        { startIndex: 5, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 5, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 8,
           type: [
             'source.malloy',
             'string.quoted.single',
-            'punctuation.definition.string.begin'
+            'punctuation.definition.string.begin',
           ],
-          color: '#CE9178'
+          color: '#CE9178',
         },
         {
           startIndex: 9,
-          type: [ 'source.malloy', 'string.quoted.single' ],
-          color: '#CE9178'
+          type: ['source.malloy', 'string.quoted.single'],
+          color: '#CE9178',
         },
         {
           startIndex: 11,
           type: [
             'source.malloy',
             'string.quoted.single',
-            'punctuation.definition.string.end'
+            'punctuation.definition.string.end',
           ],
-          color: '#CE9178'
+          color: '#CE9178',
         },
-        { startIndex: 12, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 12, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 15,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
+          type: ['source.malloy', 'string.regexp'],
+          color: '#D16969',
         },
         {
           startIndex: 17,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
+          type: ['source.malloy', 'string.regexp'],
+          color: '#D16969',
         },
         {
           startIndex: 19,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
+          type: ['source.malloy', 'string.regexp'],
+          color: '#D16969',
         },
-        { startIndex: 20, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 20, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 23,
           type: [
             'source.malloy',
             'string.quoted.double',
-            'punctuation.definition.string.begin'
+            'punctuation.definition.string.begin',
           ],
-          color: '#CE9178'
+          color: '#CE9178',
         },
         {
           startIndex: 24,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
+          type: ['source.malloy', 'string.quoted.double'],
+          color: '#CE9178',
         },
         {
           startIndex: 26,
           type: [
             'source.malloy',
             'string.quoted.double',
-            'punctuation.definition.string.end'
+            'punctuation.definition.string.end',
           ],
-          color: '#CE9178'
+          color: '#CE9178',
         },
-        { startIndex: 27, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 27, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 30,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
+          type: ['source.malloy', 'string.regexp'],
+          color: '#D16969',
         },
         {
           startIndex: 32,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
+          type: ['source.malloy', 'string.regexp'],
+          color: '#D16969',
         },
         {
           startIndex: 34,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
+          type: ['source.malloy', 'string.regexp'],
+          color: '#D16969',
         },
-        { startIndex: 35, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 35, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 37,
           type: [
             'source.malloy',
             'comment.line.double-hyphen',
-            'punctuation.definition.comment'
+            'punctuation.definition.comment',
           ],
-          color: '#6A9955'
+          color: '#6A9955',
         },
         {
           startIndex: 39,
-          type: [ 'source.malloy', 'comment.line.double-hyphen' ],
-          color: '#6A9955'
-        }
-      ]
-    }
+          type: ['source.malloy', 'comment.line.double-hyphen'],
+          color: '#6A9955',
+        },
+      ],
+    },
   ],
   [
     {
@@ -1169,59 +1169,51 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'source.sql', 'keyword.control.select' ],
-          color: '#C586C0'
+          type: ['source.malloy', 'source.sql', 'keyword.control.select'],
+          color: '#C586C0',
         },
         {
           startIndex: 6,
-          type: [ 'source.malloy', 'source.sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql'],
+          color: '#000000',
         },
         {
           startIndex: 8,
-          type: [
-            'source.malloy',
-            'source.sql',
-            'punctuation.sql-block.open'
-          ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql', 'punctuation.sql-block.open'],
+          color: '#000000',
         },
         {
           startIndex: 11,
-          type: [ 'source.malloy', 'source.sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql'],
+          color: '#000000',
         },
         {
           startIndex: 12,
-          type: [ 'source.malloy', 'source.sql', 'keyword.other.DML.sql' ],
-          color: '#569CD6'
+          type: ['source.malloy', 'source.sql', 'keyword.other.DML.sql'],
+          color: '#569CD6',
         },
         {
           startIndex: 18,
-          type: [ 'source.malloy', 'source.sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql'],
+          color: '#000000',
         },
         {
           startIndex: 19,
-          type: [ 'source.malloy', 'source.sql', 'constant.numeric.sql' ],
-          color: '#B5CEA8'
+          type: ['source.malloy', 'source.sql', 'constant.numeric.sql'],
+          color: '#B5CEA8',
         },
         {
           startIndex: 20,
-          type: [ 'source.malloy', 'source.sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql'],
+          color: '#000000',
         },
         {
           startIndex: 21,
-          type: [
-            'source.malloy',
-            'source.sql',
-            'punctuation.sql-block.close'
-          ],
-          color: '#000000'
-        }
-      ]
-    }
+          type: ['source.malloy', 'source.sql', 'punctuation.sql-block.close'],
+          color: '#000000',
+        },
+      ],
+    },
   ],
   [
     {
@@ -1229,81 +1221,73 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'keyword' ],
-          color: '#569CD6'
+          type: ['source.malloy', 'keyword'],
+          color: '#569CD6',
         },
-        { startIndex: 3, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 3, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 5,
-          type: [ 'source.malloy', 'source.sql', 'variable.other' ],
-          color: '#9CDCFE'
+          type: ['source.malloy', 'source.sql', 'variable.other'],
+          color: '#9CDCFE',
         },
         {
           startIndex: 11,
-          type: [ 'source.malloy', 'source.sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql'],
+          color: '#000000',
         },
         {
           startIndex: 12,
-          type: [ 'source.malloy', 'source.sql', 'keyword.control.sql' ],
-          color: '#C586C0'
+          type: ['source.malloy', 'source.sql', 'keyword.control.sql'],
+          color: '#C586C0',
         },
         {
           startIndex: 15,
-          type: [ 'source.malloy', 'source.sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql'],
+          color: '#000000',
         },
         {
           startIndex: 16,
-          type: [
-            'source.malloy',
-            'source.sql',
-            'punctuation.sql-block.open'
-          ],
-          color: '#000000'
-        }
-      ]
+          type: ['source.malloy', 'source.sql', 'punctuation.sql-block.open'],
+          color: '#000000',
+        },
+      ],
     },
     {
       line: '  SELECT 1',
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'source.sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql'],
+          color: '#000000',
         },
         {
           startIndex: 2,
-          type: [ 'source.malloy', 'source.sql', 'keyword.other.DML.sql' ],
-          color: '#569CD6'
+          type: ['source.malloy', 'source.sql', 'keyword.other.DML.sql'],
+          color: '#569CD6',
         },
         {
           startIndex: 8,
-          type: [ 'source.malloy', 'source.sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql'],
+          color: '#000000',
         },
         {
           startIndex: 9,
-          type: [ 'source.malloy', 'source.sql', 'constant.numeric.sql' ],
-          color: '#B5CEA8'
-        }
-      ]
+          type: ['source.malloy', 'source.sql', 'constant.numeric.sql'],
+          color: '#B5CEA8',
+        },
+      ],
     },
     {
       line: '""")',
       tokens: [
         {
           startIndex: 0,
-          type: [
-            'source.malloy',
-            'source.sql',
-            'punctuation.sql-block.close'
-          ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql', 'punctuation.sql-block.close'],
+          color: '#000000',
         },
-        { startIndex: 3, type: [ 'source.malloy' ], color: '#000000' }
-      ]
-    }
+        {startIndex: 3, type: ['source.malloy'], color: '#000000'},
+      ],
+    },
   ],
   [
     {
@@ -1311,24 +1295,20 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'source.sql', 'keyword.control.select' ],
-          color: '#C586C0'
+          type: ['source.malloy', 'source.sql', 'keyword.control.select'],
+          color: '#C586C0',
         },
         {
           startIndex: 6,
-          type: [ 'source.malloy', 'source.sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql'],
+          color: '#000000',
         },
         {
           startIndex: 8,
-          type: [
-            'source.malloy',
-            'source.sql',
-            'punctuation.sql-block.open'
-          ],
-          color: '#000000'
-        }
-      ]
+          type: ['source.malloy', 'source.sql', 'punctuation.sql-block.open'],
+          color: '#000000',
+        },
+      ],
     },
     {
       line: '-- SQL CONTEXT',
@@ -1339,33 +1319,29 @@ export default [
             'source.malloy',
             'source.sql',
             'comment.line.double-dash.sql',
-            'punctuation.definition.comment.sql'
+            'punctuation.definition.comment.sql',
           ],
-          color: '#6A9955'
+          color: '#6A9955',
         },
         {
           startIndex: 2,
-          type: [
-            'source.malloy',
-            'source.sql',
-            'comment.line.double-dash.sql'
-          ],
-          color: '#6A9955'
-        }
-      ]
+          type: ['source.malloy', 'source.sql', 'comment.line.double-dash.sql'],
+          color: '#6A9955',
+        },
+      ],
     },
     {
       line: '%{  airports -> { group_by: state }',
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'source.sql', 'source.malloy-in-sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql', 'source.malloy-in-sql'],
+          color: '#000000',
         },
         {
           startIndex: 2,
-          type: [ 'source.malloy', 'source.sql', 'source.malloy-in-sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql', 'source.malloy-in-sql'],
+          color: '#000000',
         },
         {
           startIndex: 4,
@@ -1373,24 +1349,24 @@ export default [
             'source.malloy',
             'source.sql',
             'source.malloy-in-sql',
-            'variable.other'
+            'variable.other',
           ],
-          color: '#9CDCFE'
+          color: '#9CDCFE',
         },
         {
           startIndex: 12,
-          type: [ 'source.malloy', 'source.sql', 'source.malloy-in-sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql', 'source.malloy-in-sql'],
+          color: '#000000',
         },
         {
           startIndex: 16,
-          type: [ 'source.malloy', 'source.sql', 'source.malloy-in-sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql', 'source.malloy-in-sql'],
+          color: '#000000',
         },
         {
           startIndex: 17,
-          type: [ 'source.malloy', 'source.sql', 'source.malloy-in-sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql', 'source.malloy-in-sql'],
+          color: '#000000',
         },
         {
           startIndex: 18,
@@ -1398,14 +1374,14 @@ export default [
             'source.malloy',
             'source.sql',
             'source.malloy-in-sql',
-            'keyword.control.group_by'
+            'keyword.control.group_by',
           ],
-          color: '#C586C0'
+          color: '#C586C0',
         },
         {
           startIndex: 26,
-          type: [ 'source.malloy', 'source.sql', 'source.malloy-in-sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql', 'source.malloy-in-sql'],
+          color: '#000000',
         },
         {
           startIndex: 28,
@@ -1413,21 +1389,21 @@ export default [
             'source.malloy',
             'source.sql',
             'source.malloy-in-sql',
-            'variable.other'
+            'variable.other',
           ],
-          color: '#9CDCFE'
+          color: '#9CDCFE',
         },
         {
           startIndex: 33,
-          type: [ 'source.malloy', 'source.sql', 'source.malloy-in-sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql', 'source.malloy-in-sql'],
+          color: '#000000',
         },
         {
           startIndex: 34,
-          type: [ 'source.malloy', 'source.sql', 'source.malloy-in-sql' ],
-          color: '#000000'
-        }
-      ]
+          type: ['source.malloy', 'source.sql', 'source.malloy-in-sql'],
+          color: '#000000',
+        },
+      ],
     },
     {
       line: '// MALLOY CONTEXT',
@@ -1439,9 +1415,9 @@ export default [
             'source.sql',
             'source.malloy-in-sql',
             'comment.line.double-slash',
-            'punctuation.definition.comment'
+            'punctuation.definition.comment',
           ],
-          color: '#6A9955'
+          color: '#6A9955',
         },
         {
           startIndex: 2,
@@ -1449,24 +1425,24 @@ export default [
             'source.malloy',
             'source.sql',
             'source.malloy-in-sql',
-            'comment.line.double-slash'
+            'comment.line.double-slash',
           ],
-          color: '#6A9955'
-        }
-      ]
+          color: '#6A9955',
+        },
+      ],
     },
     {
       line: '}  -- SQL CONTEXT',
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'source.sql', 'source.malloy-in-sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql', 'source.malloy-in-sql'],
+          color: '#000000',
         },
         {
           startIndex: 1,
-          type: [ 'source.malloy', 'source.sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql'],
+          color: '#000000',
         },
         {
           startIndex: 3,
@@ -1474,50 +1450,42 @@ export default [
             'source.malloy',
             'source.sql',
             'comment.line.double-dash.sql',
-            'punctuation.definition.comment.sql'
+            'punctuation.definition.comment.sql',
           ],
-          color: '#6A9955'
+          color: '#6A9955',
         },
         {
           startIndex: 5,
-          type: [
-            'source.malloy',
-            'source.sql',
-            'comment.line.double-dash.sql'
-          ],
-          color: '#6A9955'
-        }
-      ]
+          type: ['source.malloy', 'source.sql', 'comment.line.double-dash.sql'],
+          color: '#6A9955',
+        },
+      ],
     },
     {
       line: '"""  // MALLOY CONTEXT',
       tokens: [
         {
           startIndex: 0,
-          type: [
-            'source.malloy',
-            'source.sql',
-            'punctuation.sql-block.close'
-          ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql', 'punctuation.sql-block.close'],
+          color: '#000000',
         },
-        { startIndex: 3, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 3, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 5,
           type: [
             'source.malloy',
             'comment.line.double-slash',
-            'punctuation.definition.comment'
+            'punctuation.definition.comment',
           ],
-          color: '#6A9955'
+          color: '#6A9955',
         },
         {
           startIndex: 7,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
-        }
-      ]
-    }
+          type: ['source.malloy', 'comment.line.double-slash'],
+          color: '#6A9955',
+        },
+      ],
+    },
   ],
   [
     {
@@ -1525,37 +1493,33 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'source.sql', 'keyword.control.select' ],
-          color: '#C586C0'
+          type: ['source.malloy', 'source.sql', 'keyword.control.select'],
+          color: '#C586C0',
         },
         {
           startIndex: 6,
-          type: [ 'source.malloy', 'source.sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql'],
+          color: '#000000',
         },
         {
           startIndex: 8,
-          type: [
-            'source.malloy',
-            'source.sql',
-            'punctuation.sql-block.open'
-          ],
-          color: '#000000'
-        }
-      ]
+          type: ['source.malloy', 'source.sql', 'punctuation.sql-block.open'],
+          color: '#000000',
+        },
+      ],
     },
     {
       line: '%{  run: duckdb.sql("""',
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'source.sql', 'source.malloy-in-sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql', 'source.malloy-in-sql'],
+          color: '#000000',
         },
         {
           startIndex: 2,
-          type: [ 'source.malloy', 'source.sql', 'source.malloy-in-sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql', 'source.malloy-in-sql'],
+          color: '#000000',
         },
         {
           startIndex: 4,
@@ -1563,14 +1527,14 @@ export default [
             'source.malloy',
             'source.sql',
             'source.malloy-in-sql',
-            'keyword'
+            'keyword',
           ],
-          color: '#569CD6'
+          color: '#569CD6',
         },
         {
           startIndex: 7,
-          type: [ 'source.malloy', 'source.sql', 'source.malloy-in-sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql', 'source.malloy-in-sql'],
+          color: '#000000',
         },
         {
           startIndex: 9,
@@ -1579,9 +1543,9 @@ export default [
             'source.sql',
             'source.malloy-in-sql',
             'source.sql',
-            'variable.other'
+            'variable.other',
           ],
-          color: '#9CDCFE'
+          color: '#9CDCFE',
         },
         {
           startIndex: 15,
@@ -1589,9 +1553,9 @@ export default [
             'source.malloy',
             'source.sql',
             'source.malloy-in-sql',
-            'source.sql'
+            'source.sql',
           ],
-          color: '#000000'
+          color: '#000000',
         },
         {
           startIndex: 16,
@@ -1600,9 +1564,9 @@ export default [
             'source.sql',
             'source.malloy-in-sql',
             'source.sql',
-            'keyword.control.sql'
+            'keyword.control.sql',
           ],
-          color: '#C586C0'
+          color: '#C586C0',
         },
         {
           startIndex: 19,
@@ -1610,9 +1574,9 @@ export default [
             'source.malloy',
             'source.sql',
             'source.malloy-in-sql',
-            'source.sql'
+            'source.sql',
           ],
-          color: '#000000'
+          color: '#000000',
         },
         {
           startIndex: 20,
@@ -1621,11 +1585,11 @@ export default [
             'source.sql',
             'source.malloy-in-sql',
             'source.sql',
-            'punctuation.sql-block.open'
+            'punctuation.sql-block.open',
           ],
-          color: '#000000'
-        }
-      ]
+          color: '#000000',
+        },
+      ],
     },
     {
       line: '    -- SQL CONTEXT',
@@ -1637,9 +1601,9 @@ export default [
             'source.sql',
             'source.malloy-in-sql',
             'source.sql',
-            'punctuation.whitespace.comment.leading.sql'
+            'punctuation.whitespace.comment.leading.sql',
           ],
-          color: '#000000'
+          color: '#000000',
         },
         {
           startIndex: 4,
@@ -1649,9 +1613,9 @@ export default [
             'source.malloy-in-sql',
             'source.sql',
             'comment.line.double-dash.sql',
-            'punctuation.definition.comment.sql'
+            'punctuation.definition.comment.sql',
           ],
-          color: '#6A9955'
+          color: '#6A9955',
         },
         {
           startIndex: 6,
@@ -1660,11 +1624,11 @@ export default [
             'source.sql',
             'source.malloy-in-sql',
             'source.sql',
-            'comment.line.double-dash.sql'
+            'comment.line.double-dash.sql',
           ],
-          color: '#6A9955'
-        }
-      ]
+          color: '#6A9955',
+        },
+      ],
     },
     {
       line: '    %{  // MALLOY CONTEXT',
@@ -1675,9 +1639,9 @@ export default [
             'source.malloy',
             'source.sql',
             'source.malloy-in-sql',
-            'source.sql'
+            'source.sql',
           ],
-          color: '#000000'
+          color: '#000000',
         },
         {
           startIndex: 4,
@@ -1686,9 +1650,9 @@ export default [
             'source.sql',
             'source.malloy-in-sql',
             'source.sql',
-            'source.malloy-in-sql'
+            'source.malloy-in-sql',
           ],
-          color: '#000000'
+          color: '#000000',
         },
         {
           startIndex: 6,
@@ -1697,9 +1661,9 @@ export default [
             'source.sql',
             'source.malloy-in-sql',
             'source.sql',
-            'source.malloy-in-sql'
+            'source.malloy-in-sql',
           ],
-          color: '#000000'
+          color: '#000000',
         },
         {
           startIndex: 8,
@@ -1710,9 +1674,9 @@ export default [
             'source.sql',
             'source.malloy-in-sql',
             'comment.line.double-slash',
-            'punctuation.definition.comment'
+            'punctuation.definition.comment',
           ],
-          color: '#6A9955'
+          color: '#6A9955',
         },
         {
           startIndex: 10,
@@ -1722,11 +1686,11 @@ export default [
             'source.malloy-in-sql',
             'source.sql',
             'source.malloy-in-sql',
-            'comment.line.double-slash'
+            'comment.line.double-slash',
           ],
-          color: '#6A9955'
-        }
-      ]
+          color: '#6A9955',
+        },
+      ],
     },
     {
       line: '    }  ',
@@ -1738,9 +1702,9 @@ export default [
             'source.sql',
             'source.malloy-in-sql',
             'source.sql',
-            'source.malloy-in-sql'
+            'source.malloy-in-sql',
           ],
-          color: '#000000'
+          color: '#000000',
         },
         {
           startIndex: 4,
@@ -1749,9 +1713,9 @@ export default [
             'source.sql',
             'source.malloy-in-sql',
             'source.sql',
-            'source.malloy-in-sql'
+            'source.malloy-in-sql',
           ],
-          color: '#000000'
+          color: '#000000',
         },
         {
           startIndex: 5,
@@ -1759,11 +1723,11 @@ export default [
             'source.malloy',
             'source.sql',
             'source.malloy-in-sql',
-            'source.sql'
+            'source.sql',
           ],
-          color: '#000000'
-        }
-      ]
+          color: '#000000',
+        },
+      ],
     },
     {
       line: '  """  // MALLOY CONTEXT',
@@ -1774,9 +1738,9 @@ export default [
             'source.malloy',
             'source.sql',
             'source.malloy-in-sql',
-            'source.sql'
+            'source.sql',
           ],
-          color: '#000000'
+          color: '#000000',
         },
         {
           startIndex: 2,
@@ -1785,14 +1749,14 @@ export default [
             'source.sql',
             'source.malloy-in-sql',
             'source.sql',
-            'punctuation.sql-block.close'
+            'punctuation.sql-block.close',
           ],
-          color: '#000000'
+          color: '#000000',
         },
         {
           startIndex: 5,
-          type: [ 'source.malloy', 'source.sql', 'source.malloy-in-sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql', 'source.malloy-in-sql'],
+          color: '#000000',
         },
         {
           startIndex: 7,
@@ -1801,9 +1765,9 @@ export default [
             'source.sql',
             'source.malloy-in-sql',
             'comment.line.double-slash',
-            'punctuation.definition.comment'
+            'punctuation.definition.comment',
           ],
-          color: '#6A9955'
+          color: '#6A9955',
         },
         {
           startIndex: 9,
@@ -1811,60 +1775,56 @@ export default [
             'source.malloy',
             'source.sql',
             'source.malloy-in-sql',
-            'comment.line.double-slash'
+            'comment.line.double-slash',
           ],
-          color: '#6A9955'
-        }
-      ]
+          color: '#6A9955',
+        },
+      ],
     },
     {
       line: ')}  ',
       tokens: [
         {
           startIndex: 0,
-          type: [ 'source.malloy', 'source.sql', 'source.malloy-in-sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql', 'source.malloy-in-sql'],
+          color: '#000000',
         },
         {
           startIndex: 1,
-          type: [ 'source.malloy', 'source.sql', 'source.malloy-in-sql' ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql', 'source.malloy-in-sql'],
+          color: '#000000',
         },
         {
           startIndex: 2,
-          type: [ 'source.malloy', 'source.sql' ],
-          color: '#000000'
-        }
-      ]
+          type: ['source.malloy', 'source.sql'],
+          color: '#000000',
+        },
+      ],
     },
     {
       line: '"""  // MALLOY CONTEXT',
       tokens: [
         {
           startIndex: 0,
-          type: [
-            'source.malloy',
-            'source.sql',
-            'punctuation.sql-block.close'
-          ],
-          color: '#000000'
+          type: ['source.malloy', 'source.sql', 'punctuation.sql-block.close'],
+          color: '#000000',
         },
-        { startIndex: 3, type: [ 'source.malloy' ], color: '#000000' },
+        {startIndex: 3, type: ['source.malloy'], color: '#000000'},
         {
           startIndex: 5,
           type: [
             'source.malloy',
             'comment.line.double-slash',
-            'punctuation.definition.comment'
+            'punctuation.definition.comment',
           ],
-          color: '#6A9955'
+          color: '#6A9955',
         },
         {
           startIndex: 7,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
-        }
-      ]
-    }
-  ]
+          type: ['source.malloy', 'comment.line.double-slash'],
+          color: '#6A9955',
+        },
+      ],
+    },
+  ],
 ];

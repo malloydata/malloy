@@ -24,16 +24,16 @@ export type MonarchActions = (
   | Monarch.IExpandedMonarchLanguageAction
 )[];
 
-export type TextMateRepositoryKey = string
+export type TextMateRepositoryKey = string;
 export type TextMateTokenInfo = TextMateScopeName | TextMate.IRawCaptures;
 export interface TextMateRepositoryMap {
   [name: string]: TextMate.IRawRule;
-};
+}
 interface TextMateBeginEndRule extends TextMate.IRawRule {
   readonly begin: TextMate.RegExpString;
   readonly end: TextMate.RegExpString;
   readonly patterns?: TextMate.IRawRule[];
-};
+}
 
 export type ReferenceString = string;
 export type LanguageId = string;
@@ -54,7 +54,9 @@ const END_STATE_SUFFIX = '_end';
 // TODO: Move to config file with other constants (platform dependent)?
 const TOKENS_MAP = {};
 
-function instanceOfTextMateBeginEndRule(object: any): object is TextMateBeginEndRule {
+function instanceOfTextMateBeginEndRule(
+  object: any
+): object is TextMateBeginEndRule {
   return 'begin' in object && 'end' in object;
 }
 
@@ -269,7 +271,8 @@ function getIgnoreChars(
   for (const rule of state) {
     if (Array.isArray(rule)) {
       const beginChar =
-        typeof rule[M_REGEXP_INDEX] === 'string' && rule[M_REGEXP_INDEX][1] === '\\'
+        typeof rule[M_REGEXP_INDEX] === 'string' &&
+        rule[M_REGEXP_INDEX][1] === '\\'
           ? rule[M_REGEXP_INDEX].slice(1, 3)
           : rule[M_REGEXP_INDEX][1];
       if (!ignoreChars.has(beginChar)) {
@@ -373,11 +376,7 @@ tokenizer: {
     appendFileSync(filename, `\t${key}: [\n`, 'utf-8');
     for (const rule of rules) {
       if (!Array.isArray(rule)) {
-        appendFileSync(
-          filename,
-          `${inspect(rule, {depth: null})},\n`,
-          'utf-8'
-        );
+        appendFileSync(filename, `${inspect(rule, {depth: null})},\n`, 'utf-8');
       } else {
         appendFileSync(filename, `[\n`, 'utf-8');
         appendFileSync(filename, `${rule[M_REGEXP_INDEX]},\n`, 'utf-8');
