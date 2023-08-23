@@ -1,9 +1,3 @@
-// TODO: Remove assumptions about tmGrammar casing
-// Add other grammars and config files
-// Get screendiffs going
-// Do README
-// Ship the grammars with the Malloy npm package
-
 import {readFileSync, writeFileSync, appendFileSync} from 'fs';
 import {inspect} from 'util';
 import {languages as Monarch} from 'monaco-editor';

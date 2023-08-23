@@ -8,14 +8,17 @@ import {
   parseRawGrammar,
   INITIAL,
   IRawTheme,
+  IRawGrammar,
   IGrammar,
   IToken,
 } from 'vscode-textmate';
 import {loadWASM, OnigScanner, OnigString} from 'vscode-oniguruma';
 
-import {GoldenTestConfig, RelaxedToken, TestItem} from './testUtils';
+import {TextmateTestConfig, TestItem, TextmateLanguageDefinition} from './testUtils';
 
-import malloyTestDefinitions from '../grammars/malloy/malloyTestDefinitions';
+import malloyTestDefinitions from '../grammars/malloy/malloyTestInput';
+
+import malloyDarkPlusConfig from './config/malloyDarkPlusConfig';
 
 const FOREGROUND_MASK = 0b00000000011111111100000000000000;
 const FOREGROUND_OFFSET = 15;
@@ -27,27 +30,27 @@ function readFile(path: string) {
   });
 }
 
-function retrieveHighlightTestConfig(path: string): GoldenTestConfig {
+function retrieveHighlightTestConfig(path: string): TextmateTestConfig {
   const configSrc = fs.readFileSync(path, 'utf-8');
-  const rawConfig: GoldenTestConfig = JSON.parse(configSrc);
+  const rawConfig: TextmateTestConfig = JSON.parse(configSrc);
   return rawConfig;
 }
 
 function initializeLanguageMap(
-  config: GoldenTestConfig
-): Record<string, string> {
-  const languageMap: Record<string, string> = {};
+  config: TextmateTestConfig
+): Record<string, TextmateLanguageDefinition> {
+  const languageMap: Record<string, TextmateLanguageDefinition> = {};
   if (config.language.embeddedLanguages) {
     for (const lang of config.language.embeddedLanguages) {
-      languageMap[lang.scopeName] = lang.path;
+      languageMap[lang.scopeName] = lang.definition;
     }
   }
-  languageMap[config.language.scopeName] = config.language.path;
+  languageMap[config.language.scopeName] = config.language.definition;
   return languageMap;
 }
 
 function initializeRegistry(
-  languageMap: Record<string, string>,
+  languageMap: Record<string, TextmateLanguageDefinition>,
   theme: IRawTheme
 ) {
   const wasmBin = fs.readFileSync(
@@ -67,35 +70,31 @@ function initializeRegistry(
     onigLib: vscodeOnigurumaLib,
     theme: theme,
     // TODO: Remove usage of any here
-    loadGrammar: scopeName =>
-      readFile(languageMap[scopeName]).then((data: any) =>
-        parseRawGrammar(data.toString(), languageMap[scopeName])
-      ),
+    loadGrammar: scopeName => {
+      const languageDefinition: TextmateLanguageDefinition = languageMap[scopeName];
+      if (typeof languageDefinition === 'string') {
+        return readFile(languageDefinition).then((rawGrammarSrc: any) => parseRawGrammar(rawGrammarSrc.toString(), languageDefinition))
+      } else {
+        return Promise.resolve(languageDefinition as unknown as IRawGrammar);
+      }
+    },
   });
   return registry;
 }
 
-function retrieveEditorTheme(config: GoldenTestConfig): IRawTheme {
+function retrieveEditorTheme(config: TextmateTestConfig): IRawTheme {
   const themeSrc = fs.readFileSync(config.theme.path, 'utf-8');
   const rawTheme = json5.parse(themeSrc);
   return {settings: rawTheme.tokenColors};
 }
 
-// async function loadLanguages(registry: Registry, languageMap: Record<string, string>): Promise<unknown> {
-//     const promises: Promise<unknown>[] = []
-//     Object.keys(languageMap).forEach((languageId: string) => {
-//         promises.push(registry.loadGrammar(languageId));
-//     });
-//     return Promise.all(promises);
-// }
-
-function constructLineGolden(
+function constructLineTokenization(
   line: string,
   full: IToken[],
   binary: Uint32Array,
   colorMap: string[]
 ): TestItem {
-  const lineGolden: TestItem = {
+  const lineTokenization: TestItem = {
     line: line,
     tokens: [],
   };
@@ -111,13 +110,13 @@ function constructLineGolden(
     if (indexToColorMap[tokenInfo.startIndex]) {
       prevIndex = tokenInfo.startIndex;
     }
-    lineGolden.tokens.push({
+    lineTokenization.tokens.push({
       startIndex: tokenInfo.startIndex,
       type: tokenInfo.scopes,
       color: indexToColorMap[prevIndex],
     });
   }
-  return lineGolden;
+  return lineTokenization;
 }
 
 function getForegroundColor(metadata: number): number {
@@ -129,16 +128,16 @@ function tokenizeMultilineDefinitions(
   registry: Registry,
   definitions: string[][]
 ): TestItem[][] {
-  const goldens: TestItem[][] = [];
+  const tokenizations: TestItem[][] = [];
   for (let i = 0; i < definitions.length; i++) {
-    const blockGolden: TestItem[] = [];
+    const blockTokenization: TestItem[] = [];
     let ruleStack = INITIAL;
     for (let j = 0; j < definitions[i].length; j++) {
       const line = definitions[i][j];
       const full = grammar.tokenizeLine(line, ruleStack);
       const binary = grammar.tokenizeLine2(line, ruleStack);
-      blockGolden.push(
-        constructLineGolden(
+      blockTokenization.push(
+        constructLineTokenization(
           line,
           full.tokens,
           binary.tokens,
@@ -147,42 +146,32 @@ function tokenizeMultilineDefinitions(
       );
       ruleStack = full.ruleStack;
     }
-    goldens.push(blockGolden);
+    tokenizations.push(blockTokenization);
   }
-  return goldens;
+  return tokenizations;
 }
 
-function writeGoldens(goldens: TestItem[][], outputPath: string) {
-  const outputTemplate = `export default ${util.inspect(goldens, {
+function writeTokenizations(tokenizations: TestItem[][], outputPath: string) {
+  const outputTemplate = `export default ${util.inspect(tokenizations, {
     depth: null,
   })};`;
   fs.writeFileSync(outputPath, outputTemplate, 'utf-8');
 }
 
-export async function generateLanguageGolden(
-  configPath: string,
-  outputPath: string,
+export async function generateTextmateTokenizations(
+  config: TextmateTestConfig,
   testDefinitions: string[][]
-) {
-  const config = retrieveHighlightTestConfig(configPath);
+): Promise<TestItem[][]> {
   const languageMap = initializeLanguageMap(config);
   const registry = initializeRegistry(languageMap, retrieveEditorTheme(config));
-  registry
-    .loadGrammar(config.language.scopeName)
-    .then(grammar => {
-      if (grammar) {
-        const goldens = tokenizeMultilineDefinitions(
-          grammar,
-          registry,
-          testDefinitions
-        );
-        writeGoldens(goldens, outputPath);
-      }
-    })
-    .catch(error => {
-      console.log(error);
-    });
+  const grammar = await registry.loadGrammar(config.language.scopeName)
+  return tokenizeMultilineDefinitions(grammar, registry, testDefinitions);
 }
 
 // TODO: Validate command line args
-generateLanguageGolden(process.argv[2], process.argv[3], malloyTestDefinitions);
+async function main(config: TextmateTestConfig, testDefinitions: string[][], outputPath: string) {
+  const tokenizations = await generateTextmateTokenizations(malloyDarkPlusConfig, testDefinitions);
+  writeTokenizations(tokenizations, outputPath);
+}
+
+main(malloyDarkPlusConfig, malloyTestDefinitions, process.argv[2]);
