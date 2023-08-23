@@ -1,4 +1,4 @@
-const monarch = {
+export default {
   includeLF: true,
   defaultToken: '',
   tokenPostfix: '.malloy',
@@ -8,9 +8,11 @@ const monarch = {
     malloy_language: [
       {include: '@sql_string'},
       {include: '@comments'},
+      {include: '@tags'},
       {include: '@strings'},
       {include: '@numbers'},
       {include: '@keywords'},
+      {include: '@properties'},
       {include: '@functions'},
       {include: '@datetimes'},
       {include: '@identifiers_quoted'},
@@ -23,12 +25,12 @@ const monarch = {
       [
         /\b(select)(\s*:\s*)(""")/,
         [
-          'keyword',
+          'keyword.control.select',
           '',
           {
             next: '@sql_end',
             nextEmbedded: 'sql',
-            token: 'punctuation.sql-block.open',
+            token: 'punctuation.sql.block.open',
           },
         ],
       ],
@@ -37,12 +39,12 @@ const monarch = {
         [
           'variable.other',
           '',
-          'keyword',
+          'keyword.control.sql',
           '',
           {
             next: '@sql_end',
             nextEmbedded: 'sql',
-            token: 'punctuation.sql-block.open',
+            token: 'punctuation.sql.block.open',
           },
         ],
       ],
@@ -53,7 +55,7 @@ const monarch = {
         {
           next: '@pop',
           nextEmbedded: '@pop',
-          token: 'punctuation.sql-block.close',
+          token: 'punctuation.sql.block.close',
         },
       ],
     ],
@@ -86,14 +88,57 @@ const monarch = {
       [/[\*]/, 'comment.block'],
     ],
     comment_line_double_slash_end: [
-      [/\n/, {next: '@pop', token: 'comment.line.double-slash'}],
-      [/[^\n]+/, 'comment.line.double-slash'],
-      [/[\n]/, 'comment.line.double-slash'],
+      [/\n/, {next: '@pop', token: 'comment.line.double.slash'}],
+      {include: '@tag_values'},
+      [/[^\n(]+/, 'comment.line.double.slash'],
+      [/[\n(]/, 'comment.line.double.slash'],
     ],
     comment_line_double_hyphen_end: [
-      [/\n/, {next: '@pop', token: 'comment.line.double-hyphen'}],
-      [/[^\n]+/, 'comment.line.double-hyphen'],
-      [/[\n]/, 'comment.line.double-hyphen'],
+      [/\n/, {next: '@pop', token: 'comment.line.double.hyphen'}],
+      [/[^\n]+/, 'comment.line.double.hyphen'],
+      [/[\n]/, 'comment.line.double.hyphen'],
+    ],
+    tags: [
+      [/##\n/, 'string.quoted'],
+      [
+        /#"/,
+        {
+          next: '@comment_line_double_slash_end',
+          token: 'punctuation.definition.comment',
+        },
+      ],
+      [/#\n/, 'string.quoted'],
+      [
+        /#\s/,
+        {
+          next: '@comment_line_double_slash_end',
+          token: 'support.type.property.name.json',
+        },
+      ],
+      [
+        /##\s/,
+        {
+          next: '@comment_line_double_slash_end',
+          token: 'support.type.property.name.json',
+        },
+      ],
+      [/#/, {next: '@string_quoted_end', token: 'string.quoted'}],
+    ],
+    tag_values: [
+      [
+        /(-)?((?:[^\s=#]+)|(?:"[^#]+"))(?:\s*(=)\s*((?:[^\s=#]+)|(?:"[^#]+")))?/,
+        [
+          'keyword.control.negate',
+          'support.type.property.name.json',
+          'keyword.operator.comparison.ts',
+          'string.quoted',
+        ],
+      ],
+    ],
+    string_quoted_end: [
+      [/\n/, {next: '@pop', token: 'string.quoted'}],
+      [/[^\n]+/, 'string.quoted'],
+      [/[\n]/, 'string.quoted'],
     ],
     strings: [
       [
@@ -151,10 +196,54 @@ const monarch = {
       ],
     ],
     keywords: [
-      [
-        /\b(accept|sql|select|connection|run|extend|refine|aggregate|sample|calculate|timezone|dimension|except|source|group_by|having|index|join_one|with|join_many|join_cross|limit|measure|nest|order_by|primary_key|project|query|rename|top|where|declare|is|on|desc|by|asc|import|day_of_year|day_of_month|not|or|and|for|else|to|when|pick)\b/,
-        'keyword',
-      ],
+      [/\bis\b/, 'keyword.control.is'],
+      [/\bon\b/, 'keyword.control.on'],
+      [/\bnot\b/, 'keyword.other.not'],
+      [/\bor\b/, 'keyword.other.or'],
+      [/\bdesc\b/, 'keyword.control.desc'],
+      [/\bby\b/, 'keyword.control.by'],
+      [/\band\b/, 'keyword.other.and'],
+      [/\basc\b/, 'keyword.control.asc'],
+      [/\bfor\b/, 'keyword.other.for'],
+      [/\belse\b/, 'keyword.other.else'],
+      [/\bto\b/, 'keyword.other.to'],
+      [/\bwhen\b/, 'keyword.other.when'],
+      [/\bpick\b/, 'keyword.other.pick'],
+      [/\bimport\b/, 'keyword.control.import'],
+    ],
+    properties: [
+      [/\baccept\b/, 'keyword.control.accept'],
+      [/\bsql\b/, 'keyword.control.sql'],
+      [/\bselect\b/, 'keyword.control.select'],
+      [/\bconnection\b/, 'keyword.control.connection'],
+      [/\brun\b/, 'keyword'],
+      [/\bextend\b/, 'keyword.control.extend'],
+      [/\brefine\b/, 'keyword.control.refine'],
+      [/\baggregate\b/, 'keyword.control.aggregate'],
+      [/\bsample\b/, 'keyword.control.sample'],
+      [/\bcalculate\b/, 'keyword.control.calculate'],
+      [/\btimezone\b/, 'keyword.control.timezone'],
+      [/\bdimension\b/, 'keyword.control.dimension'],
+      [/\bexcept\b/, 'keyword.control.except'],
+      [/\bsource\b/, 'keyword.control.source'],
+      [/\bgroup_by\b/, 'keyword.control.group_by'],
+      [/\bhaving\b/, 'keyword.control.having'],
+      [/\bindex\b/, 'keyword.control.index'],
+      [/\bjoin_one\b/, 'keyword.control.join_one'],
+      [/\bwith\b/, 'keyword.control.with'],
+      [/\bjoin_many\b/, 'keyword.control.join_many'],
+      [/\bjoin_cross\b/, 'keyword.control.join_cross'],
+      [/\blimit\b/, 'keyword.control.limit'],
+      [/\bmeasure\b/, 'keyword.control.measure'],
+      [/\bnest\b/, 'keyword.control.nest'],
+      [/\border_by\b/, 'keyword.control.order_by'],
+      [/\bprimary_key\b/, 'keyword.control.primary_key'],
+      [/\bproject\b/, 'keyword.control.project'],
+      [/\bquery\b/, 'keyword.control.query'],
+      [/\brename\b/, 'keyword.control.rename'],
+      [/\btop\b/, 'keyword.control.top'],
+      [/\bwhere\b/, 'keyword.control.where'],
+      [/\bdeclare\b/, 'keyword.control.declare'],
     ],
     functions: [
       [
@@ -165,9 +254,9 @@ const monarch = {
         /\b(AVG|COUNT|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE|TABLE|FROM|FROM_SQL|UNGROUPED)(\s*\()/,
         ['entity.name.function', ''],
       ],
-      [/([a-zA-Z_][a-zA-Z_0-9]*)(\s*\!?\s*\()/, ['entity.name.function', '']],
+      [/\b([a-zA-Z_][a-zA-Z_0-9]*)(\s*\()/, ['entity.name.function', '']],
       [
-        /\b([a-zA-Z_][a-zA-Z_0-9]*)(\!)(timestamp|number|string|boolean|date)(\s*\()/,
+        /\b([a-zA-Z_][a-zA-Z_0-9]*)(!)(timestamp|number|string|boolean|date)?(\s*\()/,
         ['entity.name.function', '', 'entity.name.type', ''],
       ],
     ],
@@ -182,8 +271,18 @@ const monarch = {
       ],
     ],
     identifiers_quoted: [[/`[^`]*`/, 'variable.other.quoted']],
-    types: [[/\b(string|number|date|timestamp|boolean)\b/, 'entity.name.type']],
-    constants: [[/\b(null|true|false)\b/, 'constant.language']],
+    types: [
+      [/\bstring\b/, 'entity.name.type.string'],
+      [/\bnumber\b/, 'entity.name.type.number'],
+      [/\bdate\b/, 'entity.name.type.date'],
+      [/\btimestamp\b/, 'entity.name.type.timestamp'],
+      [/\bboolean\b/, 'entity.name.type.boolean'],
+    ],
+    constants: [
+      [/\bnull\b/, 'constant.language.null'],
+      [/\btrue\b/, 'constant.language.true'],
+      [/\bfalse\b/, 'constant.language.false'],
+    ],
     timeframes: [
       [
         /\b((year|quarter|month|week|day|hour|minute|second)s?)\b/,

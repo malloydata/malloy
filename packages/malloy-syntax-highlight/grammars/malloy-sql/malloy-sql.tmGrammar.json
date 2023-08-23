@@ -1,0 +1,64 @@
+{
+    "name": "Malloy SQL",
+    "scopeName": "source.malloy-sql",
+    "patterns": [{"include": "#malloysql-sql"}],
+    "repository": {
+      "malloysql-sql": {
+        "beginCaptures": {
+          "0": {"name": "entity.other.attribute.malloy-sql"},
+          "1": {"name": "entity.other.attribute.malloy-sql"},
+          "3": {"name": "comment.line.double-slash"}
+        },
+        "name": "meta.embedded.block.malloysql.sql",
+        "patterns": [
+          {"include": "#comments"},
+          {
+            "begin": "%{",
+            "end": "}%",
+            "beginCaptures": {
+              "0": {"name": "punctuation.definition.malloy-sql"}
+            },
+            "endCaptures": {
+              "0": {"name": "punctuation.definition.malloy-sql"}
+            },
+            "name": "meta.embedded.block.malloy",
+            "patterns": [{"include": "source.malloy"}]
+          },
+          {
+            "include": "source.sql"
+          }
+        ]
+      },
+      "comments": {
+        "patterns": [
+          {
+            "begin": "/\\*",
+            "end": "\\*/",
+            "beginCaptures": {
+              "0": {"name": "punctuation.definition.comment.begin"}
+            },
+            "endCaptures": {
+              "0": {"name": "punctuation.definition.comment.end"}
+            },
+            "name": "comment.block"
+          },
+          {
+            "begin": "//",
+            "end": "\\n",
+            "beginCaptures": {
+              "0": {"name": "punctuation.definition.comment"}
+            },
+            "name": "comment.line.double-slash"
+          },
+          {
+            "begin": "--",
+            "end": "\\n",
+            "beginCaptures": {
+              "0": {"name": "punctuation.definition.comment"}
+            },
+            "name": "comment.line.double-hyphen"
+          }
+        ]
+      }
+    }
+  }

@@ -1,0 +1,19 @@
+{
+  "name": "malloy-syntax-highlight",
+  "version": "1.0.0",
+  "description": "An unpublished package to simplify the process of developing and testing Malloy syntax highlighting grammars",
+  "main": "index.js",
+  "scripts": {
+    "generate-malloy-monarch": "ts-node scripts/generateMonarchGrammar grammars/malloy/malloy.tmGrammar.json grammars/malloy/malloy.ts && prettier --write grammars/malloy/malloy.ts",
+    "generate-malloy-golden": "ts-node test/generateTextmateGolden test/config/malloy-vs-dark-plus.json grammars/malloy/goldens/vsDarkPlus.ts"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "json5": "^2.2.3",
+    "monaco-editor": "^0.41.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.1.6",
+    "vscode-oniguruma": "^1.7.0",
+    "vscode-textmate": "^9.0.0"
+  }
+}

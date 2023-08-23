@@ -1,0 +1,18 @@
+{
+    "language": {
+        "id": "malloy",
+        "scopeName": "source.malloy",
+        "path": "grammars/malloy/malloy.tmGrammar.json",
+        "embeddedLanguages": [
+            {
+                "id": "sql",
+                "scopeName": "source.sql",
+                "path": "grammars/sql/sql.tmLanguage.json"
+            }
+        ]
+    },
+    "theme": {
+        "id": "vs-dark-plus",
+        "path": "themes/dark_plus.json"
+    }
+}
