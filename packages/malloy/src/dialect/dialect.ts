@@ -32,6 +32,7 @@ import {
   TimestampUnit,
   TypecastFragment,
   mkExpr,
+  FieldAtomicTypeDef,
 } from '../model/malloy_types';
 import {DialectFunctionOverloadDef} from './functions';
 
@@ -308,4 +309,9 @@ export abstract class Dialect {
   sqlTzStr(qi: QueryInfo): string {
     return `"${qi.queryTimezone}"`;
   }
+
+  abstract sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined;
+  abstract malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string;
+
+  abstract validateTypeName(sqlType: string): boolean;
 }

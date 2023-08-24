@@ -29,12 +29,12 @@
 
 import * as crypto from 'crypto';
 import {
-  AtomicFieldTypeInner,
   Connection,
   MalloyQueryData,
   NamedStructDefs,
   PersistSQLResults,
   PooledConnection,
+  PostgresDialect,
   QueryData,
   QueryDataRow,
   QueryRunStats,
@@ -46,32 +46,6 @@ import {
 import {Client, Pool, PoolClient} from 'pg';
 import QueryStream from 'pg-query-stream';
 import {randomUUID} from 'crypto';
-
-const postgresToMalloyTypes: {[key: string]: AtomicFieldTypeInner} = {
-  'character varying': 'string',
-  'name': 'string',
-  'text': 'string',
-  'date': 'date',
-  'integer': 'number',
-  'bigint': 'number',
-  'double precision': 'number',
-  'timestamp without time zone': 'timestamp', // maybe not
-  'oid': 'string',
-  'boolean': 'boolean',
-  // ARRAY: "string",
-  'timestamp': 'timestamp',
-  '"char"': 'string',
-  'character': 'string',
-  'smallint': 'number',
-  'xid': 'string',
-  'real': 'number',
-  'interval': 'string',
-  'inet': 'string',
-  'regtype': 'string',
-  'numeric': 'number',
-  'bytea': 'string',
-  'pg_ndistinct': 'number',
-};
 
 interface PostgresQueryConfiguration {
   rowLimit?: number;
@@ -100,6 +74,7 @@ const SCHEMA_PAGE_SIZE = 1000;
 export class PostgresConnection
   implements Connection, StreamingConnection, PersistSQLResults
 {
+  private readonly dialect = new PostgresDialect();
   private isSetup = false;
   private schemaCache = new Map<
     string,
@@ -293,10 +268,12 @@ export class PostgresConnection
     for (const row of result.rows) {
       const postgresDataType = row['data_type'] as string;
       let s = structDef;
-      let malloyType = postgresToMalloyTypes[postgresDataType];
+      let malloyType = this.dialect.sqlTypeToMalloyType(postgresDataType);
       let name = row['column_name'] as string;
       if (postgresDataType === 'ARRAY') {
-        malloyType = postgresToMalloyTypes[row['element_type'] as string];
+        malloyType = this.dialect.sqlTypeToMalloyType(
+          row['element_type'] as string
+        );
         s = {
           type: 'struct',
           name: row['column_name'] as string,
@@ -313,7 +290,7 @@ export class PostgresConnection
         name = 'value';
       }
       if (malloyType) {
-        s.fields.push({type: malloyType, name});
+        s.fields.push({...malloyType, name});
       } else {
         s.fields.push({
           type: 'unsupported',
