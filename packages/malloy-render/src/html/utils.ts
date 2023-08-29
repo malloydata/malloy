@@ -245,7 +245,8 @@ export function formatTitle(
   renderDef?: RenderDef | undefined,
   timezone?: string
 ) {
-  const label = renderDef?.data?.label || field.name;
+  const label =
+    field.tagParse().tag.text('label') ?? renderDef?.data?.label ?? field.name;
   let title = options.titleCase ? startCase(label) : label;
   if (
     field.isAtomicField() &&
