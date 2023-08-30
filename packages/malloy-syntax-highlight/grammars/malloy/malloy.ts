@@ -1,4 +1,6 @@
-export default {
+import {languages as Monaco} from 'monaco-editor';
+
+export const monarch: Monaco.IMonarchLanguage = {
   includeLF: true,
   defaultToken: '',
   tokenPostfix: '.malloy',
@@ -8,7 +10,7 @@ export default {
     malloy_language: [
       {include: '@sql_string'},
       {include: '@comments'},
-      {include: '@tags'},
+      // {include: '@tags'},
       {include: '@strings'},
       {include: '@numbers'},
       {include: '@keywords'},
@@ -68,7 +70,7 @@ export default {
         },
       ],
       [
-        /\/\//,
+        /(\/\/|#)/,
         {
           next: '@comment_line_double_slash_end',
           token: 'punctuation.definition.comment',
@@ -89,9 +91,9 @@ export default {
     ],
     comment_line_double_slash_end: [
       [/\n/, {next: '@pop', token: 'comment.line.double.slash'}],
-      {include: '@tag_values'},
-      [/[^\n(]+/, 'comment.line.double.slash'],
-      [/[\n(]/, 'comment.line.double.slash'],
+      // {include: '@tag_values'},
+      [/[^\n]+/, 'comment.line.double.slash'],
+      [/[\n]/, 'comment.line.double.slash'],
     ],
     comment_line_double_hyphen_end: [
       [/\n/, {next: '@pop', token: 'comment.line.double.hyphen'}],
@@ -99,41 +101,41 @@ export default {
       [/[\n]/, 'comment.line.double.hyphen'],
     ],
     tags: [
-      [/##\n/, 'string.quoted'],
-      [
-        /#"/,
-        {
-          next: '@comment_line_double_slash_end',
-          token: 'punctuation.definition.comment',
-        },
-      ],
-      [/#\n/, 'string.quoted'],
-      [
-        /#\s/,
-        {
-          next: '@comment_line_double_slash_end',
-          token: 'support.type.property.name.json',
-        },
-      ],
-      [
-        /##\s/,
-        {
-          next: '@comment_line_double_slash_end',
-          token: 'support.type.property.name.json',
-        },
-      ],
-      [/#/, {next: '@string_quoted_end', token: 'string.quoted'}],
+      // [/##\n/, 'string.quoted'],
+      // [
+      //   /#"/,
+      //   {
+      //     next: '@comment_line_double_slash_end',
+      //     token: 'punctuation.definition.comment',
+      //   },
+      // ],
+      // [/#\n/, 'string.quoted'],
+      // [
+      //   /#\s/,
+      //   {
+      //     next: '@comment_line_double_slash_end',
+      //     token: 'support.type.property.name.json',
+      //   },
+      // ],
+      // [
+      //   /##\s/,
+      //   {
+      //     next: '@comment_line_double_slash_end',
+      //     token: 'support.type.property.name.json',
+      //   },
+      // ],
+      // [/#/, {next: '@string_quoted_end', token: 'string.quoted'}],
     ],
     tag_values: [
-      [
-        /(-)?((?:[^\s=#]+)|(?:"[^#]+"))(?:\s*(=)\s*((?:[^\s=#]+)|(?:"[^#]+")))?/,
-        [
-          'keyword.control.negate',
-          'support.type.property.name.json',
-          'keyword.operator.comparison.ts',
-          'string.quoted',
-        ],
-      ],
+      // [
+      //   /(-)?((?:[^\s=#]+)|(?:"[^#]+"))(?:\s*(=)\s*((?:[^\s=#]+)|(?:"[^#]+")))?/,
+      //   [
+      //     'keyword.control.negate',
+      //     'support.type.property.name.json',
+      //     'keyword.operator.comparison.ts',
+      //     'string.quoted',
+      //   ],
+      // ],
     ],
     string_quoted_end: [
       [/\n/, {next: '@pop', token: 'string.quoted'}],

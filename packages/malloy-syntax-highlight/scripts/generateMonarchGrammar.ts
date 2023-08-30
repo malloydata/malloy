@@ -357,7 +357,9 @@ function writeOutput(filename: string, monarch: Monarch.IMonarchLanguage) {
   writeFileSync(
     filename,
     `
-export default {
+import {languages as Monaco} from 'monaco-editor';
+
+export const monarch: Monaco.IMonarchLanguage = {
 includeLF: ${monarch.includeLF},
 defaultToken: '${monarch.defaultToken}',
 tokenPostfix: '${monarch.tokenPostfix}',
@@ -388,3 +390,4 @@ tokenizer: {
 }
 
 generateMonarchGrammar();
+

@@ -1,4 +1,4 @@
-import { TextmateTestConfig, stubEmbeddedTextmateLanguage } from "../testUtils";
+import { TextmateTestConfig, stubEmbeddedTextmateLanguage } from "../../testUtils";
 
 const malloyDarkPlusConfig: TextmateTestConfig = {
     language: {
@@ -11,7 +11,7 @@ const malloyDarkPlusConfig: TextmateTestConfig = {
     },
     theme: {
         id: 'vs-dark-plus',
-        path: 'themes/dark_plus.json',
+        path: 'themes/textmate/dark_plus.json',
     },
 }
 

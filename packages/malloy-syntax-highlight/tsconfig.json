@@ -1,9 +1,24 @@
 {
   "compilerOptions": {
+    "outDir": "dist",
+    "skipLibCheck": true,
     "downlevelIteration": true,
     "noPropertyAccessFromIndexSignature": false,
     "lib": [
-      "ES2021.String"
-    ]
-  }
+      "ES2021.String",
+      "dom"
+    ],
+    "target": "es6",
+    "paths": {
+      "monaco-editor": ["./node_modules/monaco-editor/esm/vs/editor/editor.api"],
+      "vscode-textmate": ["./node_modules/vscode-textmate/release/main"],
+    }
+  },
+  "moduleResolution":"nodenext",
+  "include": [
+    "grammars/**/*.ts",
+    "test/config/**/*.ts",
+    "test/testUtils.ts",
+    "test/generateMonarchTokenizations.ts",
+  ]
 }

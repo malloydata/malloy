@@ -1,8 +1,8 @@
-const json5 = require('json5');
-const fs = require('fs');
-const path = require('path');
-const util = require('util');
-
+import {join as pathJoin} from 'path';
+import {readFileSync, writeFileSync} from 'fs';
+import {readFile as promiseReadFile} from 'fs/promises';
+import {inspect} from 'util';
+import {parse as json5Parse} from 'json5';
 import {
   Registry,
   parseRawGrammar,
@@ -13,28 +13,13 @@ import {
   IToken,
 } from 'vscode-textmate';
 import {loadWASM, OnigScanner, OnigString} from 'vscode-oniguruma';
-
 import {TextmateTestConfig, TestItem, TextmateLanguageDefinition} from './testUtils';
 
-import malloyTestDefinitions from '../grammars/malloy/malloyTestInput';
-
-import malloyDarkPlusConfig from './config/malloyDarkPlusConfig';
+import malloyDarkPlusConfig from './config/textmate/malloyDarkPlusConfig';
+import malloyTestInput from '../grammars/malloy/malloyTestInput';
 
 const FOREGROUND_MASK = 0b00000000011111111100000000000000;
 const FOREGROUND_OFFSET = 15;
-
-// TODO: Add type definitions to readFile
-function readFile(path: string) {
-  return new Promise((resolve, reject) => {
-    fs.readFile(path, (error, data) => (error ? reject(error) : resolve(data)));
-  });
-}
-
-function retrieveHighlightTestConfig(path: string): TextmateTestConfig {
-  const configSrc = fs.readFileSync(path, 'utf-8');
-  const rawConfig: TextmateTestConfig = JSON.parse(configSrc);
-  return rawConfig;
-}
 
 function initializeLanguageMap(
   config: TextmateTestConfig
@@ -49,12 +34,18 @@ function initializeLanguageMap(
   return languageMap;
 }
 
+export function retrieveEditorTheme(path: string): IRawTheme {
+  const themeSrc = readFileSync(path, 'utf-8');
+  const rawTheme = json5Parse(themeSrc);
+  return {settings: rawTheme.tokenColors};
+}
+
 function initializeRegistry(
   languageMap: Record<string, TextmateLanguageDefinition>,
   theme: IRawTheme
 ) {
-  const wasmBin = fs.readFileSync(
-    path.join(__dirname, '../node_modules/vscode-oniguruma/release/onig.wasm')
+  const wasmBin = readFileSync(
+    pathJoin(__dirname, '../node_modules/vscode-oniguruma/release/onig.wasm')
   ).buffer;
   const vscodeOnigurumaLib = loadWASM(wasmBin).then(() => {
     return {
@@ -69,11 +60,10 @@ function initializeRegistry(
   const registry = new Registry({
     onigLib: vscodeOnigurumaLib,
     theme: theme,
-    // TODO: Remove usage of any here
-    loadGrammar: scopeName => {
+    loadGrammar:  async (scopeName) => {
       const languageDefinition: TextmateLanguageDefinition = languageMap[scopeName];
       if (typeof languageDefinition === 'string') {
-        return readFile(languageDefinition).then((rawGrammarSrc: any) => parseRawGrammar(rawGrammarSrc.toString(), languageDefinition))
+        return promiseReadFile(languageDefinition).then((rawGrammarSrc) => parseRawGrammar(rawGrammarSrc.toString(), languageDefinition))
       } else {
         return Promise.resolve(languageDefinition as unknown as IRawGrammar);
       }
@@ -82,13 +72,7 @@ function initializeRegistry(
   return registry;
 }
 
-function retrieveEditorTheme(config: TextmateTestConfig): IRawTheme {
-  const themeSrc = fs.readFileSync(config.theme.path, 'utf-8');
-  const rawTheme = json5.parse(themeSrc);
-  return {settings: rawTheme.tokenColors};
-}
-
-function constructLineTokenization(
+function joinTokensWithColorInfo(
   line: string,
   full: IToken[],
   binary: Uint32Array,
@@ -137,7 +121,7 @@ function tokenizeMultilineDefinitions(
       const full = grammar.tokenizeLine(line, ruleStack);
       const binary = grammar.tokenizeLine2(line, ruleStack);
       blockTokenization.push(
-        constructLineTokenization(
+        joinTokensWithColorInfo(
           line,
           full.tokens,
           binary.tokens,
@@ -151,11 +135,13 @@ function tokenizeMultilineDefinitions(
   return tokenizations;
 }
 
-function writeTokenizations(tokenizations: TestItem[][], outputPath: string) {
-  const outputTemplate = `export default ${util.inspect(tokenizations, {
+export function writeTokenizations(tokenizations: TestItem[][], outputPath: string) {
+  const outputTemplate =
+`
+export default ${inspect(tokenizations, {
     depth: null,
   })};`;
-  fs.writeFileSync(outputPath, outputTemplate, 'utf-8');
+  writeFileSync(outputPath, outputTemplate, 'utf-8');
 }
 
 export async function generateTextmateTokenizations(
@@ -163,15 +149,15 @@ export async function generateTextmateTokenizations(
   testDefinitions: string[][]
 ): Promise<TestItem[][]> {
   const languageMap = initializeLanguageMap(config);
-  const registry = initializeRegistry(languageMap, retrieveEditorTheme(config));
-  const grammar = await registry.loadGrammar(config.language.scopeName)
+  const registry = initializeRegistry(languageMap, retrieveEditorTheme(config.theme.path));
+  const grammar = await registry.loadGrammar(config.language.scopeName);
   return tokenizeMultilineDefinitions(grammar, registry, testDefinitions);
 }
 
 // TODO: Validate command line args
-async function main(config: TextmateTestConfig, testDefinitions: string[][], outputPath: string) {
-  const tokenizations = await generateTextmateTokenizations(malloyDarkPlusConfig, testDefinitions);
+async function main(config: TextmateTestConfig, testInput: string[][], outputPath: string) {
+  const tokenizations = await generateTextmateTokenizations(config, testInput);
   writeTokenizations(tokenizations, outputPath);
 }
 
-main(malloyDarkPlusConfig, malloyTestDefinitions, process.argv[2]);
+main(malloyDarkPlusConfig, malloyTestInput, process.argv[2]);

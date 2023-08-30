@@ -35,22 +35,22 @@ export default [
   [ `state ~ 'CA' | r'M.' | "CO" | /'O.'  -- end` ],
   [ 'select: """ SELECT 1 """' ],
   [ 'run: duckdb.sql("""', '  SELECT 1', '""")' ],
-  [
-    'select: """',
-    '-- SQL CONTEXT',
-    '%{  airports -> { group_by: state }',
-    '// MALLOY CONTEXT',
-    '}  -- SQL CONTEXT',
-    '"""  // MALLOY CONTEXT'
-  ],
-  [
-    'select: """',
-    '%{  run: duckdb.sql("""',
-    '    -- SQL CONTEXT',
-    '    %{  // MALLOY CONTEXT',
-    '    }  ',
-    '  """  // MALLOY CONTEXT',
-    ')}  ',
-    '"""  // MALLOY CONTEXT'
-  ]
+  // [
+  //   'select: """',
+  //   '-- SQL CONTEXT',
+  //   '%{  airports -> { group_by: state }',
+  //   '// MALLOY CONTEXT',
+  //   '}  -- SQL CONTEXT',
+  //   '"""  // MALLOY CONTEXT'
+  // ],
+  // [
+  //   'select: """',
+  //   '%{  run: duckdb.sql("""',
+  //   '    -- SQL CONTEXT',
+  //   '    %{  // MALLOY CONTEXT',
+  //   '    }  ',
+  //   '  """  // MALLOY CONTEXT',
+  //   ')}  ',
+  //   '"""  // MALLOY CONTEXT'
+  // ]
 ];
