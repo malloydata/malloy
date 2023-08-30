@@ -4,16 +4,16 @@ steps:
     args:
       - pull
       - "-q"
-      - nixos/nix
+      - nixos/nix:2.15.2
   - id: proxy-install
-    name: "nixos/nix"
+    name: "nixos/nix:2.15.2"
     entrypoint: sh
     args:
       - -c
       - "wget -q -O /workspace/cloud_sql_proxy https://dl.google.com/cloudsql/cloud_sql_proxy.linux.386 && chmod +x /workspace/cloud_sql_proxy"
     waitFor: ["nix-quiet-install"]
   - id: run-script
-    name: "nixos/nix"
+    name: "nixos/nix:2.15.2"
     entrypoint: sh
     args:
       - -c

@@ -15,7 +15,7 @@ There are several technologies to be aware of:
 The way that we run tests:
 
 - we have a `cloudbuild.yaml` file that specifies the build -- see `cloudbuild/build-test/cloudbuild.yaml`
-- the build runs the `nixos/nix` docker image -- this ensures that `nix` is installed
+- the build runs the `nixos/nix:2.15.2` docker image -- this ensures that `nix` is installed
 - we run the file `cloudbuild/build-test/build-test.sh` -- this _enters_ into a nix environment and runs `npm run build`, etc.
 
 ### Our Testing Architecture: Cloudbuild
@@ -38,7 +38,7 @@ If you need to add a dependency, see `default.nix`. `buildInputs = [ ... ]` is a
 
 You will notice that when a build runs, nix dependencies are installed.
 
-These both take a meaningful amount of time. We can reduce the amount of time this takes by creating a docker image based on `nixos/nix`, which pre-installs nix dependencies.
+These both take a meaningful amount of time. We can reduce the amount of time this takes by creating a docker image based on `nixos/nix:2.15.2`, which pre-installs nix dependencies.
 
 ## Our Testing Architecture: Future Directions: Pinning Nix Dependencies
 
