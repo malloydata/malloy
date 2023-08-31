@@ -1,7 +1,6 @@
 import {join as pathJoin} from 'path';
-import {readFileSync, writeFileSync} from 'fs';
+import {readFileSync} from 'fs';
 import {readFile as promiseReadFile} from 'fs/promises';
-import {inspect} from 'util';
 import {parse as json5Parse} from 'json5';
 import {
   Registry,
@@ -14,9 +13,6 @@ import {
 } from 'vscode-textmate';
 import {loadWASM, OnigScanner, OnigString} from 'vscode-oniguruma';
 import {TextmateTestConfig, TestItem, TextmateLanguageDefinition} from './testUtils';
-
-import malloyDarkPlusConfig from './config/textmate/malloyDarkPlusConfig';
-import malloyTestInput from '../grammars/malloy/malloyTestInput';
 
 const FOREGROUND_MASK = 0b00000000011111111100000000000000;
 const FOREGROUND_OFFSET = 15;
@@ -135,29 +131,11 @@ function tokenizeMultilineDefinitions(
   return tokenizations;
 }
 
-export function writeTokenizations(tokenizations: TestItem[][], outputPath: string) {
-  const outputTemplate =
-`
-export default ${inspect(tokenizations, {
-    depth: null,
-  })};`;
-  writeFileSync(outputPath, outputTemplate, 'utf-8');
-}
-
 export async function generateTextmateTokenizations(
-  config: TextmateTestConfig,
-  testDefinitions: string[][]
+  config: TextmateTestConfig
 ): Promise<TestItem[][]> {
   const languageMap = initializeLanguageMap(config);
   const registry = initializeRegistry(languageMap, retrieveEditorTheme(config.theme.path));
   const grammar = await registry.loadGrammar(config.language.scopeName);
-  return tokenizeMultilineDefinitions(grammar, registry, testDefinitions);
+  return tokenizeMultilineDefinitions(grammar, registry, config.testInput);
 }
-
-// TODO: Validate command line args
-async function main(config: TextmateTestConfig, testInput: string[][], outputPath: string) {
-  const tokenizations = await generateTextmateTokenizations(config, testInput);
-  writeTokenizations(tokenizations, outputPath);
-}
-
-main(malloyDarkPlusConfig, malloyTestInput, process.argv[2]);

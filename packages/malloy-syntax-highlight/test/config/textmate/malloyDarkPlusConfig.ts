@@ -1,3 +1,4 @@
+import malloyTestInput from "../../../grammars/malloy/malloyTestInput";
 import { TextmateTestConfig, stubEmbeddedTextmateLanguage } from "../../testUtils";
 
 const malloyDarkPlusConfig: TextmateTestConfig = {
@@ -13,6 +14,7 @@ const malloyDarkPlusConfig: TextmateTestConfig = {
         id: 'vs-dark-plus',
         path: 'themes/textmate/dark_plus.json',
     },
+    testInput: malloyTestInput,
 }
 
 export default malloyDarkPlusConfig;

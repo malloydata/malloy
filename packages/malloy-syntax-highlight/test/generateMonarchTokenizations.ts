@@ -2,7 +2,7 @@ import { MonarchTestConfig, TestItem } from "./testUtils";
 import {editor as Monaco, Token} from 'monaco-editor';
 
 export async function loadMonacoAssets() {
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
     await new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.onload = resolve;

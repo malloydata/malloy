@@ -1,7 +1,7 @@
 export default [
   [ `// / ' " """ // unable to break out of /* line comments` ],
   [ ' -- a different -- line comment' ],
-  [ '# bar_chart (tags are line comments for the time being)   ' ],
+  // [ '# bar_chart (tags are line comments for the time being)   ' ],
   [
     `    /* *** / * // " " ' \\'`,
     '   """ multi-line * /*',

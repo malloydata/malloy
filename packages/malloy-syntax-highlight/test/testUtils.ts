@@ -12,6 +12,7 @@ export interface TextmateTestConfig {
     id: string;
     path: string;
   };
+  testInput: string[][];
 }
 
 export type TextmateGrammarStub = Pick<IRawGrammar, "scopeName" | "patterns">;
@@ -34,25 +35,12 @@ export function stubEmbeddedTextmateLanguage(id: string, scopeName: string): Emb
   };
 }
 
-export function getTestInput(expectedTokenizations: TestItem[][]) {
-  const blocks: string[][] = []
-  for (let i = 0; i < expectedTokenizations.length; i++) {
-      const block: string[] = [];
-      for (let j = 0; j < expectedTokenizations[i].length; j++) {
-        const line = expectedTokenizations[i][j].line;
-        block.push(line);
-      }
-      blocks.push(block);
-  }
-  return blocks;
-}
-
 export interface MonarchTestConfig {
   language: MonarchLanguage;
   embeddedLanguages: MonarchLanguage[];
   theme: Monaco.IStandaloneThemeData;
   testInput: string[][];
-  expectations: TestItem[][]
+  expectations: TestItem[][];
 };
 
 export interface MonarchLanguage {
@@ -80,6 +68,10 @@ export interface TestItem {
   tokens: RelaxedToken[];
 }
 
+/*
+ *  Make Jasmine aware of custom matchers to prevent warnings
+ *  in spec.ts and test.ts files that use theme
+ */
 declare global {
   namespace jasmine {
     interface Matchers<T> {
