@@ -7,6 +7,7 @@ let actualTokenizations: TestItem[][];
 
 beforeAll(async () => {
     await loadMonacoAssets();
+    // The call to loadMonacoAssets make the monaco global accessible in Karma Chrome tests
     // @ts-ignore
     actualTokenizations = generateMonarchTokenizations(monaco, testConfig);
     jasmine.addMatchers(monarchTestMatchers);

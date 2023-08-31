@@ -34,16 +34,18 @@ export type LanguageId = string;
 
 const ARGV_IN = 2;
 const ARGV_OUT = 3;
+const DEFAULT_TOKEN = '';
+const IGNORE_CASE = true;
+const END_STATE_SUFFIX = '_end';
+// Constants implicitly defined by Monarch
 const M_ROOT_REFERENCE = 'root';
 const M_POP = '@pop';
 const M_REGEXP_INDEX = 0;
 const M_TOKENS_INDEX = 1;
+// Constants implicitly defined by TextMate
 const TM_CAPTURE_OVERRIDE_KEY = '0';
 const TIGNORE_CASE_FLAG = '(?i)';
 const TM_SOURCE_PREFIX = 'source.';
-const DEFAULT_TOKEN = '';
-const IGNORE_CASE = true;
-const END_STATE_SUFFIX = '_end';
 
 const TOKENS_MAP = {
   'punctuation.definition.comment.begin': 'comment.block',
@@ -53,12 +55,14 @@ const TOKENS_MAP = {
   'punctuation.definition.string.end': 'string.quoted',
 };
 
+/** Custom guard to check if a rule has begin/end fields */
 function instanceOfTextMateBeginEndRule(
   object: any
 ): object is TextMateBeginEndRule {
   return 'begin' in object && 'end' in object;
 }
 
+/** Build a flattened map of repository key to their definitions */
 function flattenRepositories(
   root: TextMateRepositoryMap,
   references: TextMateRepositoryMap
@@ -71,18 +75,32 @@ function flattenRepositories(
   }
 }
 
+/*
+ * Transforms TextMate include strings to Monarch include strings
+ * Assumes that TextMate repository keys use kebab or snake case
+ */
 function textmateToMonarchInclude(includeString: TextMate.IncludeString) {
   return includeString.replace('#', '@').replaceAll('-', '_');
 }
 
+/*
+ * Translates a TextMate repository key to snake case for consumption
+ * within the script, as all TextMate repository references and Monarch state
+ * references use snake case
+ */
 function repositoryToReference(repositoryKey: TextMateRepositoryKey) {
   return repositoryKey.replaceAll('-', '_');
 }
 
+/** Retrieves the snake case reference key from a TextMate include string */
 function includeToReference(includeString: TextMate.IncludeString) {
   return includeString.slice(1).replaceAll('-', '_');
 }
 
+/*
+ * Removes the top-level Oniguruma case-insensitive flag if present as
+ * our Monarch definition defaults to case-insensitive behavior
+ */
 function cleanMatchString(matchString: TextMate.RegExpString) {
   if (matchString.startsWith(TIGNORE_CASE_FLAG)) {
     return matchString.slice(TIGNORE_CASE_FLAG.length);
@@ -91,11 +109,16 @@ function cleanMatchString(matchString: TextMate.RegExpString) {
   }
 }
 
+/*
+ * Serialize regex so that later calls to fs.writeFile write what would be a valid regex definition in .js/.ts files
+ * This is a workaround to JSON.stringify not natively handling regex serialization
+ */
 function serializeRegex(match: MonarchRegExpString) {
   let serializedMatch = match.replaceAll('/', '\\/');
   return '/' + serializedMatch + '/';
 }
 
+/** Returns the number of outermost regex groups in a regex */
 function numRegexGroups(regex: MonarchRegExpString) {
   // courtesty of https://stackoverflow.com/questions/16046620/regex-to-count-the-number-of-capturing-groups-in-a-regex
   const regexGroups = new RegExp(regex.toString() + '|').exec('');
@@ -106,10 +129,15 @@ function numRegexGroups(regex: MonarchRegExpString) {
   }
 }
 
+/*
+ * Translates thematically meaningless tokens to thematically meaningful tokens
+ * May also be used for environment-to-environment mappings
+ */
 function translateToken(token: TextMateScopeName) {
   return token in TOKENS_MAP ? TOKENS_MAP[token] : token.replaceAll('-', '.');
 }
 
+/** Returns a Monarch token info for TextMate rules with captures or beginCaptures and endCaptures */
 function generateCaptureTokens(
   match: MonarchRegExpString,
   captures: TextMate.IRawCaptures
@@ -125,6 +153,8 @@ function generateCaptureTokens(
   return tokens;
 }
 
+
+/** Returns whether a TextMate rule embeds another language */
 function searchSourceInclude(pattern: TextMate.IRawRule) {
   if (pattern.patterns) {
     for (const subpattern of pattern.patterns) {
@@ -135,6 +165,7 @@ function searchSourceInclude(pattern: TextMate.IRawRule) {
   }
 }
 
+/** Returns Monarch token info for any TextMate rule */
 function generateTokens(
   matchString: MonarchRegExpString,
   tokenInfo: TextMateTokenInfo
@@ -148,6 +179,7 @@ function generateTokens(
   }
 }
 
+/** Returns a Monarch rule given its TextMate counterpart */
 function generateRule(
   match: TextMate.RegExpString,
   tokenInfo: TextMateTokenInfo,
@@ -181,6 +213,7 @@ function generateRule(
   }
 }
 
+/** Parses a begin/end rule */
 function generateBeginEndRule(
   p: TextMateBeginEndRule,
   tokenizer: MonarchTokenizer,
@@ -248,6 +281,14 @@ function generateBeginEndRule(
   }
 }
 
+/**
+ * Returns a list of the beginning characters for a Monarch state's subrules
+ * This function's return value is used to generate two new subrule for a state:
+ *  - one that applies default styling to everything between begin/end rules except these character
+ *  - one that finally applies default styling to these characters
+ * This prevents Monarch from getting stuck in a given state which would would happen if we used .* to style
+ * everything between begin/end rules
+ */
 function getIgnoreString(
   tokenizer: MonarchTokenizer,
   currentRef: ReferenceString
@@ -290,10 +331,17 @@ function getIgnoreChars(
   }
 }
 
+/**
+ * Returns a new reference representing the key for the new Monarch state that the current
+ * Monarch state's rules will send the tokenizer to when parsed
+ */
 function nameToNewRef(name: TextMateScopeName) {
   return name.replaceAll('.', '_').replaceAll('-', '_') + END_STATE_SUFFIX;
 }
 
+/** Returns a new Monarch grammar generated by walking the
+ * TextMate rule tree and parsing each rule
+ */
 function generateMonarchRules(
   scope: TextMate.IRawRule,
   references: TextMateRepositoryMap,
@@ -331,6 +379,7 @@ function generateMonarchRules(
   }
 }
 
+/** Generates and writes a Monarch grammar output file from a TextMate grammar file */
 export function generateMonarchGrammar() {
   // TODO: Validate command line args
   const textmateSrc = readFileSync(process.argv[ARGV_IN], 'utf-8');
@@ -358,6 +407,7 @@ export function generateMonarchGrammar() {
   writeOutput(process.argv[ARGV_OUT], monarch);
 }
 
+/** Write the generated Monarch object to a file on disk */
 function writeOutput(filename: string, monarch: Monarch.IMonarchLanguage) {
   writeFileSync(
     filename,

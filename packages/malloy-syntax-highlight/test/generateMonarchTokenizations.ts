@@ -2,7 +2,9 @@ import { MonarchTestConfig, TestItem } from "./testUtils";
 import {editor as Monaco, Token} from 'monaco-editor';
 
 export async function loadMonacoAssets() {
+    // Waiting resolves difficult to track down race condition
     await new Promise(resolve => setTimeout(resolve, 1000));
+    // Uses the same setup as https://github.com/microsoft/monaco-editor/blob/main/docs/integrate-amd.md
     await new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.onload = resolve;
@@ -10,6 +12,7 @@ export async function loadMonacoAssets() {
         script.src = '/base/node_modules/monaco-editor/min/vs/loader.js';
         document.head.appendChild(script);
     });
+    // Not requirejs, 'require' namespace and function are loaded with above script
     // @ts-ignore
     require.config({
         baseUrl:
@@ -72,4 +75,3 @@ export function generateMonarchTokenizations(monacoGlobal, testConfig: MonarchTe
     }
     return tokenizations;
 }
-
