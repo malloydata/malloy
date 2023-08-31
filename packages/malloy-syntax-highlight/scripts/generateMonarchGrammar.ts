@@ -45,8 +45,13 @@ const DEFAULT_TOKEN = '';
 const IGNORE_CASE = true;
 const END_STATE_SUFFIX = '_end';
 
-// TODO: Move to config file with other constants (platform dependent)?
-const TOKENS_MAP = {};
+const TOKENS_MAP = {
+  'punctuation.definition.comment.begin': 'comment.block',
+  'punctuation.definition.comment': 'comment.line',
+  'punctuation.definition.comment.end': 'comment.block',
+  'punctuation.definition.string.begin': 'string.quoted',
+  'punctuation.definition.string.end': 'string.quoted',
+};
 
 function instanceOfTextMateBeginEndRule(
   object: any
@@ -390,4 +395,3 @@ tokenizer: {
 }
 
 generateMonarchGrammar();
-

@@ -1,1274 +1,626 @@
+{
+	"$schema": "vscode://schemas/color-theme",
+	"name": "Light+",
+	"include": "./light_vs.json",
+	"tokenColors": [ // adds rules to the light vs rules
+		{
+			"scope": [
+				"meta.embedded",
+				"source.groovy.embedded",
+				"string meta.image.inline.markdown"
+			],
+			"settings": {
+				"foreground": "#000000ff"
+			}
+		},
+		{
+			"scope": "emphasis",
+			"settings": {
+				"fontStyle": "italic"
+			}
+		},
+		{
+			"scope": "strong",
+			"settings": {
+				"fontStyle": "bold"
+			}
+		},
+		{
+			"scope": "meta.diff.header",
+			"settings": {
+				"foreground": "#000080"
+			}
+		},
+		{
+			"scope": "comment",
+			"settings": {
+				"foreground": "#008000"
+			}
+		},
+		{
+			"scope": "constant.language",
+			"settings": {
+				"foreground": "#0000ff"
+			}
+		},
+		{
+			"scope": [
+				"constant.numeric",
+				"variable.other.enummember",
+				"keyword.operator.plus.exponent",
+				"keyword.operator.minus.exponent"
+			],
+			"settings": {
+				"foreground": "#098658"
+			}
+		},
+		{
+			"scope": "constant.regexp",
+			"settings": {
+				"foreground": "#811f3f"
+			}
+		},
+		{
+			"name": "css tags in selectors, xml tags",
+			"scope": "entity.name.tag",
+			"settings": {
+				"foreground": "#800000"
+			}
+		},
+		{
+			"scope": "entity.name.selector",
+			"settings": {
+				"foreground": "#800000"
+			}
+		},
+		{
+			"scope": "entity.other.attribute-name",
+			"settings": {
+				"foreground": "#e50000"
+			}
+		},
+		{
+			"scope": [
+				"entity.other.attribute-name.class.css",
+				"entity.other.attribute-name.class.mixin.css",
+				"entity.other.attribute-name.id.css",
+				"entity.other.attribute-name.parent-selector.css",
+				"entity.other.attribute-name.pseudo-class.css",
+				"entity.other.attribute-name.pseudo-element.css",
+				"source.css.less entity.other.attribute-name.id",
+				"entity.other.attribute-name.scss"
+			],
+			"settings": {
+				"foreground": "#800000"
+			}
+		},
+		{
+			"scope": "invalid",
+			"settings": {
+				"foreground": "#cd3131"
+			}
+		},
+		{
+			"scope": "markup.underline",
+			"settings": {
+				"fontStyle": "underline"
+			}
+		},
+		{
+			"scope": "markup.bold",
+			"settings": {
+				"fontStyle": "bold",
+				"foreground": "#000080"
+			}
+		},
+		{
+			"scope": "markup.heading",
+			"settings": {
+				"fontStyle": "bold",
+				"foreground": "#800000"
+			}
+		},
+		{
+			"scope": "markup.italic",
+			"settings": {
+				"fontStyle": "italic"
+			}
+		},
+		{
+			"scope": "markup.strikethrough",
+			"settings": {
+				"fontStyle": "strikethrough"
+			}
+		},
+		{
+			"scope": "markup.inserted",
+			"settings": {
+				"foreground": "#098658"
+			}
+		},
+		{
+			"scope": "markup.deleted",
+			"settings": {
+				"foreground": "#a31515"
+			}
+		},
+		{
+			"scope": "markup.changed",
+			"settings": {
+				"foreground": "#0451a5"
+			}
+		},
+		{
+			"scope": [
+				"punctuation.definition.quote.begin.markdown",
+				"punctuation.definition.list.begin.markdown"
+			],
+			"settings": {
+				"foreground": "#0451a5"
+			}
+		},
+		{
+			"scope": "markup.inline.raw",
+			"settings": {
+				"foreground": "#800000"
+			}
+		},
+		{
+			"name": "brackets of XML/HTML tags",
+			"scope": "punctuation.definition.tag",
+			"settings": {
+				"foreground": "#800000"
+			}
+		},
+		{
+			"scope": [
+				"meta.preprocessor",
+				"entity.name.function.preprocessor"
+			],
+			"settings": {
+				"foreground": "#0000ff"
+			}
+		},
+		{
+			"scope": "meta.preprocessor.string",
+			"settings": {
+				"foreground": "#a31515"
+			}
+		},
+		{
+			"scope": "meta.preprocessor.numeric",
+			"settings": {
+				"foreground": "#098658"
+			}
+		},
+		{
+			"scope": "meta.structure.dictionary.key.python",
+			"settings": {
+				"foreground": "#0451a5"
+			}
+		},
+		{
+			"scope": "storage",
+			"settings": {
+				"foreground": "#0000ff"
+			}
+		},
+		{
+			"scope": "storage.type",
+			"settings": {
+				"foreground": "#0000ff"
+			}
+		},
+		{
+			"scope": [
+				"storage.modifier",
+				"keyword.operator.noexcept"
+			],
+			"settings": {
+				"foreground": "#0000ff"
+			}
+		},
+		{
+			"scope": [
+				"string",
+				"meta.embedded.assembly"
+			],
+			"settings": {
+				"foreground": "#a31515"
+			}
+		},
+		{
+			"scope": [
+				"string.comment.buffered.block.pug",
+				"string.quoted.pug",
+				"string.interpolated.pug",
+				"string.unquoted.plain.in.yaml",
+				"string.unquoted.plain.out.yaml",
+				"string.unquoted.block.yaml",
+				"string.quoted.single.yaml",
+				"string.quoted.double.xml",
+				"string.quoted.single.xml",
+				"string.unquoted.cdata.xml",
+				"string.quoted.double.html",
+				"string.quoted.single.html",
+				"string.unquoted.html",
+				"string.quoted.single.handlebars",
+				"string.quoted.double.handlebars"
+			],
+			"settings": {
+				"foreground": "#0000ff"
+			}
+		},
+		{
+			"scope": "string.regexp",
+			"settings": {
+				"foreground": "#811f3f"
+			}
+		},
+		{
+			"name": "String interpolation",
+			"scope": [
+				"punctuation.definition.template-expression.begin",
+				"punctuation.definition.template-expression.end",
+				"punctuation.section.embedded"
+			],
+			"settings": {
+				"foreground": "#0000ff"
+			}
+		},
+		{
+			"name": "Reset JavaScript string interpolation expression",
+			"scope": [
+				"meta.template.expression"
+			],
+			"settings": {
+				"foreground": "#000000"
+			}
+		},
+		{
+			"scope": [
+				"support.constant.property-value",
+				"support.constant.font-name",
+				"support.constant.media-type",
+				"support.constant.media",
+				"constant.other.color.rgb-value",
+				"constant.other.rgb-value",
+				"support.constant.color"
+			],
+			"settings": {
+				"foreground": "#0451a5"
+			}
+		},
+		{
+			"scope": [
+				"support.type.vendored.property-name",
+				"support.type.property-name",
+				"variable.css",
+				"variable.scss",
+				"variable.other.less",
+				"source.coffee.embedded"
+			],
+			"settings": {
+				"foreground": "#e50000"
+			}
+		},
+		{
+			"scope": [
+				"support.type.property-name.json"
+			],
+			"settings": {
+				"foreground": "#0451a5"
+			}
+		},
+		{
+			"scope": "keyword",
+			"settings": {
+				"foreground": "#0000ff"
+			}
+		},
+		{
+			"scope": "keyword.control",
+			"settings": {
+				"foreground": "#0000ff"
+			}
+		},
+		{
+			"scope": "keyword.operator",
+			"settings": {
+				"foreground": "#000000"
+			}
+		},
+		{
+			"scope": [
+				"keyword.operator.new",
+				"keyword.operator.expression",
+				"keyword.operator.cast",
+				"keyword.operator.sizeof",
+				"keyword.operator.alignof",
+				"keyword.operator.typeid",
+				"keyword.operator.alignas",
+				"keyword.operator.instanceof",
+				"keyword.operator.logical.python",
+				"keyword.operator.wordlike"
+			],
+			"settings": {
+				"foreground": "#0000ff"
+			}
+		},
+		{
+			"scope": "keyword.other.unit",
+			"settings": {
+				"foreground": "#098658"
+			}
+		},
+		{
+			"scope": [
+				"punctuation.section.embedded.begin.php",
+				"punctuation.section.embedded.end.php"
+			],
+			"settings": {
+				"foreground": "#800000"
+			}
+		},
+		{
+			"scope": "support.function.git-rebase",
+			"settings": {
+				"foreground": "#0451a5"
+			}
+		},
+		{
+			"scope": "constant.sha.git-rebase",
+			"settings": {
+				"foreground": "#098658"
+			}
+		},
+		{
+			"name": "coloring of the Java import and package identifiers",
+			"scope": [
+				"storage.modifier.import.java",
+				"variable.language.wildcard.java",
+				"storage.modifier.package.java"
+			],
+			"settings": {
+				"foreground": "#000000"
+			}
+		},
+		{
+			"name": "this.self",
+			"scope": "variable.language",
+			"settings": {
+				"foreground": "#0000ff"
+			}
+		},
+		{
+			"name": "Function declarations",
+			"scope": [
+				"entity.name.function",
+				"support.function",
+				"support.constant.handlebars",
+				"source.powershell variable.other.member",
+				"entity.name.operator.custom-literal" // See https://en.cppreference.com/w/cpp/language/user_literal
+			],
+			"settings": {
+				"foreground": "#795E26"
+			}
+		},
+		{
+			"name": "Types declaration and references",
+			"scope": [
+				"support.class",
+				"support.type",
+				"entity.name.type",
+				"entity.name.namespace",
+				"entity.other.attribute",
+				"entity.name.scope-resolution",
+				"entity.name.class",
+				"storage.type.numeric.go",
+				"storage.type.byte.go",
+				"storage.type.boolean.go",
+				"storage.type.string.go",
+				"storage.type.uintptr.go",
+				"storage.type.error.go",
+				"storage.type.rune.go",
+				"storage.type.cs",
+				"storage.type.generic.cs",
+				"storage.type.modifier.cs",
+				"storage.type.variable.cs",
+				"storage.type.annotation.java",
+				"storage.type.generic.java",
+				"storage.type.java",
+				"storage.type.object.array.java",
+				"storage.type.primitive.array.java",
+				"storage.type.primitive.java",
+				"storage.type.token.java",
+				"storage.type.groovy",
+				"storage.type.annotation.groovy",
+				"storage.type.parameters.groovy",
+				"storage.type.generic.groovy",
+				"storage.type.object.array.groovy",
+				"storage.type.primitive.array.groovy",
+				"storage.type.primitive.groovy"
+			],
+			"settings": {
+				"foreground": "#267f99"
+			}
+		},
+		{
+			"name": "Types declaration and references, TS grammar specific",
+			"scope": [
+				"meta.type.cast.expr",
+				"meta.type.new.expr",
+				"support.constant.math",
+				"support.constant.dom",
+				"support.constant.json",
+				"entity.other.inherited-class"
+			],
+			"settings": {
+				"foreground": "#267f99"
+			}
+		},
+		{
+			"name": "Control flow / Special keywords",
+			"scope": [
+				"keyword.control",
+				"source.cpp keyword.operator.new",
+				"source.cpp keyword.operator.delete",
+				"keyword.other.using",
+				"keyword.other.operator",
+				"entity.name.operator"
+			],
+			"settings": {
+				"foreground": "#AF00DB"
+			}
+		},
+		{
+			"name": "Variable and parameter name",
+			"scope": [
+				"variable",
+				"meta.definition.variable.name",
+				"support.variable",
+				"entity.name.variable",
+				"constant.other.placeholder", // placeholders in strings
 
-export default [
-  [
-    {
-      line: `// / ' " """ // unable to break out of /* line comments`,
-      tokens: [
-        {
-          startIndex: 0,
-          type: [
-            'source.malloy',
-            'comment.line.double-slash',
-            'punctuation.definition.comment'
-          ],
-          color: '#6A9955'
-        },
-        {
-          startIndex: 2,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
-        }
-      ]
-    }
-  ],
-  [
-    {
-      line: ' -- a different -- line comment',
-      tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 1,
-          type: [
-            'source.malloy',
-            'comment.line.double-hyphen',
-            'punctuation.definition.comment'
-          ],
-          color: '#6A9955'
-        },
-        {
-          startIndex: 3,
-          type: [ 'source.malloy', 'comment.line.double-hyphen' ],
-          color: '#6A9955'
-        }
-      ]
-    }
-  ],
-  [
-    {
-      line: '# bar_chart (tags are line comments for the time being)   ',
-      tokens: [
-        {
-          startIndex: 0,
-          type: [
-            'source.malloy',
-            'comment.line.double-slash',
-            'support.type.property-name.json'
-          ],
-          color: '#9CDCFE'
-        },
-        {
-          startIndex: 2,
-          type: [
-            'source.malloy',
-            'comment.line.double-slash',
-            'support.type.property-name.json',
-            'support.type.property-name.json'
-          ],
-          color: '#9CDCFE'
-        },
-        {
-          startIndex: 11,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
-        },
-        {
-          startIndex: 12,
-          type: [
-            'source.malloy',
-            'comment.line.double-slash',
-            'support.type.property-name.json',
-            'support.type.property-name.json'
-          ],
-          color: '#9CDCFE'
-        },
-        {
-          startIndex: 17,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
-        },
-        {
-          startIndex: 18,
-          type: [
-            'source.malloy',
-            'comment.line.double-slash',
-            'support.type.property-name.json',
-            'support.type.property-name.json'
-          ],
-          color: '#9CDCFE'
-        },
-        {
-          startIndex: 21,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
-        },
-        {
-          startIndex: 22,
-          type: [
-            'source.malloy',
-            'comment.line.double-slash',
-            'support.type.property-name.json',
-            'support.type.property-name.json'
-          ],
-          color: '#9CDCFE'
-        },
-        {
-          startIndex: 26,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
-        },
-        {
-          startIndex: 27,
-          type: [
-            'source.malloy',
-            'comment.line.double-slash',
-            'support.type.property-name.json',
-            'support.type.property-name.json'
-          ],
-          color: '#9CDCFE'
-        },
-        {
-          startIndex: 35,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
-        },
-        {
-          startIndex: 36,
-          type: [
-            'source.malloy',
-            'comment.line.double-slash',
-            'support.type.property-name.json',
-            'support.type.property-name.json'
-          ],
-          color: '#9CDCFE'
-        },
-        {
-          startIndex: 39,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
-        },
-        {
-          startIndex: 40,
-          type: [
-            'source.malloy',
-            'comment.line.double-slash',
-            'support.type.property-name.json',
-            'support.type.property-name.json'
-          ],
-          color: '#9CDCFE'
-        },
-        {
-          startIndex: 43,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
-        },
-        {
-          startIndex: 44,
-          type: [
-            'source.malloy',
-            'comment.line.double-slash',
-            'support.type.property-name.json',
-            'support.type.property-name.json'
-          ],
-          color: '#9CDCFE'
-        },
-        {
-          startIndex: 48,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
-        },
-        {
-          startIndex: 49,
-          type: [
-            'source.malloy',
-            'comment.line.double-slash',
-            'support.type.property-name.json',
-            'support.type.property-name.json'
-          ],
-          color: '#9CDCFE'
-        },
-        {
-          startIndex: 55,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
-        }
-      ]
-    }
-  ],
-  [
-    {
-      line: `    /* *** / * // " " ' \\'`,
-      tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 4,
-          type: [
-            'source.malloy',
-            'comment.block',
-            'punctuation.definition.comment.begin'
-          ],
-          color: '#6A9955'
-        },
-        {
-          startIndex: 6,
-          type: [ 'source.malloy', 'comment.block' ],
-          color: '#6A9955'
-        }
-      ]
-    },
-    {
-      line: '   """ multi-line * /*',
-      tokens: [
-        {
-          startIndex: 0,
-          type: [ 'source.malloy', 'comment.block' ],
-          color: '#6A9955'
-        }
-      ]
-    },
-    {
-      line: '" */  -- escaped block',
-      tokens: [
-        {
-          startIndex: 0,
-          type: [ 'source.malloy', 'comment.block' ],
-          color: '#6A9955'
-        },
-        {
-          startIndex: 2,
-          type: [
-            'source.malloy',
-            'comment.block',
-            'punctuation.definition.comment.end'
-          ],
-          color: '#6A9955'
-        },
-        { startIndex: 4, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 6,
-          type: [
-            'source.malloy',
-            'comment.line.double-hyphen',
-            'punctuation.definition.comment'
-          ],
-          color: '#6A9955'
-        },
-        {
-          startIndex: 8,
-          type: [ 'source.malloy', 'comment.line.double-hyphen' ],
-          color: '#6A9955'
-        }
-      ]
-    }
-  ],
-  [
-    {
-      line: '  sample: true',
-      tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 2,
-          type: [ 'source.malloy', 'keyword.control.sample' ],
-          color: '#C586C0'
-        },
-        { startIndex: 8, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 10,
-          type: [ 'source.malloy', 'constant.language.true' ],
-          color: '#569CD6'
-        }
-      ]
-    }
-  ],
-  [
-    {
-      line: 'fl1ght_y34r is `Year of Flight 256/* */`  -- escapes identifier',
-      tokens: [
-        {
-          startIndex: 0,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
-        },
-        { startIndex: 11, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 12,
-          type: [ 'source.malloy', 'keyword.control.is' ],
-          color: '#C586C0'
-        },
-        { startIndex: 14, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 15,
-          type: [ 'source.malloy', 'variable.other.quoted' ],
-          color: '#9CDCFE'
-        },
-        { startIndex: 40, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 42,
-          type: [
-            'source.malloy',
-            'comment.line.double-hyphen',
-            'punctuation.definition.comment'
-          ],
-          color: '#6A9955'
-        },
-        {
-          startIndex: 44,
-          type: [ 'source.malloy', 'comment.line.double-hyphen' ],
-          color: '#6A9955'
-        }
-      ]
-    }
-  ],
-  [
-    {
-      line: '`Year',
-      tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 1,
-          type: [ 'source.malloy', 'keyword.other.timeframe' ],
-          color: '#569CD6'
-        }
-      ]
-    },
-    {
-      line: '  -- escapes quoted identifier at newline',
-      tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 2,
-          type: [
-            'source.malloy',
-            'comment.line.double-hyphen',
-            'punctuation.definition.comment'
-          ],
-          color: '#6A9955'
-        },
-        {
-          startIndex: 4,
-          type: [ 'source.malloy', 'comment.line.double-hyphen' ],
-          color: '#6A9955'
-        }
-      ]
-    }
-  ],
-  [
-    {
-      line: '`Disposable Income` is (0.88 * b1) + 84 / 100.00 * b2 + (.79 * `b3`)  ',
-      tokens: [
-        {
-          startIndex: 0,
-          type: [ 'source.malloy', 'variable.other.quoted' ],
-          color: '#9CDCFE'
-        },
-        { startIndex: 19, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 20,
-          type: [ 'source.malloy', 'keyword.control.is' ],
-          color: '#C586C0'
-        },
-        { startIndex: 22, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 24,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
-        },
-        {
-          startIndex: 25,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
-        },
-        { startIndex: 28, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 31,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
-        },
-        { startIndex: 33, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 37,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
-        },
-        { startIndex: 39, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 42,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
-        },
-        { startIndex: 48, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 51,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
-        },
-        { startIndex: 53, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 57,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
-        },
-        { startIndex: 60, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 63,
-          type: [ 'source.malloy', 'variable.other.quoted' ],
-          color: '#9CDCFE'
-        },
-        { startIndex: 67, type: [ 'source.malloy' ], color: '#000000' }
-      ]
-    }
-  ],
-  [
-    {
-      line: '(123E4, 1E-27, E4, 0E+1)',
-      tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 1,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
-        },
-        { startIndex: 6, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 8,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
-        },
-        { startIndex: 13, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 15,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
-        },
-        { startIndex: 17, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 19,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
-        },
-        { startIndex: 20, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 22,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
-        },
-        { startIndex: 23, type: [ 'source.malloy' ], color: '#000000' }
-      ]
-    }
-  ],
-  [
-    {
-      line: 'avg(count(distinct session_id))',
-      tokens: [
-        {
-          startIndex: 0,
-          type: [ 'source.malloy', 'entity.name.function' ],
-          color: '#DCDCAA'
-        },
-        { startIndex: 3, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 4,
-          type: [ 'source.malloy', 'entity.name.function' ],
-          color: '#DCDCAA'
-        },
-        { startIndex: 9, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 10,
-          type: [ 'source.malloy', 'entity.name.function.modifier' ],
-          color: '#DCDCAA'
-        },
-        { startIndex: 18, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 19,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
-        },
-        { startIndex: 29, type: [ 'source.malloy' ], color: '#000000' }
-      ]
-    }
-  ],
-  [
-    {
-      line: "`year` is year(dep_time)::string  // interpret year as 'categorical'",
-      tokens: [
-        {
-          startIndex: 0,
-          type: [ 'source.malloy', 'variable.other.quoted' ],
-          color: '#9CDCFE'
-        },
-        { startIndex: 6, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 7,
-          type: [ 'source.malloy', 'keyword.control.is' ],
-          color: '#C586C0'
-        },
-        { startIndex: 9, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 10,
-          type: [ 'source.malloy', 'entity.name.function' ],
-          color: '#DCDCAA'
-        },
-        { startIndex: 14, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 15,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
-        },
-        { startIndex: 23, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 26,
-          type: [ 'source.malloy', 'entity.name.type.string' ],
-          color: '#4EC9B0'
-        },
-        { startIndex: 32, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 34,
-          type: [
-            'source.malloy',
-            'comment.line.double-slash',
-            'punctuation.definition.comment'
-          ],
-          color: '#6A9955'
-        },
-        {
-          startIndex: 36,
-          type: [ 'source.malloy', 'comment.line.double-slash' ],
-          color: '#6A9955'
-        }
-      ]
-    }
-  ],
-  [
-    {
-      line: 'is hash!number(us3r_n4me)  -- SQL function usage',
-      tokens: [
-        {
-          startIndex: 0,
-          type: [ 'source.malloy', 'keyword.control.is' ],
-          color: '#C586C0'
-        },
-        { startIndex: 2, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 3,
-          type: [ 'source.malloy', 'entity.name.function' ],
-          color: '#DCDCAA'
-        },
-        { startIndex: 7, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 8,
-          type: [ 'source.malloy', 'entity.name.type' ],
-          color: '#4EC9B0'
-        },
-        { startIndex: 14, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 15,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
-        },
-        { startIndex: 24, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 27,
-          type: [
-            'source.malloy',
-            'comment.line.double-hyphen',
-            'punctuation.definition.comment'
-          ],
-          color: '#6A9955'
-        },
-        {
-          startIndex: 29,
-          type: [ 'source.malloy', 'comment.line.double-hyphen' ],
-          color: '#6A9955'
-        }
-      ]
-    }
-  ],
-  [
-    {
-      line: '(@2001-02-03 04:05:06.001[America/Mexico_City], @2005-01-28 12:12:12.999, @1961-02-14 09:30:15, @2017-10-03 07:23) ',
-      tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 1,
-          type: [ 'source.malloy', 'constant.numeric.timestamp' ],
-          color: '#B5CEA8'
-        },
-        { startIndex: 46, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 48,
-          type: [ 'source.malloy', 'constant.numeric.timestamp' ],
-          color: '#B5CEA8'
-        },
-        { startIndex: 72, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 74,
-          type: [ 'source.malloy', 'constant.numeric.timestamp' ],
-          color: '#B5CEA8'
-        },
-        { startIndex: 94, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 96,
-          type: [ 'source.malloy', 'constant.numeric.timestamp' ],
-          color: '#B5CEA8'
-        },
-        {
-          startIndex: 113,
-          type: [ 'source.malloy' ],
-          color: '#000000'
-        }
-      ]
-    }
-  ],
-  [
-    {
-      line: 'event_time ~ @2003-Q1 for 6 quarters',
-      tokens: [
-        {
-          startIndex: 0,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
-        },
-        { startIndex: 10, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 13,
-          type: [ 'source.malloy', 'constant.numeric.date' ],
-          color: '#B5CEA8'
-        },
-        { startIndex: 21, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 22,
-          type: [ 'source.malloy', 'keyword.other.for' ],
-          color: '#569CD6'
-        },
-        { startIndex: 25, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 26,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
-        },
-        { startIndex: 27, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 28,
-          type: [ 'source.malloy', 'keyword.other.timeframe' ],
-          color: '#569CD6'
-        }
-      ]
-    }
-  ],
-  [
-    {
-      line: '(@2021, @2022-06, @2022-09-09, @2023-06-25-WK)',
-      tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 1,
-          type: [ 'source.malloy', 'constant.numeric.date' ],
-          color: '#B5CEA8'
-        },
-        { startIndex: 6, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 8,
-          type: [ 'source.malloy', 'constant.numeric.date' ],
-          color: '#B5CEA8'
-        },
-        { startIndex: 16, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 18,
-          type: [ 'source.malloy', 'constant.numeric.date' ],
-          color: '#B5CEA8'
-        },
-        { startIndex: 29, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 31,
-          type: [ 'source.malloy', 'constant.numeric.date' ],
-          color: '#B5CEA8'
-        },
-        { startIndex: 45, type: [ 'source.malloy' ], color: '#000000' }
-      ]
-    }
-  ],
-  [
-    {
-      line: "'a string with \\escapes\\u0FF1 \\'more\\",
-      tokens: [
-        {
-          startIndex: 0,
-          type: [
-            'source.malloy',
-            'string.quoted.single',
-            'punctuation.definition.string.begin'
-          ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 1,
-          type: [ 'source.malloy', 'string.quoted.single' ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 15,
-          type: [
-            'source.malloy',
-            'string.quoted.single',
-            'constant.character.escape',
-            'constant.character.escape'
-          ],
-          color: '#D7BA7D'
-        },
-        {
-          startIndex: 17,
-          type: [ 'source.malloy', 'string.quoted.single' ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 23,
-          type: [
-            'source.malloy',
-            'string.quoted.single',
-            'constant.character.escape',
-            'constant.character.escape'
-          ],
-          color: '#D7BA7D'
-        },
-        {
-          startIndex: 29,
-          type: [ 'source.malloy', 'string.quoted.single' ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 30,
-          type: [
-            'source.malloy',
-            'string.quoted.single',
-            'constant.character.escape',
-            'constant.character.escape'
-          ],
-          color: '#D7BA7D'
-        },
-        {
-          startIndex: 32,
-          type: [ 'source.malloy', 'string.quoted.single' ],
-          color: '#CE9178'
-        }
-      ]
-    }
-  ],
-  [
-    {
-      line: `state ? """ multiple " " \\u "" \\u2001 ' /* -- // " \\`,
-      tokens: [
-        {
-          startIndex: 0,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
-        },
-        { startIndex: 5, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 8,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'punctuation.definition.string.begin'
-          ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 9,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'punctuation.definition.string.end'
-          ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 10,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'punctuation.definition.string.begin'
-          ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 11,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 21,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'punctuation.definition.string.end'
-          ],
-          color: '#CE9178'
-        },
-        { startIndex: 22, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 23,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'punctuation.definition.string.begin'
-          ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 24,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 25,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'constant.character.escape',
-            'constant.character.escape'
-          ],
-          color: '#D7BA7D'
-        },
-        {
-          startIndex: 27,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 28,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'punctuation.definition.string.end'
-          ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 29,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'punctuation.definition.string.begin'
-          ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 30,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 31,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'constant.character.escape',
-            'constant.character.escape'
-          ],
-          color: '#D7BA7D'
-        },
-        {
-          startIndex: 37,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 49,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'punctuation.definition.string.end'
-          ],
-          color: '#CE9178'
-        },
-        { startIndex: 50, type: [ 'source.malloy' ], color: '#000000' }
-      ]
-    },
-    {
-      line: ' lines ',
-      tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 1,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
-        },
-        { startIndex: 6, type: [ 'source.malloy' ], color: '#000000' }
-      ]
-    },
-    {
-      line: ' """  -- exited',
-      tokens: [
-        { startIndex: 0, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 1,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'punctuation.definition.string.begin'
-          ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 2,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'punctuation.definition.string.end'
-          ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 3,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'punctuation.definition.string.begin'
-          ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 4,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
-        }
-      ]
-    }
-  ],
-  [
-    {
-      line: "/'regexp string /*-- \\escapes\\uFFFF \\'more\\",
-      tokens: [
-        {
-          startIndex: 0,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
-        },
-        {
-          startIndex: 2,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
-        },
-        {
-          startIndex: 21,
-          type: [
-            'source.malloy',
-            'string.regexp',
-            'constant.character.escape',
-            'constant.character.escape'
-          ],
-          color: '#D7BA7D'
-        },
-        {
-          startIndex: 23,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
-        },
-        {
-          startIndex: 29,
-          type: [
-            'source.malloy',
-            'string.regexp',
-            'constant.character.escape',
-            'constant.character.escape'
-          ],
-          color: '#D7BA7D'
-        },
-        {
-          startIndex: 31,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
-        },
-        {
-          startIndex: 36,
-          type: [
-            'source.malloy',
-            'string.regexp',
-            'constant.character.escape',
-            'constant.character.escape'
-          ],
-          color: '#D7BA7D'
-        },
-        {
-          startIndex: 38,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
-        }
-      ]
-    }
-  ],
-  [
-    {
-      line: `"/* -- \\e\\uFFFF \\'\\`,
-      tokens: [
-        {
-          startIndex: 0,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'punctuation.definition.string.begin'
-          ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 1,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 7,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'constant.character.escape',
-            'constant.character.escape'
-          ],
-          color: '#D7BA7D'
-        },
-        {
-          startIndex: 9,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'constant.character.escape',
-            'constant.character.escape'
-          ],
-          color: '#D7BA7D'
-        },
-        {
-          startIndex: 15,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 16,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'constant.character.escape',
-            'constant.character.escape'
-          ],
-          color: '#D7BA7D'
-        },
-        {
-          startIndex: 18,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
-        }
-      ]
-    }
-  ],
-  [
-    {
-      line: `state ~ 'CA' | r'M.' | "CO" | /'O.'  -- end`,
-      tokens: [
-        {
-          startIndex: 0,
-          type: [ 'source.malloy', 'variable.other' ],
-          color: '#9CDCFE'
-        },
-        { startIndex: 5, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 8,
-          type: [
-            'source.malloy',
-            'string.quoted.single',
-            'punctuation.definition.string.begin'
-          ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 9,
-          type: [ 'source.malloy', 'string.quoted.single' ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 11,
-          type: [
-            'source.malloy',
-            'string.quoted.single',
-            'punctuation.definition.string.end'
-          ],
-          color: '#CE9178'
-        },
-        { startIndex: 12, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 15,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
-        },
-        {
-          startIndex: 17,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
-        },
-        {
-          startIndex: 19,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
-        },
-        { startIndex: 20, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 23,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'punctuation.definition.string.begin'
-          ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 24,
-          type: [ 'source.malloy', 'string.quoted.double' ],
-          color: '#CE9178'
-        },
-        {
-          startIndex: 26,
-          type: [
-            'source.malloy',
-            'string.quoted.double',
-            'punctuation.definition.string.end'
-          ],
-          color: '#CE9178'
-        },
-        { startIndex: 27, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 30,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
-        },
-        {
-          startIndex: 32,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
-        },
-        {
-          startIndex: 34,
-          type: [ 'source.malloy', 'string.regexp' ],
-          color: '#D16969'
-        },
-        { startIndex: 35, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 37,
-          type: [
-            'source.malloy',
-            'comment.line.double-hyphen',
-            'punctuation.definition.comment'
-          ],
-          color: '#6A9955'
-        },
-        {
-          startIndex: 39,
-          type: [ 'source.malloy', 'comment.line.double-hyphen' ],
-          color: '#6A9955'
-        }
-      ]
-    }
-  ],
-  [
-    {
-      line: 'select: """ SELECT 1 """',
-      tokens: [
-        {
-          startIndex: 0,
-          type: [ 'source.malloy', 'source.sql', 'keyword.control.select' ],
-          color: '#C586C0'
-        },
-        {
-          startIndex: 6,
-          type: [ 'source.malloy', 'source.sql' ],
-          color: '#000000'
-        },
-        {
-          startIndex: 8,
-          type: [
-            'source.malloy',
-            'source.sql',
-            'punctuation.sql-block.open'
-          ],
-          color: '#000000'
-        },
-        {
-          startIndex: 11,
-          type: [ 'source.malloy', 'source.sql' ],
-          color: '#000000'
-        },
-        {
-          startIndex: 21,
-          type: [
-            'source.malloy',
-            'source.sql',
-            'punctuation.sql-block.close'
-          ],
-          color: '#000000'
-        }
-      ]
-    }
-  ],
-  [
-    {
-      line: 'run: duckdb.sql("""',
-      tokens: [
-        {
-          startIndex: 0,
-          type: [ 'source.malloy', 'keyword' ],
-          color: '#569CD6'
-        },
-        { startIndex: 3, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 5,
-          type: [ 'source.malloy', 'source.sql', 'variable.other' ],
-          color: '#9CDCFE'
-        },
-        {
-          startIndex: 11,
-          type: [ 'source.malloy', 'source.sql' ],
-          color: '#000000'
-        },
-        {
-          startIndex: 12,
-          type: [ 'source.malloy', 'source.sql', 'keyword.control.sql' ],
-          color: '#C586C0'
-        },
-        {
-          startIndex: 15,
-          type: [ 'source.malloy', 'source.sql' ],
-          color: '#000000'
-        },
-        {
-          startIndex: 16,
-          type: [
-            'source.malloy',
-            'source.sql',
-            'punctuation.sql-block.open'
-          ],
-          color: '#000000'
-        }
-      ]
-    },
-    {
-      line: '  SELECT 1',
-      tokens: [
-        {
-          startIndex: 0,
-          type: [ 'source.malloy', 'source.sql' ],
-          color: '#000000'
-        }
-      ]
-    },
-    {
-      line: '""")',
-      tokens: [
-        {
-          startIndex: 0,
-          type: [
-            'source.malloy',
-            'source.sql',
-            'punctuation.sql-block.close'
-          ],
-          color: '#000000'
-        },
-        { startIndex: 3, type: [ 'source.malloy' ], color: '#000000' }
-      ]
-    }
-  ]
-];
+			],
+			"settings": {
+				"foreground": "#001080"
+			}
+		},
+		{
+			"name": "Constants and enums",
+			"scope": [
+				"variable.other.constant",
+				"variable.other.enummember"
+			],
+			"settings": {
+				"foreground": "#0070C1",
+			}
+		},
+		{
+			"name": "Object keys, TS grammar specific",
+			"scope": [
+				"meta.object-literal.key"
+			],
+			"settings": {
+				"foreground": "#001080"
+			}
+		},
+		{
+			"name": "CSS property value",
+			"scope": [
+				"support.constant.property-value",
+				"support.constant.font-name",
+				"support.constant.media-type",
+				"support.constant.media",
+				"constant.other.color.rgb-value",
+				"constant.other.rgb-value",
+				"support.constant.color"
+			],
+			"settings": {
+				"foreground": "#0451a5"
+			}
+		},
+		{
+			"name": "Regular expression groups",
+			"scope": [
+				"punctuation.definition.group.regexp",
+				"punctuation.definition.group.assertion.regexp",
+				"punctuation.definition.character-class.regexp",
+				"punctuation.character.set.begin.regexp",
+				"punctuation.character.set.end.regexp",
+				"keyword.operator.negation.regexp",
+				"support.other.parenthesis.regexp"
+			],
+			"settings": {
+				"foreground": "#d16969"
+			}
+		},
+		{
+			"scope": [
+				"constant.character.character-class.regexp",
+				"constant.other.character-class.set.regexp",
+				"constant.other.character-class.regexp",
+				"constant.character.set.regexp"
+			],
+			"settings": {
+				"foreground": "#811f3f"
+			}
+		},
+		{
+			"scope": "keyword.operator.quantifier.regexp",
+			"settings": {
+				"foreground": "#000000"
+			}
+		},
+		{
+			"scope": [
+				"keyword.operator.or.regexp",
+				"keyword.control.anchor.regexp"
+			],
+			"settings": {
+				"foreground": "#EE0000"
+			}
+		},
+		{
+			"scope": [
+				"constant.character",
+				"constant.other.option"
+			],
+			"settings": {
+				"foreground": "#0000ff"
+			}
+		},
+		{
+			"scope": "constant.character.escape",
+			"settings": {
+				"foreground": "#EE0000"
+			}
+		},
+		{
+			"scope": "entity.name.label",
+			"settings": {
+				"foreground": "#000000"
+			}
+		}
+	],
+	"colors": {
+		"checkbox.border": "#919191",
+		"editor.background": "#FFFFFF",
+		"editor.foreground": "#000000",
+		"editor.inactiveSelectionBackground": "#E5EBF1",
+		"editorIndentGuide.background": "#D3D3D3",
+		"editorIndentGuide.activeBackground": "#939393",
+		"editor.selectionHighlightBackground": "#ADD6FF80",
+		"editorSuggestWidget.background": "#F3F3F3",
+		"activityBarBadge.background": "#007ACC",
+		"sideBarTitle.foreground": "#6F6F6F",
+		"list.hoverBackground": "#E8E8E8",
+		"menu.border": "#D4D4D4",
+		"input.placeholderForeground": "#767676",
+		"searchEditor.textInputBorder": "#CECECE",
+		"settings.textInputBorder": "#CECECE",
+		"settings.numberInputBorder": "#CECECE",
+		"statusBarItem.remoteForeground": "#FFF",
+		"statusBarItem.remoteBackground": "#16825D",
+		"ports.iconRunningProcessForeground": "#369432",
+		"sideBarSectionHeader.background": "#0000",
+		"sideBarSectionHeader.border": "#61616130",
+		"tab.lastPinnedBorder": "#61616130",
+		"notebook.cellBorderColor": "#E8E8E8",
+		"notebook.selectedCellBackground": "#c8ddf150",
+		"statusBarItem.errorBackground": "#c72e0f",
+		"list.activeSelectionIconForeground": "#FFF",
+		"list.focusAndSelectionOutline": "#90C2F9",
+		"terminal.inactiveSelectionBackground": "#E5EBF1",
+		"widget.border": "#d4d4d4",
+		"actionBar.toggledBackground": "#dddddd"
+	},
+	"semanticHighlighting": true,
+	"semanticTokenColors": {
+		"newOperator": "#AF00DB",
+		"stringLiteral": "#a31515",
+		"customLiteral": "#795E26",
+		"numberLiteral": "#098658",
+	}
+}

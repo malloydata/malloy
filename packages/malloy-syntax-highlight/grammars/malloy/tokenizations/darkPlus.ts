@@ -221,11 +221,6 @@ export default [
           type: [ 'source.malloy', 'constant.numeric' ],
           color: '#B5CEA8'
         },
-        {
-          startIndex: 25,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
-        },
         { startIndex: 28, type: [ 'source.malloy' ], color: '#000000' },
         {
           startIndex: 31,
@@ -291,12 +286,6 @@ export default [
         { startIndex: 17, type: [ 'source.malloy' ], color: '#000000' },
         {
           startIndex: 19,
-          type: [ 'source.malloy', 'constant.numeric' ],
-          color: '#B5CEA8'
-        },
-        { startIndex: 20, type: [ 'source.malloy' ], color: '#000000' },
-        {
-          startIndex: 22,
           type: [ 'source.malloy', 'constant.numeric' ],
           color: '#B5CEA8'
         },
