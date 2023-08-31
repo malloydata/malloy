@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "An unpublished package to simplify the process of developing and testing Malloy syntax highlighting grammars",
   "scripts": {
-    "gen-malloy-monarch": "ts-node scripts/generateMonarchGrammar grammars/malloy/malloy.tmGrammar.json grammars/malloy/malloy.ts && prettier --write grammars/malloy/malloy.ts",
+    "gen-malloy-monarch": "ts-node scripts/generateMonarchGrammar grammars/malloy/malloy.tmGrammar.json grammars/malloy/malloy.ts && prettier grammars/malloy/malloy.ts --write",
     "gen-malloy-tokens": "ts-node scripts/generateLanguageTokenizationFile grammars/malloy/tokenizations/darkPlus.ts",
     "test-monarch-grammars": "rimraf ./dist && tsc && karma start",
-    "test-textmate-grammars": "ts-node node_modules/jasmine/bin/jasmine --config=jasmine.json", 
+    "test-textmate-grammars": "ts-node node_modules/jasmine/bin/jasmine --config=jasmine.json",
     "gen-monaco-darkplus": "ts-node scripts/generateMonarchTheme themes/textmate/dark_plus.json themes/monaco/darkPlus.ts"
   },
   "license": "MIT",
@@ -23,6 +23,7 @@
     "karma-jasmine-html-reporter": "^2.1.0",
     "karma-spec-reporter": "^0.0.36",
     "monaco-editor": "^0.41.0",
+    "prettier": "^3.0.3",
     "ts-node": "^10.9.1",
     "typescript": "^5.1.6",
     "vscode-oniguruma": "^1.7.0",
