@@ -20,7 +20,7 @@ npm run gen-malloy-tokens
 
 ## Testing TextMate grammars
 
-This package's TextMate tokenization tests verify both the scope names (ex. constant.numeric.date, keyword.control.select) applied to patterns and the foreground text color applied by those styles.
+This package's TextMate tokenization tests verify both the scope names (ex. *constant.numeric.date*, *keyword.control.select*) applied to patterns and the foreground text color applied by those styles.
 
 TextMate tests are written in TypeScript and Jasmine, making use of ts-node to run the Jasmine binary on files with the suffix `.spec.ts` per the `jasmine.json` configuration. `grammars/malloy/malloy.spec.ts` provides an example test for the Malloy grammar using the Dark+ theme, including the config object for the test which can be found in `test/config/textmate/malloyDarkPlusConfig.ts`. You'll notice that this is the same config that is used to generate tokenizations artifacts above.
 
@@ -82,6 +82,10 @@ mapping many tokens to one. That is:
 *For match rules:*
 1. If the captures field is defined, the capture field will be applied to the match pattern.
 2. If the captures field is undefined, the name field will be applied to the match pattern.
+
+While this many-to-one mapping preserves the granularity of many rules, it sometimes results in patterns receiving scope names that are too specific and not thematically meaningful (i.e. even the richest themes do not apply highlighting to the scope name). To work around this, you can populate the `TOKENS_MAP` declaration in `scripts/generateMonarchGrammar.ts` to map a TextMate scopename that is wrongly being applied in the generated Monarch grammar to one that ought to be applied.
+
+For example, the scopename *punctuation.definition.string.begin* is assigned to the single quote (*'*) in the auto-generated grammar but it only receieves default color styling of *#000000*. In some cases, this is desirable, but we would like the boundaries of single quote strings to recieve the same styling as content with the string, so we could add an entry to `TOKENS_MAP` that maps *punctuation.definition.string.begin* to *string.quoted.single*.
 
 **Embedding levels**
 
