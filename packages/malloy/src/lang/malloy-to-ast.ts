@@ -1052,11 +1052,10 @@ export class MalloyToAST
     pcx: parse.CollectionWildCardContext
   ): ast.FieldReferenceElement {
     const nameCx = pcx.fieldPath();
-    const stars = pcx.STAR() ? '*' : '**';
     const join = nameCx
       ? this.getFieldPath(nameCx, ast.ProjectFieldReference)
       : undefined;
-    return new ast.WildcardFieldReference(join, stars);
+    return new ast.WildcardFieldReference(join);
   }
 
   visitIndexFields(pcx: parse.IndexFieldsContext): ast.FieldReferences {
@@ -1064,13 +1063,13 @@ export class MalloyToAST
       const hasStar = el.STAR() !== undefined;
       const pathCx = el.fieldPath();
       if (!pathCx) {
-        return new ast.WildcardFieldReference(undefined, '*');
+        return new ast.WildcardFieldReference(undefined);
       }
       const path = this.getFieldPath(pathCx, ast.IndexFieldReference);
       if (!hasStar) {
         return this.astAt(path, pcx);
       }
-      return this.astAt(new ast.WildcardFieldReference(path, '*'), pcx);
+      return this.astAt(new ast.WildcardFieldReference(path), pcx);
     });
     return new ast.FieldReferences(refList);
   }

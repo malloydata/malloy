@@ -99,7 +99,7 @@ export abstract class QuerySpace
 
   setEntry(name: string, value: SpaceEntry): void {
     super.setEntry(name, value);
-    // Everything in this namespace is and output field
+    // Everything in this namespace is an output field
     value.outputField = true;
   }
 
@@ -135,38 +135,6 @@ export abstract class QuerySpace
             conflictMap[name] = fullName;
           }
         }
-      } else if (part === '**') {
-        // TODO actually handle **
-        wild.log('** is currently broken');
-        success = false;
-        // const spaces: {space: FieldSpace; ref: string | undefined}[] = [
-        //   {space: current, ref: undefined},
-        // ];
-        // let toExpand: {space: FieldSpace; ref: string | undefined} | undefined;
-        // while ((toExpand = spaces.pop())) {
-        //   for (const [name, entry] of toExpand.space.entries()) {
-        //     if (this.entry(name)) {
-        //       logConflict(name, toExpand.ref);
-        //       success = false;
-        //     }
-        //     if (model.expressionIsScalar(entry.typeDesc().expressionType)) {
-        //       this.setEntry(name, entry);
-        //       conflictMap[name] = toExpand.ref
-        //         ? `${toExpand.ref}.${name}`
-        //         : name;
-        //     }
-        //     if (entry instanceof StructSpaceField) {
-        //       spaces.push({
-        //         space: entry.fieldSpace,
-        //         ref: [
-        //           ...(parentRef ? [parentRef] : []),
-        //           ...(toExpand.ref ? [toExpand.ref] : []),
-        //           name,
-        //         ].join('.'),
-        //       });
-        //     }
-        //   }
-        // }
       } else {
         const ent = current.entry(part);
         if (ent) {
@@ -189,7 +157,7 @@ export abstract class QuerySpace
       }
     }
     if (success) {
-      // TODO perform the entire replacement of * and ** here in the parser.
+      // TODO perform the entire replacement of * here in the parser.
       // Today, we add all the fields to the output space, and then still add * to
       // the query. The compiler then does a second * expansion. Instead, we should
       // just add all the fields to the query here and then remove the code in the compiler

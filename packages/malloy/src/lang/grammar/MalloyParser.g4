@@ -563,7 +563,7 @@ fieldCollection
   ;
 
 collectionWildCard
-  : (fieldPath DOT)? (STAR|STARSTAR)
+  : (fieldPath DOT)? STAR
   ;
 
 taggedRef

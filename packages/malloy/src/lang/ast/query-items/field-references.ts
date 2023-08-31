@@ -184,10 +184,7 @@ export class WildcardFieldReference extends MalloyElement implements Noteable {
   note?: Annotation;
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
-  constructor(
-    readonly joinPath: FieldReference | undefined,
-    readonly star: '*' | '**'
-  ) {
+  constructor(readonly joinPath: FieldReference | undefined) {
     super();
     this.has({joinPath: joinPath});
   }
@@ -197,9 +194,7 @@ export class WildcardFieldReference extends MalloyElement implements Noteable {
   }
 
   get refString(): string {
-    return this.joinPath
-      ? `${this.joinPath.refString}.${this.star}`
-      : this.star;
+    return this.joinPath ? `${this.joinPath.refString}.*` : '*';
   }
 }
 
