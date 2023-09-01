@@ -1103,11 +1103,13 @@ describe('qops', () => {
     const fields = query!.pipeline[0].fields;
     expect(fields.sort()).toEqual(afields.map(f => `b.${f}`));
   });
-  test('extend: and star', () => {
+  test('regress check extend: and star', () => {
     const m = model`run: ab->{ extend: {dimension: x is 1} select: * }`;
     expect(m).toTranslate();
     const q = m.translator.getQuery(0);
     expect(q).toBeDefined();
+    const fields = q!.pipeline[0].fields;
+    expect(fields.sort()).toEqual(afields.concat('x'));
   });
   test('project def', () => {
     expect('query:ab->{ project: one is 1 }').toTranslate();
