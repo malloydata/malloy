@@ -78,6 +78,7 @@ export interface TestItem {
  *  in spec.ts and test.ts files that use theme
  */
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace jasmine {
     interface Matchers<T> {
       toMatchColorData(expected: TestItem): boolean;
