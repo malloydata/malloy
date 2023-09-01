@@ -1,19 +1,19 @@
-import malloyTestInput from "../../../grammars/malloy/malloyTestInput";
+import malloyTestInput from '../../../grammars/malloy/malloyTestInput';
 import {
   TextmateTestConfig,
   stubEmbeddedTextmateLanguage,
-} from "../../testUtils";
+} from '../../testUtils';
 
 const malloyDarkPlusConfig: TextmateTestConfig = {
   language: {
-    id: "malloy",
-    scopeName: "source.malloy",
-    definition: "grammars/malloy/malloy.tmGrammar.json",
-    embeddedLanguages: [stubEmbeddedTextmateLanguage("sql", "source.sql")],
+    id: 'malloy',
+    scopeName: 'source.malloy',
+    definition: 'grammars/malloy/malloy.tmGrammar.json',
+    embeddedLanguages: [stubEmbeddedTextmateLanguage('sql', 'source.sql')],
   },
   theme: {
-    id: "vs-dark-plus",
-    path: "themes/textmate/dark_plus.json",
+    id: 'vs-dark-plus',
+    path: 'themes/textmate/dark_plus.json',
   },
   testInput: malloyTestInput,
 };

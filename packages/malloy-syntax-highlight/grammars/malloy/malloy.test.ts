@@ -3,9 +3,9 @@
 import {
   loadMonacoAssets,
   generateMonarchTokenizations,
-} from "../../test/generateMonarchTokenizations.js";
-import { malloyDarkPlusConfig as testConfig } from "../../test/config/monaco/malloyDarkPlusConfig.js";
-import { TestItem, monarchTestMatchers } from "../../test/testUtils.js";
+} from '../../test/generateMonarchTokenizations.js';
+import {malloyDarkPlusConfig as testConfig} from '../../test/config/monaco/malloyDarkPlusConfig.js';
+import {TestItem, monarchTestMatchers} from '../../test/testUtils.js';
 
 let actualTokenizations: TestItem[][];
 

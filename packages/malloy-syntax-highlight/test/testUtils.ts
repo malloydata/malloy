@@ -1,5 +1,5 @@
-import { IRawGrammar } from "vscode-textmate";
-import { languages as Monarch, editor as Monaco } from "monaco-editor";
+import {IRawGrammar} from 'vscode-textmate';
+import {languages as Monarch, editor as Monaco} from 'monaco-editor';
 
 export interface TextmateTestConfig {
   language: {
@@ -15,7 +15,7 @@ export interface TextmateTestConfig {
   testInput: string[][];
 }
 
-export type TextmateGrammarStub = Pick<IRawGrammar, "scopeName" | "patterns">;
+export type TextmateGrammarStub = Pick<IRawGrammar, 'scopeName' | 'patterns'>;
 export type TextmateLanguageDefinition = string | TextmateGrammarStub;
 
 export interface EmbeddedTextmateLanguage {
@@ -86,7 +86,7 @@ declare global {
 }
 
 export const monarchTestMatchers: jasmine.CustomMatcherFactories = {
-  toMatchColorData: function (
+  'toMatchColorData': function (
     matchersUtil: jasmine.MatchersUtil
   ): jasmine.CustomMatcher {
     return {
@@ -94,7 +94,7 @@ export const monarchTestMatchers: jasmine.CustomMatcherFactories = {
         actual: TestItem,
         expected: TestItem
       ): jasmine.CustomMatcherResult {
-        const result: jasmine.CustomMatcherResult = { pass: false };
+        const result: jasmine.CustomMatcherResult = {pass: false};
         const actualIndexToTokenMap = generateIndexToTokenMap(actual.tokens);
         const expectedIndexToTokenMap = generateIndexToTokenMap(
           expected.tokens
@@ -114,11 +114,11 @@ export const monarchTestMatchers: jasmine.CustomMatcherFactories = {
           )) {
             message += `  color ${color} to begin at index ${index}\n`;
           }
-          message += "Received:\n";
+          message += 'Received:\n';
           for (const [index, color] of Object.entries(actualIndexToColorMap)) {
             message += `  color ${color} beginning at index ${index}\n`;
           }
-          message += "\n";
+          message += '\n';
           message += `Expected tokenization:\n${JSON.stringify(
             expected.tokens,
             null,
