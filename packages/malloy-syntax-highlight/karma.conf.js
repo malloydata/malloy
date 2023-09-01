@@ -10,30 +10,29 @@ module.exports = function (config) {
         timeoutInterval: 10000,
       },
     },
-    basePath: '',
+    basePath: "",
     // frameworks to use
     // available frameworks: https://www.npmjs.com/search?q=keywords:karma-adapter
-    frameworks: ['jasmine'],
+    frameworks: ["jasmine"],
     // list of files / patterns to load in the browser
     files: [
-      { pattern: 'node_modules/monaco-editor/min/vs/**', included: false },
-      { pattern: 'node_modules/monaco-editor/min-maps/vs/**', included: false },
-      { pattern: 'dist/**/*.test.js', type: 'module' },
-      { pattern: 'dist/**/*.js', included: false },
+      { pattern: "node_modules/monaco-editor/min/vs/**", included: false },
+      { pattern: "node_modules/monaco-editor/min-maps/vs/**", included: false },
+      { pattern: "dist/**/*.test.js", type: "module" },
+      { pattern: "dist/**/*.js", included: false },
     ],
     // list of files / patterns to exclude
     exclude: [],
     plugins: [
-      // require('karma-webpack'),
-      require('karma-jasmine'),
-      require('karma-chrome-launcher'),
-      require('karma-spec-reporter'),
-      require('karma-jasmine-html-reporter'),
+      require("karma-jasmine"),
+      require("karma-chrome-launcher"),
+      require("karma-spec-reporter"),
+      require("karma-jasmine-html-reporter"),
     ],
     // test results reporter to use
     // possible values: 'dots', 'progress'
     // available reporters: https://www.npmjs.com/search?q=keywords:karma-reporter
-    reporters: ['spec', 'kjhtml'],
+    reporters: ["spec", "kjhtml"],
     // web server port
     port: 9876,
     // enable / disable colors in the output (reporters and logs)
@@ -45,7 +44,7 @@ module.exports = function (config) {
     autoWatch: true,
     // start these browsers
     // available browser launchers: https://www.npmjs.com/search?q=keywords:karma-launcher
-    browsers: ['Chrome'],
+    browsers: ["Chrome"],
     // Continuous Integration mode
     // if true, Karma captures browsers, runs the tests and exits
     singleRun: false,

@@ -1,25 +1,25 @@
 import { MonarchTestConfig, TestItem } from "./testUtils";
-import { editor as Monaco, Token } from 'monaco-editor';
+import { editor as Monaco, Token } from "monaco-editor";
 
 export async function loadMonacoAssets() {
   // Waiting resolves difficult to track down race condition
   await new Promise((resolve) => setTimeout(resolve, 1000));
   // Uses the same setup as https://github.com/microsoft/monaco-editor/blob/main/docs/integrate-amd.md
   await new Promise((resolve, reject) => {
-    const script = document.createElement('script');
+    const script = document.createElement("script");
     script.onload = resolve;
     script.onerror = reject;
-    script.src = '/base/node_modules/monaco-editor/min/vs/loader.js';
+    script.src = "/base/node_modules/monaco-editor/min/vs/loader.js";
     document.head.appendChild(script);
   });
   // Not requirejs, 'require' namespace and function are loaded with above script
   // @ts-ignore
   require.config({
-    baseUrl: '/base/node_modules/monaco-editor/min',
+    baseUrl: "/base/node_modules/monaco-editor/min",
   });
   await new Promise((resolve, reject) => {
     // @ts-ignore
-    require(['vs/editor/editor.main'], resolve, reject);
+    require(["vs/editor/editor.main"], resolve, reject);
   });
 }
 
@@ -41,12 +41,12 @@ function registerLanguages(monacoGlobal, testConfig: MonarchTestConfig) {
 }
 
 function setupEditor(monacoGlobal, theme: Monaco.IStandaloneThemeData) {
-  monacoGlobal.editor.defineTheme('test-theme', theme);
-  const element = document.createElement('div');
-  element.id = 'editor';
+  monacoGlobal.editor.defineTheme("test-theme", theme);
+  const element = document.createElement("div");
+  element.id = "editor";
   document.body.appendChild(element);
-  const editor = monacoGlobal.editor.create(document.getElementById('editor'), {
-    theme: 'test-theme',
+  const editor = monacoGlobal.editor.create(document.getElementById("editor"), {
+    theme: "test-theme",
   });
   return editor;
 }
@@ -62,7 +62,7 @@ export function generateMonarchTokenizations(
     .getColorTheme()
     .tokenTheme.getColorMap();
   for (const lines of testConfig.testInput) {
-    const block = lines.join('\n');
+    const block = lines.join("\n");
     const actualTokens: Token[][] = monacoGlobal.editor.tokenize(
       block,
       testConfig.language.id

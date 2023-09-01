@@ -1,9 +1,9 @@
-import { readFileSync, writeFileSync, appendFileSync } from 'fs';
-import { inspect } from 'util';
-import { languages as Monarch } from 'monaco-editor';
-import { ScopeName as TextMateScopeName } from 'vscode-textmate/release/theme';
+import { readFileSync, writeFileSync, appendFileSync } from "fs";
+import { inspect } from "util";
+import { languages as Monarch } from "monaco-editor";
+import { ScopeName as TextMateScopeName } from "vscode-textmate/release/theme";
 
-import * as TextMate from 'vscode-textmate/release/rawGrammar';
+import * as TextMate from "vscode-textmate/release/rawGrammar";
 
 export type MonarchRegExpString = string;
 export type MonarchIncludeString = string;
@@ -34,32 +34,32 @@ export type LanguageId = string;
 
 const ARGV_IN = 2;
 const ARGV_OUT = 3;
-const DEFAULT_TOKEN = '';
+const DEFAULT_TOKEN = "";
 const IGNORE_CASE = true;
-const END_STATE_SUFFIX = '_end';
+const END_STATE_SUFFIX = "_end";
 // Constants implicitly defined by Monarch
-const M_ROOT_REFERENCE = 'root';
-const M_POP = '@pop';
+const M_ROOT_REFERENCE = "root";
+const M_POP = "@pop";
 const M_REGEXP_INDEX = 0;
 const M_TOKENS_INDEX = 1;
 // Constants implicitly defined by TextMate
-const TM_CAPTURE_OVERRIDE_KEY = '0';
-const TIGNORE_CASE_FLAG = '(?i)';
-const TM_SOURCE_PREFIX = 'source.';
+const TM_CAPTURE_OVERRIDE_KEY = "0";
+const TIGNORE_CASE_FLAG = "(?i)";
+const TM_SOURCE_PREFIX = "source.";
 
 const TOKENS_MAP = {
-  'punctuation.definition.comment.begin': 'comment.block',
-  'punctuation.definition.comment': 'comment.line',
-  'punctuation.definition.comment.end': 'comment.block',
-  'punctuation.definition.string.begin': 'string.quoted',
-  'punctuation.definition.string.end': 'string.quoted',
+  "punctuation.definition.comment.begin": "comment.block",
+  "punctuation.definition.comment": "comment.line",
+  "punctuation.definition.comment.end": "comment.block",
+  "punctuation.definition.string.begin": "string.quoted",
+  "punctuation.definition.string.end": "string.quoted",
 };
 
 /** Custom guard to check if a rule has begin/end fields */
 function instanceOfTextMateBeginEndRule(
   object: any
 ): object is TextMateBeginEndRule {
-  return 'begin' in object && 'end' in object;
+  return "begin" in object && "end" in object;
 }
 
 /** Build a flattened map of repository key to their definitions */
@@ -80,7 +80,7 @@ function flattenRepositories(
  * Assumes that TextMate repository keys use kebab or snake case
  */
 function textmateToMonarchInclude(includeString: TextMate.IncludeString) {
-  return includeString.replace('#', '@').replaceAll('-', '_');
+  return includeString.replace("#", "@").replaceAll("-", "_");
 }
 
 /*
@@ -89,12 +89,12 @@ function textmateToMonarchInclude(includeString: TextMate.IncludeString) {
  * references use snake case
  */
 function repositoryToReference(repositoryKey: TextMateRepositoryKey) {
-  return repositoryKey.replaceAll('-', '_');
+  return repositoryKey.replaceAll("-", "_");
 }
 
 /** Retrieves the snake case reference key from a TextMate include string */
 function includeToReference(includeString: TextMate.IncludeString) {
-  return includeString.slice(1).replaceAll('-', '_');
+  return includeString.slice(1).replaceAll("-", "_");
 }
 
 /*
@@ -115,13 +115,13 @@ function cleanMatchString(matchString: TextMate.RegExpString) {
  */
 function serializeRegex(match: MonarchRegExpString) {
   const serializedMatch = match.replaceAll("/", "\\/");
-  return '/' + serializedMatch + '/';
+  return "/" + serializedMatch + "/";
 }
 
 /** Returns the number of outermost regex groups in a regex */
 function numRegexGroups(regex: MonarchRegExpString) {
   // courtesty of https://stackoverflow.com/questions/16046620/regex-to-count-the-number-of-capturing-groups-in-a-regex
-  const regexGroups = new RegExp(regex.toString() + '|').exec('');
+  const regexGroups = new RegExp(regex.toString() + "|").exec("");
   if (regexGroups) {
     return regexGroups.length - 1;
   } else {
@@ -134,7 +134,7 @@ function numRegexGroups(regex: MonarchRegExpString) {
  * May also be used for environment-to-environment mappings
  */
 function translateToken(token: TextMateScopeName) {
-  return token in TOKENS_MAP ? TOKENS_MAP[token] : token.replaceAll('-', '.');
+  return token in TOKENS_MAP ? TOKENS_MAP[token] : token.replaceAll("-", ".");
 }
 
 /** Returns a Monarch token info for TextMate rules with captures or beginCaptures and endCaptures */
@@ -169,7 +169,7 @@ function generateTokens(
   matchString: MonarchRegExpString,
   tokenInfo: TextMateTokenInfo
 ): MonarchPrimitiveAction {
-  if (typeof tokenInfo === 'string') {
+  if (typeof tokenInfo === "string") {
     return translateToken(tokenInfo);
   } else if (tokenInfo[TM_CAPTURE_OVERRIDE_KEY]?.name) {
     return translateToken(tokenInfo[TM_CAPTURE_OVERRIDE_KEY].name);
@@ -192,7 +192,7 @@ function generateRule(
     ];
   } else {
     const tokens = generateTokens(cleanedMatch, tokenInfo);
-    if (typeof tokens === 'string') {
+    if (typeof tokens === "string") {
       return [
         serializeRegex(cleanedMatch),
         {
@@ -238,7 +238,7 @@ function generateBeginEndRule(
   if (embeddedLanguage) {
     const ref = embeddedLanguage + END_STATE_SUFFIX;
     const beginRule = generateRule(p.begin, beginTextMateTokenInfo, {
-      next: '@' + ref,
+      next: "@" + ref,
       nextEmbedded: embeddedLanguage,
     });
     const endRule = generateRule(p.end, endTextMateTokenInfo, {
@@ -254,7 +254,7 @@ function generateBeginEndRule(
       ? nameToNewRef(p.name)
       : currentRef + END_STATE_SUFFIX;
     const beginRule = generateRule(p.begin, beginTextMateTokenInfo, {
-      next: '@' + newRef,
+      next: "@" + newRef,
     });
     const endRule = generateRule(p.end, endTextMateTokenInfo, { next: M_POP });
     state.push(beginRule);
@@ -268,11 +268,11 @@ function generateBeginEndRule(
       const ignoreChars = getIgnoreString(tokenizer, newRef);
       if (ignoreChars.length !== 0) {
         tokenizer[newRef].push([
-          serializeRegex('[^' + cleanMatchString(ignoreChars) + ']+'),
+          serializeRegex("[^" + cleanMatchString(ignoreChars) + "]+"),
           translateToken(p.name),
         ]);
         tokenizer[newRef].push([
-          serializeRegex('[' + cleanMatchString(ignoreChars) + ']'),
+          serializeRegex("[" + cleanMatchString(ignoreChars) + "]"),
           translateToken(p.name),
         ]);
       }
@@ -292,7 +292,7 @@ function getIgnoreString(
   tokenizer: MonarchTokenizer,
   currentRef: ReferenceString
 ) {
-  let ignoreString = '';
+  let ignoreString = "";
   const ignoreChars: Set<string> = new Set();
   getIgnoreChars(tokenizer, currentRef, ignoreChars);
   for (const char of ignoreChars) {
@@ -310,8 +310,8 @@ function getIgnoreChars(
   for (const rule of state) {
     if (Array.isArray(rule)) {
       const beginChar =
-        typeof rule[M_REGEXP_INDEX] === 'string' &&
-        rule[M_REGEXP_INDEX][1] === '\\'
+        typeof rule[M_REGEXP_INDEX] === "string" &&
+        rule[M_REGEXP_INDEX][1] === "\\"
           ? rule[M_REGEXP_INDEX].slice(1, 3)
           : rule[M_REGEXP_INDEX][1];
       if (!ignoreChars.has(beginChar)) {
@@ -335,7 +335,7 @@ function getIgnoreChars(
  * Monarch state's rules will send the tokenizer to when parsed
  */
 function nameToNewRef(name: TextMateScopeName) {
-  return name.replaceAll('.', '_').replaceAll('-', '_') + END_STATE_SUFFIX;
+  return name.replaceAll(".", "_").replaceAll("-", "_") + END_STATE_SUFFIX;
 }
 
 /** Returns a new Monarch grammar generated by walking the
@@ -381,17 +381,17 @@ function generateMonarchRules(
 /** Generates and writes a Monarch grammar output file from a TextMate grammar file */
 export function generateMonarchGrammar() {
   // TODO: Validate command line args
-  const textmateSrc = readFileSync(process.argv[ARGV_IN], 'utf-8');
+  const textmateSrc = readFileSync(process.argv[ARGV_IN], "utf-8");
   const textmateParse: TextMate.IRawGrammar = JSON.parse(textmateSrc);
   const references: TextMateRepositoryMap = {};
   flattenRepositories(textmateParse.repository, references);
   const monarch: Monarch.IMonarchLanguage = {
-    'defaultToken': DEFAULT_TOKEN,
+    defaultToken: DEFAULT_TOKEN,
     // TODO: Determine monarch.tokenPostfix from input filename
-    'tokenPostfix': '.malloy',
-    'ignoreCase': IGNORE_CASE,
-    'includeLF': true,
-    'tokenizer': {
+    tokenPostfix: ".malloy",
+    ignoreCase: IGNORE_CASE,
+    includeLF: true,
+    tokenizer: {
       root: [],
     },
   };
@@ -420,31 +420,31 @@ tokenPostfix: '${monarch.tokenPostfix}',
 ignoreCase: ${monarch.ignoreCase},
 tokenizer: {
 `,
-    'utf-8'
+    "utf-8"
   );
   for (const [key, rules] of Object.entries(monarch.tokenizer)) {
-    appendFileSync(filename, `\t${key}: [\n`, 'utf-8');
+    appendFileSync(filename, `\t${key}: [\n`, "utf-8");
     for (const rule of rules) {
       if (!Array.isArray(rule)) {
         appendFileSync(
           filename,
           `${inspect(rule, { depth: null })},\n`,
-          'utf-8'
+          "utf-8"
         );
       } else {
-        appendFileSync(filename, "[\n", 'utf-8');
-        appendFileSync(filename, `${rule[M_REGEXP_INDEX]},\n`, 'utf-8');
+        appendFileSync(filename, "[\n", "utf-8");
+        appendFileSync(filename, `${rule[M_REGEXP_INDEX]},\n`, "utf-8");
         appendFileSync(
           filename,
           `${inspect(rule[M_TOKENS_INDEX], { depth: null })},\n`,
-          'utf-8'
+          "utf-8"
         );
-        appendFileSync(filename, "],\n", 'utf-8');
+        appendFileSync(filename, "],\n", "utf-8");
       }
     }
-    appendFileSync(filename, "],\n", 'utf-8');
+    appendFileSync(filename, "],\n", "utf-8");
   }
-  appendFileSync(filename, "}\n};", 'utf-8');
+  appendFileSync(filename, "}\n};", "utf-8");
 }
 
 generateMonarchGrammar();

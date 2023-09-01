@@ -1,9 +1,9 @@
-import { TextmateTestConfig, TestItem } from '../test/testUtils';
-import { generateTextmateTokenizations } from '../test/generateTextmateTokenizations';
-import { writeFileSync } from 'fs';
-import { inspect } from 'util';
+import { TextmateTestConfig, TestItem } from "../test/testUtils";
+import { generateTextmateTokenizations } from "../test/generateTextmateTokenizations";
+import { writeFileSync } from "fs";
+import { inspect } from "util";
 
-import malloyDarkPlusConfig from '../test/config/textmate/malloyDarkPlusConfig';
+import malloyDarkPlusConfig from "../test/config/textmate/malloyDarkPlusConfig";
 
 export {};
 
@@ -12,7 +12,7 @@ function writeTokenizations(tokenizations: TestItem[][], outputPath: string) {
 export default ${inspect(tokenizations, {
     depth: null,
   })};`;
-  writeFileSync(outputPath, outputTemplate, 'utf-8');
+  writeFileSync(outputPath, outputTemplate, "utf-8");
 }
 
 async function generateTokenizationFile(

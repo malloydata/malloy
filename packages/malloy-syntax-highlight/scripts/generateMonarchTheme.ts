@@ -1,13 +1,13 @@
-import { editor as Monaco } from 'monaco-editor';
-import { retrieveEditorTheme } from '../test/generateTextmateTokenizations';
-import { inspect } from 'util';
-import { writeFileSync } from 'fs';
-import { IRawTheme } from 'vscode-textmate';
+import { editor as Monaco } from "monaco-editor";
+import { retrieveEditorTheme } from "../test/generateTextmateTokenizations";
+import { inspect } from "util";
+import { writeFileSync } from "fs";
+import { IRawTheme } from "vscode-textmate";
 
 function generateMonarchTheme(inPath: string, outPath: string) {
   const rawTextmateTheme = retrieveEditorTheme(inPath);
   const initialMonacoTheme: Monaco.IStandaloneThemeData = {
-    base: 'vs',
+    base: "vs",
     inherit: false,
     rules: [],
     colors: {},
@@ -22,7 +22,7 @@ export function convertThemeToMonaco(
 ) {
   for (const setting of rawTextmateTheme.settings) {
     if (setting.settings.foreground && setting.scope) {
-      if (typeof setting.scope === 'string') {
+      if (typeof setting.scope === "string") {
         monacoTheme.rules.push({
           token: setting.scope,
           foreground: setting.settings.foreground,
@@ -50,7 +50,7 @@ export const theme: Monaco.IStandaloneThemeData = ${inspect(theme, {
     maxArrayLength: null,
   })};
 `;
-  writeFileSync(outPath, outputTemplate, 'utf-8');
+  writeFileSync(outPath, outputTemplate, "utf-8");
 }
 
 generateMonarchTheme(process.argv[2], process.argv[3]);

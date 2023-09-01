@@ -1,7 +1,7 @@
-import { join as pathJoin } from 'path';
-import { readFileSync } from 'fs';
-import { readFile as promiseReadFile } from 'fs/promises';
-import { parse as json5Parse } from 'json5';
+import { join as pathJoin } from "path";
+import { readFileSync } from "fs";
+import { readFile as promiseReadFile } from "fs/promises";
+import { parse as json5Parse } from "json5";
 import {
   Registry,
   parseRawGrammar,
@@ -10,13 +10,13 @@ import {
   IRawGrammar,
   IGrammar,
   IToken,
-} from 'vscode-textmate';
-import { loadWASM, OnigScanner, OnigString } from 'vscode-oniguruma';
+} from "vscode-textmate";
+import { loadWASM, OnigScanner, OnigString } from "vscode-oniguruma";
 import {
   TextmateTestConfig,
   TestItem,
   TextmateLanguageDefinition,
-} from './testUtils';
+} from "./testUtils";
 
 const FOREGROUND_MASK = 0b00000000011111111100000000000000;
 const FOREGROUND_OFFSET = 15;
@@ -35,7 +35,7 @@ function initializeLanguageMap(
 }
 
 export function retrieveEditorTheme(path: string): IRawTheme {
-  const themeSrc = readFileSync(path, 'utf-8');
+  const themeSrc = readFileSync(path, "utf-8");
   const rawTheme = json5Parse(themeSrc);
   return { settings: rawTheme.tokenColors };
 }
@@ -45,7 +45,7 @@ function initializeRegistry(
   theme: IRawTheme
 ) {
   const wasmBin = readFileSync(
-    pathJoin(__dirname, '../node_modules/vscode-oniguruma/release/onig.wasm')
+    pathJoin(__dirname, "../node_modules/vscode-oniguruma/release/onig.wasm")
   ).buffer;
   const vscodeOnigurumaLib = loadWASM(wasmBin).then(() => {
     return {
@@ -63,7 +63,7 @@ function initializeRegistry(
     loadGrammar: async (scopeName) => {
       const languageDefinition: TextmateLanguageDefinition =
         languageMap[scopeName];
-      if (typeof languageDefinition === 'string') {
+      if (typeof languageDefinition === "string") {
         return promiseReadFile(languageDefinition).then((rawGrammarSrc) =>
           parseRawGrammar(rawGrammarSrc.toString(), languageDefinition)
         );

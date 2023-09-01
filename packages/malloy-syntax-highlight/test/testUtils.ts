@@ -1,5 +1,5 @@
-import { IRawGrammar } from 'vscode-textmate';
-import { languages as Monarch, editor as Monaco } from 'monaco-editor';
+import { IRawGrammar } from "vscode-textmate";
+import { languages as Monarch, editor as Monaco } from "monaco-editor";
 
 export interface TextmateTestConfig {
   language: {
@@ -86,7 +86,7 @@ declare global {
 }
 
 export const monarchTestMatchers: jasmine.CustomMatcherFactories = {
-  'toMatchColorData': function (
+  toMatchColorData: function (
     matchersUtil: jasmine.MatchersUtil
   ): jasmine.CustomMatcher {
     return {

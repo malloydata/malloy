@@ -1,8 +1,8 @@
 # Malloy Syntax Highlighting
 
-Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy currently supports BigQuery and Postgres, as well as querying Parquet and CSV files via DuckDB. 
+Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy currently supports BigQuery and Postgres, as well as querying Parquet and CSV files via DuckDB.
 
-Currently, two other dialects of Malloy are supported in addition to the standard syntax used in `.malloy` files: the Malloy notebook format (`.malloynb`) and Malloy SQL (`.malloysql`). Ensuring the visual and semantic accuracy of the syntax highlighting provided by each dialects' TextMate grammars was previously done through manual verification alone and often caused syncing issues between Malloy packages that each maintained their own copy of these grammars. Thus, this package can be pulled into only the Malloy repos that need it and includes a test runner to verify the semantic and visual accuracy of syntax highlighting provided by our TextMate grammars. Additionally, the need to maintain a Monarch grammar for Malloy has necessitated the inclusion of a both a script to generate Monarch grammars from ground truth TextMate grammars as well as infrastructure to test all Monarch grammars for parity with their TextMate counterparts. 
+Currently, two other dialects of Malloy are supported in addition to the standard syntax used in `.malloy` files: the Malloy notebook format (`.malloynb`) and Malloy SQL (`.malloysql`). Ensuring the visual and semantic accuracy of the syntax highlighting provided by each dialects' TextMate grammars was previously done through manual verification alone and often caused syncing issues between Malloy packages that each maintained their own copy of these grammars. Thus, this package can be pulled into only the Malloy repos that need it and includes a test runner to verify the semantic and visual accuracy of syntax highlighting provided by our TextMate grammars. Additionally, the need to maintain a Monarch grammar for Malloy has necessitated the inclusion of a both a script to generate Monarch grammars from ground truth TextMate grammars as well as infrastructure to test all Monarch grammars for parity with their TextMate counterparts.
 
 ## Generating a ground-truth tokenization artififact
 
@@ -20,14 +20,14 @@ npm run gen-malloy-tokens
 
 ## Testing TextMate grammars
 
-This package's TextMate tokenization tests verify both the scope names (ex. *constant.numeric.date*, *keyword.control.select*) applied to patterns and the foreground text color applied by those styles.
+This package's TextMate tokenization tests verify both the scope names (ex. _constant.numeric.date_, _keyword.control.select_) applied to patterns and the foreground text color applied by those styles.
 
 TextMate tests are written in TypeScript and Jasmine, making use of ts-node to run the Jasmine binary on files with the suffix `.spec.ts` per the `jasmine.json` configuration. `grammars/malloy/malloy.spec.ts` provides an example test for the Malloy grammar using the Dark+ theme, including the config object for the test which can be found in `test/config/textmate/malloyDarkPlusConfig.ts`. You'll notice that this is the same config that is used to generate tokenizations artifacts above.
 
- To run all TextMate tests, use:
+To run all TextMate tests, use:
 
- ```
- npm run test-textmate-grammars
+```
+npm run test-textmate-grammars
 ```
 
 ## Testing Monarch grammars
@@ -52,7 +52,7 @@ To visually inspect how well the script works out of box, run:
 
 ```
 npm run gen-malloy-monarch
-``` 
+```
 
 Then, copy the Monarch object that is exported in the output file to the [Monarch playground](https://microsoft.github.io/monaco-editor/monarch.html).
 
@@ -61,6 +61,7 @@ Then, copy the Monarch object that is exported in the output file to the [Monarc
 **The TextMate grammar**
 
 The TextMate grammar must:
+
 - continue to define all repository keys in kebab case or you may switch to snake case
 - have unique values for the name field on begin/end rules
 - supply regex match strings that, barring a top-level (?i) flag, are semantically identical, valid regex in JS (TextMate uses Oniguruma regex while Monarch requires standard JS regex)
@@ -73,38 +74,44 @@ While TextMate support multiple token classes per pattern via begin/end, caputre
 Monarch only support one token class per pattern. This script takes a specificity-first approach to
 mapping many tokens to one. That is:
 
-*For begin/end rules:*
+_For begin/end rules:_
 
 1. If beginCaptures and/or endCaptures are defined, they will be be applied to begin and end patterns.
 2. If one or both of beginCaptures/endCaptures are undefined, capture will be applied to begin and end patterns.
 3. If the captures field is udefined, the name field will be used to style both the begin/end patterns. In the same fashion as TextMate, every pattern in between a begin/end rule uses the name field.
 
-*For match rules:*
+_For match rules:_
+
 1. If the captures field is defined, the capture field will be applied to the match pattern.
 2. If the captures field is undefined, the name field will be applied to the match pattern.
 
 While this many-to-one mapping preserves the granularity of many rules, it sometimes results in patterns receiving scope names that are too specific and not thematically meaningful (i.e. even the richest themes do not apply highlighting to the scope name). To work around this, you can populate the `TOKENS_MAP` declaration in `scripts/generateMonarchGrammar.ts` to map a TextMate scopename that is wrongly being applied in the generated Monarch grammar to one that ought to be applied.
 
-For example, the scopename *punctuation.definition.string.begin* is assigned to the single quote (*'*) in the auto-generated grammar but it only receieves default color styling of *#000000*. In some cases, this is desirable, but we would like the boundaries of single quote strings to recieve the same styling as content with the string, so we could add an entry to `TOKENS_MAP` that maps *punctuation.definition.string.begin* to *string.quoted.single*.
+For example, the scopename _punctuation.definition.string.begin_ is assigned to the single quote (_'_) in the auto-generated grammar but it only receieves default color styling of _#000000_. In some cases, this is desirable, but we would like the boundaries of single quote strings to recieve the same styling as content with the string, so we could add an entry to `TOKENS_MAP` that maps _punctuation.definition.string.begin_ to _string.quoted.single_.
 
 **Embedding levels**
 
 Only one level of language embedding is currently supported. In future versions that support more than one embedding level, the grammars we defined will always need to be one nesting level away from themselves. This is due to the fact that the Monarch API does not support grammar self-references like TextMate does, which only allows us to pop the current grammar (ex. Malloy) from the language stack within its definition (ex. the Malloy definition).
 
 For example, the script could support an embedding structure like:
+
 ```
 malloysql
   └── malloy
   └── sql
 ```
+
 or
+
 ```
 malloy
   └── sql
       └── malloy
              └── sql
 ```
+
 but not
+
 ```
 malloy
   └── sql
