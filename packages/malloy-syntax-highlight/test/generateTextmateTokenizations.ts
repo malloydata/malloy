@@ -1,7 +1,7 @@
-import {join as pathJoin} from 'path';
-import {readFileSync} from 'fs';
-import {readFile as promiseReadFile} from 'fs/promises';
-import {parse as json5Parse} from 'json5';
+import { join as pathJoin } from 'path';
+import { readFileSync } from 'fs';
+import { readFile as promiseReadFile } from 'fs/promises';
+import { parse as json5Parse } from 'json5';
 import {
   Registry,
   parseRawGrammar,
@@ -11,8 +11,12 @@ import {
   IGrammar,
   IToken,
 } from 'vscode-textmate';
-import {loadWASM, OnigScanner, OnigString} from 'vscode-oniguruma';
-import {TextmateTestConfig, TestItem, TextmateLanguageDefinition} from './testUtils';
+import { loadWASM, OnigScanner, OnigString } from 'vscode-oniguruma';
+import {
+  TextmateTestConfig,
+  TestItem,
+  TextmateLanguageDefinition,
+} from './testUtils';
 
 const FOREGROUND_MASK = 0b00000000011111111100000000000000;
 const FOREGROUND_OFFSET = 15;
@@ -33,7 +37,7 @@ function initializeLanguageMap(
 export function retrieveEditorTheme(path: string): IRawTheme {
   const themeSrc = readFileSync(path, 'utf-8');
   const rawTheme = json5Parse(themeSrc);
-  return {settings: rawTheme.tokenColors};
+  return { settings: rawTheme.tokenColors };
 }
 
 function initializeRegistry(
@@ -56,10 +60,13 @@ function initializeRegistry(
   const registry = new Registry({
     onigLib: vscodeOnigurumaLib,
     theme: theme,
-    loadGrammar:  async (scopeName) => {
-      const languageDefinition: TextmateLanguageDefinition = languageMap[scopeName];
+    loadGrammar: async (scopeName) => {
+      const languageDefinition: TextmateLanguageDefinition =
+        languageMap[scopeName];
       if (typeof languageDefinition === 'string') {
-        return promiseReadFile(languageDefinition).then((rawGrammarSrc) => parseRawGrammar(rawGrammarSrc.toString(), languageDefinition))
+        return promiseReadFile(languageDefinition).then((rawGrammarSrc) =>
+          parseRawGrammar(rawGrammarSrc.toString(), languageDefinition)
+        );
       } else {
         return Promise.resolve(languageDefinition as unknown as IRawGrammar);
       }
@@ -135,7 +142,10 @@ export async function generateTextmateTokenizations(
   config: TextmateTestConfig
 ): Promise<TestItem[][]> {
   const languageMap = initializeLanguageMap(config);
-  const registry = initializeRegistry(languageMap, retrieveEditorTheme(config.theme.path));
+  const registry = initializeRegistry(
+    languageMap,
+    retrieveEditorTheme(config.theme.path)
+  );
   const grammar = await registry.loadGrammar(config.language.scopeName);
   return tokenizeMultilineDefinitions(grammar, registry, config.testInput);
 }

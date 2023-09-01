@@ -1,4 +1,4 @@
-import {editor as Monaco} from 'monaco-editor';
+import { editor as Monaco } from 'monaco-editor';
 
 export const theme: Monaco.IStandaloneThemeData = {
   base: 'vs',
@@ -8,7 +8,7 @@ export const theme: Monaco.IStandaloneThemeData = {
     { token: 'source.groovy.embedded', foreground: '#D4D4D4' },
     {
       token: 'string meta.image.inline.markdown',
-      foreground: '#D4D4D4'
+      foreground: '#D4D4D4',
     },
     { token: 'header', foreground: '#000080' },
     { token: 'comment', foreground: '#6A9955' },
@@ -23,35 +23,35 @@ export const theme: Monaco.IStandaloneThemeData = {
     { token: 'entity.other.attribute-name', foreground: '#9cdcfe' },
     {
       token: 'entity.other.attribute-name.class.css',
-      foreground: '#D7BA7D'
+      foreground: '#D7BA7D',
     },
     {
       token: 'entity.other.attribute-name.class.mixin.css',
-      foreground: '#D7BA7D'
+      foreground: '#D7BA7D',
     },
     {
       token: 'entity.other.attribute-name.id.css',
-      foreground: '#D7BA7D'
+      foreground: '#D7BA7D',
     },
     {
       token: 'entity.other.attribute-name.parent-selector.css',
-      foreground: '#D7BA7D'
+      foreground: '#D7BA7D',
     },
     {
       token: 'entity.other.attribute-name.pseudo-class.css',
-      foreground: '#D7BA7D'
+      foreground: '#D7BA7D',
     },
     {
       token: 'entity.other.attribute-name.pseudo-element.css',
-      foreground: '#D7BA7D'
+      foreground: '#D7BA7D',
     },
     {
       token: 'source.css.less entity.other.attribute-name.id',
-      foreground: '#D7BA7D'
+      foreground: '#D7BA7D',
     },
     {
       token: 'entity.other.attribute-name.scss',
-      foreground: '#D7BA7D'
+      foreground: '#D7BA7D',
     },
     { token: 'invalid', foreground: '#f44747' },
     { token: 'markup.bold', foreground: '#569cd6' },
@@ -61,24 +61,24 @@ export const theme: Monaco.IStandaloneThemeData = {
     { token: 'markup.changed', foreground: '#569cd6' },
     {
       token: 'punctuation.definition.quote.begin.markdown',
-      foreground: '#6A9955'
+      foreground: '#6A9955',
     },
     {
       token: 'punctuation.definition.list.begin.markdown',
-      foreground: '#6796e6'
+      foreground: '#6796e6',
     },
     { token: 'markup.inline.raw', foreground: '#ce9178' },
     { token: 'punctuation.definition.tag', foreground: '#808080' },
     { token: 'meta.preprocessor', foreground: '#569CD6' },
     {
       token: 'entity.name.function.preprocessor',
-      foreground: '#569CD6'
+      foreground: '#569CD6',
     },
     { token: 'meta.preprocessor.string', foreground: '#ce9178' },
     { token: 'meta.preprocessor.numeric', foreground: '#b5cea8' },
     {
       token: 'meta.structure.dictionary.key.python',
-      foreground: '#9cdcfe'
+      foreground: '#9cdcfe',
     },
     { token: 'meta.diff.header', foreground: '#569cd6' },
     { token: 'storage', foreground: '#569cd6' },
@@ -92,17 +92,17 @@ export const theme: Monaco.IStandaloneThemeData = {
     { token: 'string.regexp', foreground: '#d16969' },
     {
       token: 'punctuation.definition.template-expression.begin',
-      foreground: '#569CD6'
+      foreground: '#569CD6',
     },
     {
       token: 'punctuation.definition.template-expression.end',
-      foreground: '#569CD6'
+      foreground: '#569CD6',
     },
     { token: 'punctuation.section.embedded', foreground: '#569CD6' },
     { token: 'meta.template.expression', foreground: '#D4D4D4' },
     {
       token: 'support.type.vendored.property-name',
-      foreground: '#9CDCFE'
+      foreground: '#9CDCFE',
     },
     { token: 'support.type.property-name', foreground: '#9CDCFE' },
     { token: 'variable.css', foreground: '#9CDCFE' },
@@ -125,11 +125,11 @@ export const theme: Monaco.IStandaloneThemeData = {
     { token: 'keyword.other.unit', foreground: '#b5cea8' },
     {
       token: 'punctuation.section.embedded.begin.php',
-      foreground: '#569CD6'
+      foreground: '#569CD6',
     },
     {
       token: 'punctuation.section.embedded.end.php',
-      foreground: '#569CD6'
+      foreground: '#569CD6',
     },
     { token: 'support.function.git-rebase', foreground: '#9cdcfe' },
     { token: 'constant.sha.git-rebase', foreground: '#b5cea8' },
@@ -142,11 +142,11 @@ export const theme: Monaco.IStandaloneThemeData = {
     { token: 'support.constant.handlebars', foreground: '#DCDCAA' },
     {
       token: 'source.powershell variable.other.member',
-      foreground: '#DCDCAA'
+      foreground: '#DCDCAA',
     },
     {
       token: 'entity.name.operator.custom-literal',
-      foreground: '#DCDCAA'
+      foreground: '#DCDCAA',
     },
     { token: 'support.class', foreground: '#4EC9B0' },
     { token: 'support.type', foreground: '#4EC9B0' },
@@ -172,7 +172,7 @@ export const theme: Monaco.IStandaloneThemeData = {
     { token: 'storage.type.object.array.java', foreground: '#4EC9B0' },
     {
       token: 'storage.type.primitive.array.java',
-      foreground: '#4EC9B0'
+      foreground: '#4EC9B0',
     },
     { token: 'storage.type.primitive.java', foreground: '#4EC9B0' },
     { token: 'storage.type.token.java', foreground: '#4EC9B0' },
@@ -182,11 +182,11 @@ export const theme: Monaco.IStandaloneThemeData = {
     { token: 'storage.type.generic.groovy', foreground: '#4EC9B0' },
     {
       token: 'storage.type.object.array.groovy',
-      foreground: '#4EC9B0'
+      foreground: '#4EC9B0',
     },
     {
       token: 'storage.type.primitive.array.groovy',
-      foreground: '#4EC9B0'
+      foreground: '#4EC9B0',
     },
     { token: 'storage.type.primitive.groovy', foreground: '#4EC9B0' },
     { token: 'meta.type.cast.expr', foreground: '#4EC9B0' },
@@ -218,55 +218,55 @@ export const theme: Monaco.IStandaloneThemeData = {
     { token: 'support.constant.color', foreground: '#CE9178' },
     {
       token: 'punctuation.definition.group.regexp',
-      foreground: '#CE9178'
+      foreground: '#CE9178',
     },
     {
       token: 'punctuation.definition.group.assertion.regexp',
-      foreground: '#CE9178'
+      foreground: '#CE9178',
     },
     {
       token: 'punctuation.definition.character-class.regexp',
-      foreground: '#CE9178'
+      foreground: '#CE9178',
     },
     {
       token: 'punctuation.character.set.begin.regexp',
-      foreground: '#CE9178'
+      foreground: '#CE9178',
     },
     {
       token: 'punctuation.character.set.end.regexp',
-      foreground: '#CE9178'
+      foreground: '#CE9178',
     },
     {
       token: 'keyword.operator.negation.regexp',
-      foreground: '#CE9178'
+      foreground: '#CE9178',
     },
     {
       token: 'support.other.parenthesis.regexp',
-      foreground: '#CE9178'
+      foreground: '#CE9178',
     },
     {
       token: 'constant.character.character-class.regexp',
-      foreground: '#D16969'
+      foreground: '#D16969',
     },
     {
       token: 'constant.other.character-class.set.regexp',
-      foreground: '#D16969'
+      foreground: '#D16969',
     },
     {
       token: 'constant.other.character-class.regexp',
-      foreground: '#D16969'
+      foreground: '#D16969',
     },
     { token: 'constant.character.set.regexp', foreground: '#D16969' },
     { token: 'keyword.operator.or.regexp', foreground: '#DCDCAA' },
     { token: 'keyword.control.anchor.regexp', foreground: '#DCDCAA' },
     {
       token: 'keyword.operator.quantifier.regexp',
-      foreground: '#d7ba7d'
+      foreground: '#d7ba7d',
     },
     { token: 'constant.character', foreground: '#569CD6' },
     { token: 'constant.other.option', foreground: '#569CD6' },
     { token: 'constant.character.escape', foreground: '#d7ba7d' },
-    { token: 'entity.name.label', foreground: '#C8C8C8' }
+    { token: 'entity.name.label', foreground: '#C8C8C8' },
   ],
-  colors: {}
+  colors: {},
 };

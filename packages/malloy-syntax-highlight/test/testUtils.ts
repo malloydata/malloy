@@ -1,5 +1,5 @@
-import {IRawGrammar} from 'vscode-textmate';
-import {languages as Monarch, editor as Monaco} from 'monaco-editor';
+import { IRawGrammar } from 'vscode-textmate';
+import { languages as Monarch, editor as Monaco } from 'monaco-editor';
 
 export interface TextmateTestConfig {
   language: {
@@ -21,17 +21,20 @@ export type TextmateLanguageDefinition = string | TextmateGrammarStub;
 export interface EmbeddedTextmateLanguage {
   id: string;
   scopeName: string;
-  definition: TextmateLanguageDefinition
+  definition: TextmateLanguageDefinition;
 }
 
-export function stubEmbeddedTextmateLanguage(id: string, scopeName: string): EmbeddedTextmateLanguage  {
+export function stubEmbeddedTextmateLanguage(
+  id: string,
+  scopeName: string
+): EmbeddedTextmateLanguage {
   return {
     id,
     scopeName,
     definition: {
       scopeName,
       patterns: [],
-    }
+    },
   };
 }
 
@@ -41,14 +44,16 @@ export interface MonarchTestConfig {
   theme: Monaco.IStandaloneThemeData;
   testInput: string[][];
   expectations: TestItem[][];
-};
+}
 
 export interface MonarchLanguage {
   id: string;
   definition: Monarch.IMonarchLanguage;
 }
 
-export function stubEmbeddedMonarchGrammar(id: string): Monarch.IMonarchLanguage {
+export function stubEmbeddedMonarchGrammar(
+  id: string
+): Monarch.IMonarchLanguage {
   return {
     tokenizer: {
       root: [],
@@ -75,38 +80,60 @@ export interface TestItem {
 declare global {
   namespace jasmine {
     interface Matchers<T> {
-        toMatchColorData(expected: TestItem): boolean;
+      toMatchColorData(expected: TestItem): boolean;
     }
   }
 }
 
 export const monarchTestMatchers: jasmine.CustomMatcherFactories = {
-  toMatchColorData: function (matchersUtil: jasmine.MatchersUtil): jasmine.CustomMatcher {
+  'toMatchColorData': function (
+    matchersUtil: jasmine.MatchersUtil
+  ): jasmine.CustomMatcher {
     return {
-      compare: function(actual: TestItem, expected: TestItem): jasmine.CustomMatcherResult {
-        const result: jasmine.CustomMatcherResult = {pass: false};
+      compare: function (
+        actual: TestItem,
+        expected: TestItem
+      ): jasmine.CustomMatcherResult {
+        const result: jasmine.CustomMatcherResult = { pass: false };
         const actualIndexToTokenMap = generateIndexToTokenMap(actual.tokens);
-        const expectedIndexToTokenMap = generateIndexToTokenMap(expected.tokens);
+        const expectedIndexToTokenMap = generateIndexToTokenMap(
+          expected.tokens
+        );
         const actualIndexToColorMap = generateIndexToColorMap(actual.tokens);
-        const expectedIndexToColorMap = generateIndexToColorMap(expected.tokens);
-        result.pass = matchersUtil.equals(actualIndexToColorMap, expectedIndexToColorMap);
+        const expectedIndexToColorMap = generateIndexToColorMap(
+          expected.tokens
+        );
+        result.pass = matchersUtil.equals(
+          actualIndexToColorMap,
+          expectedIndexToColorMap
+        );
         if (!result.pass) {
           let message = `\nWhile tokenizing line "${expected.line}"\nExpected:\n`;
-          for (const [index, color] of Object.entries(expectedIndexToColorMap)) {
+          for (const [index, color] of Object.entries(
+            expectedIndexToColorMap
+          )) {
             message += `  color ${color} to begin at index ${index}\n`;
           }
-          message += `Received:\n`;
+          message += "Received:\n";
           for (const [index, color] of Object.entries(actualIndexToColorMap)) {
             message += `  color ${color} beginning at index ${index}\n`;
           }
-          message += `\n`;
-          message += `Expected tokenization:\n${JSON.stringify(expected.tokens, null, 2)}\ndoes not yield the same colors as actual tokenization:\n${JSON.stringify(actual.tokens, null, 2)}`;
+          message += "\n";
+          message += `Expected tokenization:\n${JSON.stringify(
+            expected.tokens,
+            null,
+            2
+          )}\ndoes not yield the same colors as actual tokenization:\n${JSON.stringify(
+            actual.tokens,
+            null,
+            2
+          )}`;
           result.message = message;
         }
         return result;
-      }
+      },
     };
-  }
+  },
 };
 
 function generateIndexToColorMap(tokens: RelaxedToken[]) {
@@ -122,7 +149,7 @@ function generateIndexToColorMap(tokens: RelaxedToken[]) {
 }
 
 function generateIndexToTokenMap(tokens: RelaxedToken[]) {
-  const indexToTokenMap: Map<number, RelaxedToken> = new Map();;
+  const indexToTokenMap: Map<number, RelaxedToken> = new Map();
   let prevColor: string;
   for (const token of tokens) {
     if (!prevColor || prevColor !== token.color) {

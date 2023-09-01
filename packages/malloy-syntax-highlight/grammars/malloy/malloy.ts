@@ -1,11 +1,11 @@
 import { languages as Monaco } from "monaco-editor";
 
 export const monarch: Monaco.IMonarchLanguage = {
-  includeLF: true,
-  defaultToken: "",
-  tokenPostfix: ".malloy",
-  ignoreCase: true,
-  tokenizer: {
+  'includeLF': true,
+  'defaultToken': "",
+  'tokenPostfix': ".malloy",
+  'ignoreCase': true,
+  'tokenizer': {
     root: [{ include: "@malloy_language" }],
     malloy_language: [
       { include: "@sql_string" },

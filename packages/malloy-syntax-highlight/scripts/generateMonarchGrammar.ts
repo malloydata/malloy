@@ -1,7 +1,7 @@
-import {readFileSync, writeFileSync, appendFileSync} from 'fs';
-import {inspect} from 'util';
-import {languages as Monarch} from 'monaco-editor';
-import {ScopeName as TextMateScopeName} from 'vscode-textmate/release/theme';
+import { readFileSync, writeFileSync, appendFileSync } from 'fs';
+import { inspect } from 'util';
+import { languages as Monarch } from 'monaco-editor';
+import { ScopeName as TextMateScopeName } from 'vscode-textmate/release/theme';
 
 import * as TextMate from 'vscode-textmate/release/rawGrammar';
 
@@ -114,7 +114,7 @@ function cleanMatchString(matchString: TextMate.RegExpString) {
  * This is a workaround to JSON.stringify not natively handling regex serialization
  */
 function serializeRegex(match: MonarchRegExpString) {
-  let serializedMatch = match.replaceAll('/', '\\/');
+  const serializedMatch = match.replaceAll("/", "\\/");
   return '/' + serializedMatch + '/';
 }
 
@@ -152,7 +152,6 @@ function generateCaptureTokens(
   }
   return tokens;
 }
-
 
 /** Returns whether a TextMate rule embeds another language */
 function searchSourceInclude(pattern: TextMate.IRawRule) {
@@ -257,7 +256,7 @@ function generateBeginEndRule(
     const beginRule = generateRule(p.begin, beginTextMateTokenInfo, {
       next: '@' + newRef,
     });
-    const endRule = generateRule(p.end, endTextMateTokenInfo, {next: M_POP});
+    const endRule = generateRule(p.end, endTextMateTokenInfo, { next: M_POP });
     state.push(beginRule);
     tokenizer[newRef] = [endRule];
     if (p.patterns) {
@@ -296,7 +295,7 @@ function getIgnoreString(
   let ignoreString = '';
   const ignoreChars: Set<string> = new Set();
   getIgnoreChars(tokenizer, currentRef, ignoreChars);
-  for (let char of ignoreChars) {
+  for (const char of ignoreChars) {
     ignoreString += char;
   }
   return ignoreString;
@@ -387,12 +386,12 @@ export function generateMonarchGrammar() {
   const references: TextMateRepositoryMap = {};
   flattenRepositories(textmateParse.repository, references);
   const monarch: Monarch.IMonarchLanguage = {
-    defaultToken: DEFAULT_TOKEN,
+    'defaultToken': DEFAULT_TOKEN,
     // TODO: Determine monarch.tokenPostfix from input filename
-    tokenPostfix: '.malloy',
-    ignoreCase: IGNORE_CASE,
-    includeLF: true,
-    tokenizer: {
+    'tokenPostfix': '.malloy',
+    'ignoreCase': IGNORE_CASE,
+    'includeLF': true,
+    'tokenizer': {
       root: [],
     },
   };
@@ -427,21 +426,25 @@ tokenizer: {
     appendFileSync(filename, `\t${key}: [\n`, 'utf-8');
     for (const rule of rules) {
       if (!Array.isArray(rule)) {
-        appendFileSync(filename, `${inspect(rule, {depth: null})},\n`, 'utf-8');
+        appendFileSync(
+          filename,
+          `${inspect(rule, { depth: null })},\n`,
+          'utf-8'
+        );
       } else {
-        appendFileSync(filename, `[\n`, 'utf-8');
+        appendFileSync(filename, "[\n", 'utf-8');
         appendFileSync(filename, `${rule[M_REGEXP_INDEX]},\n`, 'utf-8');
         appendFileSync(
           filename,
-          `${inspect(rule[M_TOKENS_INDEX], {depth: null})},\n`,
+          `${inspect(rule[M_TOKENS_INDEX], { depth: null })},\n`,
           'utf-8'
         );
-        appendFileSync(filename, `],\n`, 'utf-8');
+        appendFileSync(filename, "],\n", 'utf-8');
       }
     }
-    appendFileSync(filename, `],\n`, 'utf-8');
+    appendFileSync(filename, "],\n", 'utf-8');
   }
-  appendFileSync(filename, `}\n};`, 'utf-8');
+  appendFileSync(filename, "}\n};", 'utf-8');
 }
 
 generateMonarchGrammar();
