@@ -28,6 +28,7 @@ import {
   SQLBlockSource,
   SQLBlockStructDef,
   expressionIsCalculation,
+  isAtomicFieldType,
   isFieldTypeDef,
   isFilteredAliasedName,
   isSQLFragment,
@@ -43,6 +44,7 @@ import {
   getQueryField,
   markSource,
   BetaExpression,
+  aTableDef,
 } from './test-translator';
 import {isGranularResult} from '../ast/types/granular-result';
 import './parse-expects';
@@ -1081,8 +1083,31 @@ describe('qops', () => {
   test('project ref', () => {
     expect('query:ab->{ project: b.astr }').toTranslate();
   });
-  test('project *', () => {
-    expect('query:ab->{ project: * }').toTranslate();
+  const afields = aTableDef.fields
+    .filter(f => isAtomicFieldType(f.type))
+    .map(f => f.name)
+    .sort();
+  test('expands star correctly', () => {
+    const selstar = model`run: ab->{select: *}`;
+    expect(selstar).toTranslate();
+    const query = selstar.translator.getQuery(0);
+    expect(query).toBeDefined();
+    const fields = query!.pipeline[0].fields;
+    expect(fields.sort()).toEqual(afields);
+  });
+  test('expands join dot star correctly', () => {
+    const selstar = model`run: ab->{select: b.*}`;
+    expect(selstar).toTranslate();
+    const query = selstar.translator.getQuery(0);
+    expect(query).toBeDefined();
+    const fields = query!.pipeline[0].fields;
+    expect(fields.sort()).toEqual(afields.map(f => `b.${f}`));
+  });
+  test('extend: and star', () => {
+    const m = model`run: ab->{ extend: {dimension: x is 1} select: * }`;
+    expect(m).toTranslate();
+    const q = m.translator.getQuery(0);
+    expect(q).toBeDefined();
   });
   test('project def', () => {
     expect('query:ab->{ project: one is 1 }').toTranslate();

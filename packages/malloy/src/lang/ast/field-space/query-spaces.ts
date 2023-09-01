@@ -49,6 +49,8 @@ export abstract class QuerySpace
   private exprSpace: QueryInputSpace;
   astEl?: MalloyElement | undefined;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
+  expandedWild: Record<string, string[]> = {};
+
   constructor(
     readonly queryInputSpace: FieldSpace,
     refineThis: model.PipeSegment | undefined
@@ -104,65 +106,54 @@ export abstract class QuerySpace
   }
 
   protected addWild(wild: WildcardFieldReference): void {
-    let success = true;
-    let current = this.exprSpace as FieldSpace;
-    const parts = wild.refString.split('.');
+    let current: FieldSpace = this.exprSpace;
+    const parts = wild.joinPath ? wild.joinPath.list.map(pe => pe.name) : [];
     const conflictMap = {};
-    function logConflict(name: string, parentRef: string | undefined) {
-      const conflict = conflictMap[name];
-      wild.log(
-        `Cannot expand '${name}'${
-          parentRef ? ` in ${parentRef}` : ''
-        } because a field with that name already exists${
-          conflict ? ` (conflicts with ${conflict})` : ''
-        }`
-      );
-      success = false;
-    }
     for (let pi = 0; pi < parts.length; pi++) {
       const part = parts[pi];
       const prevParts = parts.slice(0, pi);
       const parentRef = pi > 0 ? prevParts.join('.') : undefined;
-      const fullName = [...prevParts.join('.'), part].join('.');
-      if (part === '*') {
-        for (const [name, entry] of current.entries()) {
-          if (this.entry(name)) {
-            logConflict(name, parentRef);
-            success = false;
-          }
-          if (model.expressionIsScalar(entry.typeDesc().expressionType)) {
-            this.setEntry(name, entry);
-            conflictMap[name] = fullName;
-          }
-        }
-      } else {
-        const ent = current.entry(part);
-        if (ent) {
-          if (ent instanceof StructSpaceField) {
-            current = ent.fieldSpace;
-          } else {
-            wild.log(
-              `Field '${part}'${
-                parentRef ? ` in ${parentRef}` : ''
-              } is not a struct`
-            );
-            success = false;
-          }
+
+      const ent = current.entry(part);
+      if (ent) {
+        if (ent instanceof StructSpaceField) {
+          current = ent.fieldSpace;
         } else {
           wild.log(
-            `No such field '${part}'${parentRef ? ` in ${parentRef}` : ''}`
+            `Field '${part}'${
+              parentRef ? ` in ${parentRef}` : ''
+            } is not a struct`
           );
-          success = false;
         }
+      } else {
+        wild.log(
+          `No such field '${part}'${parentRef ? ` in ${parentRef}` : ''}`
+        );
       }
     }
-    if (success) {
-      // TODO perform the entire replacement of * here in the parser.
-      // Today, we add all the fields to the output space, and then still add * to
-      // the query. The compiler then does a second * expansion. Instead, we should
-      // just add all the fields to the query here and then remove the code in the compiler
-      // for expanding the *.
-      this.setEntry(wild.refString, new WildSpaceField(wild.refString));
+    const printPath = parts.join('.');
+    const dialect = this.dialectObj();
+    for (const [name, entry] of current.entries()) {
+      if (this.entry(name)) {
+        const conflict = conflictMap[name];
+        wild.log(
+          `Cannot expand '${name}'${
+            printPath ? ` in ${printPath}` : ''
+          } because a field with that name already exists${
+            conflict ? ` (conflicts with ${conflict})` : ''
+          }`
+        );
+      } else {
+        const eType = entry.typeDesc();
+        if (
+          model.isAtomicFieldType(eType.dataType) &&
+          model.expressionIsScalar(eType.expressionType) &&
+          (dialect === undefined || !dialect.ignoreInProject(name))
+        ) {
+          this.setEntry(name, entry);
+          this.expandedWild[name] = parts.concat(name);
+        }
+      }
     }
   }
 
@@ -198,8 +189,13 @@ export abstract class QuerySpace
 
   protected queryFieldDefs(): model.QueryFieldDef[] {
     const fields: model.QueryFieldDef[] = [];
-    for (const [, field] of this.entries()) {
+    for (const [name, field] of this.entries()) {
       if (field instanceof SpaceField) {
+        const wildPath = this.expandedWild[name];
+        if (wildPath) {
+          fields.push(wildPath.join('.'));
+          continue;
+        }
         const fieldQueryDef = field.getQueryFieldDef(this.exprSpace);
         if (fieldQueryDef) {
           if (field instanceof WildSpaceField) {
