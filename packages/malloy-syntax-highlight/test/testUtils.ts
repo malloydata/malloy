@@ -77,14 +77,14 @@ export interface TestItem {
  *  Make Jasmine aware of custom matchers to prevent warnings
  *  in spec.ts and test.ts files that use theme
  */
-declare global {
+// declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
-  namespace jasmine {
-    interface Matchers<T> {
-      toMatchColorData(expected: TestItem): boolean;
-    }
-  }
-}
+// namespace jasmine {
+//   interface Matchers<T> {
+//     toMatchColorData(expected: TestItem): boolean;
+//   }
+// }
+// // }
 
 export const monarchTestMatchers: jasmine.CustomMatcherFactories = {
   'toMatchColorData': function (
