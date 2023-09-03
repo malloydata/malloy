@@ -1159,7 +1159,8 @@ describe('query:', () => {
       }
     });
 
-    const stageErr = 'Illegal in refinement of a query with more than one stage';
+    const stageErr =
+      'Illegal in refinement of a query with more than one stage';
     test('group_by illegal in long pipes', () => {
       expect(
         markSource`query: refineme is a -> { project: stage is "stage1" } -> { project: stage is "stage2" }
