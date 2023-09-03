@@ -23,7 +23,7 @@ We provide a task in VS Code (.vscode/tasks.json) to watch the entire Malloy rep
 
 ## Running Tests
 
-See `test/README.md` for infomration about running tests.
+See [`test/README.md`](./test/README.md) for infomration about running tests.
 
 ## Malloy VSCode Extension
 
