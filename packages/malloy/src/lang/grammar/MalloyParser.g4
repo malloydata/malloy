@@ -412,7 +412,6 @@ topStatement
 indexElement
   : fieldPath (DOT STAR)?
   | STAR
-  | STARSTAR
   ;
 
 indexFields

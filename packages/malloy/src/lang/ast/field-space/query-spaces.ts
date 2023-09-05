@@ -107,7 +107,6 @@ export abstract class QuerySpace
 
   protected addWild(wild: WildcardFieldReference): void {
     let current: FieldSpace = this.exprSpace;
-    const conflictMap = {};
     const joinPath: string[] = [];
     if (wild.joinPath) {
       // walk to end of path to find the struct to
@@ -132,15 +131,14 @@ export abstract class QuerySpace
         }
       }
     }
-    const printPath = wild.refString;
     const dialect = this.dialectObj();
     for (const [name, entry] of current.entries()) {
       if (this.entry(name)) {
-        const conflict = conflictMap[name];
+        const conflict = this.expandedWild[name]?.join('.');
         wild.log(
-          `Cannot expand '${name}'${
-            printPath ? ` in ${printPath}` : ''
-          } because a field with that name already exists${
+          `Cannot expand '${name}' in '${
+            wild.refString
+          }' because a field with that name already exists${
             conflict ? ` (conflicts with ${conflict})` : ''
           }`
         );

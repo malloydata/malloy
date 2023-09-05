@@ -809,7 +809,42 @@ describe('query:', () => {
       expect(markSource`run: a->{select: ${'ai'}.*}`).translationToFailWith(
         "Field 'ai' does not contain rows and cannot be expanded with '*'"
       );
+      expect(markSource`run: a->{select:ai,${'*'}}`).translationToFailWith(
+        "Cannot expand 'ai' in '*' because a field with that name already exists"
+      );
+      expect(markSource`run: ab->{select:ai,${'b.*'}}`).translationToFailWith(
+        "Cannot expand 'ai' in 'b.*' because a field with that name already exists"
+      );
+      const m = `
+        source: nab is a extend {
+          accept: ai
+          join_one: b is a extend {accept: ai} on ai=b.ai
+        }
+        run: nab->{select: b.*,*}
+      `;
+      expect(m).translationToFailWith(
+        "Cannot expand 'ai' in '*' because a field with that name already exists (conflicts with b.ai)"
+      );
     });
+    test('regress check extend: and star', () => {
+      const m = model`run: ab->{ extend: {dimension: x is 1} select: * }`;
+      expect(m).toTranslate();
+      const q = m.translator.getQuery(0);
+      expect(q).toBeDefined();
+      const fields = q!.pipeline[0].fields;
+      expect(fields.sort()).toEqual(afields.concat('x'));
+    });
+    test('project def', () => {
+      expect('query:ab->{ project: one is 1 }').toTranslate();
+    });
+    test('project multiple', () => {
+      expect(`
+        query: a->{
+          project: one is 1, astr
+        }
+      `).toTranslate();
+    });
+    test('index single', () => {});
     test('regress check extend: and star', () => {
       const m = model`run: ab->{ extend: {dimension: x is 1} select: * }`;
       expect(m).toTranslate();
