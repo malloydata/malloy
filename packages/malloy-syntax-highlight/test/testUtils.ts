@@ -77,14 +77,14 @@ export interface TestItem {
  *  Make Jasmine aware of custom matchers to prevent warnings
  *  in spec.ts and test.ts files that use theme
  */
-// declare global {
+declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
-// namespace jasmine {
-//   interface Matchers<T> {
-//     toMatchColorData(expected: TestItem): boolean;
-//   }
-// }
-// // }
+  namespace jasmine {
+    interface Matchers<T = TestItem> {
+      toMatchColorData(expected: T): boolean;
+    }
+  }
+}
 
 export const monarchTestMatchers: jasmine.CustomMatcherFactories = {
   'toMatchColorData': function (
@@ -95,11 +95,7 @@ export const monarchTestMatchers: jasmine.CustomMatcherFactories = {
         actual: TestItem,
         expected: TestItem
       ): jasmine.CustomMatcherResult {
-        const result: jasmine.CustomMatcherResult = {pass: false};
-        const actualIndexToTokenMap = generateIndexToTokenMap(actual.tokens);
-        const expectedIndexToTokenMap = generateIndexToTokenMap(
-          expected.tokens
-        );
+        const result: jasmine.CustomMatcherResult = {pass: false, message: ''};
         const actualIndexToColorMap = generateIndexToColorMap(actual.tokens);
         const expectedIndexToColorMap = generateIndexToColorMap(
           expected.tokens
@@ -139,7 +135,7 @@ export const monarchTestMatchers: jasmine.CustomMatcherFactories = {
 
 function generateIndexToColorMap(tokens: RelaxedToken[]) {
   const indexToColorMap: Record<number, string> = {};
-  let prevColor: string;
+  let prevColor = '';
   for (const token of tokens) {
     if (!prevColor || prevColor !== token.color) {
       indexToColorMap[token.startIndex] = token.color;
@@ -147,16 +143,4 @@ function generateIndexToColorMap(tokens: RelaxedToken[]) {
     }
   }
   return indexToColorMap;
-}
-
-function generateIndexToTokenMap(tokens: RelaxedToken[]) {
-  const indexToTokenMap: Map<number, RelaxedToken> = new Map();
-  let prevColor: string;
-  for (const token of tokens) {
-    if (!prevColor || prevColor !== token.color) {
-      indexToTokenMap.set(token.startIndex, token);
-      prevColor = token.color;
-    }
-  }
-  return indexToTokenMap;
 }

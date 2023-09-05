@@ -10,7 +10,7 @@ export const monarch: Monaco.IMonarchLanguage = {
     malloy_language: [
       {include: '@sql_string'},
       {include: '@comments'},
-      // { include: "@tags" },
+      // {include: '@tags'},
       {include: '@strings'},
       {include: '@numbers'},
       {include: '@keywords'},

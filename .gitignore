@@ -26,7 +26,6 @@ vscode-extension/**/tsconfig.tsbuildinfo
 vscode-extension/**/package-lock.json
 vscode-extension/**/.eslintcache
 test/dist
-packages/malloy-syntax-highlight/coverage
 
 # misc
 .DS_Store

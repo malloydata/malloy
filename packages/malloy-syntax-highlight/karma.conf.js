@@ -1,5 +1,6 @@
 // Karma configuration
 // Generated on Fri Aug 25 2023 22:55:21 GMT+0000 (Coordinated Universal Time)
+const path = require('path');
 
 module.exports = function (config) {
   config.set({
@@ -16,11 +17,18 @@ module.exports = function (config) {
     frameworks: ['jasmine'],
     // list of files / patterns to load in the browser
     files: [
-      {pattern: 'node_modules/monaco-editor/min/vs/**', included: false},
-      {pattern: 'node_modules/monaco-editor/min-maps/vs/**', included: false},
+      {pattern: '../../node_modules/monaco-editor/min/vs/**', included: false},
+      {
+        pattern: '../../node_modules/monaco-editor/min-maps/vs/**',
+        included: false,
+      },
       {pattern: 'dist/**/*.test.js', type: 'module'},
       {pattern: 'dist/**/*.js', included: false},
     ],
+    proxies: {
+      '/base/monaco-editor/':
+        '/absolute' + path.resolve('../../node_modules/monaco-editor/'),
+    },
     // list of files / patterns to exclude
     exclude: [],
     plugins: [

@@ -9,13 +9,14 @@ export async function loadMonacoAssets() {
     const script = document.createElement('script');
     script.onload = resolve;
     script.onerror = reject;
-    script.src = '/base/node_modules/monaco-editor/min/vs/loader.js';
+    // Absolute paths can be seen in proxies of karma.conf.js
+    script.src = '/base/monaco-editor/min/vs/loader.js';
     document.head.appendChild(script);
   });
   // Not requirejs, 'require' namespace and function are loaded with above script
   // @ts-ignore
   require.config({
-    baseUrl: '/base/node_modules/monaco-editor/min',
+    baseUrl: '/base/monaco-editor/min',
   });
   await new Promise((resolve, reject) => {
     // @ts-ignore

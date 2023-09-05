@@ -45,7 +45,10 @@ function initializeRegistry(
   theme: IRawTheme
 ) {
   const wasmBin = readFileSync(
-    pathJoin(__dirname, '../node_modules/vscode-oniguruma/release/onig.wasm')
+    pathJoin(
+      __dirname,
+      '../../../node_modules/vscode-oniguruma/release/onig.wasm'
+    )
   ).buffer;
   const vscodeOnigurumaLib = loadWASM(wasmBin).then(() => {
     return {
@@ -147,5 +150,6 @@ export async function generateTextmateTokenizations(
     retrieveEditorTheme(config.theme.path)
   );
   const grammar = await registry.loadGrammar(config.language.scopeName);
+  // @ts-ignore
   return tokenizeMultilineDefinitions(grammar, registry, config.testInput);
 }

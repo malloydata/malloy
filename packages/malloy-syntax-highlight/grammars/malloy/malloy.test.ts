@@ -9,16 +9,11 @@ import {TestItem, monarchTestMatchers} from '../../test/testUtils.js';
 
 let actualTokenizations: TestItem[][];
 
-// // declare global {
-//   // eslint-disable-next-line @typescript-eslint/no-namespace
-//   declare namespace jasmine {
-//     interface Matchers<TestItem> {
-//       toMatchColorData(expected: TestItem): boolean;
-//     }
-//   }
-// // }
-
 beforeAll(async () => {
+  // @ts-ignore
+  // for (var file in window.__karma__.files) {
+  //   console.log(file)
+  // }
   await loadMonacoAssets();
   // The call to loadMonacoAssets make the monaco global accessible in Karma Chrome tests
   // @ts-ignore
