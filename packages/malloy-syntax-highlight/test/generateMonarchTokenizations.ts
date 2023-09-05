@@ -14,11 +14,13 @@ export async function loadMonacoAssets() {
     document.head.appendChild(script);
   });
   // Not requirejs, 'require' namespace and function are loaded with above script
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
   require.config({
     baseUrl: '/base/monaco-editor/min',
   });
   await new Promise((resolve, reject) => {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     require(['vs/editor/editor.main'], resolve, reject);
   });

@@ -1,5 +1,5 @@
-// Note the use of the .js extensions for imports (not necessary for type imports)
-// to run with Karma
+// Note the use of .js extensions for imports (not necessary for type imports)
+// to run the test with Karma
 import {
   loadMonacoAssets,
   generateMonarchTokenizations,
@@ -10,12 +10,9 @@ import {TestItem, monarchTestMatchers} from '../../test/testUtils.js';
 let actualTokenizations: TestItem[][];
 
 beforeAll(async () => {
-  // @ts-ignore
-  // for (var file in window.__karma__.files) {
-  //   console.log(file)
-  // }
   await loadMonacoAssets();
-  // The call to loadMonacoAssets make the monaco global accessible in Karma Chrome tests
+  // The call to loadMonacoAssets makes the monaco global accessible in Karma Chrome tests
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
   actualTokenizations = generateMonarchTokenizations(monaco, testConfig);
   jasmine.addMatchers(monarchTestMatchers);

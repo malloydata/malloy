@@ -4,7 +4,7 @@ import {
   MonarchTestConfig,
   stubEmbeddedMonarchGrammar,
 } from '../../testUtils.js';
-import {monarch as malloy} from '../../../grammars/malloy/malloy.js';
+import {monarch as malloy} from '../../../grammars/malloy/malloy.monarch.js';
 import {theme as darkPlus} from '../../../themes/monaco/darkPlus.js';
 import malloyTestInput from '../../../grammars/malloy/malloyTestInput.js';
 import malloyDarkPlus from '../../../grammars/malloy/tokenizations/darkPlus.js';

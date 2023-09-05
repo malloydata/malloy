@@ -1,3 +1,11 @@
+/*
+ * Test input for Monarch and TextMate syntax highlighting tests
+ * - The third nested array is commented out because the recent tag DSL
+ *   update is reflected in the TextMate highlight grammar
+ * - The final two nested array are commented out because the script to
+ *   automatically generate Monarch grammars does not yet handle multiple
+ *   levels of embedding
+ */
 export default [
   ['// / \' " """ // unable to break out of /* line comments'],
   [' -- a different -- line comment'],

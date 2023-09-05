@@ -32,6 +32,7 @@ interface TextMateBeginEndRule extends TextMate.IRawRule {
 export type ReferenceString = string;
 export type LanguageId = string;
 
+// Script constants
 const ARGV_IN = 2;
 const ARGV_OUT = 3;
 const DEFAULT_TOKEN = '';
@@ -57,12 +58,24 @@ const TOKENS_MAP = {
 
 /** Custom guard to check if a rule has begin/end fields */
 function instanceOfTextMateBeginEndRule(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   object: any
 ): object is TextMateBeginEndRule {
   return 'begin' in object && 'end' in object;
 }
 
-/** Build a flattened map of repository key to their definitions */
+/**
+ * Populates a flattened map of repository keys to their rules
+ * Given the current TextMate grammar, this will look something like:
+ * {
+ *   ...
+ *   comments: {...},
+ *   strings: {...},
+ *   escapes: {...},
+ *   regex_escapes: {...},
+ *   ...
+ * }
+ */
 function flattenRepositories(
   root: TextMateRepositoryMap,
   references: TextMateRepositoryMap
@@ -75,30 +88,35 @@ function flattenRepositories(
   }
 }
 
-/*
+/**
  * Transforms TextMate include strings to Monarch include strings
  * Assumes that TextMate repository keys use kebab or snake case
+ * Ex. "#sql-string" becomes "@sql_string"
  */
 function textmateToMonarchInclude(includeString: TextMate.IncludeString) {
   return includeString.replace('#', '@').replaceAll('-', '_');
 }
 
-/*
- * Translates a TextMate repository key to snake case for consumption
+/**
+ * Coerces a TextMate repository key to snake case for consumption
  * within the script, as all TextMate repository references and Monarch state
- * references use snake case
+ * references use snake case here
  */
 function repositoryToReference(repositoryKey: TextMateRepositoryKey) {
   return repositoryKey.replaceAll('-', '_');
 }
 
-/** Retrieves the snake case reference key from a TextMate include string */
+/**
+ * Returns the snake case reference key (used in flattened repository mao)
+ * derived from a TextMate include string
+ * Ex. "#identifiers_quoted" becomes "identifiers_quoted"
+ */
 function includeToReference(includeString: TextMate.IncludeString) {
   return includeString.slice(1).replaceAll('-', '_');
 }
 
-/*
- * Removes the top-level Oniguruma case-insensitive flag if present as
+/**
+ * Removes the top-level Oniguruma ignore casing flag if present because
  * our Monarch definition defaults to case-insensitive behavior
  */
 function cleanMatchString(matchString: TextMate.RegExpString) {
@@ -109,35 +127,55 @@ function cleanMatchString(matchString: TextMate.RegExpString) {
   }
 }
 
-/*
- * Serialize regex so that later calls to fs.writeFile write what would be a valid regex definition in .js/.ts files
- * This is a workaround to JSON.stringify not natively handling regex serialization
+/**
+ * Serialize regex so that later calls to fs.writeFile write what would be a valid regex
+ * definition in .js/.ts files. This is a workaround to JSON.stringify not natively
+ * handling regex serialization
+ * Ex. "foo/bar" becomes "/foo\/bar/"
  */
 function serializeRegex(match: MonarchRegExpString) {
   const serializedMatch = match.replaceAll('/', '\\/');
   return '/' + serializedMatch + '/';
 }
 
-/** Returns the number of outermost regex groups in a regex */
+/**
+ * Returns the number of outermost capture groups in a JS regex string
+ * Inner capture groups must be ignored with ?:
+ * Ex. "(foo)(bar)" returns 2
+ * Ex. "(foo(?:baz))(bar)" also returns 2
+ */
 function numRegexGroups(regex: MonarchRegExpString) {
-  // courtesty of https://stackoverflow.com/questions/16046620/regex-to-count-the-number-of-capturing-groups-in-a-regex
-  const regexGroups = new RegExp(regex.toString() + '|').exec('');
-  if (regexGroups) {
-    return regexGroups.length - 1;
-  } else {
-    return 0;
-  }
+  const augmentedRegex = new RegExp(regex + '|');
+  const regexGroups = augmentedRegex.exec('');
+  return regexGroups ? regexGroups.length - 1 : 0;
 }
 
-/*
+/**
  * Translates thematically meaningless tokens to thematically meaningful tokens
  * May also be used for environment-to-environment mappings
+ * Ex. Scope name "punctuation.definition.comment" does not receive styling with even
+ * richest themes, so we map this scope name to "comment.line" which does recieve styles
  */
 function translateToken(token: TextMateScopeName) {
   return token in TOKENS_MAP ? TOKENS_MAP[token] : token.replaceAll('-', '.');
 }
 
-/** Returns a Monarch token info for TextMate rules with captures or beginCaptures and endCaptures */
+/**
+ * Returns an array of Monarch scope names (not state changes or embedded language logic)
+ * for TextMate rules with captures or beginCaptures and endCaptures, padded with default
+ * token ("") to match the number of outer regex groups
+ * Ex.
+ * {
+ *    "match": "(?i)\\b(count)(\\s*\\()(distinct)",
+ *    "captures": {
+ *      "1": { "name": "entity.name.function" },
+ *      "3": { "name": "entity.name.function.modifier" }
+ *    }
+ *    ...
+ * }
+ * returns ["entity.name.function", "", "entity.name.function.modifer"]
+ *
+ */
 function generateCaptureTokens(
   match: MonarchRegExpString,
   captures: TextMate.IRawCaptures
@@ -153,7 +191,17 @@ function generateCaptureTokens(
   return tokens;
 }
 
-/** Returns whether a TextMate rule embeds another language */
+/**
+ * Returns whether a TextMate rule embeds another language
+ * Ex.
+ * {
+ *    ...
+ *    "patterns": [
+ *      { "include": "source.sql" }
+ *    ]
+ * }
+ * returns true
+ */
 function searchSourceInclude(pattern: TextMate.IRawRule) {
   if (pattern.patterns) {
     for (const subpattern of pattern.patterns) {
@@ -164,7 +212,11 @@ function searchSourceInclude(pattern: TextMate.IRawRule) {
   }
 }
 
-/** Returns Monarch token info for any TextMate rule */
+/**
+ * Determines which Monarch scope name or array of scopenames
+ * should be applied for any TextMate rule according to the
+ * specificity logic in this package's README
+ */
 function generateTokens(
   matchString: MonarchRegExpString,
   tokenInfo: TextMateTokenInfo
@@ -212,7 +264,7 @@ function generateRule(
   }
 }
 
-/** Parses a begin/end rule */
+/** Parses a begin/end rule according to the logic defined in this package's README */
 function generateBeginEndRule(
   p: TextMateBeginEndRule,
   tokenizer: MonarchTokenizer,
@@ -281,26 +333,9 @@ function generateBeginEndRule(
 }
 
 /**
- * Returns a list of the beginning characters for a Monarch state's subrules
- * This function's return value is used to generate two new subrule for a state:
- *  - one that applies default styling to everything between begin/end rules except these character
- *  - one that finally applies default styling to these characters
- * This prevents Monarch from getting stuck in a given state which would would happen if we used .* to style
- * everything between begin/end rules
+ * Populates a set with the beginning characters for all of a Monarch state's
+ * rules and subrules
  */
-function getIgnoreString(
-  tokenizer: MonarchTokenizer,
-  currentRef: ReferenceString
-) {
-  let ignoreString = '';
-  const ignoreChars: Set<string> = new Set();
-  getIgnoreChars(tokenizer, currentRef, ignoreChars);
-  for (const char of ignoreChars) {
-    ignoreString += char;
-  }
-  return ignoreString;
-}
-
 function getIgnoreChars(
   tokenizer: MonarchTokenizer,
   currentRef: ReferenceString,
@@ -331,15 +366,39 @@ function getIgnoreChars(
 }
 
 /**
+ * This function's return value is used to generate two new subrule for a state:
+ *  - one that applies default styling to everything between begin/end rules except these character
+ *    Ex. "/[^'\\]+/" for single quote strings
+ *  - one that finally applies default styling to these characters
+ *    Ex. "/['\\]/" for single quote strings
+ * This prevents Monarch from getting stuck in a given state, which would would happen if we
+ * used .* to style everything between begin/end patterns
+ */
+function getIgnoreString(
+  tokenizer: MonarchTokenizer,
+  currentRef: ReferenceString
+) {
+  let ignoreString = '';
+  const ignoreChars: Set<string> = new Set();
+  getIgnoreChars(tokenizer, currentRef, ignoreChars);
+  for (const char of ignoreChars) {
+    ignoreString += char;
+  }
+  return ignoreString;
+}
+
+/**
  * Returns a new reference representing the key for the new Monarch state that the current
  * Monarch state's rules will send the tokenizer to when parsed
+ * Ex. "comment.line.double-slash" becomes "comment_line_double_slash_end"
  */
 function nameToNewRef(name: TextMateScopeName) {
   return name.replaceAll('.', '_').replaceAll('-', '_') + END_STATE_SUFFIX;
 }
 
-/** Returns a new Monarch grammar generated by walking the
- * TextMate rule tree and parsing each rule
+/**
+ * Populates a new Monarch grammar by walking the
+ * TextMate rule tree and parsing each rule recursively
  */
 function generateMonarchRules(
   scope: TextMate.IRawRule,
@@ -378,7 +437,7 @@ function generateMonarchRules(
   }
 }
 
-/** Generates and writes a Monarch grammar output file from a TextMate grammar file */
+/** Generates and writes a Monarch grammar to an output file given a TextMate grammar file */
 export function generateMonarchGrammar() {
   // TODO: Validate command line args
   const textmateSrc = readFileSync(process.argv[ARGV_IN], 'utf-8');
