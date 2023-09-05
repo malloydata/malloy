@@ -799,6 +799,17 @@ describe('query:', () => {
       const fields = query!.pipeline[0].fields;
       expect(fields.sort()).toEqual(afields.map(f => `b.${f}`));
     });
+    test('star error checking', () => {
+      expect(markSource`run: a->{select: ${'zzz'}.*}`).translationToFailWith(
+        "No such field as 'zzz'"
+      );
+      expect(markSource`run: ab->{select: b.${'zzz'}.*}`).translationToFailWith(
+        "No such field as 'zzz'"
+      );
+      expect(markSource`run: a->{select: ${'ai'}.*}`).translationToFailWith(
+        "Field 'ai' does not contain rows and cannot be expanded with '*'"
+      );
+    });
     test('regress check extend: and star', () => {
       const m = model`run: ab->{ extend: {dimension: x is 1} select: * }`;
       expect(m).toTranslate();

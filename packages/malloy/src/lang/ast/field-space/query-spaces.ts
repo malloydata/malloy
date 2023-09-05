@@ -107,31 +107,32 @@ export abstract class QuerySpace
 
   protected addWild(wild: WildcardFieldReference): void {
     let current: FieldSpace = this.exprSpace;
-    const parts = wild.joinPath ? wild.joinPath.list.map(pe => pe.name) : [];
     const conflictMap = {};
-    for (let pi = 0; pi < parts.length; pi++) {
-      const part = parts[pi];
-      const prevParts = parts.slice(0, pi);
-      const parentRef = pi > 0 ? prevParts.join('.') : undefined;
+    const joinPath: string[] = [];
+    if (wild.joinPath) {
+      // walk to end of path to find the struct to
+      for (let pi = 0; pi < wild.joinPath.list.length; pi++) {
+        const pathPart = wild.joinPath.list[pi];
+        const part = pathPart.refString;
+        joinPath.push(part);
 
-      const ent = current.entry(part);
-      if (ent) {
-        if (ent instanceof StructSpaceField) {
-          current = ent.fieldSpace;
+        const ent = current.entry(part);
+        if (ent) {
+          if (ent instanceof StructSpaceField) {
+            current = ent.fieldSpace;
+          } else {
+            pathPart.log(
+              `Field '${part}' does not contain rows and cannot be expanded with '*'`
+            );
+            return;
+          }
         } else {
-          wild.log(
-            `Field '${part}'${
-              parentRef ? ` in ${parentRef}` : ''
-            } is not a struct`
-          );
+          pathPart.log(`No such field as '${part}'`);
+          return;
         }
-      } else {
-        wild.log(
-          `No such field '${part}'${parentRef ? ` in ${parentRef}` : ''}`
-        );
       }
     }
-    const printPath = parts.join('.');
+    const printPath = wild.refString;
     const dialect = this.dialectObj();
     for (const [name, entry] of current.entries()) {
       if (this.entry(name)) {
@@ -151,7 +152,7 @@ export abstract class QuerySpace
           (dialect === undefined || !dialect.ignoreInProject(name))
         ) {
           this.setEntry(name, entry);
-          this.expandedWild[name] = parts.concat(name);
+          this.expandedWild[name] = joinPath.concat(name);
         }
       }
     }
