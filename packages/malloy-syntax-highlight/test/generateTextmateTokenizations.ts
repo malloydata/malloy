@@ -173,6 +173,10 @@ export async function generateTextmateTokenizations(
     retrieveEditorTheme(config.theme.path)
   );
   const grammar = await registry.loadGrammar(config.language.scopeName);
-  // @ts-ignore
+  if (!grammar) {
+    throw new Error(
+      `Cannot load the TextMate grammar for scope name ${config.language.scopeName}`
+    );
+  }
   return tokenizeMultilineDefinitions(grammar, registry, config.testInput);
 }

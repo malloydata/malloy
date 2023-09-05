@@ -531,7 +531,15 @@ tokenizer: {
     appendFileSync(filename, `\t${key}: [\n`, 'utf-8');
     for (const rule of rules) {
       if (!Array.isArray(rule)) {
-        appendFileSync(filename, `${inspect(rule, {depth: null})},\n`, 'utf-8');
+        // This line comments out the include rule for tags. Remove this once the TextMate grammar
+        // has been updated to reflect the new tag DSL
+        appendFileSync(
+          filename,
+          `${rule.include === '@tags' ? '//' : ''}${inspect(rule, {
+            depth: null,
+          })},\n`,
+          'utf-8'
+        );
       } else {
         appendFileSync(filename, '[\n', 'utf-8');
         appendFileSync(filename, `${rule[M_REGEXP_INDEX]},\n`, 'utf-8');
