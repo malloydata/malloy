@@ -412,7 +412,6 @@ topStatement
 indexElement
   : fieldPath (DOT STAR)?
   | STAR
-  | STARSTAR
   ;
 
 indexFields
@@ -563,7 +562,7 @@ fieldCollection
   ;
 
 collectionWildCard
-  : (fieldPath DOT)? (STAR|STARSTAR)
+  : (fieldPath DOT)? STAR
   ;
 
 taggedRef

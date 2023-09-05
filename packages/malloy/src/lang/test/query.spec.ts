@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TestTranslator, markSource, model} from './test-translator';
+import {TestTranslator, aTableDef, markSource, model} from './test-translator';
 import './parse-expects';
-import {expressionIsCalculation} from '../../model';
+import {expressionIsCalculation, isAtomicFieldType} from '../../model';
 
 describe('query:', () => {
   test('anonymous query', () => {
@@ -779,8 +779,79 @@ describe('query:', () => {
     test('project ref', () => {
       expect('query:ab->{ project: b.astr }').toTranslate();
     });
-    test('project *', () => {
-      expect('query:ab->{ project: * }').toTranslate();
+    const afields = aTableDef.fields
+      .filter(f => isAtomicFieldType(f.type))
+      .map(f => f.name)
+      .sort();
+    test('expands star correctly', () => {
+      const selstar = model`run: ab->{select: *}`;
+      expect(selstar).toTranslate();
+      const query = selstar.translator.getQuery(0);
+      expect(query).toBeDefined();
+      const fields = query!.pipeline[0].fields;
+      expect(fields.sort()).toEqual(afields);
+    });
+    test('expands join dot star correctly', () => {
+      const selstar = model`run: ab->{select: b.*}`;
+      expect(selstar).toTranslate();
+      const query = selstar.translator.getQuery(0);
+      expect(query).toBeDefined();
+      const fields = query!.pipeline[0].fields;
+      expect(fields.sort()).toEqual(afields.map(f => `b.${f}`));
+    });
+    test('star error checking', () => {
+      expect(markSource`run: a->{select: ${'zzz'}.*}`).translationToFailWith(
+        "No such field as 'zzz'"
+      );
+      expect(markSource`run: ab->{select: b.${'zzz'}.*}`).translationToFailWith(
+        "No such field as 'zzz'"
+      );
+      expect(markSource`run: a->{select: ${'ai'}.*}`).translationToFailWith(
+        "Field 'ai' does not contain rows and cannot be expanded with '*'"
+      );
+      expect(markSource`run: a->{select:ai,${'*'}}`).translationToFailWith(
+        "Cannot expand 'ai' in '*' because a field with that name already exists"
+      );
+      expect(markSource`run: ab->{select:ai,${'b.*'}}`).translationToFailWith(
+        "Cannot expand 'ai' in 'b.*' because a field with that name already exists"
+      );
+      const m = `
+        source: nab is a extend {
+          accept: ai
+          join_one: b is a extend {accept: ai} on ai=b.ai
+        }
+        run: nab->{select: b.*,*}
+      `;
+      expect(m).translationToFailWith(
+        "Cannot expand 'ai' in '*' because a field with that name already exists (conflicts with b.ai)"
+      );
+    });
+    test('regress check extend: and star', () => {
+      const m = model`run: ab->{ extend: {dimension: x is 1} select: * }`;
+      expect(m).toTranslate();
+      const q = m.translator.getQuery(0);
+      expect(q).toBeDefined();
+      const fields = q!.pipeline[0].fields;
+      expect(fields.sort()).toEqual(afields.concat('x'));
+    });
+    test('project def', () => {
+      expect('query:ab->{ project: one is 1 }').toTranslate();
+    });
+    test('project multiple', () => {
+      expect(`
+        query: a->{
+          project: one is 1, astr
+        }
+      `).toTranslate();
+    });
+    test('index single', () => {});
+    test('regress check extend: and star', () => {
+      const m = model`run: ab->{ extend: {dimension: x is 1} select: * }`;
+      expect(m).toTranslate();
+      const q = m.translator.getQuery(0);
+      expect(q).toBeDefined();
+      const fields = q!.pipeline[0].fields;
+      expect(fields.sort()).toEqual(afields.concat('x'));
     });
     test('project def', () => {
       expect('query:ab->{ project: one is 1 }').toTranslate();
