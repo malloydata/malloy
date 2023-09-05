@@ -109,9 +109,8 @@ export abstract class QuerySpace
     let current: FieldSpace = this.exprSpace;
     const joinPath: string[] = [];
     if (wild.joinPath) {
-      // walk to end of path to find the struct to
-      for (let pi = 0; pi < wild.joinPath.list.length; pi++) {
-        const pathPart = wild.joinPath.list[pi];
+      // walk path to determine namespace for *
+      for (const pathPart of wild.joinPath.list) {
         const part = pathPart.refString;
         joinPath.push(part);
 
