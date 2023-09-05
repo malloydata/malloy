@@ -1640,6 +1640,10 @@ export class AtomicField extends Entity implements Taggable {
     }
   }
 
+  public get code(): string {
+    return this.fieldTypeDef.code ?? '';
+  }
+
   tagParse(spec?: TagParseSpec) {
     spec = Tag.addModelScope(spec, this.parent.modelTag);
     return Tag.annotationToTag(this.fieldTypeDef.annotation, spec);

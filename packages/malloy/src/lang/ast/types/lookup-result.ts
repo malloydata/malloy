@@ -21,10 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {StructRelationship} from '../../../model';
 import {SpaceEntry} from './space-entry';
 
 export interface LookupFound {
   found: SpaceEntry;
+  relationship: {name: string; structRelationship: StructRelationship}[];
   error: undefined;
 }
 export interface LookupError {

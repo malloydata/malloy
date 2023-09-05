@@ -156,16 +156,33 @@ export class StaticSpace implements FieldSpace {
         });
       }
     }
+    const relationship =
+      found instanceof StructSpaceFieldBase
+        ? [
+            {
+              name: head.refString,
+              structRelationship: found.structRelationship,
+            },
+          ]
+        : [];
     if (rest.length) {
       if (found instanceof StructSpaceFieldBase) {
-        return found.fieldSpace.lookup(rest);
+        const restResult = found.fieldSpace.lookup(rest);
+        if (restResult.found) {
+          return {
+            ...restResult,
+            relationship: [...relationship, ...restResult.relationship],
+          };
+        } else {
+          return restResult;
+        }
       }
       return {
         error: `'${head}' cannot contain a '${rest[0]}'`,
         found: undefined,
       };
     }
-    return {found, error: undefined};
+    return {found, error: undefined, relationship};
   }
 
   isQueryFieldSpace(): this is QueryFieldSpace {
