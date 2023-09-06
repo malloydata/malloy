@@ -21,12 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {isFieldTypeDef, isFilteredAliasedName} from '../../model';
+import {isFieldTypeDef, isFilteredAliasedName, StructDef} from '../../model';
 import {
   expr,
   TestTranslator,
   markSource,
   BetaExpression,
+  exprWithStruct,
+  model,
 } from './test-translator';
 import './parse-expects';
 
@@ -200,31 +202,107 @@ describe('expressions', () => {
   });
 
   describe('aggregate forms', () => {
-    test('count', () => {
+    const m = model`
+      source: root is a {
+        dimension: field is 1
+        join_one: one is a {
+          dimension: field is 1
+          join_one: one is a {
+            dimension: field is 1
+          } on 1 = 1
+        } on 1 = 1
+        join_many: many is a {
+          dimension: field is 1
+          join_many: many is a {
+            dimension: field is 1
+          } on 1 = 1
+        } on 1 = 1
+        join_cross: cross is a {
+          dimension: field is 1
+          join_cross: cross is a {
+            dimension: field is 1
+          } on 1 = 1
+        } on 1 = 1
+      }
+    `;
+    m.translator.translate();
+    const struct = m.translator.modelDef.contents['root'];
+    const expr = exprWithStruct(struct as StructDef);
+    test('min with path only', () => {
+      expect(expr`one.field.min()`).toTranslate();
+    });
+    test('min with path and expression', () => {
+      expect(expr`one.min(one.field)`).translationToFailWith(
+        'no expression allowed in this form'
+      );
+    });
+    test('min without path', () => {
+      expect(expr`min(one.field)`).toTranslate();
+    });
+    test('min across join_many', () => {
+      expect(expr`min(many.field)`).toTranslate();
+    });
+    test('min requires expr', () => {
+      expect(expr`min()`).translationToFailWith(/Missing expression for min/);
+    });
+    test('source.min expr', () => {
+      expect(expr`source.min(field)`).toTranslate();
+    });
+    test('max with path', () => {
+      expect(expr`many.field.max()`).toTranslate();
+    });
+    test('max without path', () => {
+      expect(expr`max(many.field)`).toTranslate();
+    });
+    test('max requires expr', () => {
+      expect(expr`max()`).translationToFailWith(/Missing expression for max/);
+    });
+    test('source.max expr', () => {
+      expect(expr`source.max(many.field)`).toTranslate();
+    });
+    test('count with path', () => {
+      expect(expr`many.field.count()`).toTranslate();
+    });
+    test('count normal', () => {
       expect(expr`count()`).toTranslate();
     });
-    test('count distinct', () => {
-      expect(expr`count(distinct astr)`).toTranslate();
+    test('count with expr', () => {
+      expect(expr`count(many.field)`).toTranslate();
     });
-    test('join.count()', () => {
-      expect(expr`b.count()`).toTranslate();
+    test('source.count', () => {
+      expect(expr`source.count()`).toTranslate();
     });
-    for (const f of ['sum', 'min', 'max', 'avg']) {
-      const fOfT = `${f}(af)`;
-      test(fOfT, () => {
-        expect(new BetaExpression(fOfT)).toTranslate();
-      });
-      if (f !== 'min' && f !== 'max') {
-        const joinDot = `b.af.${f}()`;
-        test(joinDot, () => {
-          expect(new BetaExpression(joinDot)).toTranslate();
-        });
-        const joinAgg = `b.${f}(af)`;
-        test(joinAgg, () => {
-          expect(new BetaExpression(joinAgg)).toTranslate();
-        });
-      }
-    }
+    test('sum()', () => {
+      expect(expr`sum()`).translationToFailWith(
+        'Should be field_name.sum() or source.sum(expression)'
+      );
+    });
+    test('sum simple field', () => {
+      expect(expr`sum(field)`).toTranslate();
+    });
+    test('sum field over many', () => {
+      expect(expr`sum(many.field)`).toTranslateWithWarnings(
+        'Explicit aggregate locality is required for asymmetric aggregate sum; use `many.field.sum()`'
+      );
+    });
+    test('sum field over one', () => {
+      expect(expr`sum(one.field)`).toTranslateWithWarnings(
+        'Explicit aggregate locality is required for asymmetric aggregate sum; use `one.field.sum()` or `source.sum(one.field)` to get a result weighted with respect to `source`'
+      );
+    });
+    test('sum expr', () => {
+      expect(`##! m4warnings
+        run: a -> { aggregate: t is sum(ai * 2) }
+    `).toTranslateWithWarnings(
+        "Aggregate function missing context. Use 'source.sum(expression)' for top level aggregation"
+      );
+    });
+    test('sum path', () => {
+      expect(expr`ai.sum()`).toTranslate();
+    });
+    test('source.sum expr', () => {
+      expect(expr`source.sum(ai)`).toTranslate();
+    });
   });
 
   describe('pick statements', () => {

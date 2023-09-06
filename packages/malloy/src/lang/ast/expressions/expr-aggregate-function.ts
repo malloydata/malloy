@@ -159,7 +159,6 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
         this.expr.fieldReference.list.length === 1;
       if (!noJoinField && !this.isSymmetricFunction()) {
         const usagePaths = getJoinUsagePaths(sourceRelationship, joinUsage);
-        // TODO only do this for asymmetric aggregates...
         const joinError = sourceSpecified
           ? validateUsagePaths(usagePaths)
           : `Explicit aggregate locality is required for asymmetric aggregate ${this.elementType}`;
@@ -278,12 +277,11 @@ function getJoinUsage(
         const path = frag.type === 'field' ? frag.path : frag.name;
         const def = lookup(fs, path);
         if (def.def.type !== 'struct' && def.def.type !== 'turtle') {
+          result.push(def.relationship);
           if (def.def.e) {
             // TODO make sure this thing works for dimensions used in dimensions
             const defUsage = getJoinUsage(def.fs, def.def.e);
             result.push(...defUsage.map(r => [...def.relationship, ...r]));
-          } else {
-            result.push(def.relationship);
           }
         }
       }
