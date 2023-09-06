@@ -21,8 +21,6 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-// Must import Jest functions directly because tsc detects Jasmine globals for Karma otherwise
-import {describe, expect, it} from '@jest/globals';
 import {generateTextmateTokenizations} from '../../test/generateTextmateTokenizations';
 import expectedTokenizations from './tokenizations/darkPlus';
 import testConfig from '../../test/config/textmate/malloyDarkPlusConfig';
