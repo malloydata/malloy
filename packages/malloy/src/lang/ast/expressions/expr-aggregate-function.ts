@@ -33,7 +33,6 @@ import {
 import {exprWalk} from '../../../model/utils';
 
 import {errorFor} from '../ast-utils';
-import { ColumnSpaceField } from '../field-space/column-space-field';
 import {ReferenceField} from '../field-space/reference-field';
 import {StructSpaceField} from '../field-space/static-space';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
