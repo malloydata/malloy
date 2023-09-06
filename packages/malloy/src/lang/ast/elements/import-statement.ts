@@ -99,7 +99,7 @@ export class ImportStatement
           for (const importOne of this.list) {
             const fetchName = importOne.from || importOne;
             if (doc.getEntry(importOne.text)) {
-              importOne.log(`Cannot redefine ${importOne.text}`);
+              importOne.log(`Cannot redefine '${importOne.text}'`);
             } else if (importable[fetchName.text]) {
               const importMe = {...importable[fetchName.text]};
               if (importOne.from) {
