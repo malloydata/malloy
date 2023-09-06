@@ -24,6 +24,6 @@
     "useUnknownInCatchVariables": false,
     "forceConsistentCasingInFileNames": true,
     "noPropertyAccessFromIndexSignature": true,
-    "types": ["node", "jest"]
+    "types": ["node", "jest", "jest-expect-message"]
   }
 }
