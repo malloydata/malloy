@@ -133,8 +133,8 @@ unrefinableQuery
   ;
 
 refinableQuery
-  : ARROW? id                       # QueryByName
-  | unextendableSource ARROW id     # QueryByTurtleName
+  : ARROW? id                         # QueryByName
+  | unextendableSource (ARROW|DOT) id # QueryByTurtleName
   ;
 
 unextendableSource
