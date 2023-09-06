@@ -36,6 +36,7 @@ import {
   isSamplingPercent,
   isSamplingRows,
   mkExpr,
+  FieldAtomicTypeDef,
 } from '../../model/malloy_types';
 import {indent} from '../../model/utils';
 import {DialectFunctionOverloadDef} from '../functions';
@@ -45,14 +46,28 @@ import {Dialect, DialectFieldList, QueryInfo, inDays, qtz} from '../dialect';
 // need to refactor runSQL to take a SQLBlock instead of just a sql string.
 const hackSplitComment = '-- hack: split on this';
 
-const castMap: Record<string, string> = {
-  'number': 'double precision',
-  'string': 'varchar',
-};
-
 const pgExtractionMap: Record<string, string> = {
   'day_of_week': 'dow',
   'day_of_year': 'doy',
+};
+
+const duckDBToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
+  'BIGINT': {type: 'number', numberType: 'integer'},
+  'INTEGER': {type: 'number', numberType: 'integer'},
+  'TINYINT': {type: 'number', numberType: 'integer'},
+  'SMALLINT': {type: 'number', numberType: 'integer'},
+  'UBIGINT': {type: 'number', numberType: 'integer'},
+  'UINTEGER': {type: 'number', numberType: 'integer'},
+  'UTINYINT': {type: 'number', numberType: 'integer'},
+  'USMALLINT': {type: 'number', numberType: 'integer'},
+  'HUGEINT': {type: 'number', numberType: 'integer'},
+  'DOUBLE': {type: 'number', numberType: 'float'},
+  'VARCHAR': {type: 'string'},
+  'DATE': {type: 'date'},
+  'TIMESTAMP': {type: 'timestamp'},
+  'TIME': {type: 'string'},
+  'DECIMAL': {type: 'number', numberType: 'float'},
+  'BOOLEAN': {type: 'boolean'},
 };
 
 export class DuckDBDialect extends Dialect {
@@ -339,9 +354,12 @@ export class DuckDBDialect extends Dialect {
       return mkExpr`CAST((${cast.expr})::TIMESTAMP AT TIME ZONE '${tz}' AS TIMESTAMP)`;
     }
     if (cast.srcType !== cast.dstType) {
-      const dstType = castMap[cast.dstType] || cast.dstType;
+      const dstType =
+        typeof cast.dstType === 'string'
+          ? this.malloyTypeToSQLType({type: cast.dstType})
+          : cast.dstType.raw;
       const castFunc = cast.safe ? 'TRY_CAST' : 'CAST';
-      return mkExpr`${castFunc}(${cast.expr}  AS ${dstType})`;
+      return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
     }
     return cast.expr;
   }
@@ -431,11 +449,37 @@ export class DuckDBDialect extends Dialect {
     return DUCKDB_FUNCTIONS.get(name);
   }
 
+  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
+    if (malloyType.type === 'number') {
+      if (malloyType.numberType === 'integer') {
+        return 'integer';
+      } else {
+        return 'double precision';
+      }
+    } else if (malloyType.type === 'string') {
+      return 'varchar';
+    }
+    return malloyType.type;
+  }
+
+  sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
+    return duckDBToMalloyTypes[sqlType.toUpperCase()];
+  }
+
   castToString(expression: string): string {
     return `CAST(${expression} as VARCHAR)`;
   }
 
   concat(...values: string[]): string {
     return values.join(' || ');
+  }
+
+  validateTypeName(sqlType: string): boolean {
+    // Letters:              BIGINT
+    // Numbers:              INT8
+    // Spaces:               TIMESTAMP WITH TIME ZONE
+    // Parentheses, Commas:  DECIMAL(1, 1)
+    // Brackets:             INT[ ]
+    return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
   }
 }

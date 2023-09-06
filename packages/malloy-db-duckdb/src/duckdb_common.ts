@@ -22,7 +22,6 @@
  */
 
 import {
-  AtomicFieldTypeInner,
   FieldTypeDef,
   MalloyQueryData,
   NamedStructDefs,
@@ -35,26 +34,8 @@ import {
   StreamingConnection,
   StructDef,
   TestableConnection,
+  DuckDBDialect,
 } from '@malloydata/malloy';
-
-const duckDBToMalloyTypes: {[key: string]: AtomicFieldTypeInner} = {
-  'BIGINT': 'number',
-  'INTEGER': 'number',
-  'TINYINT': 'number',
-  'SMALLINT': 'number',
-  'UBIGINT': 'number',
-  'UINTEGER': 'number',
-  'UTINYINT': 'number',
-  'USMALLINT': 'number',
-  'HUGEINT': 'number',
-  'DOUBLE': 'number',
-  'VARCHAR': 'string',
-  'DATE': 'date',
-  'TIMESTAMP': 'timestamp',
-  'TIME': 'string',
-  'DECIMAL': 'number',
-  'BOOLEAN': 'boolean',
-};
 
 export interface DuckDBQueryOptions {
   rowLimit: number;
@@ -75,6 +56,7 @@ const unquoteName = (name: string) => {
 export abstract class DuckDBCommon
   implements TestableConnection, PersistSQLResults, StreamingConnection
 {
+  private readonly dialect = new DuckDBDialect();
   static DEFAULT_QUERY_OPTIONS: DuckDBQueryOptions = {
     rowLimit: 10,
   };
@@ -250,7 +232,7 @@ export abstract class DuckDBCommon
       const name = unquoteName(fieldName);
       // Remove DECIMAL(x,y) precision to simplify lookup
       duckDBType = duckDBType.replace(/^DECIMAL\(\d+,\d+\)/g, 'DECIMAL');
-      let malloyType = duckDBToMalloyTypes[duckDBType];
+      let malloyType = this.dialect.sqlTypeToMalloyType(duckDBType);
       const arrayMatch = duckDBType.match(/(?<duckDBType>.*)\[\]$/);
       if (arrayMatch && arrayMatch.groups) {
         duckDBType = arrayMatch.groups['duckDBType'];
@@ -274,7 +256,7 @@ export abstract class DuckDBCommon
         structDef.fields.push(innerStructDef);
       } else {
         if (arrayMatch) {
-          malloyType = duckDBToMalloyTypes[duckDBType];
+          malloyType = this.dialect.sqlTypeToMalloyType(duckDBType);
           const innerStructDef: StructDef = {
             type: 'struct',
             name,
@@ -285,12 +267,12 @@ export abstract class DuckDBCommon
               field: name,
               isArray: true,
             },
-            fields: [{type: malloyType, name: 'value'} as FieldTypeDef],
+            fields: [{...malloyType, name: 'value'} as FieldTypeDef],
           };
           structDef.fields.push(innerStructDef);
         } else {
           if (malloyType) {
-            structDef.fields.push({type: malloyType, name});
+            structDef.fields.push({...malloyType, name});
           } else {
             structDef.fields.push({
               type: 'unsupported',

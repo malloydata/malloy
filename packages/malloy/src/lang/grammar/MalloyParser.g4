@@ -381,7 +381,7 @@ calculateStatement
   ;
 
 projectStatement
-  : tags PROJECT fieldCollection
+  : tags (SELECT | PROJECT) fieldCollection
   ;
 
 orderByStatement
@@ -412,7 +412,6 @@ topStatement
 indexElement
   : fieldPath (DOT STAR)?
   | STAR
-  | STARSTAR
   ;
 
 indexFields
@@ -496,14 +495,19 @@ ungroup
   : ALL | EXCLUDE
   ;
 
+malloyOrSQLType
+  : malloyType
+  | string
+  ;
+
 fieldExpr
   : fieldPath                                              # exprFieldPath
   | fieldExpr OCURLY filteredBy CCURLY                     # exprFilter
   | literal                                                # exprLiteral
   | fieldExpr timeframe                                    # exprDuration
   | fieldExpr DOT timeframe                                # exprTimeTrunc
-  | fieldExpr DOUBLECOLON malloyType                       # exprCast
-  | fieldExpr TRIPLECOLON malloyType                       # exprSafeCast
+  | fieldExpr DOUBLECOLON malloyOrSQLType                  # exprCast
+  | fieldExpr TRIPLECOLON malloyOrSQLType                  # exprSafeCast
   | MINUS fieldExpr                                        # exprMinus
   | fieldExpr ( STAR | SLASH | PERCENT ) fieldExpr         # exprMulDiv
   | fieldExpr ( PLUS | MINUS ) fieldExpr                   # exprAddSub
@@ -517,7 +521,7 @@ fieldExpr
   | fieldExpr AND fieldExpr                                # exprLogicalAnd
   | fieldExpr OR fieldExpr                                 # exprLogicalOr
   | fieldExpr DOUBLE_QMARK fieldExpr                       # exprCoalesce
-  | CAST OPAREN fieldExpr AS malloyType CPAREN             # exprCast
+  | CAST OPAREN fieldExpr AS malloyOrSQLType CPAREN        # exprCast
   | COUNT OPAREN DISTINCT fieldExpr CPAREN                 # exprCountDisinct
   | (SOURCE_KW DOT)? aggregate
       OPAREN (fieldExpr | STAR)? CPAREN                    # exprPathlessAggregate
@@ -558,7 +562,7 @@ fieldCollection
   ;
 
 collectionWildCard
-  : (fieldPath DOT)? (STAR|STARSTAR)
+  : (fieldPath DOT)? STAR
   ;
 
 taggedRef

@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/eslint-plugin-lint",
-  "version": "0.0.79",
+  "version": "0.0.80",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,7 +17,6 @@
   },
   "dependencies": {
     "@typescript-eslint/utils": "^5.59.1",
-    "tsutils": "^3.21.0",
-    "typescript": "^4.8.4"
+    "typescript": "5.1.6"
   }
 }

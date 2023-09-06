@@ -54,6 +54,27 @@ afterAll(async () => {
 });
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
+  // Issue: #1284
+  it(`parenthesize output field values - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `run: table('malloytest.aircraft') -> {
+          group_by:
+            r is 1
+
+          calculate:
+            zero is 1 - rank()
+            zero_bare  is 0 - zero
+            zero_paren is 0 - (zero)
+        }`
+      )
+      .run();
+    const bare = result.data.path(0, 'zero_bare').number.value;
+    const paren = result.data.path(0, 'zero_paren').number.value;
+    expect(bare).toBe(0);
+    expect(paren).toBe(0);
+  });
+
   // Issue: #151
   it(`unknown dialect  - ${databaseName}`, async () => {
     const result = await runtime

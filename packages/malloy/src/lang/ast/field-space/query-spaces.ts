@@ -49,6 +49,8 @@ export abstract class QuerySpace
   private exprSpace: QueryInputSpace;
   astEl?: MalloyElement | undefined;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
+  expandedWild: Record<string, string[]> = {};
+
   constructor(
     readonly queryInputSpace: FieldSpace,
     refineThis: model.PipeSegment | undefined
@@ -99,102 +101,57 @@ export abstract class QuerySpace
 
   setEntry(name: string, value: SpaceEntry): void {
     super.setEntry(name, value);
-    // Everything in this namespace is and output field
+    // Everything in this namespace is an output field
     value.outputField = true;
   }
 
   protected addWild(wild: WildcardFieldReference): void {
-    let success = true;
-    let current = this.exprSpace as FieldSpace;
-    const parts = wild.refString.split('.');
-    const conflictMap = {};
-    function logConflict(name: string, parentRef: string | undefined) {
-      const conflict = conflictMap[name];
-      wild.log(
-        `Cannot expand '${name}'${
-          parentRef ? ` in ${parentRef}` : ''
-        } because a field with that name already exists${
-          conflict ? ` (conflicts with ${conflict})` : ''
-        }`
-      );
-      success = false;
-    }
-    for (let pi = 0; pi < parts.length; pi++) {
-      const part = parts[pi];
-      const prevParts = parts.slice(0, pi);
-      const parentRef = pi > 0 ? prevParts.join('.') : undefined;
-      const fullName = [...prevParts.join('.'), part].join('.');
-      if (part === '*') {
-        for (const [name, entry] of current.entries()) {
-          if (this.entry(name)) {
-            logConflict(name, parentRef);
-            success = false;
-          }
-          if (model.expressionIsScalar(entry.typeDesc().expressionType)) {
-            this.setEntry(name, entry);
-            conflictMap[name] = fullName;
-          }
-        }
-      } else if (part === '**') {
-        // TODO actually handle **
-        wild.log('** is currently broken');
-        success = false;
-        // const spaces: {space: FieldSpace; ref: string | undefined}[] = [
-        //   {space: current, ref: undefined},
-        // ];
-        // let toExpand: {space: FieldSpace; ref: string | undefined} | undefined;
-        // while ((toExpand = spaces.pop())) {
-        //   for (const [name, entry] of toExpand.space.entries()) {
-        //     if (this.entry(name)) {
-        //       logConflict(name, toExpand.ref);
-        //       success = false;
-        //     }
-        //     if (model.expressionIsScalar(entry.typeDesc().expressionType)) {
-        //       this.setEntry(name, entry);
-        //       conflictMap[name] = toExpand.ref
-        //         ? `${toExpand.ref}.${name}`
-        //         : name;
-        //     }
-        //     if (entry instanceof StructSpaceField) {
-        //       spaces.push({
-        //         space: entry.fieldSpace,
-        //         ref: [
-        //           ...(parentRef ? [parentRef] : []),
-        //           ...(toExpand.ref ? [toExpand.ref] : []),
-        //           name,
-        //         ].join('.'),
-        //       });
-        //     }
-        //   }
-        // }
-      } else {
+    let current: FieldSpace = this.exprSpace;
+    const joinPath: string[] = [];
+    if (wild.joinPath) {
+      // walk path to determine namespace for *
+      for (const pathPart of wild.joinPath.list) {
+        const part = pathPart.refString;
+        joinPath.push(part);
+
         const ent = current.entry(part);
         if (ent) {
           if (ent instanceof StructSpaceField) {
             current = ent.fieldSpace;
           } else {
-            wild.log(
-              `Field '${part}'${
-                parentRef ? ` in ${parentRef}` : ''
-              } is not a struct`
+            pathPart.log(
+              `Field '${part}' does not contain rows and cannot be expanded with '*'`
             );
-            success = false;
+            return;
           }
         } else {
-          wild.log(
-            `No such field '${part}'${parentRef ? ` in ${parentRef}` : ''}`
-          );
-          success = false;
+          pathPart.log(`No such field as '${part}'`);
+          return;
         }
       }
     }
-    if (success) {
-      // TODO perform the entire replacement of * and ** here in the parser.
-      // Today, we add all the fields to the output space, and then still add * to
-      // the query. The compiler then does a second * expansion. Instead, we should
-      // just add all the fields to the query here and then remove the code in the compiler
-      // for expanding the *.
-      this.setEntry(wild.refString, new WildSpaceField(wild.refString));
+    const dialect = this.dialectObj();
+    for (const [name, entry] of current.entries()) {
+      if (this.entry(name)) {
+        const conflict = this.expandedWild[name]?.join('.');
+        wild.log(
+          `Cannot expand '${name}' in '${
+            wild.refString
+          }' because a field with that name already exists${
+            conflict ? ` (conflicts with ${conflict})` : ''
+          }`
+        );
+      } else {
+        const eType = entry.typeDesc();
+        if (
+          model.isAtomicFieldType(eType.dataType) &&
+          model.expressionIsScalar(eType.expressionType) &&
+          (dialect === undefined || !dialect.ignoreInProject(name))
+        ) {
+          this.setEntry(name, entry);
+          this.expandedWild[name] = joinPath.concat(name);
+        }
+      }
     }
   }
 
@@ -230,8 +187,13 @@ export abstract class QuerySpace
 
   protected queryFieldDefs(): model.QueryFieldDef[] {
     const fields: model.QueryFieldDef[] = [];
-    for (const [, field] of this.entries()) {
+    for (const [name, field] of this.entries()) {
       if (field instanceof SpaceField) {
+        const wildPath = this.expandedWild[name];
+        if (wildPath) {
+          fields.push(wildPath.join('.'));
+          continue;
+        }
         const fieldQueryDef = field.getQueryFieldDef(this.exprSpace);
         if (fieldQueryDef) {
           if (field instanceof WildSpaceField) {

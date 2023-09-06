@@ -30,9 +30,12 @@ import {
   NamedModelObject,
   PipeSegment,
   Query,
+  SQLBlockSource,
+  SQLBlockStructDef,
   StructDef,
   TurtleDef,
   isFilteredAliasedName,
+  isSQLFragment,
 } from '../../model/malloy_types';
 import {ExpressionDef, MalloyElement} from '../ast';
 import {NameSpace} from '../ast/types/name-space';
@@ -528,4 +531,29 @@ export function markSource(
   }
   code += unmarked[marked.length];
   return {code, locations};
+}
+
+export function getSelectOneStruct(
+  sqlBlock: SQLBlockSource
+): SQLBlockStructDef {
+  const selectThis = sqlBlock.select[0];
+  if (!isSQLFragment(selectThis)) {
+    throw new Error('weird test support error sorry');
+  }
+  return {
+    type: 'struct',
+    name: sqlBlock.name,
+    dialect: 'standardsql',
+    structSource: {
+      type: 'sql',
+      method: 'subquery',
+      sqlBlock: {
+        type: 'sqlBlock',
+        name: sqlBlock.name,
+        selectStr: selectThis.sql,
+      },
+    },
+    structRelationship: {type: 'basetable', connectionName: 'bigquery'},
+    fields: [{type: 'number', name: 'one'}],
+  };
 }

@@ -378,7 +378,7 @@ class QueryField extends QueryNode {
     frag: OutputFieldFragment,
     _state: GenerateState
   ): string {
-    return resultSet.getField(frag.name).getAnalyticalSQL(false);
+    return `(${resultSet.getField(frag.name).getAnalyticalSQL(false)})`;
   }
 
   generateSQLExpression(

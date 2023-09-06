@@ -21,22 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {AtomicFieldType, CastType} from '../../../model';
 import {castTo} from '../time-utils';
 import {ExprValue} from '../types/expr-value';
 import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 import {compressExpr} from './utils';
 
-export type CastType = 'string' | 'number' | 'boolean' | 'date' | 'timestamp';
-export function isCastType(t: string): t is CastType {
-  return ['string', 'number', 'boolean', 'date', 'timestamp'].includes(t);
-}
-
 export class ExprCast extends ExpressionDef {
   elementType = 'cast';
   constructor(
     readonly expr: ExpressionDef,
-    readonly castType: CastType,
+    readonly castType: CastType | {raw: string},
     readonly safe = false
   ) {
     super({expr: expr});
@@ -44,8 +40,27 @@ export class ExprCast extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
+    let dataType: AtomicFieldType = 'unsupported';
+    if (typeof this.castType === 'string') {
+      dataType = this.castType;
+    } else {
+      const dialect = fs.dialectObj();
+      if (dialect) {
+        if (dialect.validateTypeName(this.castType.raw)) {
+          // TODO theoretically `sqlTypeToMalloyType` can get number subtypes,
+          // but `TypeDesc` does not support them.
+          dataType =
+            fs.dialectObj()?.sqlTypeToMalloyType(this.castType.raw)?.type ??
+            'unsupported';
+        } else {
+          this.log(
+            `Cast type \`${this.castType.raw}\` is invalid for ${dialect.name} dialect`
+          );
+        }
+      }
+    }
     return {
-      dataType: this.castType,
+      dataType,
       expressionType: expr.expressionType,
       value: compressExpr(
         castTo(this.castType, expr.value, expr.dataType, this.safe)

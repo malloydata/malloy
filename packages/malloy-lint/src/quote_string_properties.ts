@@ -28,7 +28,6 @@ import {
   ParserServices,
 } from '@typescript-eslint/utils';
 import ts from 'typescript';
-import * as tsutils from 'tsutils';
 
 const createRule = ESLintUtils.RuleCreator(
   () => 'https://github.com/malloydata/malloy/main/package/malloy-lint'
@@ -94,10 +93,10 @@ const rule: ReturnType<typeof createRule> = createRule({
           const originalNode = parserServices.esTreeNodeToTSNodeMap.get(parent);
           const nodeType = checker.getTypeAtLocation(originalNode);
 
-          if (tsutils.isPropertyDeclaration(originalNode)) {
+          if (originalNode.kind === ts.SyntaxKind.PropertyDeclaration) {
             return nodeType;
           }
-          if (tsutils.isVariableDeclaration(originalNode)) {
+          if (originalNode.kind === ts.SyntaxKind.VariableDeclaration) {
             return nodeType;
           }
           return undefined;
@@ -114,7 +113,7 @@ const rule: ReturnType<typeof createRule> = createRule({
             ts.IndexKind.String
           )?.keyType;
           if (keyType) {
-            return tsutils.isTypeFlagSet(keyType, ts.TypeFlags.String);
+            return Boolean(keyType.getFlags() & ts.TypeFlags.String);
           }
           return false;
         }
