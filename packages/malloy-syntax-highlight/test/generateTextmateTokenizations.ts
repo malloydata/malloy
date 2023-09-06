@@ -90,8 +90,9 @@ function initializeRegistry(
       const languageDefinition: TextmateLanguageDefinition =
         languageMap[scopeName];
       if (typeof languageDefinition === 'string') {
-        return promiseReadFile(pathJoin(__dirname, languageDefinition)).then(rawGrammarSrc =>
-          parseRawGrammar(rawGrammarSrc.toString(), languageDefinition)
+        return promiseReadFile(pathJoin(__dirname, languageDefinition)).then(
+          rawGrammarSrc =>
+            parseRawGrammar(rawGrammarSrc.toString(), languageDefinition)
         );
       } else {
         return Promise.resolve(languageDefinition as unknown as IRawGrammar);
