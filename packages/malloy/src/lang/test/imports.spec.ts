@@ -158,4 +158,32 @@ source: botProjQSrc is from(->botProjQ)
       }
     }
   });
+  test('selective import of source', () => {
+    const docParse = new TestTranslator('import { bb } from "child"');
+    const xr = docParse.unresolved();
+    expect(docParse).toParse();
+    expect(xr).toEqual({urls: ['internal://test/langtests/child']});
+    docParse.update({
+      urls: {
+        'internal://test/langtests/child': 'source: aa is a; source: bb is a',
+      },
+    });
+    expect(docParse).toTranslate();
+    const bb = docParse.getSourceDef('bb');
+    expect(bb).toBeDefined();
+    const aa = docParse.getSourceDef('aa');
+    expect(aa).toBeUndefined();
+  });
+  test('renaming import of source', () => {
+    const docParse = new TestTranslator('import { bb is aa } from "child"');
+    const xr = docParse.unresolved();
+    expect(docParse).toParse();
+    expect(xr).toEqual({urls: ['internal://test/langtests/child']});
+    docParse.update({
+      urls: {'internal://test/langtests/child': 'source: aa is a'},
+    });
+    expect(docParse).toTranslate();
+    const bb = docParse.getSourceDef('bb');
+    expect(bb).toBeDefined();
+  });
 });

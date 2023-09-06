@@ -22,9 +22,37 @@
  */
 
 import {ModelDataRequest} from '../../translate-response';
-import {DocStatement, Document, MalloyElement} from '../types/malloy-element';
+import {
+  DocStatement,
+  Document,
+  ListOf,
+  MalloyElement,
+} from '../types/malloy-element';
 
-export class ImportStatement extends MalloyElement implements DocStatement {
+export class ImportSourceName extends MalloyElement {
+  elementType = 'importSourceName';
+  constructor(readonly text: string) {
+    super();
+  }
+}
+
+export class ImportSelect extends MalloyElement {
+  elementType = 'importName';
+  constructor(
+    readonly text: string,
+    readonly from: ImportSourceName | undefined
+  ) {
+    super();
+    if (from) {
+      this.has({from});
+    }
+  }
+}
+
+export class ImportStatement
+  extends ListOf<ImportSelect>
+  implements DocStatement
+{
   elementType = 'import statement';
   fullURL?: string;
 
@@ -38,7 +66,7 @@ export class ImportStatement extends MalloyElement implements DocStatement {
    */
 
   constructor(readonly url: string, baseURL: string) {
-    super();
+    super([]);
     try {
       this.fullURL = decodeURI(new URL(url, baseURL).toString());
     } catch (e) {
@@ -65,13 +93,33 @@ export class ImportStatement extends MalloyElement implements DocStatement {
     } else if (this.fullURL) {
       const src = trans.root.importZone.getEntry(this.fullURL);
       if (src.status === 'present') {
-        for (const [importing, entry] of Object.entries(
-          trans.getChildExports(this.fullURL)
-        )) {
-          if (doc.getEntry(importing)) {
-            this.log(`Cannot redefine '${importing}'`);
-          } else {
-            doc.setEntry(importing, {entry, exported: false});
+        const importable = trans.getChildExports(this.fullURL);
+        if (this.notEmpty()) {
+          // just import the named objects
+          for (const importOne of this.list) {
+            const fetchName = importOne.from || importOne;
+            if (doc.getEntry(importOne.text)) {
+              importOne.log(`Cannot redefine ${importOne.text}`);
+            } else if (importable[fetchName.text]) {
+              const importMe = {...importable[fetchName.text]};
+              if (importOne.from) {
+                importMe.as = importOne.text;
+              }
+              doc.setEntry(importOne.text, {entry: importMe, exported: false});
+            } else {
+              fetchName.log(`Cannot find '${fetchName.text}', not imported`);
+            }
+          }
+        } else {
+          // import everything
+          for (const [importing, entry] of Object.entries(
+            trans.getChildExports(this.fullURL)
+          )) {
+            if (doc.getEntry(importing)) {
+              this.log(`Cannot redefine '${importing}'`);
+            } else {
+              doc.setEntry(importing, {entry, exported: false});
+            }
           }
         }
       } else if (src.status === 'error') {

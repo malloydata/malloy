@@ -40,6 +40,7 @@ import {
   getShortString,
   getStringIfShort,
   unIndent,
+  idToStr,
 } from './parse-utils';
 import {CastType} from '../model';
 import {DocumentLocation, isCastType, Note} from '../model/malloy_types';
@@ -1673,10 +1674,23 @@ export class MalloyToAST
 
   visitImportStatement(pcx: parse.ImportStatementContext): ast.ImportStatement {
     const url = this.getPlainString(pcx.importURL());
-    return this.astAt(
+    const importStmt = this.astAt(
       new ast.ImportStatement(url, this.parseInfo.sourceURL),
       pcx
     );
+    const selectCx = pcx.importSelect();
+    if (selectCx) {
+      for (const item of selectCx.importItem()) {
+        const ids = item.id();
+        const oldName = ids[1]
+          ? this.astAt(new ast.ImportSourceName(idToStr(ids[1])), ids[1])
+          : undefined;
+        importStmt.push(
+          this.astAt(new ast.ImportSelect(idToStr(ids[0]), oldName), ids[0])
+        );
+      }
+    }
+    return importStmt;
   }
 
   visitJustExpr(pcx: parse.JustExprContext): ast.ExpressionDef {

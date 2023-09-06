@@ -83,7 +83,17 @@ sqlInterpolation
   ;
 
 importStatement
-  : IMPORT importURL
+  : IMPORT importSelect? importURL
+  ;
+
+importSelect
+  : OCURLY
+    importItem (COMMA importItem)*
+    CCURLY FROM
+  ;
+
+importItem
+  : id (IS id)?
   ;
 
 importURL
