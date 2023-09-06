@@ -58,7 +58,7 @@ function initializeLanguageMap(
 }
 
 export function retrieveEditorTheme(path: string): IRawTheme {
-  const themeSrc = readFileSync(path, 'utf-8');
+  const themeSrc = readFileSync(pathJoin(__dirname, path), 'utf-8');
   const rawTheme = json5Parse(themeSrc);
   return {settings: rawTheme.tokenColors};
 }
@@ -90,7 +90,7 @@ function initializeRegistry(
       const languageDefinition: TextmateLanguageDefinition =
         languageMap[scopeName];
       if (typeof languageDefinition === 'string') {
-        return promiseReadFile(languageDefinition).then(rawGrammarSrc =>
+        return promiseReadFile(pathJoin(__dirname, languageDefinition)).then(rawGrammarSrc =>
           parseRawGrammar(rawGrammarSrc.toString(), languageDefinition)
         );
       } else {
