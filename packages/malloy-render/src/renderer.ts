@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Tags} from '@malloydata/malloy';
+import {DataColumn, Tag} from '@malloydata/malloy';
 import {RendererOptions} from './renderer_types';
 export type ChildRenderers = {[fieldName: string]: Renderer};
 
@@ -33,7 +33,7 @@ export abstract class RenderTree implements Renderer {
   constructor(
     protected readonly document: Document,
     protected readonly options: RendererOptions,
-    protected readonly tags?: Tags
+    protected readonly tagged: Tag
   ) {}
 
   protected abstract get childRenderers(): ChildRenderers;

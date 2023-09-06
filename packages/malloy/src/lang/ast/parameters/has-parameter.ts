@@ -21,11 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {
-  AtomicFieldType,
-  Parameter,
-  isAtomicFieldType,
-} from '../../../model/malloy_types';
+import {Parameter, CastType, isCastType} from '../../../model/malloy_types';
 
 import {ConstantSubExpression} from '../expressions/constant-sub-expression';
 import {MalloyElement} from '../types/malloy-element';
@@ -41,14 +37,14 @@ export class HasParameter extends MalloyElement {
   elementType = 'hasParameter';
   readonly name: string;
   readonly isCondition: boolean;
-  readonly type?: AtomicFieldType;
+  readonly type?: CastType;
   readonly default?: ConstantSubExpression;
 
   constructor(init: HasInit) {
     super();
     this.name = init.name;
     this.isCondition = init.isCondition;
-    if (init.type && isAtomicFieldType(init.type)) {
+    if (init.type && isCastType(init.type)) {
       this.type = init.type;
     }
     if (init.default) {

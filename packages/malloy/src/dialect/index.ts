@@ -21,6 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+export type {DialectFunctionOverloadDef} from './functions/util';
+export {
+  anyExprType,
+  makeParam,
+  overload,
+  minScalar,
+  sql,
+} from './functions/util';
 export {Dialect} from './dialect';
 export type {DialectFieldList} from './dialect';
 export {StandardSQLDialect} from './standardsql';

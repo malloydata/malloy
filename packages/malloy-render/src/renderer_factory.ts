@@ -1,11 +1,11 @@
-import {Explore, Field, MalloyTagProperties} from '@malloydata/malloy';
+import {Explore, Field, Tag} from '@malloydata/malloy';
 import {Renderer} from './renderer';
 import {DataRenderOptions, RenderDef, StyleDefaults} from './data_styles';
 import {RendererOptions} from './renderer_types';
 
 type TagPropertyExtractor<T extends DataRenderOptions> = (
   options: T,
-  extractedValue: string | undefined
+  tagObj: Tag | undefined
 ) => void;
 
 export abstract class RendererFactory<T extends DataRenderOptions> {
@@ -33,16 +33,12 @@ export abstract class RendererFactory<T extends DataRenderOptions> {
     return renderDef.renderer === this.rendererName;
   }
 
-  parseTagParameters(tagProperties: MalloyTagProperties) {
+  parseTagParameters(tags: Tag) {
     const options = {} as T;
-    for (const tag in this.tagOptionExtractors) {
-      let tagValue: string | undefined = undefined;
-      if (tagProperties[tag]) {
-        if (typeof tagProperties[tag] === 'string') {
-          tagValue = tagProperties[tag] as string;
-        }
-
-        this.tagOptionExtractors[tag](options, tagValue);
+    for (const tagName in this.tagOptionExtractors) {
+      const tagValue = tags.tag(tagName);
+      if (tagValue) {
+        this.tagOptionExtractors[tagName](options, tagValue);
       }
     }
 

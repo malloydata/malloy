@@ -23,14 +23,13 @@
  */
 
 import {MalloyTranslator, TranslateResponse} from '..';
-import {DocumentLocation} from '../../model';
+import {DocumentLocation, DocumentRange} from '../../model';
 import {
   BetaExpression,
   MarkedSource,
   pretty,
   TestTranslator,
 } from './test-translator';
-import {inspect} from 'util';
 import {LogSeverity} from '../parse-log';
 
 type SimpleProblemSpec = string | RegExp;
@@ -89,6 +88,15 @@ declare global {
       isLocationIn(at: DocumentLocation, txt: string): R;
     }
   }
+}
+
+function rangeToStr(loc?: DocumentRange): string {
+  if (loc) {
+    const from = `#${loc.start.line}:${loc.start.character}`;
+    const to = `#${loc.end.line}:${loc.end.character}`;
+    return `${from}-${to}`;
+  }
+  return 'undefined';
 }
 
 function ensureNoProblems(trans: MalloyTranslator) {
@@ -317,8 +325,8 @@ function checkForProblems(
           const want = mSrc.locations[i].range;
           if (!context.equals(have, want)) {
             explain.push(
-              `Expected '${msg.message}' at location: ${inspect(want)}\n` +
-                `Actual location: ${inspect(have)}`
+              `Expected '${msg.message}' at location: ${rangeToStr(want)}\n` +
+                `Actual location: ${rangeToStr(have)}`
             );
           }
         }
@@ -341,7 +349,7 @@ function checkForProblems(
     return {
       pass: false,
       message: () =>
-        `Compiler did not generated expected errors\n${explain.join('\n')}`,
+        `Compiler errors did not match expected errors\n${explain.join('\n')}`,
     };
   }
 }

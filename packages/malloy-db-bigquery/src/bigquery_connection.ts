@@ -46,6 +46,7 @@ import {
   QueryDataRow,
   QueryRunStats,
   SQLBlock,
+  StandardSQLDialect,
   StreamingConnection,
   StructDef,
   toAsyncGenerator,
@@ -134,6 +135,7 @@ const TIMEOUT_MS = 1000 * 60 * 10;
 export class BigQueryConnection
   implements Connection, PersistSQLResults, StreamingConnection
 {
+  private readonly dialect = new StandardSQLDialect();
   static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
     rowLimit: 10,
   };
@@ -160,26 +162,6 @@ export class BigQueryConnection
   private location: string;
 
   public readonly name: string;
-
-  bqToMalloyTypes: {[key: string]: Partial<FieldTypeDef>} = {
-    'DATE': {type: 'date'},
-    'STRING': {type: 'string'},
-    'INTEGER': {type: 'number', numberType: 'integer'},
-    'INT64': {type: 'number', numberType: 'integer'},
-    'FLOAT': {type: 'number', numberType: 'float'},
-    'FLOAT64': {type: 'number', numberType: 'float'},
-    'NUMERIC': {type: 'number', numberType: 'float'},
-    'BIGNUMERIC': {type: 'number', numberType: 'float'},
-    'TIMESTAMP': {type: 'timestamp'},
-    'BOOLEAN': {type: 'boolean'},
-    'BOOL': {type: 'boolean'},
-    'JSON': {type: 'json'},
-    // TODO (https://cloud.google.com/bigquery/docs/reference/rest/v2/tables#tablefieldschema):
-    // BYTES
-    // DATETIME
-    // TIME
-    // GEOGRAPHY
-  };
 
   constructor(
     name: string,
@@ -230,6 +212,10 @@ export class BigQueryConnection
   }
 
   public canStream(): this is StreamingConnection {
+    return true;
+  }
+
+  public get supportsNesting(): boolean {
     return true;
   }
 
@@ -508,7 +494,7 @@ export class BigQueryConnection
 
       // check for an array
       if (field.mode === 'REPEATED' && !['STRUCT', 'RECORD'].includes(type)) {
-        const malloyType = this.bqToMalloyTypes[type];
+        const malloyType = this.dialect.sqlTypeToMalloyType(type);
         if (malloyType) {
           const innerStructDef: StructDef = {
             type: 'struct',
@@ -540,7 +526,7 @@ export class BigQueryConnection
         this.addFieldsToStructDef(innerStructDef, field);
         structDef.fields.push(innerStructDef);
       } else {
-        const malloyType = this.bqToMalloyTypes[type] || {
+        const malloyType = this.dialect.sqlTypeToMalloyType(type) ?? {
           type: 'unsupported',
           rawType: type.toLowerCase(),
         };
@@ -725,7 +711,6 @@ export class BigQueryConnection
           lastFetchError = fetchError;
         }
       }
-
       throw lastFetchError;
     } catch (e) {
       throw maybeRewriteError(e);

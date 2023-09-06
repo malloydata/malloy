@@ -5,6 +5,7 @@
   "name": "malloy",
   "workspaces": {
     "packages": [
+      "packages/malloy-interfaces",
       "packages/malloy",
       "packages/malloy-db-bigquery",
       "packages/malloy-db-duckdb",
@@ -66,9 +67,9 @@
     "jest-silent-reporter": "^0.5.0",
     "lerna": "^7.1.0",
     "prettier": "^2.3.2",
-    "ts-jest": "^29.0.3",
+    "ts-jest": "^29.1.1",
     "ts-node": "^10.9.1",
-    "typescript": "4.8.4",
+    "typescript": "5.1.6",
     "unified": "^10.1.2",
     "uuid": "^8.3.2"
   },

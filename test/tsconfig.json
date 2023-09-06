@@ -7,6 +7,9 @@
   },
   "references": [
     {
+      "path": "../packages/malloy-interfaces"
+    },
+    {
       "path": "../packages/malloy"
     },
     {

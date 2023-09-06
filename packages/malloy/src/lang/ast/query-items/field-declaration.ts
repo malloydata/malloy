@@ -117,7 +117,7 @@ export abstract class FieldDeclaration
     }
     const compressValue = compressExpr(exprValue.value);
     const retType = exprValue.dataType;
-    if (isAtomicFieldType(retType)) {
+    if (isAtomicFieldType(retType) && retType !== 'error') {
       const template: FieldTypeDef = {
         name: exprName,
         type: retType,

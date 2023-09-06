@@ -22,6 +22,7 @@
  */
 
 import {
+  isCastType,
   isSQLBlockStruct,
   isValueParameter,
   paramHasValue,
@@ -141,7 +142,7 @@ export class NamedSource extends Source {
           } else {
             const pVal = pExpr.constantValue();
             let value = pVal.value;
-            if (pVal.dataType !== decl.type) {
+            if (pVal.dataType !== decl.type && isCastType(decl.type)) {
               value = castTo(decl.type, pVal.value, pVal.dataType, true);
             }
             decl.value = value;
@@ -158,6 +159,7 @@ export class NamedSource extends Source {
         this.log(`Value not provided for required parameter ${checkDef}`);
       }
     }
+    this.document()?.rememberToAddModelAnnotations(ret);
     return ret;
   }
 }

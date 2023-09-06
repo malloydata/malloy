@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+export {DuckDBDialect, StandardSQLDialect, PostgresDialect} from './dialect';
 // TODO tighten up exports
 export type {
   QueryDataRow,
@@ -37,6 +38,7 @@ export type {
   TimestampUnit,
   TimeFieldType,
   QueryData,
+  QueryValue,
   FieldTypeDef,
   Expr,
   DialectFragment,
@@ -122,6 +124,7 @@ export type {
   DataRecord,
   DataColumn,
   DataArrayOrRecord,
+  Loggable,
   ModelMaterializer,
   DocumentSymbol,
   DocumentHighlight,
@@ -134,20 +137,23 @@ export type {
 } from './malloy';
 export type {RunSQLOptions} from './run_sql_options';
 export type {
-  URLReader,
+  Connection,
+  ConnectionConfig,
+  ConnectionFactory,
+  ConnectionParameter,
+  ConnectionParameterValue,
+  ConnectionConfigSchema,
   InfoConnection,
   LookupConnection,
-  Connection,
-  DialectProvider,
-  QueryString,
   ModelString,
-  QueryURL,
   ModelURL,
-  PooledConnection,
-  TestableConnection,
   PersistSQLResults,
+  PooledConnection,
+  QueryString,
+  QueryURL,
+  TestableConnection,
   StreamingConnection,
+  URLReader,
 } from './runtime_types';
-export type {Loggable} from './malloy';
 export {toAsyncGenerator} from './connection_utils';
-export {Tags, type MalloyTags, type MalloyTagProperties} from './tags';
+export {type TagParse, Tag, type TagDict} from './tags';

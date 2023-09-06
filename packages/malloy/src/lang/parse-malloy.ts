@@ -82,7 +82,7 @@ import {
   isNeedResponse,
 } from './translate-response';
 import {locationContainsPosition} from './utils';
-import {MalloyTagProperties} from '../tags';
+import {Tag} from '../tags';
 import {MalloyParseInfo} from './malloy-parse-info';
 
 export type StepResponses =
@@ -899,7 +899,7 @@ export class MalloyTranslator extends MalloyTranslation {
   importZone = new Zone<string>();
   sqlQueryZone = new Zone<SQLBlockStructDef>();
   logger = new MessageLog();
-  compilerFlags: MalloyTagProperties = {};
+  compilerFlags = new Tag();
   readonly root: MalloyTranslator;
   constructor(rootURL: string, preload: ParseUpdate | null = null) {
     super(rootURL);

@@ -25,6 +25,8 @@
 
 import {RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable} from '../../util';
+import '../../util/db-jest-matchers';
+import {DateTime} from 'luxon';
 
 const [describe] = describeIfDatabaseAvailable(['postgres']);
 
@@ -137,5 +139,29 @@ describe('Postgres tests', () => {
       )
       .run();
     expect(result.data.value[0]['ranger']).toBeDefined();
+  });
+  describe('time', () => {
+    const zone = 'America/Mexico_City'; // -06:00 no DST
+    const zone_2020 = DateTime.fromObject({
+      year: 2020,
+      month: 2,
+      day: 20,
+      hour: 0,
+      minute: 0,
+      second: 0,
+      zone,
+    });
+    // TODO: Investigate why this test is not working.
+    test.skip('can use unsupported types', async () => {
+      await expect(runtime).queryMatches(
+        `sql: timeData is { connection: "postgres"  select: """
+          SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
+        """}
+      query: from_sql(timeData) -> {
+        project: mex_220 is t_tstz::timestamp
+      }`,
+        {mex_220: zone_2020.toJSDate()}
+      );
+    });
   });
 });

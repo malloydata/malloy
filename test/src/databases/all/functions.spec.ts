@@ -22,11 +22,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-
-import * as malloy from '@malloydata/malloy';
 import {RuntimeList, allDatabases} from '../../runtimes';
 import {databasesFromEnvironmentOr} from '../../util';
+import '../../util/db-jest-matchers';
+import * as malloy from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -345,7 +344,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       expect(result.data.path(1, 'q', 1, 'row_num').value).toBe(2);
     });
 
-    it(`works outside nest, but with a nest nearby - ${databaseName}`, async () => {
+    test(`works outside nest, but with a nest nearby - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
           `query: state_facts -> {
@@ -530,7 +529,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
 
   describe('first_value', () => {
-    it(`works in nest - ${databaseName}`, async () => {
+    test(`works in nest - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
           `

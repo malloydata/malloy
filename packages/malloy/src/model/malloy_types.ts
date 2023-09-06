@@ -31,6 +31,7 @@ type ConstantExpr = Expr;
 type Condition = Expr;
 interface ParamCondition extends ParamBase {
   condition: Condition | null;
+  type: CastType;
 }
 interface ParamValue extends ParamBase {
   value: ConstantExpr | null;
@@ -324,7 +325,7 @@ export interface TypecastFragment extends DialectFragmentBase {
   function: 'cast';
   safe: boolean;
   expr: Expr;
-  dstType: AtomicFieldType;
+  dstType: CastType | {raw: string};
   srcType?: AtomicFieldType;
 }
 
@@ -550,14 +551,8 @@ export type TimeFieldType = 'date' | 'timestamp';
 export function isTimeFieldType(s: string): s is TimeFieldType {
   return s === 'date' || s === 'timestamp';
 }
-export type AtomicFieldType =
-  | 'string'
-  | 'number'
-  | TimeFieldType
-  | 'boolean'
-  | 'unsupported'
-  | 'json'
-  | 'error';
+export type CastType = 'string' | 'number' | TimeFieldType | 'boolean' | 'json';
+export type AtomicFieldType = CastType | 'unsupported' | 'error';
 export function isAtomicFieldType(s: string): s is AtomicFieldType {
   return [
     'string',
@@ -567,7 +562,13 @@ export function isAtomicFieldType(s: string): s is AtomicFieldType {
     'boolean',
     'json',
     'unsupported',
+    'error',
   ].includes(s);
+}
+export function isCastType(s: string): s is CastType {
+  return ['string', 'number', 'date', 'timestamp', 'boolean', 'json'].includes(
+    s
+  );
 }
 
 /**
@@ -597,37 +598,65 @@ export function FieldIsIntrinsic(f: FieldDef): boolean {
   }
 }
 
-/** Scalar String Field */
-export interface FieldStringDef extends FieldAtomicDef {
+export interface FieldStringTypeDef {
   type: 'string';
   bucketFilter?: string;
   bucketOther?: string;
 }
 
-/** Scalar Numeric String Field */
-export interface FieldNumberDef extends FieldAtomicDef {
+/** Scalar String Field */
+export interface FieldStringDef extends FieldAtomicDef, FieldStringTypeDef {
+  type: 'string';
+}
+
+export interface FieldNumberTypeDef {
   type: 'number';
   numberType?: 'integer' | 'float';
 }
 
-/** Scalar Boolean Field */
-export interface FieldBooleanDef extends FieldAtomicDef {
+/** Scalar Numeric String Field */
+export interface FieldNumberDef extends FieldAtomicDef, FieldNumberTypeDef {
+  type: 'number';
+}
+
+export interface FieldBooleanTypeDef {
   type: 'boolean';
 }
 
-/** Scalar JSON Field */
-export interface FieldJSONDef extends FieldAtomicDef {
+/** Scalar Boolean Field */
+export interface FieldBooleanDef extends FieldAtomicDef, FieldBooleanTypeDef {
+  type: 'boolean';
+}
+
+export interface FieldJSONTypeDef {
   type: 'json';
 }
 
-/** Scalar unsupported Field */
-export interface FieldUnsupportedDef extends FieldAtomicDef {
+/** Scalar JSON Field */
+export interface FieldJSONDef extends FieldAtomicDef, FieldJSONTypeDef {
+  type: 'json';
+}
+
+export interface FieldUnsupportedTypeDef {
   type: 'unsupported';
   rawType?: string;
 }
-export interface FieldErrorDef extends FieldAtomicDef {
+
+/** Scalar unsupported Field */
+export interface FieldUnsupportedDef
+  extends FieldAtomicDef,
+    FieldUnsupportedTypeDef {
+  type: 'unsupported';
+}
+
+export interface FieldErrorTypeDef {
   type: 'error';
 }
+
+export interface FieldErrorDef extends FieldAtomicDef, FieldErrorTypeDef {
+  type: 'error';
+}
+
 export type DateUnit = 'day' | 'week' | 'month' | 'quarter' | 'year';
 export function isDateUnit(str: string): str is DateUnit {
   return ['day', 'week', 'month', 'quarter', 'year'].includes(str);
@@ -650,16 +679,26 @@ export enum ValueType {
 
 export type TimeValueType = ValueType.Date | ValueType.Timestamp;
 
-/** Scalar Date Field. */
-export interface FieldDateDef extends FieldAtomicDef {
+export interface FieldDateTypeDef {
   type: 'date';
   timeframe?: DateUnit;
 }
 
-/** Scalar Timestamp Field */
-export interface FieldTimestampDef extends FieldAtomicDef {
+/** Scalar Date Field. */
+export interface FieldDateDef extends FieldAtomicDef, FieldDateTypeDef {
+  type: 'date';
+}
+
+export interface FieldTimestampTypeDef {
   type: 'timestamp';
   timeframe?: TimestampUnit;
+}
+
+/** Scalar Timestamp Field */
+export interface FieldTimestampDef
+  extends FieldAtomicDef,
+    FieldTimestampTypeDef {
+  type: 'timestamp';
 }
 
 /** parameter to order a query */
@@ -724,6 +763,7 @@ export interface Query extends Pipeline, Filtered, HasLocation {
   type?: 'query';
   structRef: StructRef;
   annotation?: Annotation;
+  modelAnnotation?: Annotation;
 }
 
 export type NamedQuery = Query & NamedObject;
@@ -875,6 +915,7 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
   queryTimezone?: string;
   dialect: string;
   annotation?: Annotation;
+  modelAnnotation?: ModelAnnotation;
 }
 
 export type ExpressionValueType =
@@ -981,6 +1022,16 @@ export type FieldTypeDef =
   | FieldUnsupportedDef
   | FieldErrorDef;
 
+export type FieldAtomicTypeDef =
+  | FieldStringTypeDef
+  | FieldDateTypeDef
+  | FieldTimestampTypeDef
+  | FieldNumberTypeDef
+  | FieldBooleanTypeDef
+  | FieldJSONTypeDef
+  | FieldUnsupportedTypeDef
+  | FieldErrorTypeDef;
+
 export function isFieldTypeDef(f: FieldDef): f is FieldTypeDef {
   return (
     f.type === 'string' ||
@@ -1046,7 +1097,7 @@ export interface ModelDef {
   name: string;
   exports: string[];
   contents: Record<string, NamedModelObject>;
-  annotation?: Annotation;
+  annotation?: ModelAnnotation;
 }
 
 /** Very common record type */
@@ -1056,8 +1107,16 @@ export type NamedModelObjects = Record<string, NamedModelObject>;
 /** Malloy source annotations attached to objects */
 export interface Annotation {
   inherits?: Annotation;
-  blockNotes?: string[];
-  notes?: string[];
+  blockNotes?: Note[];
+  notes?: Note[];
+}
+export interface Note {
+  text: string;
+  at: DocumentLocation;
+}
+/** Annotations with a uuid to make it easier to stream */
+export interface ModelAnnotation extends Annotation {
+  id: string;
 }
 
 export type QueryScalar = string | boolean | number | Date | Buffer | null;

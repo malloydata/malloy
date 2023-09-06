@@ -24,7 +24,7 @@
 
 import {RuntimeList, allDatabases} from '../../runtimes';
 import '../../util/db-jest-matchers';
-import {databasesFromEnvironmentOr, mkSqlEqWith} from '../../util';
+import {databasesFromEnvironmentOr, mkSqlEqWith, testIf} from '../../util';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -137,7 +137,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   // filtered turtle expressions
-  it('model: filtered turtle', async () => {
+  testIf(runtime.supportsNesting)('model: filtered turtle', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -167,7 +167,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     expect(result.data.path(0, 'aircraft_count').value).toBe(91);
   });
 
-  it('model: turtle having2', async () => {
+  testIf(runtime.supportsNesting)('model: turtle having2', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -191,7 +191,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     expect(result.data.path(0, 'by_state', 0, 'state').value).toBe('VA');
   });
 
-  it('model: turtle having on main', async () => {
+  testIf(runtime.supportsNesting)('model: turtle having on main', async () => {
     const result = await expressionModel
       .loadQuery(
         `
@@ -222,9 +222,11 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   // bigquery doesn't like to partition by floats,
-  it('model: having float group by partition', async () => {
-    await expect(runtime).queryMatches(
-      `${expressionModelText}
+  testIf(runtime.supportsNesting)(
+    'model: having float group by partition',
+    async () => {
+      await expect(runtime).queryMatches(
+        `${expressionModelText}
       query: aircraft_models->{
         order_by: 1
         where: seats_bucketed > 0
@@ -236,9 +238,10 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           aggregate: aircraft_model_count
         }
       }`,
-      {aircraft_model_count: 448}
-    );
-  });
+        {aircraft_model_count: 448}
+      );
+    }
+  );
 
   it('model: aggregate functions distinct min max', async () => {
     const result = await expressionModel
@@ -393,10 +396,40 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     expect(result.data.path(0, 'm_count').value).toBe(63);
   });
 
-  it('query with aliasname used twice', async () => {
+  it('sql cast', async () => {
     const result = await expressionModel
       .loadQuery(
         `
+        query: aircraft -> {
+          group_by: a is "312"::"integer"
+        }
+        `
+      )
+      .run();
+    expect(result.data.path(0, 'a').isNumber()).toBe(true);
+    expect(result.data.path(0, 'a').number.value).toBe(312);
+
+    if (runtime.connection.name !== 'postgres') {
+      const result = await expressionModel
+        .loadQuery(
+          `
+          query: aircraft -> {
+            group_by: a is "312":::"integer"
+          }
+          `
+        )
+        .run();
+      expect(result.data.path(0, 'a').isNumber()).toBe(true);
+      expect(result.data.path(0, 'a').number.value).toBe(312);
+    }
+  });
+
+  testIf(runtime.supportsNesting)(
+    'query with aliasname used twice',
+    async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `
         query: aircraft->{
           group_by: first is substr(city,1,1)
           aggregate: aircraft_count is count()
@@ -415,10 +448,11 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             order_by: 2 desc, 1
         }
       `
-      )
-      .run();
-    expect(result.data.path(0, 'first_three').value).toBe('SAB');
-  });
+        )
+        .run();
+      expect(result.data.path(0, 'first_three').value).toBe('SAB');
+    }
+  );
 
   it.skip('join foreign_key reverse', async () => {
     const result = await expressionModel

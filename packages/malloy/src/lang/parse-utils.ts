@@ -26,10 +26,8 @@ import {
   StringContext,
   ShortStringContext,
   SqlStringContext,
-  IsDefineContext,
   IdContext,
 } from './lib/Malloy/MalloyParser';
-import {TerminalNode} from 'antlr4ts/tree/TerminalNode';
 
 /**
  * Take the text of a matched string, including the matching quote
@@ -54,7 +52,7 @@ export function getStringIfShort(cx: HasString): string | undefined {
   }
 }
 
-export type HasString = ParserRuleContext & {
+export type HasString = {
   string: () => StringContext;
 };
 type StringPart = ParserRuleContext | string;
@@ -148,21 +146,6 @@ export function parseString(str: string, surround = ''): string {
     }
   }
   return out;
-}
-
-type HasAnnotations = ParserRuleContext & {ANNOTATION: () => TerminalNode[]};
-/**
- * Get all the possibly missing annotations from this parse rule
- * @param cx Any parse context which has an ANNOTATION* rules
- * @returns Array of texts for the annotations
- */
-export function getNotes(cx: HasAnnotations): string[] {
-  return cx.ANNOTATION().map(a => a.text);
-}
-
-export function getIsNotes(cx: IsDefineContext): string[] {
-  const before = getNotes(cx._beforeIs);
-  return before.concat(getNotes(cx._afterIs));
 }
 
 export type HasID = ParserRuleContext & {id: () => IdContext};

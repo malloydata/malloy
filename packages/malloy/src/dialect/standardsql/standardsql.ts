@@ -33,14 +33,11 @@ import {
   isSamplingPercent,
   isSamplingRows,
   mkExpr,
+  FieldAtomicTypeDef,
 } from '../../model/malloy_types';
 import {STANDARDSQL_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
 import {Dialect, DialectFieldList, QueryInfo} from '../dialect';
-
-const castMap: Record<string, string> = {
-  'number': 'float64',
-};
 
 // These are the units that "TIMESTAMP_ADD" "TIMESTAMP_DIFF" accept
 function timestampMeasureable(units: string): boolean {
@@ -78,12 +75,32 @@ declare interface TimeMeasure {
   ratio: number;
 }
 
+const bqToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
+  'DATE': {type: 'date'},
+  'STRING': {type: 'string'},
+  'INTEGER': {type: 'number', numberType: 'integer'},
+  'INT64': {type: 'number', numberType: 'integer'},
+  'FLOAT': {type: 'number', numberType: 'float'},
+  'FLOAT64': {type: 'number', numberType: 'float'},
+  'NUMERIC': {type: 'number', numberType: 'float'},
+  'BIGNUMERIC': {type: 'number', numberType: 'float'},
+  'TIMESTAMP': {type: 'timestamp'},
+  'BOOLEAN': {type: 'boolean'},
+  'BOOL': {type: 'boolean'},
+  'JSON': {type: 'json'},
+  // TODO (https://cloud.google.com/bigquery/docs/reference/rest/v2/tables#tablefieldschema):
+  // BYTES
+  // DATETIME
+  // TIME
+  // GEOGRAPHY
+};
+
 export class StandardSQLDialect extends Dialect {
   name = 'standardsql';
   defaultNumberType = 'FLOAT64';
+  defaultDecimalType = 'NUMERIC';
   udfPrefix = '__udf';
   hasFinalStage = false;
-  stringTypeName = 'STRING';
   divisionIsInteger = false;
   supportsSumDistinctFunction = false;
   unnestWithNumbers = false;
@@ -94,6 +111,7 @@ export class StandardSQLDialect extends Dialect {
   dontUnionIndex = true; // bigquery can't use a sample table more than once in a query.
   supportsQualify = true;
   supportsSafeCast = true;
+  supportsNesting = true;
 
   quoteTablePath(tablePath: string): string {
     return `\`${tablePath}\``;
@@ -407,9 +425,12 @@ ${indent(sql)}
       return mkExpr`TIMESTAMP(${cast.expr}, '${tz}')`;
     }
     if (cast.srcType !== cast.dstType) {
-      const dstType = castMap[cast.dstType] || cast.dstType;
+      const dstType =
+        typeof cast.dstType === 'string'
+          ? this.malloyTypeToSQLType({type: cast.dstType})
+          : cast.dstType.raw;
       const castFunc = cast.safe ? 'SAFE_CAST' : 'CAST';
-      return mkExpr`${castFunc}(${cast.expr}  AS ${dstType})`;
+      return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
     }
     return cast.expr;
   }
@@ -499,5 +520,37 @@ ${indent(sql)}
 
   getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
     return STANDARDSQL_FUNCTIONS.get(name);
+  }
+
+  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
+    if (malloyType.type === 'number') {
+      if (malloyType.numberType === 'integer') {
+        return 'INT64';
+      } else {
+        return 'FLOAT64';
+      }
+    }
+    return malloyType.type;
+  }
+
+  sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
+    return bqToMalloyTypes[sqlType.toUpperCase()];
+  }
+
+  castToString(expression: string): string {
+    return `CAST(${expression} as STRING)`;
+  }
+
+  concat(...values: string[]): string {
+    return values.join(' || ');
+  }
+
+  validateTypeName(sqlType: string): boolean {
+    // Letters:              BIGINT
+    // Numbers:              INT8
+    // Spaces,
+    // Parentheses, Commas:  NUMERIC(5, 2)
+    // Angle Brackets:       ARRAY<INT64>
+    return sqlType.match(/^[A-Za-z\s(),<>0-9]*$/) !== null;
   }
 }

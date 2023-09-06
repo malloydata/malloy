@@ -35,15 +35,11 @@ import {
   isSamplingPercent,
   isSamplingRows,
   mkExpr,
+  FieldAtomicTypeDef,
 } from '../../model/malloy_types';
 import {POSTGRES_FUNCTIONS} from './functions';
 import {DialectFunctionOverloadDef} from '../functions';
 import {Dialect, DialectFieldList, QueryInfo, qtz} from '../dialect';
-
-const castMap: Record<string, string> = {
-  'number': 'double precision',
-  'string': 'varchar',
-};
 
 const pgExtractionMap: Record<string, string> = {
   'day_of_week': 'dow',
@@ -68,12 +64,38 @@ const inSeconds: Record<string, number> = {
   'week': 7 * 24 * 3600,
 };
 
+const postgresToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
+  'character varying': {type: 'string'},
+  'name': {type: 'string'},
+  'text': {type: 'string'},
+  'date': {type: 'date'},
+  'integer': {type: 'number', numberType: 'integer'},
+  'bigint': {type: 'number', numberType: 'integer'},
+  'double precision': {type: 'number', numberType: 'float'},
+  'timestamp without time zone': {type: 'timestamp'}, // maybe not
+  'oid': {type: 'string'},
+  'boolean': {type: 'boolean'},
+  // ARRAY: "string",
+  'timestamp': {type: 'timestamp'},
+  '"char"': {type: 'string'},
+  'character': {type: 'string'},
+  'smallint': {type: 'number', numberType: 'integer'},
+  'xid': {type: 'string'},
+  'real': {type: 'number', numberType: 'float'},
+  'interval': {type: 'string'},
+  'inet': {type: 'string'},
+  'regtype': {type: 'string'},
+  'numeric': {type: 'number', numberType: 'float'},
+  'bytea': {type: 'string'},
+  'pg_ndistinct': {type: 'number', numberType: 'integer'},
+};
+
 export class PostgresDialect extends Dialect {
   name = 'postgres';
   defaultNumberType = 'DOUBLE PRECISION';
+  defaultDecimalType = 'NUMERIC';
   udfPrefix = 'pg_temp.__udf';
   hasFinalStage = true;
-  stringTypeName = 'VARCHAR';
   divisionIsInteger = true;
   supportsSumDistinctFunction = false;
   unnestWithNumbers = false;
@@ -85,6 +107,7 @@ export class PostgresDialect extends Dialect {
   dontUnionIndex = false;
   supportsQualify = false;
   globalFunctions = POSTGRES_FUNCTIONS;
+  supportsNesting = true;
 
   quoteTablePath(tablePath: string): string {
     return tablePath
@@ -347,12 +370,15 @@ export class PostgresDialect extends Dialect {
       return mkExpr`CAST((${cast.expr})::TIMESTAMP AT TIME ZONE '${tz}' AS TIMESTAMP)`;
     }
     if (cast.srcType !== cast.dstType) {
-      const dstType = castMap[cast.dstType] || cast.dstType;
+      const dstType =
+        typeof cast.dstType === 'string'
+          ? this.malloyTypeToSQLType({type: cast.dstType})
+          : cast.dstType.raw;
       if (cast.safe) {
         throw new Error("Postgres dialect doesn't support Safe Cast");
       }
       const castFunc = 'CAST';
-      return mkExpr`${castFunc}(${cast.expr}  AS ${dstType})`;
+      return mkExpr`${castFunc}(${cast.expr} AS ${dstType})`;
     }
     return cast.expr;
   }
@@ -447,5 +473,39 @@ export class PostgresDialect extends Dialect {
 
   getGlobalFunctionDef(name: string): DialectFunctionOverloadDef[] | undefined {
     return POSTGRES_FUNCTIONS.get(name);
+  }
+
+  malloyTypeToSQLType(malloyType: FieldAtomicTypeDef): string {
+    if (malloyType.type === 'number') {
+      if (malloyType.numberType === 'integer') {
+        return 'integer';
+      } else {
+        return 'double precision';
+      }
+    } else if (malloyType.type === 'string') {
+      return 'varchar';
+    }
+    return malloyType.type;
+  }
+
+  sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
+    return postgresToMalloyTypes[sqlType.toLowerCase()];
+  }
+
+  castToString(expression: string): string {
+    return `CAST(${expression} as VARCHAR)`;
+  }
+
+  concat(...values: string[]): string {
+    return values.join(' || ');
+  }
+
+  validateTypeName(sqlType: string): boolean {
+    // Letters:              BIGINT
+    // Numbers:              INT8
+    // Spaces:               TIMESTAMP WITH TIME ZONE
+    // Parentheses, Commas:  NUMERIC(5, 2)
+    // Square Brackets:      INT64[]
+    return sqlType.match(/^[A-Za-z\s(),[\]0-9]*$/) !== null;
   }
 }

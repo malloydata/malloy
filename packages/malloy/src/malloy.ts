@@ -76,7 +76,8 @@ import {
   URLReader,
 } from './runtime_types';
 import {DateTime} from 'luxon';
-import {Taggable, Tags} from './tags';
+import {Tag, TagParse, TagParseSpec, Taggable} from './tags';
+import {getDialect} from './dialect';
 
 export interface Loggable {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -611,8 +612,12 @@ export class Model implements Taggable {
     this.problems = problems;
   }
 
-  getTags(): Tags {
-    return new Tags(this.modelDef.annotation);
+  tagParse(spec?: TagParseSpec): TagParse {
+    return Tag.annotationToTag(this.modelDef.annotation, spec);
+  }
+
+  getTaglines(prefix?: RegExp) {
+    return Tag.annotationToTaglines(this.modelDef.annotation, prefix);
   }
 
   /**
@@ -771,8 +776,14 @@ export class PreparedQuery implements Taggable {
     this.name = name;
   }
 
-  getTags(): Tags {
-    return new Tags(this._query.annotation);
+  tagParse(spec?: TagParseSpec) {
+    const modelScope = Tag.annotationToTag(this._modelDef.annotation).tag;
+    spec = Tag.addModelScope(spec, modelScope);
+    return Tag.annotationToTag(this._query.annotation, spec);
+  }
+
+  getTaglines(prefix?: RegExp) {
+    return Tag.annotationToTaglines(this._query.annotation, prefix);
   }
 
   /**
@@ -1100,8 +1111,14 @@ export class PreparedResult implements Taggable {
     this.modelDef = modelDef;
   }
 
-  public getTags(): Tags {
-    return new Tags(this.inner.annotation);
+  tagParse(spec?: TagParseSpec): TagParse {
+    const modelScope = Tag.annotationToTag(this.modelDef.annotation).tag;
+    spec = Tag.addModelScope(spec, modelScope);
+    return Tag.annotationToTag(this.inner.annotation, spec);
+  }
+
+  getTaglines(prefix?: RegExp) {
+    return Tag.annotationToTaglines(this.inner.annotation, prefix);
   }
 
   /**
@@ -1356,6 +1373,14 @@ export class Explore extends Entity {
 
   public isIntrinsic(): boolean {
     return FieldIsIntrinsic(this._structDef);
+  }
+
+  private parsedModelTag?: Tag;
+  public get modelTag(): Tag {
+    this.parsedModelTag ||= Tag.annotationToTag(
+      this._structDef.modelAnnotation
+    ).tag;
+    return this.parsedModelTag;
   }
 
   /**
@@ -1615,8 +1640,13 @@ export class AtomicField extends Entity implements Taggable {
     }
   }
 
-  getTags(): Tags {
-    return new Tags(this.fieldTypeDef.annotation);
+  tagParse(spec?: TagParseSpec) {
+    spec = Tag.addModelScope(spec, this.parent.modelTag);
+    return Tag.annotationToTag(this.fieldTypeDef.annotation, spec);
+  }
+
+  getTaglines(prefix?: RegExp) {
+    return Tag.annotationToTaglines(this.fieldTypeDef.annotation, prefix);
   }
 
   public isIntrinsic(): boolean {
@@ -1882,8 +1912,13 @@ export class QueryField extends Query implements Taggable {
     this.parent = parent;
   }
 
-  getTags(): Tags {
-    return new Tags(this.turtleDef.annotation);
+  tagParse(spec?: TagParseSpec) {
+    spec = Tag.addModelScope(spec, this.parent.modelTag);
+    return Tag.annotationToTag(this.turtleDef.annotation, spec);
+  }
+
+  getTaglines(prefix?: RegExp) {
+    return Tag.annotationToTaglines(this.turtleDef.annotation, prefix);
   }
 
   public isQueryField(): this is QueryField {
@@ -1946,8 +1981,13 @@ export class ExploreField extends Explore implements Taggable {
     }
   }
 
-  getTags(): Tags {
-    return new Tags(this._structDef.annotation);
+  tagParse(spec?: TagParseSpec) {
+    spec = Tag.addModelScope(spec, this._parentExplore.modelTag);
+    return Tag.annotationToTag(this._structDef.annotation, spec);
+  }
+
+  getTaglines(prefix?: RegExp) {
+    return Tag.annotationToTaglines(this._structDef.annotation, prefix);
   }
 
   public isQueryField(): this is QueryField {
@@ -2260,6 +2300,10 @@ export class SingleConnectionRuntime<
       super(urlsOrConnections as URLReader, connection);
       this.connection = connection;
     }
+  }
+
+  get supportsNesting(): boolean {
+    return getDialect(this.connection.dialectName).supportsNesting;
   }
 }
 

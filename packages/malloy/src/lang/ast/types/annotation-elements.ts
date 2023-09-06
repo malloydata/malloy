@@ -21,7 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {MalloyTagProperties, parseTagProperties} from '../../../tags';
+import {Note} from '../../../model/malloy_types';
+import {Tag} from '../../../tags';
+import {MessageLogger} from '../../parse-log';
 import {Document, DocStatement, MalloyElement} from './malloy-element';
 import {QueryPropertyInterface} from './query-property-interface';
 
@@ -33,7 +35,7 @@ export class ObjectAnnotation
   forceQueryClass = undefined;
   queryRefinementStage = undefined;
 
-  constructor(readonly notes: string[]) {
+  constructor(readonly notes: Note[]) {
     super();
   }
 
@@ -43,17 +45,16 @@ export class ObjectAnnotation
 export class ModelAnnotation extends ObjectAnnotation implements DocStatement {
   elementType = 'modelAnnotation';
 
-  getCompilerFlags(existing: MalloyTagProperties): MalloyTagProperties {
-    let flags = {...existing};
-    for (const note of this.notes) {
-      if (note.startsWith('##! ')) {
-        const parsed = parseTagProperties(note.slice(4), flags);
-        if (parsed) {
-          flags = parsed;
-        }
+  getCompilerFlags(existing: Tag, logTo: MessageLogger): Tag {
+    const tagParse = Tag.annotationToTag(
+      {notes: this.notes},
+      {
+        prefix: /^##! /,
+        extending: existing,
       }
-    }
-    return flags;
+    );
+    tagParse.log.forEach(err => logTo.log(err));
+    return tagParse.tag;
   }
 
   execute(doc: Document): void {
