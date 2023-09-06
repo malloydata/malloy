@@ -709,6 +709,32 @@ export abstract class MalloyTranslation {
     }
   }
 
+  codeAtLocation(location: DocumentLocation) {
+    const lines = this.getLineMap(location.url) || [];
+    if (location.range.start.line === location.range.end.line) {
+      return lines[location.range.start.line].slice(
+        location.range.start.character,
+        location.range.end.character
+      );
+    }
+    let result = '';
+    result += lines[location.range.start.line].slice(
+      location.range.start.character
+    );
+    for (
+      let lineNumber = location.range.start.line + 1;
+      lineNumber < location.range.end.line;
+      lineNumber++
+    ) {
+      result += lines[lineNumber];
+    }
+    result += lines[location.range.end.line].slice(
+      0,
+      location.range.end.character
+    );
+    return result;
+  }
+
   prettyErrors(): string {
     let lovely = '';
     let inFile = '';

@@ -100,6 +100,10 @@ export abstract class MalloyElement {
     this.codeLocation = loc;
   }
 
+  get code() {
+    return this.translator()?.codeAtLocation(this.location) ?? '';
+  }
+
   protected document(): Document | undefined {
     if (this instanceof Document) {
       return this;

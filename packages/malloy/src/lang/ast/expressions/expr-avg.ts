@@ -26,8 +26,12 @@ import {ExpressionDef} from '../types/expression-def';
 import {ExprAsymmetric} from './expr-asymmetric';
 
 export class ExprAvg extends ExprAsymmetric {
-  constructor(expr: ExpressionDef | undefined, source?: FieldReference) {
-    super('avg', expr, source);
+  constructor(
+    expr: ExpressionDef | undefined,
+    source?: FieldReference,
+    explicitSource?: boolean
+  ) {
+    super('avg', expr, source, explicitSource);
     this.has({source: source});
   }
 }

@@ -1512,17 +1512,18 @@ export class MalloyToAST
         );
         return new ast.ExprNULL();
       }
-      if (this.m4WarningsEnabled() && !pcx.SOURCE_KW()) {
-        const msg =
-          expr instanceof ast.ExprIdReference
-            ? `Aggregate function missing context. Use '${exprDef?.text}.${aggFunc}()'`
-            : `Aggregate function missing context. Use 'source.${aggFunc}(expression)' for top level aggregation`;
-        this.contextError(pcx, msg, 'warn');
-      }
+      const explicitSource = pcx.SOURCE_KW() !== undefined;
+      // if (this.m4WarningsEnabled() && !pcx.SOURCE_KW()) {
+      //   const msg =
+      //     expr instanceof ast.ExprIdReference
+      //       ? `Aggregate function missing context. Use '${exprDef?.text}.${aggFunc}()'`
+      //       : `Aggregate function missing context. Use 'source.${aggFunc}(expression)' for top level aggregation`;
+      //   this.contextError(pcx, msg, 'warn');
+      // }
       if (aggFunc === 'avg') {
-        return new ast.ExprAvg(expr, source);
+        return new ast.ExprAvg(expr, source, explicitSource);
       } else if (aggFunc === 'sum') {
-        return new ast.ExprSum(expr, source);
+        return new ast.ExprSum(expr, source, explicitSource);
       }
     }
     return new ast.ExprNULL();
