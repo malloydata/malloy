@@ -76,7 +76,6 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
       name: string;
       structRelationship: StructRelationship;
     }[] = [];
-    const joinUsage = this.getJoinUsage(fs);
     if (this.source) {
       const result = this.source.getField(fs);
       if (result.found) {
@@ -110,6 +109,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
             // Here we handle a special case where you write `foo.agg()` and `foo` is a
             // dimension which uses only one distinct join path; in this case, we set the
             // locality to be that join path
+            const joinUsage = this.getJoinUsage(fs);
             const allUsagePaths = joinUsage.map(x =>
               x.map(y => y.name).join('.')
             );
@@ -144,11 +144,14 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
       this.log('Aggregate expression cannot be aggregate');
       return errorFor('reagggregate');
     }
-    if (exprVal.evalSpace === 'output') {
+    const inOutputSpace = exprVal.evalSpace === 'output';
+    if (inOutputSpace) {
       this.log('Aggregate over an output expression is never useful');
     }
+    const isAnError = exprVal.dataType === 'error';
     const m4warnings = this.translator()?.root.compilerFlags?.has('m4warnings');
-    if (m4warnings) {
+    if (m4warnings && !inOutputSpace && !isAnError) {
+      const joinUsage = this.getJoinUsage(fs);
       // Did the user spceify a source, either as `source.agg()` or `path.to.join.agg()` or `path.to.field.agg()`
       const sourceSpecified = this.source !== undefined || this.explicitSource;
       if (expr) {
