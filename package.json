@@ -13,6 +13,7 @@
       "packages/malloy-malloy-sql",
       "packages/malloy-lint",
       "packages/malloy-render",
+      "packages/malloy-syntax-highlight",
       "test"
     ]
   },

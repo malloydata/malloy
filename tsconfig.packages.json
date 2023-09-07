@@ -23,6 +23,7 @@
     "sourceMap": true,
     "useUnknownInCatchVariables": false,
     "forceConsistentCasingInFileNames": true,
-    "noPropertyAccessFromIndexSignature": true
+    "noPropertyAccessFromIndexSignature": true,
+    "types": ["node", "jest", "jest-expect-message"]
   }
 }
