@@ -273,10 +273,17 @@ export class TestTranslator extends MalloyTranslator {
     },
   };
 
-  constructor(readonly testSrc: string, rootRule = 'malloyDocument') {
+  constructor(
+    readonly testSrc: string,
+    rootRule = 'malloyDocument',
+    internalModel?: ModelDef
+  ) {
     super(testURI);
     this.grammarRule = rootRule;
     this.importZone.define(testURI, testSrc);
+    if (internalModel !== undefined) {
+      this.internalModel = internalModel;
+    }
     for (const tableName in mockSchema) {
       this.schemaZone.define(tableName, mockSchema[tableName]);
       this.schemaZone.define('conn:' + tableName, mockSchema[tableName]);
@@ -513,6 +520,28 @@ export function model(
   return {
     ...ms,
     translator: new TestTranslator(ms.code),
+  };
+}
+
+export function makeModelFunc(options: {
+  model?: ModelDef;
+  prefix?: string;
+  wrap?: (code: string) => string;
+}) {
+  return function model(
+    unmarked: TemplateStringsArray,
+    ...marked: string[]
+  ): HasTranslator {
+    const ms = markSource(unmarked, ...marked);
+    return {
+      ...ms,
+      translator: new TestTranslator(
+        (options.prefix ?? '') +
+          (options.wrap ? options.wrap(ms.code) : ms.code),
+        undefined,
+        options?.model
+      ),
+    };
   };
 }
 

@@ -1514,7 +1514,7 @@ export class MalloyToAST
       if (expr === undefined) {
         this.contextError(
           pcx,
-          `Should be fieldName.${aggFunc}() or source.${aggFunc}(expression)`
+          `Should be field_name.${aggFunc}() or source.${aggFunc}(expression)`
         );
         return new ast.ExprNULL();
       }

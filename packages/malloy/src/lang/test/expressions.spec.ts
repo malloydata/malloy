@@ -29,6 +29,7 @@ import {
   BetaExpression,
   exprWithStruct,
   model,
+  makeModelFunc,
 } from './test-translator';
 import './parse-expects';
 
@@ -203,106 +204,258 @@ describe('expressions', () => {
 
   describe('aggregate forms', () => {
     const m = model`
+      ##! m4warnings
       source: root is a {
-        dimension: field is 1
+        rename: column is ai
+        dimension: field is column * 2
+        dimension: many_field is many.column * 2
+        dimension: many_one_field is many.column + one.column
         join_one: one is a {
-          dimension: field is 1
+          rename: column is ai
+          dimension: field is column * 2
           join_one: one is a {
-            dimension: field is 1
-          } on 1 = 1
-        } on 1 = 1
+            rename: column is ai
+          } on true
+        } on true
         join_many: many is a {
-          dimension: field is 1
+          rename: column is ai
+          dimension: field is column * 2
+          dimension: constant is 1
           join_many: many is a {
-            dimension: field is 1
-          } on 1 = 1
-        } on 1 = 1
+            rename: column is ai
+            dimension: field is column * 2
+          } on true
+        } on true
         join_cross: cross is a {
-          dimension: field is 1
+          rename: column is ai
+          dimension: field is column * 2
           join_cross: cross is a {
-            dimension: field is 1
-          } on 1 = 1
-        } on 1 = 1
+            rename: column is ai
+            dimension: field is column * 2
+          } on true
+        } on true
       }
     `;
     m.translator.translate();
-    const struct = m.translator.modelDef.contents['root'];
-    const expr = exprWithStruct(struct as StructDef);
-    test('min with path only', () => {
-      expect(expr`one.field.min()`).toTranslate();
+    const modelX = makeModelFunc({
+      model: m.translator.modelDef,
+      prefix: '##! m4warnings\n',
+      wrap: x => `run: root -> { aggregate: x is ${x} }`,
     });
-    test('min with path and expression', () => {
-      expect(expr`one.min(one.field)`).translationToFailWith(
-        'no expression allowed in this form'
+    test('one.column.min()', () => {
+      expect(modelX`one.column.min()`).toTranslate();
+    });
+    test('one.min(one.column)', () => {
+      expect(modelX`one.min(one.column)`).translationToFailWith(
+        'Cannot have an expression and an aggregate path for min()'
       );
     });
-    test('min without path', () => {
-      expect(expr`min(one.field)`).toTranslate();
+    test('min(one.column)', () => {
+      expect(modelX`min(one.column)`).toTranslate();
     });
-    test('min across join_many', () => {
-      expect(expr`min(many.field)`).toTranslate();
+    test('min(many.column)', () => {
+      expect(modelX`min(many.column)`).toTranslate();
     });
-    test('min requires expr', () => {
-      expect(expr`min()`).translationToFailWith(/Missing expression for min/);
+    test('min()', () => {
+      expect(modelX`min()`).translationToFailWith(/Missing expression for min/);
     });
-    test('source.min expr', () => {
-      expect(expr`source.min(field)`).toTranslate();
+    test('source.min(column)', () => {
+      expect(modelX`source.min(column)`).toTranslate();
     });
-    test('max with path', () => {
-      expect(expr`many.field.max()`).toTranslate();
+    test('many.column.max()', () => {
+      expect(modelX`many.column.max()`).toTranslate();
     });
-    test('max without path', () => {
-      expect(expr`max(many.field)`).toTranslate();
+    test('max(many.column)', () => {
+      expect(modelX`max(many.column)`).toTranslate();
     });
-    test('max requires expr', () => {
-      expect(expr`max()`).translationToFailWith(/Missing expression for max/);
+    test('max()', () => {
+      expect(modelX`max()`).translationToFailWith(/Missing expression for max/);
     });
-    test('source.max expr', () => {
-      expect(expr`source.max(many.field)`).toTranslate();
+    test('source.max(many.column)', () => {
+      expect(modelX`source.max(many.column)`).toTranslate();
     });
-    test('count with path', () => {
-      expect(expr`many.field.count()`).toTranslate();
+    test('many.column.count()', () => {
+      expect(expr`many.column.count()`).toTranslate();
     });
-    test('count normal', () => {
-      expect(expr`count()`).toTranslate();
+    test('count()', () => {
+      expect(modelX`count()`).toTranslate();
     });
-    test('count with expr', () => {
-      expect(expr`count(many.field)`).toTranslate();
+    test('count(many.column)', () => {
+      expect(modelX`count(many.column)`).toTranslate();
     });
-    test('source.count', () => {
-      expect(expr`source.count()`).toTranslate();
+    test('source.count()', () => {
+      expect(modelX`source.count()`).toTranslate();
+    });
+    test('many.count()', () => {
+      expect(modelX`many.count()`).toTranslate();
     });
     test('sum()', () => {
-      expect(expr`sum()`).translationToFailWith(
+      expect(modelX`sum()`).translationToFailWith(
         'Should be field_name.sum() or source.sum(expression)'
       );
     });
-    test('sum simple field', () => {
-      expect(expr`sum(field)`).toTranslate();
+    test('sum(column)', () => {
+      expect(modelX`sum(column)`).toTranslate();
     });
-    test('sum field over many', () => {
-      expect(expr`sum(many.field)`).toTranslateWithWarnings(
+    test('sum(column * 2)', () => {
+      expect(modelX`sum(column * 2)`).toTranslate();
+    });
+    test('column.sum()', () => {
+      expect(modelX`column.sum()`).toTranslate();
+    });
+    test('source.sum(column)', () => {
+      expect(modelX`source.sum(column)`).toTranslate();
+    });
+    test('sum(many.column)', () => {
+      expect(modelX`sum(many.column)`).toTranslateWithWarnings(
+        'Explicit aggregate locality is required for asymmetric aggregate sum; use `many.column.sum()`'
+      );
+    });
+    // TODO should this be an error?
+    test('source.sum(many.column)', () => {
+      expect(modelX`source.sum(many.column)`).toTranslateWithWarnings(
+        'Cannot compute asymmetric aggregate across forward join_many relationship `many`; use `many.column.sum()`'
+      );
+    });
+    test('many.column.sum()', () => {
+      expect(modelX`many.column.sum()`).toTranslate();
+    });
+    test('many.sum(many.column)', () => {
+      expect(modelX`many.sum(many.column)`).toTranslate();
+    });
+    test('sum(one.column)', () => {
+      expect(modelX`sum(one.column)`).toTranslateWithWarnings(
+        'Explicit aggregate locality is required for asymmetric aggregate sum; use `one.column.sum()` or `source.sum(one.column)` to get a result weighted with respect to `source`'
+      );
+    });
+    test('sum(many.constant)', () => {
+      expect(modelX`sum(many.constant)`).toTranslate();
+    });
+    test('source.sum(many.constant)', () => {
+      expect(modelX`source.sum(many.constant)`).toTranslate();
+    });
+    test('sum(many.field)', () => {
+      expect(modelX`sum(many.field)`).toTranslateWithWarnings(
         'Explicit aggregate locality is required for asymmetric aggregate sum; use `many.field.sum()`'
       );
     });
-    test('sum field over one', () => {
-      expect(expr`sum(one.field)`).toTranslateWithWarnings(
-        'Explicit aggregate locality is required for asymmetric aggregate sum; use `one.field.sum()` or `source.sum(one.field)` to get a result weighted with respect to `source`'
+    test('source.sum(many.field)', () => {
+      expect(modelX`source.sum(many.field)`).toTranslateWithWarnings(
+        'Cannot compute asymmetric aggregate across forward join_many relationship `many`; use `many.field.sum()`'
       );
     });
-    test('sum expr', () => {
-      expect(`##! m4warnings
-        run: a -> { aggregate: t is sum(ai * 2) }
-    `).toTranslateWithWarnings(
-        "Aggregate function missing context. Use 'source.sum(expression)' for top level aggregation"
+    test('many.field.sum()', () => {
+      expect(modelX`many.field.sum()`).toTranslate();
+    });
+    test('many.sum(many.field)', () => {
+      expect(modelX`many.sum(many.field)`).toTranslate();
+    });
+
+    test('sum(many.field + many.field)', () => {
+      expect(modelX`sum(many.field + many.field)`).toTranslateWithWarnings(
+        'Explicit aggregate locality is required for asymmetric aggregate sum; use `many.sum(many.field + many.field)`'
       );
     });
-    test('sum path', () => {
-      expect(expr`ai.sum()`).toTranslate();
+    test('source.sum(many.field + many.field)', () => {
+      expect(
+        modelX`source.sum(many.field + many.field)`
+      ).toTranslateWithWarnings(
+        'Cannot compute asymmetric aggregate across forward join_many relationship `many`; use `many.sum(many.field + many.field)`'
+      );
     });
-    test('source.sum expr', () => {
-      expect(expr`source.sum(ai)`).toTranslate();
+    test('many.field + many.field.sum()', () => {
+      expect(modelX`many.field + many.field.sum()`).toTranslate();
     });
+    test('many.sum(many.field + many.field)', () => {
+      expect(modelX`many.sum(many.field + many.field)`).toTranslate();
+    });
+
+    test('sum(many_field)', () => {
+      expect(modelX`sum(many_field)`).toTranslateWithWarnings(
+        'Explicit aggregate locality is required for asymmetric aggregate sum; use `many_field.sum()`'
+      );
+    });
+    test('source.sum(many_field)', () => {
+      expect(modelX`source.sum(many_field)`).toTranslateWithWarnings(
+        'Cannot compute asymmetric aggregate across forward join_many relationship `many`; use `many_field.sum()`'
+      );
+    });
+    test('many_field.sum()', () => {
+      expect(modelX`many_field.sum()`).toTranslate();
+    });
+    test('many.sum(many_field)', () => {
+      expect(modelX`many.sum(many_field)`).toTranslate();
+    });
+
+    test('sum(many.field + one.field)', () => {
+      expect(modelX`sum(many.field + one.field)`).toTranslateWithWarnings(
+        'Explicit aggregate locality is required for asymmetric aggregate sum; rewrite'
+      );
+    });
+    test('source.sum(many.field + one.field)', () => {
+      expect(
+        modelX`source.sum(many.field + one.field)`
+      ).toTranslateWithWarnings(
+        'Cannot compute asymmetric aggregate across forward join_many relationship `many`; rewrite'
+      );
+    });
+    test('many.sum(many.field + one.field)', () => {
+      expect(modelX`many.sum(many.field + one.field)`).toTranslate();
+    });
+
+    test('sum(many_one_field)', () => {
+      expect(modelX`sum(many_one_field)`).toTranslateWithWarnings(
+        'Explicit aggregate locality is required for asymmetric aggregate sum; rewrite'
+      );
+    });
+    test('source.sum(many_one_field)', () => {
+      expect(modelX`source.sum(many_one_field)`).toTranslateWithWarnings(
+        'Cannot compute asymmetric aggregate across forward join_many relationship `many`; rewrite'
+      );
+    });
+    test('many.sum(many_one_field)', () => {
+      expect(modelX`many.sum(many_one_field)`).toTranslate();
+    });
+
+    test('many.avg(field)', () => {
+      expect(modelX`many.avg(field)`).toTranslate();
+    });
+
+    test('one.avg(field)', () => {
+      expect(modelX`one.avg(field)`).toTranslate();
+    });
+
+    test('cross.avg(field)', () => {
+      expect(modelX`cross.avg(field)`).toTranslateWithWarnings(
+        'Cannot compute asymmetric aggregate across join_cross relationship `cross`; use `field.avg()`'
+      );
+    });
+
+    test('cross.avg(cross.field)', () => {
+      expect(modelX`cross.avg(cross.field)`).toTranslate();
+    });
+
+    test('one.column.sum()', () => {
+      expect(modelX`one.column.sum()`).toTranslate();
+    });
+    test('one.sum(one.column)', () => {
+      expect(modelX`one.sum(one.column)`).toTranslate();
+    });
+    test('source.sum(one.column)', () => {
+      expect(modelX`source.sum(one.column)`).toTranslate();
+    });
+    test('sum(one.column + one.column)', () => {
+      expect(modelX`sum(one.column + one.column)`).toTranslateWithWarnings(
+        'Explicit aggregate locality is required for asymmetric aggregate sum; use `one.sum(one.column + one.column)` or `source.sum(one.column + one.column)` to get a result weighted with respect to `source`'
+      );
+    });
+    test('one.sum(one.column + one.column)', () => {
+      expect(modelX`one.sum(one.column + one.column)`).toTranslate();
+    });
+    test('source.sum(one.column + one.column)', () => {
+      expect(modelX`source.sum(one.column + one.column)`).toTranslate();
+    });
+    // TODO ensure that sum(nested.column) errors
   });
 
   describe('pick statements', () => {

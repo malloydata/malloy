@@ -147,24 +147,27 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     if (exprVal.evalSpace === 'output') {
       this.log('Aggregate over an output expression is never useful');
     }
-    // Did the user spceify a source, either as `source.agg()` or `path.to.join.agg()` or `path.to.field.agg()`
-    const sourceSpecified = this.source !== undefined || this.explicitSource;
-    // Is this an `agg(field)`, where field has no dots
-    if (expr) {
-      const noJoinField =
-        !this.source &&
-        joinUsage.every(usage => usage.length === 0) &&
-        this.expr &&
-        this.expr instanceof ExprIdReference &&
-        this.expr.fieldReference.list.length === 1;
-      if (!noJoinField && !this.isSymmetricFunction()) {
-        const usagePaths = getJoinUsagePaths(sourceRelationship, joinUsage);
-        const joinError = sourceSpecified
-          ? validateUsagePaths(usagePaths)
-          : `Explicit aggregate locality is required for asymmetric aggregate ${this.elementType}`;
-        const suggestion = suggestNewVersion(joinUsage, expr, this.elementType);
-        if (joinError) {
-          this.log(`${joinError}; ${suggestion}`, 'warn');
+    const m4warnings = this.translator()?.root.compilerFlags?.has('m4warnings');
+    if (m4warnings) {
+      // Did the user spceify a source, either as `source.agg()` or `path.to.join.agg()` or `path.to.field.agg()`
+      const sourceSpecified = this.source !== undefined || this.explicitSource;
+      if (expr) {
+        // Is this an `agg(field)`, where field uses no joins (or nested fields)
+        const noJoinField =
+          !this.source && joinUsage.every(usage => usage.length === 0);
+        if (!noJoinField && !this.isSymmetricFunction()) {
+          const usagePaths = getJoinUsagePaths(sourceRelationship, joinUsage);
+          const joinError = sourceSpecified
+            ? validateUsagePaths(usagePaths)
+            : `Explicit aggregate locality is required for asymmetric aggregate ${this.elementType}`;
+          const suggestion = suggestNewVersion(
+            joinUsage,
+            expr,
+            this.elementType
+          );
+          if (joinError) {
+            this.log(`${joinError}; ${suggestion}`, 'warn');
+          }
         }
       }
     }
@@ -277,11 +280,12 @@ function getJoinUsage(
         const path = frag.type === 'field' ? frag.path : frag.name;
         const def = lookup(fs, path);
         if (def.def.type !== 'struct' && def.def.type !== 'turtle') {
-          result.push(def.relationship);
           if (def.def.e) {
             // TODO make sure this thing works for dimensions used in dimensions
             const defUsage = getJoinUsage(def.fs, def.def.e);
             result.push(...defUsage.map(r => [...def.relationship, ...r]));
+          } else {
+            result.push(def.relationship);
           }
         }
       }
@@ -387,7 +391,9 @@ function suggestNewVersion(
       }
     }
   }
+  // expr.log(`${joinUsage.map(prettyRelationship)}`);
   const usagePaths = getJoinUsagePaths(longestOverlap, joinUsage);
+  // expr.log(`${usagePaths.map(prettyUsagePath)}`);
   const usageError = validateUsagePaths(usagePaths);
   // get rid of everything after the last many/cross
   const indexFromEndOfLastMany = longestOverlap
