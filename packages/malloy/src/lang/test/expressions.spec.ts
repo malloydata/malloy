@@ -214,6 +214,12 @@ describe('expressions', () => {
         join_one: one is a {
           rename: column is ai
           dimension: field is column * 2
+          dimension: many_field is many.column * 2
+          join_many: many is a {
+            rename: column is ai
+            dimension: field is column * 2
+            dimension: constant is 1
+          } on true
         } on true
         join_many: many is a {
           rename: column is ai
@@ -390,10 +396,29 @@ describe('expressions', () => {
       );
     });
     test('many_field.sum()', () => {
+      // TODO test this case that we generate the right SQL
       expect(modelX`many_field.sum()`).toTranslate();
     });
     test('many.sum(many_field)', () => {
       expect(modelX`many.sum(many_field)`).toTranslate();
+    });
+
+    test('sum(one.many_field)', () => {
+      expect(modelX`sum(one.many_field)`).toTranslateWithWarnings(
+        'Explicit aggregate locality is required for asymmetric aggregate sum; use `one.many_field.sum()`'
+      );
+    });
+    test('source.sum(one.many_field)', () => {
+      expect(modelX`source.sum(one.many_field)`).toTranslateWithWarnings(
+        'Cannot compute asymmetric aggregate across forward join_many relationship `many`; use `one.many_field.sum()`'
+      );
+    });
+    test('one.many_field.sum()', () => {
+      // TODO test this case that we generate the right SQL
+      expect(modelX`one.many_field.sum()`).toTranslate();
+    });
+    test('many.sum(one.many_field)', () => {
+      expect(modelX`one.many.sum(one.many_field)`).toTranslate();
     });
 
     test('sum(many.field + one.field)', () => {
