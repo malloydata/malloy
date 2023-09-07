@@ -67,6 +67,14 @@ const mockSchema: Record<string, StructDef> = {
       {type: 'timestamp', name: 'ats'},
       {type: 'unsupported', name: 'aun'},
       {type: 'unsupported', name: 'aweird', rawType: 'weird'},
+      {
+        type: 'struct',
+        name: 'astruct',
+        structSource: {type: 'nested'},
+        structRelationship: {type: 'inline'},
+        fields: [{type: 'number', name: 'column', numberType: 'integer'}],
+        dialect: 'standardsql',
+      },
     ],
   },
   'malloytest.carriers': {

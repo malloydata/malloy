@@ -207,32 +207,30 @@ describe('expressions', () => {
       ##! m4warnings
       source: root is a {
         rename: column is ai
+        rename: nested is astruct
         dimension: field is column * 2
         dimension: many_field is many.column * 2
         dimension: many_one_field is many.column + one.column
         join_one: one is a {
           rename: column is ai
           dimension: field is column * 2
-          join_one: one is a {
-            rename: column is ai
-          } on true
         } on true
         join_many: many is a {
           rename: column is ai
           dimension: field is column * 2
           dimension: constant is 1
-          join_many: many is a {
+          join_one: one is a {
             rename: column is ai
             dimension: field is column * 2
+            join_one: one is a {
+              rename: column is ai
+              dimension: field is column * 2
+            } on true
           } on true
         } on true
         join_cross: cross is a {
           rename: column is ai
           dimension: field is column * 2
-          join_cross: cross is a {
-            rename: column is ai
-            dimension: field is column * 2
-          } on true
         } on true
       }
     `;
@@ -334,6 +332,17 @@ describe('expressions', () => {
     test('source.sum(many.constant)', () => {
       expect(modelX`source.sum(many.constant)`).toTranslate();
     });
+    test('sum(nested.column)', () => {
+      expect(modelX`sum(nested.column)`).toTranslateWithWarnings(
+        'Explicit aggregate locality is required for asymmetric aggregate sum; use `nested.column.sum()` or `source.sum(nested.column)` to get a result weighted with respect to `source`'
+      );
+    });
+    test('nested.column.sum()', () => {
+      expect(modelX`nested.column.sum()`).toTranslate();
+    });
+    test('source.sum(nested.column)', () => {
+      expect(modelX`source.sum(nested.column)`).toTranslate();
+    });
     test('sum(many.field)', () => {
       expect(modelX`sum(many.field)`).toTranslateWithWarnings(
         'Explicit aggregate locality is required for asymmetric aggregate sum; use `many.field.sum()`'
@@ -415,6 +424,17 @@ describe('expressions', () => {
     });
     test('many.sum(many_one_field)', () => {
       expect(modelX`many.sum(many_one_field)`).toTranslate();
+    });
+
+    test('sum(many.one.field)', () => {
+      expect(modelX`sum(many.one.field)`).toTranslateWithWarnings(
+        'Explicit aggregate locality is required for asymmetric aggregate sum; use `many.one.field.sum()` or `many.sum(many.one.field)` to get a result weighted with respect to `many`'
+      );
+    });
+    test('sum(many.one.one.field)', () => {
+      expect(modelX`sum(many.one.one.field)`).toTranslateWithWarnings(
+        'Explicit aggregate locality is required for asymmetric aggregate sum; use `many.one.one.field.sum()` or `many.sum(many.one.one.field)` to get a result weighted with respect to `many`'
+      );
     });
 
     test('many.avg(field)', () => {

@@ -397,17 +397,18 @@ function suggestNewVersion(
   const usageError = validateUsagePaths(usagePaths);
   // get rid of everything after the last many/cross
   const indexFromEndOfLastMany = longestOverlap
+    .slice()
     .reverse()
     .findIndex(
       x =>
         x.structRelationship.type === 'many' ||
         x.structRelationship.type === 'cross'
     );
-  const lastManyCrossIndex =
+  const numJoinsToLastMany =
     indexFromEndOfLastMany === -1
       ? 0
       : longestOverlap.length - indexFromEndOfLastMany;
-  const shortestOverlapWithMany = longestOverlap.slice(0, lastManyCrossIndex);
+  const shortestOverlapWithMany = longestOverlap.slice(0, numJoinsToLastMany);
   const shortUsagePaths = getJoinUsagePaths(shortestOverlapWithMany, joinUsage);
   const shortUsageError = validateUsagePaths(shortUsagePaths);
   // const debug = `longest overlap of ${joinUsage.map(
