@@ -475,7 +475,6 @@ describe('expressions', () => {
     test('source.sum(one.column + one.column)', () => {
       expect(modelX`source.sum(one.column + one.column)`).toTranslate();
     });
-    // TODO ensure that sum(nested.column) errors
   });
 
   describe('pick statements', () => {
