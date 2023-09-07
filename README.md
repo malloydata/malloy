@@ -37,7 +37,7 @@ Documentation:
 
 ## Contributing
 
-If you would like to [work on Malloy](CONTRIBUTING.md), take a look at the instructions for [developing Malloy](developing.md) and [developing documentation](documentation.md).
+If you would like to [work on Malloy](CONTRIBUTING.md), take a look at the instructions for [developing Malloy](developing.md).
 
 To report security issues please see our [security policy](https://github.com/malloydata/malloy/security/policy).
 
