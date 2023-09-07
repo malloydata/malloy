@@ -475,6 +475,16 @@ describe('expressions', () => {
     test('source.sum(one.column + one.column)', () => {
       expect(modelX`source.sum(one.column + one.column)`).toTranslate();
     });
+    test('lag(sum(output))', () => {
+      expect(model`
+      ##! m4warnings
+      run: a -> {
+        group_by: output is 1
+        calculate: bar is lag(sum(output))
+      }`).translationToFailWith(
+        'Aggregate over an output expression is never useful'
+      );
+    });
   });
 
   describe('pick statements', () => {
