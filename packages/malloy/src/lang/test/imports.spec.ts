@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 import './parse-expects';
-import {TestTranslator} from './test-translator';
+import {TestTranslator, model} from './test-translator';
 import escapeRegEx from 'lodash/escapeRegExp';
 
 describe('import:', () => {
@@ -157,5 +157,75 @@ source: botProjQSrc is from(->botProjQ)
         expect(typeof qs).not.toBe('string');
       }
     }
+  });
+  test('selective import of source', () => {
+    const docParse = new TestTranslator('import { bb } from "child"');
+    const xr = docParse.unresolved();
+    expect(docParse).toParse();
+    expect(xr).toEqual({urls: ['internal://test/langtests/child']});
+    docParse.update({
+      urls: {
+        'internal://test/langtests/child': 'source: aa is a; source: bb is a',
+      },
+    });
+    expect(docParse).toTranslate();
+    const bb = docParse.getSourceDef('bb');
+    expect(bb).toBeDefined();
+    const aa = docParse.getSourceDef('aa');
+    expect(aa).toBeUndefined();
+  });
+  test('renaming import of source', () => {
+    const docParse = new TestTranslator('import { bb is aa } from "child"');
+    const xr = docParse.unresolved();
+    expect(docParse).toParse();
+    expect(xr).toEqual({urls: ['internal://test/langtests/child']});
+    docParse.update({
+      urls: {'internal://test/langtests/child': 'source: aa is a'},
+    });
+    expect(docParse).toTranslate();
+    const bb = docParse.getSourceDef('bb');
+    expect(bb).toBeDefined();
+  });
+  test('selective import of source, not found', () => {
+    const doc = model`import { ${'bb'} } from "child"`;
+    const xr = doc.translator.unresolved();
+    expect(doc).toParse();
+    expect(xr).toEqual({urls: ['internal://test/langtests/child']});
+    doc.translator.update({
+      urls: {
+        'internal://test/langtests/child': 'source: aa is a',
+      },
+    });
+    expect(doc.translator).translationToFailWith(
+      "Cannot find 'bb', not imported"
+    );
+  });
+  test('selective renamed import of source, not found', () => {
+    const doc = model`import { cc is ${'bb'} } from "child"`;
+    const xr = doc.translator.unresolved();
+    expect(doc).toParse();
+    expect(xr).toEqual({urls: ['internal://test/langtests/child']});
+    doc.translator.update({
+      urls: {
+        'internal://test/langtests/child': 'source: aa is a',
+      },
+    });
+    expect(doc.translator).translationToFailWith(
+      "Cannot find 'bb', not imported"
+    );
+  });
+  test('selective import of source, no-redefinition', () => {
+    const doc = model`
+      import { cc is ${'bb'} } from "child"
+      import { cc is ${'bb'} } from "child"`;
+    const xr = doc.translator.unresolved();
+    expect(doc).toParse();
+    expect(xr).toEqual({urls: ['internal://test/langtests/child']});
+    doc.translator.update({
+      urls: {
+        'internal://test/langtests/child': 'source: bb is a',
+      },
+    });
+    expect(doc.translator).translationToFailWith("Cannot redefine 'cc'");
   });
 });

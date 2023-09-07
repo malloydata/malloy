@@ -157,11 +157,14 @@ export type HasID = ParserRuleContext & {id: () => IdContext};
  * @returns The indenftifier text
  */
 export function getId(cx: HasID): string {
-  const quoted = cx.id().BQ_STRING();
+  return idToStr(cx.id());
+}
+export function idToStr(cx: IdContext): string {
+  const quoted = cx.BQ_STRING();
   if (quoted) {
     return parseString(quoted.text, '`');
   }
-  return cx.id().text;
+  return cx.text;
 }
 
 export function getOptionalId(cx: ParserRuleContext): string | undefined {
