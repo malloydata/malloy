@@ -21,13 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {isFieldTypeDef, isFilteredAliasedName, StructDef} from '../../model';
+import {isFieldTypeDef, isFilteredAliasedName} from '../../model';
 import {
   expr,
   TestTranslator,
   markSource,
   BetaExpression,
-  exprWithStruct,
   model,
   makeModelFunc,
 } from './test-translator';

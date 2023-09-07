@@ -205,7 +205,6 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     if (this.source) {
       const lookup = this.source.getField(fs);
       if (lookup.found) {
-        // TODO uhhhh
         if (lookup.found.outputField) {
           const sfd: Fragment[] = [
             {type: 'outputField', name: this.source.refString},
@@ -281,7 +280,6 @@ function getJoinUsage(
         const def = lookup(fs, path);
         if (def.def.type !== 'struct' && def.def.type !== 'turtle') {
           if (def.def.e) {
-            // TODO make sure this thing works for dimensions used in dimensions
             const defUsage = getJoinUsage(def.fs, def.def.e);
             result.push(...defUsage.map(r => [...def.relationship, ...r]));
           } else {
@@ -292,28 +290,6 @@ function getJoinUsage(
     }
   });
   return result;
-}
-
-function prettyRelationship(
-  relationship: {name: string; structRelationship: StructRelationship}[]
-): string {
-  return relationship
-    .map(p => `${p.name}[${p.structRelationship.type}]`)
-    .join('.');
-}
-
-function prettyUsagePath(
-  relationship: {
-    name: string;
-    structRelationship: StructRelationship;
-    reverse: boolean;
-  }[]
-): string {
-  return relationship
-    .map(
-      p => `${p.name}[${p.reverse ? '<<' : '>>'}${p.structRelationship.type}]`
-    )
-    .join('.');
 }
 
 function getJoinUsagePaths(
@@ -442,84 +418,3 @@ function suggestNewVersion(
     return result;
   }
 }
-
-/*
-
-field.agg()
-one.field.agg()
-many.field.agg()
-cross.field.agg()
-one.agg(one.field)
-many.agg(many.field)
-many.agg(one.field)
-many.agg(cross.field)
-
-// Forms
-// A path.to.field.agg()
-// B path.to.join.agg(path.to.field)
-// C path.to.join.agg(expr)
-// D agg(path.to.field)
-// E agg(expr)
-// F source.agg(expr)
-// G source.agg(path.to.field)
-
-// Classify
-// Ok
-// Special case: agg(dimension(path.many.path)) -> set the agg locality to path.many.path (the long path)
-// Special case: agg(field) -> set the agg locality to source
-// Crosses exactly one join_many relationship j forward
-
-    short path: shortest path shared by all usages that contains the problematic many
-    long path: longest path shared by all usages (that contains the problematic many)
-    theory: for all cases, take the path to the many (short path) and the path to the field (long path), and do the agg WRT each.
-    If the path to the field === the path to the many, then there's only one.
-    If the arg is a field, then rewrite as path.to.field.agg() OR path.to.many.agg(path.to.field)
-    If arg is an expression, then rewrite as short.agg(expr) OR long.agg(expr)
-
-    - always pick the long path
-    - if it can be written as field.agg() suggest that
-    - for expressions: long.agg(expr)
-
-    What about middle?
-
-  // A: path.many.path.field.agg() -> OK as is
-  // B:
-    path.agg(path.many.path.field) -> path.many.path.field.agg()
-                                   -> path.many.agg(path.many.path.field)
-    path.agg(path.many.field) -> path.many.field.agg()
-  // C:
-    path.agg(expr(path.many.path)) -> path.many.path.agg(expr)
-                                   -> path.many.agg(expr)
-  // D:
-    agg(path.many.path.field) -> path.many.path.field.agg()
-      or specify some other locality....
-                              -> path.many.agg(path.many.path.field)
-
-                              read more at malloydata.dev/aggregatelocality
-    agg(path.many.field) -> roopatht.many.field.agg()
-  // E:
-    agg(expr(path.many.path)) -> path.many.path.agg(expr) or move the aggregates into the sources
-                              -> path.many.agg(expr)
-  // F:
-    source.agg(expr(path.many.path)) -> path.many.path.agg(expr)
-                                     -> path.many.agg(expr)
-  // G:
-    source.agg(root.many.path.field) -> root.many.path.field.agg()
-                                     -> root.many.agg(root.many.path.field)
-    source.agg(root.many.field) -> root.many.field.agg()
-// Crosses exactly one join_cross relationship j forward ^ same as above
-// Crosses exactly one join_cross relationship backward
-  // B: cross.agg(one.field) ; suggest one.field.agg() or source.agg(one.field)
-  // C: Invalid, needs to be rewritten
-// Using no many or cross:
-   agg(path.field) -> path.field.agg() "you probably mean this"
-                   -> source.agg(path.field) "this is also valid but gives a weighted result"
-
-// Any other combination of things: rewrite
-
-
-
-
-
-
-*/

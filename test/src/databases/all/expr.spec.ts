@@ -412,6 +412,37 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }
   });
 
+  it('many_field.sum() has correct locality', async () => {
+    const result = await expressionModel
+      .loadQuery(
+        `
+
+        source: a is table('malloytest.aircraft')
+
+        source: am is table('malloytest.aircraft_models') extend {
+          join_many: a on a.aircraft_model_code = a.aircraft_model_code
+          dimension: a_year_built is a.year_built
+        }
+
+        // run: a -> {
+        //   aggregate: avg_year_built is avg(year_built)
+        // }
+
+        run: am -> {
+          aggregate: avg_a_year_built1 is a_year_built.avg()
+          aggregate: avg_a_year_built2 is a.avg(a_year_built)
+        }
+        `
+      )
+      .run();
+    expect(
+      Math.floor(result.data.path(0, 'avg_a_year_built1').number.value)
+    ).toBe(1969);
+    expect(
+      Math.floor(result.data.path(0, 'avg_a_year_built2').number.value)
+    ).toBe(1969);
+  });
+
   testIf(runtime.supportsNesting)(
     'query with aliasname used twice',
     async () => {
