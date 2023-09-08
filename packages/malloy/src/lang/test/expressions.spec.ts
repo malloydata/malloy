@@ -203,7 +203,6 @@ describe('expressions', () => {
 
   describe('aggregate forms', () => {
     const m = model`
-      ##! m4warnings
       source: root is a {
         rename: column is ai
         rename: nested is astruct
@@ -242,7 +241,6 @@ describe('expressions', () => {
     m.translator.translate();
     const modelX = makeModelFunc({
       model: m.translator.modelDef,
-      prefix: '##! m4warnings\n',
       wrap: x => `run: root -> { aggregate: x is ${x} }`,
     });
     test('one.column.min()', () => {
@@ -314,12 +312,12 @@ describe('expressions', () => {
       expect(modelX`source.sum(column)`).toTranslate();
     });
     test('sum(many.column)', () => {
-      expect(modelX`sum(many.column)`).toTranslateWithWarnings(
+      expect(modelX`sum(many.column)`).translationToFailWith(
         'Join path is required for this calculation; use `many.column.sum()`'
       );
     });
     test('source.sum(many.column)', () => {
-      expect(modelX`source.sum(many.column)`).toTranslateWithWarnings(
+      expect(modelX`source.sum(many.column)`).translationToFailWith(
         'Cannot compute asymmetric aggregate across forward join_many relationship `many`; use `many.column.sum()`'
       );
     });
@@ -352,12 +350,12 @@ describe('expressions', () => {
       expect(modelX`source.sum(nested.column)`).toTranslate();
     });
     test('sum(many.field)', () => {
-      expect(modelX`sum(many.field)`).toTranslateWithWarnings(
+      expect(modelX`sum(many.field)`).translationToFailWith(
         'Join path is required for this calculation; use `many.field.sum()`'
       );
     });
     test('source.sum(many.field)', () => {
-      expect(modelX`source.sum(many.field)`).toTranslateWithWarnings(
+      expect(modelX`source.sum(many.field)`).translationToFailWith(
         'Cannot compute asymmetric aggregate across forward join_many relationship `many`; use `many.field.sum()`'
       );
     });
@@ -369,14 +367,12 @@ describe('expressions', () => {
     });
 
     test('sum(many.field + many.field)', () => {
-      expect(modelX`sum(many.field + many.field)`).toTranslateWithWarnings(
+      expect(modelX`sum(many.field + many.field)`).translationToFailWith(
         'Join path is required for this calculation; use `many.sum(many.field + many.field)`'
       );
     });
     test('source.sum(many.field + many.field)', () => {
-      expect(
-        modelX`source.sum(many.field + many.field)`
-      ).toTranslateWithWarnings(
+      expect(modelX`source.sum(many.field + many.field)`).translationToFailWith(
         'Cannot compute asymmetric aggregate across forward join_many relationship `many`; use `many.sum(many.field + many.field)`'
       );
     });
@@ -388,17 +384,16 @@ describe('expressions', () => {
     });
 
     test('sum(many_field)', () => {
-      expect(modelX`sum(many_field)`).toTranslateWithWarnings(
+      expect(modelX`sum(many_field)`).translationToFailWith(
         'Join path is required for this calculation; use `many_field.sum()`'
       );
     });
     test('source.sum(many_field)', () => {
-      expect(modelX`source.sum(many_field)`).toTranslateWithWarnings(
+      expect(modelX`source.sum(many_field)`).translationToFailWith(
         'Cannot compute asymmetric aggregate across forward join_many relationship `many`; use `many_field.sum()`'
       );
     });
     test('many_field.sum()', () => {
-      // TODO test this case that we generate the right SQL
       expect(modelX`many_field.sum()`).toTranslate();
     });
     test('many.sum(many_field)', () => {
@@ -406,17 +401,16 @@ describe('expressions', () => {
     });
 
     test('sum(one.many_field)', () => {
-      expect(modelX`sum(one.many_field)`).toTranslateWithWarnings(
+      expect(modelX`sum(one.many_field)`).translationToFailWith(
         'Join path is required for this calculation; use `one.many_field.sum()`'
       );
     });
     test('source.sum(one.many_field)', () => {
-      expect(modelX`source.sum(one.many_field)`).toTranslateWithWarnings(
+      expect(modelX`source.sum(one.many_field)`).translationToFailWith(
         'Cannot compute asymmetric aggregate across forward join_many relationship `many`; use `one.many_field.sum()`'
       );
     });
     test('one.many_field.sum()', () => {
-      // TODO test this case that we generate the right SQL
       expect(modelX`one.many_field.sum()`).toTranslate();
     });
     test('many.sum(one.many_field)', () => {
@@ -424,14 +418,12 @@ describe('expressions', () => {
     });
 
     test('sum(many.field + one.field)', () => {
-      expect(modelX`sum(many.field + one.field)`).toTranslateWithWarnings(
+      expect(modelX`sum(many.field + one.field)`).translationToFailWith(
         'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
       );
     });
     test('source.sum(many.field + one.field)', () => {
-      expect(
-        modelX`source.sum(many.field + one.field)`
-      ).toTranslateWithWarnings(
+      expect(modelX`source.sum(many.field + one.field)`).translationToFailWith(
         'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
       );
     });
@@ -440,12 +432,12 @@ describe('expressions', () => {
     });
 
     test('sum(many_one_field)', () => {
-      expect(modelX`sum(many_one_field)`).toTranslateWithWarnings(
+      expect(modelX`sum(many_one_field)`).translationToFailWith(
         'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
       );
     });
     test('source.sum(many_one_field)', () => {
-      expect(modelX`source.sum(many_one_field)`).toTranslateWithWarnings(
+      expect(modelX`source.sum(many_one_field)`).translationToFailWith(
         'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
       );
     });
@@ -454,12 +446,12 @@ describe('expressions', () => {
     });
 
     test('sum(many.one.field)', () => {
-      expect(modelX`sum(many.one.field)`).toTranslateWithWarnings(
+      expect(modelX`sum(many.one.field)`).translationToFailWith(
         'Join path is required for this calculation; use `many.one.field.sum()` or `many.sum(many.one.field)` to get a result weighted with respect to `many`'
       );
     });
     test('sum(many.one.one.field)', () => {
-      expect(modelX`sum(many.one.one.field)`).toTranslateWithWarnings(
+      expect(modelX`sum(many.one.one.field)`).translationToFailWith(
         'Join path is required for this calculation; use `many.one.one.field.sum()` or `many.sum(many.one.one.field)` to get a result weighted with respect to `many`'
       );
     });
@@ -473,7 +465,7 @@ describe('expressions', () => {
     });
 
     test('cross.avg(field)', () => {
-      expect(modelX`cross.avg(field)`).toTranslateWithWarnings(
+      expect(modelX`cross.avg(field)`).translationToFailWith(
         'Cannot compute asymmetric aggregate across join_cross relationship `cross`; use `field.avg()`'
       );
     });
