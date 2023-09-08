@@ -318,7 +318,6 @@ describe('expressions', () => {
         'Join path is required for this calculation; use `many.column.sum()`'
       );
     });
-    // TODO should this be an error?
     test('source.sum(many.column)', () => {
       expect(modelX`source.sum(many.column)`).toTranslateWithWarnings(
         'Cannot compute asymmetric aggregate across forward join_many relationship `many`; use `many.column.sum()`'

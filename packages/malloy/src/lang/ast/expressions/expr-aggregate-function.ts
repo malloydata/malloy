@@ -141,8 +141,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
       return errorFor('reagggregate');
     }
     const isAnError = exprVal.dataType === 'error';
-    const m4warnings = this.translator()?.root.compilerFlags?.has('m4warnings');
-    if (m4warnings && !isAnError) {
+    if (!isAnError) {
       const joinUsage = this.getJoinUsage(inputFS);
       // Did the user spceify a source, either as `source.agg()` or `path.to.join.agg()` or `path.to.field.agg()`
       const sourceSpecified = this.source !== undefined || this.explicitSource;
@@ -163,7 +162,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
               expr,
               this.elementType
             );
-            this.log(errorWithSuggestion, 'warn');
+            this.log(errorWithSuggestion, joinError ? 'error' : 'warn');
           }
         }
       }
