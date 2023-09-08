@@ -529,7 +529,7 @@ describe('BigQuery expression tests', () => {
         where: faa_region ? ~'A%'
         order_by: 1
         group_by: faa_region
-        aggregate: airport_count is COUNT(*)
+        aggregate: airport_count is count()
         nest: state is {
           where: state ?'CA'|'NY'
           group_by: state
@@ -692,7 +692,7 @@ describe('BigQuery expression tests', () => {
 const airportModelText = `
 source: airports is table('malloy-data.malloytest.airports'){
   primary_key: code
-  measure: airport_count is count(*)
+  measure: airport_count is count()
 
   query: by_fac_type is {
     group_by: fac_type
@@ -724,7 +724,7 @@ describe('airport_tests', () => {
       model,
       `
       query: airports->{
-        aggregate: a is count(*)
+        aggregate: a is count()
       }
     `
     );

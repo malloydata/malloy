@@ -512,13 +512,12 @@ expressionModels.forEach((expressionModel, databaseName) => {
   });
 
   describe('output field in calculate', () => {
-    it(`dotted aggregates work with an output field - ${databaseName}`, async () => {
+    it(`output field referenceable in calculate - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
           `query: aircraft -> {
-            group_by: aircraft_models.seats
-            aggregate: s is aircraft_models.seats.sum()
-            calculate: a is lag(seats.sum())
+            group_by: s is aircraft_models.seats
+            calculate: a is lag(s)
           }`
         )
         .run();

@@ -27,6 +27,8 @@ import {
   TestTranslator,
   markSource,
   BetaExpression,
+  model,
+  makeModelFunc,
 } from './test-translator';
 import './parse-expects';
 
@@ -200,31 +202,306 @@ describe('expressions', () => {
   });
 
   describe('aggregate forms', () => {
-    test('count', () => {
-      expect(expr`count()`).toTranslate();
-    });
-    test('count distinct', () => {
-      expect(expr`count(distinct astr)`).toTranslate();
-    });
-    test('join.count()', () => {
-      expect(expr`b.count()`).toTranslate();
-    });
-    for (const f of ['sum', 'min', 'max', 'avg']) {
-      const fOfT = `${f}(af)`;
-      test(fOfT, () => {
-        expect(new BetaExpression(fOfT)).toTranslate();
-      });
-      if (f !== 'min' && f !== 'max') {
-        const joinDot = `b.af.${f}()`;
-        test(joinDot, () => {
-          expect(new BetaExpression(joinDot)).toTranslate();
-        });
-        const joinAgg = `b.${f}(af)`;
-        test(joinAgg, () => {
-          expect(new BetaExpression(joinAgg)).toTranslate();
-        });
+    const m = model`
+      source: root is a {
+        rename: column is ai
+        rename: nested is astruct
+        dimension: field is column * 2
+        dimension: many_field is many.column * 2
+        dimension: many_one_field is many.column + one.column
+        join_one: one is a {
+          rename: column is ai
+          dimension: field is column * 2
+          dimension: many_field is many.column * 2
+          join_many: many is a {
+            rename: column is ai
+            dimension: field is column * 2
+            dimension: constant is 1
+          } on true
+        } on true
+        join_many: many is a {
+          rename: column is ai
+          dimension: field is column * 2
+          dimension: constant is 1
+          join_one: one is a {
+            rename: column is ai
+            dimension: field is column * 2
+            join_one: one is a {
+              rename: column is ai
+              dimension: field is column * 2
+            } on true
+          } on true
+        } on true
+        join_cross: cross is a {
+          rename: column is ai
+          dimension: field is column * 2
+        } on true
       }
-    }
+    `;
+    m.translator.translate();
+    const modelX = makeModelFunc({
+      model: m.translator.modelDef,
+      wrap: x => `run: root -> { aggregate: x is ${x} }`,
+    });
+    test('one.column.min()', () => {
+      expect(modelX`one.column.min()`).toTranslate();
+    });
+    test('one.min(one.column)', () => {
+      expect(modelX`one.min(one.column)`).translationToFailWith(
+        'Symmetric aggregate function `min` must be written as `min(expression)` or `path.to.field.min()`'
+      );
+    });
+    test('min(one.column)', () => {
+      expect(modelX`min(one.column)`).toTranslate();
+    });
+    test('min(many.column)', () => {
+      expect(modelX`min(many.column)`).toTranslate();
+    });
+    test('min()', () => {
+      expect(modelX`min()`).translationToFailWith(
+        'Symmetric aggregate function `min` must be written as `min(expression)` or `path.to.field.min()`'
+      );
+    });
+    test('source.min(column)', () => {
+      expect(modelX`source.min(column)`).toTranslate();
+    });
+    test('many.column.max()', () => {
+      expect(modelX`many.column.max()`).toTranslate();
+    });
+    test('max(many.column)', () => {
+      expect(modelX`max(many.column)`).toTranslate();
+    });
+    test('max()', () => {
+      expect(modelX`max()`).translationToFailWith(
+        'Symmetric aggregate function `max` must be written as `max(expression)` or `path.to.field.max()`'
+      );
+    });
+    test('source.max(many.column)', () => {
+      expect(modelX`source.max(many.column)`).toTranslate();
+    });
+    test('many.column.count()', () => {
+      expect(expr`many.column.count()`).toTranslate();
+    });
+    test('count()', () => {
+      expect(modelX`count()`).toTranslate();
+    });
+    test('count(many.column)', () => {
+      expect(modelX`count(many.column)`).toTranslate();
+    });
+    test('source.count()', () => {
+      expect(modelX`source.count()`).toTranslate();
+    });
+    test('many.count()', () => {
+      expect(modelX`many.count()`).toTranslate();
+    });
+    test('sum()', () => {
+      expect(modelX`sum()`).translationToFailWith(
+        'Asymmetric aggregate function `sum` must be written as `path.to.field.sum()`, `path.to.join.sum(expression)`, or `sum(expression)`'
+      );
+    });
+    test('sum(column)', () => {
+      expect(modelX`sum(column)`).toTranslate();
+    });
+    test('sum(column * 2)', () => {
+      expect(modelX`sum(column * 2)`).toTranslate();
+    });
+    test('column.sum()', () => {
+      expect(modelX`column.sum()`).toTranslate();
+    });
+    test('source.sum(column)', () => {
+      expect(modelX`source.sum(column)`).toTranslate();
+    });
+    test('sum(many.column)', () => {
+      expect(modelX`sum(many.column)`).translationToFailWith(
+        'Join path is required for this calculation; use `many.column.sum()`'
+      );
+    });
+    test('source.sum(many.column)', () => {
+      expect(modelX`source.sum(many.column)`).translationToFailWith(
+        'Cannot compute asymmetric aggregate across forward `join_many` relationship `many`; use `many.column.sum()`'
+      );
+    });
+    test('many.column.sum()', () => {
+      expect(modelX`many.column.sum()`).toTranslate();
+    });
+    test('many.sum(many.column)', () => {
+      expect(modelX`many.sum(many.column)`).toTranslate();
+    });
+    test('sum(one.column)', () => {
+      expect(modelX`sum(one.column)`).toTranslateWithWarnings(
+        'Join path is required for this calculation; use `one.column.sum()` or `source.sum(one.column)` to get a result weighted with respect to `source`'
+      );
+    });
+    test('sum(many.constant)', () => {
+      expect(modelX`sum(many.constant)`).toTranslate();
+    });
+    test('source.sum(many.constant)', () => {
+      expect(modelX`source.sum(many.constant)`).toTranslate();
+    });
+    test('sum(nested.column)', () => {
+      expect(modelX`sum(nested.column)`).toTranslateWithWarnings(
+        'Join path is required for this calculation; use `nested.column.sum()` or `source.sum(nested.column)` to get a result weighted with respect to `source`'
+      );
+    });
+    test('nested.column.sum()', () => {
+      expect(modelX`nested.column.sum()`).toTranslate();
+    });
+    test('source.sum(nested.column)', () => {
+      expect(modelX`source.sum(nested.column)`).toTranslate();
+    });
+    test('sum(many.field)', () => {
+      expect(modelX`sum(many.field)`).translationToFailWith(
+        'Join path is required for this calculation; use `many.field.sum()`'
+      );
+    });
+    test('source.sum(many.field)', () => {
+      expect(modelX`source.sum(many.field)`).translationToFailWith(
+        'Cannot compute asymmetric aggregate across forward `join_many` relationship `many`; use `many.field.sum()`'
+      );
+    });
+    test('many.field.sum()', () => {
+      expect(modelX`many.field.sum()`).toTranslate();
+    });
+    test('many.sum(many.field)', () => {
+      expect(modelX`many.sum(many.field)`).toTranslate();
+    });
+
+    test('sum(many.field + many.field)', () => {
+      expect(modelX`sum(many.field + many.field)`).translationToFailWith(
+        'Join path is required for this calculation; use `many.sum(many.field + many.field)`'
+      );
+    });
+    test('source.sum(many.field + many.field)', () => {
+      expect(modelX`source.sum(many.field + many.field)`).translationToFailWith(
+        'Cannot compute asymmetric aggregate across forward `join_many` relationship `many`; use `many.sum(many.field + many.field)`'
+      );
+    });
+    test('many.field + many.field.sum()', () => {
+      expect(modelX`many.field + many.field.sum()`).toTranslate();
+    });
+    test('many.sum(many.field + many.field)', () => {
+      expect(modelX`many.sum(many.field + many.field)`).toTranslate();
+    });
+
+    test('sum(many_field)', () => {
+      expect(modelX`sum(many_field)`).translationToFailWith(
+        'Join path is required for this calculation; use `many_field.sum()`'
+      );
+    });
+    test('source.sum(many_field)', () => {
+      expect(modelX`source.sum(many_field)`).translationToFailWith(
+        'Cannot compute asymmetric aggregate across forward `join_many` relationship `many`; use `many_field.sum()`'
+      );
+    });
+    test('many_field.sum()', () => {
+      expect(modelX`many_field.sum()`).toTranslate();
+    });
+    test('many.sum(many_field)', () => {
+      expect(modelX`many.sum(many_field)`).toTranslate();
+    });
+
+    test('sum(one.many_field)', () => {
+      expect(modelX`sum(one.many_field)`).translationToFailWith(
+        'Join path is required for this calculation; use `one.many_field.sum()`'
+      );
+    });
+    test('source.sum(one.many_field)', () => {
+      expect(modelX`source.sum(one.many_field)`).translationToFailWith(
+        'Cannot compute asymmetric aggregate across forward `join_many` relationship `many`; use `one.many_field.sum()`'
+      );
+    });
+    test('one.many_field.sum()', () => {
+      expect(modelX`one.many_field.sum()`).toTranslate();
+    });
+    test('many.sum(one.many_field)', () => {
+      expect(modelX`one.many.sum(one.many_field)`).toTranslate();
+    });
+
+    test('sum(many.field + one.field)', () => {
+      expect(modelX`sum(many.field + one.field)`).translationToFailWith(
+        'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
+      );
+    });
+    test('source.sum(many.field + one.field)', () => {
+      expect(modelX`source.sum(many.field + one.field)`).translationToFailWith(
+        'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
+      );
+    });
+    test('many.sum(many.field + one.field)', () => {
+      expect(modelX`many.sum(many.field + one.field)`).toTranslate();
+    });
+
+    test('sum(many_one_field)', () => {
+      expect(modelX`sum(many_one_field)`).translationToFailWith(
+        'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
+      );
+    });
+    test('source.sum(many_one_field)', () => {
+      expect(modelX`source.sum(many_one_field)`).translationToFailWith(
+        'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
+      );
+    });
+    test('many.sum(many_one_field)', () => {
+      expect(modelX`many.sum(many_one_field)`).toTranslate();
+    });
+
+    test('sum(many.one.field)', () => {
+      expect(modelX`sum(many.one.field)`).translationToFailWith(
+        'Join path is required for this calculation; use `many.one.field.sum()` or `many.sum(many.one.field)` to get a result weighted with respect to `many`'
+      );
+    });
+    test('sum(many.one.one.field)', () => {
+      expect(modelX`sum(many.one.one.field)`).translationToFailWith(
+        'Join path is required for this calculation; use `many.one.one.field.sum()` or `many.sum(many.one.one.field)` to get a result weighted with respect to `many`'
+      );
+    });
+
+    test('many.avg(field)', () => {
+      expect(modelX`many.avg(field)`).toTranslate();
+    });
+
+    test('one.avg(field)', () => {
+      expect(modelX`one.avg(field)`).toTranslate();
+    });
+
+    test('cross.avg(field)', () => {
+      expect(modelX`cross.avg(field)`).translationToFailWith(
+        'Cannot compute asymmetric aggregate across `join_cross` relationship `cross`; use `field.avg()`'
+      );
+    });
+
+    test('cross.avg(cross.field)', () => {
+      expect(modelX`cross.avg(cross.field)`).toTranslate();
+    });
+
+    test('one.column.sum()', () => {
+      expect(modelX`one.column.sum()`).toTranslate();
+    });
+    test('one.sum(one.column)', () => {
+      expect(modelX`one.sum(one.column)`).toTranslate();
+    });
+    test('source.sum(one.column)', () => {
+      expect(modelX`source.sum(one.column)`).toTranslate();
+    });
+    test('sum(one.column + one.column)', () => {
+      expect(modelX`sum(one.column + one.column)`).toTranslateWithWarnings(
+        'Join path is required for this calculation; use `one.sum(one.column + one.column)` or `source.sum(one.column + one.column)` to get a result weighted with respect to `source`'
+      );
+    });
+    test('one.sum(one.column + one.column)', () => {
+      expect(modelX`one.sum(one.column + one.column)`).toTranslate();
+    });
+    test('source.sum(one.column + one.column)', () => {
+      expect(modelX`source.sum(one.column + one.column)`).toTranslate();
+    });
+    test('lag(sum(output))', () => {
+      expect(model`
+      ##! m4warnings
+      run: a -> {
+        group_by: output is 1
+        calculate: bar is lag(sum(output))
+      }`).translationToFailWith("'output' is not defined");
+    });
   });
 
   describe('pick statements', () => {

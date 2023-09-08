@@ -29,10 +29,15 @@ export abstract class ExprAsymmetric extends ExprAggregateFunction {
   constructor(
     readonly func: 'sum' | 'avg',
     readonly expr: ExpressionDef | undefined,
-    readonly source?: FieldReference
+    readonly source?: FieldReference,
+    explicitSource?: boolean
   ) {
-    super(func, expr);
+    super(func, expr, explicitSource);
     this.has({source: source});
+  }
+
+  isSymmetricFunction() {
+    return false;
   }
 
   defaultFieldName(): undefined | string {

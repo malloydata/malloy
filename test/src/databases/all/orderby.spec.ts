@@ -235,7 +235,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
         `
     source: a is table('malloytest.aircraft'){
       primary_key: tail_num
-      measure: aircraft_count is count(*)
+      measure: aircraft_count is count()
     }
 
     source: f is table('malloytest.flights'){

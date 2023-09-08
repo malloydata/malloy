@@ -207,6 +207,106 @@ export function exprMap(expr: Expr, func: (fragment: Fragment) => Expr): Expr {
   });
 }
 
+export function exprWalk(expr: Expr, func: (fragment: Fragment) => void): void {
+  expr.forEach(fragment => {
+    func(fragment);
+    if (typeof fragment === 'string') {
+      return fragment;
+    }
+    switch (fragment.type) {
+      case 'aggregate':
+      case 'all':
+      case 'spread':
+      case 'sql_expression':
+      case 'exclude':
+        return {
+          ...fragment,
+          e: exprWalk(fragment.e, func),
+        };
+      case 'apply':
+        return {
+          ...fragment,
+          to: exprWalk(fragment.to, func),
+          value: exprWalk(fragment.value, func),
+        };
+      case 'applyVal':
+      case 'field':
+      case 'function_parameter':
+      case 'parameter':
+      case 'outputField':
+        return fragment;
+      case 'function_call':
+        return {
+          ...fragment,
+          args: fragment.args.map(arg => exprWalk(arg, func)),
+        };
+      case 'filterExpression':
+        return {
+          ...fragment,
+          e: exprWalk(fragment.e, func),
+          filterList: fragment.filterList.map(filter => {
+            return {
+              ...filter,
+              expression: exprWalk(filter.expression, func),
+            };
+          }),
+        };
+      case 'dialect': {
+        switch (fragment.function) {
+          case 'cast':
+          case 'regexpMatch':
+            return {
+              ...fragment,
+              expr: exprWalk(fragment.expr, func),
+            };
+          case 'delta':
+            return {
+              ...fragment,
+              delta: exprWalk(fragment.delta, func),
+            };
+          case 'div':
+            return {
+              ...fragment,
+              denominator: exprWalk(fragment.denominator, func),
+              numerator: exprWalk(fragment.numerator, func),
+            };
+          case 'now':
+          case 'numberLiteral':
+          case 'stringLiteral':
+          case 'timeLiteral':
+          case 'regexpLiteral':
+            return fragment;
+          case 'extract':
+          case 'trunc':
+            return {
+              ...fragment,
+              expr: {
+                ...fragment.expr,
+                value: exprWalk(fragment.expr.value, func),
+              },
+            };
+          case 'timeDiff':
+            return {
+              ...fragment,
+              left: {
+                ...fragment.left,
+                value: exprWalk(fragment.left.value, func),
+              },
+              right: {
+                ...fragment.left,
+                value: exprWalk(fragment.left.value, func),
+              },
+            };
+          default:
+            throw new Error('unexpected dialect function');
+        }
+      }
+      default:
+        throw new Error('unexpected');
+    }
+  });
+}
+
 export function joinWith<T>(els: T[][], sep: T): T[] {
   const result: T[] = [];
   for (let i = 0; i < els.length; i++) {

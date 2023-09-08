@@ -67,6 +67,14 @@ const mockSchema: Record<string, StructDef> = {
       {type: 'timestamp', name: 'ats'},
       {type: 'unsupported', name: 'aun'},
       {type: 'unsupported', name: 'aweird', rawType: 'weird'},
+      {
+        type: 'struct',
+        name: 'astruct',
+        structSource: {type: 'nested'},
+        structRelationship: {type: 'inline'},
+        fields: [{type: 'number', name: 'column', numberType: 'integer'}],
+        dialect: 'standardsql',
+      },
     ],
   },
   'malloytest.carriers': {
@@ -273,10 +281,17 @@ export class TestTranslator extends MalloyTranslator {
     },
   };
 
-  constructor(readonly testSrc: string, rootRule = 'malloyDocument') {
+  constructor(
+    readonly testSrc: string,
+    rootRule = 'malloyDocument',
+    internalModel?: ModelDef
+  ) {
     super(testURI);
     this.grammarRule = rootRule;
     this.importZone.define(testURI, testSrc);
+    if (internalModel !== undefined) {
+      this.internalModel = internalModel;
+    }
     for (const tableName in mockSchema) {
       this.schemaZone.define(tableName, mockSchema[tableName]);
       this.schemaZone.define('conn:' + tableName, mockSchema[tableName]);
@@ -393,19 +408,24 @@ export class BetaExpression extends TestTranslator {
     super(src, 'justExpr');
   }
 
+  private testFS() {
+    const aStruct = this.internalModel.contents['ab'];
+    if (aStruct.type === 'struct') {
+      const tstFS = new StaticSpace(aStruct);
+      return tstFS;
+    } else {
+      throw new Error("Can't get simple namespace for expression tests");
+    }
+  }
+
   compile(): void {
     const exprAst = this.ast();
     if (exprAst instanceof ExpressionDef) {
-      const aStruct = this.internalModel.contents['ab'];
-      if (aStruct.type === 'struct') {
-        const tstFS = new StaticSpace(aStruct);
-        const exprDef = exprAst.getExpression(tstFS);
-        this.compiled = exprDef;
-        if (TestTranslator.inspectCompile) {
-          console.log('EXPRESSION: ', pretty(exprDef));
-        }
-      } else {
-        throw new Error("Can't get simple namespace for expression tests");
+      const tstFS = this.testFS();
+      const exprDef = exprAst.getExpression(tstFS);
+      this.compiled = exprDef;
+      if (TestTranslator.inspectCompile) {
+        console.log('EXPRESSION: ', pretty(exprDef));
       }
     } else if (this.logger.hasErrors()) {
       return;
@@ -495,6 +515,28 @@ export function model(
   return {
     ...ms,
     translator: new TestTranslator(ms.code),
+  };
+}
+
+export function makeModelFunc(options: {
+  model?: ModelDef;
+  prefix?: string;
+  wrap?: (code: string) => string;
+}) {
+  return function model(
+    unmarked: TemplateStringsArray,
+    ...marked: string[]
+  ): HasTranslator {
+    const ms = markSource(unmarked, ...marked);
+    return {
+      ...ms,
+      translator: new TestTranslator(
+        (options.prefix ?? '') +
+          (options.wrap ? options.wrap(ms.code) : ms.code),
+        undefined,
+        options?.model
+      ),
+    };
   };
 }
 

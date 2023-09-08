@@ -728,7 +728,7 @@ describe('query:', () => {
       query: a extend { join_one: aaa on astr=aaa.astr } -> {
         group_by: aaa.big_i
         aggregate: s is aaa.big_i.sum()
-        calculate: a is lag(big_i.sum())
+        calculate: a is lag(big_i)
       }`).toTranslate();
     });
   });

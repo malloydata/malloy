@@ -533,15 +533,15 @@ fieldExpr
   | fieldExpr DOUBLE_QMARK fieldExpr                       # exprCoalesce
   | CAST OPAREN fieldExpr AS malloyOrSQLType CPAREN        # exprCast
   | COUNT OPAREN DISTINCT fieldExpr CPAREN                 # exprCountDisinct
-  | (fieldPath DOT)?
-      aggregate
-      OPAREN (fieldExpr | STAR)? CPAREN                    # exprAggregate
+  | (SOURCE_KW DOT)? aggregate
+      OPAREN (fieldExpr | STAR)? CPAREN                    # exprPathlessAggregate
+  | fieldPath DOT aggregate
+      OPAREN fieldExpr? CPAREN                             # exprAggregate
   | OPAREN partialAllowedFieldExpr CPAREN                  # exprExpr
-  | (fieldPath DOT)?
-      id
+  | fieldPath DOT id
       OPAREN ( argumentList? ) CPAREN                      # exprAggFunc
   | ((id (EXCLAM malloyType?)?) | timeframe)
-    OPAREN ( argumentList? ) CPAREN                        # exprFunc
+      OPAREN ( argumentList? ) CPAREN                      # exprFunc
   | pickStatement                                          # exprPick
   | ungroup OPAREN fieldExpr (COMMA fieldName)* CPAREN     # exprUngroup
   ;

@@ -21,7 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {FieldDef, StructDef, TypeDesc} from '../../../model/malloy_types';
+import {
+  FieldDef,
+  StructDef,
+  StructRelationship,
+  TypeDesc,
+} from '../../../model/malloy_types';
 import {FieldSpace} from '../types/field-space';
 import {SpaceField} from '../types/space-field';
 
@@ -31,6 +36,10 @@ export abstract class StructSpaceFieldBase extends SpaceField {
   }
 
   abstract get fieldSpace(): FieldSpace;
+
+  get structRelationship(): StructRelationship {
+    return this.sourceDef.structRelationship;
+  }
 
   fieldDef(): FieldDef {
     return this.sourceDef;

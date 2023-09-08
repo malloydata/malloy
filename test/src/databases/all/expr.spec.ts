@@ -32,7 +32,6 @@ const expressionModelText = `
 source: aircraft_models is table('malloytest.aircraft_models') extend {
   primary_key: aircraft_model_code
   measure:
-    airport_count is count(*),
     aircraft_model_count is count(),
     total_seats is sum(seats),
     boeing_seats is sum(seats) {? manufacturer ? 'BOEING'},
@@ -44,7 +43,7 @@ source: aircraft_models is table('malloytest.aircraft_models') extend {
 source: aircraft is table('malloytest.aircraft') extend {
   primary_key: tail_num
   join_one: aircraft_models with aircraft_model_code
-  measure: aircraft_count is count(*)
+  measure: aircraft_count is count()
   query: by_manufacturer is {
     top: 5
     group_by: aircraft_models.manufacturer
@@ -331,17 +330,6 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     }
   );
 
-  it.skip('defines in model', async () => {
-    // const result1 = await model.makeQuery(`
-    //   define a is ('malloytest.alltypes');
-    //   explore a | reduce x is count(*)
-    //   `);
-    // const result = await model.makeQuery(`
-    //     define a is ('malloytest.alltypes');
-    //     explore a | reduce x is count(*)
-    //     `);
-  });
-
   it('named query metadata undefined', async () => {
     const result = await expressionModel
       .loadQuery(
@@ -422,6 +410,37 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(result.data.path(0, 'a').isNumber()).toBe(true);
       expect(result.data.path(0, 'a').number.value).toBe(312);
     }
+  });
+
+  it('many_field.sum() has correct locality', async () => {
+    const result = await expressionModel
+      .loadQuery(
+        `
+
+        source: a is table('malloytest.aircraft')
+
+        source: am is table('malloytest.aircraft_models') extend {
+          join_many: a on a.aircraft_model_code = a.aircraft_model_code
+          dimension: a_year_built is a.year_built
+        }
+
+        // run: a -> {
+        //   aggregate: avg_year_built is avg(year_built)
+        // }
+
+        run: am -> {
+          aggregate: avg_a_year_built1 is a_year_built.avg()
+          aggregate: avg_a_year_built2 is a.avg(a_year_built)
+        }
+        `
+      )
+      .run();
+    expect(
+      Math.floor(result.data.path(0, 'avg_a_year_built1').number.value)
+    ).toBe(1969);
+    expect(
+      Math.floor(result.data.path(0, 'avg_a_year_built2').number.value)
+    ).toBe(1969);
   });
 
   testIf(runtime.supportsNesting)(
