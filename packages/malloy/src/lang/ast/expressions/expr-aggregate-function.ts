@@ -69,15 +69,18 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
+    // It is never useful to use output fields in an aggregate expression
+    // so we don't even allow them to be referenced at all
+    const inputFS = fs.isQueryFieldSpace() ? fs.inputSpace() : fs;
     let expr: FieldReference | ExpressionDef | undefined = this.expr;
-    let exprVal = this.expr?.getExpression(fs);
+    let exprVal = this.expr?.getExpression(inputFS);
     let structPath = this.source?.refString;
     let sourceRelationship: {
       name: string;
       structRelationship: StructRelationship;
     }[] = [];
     if (this.source) {
-      const result = this.source.getField(fs);
+      const result = this.source.getField(inputFS);
       if (result.found) {
         sourceRelationship = result.relationship;
         const sourceFoot = result.found;
@@ -101,25 +104,19 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
             evalSpace: footType.evalSpace,
           };
           structPath = this.source.sourceString;
-          if (sourceFoot instanceof ReferenceField && sourceFoot.outputField) {
-            // If you reference an output field as the foot, then we need to get the
-            // source from that field, rather than using the default source.
-            structPath = sourceFoot.fieldRef.sourceString;
-          } else {
-            // Here we handle a special case where you write `foo.agg()` and `foo` is a
-            // dimension which uses only one distinct join path; in this case, we set the
-            // locality to be that join path
-            const joinUsage = this.getJoinUsage(fs);
-            const allUsagePaths = joinUsage.map(x =>
-              x.map(y => y.name).join('.')
-            );
-            const allUsagesSame =
-              allUsagePaths.length > 0 &&
-              allUsagePaths.slice(1).every(x => x === allUsagePaths[0]);
-            if (allUsagesSame) {
-              structPath = allUsagePaths[0];
-              sourceRelationship = joinUsage[0];
-            }
+          // Here we handle a special case where you write `foo.agg()` and `foo` is a
+          // dimension which uses only one distinct join path; in this case, we set the
+          // locality to be that join path
+          const joinUsage = this.getJoinUsage(inputFS);
+          const allUsagePaths = joinUsage.map(x =>
+            x.map(y => y.name).join('.')
+          );
+          const allUsagesSame =
+            allUsagePaths.length > 0 &&
+            allUsagePaths.slice(1).every(x => x === allUsagePaths[0]);
+          if (allUsagesSame) {
+            structPath = allUsagePaths[0];
+            sourceRelationship = joinUsage[0];
           }
         } else {
           if (!(sourceFoot instanceof StructSpaceFieldBase)) {
@@ -144,14 +141,10 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
       this.log('Aggregate expression cannot be aggregate');
       return errorFor('reagggregate');
     }
-    const inOutputSpace = exprVal.evalSpace === 'output';
-    if (inOutputSpace) {
-      this.log('Aggregate over an output expression is never useful');
-    }
     const isAnError = exprVal.dataType === 'error';
     const m4warnings = this.translator()?.root.compilerFlags?.has('m4warnings');
-    if (m4warnings && !inOutputSpace && !isAnError) {
-      const joinUsage = this.getJoinUsage(fs);
+    if (m4warnings && !isAnError) {
+      const joinUsage = this.getJoinUsage(inputFS);
       // Did the user spceify a source, either as `source.agg()` or `path.to.join.agg()` or `path.to.field.agg()`
       const sourceSpecified = this.source !== undefined || this.explicitSource;
       if (expr) {
@@ -208,17 +201,8 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
     if (this.source) {
       const lookup = this.source.getField(fs);
       if (lookup.found) {
-        if (lookup.found.outputField) {
-          const sfd: Fragment[] = [
-            {type: 'outputField', name: this.source.refString},
-          ];
-          result.push(...getJoinUsage(fs, sfd));
-        } else {
-          const sfd: Fragment[] = [
-            {type: 'field', path: this.source.refString},
-          ];
-          result.push(...getJoinUsage(fs, sfd));
-        }
+        const sfd: Fragment[] = [{type: 'field', path: this.source.refString}];
+        result.push(...getJoinUsage(fs, sfd));
       }
     }
     if (this.expr) {
@@ -278,9 +262,8 @@ function getJoinUsage(
   exprWalk(expr, frag => {
     // TODO sources as fields?
     if (typeof frag !== 'string') {
-      if (frag.type === 'field' || frag.type === 'outputField') {
-        const path = frag.type === 'field' ? frag.path : frag.name;
-        const def = lookup(fs, path);
+      if (frag.type === 'field') {
+        const def = lookup(fs, frag.path);
         if (def.def.type !== 'struct' && def.def.type !== 'turtle') {
           if (def.def.e) {
             const defUsage = getJoinUsage(def.fs, def.def.e);

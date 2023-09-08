@@ -505,9 +505,7 @@ describe('expressions', () => {
       run: a -> {
         group_by: output is 1
         calculate: bar is lag(sum(output))
-      }`).translationToFailWith(
-        'Aggregate over an output expression is never useful'
-      );
+      }`).translationToFailWith("'output' is not defined");
     });
   });
 
