@@ -260,7 +260,6 @@ function getJoinUsage(
     }
   };
   exprWalk(expr, frag => {
-    // TODO sources as fields?
     if (typeof frag !== 'string') {
       if (frag.type === 'field') {
         const def = lookup(fs, frag.path);
@@ -354,9 +353,7 @@ function suggestNewVersion(
       }
     }
   }
-  // expr.log(`${joinUsage.map(prettyRelationship)}`);
   const usagePaths = getJoinUsagePaths(longestOverlap, joinUsage);
-  // expr.log(`${usagePaths.map(prettyUsagePath)}`);
   const usageError = validateUsagePaths(usagePaths);
   // get rid of everything after the last many/cross
   const indexFromEndOfLastMany = longestOverlap
@@ -374,9 +371,6 @@ function suggestNewVersion(
   const shortestOverlapWithMany = longestOverlap.slice(0, numJoinsToLastMany);
   const shortUsagePaths = getJoinUsagePaths(shortestOverlapWithMany, joinUsage);
   const shortUsageError = validateUsagePaths(shortUsagePaths);
-  // const debug = `longest overlap of ${joinUsage.map(
-  //   prettyRelationship
-  // )} is ${prettyRelationship(longestOverlap)}`;
   const longLocality =
     longestOverlap.length > 0
       ? longestOverlap.map(r => r.name).join('.')
@@ -395,9 +389,6 @@ function suggestNewVersion(
         ? `${expr.fieldReference.refString}.${func}()`
         : `${longLocality}.${func}(${expr.code})`;
     const shortSuggestion = `${shortLocality}.${func}(${expr.code})`;
-    // const debug = `shortest overlap with manys: ${prettyRelationship(
-    //   shortestOverlapWithMany
-    // )} / `;
     let result = `${joinError}; use \`${longSuggestion}\``;
     if (shortUsageError === undefined && shortLocality !== longLocality) {
       result += ` or \`${shortSuggestion}\` to get a result weighted with respect to \`${shortLocality}\``;

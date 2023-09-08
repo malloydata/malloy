@@ -404,12 +404,12 @@ export class TestTranslator extends MalloyTranslator {
 
 export class BetaExpression extends TestTranslator {
   private compiled?: ExprValue;
-  constructor(src: string, private readonly struct?: StructDef) {
+  constructor(src: string) {
     super(src, 'justExpr');
   }
 
   private testFS() {
-    const aStruct = this.struct ?? this.internalModel.contents['ab'];
+    const aStruct = this.internalModel.contents['ab'];
     if (aStruct.type === 'struct') {
       const tstFS = new StaticSpace(aStruct);
       return tstFS;
@@ -504,19 +504,6 @@ export function expr(
   return {
     ...ms,
     translator: new BetaExpression(ms.code),
-  };
-}
-
-export function exprWithStruct(struct: StructDef) {
-  return function expr(
-    unmarked: TemplateStringsArray,
-    ...marked: string[]
-  ): HasTranslator {
-    const ms = markSource(unmarked, ...marked);
-    return {
-      ...ms,
-      translator: new BetaExpression(ms.code, struct),
-    };
   };
 }
 

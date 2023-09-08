@@ -1521,13 +1521,6 @@ export class MalloyToAST
         return new ast.ExprNULL();
       }
       const explicitSource = pcx.SOURCE_KW() !== undefined;
-      // if (this.m4WarningsEnabled() && !pcx.SOURCE_KW()) {
-      //   const msg =
-      //     expr instanceof ast.ExprIdReference
-      //       ? `Aggregate function missing context. Use '${exprDef?.text}.${aggFunc}()'`
-      //       : `Aggregate function missing context. Use 'source.${aggFunc}(expression)' for top level aggregation`;
-      //   this.contextError(pcx, msg, 'warn');
-      // }
       if (aggFunc === 'avg') {
         return new ast.ExprAvg(expr, source, explicitSource);
       } else if (aggFunc === 'sum') {
