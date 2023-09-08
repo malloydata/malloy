@@ -1429,6 +1429,14 @@ export class MalloyToAST
     );
   }
 
+  symmetricAggregateUsageError(aggFunc: string) {
+    return `Symmetric aggregate function \`${aggFunc}\` must be written as \`${aggFunc}(expression)\` or \`path.to.field.${aggFunc}()\``;
+  }
+
+  asymmetricAggregateUsageError(aggFunc: string) {
+    return `Asymmetric aggregate function \`${aggFunc}\` must be written as \`path.to.field.${aggFunc}()\`, \`path.to.join.${aggFunc}(expression)\`, or \`${aggFunc}(expression)\``;
+  }
+
   visitExprAggregate(pcx: parse.ExprAggregateContext): ast.ExpressionDef {
     const pathCx = pcx.fieldPath();
     const path = this.getFieldPath(pathCx, ast.ExpressionFieldReference);
@@ -1447,10 +1455,7 @@ export class MalloyToAST
 
     if (aggFunc === 'min' || aggFunc === 'max') {
       if (expr) {
-        this.contextError(
-          pcx,
-          `Cannot have an expression and an aggregate path for ${aggFunc}()`
-        );
+        this.contextError(pcx, this.symmetricAggregateUsageError(aggFunc));
       } else {
         const idRef = this.astAt(new ast.ExprIdReference(path), pathCx);
         return aggFunc === 'min'
@@ -1502,20 +1507,17 @@ export class MalloyToAST
       if (expr) {
         return new ast.ExprMin(expr);
       } else {
-        this.contextError(pcx, 'Missing expression for min()');
+        this.contextError(pcx, this.symmetricAggregateUsageError(aggFunc));
       }
     } else if (aggFunc === 'max') {
       if (expr) {
         return new ast.ExprMax(expr);
       } else {
-        this.contextError(pcx, 'Missing expression for max()');
+        this.contextError(pcx, this.symmetricAggregateUsageError(aggFunc));
       }
     } else {
       if (expr === undefined) {
-        this.contextError(
-          pcx,
-          `Should be field_name.${aggFunc}() or source.${aggFunc}(expression)`
-        );
+        this.contextError(pcx, this.asymmetricAggregateUsageError(aggFunc));
         return new ast.ExprNULL();
       }
       const explicitSource = pcx.SOURCE_KW() !== undefined;

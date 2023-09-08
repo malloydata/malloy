@@ -33,7 +33,6 @@ import {
 import {exprWalk} from '../../../model/utils';
 
 import {errorFor} from '../ast-utils';
-import {ReferenceField} from '../field-space/reference-field';
 import {StructSpaceField} from '../field-space/static-space';
 import {StructSpaceFieldBase} from '../field-space/struct-space-field-base';
 import {FT} from '../fragtype-utils';
@@ -153,16 +152,18 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           !this.source && joinUsage.every(usage => usage.length === 0);
         if (!noJoinField && !this.isSymmetricFunction()) {
           const usagePaths = getJoinUsagePaths(sourceRelationship, joinUsage);
-          const joinError = sourceSpecified
-            ? validateUsagePaths(usagePaths)
-            : `Explicit aggregate locality is required for asymmetric aggregate ${this.elementType}`;
-          const suggestion = suggestNewVersion(
-            joinUsage,
-            expr,
-            this.elementType
-          );
-          if (joinError) {
-            this.log(`${joinError}; ${suggestion}`, 'warn');
+          const joinError = validateUsagePaths(usagePaths);
+          const message = sourceSpecified
+            ? joinError
+            : 'Join path is required for this calculation';
+          if (message) {
+            const errorWithSuggestion = suggestNewVersion(
+              message,
+              joinUsage,
+              expr,
+              this.elementType
+            );
+            this.log(errorWithSuggestion, 'warn');
           }
         }
       }
@@ -334,12 +335,13 @@ function validateUsagePaths(
 }
 
 function suggestNewVersion(
+  joinError: string,
   joinUsage: {name: string; structRelationship: StructRelationship}[][],
   expr: FieldReference | ExpressionDef,
   func: string
 ) {
   if (joinUsage.length === 0) {
-    return;
+    return joinError;
   }
   // Get longest shared prefix
   let longestOverlap = joinUsage[0];
@@ -385,7 +387,7 @@ function suggestNewVersion(
       ? shortestOverlapWithMany.map(r => r.name).join('.')
       : 'source';
   if (usageError) {
-    return 'rewrite';
+    return 'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`';
   } else {
     const longSuggestion =
       expr instanceof FieldReference
@@ -397,7 +399,7 @@ function suggestNewVersion(
     // const debug = `shortest overlap with manys: ${prettyRelationship(
     //   shortestOverlapWithMany
     // )} / `;
-    let result = `use \`${longSuggestion}\``;
+    let result = `${joinError}; use \`${longSuggestion}\``;
     if (shortUsageError === undefined && shortLocality !== longLocality) {
       result += ` or \`${shortSuggestion}\` to get a result weighted with respect to \`${shortLocality}\``;
     }

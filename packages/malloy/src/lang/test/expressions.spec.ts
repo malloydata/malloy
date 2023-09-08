@@ -250,7 +250,7 @@ describe('expressions', () => {
     });
     test('one.min(one.column)', () => {
       expect(modelX`one.min(one.column)`).translationToFailWith(
-        'Cannot have an expression and an aggregate path for min()'
+        'Symmetric aggregate function `min` must be written as `min(expression)` or `path.to.field.min()`'
       );
     });
     test('min(one.column)', () => {
@@ -260,7 +260,9 @@ describe('expressions', () => {
       expect(modelX`min(many.column)`).toTranslate();
     });
     test('min()', () => {
-      expect(modelX`min()`).translationToFailWith(/Missing expression for min/);
+      expect(modelX`min()`).translationToFailWith(
+        'Symmetric aggregate function `min` must be written as `min(expression)` or `path.to.field.min()`'
+      );
     });
     test('source.min(column)', () => {
       expect(modelX`source.min(column)`).toTranslate();
@@ -272,7 +274,9 @@ describe('expressions', () => {
       expect(modelX`max(many.column)`).toTranslate();
     });
     test('max()', () => {
-      expect(modelX`max()`).translationToFailWith(/Missing expression for max/);
+      expect(modelX`max()`).translationToFailWith(
+        'Symmetric aggregate function `max` must be written as `max(expression)` or `path.to.field.max()`'
+      );
     });
     test('source.max(many.column)', () => {
       expect(modelX`source.max(many.column)`).toTranslate();
@@ -294,7 +298,7 @@ describe('expressions', () => {
     });
     test('sum()', () => {
       expect(modelX`sum()`).translationToFailWith(
-        'Should be field_name.sum() or source.sum(expression)'
+        'Asymmetric aggregate function `sum` must be written as `path.to.field.sum()`, `path.to.join.sum(expression)`, or `sum(expression)`'
       );
     });
     test('sum(column)', () => {
@@ -311,7 +315,7 @@ describe('expressions', () => {
     });
     test('sum(many.column)', () => {
       expect(modelX`sum(many.column)`).toTranslateWithWarnings(
-        'Explicit aggregate locality is required for asymmetric aggregate sum; use `many.column.sum()`'
+        'Join path is required for this calculation; use `many.column.sum()`'
       );
     });
     // TODO should this be an error?
@@ -328,7 +332,7 @@ describe('expressions', () => {
     });
     test('sum(one.column)', () => {
       expect(modelX`sum(one.column)`).toTranslateWithWarnings(
-        'Explicit aggregate locality is required for asymmetric aggregate sum; use `one.column.sum()` or `source.sum(one.column)` to get a result weighted with respect to `source`'
+        'Join path is required for this calculation; use `one.column.sum()` or `source.sum(one.column)` to get a result weighted with respect to `source`'
       );
     });
     test('sum(many.constant)', () => {
@@ -339,7 +343,7 @@ describe('expressions', () => {
     });
     test('sum(nested.column)', () => {
       expect(modelX`sum(nested.column)`).toTranslateWithWarnings(
-        'Explicit aggregate locality is required for asymmetric aggregate sum; use `nested.column.sum()` or `source.sum(nested.column)` to get a result weighted with respect to `source`'
+        'Join path is required for this calculation; use `nested.column.sum()` or `source.sum(nested.column)` to get a result weighted with respect to `source`'
       );
     });
     test('nested.column.sum()', () => {
@@ -350,7 +354,7 @@ describe('expressions', () => {
     });
     test('sum(many.field)', () => {
       expect(modelX`sum(many.field)`).toTranslateWithWarnings(
-        'Explicit aggregate locality is required for asymmetric aggregate sum; use `many.field.sum()`'
+        'Join path is required for this calculation; use `many.field.sum()`'
       );
     });
     test('source.sum(many.field)', () => {
@@ -367,7 +371,7 @@ describe('expressions', () => {
 
     test('sum(many.field + many.field)', () => {
       expect(modelX`sum(many.field + many.field)`).toTranslateWithWarnings(
-        'Explicit aggregate locality is required for asymmetric aggregate sum; use `many.sum(many.field + many.field)`'
+        'Join path is required for this calculation; use `many.sum(many.field + many.field)`'
       );
     });
     test('source.sum(many.field + many.field)', () => {
@@ -386,7 +390,7 @@ describe('expressions', () => {
 
     test('sum(many_field)', () => {
       expect(modelX`sum(many_field)`).toTranslateWithWarnings(
-        'Explicit aggregate locality is required for asymmetric aggregate sum; use `many_field.sum()`'
+        'Join path is required for this calculation; use `many_field.sum()`'
       );
     });
     test('source.sum(many_field)', () => {
@@ -404,7 +408,7 @@ describe('expressions', () => {
 
     test('sum(one.many_field)', () => {
       expect(modelX`sum(one.many_field)`).toTranslateWithWarnings(
-        'Explicit aggregate locality is required for asymmetric aggregate sum; use `one.many_field.sum()`'
+        'Join path is required for this calculation; use `one.many_field.sum()`'
       );
     });
     test('source.sum(one.many_field)', () => {
@@ -422,14 +426,14 @@ describe('expressions', () => {
 
     test('sum(many.field + one.field)', () => {
       expect(modelX`sum(many.field + one.field)`).toTranslateWithWarnings(
-        'Explicit aggregate locality is required for asymmetric aggregate sum; rewrite'
+        'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
       );
     });
     test('source.sum(many.field + one.field)', () => {
       expect(
         modelX`source.sum(many.field + one.field)`
       ).toTranslateWithWarnings(
-        'Cannot compute asymmetric aggregate across forward join_many relationship `many`; rewrite'
+        'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
       );
     });
     test('many.sum(many.field + one.field)', () => {
@@ -438,12 +442,12 @@ describe('expressions', () => {
 
     test('sum(many_one_field)', () => {
       expect(modelX`sum(many_one_field)`).toTranslateWithWarnings(
-        'Explicit aggregate locality is required for asymmetric aggregate sum; rewrite'
+        'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
       );
     });
     test('source.sum(many_one_field)', () => {
       expect(modelX`source.sum(many_one_field)`).toTranslateWithWarnings(
-        'Cannot compute asymmetric aggregate across forward join_many relationship `many`; rewrite'
+        'Aggregated dimensional expression contains multiple join paths; rewrite, for example `sum(first_join.field + second_join.field)` as `first_join.field.sum() + second_join.field.sum()`'
       );
     });
     test('many.sum(many_one_field)', () => {
@@ -452,12 +456,12 @@ describe('expressions', () => {
 
     test('sum(many.one.field)', () => {
       expect(modelX`sum(many.one.field)`).toTranslateWithWarnings(
-        'Explicit aggregate locality is required for asymmetric aggregate sum; use `many.one.field.sum()` or `many.sum(many.one.field)` to get a result weighted with respect to `many`'
+        'Join path is required for this calculation; use `many.one.field.sum()` or `many.sum(many.one.field)` to get a result weighted with respect to `many`'
       );
     });
     test('sum(many.one.one.field)', () => {
       expect(modelX`sum(many.one.one.field)`).toTranslateWithWarnings(
-        'Explicit aggregate locality is required for asymmetric aggregate sum; use `many.one.one.field.sum()` or `many.sum(many.one.one.field)` to get a result weighted with respect to `many`'
+        'Join path is required for this calculation; use `many.one.one.field.sum()` or `many.sum(many.one.one.field)` to get a result weighted with respect to `many`'
       );
     });
 
@@ -490,7 +494,7 @@ describe('expressions', () => {
     });
     test('sum(one.column + one.column)', () => {
       expect(modelX`sum(one.column + one.column)`).toTranslateWithWarnings(
-        'Explicit aggregate locality is required for asymmetric aggregate sum; use `one.sum(one.column + one.column)` or `source.sum(one.column + one.column)` to get a result weighted with respect to `source`'
+        'Join path is required for this calculation; use `one.sum(one.column + one.column)` or `source.sum(one.column + one.column)` to get a result weighted with respect to `source`'
       );
     });
     test('one.sum(one.column + one.column)', () => {
