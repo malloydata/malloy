@@ -318,7 +318,7 @@ describe('expressions', () => {
     });
     test('source.sum(many.column)', () => {
       expect(modelX`source.sum(many.column)`).translationToFailWith(
-        'Cannot compute asymmetric aggregate across forward join_many relationship `many`; use `many.column.sum()`'
+        'Cannot compute asymmetric aggregate across forward `join_many` relationship `many`; use `many.column.sum()`'
       );
     });
     test('many.column.sum()', () => {
@@ -356,7 +356,7 @@ describe('expressions', () => {
     });
     test('source.sum(many.field)', () => {
       expect(modelX`source.sum(many.field)`).translationToFailWith(
-        'Cannot compute asymmetric aggregate across forward join_many relationship `many`; use `many.field.sum()`'
+        'Cannot compute asymmetric aggregate across forward `join_many` relationship `many`; use `many.field.sum()`'
       );
     });
     test('many.field.sum()', () => {
@@ -373,7 +373,7 @@ describe('expressions', () => {
     });
     test('source.sum(many.field + many.field)', () => {
       expect(modelX`source.sum(many.field + many.field)`).translationToFailWith(
-        'Cannot compute asymmetric aggregate across forward join_many relationship `many`; use `many.sum(many.field + many.field)`'
+        'Cannot compute asymmetric aggregate across forward `join_many` relationship `many`; use `many.sum(many.field + many.field)`'
       );
     });
     test('many.field + many.field.sum()', () => {
@@ -390,7 +390,7 @@ describe('expressions', () => {
     });
     test('source.sum(many_field)', () => {
       expect(modelX`source.sum(many_field)`).translationToFailWith(
-        'Cannot compute asymmetric aggregate across forward join_many relationship `many`; use `many_field.sum()`'
+        'Cannot compute asymmetric aggregate across forward `join_many` relationship `many`; use `many_field.sum()`'
       );
     });
     test('many_field.sum()', () => {
@@ -407,7 +407,7 @@ describe('expressions', () => {
     });
     test('source.sum(one.many_field)', () => {
       expect(modelX`source.sum(one.many_field)`).translationToFailWith(
-        'Cannot compute asymmetric aggregate across forward join_many relationship `many`; use `one.many_field.sum()`'
+        'Cannot compute asymmetric aggregate across forward `join_many` relationship `many`; use `one.many_field.sum()`'
       );
     });
     test('one.many_field.sum()', () => {
@@ -466,7 +466,7 @@ describe('expressions', () => {
 
     test('cross.avg(field)', () => {
       expect(modelX`cross.avg(field)`).translationToFailWith(
-        'Cannot compute asymmetric aggregate across join_cross relationship `cross`; use `field.avg()`'
+        'Cannot compute asymmetric aggregate across `join_cross` relationship `cross`; use `field.avg()`'
       );
     });
 

@@ -325,9 +325,9 @@ function validateUsagePaths(
   for (const path of usagePaths) {
     for (const step of path) {
       if (step.structRelationship.type === 'cross') {
-        return `Cannot compute asymmetric aggregate across join_cross relationship \`${step.name}\``;
+        return `Cannot compute asymmetric aggregate across \`join_cross\` relationship \`${step.name}\``;
       } else if (step.structRelationship.type === 'many' && !step.reverse) {
-        return `Cannot compute asymmetric aggregate across forward join_many relationship \`${step.name}\``;
+        return `Cannot compute asymmetric aggregate across forward \`join_many\` relationship \`${step.name}\``;
       }
     }
   }
