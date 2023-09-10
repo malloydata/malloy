@@ -207,7 +207,7 @@ describe('expressions', () => {
         rename: column is ai
         rename: nested is astruct
         rename: inline is aninline
-        rename: inline2 is anonrepeatedstruct
+        rename: nested_inline is anonrepeatedstruct
         dimension: field is column * 2
         dimension: many_field is many.column * 2
         dimension: many_one_field is many.column + one.column
@@ -364,16 +364,16 @@ describe('expressions', () => {
     test('source.sum(inline.column)', () => {
       expect(modelX`source.sum(inline.column)`).toTranslate();
     });
-    test('sum(inline2.column)', () => {
-      expect(modelX`sum(inline2.column)`).toTranslateWithWarnings(
-        'Join path is required for this calculation; use `inline2.column.sum()` or `source.sum(inline2.column)` to get a result weighted with respect to `source`'
+    test('sum(nested_inline.column)', () => {
+      expect(modelX`sum(nested_inline.column)`).toTranslateWithWarnings(
+        'Join path is required for this calculation; use `nested_inline.column.sum()` or `source.sum(nested_inline.column)` to get a result weighted with respect to `source`'
       );
     });
-    test('inline2.column.sum()', () => {
-      expect(modelX`inline2.column.sum()`).toTranslate();
+    test('nested_inline.column.sum()', () => {
+      expect(modelX`nested_inline.column.sum()`).toTranslate();
     });
-    test('source.sum(inline2.column)', () => {
-      expect(modelX`source.sum(inline2.column)`).toTranslate();
+    test('source.sum(nested_inline.column)', () => {
+      expect(modelX`source.sum(nested_inline.column)`).toTranslate();
     });
     test('sum(many.field)', () => {
       expect(modelX`sum(many.field)`).translationToFailWith(
