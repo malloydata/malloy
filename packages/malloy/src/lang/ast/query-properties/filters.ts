@@ -22,7 +22,8 @@
  */
 
 import {
-  expressionIsCalculation,
+  expressionIsAggregate,
+  expressionIsAnalytic,
   FilterExpression,
 } from '../../../model/malloy_types';
 
@@ -88,20 +89,21 @@ export class Filter
       // Aggregates are ALSO checked at SQL generation time, but checking
       // here allows better reflection of errors back to user.
       if (this.havingClause !== undefined) {
-        const needHaving = expressionIsCalculation(fExpr.expressionType);
+        const isAggregate = expressionIsAggregate(fExpr.expressionType);
+        const isAnalytic = expressionIsAnalytic(fExpr.expressionType);
         if (this.havingClause) {
-          if (!needHaving) {
-            oneElement.log(
-              'Aggregate or analytic expression expected in HAVING filter'
-            );
+          if (isAnalytic) {
+            oneElement.log('Analytic expressions are not allowed in `having:`');
             continue;
           }
         } else {
-          if (needHaving) {
-            oneElement.log(
-              'Aggregate or analytic expressions not allowed in WHERE'
-            );
+          if (isAnalytic) {
+            oneElement.log('Analytic expressions are not allowed in `where:`');
             continue;
+          } else if (isAggregate) {
+            oneElement.log(
+              'Aggregate expressions are not allowed in `where:`; use `having:`'
+            );
           }
         }
       }
