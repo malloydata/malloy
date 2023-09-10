@@ -206,6 +206,7 @@ describe('expressions', () => {
       source: root is a {
         rename: column is ai
         rename: nested is astruct
+        rename: inline is aninline
         dimension: field is column * 2
         dimension: many_field is many.column * 2
         dimension: many_one_field is many.column + one.column
@@ -318,7 +319,7 @@ describe('expressions', () => {
     });
     test('source.sum(many.column)', () => {
       expect(modelX`source.sum(many.column)`).translationToFailWith(
-        'Cannot compute asymmetric aggregate across forward `join_many` relationship `many`; use `many.column.sum()`'
+        'Cannot compute `sum` across `join_many` relationship `many`; use `many.column.sum()`'
       );
     });
     test('many.column.sum()', () => {
@@ -339,15 +340,28 @@ describe('expressions', () => {
       expect(modelX`source.sum(many.constant)`).toTranslate();
     });
     test('sum(nested.column)', () => {
-      expect(modelX`sum(nested.column)`).toTranslateWithWarnings(
-        'Join path is required for this calculation; use `nested.column.sum()` or `source.sum(nested.column)` to get a result weighted with respect to `source`'
+      expect(modelX`sum(nested.column)`).translationToFailWith(
+        'Join path is required for this calculation; use `nested.column.sum()`'
       );
     });
     test('nested.column.sum()', () => {
       expect(modelX`nested.column.sum()`).toTranslate();
     });
     test('source.sum(nested.column)', () => {
-      expect(modelX`source.sum(nested.column)`).toTranslate();
+      expect(modelX`source.sum(nested.column)`).translationToFailWith(
+        'Cannot compute `sum` across repeated relationship `nested`; use `nested.column.sum()`'
+      );
+    });
+    test('sum(inline.column)', () => {
+      expect(modelX`sum(inline.column)`).toTranslateWithWarnings(
+        'Join path is required for this calculation; use `inline.column.sum()` or `source.sum(inline.column)` to get a result weighted with respect to `source`'
+      );
+    });
+    test('inline.column.sum()', () => {
+      expect(modelX`inline.column.sum()`).toTranslate();
+    });
+    test('source.sum(inline.column)', () => {
+      expect(modelX`source.sum(inline.column)`).toTranslate();
     });
     test('sum(many.field)', () => {
       expect(modelX`sum(many.field)`).translationToFailWith(
@@ -356,7 +370,7 @@ describe('expressions', () => {
     });
     test('source.sum(many.field)', () => {
       expect(modelX`source.sum(many.field)`).translationToFailWith(
-        'Cannot compute asymmetric aggregate across forward `join_many` relationship `many`; use `many.field.sum()`'
+        'Cannot compute `sum` across `join_many` relationship `many`; use `many.field.sum()`'
       );
     });
     test('many.field.sum()', () => {
@@ -373,7 +387,7 @@ describe('expressions', () => {
     });
     test('source.sum(many.field + many.field)', () => {
       expect(modelX`source.sum(many.field + many.field)`).translationToFailWith(
-        'Cannot compute asymmetric aggregate across forward `join_many` relationship `many`; use `many.sum(many.field + many.field)`'
+        'Cannot compute `sum` across `join_many` relationship `many`; use `many.sum(many.field + many.field)`'
       );
     });
     test('many.field + many.field.sum()', () => {
@@ -390,7 +404,7 @@ describe('expressions', () => {
     });
     test('source.sum(many_field)', () => {
       expect(modelX`source.sum(many_field)`).translationToFailWith(
-        'Cannot compute asymmetric aggregate across forward `join_many` relationship `many`; use `many_field.sum()`'
+        'Cannot compute `sum` across `join_many` relationship `many`; use `many_field.sum()`'
       );
     });
     test('many_field.sum()', () => {
@@ -407,7 +421,7 @@ describe('expressions', () => {
     });
     test('source.sum(one.many_field)', () => {
       expect(modelX`source.sum(one.many_field)`).translationToFailWith(
-        'Cannot compute asymmetric aggregate across forward `join_many` relationship `many`; use `one.many_field.sum()`'
+        'Cannot compute `sum` across `join_many` relationship `many`; use `one.many_field.sum()`'
       );
     });
     test('one.many_field.sum()', () => {
@@ -466,7 +480,7 @@ describe('expressions', () => {
 
     test('cross.avg(field)', () => {
       expect(modelX`cross.avg(field)`).translationToFailWith(
-        'Cannot compute asymmetric aggregate across `join_cross` relationship `cross`; use `field.avg()`'
+        'Cannot compute `avg` across `join_cross` relationship `cross`; use `field.avg()`'
       );
     });
 
