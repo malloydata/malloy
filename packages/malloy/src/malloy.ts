@@ -1975,10 +1975,7 @@ export class ExploreField extends Explore implements Taggable {
       case 'inline':
         return JoinRelationship.OneToOne;
       case 'nested': {
-        if (this.structDef.structRelationship.isArray) {
-          return JoinRelationship.ManyToOne;
-        }
-        return JoinRelationship.OneToOne;
+        return JoinRelationship.OneToMany;
       }
       default:
         throw new Error('A source field must have a join relationship.');

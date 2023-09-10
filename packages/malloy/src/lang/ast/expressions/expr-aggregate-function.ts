@@ -328,11 +328,7 @@ function validateUsagePaths(
         return `Cannot compute \`${functionName}\` across \`join_cross\` relationship \`${step.name}\``;
       } else if (step.structRelationship.type === 'many' && !step.reverse) {
         return `Cannot compute \`${functionName}\` across \`join_many\` relationship \`${step.name}\``;
-      } else if (
-        step.structRelationship.type === 'nested' &&
-        step.structRelationship.isArray &&
-        !step.reverse
-      ) {
+      } else if (step.structRelationship.type === 'nested' && !step.reverse) {
         return `Cannot compute \`${functionName}\` across repeated relationship \`${step.name}\``;
       }
     }
