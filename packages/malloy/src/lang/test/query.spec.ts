@@ -975,6 +975,25 @@ describe('query:', () => {
         }
       `).toTranslate();
     });
+    test('agg cannot be used in where', () => {
+      expect(
+        'query:ab->{ aggregate: acount; group_by: astr; where: acount > 10 }'
+      ).translationToFailWith(
+        'Aggregate expressions are not allowed in `where:`; use `having:`'
+      );
+    });
+    test('analytic cannot be used in where', () => {
+      expect(
+        'query:ab->{ calculate: prevc is lag(count()); group_by: astr; where: prevc > 10 }'
+      ).translationToFailWith("'prevc' is not defined");
+    });
+    test('analytic cannot be used in having', () => {
+      expect(
+        'query:ab->{ calculate: prevc is lag(count()); group_by: astr; having: prevc > 10 }'
+      ).translationToFailWith(
+        'Analytic expressions are not allowed in `having:`'
+      );
+    });
     test('where single', () => {
       expect('query:a->{ group_by: astr; where: af > 10 }').toTranslate();
     });
