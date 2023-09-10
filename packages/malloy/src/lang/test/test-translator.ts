@@ -77,14 +77,6 @@ const mockSchema: Record<string, StructDef> = {
       },
       {
         type: 'struct',
-        name: 'anonrepeatedstruct',
-        structSource: {type: 'nested'},
-        structRelationship: {type: 'nested', isArray: false, field: 'foo'},
-        fields: [{type: 'number', name: 'column', numberType: 'integer'}],
-        dialect: 'standardsql',
-      },
-      {
-        type: 'struct',
         name: 'aninline',
         structSource: {type: 'nested'},
         structRelationship: {type: 'inline'},
