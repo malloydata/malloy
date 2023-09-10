@@ -151,7 +151,7 @@ export abstract class ExprAggregateFunction extends ExpressionDef {
           !this.source && joinUsage.every(usage => usage.length === 0);
         if (!noJoinField && !this.isSymmetricFunction()) {
           const usagePaths = getJoinUsagePaths(sourceRelationship, joinUsage);
-          const joinError = validateUsagePaths(usagePaths);
+          const joinError = validateUsagePaths(this.elementType, usagePaths);
           const message = sourceSpecified
             ? joinError
             : 'Join path is required for this calculation';
@@ -315,6 +315,7 @@ function getJoinUsagePaths(
 }
 
 function validateUsagePaths(
+  functionName: string,
   usagePaths: {
     name: string;
     structRelationship: StructRelationship;
@@ -324,9 +325,15 @@ function validateUsagePaths(
   for (const path of usagePaths) {
     for (const step of path) {
       if (step.structRelationship.type === 'cross') {
-        return `Cannot compute asymmetric aggregate across \`join_cross\` relationship \`${step.name}\``;
+        return `Cannot compute \`${functionName}\` across \`join_cross\` relationship \`${step.name}\``;
       } else if (step.structRelationship.type === 'many' && !step.reverse) {
-        return `Cannot compute asymmetric aggregate across forward \`join_many\` relationship \`${step.name}\``;
+        return `Cannot compute \`${functionName}\` across \`join_many\` relationship \`${step.name}\``;
+      } else if (
+        step.structRelationship.type === 'nested' &&
+        step.structRelationship.isArray &&
+        !step.reverse
+      ) {
+        return `Cannot compute \`${functionName}\` across repeated relationship \`${step.name}\``;
       }
     }
   }
@@ -354,7 +361,7 @@ function suggestNewVersion(
     }
   }
   const usagePaths = getJoinUsagePaths(longestOverlap, joinUsage);
-  const usageError = validateUsagePaths(usagePaths);
+  const usageError = validateUsagePaths(func, usagePaths);
   // get rid of everything after the last many/cross
   const indexFromEndOfLastMany = longestOverlap
     .slice()
@@ -370,7 +377,7 @@ function suggestNewVersion(
       : longestOverlap.length - indexFromEndOfLastMany;
   const shortestOverlapWithMany = longestOverlap.slice(0, numJoinsToLastMany);
   const shortUsagePaths = getJoinUsagePaths(shortestOverlapWithMany, joinUsage);
-  const shortUsageError = validateUsagePaths(shortUsagePaths);
+  const shortUsageError = validateUsagePaths(func, shortUsagePaths);
   const longLocality =
     longestOverlap.length > 0
       ? longestOverlap.map(r => r.name).join('.')
