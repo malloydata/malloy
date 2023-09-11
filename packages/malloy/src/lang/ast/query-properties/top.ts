@@ -43,7 +43,10 @@ export class Top extends MalloyElement implements QueryPropertyInterface {
   queryRefinementStage = LegalRefinementStage.Tail;
   forceQueryClass = undefined;
 
-  constructor(readonly limit: number, readonly by?: TopInit) {
+  constructor(
+    readonly limit: number,
+    readonly by?: TopInit
+  ) {
     super();
     this.has({by: by});
   }

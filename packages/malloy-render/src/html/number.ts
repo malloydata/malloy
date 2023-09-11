@@ -30,7 +30,10 @@ import {RendererFactory} from '../renderer_factory';
 import {format} from 'ssf';
 
 export class HTMLNumberRenderer extends HTMLTextRenderer {
-  constructor(document: Document, readonly options: NumberRenderOptions) {
+  constructor(
+    document: Document,
+    readonly options: NumberRenderOptions
+  ) {
     super(document);
   }
 

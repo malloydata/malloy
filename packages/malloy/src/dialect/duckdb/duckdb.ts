@@ -403,8 +403,8 @@ export class DuckDBDialect extends Dialect {
       SELECT ${func(values.map((v, i) => `a.val${i}`))} as value
       FROM (
         SELECT UNNEST(list(distinct {key:${key}, ${values
-      .map((v, i) => `val${i}: ${v}`)
-      .join(',')}})) a
+          .map((v, i) => `val${i}: ${v}`)
+          .join(',')}})) a
       )
     )`;
   }

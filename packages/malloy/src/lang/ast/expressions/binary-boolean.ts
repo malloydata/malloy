@@ -31,7 +31,7 @@ import {FieldSpace} from '../types/field-space';
 import {compose} from './utils';
 
 export abstract class BinaryBoolean<
-  opType extends string
+  opType extends string,
 > extends ExpressionDef {
   elementType = 'abstract boolean binary';
   legalChildTypes = [FT.boolT];

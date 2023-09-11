@@ -22,7 +22,10 @@ export class QueryInputSpace extends RefinedSpace implements QueryFieldSpace {
    * @param input The source which might be extended
    * @param queryOutput MUST BE A QuerySpace
    */
-  constructor(input: SourceSpec, private queryOutput: FieldSpace) {
+  constructor(
+    input: SourceSpec,
+    private queryOutput: FieldSpace
+  ) {
     const inputSpace = new SpaceSeed(input);
     super(inputSpace.structDef);
   }

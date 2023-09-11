@@ -65,7 +65,10 @@ export class ImportStatement
    * there are other ways to contruct an AST.
    */
 
-  constructor(readonly url: string, baseURL: string) {
+  constructor(
+    readonly url: string,
+    baseURL: string
+  ) {
     super([]);
     try {
       this.fullURL = decodeURI(new URL(url, baseURL).toString());

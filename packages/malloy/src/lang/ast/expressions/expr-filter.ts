@@ -36,7 +36,10 @@ import {FieldSpace} from '../types/field-space';
 export class ExprFilter extends ExpressionDef {
   elementType = 'filtered expression';
   legalChildTypes = FT.anyAtomicT;
-  constructor(readonly expr: ExpressionDef, readonly filter: Filter) {
+  constructor(
+    readonly expr: ExpressionDef,
+    readonly filter: Filter
+  ) {
     super({expr: expr, filter: filter});
   }
 

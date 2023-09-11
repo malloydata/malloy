@@ -40,7 +40,10 @@ export class ReferenceField extends SpaceField {
   private memoReference?: SpaceEntry;
   private memoTypeDesc?: TypeDesc;
   private queryFieldDef?: QueryFieldDef;
-  constructor(readonly fieldRef: FieldReference, readonly inFS: FieldSpace) {
+  constructor(
+    readonly fieldRef: FieldReference,
+    readonly inFS: FieldSpace
+  ) {
     super();
   }
 

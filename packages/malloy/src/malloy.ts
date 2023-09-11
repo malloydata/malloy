@@ -248,9 +248,8 @@ export class Malloy {
           // iterate over connections, fetching schema for all missing tables
           for (const [connectionName, tablePathByKey] of tablesByConnection) {
             try {
-              const connection = await connections.lookupConnection(
-                connectionName
-              );
+              const connection =
+                await connections.lookupConnection(connectionName);
               // TODO detect if the union of `Object.keys(tables)` and `Object.keys(errors)` is not the same
               //      as `Object.keys(tablePathByKey)`, i.e. that all tables are accounted for. Otherwise
               //      the translator runs into an infinite loop fetching tables.
@@ -574,7 +573,10 @@ export class MalloyError extends Error {
   /**
    * An array of log messages produced during compilation.
    */
-  constructor(message: string, readonly problems: LogMessage[] = []) {
+  constructor(
+    message: string,
+    readonly problems: LogMessage[] = []
+  ) {
     super(message);
   }
 }
@@ -583,20 +585,16 @@ export class MalloyError extends Error {
  * A compiled Malloy document.
  */
 export class Model implements Taggable {
-  private modelDef: ModelDef;
-  private queryList: InternalQuery[];
-  private sqlBlocks: SQLBlockStructDef[];
   _referenceAt: (
     location: ModelDocumentPosition
   ) => DocumentReference | undefined;
   _importAt: (location: ModelDocumentPosition) => ImportLocation | undefined;
-  readonly problems: LogMessage[];
 
   constructor(
-    modelDef: ModelDef,
-    queryList: InternalQuery[],
-    sqlBlocks: SQLBlockStructDef[],
-    problems: LogMessage[],
+    private modelDef: ModelDef,
+    private queryList: InternalQuery[],
+    private sqlBlocks: SQLBlockStructDef[],
+    readonly problems: LogMessage[],
     referenceAt: (
       location: ModelDocumentPosition
     ) => DocumentReference | undefined = () => undefined,
@@ -604,12 +602,8 @@ export class Model implements Taggable {
       location: ModelDocumentPosition
     ) => ImportLocation | undefined = () => undefined
   ) {
-    this.modelDef = modelDef;
-    this.queryList = queryList;
-    this.sqlBlocks = sqlBlocks;
     this._referenceAt = referenceAt;
     this._importAt = importAt;
-    this.problems = problems;
   }
 
   tagParse(spec?: TagParseSpec): TagParse {
@@ -768,12 +762,14 @@ export class Model implements Taggable {
 export class PreparedQuery implements Taggable {
   public _modelDef: ModelDef;
   public _query: InternalQuery | NamedQuery;
-  public name?: string;
 
-  constructor(query: InternalQuery, model: ModelDef, name?: string) {
+  constructor(
+    query: InternalQuery,
+    model: ModelDef,
+    public name?: string
+  ) {
     this._query = query;
     this._modelDef = model;
-    this.name = name;
   }
 
   tagParse(spec?: TagParseSpec) {
@@ -841,11 +837,7 @@ export class PreparedQuery implements Taggable {
  * A parsed Malloy document.
  */
 export class Parse {
-  private translator: MalloyTranslator;
-
-  constructor(translator: MalloyTranslator) {
-    this.translator = translator;
-  }
+  constructor(private translator: MalloyTranslator) {}
 
   /**
    * Retrieve the document highlights for the parsed document.
@@ -1104,11 +1096,12 @@ export class DocumentCompletion {
  */
 export class PreparedResult implements Taggable {
   protected inner: CompiledQuery;
-  protected modelDef: ModelDef;
 
-  constructor(query: CompiledQuery, modelDef: ModelDef) {
+  constructor(
+    query: CompiledQuery,
+    protected modelDef: ModelDef
+  ) {
     this.inner = query;
-    this.modelDef = modelDef;
   }
 
   tagParse(spec?: TagParseSpec): TagParse {
@@ -1202,11 +1195,7 @@ export class EmptyURLReader implements URLReader {
  * A URL reader backed by an in-memory mapping of URL contents.
  */
 export class InMemoryURLReader implements URLReader {
-  private files: Map<string, string>;
-
-  constructor(files: Map<string, string>) {
-    this.files = files;
-  }
+  constructor(private files: Map<string, string>) {}
 
   public async readURL(url: URL): Promise<string> {
     const file = this.files.get(url.toString());
@@ -1222,15 +1211,10 @@ export class InMemoryURLReader implements URLReader {
  * A fixed mapping of connection names to connections.
  */
 export class FixedConnectionMap implements LookupConnection<Connection> {
-  private connections: Map<string, Connection>;
-  private defaultConnectionName?: string;
   constructor(
-    connections: Map<string, Connection>,
-    defaultConnectionName?: string
-  ) {
-    this.connections = connections;
-    this.defaultConnectionName = defaultConnectionName;
-  }
+    private connections: Map<string, Connection>,
+    private defaultConnectionName?: string
+  ) {}
 
   /**
    * Get a connection by name.
@@ -2284,7 +2268,7 @@ export class ConnectionRuntime extends Runtime {
 }
 
 export class SingleConnectionRuntime<
-  T extends Connection = Connection
+  T extends Connection = Connection,
 > extends Runtime {
   public readonly connection: T;
 
@@ -2308,12 +2292,13 @@ export class SingleConnectionRuntime<
 }
 
 class FluentState<T> {
-  protected runtime: Runtime;
   private readonly _materialize: () => Promise<T>;
   private materialized: Promise<T> | undefined;
 
-  constructor(runtime: Runtime, materialize: () => Promise<T>) {
-    this.runtime = runtime;
+  constructor(
+    protected runtime: Runtime,
+    materialize: () => Promise<T>
+  ) {
     this._materialize = materialize;
   }
 
@@ -2475,9 +2460,8 @@ export class ModelMaterializer extends FluentState<Model> {
       );
     }
     const connectionName = schema.structRelationship.connectionName;
-    const connection = await this.runtime.connections.lookupConnection(
-      connectionName
-    );
+    const connection =
+      await this.runtime.connections.lookupConnection(connectionName);
     return await queryModel.searchIndex(
       connection,
       sourceName,

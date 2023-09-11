@@ -26,7 +26,10 @@ import {Join} from '../query-properties/joins';
 import {StructSpaceField} from './static-space';
 
 export class JoinSpaceField extends StructSpaceField {
-  constructor(readonly intoFS: FieldSpace, readonly join: Join) {
+  constructor(
+    readonly intoFS: FieldSpace,
+    readonly join: Join
+  ) {
     super(join.structDef());
   }
 }

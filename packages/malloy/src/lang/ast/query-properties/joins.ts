@@ -132,7 +132,10 @@ export class ExpressionJoin extends Join {
   elementType = 'joinOnExpr';
   joinType: ExpressionJoinType = 'one';
   private expr?: ExpressionDef;
-  constructor(readonly name: ModelEntryReference, readonly source: Source) {
+  constructor(
+    readonly name: ModelEntryReference,
+    readonly source: Source
+  ) {
     super({name: name, source: source});
   }
 

@@ -133,11 +133,12 @@ class StageWriter {
   udfs: string[] = [];
   pdts: string[] = [];
   stagePrefix = '__stage';
-  parent: StageWriter | undefined;
   useCTE: boolean;
 
-  constructor(useCTE = true, parent: StageWriter | undefined) {
-    this.parent = parent;
+  constructor(
+    useCTE = true,
+    public parent: StageWriter | undefined
+  ) {
     this.useCTE = useCTE;
   }
 
@@ -286,10 +287,7 @@ class GenerateState {
 }
 
 abstract class QueryNode {
-  fieldDef: FieldDef;
-  constructor(fieldDef: FieldDef) {
-    this.fieldDef = fieldDef;
-  }
+  constructor(public fieldDef: FieldDef) {}
 
   getIdentifier() {
     return getIdentifier(this.fieldDef);
@@ -1215,22 +1213,14 @@ interface FieldInstance {
 
 class FieldInstanceField implements FieldInstance {
   type: FieldInstanceType = 'field';
-  f: QueryField;
-  // the output index of this field (1 based)
-  fieldUsage: FieldUsage;
   additionalGroupSets: number[] = [];
-  parent: FieldInstanceResult;
   analyticalSQL: string | undefined; // the name of the field when used in a window function calculation.
   partitionSQL: string | undefined; // the name of the field when used as a partition.
   constructor(
-    f: QueryField,
-    fieldUsage: FieldUsage,
-    parent: FieldInstanceResult
-  ) {
-    this.f = f;
-    this.fieldUsage = fieldUsage;
-    this.parent = parent;
-  }
+    public f: QueryField,
+    public fieldUsage: FieldUsage,
+    public parent: FieldInstanceResult
+  ) {}
 
   root(): FieldInstanceResultRoot {
     return this.parent.root();
@@ -1273,9 +1263,7 @@ class FieldInstanceResult implements FieldInstance {
   allFields = new Map<string, FieldInstance>();
   groupSet = 0;
   depth = 0;
-  parent: FieldInstanceResult | undefined;
   childGroups: number[] = [];
-  turtleDef: TurtleDef;
   firstSegment: PipeSegment;
   hasHaving = false;
   ungroupedSets = new Map<string, UngroupSet>();
@@ -1283,9 +1271,10 @@ class FieldInstanceResult implements FieldInstance {
 
   resultUsesUngrouped = false;
 
-  constructor(turtleDef: TurtleDef, parent: FieldInstanceResult | undefined) {
-    this.parent = parent;
-    this.turtleDef = turtleDef;
+  constructor(
+    public turtleDef: TurtleDef,
+    public parent: FieldInstanceResult | undefined
+  ) {
     this.firstSegment = turtleDef.pipeline[0];
   }
 
@@ -1727,19 +1716,13 @@ class JoinInstance {
   mayNeedUniqueKey = false;
   makeUniqueKey = false;
   leafiest = false;
-  parent: JoinInstance | undefined;
-  queryStruct: QueryStruct;
   joinFilterConditions?: QueryFieldBoolean[];
-  alias: string;
   children: JoinInstance[] = [];
   constructor(
-    queryStruct: QueryStruct,
-    alias: string,
-    parent: JoinInstance | undefined
+    public queryStruct: QueryStruct,
+    public alias: string,
+    public parent: JoinInstance | undefined
   ) {
-    this.queryStruct = queryStruct;
-    this.parent = parent;
-    this.alias = alias;
     if (parent) {
       parent.children.push(this);
     }
@@ -4548,19 +4531,19 @@ export class QueryModel {
               ${fieldTypeColumn},
               weight,
               CASE WHEN lower(${fieldValueColumn}) LIKE  lower(${generateSQLStringLiteral(
-      searchValue + '%'
-    )}) THEN 1 ELSE 0 END as match_first
+                searchValue + '%'
+              )}) THEN 1 ELSE 0 END as match_first
             FROM  ${await connection.manifestTemporaryTable(sqlPDT)}
             WHERE lower(${fieldValueColumn}) LIKE lower(${generateSQLStringLiteral(
-      '%' + searchValue + '%'
-    )}) ${
-      searchField !== undefined
-        ? ` AND ${fieldNameColumn} = '` + searchField + "' \n"
-        : ''
-    }
+              '%' + searchValue + '%'
+            )}) ${
+              searchField !== undefined
+                ? ` AND ${fieldNameColumn} = '` + searchField + "' \n"
+                : ''
+            }
             ORDER BY CASE WHEN lower(${fieldValueColumn}) LIKE  lower(${generateSQLStringLiteral(
-      searchValue + '%'
-    )}) THEN 1 ELSE 0 END DESC, weight DESC
+              searchValue + '%'
+            )}) THEN 1 ELSE 0 END DESC, weight DESC
             LIMIT ${limit}
           `;
     if (struct.dialect.hasFinalStage) {

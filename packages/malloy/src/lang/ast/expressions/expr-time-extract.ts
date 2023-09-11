@@ -59,7 +59,10 @@ export class ExprTimeExtract extends ExpressionDef {
     }
   }
 
-  constructor(readonly extractText: string, readonly args: ExpressionDef[]) {
+  constructor(
+    readonly extractText: string,
+    readonly args: ExpressionDef[]
+  ) {
     super({args: args});
   }
 

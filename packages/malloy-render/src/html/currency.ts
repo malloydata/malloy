@@ -29,7 +29,10 @@ import {RendererOptions} from '../renderer_types';
 import {Renderer} from '../renderer';
 
 export class HTMLCurrencyRenderer extends HTMLTextRenderer {
-  constructor(document: Document, readonly options: CurrencyRenderOptions) {
+  constructor(
+    document: Document,
+    readonly options: CurrencyRenderOptions
+  ) {
     super(document);
   }
 

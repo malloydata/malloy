@@ -161,14 +161,11 @@ export class BigQueryConnection
 
   private location: string;
 
-  public readonly name: string;
-
   constructor(
-    name: string,
+    public readonly name: string,
     queryOptions?: QueryOptionsReader,
     config: BigQueryConnectionConfiguration = {}
   ) {
-    this.name = name;
     this.bigQuery = new BigQuerySDK({
       userAgent: `Malloy/${Malloy.version}`,
       keyFilename: config.serviceAccountKeyPath,
@@ -456,9 +453,8 @@ export class BigQueryConnection
 
     if (!(await dataset.exists())[0]) {
       if (createDataset) {
-        const newDatasetResponse = await this.bigQuery.createDataset(
-          datasetName
-        );
+        const newDatasetResponse =
+          await this.bigQuery.createDataset(datasetName);
         dataset = newDatasetResponse[0];
       } else {
         throw new Error(`Dataset ${datasetName} does not exist`);

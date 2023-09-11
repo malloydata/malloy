@@ -439,8 +439,8 @@ export class PostgresDialect extends Dialect {
       SELECT ${func(values.map((v, i) => `(a::json->>'f${i + 2}')`))} as value
       FROM (
         SELECT UNNEST(array_agg(distinct row_to_json(row(${key},${values.join(
-      ','
-    )}))::text)) a
+          ','
+        )}))::text)) a
       ) a
     )`;
   }

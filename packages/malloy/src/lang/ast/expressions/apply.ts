@@ -27,7 +27,10 @@ import {ExpressionDef} from '../types/expression-def';
 
 export class Apply extends ExprCompare {
   elementType = 'apply';
-  constructor(readonly left: ExpressionDef, readonly right: ExpressionDef) {
+  constructor(
+    readonly left: ExpressionDef,
+    readonly right: ExpressionDef
+  ) {
     super(left, Comparison.EqualTo, right);
   }
 }

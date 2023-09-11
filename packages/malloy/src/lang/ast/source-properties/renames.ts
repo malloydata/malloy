@@ -30,7 +30,10 @@ import {SpaceField} from '../types/space-field';
 
 export class RenameField extends MalloyElement implements MakeEntry {
   elementType = 'renameField';
-  constructor(readonly newName: string, readonly oldName: FieldName) {
+  constructor(
+    readonly newName: string,
+    readonly oldName: FieldName
+  ) {
     super();
     this.has({oldName: oldName});
   }

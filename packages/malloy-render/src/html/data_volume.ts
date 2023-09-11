@@ -34,7 +34,10 @@ import {Renderer} from '../renderer';
 import {RendererFactory} from '../renderer_factory';
 
 export class HTMLDataVolumeRenderer extends HTMLTextRenderer {
-  constructor(document: Document, readonly options: DataVolumeRenderOptions) {
+  constructor(
+    document: Document,
+    readonly options: DataVolumeRenderOptions
+  ) {
     super(document);
   }
 

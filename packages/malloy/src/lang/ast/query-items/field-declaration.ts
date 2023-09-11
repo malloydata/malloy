@@ -272,7 +272,10 @@ export class DefSpace implements FieldSpace {
 
 export class FieldDefinitionValue extends SpaceField {
   fieldName: string;
-  constructor(readonly space: FieldSpace, readonly exprDef: FieldDeclaration) {
+  constructor(
+    readonly space: FieldSpace,
+    readonly exprDef: FieldDeclaration
+  ) {
     super();
     this.fieldName = exprDef.defineName;
   }
