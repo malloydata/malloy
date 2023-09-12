@@ -29,7 +29,10 @@ import {FieldSpace} from '../types/field-space';
 
 export class PartialCompare extends ExpressionDef {
   elementType = '<=> a';
-  constructor(readonly op: Comparison, readonly right: ExpressionDef) {
+  constructor(
+    readonly op: Comparison,
+    readonly right: ExpressionDef
+  ) {
     super({right: right});
   }
 

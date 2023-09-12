@@ -905,7 +905,10 @@ export abstract class MalloyTranslation {
 }
 
 export class MalloyChildTranslator extends MalloyTranslation {
-  constructor(rootURL: string, readonly root: MalloyTranslator) {
+  constructor(
+    rootURL: string,
+    readonly root: MalloyTranslator
+  ) {
     super(rootURL);
   }
 }

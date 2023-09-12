@@ -38,7 +38,10 @@ import {
 
 export class FilterElement extends MalloyElement {
   elementType = 'filterElement';
-  constructor(readonly expr: ExpressionDef, readonly exprSrc: string) {
+  constructor(
+    readonly expr: ExpressionDef,
+    readonly exprSrc: string
+  ) {
     super({expr: expr});
   }
 

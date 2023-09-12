@@ -33,7 +33,10 @@ import {Renderer} from '../renderer';
 import {RendererFactory} from '../renderer_factory';
 
 export class HTMLDurationRenderer extends HTMLTextRenderer {
-  constructor(document: Document, readonly options: DurationRenderOptions) {
+  constructor(
+    document: Document,
+    readonly options: DurationRenderOptions
+  ) {
     super(document);
   }
 

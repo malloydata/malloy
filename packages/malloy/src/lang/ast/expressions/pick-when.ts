@@ -52,7 +52,10 @@ function typeCoalesce(ev1: ExprValue | undefined, ev2: ExprValue): ExprValue {
 
 export class Pick extends ExpressionDef {
   elementType = 'pick';
-  constructor(readonly choices: PickWhen[], readonly elsePick?: ExpressionDef) {
+  constructor(
+    readonly choices: PickWhen[],
+    readonly elsePick?: ExpressionDef
+  ) {
     super({choices});
     this.has({elsePick});
   }

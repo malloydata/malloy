@@ -27,7 +27,7 @@ import {ExpressionDef} from '../types/expression-def';
 import {FieldSpace} from '../types/field-space';
 
 export abstract class BinaryNumeric<
-  opType extends string
+  opType extends string,
 > extends ExpressionDef {
   elementType = 'numeric binary abstract';
   constructor(

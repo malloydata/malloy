@@ -147,7 +147,7 @@ export function testRuntimeFor(connection: Connection) {
 }
 
 export const allDatabases = ['postgres', 'bigquery', 'duckdb', 'duckdb_wasm'];
-type RuntimeDatabaseNames = typeof allDatabases[number];
+type RuntimeDatabaseNames = (typeof allDatabases)[number];
 
 export class RuntimeList {
   runtimeMap = new Map<string, SingleConnectionRuntime>();

@@ -30,7 +30,10 @@ import {FieldSpace} from '../types/field-space';
 export class ExprCoalesce extends ExpressionDef {
   elementType = 'coalesce expression';
   legalChildTypes = FT.anyAtomicT;
-  constructor(readonly expr: ExpressionDef, readonly altExpr: ExpressionDef) {
+  constructor(
+    readonly expr: ExpressionDef,
+    readonly altExpr: ExpressionDef
+  ) {
     super({expr, altExpr});
   }
 

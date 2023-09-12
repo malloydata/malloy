@@ -52,7 +52,10 @@ export class RefinedSource extends Source {
   elementType = 'refinedSource';
   currentAnnotation?: Annotation;
 
-  constructor(readonly source: Source, readonly refinement: SourceDesc) {
+  constructor(
+    readonly source: Source,
+    readonly refinement: SourceDesc
+  ) {
     super({source: source, refinement: refinement});
   }
 

@@ -31,7 +31,10 @@ import {compose} from './utils';
 
 export class Range extends ExpressionDef {
   elementType = 'range';
-  constructor(readonly first: ExpressionDef, readonly last: ExpressionDef) {
+  constructor(
+    readonly first: ExpressionDef,
+    readonly last: ExpressionDef
+  ) {
     super({first: first, last: last});
   }
 

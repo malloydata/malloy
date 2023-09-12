@@ -38,7 +38,10 @@ export class DefineQuery
 {
   elementType = 'defineQuery';
 
-  constructor(readonly name: string, readonly queryDetails: QueryElement) {
+  constructor(
+    readonly name: string,
+    readonly queryDetails: QueryElement
+  ) {
     super({queryDetails: queryDetails});
   }
 
