@@ -398,6 +398,22 @@ expressionModels.forEach((expressionModel, databaseName) => {
       expect(result.data.path(2, 'r').value).toBe(3);
       expect(result.data.path(3, 'r').value).toBe(3);
     });
+
+    it(`works using unary minus in calculate block - ${databaseName}`, async () => {
+      const result = await expressionModel
+        .loadQuery(
+          `query: state_facts -> {
+            group_by: first_letter is substr(state, 1, 1)
+            aggregate: states_with_first_letter_ish is round(count() / 2) * 2
+            calculate: r is rank() neg_r is - r
+          }`
+        )
+        .run();
+      expect(result.data.path(0, 'neg_r').value).toBe(-1);
+      expect(result.data.path(1, 'neg_r').value).toBe(-1);
+      expect(result.data.path(2, 'neg_r').value).toBe(-3);
+      expect(result.data.path(3, 'neg_r').value).toBe(-3);
+    });
   });
 
   describe('lag', () => {

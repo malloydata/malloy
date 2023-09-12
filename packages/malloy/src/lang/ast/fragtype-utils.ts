@@ -68,6 +68,19 @@ export class FT {
   }
 
   /**
+   * Checks if a given type is in a list, ignoring aggregate
+   * @param check The type to check (can be undefined)
+   * @param from List of types which are OK
+   */
+  static typeIn(check: TypeDesc | undefined, from: TypeDesc[]): boolean {
+    if (check) {
+      const found = from.find(okType => FT.typeEq(okType, check));
+      return found !== undefined;
+    }
+    return false;
+  }
+
+  /**
    * Checks if the base types, ignoring aggregate, are equal
    * @param left Left type
    * @param right Right type

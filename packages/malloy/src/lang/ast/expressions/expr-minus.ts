@@ -37,7 +37,7 @@ export class ExprMinus extends ExpressionDef {
 
   getExpression(fs: FieldSpace): ExprValue {
     const expr = this.expr.getExpression(fs);
-    if (this.typeCheck(this.expr, expr)) {
+    if (FT.typeIn(expr, this.legalChildTypes)) {
       if (expr.value.length > 1) {
         return {...expr, dataType: 'number', value: ['-(', ...expr.value, ')']};
       }
