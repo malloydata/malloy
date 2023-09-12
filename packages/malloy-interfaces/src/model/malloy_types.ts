@@ -558,6 +558,8 @@ export type AtomicFieldType =
   | 'unsupported'
   | 'json'
   | 'error';
+
+export type AtomicFieldTypeInner = AtomicFieldType;
 export function isAtomicFieldType(s: string): s is AtomicFieldType {
   return [
     'string',
