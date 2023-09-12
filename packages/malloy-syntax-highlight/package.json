@@ -1,7 +1,7 @@
 {
-  "name": "malloy-syntax-highlight",
+  "name": "@malloydata/syntax-highlight",
   "version": "0.0.82",
-  "description": "An unpublished package to simplify the process of developing and testing Malloy syntax highlighting grammars",
+  "description": "A package to simplify the process of developing, testing, and syncnig Malloy syntax highlighting grammars",
   "files": [
     "grammars/**/*.tmGrammar.json",
     "grammars/**/*-language.json"
