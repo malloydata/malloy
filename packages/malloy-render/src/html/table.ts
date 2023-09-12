@@ -137,7 +137,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
             );
 
             const pfKey = pivotedField.key;
-            if (!pivotedFields[pfKey]) {
+            if (!pivotedFields.get(pfKey)) {
               pivotedFields.set(pfKey, pivotedField);
             }
           }
@@ -487,7 +487,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
       this.childRenderers[field.name],
       shouldTranspose
     );
-    cell.innerHTML = '-';
+    cell.textContent = '-';
     return cell;
   }
 
