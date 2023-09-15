@@ -668,10 +668,7 @@ export abstract class MalloyTranslation {
 
   addChild(url: string): void {
     if (!this.childTranslators.get(url)) {
-      this.childTranslators.set(
-        url,
-        new MalloyChildTranslator(url, this.importBaseURL, this.root)
-      );
+      this.childTranslators.set(url, new MalloyChildTranslator(url, this.root));
     }
   }
 
@@ -915,10 +912,9 @@ export abstract class MalloyTranslation {
 export class MalloyChildTranslator extends MalloyTranslation {
   constructor(
     rootURL: string,
-    importURL: string | null,
     readonly root: MalloyTranslator
   ) {
-    super(rootURL, importURL);
+    super(rootURL);
   }
 }
 

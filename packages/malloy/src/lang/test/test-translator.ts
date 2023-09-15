@@ -220,7 +220,7 @@ export class TestChildTranslator extends MalloyChildTranslator {
 
   addChild(url: string): void {
     if (!this.childTranslators.get(url)) {
-      const child = new TestChildTranslator(url, this.importBaseURL, this.root);
+      const child = new TestChildTranslator(url, this.root);
       this.childTranslators.set(url, child);
     }
   }
@@ -312,7 +312,7 @@ export class TestTranslator extends MalloyTranslator {
 
   addChild(url: string): void {
     if (!this.childTranslators.get(url)) {
-      const child = new TestChildTranslator(url, this.importBaseURL, this);
+      const child = new TestChildTranslator(url, this);
       this.childTranslators.set(url, child);
     }
   }
