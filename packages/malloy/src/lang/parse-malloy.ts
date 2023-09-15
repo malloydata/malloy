@@ -256,6 +256,7 @@ class ParseStep implements TranslationStep {
       tokenStream: tokenStream,
       sourceStream: inputStream,
       sourceURL: that.sourceURL,
+      importBaseURL: that.importBaseURL || that.sourceURL,
       rangeFromContext: cx => that.rangeFromContext(cx),
       // TODO put the real version here
       malloyVersion: '0.0.0-m4',
@@ -291,7 +292,10 @@ class ImportsAndTablesStep implements TranslationStep {
         const firstRef = this.parseReferences.urls[relativeRef];
         try {
           const ref = decodeURI(
-            new URL(relativeRef, that.sourceURL).toString()
+            new URL(
+              relativeRef,
+              that.importBaseURL || that.sourceURL
+            ).toString()
           );
           that.addChild(ref);
           that.root.importZone.reference(ref, {
@@ -636,6 +640,7 @@ export abstract class MalloyTranslation {
 
   constructor(
     readonly sourceURL: string,
+    readonly importBaseURL: string | null = null,
     public grammarRule = 'malloyDocument'
   ) {
     this.childTranslators = new Map<string, MalloyTranslation>();
@@ -663,7 +668,10 @@ export abstract class MalloyTranslation {
 
   addChild(url: string): void {
     if (!this.childTranslators.get(url)) {
-      this.childTranslators.set(url, new MalloyChildTranslator(url, this.root));
+      this.childTranslators.set(
+        url,
+        new MalloyChildTranslator(url, this.importBaseURL, this.root)
+      );
     }
   }
 
@@ -907,9 +915,10 @@ export abstract class MalloyTranslation {
 export class MalloyChildTranslator extends MalloyTranslation {
   constructor(
     rootURL: string,
+    importURL: string | null,
     readonly root: MalloyTranslator
   ) {
-    super(rootURL);
+    super(rootURL, importURL);
   }
 }
 
@@ -930,8 +939,12 @@ export class MalloyTranslator extends MalloyTranslation {
   logger = new MessageLog();
   compilerFlags = new Tag();
   readonly root: MalloyTranslator;
-  constructor(rootURL: string, preload: ParseUpdate | null = null) {
-    super(rootURL);
+  constructor(
+    rootURL: string,
+    importURL: string | null = null,
+    preload: ParseUpdate | null = null
+  ) {
+    super(rootURL, importURL);
     this.root = this;
     if (preload) {
       this.update(preload);
