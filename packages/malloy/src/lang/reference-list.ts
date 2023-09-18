@@ -21,14 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DocumentPosition, DocumentReference} from '../model';
+import {DocumentLocation, DocumentPosition} from '../model';
 import {locationContainsPosition} from './utils';
 
-export class ReferenceList {
+export class ReferenceList<T> {
   constructor(private readonly sourceURL: string) {}
 
   // These should always be sorted by their end positions
-  private readonly references: DocumentReference[] = [];
+  private readonly references: {location: DocumentLocation; value: T}[] = [];
 
   private findIndexBefore(position: DocumentPosition): number {
     let low = 0;
@@ -51,28 +51,31 @@ export class ReferenceList {
     return low;
   }
 
-  public add(reference: DocumentReference): void {
+  public add(location: DocumentLocation, reference: T): void {
     // Ignore any reference in another file
-    if (reference.location.url !== this.sourceURL) {
+    if (location.url !== this.sourceURL) {
       return;
     }
-    const insertIndex = this.findIndexBefore(reference.location.range.end);
+    const insertIndex = this.findIndexBefore(location.range.end);
     // Ignore duplicate references
     if (
       insertIndex < this.references.length &&
-      this.isPositionEqual(reference, this.references[insertIndex])
+      this.isPositionEqual(location, this.references[insertIndex].location)
     ) {
       return;
     }
-    this.references.splice(insertIndex, 0, reference);
+    this.references.splice(insertIndex, 0, {
+      location,
+      value: reference,
+    });
   }
 
   private isPositionEqual(
-    referenceA: DocumentReference,
-    referenceB: DocumentReference
+    referenceA: DocumentLocation,
+    referenceB: DocumentLocation
   ) {
-    const rangeA = referenceA.location.range;
-    const rangeB = referenceB.location.range;
+    const rangeA = referenceA.range;
+    const rangeB = referenceB.range;
     return (
       rangeA.start.line === rangeB.start.line &&
       rangeA.start.character === rangeB.start.character &&
@@ -81,7 +84,7 @@ export class ReferenceList {
     );
   }
 
-  public find(position: DocumentPosition): DocumentReference | undefined {
+  public find(position: DocumentPosition): T | undefined {
     // Here we assume that references DO NOT overlap. And then we do a binary
     // search to find the one we're looking for.
     const index = this.findIndexBefore(position);
@@ -90,7 +93,7 @@ export class ReferenceList {
     }
     const reference = this.references[index];
     if (locationContainsPosition(reference.location, position)) {
-      return reference;
+      return reference.value;
     }
     return undefined;
   }

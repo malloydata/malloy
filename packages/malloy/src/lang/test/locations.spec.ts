@@ -35,6 +35,10 @@ import {
 import './parse-expects';
 import {DocumentLocation, DocumentPosition} from '../../model/malloy_types';
 
+function pos(location: DocumentLocation): DocumentPosition {
+  return location.range.start;
+}
+
 describe('source locations', () => {
   test('renamed source location', () => {
     const source = markSource`source: ${'na is a'}`;
@@ -286,6 +290,71 @@ describe('source locations', () => {
     expect(
       model`query: a -> { group_by: one is 1; order_by: ${'xyz'} }`
     ).translationToFailWith("'xyz' is not defined");
+  });
+});
+
+describe('field completions', () => {
+  test('order_by output field', () => {
+    const source = markSource`
+      query: a -> { group_by: xxx is 1; order_by: ${'xxx'} }
+    `;
+    const m = new TestTranslator(source.code);
+    m.translate();
+    expect(m.completionsAt(pos(source.locations[0]))).toBe(['xxx']);
+  });
+
+  test('order_by there are errors', () => {
+    const source = markSource`
+      query: a -> {
+        group_by: asdfsdaf
+        group_by: xxx is 1
+        order_by: ${'xxx'}
+      }
+    `;
+    const m = new TestTranslator(source.code);
+    m.translate();
+    expect(m.completionsAt(pos(source.locations[0]))).toBe(['asdfsdaf', 'xxx']);
+  });
+
+  test('order_by completions when error', () => {
+    const source = markSource`
+      query: a -> { order_by: ${'a'} }
+    `;
+    const m = new TestTranslator(source.code);
+    m.translate();
+    expect(m.completionsAt(pos(source.locations[0]))).toBe([
+      'astr',
+      'af',
+      'ai',
+      'ad',
+      'abool',
+      'ats',
+      'aun',
+      'aweird',
+      'astruct',
+      'aninline',
+    ]);
+  });
+
+  test('order_by completions when valid', () => {
+    const source = markSource`
+      query: a extend { dimension: ai2 is ai } -> { order_by: ${'ai'} }
+    `;
+    const m = new TestTranslator(source.code);
+    m.translate();
+    expect(m.completionsAt(pos(source.locations[0]))).toBe([
+      'astr',
+      'af',
+      'ai',
+      'ad',
+      'abool',
+      'ats',
+      'aun',
+      'aweird',
+      'ai2',
+      'astruct',
+      'aninline',
+    ]);
   });
 });
 
@@ -678,10 +747,6 @@ describe('source references', () => {
       },
     });
   });
-
-  function pos(location: DocumentLocation): DocumentPosition {
-    return location.range.start;
-  }
 
   test('reference to join in aggregate source', () => {
     const source = markSource`

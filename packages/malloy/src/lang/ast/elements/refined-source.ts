@@ -119,6 +119,7 @@ export class RefinedSource extends Source {
     if (primaryKey) {
       const keyDef = primaryKey.field.getField(fs);
       if (keyDef.error) {
+        // TODO here
         primaryKey.log(keyDef.error);
       }
     }

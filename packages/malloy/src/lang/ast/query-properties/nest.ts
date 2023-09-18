@@ -69,6 +69,7 @@ abstract class TurtleDeclRoot
       const headEnt = this.turtleName.getField(fs);
       let reportWrongType = true;
       if (headEnt.error) {
+        // TODO here
         this.log(headEnt.error);
         reportWrongType = false;
       } else if (headEnt.found instanceof QueryField) {

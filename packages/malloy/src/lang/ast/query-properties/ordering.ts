@@ -55,7 +55,14 @@ export class OrderBy extends MalloyElement {
     if (this.field instanceof FieldName && fs.isQueryFieldSpace()) {
       const output = fs.outputSpace();
       const entry = this.field.getField(output);
+      if (entry.completions) {
+        this.field.addCompletions({
+          location: this.field.location,
+          completions: entry.completions.map(x => x.name),
+        });
+      }
       if (entry.error) {
+        // TODO here
         this.field.log(entry.error);
       }
       if (entry.found?.typeDesc().evalSpace === 'input') {

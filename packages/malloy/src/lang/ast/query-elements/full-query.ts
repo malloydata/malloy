@@ -76,6 +76,7 @@ export class FullQuery extends TurtleHeadedPipe {
     }
     if (this.turtleName) {
       const lookFor = this.turtleName.getField(pipeFS);
+      // TODO here
       if (lookFor.error) this.log(lookFor.error);
       const name = this.turtleName.refString;
       const {pipeline, location, annotation} = this.expandTurtle(

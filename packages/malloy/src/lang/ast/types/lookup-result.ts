@@ -21,16 +21,18 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructRelationship} from '../../../model';
+import {FieldValueType, StructRelationship} from '../../../model';
 import {SpaceEntry} from './space-entry';
 
 export interface LookupFound {
   found: SpaceEntry;
   relationship: {name: string; structRelationship: StructRelationship}[];
+  completions?: {name: string; type: FieldValueType}[];
   error: undefined;
 }
 export interface LookupError {
   error: string;
+  completions?: {name: string; type: FieldValueType}[];
   found: undefined;
 }
 

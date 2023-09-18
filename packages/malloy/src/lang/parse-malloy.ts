@@ -632,7 +632,11 @@ export abstract class MalloyTranslation {
   readonly helpContextStep: HelpContextStep;
   readonly translateStep: TranslateStep;
 
-  readonly references: ReferenceList;
+  readonly references: ReferenceList<DocumentReference>;
+  readonly fieldCompletions: ReferenceList<{
+    location: DocumentLocation;
+    completions: string[];
+  }>;
 
   constructor(
     readonly sourceURL: string,
@@ -659,6 +663,7 @@ export abstract class MalloyTranslation {
     this.astStep = new ASTStep(this.importsAndTablesStep);
     this.translateStep = new TranslateStep(this.astStep);
     this.references = new ReferenceList(sourceURL);
+    this.fieldCompletions = new ReferenceList(sourceURL);
   }
 
   addChild(url: string): void {
@@ -668,11 +673,22 @@ export abstract class MalloyTranslation {
   }
 
   addReference(reference: DocumentReference): void {
-    this.references.add(reference);
+    this.references.add(reference.location, reference);
+  }
+
+  addCompletions(completions: {
+    location: DocumentLocation;
+    completions: string[];
+  }): void {
+    this.fieldCompletions.add(completions.location, completions);
   }
 
   referenceAt(position: DocumentPosition): DocumentReference | undefined {
     return this.references.find(position);
+  }
+
+  completionsAt(position: DocumentPosition): string[] | undefined {
+    return this.fieldCompletions.find(position)?.completions;
   }
 
   /**
@@ -905,10 +921,7 @@ export abstract class MalloyTranslation {
 }
 
 export class MalloyChildTranslator extends MalloyTranslation {
-  constructor(
-    rootURL: string,
-    readonly root: MalloyTranslator
-  ) {
+  constructor(rootURL: string, readonly root: MalloyTranslator) {
     super(rootURL);
   }
 }

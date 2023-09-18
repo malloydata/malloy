@@ -189,6 +189,8 @@ export class Malloy {
     while (true) {
       const result = translator.translate(model?._modelDef);
       if (result.final) {
+        const completionsAt = (position: ModelDocumentPosition) =>
+          translator.completionsAt(position);
         if (result.translated) {
           return new Model(
             result.translated.modelDef,
@@ -197,6 +199,7 @@ export class Malloy {
             result.problems || [],
             (position: ModelDocumentPosition) =>
               translator.referenceAt(position),
+            completionsAt,
             (position: ModelDocumentPosition) => translator.importAt(position)
           );
         } else {
@@ -204,7 +207,8 @@ export class Malloy {
           const errText = translator.prettyErrors();
           throw new MalloyError(
             `Error(s) compiling model:\n${errText}`,
-            errors
+            errors,
+            completionsAt
           );
         }
       } else {
@@ -248,8 +252,9 @@ export class Malloy {
           // iterate over connections, fetching schema for all missing tables
           for (const [connectionName, tablePathByKey] of tablesByConnection) {
             try {
-              const connection =
-                await connections.lookupConnection(connectionName);
+              const connection = await connections.lookupConnection(
+                connectionName
+              );
               // TODO detect if the union of `Object.keys(tables)` and `Object.keys(errors)` is not the same
               //      as `Object.keys(tablePathByKey)`, i.e. that all tables are accounted for. Otherwise
               //      the translator runs into an infinite loop fetching tables.
@@ -575,9 +580,16 @@ export class MalloyError extends Error {
    */
   constructor(
     message: string,
-    readonly problems: LogMessage[] = []
+    readonly problems: LogMessage[] = [],
+    readonly _completionsAt?: (
+      location: ModelDocumentPosition
+    ) => string[] | undefined
   ) {
     super(message);
+  }
+
+  public completionsAt(location: ModelDocumentPosition): string[] | undefined {
+    return this._completionsAt ? this._completionsAt(location) : undefined;
   }
 }
 
@@ -588,6 +600,7 @@ export class Model implements Taggable {
   _referenceAt: (
     location: ModelDocumentPosition
   ) => DocumentReference | undefined;
+  _completionsAt: (location: ModelDocumentPosition) => string[] | undefined;
   _importAt: (location: ModelDocumentPosition) => ImportLocation | undefined;
 
   constructor(
@@ -598,12 +611,16 @@ export class Model implements Taggable {
     referenceAt: (
       location: ModelDocumentPosition
     ) => DocumentReference | undefined = () => undefined,
+    completionsAt: (
+      location: ModelDocumentPosition
+    ) => string[] | undefined = () => undefined,
     importAt: (
       location: ModelDocumentPosition
     ) => ImportLocation | undefined = () => undefined
   ) {
     this._referenceAt = referenceAt;
     this._importAt = importAt;
+    this._completionsAt = completionsAt;
   }
 
   tagParse(spec?: TagParseSpec): TagParse {
@@ -625,6 +642,17 @@ export class Model implements Taggable {
     position: ModelDocumentPosition
   ): DocumentReference | undefined {
     return this._referenceAt(position);
+  }
+
+  /**
+   * Retrieve a document reference for the token at the given position within
+   * the document that produced this model.
+   *
+   * @param position A position within the document.
+   * @return A `DocumentReference` at that position if one exists.
+   */
+  public getCompletions(position: ModelDocumentPosition): string[] | undefined {
+    return this._completionsAt(position);
   }
 
   /**
@@ -763,11 +791,7 @@ export class PreparedQuery implements Taggable {
   public _modelDef: ModelDef;
   public _query: InternalQuery | NamedQuery;
 
-  constructor(
-    query: InternalQuery,
-    model: ModelDef,
-    public name?: string
-  ) {
+  constructor(query: InternalQuery, model: ModelDef, public name?: string) {
     this._query = query;
     this._modelDef = model;
   }
@@ -1097,10 +1121,7 @@ export class DocumentCompletion {
 export class PreparedResult implements Taggable {
   protected inner: CompiledQuery;
 
-  constructor(
-    query: CompiledQuery,
-    protected modelDef: ModelDef
-  ) {
+  constructor(query: CompiledQuery, protected modelDef: ModelDef) {
     this.inner = query;
   }
 
@@ -2268,7 +2289,7 @@ export class ConnectionRuntime extends Runtime {
 }
 
 export class SingleConnectionRuntime<
-  T extends Connection = Connection,
+  T extends Connection = Connection
 > extends Runtime {
   public readonly connection: T;
 
@@ -2295,10 +2316,7 @@ class FluentState<T> {
   private readonly _materialize: () => Promise<T>;
   private materialized: Promise<T> | undefined;
 
-  constructor(
-    protected runtime: Runtime,
-    materialize: () => Promise<T>
-  ) {
+  constructor(protected runtime: Runtime, materialize: () => Promise<T>) {
     this._materialize = materialize;
   }
 
@@ -2460,8 +2478,9 @@ export class ModelMaterializer extends FluentState<Model> {
       );
     }
     const connectionName = schema.structRelationship.connectionName;
-    const connection =
-      await this.runtime.connections.lookupConnection(connectionName);
+    const connection = await this.runtime.connections.lookupConnection(
+      connectionName
+    );
     return await queryModel.searchIndex(
       connection,
       sourceName,

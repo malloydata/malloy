@@ -60,6 +60,7 @@ export class Top extends MalloyElement implements QueryPropertyInterface {
           const output = fs.outputSpace();
           const entry = this.by.getField(output);
           if (entry.error) {
+            // TODO here
             this.by.log(entry.error);
           }
           if (entry.found?.typeDesc().evalSpace === 'input') {

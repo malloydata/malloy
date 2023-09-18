@@ -26,6 +26,7 @@ import {
   Annotation,
   DocumentLocation,
   DocumentReference,
+  FieldValueType,
   isSQLBlockStruct,
   ModelDef,
   Note,
@@ -171,6 +172,13 @@ export abstract class MalloyElement {
 
   addReference(reference: DocumentReference): void {
     this.translator()?.addReference(reference);
+  }
+
+  addCompletions(completions: {
+    location: DocumentLocation;
+    completions: string[];
+  }): void {
+    this.translator()?.addCompletions(completions);
   }
 
   private get sourceURL() {

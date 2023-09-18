@@ -51,6 +51,7 @@ export class RenameField extends MalloyElement implements MakeEntry {
           new RenameSpaceField(oldValue.found, this.newName, this.location)
         );
       } else {
+        // TODO here
         this.log(`'${this.oldName}' cannot be renamed`);
       }
     } else {

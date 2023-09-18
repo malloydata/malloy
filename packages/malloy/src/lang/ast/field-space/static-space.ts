@@ -123,8 +123,12 @@ export class StaticSpace implements FieldSpace {
     const head = path[0];
     const rest = path.slice(1);
     const found = this.entry(head.refString);
+    const completions = this.entries().map(e => ({
+      name: e[0],
+      type: e[1].typeDesc().dataType,
+    }));
     if (!found) {
-      return {error: `'${head}' is not defined`, found};
+      return {error: `'${head}' is not defined`, completions, found};
     }
     if (found instanceof SpaceField) {
       /*
@@ -182,7 +186,7 @@ export class StaticSpace implements FieldSpace {
         found: undefined,
       };
     }
-    return {found, error: undefined, relationship};
+    return {found, error: undefined, relationship, completions};
   }
 
   isQueryFieldSpace(): this is QueryFieldSpace {
