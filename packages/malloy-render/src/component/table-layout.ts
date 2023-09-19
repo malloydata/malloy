@@ -77,7 +77,7 @@ function getColumnWidth(f: Field, metadata: RenderResultMetadata) {
   let width = 0;
   if (f.isAtomicField()) {
     // TODO: get font styles from theme
-    const font = `12px Inter, sans-serif`;
+    const font = '12px Inter, sans-serif';
     const titleWidth = getTextWidth(f.name, font);
     if (f.isAtomicField() && f.isString()) {
       width =

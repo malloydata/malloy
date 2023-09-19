@@ -261,6 +261,34 @@ export function isFieldFragment(f: Fragment): f is FieldFragment {
   return (f as FieldFragment)?.type === 'field';
 }
 
+export interface FieldReferenceFragment {
+  type: 'field-reference';
+  path: string;
+}
+export function isFieldReferenceFragment(
+  f: Fragment
+): f is FieldReferenceFragment {
+  return (f as FieldReferenceFragment)?.type === 'field-reference';
+}
+
+export interface SqlStringFragment {
+  type: 'sql-string';
+  e: Expr;
+}
+export function isSqlStringFragment(f: Fragment): f is SqlStringFragment {
+  return (f as SqlStringFragment)?.type === 'sql-string';
+}
+
+export interface SourceReferenceFragment {
+  type: 'source-reference';
+  path?: string;
+}
+export function isSourceReferenceFragment(
+  f: Fragment
+): f is SourceReferenceFragment {
+  return (f as SourceReferenceFragment)?.type === 'source-reference';
+}
+
 export interface ParameterFragment {
   type: 'parameter';
   path: string;
@@ -382,6 +410,9 @@ export type Fragment =
   | ApplyFragment
   | ApplyValueFragment
   | FieldFragment
+  | FieldReferenceFragment
+  | SourceReferenceFragment
+  | SqlStringFragment
   | ParameterFragment
   | FilterFragment
   | OutputFieldFragment

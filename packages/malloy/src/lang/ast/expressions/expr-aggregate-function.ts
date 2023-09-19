@@ -261,6 +261,7 @@ function getJoinUsage(
   };
   exprWalk(expr, frag => {
     if (typeof frag !== 'string') {
+      // TODO make this work for field references inside sql_* functions
       if (frag.type === 'field') {
         const def = lookup(fs, frag.path);
         if (def.def.type !== 'struct' && def.def.type !== 'turtle') {
