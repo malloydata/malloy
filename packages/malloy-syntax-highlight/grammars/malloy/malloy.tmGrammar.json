@@ -467,6 +467,10 @@
           "name": "keyword.control.top"
         },
         {
+          "match": "(?i)\\bview\\b",
+          "name": "keyword.control.view"
+        },
+        {
           "match": "(?i)\\bwhere\\b",
           "name": "keyword.control.where"
         },
