@@ -56,7 +56,7 @@ SOURCE: S O U R C E SPACE_CHAR* ':';
 SQLC: S Q L SPACE_CHAR* ':';
 TOP: T O P SPACE_CHAR* ':';
 WHERE: W H E R E SPACE_CHAR* ':';
-VIEW: V I E W SPACE_CHAR* ;
+VIEW: V I E W SPACE_CHAR* ':' ;
 TIMEZONE: T I M E Z O N E SPACE_CHAR* ':';
 
 // bare keywords
