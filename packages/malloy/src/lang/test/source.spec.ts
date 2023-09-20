@@ -218,7 +218,10 @@ describe('source:', () => {
     test('except multi', () => {
       expect('source: c is a { except: astr, af }').toTranslate();
     });
-    test('explore-query', () => {
+    test('turtle in a source can be called view', () => {
+      expect('source: c is a {view: q is { group_by: astr } }').toTranslate();
+    });
+    test('turtle in source can be called query', () => {
       expect('source: c is a {query: q is { group_by: astr } }').toTranslate();
     });
     test('refined explore-query', () => {
