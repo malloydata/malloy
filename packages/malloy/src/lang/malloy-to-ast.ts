@@ -1734,7 +1734,7 @@ export class MalloyToAST
   visitImportStatement(pcx: parse.ImportStatementContext): ast.ImportStatement {
     const url = this.getPlainString(pcx.importURL());
     const importStmt = this.astAt(
-      new ast.ImportStatement(url, this.parseInfo.sourceURL),
+      new ast.ImportStatement(url, this.parseInfo.importBaseURL),
       pcx
     );
     const selectCx = pcx.importSelect();

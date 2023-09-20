@@ -34,6 +34,7 @@ export interface MalloyParseInfo {
   tokenStream: CommonTokenStream;
   sourceStream: CodePointCharStream;
   sourceURL: string;
+  importBaseURL: string;
   rangeFromContext: (pcx: ParserRuleContext) => DocumentRange;
   malloyVersion: string;
 }

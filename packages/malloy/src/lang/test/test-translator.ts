@@ -291,10 +291,11 @@ export class TestTranslator extends MalloyTranslator {
 
   constructor(
     readonly testSrc: string,
+    importBaseURL: string | null = null,
     rootRule = 'malloyDocument',
     internalModel?: ModelDef
   ) {
-    super(testURI);
+    super(testURI, importBaseURL);
     this.grammarRule = rootRule;
     this.importZone.define(testURI, testSrc);
     if (internalModel !== undefined) {
@@ -413,7 +414,7 @@ export class TestTranslator extends MalloyTranslator {
 export class BetaExpression extends TestTranslator {
   private compiled?: ExprValue;
   constructor(src: string) {
-    super(src, 'justExpr');
+    super(src, null, 'justExpr');
   }
 
   private testFS() {
@@ -541,6 +542,7 @@ export function makeModelFunc(options: {
       translator: new TestTranslator(
         (options.prefix ?? '') +
           (options.wrap ? options.wrap(ms.code) : ms.code),
+        null,
         undefined,
         options?.model
       ),

@@ -37,6 +37,21 @@ describe('import:', () => {
     const aa = docParse.getSourceDef('aa');
     expect(aa).toBeDefined();
   });
+  test('simple source with importBaseURL', () => {
+    const docParse = new TestTranslator(
+      'import "child"',
+      'http://example.com/'
+    );
+    const xr = docParse.unresolved();
+    expect(docParse).toParse();
+    expect(xr).toEqual({urls: ['http://example.com/child']});
+    docParse.update({
+      urls: {'http://example.com/child': 'source: aa is a'},
+    });
+    expect(docParse).toTranslate();
+    const aa = docParse.getSourceDef('aa');
+    expect(aa).toBeDefined();
+  });
   test('simple query', () => {
     const docParse = new TestTranslator('import "child"');
     const xr = docParse.unresolved();

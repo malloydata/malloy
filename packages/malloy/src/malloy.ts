@@ -90,6 +90,10 @@ export interface Loggable {
   error: (message?: any, ...optionalParams: any[]) => void;
 }
 
+export interface ParseOptions {
+  importBaseURL?: URL;
+}
+
 export class Malloy {
   // TODO load from file built during release
   public static get version(): string {
@@ -106,13 +110,25 @@ export class Malloy {
     Malloy._log = log;
   }
 
-  private static _parse(source: string, url?: URL): Parse {
+  private static _parse(
+    source: string,
+    url?: URL,
+    options?: ParseOptions
+  ): Parse {
     if (url === undefined) {
       url = new URL('internal://internal.malloy');
     }
-    const translator = new MalloyTranslator(url.toString(), {
-      urls: {[url.toString()]: source},
-    });
+    let importBaseURL = url;
+    if (options?.importBaseURL) {
+      importBaseURL = options?.importBaseURL;
+    }
+    const translator = new MalloyTranslator(
+      url.toString(),
+      importBaseURL.toString(),
+      {
+        urls: {[url.toString()]: source},
+      }
+    );
     return new Parse(translator);
   }
 
@@ -126,9 +142,11 @@ export class Malloy {
   public static parse({
     url,
     urlReader,
+    options,
   }: {
     url: URL;
     urlReader: URLReader;
+    options?: ParseOptions;
   }): Promise<Parse>;
   /**
    * Parse a Malloy document by contents.
@@ -137,18 +155,28 @@ export class Malloy {
    * @param source The contents of the Malloy document to parse.
    * @return A `Parse` result.
    */
-  public static parse({source, url}: {url?: URL; source: string}): Parse;
+  public static parse({
+    source,
+    url,
+    options,
+  }: {
+    url?: URL;
+    source: string;
+    options?: ParseOptions;
+  }): Parse;
   public static parse({
     url,
     urlReader,
     source,
+    options,
   }: {
     url?: URL;
     source?: string;
     urlReader?: URLReader;
+    options?: ParseOptions;
   }): Parse | Promise<Parse> {
     if (source !== undefined) {
-      return Malloy._parse(source, url);
+      return Malloy._parse(source, url, options);
     } else {
       if (urlReader === undefined) {
         throw new Error('Internal Error: urlReader is required.');
@@ -159,7 +187,7 @@ export class Malloy {
         );
       }
       return urlReader.readURL(url).then(source => {
-        return Malloy._parse(source, url);
+        return Malloy._parse(source, url, options);
       });
     }
   }
@@ -2057,16 +2085,21 @@ export class Runtime {
    * @return A `ModelMaterializer` capable of materializing the requested model,
    * or loading further related objects.
    */
-  public loadModel(source: ModelURL | ModelString): ModelMaterializer {
+  public loadModel(
+    source: ModelURL | ModelString,
+    options?: ParseOptions
+  ): ModelMaterializer {
     return new ModelMaterializer(this, async () => {
       const parse =
         source instanceof URL
           ? await Malloy.parse({
               url: source,
               urlReader: this.urlReader,
+              options,
             })
           : Malloy.parse({
               source,
+              options,
             });
       return Malloy.compile({
         urlReader: this.urlReader,
@@ -2093,8 +2126,11 @@ export class Runtime {
    * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
-  public loadQuery(query: QueryURL | QueryString): QueryMaterializer {
-    return this.loadModel(query).loadFinalQuery();
+  public loadQuery(
+    query: QueryURL | QueryString,
+    options?: ParseOptions
+  ): QueryMaterializer {
+    return this.loadModel(query, options).loadFinalQuery();
   }
 
   /**
@@ -2108,9 +2144,10 @@ export class Runtime {
    */
   public loadQueryByIndex(
     model: ModelURL | ModelString,
-    index: number
+    index: number,
+    options?: ParseOptions
   ): QueryMaterializer {
-    return this.loadModel(model).loadQueryByIndex(index);
+    return this.loadModel(model, options).loadQueryByIndex(index);
   }
 
   /**
@@ -2124,9 +2161,10 @@ export class Runtime {
    */
   public loadQueryByName(
     model: ModelURL | ModelString,
-    name: string
+    name: string,
+    options?: ParseOptions
   ): QueryMaterializer {
-    return this.loadModel(model).loadQueryByName(name);
+    return this.loadModel(model, options).loadQueryByName(name);
   }
 
   /**
@@ -2140,9 +2178,10 @@ export class Runtime {
    */
   public loadSQLBlockByName(
     model: ModelURL | ModelString,
-    name: string
+    name: string,
+    options?: ParseOptions
   ): SQLBlockMaterializer {
-    return this.loadModel(model).loadSQLBlockByName(name);
+    return this.loadModel(model, options).loadSQLBlockByName(name);
   }
 
   /**
@@ -2156,9 +2195,10 @@ export class Runtime {
    */
   public loadSQLBlockByIndex(
     model: ModelURL | ModelString,
-    index: number
+    index: number,
+    options?: ParseOptions
   ): SQLBlockMaterializer {
-    return this.loadModel(model).loadSQLBlockByIndex(index);
+    return this.loadModel(model, options).loadSQLBlockByIndex(index);
   }
 
   // TODO maybe use overloads for the alternative parameters
@@ -2168,8 +2208,11 @@ export class Runtime {
    * @param source The URL or contents of a Malloy model document to compile.
    * @return A promise of a compiled `Model`.
    */
-  public getModel(source: ModelURL | ModelString): Promise<Model> {
-    return this.loadModel(source).getModel();
+  public getModel(
+    source: ModelURL | ModelString,
+    options?: ParseOptions
+  ): Promise<Model> {
+    return this.loadModel(source, options).getModel();
   }
 
   /**
@@ -2178,8 +2221,11 @@ export class Runtime {
    * @param query The URL or contents of a Malloy query document to compile.
    * @return A promise of a compiled `PreparedQuery`.
    */
-  public getQuery(query: QueryURL | QueryString): Promise<PreparedQuery> {
-    return this.loadQuery(query).getPreparedQuery();
+  public getQuery(
+    query: QueryURL | QueryString,
+    options?: ParseOptions
+  ): Promise<PreparedQuery> {
+    return this.loadQuery(query, options).getPreparedQuery();
   }
 
   /**
@@ -2192,9 +2238,10 @@ export class Runtime {
    */
   public getQueryByIndex(
     model: ModelURL | ModelString,
-    index: number
+    index: number,
+    options?: ParseOptions
   ): Promise<PreparedQuery> {
-    return this.loadQueryByIndex(model, index).getPreparedQuery();
+    return this.loadQueryByIndex(model, index, options).getPreparedQuery();
   }
 
   /**
@@ -2207,9 +2254,10 @@ export class Runtime {
    */
   public getQueryByName(
     model: ModelURL | ModelString,
-    name: string
+    name: string,
+    options?: ParseOptions
   ): Promise<PreparedQuery> {
-    return this.loadQueryByName(model, name).getPreparedQuery();
+    return this.loadQueryByName(model, name, options).getPreparedQuery();
   }
 
   /**
@@ -2222,9 +2270,10 @@ export class Runtime {
    */
   public getSQLBlockByName(
     model: ModelURL | ModelString,
-    name: string
+    name: string,
+    options?: ParseOptions
   ): Promise<SQLBlockStructDef> {
-    return this.loadSQLBlockByName(model, name).getSQLBlock();
+    return this.loadSQLBlockByName(model, name, options).getSQLBlock();
   }
 
   /**
@@ -2237,9 +2286,10 @@ export class Runtime {
    */
   public getSQLBlockByIndex(
     model: ModelURL | ModelString,
-    index: number
+    index: number,
+    options?: ParseOptions
   ): Promise<SQLBlockStructDef> {
-    return this.loadSQLBlockByIndex(model, index).getSQLBlock();
+    return this.loadSQLBlockByIndex(model, index, options).getSQLBlock();
   }
 }
 
@@ -2390,7 +2440,10 @@ export class ModelMaterializer extends FluentState<Model> {
    * @return A `QueryMaterializer` capable of materializing the requested query, running it,
    * or loading further related objects.
    */
-  public loadQuery(query: QueryString | QueryURL): QueryMaterializer {
+  public loadQuery(
+    query: QueryString | QueryURL,
+    options?: ParseOptions
+  ): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       const urlReader = this.runtime.urlReader;
       const connections = this.runtime.connections;
@@ -2399,9 +2452,11 @@ export class ModelMaterializer extends FluentState<Model> {
           ? await Malloy.parse({
               url: query,
               urlReader,
+              options,
             })
           : Malloy.parse({
               source: query,
+              options,
             });
       const model = await this.getModel();
       const queryModel = await Malloy.compile({
@@ -2421,7 +2476,10 @@ export class ModelMaterializer extends FluentState<Model> {
    * @return A `ModelMaterializer` capable of materializing the requested model,
    * or loading further related objects.
    */
-  public extendModel(query: QueryString | QueryURL): ModelMaterializer {
+  public extendModel(
+    query: QueryString | QueryURL,
+    options?: ParseOptions
+  ): ModelMaterializer {
     return new ModelMaterializer(this.runtime, async () => {
       const urlReader = this.runtime.urlReader;
       const connections = this.runtime.connections;
@@ -2430,9 +2488,11 @@ export class ModelMaterializer extends FluentState<Model> {
           ? await Malloy.parse({
               url: query,
               urlReader,
+              options,
             })
           : Malloy.parse({
               source: query,
+              options,
             });
       const model = await this.getModel();
       const queryModel = await Malloy.compile({
@@ -2473,7 +2533,8 @@ export class ModelMaterializer extends FluentState<Model> {
 
   public async searchValueMap(
     sourceName: string,
-    limit = 10
+    limit = 10,
+    options?: ParseOptions
   ): Promise<SearchValueMapResult[] | undefined> {
     const model = await this.materialize();
     const schema = model.getExploreByName(sourceName);
@@ -2503,7 +2564,7 @@ export class ModelMaterializer extends FluentState<Model> {
           limit: 1000
         }
     `;
-    const result = await this.loadQuery(searchMapMalloy).run({
+    const result = await this.loadQuery(searchMapMalloy, options).run({
       rowLimit: 1000,
     });
     return result._queryResult.result as unknown as SearchValueMapResult[];
@@ -2572,8 +2633,11 @@ export class ModelMaterializer extends FluentState<Model> {
    * @param query The URL or contents of a query document to compile.
    * @return A promise to a prepared query.
    */
-  public getQuery(query: QueryString | QueryURL): Promise<PreparedQuery> {
-    return this.loadQuery(query).getPreparedQuery();
+  public getQuery(
+    query: QueryString | QueryURL,
+    options?: ParseOptions
+  ): Promise<PreparedQuery> {
+    return this.loadQuery(query, options).getPreparedQuery();
   }
 
   /**
