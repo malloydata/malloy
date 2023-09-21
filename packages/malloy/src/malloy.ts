@@ -333,10 +333,13 @@ export class Malloy {
     partialModel: ModelDef | undefined,
     toCompile: SQLBlockSource
   ): SQLBlock {
-    let queryModel: QueryModel;
-    const sqlStrings = toCompile.select.map(segment => {
+    let queryModel: QueryModel | undefined = undefined;
+    let selectStr = '';
+    let parenAlready = false;
+    for (const segment of toCompile.select) {
       if (isSQLFragment(segment)) {
-        return segment.sql;
+        selectStr += segment.sql;
+        parenAlready = selectStr[-1] === '(';
       } else {
         // TODO catch exceptions and throw errors ...
         if (!queryModel) {
@@ -347,16 +350,13 @@ export class Malloy {
           }
           queryModel = new QueryModel(partialModel);
         }
-        return queryModel.compileQuery(segment, false).sql;
+        const compiledSql = queryModel.compileQuery(segment, false).sql;
+        selectStr += parenAlready ? compiledSql : `(${compiledSql})`;
+        parenAlready = false;
       }
-    });
+    }
     const {name, connection} = toCompile;
-    return {
-      type: 'sqlBlock',
-      name,
-      connection,
-      selectStr: sqlStrings.join(''),
-    };
+    return {type: 'sqlBlock', name, connection, selectStr};
   }
 
   /**
