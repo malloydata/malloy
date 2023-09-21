@@ -339,7 +339,7 @@ export class Malloy {
     for (const segment of toCompile.select) {
       if (isSQLFragment(segment)) {
         selectStr += segment.sql;
-        parenAlready = segment.sql.match(/\s*\(\s*$/) !== null;
+        parenAlready = segment.sql.match(/\(\s*$/) !== null;
       } else {
         // TODO catch exceptions and throw errors ...
         if (!queryModel) {
