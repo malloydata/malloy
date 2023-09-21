@@ -29,19 +29,19 @@ describe('turducken', () => {
   test('malloy source code is wrapped in parens', async () => {
     const sql = 'SELECT 1 as one';
     const q = runtime.loadQuery(`
-      source: one is duckdb.sql("${sql}");
-      run: duckdb.sql("""SELECT one as num FROM %{one->{select:*}}""")
+      source: hasone is duckdb.sql("${sql}");
+      run: duckdb.sql("""SELECT one as num FROM %{hasone->{select:*}}""")
     `);
     const qsql = await q.getSQL();
-    expect(qsql).toContain(`FROM (${sql}) as one`);
+    expect(qsql).toContain(`FROM (${sql}) as hasone`);
   });
   test('malloy source code not double-wrapped in parens', async () => {
     const sql = 'SELECT 1 as one';
     const q = runtime.loadQuery(`
-      source: one is duckdb.sql("${sql}");
-      run: duckdb.sql("""SELECT one as num FROM (%{one->{select:*}})""")
+      source: hasone is duckdb.sql("${sql}");
+      run: duckdb.sql("""SELECT one as num FROM (%{hasone->{select:*}})""")
     `);
     const qsql = await q.getSQL();
-    expect(qsql).toContain(`FROM (${sql}) as one`);
+    expect(qsql).toContain(`FROM (${sql}) as hasone`);
   });
 });
