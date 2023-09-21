@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "build": "tsc",
+    "clean": "tsc --build --clean && rm -rf dist",
     "gen-malloy-monarch": "ts-node scripts/generateMonarchGrammar grammars/malloy/malloy.tmGrammar.json grammars/malloy/malloy.monarch.ts && prettier grammars/malloy/malloy.monarch.ts --write",
     "gen-malloy-tokens": "ts-node scripts/generateLanguageTokenizationFile grammars/malloy/tokenizations/darkPlus.ts",
     "test-monarch-grammars": "rimraf ./dist && tsc && karma start",
