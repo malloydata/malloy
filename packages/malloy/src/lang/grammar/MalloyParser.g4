@@ -572,7 +572,14 @@ fieldCollection
   ;
 
 collectionWildCard
-  : (fieldPath DOT)? STAR
+  : (fieldPath DOT)? STAR starQualified?
+  ;
+
+starQualified
+  : OCURLY (
+      (EXCEPT fieldNameList)
+    | COMMA
+  )+ CCURLY
   ;
 
 taggedRef

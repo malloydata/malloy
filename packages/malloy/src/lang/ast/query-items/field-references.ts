@@ -184,6 +184,7 @@ export class WildcardFieldReference extends MalloyElement implements Noteable {
   note?: Annotation;
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
+  except = new Set<string>();
   constructor(readonly joinPath: FieldReference | undefined) {
     super();
     this.has({joinPath: joinPath});
