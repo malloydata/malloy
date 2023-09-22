@@ -117,7 +117,7 @@ describe('source:', () => {
     test('where clause can use the join namespace in source refined query', () => {
       expect(`
       source: flights is table('malloytest.flights') + {
-        query: boo is {
+        view: boo is {
           join_one: carriers is table('malloytest.carriers') on carrier = carriers.code
           where: carriers.code = 'WN' | 'AA'
           group_by: carriers.nickname
@@ -219,15 +219,23 @@ describe('source:', () => {
       expect('source: c is a { except: astr, af }').toTranslate();
     });
     test('turtle in a source can be called view', () => {
-      expect('source: c is a {view: q is { group_by: astr } }').toTranslate();
+      expect(
+        'source: c is a extend {view: q is { group_by: astr } }'
+      ).toTranslate();
     });
-    test('turtle in source can be called query', () => {
-      expect('source: c is a {query: q is { group_by: astr } }').toTranslate();
+    test('turtle in source can be called query with m4 warning', () => {
+      expect(
+        `##! m4warnings
+          source: c is a extend {query: q is { group_by: astr } }
+        `
+      ).toTranslateWithWarnings(
+        'Use view: inside of a source instead of query:'
+      );
     });
     test('refined explore-query', () => {
       expect(`
         source: abNew is ab {
-          query: for1 is aturtle {? ai = 1 }
+          view: for1 is aturtle {? ai = 1 }
         }
       `).toTranslate();
     });
@@ -235,7 +243,7 @@ describe('source:', () => {
       expect(`
         ##! m4warnings
         source: abNew is ab extend {
-          query: for1 is aturtle refine {? ai = 1 }
+          view: for1 is aturtle refine {? ai = 1 }
         }
       `).toTranslateWithWarnings(
         'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
@@ -244,7 +252,7 @@ describe('source:', () => {
     test('chained explore-query', () => {
       expect(`
         source: c is a {
-          query: chain is {
+          view: chain is {
             group_by: astr
           } -> {
             top: 10; order_by: astr
@@ -256,7 +264,7 @@ describe('source:', () => {
     test('multiple explore-query', () => {
       expect(`
         source: abNew is ab {
-          query:
+          view:
             q1 is { group_by: astr },
             q2 is { group_by: ai }
         }
