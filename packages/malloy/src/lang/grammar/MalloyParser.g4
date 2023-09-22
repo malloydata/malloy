@@ -144,7 +144,7 @@ unrefinableQuery
 
 refinableQuery
   : ARROW? id                         # QueryByName
-  | unextendableSource (ARROW|DOT) id # QueryByTurtleName
+  | unextendableSource ARROW id       # QueryByTurtleName
   ;
 
 unextendableSource

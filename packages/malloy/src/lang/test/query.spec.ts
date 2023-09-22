@@ -83,26 +83,11 @@ describe('query:', () => {
       'query: from(ab -> {group_by: astr}) { dimension: bigstr is upper(astr) } -> { group_by: bigstr }'
     ).toTranslate();
   });
-  test('arrow turtle geenrates m4 warning', () => {
-    expect(`##! m4warnings
-      run: ab -> aturtle
-  `).toTranslateWithWarnings(
-      "Use '.aturtle' instead of '->aturtle' to reference the query contained in the source"
-    );
-  });
   test('query with shortcut filtered turtle', () => {
-    expect("query: allA is ab.aturtle {? astr ~ 'a%' }").toTranslate();
-  });
-  test('query with shortcut filtered turtle m4warning', () => {
-    expect(`
-      ##! m4warnings
-      query: allA is ab.aturtle refine {? astr ~ 'a%' }
-    `).toTranslateWithWarnings(
-      'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
-    );
+    expect("query: allA is ab -> aturtle {? astr ~ 'a%' }").toTranslate();
   });
   test('query with filtered turtle', () => {
-    expect("query: allA is ab.aturtle { where: astr ~ 'a%' }").toTranslate();
+    expect("query: allA is ab -> aturtle { where: astr ~ 'a%' }").toTranslate();
   });
   test('nest: in group_by:', () => {
     expect(`
@@ -1150,7 +1135,7 @@ describe('query:', () => {
             declare: aratio is ai / acount
           }
         }
-        query: nab.xturtle + { aggregate: aratio }
+        query: nab -> xturtle + { aggregate: aratio }
       `);
       expect(m).toTranslate();
       const t = m.translate();
@@ -1171,7 +1156,7 @@ describe('query:', () => {
     });
     test('refine query source with field', () => {
       const m = new TestTranslator(`
-        query: ab.aturtle + {
+        query: ab -> aturtle + {
           declare: aratio is ai / acount
           aggregate: aratio
         }
@@ -1194,7 +1179,7 @@ describe('query:', () => {
     });
     test('refine query source with join', () => {
       const m = new TestTranslator(`
-        query: ab.aturtle + {
+        query: ab -> aturtle + {
           join_one: bb is b on bb.astr = astr
           group_by: foo is bb.astr
         }
