@@ -132,6 +132,9 @@ export abstract class QuerySpace
     }
     const dialect = this.dialectObj();
     for (const [name, entry] of current.entries()) {
+      if (wild.except.has(name)) {
+        continue;
+      }
       if (this.entry(name)) {
         const conflict = this.expandedWild[name]?.join('.');
         wild.log(

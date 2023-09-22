@@ -1064,7 +1064,14 @@ export class MalloyToAST
     const join = nameCx
       ? this.getFieldPath(nameCx, ast.ProjectFieldReference)
       : undefined;
-    return this.astAt(new ast.WildcardFieldReference(join), pcx);
+    const wild = this.astAt(new ast.WildcardFieldReference(join), pcx);
+    const exceptStmts = pcx.starQualified()?.fieldNameList() || [];
+    for (const except of exceptStmts) {
+      for (const exceptThis of except.fieldName()) {
+        wild.except.add(getId(exceptThis));
+      }
+    }
+    return wild;
   }
 
   visitIndexFields(pcx: parse.IndexFieldsContext): ast.FieldReferences {

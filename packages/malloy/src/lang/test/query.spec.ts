@@ -806,6 +806,17 @@ describe('query:', () => {
       const fields = query!.pipeline[0].fields;
       expect(fields.sort()).toEqual(afields.map(f => `b.${f}`));
     });
+    test('expands star with exclusions', () => {
+      const selstar = model`run: ab->{select: * { except: ai, except: aun, aweird }}`;
+      const filterdFields = afields.filter(
+        f => f !== 'ai' && f !== 'aun' && f !== 'aweird'
+      );
+      expect(selstar).toTranslate();
+      const query = selstar.translator.getQuery(0);
+      expect(query).toBeDefined();
+      const fields = query!.pipeline[0].fields;
+      expect(fields.sort()).toEqual(filterdFields);
+    });
     test('star error checking', () => {
       expect(markSource`run: a->{select: ${'zzz'}.*}`).translationToFailWith(
         "No such field as 'zzz'"
