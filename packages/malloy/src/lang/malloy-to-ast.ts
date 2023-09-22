@@ -394,14 +394,6 @@ export class MalloyToAST
     const source = this.visitUnextendableSource(pcx.unextendableSource());
     const query = new ast.FullQuery(source);
     query.turtleName = this.getFieldName(pcx);
-    const idTxt = pcx.id().text;
-    if (this.m4WarningsEnabled() && pcx.ARROW()) {
-      this.contextError(
-        pcx,
-        `Use '.${idTxt}' instead of '->${idTxt}' to reference the query contained in the source`,
-        'warn'
-      );
-    }
     return this.astAt(query, pcx);
   }
 
