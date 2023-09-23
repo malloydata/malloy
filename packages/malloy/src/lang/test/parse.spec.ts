@@ -929,7 +929,7 @@ describe('extend and refine', () => {
     test('implicit refine in nest', () => {
       expect(`##! m4warnings
       source: c is a extend {
-        query: x is { select: * }
+        view: x is { select: * }
       }
 
       run: c -> {
@@ -942,8 +942,8 @@ describe('extend and refine', () => {
     test('implicit refine in turtle works', () => {
       expect(`##! m4warnings
       source: c is a extend {
-        query: x is { select: * }
-        query: y is x { limit: 1 }
+        view: x is { select: * }
+        view: y is x { limit: 1 }
       }`).toTranslateWithWarnings(
         'Implicit query refinement is deprecated, use the `refine` operator.'
       );

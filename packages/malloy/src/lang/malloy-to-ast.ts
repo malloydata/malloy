@@ -801,6 +801,13 @@ export class MalloyToAST
     const queryDefs = this.visitSubQueryDefList(pcx.subQueryDefList());
     const blockNotes = this.getNotes(pcx.tags());
     queryDefs.extendNote({blockNotes});
+    if (this.m4WarningsEnabled() && pcx.QUERY()) {
+      this.contextError(
+        pcx,
+        'Use view: inside of a source instead of query:',
+        'warn'
+      );
+    }
     return queryDefs;
   }
 
