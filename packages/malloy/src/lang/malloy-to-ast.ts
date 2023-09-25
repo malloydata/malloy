@@ -1157,6 +1157,13 @@ export class MalloyToAST
     pipeCx: parse.PipelineFromNameContext
   ): void {
     const firstCx = pipeCx.firstSegment();
+    if (this.m4WarningsEnabled() && firstCx.ARROW()) {
+      this.contextError(
+        firstCx,
+        "Leading '->' in a view or nest definition is no longer needed.",
+        'warn'
+      );
+    }
     const nameCx = firstCx.exploreQueryName();
     if (nameCx) {
       pipe.turtleName = this.getFieldName(nameCx);
