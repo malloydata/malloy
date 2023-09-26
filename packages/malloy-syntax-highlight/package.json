@@ -13,11 +13,13 @@
     "gen-malloy-tokens": "ts-node scripts/generateLanguageTokenizationFile grammars/malloy/tokenizations/darkPlus.ts",
     "test-monarch-grammars": "rimraf ./dist && tsc && karma start",
     "test-textmate-grammars": "jest",
-    "gen-monaco-darkplus": "ts-node scripts/generateMonarchTheme themes/textmate/dark_plus.json themes/monaco/darkPlus.ts"
+    "gen-monaco-darkplus": "ts-node scripts/generateMonarchTheme themes/textmate/dark_plus.json themes/monaco/darkPlus.ts",
+    "serve-visual": "http-server test/visual -p 2222"
   },
   "license": "MIT",
   "devDependencies": {
     "@types/jasmine": "^4.3.5",
+    "http-server": "^14.1.1",
     "jasmine-core": "^5.1.1",
     "json5": "^2.2.3",
     "karma": "^6.4.2",
