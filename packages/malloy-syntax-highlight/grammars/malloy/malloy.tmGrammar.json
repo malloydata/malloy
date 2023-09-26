@@ -364,7 +364,7 @@
         },
         {
           "match": "(?i)\\brun\\b",
-          "name": "keyword"
+          "name": "keyword.control.run"
         },
         {
           "match": "(?i)\\bextend\\b",

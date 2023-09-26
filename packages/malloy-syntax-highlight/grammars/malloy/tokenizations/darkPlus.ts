@@ -1062,8 +1062,8 @@ export default [
       tokens: [
         {
           startIndex: 0,
-          type: ['source.malloy', 'keyword'],
-          color: '#569CD6',
+          type: ['source.malloy', 'keyword.control.run'],
+          color: '#C586C0',
         },
         {startIndex: 3, type: ['source.malloy'], color: '#000000'},
         {
