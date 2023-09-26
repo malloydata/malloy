@@ -610,6 +610,7 @@ class TranslateStep implements TranslationStep {
           modelDef: that.modelDef,
           queryList: that.queryList,
           sqlBlocks: that.sqlBlocks,
+          imports: that.imports,
         },
         ...that.problemResponse(),
         final: true,

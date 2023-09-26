@@ -22,6 +22,7 @@
  */
 
 import {
+  ImportLocation,
   ModelDef,
   Query,
   SQLBlockSource,
@@ -95,6 +96,7 @@ interface TranslatedResponseData
     modelDef: ModelDef;
     queryList: Query[];
     sqlBlocks: SQLBlockStructDef[];
+    imports: ImportLocation[];
   };
 }
 
