@@ -26,71 +26,74 @@ import './parse-expects';
 import {expressionIsCalculation, isAtomicFieldType} from '../../model';
 
 describe('query:', () => {
-  test('anonymous query', () => {
-    expect(
-      markSource`query: ${"table('aTable') -> { group_by: astr }"}`
-    ).toTranslate();
-  });
-  test('anonymous query', () => {
-    expect(
-      markSource`##! m4warnings
+  describe('basic query syntax', () => {
+    test('anonymous query', () => {
+      expect(
+        markSource`query: ${"table('aTable') -> { group_by: astr }"}`
+      ).toTranslate();
+    });
+    test('anonymous query', () => {
+      expect(
+        markSource`##! m4warnings
       query: ${"conn.table('aTable') -> { group_by: astr }"}`
-    ).toTranslateWithWarnings(
-      'Anonymous `query:` statements are deprecated, use `run:` instead'
-    );
-  });
-  test('run query', () =>
-    expect("run: table('aTable') -> { group_by: astr }").toTranslate());
-  test('run query ref', () =>
-    expect(`
+      ).toTranslateWithWarnings(
+        'Anonymous `query:` statements are deprecated, use `run:` instead'
+      );
+    });
+    test('run query', () =>
+      expect("run: table('aTable') -> { group_by: astr }").toTranslate());
+    test('run query ref', () =>
+      expect(`
       query: foo is table('aTable') -> { group_by: astr }
       run: foo
     `).toTranslate());
-  test('query', () =>
-    expect(
-      "query: name is table('aTable') -> { group_by: astr }"
-    ).toTranslate());
-  test('query', () => {
-    expect(
-      "query: name is table('aTable') -> { group_by: astr }"
-    ).toTranslate();
-  });
-  test('query from query', () => {
-    expect(
-      `
+    test('query', () =>
+      expect(
+        "query: name is table('aTable') -> { group_by: astr }"
+      ).toTranslate());
+    test('query', () => {
+      expect(
+        "query: name is table('aTable') -> { group_by: astr }"
+      ).toTranslate();
+    });
+    test('query from query', () => {
+      expect(
+        `
         query: q1 is ab->{ group_by: astr limit: 10 }
         query: q2 is ->q1
       `
-    ).toTranslate();
-  });
-  test('query with refinements from query', () => {
-    expect(
-      `
+      ).toTranslate();
+    });
+    test('query with refinements from query', () => {
+      expect(
+        `
         query: q1 is ab->{ group_by: astr limit: 10 }
         query: q2 is ->q1 { aggregate: acount }
       `
-    ).toTranslate();
-  });
-  test('chained query operations', () => {
-    expect(`
+      ).toTranslate();
+    });
+    test('chained query operations', () => {
+      expect(`
       query: ab
         -> { group_by: astr; aggregate: acount }
         -> { top: 5; where: astr ~ 'a%' group_by: astr }
     `).toTranslate();
-  });
-  test('from(query) refined into query', () => {
-    expect(
-      'query: from(ab -> {group_by: astr}) { dimension: bigstr is upper(astr) } -> { group_by: bigstr }'
-    ).toTranslate();
-  });
-  test('query with shortcut filtered turtle', () => {
-    expect("query: allA is ab -> aturtle {? astr ~ 'a%' }").toTranslate();
-  });
-  test('query with filtered turtle', () => {
-    expect("query: allA is ab -> aturtle { where: astr ~ 'a%' }").toTranslate();
-  });
-  test('nest: in group_by:', () => {
-    expect(`
+    });
+    test('from(query) refined into query', () => {
+      expect(
+        'query: from(ab -> {group_by: astr}) { dimension: bigstr is upper(astr) } -> { group_by: bigstr }'
+      ).toTranslate();
+    });
+    test('query with shortcut filtered turtle', () => {
+      expect("query: allA is ab -> aturtle {? astr ~ 'a%' }").toTranslate();
+    });
+    test('query with filtered turtle', () => {
+      expect(
+        "query: allA is ab -> aturtle { where: astr ~ 'a%' }"
+      ).toTranslate();
+    });
+    test('nest: in group_by:', () => {
+      expect(`
       query: ab -> {
         group_by: astr;
         nest: nested_count is {
@@ -98,45 +101,45 @@ describe('query:', () => {
         }
       }
     `).toTranslate();
-  });
-  test('reduce pipe project', () => {
-    expect(`
+    });
+    test('reduce pipe project', () => {
+      expect(`
       query: a -> { aggregate: f is count() } -> { project: f2 is f + 1 }
     `).toTranslate();
-  });
-  test('refine and extend query', () => {
-    expect(`
+    });
+    test('refine and extend query', () => {
+      expect(`
       query: a_by_str is a -> { group_by: astr }
       query: -> a_by_str { aggregate: str_count is count() }
     `).toTranslate();
-  });
-  test('query refinement preserves original', () => {
-    const x = new TestTranslator(`
+    });
+    test('query refinement preserves original', () => {
+      const x = new TestTranslator(`
       query: q is a -> { aggregate: acount is count() }
       query: nq is -> q + { group_by: astr }
     `);
-    expect(x).toTranslate();
-    const q = x.getQuery('q');
-    expect(q).toBeDefined();
-    if (q) {
-      const qFields = q.pipeline[0].fields;
-      expect(qFields.length).toBe(1);
-    }
-  });
-  test('query composition preserves original', () => {
-    const x = new TestTranslator(`
+      expect(x).toTranslate();
+      const q = x.getQuery('q');
+      expect(q).toBeDefined();
+      if (q) {
+        const qFields = q.pipeline[0].fields;
+        expect(qFields.length).toBe(1);
+      }
+    });
+    test('query composition preserves original', () => {
+      const x = new TestTranslator(`
       query: q is ab -> { aggregate: acount }
       query: nq is -> q -> { project: * }
     `);
-    expect(x).toTranslate();
-    const q = x.getQuery('q');
-    expect(q).toBeDefined();
-    if (q) {
-      expect(q.pipeline.length).toBe(1);
-    }
-  });
-  test('all ungroup with args', () => {
-    expect(`
+      expect(x).toTranslate();
+      const q = x.getQuery('q');
+      expect(q).toBeDefined();
+      if (q) {
+        expect(q.pipeline.length).toBe(1);
+      }
+    });
+    test('all ungroup with args', () => {
+      expect(`
       query: a -> {
         group_by: astr
         nest: by_int is {
@@ -145,9 +148,9 @@ describe('query:', () => {
         }
       }
     `).toTranslate();
-  });
-  test('all ungroup checks args', () => {
-    expect(`
+    });
+    test('all ungroup checks args', () => {
+      expect(`
     query: a -> {
       group_by: astr
       nest: by_int is {
@@ -156,9 +159,9 @@ describe('query:', () => {
       }
     }
   `).translationToFailWith("all() 'afloat' is missing from query output");
-  });
-  test('exclude ungroup with args', () => {
-    expect(`
+    });
+    test('exclude ungroup with args', () => {
+      expect(`
       query: a -> {
         group_by: aa is 'a'
         nest: by_b is {
@@ -170,9 +173,9 @@ describe('query:', () => {
         }
       }
     `).toTranslate();
-  });
-  test('exclude ungroup checks args', () => {
-    expect(`
+    });
+    test('exclude ungroup checks args', () => {
+      expect(`
       query: a -> {
         group_by: aa is 'a'
         nest: by_b is {
@@ -184,9 +187,9 @@ describe('query:', () => {
         }
       }
     `).translationToFailWith("exclude() 'aaa' is missing from query output");
-  });
-  test('exclude problem revealed by production models', () => {
-    expect(`
+    });
+    test('exclude problem revealed by production models', () => {
+      expect(`
       source: carriers is table('malloytest.carriers') {
         primary_key: code
       }
@@ -204,6 +207,7 @@ describe('query:', () => {
         }
       }
     `).toTranslate();
+    });
   });
   describe('query operation typechecking', () => {
     describe('field declarations', () => {

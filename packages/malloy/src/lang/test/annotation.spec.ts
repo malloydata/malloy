@@ -623,4 +623,30 @@ describe('query operation annotations', () => {
       expect(note_b?.annotation).matchesAnnotation({inherits: defaultTags});
     }
   });
+  test('annotations preserved from path references', () => {
+    const m = model`
+      run: a -> {
+        extend: {
+          join_one: x is
+            a extend {
+              # blockNote
+              dimension:
+                # note
+                xdim
+                # b4-is
+                is
+                # after-is
+                1
+            } on x.ai = ai
+        }
+        group_by: x.xdim
+      }`;
+    expect(m).toTranslate();
+    const foundYou = m.translator.getQuery(0);
+    expect(foundYou).toBeDefined();
+    if (foundYou) {
+      const note_b = getFieldDef(foundYou.pipeline[0], 'xdim');
+      expect(note_b?.annotation).matchesAnnotation({inherits: defaultTags});
+    }
+  });
 });
