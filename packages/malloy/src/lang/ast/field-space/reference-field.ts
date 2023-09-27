@@ -103,7 +103,7 @@ export class ReferenceField extends SpaceField {
           // and annotate the expression.
           if (isAtomicFieldType(origFd.type)) {
             const newField: FieldAtomicDef = {
-              name: this.fieldRef.list[-1].refString,
+              name: this.fieldRef.list[this.fieldRef.list.length - 1].refString,
               type: origFd.type,
               e: [{type: 'field', path}],
               annotation,
