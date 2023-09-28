@@ -38,7 +38,7 @@ const {execSync} = require('child_process');
 const langSrc = path.dirname(__dirname);
 const libDir = path.join(langSrc, 'lib');
 
-let ANTLR_VERSION="update-from-package.json";
+let ANTLR_VERSION = 'update-from-package.json';
 let antlrDist = '';
 let antlrJar = '';
 const antlr = '-Xexact-output-dir -o ../lib/Malloy';
@@ -66,7 +66,9 @@ async function ensureAntlrJarExists() {
     // Recommended in the antlr documentation because the version numbering in
     // antlr does not follow semantic versioning rules, so a human should decide
     // when it is OK to move the version forwards.
-    console.log(`Antlr dependency must locked to a particular version, not ${ANTLR_VERSION}`)
+    console.log(
+      `Antlr dependency must locked to a particular version, not ${ANTLR_VERSION}`
+    );
     process.exit(3);
   }
   antlrDist = `https://www.antlr.org/download/antlr-${ANTLR_VERSION}-complete.jar`;
@@ -80,9 +82,10 @@ async function ensureAntlrJarExists() {
     fs.mkdirSync(libDir);
   }
   const outFile = fs.openSync(antlrJar, 'w');
+  // eslint-disable-next-line no-unused-vars
   await new Promise((resolve, _reject) => {
-    https.get(antlrDist, (response) => {
-      response.on('data', (chunk) => {
+    https.get(antlrDist, response => {
+      response.on('data', chunk => {
         fs.writeFileSync(outFile, chunk);
       });
 
@@ -117,10 +120,9 @@ function oldDigest() {
 }
 
 function run(cmd) {
-  javaCmd = `java -jar ${antlrJar} -Dlanguage=TypeScript ${cmd}`
+  const javaCmd = `java -jar ${antlrJar} -Dlanguage=TypeScript ${cmd}`;
   try {
     console.log(`>> antlr4 ${cmd}`);
-    console.log(javaCmd);
     console.log(execSync(javaCmd).toString());
   } catch (runError) {
     console.log(runError);
@@ -128,7 +130,6 @@ function run(cmd) {
   }
   return true;
 }
-
 
 function version(fn) {
   return uuidv5(fs.readFileSync(fn, 'utf-8'), MALLOY_UUID);
