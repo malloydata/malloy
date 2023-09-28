@@ -120,6 +120,7 @@ export function getDialectFunction(name: string): FunctionDef | undefined {
             dialect: {[dialect.name]: overload.e},
             needsWindowOrderBy: overload.needsWindowOrderBy,
             between: overload.between,
+            isSymmetric: overload.isSymmetric,
           });
         }
       }

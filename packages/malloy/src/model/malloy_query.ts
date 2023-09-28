@@ -461,8 +461,10 @@ class QueryField extends QueryNode {
   ): string {
     const overload = frag.overload;
     const args = frag.args;
+    const isSymmetric = frag.overload.isSymmetric ?? false;
     const distinctKey =
       expressionIsAggregate(overload.returnType.expressionType) &&
+      !isSymmetric &&
       this.generateDistinctKeyIfNecessary(resultSet, context, frag.structPath);
     if (distinctKey) {
       if (!context.dialect.supportsAggDistinct) {

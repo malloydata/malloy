@@ -36,6 +36,7 @@ export interface DialectFunctionOverloadDef {
   params: FunctionParameterDef[];
   e: Expr;
   needsWindowOrderBy?: boolean;
+  isSymmetric?: boolean;
   between: {preceding: number | string; following: number | string} | undefined;
 }
 
