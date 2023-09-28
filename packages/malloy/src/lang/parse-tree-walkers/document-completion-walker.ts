@@ -21,11 +21,10 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {CommonTokenStream, ParserRuleContext} from 'antlr4ts';
-import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
-import {ParseTree} from 'antlr4ts/tree';
-import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
+import {ParseTree, ParseTreeWalker, CommonTokenStream, ParserRuleContext, ParseTreeListener} from 'antlr4';
+import MalloyParserListener from '../lib/Malloy/MalloyParserListener';
 import * as parser from '../lib/Malloy/MalloyParser';
+import { inRange, rangeOf } from './walker-utils';
 
 export interface DocumentCompletion {
   type: string;
@@ -63,51 +62,40 @@ const QUERY_PROPERTIES = [
 
 const MODEL_PROPERTIES = ['source', 'explore', 'query', 'sql'];
 
-class DocumentCompletionWalker implements MalloyParserListener {
+class DocumentCompletionWalker
+  extends ParseTreeListener
+  implements MalloyParserListener
+{
   constructor(
     readonly tokens: CommonTokenStream,
     readonly completions: DocumentCompletion[],
     readonly position: {line: number; character: number}
-  ) {}
+  ) {
+    super();
+  }
 
   rangeOf(pcx: ParserRuleContext) {
     const stopToken = pcx.stop || pcx.start;
     return {
       start: {
         line: pcx.start.line - 1,
-        character: pcx.start.charPositionInLine,
+        character: pcx.start.column,
       },
       end: {
         line: stopToken.line - 1,
         character:
-          stopToken.stopIndex -
-          (stopToken.startIndex - stopToken.charPositionInLine) +
+          stopToken.stop -
+          (stopToken.start - stopToken.column) +
           1,
       },
     };
   }
 
-  inRange(range: {
-    start: {line: number; character: number};
-    end: {line: number; character: number};
-  }): boolean {
-    const {start, end} = range;
-    const afterStart =
-      this.position.line > start.line ||
-      (this.position.line === start.line &&
-        this.position.character >= start.character);
-    const beforeEnd =
-      this.position.line < end.line ||
-      (this.position.line === end.line &&
-        this.position.character <= end.character);
-    return afterStart && beforeEnd;
-  }
-
   enterExploreProperties(ctx: parser.ExplorePropertiesContext) {
-    if (this.inRange(this.rangeOf(ctx))) {
+    if (inRange(this.position, rangeOf(ctx))) {
       let insideStatement = false;
-      for (const exploreStatementContext of ctx.exploreStatement()) {
-        if (this.inRange(this.rangeOf(exploreStatementContext))) {
+      for (const exploreStatementContext of ctx.exploreStatement_list()) {
+        if (inRange(this.position, rangeOf(exploreStatementContext))) {
           insideStatement = true;
         }
       }
@@ -123,10 +111,10 @@ class DocumentCompletionWalker implements MalloyParserListener {
   }
 
   enterQueryProperties(ctx: parser.QueryPropertiesContext) {
-    if (this.inRange(this.rangeOf(ctx))) {
+    if (inRange(this.position, rangeOf(ctx))) {
       let insideStatement = false;
-      for (const exploreStatementContext of ctx.queryStatement()) {
-        if (this.inRange(this.rangeOf(exploreStatementContext))) {
+      for (const exploreStatementContext of ctx.queryStatement_list()) {
+        if (inRange(this.position, rangeOf(exploreStatementContext))) {
           insideStatement = true;
         }
       }
@@ -142,10 +130,10 @@ class DocumentCompletionWalker implements MalloyParserListener {
   }
 
   enterMalloyDocument(ctx: parser.MalloyDocumentContext) {
-    if (this.inRange(this.rangeOf(ctx))) {
+    if (inRange(this.position, rangeOf(ctx))) {
       let insideStatement = false;
-      for (const modelStatementContext of ctx.malloyStatement()) {
-        if (this.inRange(this.rangeOf(modelStatementContext))) {
+      for (const modelStatementContext of ctx.malloyStatement_list()) {
+        if (inRange(this.position, rangeOf(modelStatementContext))) {
           insideStatement = true;
         }
       }

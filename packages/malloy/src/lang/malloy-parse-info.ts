@@ -22,17 +22,17 @@
  */
 
 import {
-  CodePointCharStream,
+  CharStream,
   CommonTokenStream,
   ParserRuleContext,
-} from 'antlr4ts';
-import {ParseTree} from 'antlr4ts/tree';
+} from 'antlr4';
+import {ParseTree} from 'antlr4';
 import {DocumentRange} from '../model/malloy_types';
 
 export interface MalloyParseInfo {
   root: ParseTree;
   tokenStream: CommonTokenStream;
-  sourceStream: CodePointCharStream;
+  sourceStream: CharStream;
   sourceURL: string;
   importBaseURL: string;
   rangeFromContext: (pcx: ParserRuleContext) => DocumentRange;

@@ -32,7 +32,7 @@ tagSpec
   | MINUS? propName                    # tagDef
   ;
 
-string
+anyString
   : SQ_STRING
   | DQ_STRING
   | BARE_STRING
@@ -47,13 +47,13 @@ identifier
 propName: identifier (DOT identifier)*;
 
 eqValue
-  : string
+  : anyString
   | arrayValue
   | reference
   ;
 
 arrayElement
-  : string properties?
+  : anyString properties?
   | properties
   | arrayValue
   | reference

@@ -21,16 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {AbstractParseTreeVisitor} from 'antlr4ts/tree';
-import {MalloyTagLexer} from './lang/lib/Malloy/MalloyTagLexer';
-import {
+import MalloyTagLexer from './lang/lib/Malloy/MalloyTagLexer';
+import MalloyTagParser, {
   ArrayElementContext,
   ArrayValueContext,
-  MalloyTagParser,
   PropNameContext,
   PropertiesContext,
   ReferenceContext,
-  StringContext,
+  AnyStringContext,
   TagDefContext,
   TagEqContext,
   TagLineContext,
@@ -38,14 +36,15 @@ import {
   TagSpecContext,
   TagUpdatePropertiesContext,
 } from './lang/lib/Malloy/MalloyTagParser';
-import {MalloyTagVisitor} from './lang/lib/Malloy/MalloyTagVisitor';
+import MalloyTagVisitor from './lang/lib/Malloy/MalloyTagVisitor';
 import {
-  ANTLRErrorListener,
+  ErrorListener as ANTLRErrorListener,
   CharStreams,
   CommonTokenStream,
+  ParseTreeVisitor,
   ParserRuleContext,
   Token,
-} from 'antlr4ts';
+} from 'antlr4';
 import {parseString} from './lang/parse-utils';
 import {LogMessage} from './lang';
 import cloneDeep from 'lodash/cloneDeep';
@@ -381,11 +380,11 @@ function parsePath(buildOn: Tag, path: string[]): [string, TagDict] {
   return [path[path.length - 1], writeInto];
 }
 
-function getString(ctx: StringContext) {
+function getString(ctx: AnyStringContext) {
   if (ctx.SQ_STRING() || ctx.DQ_STRING()) {
-    return parseString(ctx.text, ctx.text[0]);
+    return parseString(ctx.getText(), ctx.getText()[0]);
   }
-  return ctx.text;
+  return ctx.getText();
 }
 
 function parseTagline(
@@ -417,10 +416,7 @@ function parseTagline(
   return {tag, log: pLog.log};
 }
 
-class TaglineParser
-  extends AbstractParseTreeVisitor<Tag>
-  implements MalloyTagVisitor<Tag>
-{
+class TaglineParser extends ParseTreeVisitor<Tag> implements MalloyTagVisitor<Tag> {
   scopes: Tag[] = [];
   constructor(outerScopes: Tag[] = []) {
     super();
@@ -431,15 +427,15 @@ class TaglineParser
     return new Tag();
   }
 
-  visitString(ctx: StringContext): Tag {
+  vistAnyString(ctx: AnyStringContext): Tag {
     return new Tag({eq: getString(ctx)});
   }
 
   protected getPropName(ctx: PropNameContext): string[] {
     return ctx
-      .identifier()
+      .identifier_list()
       .map(cx =>
-        cx.BARE_STRING() ? cx.text : parseString(cx.text, cx.text[0])
+        cx.BARE_STRING() ? cx.getText() : parseString(cx.getText(), cx.getText()[0])
       );
   }
 
@@ -456,17 +452,17 @@ class TaglineParser
   tagLineToTag(ctx: TagLineContext, extending: Tag | undefined): Tag {
     extending = extending?.clone() || new Tag({});
     this.scopes.unshift(extending);
-    this.getTags(ctx.tagSpec(), extending);
+    this.getTags(ctx.tagSpec_list(), extending);
     return extending;
   }
 
-  visitTagLine(_ctx: TagLineContext): Tag {
+  visitTagLine(_ctx: TagLineContext): Tag  {
     throw new Error('INTERNAL: ERROR: Call tagLineToTag, not vistTagLine');
     return this.defaultResult();
   }
 
   visitProperties(ctx: PropertiesContext): Tag {
-    return this.getTags(ctx.tagSpec(), getBuildOn(ctx));
+    return this.getTags(ctx.tagSpec_list(), getBuildOn(ctx));
   }
 
   visitArrayValue(ctx: ArrayValueContext): Tag {
@@ -474,13 +470,13 @@ class TaglineParser
   }
 
   getArray(ctx: ArrayValueContext): Tag[] {
-    return ctx.arrayElement().map(v => this.visit(v));
+    return ctx.arrayElement_list().map(v => this.visit(v));
   }
 
   visitArrayElement(ctx: ArrayElementContext): Tag {
     const propCx = ctx.properties();
     const properties = propCx ? this.visitProperties(propCx) : undefined;
-    const strCx = ctx.string();
+    const strCx = ctx.anyString();
     let value: TagValue | undefined = strCx ? getString(strCx) : undefined;
 
     const arrayCx = ctx.arrayValue();

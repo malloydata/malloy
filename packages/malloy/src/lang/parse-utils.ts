@@ -21,9 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ParserRuleContext} from 'antlr4ts';
+import {ParserRuleContext} from 'antlr4';
 import {
-  StringContext,
+  AnyStringContext,
   ShortStringContext,
   SqlStringContext,
   IdContext,
@@ -37,7 +37,7 @@ import {
  * @returns Decocded string
  */
 export function getShortString(scx: ShortStringContext): string {
-  const str = scx.DQ_STRING()?.text || scx.SQ_STRING()?.text;
+  const str = scx.DQ_STRING()?.getText() || scx.SQ_STRING()?.getText();
   if (str) {
     return parseString(str, str[0]);
   }
@@ -46,21 +46,21 @@ export function getShortString(scx: ShortStringContext): string {
 }
 
 export function getStringIfShort(cx: HasString): string | undefined {
-  const scx = cx.string().shortString();
+  const scx = cx.anyString().shortString();
   if (scx) {
     return getShortString(scx);
   }
 }
 
 export type HasString = {
-  string: () => StringContext;
+  anyString: () => AnyStringContext;
 };
 type StringPart = ParserRuleContext | string;
 
 export function* getStringParts(cx: SqlStringContext): Generator<StringPart> {
   if (cx) {
-    for (const part of cx.sqlInterpolation()) {
-      const upToOpen = part.OPEN_CODE().text;
+    for (const part of cx.sqlInterpolation_list()) {
+      const upToOpen = part.OPEN_CODE().getText();
       if (upToOpen.length > 2) {
         yield upToOpen.slice(0, upToOpen.length - 2);
       }
@@ -68,7 +68,7 @@ export function* getStringParts(cx: SqlStringContext): Generator<StringPart> {
         yield part.query();
       }
     }
-    const lastChars = cx.SQL_END()?.text.slice(0, -3);
+    const lastChars = cx.SQL_END()?.getText().slice(0, -3);
     if (lastChars && lastChars.length > 0) {
       yield lastChars;
     }
@@ -162,9 +162,9 @@ export function getId(cx: HasID): string {
 export function idToStr(cx: IdContext): string {
   const quoted = cx.BQ_STRING();
   if (quoted) {
-    return parseString(quoted.text, '`');
+    return parseString(quoted.getText(), '`');
   }
-  return cx.text;
+  return cx.getText();
 }
 
 export function getOptionalId(cx: ParserRuleContext): string | undefined {

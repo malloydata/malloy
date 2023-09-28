@@ -97,7 +97,7 @@ importItem
   ;
 
 importURL
-  : string
+  : anyString
   ;
 
 docAnnotations
@@ -437,7 +437,7 @@ sampleStatement
   ;
 
 timezoneStatement
-  : TIMEZONE string
+  : TIMEZONE anyString
   ;
 
 queryAnnotation
@@ -455,7 +455,7 @@ aggregate: SUM | COUNT | AVG | MIN | MAX;
 malloyType: STRING | NUMBER | BOOLEAN | DATE | TIMESTAMP;
 compareOp: MATCH | NOT_MATCH | GT | LT | GTE | LTE | EQ | NE;
 
-string
+anyString
   : shortString
   | sqlString
   ;
@@ -469,7 +469,7 @@ numericLiteral
   ;
 
 literal
-  : string                                      # exprString
+  : anyString                                   # exprString
   | numericLiteral                              # exprNumber
   | dateLiteral                                 # exprTime
   | NULL                                        # exprNULL
@@ -488,8 +488,8 @@ dateLiteral
   | LITERAL_YEAR           # literalYear
   ;
 
-tablePath: string;
-tableURI: string;
+tablePath: anyString;
+tableURI: anyString;
 
 id
   : IDENTIFIER
@@ -507,7 +507,7 @@ ungroup
 
 malloyOrSQLType
   : malloyType
-  | string
+  | anyString
   ;
 
 fieldExpr
@@ -608,4 +608,4 @@ justExpr: fieldExpr EOF;
 
 sqlExploreNameRef: id;
 nameSQLBlock: id;
-connectionName: string;
+connectionName: anyString;

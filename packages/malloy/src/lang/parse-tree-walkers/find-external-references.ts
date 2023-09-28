@@ -21,11 +21,9 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {CommonTokenStream} from 'antlr4ts';
-import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
-import {ParseTree} from 'antlr4ts/tree';
+import {CommonTokenStream, ParseTree, ParseTreeWalker} from 'antlr4';
 import * as parser from '../lib/Malloy/MalloyParser';
-import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
+import MalloyParserListener from '../lib/Malloy/MalloyParserListener';
 import {DocumentRange} from '../../model/malloy_types';
 import {MalloyTranslation} from '../parse-malloy';
 import {
@@ -54,7 +52,7 @@ function getPlainString(cx: HasString): string {
     return shortStr;
   }
   const safeParts: string[] = [];
-  const multiLineStr = cx.string().sqlString();
+  const multiLineStr = cx.anyString().sqlString();
   if (multiLineStr) {
     for (const part of getStringParts(multiLineStr)) {
       if (typeof part === 'string') {
@@ -66,14 +64,16 @@ function getPlainString(cx: HasString): string {
   return '';
 }
 
-class FindExternalReferences implements MalloyParserListener {
+class FindExternalReferences extends MalloyParserListener {
   needTables: NeedTables = {};
   needImports: NeedImports = {};
 
   constructor(
     readonly trans: MalloyTranslation,
     readonly tokens: CommonTokenStream
-  ) {}
+  ) {
+    super();
+  }
 
   registerTableReference(
     connectionName: string | undefined,
@@ -90,14 +90,14 @@ class FindExternalReferences implements MalloyParserListener {
     }
   }
 
-  enterTableMethod(pcx: parser.TableMethodContext) {
+  enterTableMethod = (pcx: parser.TableMethodContext) => {
     const connId = getId(pcx.connectionId());
     const tablePath = getPlainString(pcx.tablePath());
     const reference = this.trans.rangeFromContext(pcx);
     this.registerTableReference(connId, tablePath, reference);
   }
 
-  enterTableFunction(pcx: parser.TableFunctionContext) {
+  enterTableFunction = (pcx: parser.TableFunctionContext) => {
     const tableURI = getPlainString(pcx.tableURI());
     // This use of `deprecatedParseTableURI` is ok because it is for handling the
     // old, soon-to-be-deprecated table syntax.
@@ -106,7 +106,7 @@ class FindExternalReferences implements MalloyParserListener {
     this.registerTableReference(connectionName, tablePath, reference);
   }
 
-  enterImportURL(pcx: parser.ImportURLContext) {
+  enterImportURL = (pcx: parser.ImportURLContext) => {
     const url = getPlainString(pcx);
     if (!this.needImports[url]) {
       this.needImports[url] = this.trans.rangeFromContext(pcx);

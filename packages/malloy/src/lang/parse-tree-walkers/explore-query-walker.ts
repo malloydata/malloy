@@ -21,10 +21,8 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {CommonTokenStream} from 'antlr4ts';
-import {ParseTree} from 'antlr4ts/tree';
-import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
-import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
+import {CommonTokenStream, ParseTree, ParseTreeWalker, ParseTreeListener} from 'antlr4';
+import MalloyParserListener from '../lib/Malloy/MalloyParserListener';
 // import {
 //   ExploreContext,
 //   FilterElementContext,
@@ -56,12 +54,16 @@ export interface ExploreClauseRef {
   range: SimpleRange;
 }
 
-export class ExploreQueryWalker implements MalloyParserListener {
+export class ExploreQueryWalker
+  extends ParseTreeListener
+  implements MalloyParserListener
+{
   tokens: CommonTokenStream;
   exploreClauseRefs: ExploreClauseRef[];
   currentExploreClauseRef: ExploreClauseRef | undefined;
 
   constructor(tokens: CommonTokenStream) {
+    super();
     this.exploreClauseRefs = [];
     this.tokens = tokens;
   }

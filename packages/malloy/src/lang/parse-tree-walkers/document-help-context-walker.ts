@@ -21,14 +21,14 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {ParserRuleContext} from 'antlr4ts';
-import {AbstractParseTreeVisitor, ParseTree} from 'antlr4ts/tree';
+import {ParseTreeVisitor, ParseTree, ParserRuleContext} from 'antlr4';
 import {
   ExplorePropertiesContext,
   MalloyDocumentContext,
   QueryPropertiesContext,
 } from '../lib/Malloy/MalloyParser';
-import {MalloyParserVisitor} from '../lib/Malloy/MalloyParserVisitor';
+import MalloyParserVisitor from '../lib/Malloy/MalloyParserVisitor';
+import { rangeOf, inRange } from './walker-utils';
 
 export interface DocumentHelpContext {
   type: string;
@@ -36,7 +36,7 @@ export interface DocumentHelpContext {
 }
 
 class HelpContextVisitor
-  extends AbstractParseTreeVisitor<DocumentHelpContext | undefined>
+  extends ParseTreeVisitor<DocumentHelpContext | undefined>
   implements MalloyParserVisitor<DocumentHelpContext | undefined>
 {
   type = '';
@@ -45,64 +45,33 @@ class HelpContextVisitor
     super();
   }
 
-  rangeOf(ctx: ParserRuleContext) {
-    const stopToken = ctx.stop || ctx.start;
-    return {
-      start: {
-        line: ctx.start.line - 1,
-        character: ctx.start.charPositionInLine,
-      },
-      end: {
-        line: stopToken.line - 1,
-        character:
-          stopToken.stopIndex -
-          (stopToken.startIndex - stopToken.charPositionInLine) +
-          1,
-      },
-    };
-  }
-
-  inRange(range: {
-    start: {line: number; character: number};
-    end: {line: number; character: number};
-  }): boolean {
-    return (
-      range.start.line <= this.position.line &&
-      range.end.line >= this.position.line &&
-      (this.position.line !== range.start.line ||
-        this.position.character >= range.start.character) &&
-      (this.position.line !== range.end.line ||
-        this.position.character <= range.end.character)
-    );
-  }
-
   defaultResult(): DocumentHelpContext | undefined {
     return undefined;
   }
 
   visitChildren(ctx: ParserRuleContext) {
     let result = this.defaultResult();
-    if (this.inRange(this.rangeOf(ctx))) {
-      result = {
-        type: this.type,
-        token: ctx.start.text,
-      };
-      const n = ctx.childCount;
-      for (let i = 0; i < n; i++) {
-        const c = ctx.getChild(i);
-        const childResult = c.accept(this);
-        if (childResult) {
-          result = this.aggregateResult(result, childResult);
-        }
-      }
-    }
+    // if (inRange(this.position, rangeOf(ctx))) {
+    //   result = {
+    //     type: this.type,
+    //     token: ctx.start.text,
+    //   };
+    //   const n = ctx.childCount;
+    //   for (let i = 0; i < n; i++) {
+    //     const c = ctx.getChild(i);
+    //     const childResult = c.accept(this);
+    //     if (childResult) {
+    //       result = this.aggregateResult(result, childResult);
+    //     }
+    //   }
+    // }
     return result;
   }
 
   visitMalloyDocument(
     ctx: MalloyDocumentContext
   ): DocumentHelpContext | undefined {
-    if (this.inRange(this.rangeOf(ctx))) {
+    if (inRange(this.position, rangeOf(ctx))) {
       this.type = 'model_property';
       return this.visitChildren(ctx);
     }
@@ -112,7 +81,7 @@ class HelpContextVisitor
   visitExploreProperties(
     ctx: ExplorePropertiesContext
   ): DocumentHelpContext | undefined {
-    if (this.inRange(this.rangeOf(ctx))) {
+    if (inRange(this.position, rangeOf(ctx))) {
       this.type = 'explore_property';
       return this.visitChildren(ctx);
     }
@@ -122,7 +91,7 @@ class HelpContextVisitor
   visitQueryProperties(
     ctx: QueryPropertiesContext
   ): DocumentHelpContext | undefined {
-    if (this.inRange(this.rangeOf(ctx))) {
+    if (inRange(this.position, rangeOf(ctx))) {
       this.type = 'query_property';
       return this.visitChildren(ctx);
     }
@@ -130,7 +99,7 @@ class HelpContextVisitor
   }
 
   protected aggregateResult(
-    aggregate: DocumentHelpContext | undefined,
+    _aggregate: DocumentHelpContext | undefined,
     nextResult: DocumentHelpContext | undefined
   ): DocumentHelpContext | undefined {
     return nextResult;

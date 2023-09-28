@@ -21,14 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {CommonTokenStream, ParserRuleContext} from 'antlr4ts';
-import {ParseTreeWalker} from 'antlr4ts/tree/ParseTreeWalker';
-import {ParseTree} from 'antlr4ts/tree';
-import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
+import {CommonTokenStream, ParserRuleContext, ParseTree, ParseTreeListener, ParseTreeWalker, Token} from 'antlr4';
+import MalloyParserListener from '../lib/Malloy/MalloyParserListener';
 import * as parser from '../lib/Malloy/MalloyParser';
-import {MalloyParser} from '../lib/Malloy/MalloyParser';
-import {Token} from 'antlr4ts/Token';
+import MalloyParser from '../lib/Malloy/MalloyParser';
 import {DocumentRange} from '../../model/malloy_types';
+import { rangeOf } from './walker-utils';
 
 export interface DocumentHighlight {
   range: DocumentRange;
@@ -118,7 +116,7 @@ export function passForHighlights(
 ): DocumentHighlight[] {
   const highlights: DocumentHighlight[] = [];
   const register = (token: Token, type: string, removeColon = false) => {
-    const offset = token.startIndex - token.charPositionInLine;
+    const offset = token.start - token.column;
     const tokenLines = token.text?.split('\n') || [];
     const numberOfLines = tokenLines.length;
     const lengthOfAllButLastLine = tokenLines
@@ -130,14 +128,14 @@ export function passForHighlights(
       range: {
         start: {
           line: token.line - 1,
-          character: token.startIndex - offset,
+          character: token.start - offset,
         },
         end: {
           line: token.line - 1 + numberOfLines - 1,
           character:
-            token.stopIndex +
+            token.stop +
             2 -
-            (numberOfLines > 1 ? token.startIndex : offset) -
+            (numberOfLines > 1 ? token.start : offset) -
             lengthOfAllButLastLine -
             numberOfLines -
             colonAdjustment,
@@ -343,34 +341,22 @@ export function passForHighlights(
   return highlights;
 }
 
-class DocumentHighlightWalker implements MalloyParserListener {
+class DocumentHighlightWalker
+  extends ParseTreeListener
+  implements MalloyParserListener
+{
   constructor(
     readonly tokens: CommonTokenStream,
     readonly highlights: DocumentHighlight[]
-  ) {}
-
-  rangeOf(pcx: ParserRuleContext) {
-    const stopToken = pcx.stop || pcx.start;
-    return {
-      start: {
-        line: pcx.start.line - 1,
-        character: pcx.start.charPositionInLine,
-      },
-      end: {
-        line: stopToken.line - 1,
-        character:
-          stopToken.stopIndex -
-          (stopToken.startIndex - stopToken.charPositionInLine) +
-          1,
-      },
-    };
+  ) {
+    super();
   }
 
   enterExprFunc(pcx: parser.ExprFuncContext) {
     const id = pcx.id() || pcx.timeframe();
     if (id) {
       this.highlights.push({
-        range: this.rangeOf(id),
+        range: rangeOf(id),
         type: HighlightType.Call.Function,
       });
     }

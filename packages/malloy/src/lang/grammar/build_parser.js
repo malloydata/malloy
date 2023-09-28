@@ -27,15 +27,25 @@
 
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-var-requires */
-const {readFileSync, writeFileSync, existsSync, rmSync} = require('fs');
+/* eslint-disable no-process-exit */
+
+const fs = require('fs');
+const https = require('https');
 const {v5: uuidv5} = require('uuid');
 const path = require('path');
 const {execSync} = require('child_process');
 
 const langSrc = path.dirname(__dirname);
-const libDir = path.join(langSrc, 'lib', 'Malloy');
-const antlr = 'antlr4ts -Xexact-output-dir -o ../lib/Malloy';
-const digestFile = path.join(libDir, '_BUILD_DIGEST_');
+const libDir = path.join(langSrc, 'lib');
+
+let ANTLR_VERSION="update-from-package.json";
+let antlrDist = '';
+let antlrJar = '';
+const antlr = '-Xexact-output-dir -o ../lib/Malloy';
+
+const destDir = path.join(libDir, 'Malloy');
+const digestFile = path.join(destDir, '_BUILD_DIGEST_');
+
 const build = [
   {src: 'MalloyLexer.g4', makes: 'MalloyLexer.ts', run: antlr},
   {src: 'MalloyParser.g4', makes: 'MalloyParser.ts', run: `${antlr} -visitor`},
@@ -47,10 +57,58 @@ const build = [
 ];
 const MALLOY_UUID = '76c17e9d-f3ce-5f2d-bfde-98ad3d2a37f6';
 
+async function ensureAntlrJarExists() {
+  const packageJsonFile = path.join(langSrc, '../../package.json');
+  const packageJsonSrc = fs.readFileSync(packageJsonFile);
+  const package = JSON.parse(packageJsonSrc);
+  ANTLR_VERSION = package.dependencies.antlr4;
+  if (!ANTLR_VERSION.match(/^\d/)) {
+    // Recommended in the antlr documentation because the version numbering in
+    // antlr does not follow semantic versioning rules, so a human should decide
+    // when it is OK to move the version forwards.
+    console.log(`Antlr dependency must locked to a particular version, not ${ANTLR_VERSION}`)
+    process.exit(3);
+  }
+  antlrDist = `https://www.antlr.org/download/antlr-${ANTLR_VERSION}-complete.jar`;
+  antlrJar = path.join(libDir, `antlr-${ANTLR_VERSION}-complete.jar`);
+  if (fs.existsSync(antlrJar)) {
+    return;
+  }
+  console.log(`-- Download ${antlrDist}`);
+  if (!fs.existsSync(libDir)) {
+    console.log(`>> mkdir ${libDir}`);
+    fs.mkdirSync(libDir);
+  }
+  const outFile = fs.openSync(antlrJar, 'w');
+  await new Promise((resolve, _reject) => {
+    https.get(antlrDist, (response) => {
+      response.on('data', (chunk) => {
+        fs.writeFileSync(outFile, chunk);
+      });
+
+      // note to future me, i tried testing this by putting a bad url in the request
+      // it did not generate this response, so this code never runs, sorry future me
+      // you have to learn what i didn't bother to learn
+      response.on('error', () => {
+        console.log(`Failed to download ${antlrDist}. Error response received`);
+        fs.closeSync(outFile);
+        fs.rmSync(antlrJar);
+        process.exit(2);
+      });
+
+      response.on('end', () => {
+        console.log(`>> written to ${antlrJar}\n`);
+        fs.closeSync(outFile);
+        resolve();
+      });
+    });
+  });
+}
+
 function oldDigest() {
   try {
-    if (existsSync(digestFile)) {
-      return JSON.parse(readFileSync(digestFile, 'utf-8'));
+    if (fs.existsSync(digestFile)) {
+      return JSON.parse(fs.readFileSync(digestFile, 'utf-8'));
     }
   } catch (e) {
     // nothing to do
@@ -59,42 +117,52 @@ function oldDigest() {
 }
 
 function run(cmd) {
+  javaCmd = `java -jar ${antlrJar} -Dlanguage=TypeScript ${cmd}`
   try {
-    console.log(`>> ${cmd}`);
-    console.log(execSync(cmd).toString());
+    console.log(`>> antlr4 ${cmd}`);
+    console.log(javaCmd);
+    console.log(execSync(javaCmd).toString());
   } catch (runError) {
+    console.log(runError);
     return false;
   }
   return true;
 }
 
-process.chdir(path.join(langSrc, 'grammar'));
 
 function version(fn) {
-  return uuidv5(readFileSync(fn, 'utf-8'), MALLOY_UUID);
+  return uuidv5(fs.readFileSync(fn, 'utf-8'), MALLOY_UUID);
 }
 
-const prevDigest = oldDigest();
-const buildDigest = {[__filename]: version(__filename)};
-let newDigest = false;
-for (const target of build) {
-  buildDigest[target.src] = version(target.src);
-  if (
-    prevDigest[__filename] === buildDigest[__filename] &&
-    existsSync(path.join(libDir, target.makes)) &&
-    prevDigest[target.src] === buildDigest[target.src]
-  ) {
-    console.log(`-- ${target.makes} up to date`);
-    continue;
+async function MAIN() {
+  let gotJar = false;
+  process.chdir(path.join(langSrc, 'grammar'));
+  const prevDigest = oldDigest();
+  const buildDigest = {[__filename]: version(__filename)};
+  let newDigest = false;
+  for (const target of build) {
+    buildDigest[target.src] = version(target.src);
+    if (
+      prevDigest[__filename] === buildDigest[__filename] &&
+      fs.existsSync(path.join(destDir, target.makes)) &&
+      prevDigest[target.src] === buildDigest[target.src]
+    ) {
+      console.log(`-- ${target.makes} up to date`);
+      continue;
+    }
+    if (!gotJar) {
+      await ensureAntlrJarExists();
+      gotJar = true;
+    }
+    console.log(`-- Create ${target.makes} from ${target.src}`);
+    if (!run(`${target.run} ${target.src}`)) {
+      fs.rmSync(digestFile);
+      process.exit(1);
+    }
+    newDigest = true;
   }
-  console.log(`-- Create ${target.makes} from ${target.src}`);
-  if (!run(`${target.run} ${target.src}`)) {
-    rmSync(digestFile);
-    // eslint-disable-next-line no-process-exit
-    process.exit(1);
+  if (newDigest) {
+    fs.writeFileSync(digestFile, JSON.stringify(buildDigest));
   }
-  newDigest = true;
 }
-if (newDigest) {
-  writeFileSync(digestFile, JSON.stringify(buildDigest));
-}
+MAIN();

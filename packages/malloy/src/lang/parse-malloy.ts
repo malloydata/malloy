@@ -22,13 +22,13 @@
  */
 
 import {
-  ANTLRErrorListener,
+  ErrorListener as ANTLRErrorListener,
   CharStreams,
   CommonTokenStream,
   ParserRuleContext,
   Token,
-} from 'antlr4ts';
-import {ParseTree} from 'antlr4ts/tree';
+  ParseTree,
+} from 'antlr4';
 import {
   DocumentLocation,
   DocumentPosition,
@@ -41,8 +41,8 @@ import {
   SQLBlockStructDef,
   StructDef,
 } from '../model/malloy_types';
-import {MalloyLexer} from './lib/Malloy/MalloyLexer';
-import {MalloyParser} from './lib/Malloy/MalloyParser';
+import MalloyLexer from './lib/Malloy/MalloyLexer';
+import MalloyParser from './lib/Malloy/MalloyParser';
 import * as ast from './ast';
 import {MalloyToAST} from './malloy-to-ast';
 import {LogMessage, MessageLog, MessageLogger} from './parse-log';
@@ -91,19 +91,6 @@ export type StepResponses =
   | TranslateResponse
   | ParseResponse
   | MetadataResponse;
-
-/**
- * This ignores a -> popMode when the mode stack is empty, which is a hack,
- * but it let's us parse }%
- */
-class HandlesOverpoppingLexer extends MalloyLexer {
-  popMode(): number {
-    if (this._modeStack.isEmpty) {
-      return this._mode;
-    }
-    return super.popMode();
-  }
-}
 
 /**
  * A Translation is a series of translation steps. Each step can depend
@@ -235,7 +222,7 @@ class ParseStep implements TranslationStep {
 
   private runParser(source: string, that: MalloyTranslation): MalloyParseInfo {
     const inputStream = CharStreams.fromString(source);
-    const lexer = new HandlesOverpoppingLexer(inputStream);
+    const lexer = new MalloyLexer(inputStream);
     const tokenStream = new CommonTokenStream(lexer);
     const malloyParser = new MalloyParser(tokenStream);
     malloyParser.removeErrorListeners();
@@ -874,19 +861,19 @@ export abstract class MalloyTranslation {
   rangeFromTokens(startToken: Token, stopToken: Token): DocumentRange {
     const start = {
       line: startToken.line - 1,
-      character: startToken.charPositionInLine,
+      character: startToken.column,
     };
-    if (this.parseStep.sourceInfo && stopToken.stopIndex !== -1) {
+    if (this.parseStep.sourceInfo && stopToken.stop !== -1) {
       // Find the line which contains the stopIndex
       const lastLine = this.parseStep.sourceInfo.lines.length - 1;
       for (let lineNo = startToken.line - 1; lineNo <= lastLine; lineNo++) {
         const at = this.parseStep.sourceInfo.at[lineNo];
-        if (stopToken.stopIndex >= at.begin && stopToken.stopIndex <= at.end) {
+        if (stopToken.stop >= at.begin && stopToken.stop <= at.end) {
           return {
             start,
             end: {
               line: lineNo,
-              character: stopToken.stopIndex - at.begin + 1,
+              character: stopToken.stop - at.begin + 1,
             },
           };
         }

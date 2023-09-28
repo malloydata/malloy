@@ -22,7 +22,7 @@
     "prepublishOnly": "npm run clean && npm run build"
   },
   "dependencies": {
-    "antlr4ts": "^0.5.0-alpha.4",
+    "antlr4": "4.13.1",
     "assert": "^2.0.0",
     "jest-diff": "^29.6.2",
     "lodash": "^4.17.20",
@@ -31,7 +31,6 @@
   },
   "devDependencies": {
     "@types/lodash": "^4.14.165",
-    "@types/luxon": "^1.26.4",
-    "antlr4ts-cli": "^0.5.0-alpha.4"
+    "@types/luxon": "^1.26.4"
   }
 }
