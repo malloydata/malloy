@@ -24,11 +24,11 @@
 import {languages as Monaco} from 'monaco-editor';
 
 export const monarch: Monaco.IMonarchLanguage = {
-  'includeLF': true,
-  'defaultToken': '',
-  'tokenPostfix': '.malloy',
-  'ignoreCase': true,
-  'tokenizer': {
+  includeLF: true,
+  defaultToken: '',
+  tokenPostfix: '.malloy',
+  ignoreCase: true,
+  tokenizer: {
     root: [{include: '@malloy_language'}],
     malloy_language: [
       {include: '@sql_string'},
@@ -91,8 +91,8 @@ export const monarch: Monaco.IMonarchLanguage = {
     ],
     comment_block_end: [
       [/\*\//, {next: '@pop', token: 'comment.block'}],
-      [/[^*]+/, 'comment.block'],
-      [/[*]/, 'comment.block'],
+      [/[^\*]+/, 'comment.block'],
+      [/[\*]/, 'comment.block'],
     ],
     comment_line_double_slash_end: [
       [/\n/, {next: '@pop', token: 'comment.line.double.slash'}],
@@ -145,7 +145,7 @@ export const monarch: Monaco.IMonarchLanguage = {
       [/'/, {next: '@string_quoted_single_end', token: 'string.quoted'}],
       [/"/, {next: '@string_quoted_double_end', token: 'string.quoted'}],
       [/"""/, {next: '@string_quoted_triple_end', token: 'string.quoted'}],
-      [/[r|/]'/, {next: '@string_regexp_end', token: 'string.regexp'}],
+      [/[r|\/]'/, {next: '@string_regexp_end', token: 'string.regexp'}],
     ],
     string_quoted_single_end: [
       [/'/, {next: '@pop', token: 'string.quoted'}],
@@ -199,7 +199,7 @@ export const monarch: Monaco.IMonarchLanguage = {
       [/\bsql\b/, 'keyword.control.sql'],
       [/\bselect\b/, 'keyword.control.select'],
       [/\bconnection\b/, 'keyword.control.connection'],
-      [/\brun\b/, 'keyword'],
+      [/\brun\b/, 'keyword.control.run'],
       [/\bextend\b/, 'keyword.control.extend'],
       [/\brefine\b/, 'keyword.control.refine'],
       [/\baggregate\b/, 'keyword.control.aggregate'],
@@ -225,6 +225,7 @@ export const monarch: Monaco.IMonarchLanguage = {
       [/\bquery\b/, 'keyword.control.query'],
       [/\brename\b/, 'keyword.control.rename'],
       [/\btop\b/, 'keyword.control.top'],
+      [/\bview\b/, 'keyword.control.view'],
       [/\bwhere\b/, 'keyword.control.where'],
       [/\bdeclare\b/, 'keyword.control.declare'],
     ],
@@ -245,7 +246,7 @@ export const monarch: Monaco.IMonarchLanguage = {
     ],
     datetimes: [
       [
-        /@[0-9]{4}-[0-9]{2}-[0-9]{2}[ T][0-9]{2}:[0-9]{2}((:[0-9]{2})(([.,][0-9]+)(\[[A-Za-z_/]+\])?)?)?/,
+        /@[0-9]{4}-[0-9]{2}-[0-9]{2}[ T][0-9]{2}:[0-9]{2}((:[0-9]{2})(([\.,][0-9]+)(\[[A-Za-z_\/]+\])?)?)?/,
         'constant.numeric.timestamp',
       ],
       [

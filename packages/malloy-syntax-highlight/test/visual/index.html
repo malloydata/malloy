@@ -1,0 +1,76 @@
+<html>
+  <head>
+    <style>
+      body {
+        display: flex;
+        flex-direction: row;
+      }
+      .left {
+        width: 50%;
+        border: 1px solid #efefef;
+        margin: 10px;
+        border-radius: 10px;
+        overflow: hidden;
+        padding: 3px;
+      }
+      #input {
+        width: 100%;
+        height: 100%;
+        border: none;
+        resize: none;
+      }
+      #input:focus {
+        border: none;
+        outline: none;
+      }
+      .right {
+        padding: 3px;
+        width: 50%;
+        border: 1px solid #efefef;
+        margin: 10px;
+        border-radius: 10px;
+      }
+      pre {
+        white-space: pre-wrap;
+        margin: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="left"><textarea id="input">
+source: flights is duckdb.table('flights.parquet') extend {
+  dimension: foo is 1
+}
+    </textarea></div>
+    <div class="right"><div id="output"></div></div>
+    <script src="https://unpkg.com/shiki"></script>
+    <script>
+      fetch("./malloy.tmGrammar.json").then(response => {
+        const malloyGrammar = response.json();
+        const update = (el) => {
+          shiki
+          .getHighlighter({
+            theme: 'light-plus',
+            langs: [
+              "sql",
+              "json",
+              {
+                id: "malloy",
+                scopeName: "source.malloy",
+                embeddedLangs: ["sql"],
+                grammar: malloyGrammar,
+              },
+            ],
+          })
+          .then(highlighter => {
+            const code = highlighter.codeToHtml(el.value, { lang: 'malloy' })
+            document.getElementById('output').innerHTML = code
+          })
+        }
+        const inp = document.getElementById("input");
+        inp.addEventListener('input', (ev) => update(ev.target));
+        update(inp);
+      });
+    </script>
+  </body>
+</html>
