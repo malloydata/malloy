@@ -44,7 +44,7 @@ describe('source:', () => {
   });
   test('fitlered table', () => {
     expect(
-      "source: testA is table('aTable') extend { where: astr ~ 'a%' }"
+      "source: testA is _db_.table('aTable') extend { where: astr ~ 'a%' }"
     ).toTranslate();
   });
   test('ref source with no refinement', () => {

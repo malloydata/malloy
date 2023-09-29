@@ -75,7 +75,7 @@ describe('query:', () => {
         `
       ).toTranslate();
     });
-    test.skip('query output refined into another query', () => {
+    test('query output refined into another query', () => {
       expect(
         'run: ab -> {group_by: astr} extend { dimension: bigstr is upper(astr) } -> { group_by: bigstr }'
       ).toTranslate();
