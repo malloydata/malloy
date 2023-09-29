@@ -371,13 +371,13 @@ export class MalloyToAST
     if (pcx.REFINE()) {
       this.contextError(
         pcx,
-        'The experimental "refine" operator is deprecated, use "+" to refine a view',
+        'The experimental "refine" operator is deprecated, use the "+" operator',
         'warn'
       );
     } else if (!pcx.refineOperator()) {
       this.contextError(
         pcx,
-        'Implicit refinement is deprecated, deprecated, use "+" to refine a view',
+        'Implicit refinement is deprecated, use the "+" operator',
         'warn'
       );
     }
@@ -432,7 +432,7 @@ export class MalloyToAST
       if (pcx.refineOperator()) {
         this.contextError(
           pcx,
-          'Source extension with "+" is deprecated, use the "extend" operator.',
+          'Source extension with "+" is deprecated, use the "extend" operator',
           'warn'
         );
       } else if (pcx.EXTEND() === undefined) {
