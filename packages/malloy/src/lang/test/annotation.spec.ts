@@ -76,15 +76,15 @@ const defaultTags = {
 };
 
 const turtleDef = `
-source: na is a {
+source: na is a extend {
   # blockNote
-  query:
+  view:
   # note
     note_a
     # b4-is
     is
     # after-is
-    {project: *}
+    {select: *}
 }
 `;
 
@@ -137,7 +137,7 @@ describe('document annotation', () => {
       # note0
       source: note_b is a
       # note1
-      source: note_a is note_b { primary_key: ai }
+      source: note_a is note_b extend { primary_key: ai }
     `);
     expect(m).toTranslate();
     const note_a = m.getSourceDef('note_a');
@@ -158,7 +158,7 @@ describe('document annotation', () => {
       # b4-is
       is
       # after-is
-      a -> {project: *}
+      a -> {select: *}
     `);
     expect(m).toTranslate();
     const note_a = m.getQuery('note_a');
@@ -170,9 +170,9 @@ describe('document annotation', () => {
   test('anonymous query annotation points', () => {
     const m = new TestTranslator(`
       # note1
-      query:
+      run:
         # note2
-        a -> {project: *}
+        a -> {select: *}
     `);
     expect(m).toTranslate();
     const note_a = m.getQuery(0);
@@ -189,7 +189,7 @@ describe('document annotation', () => {
       # note1
       run:
         # note2
-        a -> {project: *}
+        a -> {select: *}
     `);
     expect(m).toTranslate();
     const note_a = m.getQuery(0);
@@ -205,7 +205,7 @@ describe('document annotation', () => {
     const m = new TestTranslator(`
       # note1
       # note2
-      query: note_a is a -> {project: *}
+      query: note_a is a -> {select: *}
     `);
     expect(m).toTranslate();
     const note_a = m.getQuery('note_a');
@@ -221,9 +221,9 @@ describe('document annotation', () => {
     # noteb0
       query:
     # noteb1
-        note_b is a -> { project: * }
+        note_b is a -> { select: * }
     # note1
-      query: note_a is -> note_b { where: astr = 'a' }
+      query: note_a is -> note_b extend { where: astr = 'a' }
     `);
     expect(m).toTranslate();
     const note_a = m.getQuery('note_a');
@@ -238,7 +238,7 @@ describe('document annotation', () => {
   test('query from turtle inherits turtle annotation', () => {
     const m = new TestTranslator(`
       ${turtleDef}
-      query: na->note_a
+      run: na->note_a
     `);
     expect(m).toTranslate();
     const note_a = m.getQuery(0);
@@ -293,8 +293,8 @@ describe('source definition annotations', () => {
   test('refined turtle inherits annotation', () => {
     const m = new TestTranslator(`
       ${turtleDef}
-      source: new_na is na + {
-        query: new_note_a is note_a
+      source: new_na is na extend {
+        view: new_note_a is note_a
       }
     `);
     expect(m).toTranslate();
@@ -308,7 +308,7 @@ describe('source definition annotations', () => {
   });
   test('dimension block annotation', () => {
     const m = new TestTranslator(`
-      source: na is a {
+      source: na is a extend {
         # blockNote
         dimension:
           # note
@@ -329,7 +329,7 @@ describe('source definition annotations', () => {
   });
   test('measure block annotation', () => {
     const m = new TestTranslator(`
-      source: na is a {
+      source: na is a extend {
         # blockNote
         measure:
           # note
@@ -350,7 +350,7 @@ describe('source definition annotations', () => {
   });
   test('join_one-with block annotation', () => {
     const m = new TestTranslator(`
-      source: na is a {
+      source: na is a extend {
         # blockNote
         join_one:
           # note
@@ -371,7 +371,7 @@ describe('source definition annotations', () => {
   });
   test('join_many-on block annotation', () => {
     const m = new TestTranslator(`
-      source: na is a {
+      source: na is a extend {
         # blockNote
         join_many:
         # note
@@ -392,7 +392,7 @@ describe('source definition annotations', () => {
   });
   test('ignores model annotation', () => {
     const m = new TestTranslator(`
-      source: na is a {
+      source: na is a extend {
         ## model1
       }
     `);
@@ -404,9 +404,9 @@ describe('source definition annotations', () => {
 describe('query operation annotations', () => {
   test('ignores model annotation', () => {
     expect(`
-      query: a -> {
+      run: a -> {
         ## model1
-        project: *
+        select: *
       }
     `).translationToFailWith('Model annotations not allowed at this scope');
   });
@@ -414,7 +414,7 @@ describe('query operation annotations', () => {
     const m = new TestTranslator(`
       query: findme is a -> {
         # blockNote
-        project:
+        select:
           # note
           note_a
           # b4-is
@@ -433,7 +433,7 @@ describe('query operation annotations', () => {
   });
   test('project ref inherits annotation', () => {
     const m = new TestTranslator(`
-      query: a + {
+      run: a extend {
         # blockNote
         dimension:
           # note
@@ -444,7 +444,7 @@ describe('query operation annotations', () => {
           astr
       } -> {
         # note1
-        project:
+        select:
           # note2
           note_a
       }
@@ -506,7 +506,7 @@ describe('query operation annotations', () => {
   });
   test('group_by ref inherits', () => {
     const m = new TestTranslator(`
-      source: aa is a + {
+      source: aa is a extend {
         # blockNote
         dimension:
           # note
@@ -558,7 +558,7 @@ describe('query operation annotations', () => {
   });
   test('aggregate ref inherits', () => {
     const m = new TestTranslator(`
-      source: aa is a + {
+      source: aa is a extend {
         # blockNote
         measure:
           # note
@@ -611,7 +611,7 @@ describe('query operation annotations', () => {
   test('nest from existing inherits annotation', () => {
     const m = new TestTranslator(`
       ${turtleDef}
-      query: na -> {
+      run: na -> a extend {
         nest: note_b is note_a
       }
     `);
