@@ -163,11 +163,11 @@ describe('expressions', () => {
   });
 
   test('filtered measure', () => {
-    expect(expr`acount {? astr = 'why?' }`).toTranslate();
+    expect(expr`acount {where: astr = 'why?' }`).toTranslate();
   });
   test('filtered ungrouped aggregate', () => {
     expect(`
-        query: a -> {
+        run: a -> {
           group_by: ai
           aggregate: x is all(avg(ai)) { where: true }
         }
@@ -192,7 +192,7 @@ describe('expressions', () => {
   });
   test('correctly flags filtered analytic', () => {
     expect(markSource`
-        query: a -> {
+        run: a -> {
           group_by: ai
           calculate: l is lag(ai) { where: true }
         }
@@ -573,14 +573,14 @@ describe('expressions', () => {
     });
     test('n-ary without else', () => {
       expect(`
-        source: na is a + { dimension: d is
+        source: na is a extend { dimension: d is
           pick 7 when true and true
         }
       `).translationToFailWith("pick incomplete, missing 'else'");
     });
     test('n-ary with mismatch when clauses', () => {
       expect(markSource`
-        source: na is a + { dimension: d is
+        source: na is a extend { dimension: d is
           pick 7 when true and true
           pick '7' when true or true
           else 7
@@ -589,7 +589,7 @@ describe('expressions', () => {
     });
     test('n-ary with mismatched else clause', () => {
       expect(markSource`
-        source: na is a + { dimension: d is
+        source: na is a extend { dimension: d is
           pick 7 when true and true
           else '7'
         }
@@ -597,21 +597,21 @@ describe('expressions', () => {
     });
     test('applied else mismatch', () => {
       expect(markSource`
-        source: na is a + { dimension: d is
+        source: na is a extend { dimension: d is
           7 ? pick 7 when 7 else 'not seven'
         }
       `).translationToFailWith("else type 'string', expected 'number'");
     });
     test('applied default mismatch', () => {
       expect(markSource`
-        source: na is a + { dimension: d is
+        source: na is a extend { dimension: d is
           7 ? pick 'seven' when 7
         }
       `).translationToFailWith("pick default type 'number', expected 'string'");
     });
     test('applied when mismatch', () => {
       expect(markSource`
-        source: na is a + { dimension: d is
+        source: na is a extend { dimension: d is
           7 ? pick 'seven' when 7 pick 6 when 6
         }
       `).translationToFailWith("pick type 'number', expected 'string'");
@@ -681,19 +681,19 @@ describe('expressions', () => {
 });
 describe('unspported fields in schema', () => {
   test('unsupported reference in result allowed', () => {
-    const uModel = new TestTranslator('query: a->{ group_by: aun }');
+    const uModel = new TestTranslator('run: a->{ group_by: aun }');
     expect(uModel).toTranslate();
   });
   test('unsupported reference can be compared to NULL', () => {
     const uModel = new TestTranslator(
-      'query: a->{ where: aun != NULL; project: * }'
+      'run: a->{ where: aun != NULL; select: * }'
     );
     expect(uModel).toTranslate();
   });
   test('flag unsupported equality', () => {
     // because we don't know if the two unsupported types are comparable
     const uModel = new TestTranslator(
-      'query: ab->{ where: aun = b.aun  project: * }'
+      'run: ab->{ where: aun = b.aun  select: * }'
     );
     expect(uModel).translationToFailWith(
       'Unsupported type not allowed in expression'
@@ -702,7 +702,7 @@ describe('unspported fields in schema', () => {
   test('flag unsupported compare', () => {
     // because we don't know if the two unsupported types are comparable
     const uModel = new TestTranslator(
-      'query: ab->{ where: aun > b.aun  project: * }'
+      'run: ab->{ where: aun > b.aun  select: * }'
     );
     expect(uModel).translationToFailWith(
       'Unsupported type not allowed in expression'
@@ -710,19 +710,19 @@ describe('unspported fields in schema', () => {
   });
   test('allow unsupported equality when raw types match', () => {
     const uModel = new TestTranslator(
-      'query: ab->{ where: aweird = b.aweird  project: * }'
+      'run: ab->{ where: aweird = b.aweird  select: * }'
     );
     expect(uModel).toTranslate();
   });
   test('flag not applied to unsupported', () => {
     const uModel = new TestTranslator(
-      'source: x is a { dimension: notUn is not aun }'
+      'source: x is a extend { dimension: notUn is not aun }'
     );
     expect(uModel).translationToFailWith("'not' Can't use type unsupported");
   });
   test('allow unsupported to be cast', () => {
     const uModel = new TestTranslator(
-      'source: x is a { dimension: notUn is aun::string }'
+      'source: x is a extend { dimension: notUn is aun::string }'
     );
     expect(uModel).toTranslate();
   });
