@@ -35,7 +35,7 @@ export function typecheckProject(type: TypeDesc, logTo: MalloyElement) {
     let kind: string;
     if (type.dataType === 'turtle') {
       useInstead = 'a nest';
-      kind = 'a query';
+      kind = 'a view';
     } else if (expressionIsAnalytic(type.expressionType)) {
       useInstead = 'a calculate';
       kind = 'an analytic';
@@ -57,7 +57,7 @@ export function typecheckIndex(type: TypeDesc, logTo: MalloyElement) {
   if (type.dataType === 'turtle' || !expressionIsScalar(type.expressionType)) {
     let kind: string;
     if (type.dataType === 'turtle') {
-      kind = 'a query';
+      kind = 'a view';
     } else if (expressionIsAnalytic(type.expressionType)) {
       kind = 'an analytic';
     } else if (expressionIsAggregate(type.expressionType)) {
@@ -120,7 +120,7 @@ export function typecheckCalculate(type: TypeDesc, logTo: MalloyElement) {
     let kind: string;
     if (type.dataType === 'turtle') {
       useInstead = 'a nest';
-      kind = 'a query';
+      kind = 'a view';
     } else if (expressionIsAggregate(type.expressionType)) {
       useInstead = 'an aggregate';
       kind = 'an aggregate';
@@ -147,7 +147,7 @@ export function typecheckAggregate(type: TypeDesc, logTo: MalloyElement) {
     let kind: string;
     if (type.dataType === 'turtle') {
       useInstead = 'a nest';
-      kind = 'a query';
+      kind = 'a view';
     } else if (expressionIsAnalytic(type.expressionType)) {
       useInstead = 'a calculate';
       kind = 'an analytic';
@@ -169,7 +169,7 @@ export function typecheckGroupBy(type: TypeDesc, logTo: MalloyElement) {
     let kind: string;
     if (type.dataType === 'turtle') {
       useInstead = 'a nest';
-      kind = 'a query';
+      kind = 'a view';
     } else if (expressionIsAnalytic(type.expressionType)) {
       useInstead = 'a calculate';
       kind = 'an analytic';

@@ -55,6 +55,8 @@ class IgnoredElement extends ast.MalloyElement {
   }
 }
 
+const DEFAULT_COMPILER_FLAGS = ['##! m4warnings'];
+
 type HasAnnotations = ParserRuleContext & {ANNOTATION: () => TerminalNode[]};
 
 /**
@@ -71,6 +73,10 @@ export class MalloyToAST
     readonly msgLog: MessageLogger
   ) {
     super();
+    for (const flag of DEFAULT_COMPILER_FLAGS) {
+      const withNewTag = Tag.fromTagline(flag, this.compilerFlags);
+      this.compilerFlags = withNewTag.tag;
+    }
   }
 
   /**
@@ -362,10 +368,16 @@ export class MalloyToAST
       this.visitQueryProperties(pcx.queryProperties()),
       pcx
     );
-    if (this.m4WarningsEnabled() && pcx.REFINE() === undefined) {
-      this.astError(
-        properties,
-        'Implicit query refinement is deprecated, use the `refine` operator.',
+    if (pcx.REFINE()) {
+      this.contextError(
+        pcx,
+        'The experimental "refine" operator is deprecated, use "+" to refine a view',
+        'warn'
+      );
+    } else if (!pcx.refineOperator()) {
+      this.contextError(
+        pcx,
+        'Implicit refinement is deprecated, deprecated, use "+" to refine a view',
         'warn'
       );
     }
@@ -416,12 +428,20 @@ export class MalloyToAST
   ): ast.SourceDesc {
     const extensions = pcx?.exploreProperties();
     const sourceDesc = this.astAt(this.visitExploreProperties(extensions), pcx);
-    if (this.m4WarningsEnabled() && pcx.EXTEND() === undefined) {
-      this.astError(
-        sourceDesc,
-        'Implicit source extension is deprecated, use the `extend` operator.',
-        'warn'
-      );
+    if (this.m4WarningsEnabled()) {
+      if (pcx.refineOperator()) {
+        this.contextError(
+          pcx,
+          'Source extension with "+" is deprecated, use the "extend" operator.',
+          'warn'
+        );
+      } else if (pcx.EXTEND() === undefined) {
+        this.contextError(
+          pcx,
+          'Implicit source extension is deprecated, use the `extend` operator.',
+          'warn'
+        );
+      }
     }
     return sourceDesc;
   }
@@ -920,7 +940,7 @@ export class MalloyToAST
         x instanceof ast.FieldReference || x instanceof ast.FieldDeclaration
           ? x
           : false,
-      'query field'
+      'view field'
     );
   }
 
