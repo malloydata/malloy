@@ -46,7 +46,7 @@ describe('source locations', () => {
   });
 
   test('refined source location', () => {
-    const source = markSource`source: ${'na is a {}'}`;
+    const source = markSource`source: ${'na is a extend {}'}`;
     const m = new TestTranslator(source.code);
     expect(m).toParse();
     expect(getExplore(m.modelDef, 'na').location).toMatchObject(
@@ -55,7 +55,7 @@ describe('source locations', () => {
   });
 
   test('location of defined dimension', () => {
-    const source = markSource`source: na is a { dimension: ${'x is 1'} }`;
+    const source = markSource`source: na is a extend { dimension: ${'x is 1'} }`;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
@@ -64,7 +64,7 @@ describe('source locations', () => {
   });
 
   test('location of defined measure', () => {
-    const source = markSource`source: na is a { measure: ${'x is count()'} }`;
+    const source = markSource`source: na is a extend { measure: ${'x is count()'} }`;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
@@ -72,8 +72,8 @@ describe('source locations', () => {
     expect(x.location).toMatchObject(source.locations[0]);
   });
 
-  test('location of defined query', () => {
-    const source = markSource`source: na is a { query: ${'x is { group_by: y is 1 }'} }`;
+  test('location of defined view', () => {
+    const source = markSource`source: na is a extend { view: ${'x is { group_by: y is 1 }'} }`;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
@@ -81,10 +81,10 @@ describe('source locations', () => {
     expect(x.location).toMatchObject(source.locations[0]);
   });
 
-  test('location of defined field inside a query', () => {
+  test('location of defined field inside a view', () => {
     const source = markSource`
-      source: na is a {
-        query: x is {
+      source: na is a extend {
+        view: x is {
           group_by: ${'y is 1'}
         }
       }`;
@@ -97,11 +97,11 @@ describe('source locations', () => {
     expect(y.location).toMatchObject(source.locations[0]);
   });
 
-  test('location of filtered field inside a query', () => {
+  test('location of filtered field inside a view', () => {
     const source = markSource`
-      source: na is a {
+      source: na is a extend {
         measure: y is count()
-        query: x is {
+        view: x is {
           aggregate: ${'z is y { where: true }'}
         }
       }`;
@@ -115,7 +115,7 @@ describe('source locations', () => {
   });
 
   test('location of field inherited from table', () => {
-    const source = markSource`source: na is ${"table('aTable')"}`;
+    const source = markSource`source: na is ${"_db_.table('aTable')"}`;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
     const na = getExplore(m.modelDef, 'na');
@@ -123,8 +123,8 @@ describe('source locations', () => {
     expect(abool.location).toMatchObject(source.locations[0]);
   });
 
-  test('location of field inherited from sql block', () => {
-    const source = markSource`--- comment
+  test('pre m4 location of field inherited from sql block', () => {
+    const source = markSource`##! -m4warnings
       sql: s is { select: ${'"""SELECT 1 as one """'} }
       source: na is from_sql(s)
     `;
@@ -143,10 +143,11 @@ describe('source locations', () => {
     }
   });
 
-  test('location of fields inherited from a query', () => {
+  test('pre m4 location of fields inherited from a query', () => {
     const source = markSource`
+      ##! -m4warnings
       source: na is from(
-        ${"table('aTable')"} -> {
+        ${"_db_.table('aTable')"} -> {
           group_by:
             abool
             ${'y is 1'}
@@ -163,7 +164,7 @@ describe('source locations', () => {
   });
 
   test('location of named query', () => {
-    const source = markSource`query: ${'q is a -> { project: * }'}`;
+    const source = markSource`query: ${'q is a -> { select: * }'}`;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
     const q = getExplore(m.modelDef, 'q');
@@ -179,8 +180,8 @@ describe('source locations', () => {
     expect(a.location).toMatchObject(source.locations[0]);
   });
 
-  test('location of named SQL block', () => {
-    const source = markSource`${'sql: s is { select: """SELECT 1 as one""" }'}`;
+  test('pre m4 location of named SQL block', () => {
+    const source = markSource`##! -m4warnings\n${'sql: s is { select: """SELECT 1 as one""" }'}`;
     const m = new TestTranslator(source.code);
     expect(m).toParse();
     const compileSql = m.translate().compileSQL;
@@ -197,7 +198,7 @@ describe('source locations', () => {
 
   test('location of renamed field', () => {
     const source = markSource`
-      source: na is a {
+      source: na is a extend {
         rename: ${'bbool is abool'}
       }
     `;
@@ -210,8 +211,8 @@ describe('source locations', () => {
 
   test('location of join on', () => {
     const source = markSource`
-      source: na is a {
-        join_one: ${'x is a { primary_key: abool } on abool'}
+      source: na is a extend {
+        join_one: ${'x is a extend { primary_key: abool } on abool'}
       }
     `;
     const m = new TestTranslator(source.code);
@@ -223,8 +224,8 @@ describe('source locations', () => {
 
   test('location of join with', () => {
     const source = markSource`
-      source: na is a {
-        join_one: ${'x is a { primary_key: astr } with astr'}
+      source: na is a extend {
+        join_one: ${'x is a extend { primary_key: astr } with astr'}
       }
     `;
     const m = new TestTranslator(source.code);
@@ -236,8 +237,8 @@ describe('source locations', () => {
 
   test('location of field in join', () => {
     const source = markSource`
-      source: na is a {
-        join_one: x is a {
+      source: na is a extend {
+        join_one: x is a extend {
           primary_key: abool
           dimension: ${'y is 1'}
         } on abool
@@ -261,30 +262,30 @@ describe('source locations', () => {
   // });
 
   test('undefined query location', () => {
-    expect(model`query: ${'-> xyz'}`).translationToFailWith(
+    expect(model`run: ${'xyz'}`).translationToFailWith(
       "Reference to undefined query 'xyz'"
     );
   });
   test('undefined field reference', () => {
-    expect(model`query: a -> { group_by: ${'xyz'} }`).translationToFailWith(
+    expect(model`run: a -> { group_by: ${'xyz'} }`).translationToFailWith(
       "'xyz' is not defined"
     );
   });
   test('bad query', () => {
     expect(
-      model`query: a -> { group_by: astr; ${'project: *'} }`
+      model`run: a -> { group_by: astr; ${'select: *'} }`
     ).translationToFailWith(/Not legal in grouping query/);
   });
 
   test.skip('undefined field reference in top', () => {
     expect(
-      model`query: a -> { group_by: one is 1; top: 1 by ${'xyz'} }`
+      model`run: a -> { group_by: one is 1; top: 1 by ${'xyz'} }`
     ).translationToFailWith("'xyz' is not defined");
   });
 
   test.skip('undefined field reference in order_by', () => {
     expect(
-      model`query: a -> { group_by: one is 1; order_by: ${'xyz'} }`
+      model`run: a -> { group_by: one is 1; order_by: ${'xyz'} }`
     ).translationToFailWith("'xyz' is not defined");
   });
 });
@@ -293,7 +294,7 @@ describe('source references', () => {
   test('reference to explore', () => {
     const source = markSource`
       source: ${'na is a'}
-      query: ${'na'} -> { project: * }
+      run: ${'na'} -> { select: * }
     `;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
@@ -309,10 +310,10 @@ describe('source references', () => {
 
   test('reference to query in query', () => {
     const source = markSource`
-      source: t is a {
-        query: ${'q is { project: * }'}
+      source: t is a extend {
+        view: ${'q is { select: * }'}
       }
-      query: t -> ${'q'}
+      run: t -> ${'q'}
     `;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
@@ -328,8 +329,8 @@ describe('source references', () => {
 
   test('reference to query in query (version 2)', () => {
     const source = markSource`
-      source: na is a { query: ${'x is { group_by: y is 1 }'} }
-      query: na -> ${'x'}
+      source: na is a extend { view: ${'x is { group_by: y is 1 }'} }
+      run: na -> ${'x'}
     `;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
@@ -343,8 +344,9 @@ describe('source references', () => {
     });
   });
 
-  test('reference to sql block', () => {
+  test('pre m4 reference to sql block', () => {
     const source = markSource`
+      ##! -m4warnings
       ${'sql: s is {select:"""SELECT 1 as one"""}'}
       source: na is from_sql(${'s'})
     `;
@@ -370,9 +372,10 @@ describe('source references', () => {
     }
   });
 
-  test('reference to query in from', () => {
+  test('pre m4 reference to query in from', () => {
     const source = markSource`
-      query: ${'q is a -> { project: * }'}
+      ##! -m4warnings
+      query: ${'q is a -> { select: * }'}
       source: na is from(-> ${'q'})
     `;
     const m = new TestTranslator(source.code);
@@ -389,8 +392,8 @@ describe('source references', () => {
 
   test('reference to query in query head', () => {
     const source = markSource`
-      query: ${'q is a -> { project: * }'}
-      query: q2 is -> ${'q'} -> { project: * }
+      query: ${'q is a -> { select: * }'}
+      query: q2 is ${'q'} -> { select: * }
     `;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
@@ -406,8 +409,8 @@ describe('source references', () => {
 
   test('reference to query in refined query', () => {
     const source = markSource`
-      query: ${'q is a -> { project: * }'}
-      query: q2 is -> ${'q'} { limit: 10 }
+      query: ${'q is a -> { select: * }'}
+      query: q2 is ${'q'} + { limit: 10 }
     `;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
@@ -423,8 +426,8 @@ describe('source references', () => {
 
   test('reference to field in expression', () => {
     const source = markSource`
-      source: na is ${"table('aTable')"}
-      query: na -> { project: bbool is not ${'abool'} }
+      source: na is ${"_db_.table('aTable')"}
+      run: na -> { select: bbool is not ${'abool'} }
     `;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
@@ -440,10 +443,10 @@ describe('source references', () => {
 
   test('reference to quoted field in expression', () => {
     const source = markSource`
-      source: na is a {
+      source: na is a extend {
         dimension: ${"`name` is 'name'"}
       }
-      query: na -> { project: ${'`name`'} }
+      run: na -> { select: ${'`name`'} }
     `;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
@@ -459,11 +462,11 @@ describe('source references', () => {
 
   test('reference to joined field in expression', () => {
     const source = markSource`
-      source: na is a {
-        join_one: self is ${"table('aTable')"}
+      source: na is a extend {
+        join_one: self is ${"_db_.table('aTable')"}
           on astr = self.astr
       }
-      query: na -> { project: bstr is self.${'astr'} }
+      run: na -> { select: bstr is self.${'astr'} }
     `;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
@@ -479,10 +482,10 @@ describe('source references', () => {
 
   test('reference to joined join in expression', () => {
     const source = markSource`
-      source: na is a {
+      source: na is a extend {
         join_one: ${'self is a on astr = self.astr'}
       }
-      query: na -> { project: bstr is ${'self'}.astr }
+      run: na -> { select: bstr is ${'self'}.astr }
     `;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
@@ -498,7 +501,7 @@ describe('source references', () => {
 
   test('reference to field not in expression (group by)', () => {
     const source = markSource`
-      query: ${"table('aTable')"} -> { group_by: ${'abool'} }
+      run: ${"_db_.table('aTable')"} -> { group_by: ${'abool'} }
     `;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
@@ -514,8 +517,8 @@ describe('source references', () => {
 
   test('reference to field not in expression (project)', () => {
     const source = markSource`
-      source: na is ${"table('aTable')"}
-      query: na -> { project: ${'abool'} }
+      source: na is ${"_db_.table('aTable')"}
+      run: na -> { select: ${'abool'} }
     `;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
@@ -531,7 +534,7 @@ describe('source references', () => {
 
   test.skip('reference to field in order by', () => {
     const source = markSource`
-      query: ${"table('aTable')"} -> {
+      run: ${"_db_.table('aTable')"} -> {
         group_by: abool
         order_by: ${'abool'}
       }
@@ -550,7 +553,7 @@ describe('source references', () => {
 
   test.skip('reference to field in order by (output space)', () => {
     const source = markSource`
-      query: a -> {
+      run: a -> {
         group_by: ${'one is 1'}
         order_by: ${'one'}
       }
@@ -569,7 +572,7 @@ describe('source references', () => {
 
   test('reference to field in aggregate', () => {
     const source = markSource`
-      query: a { measure: ${'c is count()'} } -> {
+      run: a extend { measure: ${'c is count()'} } -> {
         group_by: abool
         aggregate: ${'c'}
       }
@@ -588,7 +591,7 @@ describe('source references', () => {
 
   test('reference to field in measure', () => {
     const source = markSource`
-      source: e is a {
+      source: e is a extend {
         measure: ${'c is count()'}
         measure: c2 is ${'c'}
       }
@@ -607,7 +610,7 @@ describe('source references', () => {
 
   test.skip('reference to field in top', () => {
     const source = markSource`
-      query: ${"table('aTable')"} -> {
+      run: ${"_db_.table('aTable')"} -> {
         group_by: abool
         top: 10 by ${'abool'}
       }
@@ -626,7 +629,7 @@ describe('source references', () => {
 
   test.skip('reference to field in top (output space)', () => {
     const source = markSource`
-      query: a -> {
+      run: a -> {
         group_by: ${'one is 1'}
         top: 10 by ${'one'}
       }
@@ -645,7 +648,7 @@ describe('source references', () => {
 
   test('reference to field in filter', () => {
     const source = markSource`
-      query: ${"table('aTable')"} -> {
+      run: ${"_db_.table('aTable')"} -> {
         group_by: abool
         where: ${'abool'}
       }
@@ -664,8 +667,8 @@ describe('source references', () => {
 
   test('reference to field in aggregate source', () => {
     const source = markSource`
-      source: na is ${"table('aTable')"}
-      query: na -> { aggregate: ai_sum is ${'ai'}.sum() }
+      source: na is ${"_db_.table('aTable')"}
+      run: na -> { aggregate: ai_sum is ${'ai'}.sum() }
     `;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
@@ -685,10 +688,10 @@ describe('source references', () => {
 
   test('reference to join in aggregate source', () => {
     const source = markSource`
-      source: na is a {
+      source: na is a extend {
         join_one: ${'self is a on astr = self.astr'}
       }
-      query: na -> { aggregate: ai_sum is ${'self'}.sum(self.ai) }
+      run: na -> { aggregate: ai_sum is ${'self'}.sum(self.ai) }
     `;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
@@ -704,10 +707,10 @@ describe('source references', () => {
 
   test('reference to join in aggregate in expr', () => {
     const source = markSource`
-      source: na is a {
+      source: na is a extend {
         join_one: ${'self is a on astr = self.astr'}
       }
-      query: na -> { aggregate: ai_sum is self.sum(${'self'}.ai) }
+      run: na -> { aggregate: ai_sum is self.sum(${'self'}.ai) }
     `;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
@@ -724,7 +727,7 @@ describe('source references', () => {
   test('reference to sourcein join', () => {
     const source = markSource`
       source: ${'exp1 is a'}
-      source: exp2 is a {
+      source: exp2 is a extend {
         join_one: ${'exp1'} on astr = exp1.astr
       }
     `;
@@ -742,8 +745,8 @@ describe('source references', () => {
 
   test('reference to field in aggregate (in expr)', () => {
     const source = markSource`
-      source: na is ${"table('aTable')"}
-      query: na -> { aggregate: ai_sum is sum(${'ai'}) }
+      source: na is ${"_db_.table('aTable')"}
+      run: na -> { aggregate: ai_sum is sum(${'ai'}) }
     `;
     const m = new TestTranslator(source.code);
     expect(m).toTranslate();
@@ -759,7 +762,7 @@ describe('source references', () => {
 
   test('reference to field in rename', () => {
     const source = markSource`
-      source: na is ${"table('aTable')"} {
+      source: na is ${"_db_.table('aTable')"} extend {
         rename: bbool is ${'abool'}
       }
     `;
@@ -777,9 +780,8 @@ describe('source references', () => {
 
   test('reference to field in join with', () => {
     const source = markSource`
-      source: exp1 is a { primary_key: astr }
-      source: exp2 is ${"table('aTable')"} {
-        join_one: exp1 with ${'astr'}
+      source: exp2 is ${"_db_.table('aTable')"} extend {
+        join_one: exp1 is a with ${'astr'}
       }
     `;
     const m = new TestTranslator(source.code);
