@@ -284,8 +284,8 @@ test('(regression) query does not use source block range', () => {
   testLens(
     markSource`source: a is table('b') {
       query:
-        ${'x is {project: *}'}
-        y is {project: *}
+        ${'x is {select: *}'}
+        y is {select: *}
     }`,
     [0, 0]
   );

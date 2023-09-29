@@ -59,7 +59,7 @@ describe('import:', () => {
     expect(xr).toEqual({urls: ['internal://test/langtests/child']});
     docParse.update({
       urls: {
-        'internal://test/langtests/child': 'query: aq is a->{ project: * }',
+        'internal://test/langtests/child': 'query: aq is a->{ select: * }',
       },
     });
     expect(docParse).toTranslate();
@@ -69,7 +69,7 @@ describe('import:', () => {
   test('query based source with named structref', () => {
     const docParse = new TestTranslator(`
 import "child"
-source: newSrc is a {
+source: newSrc is a extend {
   join_one: b is botProjQSrc on b.astr = astr
 }
 `);
@@ -80,8 +80,8 @@ source: newSrc is a {
       urls: {
         'internal://test/langtests/child': `
 source: bottomSrc is a
-query: botProjQ is bottomSrc -> { project: * }
-source: botProjQSrc is from(->botProjQ)
+query: botProjQ is bottomSrc -> { select: * }
+source: botProjQSrc is botProjQ
 `,
       },
     });
@@ -129,7 +129,7 @@ source: botProjQSrc is from(->botProjQ)
     expect(xr).toEqual({urls: ['internal://test/parent.malloy']});
     docParse.update({
       urls: {
-        'internal://test/parent.malloy': "source: aa is table('aTable')",
+        'internal://test/parent.malloy': "source: aa is _db_.table('aTable')",
       },
     });
     expect(docParse).toTranslate();
@@ -142,7 +142,7 @@ source: botProjQSrc is from(->botProjQ)
     docParse.update({
       urls: {
         'internal://test/parent.malloy': `
-          source: aa is table('aTable') {
+          source: aa is _db_.table('aTable') extend {
             dimension: astr is 'not legal beause astr exists'
           }`,
       },
@@ -156,7 +156,7 @@ source: botProjQSrc is from(->botProjQ)
         source: midSrc is from(bottomSrc -> { group_by: astr })
       `,
       'internal://test/langtests/bottom':
-        "source: bottomSrc is table('aTable')",
+        "source: bottomSrc is _db_.table('aTable')",
     };
     const fullModel = new TestTranslator(`
       import "middle"

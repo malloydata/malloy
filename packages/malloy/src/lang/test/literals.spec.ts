@@ -210,22 +210,22 @@ describe('literals', () => {
       expect(v).toMatchObject({literal: 'right\n  mid\nleft'});
     });
     test('timezone single quote', () => {
-      const m = new TestTranslator(`run: a-> {timezone: '${tz}'; project: *}`);
+      const m = new TestTranslator(`run: a-> {timezone: '${tz}'; select: *}`);
       expect(m).toParse();
     });
     test('timezone double quote', () => {
-      const m = new TestTranslator(`run: a-> {timezone: "${tz}"; project: *}`);
+      const m = new TestTranslator(`run: a-> {timezone: "${tz}"; select: *}`);
       expect(m).toParse();
     });
     test('timezone triple quote', () => {
       const m = new TestTranslator(
-        `run: a->{timezone: """${tz}"""; project: *}`
+        `run: a->{timezone: """${tz}"""; select: *}`
       );
       expect(m).toParse();
     });
     test('timezone with illegal query', () => {
       expect(
-        `run: a->{timezone: """${tz}%{ab->aturtle}"""; project: *}`
+        `run: a->{timezone: """${tz}%{ab->aturtle}"""; select: *}`
       ).translationToFailWith('%{ query } illegal in this string');
     });
     test('table single quote', () => {
