@@ -262,9 +262,4 @@ export class SQRefinedQuery extends SourceQueryNode {
       return query;
     }
   }
-
-  getSource() {
-    if (this.toRefine.isSource())
-    const asSource = new QuerySource();
-  }
 }
