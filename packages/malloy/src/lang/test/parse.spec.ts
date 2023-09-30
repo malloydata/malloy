@@ -1051,8 +1051,8 @@ describe('m3/m4 source query sentences', () => {
     `;
     expect(malloy).toTranslate();
   });
-  test('q0_refbare', () =>
-    expect(`define query: q0_refbare is q0 ${qryRefine}`).toTranslate());
+  test('wer', () =>
+    expect('define source: qs1 is q + ${qryRefine}').toTranslate());
   // todo MTOY write test to make sure arrow has correct precedence vs +
   test('sqexpr parsing', () => {
     expect(`
@@ -1066,8 +1066,8 @@ describe('m3/m4 source query sentences', () => {
       define source: s0_extplus is s + ${srcExtend}
       define source: s0_ext is s extend ${srcExtend}
 
-      define query: q0_refbare is q0 ${qryRefine}
-      define query: q0_refplus is q0 + ${qryRefine}
+      define query: q0_refbare is q ${qryRefine}
+      define query: q0_refplus is q + ${qryRefine}
 
       define source: qs is q
       define source: qs0 is q extend ${srcExtend}
