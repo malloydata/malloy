@@ -1051,27 +1051,25 @@ describe('m3/m4 source query sentences', () => {
     `;
     expect(malloy).toTranslate();
   });
-  test('wer', () =>
-    expect('define source: qs1 is q + ${qryRefine}').toTranslate());
   // todo MTOY write test to make sure arrow has correct precedence vs +
   test('sqexpr parsing', () => {
     expect(`
       source: s is a
       query: q is s -> ${query}
 
-      define source: s0 is a
-      define query: q0 is a -> ${query}
+      define source: s0 is a;
+      define query: q0 is a -> ${query};
 
-      define source: s0_extbare is s ${srcExtend}
-      define source: s0_extplus is s + ${srcExtend}
-      define source: s0_ext is s extend ${srcExtend}
+      define source: s0_extbare is s ${srcExtend};
+      define source: s0_extplus is s + ${srcExtend};
+      define source: s0_ext is s extend ${srcExtend};
 
-      define query: q0_refbare is q ${qryRefine}
-      define query: q0_refplus is q + ${qryRefine}
+      define query: q0_refbare is q ${qryRefine};
+      define query: q0_refplus is q + ${qryRefine};
 
-      define source: qs is q
-      define source: qs0 is q extend ${srcExtend}
-      define source: qs1 is q + ${qryRefine}
+      define source: qs is q;
+      define source: qs0 is q extend ${srcExtend};
+      define source: qs1 is q + ${qryRefine};
 
       define source: s1_m4 is q + ${qryRefine};
       define source: s2_m4 is q + ${qryRefine} -> ${query} extend ${srcExtend};
@@ -1079,8 +1077,8 @@ describe('m3/m4 source query sentences', () => {
       define source: s3 is s extend ${srcExtend};
       define source: s4 is q extend ${srcExtend};
 
-      define query: q0 is q
-      define query: q1 is a -> ${query}
+      define query: q0 is q;
+      define query: q1 is a -> ${query};
       define query: q1_m4 is s extend {view: newTurt is ${query}} -> newTurt + ${qryRefine};
       define query: q2_m4 is q1 + ${qryRefine};
       define query: q_m4_err is s + ${qryRefine}; -- should parse but error on visit

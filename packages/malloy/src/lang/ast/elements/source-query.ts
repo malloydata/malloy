@@ -73,7 +73,7 @@ export class DefineStatement
         this.has({srcDef});
         srcDef.execute(doc);
       } else {
-        this.log('Cannot make a source out of this expression');
+        this.valueTree.log('Cannot make a source out of this expression');
       }
     } else if (this.defType === 'query') {
       const query = this.valueTree.getQuery();
@@ -82,7 +82,7 @@ export class DefineStatement
         this.has({queryDef});
         queryDef.execute(doc);
       } else {
-        this.log('Canot make a query out of this expression');
+        this.valueTree.log('Canot make a query out of this expression');
       }
     }
   }
@@ -260,6 +260,15 @@ export class SQRefinedQuery extends SourceQueryNode {
       query.refineWith(this.refine);
       this.has({query});
       return query;
+    }
+  }
+
+  getSource() {
+    const query = this.getQuery();
+    if (query) {
+      const queryAsSource = new QuerySource(query);
+      this.has({queryAsSource});
+      return queryAsSource;
     }
   }
 }
