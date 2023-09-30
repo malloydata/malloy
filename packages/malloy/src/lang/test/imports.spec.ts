@@ -153,7 +153,9 @@ source: botProjQSrc is botProjQ
     const srcFiles = {
       'internal://test/langtests/middle': `
         import "bottom"
-        source: midSrc is from(bottomSrc -> { group_by: astr })
+        // in m4 source: NAME is SRC -> { QUERY } wasn't parsing
+        query: q is bottomSrc -> { group_by: astr }
+        source: midSrc is q
       `,
       'internal://test/langtests/bottom':
         "source: bottomSrc is _db_.table('aTable')",

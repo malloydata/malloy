@@ -223,7 +223,7 @@ describe('document annotation', () => {
     # noteb1
         note_b is a -> { select: * }
     # note1
-      query: note_a is -> note_b extend { where: astr = 'a' }
+      query: note_a is note_b + { where: astr = 'a' }
     `);
     expect(m).toTranslate();
     const note_a = m.getQuery('note_a');
