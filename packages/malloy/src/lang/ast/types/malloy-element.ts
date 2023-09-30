@@ -28,6 +28,7 @@ import {
   DocumentReference,
   isSQLBlockStruct,
   ModelDef,
+  NamedModelObject,
   Note,
   Query,
   SQLBlockStructDef,
@@ -309,6 +310,10 @@ export class ModelEntryReference extends MalloyElement {
 
   toString(): string {
     return this.refString;
+  }
+
+  getNamed(): NamedModelObject | undefined {
+    return this.modelEntry(this.name)?.entry;
   }
 }
 

@@ -131,7 +131,10 @@ export class MalloyToAST
       if (checked) {
         acceptable.push(checked);
       } else if (!(el instanceof IgnoredElement)) {
-        this.astError(el, `Expected ${desc}, not '${el.elementType}'`);
+        this.astError(
+          el,
+          `Parser enountered unexpected statement type '${el.elementType}' when it needed '${desc}'`
+        );
       }
     }
     return acceptable;
@@ -1850,5 +1853,69 @@ export class MalloyToAST
   ): ast.ObjectAnnotation {
     const allNotes = this.getNotes(pcx);
     return new ast.ObjectAnnotation(allNotes);
+  }
+
+  visitDefineStmt(pcx: parse.DefineStmtContext) {
+    const defineAs = this.visit(pcx.sqExpr());
+    if (defineAs instanceof ast.SourceQueryNode) {
+      const def = new ast.DefineStatement(
+        getId(pcx),
+        pcx.SOURCE() ? 'source' : 'query',
+        defineAs
+      );
+      return this.astAt(def, pcx);
+    }
+    this.contextError(
+      pcx.sqExpr(),
+      'Parser expected a source/query expression here'
+    );
+    return this.defaultResult();
+  }
+
+  visitSQID(pcx: parse.SQIDContext): ast.SQReference {
+    const ref = new ast.SQReference(getId(pcx));
+    return this.astAt(ref, pcx);
+  }
+
+  visitSQExtendedSource(pcx: parse.SQExtendedSourceContext) {
+    const extendSrc = this.visit(pcx.sqExpr());
+    if (extendSrc instanceof ast.SourceQueryNode) {
+      const src = new ast.SQExtendedSource(
+        extendSrc,
+        this.getSourceExtensions(pcx.sourceExtension())
+      );
+      return this.astAt(src, pcx);
+    }
+    return this.defaultResult();
+  }
+
+  visitSQArrow(pcx: parse.SQArrowContext) {
+    const applyTo = this.visit(pcx.sqExpr());
+    if (applyTo instanceof ast.SourceQueryNode) {
+      const sqExpr = new ast.SQApplyView(
+        applyTo,
+        pcx.qSeg().map(cx => {
+          const qopCX = cx.queryProperties();
+          if (qopCX) {
+            return this.visitQueryProperties(qopCX);
+          }
+          return getOptionalId(cx) || 'NEVER-GOING-TO-SEE-THIS';
+        })
+      );
+      return this.astAt(sqExpr, pcx);
+    }
+    return this.defaultResult();
+  }
+
+  visitSQRefinedQuery(pcx: parse.SQRefinedQueryContext) {
+    const refineThis = this.visit(pcx.sqExpr());
+    if (refineThis instanceof ast.SourceQueryNode) {
+      const refined = new ast.SQRefinedQuery(
+        refineThis,
+        this.getQueryRefinements(pcx.queryRefinement())
+      );
+      return this.astAt(refined, pcx);
+    }
+    return this.defaultResult();
   }
 }

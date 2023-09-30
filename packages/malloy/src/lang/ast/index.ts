@@ -26,6 +26,7 @@ export * from './elements/define-source';
 export * from './elements/define-query';
 export * from './elements/source';
 export * from './elements/refined-source';
+export * from './elements/source-query';
 export * from './source-properties/field-list-edit';
 export * from './source-properties/primary-key';
 export * from './source-properties/renames';

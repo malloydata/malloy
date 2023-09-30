@@ -1019,3 +1019,70 @@ describe('miscellaneous m4 warnings', () => {
     );
   });
 });
+
+describe('m3/m4 source query sentences', () => {
+  const srcExtend = '{accept:ai}';
+  const qryRefine = '{limit:1}';
+  const query = '{select:*}';
+  test('all forms', () => {
+    const malloy = model`
+      source: s is a
+      query: q is a -> ${query}
+
+      // m0 here means "no sigil for extend/refine
+      source: s1 is from(q ${qryRefine} -> ${query});
+      source: s2 is from(q ${qryRefine} -> ${query}) ${srcExtend};
+      source: s3 is src ${srcExtend};
+      source: s4 is q ${srcExtend}; // maybe should have been an error back in the day?
+      query: q1 is s ${srcExtend} -> aturt ${qryRefine};
+      query: q2 is -> q1 ${qryRefine};
+      query: q3 is from(s -> ${query}) ${srcExtend} -> ${query};
+
+      // m4
+      source: s1_m4 is q + ${qryRefine};
+      source: s2_m4 is q + ${qryRefine} -> ${query} extend ${srcExtend};
+      source: s_m4_err is s + ${qryRefine}; -- should parse but error on visit
+      source: s3 is s extend ${srcExtend};
+      source: s4 is q extend ${srcExtend};
+      query: q1_m4 is s extend ${srcExtend} -> aturt + ${qryRefine};
+      query: q2_m4 is q1 + ${qryRefine};
+      query: q_m4_err is s + ${qryRefine}; -- should parse but error on visit
+      query: q3 is s -> ${query} extend ${srcExtend} -> ${query};
+    `;
+    expect(malloy).toTranslate();
+  });
+  // todo MTOY write test to make sure arrow has correct precedence vs +
+  test('sqexpr parsing', () => {
+    expect(`
+      source: s is a
+      query: q is s -> ${query}
+
+      define source: s0 is a
+      define query: q0 is a -> ${query}
+
+      define source: s0_extbare is s ${srcExtend}
+      define source: s0_extplus is s + ${srcExtend}
+      define source: s0_ext is s extend ${srcExtend}
+
+      define query: q0_refbare is q0 ${qryRefine}
+      define query: q0_refplus is q0 + ${qryRefine}
+
+      define source: qs is q
+      define source: qs0 is q extend ${srcExtend}
+      define source: qs1 is q + ${qryRefine}
+
+      // define source: s1_m4 is q + ${qryRefine};
+      // define source: s2_m4 is q + ${qryRefine} -> ${query} extend ${srcExtend};
+      // define source: s_m4_err is s + ${qryRefine}; -- should parse but error on visit
+      // define source: s3 is s extend ${srcExtend};
+      // define source: s4 is q extend ${srcExtend};
+
+      // define query: q0 is q
+      // define query: q1 is a -> ${query}
+      // define query: q1_m4 is s extend {view: newTurt is ${query}} -> newTurt + ${qryRefine};
+      // define query: q2_m4 is q1 + ${qryRefine};
+      // define query: q_m4_err is s + ${qryRefine}; -- should parse but error on visit
+      // define query: q3 is s -> ${query} extend ${srcExtend} -> ${query};
+    `).toTranslate();
+  });
+});

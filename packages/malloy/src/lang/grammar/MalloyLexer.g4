@@ -74,6 +74,7 @@ COUNT: C O U N T ;
 DATE: D A T E;
 DAY: D A Y S?;
 DESC: D E S C ;
+DEFINE: D E F I N E ;
 DISTINCT: D I S T I N C T ;
 ELSE: E L S E ;
 END: E N D ;

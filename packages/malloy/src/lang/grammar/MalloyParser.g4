@@ -34,6 +34,7 @@ malloyStatement
   | runStatement
   | docAnnotations
   | ignoredObjectAnnotations
+  | defineStmt
   ;
 
 defineSourceStatement
@@ -123,13 +124,11 @@ topLevelQueryDef
 refineOperator: PLUS ;
 
 queryRefinement
-  : refineOperator? queryProperties
-  | REFINE queryProperties
+  : (REFINE | refineOperator)? queryProperties
   ;
 
 sourceExtension
-  : refineOperator? exploreProperties
-  | EXTEND exploreProperties
+  : (EXTEND | refineOperator)? exploreProperties
   ;
 
 query
@@ -271,6 +270,23 @@ joinStatement
 
 queryExtend
   : EXTENDQ queryExtendStatementList
+  ;
+
+defineStmt
+  : DEFINE (SOURCE | QUERY) id IS sqExpr
+  ;
+
+sqExpr
+  : ARROW? id                                 # SQID
+  | sqExpr ARROW qSeg (PLUS qSeg)*            # SQArrow
+  | sqExpr sourceExtension                    # SQExtendedSource
+  | sqExpr queryRefinement                    # SQRefinedQuery
+  | FROM OPAREN sqExpr CPAREN                 # SQFrom
+  ;
+
+qSeg
+  : id
+  | queryProperties
   ;
 
 queryExtendStatement
