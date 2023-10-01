@@ -343,3 +343,19 @@ export class SQRefinedQuery extends SourceQueryNode {
     }
   }
 }
+
+export class SQFrom extends SourceQueryNode {
+  elementType = 'sqFrom';
+
+  constructor(readonly from: SourceQueryNode) {
+    super({from});
+  }
+
+  getSource() {
+    return this.from.getSource();
+  }
+
+  getQuery() {
+    return this.from.getQuery();
+  }
+}

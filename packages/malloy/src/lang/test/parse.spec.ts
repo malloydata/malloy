@@ -1082,6 +1082,7 @@ describe('m3/m4 source query sentences', () => {
       define source: s2_m4 is q + ${qryRefine} -> ${query} extend ${srcExtend};
       define source: s3 is s extend ${srcExtend};
       define source: s4 is q extend ${srcExtend};
+      define source: s5 is from(s -> ${query})
 
       define query: q0 is q;
       define query: q0_refbare is q ${qryRefine};
@@ -1090,6 +1091,7 @@ describe('m3/m4 source query sentences', () => {
       define query: q1_m4 is ab -> aturtle + ${qryRefine};
       define query: q2_m4 is q1 + ${qryRefine};
       define query: q3 is s -> ${query} extend ${srcExtend} -> ${query};
+
     `).toTranslate();
   });
 });

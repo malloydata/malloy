@@ -1918,4 +1918,13 @@ export class MalloyToAST
     }
     return this.defaultResult();
   }
+
+  visitSQFrom(pcx: parse.SQFromContext) {
+    const fromThis = this.visit(pcx.sqExpr());
+    if (fromThis instanceof ast.SourceQueryNode) {
+      const from = new ast.SQFrom(fromThis);
+      return this.astAt(from, pcx);
+    }
+    return this.defaultResult();
+  }
 }

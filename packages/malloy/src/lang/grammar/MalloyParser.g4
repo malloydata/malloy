@@ -281,7 +281,7 @@ sqExpr
   | sqExpr ARROW qSeg (PLUS qSeg)*            # SQArrow
   | sqExpr sourceExtension                    # SQExtendedSource
   | sqExpr queryRefinement                    # SQRefinedQuery
-  | FROM OPAREN sqExpr CPAREN                 # SQFrom
+  | FROM? OPAREN sqExpr CPAREN                # SQFrom
   ;
 
 qSeg
