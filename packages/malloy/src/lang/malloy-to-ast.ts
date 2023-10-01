@@ -1892,7 +1892,7 @@ export class MalloyToAST
   visitSQArrow(pcx: parse.SQArrowContext) {
     const applyTo = this.visit(pcx.sqExpr());
     if (applyTo instanceof ast.SourceQueryNode) {
-      const sqExpr = new ast.SQApplyView(
+      const sqExpr = new ast.SQAppendView(
         applyTo,
         pcx.qSeg().map(cx => {
           const qopCX = cx.queryProperties();

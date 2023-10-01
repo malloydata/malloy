@@ -206,13 +206,25 @@ export class SQExtendedSource extends SourceQueryNode {
   }
 }
 
-export class SQApplyView extends SourceQueryNode {
-  elementType = 'sqApplyView';
+class TurtleName extends MalloyElement {
+  elementType = 'turtleName';
+  constructor(readonly name: string) {
+    super();
+  }
+}
+export class SQAppendView extends SourceQueryNode {
+  elementType = 'sqAppendView';
   constructor(
     readonly applyTo: SourceQueryNode,
     readonly viewList: (string | QOPDesc)[]
   ) {
     super({applyTo: applyTo});
+    // for debuggability only ...
+    const views: MalloyElement[] = [];
+    for (const view of viewList) {
+      views.push(view instanceof QOPDesc ? view : new TurtleName(view));
+    }
+    this.has({refinementList: views});
   }
 
   /*
@@ -247,22 +259,24 @@ export class SQApplyView extends SourceQueryNode {
       this.has({querySrc});
       theQuery = new FullQuery(querySrc);
       this.has({theQuery});
-      let head = views.shift();
+      const head = views[0];
       if (typeof head === 'string') {
         theQuery.turtleName = new FieldName(head);
         if (views.length === 1) {
-          if (views[0] instanceof QOPDesc) {
-            theQuery.refineWith(views[0]);
+          return theQuery;
+        }
+        if (views.length === 2) {
+          if (views[1] instanceof QOPDesc) {
+            theQuery.refineWith(views[1]);
             return theQuery;
           } else {
-            this.sqLog('Cannot refine with a view');
+            this.sqLog('Cannot refine with a named view');
             return;
           }
         } else {
           this.sqLog('Cannot have multiple refinements');
         }
       } else if (views.length === 1) {
-        head = views[0];
         if (head instanceof QOPDesc) {
           theQuery.addSegments(head);
           return theQuery;
@@ -325,12 +339,15 @@ export class SQRefinedQuery extends SourceQueryNode {
       this.sqLog('Cannot add view refinements to a source');
       return;
     }
-    const query = this.toRefine.getQuery();
-    if (query) {
-      // todo error if query is already refined
-      query.refineWith(this.refine);
-      this.has({query});
-      return query;
+    const refinedQuery = this.toRefine.getQuery();
+    if (refinedQuery) {
+      if (refinedQuery.alreadyRefined()) {
+        this.sqLog('Cannot refine a refined query');
+        return;
+      }
+      refinedQuery.refineWith(this.refine);
+      this.has({query: refinedQuery});
+      return refinedQuery;
     }
   }
 

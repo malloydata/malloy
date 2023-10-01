@@ -1053,20 +1053,19 @@ describe('m3/m4 source query sentences', () => {
   });
   // todo MTOY write test to make sure arrow has correct precedence vs +
   // also maybe arrow vs extend
-  test('cannot view refine a source', () => {
+  test('M4 should error on these sq expressions', () => {
     expect(`define source: s is a + ${qryRefine}`).translationToFailWith(
       'Cannot add view refinements to a source'
     );
-    expect(`define query: q_m4_err is s + ${qryRefine}`).translationToFailWith(
+    expect(`define query: q_m4_err is a + ${qryRefine}`).translationToFailWith(
       'Cannot add view refinements to a source'
     );
   });
   test('q2m4', () =>
     expect(`
-      query: q is a -> ${query}
-      define query: q2_m4 is q + ${qryRefine}
+    define query: q1_m4 is ab -> aturtle + ${qryRefine}
     `).toTranslate());
-  test('sqexpr parsing', () => {
+  test('legal sqexpressions', () => {
     expect(`
       source: s is a
       query: q is s -> ${query}
