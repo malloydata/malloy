@@ -1873,8 +1873,8 @@ export class MalloyToAST
   }
 
   visitSQID(pcx: parse.SQIDContext): ast.SQReference {
-    const ref = new ast.SQReference(getId(pcx));
-    return this.astAt(ref, pcx);
+    const ref = new ast.ModelEntryReference(getId(pcx));
+    return this.astAt(new ast.SQReference(ref), pcx);
   }
 
   visitSQExtendedSource(pcx: parse.SQExtendedSourceContext) {

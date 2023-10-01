@@ -1052,6 +1052,7 @@ describe('m3/m4 source query sentences', () => {
     expect(malloy).toTranslate();
   });
   // todo MTOY write test to make sure arrow has correct precedence vs +
+  // also maybe arrow vs extend
   test('cannot view refine a source', () => {
     expect(`define source: s is a + ${qryRefine}`).translationToFailWith(
       'Cannot add view refinements to a source'
@@ -1060,6 +1061,11 @@ describe('m3/m4 source query sentences', () => {
       'Cannot add view refinements to a source'
     );
   });
+  test('q2m4', () =>
+    expect(`
+      query: q is a -> ${query}
+      define query: q2_m4 is q + ${qryRefine}
+    `).toTranslate());
   test('sqexpr parsing', () => {
     expect(`
       source: s is a
@@ -1081,7 +1087,7 @@ describe('m3/m4 source query sentences', () => {
       define query: q0_refbare is q ${qryRefine};
       define query: q0_refplus is q + ${qryRefine};
       define query: q1 is a -> ${query};
-      define query: q1_m4 is s extend {view: newTurt is ${query}} -> newTurt + ${qryRefine};
+      define query: q1_m4 is ab -> aturtle + ${qryRefine};
       define query: q2_m4 is q1 + ${qryRefine};
       define query: q3 is s -> ${query} extend ${srcExtend} -> ${query};
     `).toTranslate();

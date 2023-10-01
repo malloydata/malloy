@@ -128,21 +128,23 @@ export abstract class SourceQueryNode extends MalloyElement {
 
 export class SQReference extends SourceQueryNode {
   elementType = 'sqReference';
-  ref: ModelEntryReference;
   asSource?: Source;
 
-  constructor(name: string) {
-    super();
-    this.ref = new ModelEntryReference(name);
-    this.has({ref: this.ref});
+  constructor(readonly ref: ModelEntryReference) {
+    super({ref});
   }
 
   getQuery(): QueryElement | undefined {
-    if (this.ref.getNamed()?.type === 'query') {
-      const query = new ExistingQuery();
-      query.head = this.ref.name;
-      this.has({query});
-      return query;
+    const entry = this.ref.getNamed();
+    if (entry) {
+      if (entry.type === 'query') {
+        const query = new ExistingQuery();
+        query.head = this.ref.name;
+        this.has({query});
+        return query;
+      }
+    } else {
+      this.sqLog(`Reference to undefined object '${this.ref.refString}'`);
     }
   }
 
@@ -156,7 +158,7 @@ export class SQReference extends SourceQueryNode {
     }
     const entry = this.ref.getNamed();
     if (!entry) {
-      this.sqLog(`Undefined query or source '${this.ref.name}`);
+      this.sqLog(`Reference to undefined object '${this.ref.refString}'`);
       return;
     }
     if (entry.type === 'query') {
@@ -213,6 +215,26 @@ export class SQApplyView extends SourceQueryNode {
     super({applyTo: applyTo});
   }
 
+  /*
+
+    if the thing we are applying a view to as a query ... just add a segment
+      if the view is a segment
+
+    if it is a source then the first segment is allowed to be a string
+
+    all the rest of the segments are refinements to the first segment
+
+    which are usually illegal ... so patterns
+
+    src -> turtle // ok
+    src -> turtle + qop // ok second thing is a refinement
+    src -> qop // ok
+    query -> qop // ok
+
+    the grammar allows for a list of views and refinements ... these are not translated yet
+
+
+  */
   getQuery() {
     let theQuery: QueryElement;
     const views = [...this.viewList];
@@ -228,16 +250,26 @@ export class SQApplyView extends SourceQueryNode {
       let head = views.shift();
       if (typeof head === 'string') {
         theQuery.turtleName = new FieldName(head);
-      }
-      if (views.length === 1) {
+        if (views.length === 1) {
+          if (views[0] instanceof QOPDesc) {
+            theQuery.refineWith(views[0]);
+            return theQuery;
+          } else {
+            this.sqLog('Cannot refine with a view');
+            return;
+          }
+        } else {
+          this.sqLog('Cannot have multiple refinements');
+        }
+      } else if (views.length === 1) {
         head = views[0];
         if (head instanceof QOPDesc) {
           theQuery.addSegments(head);
-          views.shift();
+          return theQuery;
         }
       }
       if (views.length > 0) {
-        this.sqLog('query definition by combining not yet supported');
+        this.sqLog('Cannot have multiple refinements');
         return;
       }
       return theQuery;
