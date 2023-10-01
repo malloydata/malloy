@@ -73,7 +73,7 @@ export class DefineStatement
         this.has({srcDef});
         srcDef.execute(doc);
       } else {
-        this.valueTree.log('Cannot make a source out of this expression');
+        this.valueTree.sqLog('Cannot make a source out of this expression');
       }
     } else if (this.defType === 'query') {
       const query = this.valueTree.getQuery();
@@ -82,7 +82,7 @@ export class DefineStatement
         this.has({queryDef});
         queryDef.execute(doc);
       } else {
-        this.valueTree.log('Canot make a query out of this expression');
+        this.valueTree.sqLog('Canot make a query out of this expression');
       }
     }
   }
@@ -90,6 +90,7 @@ export class DefineStatement
 
 export abstract class SourceQueryNode extends MalloyElement {
   elementType = 'sourceQueryNode';
+  errored = false;
 
   getSource(): Source | undefined {
     return;
@@ -101,6 +102,27 @@ export abstract class SourceQueryNode extends MalloyElement {
 
   isSource(): boolean {
     return false;
+  }
+
+  sqLog(message: string) {
+    if (this.isErrorFree()) {
+      this.log(message);
+    }
+    this.errored = true;
+  }
+
+  isErrorFree(): boolean {
+    if (this.errored) {
+      return false;
+    }
+    let clean = true;
+    for (const child of this.walk()) {
+      if (child instanceof SourceQueryNode && child.errored) {
+        clean = false;
+        break;
+      }
+    }
+    return clean;
   }
 }
 
@@ -134,7 +156,7 @@ export class SQReference extends SourceQueryNode {
     }
     const entry = this.ref.getNamed();
     if (!entry) {
-      this.log(`Undefined query or source '${this.ref.name}`);
+      this.sqLog(`Undefined query or source '${this.ref.name}`);
       return;
     }
     if (entry.type === 'query') {
@@ -144,7 +166,7 @@ export class SQReference extends SourceQueryNode {
     } else if (entry.type === 'struct') {
       this.asSource = new NamedSource(this.ref);
     } else {
-      this.log(
+      this.sqLog(
         `Expected '${this.ref.refString}' to be of type query or source, not '${entry.type}'`
       );
     }
@@ -174,6 +196,7 @@ export class SQExtendedSource extends SourceQueryNode {
       this.has({asSource: this.asSource});
       return this.asSource;
     }
+    this.sqLog('Could not compute source to extend');
   }
 
   isSource() {
@@ -196,6 +219,7 @@ export class SQApplyView extends SourceQueryNode {
     if (this.applyTo.isSource()) {
       const querySrc = this.applyTo.getSource();
       if (!querySrc) {
+        this.sqLog('Could not get source for query');
         return;
       }
       this.has({querySrc});
@@ -213,7 +237,7 @@ export class SQApplyView extends SourceQueryNode {
         }
       }
       if (views.length > 0) {
-        this.log('query definition by combining not yet supported');
+        this.sqLog('query definition by combining not yet supported');
         return;
       }
       return theQuery;
@@ -221,6 +245,7 @@ export class SQApplyView extends SourceQueryNode {
 
     const found = this.applyTo.getQuery();
     if (!found) {
+      this.sqLog('Could not create query to extend');
       return;
     }
     theQuery = found;
@@ -231,12 +256,25 @@ export class SQApplyView extends SourceQueryNode {
         theQuery.addSegments(head);
         views.shift();
       } else {
-        this.log(`Cannot reference view '${head}' in output of query`);
+        this.sqLog(`Cannot reference view '${head}' in output of query`);
+        return;
       }
     } else {
-      this.log('query definition by combining not yet supported');
+      this.sqLog('query definition by combining not yet supported');
+      return;
     }
     return theQuery;
+  }
+
+  getSource(): Source | undefined {
+    const query = this.getQuery();
+    if (!query) {
+      this.sqLog("Couldn't comprehend query well enough to make a source");
+      return;
+    }
+    const asSource = new QuerySource(query);
+    this.has({asSource});
+    return asSource;
   }
 }
 
@@ -252,6 +290,7 @@ export class SQRefinedQuery extends SourceQueryNode {
 
   getQuery() {
     if (this.toRefine.isSource()) {
+      this.sqLog('Cannot add view refinements to a source');
       return;
     }
     const query = this.toRefine.getQuery();
