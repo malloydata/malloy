@@ -29,8 +29,8 @@ import {
   MalloyElement,
   DocStatementList,
 } from '../types/malloy-element';
-import {QueryElement} from '../types/query-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
+import {SourceQueryNode} from './source-query';
 
 export class DefineQuery
   extends MalloyElement
@@ -40,9 +40,9 @@ export class DefineQuery
 
   constructor(
     readonly name: string,
-    readonly queryDetails: QueryElement
+    readonly queryExpr: SourceQueryNode
   ) {
-    super({queryDetails: queryDetails});
+    super({queryExpr});
   }
 
   readonly isNoteableObj = true;
@@ -55,8 +55,13 @@ export class DefineQuery
       this.log(`'${this.name}' is already defined, cannot redefine`);
       return;
     }
+    const queryEl = this.queryExpr.getQuery();
+    if (!queryEl) {
+      this.queryExpr.sqLog('Cannot define a query from this expression');
+      return;
+    }
     const entry: NamedQuery = {
-      ...this.queryDetails.query(),
+      ...queryEl.query(),
       type: 'query',
       name: this.name,
       location: this.location,

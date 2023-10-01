@@ -331,9 +331,10 @@ export class MalloyToAST
   }
 
   visitSourceDefinition(pcx: parse.SourceDefinitionContext): ast.DefineSource {
+    const exploreExpr = this.visit(pcx.sqExplore());
     const exploreDef = new ast.DefineSource(
       getId(pcx.sourceNameDef()),
-      this.getSource(pcx.explore()),
+      exploreExpr instanceof ast.SourceQueryNode ? exploreExpr : undefined,
       true,
       []
     );
@@ -519,8 +520,10 @@ export class MalloyToAST
     );
   }
 
-  visitSQLSourceName(pcx: parse.SQLSourceNameContext): ast.FromSQLSource {
-    const name = this.getModelEntryName(pcx.sqlExploreNameRef());
+  protected getLegacySQLSouce(
+    pcx: parse.SqlExploreNameRefContext
+  ): ast.FromSQLSource {
+    const name = this.getModelEntryName(pcx);
     const res = this.astAt(new ast.FromSQLSource(name), pcx);
     if (this.m4WarningsEnabled()) {
       this.astError(
@@ -530,6 +533,10 @@ export class MalloyToAST
       );
     }
     return res;
+  }
+
+  visitSQLSourceName(pcx: parse.SQLSourceNameContext): ast.FromSQLSource {
+    return this.getLegacySQLSouce(pcx.sqlExploreNameRef());
   }
 
   visitSqlSource(pcx: parse.SqlSourceContext): ast.SQLSource {
@@ -1199,11 +1206,11 @@ export class MalloyToAST
 
   visitTopLevelQueryDef(pcx: parse.TopLevelQueryDefContext): ast.DefineQuery {
     const queryName = getId(pcx.queryName());
-    const queryExpr = this.visit(pcx.query());
-    if (ast.isQueryElement(queryExpr)) {
-      const notes = this.getNotes(pcx.tags()).concat(
-        this.getIsNotes(pcx.isDefine())
-      );
+    const queryExpr = this.visit(pcx.sqExpr());
+    const notes = this.getNotes(pcx.tags()).concat(
+      this.getIsNotes(pcx.isDefine())
+    );
+    if (queryExpr instanceof ast.SourceQueryNode) {
       const queryDef = new ast.DefineQuery(queryName, queryExpr);
       queryDef.extendNote({notes});
       return this.astAt(queryDef, pcx);
@@ -1855,25 +1862,8 @@ export class MalloyToAST
     return new ast.ObjectAnnotation(allNotes);
   }
 
-  visitDefineStmt(pcx: parse.DefineStmtContext) {
-    const defineAs = this.visit(pcx.sqExpr());
-    if (defineAs instanceof ast.SourceQueryNode) {
-      const def = new ast.DefineStatement(
-        getId(pcx),
-        pcx.SOURCE() ? 'source' : 'query',
-        defineAs
-      );
-      return this.astAt(def, pcx);
-    }
-    this.contextError(
-      pcx.sqExpr(),
-      'Parser expected a source/query expression here'
-    );
-    return this.defaultResult();
-  }
-
   visitSQID(pcx: parse.SQIDContext): ast.SQReference {
-    const ref = new ast.ModelEntryReference(getId(pcx));
+    const ref = this.getModelEntryName(pcx);
     return this.astAt(new ast.SQReference(ref), pcx);
   }
 
@@ -1892,16 +1882,33 @@ export class MalloyToAST
   visitSQArrow(pcx: parse.SQArrowContext) {
     const applyTo = this.visit(pcx.sqExpr());
     if (applyTo instanceof ast.SourceQueryNode) {
-      const sqExpr = new ast.SQAppendView(
-        applyTo,
-        pcx.qSeg().map(cx => {
-          const qopCX = cx.queryProperties();
-          if (qopCX) {
-            return this.visitQueryProperties(qopCX);
-          }
-          return getOptionalId(cx) || 'NEVER-GOING-TO-SEE-THIS';
-        })
-      );
+      const viewParts: ast.ArrowViewComponent[] = [];
+      const headCx = pcx.leadSeg();
+      const headId = getOptionalId(headCx);
+      if (headId) {
+        viewParts.push(new ast.ViewFieldReference([new ast.FieldName(headId)]));
+        const andRefined = headCx.queryRefinement();
+        if (andRefined) {
+          viewParts.push(this.getQueryRefinements(andRefined));
+        }
+      }
+      const qopCx = headCx.queryProperties();
+      if (qopCx) {
+        viewParts.push(this.visitQueryProperties(qopCx));
+      }
+      for (const seg of pcx.qSeg()) {
+        const asQop = seg.queryProperties();
+        if (asQop) {
+          viewParts.push(this.visitQueryProperties(asQop));
+        }
+        const viewName = getOptionalId(seg);
+        if (viewName) {
+          viewParts.push(
+            new ast.ViewFieldReference([new ast.FieldName(viewName)])
+          );
+        }
+      }
+      const sqExpr = new ast.SQAppendView(applyTo, viewParts);
       return this.astAt(sqExpr, pcx);
     }
     return this.defaultResult();
@@ -1926,5 +1933,27 @@ export class MalloyToAST
       return this.astAt(from, pcx);
     }
     return this.defaultResult();
+  }
+
+  visitSQTable(pcx: parse.SQTableContext) {
+    const theTable = this.visit(pcx.exploreTable());
+    if (theTable instanceof TableSource) {
+      const sqTable = new ast.SQSourceWrapper(theTable);
+      return this.astAt(sqTable, pcx);
+    }
+    return this.defaultResult();
+  }
+
+  visitSQLegacySQLBlock(pcx: parse.SQLegacySQLBlockContext) {
+    const theBlock = this.getLegacySQLSouce(pcx.sqlExploreNameRef());
+    const sqExpr = new ast.SQSourceWrapper(theBlock);
+    return this.astAt(sqExpr, pcx);
+  }
+
+  visitSQSQL(pcx: parse.SQSQLContext) {
+    const sqExpr = new ast.SQSourceWrapper(
+      this.visitSqlSource(pcx.sqlSource())
+    );
+    return this.astAt(sqExpr, pcx);
   }
 }

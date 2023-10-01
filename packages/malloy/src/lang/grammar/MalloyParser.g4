@@ -118,7 +118,7 @@ topLevelQueryDefs
   ;
 
 topLevelQueryDef
-  : tags queryName isDefine query
+  : tags queryName isDefine sqExpr
   ;
 
 refineOperator: PLUS ;
@@ -200,7 +200,11 @@ sourcePropertyList
   ;
 
 sourceDefinition
-  : tags sourceNameDef isDefine explore
+  : tags sourceNameDef isDefine sqExplore
+  ;
+
+sqExplore
+  : sqExpr
   ;
 
 explore
@@ -278,10 +282,18 @@ defineStmt
 
 sqExpr
   : ARROW? id                                 # SQID
-  | sqExpr ARROW qSeg (PLUS qSeg)*            # SQArrow
+  | sqExpr ARROW leadSeg (PLUS qSeg)*         # SQArrow
   | sqExpr sourceExtension                    # SQExtendedSource
   | sqExpr queryRefinement                    # SQRefinedQuery
   | FROM? OPAREN sqExpr CPAREN                # SQFrom
+  | exploreTable                              # SQTable
+  | FROM_SQL OPAREN sqlExploreNameRef CPAREN  # SQLegacySQLBlock
+  | sqlSource                                 # SQSQL
+  ;
+
+leadSeg
+  : id queryRefinement?
+  | queryProperties
   ;
 
 qSeg
