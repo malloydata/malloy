@@ -1706,14 +1706,14 @@ export class MalloyToAST
     return new ast.SampleProperty({enable: enabled});
   }
 
-  visitDocAnnotations(pcx: parse.DocAnnotationsContext): ast.ModelAnnotation {
+  visitDocAnnotations(pcx: parse.DocAnnotationsContext): ast.ModelAnnotationElement {
     const allNotes = pcx.DOC_ANNOTATION().map(note => {
       return {
         text: note.text,
         at: this.getLocation(pcx),
       };
     });
-    const tags = new ast.ModelAnnotation(allNotes);
+    const tags = new ast.ModelAnnotationElement(allNotes);
     this.compilerFlags = tags.getCompilerFlags(this.compilerFlags, this.msgLog);
     return tags;
   }

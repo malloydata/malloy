@@ -724,7 +724,6 @@ export interface Query extends Pipeline, Filtered, HasLocation {
   type?: 'query';
   structRef: StructRef;
   annotation?: Annotation;
-  modelAnnotation?: Annotation;
 }
 
 export type NamedQuery = Query & NamedObject;
@@ -876,7 +875,6 @@ export interface StructDef extends NamedObject, ResultStructMetadata, Filtered {
   queryTimezone?: string;
   dialect: string;
   annotation?: Annotation;
-  modelAnnotation?: ModelAnnotation;
 }
 
 export type ExpressionValueType =
@@ -1046,9 +1044,10 @@ export type NamedModelObject =
 /** Result of parsing a model file */
 export interface ModelDef {
   name: string;
+  annotationID: string;
   exports: string[];
   contents: Record<string, NamedModelObject>;
-  annotation?: ModelAnnotation;
+  modelAnnotations: Record<string, ModelAnnotation>;
 }
 
 /** Very common record type */

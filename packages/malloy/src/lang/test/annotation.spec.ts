@@ -253,7 +253,7 @@ describe('document annotation', () => {
     expect(m).toTranslate();
     const model = m.translate()?.translated;
     expect(model).toBeDefined();
-    const notes = model?.modelDef.annotation;
+    const notes = model?.modelDef.modelAnnotation;
     expect(notes).matchesAnnotation({notes: ['## model1\n', '## model2\n']});
   });
   test('ignores objectless object annotations', () => {
@@ -622,5 +622,39 @@ describe('query operation annotations', () => {
       const note_b = getFieldDef(foundYou.pipeline[0], 'note_b');
       expect(note_b?.annotation).matchesAnnotation({inherits: defaultTags});
     }
+  });
+});
+
+const testTree = {
+  'internal://test/langtests/top.malloy': `## top=top middle=top bottom=top
+    source: topSrc is a extend {
+      # t=$(top) m=$(middle) b=$(bottom)
+      dimension: noted_num is ai
+    }
+    query: topQuery is topSrc -> { project: noted_num }`,
+  'internal://test/langtests/middle.malloy': `## middle=middle
+    import "top.malloy"
+    query: midQuery is topQuery`,
+  'internal://test/langtests/bottom.malloy': `## bottom=bottom
+    import "middle.malloy"
+    query: bottomQuery is midQuery`,
+};
+
+test('model scope and imports', () => {
+  const topper = {notes: ['## top=top middle=top bottom=top\n']};
+  const midder = {inherits: topper, notes: ['## middle=middle\n']};
+  const t = new TestTranslator(
+    testTree['internal://test/langtests/bottom.malloy']
+  );
+  t.update({urls: testTree});
+  expect(t).toTranslate();
+  const midQuery = t.getQuery('midQuery');
+  expect(midQuery).toBeDefined();
+  expect(midQuery?.modelAnnotation).matchesAnnotation(midder);
+  const bottomQuery = t.getQuery('bottomQuery');
+  expect(bottomQuery).toBeDefined();
+  expect(bottomQuery?.modelAnnotation).matchesAnnotation({
+    inherits: midder,
+    notes: ['## bottom=bottom\n'],
   });
 });

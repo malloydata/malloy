@@ -27,6 +27,7 @@ import {
   DocumentLocation,
   DocumentReference,
   isSQLBlockStruct,
+  ModelAnnotation,
   ModelDef,
   Note,
   Query,
@@ -169,7 +170,7 @@ export abstract class MalloyElement {
     this.translator()?.addReference(reference);
   }
 
-  private get sourceURL() {
+  protected get sourceURL() {
     const trans = this.translator();
     return trans?.sourceURL || '(missing)';
   }
@@ -413,9 +414,18 @@ function annotationNotes(an: Annotation): string[] {
   return ret;
 }
 
-function annotationID(a: Annotation): string {
-  const allStrs = annotationNotes(a).join('');
-  return uuidv5(allStrs, docAnnotationNameSpace);
+function makeModelAnnotation(a: Annotation, forFile: string): ModelAnnotation {
+  const allStrs = annotationNotes(a).join('') + forFile;
+  return {...a, id: uuidv5(allStrs, docAnnotationNameSpace)};
+}
+
+function provideModelAnnotation(
+  obj: StructDef | Query,
+  modelAnnoation: ModelAnnotation | undefined
+): void {
+  if (modelAnnoation && obj.modelAnnotation === undefined) {
+    obj.modelAnnotation = modelAnnoation;
+  }
 }
 
 /**
@@ -476,19 +486,19 @@ export class Document extends MalloyElement implements NameSpace {
     const modelDef = this.modelDef();
     if (needs === undefined) {
       for (const q of this.queryList) {
-        if (q.modelAnnotation === undefined && modelDef.annotation) {
-          q.modelAnnotation = modelDef.annotation;
+        if (q.modelAnnotation === undefined && modelDef.modelAnnotation) {
+          provideModelAnnotation(q, modelDef.modelAnnotation);
         }
       }
       for (const q of this.sqlBlocks) {
-        if (q.modelAnnotation === undefined && modelDef.annotation) {
-          q.modelAnnotation = modelDef.annotation;
+        if (q.modelAnnotation === undefined && modelDef.modelAnnotation) {
+          provideModelAnnotation(q, modelDef.modelAnnotation);
         }
       }
     }
-    if (modelDef.annotation) {
+    if (modelDef.modelAnnotation) {
       for (const sd of this.modelAnnotationTodoList) {
-        sd.modelAnnotation ||= modelDef.annotation;
+        provideModelAnnotation(sd, modelDef.modelAnnotation);
       }
     }
     const ret: DocumentCompileResult = {
@@ -505,22 +515,37 @@ export class Document extends MalloyElement implements NameSpace {
     this.modelAnnotationTodoList.push(sd);
   }
 
+  /*
+  ok things that are imported should not have their modelAnnotation touched
+
+  thing defined in this model ... based on things in the old model
+  the modelAnotation for that object should have inherits ...
+
+  i think that means that when i set the annotation with inherits, i also
+  need to set the model annotation with inherits ... but maybe i can do
+  that in the "remember" function
+
+  */
   modelDef(): ModelDef {
     const def: ModelDef = {name: '', exports: [], contents: {}};
     if (this.notes.length > 0) {
-      def.annotation = {id: '', notes: this.notes};
-      def.annotation.id = annotationID(def.annotation);
+      def.modelAnnotation = makeModelAnnotation(
+        {notes: this.notes},
+        this.sourceURL
+      );
     }
-    for (const entry in this.documentModel) {
-      const entryDef = this.documentModel[entry].entry;
+    for (const entryKey in this.documentModel) {
+      const ent = this.documentModel[entryKey];
+      const entryDef = ent.entry;
       if (entryDef.type === 'struct' || entryDef.type === 'query') {
-        if (this.documentModel[entry].exported) {
-          def.exports.push(entry);
+        if (this.documentModel[entryKey].exported) {
+          def.exports.push(entryKey);
         }
-        def.contents[entry] = cloneDeep(entryDef);
-        if (entryDef.modelAnnotation === undefined && def.annotation) {
-          entryDef.modelAnnotation = def.annotation;
+        const annotated = cloneDeep(entryDef);
+        if (!ent.imported && def.modelAnnotation) {
+          annotated.modelAnnotation = def.modelAnnotation;
         }
+        def.contents[entryKey] = annotated;
       }
     }
     return def;

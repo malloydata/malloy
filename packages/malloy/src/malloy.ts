@@ -612,12 +612,16 @@ export class Model implements Taggable {
     this.problems = problems;
   }
 
-  tagParse(spec?: TagParseSpec): TagParse {
-    return Tag.annotationToTag(this.modelDef.annotation, spec);
+  private annotation() {
+    return this.modelDef.modelAnnotations[this.modelDef.annotationID];
+  }
+
+  public tagParse(spec?: TagParseSpec): TagParse {
+    return Tag.annotationToTag(this.annotation(), spec);
   }
 
   getTaglines(prefix?: RegExp) {
-    return Tag.annotationToTaglines(this.modelDef.annotation, prefix);
+    return Tag.annotationToTaglines(this.annotation(), prefix);
   }
 
   /**
@@ -777,7 +781,7 @@ export class PreparedQuery implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec) {
-    const modelScope = Tag.annotationToTag(this._modelDef.annotation).tag;
+    const modelScope = Tag.annotationToTag(this._modelDef.modelAnnotation).tag;
     spec = Tag.addModelScope(spec, modelScope);
     return Tag.annotationToTag(this._query.annotation, spec);
   }
@@ -1112,7 +1116,7 @@ export class PreparedResult implements Taggable {
   }
 
   tagParse(spec?: TagParseSpec): TagParse {
-    const modelScope = Tag.annotationToTag(this.modelDef.annotation).tag;
+    const modelScope = Tag.annotationToTag(this.modelDef.modelAnnotation).tag;
     spec = Tag.addModelScope(spec, modelScope);
     return Tag.annotationToTag(this.inner.annotation, spec);
   }

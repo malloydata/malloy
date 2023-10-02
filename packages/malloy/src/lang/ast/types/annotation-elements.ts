@@ -42,7 +42,10 @@ export class ObjectAnnotation
   queryExecute() {}
 }
 
-export class ModelAnnotation extends ObjectAnnotation implements DocStatement {
+export class ModelAnnotationElement
+  extends ObjectAnnotation
+  implements DocStatement
+{
   elementType = 'modelAnnotation';
 
   getCompilerFlags(existing: Tag, logTo: MessageLogger): Tag {

@@ -71,7 +71,7 @@ export class ImportStatement extends MalloyElement implements DocStatement {
           if (doc.getEntry(importing)) {
             this.log(`Cannot redefine '${importing}'`);
           } else {
-            doc.setEntry(importing, {entry, exported: false});
+            doc.setEntry(importing, {entry, exported: false, imported: true});
           }
         }
       } else if (src.status === 'error') {
