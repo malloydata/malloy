@@ -24,8 +24,8 @@
 import {Annotation} from '../../../model';
 
 import {DocStatement, Document, MalloyElement} from '../types/malloy-element';
-import {QueryElement} from '../types/query-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
+import {SourceQueryNode} from '../elements/source-query';
 
 export class AnonymousQuery
   extends MalloyElement
@@ -33,9 +33,9 @@ export class AnonymousQuery
 {
   elementType = 'anonymousQuery';
 
-  constructor(readonly theQuery: QueryElement) {
+  constructor(readonly queryExpr: SourceQueryNode) {
     super();
-    this.has({query: theQuery});
+    this.has({queryExpr});
   }
 
   readonly isNoteableObj = true;
@@ -43,11 +43,18 @@ export class AnonymousQuery
   note?: Annotation;
 
   execute(doc: Document): void {
-    const modelQuery = this.theQuery.query();
-    if (this.note) {
-      modelQuery.annotation = modelQuery.annotation
-        ? {...this.note, inherits: modelQuery.annotation}
-        : this.note;
+    const queryObj = this.queryExpr.getQuery();
+    if (!queryObj) {
+      this.queryExpr.sqLog('Cannot run this object as a query');
+      return;
+    }
+    const modelQuery = {...queryObj.query()};
+    const annotation = this.note || {};
+    if (modelQuery.annotation) {
+      annotation.inherits = modelQuery.annotation;
+    }
+    if (annotation.notes || annotation.blockNotes || annotation.inherits) {
+      modelQuery.annotation = annotation;
     }
     doc.queryList.push(modelQuery);
   }

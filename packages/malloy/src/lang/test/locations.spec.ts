@@ -378,9 +378,9 @@ describe('source references', () => {
       query: ${'q is a -> { select: * }'}
       source: na is from(-> ${'q'})
     `;
-    const m = new TestTranslator(source.code);
-    expect(m).toTranslate();
-    expect(m.referenceAt(pos(source.locations[1]))).toMatchObject({
+    expect(source).toTranslate();
+    const mt = source.translator;
+    expect(mt.referenceAt(pos(source.locations[1]))).toMatchObject({
       location: source.locations[1],
       type: 'queryReference',
       text: 'q',

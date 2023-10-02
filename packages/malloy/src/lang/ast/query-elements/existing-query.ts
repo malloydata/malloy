@@ -31,7 +31,7 @@ import {QueryComp} from '../types/query-comp';
 import {QueryHeadStruct} from './query-head-struct';
 
 export class ExistingQuery extends PipelineDesc {
-  elementType = 'exisitingQUery';
+  elementType = 'exisitingQuery';
   _head?: ModelEntryReference | string;
 
   set head(head: ModelEntryReference | string | undefined) {

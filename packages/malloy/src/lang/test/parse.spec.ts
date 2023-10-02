@@ -107,7 +107,7 @@ describe('error handling', () => {
         source: newAB is a extend { join_one: newB is ${'bb'} on astring }
         source: newB is b
       `
-    ).translationToFailWith("Undefined query or source 'bb'");
+    ).translationToFailWith("Reference to undefined object 'bb'");
   });
   test('non-rename rename', () => {
     expect(
@@ -1046,5 +1046,48 @@ describe('miscellaneous m4 warnings', () => {
     `).toTranslateWithWarnings(
       'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow'
     );
+  });
+});
+
+describe('m3/m4 source query sentences', () => {
+  const srcExtend = '{accept:ai}';
+  const qryRefine = '{limit:1}';
+  const query = '{select:*}';
+  // todo MTOY write test to make sure arrow has correct precedence vs +
+  // also maybe arrow vs extend
+  test('M4 should error on these sq expressions', () => {
+    expect(`source: s is a + ${qryRefine}`).translationToFailWith(
+      "Cannot add view refinements to 'a' because it is a source"
+    );
+    expect(`query: q_m4_err is a + ${qryRefine}`).translationToFailWith(
+      "Cannot add view refinements to 'a' because it is a source"
+    );
+  });
+  test('legal sqexpressions', () => {
+    expect(`
+      source: s is a
+      query: q is s -> ${query}
+
+      source: s0 is a;
+      source: s0_extbare is s ${srcExtend};
+      source: s0_extplus is s + ${srcExtend};
+      source: s0_ext is s extend ${srcExtend};
+      source: qs is q;
+      source: qs0 is q extend ${srcExtend};
+      source: qs1 is q + ${qryRefine};
+      source: s1_m4 is q + ${qryRefine};
+      source: s2_m4 is q + ${qryRefine} -> ${query} extend ${srcExtend};
+      source: s3 is s extend ${srcExtend};
+      source: s4 is q extend ${srcExtend};
+      source: s5 is from(s -> ${query})
+
+      query: q0 is q;
+      query: q0_refbare is q ${qryRefine};
+      query: q0_refplus is q + ${qryRefine};
+      query: q1_bare is ab -> aturtle ${qryRefine};
+      query: q1_plus is ab -> aturtle + ${qryRefine};
+      query: q2 is s -> ${query} extend ${srcExtend} -> ${query};
+
+    `).toTranslate();
   });
 });

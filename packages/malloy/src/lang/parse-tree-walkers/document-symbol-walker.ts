@@ -86,7 +86,7 @@ class DocumentSymbolWalker implements MalloyParserListener {
   enterAnonymousQuery(pcx: parser.AnonymousQueryContext) {
     this.symbols.push({
       range: this.translator.rangeFromContext(
-        pcx.topLevelAnonQueryDef().query()
+        pcx.topLevelAnonQueryDef().sqExpr()
       ),
       name: 'unnamed_query',
       type: 'unnamed_query',

@@ -64,8 +64,8 @@ export function* getStringParts(cx: SqlStringContext): Generator<StringPart> {
       if (upToOpen.length > 2) {
         yield upToOpen.slice(0, upToOpen.length - 2);
       }
-      if (part.query()) {
-        yield part.query();
+      if (part.sqExpr()) {
+        yield part.sqExpr();
       }
     }
     const lastChars = cx.SQL_END()?.text.slice(0, -3);

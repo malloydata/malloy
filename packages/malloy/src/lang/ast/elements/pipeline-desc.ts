@@ -52,6 +52,10 @@ export abstract class PipelineDesc extends MalloyElement {
   protected qops: QOPDesc[] = [];
   nestedInQuerySpace?: QueryInputSpace;
 
+  alreadyRefined(): boolean {
+    return this.withRefinement !== undefined;
+  }
+
   refineWith(refinement: QOPDesc): void {
     this.withRefinement = refinement;
     this.has({withRefinement: refinement});
