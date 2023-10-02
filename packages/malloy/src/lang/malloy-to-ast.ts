@@ -380,7 +380,7 @@ export class MalloyToAST
           'Source extension with "+" is deprecated, use the "extend" operator',
           'warn'
         );
-      } else if (pcx.EXTEND() === undefined) {
+      } else if (pcx.EXTEND() === undefined && this.m4WarningsEnabled()) {
         this.contextError(
           pcx,
           'Implicit source extension is deprecated, use the `extend` operator.',
@@ -1730,7 +1730,10 @@ export class MalloyToAST
     }
     const sqExpr = this.getSqExpr(pcx.sqExpr());
     const hasPlus = !!pcx.PLUS();
-    return this.astAt(new ast.SQLegacyModify(sqExpr, plus, hasPlus), pcx);
+    return this.astAt(
+      new ast.SQLegacyModify(sqExpr, plus, hasPlus, this.m4WarningsEnabled()),
+      pcx
+    );
   }
 
   visitSQID(pcx: parse.SQIDContext) {

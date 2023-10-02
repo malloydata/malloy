@@ -926,14 +926,16 @@ describe('query:', () => {
     });
     test('top N by field', () => {
       expect(
-        markSource`run: a->{top: 5 ${'by astr'}; group_by: astr}`
+        `##! m4warnings
+        run: a->{top: 5 ${'by astr'}; group_by: astr}`
       ).toTranslateWithWarnings(
         'by clause of top statement unupported. Use order_by instead'
       );
     });
     test('top N by expression', () => {
       expect(
-        'run: ab->{top: 5 by ai + 1; group_by: ai}'
+        `##! m4warnings
+        run: ab->{top: 5 by ai + 1; group_by: ai}`
       ).toTranslateWithWarnings(
         'by clause of top statement unupported. Use order_by instead'
       );

@@ -800,29 +800,31 @@ describe('extend and refine', () => {
       ).toTranslate();
     });
 
-    const plus =
-      'Source extension with "+" is deprecated, use the "extend" operator';
-    const impilcit =
-      'Implicit source extension is deprecated, use the `extend` operator.';
     test('source name with ambiguous refinements', () => {
       expect(
-        'run: a + { join_one: b on b.ai = ai } -> { select: b.* }'
-      ).toTranslateWithWarnings(plus);
+        `##! -m4warnings
+         run: a + { join_one: b on b.ai = ai } -> { select: b.* }`
+      ).toTranslate();
       expect(
-        'run: a + { where: 1 = 1 } -> { select: * }'
-      ).toTranslateWithWarnings(plus);
+        `##! -m4warnings
+        run: a + { where: 1 = 1 } -> { select: * }`
+      ).toTranslate();
       expect(
-        'run: a + { dimension: three is 3 } -> { select: * }'
-      ).toTranslateWithWarnings(plus);
+        `##! -m4warnings
+        run: a + { dimension: three is 3 } -> { select: * }`
+      ).toTranslate();
       expect(
-        'source: s is a { join_one: b on b.ai = ai }'
-      ).toTranslateWithWarnings(impilcit);
-      expect('source: s is a { where: 1 = 1 }').toTranslateWithWarnings(
-        impilcit
-      );
+        `##! -m4warnings
+        source: s is a { join_one: b on b.ai = ai }`
+      ).toTranslate();
       expect(
-        'source: s is a { dimension: three is 3 }'
-      ).toTranslateWithWarnings(impilcit);
+        `##! -m4warnings
+        source: s is a { where: 1 = 1 }`
+      ).toTranslate();
+      expect(
+        `##! -m4warnings
+        source: s is a { dimension: three is 3 }`
+      ).toTranslate();
     });
 
     describe('query name with ambiguous refinements', () => {

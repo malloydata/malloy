@@ -101,7 +101,8 @@ export class SQLegacyModify extends SourceQueryNode {
   constructor(
     readonly sourceQuery: SourceQueryNode,
     readonly plus: MalloyElement[],
-    readonly hasPlus: boolean
+    readonly hasPlus: boolean,
+    readonly m4Warnings: boolean
   ) {
     super({sourceQuery, plus});
   }
@@ -111,7 +112,7 @@ export class SQLegacyModify extends SourceQueryNode {
     if (!asQuery) {
       return;
     }
-    if (!this.hasPlus) {
+    if (!this.hasPlus && this.m4Warnings) {
       this.log(
         'Implicit query refinement is deprecated, use the `+` operator',
         'warn'
@@ -136,16 +137,18 @@ export class SQLegacyModify extends SourceQueryNode {
     if (!asSource) {
       return;
     }
-    if (this.hasPlus) {
-      this.log(
-        'Source extension with "+" is deprecated, use the "extend" operator',
-        'warn'
-      );
-    } else {
-      this.log(
-        'Implicit source extension is deprecated, use the `extend` operator.',
-        'warn'
-      );
+    if (this.m4Warnings) {
+      if (this.hasPlus) {
+        this.log(
+          'Source extension with "+" is deprecated, use the "extend" operator',
+          'warn'
+        );
+      } else {
+        this.log(
+          'Implicit source extension is deprecated, use the `extend` operator.',
+          'warn'
+        );
+      }
     }
     const stmts: SourceProperty[] = [];
     for (const stmt of this.plus) {
