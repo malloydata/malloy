@@ -261,7 +261,7 @@ sqExpr
   | sqExpr PLUS? ambiguousModification        # SQAmbiguous
   | sqExpr sourceExtension                    # SQExtendedSource
   | sqExpr queryRefinement                    # SQRefinedQuery
-  | FROM? OPAREN sqExpr CPAREN                # SQFrom
+  | FROM OPAREN sqExpr CPAREN                 # SQFrom
   | exploreTable                              # SQTable
   | FROM_SQL OPAREN sqlExploreNameRef CPAREN  # SQLegacySQLBlock
   | sqlSource                                 # SQSQL
