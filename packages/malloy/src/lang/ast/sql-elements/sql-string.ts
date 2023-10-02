@@ -23,10 +23,10 @@
 
 import {SQLPhrase} from '../../../model/malloy_types';
 
-import {QueryElement, isQueryElement} from '../types/query-element';
 import {MalloyElement} from '../types/malloy-element';
+import {SourceQueryNode} from '../elements/source-query';
 
-type SQLStringSegment = string | QueryElement;
+type SQLStringSegment = string | SourceQueryNode;
 export class SQLString extends MalloyElement {
   elementType = 'sqlString';
   elements: SQLStringSegment[] = [];
@@ -34,7 +34,7 @@ export class SQLString extends MalloyElement {
 
   complete() {
     this.has({
-      queries: this.elements.filter(isMalloyElement),
+      queries: this.elements.filter(isQuery),
     });
   }
 
@@ -43,7 +43,7 @@ export class SQLString extends MalloyElement {
       if (el.length > 0) {
         this.elements.push(el);
       }
-    } else if (isQueryElement(el)) {
+    } else if (el instanceof SourceQueryNode) {
       this.elements.push(el);
       this.containsQueries = true;
       el.parent = this;
@@ -53,15 +53,23 @@ export class SQLString extends MalloyElement {
   }
 
   sqlPhrases(): SQLPhrase[] {
-    return this.elements.map(el => {
+    const ret: SQLPhrase[] = [];
+    for (const el of this.elements) {
       if (typeof el === 'string') {
-        return {sql: el};
+        ret.push({sql: el});
+      } else {
+        const queryObject = el.getQuery();
+        if (queryObject) {
+          ret.push(queryObject.query());
+        } else {
+          el.sqLog('Cannot expand into a query');
+        }
       }
-      return el.query();
-    });
+    }
+    return ret;
   }
 }
 
-function isMalloyElement(x: SQLStringSegment): x is QueryElement {
-  return typeof x !== 'string' && isQueryElement(x);
+function isQuery(x: SQLStringSegment): x is SourceQueryNode {
+  return x instanceof SourceQueryNode;
 }

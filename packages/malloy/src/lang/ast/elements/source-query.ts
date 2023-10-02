@@ -21,31 +21,43 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation} from '../../../model';
-import {DocStatement, Document, MalloyElement} from '../types/malloy-element';
-import {Noteable, extendNoteMethod} from '../types/noteable';
 import {QueryElement} from '../types/query-element';
+import {MalloyElement} from '../types/malloy-element';
+import {Source} from './source';
 
-export class RunQuery extends MalloyElement implements DocStatement, Noteable {
-  elementType = 'runQuery';
-  note?: Annotation;
-  readonly isNoteableObj = true;
-  extendNote = extendNoteMethod;
-  constructor(readonly theQuery: QueryElement) {
-    super();
-    this.has({query: theQuery});
+export abstract class SourceQueryNode extends MalloyElement {
+  errored = false;
+
+  getSource(): Source | undefined {
+    return;
   }
 
-  execute(doc: Document): void {
-    let modelQuery = this.theQuery.query();
-    const annotation = this.note || {};
-    if (modelQuery.annotation) {
-      annotation.inherits = modelQuery.annotation;
+  getQuery(): QueryElement | undefined {
+    return;
+  }
+
+  isSource(): boolean {
+    return false;
+  }
+
+  sqLog(message: string) {
+    if (this.isErrorFree()) {
+      this.log(message);
     }
-    if (annotation.notes || annotation.blockNotes || annotation.inherits) {
-      modelQuery = {...modelQuery, annotation};
+    this.errored = true;
+  }
+
+  isErrorFree(): boolean {
+    if (this.errored) {
+      return false;
     }
-    doc.queryList.push(modelQuery);
-    return undefined;
+    let clean = true;
+    for (const child of this.walk()) {
+      if (child instanceof SourceQueryNode && child.errored) {
+        clean = false;
+        break;
+      }
+    }
+    return clean;
   }
 }

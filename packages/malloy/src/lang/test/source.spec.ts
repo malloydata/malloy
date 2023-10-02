@@ -27,35 +27,39 @@ import './parse-expects';
 
 describe('source:', () => {
   test('table', () => {
-    expect("source: testA is table('aTable')").toTranslate();
+    expect("source: testA is _db_.table('aTable')").toTranslate();
   });
   test('shorcut fitlered table', () => {
-    expect("source: xA is table('aTable') {? astr ~ 'a%' }").toTranslate();
+    expect(
+      "source: xA is _db_.table('aTable') extend { where: astr ~ 'a%' }"
+    ).toTranslate();
   });
   test('shorcut fitlered table m4warning', () => {
     expect(`
       ##! m4warnings
-      source: xA is conn.table('aTable') extend {? astr ~ 'a%' }
+      source: xA is _db_.table('aTable') extend {? astr ~ 'a%' }
     `).toTranslateWithWarnings(
       'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
     );
   });
   test('fitlered table', () => {
     expect(
-      "source: testA is table('aTable') { where: astr ~ 'a%' }"
+      "source: testA is _db_.table('aTable') extend { where: astr ~ 'a%' }"
     ).toTranslate();
   });
   test('ref source with no refinement', () => {
     expect('source: testA is a').toTranslate();
   });
-  test('from(query)', () => {
-    expect('source: testA is from(a->{group_by: astr})').toTranslate();
+  test('source from query', () => {
+    expect('source: testA is a->{group_by: astr}').toTranslate();
   });
   test('refine source', () => {
-    expect('source: aa is a { dimension: a is astr }').toTranslate();
+    expect('source: aa is a extend { dimension: a is astr }').toTranslate();
   });
   test('source refinement preserves original', () => {
-    const x = new TestTranslator('source: na is a + { dimension: one is 1 }');
+    const x = new TestTranslator(
+      'source: na is a extend { dimension: one is 1 }'
+    );
     expect(x).toTranslate();
     const a = x.getSourceDef('a');
     if (a) {
@@ -67,23 +71,26 @@ describe('source:', () => {
 
   describe('source properties', () => {
     test('single dimension', () => {
-      expect('source: aa is a { dimension: x is 1 }').toTranslate();
+      expect('source: aa is a extend { dimension: x is 1 }').toTranslate();
     });
     test('multiple dimensions', () => {
       expect(`
-        source: aa is a {
+        source: aa is a extend {
           dimension:
             x is 1
             y is 2
         }
       `).toTranslate();
     });
-    test('single declare', () => {
-      expect('source: aa is a { declare: x is 1 }').toTranslate();
+    test('single declare ok b4 m4', () => {
+      expect(
+        '##! -m4warnings\nsource: aa is a extend { declare: x is 1 }'
+      ).toTranslate();
     });
-    test('multiple declare', () => {
+    test('multiple declare ok b4 m4', () => {
       expect(`
-        source: aa is a {
+        ##! -m4warnings
+        source: aa is a extend {
           declare:
             x is 1
             y is 2
@@ -91,11 +98,11 @@ describe('source:', () => {
       `).toTranslate();
     });
     test('single measure', () => {
-      expect('source: aa is a { measure: x is count() }').toTranslate();
+      expect('source: aa is a extend { measure: x is count() }').toTranslate();
     });
     test('multiple measures', () => {
       expect(`
-        source: aa is a {
+        source: aa is a extend {
           measure:
             x is count()
             y is x * x
@@ -103,11 +110,11 @@ describe('source:', () => {
       `).toTranslate();
     });
     test('single where', () => {
-      expect('source: aa is a { where: ai > 10 }').toTranslate();
+      expect('source: aa is a extend { where: ai > 10 }').toTranslate();
     });
     test('multiple where', () => {
       expect(`
-        source: aa is a {
+        source: aa is a extend {
           where:
             ai > 10,
             af < 1000
@@ -116,9 +123,9 @@ describe('source:', () => {
     });
     test('where clause can use the join namespace in source refined query', () => {
       expect(`
-      source: flights is table('malloytest.flights') + {
+      source: flights is _db_.table('malloytest.flights') extend {
         view: boo is {
-          join_one: carriers is table('malloytest.carriers') on carrier = carriers.code
+          extend: { join_one: carriers is _db_.table('malloytest.carriers') on carrier = carriers.code }
           where: carriers.code = 'WN' | 'AA'
           group_by: carriers.nickname
           aggregate: flight_count is count()
@@ -127,50 +134,52 @@ describe('source:', () => {
     });
     describe('joins', () => {
       test('with', () => {
-        expect('source: x is a { join_one: b with astr }').toTranslate();
+        expect('source: x is a extend { join_one: b with astr }').toTranslate();
       });
       test('with', () => {
         expect(
-          model`source: x is a { join_one: y is b with astr }`
+          model`source: x is a extend { join_one: y is b with astr }`
         ).toTranslate();
       });
       test('with dotted ref', () => {
         expect(
-          model`source: x is ab { join_one: xz is a with b.astr }`
+          model`source: x is ab extend { join_one: xz is a with b.astr }`
         ).toTranslate();
       });
       test('one on', () => {
         expect(
-          model`source: x is a { join_one: b on astr = b.astr }`
+          model`source: x is a extend { join_one: b on astr = b.astr }`
         ).toTranslate();
       });
       test('one is on', () => {
         expect(
-          'source: x is a { join_one: y is b on astr = y.astr }'
+          'source: x is a extend { join_one: y is b on astr = y.astr }'
         ).toTranslate();
       });
       test('many on', () => {
         expect(
-          'source: nab is a { join_many: b on astr = b.astr }'
+          'source: nab is a extend { join_many: b on astr = b.astr }'
         ).toTranslate();
       });
       test('many is on', () => {
         expect(
-          'source: y is a { join_many: x is b on astr = x.astr }'
+          'source: y is a extend { join_many: x is b on astr = x.astr }'
         ).toTranslate();
       });
       test('cross', () => {
-        expect('source: nab is a { join_cross: b }').toTranslate();
+        expect('source: nab is a extend { join_cross: b }').toTranslate();
       });
       test('cross is', () => {
-        expect('source: nab is a { join_cross: xb is b }').toTranslate();
+        expect('source: nab is a extend { join_cross: xb is b }').toTranslate();
       });
       test('cross on', () => {
-        expect('source: nab is a { join_cross: b on true}').toTranslate();
+        expect(
+          'source: nab is a extend { join_cross: b on true}'
+        ).toTranslate();
       });
       test('multiple joins', () => {
         expect(`
-          source: nab is a {
+          source: nab is a extend {
             join_one:
               b with astr,
               br is b with astr
@@ -180,23 +189,33 @@ describe('source:', () => {
       test('with requires primary key', () => {
         expect(
           markSource`
-            source: nb is b {
-              join_one: ${"bb is table('aTable') with astr"}
+            source: nb is b extend {
+              join_one: ${'bb is _db_.table("aTable") with astr'}
             }
           `
         ).translationToFailWith(
           'join_one: Cannot use with unless source has a primary key'
         );
       });
+      test('can join a query without a rename', () => {
+        expect(`
+          query: aq is a -> {select: *}
+          source: aqs is a extend {
+            join_one: aq on ai = aq.ai
+          }
+        `).toTranslate();
+      });
     });
     test('primary_key', () => {
-      expect('source: c is a { primary_key: ai }').toTranslate();
+      expect('source: c is a extend { primary_key: ai }').toTranslate();
     });
     test('rename', () => {
-      expect('source: c is a { rename: nn is ai }').toTranslate();
+      expect('source: c is a extend { rename: nn is ai }').toTranslate();
     });
     test('accept single', () => {
-      const onlyAstr = new TestTranslator('source: c is a { accept: astr }');
+      const onlyAstr = new TestTranslator(
+        'source: c is a extend { accept: astr }'
+      );
       expect(onlyAstr).toTranslate();
       const c = onlyAstr.getSourceDef('c');
       if (c) {
@@ -204,10 +223,12 @@ describe('source:', () => {
       }
     });
     test('accept multi', () => {
-      expect('source: c is a { accept: astr, af }').toTranslate();
+      expect('source: c is a extend { accept: astr, af }').toTranslate();
     });
     test('except single', () => {
-      const noAstr = new TestTranslator('source: c is a { except: astr }');
+      const noAstr = new TestTranslator(
+        'source: c is a extend { except: astr }'
+      );
       expect(noAstr).toTranslate();
       const c = noAstr.getSourceDef('c');
       if (c) {
@@ -216,7 +237,7 @@ describe('source:', () => {
       }
     });
     test('except multi', () => {
-      expect('source: c is a { except: astr, af }').toTranslate();
+      expect('source: c is a extend { except: astr, af }').toTranslate();
     });
     test('turtle in a source can be called view', () => {
       expect(
@@ -243,8 +264,8 @@ describe('source:', () => {
     });
     test('refined explore-query', () => {
       expect(`
-        source: abNew is ab {
-          view: for1 is aturtle {? ai = 1 }
+        source: abNew is ab extend {
+          view: for1 is aturtle + { where: ai = 1 }
         }
       `).toTranslate();
     });
@@ -252,7 +273,7 @@ describe('source:', () => {
       expect(`
         ##! m4warnings
         source: abNew is ab extend {
-          view: for1 is aturtle refine {? ai = 1 }
+          view: for1 is aturtle + {? ai = 1 }
         }
       `).toTranslateWithWarnings(
         'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
@@ -260,19 +281,19 @@ describe('source:', () => {
     });
     test('chained explore-query', () => {
       expect(`
-        source: c is a {
+        source: c is a extend {
           view: chain is {
             group_by: astr
           } -> {
             top: 10; order_by: astr
-            project: *
+            select: *
           }
         }
       `).toTranslate();
     });
     test('multiple explore-query', () => {
       expect(`
-        source: abNew is ab {
+        source: abNew is ab extend {
           view:
             q1 is { group_by: astr },
             q2 is { group_by: ai }

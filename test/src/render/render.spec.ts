@@ -39,7 +39,7 @@ async function runUnsupportedRenderTest(
     const src = `
       query: q is
         ${connectionName}.sql("""SELECT ${expr} AS test""")
-        -> { project: * }
+        -> { select: * }
     `;
     const result = await runtime.loadModel(src).loadQueryByName('q').run();
     // console.log("DATA", result.data.toObject());
@@ -221,11 +221,11 @@ describe('rendering results', () => {
           nest: height_by_age
             # line_chart
           is {
-            project: monthy, height
+            select: monthy, height
           }
 
           nest: weight_by_age_bar_chart is {
-            project: monthy, wt
+            select: monthy, wt
           }
 
           aggregate:
@@ -296,7 +296,7 @@ describe('rendering results', () => {
               order_by: nm
               nest: height_by_age
               is {
-                project:
+                select:
                   # hidden
                   monthy,
                   height
@@ -305,12 +305,12 @@ describe('rendering results', () => {
               # hidden
               nest: height_by_age_hidden
               is {
-                project: monthy, height
+                select: monthy, height
               }
 
               # list
               nest: monthy is {
-                project: price
+                select: price
               }
 
               aggregate:
@@ -419,7 +419,7 @@ describe('rendering results', () => {
       const src = `
         query: mex_query is duckdb.sql('SELECT 1') -> {
           timezone: 'America/Mexico_City'
-          project: mex_time is @2021-02-24 03:05:06
+          select: mex_time is @2021-02-24 03:05:06
         }
       `;
       const result = await (
@@ -443,7 +443,7 @@ describe('rendering results', () => {
 
         query:
           data_trunc is timeDataTrunc -> {
-            project: yr is times.year, qt is times.quarter, mt is times.month, dy is times.day
+            select: yr is times.year, qt is times.quarter, mt is times.month, dy is times.day
         }
       `;
       const result = await (
@@ -464,7 +464,7 @@ describe('rendering results', () => {
         query: mex_query # bar_chart
           is duckdb.sql('SELECT 1') -> {
             timezone: 'America/Mexico_City'
-            project: mex_time is @2021-02-24 03:05:06
+            select: mex_time is @2021-02-24 03:05:06
           }
       `;
       const result = await (
@@ -507,7 +507,7 @@ describe('rendering results', () => {
     test('value format tags works correctly', async () => {
       const src = `
         query: number_query is duckdb.sql('SELECT 12.345 as anumber') -> {
-          project:
+          select:
             anumber
             # number= "#,##0.0000"
             larger is anumber
@@ -531,7 +531,7 @@ describe('rendering results', () => {
     test('data volume tags works correctly', async () => {
       const src = `
         query: bytes_query is duckdb.sql('SELECT 1') -> {
-          project:
+          select:
           # data_volume = bytes
           usage_b is 3758
           # data_volume = kb
@@ -560,7 +560,7 @@ describe('rendering results', () => {
     test('duration tags works correctly', async () => {
       const src = `
         query: duration_query is duckdb.sql('SELECT 1') -> {
-          project:
+          select:
           # duration = nanoseconds
           ns1 is 1
           # duration = nanoseconds

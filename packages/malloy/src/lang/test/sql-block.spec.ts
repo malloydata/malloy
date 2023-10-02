@@ -69,6 +69,7 @@ describe('sql:', () => {
 
   test('definition', () => {
     const model = new TestTranslator(`
+      ##! -m4warnings
       sql: users IS {
         select: """${selStmt}"""
         connection: "aConnection"
@@ -91,13 +92,16 @@ describe('sql:', () => {
         if (isSQLBlockStruct(expectThis)) {
           expectThis.declaredSQLBlock = true;
         }
-        expect(unlocatedStructDef(model.sqlBlocks[0])).toEqual(expectThis);
+        const got = unlocatedStructDef(model.sqlBlocks[0]);
+        delete got.modelAnnotation;
+        expect(got).toEqual(expectThis);
       }
     }
   });
 
   test('source from sql', () => {
     const model = new TestTranslator(`
+      ##! -m4warnings
       sql: users IS { select: """${selStmt}""" }
       source: malloyUsers is from_sql(users) { primary_key: ai }
     `);
@@ -120,14 +124,13 @@ describe('sql:', () => {
 
   test('source from imported sql-based-source', () => {
     const createModel = `
-      sql: users IS { select: """${selStmt}""" }
-      source: malloyUsers is from_sql(users) { primary_key: ai }
+      source: malloyUsers is _db_.sql('${selStmt}') extend { primary_key: ai }
     `;
     const model = new TestTranslator(`
       import "createModel.malloy"
       source: importUsers is malloyUsers
-      query: malloyUsers -> { project: * }
-      query: importUsers -> { project: * }
+      run: malloyUsers -> { select: * }
+      run: importUsers -> { select: * }
     `);
     model.importZone.define(
       'internal://test/langtests/createModel.malloy',
@@ -137,13 +140,14 @@ describe('sql:', () => {
     const needReq = model.translate();
     const needs = needReq?.compileSQL;
     expect(needs).toBeDefined();
-    const sql = makeSQLBlock([{sql: selStmt}]);
+    const sql = makeSQLBlock([{sql: selStmt}], '_db_');
     model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});
     expect(model).toTranslate();
   });
 
   it('simple turducken', () => {
     const m = new TestTranslator(`
+      ##! -m4warnings
       sql: someSql is {
         select: """SELECT * FROM %{ a -> { group_by: astr } } WHERE 1=1"""
       }
@@ -162,6 +166,7 @@ describe('sql:', () => {
   });
   it('old style ', () => {
     const m = new TestTranslator(`
+      ##! -m4warnings
       sql: someSql is {
         select: """SELECT * FROM %{ a -> { group_by: astr } } WHERE 1=1"""
       }
@@ -182,14 +187,14 @@ describe('sql:', () => {
     const m = new TestTranslator(`
       run: duckdb.sql("""
         SELECT * from (%{
-          duckdb.sql("""SELECT 2 as two""") {
-            query: b is {
+          duckdb.sql("""SELECT 2 as two""") extend {
+            view: b is {
               nest: c is {
                 extend: {
                   join_one: d is duckdb.sql("""
                     SELECT * from (%{
-                      duckdb.sql("""SELECT 3 as three""") {
-                        query: b is {
+                      duckdb.sql("""SELECT 3 as three""") extend {
+                        view: b is {
                           nest: c is {
                             extend: {
                               join_one: d is duckdb.sql("""SELECT 4 as four""") on three = d.four - 1
@@ -212,6 +217,7 @@ describe('sql:', () => {
   });
   it('model preserved', () => {
     const shouldBeOK = `
+      ##! -m4warnings
       source: newa is a
       sql: someSql is { select: """${selStmt}""" }
       source: newaa is newa
@@ -226,8 +232,9 @@ describe('sql:', () => {
     expect(model).toTranslate();
   });
 
-  test('source from extended sql-based-source', () => {
+  test('pre m4 source from extended sql-based-source', () => {
     const model = new TestTranslator(`
+      ##! -m4warnings
       sql: sql_block IS { select: """${selStmt}""" }
       source: malloy_source is from_sql(sql_block) { primary_key: ai }
 `);
@@ -240,7 +247,7 @@ describe('sql:', () => {
     const extModel = new MalloyTranslator('sqlblocktest://main');
     extModel.importZone.define(
       'sqlblocktest://main',
-      'query: malloy_source -> { project: * }'
+      'run: malloy_source -> { select: * }'
     );
     const tr = extModel.translate(modelDef);
     // because extModel is not a TestTranslator we can't use the hotness

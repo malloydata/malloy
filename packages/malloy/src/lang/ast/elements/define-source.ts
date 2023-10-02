@@ -32,8 +32,7 @@ import {
   DocStatementList,
 } from '../types/malloy-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
-
-import {Source} from './source';
+import {SourceQueryNode} from './source-query';
 
 export class DefineSource
   extends MalloyElement
@@ -43,11 +42,14 @@ export class DefineSource
   readonly parameters?: HasParameter[];
   constructor(
     readonly name: string,
-    readonly theSource: Source,
+    readonly sourceExpr: SourceQueryNode | undefined,
     readonly exported: boolean,
     params?: MalloyElement[]
   ) {
-    super({explore: theSource});
+    super();
+    if (sourceExpr) {
+      this.has({sourceExpr});
+    }
     if (params) {
       this.parameters = [];
       for (const el of params) {
@@ -70,7 +72,11 @@ export class DefineSource
     if (doc.modelEntry(this.name)) {
       this.log(`Cannot redefine '${this.name}'`);
     } else {
-      const structDef = this.theSource.withParameters(this.parameters);
+      const theSource = this.sourceExpr?.getSource();
+      if (theSource === undefined) {
+        return;
+      }
+      const structDef = theSource.withParameters(this.parameters);
       if (ErrorFactory.isErrorStructDef(structDef)) {
         return;
       }

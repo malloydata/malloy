@@ -27,7 +27,6 @@ import {
   isJoinOn,
   StructDef,
 } from '../../../model/malloy_types';
-import {Source} from '../elements/source';
 import {compressExpr} from '../expressions/utils';
 import {DynamicSpace} from '../field-space/dynamic-space';
 import {JoinSpaceField} from '../field-space/join-space-field';
@@ -42,6 +41,8 @@ import {
   QueryPropertyInterface,
 } from '../types/query-property-interface';
 import {MakeEntry} from '../types/space-entry';
+import {SourceQueryNode} from '../elements/source-query';
+import {ErrorFactory} from '../error-factory';
 
 export abstract class Join
   extends MalloyElement
@@ -52,10 +53,20 @@ export abstract class Join
   abstract fixupJoinOn(outer: FieldSpace, inStruct: StructDef): void;
   readonly isNoteableObj = true;
   extendNote = extendNoteMethod;
+  abstract sourceExpr: SourceQueryNode;
   note?: Annotation;
 
   makeEntry(fs: DynamicSpace) {
     fs.newEntry(this.name.refString, this, new JoinSpaceField(fs, this));
+  }
+
+  protected getStructDefFromExpr() {
+    const source = this.sourceExpr.getSource();
+    if (!source) {
+      this.sourceExpr.sqLog('Cannot great a source to join from');
+      return ErrorFactory.structDef;
+    }
+    return source.structDef();
   }
 }
 
@@ -63,14 +74,14 @@ export class KeyJoin extends Join {
   elementType = 'joinOnKey';
   constructor(
     readonly name: ModelEntryReference,
-    readonly source: Source,
+    readonly sourceExpr: SourceQueryNode,
     readonly keyExpr: ExpressionDef
   ) {
-    super({name: name, source: source, keyExpr: keyExpr});
+    super({name, sourceExpr, keyExpr});
   }
 
   structDef(): StructDef {
-    const sourceDef = this.source.structDef();
+    const sourceDef = this.getStructDefFromExpr();
     const joinStruct: StructDef = {
       ...sourceDef,
       structRelationship: {
@@ -134,9 +145,9 @@ export class ExpressionJoin extends Join {
   private expr?: ExpressionDef;
   constructor(
     readonly name: ModelEntryReference,
-    readonly source: Source
+    readonly sourceExpr: SourceQueryNode
   ) {
-    super({name: name, source: source});
+    super({name, sourceExpr});
   }
 
   set joinOn(joinExpr: ExpressionDef | undefined) {
@@ -164,7 +175,12 @@ export class ExpressionJoin extends Join {
   }
 
   structDef(): StructDef {
-    const sourceDef = this.source.structDef();
+    const source = this.sourceExpr.getSource();
+    if (!source) {
+      this.sourceExpr.sqLog('Cannot create a source to join from');
+      return ErrorFactory.structDef;
+    }
+    const sourceDef = source.structDef();
     const joinStruct: StructDef = {
       ...sourceDef,
       structRelationship: {type: this.joinType},

@@ -625,7 +625,7 @@ describe('BigQuery expression tests', () => {
       faa,
       `
       query: flights->{
-        aggregate: carrier_count is count(distinct carrier)
+        aggregate: carrier_count is count(carrier)
       }
     `
     );
@@ -763,7 +763,7 @@ describe('airport_tests', () => {
           }
         }
       } -> { limit: 1
-        project: zero.by_faa_region_Z.by_state.by_county.county
+        select: zero.by_faa_region_Z.by_state.by_county.county
       }
 
     `
@@ -778,13 +778,13 @@ describe('airport_tests', () => {
     query: airports -> {
       group_by: county
       nest: stuff is {
-        project: elevation
+        select: elevation
         order_by: 1 desc
         limit: 10
       }
       order_by: 1
     } -> {
-      project: stuff.elevation
+      select: stuff.elevation
       limit: 1
     }
     `
@@ -827,7 +827,7 @@ describe('airport_tests', () => {
           query: pipe_turtle is {
             aggregate: a is airport_count
           } -> {
-            project: a
+            select: a
           }
         }
         query: my_airports->pipe_turtle
@@ -848,7 +848,7 @@ describe('airport_tests', () => {
             county
           aggregate: a is count()
         } -> {
-          project:
+          select:
             state is upper(state)
             a
         } -> {
@@ -1027,7 +1027,7 @@ describe('unsupported type tests', () => {
         sql: badType is {
           select: """SELECT ST_GEOGFROMTEXT('LINESTRING(1 2, 3 4)') as geo"""
         }
-        query: from_sql(badType)->{ project: *}
+        query: from_sql(badType)->{ select: *}
       `
       )
       .run();

@@ -232,20 +232,23 @@ export class TestTranslator extends MalloyTranslator {
   /*
    * All test source files can assume that an import of this
    * model has already happened.
-   *   source: a is table('aTable') { primary_key: astr }
+   *
+   * Also the following tables will be available on _db_
+   *   aTable, malloytest.carriers, malloytest.flights, malloytest.airports
+   *
+   *   source: a is _db_.table('aTable') extend { primary_key: astr }
    *   source: b is a
-   *   source: ab is a {
+   *   source: ab is a extend {
    *     join_one: b with astr
    *     measure: acount is count()
    *     query: aturtle is { group_by: astr; aggregate: acount }
    *   }
-   * Also the following tables will be available
-   *   'aTable', 'malloytest.carriers'
    */
   internalModel: ModelDef = {
     name: testURI,
     exports: [],
     contents: {
+      _db_: {type: 'connection', name: '_db_'},
       a: {...aTableDef, primaryKey: 'astr', as: 'a'},
       b: {...aTableDef, primaryKey: 'astr', as: 'b'},
       ab: {
@@ -303,7 +306,7 @@ export class TestTranslator extends MalloyTranslator {
     }
     for (const tableName in mockSchema) {
       this.schemaZone.define(tableName, mockSchema[tableName]);
-      this.schemaZone.define('conn:' + tableName, mockSchema[tableName]);
+      this.schemaZone.define(`_db_:${tableName}`, mockSchema[tableName]);
     }
   }
 

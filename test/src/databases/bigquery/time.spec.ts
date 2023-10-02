@@ -51,7 +51,7 @@ describe('BigQuery double truncation', () => {
       SELECT DATETIME '2020-02-20 00:00:00' as t_datetime
       """}
     query: from_sql(timeData) -> {
-      project: mex_220 is t_datetime::timestamp
+      select: mex_220 is t_datetime::timestamp
     }`,
       {mex_220: utc_2020.toJSDate()}
     );

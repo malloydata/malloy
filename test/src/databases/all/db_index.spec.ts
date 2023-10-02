@@ -95,7 +95,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         }
 
         query: t-> {index:one, state }
-          -> {project: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
+          -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
     `
       )
       .run();
@@ -116,7 +116,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         }
 
         query: t-> {index:one, state; sample: 10 }
-          -> {project: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
+          -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
     `
         )
         .run();
@@ -134,7 +134,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         }
 
         query: t-> {index:one, tailnum; sample: 50% }
-          -> {project: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
+          -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
     `
       )
       .run();

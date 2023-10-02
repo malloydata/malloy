@@ -59,7 +59,7 @@ describe('extendModel', () => {
     const oneState = await q1.run();
     expect(oneState.data.path(0, 'state').value).toBe('CA');
 
-    const extended = model.extendModel('query: q2 is ->q1 -> { project: * }');
+    const extended = model.extendModel('query: q2 is ->q1 -> { select: * }');
     const q2 = extended.loadQueryByName('q2');
     const twoState = await q2.run();
     expect(twoState.data.path(0, 'state').value).toBe('CA');
@@ -70,7 +70,7 @@ describe('extendModel', () => {
     `);
 
     const extended = model.extendModel(
-      'query: q2 is from_sql(q1)->{project: *}'
+      'query: q2 is from_sql(q1)->{select: *}'
     );
     const q2 = extended.loadQueryByName('q2');
     const twoState = await q2.run();

@@ -2555,9 +2555,9 @@ export class ModelMaterializer extends FluentState<Model> {
         -> {
           where: fieldType = 'string'
           group_by: fieldName
-          aggregate: cardinality is count(distinct fieldValue)
+          aggregate: cardinality is count(fieldValue)
           nest: values is {
-            project: fieldValue, weight
+            select: fieldValue, weight
             order_by: weight desc
             limit: ${limit}
           }

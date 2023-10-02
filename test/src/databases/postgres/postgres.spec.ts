@@ -64,7 +64,7 @@ describe('Postgres tests', () => {
         SELECT 1 as n
        """}
 
-      query: from_sql(one) -> { project: n }
+      query: from_sql(one) -> { select: n }
       `
       )
       .run();
@@ -79,7 +79,7 @@ describe('Postgres tests', () => {
         SELECT 1 as "upperLower"
        """}
 
-      query: from_sql(one) -> { project: upperLower }
+      query: from_sql(one) -> { select: upperLower }
       `
       )
       .run();
@@ -95,7 +95,7 @@ describe('Postgres tests', () => {
        """}
 
       query: from_sql(one) -> {
-        project:
+        select:
           select
           create is select + 1
       }
@@ -111,7 +111,7 @@ describe('Postgres tests', () => {
     const result = await runtime
       .loadQuery(
         `
-      query: table('public.UpperTablePublic') -> { project: one }
+      query: table('public.UpperTablePublic') -> { select: one }
       `
       )
       .run();
@@ -122,7 +122,7 @@ describe('Postgres tests', () => {
     const result = await runtime
       .loadQuery(
         `
-      query: table('UpperSchema.UpperSchemaUpperTable') -> { project: one }
+      query: table('UpperSchema.UpperSchemaUpperTable') -> { select: one }
       `
       )
       .run();
@@ -134,7 +134,7 @@ describe('Postgres tests', () => {
       .loadQuery(
         `
         sql: badType is { select: """SELECT int4range(10, 20) as ranger""" }
-        query: from_sql(badType)->{ project: *}
+        query: from_sql(badType)->{ select: *}
       `
       )
       .run();
@@ -158,7 +158,7 @@ describe('Postgres tests', () => {
           SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
         """}
       query: from_sql(timeData) -> {
-        project: mex_220 is t_tstz::timestamp
+        select: mex_220 is t_tstz::timestamp
       }`,
         {mex_220: zone_2020.toJSDate()}
       );

@@ -349,7 +349,11 @@ function checkForProblems(
     return {
       pass: false,
       message: () =>
-        `Compiler errors did not match expected errors\n${explain.join('\n')}`,
+        `Compiler errors did not match expected errors\n${explain.join('\n')}
+        -------- FROM SOURCE --------
+        ${src}
+        -----------------------------
+        `,
     };
   }
 }

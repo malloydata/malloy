@@ -179,6 +179,13 @@ export class DimensionFieldReference extends FieldReference {
   }
 }
 
+export class ViewFieldReference extends FieldReference {
+  elementType = 'viewFieldRefernce';
+  typecheck(_type: TypeDesc) {
+    this.log('Cannot use a view field in an expression');
+  }
+}
+
 export class WildcardFieldReference extends MalloyElement implements Noteable {
   elementType = 'wildcardFieldReference';
   note?: Annotation;

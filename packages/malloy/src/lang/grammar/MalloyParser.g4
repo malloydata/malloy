@@ -46,7 +46,7 @@ defineQuery
   ;
 
 topLevelAnonQueryDef
-  : tags query
+  : tags sqExpr
   ;
 
 tags
@@ -58,7 +58,7 @@ isDefine
   ;
 
 runStatement
-  : blockTags=tags RUN noteTags=tags topLevelAnonQueryDef
+  : tags RUN topLevelAnonQueryDef
   ;
 
 defineSQLStatement
@@ -79,7 +79,7 @@ sqlString
   ;
 
 sqlInterpolation
-  : OPEN_CODE query (CCURLY | CLOSE_CODE)
+  : OPEN_CODE sqExpr (CCURLY | CLOSE_CODE)
   ;
 
 importStatement
@@ -117,46 +117,17 @@ topLevelQueryDefs
   ;
 
 topLevelQueryDef
-  : tags queryName isDefine query
+  : tags queryName isDefine sqExpr
   ;
 
 refineOperator: PLUS ;
 
 queryRefinement
-  : refineOperator? queryProperties
-  | REFINE queryProperties
+  : (REFINE | refineOperator)? queryProperties
   ;
 
 sourceExtension
-  : refineOperator? exploreProperties
-  | EXTEND exploreProperties
-  ;
-
-query
-  : unrefinableQuery pipeElement*    # NormalQuery
-  | sqlSource                        # QueryFromSQLSource
-  ;
-
-unrefinableQuery
-  : unextendableSource pipeElement+  # QueryFromSource
-  | refinableQuery queryRefinement?  # RefinedQuery
-  ;
-
-refinableQuery
-  : ARROW? id                         # QueryByName
-  | unextendableSource ARROW id       # QueryByTurtleName
-  ;
-
-unextendableSource
-  : extendableSource sourceExtension?
-  ;
-
-extendableSource
-  : sourceID                                      # SourceFromNamedModelEntry
-  | exploreTable                                  # TableSource
-  | FROM OPAREN query CPAREN                      # QuerySource
-  | FROM_SQL OPAREN sqlExploreNameRef CPAREN      # SQLSourceName
-  | sqlSource                                     # SQLSource_stub
+  : (EXTEND | refineOperator)? exploreProperties
   ;
 
 sqlSource
@@ -201,12 +172,11 @@ sourcePropertyList
   ;
 
 sourceDefinition
-  : tags sourceNameDef isDefine explore
+  : tags sourceNameDef isDefine sqExplore
   ;
 
-explore
-  : unextendableSource           # BareExtendedSource_stub
-  | query sourceExtension        # ExtendedQuery
+sqExplore
+  : sqExpr
   ;
 
 sourceNameDef: id;
@@ -273,6 +243,40 @@ queryExtend
   : EXTENDQ queryExtendStatementList
   ;
 
+// this is a little turd to allow m0 and 4.0 to run at once
+ambiguousModification
+  : filterShortcut
+  | OCURLY (modEither | SEMI)* CCURLY
+  ;
+
+modEither
+  : joinStatement
+  | whereStatement
+  | declareStatement
+  ;
+
+sqExpr
+  : ARROW? id                                 # SQID
+  | sqExpr ARROW leadSeg (PLUS qSeg)*         # SQArrow
+  | sqExpr PLUS? ambiguousModification        # SQAmbiguous
+  | sqExpr sourceExtension                    # SQExtendedSource
+  | sqExpr queryRefinement                    # SQRefinedQuery
+  | FROM OPAREN sqExpr CPAREN                 # SQFrom
+  | exploreTable                              # SQTable
+  | FROM_SQL OPAREN sqlExploreNameRef CPAREN  # SQLegacySQLBlock
+  | sqlSource                                 # SQSQL
+  ;
+
+leadSeg
+  : id queryRefinement?
+  | queryProperties
+  ;
+
+qSeg
+  : id
+  | queryProperties
+  ;
+
 queryExtendStatement
   : defDimensions
   | defMeasures
@@ -288,7 +292,7 @@ joinList
   ;
 
 isExplore
-  : before_is=tags IS after_is=tags explore
+  : before_is=tags IS after_is=tags sqExpr
   ;
 
 joinDef

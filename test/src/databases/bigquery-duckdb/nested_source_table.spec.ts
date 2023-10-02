@@ -39,7 +39,7 @@ const modelText = `
 source:ga_sessions is table('malloytest.ga_sample'){
 
   measure:
-    user_count is count(distinct fullVisitorId)
+    user_count is count(fullVisitorId)
     session_count is count()
     total_visits is totals.visits.sum()
     total_hits is totals.hits.sum()
@@ -162,7 +162,7 @@ describe.each(runtimes.runtimeList)(
           `
         query: ga_sessions->search_index -> {
           where: fieldName != null
-          project: *
+          select: *
           order_by: fieldName, weight desc
           limit: 10
         }
@@ -188,7 +188,7 @@ describe.each(runtimes.runtimeList)(
           sample: ${sampleSize}
         }
         -> {
-          aggregate: field_count is count(DISTINCT fieldName)
+          aggregate: field_count is count(fieldName)
           nest: top_fields is {
             group_by: fieldName
             aggregate: row_count is count()
@@ -249,7 +249,7 @@ describe.each(runtimes.runtimeList)(
         source: eone is  table('malloytest.airports') {}
 
         query: eone -> {
-          project:
+          select:
             bad_date is '123':::date
             bad_number is 'abc':::number
             limit: 1

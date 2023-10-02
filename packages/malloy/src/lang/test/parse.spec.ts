@@ -33,10 +33,10 @@ import './parse-expects';
 describe('model statements', () => {
   describe('table method', () => {
     test('table method works', () => {
-      expect("source: testA is conn.table('aTable')").toTranslate();
+      expect("source: testA is _db_.table('aTable')").toTranslate();
     });
     test('table method works with quoted connection name', () => {
-      expect("source: testA is `conn`.table('aTable')").toTranslate();
+      expect("source: testA is `_db_`.table('aTable')").toTranslate();
     });
     test('table method fails when connection name is wrong', () => {
       expect("source: testA is bad_conn.table('aTable')").not.toTranslate();
@@ -57,7 +57,7 @@ describe('model statements', () => {
     });
     test('table function is deprecated', () => {
       expect(`##! m4warnings
-      source: testA is table('conn:aTable')
+      source: testA is table('_db_:aTable')
     `).toTranslateWithWarnings(
         "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`"
       );
@@ -66,7 +66,7 @@ describe('model statements', () => {
 
   test('errors on redefinition of query', () => {
     expect(
-      'query: q1 is a -> { project: * }, q1 is a -> { project: * }'
+      'query: q1 is a -> { select: * }, q1 is a -> { select: * }'
     ).translationToFailWith("'q1' is already defined, cannot redefine");
   });
 });
@@ -74,49 +74,49 @@ describe('model statements', () => {
 describe('error handling', () => {
   test('field and query with same name does not overflow', () => {
     expect(`
-      source: flights is table('malloytest.flights') {
-        query: carrier is { group_by: carrier }
+      source: flights is _db_.table('malloytest.flights') extend {
+        view: carrier is { group_by: carrier }
       }
     `).translationToFailWith("Cannot redefine 'carrier'");
   });
   test('redefine source', () => {
     expect(markSource`
-      source: airports is table('malloytest.airports') + {
+      source: airports is _db_.table('malloytest.airports') extend {
         primary_key: code
       }
-      source: airports is table('malloytest.airports') + {
+      source: airports is _db_.table('malloytest.airports') extend {
         primary_key: code
       }
     `).translationToFailWith("Cannot redefine 'airports'");
   });
   test('query from undefined source', () => {
-    expect(markSource`query: ${'x'}->{ project: y }`).translationToFailWith(
-      "Undefined query or source 'x'"
+    expect(markSource`run: ${'x'}->{ select: y }`).translationToFailWith(
+      "Reference to undefined object 'x'"
     );
   });
   test('query with expression from undefined source', () => {
     // Regression check: Once upon a time this died with an exception even
     // when "query: x->{ group_by: y}" (above) generated the correct error.
     expect(
-      markSource`query: ${'x'}->{ project: y is z / 2 }`
-    ).translationToFailWith("Undefined query or source 'x'");
+      markSource`run: ${'x'}->{ select: y is z / 2 }`
+    ).translationToFailWith("Reference to undefined object 'x'");
   });
   test('join reference before definition', () => {
     expect(
       markSource`
-        source: newAB is a { join_one: newB is ${'bb'} on astring }
+        source: newAB is a extend { join_one: newB is ${'bb'} on astring }
         source: newB is b
       `
-    ).translationToFailWith("Undefined query or source 'bb'");
+    ).translationToFailWith("Reference to undefined object 'bb'");
   });
   test('non-rename rename', () => {
-    expect('source: na is a { rename: astr is astr }').translationToFailWith(
-      "Can't rename field to itself"
-    );
+    expect(
+      'source: na is a extend { rename: astr is astr }'
+    ).translationToFailWith("Can't rename field to itself");
   });
   test('reference to field in its definition', () => {
     expect(
-      'source: na is a { dimension: ustr is upper(ustr) } '
+      'source: na is a extend { dimension: ustr is upper(ustr) } '
     ).translationToFailWith("Circular reference to 'ustr' in definition");
   });
   test('empty model', () => {
@@ -126,39 +126,39 @@ describe('error handling', () => {
     expect('\n').toTranslate();
   });
   test('query without fields', () => {
-    expect('query: a -> { top: 5 }').translationToFailWith(
+    expect('run: a -> { top: 5 }').translationToFailWith(
       "Can't determine query type (group_by/aggregate/nest,project,index)"
     );
   });
   test('refine cannot change query type', () => {
-    expect('query: ab -> aturtle { project: astr }').translationToFailWith(
+    expect('run: ab -> aturtle + { select: astr }').translationToFailWith(
       /Not legal in grouping query/
     );
   });
   test('undefined field ref in query', () => {
-    expect('query: ab -> { aggregate: xyzzy }').translationToFailWith(
+    expect('run: ab -> { aggregate: xyzzy }').translationToFailWith(
       "'xyzzy' is not defined"
     );
   });
   test('query on source with errors', () => {
     expect(markSource`
-        source: na is a { join_one: ${'n'} on astr }
-      `).translationToFailWith("Undefined source 'n'");
+        source: na is a extend { join_one: ${'n'} on astr }
+      `).translationToFailWith("Reference to undefined object 'n'");
   });
   test('detect duplicate output field names', () => {
     expect(
-      markSource`query: ab -> { group_by: astr, ${'astr'} }`
+      markSource`run: ab -> { group_by: astr, ${'astr'} }`
     ).translationToFailWith("Output already has a field named 'astr'");
   });
   test('detect join tail overlap existing ref', () => {
     expect(
-      markSource`query: ab -> { group_by: astr, ${'b.astr'} }`
+      markSource`run: ab -> { group_by: astr, ${'b.astr'} }`
     ).translationToFailWith("Output already has a field named 'astr'");
   });
   test('undefined in expression with regex compare', () => {
     expect(
       `
-        source: c is a {
+        source: c is a extend {
           dimension: d is meaning_of_life ~ r'(forty two|fifty four)'
         }
       `
@@ -166,23 +166,25 @@ describe('error handling', () => {
   });
   test('detect output collision on join references', () => {
     expect(`
-      query: ab -> {
+      run: ab -> {
         group_by: astr, b.astr
       }
     `).translationToFailWith("Output already has a field named 'astr'");
   });
   test('rejoin a query is renamed', () => {
+    // should not use from()
     expect(`
+      ##! -m4warnings
       source: querySrc is from(
-        table('malloytest.flights')->{
+        _db_.table('malloytest.flights')->{
           group_by: origin
           nest: nested is { group_by: destination }
         }
       )
 
-    source: refineQuerySrc is querySrc {
+    source: refineQuerySrc is querySrc extend {
       join_one: rejoin is querySrc on 7=8
-      query: broken is {
+      view: broken is {
         group_by: rejoin.nested.destination
       }
     }
@@ -193,7 +195,7 @@ describe('error handling', () => {
   });
 
   test('bad sql in sql block', () => {
-    const badSelect = model`sql: someName is { select: """)""" }`;
+    const badSelect = model`source: someName is _db_.sql(")")`;
     const badTrans = badSelect.translator;
     expect(badSelect).toParse();
     const needSchema = badTrans.translate();
@@ -202,12 +204,12 @@ describe('error handling', () => {
       badTrans.update({
         errors: {
           compileSQL: {
-            [needSchema.compileSQL.name]: 'ZZZZ',
+            [needSchema.compileSQL.name]: 'Nobody ZZZZ',
           },
         },
       });
     }
-    expect(badTrans).translationToFailWith('Invalid SQL, ZZZZ');
+    expect(badTrans).translationToFailWith('Invalid SQL, Nobody ZZZZ');
   });
 });
 
@@ -219,8 +221,7 @@ describe('translate imports', () => {
     expect(resp1.final).toBeUndefined();
     m.update({
       urls: {
-        'internal://test/langtests/myfile.malloy':
-          'query: ab -> { project: * }',
+        'internal://test/langtests/myfile.malloy': 'query: ab -> { select: * }',
       },
     });
     const resp2 = m.translate();
@@ -245,8 +246,8 @@ describe('translation need error locations', () => {
 
   test('sql struct error location', () => {
     const source = markSource`
-      sql: bad_sql is {select: ${'"""BAD_SQL"""'}}
-      query: from_sql(bad_sql) -> { project: * }
+      source: bad_sql is _db_.sql(${'"""BAD_SQL"""'})
+      run: bad_sql -> { select: * }
     `;
     const m = new TestTranslator(source.code);
     expect(m).toParse();
@@ -262,7 +263,7 @@ describe('translation need error locations', () => {
 
   test('table struct error location', () => {
     const source = model`
-      source: bad_explore is ${"table('malloy-data.bad.table')"}
+      source: bad_explore is ${"_db_.table('malloy-data.bad.table')"}
     `;
     const m = source.translator;
     const result = m.translate();
@@ -279,8 +280,8 @@ describe('error cascading', () => {
   test('errors can appear in multiple top level objects', () => {
     expect(
       markSource`
-        source: a1 is a { dimension: ${'x is count()'} }
-        source: a2 is a { dimension: ${'x is count()'} }
+        source: a1 is a extend { dimension: ${'x is count()'} }
+        source: a2 is a extend { dimension: ${'x is count()'} }
       `
     ).translationToFailWith(
       'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?',
@@ -353,13 +354,13 @@ describe('error cascading', () => {
   test('dependent errors do not cascade', () => {
     expect(
       `
-        source: a1 is a {
+        source: a1 is a extend {
           join_one: b with astr
           dimension:
             ${'err is null'}
             ${scalars.map((d, i) => `e${i} is ${d}`).join('\n            ')}
           measure:
-            measure_err is count(distinct foo),
+            measure_err is count(foo),
             ${[...aggregates, ...ungroupedAggregates]
               .map((m, i) => `e${i + scalars.length} is ${m}`)
               .join('\n            ')}
@@ -374,7 +375,7 @@ describe('error cascading', () => {
   test('error type inference is good', () => {
     for (const scalar of scalars) {
       const source = `
-          source: a1 is a {
+          source: a1 is a extend {
             dimension:
               ${'err is null'}
               dim is length(${scalar}, 1)
@@ -390,14 +391,14 @@ describe('error cascading', () => {
   test('eval space of errors is preserved', () => {
     expect(
       `
-        source: a1 is a {
+        source: a1 is a extend {
           join_one: b with astr
         }
-        query: a1 -> {
+        run: a1 -> {
           group_by:
             ${'err is null'}
           aggregate:
-            measure_err is count(distinct foo)
+            measure_err is count(foo)
           calculate:
             ${scalars
               .map((d, i) => `e${i} is lag(${d})`)
@@ -417,11 +418,11 @@ describe('error cascading', () => {
 describe('pipeline comprehension', () => {
   test('second query gets namespace from first', () => {
     expect(`
-      source: aq is a {
-        query: t1 is {
+      source: aq is a extend {
+        view: t1 is {
           group_by: t1int is ai, t1str is astr
         } -> {
-          project: t1str, t1int
+          select: t1str, t1int
         }
       }
     `).toTranslate();
@@ -429,11 +430,11 @@ describe('pipeline comprehension', () => {
   test("second query doesn't have access to original fields", () => {
     expect(
       model`
-        source: aq is a {
-          query: t1 is {
+        source: aq is a extend {
+          view: t1 is {
             group_by: t1int is ai, t1str is astr
           } -> {
-            project: ${'ai'}
+            select: ${'ai'}
           }
         }
       `
@@ -441,52 +442,52 @@ describe('pipeline comprehension', () => {
   });
   test('new query can append ops to existing query', () => {
     expect(`
-      source: aq is a {
-        query: t0 is {
+      source: aq is a extend {
+        view: t0 is {
           group_by: t1int is ai, t1str is astr
         }
-        query: t1 is t0 -> {
-          project: t1str, t1int
+        view: t1 is t0 -> {
+          select: t1str, t1int
         }
       }
     `).toTranslate();
   });
   test('new query can refine and append to exisiting query', () => {
     expect(`
-      source: aq is table('aTable') {
-        query: by_region is { group_by: astr }
-        query: by_region2 is by_region {
+      source: aq is _db_.table('aTable') extend {
+        view: by_region is { group_by: astr }
+        view: by_region2 is by_region + {
           nest: dateNest is { group_by: ad }
         } -> {
-          project: astr, dateNest.ad
+          select: astr, dateNest.ad
         }
       }
     `).toTranslate();
   });
   test('reference to a query can include a refinement', () => {
     expect(`
-      query: ab -> {
+      run: ab -> {
         group_by: ai
-        nest: aturtle { limit: 1 }
+        nest: aturtle + { limit: 1 }
       }
     `).toTranslate();
   });
   test('Querying an sourcebased on a query', () => {
     expect(`
       query: q is a -> { group_by: astr; aggregate: strsum is ai.sum() }
-      source: aq is a {
-        join_one: aq is from(->q) on astr = aq.astr
+      source: aq is a extend {
+        join_one: aq is q on astr = aq.astr
       }
-      query: aqf is aq -> { project: * }
+      run: aq -> { select: * }
     `).toTranslate();
   });
   test('new query appends to existing query', () => {
     const src = `
-      query: s1 is table('malloytest.flights') -> {
+      query: s1 is _db_.table('malloytest.flights') -> {
         group_by: origin, destination
       }
-      query: s2 is ->s1 ->{
-        group_by: destination
+      query: s2 is s1 -> {
+        select: *, extra is 'extra'
       }
     `;
     const m = new TestTranslator(src);
@@ -550,7 +551,7 @@ describe('sql expressions', () => {
 
   test('reference to sql expression in extended source', () => {
     const m = model`
-      source: na is bigquery.sql("""SELECT 1 as one""") {
+      source: na is bigquery.sql("""SELECT 1 as one""") extend {
         dimension: two is one + one
       }
     `;
@@ -566,7 +567,7 @@ describe('sql expressions', () => {
 
   test('reference to sql expression in named query', () => {
     const m = new TestTranslator(`
-      query: nq is bigquery.sql("""SELECT 1 as one""") -> { project: * }
+      query: nq is bigquery.sql("""SELECT 1 as one""") -> { select: * }
     `);
     expect(m).toParse();
     const compileSql = m.translate().compileSQL;
@@ -581,7 +582,7 @@ describe('sql expressions', () => {
 
   test('reference to sql expression in unnamed query', () => {
     const m = new TestTranslator(`
-      query: bigquery.sql("""SELECT 1 as one""") -> { project: * }
+      run: bigquery.sql("""SELECT 1 as one""") -> { select: * }
     `);
     expect(m).toParse();
     const compileSql = m.translate().compileSQL;
@@ -596,7 +597,7 @@ describe('sql expressions', () => {
 
   test('reference to sql expression in join', () => {
     const m = model`
-      source: quux is a {
+      source: quux is a extend {
         join_one: xyzzy is
           duckdb.sql("""SELECT 1 as one""")
           on ai = xyzzy.one
@@ -678,7 +679,7 @@ describe('sql expressions', () => {
 
   test('reference to sql expression in anonymous query', () => {
     const m = new TestTranslator(`
-      query: bigquery.sql("""select 1 as one""")
+      run: bigquery.sql("""select 1 as one""")
     `);
     expect(m).toParse();
     const compileSql = m.translate().compileSQL;
@@ -693,11 +694,11 @@ describe('sql expressions', () => {
 
   // TODO this is not possible to implement yet unless we
   // can distinguish between the generated IR of `conn.sql(...)`
-  // and `conn.sql(...) -> { project: * }`.
+  // and `conn.sql(...) -> { select: * }`.
   test.skip('cannot refine a SQL query', () => {
     const m = new TestTranslator(`
       query: q1 is bigquery.sql("""select 1 as one""")
-      run: q1 refine { where: 1 = 1 }
+      run: q1 + { where: 1 = 1 }
     `);
     expect(m).toParse();
     const compileSql = m.translate().compileSQL;
@@ -712,11 +713,12 @@ describe('sql expressions', () => {
 });
 
 describe('turtle with leading arrow', () => {
-  test('optional leading arrow for defining a turtle', () => {
+  test('pre m4 optional leading arrow for defining a turtle', () => {
     expect(`
+      ##! -m4warnings
       source: c is a extend {
-        query: x is -> { project: * }
-        query: y is { project: * }
+        query: x is -> { select: * }
+        query: y is { select: * }
       }
     `).toTranslate();
   });
@@ -728,7 +730,7 @@ describe('extend and refine', () => {
       expect(
         `
         query: q is a -> { group_by: ai }
-        run: q refine { group_by: ai2 is ai }
+        run: q + { group_by: ai2 is ai }
         `
       ).toTranslate();
     });
@@ -743,8 +745,8 @@ describe('extend and refine', () => {
     });
 
     test('source name with query refinements', () => {
-      expect('run: a refine { group_by: ai }').translationToFailWith(
-        "Illegal reference to 'a', query expected"
+      expect('run: a + { group_by: ai }').translationToFailWith(
+        "Cannot add view refinements to 'a' because it is a source"
       );
     });
 
@@ -761,7 +763,9 @@ describe('extend and refine', () => {
     });
 
     test('query with extension then new stage', () => {
-      expect('run: a { dimension: x is 1 } -> { group_by: x }').toTranslate();
+      expect(
+        'run: a extend { dimension: x is 1 } -> { group_by: x }'
+      ).toTranslate();
     });
   });
 
@@ -770,7 +774,7 @@ describe('extend and refine', () => {
       expect(
         `
         query: q is a -> { group_by: ai }
-        run: q { group_by: ai2 is ai }
+        run: q + { group_by: ai2 is ai }
         `
       ).toTranslate();
     });
@@ -779,92 +783,119 @@ describe('extend and refine', () => {
       expect(
         `
         query: q is a -> { group_by: ai }
-        source: s is q { dimension: ai_2 is ai + ai }
+        source: s is q extend { dimension: ai_2 is ai + ai }
         `
       ).toTranslate();
     });
 
     test('source name with query refinements', () => {
-      expect('run: a { group_by: one }').translationToFailWith(
-        "Illegal reference to 'a', query expected"
+      expect('run: a + { group_by: one }').translationToFailWith(
+        "Cannot add view refinements to 'a' because it is a source"
       );
     });
 
     test('source name with source refinements', () => {
-      expect('source: s is a { dimension: ai_2 is ai + ai }').toTranslate();
+      expect(
+        'source: s is a extend { dimension: ai_2 is ai + ai }'
+      ).toTranslate();
     });
 
     test('source name with ambiguous refinements', () => {
-      // Ambiguous refinements are assumed to be source extensions
       expect(
-        'run: a { join_one: b on b.ai = ai } -> { project: b.* }'
+        `##! -m4warnings
+         run: a + { join_one: b on b.ai = ai } -> { select: b.* }`
       ).toTranslate();
-      expect('run: a { where: 1 = 1 } -> { project: * }').toTranslate();
-      expect('run: a { declare: three is 3 } -> { project: * }').toTranslate();
-      expect('source: s is a { join_one: b on b.ai = ai }').toTranslate();
-      expect('source: s is a { where: 1 = 1 }').toTranslate();
-      expect('source: s is a { declare: three is 3 }').toTranslate();
+      expect(
+        `##! -m4warnings
+        run: a + { where: 1 = 1 } -> { select: * }`
+      ).toTranslate();
+      expect(
+        `##! -m4warnings
+        run: a + { dimension: three is 3 } -> { select: * }`
+      ).toTranslate();
+      expect(
+        `##! -m4warnings
+        source: s is a { join_one: b on b.ai = ai }`
+      ).toTranslate();
+      expect(
+        `##! -m4warnings
+        source: s is a { where: 1 = 1 }`
+      ).toTranslate();
+      expect(
+        `##! -m4warnings
+        source: s is a { dimension: three is 3 }`
+      ).toTranslate();
     });
 
     describe('query name with ambiguous refinements', () => {
-      test('implicitly convert the query into a source', () => {
+      test('adding segment to ambuguously refined query', () => {
         expect(`
+          ##! -m4warnings
           query: q is a -> { group_by: ai }
-          run: q { join_one: b on 1 = 1 } -> { project: b.* }
+          run: q + { join_one: b on 1 = 1 } -> { select: b.* }
+        `).translationToFailWith("No such field as 'b'");
+        expect(`
+          ##! -m4warnings
+          query: q is a -> { group_by: ai }
+          run: q + { where: 1 = 1 } -> { select: * }
         `).toTranslate();
         expect(`
+          ##! -m4warnings
           query: q is a -> { group_by: ai }
-          run: q { where: 1 = 1 } -> { project: * }
-        `).toTranslate();
-        expect(`
-          query: q is a -> { group_by: ai }
-          run: q { declare: three is 3 } -> { project: * }
+          run: q + { declare: three is 3 } -> { select: * }
         `).toTranslate();
       });
       test('automatically recognize this as a query refinement without new stage', () => {
         expect(`
+          ##! -m4warnings
           query: q is a -> { group_by: ai }
-          run: q { join_one: b on 1 = 1 }
+          run: q + { join_one: b on 1 = 1 }
         `).toTranslate();
         expect(`
+          ##! -m4warnings
           query: q is a -> { group_by: ai }
-          run: q { where: 1 = 1 }
+          run: q + { where: 1 = 1 }
         `).toTranslate();
         expect(`
+          ##! -m4warnings
           query: q is a -> { group_by: ai }
-          run: q { declare: three is 3 }
+          run: q + { declare: three is 3 }
         `).toTranslate();
       });
-      test('can also just add from() to use as a source', () => {
-        // TODO add a warning when you use from() -- "`from()` is deprecated; to apply source extensions to a query, use `extend`"
+      test('can extend a query into a source', () => {
         expect(`
           query: q is a -> { group_by: ai }
-          source: s is from(q) { join_one: b on b.ai = ai }
+          source: s is q extend { join_one: b on b.ai = ai }
         `).toTranslate();
       });
       test('can also add an arrow to clarify that it is a query', () => {
         // Of course, number 1 and 3 are actually useless because you're defining
         // something and then not using it...
         expect(`
+          ##! -m4warnings
           query: q is a -> { group_by: ai }
-          run: -> q { join_one: b on b.ai = ai } -> { project: * }
+          run: q + { join_one: b on b.ai = ai } -> { select: * }
         `).toTranslate();
         expect(`
+          ##! -m4warnings
           query: q is a -> { group_by: ai }
-          run: -> q { where: 1 = 1 } -> { project: * }
+          run: q + { where: 1 = 1 } -> { select: * }
         `).toTranslate();
         expect(`
+          ##! -m4warnings
           query: q is a -> { group_by: ai }
-          run: -> q { declare: three is 3 } -> { project: * }
+          run: q + { declare: three is 3 } -> { select: * }
         `).toTranslate();
         // Alternatively, fix 1 and 3 by actually using the declared thing
         expect(`
+          ##! -m4warnings
           query: q is a -> { group_by: ai }
-          run: q { join_one: b on b.ai = ai; group_by: ai2 is b.ai }
+          run: q + { join_one: b on b.ai = ai; group_by: ai2 is b.ai }
         `).toTranslate();
         expect(`
+          ##! -m4warnings
           query: q is a -> { group_by: ai }
-          run: q { declare: three is 3; group_by: three }
+          run: q + { extend: {dimension: three is 3} group_by: three }
         `).toTranslate();
       });
     });
@@ -878,11 +909,8 @@ describe('extend and refine', () => {
     });
 
     test('syntactically valid to refine a source, but illegal', () => {
-      expect('run: a { group_by: ai } ').translationToFailWith(
-        "Illegal reference to 'a', query expected"
-      );
-      expect('run: a refine { group_by: ai } ').translationToFailWith(
-        "Illegal reference to 'a', query expected"
+      expect('run: a + { group_by: ai } ').translationToFailWith(
+        "Cannot add view refinements to 'a' because it is a source"
       );
     });
   });
@@ -890,15 +918,15 @@ describe('extend and refine', () => {
   describe('turtles', () => {
     test('explicit refine in turtle works', () => {
       expect(`source: c is a extend {
-        query: x is { project: * }
-        query: y is x refine { limit: 1 }
+        view: x is { select: * }
+        view: y is x + { limit: 1 }
       }`).toTranslate();
     });
 
     test('implicit refine in turtle works', () => {
       expect(`source: c is a extend {
-        query: x is { project: * }
-        query: y is x { limit: 1 }
+        view: x is { select: * }
+        view: y is x + { limit: 1 }
       }`).toTranslate();
     });
   });
@@ -906,21 +934,21 @@ describe('extend and refine', () => {
   describe('nests', () => {
     test('explicit refine in nest', () => {
       expect(`source: c is a extend {
-        query: x is { project: * }
+        view: x is { select: * }
       }
 
       run: c -> {
-        nest: x refine { limit: 1 }
+        nest: x + { limit: 1 }
       }`).toTranslate();
     });
 
-    test('implicit refine in nest', () => {
+    test('refine in nest', () => {
       expect(`source: c is a extend {
-        query: x is { project: * }
+        view: x is { select: * }
       }
 
       run: c -> {
-        nest: x { limit: 1 }
+        nest: x + { limit: 1 }
       }`).toTranslate();
     });
   });
@@ -935,7 +963,7 @@ describe('extend and refine', () => {
       run: c -> {
         nest: x { limit: 1 }
       }`).toTranslateWithWarnings(
-        'Implicit query refinement is deprecated, use the `refine` operator.'
+        'Implicit query refinement is deprecated, use the `+` operator'
       );
     });
 
@@ -945,7 +973,7 @@ describe('extend and refine', () => {
         view: x is { select: * }
         view: y is x { limit: 1 }
       }`).toTranslateWithWarnings(
-        'Implicit query refinement is deprecated, use the `refine` operator.'
+        'Implicit query refinement is deprecated, use the `+` operator'
       );
     });
 
@@ -954,7 +982,7 @@ describe('extend and refine', () => {
         query: q is a -> { group_by: ai }
         run: q { group_by: three is 3 }
       `).toTranslateWithWarnings(
-        'Implicit query refinement is deprecated, use the `refine` operator.'
+        'Implicit query refinement is deprecated, use the `+` operator'
       );
     });
 
@@ -1017,5 +1045,49 @@ describe('miscellaneous m4 warnings', () => {
     `).toTranslateWithWarnings(
       'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow'
     );
+  });
+});
+
+describe('m3/m4 source query sentences', () => {
+  const srcExtend = '{accept:ai}';
+  const qryRefine = '{limit:1}';
+  const query = '{select:*}';
+  // todo MTOY write test to make sure arrow has correct precedence vs +
+  // also maybe arrow vs extend
+  test('M4 should error on these sq expressions', () => {
+    expect(`source: s is a + ${qryRefine}`).translationToFailWith(
+      "Cannot add view refinements to 'a' because it is a source"
+    );
+    expect(`query: q_m4_err is a + ${qryRefine}`).translationToFailWith(
+      "Cannot add view refinements to 'a' because it is a source"
+    );
+  });
+  test('legal sqexpressions', () => {
+    // some things that are m4 warnings are commented out
+    expect(`
+      source: s is a
+      query: q is s -> ${query}
+
+      source: s0 is a;
+      // source: s0_extbare is s ${srcExtend};
+      // source: s0_extplus is s + ${srcExtend};
+      source: s0_ext is s extend ${srcExtend};
+      source: qs is q;
+      source: qs0 is q extend ${srcExtend};
+      source: qs1 is q + ${qryRefine};
+      source: s1_m4 is q + ${qryRefine};
+      source: s2_m4 is q + ${qryRefine} -> ${query} extend ${srcExtend};
+      source: s3 is s extend ${srcExtend};
+      source: s4 is q extend ${srcExtend};
+      // source: s5 is from(s -> ${query})
+
+      query: q0 is q;
+      // query: q0_refbare is q ${qryRefine};
+      query: q0_refplus is q + ${qryRefine};
+      // query: q1_bare is ab -> aturtle ${qryRefine};
+      query: q1_plus is ab -> aturtle + ${qryRefine};
+      query: q2 is s -> ${query} extend ${srcExtend} -> ${query};
+
+    `).toTranslate();
   });
 });

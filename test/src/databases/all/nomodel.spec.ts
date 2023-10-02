@@ -111,7 +111,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           {
             dimension: lower_state is lower(state)
           }
-          -> {project: lower_state}
+          -> {select: lower_state}
         `
       )
       .run();
@@ -250,7 +250,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
       query: f->{
         aggregate:
-          row_count is count(distinct concat(state,a.state))
+          row_count is count(concat(state,a.state))
           left_count is count()
           right_count is a.count()
           left_sum is airport_count.sum()
@@ -279,7 +279,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
       query: f->{
         aggregate:
-          row_count is count(distinct concat(state,a.r))
+          row_count is count(concat(state,a.r))
           left_sum is airport_count.sum()
           right_sum is a.r.sum()
           sum_sum is sum(airport_count + a.r)
@@ -306,7 +306,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
       query: f->{
         aggregate:
-          row_count is count(distinct concat(state,a.state))
+          row_count is count(concat(state,a.state))
           left_sum is airport_count.sum()
           right_sum is a.airport_count.sum()
       }
@@ -409,11 +409,11 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .loadQuery(
         `
       query: table('malloytest.state_facts') -> {
-        project: state
+        select: state
         limit: 10
       }
       -> {
-        project: state
+        select: state
         limit: 3
       }
       `
@@ -762,7 +762,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           aggregate: t is count()
         }
         -> {
-          project: t1 is t+1
+          select: t1 is t+1
         }
       }
       query: f-> {
@@ -788,7 +788,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           aggregate: t is count()
         }
         -> {
-          project: t1 is t+1
+          select: t1 is t+1
         }
       }
       query: f-> {
@@ -843,7 +843,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       ${sql1234}
       source: eone is  from_sql(one) {}
 
-      query: eone -> { project: a }
+      query: eone -> { select: a }
       `
       )
       .run();
@@ -855,7 +855,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       .loadQuery(
         `
           ${sql1234}
-          query: from_sql(one) -> { project: a }
+          query: from_sql(one) -> { select: a }
       `
       )
       .run();
@@ -880,7 +880,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           """
         }
         query: from_sql(state_as_sql) -> {
-          project: *; where: popular_name = 'Emma'
+          select: *; where: popular_name = 'Emma'
         }`;
       const result = await runtime.loadQuery(turduckenQuery).run();
       expect(result.data.value[0]['state_count']).toBe(6);
@@ -895,7 +895,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   //       select version() as version
   //     ;;
 
-  //     query: from_sql(one) -> { project: version }
+  //     query: from_sql(one) -> { select: version }
   //     `
   //     )
   //     .run();
@@ -910,7 +910,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       ${sql1234}
       query: from_sql(one) -> {
         declare: c is a + 1
-        project: c
+        select: c
       }
       `
       )
@@ -926,7 +926,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       source: foo is from_sql(one) + {
         query: bar is {
           declare: c is a + 1
-          project: c
+          select: c
         }
       }
 
@@ -945,12 +945,12 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       source: foo is from_sql(one) + {
         query: bar is {
           declare: c is a + 1
-          project: c
+          select: c
         }
 
         query: baz is bar + {
           declare: d is c + 1
-          project: d
+          select: d
         }
       }
 
@@ -992,7 +992,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
       query: from_sql(one) -> {
         declare: c is b + 4
-        project: x is a * c
+        select: x is a * c
       }
       `
       )
@@ -1114,7 +1114,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         .loadQuery(
           `
             query: table('malloytest.state_facts') -> {
-              project: tick is '${back}${tick}'
+              select: tick is '${back}${tick}'
             }
         `
         )
@@ -1126,7 +1126,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         .loadQuery(
           `
             query: table('malloytest.state_facts') -> {
-              project: back is '${back}${back}'
+              select: back is '${back}${back}'
             }
         `
         )

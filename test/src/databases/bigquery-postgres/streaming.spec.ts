@@ -58,7 +58,7 @@ describe('Streaming tests', () => {
     it(`basic stream test  - ${databaseName}`, async () => {
       const stream = runtime
         .loadModel("source: airports is table('malloytest.airports') {}")
-        .loadQuery('query: airports -> { project: code }')
+        .loadQuery('query: airports -> { select: code }')
         .runStream({rowLimit: 10});
       const rows: DataRecord[] = [];
       for await (const row of stream) {
@@ -71,7 +71,7 @@ describe('Streaming tests', () => {
     it(`stream to JSON - ${databaseName}`, async () => {
       const stream = runtime
         .loadModel("source: airports is table('malloytest.airports') {}")
-        .loadQuery('query: airports -> { project: code }')
+        .loadQuery('query: airports -> { select: code }')
         .runStream({rowLimit: 1});
       const accummulator = new StringAccumulator();
       const jsonWriter = new JSONWriter(accummulator);
@@ -89,7 +89,7 @@ describe('Streaming tests', () => {
     it(`stream to CSV - ${databaseName}`, async () => {
       const stream = runtime
         .loadModel("source: airports is table('malloytest.airports') {}")
-        .loadQuery('query: airports -> { project: code }')
+        .loadQuery('query: airports -> { select: code }')
         .runStream({rowLimit: 1});
       const accummulator = new StringAccumulator();
       const csvWriter = new CSVWriter(accummulator);

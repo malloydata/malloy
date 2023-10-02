@@ -82,7 +82,7 @@ describe('JSON tests', () => {
             ${modelString}
 
             query: s-> {
-              project: j, r
+              select: j, r
               order_by: 2 desc
             }
               `

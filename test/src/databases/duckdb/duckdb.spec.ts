@@ -84,7 +84,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
       .loadQuery(
         `
           query: table('duckdb:test/data/duckdb/test.json') -> {
-            project: *
+            select: *
           }
         `
       )
@@ -118,7 +118,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
           SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
         """}
       query: from_sql(timeData) -> {
-        project: mex_220 is t_tstz::timestamp
+        select: mex_220 is t_tstz::timestamp
       }`,
         {mex_220: zone_2020.toJSDate()}
       );
