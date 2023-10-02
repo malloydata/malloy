@@ -25,21 +25,22 @@
     "npm": ">=8"
   },
   "scripts": {
-    "clean": "npm run -ws clean",
     "build": "npm run -ws build",
-    "watch": "tsc --watch",
-    "lint-build": "npm run build -w packages/malloy -w packages/malloy-lint",
+    "build-duckdb-db": "ts-node scripts/build_duckdb_test_database",
+    "clean": "npm run -ws clean",
+    "check-node-version": "./test/bin/assert_node_version.sh",
     "lint": "npm run lint-build && gts lint",
+    "lint-build": "npm run build -w packages/malloy -w packages/malloy-lint",
     "lint-fix": "npm run lint-build && gts fix",
+    "malloyc": "ts-node scripts/malloy-to-json",
     "test": "jest --runInBand",
     "test-bigquery": "MALLOY_DATABASE=bigquery jest --runInBand",
-    "test-postgres": "MALLOY_DATABASE=postgres jest --runInBand",
-    "test-duckdb": "MALLOY_DATABASE=duckdb jest --runInBand",
-    "test-silent": "JEST_SILENT_REPORTER_SHOW_PATHS=true jest --runInBand --reporters jest-silent-reporter",
     "test-deps": "npm run build && npx jest -t dependencies",
+    "test-duckdb": "MALLOY_DATABASE=duckdb jest --runInBand",
+    "test-postgres": "MALLOY_DATABASE=postgres jest --runInBand",
+    "test-silent": "JEST_SILENT_REPORTER_SHOW_PATHS=true jest --runInBand --reporters jest-silent-reporter",
     "third-party-licenses": "ts-node scripts/third_party_licenses",
-    "malloyc": "ts-node scripts/malloy-to-json",
-    "build-duckdb-db": "ts-node scripts/build_duckdb_test_database"
+    "watch": "tsc --watch"
   },
   "devDependencies": {
     "@jest/globals": "^26.6.2",
