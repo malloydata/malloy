@@ -263,7 +263,7 @@ describe('source locations', () => {
 
   test('undefined query location', () => {
     expect(model`run: ${'xyz'}`).translationToFailWith(
-      "Reference to undefined query 'xyz'"
+      "Reference to undefined object 'xyz'"
     );
   });
   test('undefined field reference', () => {

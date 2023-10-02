@@ -313,7 +313,7 @@ export class ModelEntryReference extends MalloyElement {
   }
 
   getNamed(): NamedModelObject | undefined {
-    return this.modelEntry(this.name)?.entry;
+    return this.modelEntry(this)?.entry;
   }
 }
 

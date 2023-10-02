@@ -1773,8 +1773,13 @@ export class MalloyToAST
     const viewParts: ast.ArrowViewComponent[] = [];
     const headCx = pcx.leadSeg();
     const headId = getOptionalId(headCx);
-    if (headId) {
-      viewParts.push(new ast.ViewFieldReference([new ast.FieldName(headId)]));
+    const headIdCx = headCx.id();
+    if (headIdCx && headId) {
+      viewParts.push(
+        new ast.ViewFieldReference([
+          this.astAt(new ast.FieldName(headId), headIdCx),
+        ])
+      );
       const andRefined = headCx.queryRefinement();
       if (andRefined) {
         viewParts.push(this.getQueryRefinements(andRefined));
