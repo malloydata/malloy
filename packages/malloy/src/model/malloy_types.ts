@@ -974,6 +974,7 @@ export interface FunctionOverloadDef {
   returnType: TypeDesc;
   needsWindowOrderBy?: boolean;
   between?: {preceding: number | string; following: number | string};
+  isSymmetric?: boolean;
   params: FunctionParameterDef[];
   dialect: {
     [dialect: string]: Expr;
