@@ -114,7 +114,7 @@ describe('join expression tests', () => {
             aggregate: num_models is count()
           }) with manufacturer
       } -> {
-        project:
+        select:
           manufacturer
           am_facts.num_models
         order_by: 2 desc
@@ -137,7 +137,7 @@ describe('join expression tests', () => {
             aggregate: num_models is count()
           }
       -> {
-        project:
+        select:
           m
           num_models
         order_by: 2 desc
@@ -166,7 +166,7 @@ describe('join expression tests', () => {
             ) with m
           }
           -> {
-            project:
+            select:
               m
               num_models
               seats.total_seats
@@ -190,7 +190,7 @@ describe('join expression tests', () => {
           with manufacturer
       }
       query: foo-> {
-        project:
+        select:
           manufacturer,
           num_models,
           seats.total_seats
@@ -210,7 +210,7 @@ describe('join expression tests', () => {
         .loadQuery(
           `
       query: funnel->{
-        project:
+        select:
          manufacturer
           num_models
           seats.total_seats
@@ -235,7 +235,7 @@ describe('join expression tests', () => {
       }->{
         aggregate: f_sum is f.sum()
       }->{
-        project: f_sum2 is f_sum+1
+        select: f_sum2 is f_sum+1
       }
     `
         )

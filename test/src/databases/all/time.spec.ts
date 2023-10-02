@@ -502,7 +502,7 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
           dimension: default_time is @2021-02-24 03:05:06
           query: la_query is {
             timezone: 'America/Los_Angeles'
-            project: la_time is @2021-02-24 03:05:06
+            select: la_time is @2021-02-24 03:05:06
           }
         }
 
@@ -533,7 +533,7 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
         source: timezone is from_sql(timeData) + {
           dimension: default_time is @2021-02-24 03:05:06
           query: undef_query is {
-            project: undef_time is @2021-02-24 03:05:06
+            select: undef_time is @2021-02-24 03:05:06
           }
         }
 
@@ -560,11 +560,11 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
           dimension: ny_time is @2021-02-24 03:05:06
           query: la_query is {
             timezone: 'America/Los_Angeles'
-            project: la_time is @2021-02-24 03:05:06
+            select: la_time is @2021-02-24 03:05:06
           }
           query: mex_query is {
             timezone: 'America/Mexico_City'
-            project: mex_time is @2021-02-24 03:05:06
+            select: mex_time is @2021-02-24 03:05:06
           }
         }
 
@@ -681,7 +681,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
       query: from_sql(tzTest) -> {
         timezone: '${zone}'
         declare: utc_midnight is @2020-02-20 00:00:00[UTC]
-        project:
+        select:
           mex_midnight is hour(utc_midnight)
           mex_day is day(utc_midnight)
       }`,
@@ -698,7 +698,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
       query: from_sql(tzTest) -> {
         timezone: '${zone}'
         declare: utc_midnight is @2020-02-20 00:00:00[UTC]
-        project:
+        select:
           mex_day is utc_midnight.day
       }`,
       {mex_day: mex_19.toJSDate()}
@@ -713,7 +713,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
       query: from_sql(tzTest) -> {
         timezone: '${zone}'
         declare: utc_midnight is @2020-02-20 00:00:00[UTC]
-        project: mex_day is day(utc_midnight::date)
+        select: mex_day is day(utc_midnight::date)
       }`,
       {mex_day: 19}
     );
@@ -726,7 +726,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
       """ }
       query: from_sql(tzTest) -> {
         timezone: '${zone}'
-        project: mex_ts is mex_20::timestamp
+        select: mex_ts is mex_20::timestamp
       }`,
       {mex_ts: zone_2020.toJSDate()}
     );
@@ -739,7 +739,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
             SELECT DATETIME '2020-02-20 00:00:00' as t_datetime
             """}
           query: from_sql(timeData) -> {
-            project: mex_220 is t_datetime::timestamp
+            select: mex_220 is t_datetime::timestamp
           }`,
         {mex_220: utc_2020.toJSDate()}
       );
@@ -749,7 +749,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
               SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
             """}
           query: from_sql(timeData) -> {
-            project: mex_220 is t_tstz::timestamp
+            select: mex_220 is t_tstz::timestamp
           }`,
         {mex_220: zone_2020.toJSDate()}
       );

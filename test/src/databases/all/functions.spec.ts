@@ -998,7 +998,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works with default value - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts -> { project: *; limit: 10 } -> {
+          `query: state_facts -> { select: *; limit: 10 } -> {
           group_by: state
           calculate: next_state is lead(state, 1, 'NONE')
         }`
@@ -1057,7 +1057,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       const result = await expressionModel
         .loadQuery(
           `
-          query: state_facts -> { project: *; limit: 3 } -> {
+          query: state_facts -> { select: *; limit: 3 } -> {
             group_by: state, births
             order_by: births desc
             calculate: rolling_avg is avg_moving(births, 0, 2)
@@ -1081,7 +1081,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       const result = await expressionModel
         .loadQuery(
           `
-          query: state_facts -> { project: *; limit: 5 } -> {
+          query: state_facts -> { select: *; limit: 5 } -> {
             group_by: state, births
             order_by: births asc
             calculate: min_c is min_cumulative(births)

@@ -120,7 +120,7 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
           query: basicTypes
           -> {
             declare: ${varName} is ${expr}
-            project: calc is pick ${whenPick} else ${elsePick}
+            select: calc is pick ${whenPick} else ${elsePick}
           }`;
     } else if (typeof result === 'number') {
       query = `${sourceDef}
@@ -128,7 +128,7 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
           -> {
             declare: expect is ${result}
             declare: got is ${expr}
-            project: calc is
+            select: calc is
               pick '=' when expect = got
               else concat('sqlEq failed', CHR(10), '    Expected: ${qExpr} == ${result}', CHR(10), '    Received: ', got::string)
           }`;
@@ -139,10 +139,10 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
       query = `${sourceDef}
           query: basicTypes
           -> {
-            project: expect is ${qResult}
-            project: got is ${expr}
+            select: expect is ${qResult}
+            select: got is ${expr}
           } -> {
-            project: calc is
+            select: calc is
               pick '=' when expect = got
               else concat('sqlEq failed', CHR(10), '    Expected: ${sqlSafe(
                 expr
@@ -153,10 +153,10 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
       query = `${sourceDef}
           query: basicTypes
           -> {
-            project: expect is ${result}
-            project: got is ${expr}
+            select: expect is ${result}
+            select: got is ${expr}
           } -> {
-            project: calc is
+            select: calc is
               pick '=' when expect = got
               else concat('sqlEq failed', CHR(10), '    Expected: ${qExpr} == ${qResult}', CHR(10), '    Received: ', got::string)
           }`;

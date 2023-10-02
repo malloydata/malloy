@@ -162,7 +162,7 @@ describe.each(runtimes.runtimeList)(
           `
         query: ga_sessions->search_index -> {
           where: fieldName != null
-          project: *
+          select: *
           order_by: fieldName, weight desc
           limit: 10
         }
@@ -249,7 +249,7 @@ describe.each(runtimes.runtimeList)(
         source: eone is  table('malloytest.airports') {}
 
         query: eone -> {
-          project:
+          select:
             bad_date is '123':::date
             bad_number is 'abc':::number
             limit: 1

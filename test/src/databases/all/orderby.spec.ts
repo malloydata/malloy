@@ -141,7 +141,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
           aggregate: fetch is count()
         }
       } -> {
-        project:
+        select:
           withxz is lower(withx.select)
           fetch is withx.fetch
       }
@@ -161,8 +161,8 @@ expressionModels.forEach((orderByModel, databaseName) => {
           aggregate: fetch is count()
         }
       } -> {
-        project: withxis lower(withx.select)
-        project: fetch is with.fetch
+        select: withxis lower(withx.select)
+        select: fetch is with.fetch
       }
       `
       )
@@ -196,7 +196,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
 
         query: popular_names->{
           order_by: 2
-          project: manufacturer, model_count
+          select: manufacturer, model_count
         }
         `
       )
@@ -221,7 +221,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
 
         query: popular_names->{
          order_by: 2
-         project: manufacturer, model_count
+         select: manufacturer, model_count
         }
         `
       )

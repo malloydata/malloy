@@ -281,7 +281,7 @@ describe('tags in results', () => {
           sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
           # b4query
           query: # afterQuery import=$(modelDef)
-            from_sql(one) -> { project: * }`
+            from_sql(one) -> { select: * }`
     );
     const qTag = {b4query: {}, afterQuery: {}, import: {eq: 'ok'}};
     const query = await loaded.getPreparedQuery();
@@ -303,7 +303,7 @@ describe('tags in results', () => {
             # Bis
             is
             # Ais
-            from_sql(one) -> { project: * }
+            from_sql(one) -> { select: * }
           query: -> theName`
     );
     const query = await loaded.getPreparedQuery();
@@ -324,7 +324,7 @@ describe('tags in results', () => {
               # Bis
               is
               # Ais
-              { project: one }
+              { select: one }
             }
           -> in_one`
     );
@@ -340,7 +340,7 @@ describe('tags in results', () => {
           ## modelDef=ok
           sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
           query: from_sql(one) -> {
-            project:
+            select:
               # note1 import=$(modelDef)
               one
           }`
@@ -360,7 +360,7 @@ describe('tags in results', () => {
           sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
           source: malloy_one is from_sql(one) + {
             query: in_one is {
-              project: one
+              select: one
             }
             query: one_and_one is {
               group_by: one
@@ -391,13 +391,13 @@ describe('tags in results', () => {
           query: height
           # barchart
           is {
-            project: heightd is 10
+            select: heightd is 10
           }
 
           query: age
           # barchart
           is {
-            project: aged is 20
+            select: aged is 20
           }
 
         }
@@ -423,7 +423,7 @@ describe('tags in results', () => {
           ## scope=model
           sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
           query: from_sql(one) -> {
-            project:
+            select:
               # valueFrom=$(scope)
               one
           }`

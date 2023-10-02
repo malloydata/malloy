@@ -99,7 +99,7 @@ import "./airports.malloy"
 // The Equivqalent of a SELECT * in SQL.
 
 query: airports -> {
-  project: *
+  select: *
 }
 
 // --
@@ -108,7 +108,7 @@ query: airports -> {
 
 query: airports -> {
   where: faa_dist = 'NYC'
-  project: *
+  select: *
 }
 ```
 
