@@ -59,7 +59,7 @@ class IgnoredElement extends ast.MalloyElement {
   }
 }
 
-const DEFAULT_COMPILER_FLAGS = ['##! m4warnings'];
+// const DEFAULT_COMPILER_FLAGS = ['##! m4warnings'];
 
 type HasAnnotations = ParserRuleContext & {ANNOTATION: () => TerminalNode[]};
 
@@ -77,10 +77,11 @@ export class MalloyToAST
     readonly msgLog: MessageLogger
   ) {
     super();
-    for (const flag of DEFAULT_COMPILER_FLAGS) {
-      const withNewTag = Tag.fromTagline(flag, this.compilerFlags);
-      this.compilerFlags = withNewTag.tag;
-    }
+    // for (const flag of DEFAULT_COMPILER_FLAGS) {
+    //   const withNewTag = Tag.fromTagline(flag, this.compilerFlags);
+    //   this.compilerFlags = withNewTag.tag;
+    // }
+    this.compilerFlags = new Tag();
   }
 
   /**
