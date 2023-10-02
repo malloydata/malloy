@@ -373,7 +373,7 @@ describe('source references', () => {
   });
 
   test('pre m4 reference to query in from', () => {
-    const source = markSource`
+    const source = model`
       ##! -m4warnings
       query: ${'q is a -> { select: * }'}
       source: na is from(-> ${'q'})
