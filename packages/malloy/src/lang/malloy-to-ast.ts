@@ -1720,8 +1720,22 @@ export class MalloyToAST
     return new ast.ObjectAnnotation(allNotes);
   }
 
+  visitSQAmbiguous(pcx: parse.SQAmbiguousContext) {
+    const addCx = pcx.ambiguousModification();
+    const plus: ast.MalloyElement[] = [];
+    const filterCx = addCx.filterShortcut();
+    if (filterCx) {
+      plus.push(this.getFilterShortcut(filterCx));
+    }
+    for (const modifier of addCx.modEither()) {
+      plus.push(this.visit(modifier));
+    }
+    const sqExpr = this.getSqExpr(pcx.sqExpr());
+    const hasPlus = !!pcx.PLUS();
+    return this.astAt(new ast.SQLegacyModify(sqExpr, plus, hasPlus), pcx);
+  }
+
   visitSQID(pcx: parse.SQIDContext) {
-    const ref = this.getModelEntryName(pcx);
     if (this.m4WarningsEnabled() && pcx.ARROW()) {
       this.contextError(
         pcx,
@@ -1729,30 +1743,8 @@ export class MalloyToAST
         'warn'
       );
     }
-
-    // After 4.0, this should be deleted, this just picks up references with
-    // refinement/extenseiosn we can't classify because there is no sigil
-    const plus: ast.MalloyElement[] = [];
-    const addCx = pcx.ambiguousModification();
-    if (addCx) {
-      if (this.m4WarningsEnabled()) {
-        this.contextError(
-          addCx,
-          'Implicit extension/refinement is deprecated, use the `extend` or `+` operator.',
-          'warn'
-        );
-      }
-      const filterCx = addCx.filterShortcut();
-      if (filterCx) {
-        plus.push(this.getFilterShortcut(filterCx));
-      }
-      for (const modifier of addCx.modEither()) {
-        plus.push(this.visit(modifier));
-      }
-    }
-
-    const name = this.astAt(new ast.SQReference(ref, plus), pcx.id());
-    return name;
+    const ref = this.getModelEntryName(pcx);
+    return this.astAt(new ast.SQReference(ref), pcx.id());
   }
 
   protected getSqExpr(cx: parse.SqExprContext): ast.SourceQueryNode {

@@ -41,11 +41,8 @@ export class SQReference extends SourceQueryNode {
   elementType = 'sqReference';
   asSource?: Source;
 
-  constructor(
-    readonly ref: ModelEntryReference,
-    readonly plus: MalloyElement[]
-  ) {
-    super({ref, plus});
+  constructor(readonly ref: ModelEntryReference) {
+    super({ref});
   }
 
   getQuery(): QueryElement | undefined {
@@ -55,17 +52,6 @@ export class SQReference extends SourceQueryNode {
         const query = new ExistingQuery();
         query.head = this.ref.name;
         this.has({query});
-        const stmts: QueryProperty[] = [];
-        for (const stmt of this.plus) {
-          if (isQueryProperty(stmt)) {
-            stmts.push(stmt);
-          } else {
-            stmt.log('Unable to add this refinement to query');
-          }
-        }
-        if (stmts.length > 0) {
-          query.refineWith(new QOPDesc(stmts));
-        }
         return query;
       } else {
         this.sqLog(
@@ -75,6 +61,7 @@ export class SQReference extends SourceQueryNode {
     } else {
       this.sqLog(`Reference to undefined object '${this.ref.refString}'`);
     }
+    return;
   }
 
   isSource() {
@@ -102,20 +89,79 @@ export class SQReference extends SourceQueryNode {
       );
       return;
     }
+    this.has({asSource: this.asSource});
+    return this.asSource;
+  }
+}
+
+export class SQLegacyModify extends SourceQueryNode {
+  elementType = 'sqLogacyModify';
+  constructor(
+    readonly sourceQuery: SourceQueryNode,
+    readonly plus: MalloyElement[],
+    readonly hasPlus: boolean
+  ) {
+    super({sourceQuery, plus});
+  }
+
+  getQuery() {
+    const asQuery = this.sourceQuery.getQuery();
+    if (!asQuery) {
+      return;
+    }
+    if (!this.hasPlus) {
+      this.log(
+        'Implicit query refinement is deprecated, use the `+` operator',
+        'warn'
+      );
+    }
+    const stmts: QueryProperty[] = [];
+    for (const stmt of this.plus) {
+      if (isQueryProperty(stmt)) {
+        stmts.push(stmt);
+      } else {
+        // just for typing, should never happen because this is an ambiguous modification
+        stmt.log('Unable to add this refinement to query');
+      }
+    }
+    asQuery.refineWith(new QOPDesc(stmts));
+    this.has({asQuery});
+    return asQuery;
+  }
+
+  getSource() {
+    let asSource = this.sourceQuery.getSource();
+    if (!asSource) {
+      return;
+    }
+    if (this.hasPlus) {
+      this.log(
+        'Source extension with "+" is deprecated, use the "extend" operator',
+        'warn'
+      );
+    } else {
+      this.log(
+        'Implicit source extension is deprecated, use the `extend` operator.',
+        'warn'
+      );
+    }
     const stmts: SourceProperty[] = [];
     for (const stmt of this.plus) {
       if (isSourceProperty(stmt)) {
         stmts.push(stmt);
       } else {
+        // just for typing, should never happen because this is an ambiguous modification
         stmt.log('Unable to add this extension to source');
       }
     }
-    if (stmts.length > 0) {
-      const extend = new SourceDesc(stmts);
-      this.asSource = new RefinedSource(this.asSource, extend);
-    }
-    this.has({source: this.asSource});
-    return this.asSource;
+    const extend = new SourceDesc(stmts);
+    asSource = new RefinedSource(asSource, extend);
+    this.has({asSource});
+    return asSource;
+  }
+
+  isSource() {
+    return this.sourceQuery.isSource();
   }
 }
 

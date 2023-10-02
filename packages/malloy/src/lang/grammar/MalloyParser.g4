@@ -256,8 +256,9 @@ modEither
   ;
 
 sqExpr
-  : ARROW? id ambiguousModification?          # SQID
+  : ARROW? id                                 # SQID
   | sqExpr ARROW leadSeg (PLUS qSeg)*         # SQArrow
+  | sqExpr PLUS? ambiguousModification        # SQAmbiguous
   | sqExpr sourceExtension                    # SQExtendedSource
   | sqExpr queryRefinement                    # SQRefinedQuery
   | FROM? OPAREN sqExpr CPAREN                # SQFrom
