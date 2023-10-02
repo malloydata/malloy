@@ -39,7 +39,7 @@ const modelText = `
 source:ga_sessions is table('malloytest.ga_sample'){
 
   measure:
-    user_count is count(distinct fullVisitorId)
+    user_count is count(fullVisitorId)
     session_count is count()
     total_visits is totals.visits.sum()
     total_hits is totals.hits.sum()
@@ -188,7 +188,7 @@ describe.each(runtimes.runtimeList)(
           sample: ${sampleSize}
         }
         -> {
-          aggregate: field_count is count(DISTINCT fieldName)
+          aggregate: field_count is count(fieldName)
           nest: top_fields is {
             group_by: fieldName
             aggregate: row_count is count()

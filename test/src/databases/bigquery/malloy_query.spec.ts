@@ -625,7 +625,7 @@ describe('BigQuery expression tests', () => {
       faa,
       `
       query: flights->{
-        aggregate: carrier_count is count(distinct carrier)
+        aggregate: carrier_count is count(carrier)
       }
     `
     );

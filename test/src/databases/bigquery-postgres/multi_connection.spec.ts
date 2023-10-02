@@ -67,15 +67,15 @@ describe('Multi-connection', () => {
 
   const expressionModelText = `
 source: default_aircraft is table('malloytest.aircraft'){
-  measure: aircraft_count is count(DISTINCT tail_num)
+  measure: aircraft_count is count(tail_num)
 }
 
 source: bigquery_state_facts is table('malloytest.state_facts'){
-  measure: state_count is count(DISTINCT state)+2
+  measure: state_count is count(state)+2
 }
 
 source: postgres_aircraft is table('postgres:malloytest.aircraft'){
-  measure: aircraft_count is count(DISTINCT tail_num)+4
+  measure: aircraft_count is count(tail_num)+4
 }
 `;
 
@@ -130,7 +130,7 @@ source: postgres_aircraft is table('postgres:malloytest.aircraft'){
         group_by:
           version is version!()
         aggregate:
-          code_count is count(distinct code)
+          code_count is count(code)
           airport_count is count()
       }
     `
