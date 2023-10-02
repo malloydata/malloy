@@ -611,7 +611,7 @@ describe('query operation annotations', () => {
   test('nest from existing inherits annotation', () => {
     const m = new TestTranslator(`
       ${turtleDef}
-      run: na -> a extend {
+      run: na -> {
         nest: note_b is note_a
       }
     `);
