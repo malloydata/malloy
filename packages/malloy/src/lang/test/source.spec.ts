@@ -197,6 +197,14 @@ describe('source:', () => {
           'join_one: Cannot use with unless source has a primary key'
         );
       });
+      test('can join a query without a rename', () => {
+        expect(`
+          query: aq is a -> {select: *}
+          source: aqs is a extend {
+            join_one: aq on ai = aq.ai
+          }
+        `).toTranslate();
+      });
     });
     test('primary_key', () => {
       expect('source: c is a extend { primary_key: ai }').toTranslate();

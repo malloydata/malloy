@@ -59,7 +59,8 @@ export class SQReference extends SourceQueryNode {
         );
       }
     } else {
-      this.sqLog(`Reference to undefined object '${this.ref.refString}'`);
+      this.ref.log(`Reference to undefined object '${this.ref.refString}'`);
+      this.errored = true;
     }
     return;
   }
@@ -74,7 +75,8 @@ export class SQReference extends SourceQueryNode {
     }
     const entry = this.ref.getNamed();
     if (!entry) {
-      this.sqLog(`Reference to undefined object '${this.ref.refString}'`);
+      this.ref.log(`Reference to undefined object '${this.ref.refString}'`);
+      this.errored = true;
       return;
     }
     if (entry.type === 'query') {

@@ -528,10 +528,7 @@ export class MalloyToAST
       );
       return {joinFrom: joinSrc, notes};
     }
-    return {
-      joinFrom: new ast.SQSourceWrapper(new ast.NamedSource(name)),
-      notes: [],
-    };
+    return {joinFrom: new ast.SQReference(name), notes: []};
   }
 
   visitQueryJoinStatement(

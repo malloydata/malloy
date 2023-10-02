@@ -177,7 +177,7 @@ export class ExpressionJoin extends Join {
   structDef(): StructDef {
     const source = this.sourceExpr.getSource();
     if (!source) {
-      this.sourceExpr.sqLog('Cannot great a source to join from');
+      this.sourceExpr.sqLog('Cannot create a source to join from');
       return ErrorFactory.structDef;
     }
     const sourceDef = source.structDef();

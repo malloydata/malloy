@@ -143,7 +143,7 @@ describe('error handling', () => {
   test('query on source with errors', () => {
     expect(markSource`
         source: na is a extend { join_one: ${'n'} on astr }
-      `).translationToFailWith("Undefined source 'n'");
+      `).translationToFailWith("Reference to undefined object 'n'");
   });
   test('detect duplicate output field names', () => {
     expect(
