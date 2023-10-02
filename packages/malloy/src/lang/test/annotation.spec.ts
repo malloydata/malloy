@@ -167,23 +167,6 @@ describe('document annotation', () => {
       expect(note_a.annotation).matchesAnnotation(defaultTags);
     }
   });
-  test('anonymous query annotation points', () => {
-    const m = new TestTranslator(`
-      # note1
-      run:
-        # note2
-        a -> {select: *}
-    `);
-    expect(m).toTranslate();
-    const note_a = m.getQuery(0);
-    expect(note_a).toBeDefined();
-    if (note_a) {
-      expect(note_a.annotation).matchesAnnotation({
-        blockNotes: ['# note1\n'],
-        notes: ['# note2\n'],
-      });
-    }
-  });
   test('run statement annotation points', () => {
     const m = new TestTranslator(`
       # note1
@@ -236,14 +219,20 @@ describe('document annotation', () => {
     }
   });
   test('query from turtle inherits turtle annotation', () => {
-    const m = new TestTranslator(`
+    const m = model`
       ${turtleDef}
-      run: na->note_a
-    `);
+      # run_block
+      run: # run_note
+       na -> note_a
+    `;
     expect(m).toTranslate();
-    const note_a = m.getQuery(0);
+    const note_a = m.translator.getQuery(0);
     expect(note_a?.annotation).toBeDefined();
-    expect(note_a?.annotation).matchesAnnotation({inherits: defaultTags});
+    expect(note_a?.annotation).matchesAnnotation({
+      blockNotes: ['# run_block\n'],
+      notes: ['# run_note\n'],
+      inherits: {inherits: defaultTags},
+    });
   });
   test('model annotations', () => {
     const m = new TestTranslator(`
