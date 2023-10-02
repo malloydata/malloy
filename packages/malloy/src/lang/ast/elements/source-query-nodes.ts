@@ -359,6 +359,10 @@ export class SQFrom extends SourceQueryNode {
   getQuery() {
     return this.from.getQuery();
   }
+
+  isSource() {
+    return true;
+  }
 }
 
 export class SQSourceWrapper extends SourceQueryNode {
