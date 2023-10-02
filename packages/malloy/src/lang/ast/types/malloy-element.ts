@@ -28,6 +28,7 @@ import {
   DocumentReference,
   isSQLBlockStruct,
   ModelDef,
+  ModelAnnotation,
   NamedModelObject,
   Note,
   Query,
@@ -514,11 +515,18 @@ export class Document extends MalloyElement implements NameSpace {
     this.modelAnnotationTodoList.push(sd);
   }
 
+  currentModelAnnotation(): ModelAnnotation | undefined {
+    if (this.notes.length > 0) {
+      const ret = {id: '', notes: this.notes};
+      ret.id = annotationID(ret);
+      return ret;
+    }
+  }
+
   modelDef(): ModelDef {
     const def: ModelDef = {name: '', exports: [], contents: {}};
     if (this.notes.length > 0) {
-      def.annotation = {id: '', notes: this.notes};
-      def.annotation.id = annotationID(def.annotation);
+      def.annotation = this.currentModelAnnotation();
     }
     for (const entry in this.documentModel) {
       const entryDef = this.documentModel[entry].entry;
@@ -526,10 +534,11 @@ export class Document extends MalloyElement implements NameSpace {
         if (this.documentModel[entry].exported) {
           def.exports.push(entry);
         }
-        def.contents[entry] = cloneDeep(entryDef);
-        if (entryDef.modelAnnotation === undefined && def.annotation) {
-          entryDef.modelAnnotation = def.annotation;
+        const newEntry = cloneDeep(entryDef);
+        if (newEntry.modelAnnotation === undefined && def.annotation) {
+          newEntry.modelAnnotation = def.annotation;
         }
+        def.contents[entry] = newEntry;
       }
     }
     return def;

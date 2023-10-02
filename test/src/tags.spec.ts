@@ -277,11 +277,11 @@ describe('tags in results', () => {
   test('nameless query', async () => {
     const loaded = runtime.loadQuery(
       `
-          ## modelDef=ok
-          sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
-          # b4query
-          query: # afterQuery import=$(modelDef)
-            from_sql(one) -> { select: * }`
+        ## modelDef=ok
+        source: one is duckdb.sql("SELECT 1 as one")
+        # b4query
+        run: # afterQuery import=$(modelDef)
+          one -> { select: * }`
     );
     const qTag = {b4query: {}, afterQuery: {}, import: {eq: 'ok'}};
     const query = await loaded.getPreparedQuery();
@@ -294,17 +294,18 @@ describe('tags in results', () => {
   test('named query', async () => {
     const loaded = runtime.loadQuery(
       `
-          sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
-          ## modelDef=ok
-          # BQ
-          query: # AQ
-            # import=$(modelDef)
-            theName
-            # Bis
-            is
-            # Ais
-            from_sql(one) -> { select: * }
-          query: -> theName`
+        ## modelDef=ok
+        source: one is duckdb.sql("SELECT 1 as one")
+        # BQ
+        query: # AQ
+          # import=$(modelDef)
+          theName
+          # Bis
+          is
+          # Ais
+          one -> { select: * }
+        run: theName
+      `
     );
     const query = await loaded.getPreparedQuery();
     expect(query).toBeDefined();
@@ -315,18 +316,18 @@ describe('tags in results', () => {
   test('turtle query', async () => {
     const loaded = runtime.loadQuery(
       `
-          ## modelDef=ok
-          sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
-          query: from_sql(one) + {
-            # BQ import=$(modelDef)
-            query: # AQ
-              in_one
-              # Bis
-              is
-              # Ais
-              { select: one }
-            }
-          -> in_one`
+        ## modelDef=ok
+        source: one is duckdb.sql("SELECT 1 as one") extend {
+          # BQ import=$(modelDef)
+          view: # AQ
+            in_one
+            # Bis
+            is
+            # Ais
+            { select: one }
+        }
+        run: one -> in_one
+      `
     );
     const query = await loaded.getPreparedQuery();
     expect(query).toBeDefined();
@@ -338,8 +339,8 @@ describe('tags in results', () => {
     const loaded = runtime.loadQuery(
       `
           ## modelDef=ok
-          sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
-          query: from_sql(one) -> {
+          source: one is duckdb.sql("SELECT 1 as one")
+          run: one -> {
             select:
               # note1 import=$(modelDef)
               one
@@ -357,12 +358,12 @@ describe('tags in results', () => {
     const loaded = runtime.loadQuery(
       `
           ## modelDef=ok
-          sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
-          source: malloy_one is from_sql(one) + {
-            query: in_one is {
+          source: one is duckdb.sql("SELECT 1 as one")
+          source: malloy_one is one extend {
+            view: in_one is {
               select: one
             }
-            query: one_and_one is {
+            view: one_and_one is {
               group_by: one
               # note1
               nest:
@@ -370,7 +371,7 @@ describe('tags in results', () => {
                 in_one
             }
           }
-          query: malloy_one -> one_and_one`
+          run: malloy_one -> one_and_one`
     );
     const result = await loaded.run();
     const shape = result.resultExplore;
@@ -388,20 +389,20 @@ describe('tags in results', () => {
         source: ages is duckdb.sql('SELECT 1 as one') extend {
           # name
           dimension: name is 'John'
-          query: height
+          view: height
           # barchart
           is {
             select: heightd is 10
           }
 
-          query: age
+          view: age
           # barchart
           is {
             select: aged is 20
           }
 
         }
-        query: ages -> {
+        run: ages -> {
           group_by: name
           nest: height
           nest: age
@@ -417,12 +418,11 @@ describe('tags in results', () => {
     expect(age.tagParse().tag).tagsAre({barchart: {}});
     expect(name.tagParse().tag).tagsAre({name: {}});
   });
-  test('User defines scopes nest properly', async () => {
+  test('User defined scopes nest properly', async () => {
     const loaded = runtime.loadQuery(
       `
           ## scope=model
-          sql: one is {connection: "duckdb" select: """SELECT 1 as one"""}
-          query: from_sql(one) -> {
+          run: duckdb.sql("SELECT 1 as one") -> {
             select:
               # valueFrom=$(scope)
               one

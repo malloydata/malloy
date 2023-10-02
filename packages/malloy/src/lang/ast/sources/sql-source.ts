@@ -119,11 +119,16 @@ export class SQLSource extends Source {
       return ErrorFactory.structDef;
     } else if (lookup.status === 'present') {
       const location = this.select.location;
-      const locStruct = {
+      const locStruct: StructDef = {
         ...lookup.value,
         fields: lookup.value.fields.map(f => ({...f, location})),
         location: this.location,
       };
+      const fromDoc = this.document();
+      const modelAnnotation = fromDoc?.currentModelAnnotation();
+      if (modelAnnotation) {
+        locStruct.modelAnnotation = modelAnnotation;
+      }
       return locStruct;
     } else {
       this.log(
