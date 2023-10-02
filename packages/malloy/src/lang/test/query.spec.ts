@@ -28,9 +28,7 @@ import {expressionIsCalculation, isAtomicFieldType} from '../../model';
 describe('query:', () => {
   describe('basic query syntax', () => {
     test('anonymous query', () => {
-      expect(
-        markSource`query: ${"table('aTable') -> { group_by: astr }"}`
-      ).toTranslate();
+      expect("query: table('aTable') -> { group_by: astr }").toTranslate();
     });
     test('anonymous query', () => {
       expect(

@@ -34,7 +34,6 @@ malloyStatement
   | runStatement
   | docAnnotations
   | ignoredObjectAnnotations
-  | defineStmt
   ;
 
 defineSourceStatement
@@ -47,7 +46,7 @@ defineQuery
   ;
 
 topLevelAnonQueryDef
-  : tags query
+  : tags sqExpr
   ;
 
 tags
@@ -59,7 +58,7 @@ isDefine
   ;
 
 runStatement
-  : blockTags=tags RUN noteTags=tags topLevelAnonQueryDef
+  : tags RUN topLevelAnonQueryDef
   ;
 
 defineSQLStatement
@@ -80,7 +79,7 @@ sqlString
   ;
 
 sqlInterpolation
-  : OPEN_CODE query (CCURLY | CLOSE_CODE)
+  : OPEN_CODE sqExpr (CCURLY | CLOSE_CODE)
   ;
 
 importStatement
@@ -131,33 +130,6 @@ sourceExtension
   : (EXTEND | refineOperator)? exploreProperties
   ;
 
-query
-  : unrefinableQuery pipeElement*    # NormalQuery
-  | sqlSource                        # QueryFromSQLSource
-  ;
-
-unrefinableQuery
-  : unextendableSource pipeElement+  # QueryFromSource
-  | refinableQuery queryRefinement?  # RefinedQuery
-  ;
-
-refinableQuery
-  : ARROW? id                         # QueryByName
-  | unextendableSource ARROW id       # QueryByTurtleName
-  ;
-
-unextendableSource
-  : extendableSource sourceExtension?
-  ;
-
-extendableSource
-  : sourceID                                      # SourceFromNamedModelEntry
-  | exploreTable                                  # TableSource
-  | FROM OPAREN query CPAREN                      # QuerySource
-  | FROM_SQL OPAREN sqlExploreNameRef CPAREN      # SQLSourceName
-  | sqlSource                                     # SQLSource_stub
-  ;
-
 sqlSource
   : connectionId DOT SQL OPAREN (sqlString|shortString) CPAREN
   ;
@@ -205,11 +177,6 @@ sourceDefinition
 
 sqExplore
   : sqExpr
-  ;
-
-explore
-  : unextendableSource           # BareExtendedSource_stub
-  | query sourceExtension        # ExtendedQuery
   ;
 
 sourceNameDef: id;
@@ -276,12 +243,20 @@ queryExtend
   : EXTENDQ queryExtendStatementList
   ;
 
-defineStmt
-  : DEFINE (SOURCE | QUERY) id IS sqExpr
+// this is a little turd to allow m0 and 4.0 to run at once
+ambiguousModification
+  : filterShortcut
+  | OCURLY (modEither | SEMI)* CCURLY
+  ;
+
+modEither
+  : joinStatement
+  | whereStatement
+  | declareStatement
   ;
 
 sqExpr
-  : ARROW? id                                 # SQID
+  : ARROW? id ambiguousModification?          # SQID
   | sqExpr ARROW leadSeg (PLUS qSeg)*         # SQArrow
   | sqExpr sourceExtension                    # SQExtendedSource
   | sqExpr queryRefinement                    # SQRefinedQuery
@@ -316,7 +291,7 @@ joinList
   ;
 
 isExplore
-  : before_is=tags IS after_is=tags explore
+  : before_is=tags IS after_is=tags sqExpr
   ;
 
 joinDef

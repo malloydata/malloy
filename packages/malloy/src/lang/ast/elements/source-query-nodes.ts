@@ -22,7 +22,7 @@
  */
 
 import {RefinedSource} from './refined-source';
-import {ModelEntryReference} from '../types/malloy-element';
+import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
 import {Source} from './source';
 import {SourceQueryNode} from './source-query';
 import {QueryElement} from '../types/query-element';
@@ -33,13 +33,19 @@ import {SourceDesc} from '../types/source-desc';
 import {QOPDesc} from '../query-properties/qop-desc';
 import {FullQuery} from '../query-elements/full-query';
 import {ViewFieldReference} from '../query-items/field-references';
+import {QueryProperty, isQueryProperty} from '../types/query-property';
+import {SourceProperty, isSourceProperty} from '../types/source-property';
+import {SQLSource} from '../sources/sql-source';
 
 export class SQReference extends SourceQueryNode {
   elementType = 'sqReference';
   asSource?: Source;
 
-  constructor(readonly ref: ModelEntryReference) {
-    super({ref});
+  constructor(
+    readonly ref: ModelEntryReference,
+    readonly plus: MalloyElement[]
+  ) {
+    super({ref, plus});
   }
 
   getQuery(): QueryElement | undefined {
@@ -49,7 +55,22 @@ export class SQReference extends SourceQueryNode {
         const query = new ExistingQuery();
         query.head = this.ref.name;
         this.has({query});
+        const stmts: QueryProperty[] = [];
+        for (const stmt of this.plus) {
+          if (isQueryProperty(stmt)) {
+            stmts.push(stmt);
+          } else {
+            stmt.log('Unable to add this refinement to query');
+          }
+        }
+        if (stmts.length > 0) {
+          query.refineWith(new QOPDesc(stmts));
+        }
         return query;
+      } else {
+        this.sqLog(
+          `Illegal reference to '${entry.as || entry.name}', query expected`
+        );
       }
     } else {
       this.sqLog(`Reference to undefined object '${this.ref.refString}'`);
@@ -79,6 +100,19 @@ export class SQReference extends SourceQueryNode {
       this.sqLog(
         `Expected '${this.ref.refString}' to be of type query or source, not '${entry.type}'`
       );
+      return;
+    }
+    const stmts: SourceProperty[] = [];
+    for (const stmt of this.plus) {
+      if (isSourceProperty(stmt)) {
+        stmts.push(stmt);
+      } else {
+        stmt.log('Unable to add this extension to source');
+      }
+    }
+    if (stmts.length > 0) {
+      const extend = new SourceDesc(stmts);
+      this.asSource = new RefinedSource(this.asSource, extend);
     }
     this.has({source: this.asSource});
     return this.asSource;
@@ -234,7 +268,13 @@ export class SQRefinedQuery extends SourceQueryNode {
 
   getQuery() {
     if (this.toRefine.isSource()) {
-      this.sqLog('Cannot add view refinements to a source');
+      if (this.toRefine instanceof SQReference) {
+        this.sqLog(
+          `Cannot add view refinements to '${this.toRefine.ref.refString}' because it is a source`
+        );
+      } else {
+        this.sqLog('Cannot add view refinements to a source');
+      }
       return;
     }
     const refinedQuery = this.toRefine.getQuery();
@@ -288,5 +328,18 @@ export class SQSourceWrapper extends SourceQueryNode {
 
   getSource() {
     return this.theSource;
+  }
+
+  getQuery() {
+    if (this.theSource instanceof SQLSource) {
+      const queryObj = new FullQuery(this.theSource);
+      this.has({sqlAsQUery: queryObj});
+      return queryObj;
+    }
+    if (this.theSource instanceof NamedSource) {
+      this.sqLog(
+        `Illegal reference to '${this.theSource.refName}', query expected`
+      );
+    }
   }
 }

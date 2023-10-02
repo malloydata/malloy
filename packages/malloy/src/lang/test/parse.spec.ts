@@ -91,7 +91,7 @@ describe('error handling', () => {
   });
   test('query from undefined source', () => {
     expect(markSource`query: ${'x'}->{ project: y }`).translationToFailWith(
-      "Undefined query or source 'x'"
+      "Reference to undefined object 'x'"
     );
   });
   test('query with expression from undefined source', () => {
@@ -99,7 +99,7 @@ describe('error handling', () => {
     // when "query: x->{ group_by: y}" (above) generated the correct error.
     expect(
       markSource`query: ${'x'}->{ project: y is z / 2 }`
-    ).translationToFailWith("Undefined query or source 'x'");
+    ).translationToFailWith("Reference to undefined object 'x'");
   });
   test('join reference before definition', () => {
     expect(
@@ -107,7 +107,7 @@ describe('error handling', () => {
         source: newAB is a { join_one: newB is ${'bb'} on astring }
         source: newB is b
       `
-    ).translationToFailWith("Undefined query or source 'bb'");
+    ).translationToFailWith("Reference to undefined object 'bb'");
   });
   test('non-rename rename', () => {
     expect('source: na is a { rename: astr is astr }').translationToFailWith(
@@ -744,7 +744,7 @@ describe('extend and refine', () => {
 
     test('source name with query refinements', () => {
       expect('run: a refine { group_by: ai }').translationToFailWith(
-        "Illegal reference to 'a', query expected"
+        "Cannot add view refinements to 'a' because it is a source"
       );
     });
 
@@ -786,7 +786,7 @@ describe('extend and refine', () => {
 
     test('source name with query refinements', () => {
       expect('run: a { group_by: one }').translationToFailWith(
-        "Illegal reference to 'a', query expected"
+        "Cannot add view refinements to 'a' because it is a source"
       );
     });
 
@@ -879,10 +879,10 @@ describe('extend and refine', () => {
 
     test('syntactically valid to refine a source, but illegal', () => {
       expect('run: a { group_by: ai } ').translationToFailWith(
-        "Illegal reference to 'a', query expected"
+        "Cannot add view refinements to 'a' because it is a source"
       );
       expect('run: a refine { group_by: ai } ').translationToFailWith(
-        "Illegal reference to 'a', query expected"
+        "Cannot add view refinements to 'a' because it is a source"
       );
     });
   });
@@ -1027,11 +1027,11 @@ describe('m3/m4 source query sentences', () => {
   // todo MTOY write test to make sure arrow has correct precedence vs +
   // also maybe arrow vs extend
   test('M4 should error on these sq expressions', () => {
-    expect(`define source: s is a + ${qryRefine}`).translationToFailWith(
-      'Cannot add view refinements to a source'
+    expect(`source: s is a + ${qryRefine}`).translationToFailWith(
+      "Cannot add view refinements to 'a' because it is a source"
     );
-    expect(`define query: q_m4_err is a + ${qryRefine}`).translationToFailWith(
-      'Cannot add view refinements to a source'
+    expect(`query: q_m4_err is a + ${qryRefine}`).translationToFailWith(
+      "Cannot add view refinements to 'a' because it is a source"
     );
   });
   test('legal sqexpressions', () => {
