@@ -360,7 +360,7 @@ export class MalloyToAST
     } else if (!pcx.refineOperator()) {
       this.contextError(
         pcx,
-        'Implicit refinement is deprecated, use the "+" operator',
+        'Implicit query refinement is deprecated, use the `+` operator',
         'warn'
       );
     }
@@ -1735,6 +1735,13 @@ export class MalloyToAST
     const plus: ast.MalloyElement[] = [];
     const addCx = pcx.ambiguousModification();
     if (addCx) {
+      if (this.m4WarningsEnabled()) {
+        this.contextError(
+          addCx,
+          'Implicit extension/refinement is deprecated, use the `extend` or `+` operator.',
+          'warn'
+        );
+      }
       const filterCx = addCx.filterShortcut();
       if (filterCx) {
         plus.push(this.getFilterShortcut(filterCx));
@@ -1803,9 +1810,17 @@ export class MalloyToAST
 
   visitSQRefinedQuery(pcx: parse.SQRefinedQueryContext) {
     const refineThis = this.getSqExpr(pcx.sqExpr());
+    const refine = pcx.queryRefinement();
+    if (this.m4WarningsEnabled() && refine.REFINE()) {
+      this.contextError(
+        refine,
+        'The `refine` keyword is deprecated, use the `+` operator',
+        'warn'
+      );
+    }
     const refined = new ast.SQRefinedQuery(
       refineThis,
-      this.getQueryRefinements(pcx.queryRefinement())
+      this.getQueryRefinements(refine)
     );
     return this.astAt(refined, pcx);
   }

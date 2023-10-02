@@ -91,7 +91,7 @@ describe('error handling', () => {
   });
   test('query from undefined source', () => {
     expect(markSource`run: ${'x'}->{ select: y }`).translationToFailWith(
-      "Undefined query or source 'x'"
+      "Reference to undefined object 'x'"
     );
   });
   test('query with expression from undefined source', () => {
@@ -99,7 +99,7 @@ describe('error handling', () => {
     // when "query: x->{ group_by: y}" (above) generated the correct error.
     expect(
       markSource`run: ${'x'}->{ select: y is z / 2 }`
-    ).translationToFailWith("Undefined query or source 'x'");
+    ).translationToFailWith("Reference to undefined object 'x'");
   });
   test('join reference before definition', () => {
     expect(
@@ -746,7 +746,7 @@ describe('extend and refine', () => {
 
     test('source name with query refinements', () => {
       expect('run: a + { group_by: ai }').translationToFailWith(
-        "Illegal reference to 'a', query expected"
+        "Cannot add view refinements to 'a' because it is a source"
       );
     });
 
@@ -790,7 +790,7 @@ describe('extend and refine', () => {
 
     test('source name with query refinements', () => {
       expect('run: a + { group_by: one }').translationToFailWith(
-        "Illegal reference to 'a', query expected"
+        "Cannot add view refinements to 'a' because it is a source"
       );
     });
 
@@ -802,8 +802,6 @@ describe('extend and refine', () => {
 
     const plus =
       'Source extension with "+" is deprecated, use the "extend" operator';
-    const implicit =
-      'Implicit source extension is deprecated, use the `extend` operator.';
     test('source name with ambiguous refinements', () => {
       expect(
         'run: a + { join_one: b on b.ai = ai } -> { select: b.* }'
@@ -817,14 +815,16 @@ describe('extend and refine', () => {
       expect(
         'source: s is a { join_one: b on b.ai = ai }'
       ).toTranslateWithWarnings(
-        'Implicit source extension is deprecated, use the `extend` operator.'
+        'Implicit extension/refinement is deprecated, use the `extend` or `+` operator.'
       );
       expect('source: s is a { where: 1 = 1 }').toTranslateWithWarnings(
-        implicit
+        'Implicit extension/refinement is deprecated, use the `extend` or `+` operator.'
       );
       expect(
         'source: s is a { dimension: three is 3 }'
-      ).toTranslateWithWarnings(implicit);
+      ).toTranslateWithWarnings(
+        'Implicit source extension is deprecated, use the `extend` operator.'
+      );
     });
 
     describe('query name with ambiguous refinements', () => {
@@ -911,7 +911,7 @@ describe('extend and refine', () => {
 
     test('syntactically valid to refine a source, but illegal', () => {
       expect('run: a + { group_by: ai } ').translationToFailWith(
-        "Illegal reference to 'a', query expected"
+        "Cannot add view refinements to 'a' because it is a source"
       );
     });
   });
@@ -964,7 +964,7 @@ describe('extend and refine', () => {
       run: c -> {
         nest: x { limit: 1 }
       }`).toTranslateWithWarnings(
-        'Implicit refinement is deprecated, use the "+" operator'
+        'Implicit query refinement is deprecated, use the `+` operator'
       );
     });
 
@@ -974,7 +974,7 @@ describe('extend and refine', () => {
         view: x is { select: * }
         view: y is x { limit: 1 }
       }`).toTranslateWithWarnings(
-        'Implicit refinement is deprecated, use the "+" operator'
+        'Implicit query refinement is deprecated, use the `+` operator'
       );
     });
 
@@ -983,7 +983,7 @@ describe('extend and refine', () => {
         query: q is a -> { group_by: ai }
         run: q { group_by: three is 3 }
       `).toTranslateWithWarnings(
-        'Implicit refinement is deprecated, use the "+" operator'
+        'Implicit query refinement is deprecated, use the `+` operator'
       );
     });
 
@@ -1064,13 +1064,14 @@ describe('m3/m4 source query sentences', () => {
     );
   });
   test('legal sqexpressions', () => {
+    // some things that are m4 warnings are commented out
     expect(`
       source: s is a
       query: q is s -> ${query}
 
       source: s0 is a;
-      source: s0_extbare is s ${srcExtend};
-      source: s0_extplus is s + ${srcExtend};
+      // source: s0_extbare is s ${srcExtend};
+      // source: s0_extplus is s + ${srcExtend};
       source: s0_ext is s extend ${srcExtend};
       source: qs is q;
       source: qs0 is q extend ${srcExtend};
@@ -1079,12 +1080,12 @@ describe('m3/m4 source query sentences', () => {
       source: s2_m4 is q + ${qryRefine} -> ${query} extend ${srcExtend};
       source: s3 is s extend ${srcExtend};
       source: s4 is q extend ${srcExtend};
-      source: s5 is from(s -> ${query})
+      // source: s5 is from(s -> ${query})
 
       query: q0 is q;
-      query: q0_refbare is q ${qryRefine};
+      // query: q0_refbare is q ${qryRefine};
       query: q0_refplus is q + ${qryRefine};
-      query: q1_bare is ab -> aturtle ${qryRefine};
+      // query: q1_bare is ab -> aturtle ${qryRefine};
       query: q1_plus is ab -> aturtle + ${qryRefine};
       query: q2 is s -> ${query} extend ${srcExtend} -> ${query};
 
