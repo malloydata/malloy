@@ -46,8 +46,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     // so this can't work yet.
     it.skip(`can appear after errors - ${databaseName}`, async () => {
       const source = `
-        source: foo is table('asdfds');
-        source: bar is table('malloytest.state_facts') {
+        source: foo is ${databaseName}.table('asdfds');
+        source: bar is ${databaseName}.table('malloytest.state_facts') extend {
           dimension: a is LENGTH('foo')
         }
       `;
@@ -69,10 +69,10 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
     it(`can appear before errors - ${databaseName}`, async () => {
       const source = `
-        source: bar is table('malloytest.state_facts') {
+        source: bar is ${databaseName}.table('malloytest.state_facts') extend {
           dimension: a is LENGTH('foo')
         }
-        source: foo is table('asdfds');
+        source: foo is ${databaseName}.table('asdfds');
       `;
       const error = await getError(() => runtime.getModel(source));
       expect(error).not.toBeUndefined();
@@ -92,7 +92,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
     it(`can appear alone - ${databaseName}`, async () => {
       const source = `
-        source: bar is table('malloytest.state_facts') {
+        source: bar is ${databaseName}.table('malloytest.state_facts') extend {
           dimension: a is LENGTH('foo')
         }
       `;
