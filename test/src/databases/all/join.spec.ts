@@ -29,26 +29,26 @@ import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 const joinModelText = `
-  source: aircraft_models is table('malloytest.aircraft_models') {
+  source: aircraft_models is table('malloytest.aircraft_models') extend {
     primary_key: aircraft_model_code
     measure: model_count is count()
-    query: manufacturer_models is {
+    view: manufacturer_models is {
       group_by: manufacturer
       aggregate: num_models is count()
     }
-    query: manufacturer_seats is {
+    view: manufacturer_seats is {
       group_by: manufacturer
       aggregate: total_seats is seats.sum()
     }
   }
 
-  source: aircraft is table('malloytest.aircraft'){
+  source: aircraft is table('malloytest.aircraft') extend {
     primary_key: tail_num
     measure: aircraft_count is count()
   }
 
-  source: funnel is from(aircraft_models->manufacturer_models) {
-    join_one: seats is from(aircraft_models->manufacturer_seats)
+  source: funnel is aircraft_models->manufacturer_models extend {
+    join_one: seats is aircraft_models->manufacturer_seats
         with manufacturer
   }
 `;
@@ -69,11 +69,11 @@ describe('join expression tests', () => {
         .loadModel(joinModelText)
         .loadQuery(
           `
-      source: a2 is aircraft {
+      source: a2 is aircraft extend {
         join_one: aircraft_models with aircraft_model_code
       }
 
-      query: a2 -> {
+      run: a2 -> {
         aggregate:
           aircraft_count
           aircraft_models.model_count
@@ -89,7 +89,7 @@ describe('join expression tests', () => {
         .loadModel(joinModelText)
         .loadQuery(
           `
-      query: aircraft {
+      run: aircraft {
         join_one: aircraft_models with aircraft_model_code
       } -> {
         aggregate:
@@ -107,12 +107,12 @@ describe('join expression tests', () => {
         .loadModel(joinModelText)
         .loadQuery(
           `
-      query: aircraft_models {
-        join_one: am_facts is from(
+      run: aircraft_models {
+        join_one: am_facts is
           aircraft_models->{
             group_by: m is manufacturer
             aggregate: num_models is count()
-          }) with manufacturer
+          } with manufacturer
       } -> {
         select:
           manufacturer
@@ -131,7 +131,7 @@ describe('join expression tests', () => {
         .loadModel(joinModelText)
         .loadQuery(
           `
-      query:
+      run:
           aircraft_models-> {
             group_by: m is manufacturer
             aggregate: num_models is count()
@@ -154,16 +154,15 @@ describe('join expression tests', () => {
         .loadModel(joinModelText)
         .loadQuery(
           `
-          query: from(aircraft_models->{
+          run: aircraft_models->{
             group_by: m is manufacturer
             aggregate: num_models is count()
-            }){
-            join_one: seats is from(
+            } extend {
+            join_one: seats is
               aircraft_models->{
                 group_by: m is manufacturer
                 aggregate: total_seats is seats.sum()
-              }
-            ) with m
+              } with m
           }
           -> {
             select:
@@ -185,11 +184,10 @@ describe('join expression tests', () => {
         .loadModel(joinModelText)
         .loadQuery(
           `
-      source: foo is from(aircraft_models-> manufacturer_models){
-        join_one: seats is from(aircraft_models->manufacturer_seats)
-          with manufacturer
+      source: foo is aircraft_models-> manufacturer_models extend {
+        join_one: seats is aircraft_models->manufacturer_seats with manufacturer
       }
-      query: foo-> {
+      run: foo-> {
         select:
           manufacturer,
           num_models,
@@ -209,7 +207,7 @@ describe('join expression tests', () => {
         .loadModel(joinModelText)
         .loadQuery(
           `
-      query: funnel->{
+      run: funnel->{
         select:
          manufacturer
           num_models
@@ -229,7 +227,7 @@ describe('join expression tests', () => {
         .loadModel(joinModelText)
         .loadQuery(
           `
-      query: aircraft_models->{
+      run: aircraft_models->{
         group_by: manufacturer
         aggregate: f is count()
       }->{
@@ -258,8 +256,8 @@ describe('join expression tests', () => {
           // join the 4 rows and reference the
           //  nested column. should return all the rows.
           //  If the unnest is an inner join, we'll get back just 4 rows.
-          query: table('malloytest.state_facts') {
-            join_one: a_states is from(->a_states) with state
+          run: table('malloytest.state_facts') {
+            join_one: a_states is a_states with state
           }
           -> {
             group_by: state
@@ -280,14 +278,14 @@ describe('join expression tests', () => {
       const result = await runtime
         .loadQuery(
           `
-        source: flights is table('malloytest.flights') {
+        source: flights is table('malloytest.flights') extend {
           join_one: aircraft is table('malloytest.aircraft')
             on tail_num = aircraft.tail_num
           join_one: aircraft_models is table('malloytest.aircraft_models')
             on aircraft.aircraft_model_code = aircraft_models.aircraft_model_code
         }
 
-        query: flights -> {
+        run: flights -> {
           group_by: aircraft_models.seats
           aggregate: flight_count is count()
         }
@@ -306,12 +304,12 @@ describe('join expression tests', () => {
 
         source: aircraft is table('malloytest.aircraft')
 
-        source: flights is table('malloytest.flights'){
+        source: flights is table('malloytest.flights') extend {
           join_one: aircraft on aircraft.tail_num = tail_num
           join_one: aircraft_models on aircraft_models.aircraft_model_code = aircraft.aircraft_model_code
         }
 
-        query: flights-> {
+        run: flights-> {
           group_by: testingtwo is aircraft_models.model
         }
       `
@@ -325,7 +323,7 @@ describe('join expression tests', () => {
       const result = await runtime
         .loadQuery(
           `
-          query: table('malloytest.state_facts') -> {
+          run: table('malloytest.state_facts') -> {
             join_one: sf is table('malloytest.state_facts') on sf.state = state
             aggregate: x is sf.births.sum() { ? state = 'CA' }
           }
