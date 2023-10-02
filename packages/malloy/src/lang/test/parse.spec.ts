@@ -802,6 +802,8 @@ describe('extend and refine', () => {
 
     const plus =
       'Source extension with "+" is deprecated, use the "extend" operator';
+    const impilcit =
+      'Implicit source extension is deprecated, use the `extend` operator.';
     test('source name with ambiguous refinements', () => {
       expect(
         'run: a + { join_one: b on b.ai = ai } -> { select: b.* }'
@@ -814,27 +816,22 @@ describe('extend and refine', () => {
       ).toTranslateWithWarnings(plus);
       expect(
         'source: s is a { join_one: b on b.ai = ai }'
-      ).toTranslateWithWarnings(
-        'Implicit extension/refinement is deprecated, use the `extend` or `+` operator.'
-      );
+      ).toTranslateWithWarnings(impilcit);
       expect('source: s is a { where: 1 = 1 }').toTranslateWithWarnings(
-        'Implicit extension/refinement is deprecated, use the `extend` or `+` operator.'
+        impilcit
       );
       expect(
         'source: s is a { dimension: three is 3 }'
-      ).toTranslateWithWarnings(
-        'Implicit source extension is deprecated, use the `extend` operator.'
-      );
+      ).toTranslateWithWarnings(impilcit);
     });
 
     describe('query name with ambiguous refinements', () => {
-      // no implicit conversions in m4, so leaving this test here just for now
-      test('pre m4 implicitly convert the query into a source', () => {
+      test('adding segment to ambuguously refined query', () => {
         expect(`
           ##! -m4warnings
           query: q is a -> { group_by: ai }
           run: q + { join_one: b on 1 = 1 } -> { select: b.* }
-        `).toTranslate();
+        `).translationToFailWith("No such field as 'b'");
         expect(`
           ##! -m4warnings
           query: q is a -> { group_by: ai }
