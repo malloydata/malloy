@@ -248,8 +248,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         `
         query: aircraft_models->{
           aggregate:
-            distinct_seats is count(distinct seats),
-            boeing_distinct_seats is count(distinct seats) {?manufacturer ? 'BOEING'},
+            distinct_seats is count(seats),
+            boeing_distinct_seats is count(seats) {?manufacturer ? 'BOEING'},
             min_seats is min(seats),
             cessna_min_seats is min(seats) {? manufacturer ? 'CESSNA'},
             max_seats is max(seats),
@@ -377,7 +377,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         `
         source: b is aircraft{ where: aircraft_models.manufacturer ? ~'B%' }
 
-        query: b->{aggregate: m_count is count(distinct aircraft_models.manufacturer) }
+        query: b->{aggregate: m_count is count(aircraft_models.manufacturer) }
         `
       )
       .run();
@@ -461,7 +461,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             }
           }
         } -> {
-          project:
+          select:
             aircraft.aircraft.first_three
             aircraft_count
             order_by: 2 desc, 1
@@ -530,7 +530,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     source: bo_models is
       from(
           table('malloytest.aircraft_models') {? manufacturer ? ~ 'BO%' }
-          -> { project: aircraft_model_code, manufacturer, seats }
+          -> { select: aircraft_model_code, manufacturer, seats }
         ) {
           primary_key: aircraft_model_code
           measure: bo_count is count()
@@ -539,7 +539,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     source: b_models is
         from(
           table('malloytest.aircraft_models') {? manufacturer ? ~ 'B%' }
-          -> { project: aircraft_model_code, manufacturer, seats }
+          -> { select: aircraft_model_code, manufacturer, seats }
         ) {
           where: bo_models.seats > 200
           primary_key: aircraft_model_code
@@ -687,7 +687,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       await expect(runtime).queryMatches(
         `sql: x is {connection:"${databaseName}" select:"""SELECT 1 as x"""}
         query: from_sql(x) -> {
-          project: double_quote is "${back}${dq}"
+          select: double_quote is "${back}${dq}"
         }
       `,
         {double_quote: '"'}
@@ -706,7 +706,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       """ }
       query: from_sql(nullTest) -> {
         where: null_value = null
-        project:
+        select:
           found_null is  null_value ?? 'correct',
           else_pass is string_value ?? 'incorrect'
           literal_null is null ?? 'correct'
@@ -722,7 +722,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       query: from_sql(tbl) + {
         dimension: fot is (false) or (true)
       } -> {
-        project:
+        select:
           no_paren is false and fot
           paren is    false and (fot)
       }
