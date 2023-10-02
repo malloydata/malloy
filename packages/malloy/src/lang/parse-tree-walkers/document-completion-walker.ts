@@ -43,7 +43,7 @@ const EXPLORE_PROPERTIES = [
   'rename',
   'accept',
   'except',
-  'query',
+  'view',
   'declare',
 ];
 
