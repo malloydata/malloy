@@ -27,7 +27,7 @@ nix-shell --pure --keep NPM_TOKEN --keep PACKAGES --keep BRANCH_NAME --command "
     npm publish -w \$package --access=public
   done
   # Make sure we're current
-  git pull
+  git pull origin main
   # Tag current version
   git tag v\$VERSION
   git push origin v\$VERSION
