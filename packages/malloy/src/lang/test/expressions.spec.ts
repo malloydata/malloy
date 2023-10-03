@@ -516,6 +516,15 @@ describe('expressions', () => {
         calculate: bar is lag(sum(output))
       }`).translationToFailWith("'output' is not defined");
     });
+    test('count(distinct column)', () => {
+      expect(model`
+      ##! m4warnings
+      run: a -> {
+        aggregate: x is count(distinct astr)
+      }`).toTranslateWithWarnings(
+        '`count(distinct expression)` deprecated, use `count(expression)` instead'
+      );
+    });
   });
 
   describe('pick statements', () => {
