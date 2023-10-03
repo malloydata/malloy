@@ -42,8 +42,12 @@ export class HTMLImageRenderer implements Renderer {
     if (data.isNull()) {
       return createNullElement(this.document);
     }
-
+    const { tag } = data.field.tagParse();
+    const height = tag.numeric("image", "height");
+    const width = tag.numeric("image", "width");
     const element = this.document.createElement('img');
+    if(height) element.style.height = `${height}px`;
+    if(width) element.style.width = `${width}px`;
     element.src = data.value;
     return element;
   }
