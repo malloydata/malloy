@@ -95,6 +95,10 @@ export interface ParseOptions {
   importBaseURL?: URL;
 }
 
+export interface CompileOptions {
+  refreshSchemaCache?: boolean;
+}
+
 export class Malloy {
   // TODO load from file built during release
   public static get version(): string {
@@ -207,12 +211,15 @@ export class Malloy {
     connections,
     parse,
     model,
+    refreshSchemaCache,
   }: {
     urlReader: URLReader;
     connections: LookupConnection<InfoConnection>;
     parse: Parse;
     model?: Model;
+    refreshSchemaCache: boolean | undefined;
   }): Promise<Model> {
+    refreshSchemaCache = refreshSchemaCache ?? false;
     const translator = parse._translator;
     // eslint-disable-next-line no-constant-condition
     while (true) {
@@ -283,7 +290,9 @@ export class Malloy {
               //      as `Object.keys(tablePathByKey)`, i.e. that all tables are accounted for. Otherwise
               //      the translator runs into an infinite loop fetching tables.
               const {schemas: tables, errors} =
-                await connection.fetchSchemaForTables(tablePathByKey);
+                await connection.fetchSchemaForTables(tablePathByKey, {
+                  refreshSchemaCache,
+                });
               translator.update({tables, errors: {tables: errors}});
             } catch (error) {
               // There was an exception getting the connection, associate that error
@@ -307,7 +316,9 @@ export class Malloy {
               result.partialModel,
               toCompile
             );
-            const resolved = await conn.fetchSchemaForSQLBlock(expanded);
+            const resolved = await conn.fetchSchemaForSQLBlock(expanded, {
+              refreshSchemaCache,
+            });
             if (resolved.error) {
               translator.update({
                 errors: {compileSQL: {[expanded.name]: resolved.error}},
@@ -2109,7 +2120,7 @@ export class Runtime {
    */
   public loadModel(
     source: ModelURL | ModelString,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): ModelMaterializer {
     return new ModelMaterializer(this, async () => {
       const parse =
@@ -2127,6 +2138,7 @@ export class Runtime {
         urlReader: this.urlReader,
         connections: this.connections,
         parse,
+        refreshSchemaCache: options?.refreshSchemaCache,
       });
     });
   }
@@ -2464,7 +2476,7 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadQuery(
     query: QueryString | QueryURL,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       const urlReader = this.runtime.urlReader;
@@ -2486,6 +2498,7 @@ export class ModelMaterializer extends FluentState<Model> {
         connections,
         parse,
         model,
+        refreshSchemaCache: options?.refreshSchemaCache,
       });
       return queryModel.preparedQuery;
     });
@@ -2500,7 +2513,7 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public extendModel(
     query: QueryString | QueryURL,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): ModelMaterializer {
     return new ModelMaterializer(this.runtime, async () => {
       const urlReader = this.runtime.urlReader;
@@ -2522,6 +2535,7 @@ export class ModelMaterializer extends FluentState<Model> {
         connections,
         parse,
         model,
+        refreshSchemaCache: options?.refreshSchemaCache,
       });
       return queryModel;
     });

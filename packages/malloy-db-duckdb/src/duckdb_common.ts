@@ -299,14 +299,15 @@ export abstract class DuckDBCommon
   }
 
   public async fetchSchemaForSQLBlock(
-    sqlRef: SQLBlock
+    sqlRef: SQLBlock,
+    options: {refreshSchemaCache: boolean}
   ): Promise<
     | {structDef: StructDef; error?: undefined}
     | {error: string; structDef?: undefined}
   > {
     const key = sqlRef.name;
     let inCache = this.sqlSchemaCache.get(key);
-    if (!inCache) {
+    if (!inCache || options.refreshSchemaCache) {
       try {
         inCache = {
           structDef: await this.getSQLBlockSchema(sqlRef),
@@ -319,7 +320,10 @@ export abstract class DuckDBCommon
     return inCache;
   }
 
-  public async fetchSchemaForTables(tables: Record<string, string>): Promise<{
+  public async fetchSchemaForTables(
+    tables: Record<string, string>,
+    options: {refreshSchemaCache: boolean}
+  ): Promise<{
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;
   }> {
@@ -328,7 +332,7 @@ export abstract class DuckDBCommon
 
     for (const tableKey in tables) {
       let inCache = this.schemaCache.get(tableKey);
-      if (!inCache) {
+      if (!inCache || options.refreshSchemaCache) {
         const tablePath = tables[tableKey];
         try {
           inCache = {

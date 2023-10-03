@@ -265,7 +265,8 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   }
 
   public async fetchSchemaForSQLBlock(
-    sqlRef: SQLBlock
+    sqlRef: SQLBlock,
+    options: {refreshSchemaCache: boolean}
   ): Promise<
     | {structDef: StructDef; error?: undefined}
     | {error: string; structDef?: undefined}
@@ -278,16 +279,19 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
       tables.push(match[2] || match[3]);
     }
     await this.findTables(tables);
-    return super.fetchSchemaForSQLBlock(sqlRef);
+    return super.fetchSchemaForSQLBlock(sqlRef, options);
   }
 
-  async fetchSchemaForTables(missing: Record<string, string>): Promise<{
+  async fetchSchemaForTables(
+    missing: Record<string, string>,
+    options: {refreshSchemaCache: boolean}
+  ): Promise<{
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;
   }> {
     const tables = Object.values(missing);
     await this.findTables(tables);
-    return super.fetchSchemaForTables(missing);
+    return super.fetchSchemaForTables(missing, options);
   }
 
   async close(): Promise<void> {

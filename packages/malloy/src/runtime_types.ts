@@ -77,7 +77,10 @@ export interface InfoConnection {
    * as a map of keys to table names.
    * @return A mapping of table keys to schemas.
    */
-  fetchSchemaForTables(tables: Record<string, string>): Promise<{
+  fetchSchemaForTables(
+    tables: Record<string, string>,
+    options: {refreshSchemaCache: boolean}
+  ): Promise<{
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;
   }>;
@@ -90,7 +93,8 @@ export interface InfoConnection {
    */
 
   fetchSchemaForSQLBlock(
-    block: SQLBlock
+    block: SQLBlock,
+    options: {refreshSchemaCache: boolean}
   ): Promise<
     | {structDef: StructDef; error?: undefined}
     | {error: string; structDef?: undefined}

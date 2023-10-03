@@ -595,7 +595,10 @@ export class BigQueryConnection
     return structDef;
   }
 
-  public async fetchSchemaForTables(missing: Record<string, string>): Promise<{
+  public async fetchSchemaForTables(
+    missing: Record<string, string>,
+    options: {refreshSchemaCache: boolean}
+  ): Promise<{
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;
   }> {
@@ -604,7 +607,7 @@ export class BigQueryConnection
 
     for (const tableKey in missing) {
       let inCache = this.schemaCache.get(tableKey);
-      if (!inCache) {
+      if (!inCache || options.refreshSchemaCache) {
         const tablePath = this.normalizeTablePath(missing[tableKey]);
         try {
           const tableFieldSchema = await this.getTableFieldSchema(tablePath);
@@ -653,14 +656,15 @@ export class BigQueryConnection
   }
 
   public async fetchSchemaForSQLBlock(
-    sqlRef: SQLBlock
+    sqlRef: SQLBlock,
+    options: {refreshSchemaCache: boolean}
   ): Promise<
     | {structDef: StructDef; error?: undefined}
     | {error: string; structDef?: undefined}
   > {
     const key = sqlRef.name;
     let inCache = this.sqlSchemaCache.get(key);
-    if (!inCache) {
+    if (!inCache || options.refreshSchemaCache) {
       try {
         const tableFieldSchema = await this.getSQLBlockSchema(sqlRef);
         inCache = {

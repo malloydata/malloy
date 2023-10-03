@@ -135,7 +135,10 @@ export class PostgresConnection
     return true;
   }
 
-  public async fetchSchemaForTables(missing: Record<string, string>): Promise<{
+  public async fetchSchemaForTables(
+    missing: Record<string, string>,
+    options: {refreshSchemaCache: boolean}
+  ): Promise<{
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;
   }> {
@@ -144,7 +147,7 @@ export class PostgresConnection
 
     for (const tableKey in missing) {
       let inCache = this.schemaCache.get(tableKey);
-      if (!inCache) {
+      if (!inCache || options.refreshSchemaCache) {
         const tablePath = missing[tableKey];
         try {
           inCache = {
@@ -165,14 +168,15 @@ export class PostgresConnection
   }
 
   public async fetchSchemaForSQLBlock(
-    sqlRef: SQLBlock
+    sqlRef: SQLBlock,
+    options: {refreshSchemaCache: boolean}
   ): Promise<
     | {structDef: StructDef; error?: undefined}
     | {error: string; structDef?: undefined}
   > {
     const key = sqlRef.name;
     let inCache = this.sqlSchemaCache.get(key);
-    if (!inCache) {
+    if (!inCache || options.refreshSchemaCache) {
       try {
         inCache = {
           structDef: await this.getSQLBlockSchema(sqlRef),
