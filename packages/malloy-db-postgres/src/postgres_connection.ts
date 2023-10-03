@@ -137,7 +137,7 @@ export class PostgresConnection
 
   public async fetchSchemaForTables(
     missing: Record<string, string>,
-    options: {refreshSchemaCache: boolean}
+    options: FetchSchemaOptions
   ): Promise<{
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;
@@ -169,7 +169,7 @@ export class PostgresConnection
 
   public async fetchSchemaForSQLBlock(
     sqlRef: SQLBlock,
-    options: {refreshSchemaCache: boolean}
+    options: FetchSchemaOptions
   ): Promise<
     | {structDef: StructDef; error?: undefined}
     | {error: string; structDef?: undefined}

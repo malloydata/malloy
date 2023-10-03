@@ -300,7 +300,7 @@ export abstract class DuckDBCommon
 
   public async fetchSchemaForSQLBlock(
     sqlRef: SQLBlock,
-    options: {refreshSchemaCache: boolean}
+    options: FetchSchemaOptions
   ): Promise<
     | {structDef: StructDef; error?: undefined}
     | {error: string; structDef?: undefined}
@@ -322,7 +322,7 @@ export abstract class DuckDBCommon
 
   public async fetchSchemaForTables(
     tables: Record<string, string>,
-    options: {refreshSchemaCache: boolean}
+    options: FetchSchemaOptions
   ): Promise<{
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;

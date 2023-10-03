@@ -233,7 +233,10 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     }
   }
 
-  private async findTables(tables: string[]): Promise<void> {
+  private async findTables(
+    tables: string[],
+    options: FetchSchemaOptions
+  ): Promise<void> {
     const fetchRemoteFile = async (tablePath: string): Promise<boolean> => {
       for (const callback of this.remoteFileCallbacks) {
         const data = await callback(tablePath);
@@ -256,7 +259,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
         continue;
       }
       // If we're not trying to fetch start trying
-      if (!(tablePath in this.remoteFileStatus)) {
+      if (!(tablePath in this.remoteFileStatus || options.refreshSchemaCache)) {
         this.remoteFileStatus[tablePath] = fetchRemoteFile(tablePath);
       }
       // Wait for response
@@ -266,7 +269,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
 
   public async fetchSchemaForSQLBlock(
     sqlRef: SQLBlock,
-    options: {refreshSchemaCache: boolean}
+    options: FetchSchemaOptions
   ): Promise<
     | {structDef: StructDef; error?: undefined}
     | {error: string; structDef?: undefined}
@@ -278,19 +281,19 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     for (const match of sqlRef.selectStr.matchAll(TABLE_FUNCTION_MATCH)) {
       tables.push(match[2] || match[3]);
     }
-    await this.findTables(tables);
+    await this.findTables(tables, options);
     return super.fetchSchemaForSQLBlock(sqlRef, options);
   }
 
   async fetchSchemaForTables(
     missing: Record<string, string>,
-    options: {refreshSchemaCache: boolean}
+    options: FetchSchemaOptions
   ): Promise<{
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;
   }> {
     const tables = Object.values(missing);
-    await this.findTables(tables);
+    await this.findTables(tables, options);
     return super.fetchSchemaForTables(missing, options);
   }
 

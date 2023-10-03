@@ -65,6 +65,14 @@ export interface URLReader {
 }
 
 /**
+ * Options passed to fetchSchema methods.
+ */
+export interface FetchSchemaOptions {
+  // Fetch a fresh copy of the schema instead of using cache
+  refreshSchemaCache: boolean;
+}
+
+/**
  * An object capable of reading schemas for given table names.
  */
 export interface InfoConnection {
@@ -79,7 +87,7 @@ export interface InfoConnection {
    */
   fetchSchemaForTables(
     tables: Record<string, string>,
-    options: {refreshSchemaCache: boolean}
+    options: FetchSchemaOptions
   ): Promise<{
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;
@@ -94,7 +102,7 @@ export interface InfoConnection {
 
   fetchSchemaForSQLBlock(
     block: SQLBlock,
-    options: {refreshSchemaCache: boolean}
+    options: FetchSchemaOptions
   ): Promise<
     | {structDef: StructDef; error?: undefined}
     | {error: string; structDef?: undefined}
