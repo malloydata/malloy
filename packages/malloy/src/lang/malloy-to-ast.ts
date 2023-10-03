@@ -1314,7 +1314,8 @@ export class MalloyToAST
     if (this.m4WarningsEnabled()) {
       this.contextError(
         pcx,
-        "'count(DISTINCT expression)' deprecated, use 'count(expression)' instead"
+        '`count(distinct expression)` deprecated, use `count(expression)` instead',
+        'warn'
       );
     }
     return this.astAt(
