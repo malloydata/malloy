@@ -541,8 +541,8 @@ export class Malloy {
     if (!connection.canStream()) {
       throw new Error(`Connection '${connectionName}' cannot stream results.`);
     }
-    let sql;
-    let resultExplore;
+    let sql: string;
+    let resultExplore: Explore;
     if (sqlStruct) {
       if (sqlStruct.structRelationship.type !== 'basetable') {
         throw new Error(
@@ -2162,7 +2162,7 @@ export class Runtime {
    */
   public loadQuery(
     query: QueryURL | QueryString,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): QueryMaterializer {
     return this.loadModel(query, options).loadFinalQuery();
   }
@@ -2179,7 +2179,7 @@ export class Runtime {
   public loadQueryByIndex(
     model: ModelURL | ModelString,
     index: number,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): QueryMaterializer {
     return this.loadModel(model, options).loadQueryByIndex(index);
   }
@@ -2196,7 +2196,7 @@ export class Runtime {
   public loadQueryByName(
     model: ModelURL | ModelString,
     name: string,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): QueryMaterializer {
     return this.loadModel(model, options).loadQueryByName(name);
   }
@@ -2213,7 +2213,7 @@ export class Runtime {
   public loadSQLBlockByName(
     model: ModelURL | ModelString,
     name: string,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): SQLBlockMaterializer {
     return this.loadModel(model, options).loadSQLBlockByName(name);
   }
@@ -2230,7 +2230,7 @@ export class Runtime {
   public loadSQLBlockByIndex(
     model: ModelURL | ModelString,
     index: number,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): SQLBlockMaterializer {
     return this.loadModel(model, options).loadSQLBlockByIndex(index);
   }
@@ -2244,7 +2244,7 @@ export class Runtime {
    */
   public getModel(
     source: ModelURL | ModelString,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): Promise<Model> {
     return this.loadModel(source, options).getModel();
   }
@@ -2257,7 +2257,7 @@ export class Runtime {
    */
   public getQuery(
     query: QueryURL | QueryString,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): Promise<PreparedQuery> {
     return this.loadQuery(query, options).getPreparedQuery();
   }
@@ -2273,7 +2273,7 @@ export class Runtime {
   public getQueryByIndex(
     model: ModelURL | ModelString,
     index: number,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): Promise<PreparedQuery> {
     return this.loadQueryByIndex(model, index, options).getPreparedQuery();
   }
@@ -2289,7 +2289,7 @@ export class Runtime {
   public getQueryByName(
     model: ModelURL | ModelString,
     name: string,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): Promise<PreparedQuery> {
     return this.loadQueryByName(model, name, options).getPreparedQuery();
   }
@@ -2305,7 +2305,7 @@ export class Runtime {
   public getSQLBlockByName(
     model: ModelURL | ModelString,
     name: string,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): Promise<SQLBlockStructDef> {
     return this.loadSQLBlockByName(model, name, options).getSQLBlock();
   }
@@ -2321,7 +2321,7 @@ export class Runtime {
   public getSQLBlockByIndex(
     model: ModelURL | ModelString,
     index: number,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): Promise<SQLBlockStructDef> {
     return this.loadSQLBlockByIndex(model, index, options).getSQLBlock();
   }

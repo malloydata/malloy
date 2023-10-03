@@ -178,7 +178,7 @@ export interface PersistSQLResults extends Connection {
 export interface StreamingConnection extends Connection {
   runSQLStream(
     sqlCommand: string,
-    options?: {rowLimit?: number}
+    options?: RunSQLOptions
   ): AsyncIterableIterator<QueryDataRow>;
 }
 
