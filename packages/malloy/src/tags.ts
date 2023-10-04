@@ -148,7 +148,9 @@ export class Tag implements TagInterface {
     extending: Tag | undefined,
     ...importing: Tag[]
   ): TagParse {
-    return parseTagline(str, extending, importing, __filename, 0, 0);
+    // TODO -- Figure out the right thing about the URL
+    const url = `internal://tag-parse/from-tag-line?${encodeURIComponent(str)}`;
+    return parseTagline(str, extending, importing, url, 0, 0);
   }
 
   static addModelScope(
