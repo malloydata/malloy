@@ -44,7 +44,7 @@
     "@malloydata/malloy": "^0.0.102",
     "@malloydata/malloy-interfaces": "^0.0.102",
     "apache-arrow": "^13.0.0",
-    "duckdb": "0.9.1-dev19.0",
+    "duckdb": "0.9.1-dev95.0",
     "web-worker": "^1.2.0"
   }
 }
