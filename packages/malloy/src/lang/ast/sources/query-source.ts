@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {StructDef} from '../../../model/malloy_types';
+import {StructDef, StructSource} from '../../../model/malloy_types';
 import {Source} from '../elements/source';
 import {QueryElement} from '../types/query-element';
 
@@ -33,8 +33,10 @@ export class QuerySource extends Source {
 
   structDef(): StructDef {
     const comp = this.query.queryComp(false);
-    const queryStruct = comp.outputStruct;
-    queryStruct.structSource = {type: 'query', query: comp.query};
+    const queryStruct = {
+      ...comp.outputStruct,
+      structSource: ({type: 'query', query: comp.query} as StructSource)
+    };
     this.document()?.rememberToAddModelAnnotations(queryStruct);
     return queryStruct;
   }

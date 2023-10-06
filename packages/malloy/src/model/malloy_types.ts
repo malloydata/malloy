@@ -768,7 +768,7 @@ export interface Query extends Pipeline, Filtered, HasLocation {
 
 export type NamedQuery = Query & NamedObject;
 
-export type PipeSegment = QuerySegment | IndexSegment;
+export type PipeSegment = QuerySegment | IndexSegment | RawSegment;
 
 export interface ReduceSegment extends QuerySegment {
   type: 'reduce';
@@ -812,6 +812,14 @@ interface SamplingEnable {
 
 export function isSamplingEnable(s: Sampling): s is SamplingEnable {
   return (s as SamplingEnable).enable !== undefined;
+}
+
+export interface RawSegment extends Filtered {
+  type: 'raw';
+  fields: never[];
+}
+export function isRawSegment(pe: PipeSegment): pe is RawSegment {
+  return (pe as RawSegment).type === 'raw';
 }
 
 export interface IndexSegment extends Filtered {

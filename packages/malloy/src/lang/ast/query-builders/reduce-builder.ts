@@ -101,7 +101,7 @@ export class ReduceBuilder implements QueryBuilder {
   }
 
   refineFrom(from: PipeSegment | undefined, to: QuerySegment): void {
-    if (from && from.type !== 'index') {
+    if (from && from.type !== 'index' && from.type !== 'raw') {
       if (!this.order) {
         if (from.orderBy) {
           to.orderBy = from.orderBy;

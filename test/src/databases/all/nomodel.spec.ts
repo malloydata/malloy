@@ -689,6 +689,36 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     }
   );
 
+  it(`simple sql is exactly as written - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(`run: conn.sql("select 1 as one")`)
+      .run();
+    expect(result.sql).toBe("select 1 as one");
+    expect(result.resultExplore).not.toBeUndefined();
+  });
+
+  it(`source from query defined as sql query - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(`
+        query: q is conn.sql("select 1 as one")
+        source: s is q
+        run: s -> { select: * }
+      `)
+      .run();
+    expect(result.data.path(0, "one").number.value).toBe(1);
+  });
+
+  it(`source from query defined as other query - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(`
+        query: q is conn.table('malloytest.flights') -> { group_by: carrier }
+        source: s is q
+        run: s -> { select: * }
+      `)
+      .run();
+      expect(result.data.path(0, "carrier").string.value).toBe("AA");
+  });
+
   it(`all with parameters - basic  - ${databaseName}`, async () => {
     const result = await runtime
       .loadQuery(
