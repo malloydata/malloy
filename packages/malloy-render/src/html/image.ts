@@ -39,12 +39,22 @@ export class HTMLImageRenderer implements Renderer {
       );
     }
 
-    if (data.isNull()) {
-      return createNullElement(this.document);
+    const element: HTMLElement = data.isNull()
+      ? createNullElement(this.document)
+      : this.document.createElement('img');
+    const {tag} = data.field.tagParse();
+    const width = tag.numeric('image', 'width');
+    const height = tag.numeric('image', 'height');
+    // Both image and null placeholder get matching size
+    if (width) element.style.width = `${width}px`;
+    if (height) element.style.height = `${height}px`;
+    // Image specific props
+    if (!data.isNull()) {
+      const alt = tag.text('image', 'alt');
+      const img = element as HTMLImageElement;
+      img.src = data.value;
+      if (alt) img.alt = alt;
     }
-
-    const element = this.document.createElement('img');
-    element.src = data.value;
     return element;
   }
 }
