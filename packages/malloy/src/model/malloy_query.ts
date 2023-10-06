@@ -66,7 +66,6 @@ import {
   isQuerySegment,
   isRawSegment,
   isSpreadFragment,
-  isSQLBlockStruct,
   isSQLExpressionFragment,
   isUngroupFragment,
   isValueParameter,
@@ -1283,7 +1282,10 @@ class FieldInstanceResult implements FieldInstance {
   }
 
   getQueryInfo(): QueryInfo {
-    if (!isIndexSegment(this.firstSegment) && !isRawSegment(this.firstSegment)) {
+    if (
+      !isIndexSegment(this.firstSegment) &&
+      !isRawSegment(this.firstSegment)
+    ) {
       const {queryTimezone} = this.firstSegment;
       if (queryTimezone) {
         return {queryTimezone};
@@ -3239,7 +3241,9 @@ class QueryQuery extends QueryField {
     // let fieldsSQL: string[] = [];
     const dialectFieldList: DialectFieldList = [];
     let orderBy = '';
-    const limit: number | undefined = isRawSegment(resultStruct.firstSegment) ? undefined : resultStruct.firstSegment.limit;
+    const limit: number | undefined = isRawSegment(resultStruct.firstSegment)
+      ? undefined
+      : resultStruct.firstSegment.limit;
 
     // calculate the ordering.
     const obSQL: string[] = [];
@@ -3634,10 +3638,12 @@ class QueryQueryRaw extends QueryQuery {
   generateSQL(stageWriter: StageWriter): string {
     const ssrc = this.parent.fieldDef.structSource;
     if (ssrc.type !== 'sql' || ssrc.method !== 'subquery') {
-      throw new Error("Invalid struct for QueryQueryRaw, currently only supports SQL");
+      throw new Error(
+        'Invalid struct for QueryQueryRaw, currently only supports SQL'
+      );
     }
     const s = ssrc.sqlBlock.selectStr;
-    return stageWriter.addStage(s)
+    return stageWriter.addStage(s);
   }
 
   prepare() {
@@ -3648,7 +3654,9 @@ class QueryQueryRaw extends QueryQuery {
     return this.parent.fieldDef;
   }
 
-  getResultMetadata(fi: FieldInstance): ResultStructMetadataDef | ResultMetadataDef | undefined {
+  getResultMetadata(
+    _fi: FieldInstance
+  ): ResultStructMetadataDef | ResultMetadataDef | undefined {
     return undefined;
   }
 }

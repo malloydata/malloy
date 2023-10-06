@@ -35,7 +35,7 @@ export class QuerySource extends Source {
     const comp = this.query.queryComp(false);
     const queryStruct = {
       ...comp.outputStruct,
-      structSource: ({type: 'query', query: comp.query} as StructSource)
+      structSource: {type: 'query', query: comp.query} as StructSource,
     };
     this.document()?.rememberToAddModelAnnotations(queryStruct);
     return queryStruct;
