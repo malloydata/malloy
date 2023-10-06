@@ -68,4 +68,4 @@ GROUP BY carrier
 ORDER BY flight_count desc         -- malloy automatically orders by the first aggregate
 ```
 
-Learn more about the syntax and language features of Malloy in the [Quickstart](https://malloydata.github.io/documentation/language/basic.html).
+Learn more about the syntax and language features of Malloy in the [Quickstart](https://malloydata.github.io/documentation/user_guides/basic).
