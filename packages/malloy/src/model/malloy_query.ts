@@ -2109,7 +2109,7 @@ class QueryQuery extends QueryField {
       if (
         isFunctionCallFragment(expr) &&
         expressionIsAnalytic(expr.overload.returnType.expressionType) &&
-        this.parent.dialect.name === 'standardsql'
+        this.parent.dialect.cantPartitionWindowFunctionsOnExpressions
       ) {
         // force the use of a lateral_join_bag
         resultStruct.root().isComplexQuery = true;
@@ -2831,7 +2831,7 @@ class QueryQuery extends QueryField {
           const exp = fi.getSQL();
           if (isScalarField(fi.f)) {
             if (
-              this.parent.dialect.name === 'standardsql' &&
+              this.parent.dialect.cantPartitionWindowFunctionsOnExpressions &&
               this.rootResult.queryUsesPartitioning
             ) {
               // BigQuery can't partition aggregate function except when the field has no

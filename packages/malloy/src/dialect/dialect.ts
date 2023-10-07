@@ -102,6 +102,13 @@ export abstract class Dialect {
   abstract supportsSafeCast: boolean;
   abstract supportsNesting: boolean;
 
+  // -- we should add flags with default values from now on so as to not break
+  // dialects outside our repository
+  //
+
+  // StandardSQL dialects can't partition on expression in window functions
+  cantPartitionWindowFunctionsOnExpressions = false;
+
   // return the definition of a function with the given name
   abstract getGlobalFunctionDef(
     name: string
