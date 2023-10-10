@@ -130,10 +130,11 @@ HACKY_REGEX: ('/' | [rR]) '\'' (STRING_ESCAPE | ~('\\' | '\''))* '\'';
 fragment HEX: [0-9a-fA-F];
 fragment UNICODE: '\\u' HEX HEX HEX HEX;
 fragment SAFE_NON_QUOTE: ~ ['"`\\\u0000-\u001F];
-fragment ESCAPED: '\\' .;
-SQ_STRING: '\'' (UNICODE | ESCAPED | SAFE_NON_QUOTE | ["`])* '\'';
-DQ_STRING: '"' (UNICODE | ESCAPED | SAFE_NON_QUOTE | ['`])* '"';
-BQ_STRING: '`' (UNICODE | ESCAPED | SAFE_NON_QUOTE | ['"])* '`';
+fragment ESCAPED: '\\' ~ '\n';
+fragment STR_CHAR: UNICODE | ESCAPED | SAFE_NON_QUOTE | '\t';
+SQ_STRING: '\'' (STR_CHAR | ["`])* '\'';
+DQ_STRING: '"' (STR_CHAR | ['`])* '"';
+BQ_STRING: '`' (STR_CHAR | ['"])* '`';
 
 fragment F_TO_EOL: ~[\r\n]* (('\r'? '\n') | EOF);
 DOC_ANNOTATION: '##' F_TO_EOL;
