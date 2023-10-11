@@ -1091,3 +1091,6 @@ describe('m3/m4 source query sentences', () => {
     `).toTranslate();
   });
 });
+
+test('non breaking space in source', () =>
+  expect('source:\u00a0z\u00a0is\u00a0a').toParse());

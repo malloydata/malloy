@@ -276,5 +276,6 @@ describe('literals', () => {
       const x = new BetaExpression('"""x"""');
       expect(x).toParse();
     });
+    test('a string containing a tab', () => expect(expr`'\t'`).toParse());
   });
 });
