@@ -23,7 +23,7 @@
 
 lexer grammar MalloyLexer;
 
-fragment SPACE_CHAR: [ \u000B\t\r\n];
+fragment SPACE_CHAR: [ \u000B\t\r\n\u0080];
 
 // colon keywords ...
 ACCEPT: A C C E P T SPACE_CHAR* ':';
