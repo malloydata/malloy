@@ -677,7 +677,7 @@ export class Model implements Taggable {
   public getPreparedQueryByName(queryName: string): PreparedQuery {
     const query = this.modelDef.contents[queryName];
     if (query?.type === 'query') {
-      return new PreparedQuery(query, this.modelDef, queryName);
+      return new PreparedQuery(query, this.modelDef, this.problems, queryName);
     }
 
     throw new Error('Given query name does not refer to a named query.');
@@ -695,7 +695,11 @@ export class Model implements Taggable {
     } else if (index >= this.queryList.length) {
       throw new Error(`Query index ${index} is out of bounds.`);
     }
-    return new PreparedQuery(this.queryList[index], this.modelDef);
+    return new PreparedQuery(
+      this.queryList[index],
+      this.modelDef,
+      this.problems
+    );
   }
 
   /**
@@ -739,7 +743,8 @@ export class Model implements Taggable {
     }
     return new PreparedQuery(
       this.queryList[this.queryList.length - 1],
-      this.modelDef
+      this.modelDef,
+      this.problems
     );
   }
 
@@ -794,6 +799,7 @@ export class PreparedQuery implements Taggable {
   constructor(
     query: InternalQuery,
     model: ModelDef,
+    public problems: LogMessage[],
     public name?: string
   ) {
     this._query = query;
@@ -856,6 +862,7 @@ export class PreparedQuery implements Taggable {
     return new PreparedQuery(
       {...turtleDef, structRef, type: 'query'},
       this._modelDef,
+      this.problems,
       this.name || turtleDef.as || turtleDef.name
     );
   }
@@ -1413,7 +1420,7 @@ export class Explore extends Entity {
         },
       ],
     };
-    return new PreparedQuery(internalQuery, this.modelDef, name);
+    return new PreparedQuery(internalQuery, this.modelDef, [], name);
   }
 
   private get modelDef(): ModelDef {
@@ -2669,7 +2676,7 @@ export class ModelMaterializer extends FluentState<Model> {
   public _loadQueryFromQueryDef(query: InternalQuery): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       const model = await this.materialize();
-      return new PreparedQuery(query, model._modelDef);
+      return new PreparedQuery(query, model._modelDef, model.problems);
     });
   }
 
