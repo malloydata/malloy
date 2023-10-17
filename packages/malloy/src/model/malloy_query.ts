@@ -2250,7 +2250,7 @@ class QueryQuery extends QueryField {
       if (field instanceof QueryTurtle || field instanceof QueryQuery) {
         if (this.firstSegment.type === 'project') {
           throw new Error(
-            `Turtled Queries cannot be used in PROJECT - '${field.fieldDef.name}'`
+            `Nested views cannot be used in select - '${field.fieldDef.name}'`
           );
         }
         const fir = new FieldInstanceResult(
@@ -2269,7 +2269,7 @@ class QueryQuery extends QueryField {
         if (isAggregateField(field)) {
           if (this.firstSegment.type === 'project') {
             throw new Error(
-              `Aggregate Fields cannot be used in PROJECT - '${field.fieldDef.name}'`
+              `Aggregate Fields cannot be used in select - '${field.fieldDef.name}'`
             );
           }
         }

@@ -919,7 +919,7 @@ export class MalloyToAST
     );
   }
 
-  // "FieldCollection" can only mean a project statement today
+  // "FieldCollection" can only mean a select statement today
   visitFieldCollection(
     pcx: parse.FieldCollectionContext
   ): ast.ProjectStatement {

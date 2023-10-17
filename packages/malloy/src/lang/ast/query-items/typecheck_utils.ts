@@ -48,7 +48,7 @@ export function typecheckProject(type: TypeDesc, logTo: MalloyElement) {
       );
     }
     logTo.log(
-      `Cannot use ${kind} field in a project operation, did you mean to use ${useInstead} operation instead?`
+      `Cannot use ${kind} field in a select operation, did you mean to use ${useInstead} operation instead?`
     );
   }
 }
