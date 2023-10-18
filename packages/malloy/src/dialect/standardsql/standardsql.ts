@@ -538,7 +538,7 @@ ${indent(sql)}
     // Clean types with args
     const baseSqlType = sqlType
       .toUpperCase()
-      .replace(/\(\.*)/, '')
+      .replace(/\(.*\)/, '')
       .trim();
     return bqToMalloyTypes[baseSqlType];
   }

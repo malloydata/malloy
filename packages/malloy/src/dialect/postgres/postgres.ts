@@ -493,7 +493,7 @@ export class PostgresDialect extends Dialect {
     // Clean types with args
     const baseSqlType = sqlType
       .toLowerCase()
-      .replace(/\(\.*)/, '')
+      .replace(/\(.*\)/, '')
       .trim();
     return postgresToMalloyTypes[baseSqlType];
   }

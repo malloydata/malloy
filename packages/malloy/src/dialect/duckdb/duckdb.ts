@@ -466,7 +466,7 @@ export class DuckDBDialect extends Dialect {
     // Clean types with args
     const baseSqlType = sqlType
       .toUpperCase()
-      .replace(/\(\.*)/, '')
+      .replace(/\(.*\)/, '')
       .trim();
     return duckDBToMalloyTypes[baseSqlType];
   }
