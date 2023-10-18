@@ -463,8 +463,11 @@ export class DuckDBDialect extends Dialect {
   }
 
   sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
-    // Clean VARCHAR(n)
-    const baseSqlType = sqlType.toUpperCase().replace(/\(\d+)/, '');
+    // Clean types with args
+    const baseSqlType = sqlType
+      .toUpperCase()
+      .replace(/\(\.*)/, '')
+      .trim();
     return duckDBToMalloyTypes[baseSqlType];
   }
 

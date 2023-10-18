@@ -88,6 +88,7 @@ const postgresToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'numeric': {type: 'number', numberType: 'float'},
   'bytea': {type: 'string'},
   'pg_ndistinct': {type: 'number', numberType: 'integer'},
+  'varchar': {type: 'string'},
 };
 
 export class PostgresDialect extends Dialect {
@@ -489,7 +490,12 @@ export class PostgresDialect extends Dialect {
   }
 
   sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
-    return postgresToMalloyTypes[sqlType.toLowerCase()];
+    // Clean types with args
+    const baseSqlType = sqlType
+      .toLowerCase()
+      .replace(/\(\.*)/, '')
+      .trim();
+    return postgresToMalloyTypes[baseSqlType];
   }
 
   castToString(expression: string): string {
