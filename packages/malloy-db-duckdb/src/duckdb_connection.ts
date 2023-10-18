@@ -81,15 +81,10 @@ export class DuckDBConnection extends DuckDBCommon {
           `SET FILE_SEARCH_PATH='${this.workingDirectory}'`
         );
       }
-      const setupCmds = [
-        "INSTALL 'json'",
-        "LOAD 'json'",
-        "INSTALL 'httpfs'",
-        "LOAD 'httpfs'",
-        "INSTALL 'icu'",
-        "LOAD 'icu'",
-        "SET TimeZone='UTC'",
-      ];
+      for (const ext of ['json', 'httpfs', 'icu']) {
+        await this.loadExtension(ext);
+      }
+      const setupCmds = ["SET TimeZone='UTC'"];
       for (const cmd of setupCmds) {
         try {
           await this.runDuckDBQuery(cmd);
