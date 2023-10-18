@@ -70,16 +70,6 @@ const duckDBToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'BOOLEAN': {type: 'boolean'},
 };
 
-const duckDBToMalloyTypesMatchers: Array<{
-  match: RegExp;
-  malloyType: FieldAtomicTypeDef;
-}> = [
-  {
-    match: /^VARCHAR\(\d*\)$/,
-    malloyType: {type: 'string'},
-  },
-];
-
 export class DuckDBDialect extends Dialect {
   name = 'duckdb';
   defaultNumberType = 'DOUBLE';
@@ -473,10 +463,9 @@ export class DuckDBDialect extends Dialect {
   }
 
   sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
-    const regExMatch = duckDBToMalloyTypesMatchers.find(m =>
-      sqlType.toUpperCase().match(m.match)
-    )?.malloyType;
-    return regExMatch ?? duckDBToMalloyTypes[sqlType.toUpperCase()];
+    // Clean VARCHAR(n)
+    const baseSqlType = sqlType.toUpperCase().replace(/\(\d+)/, '');
+    return duckDBToMalloyTypes[baseSqlType];
   }
 
   castToString(expression: string): string {
