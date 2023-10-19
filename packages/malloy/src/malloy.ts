@@ -32,6 +32,7 @@ import {
 import {DocumentHelpContext} from './lang/parse-tree-walkers/document-help-context-walker';
 import {
   CompiledQuery,
+  DocumentLocation,
   DocumentReference,
   FieldBooleanDef,
   FieldDateDef,
@@ -1361,6 +1362,8 @@ abstract class Entity {
   }
 
   public abstract isIntrinsic(): boolean;
+
+  public abstract get location(): DocumentLocation | undefined;
 }
 
 export type Field = AtomicField | QueryField | ExploreField;
@@ -1611,6 +1614,10 @@ export class Explore extends Entity {
         : undefined;
     return new Explore(main_explore._structDef, parentExplore, sourceExplore);
   }
+
+  public get location(): DocumentLocation | undefined {
+    return this.structDef.location;
+  }
 }
 
 export enum AtomicFieldType {
@@ -1757,6 +1764,10 @@ export class AtomicField extends Entity implements Taggable {
       this.fieldTypeDef.resultMetadata?.sourceField ||
       this.name
     );
+  }
+
+  public get location(): DocumentLocation | undefined {
+    return this.fieldTypeDef.location;
   }
 }
 
@@ -1920,6 +1931,10 @@ export class Query extends Entity {
 
   public isIntrinsic(): boolean {
     return false;
+  }
+
+  public get location(): DocumentLocation | undefined {
+    return this.turtleDef.location;
   }
 }
 
