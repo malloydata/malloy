@@ -535,12 +535,9 @@ ${indent(sql)}
   }
 
   sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
-    // Clean types with args
-    const baseSqlType = sqlType
-      .toUpperCase()
-      .replace(/\(.*\)/, '')
-      .trim();
-    return bqToMalloyTypes[baseSqlType];
+    // Remove trailing params
+    const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
+    return bqToMalloyTypes[baseSqlType.toUpperCase()];
   }
 
   castToString(expression: string): string {
