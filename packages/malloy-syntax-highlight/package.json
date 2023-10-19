@@ -6,6 +6,9 @@
     "grammars/**/*.tmGrammar.json",
     "grammars/**/*-language.json"
   ],
+  "engines": {
+    "node": ">=16"
+  },
   "scripts": {
     "build": "tsc",
     "clean": "tsc --build --clean && rm -rf dist",

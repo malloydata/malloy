@@ -9,6 +9,9 @@
     "type": "git",
     "url": "https://github.com/malloydata/malloy"
   },
+  "engines": {
+    "node": ">=16"
+  },
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
