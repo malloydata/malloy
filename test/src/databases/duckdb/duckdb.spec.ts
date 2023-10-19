@@ -100,6 +100,13 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     expect(result.rows[0]).toEqual({"current_setting('TimeZone')": 'CET'});
   });
 
+  it('supports varchars with parameters', async () => {
+    await expect(runtime).queryMatches(
+      "run: duckdb.sql(\"SELECT 'a'::VARCHAR as abc, 'a3'::VARCHAR(3) as abc3\")",
+      {abc: 'a', abc3: 'a3'}
+    );
+  });
+
   describe('time', () => {
     const zone = 'America/Mexico_City'; // -06:00 no DST
     const zone_2020 = DateTime.fromObject({
