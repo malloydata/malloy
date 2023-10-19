@@ -6,7 +6,7 @@
   "types": "dist/index.d.ts",
   "homepage": "https://github.com/malloydata/malloy#readme",
   "engines": {
-    "node": ">=10"
+    "node": ">=16"
   },
   "repository": {
     "type": "git",
