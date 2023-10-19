@@ -6,17 +6,12 @@ type RenderOptions = {
   script: string;
   source: string;
   view: string;
+  connection: Promise<DuckDBWASMConnection>;
 };
 
-async function runAndRender({script, source, view}: RenderOptions) {
-  const connection = new DuckDBWASMConnection('duckdb');
-  const tableName = 'data/products.parquet';
-  await connection.connecting;
-  await connection.registerRemoteTable(
-    tableName,
-    new window.URL(tableName, window.location.href).toString()
-  );
-  const runtime = new SingleConnectionRuntime(connection);
+async function runAndRender({script, source, view, connection}: RenderOptions) {
+  const conn = await connection;
+  const runtime = new SingleConnectionRuntime(conn);
   const model = runtime.loadModel(script);
   const runner = model.loadQuery(`run: ${source} -> ${view}`);
   const viewer = new HTMLView(document);

@@ -40,7 +40,6 @@ const config = {
         'process.env': {},
       },
     });
-    console.log(finalConfig);
     return finalConfig;
   },
 };

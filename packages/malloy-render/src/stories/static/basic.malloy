@@ -1,1 +1,8 @@
-source: products is duckdb.table("data/products.parquet");
+source: products is duckdb.table("data/products.parquet") extend {
+
+  # bar_chart
+  view: category_bar is {
+      group_by: category
+      aggregate: avg_retail is retail_price.avg()
+    }
+};
