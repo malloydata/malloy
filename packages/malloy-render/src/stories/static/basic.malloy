@@ -1,0 +1,1 @@
+source: products is duckdb.table("data/products.parquet");
