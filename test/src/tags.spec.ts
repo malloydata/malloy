@@ -129,12 +129,32 @@ describe('tagParse to Tag', () => {
     ['x=.7e2', {x: {eq: '.7e2'}}],
     ['x=7E2', {x: {eq: '7E2'}}],
     ['`spacey name`=Zaphod', {'spacey name': {eq: 'Zaphod'}}],
+    [
+      'image { alt=hello { field=department } }',
+      {
+        image: {
+          properties: {
+            alt: {eq: 'hello', properties: {field: {eq: 'department'}}},
+          },
+        },
+      },
+    ],
+    [
+      'image { alt=hello { field=department } }',
+      {
+        image: {
+          properties: {
+            alt: {eq: 'hello', properties: {field: {eq: 'department'}}},
+          },
+        },
+      },
+    ],
   ];
   test.each(tagTests)('tag %s', (expression: string, expected: TagDict) => {
     expect(expression).tagsAre(expected);
   });
-  test('uncomment to debug just one of the expressions', () => {
-    const x: TagTestTuple = ['a=a b=$(a)', {a: {eq: 'a'}, b: {eq: 'a'}}];
+  test.skip('unskip to debug just one of the expressions', () => {
+    const x: TagTestTuple = ['x x.y', {x: {properties: {y: {}}}}];
     expect(x[0]).tagsAre(x[1]);
   });
 });
