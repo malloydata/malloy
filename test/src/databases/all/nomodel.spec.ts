@@ -815,9 +815,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   it(`sql_block no explore- ${databaseName}`, async () => {
-    expect(`
-      ${sql1234}
-      run: sql1234 -> { select: a }`).resultEquals(runtime, {a: 1});
+    await expect(`
+      run: ${sql1234}-> { select: a }`).resultEquals(runtime, {a: 1});
   });
 
   it(`sql_block with turducken- ${databaseName}`, async () => {
