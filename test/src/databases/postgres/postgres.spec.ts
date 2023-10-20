@@ -56,96 +56,51 @@ describe('Postgres tests', () => {
     await runtimeList.closeAll();
   });
 
-  it('sql_block', async () => {
-    const result = await runtime
-      .loadQuery(
-        `
-      sql: one is {select:"""
-        SELECT 1 as n
-       """}
-
-      query: from_sql(one) -> { select: n }
-      `
-      )
-      .run();
-    expect(result.data.value[0]['n']).toBe(1);
+  it('run an sql query', async () => {
+    await expect(
+      'run: postgres.sql("SELECT 1 as n") -> { select: n }'
+    ).resultEquals(runtime, {n: 1});
   });
 
-  it('quote field name', async () => {
-    const result = await runtime
-      .loadQuery(
-        `
-      sql: one is {select:"""
-        SELECT 1 as "upperLower"
-       """}
-
-      query: from_sql(one) -> { select: upperLower }
-      `
-      )
-      .run();
-    expect(result.data.value[0]['upperLower']).toBe(1);
+  it('mixed case col names are properly quoted so they retain case in results', async () => {
+    await expect(`
+      run: postgres.sql('SELECT 1 as "upperLower"') -> { select: upperLower }
+    `).resultEquals(runtime, {upperLower: 1});
   });
 
-  it('quote keyword', async () => {
-    const result = await runtime
-      .loadQuery(
-        `
-      sql: one is {select:"""
-        SELECT 1 as "select"
-       """}
-
-      query: from_sql(one) -> {
-        select:
-          select
-          create is select + 1
-      }
-      `
-      )
-      .run();
-    expect(result.data.value[0]['select']).toBe(1);
-    expect(result.data.value[0]['create']).toBe(2);
+  it('fields which are sql keywords are quoted', async () => {
+    await expect(`
+    run: postgres.sql('SELECT 1 as "select"') -> {
+      select:
+        select
+        create is select + 1
+    }
+  `).resultEquals(runtime, {select: 1, create: 2});
   });
 
-  // these started failing and I'm not sure why (lloyd, skipping for now)
-  it.skip('quote table name', async () => {
-    const result = await runtime
-      .loadQuery(
-        `
-      query: table('public.UpperTablePublic') -> { select: one }
-      `
-      )
-      .run();
-    expect(result.data.value[0]['one']).toBe(1);
+  it('will quote to properly access mixed case table name', async () => {
+    await expect(`
+      run: postgres.table('public.UpperTablePublic') -> { select: one }
+    `).resultEquals(runtime, {one: 1});
   });
 
-  it.skip('quote schema name', async () => {
-    const result = await runtime
-      .loadQuery(
-        `
-      query: table('UpperSchema.UpperSchemaUpperTable') -> { select: one }
-      `
-      )
-      .run();
-    expect(result.data.value[0]['one']).toBe(1);
+  it('quote to properly access mixes case schema name', async () => {
+    await expect(`
+      run: postgres.table('UpperSchema.UpperSchemaUpperTable') -> { select: one }
+    `).resultEquals(runtime, {one: 1});
   });
 
   it('passes unsupported data', async () => {
     const result = await runtime
-      .loadQuery(
-        `
-        sql: badType is { select: """SELECT int4range(10, 20) as ranger""" }
-        query: from_sql(badType)->{ select: *}
-      `
-      )
+      .loadQuery('run: postgres.sql("SELECT int4range(10, 20) as ranger")')
       .run();
     expect(result.data.value[0]['ranger']).toBeDefined();
   });
 
   it('supports varchars with parameters', async () => {
-    await expect(runtime).queryMatches(
-      "run: postgres.sql(\"SELECT 'a'::VARCHAR as abc, 'a3'::VARCHAR(3) as abc3\")",
-      {abc: 'a', abc3: 'a3'}
-    );
+    await expect(
+      "run: postgres.sql(\"SELECT 'a'::VARCHAR as abc, 'a3'::VARCHAR(3) as abc3\")"
+    ).resultEquals(runtime, {abc: 'a', abc3: 'a3'});
   });
 
   describe('time', () => {
@@ -159,17 +114,14 @@ describe('Postgres tests', () => {
       second: 0,
       zone,
     });
-    // TODO: Investigate why this test is not working.
-    test.skip('can use unsupported types', async () => {
-      await expect(runtime).queryMatches(
-        `sql: timeData is { connection: "postgres"  select: """
-          SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
-        """}
-      query: from_sql(timeData) -> {
-        select: mex_220 is t_tstz::timestamp
-      }`,
-        {mex_220: zone_2020.toJSDate()}
-      );
+    test('can cast TIMESTAMPTZ to timestamp', async () => {
+      await expect(
+        `run: duckdb.sql("""
+              SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
+          """) -> {
+            select: mex_220 is t_tstz::timestamp
+          }`
+      ).resultEquals(runtime, {mex_220: zone_2020.toJSDate()});
     });
   });
 });

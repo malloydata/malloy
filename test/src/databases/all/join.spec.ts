@@ -28,8 +28,9 @@ import {databasesFromEnvironmentOr} from '../../util';
 import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
-const joinModelText = `
-  source: aircraft_models is table('malloytest.aircraft_models') extend {
+function modelText(connectionName: string) {
+  return `
+  source: aircraft_models is ${connectionName}.table('malloytest.aircraft_models') extend {
     primary_key: aircraft_model_code
     measure: model_count is count()
     view: manufacturer_models is {
@@ -42,7 +43,7 @@ const joinModelText = `
     }
   }
 
-  source: aircraft is table('malloytest.aircraft') extend {
+  source: aircraft is ${connectionName}.table('malloytest.aircraft') extend {
     primary_key: tail_num
     measure: aircraft_count is count()
   }
@@ -52,6 +53,7 @@ const joinModelText = `
         with manufacturer
   }
 `;
+}
 
 // const models = new Map<string, malloy.ModelMaterializer>();
 // runtimes.runtimeMap.forEach((runtime, key) => {
@@ -64,6 +66,7 @@ afterAll(async () => {
 
 describe('join expression tests', () => {
   runtimes.runtimeMap.forEach((runtime, database) => {
+    const joinModelText = modelText(database);
     it(`model source refine join - ${database}`, async () => {
       const result = await runtime
         .loadModel(joinModelText)
@@ -247,7 +250,7 @@ describe('join expression tests', () => {
         .loadQuery(
           `
           // produce a table with 4 rows that has a nested element
-          query: a_states is table('malloytest.state_facts')-> {
+          query: a_states is ${database}.table('malloytest.state_facts')-> {
             where: state ? ~ 'A%'
             group_by: state
             nest: somthing is {group_by: state}
@@ -256,7 +259,7 @@ describe('join expression tests', () => {
           // join the 4 rows and reference the
           //  nested column. should return all the rows.
           //  If the unnest is an inner join, we'll get back just 4 rows.
-          run: table('malloytest.state_facts') {
+          run: ${database}.table('malloytest.state_facts') {
             join_one: a_states is a_states with state
           }
           -> {
@@ -278,10 +281,10 @@ describe('join expression tests', () => {
       const result = await runtime
         .loadQuery(
           `
-        source: flights is table('malloytest.flights') extend {
-          join_one: aircraft is table('malloytest.aircraft')
+        source: flights is ${database}.table('malloytest.flights') extend {
+          join_one: aircraft is ${database}.table('malloytest.aircraft')
             on tail_num = aircraft.tail_num
-          join_one: aircraft_models is table('malloytest.aircraft_models')
+          join_one: aircraft_models is ${database}.table('malloytest.aircraft_models')
             on aircraft.aircraft_model_code = aircraft_models.aircraft_model_code
         }
 
@@ -300,11 +303,11 @@ describe('join expression tests', () => {
       const result = await runtime
         .loadQuery(
           `
-        source: aircraft_models is table('malloytest.aircraft_models')
+        source: aircraft_models is ${database}.table('malloytest.aircraft_models')
 
-        source: aircraft is table('malloytest.aircraft')
+        source: aircraft is ${database}.table('malloytest.aircraft')
 
-        source: flights is table('malloytest.flights') extend {
+        source: flights is ${database}.table('malloytest.flights') extend {
           join_one: aircraft on aircraft.tail_num = tail_num
           join_one: aircraft_models on aircraft_models.aircraft_model_code = aircraft.aircraft_model_code
         }
@@ -323,8 +326,8 @@ describe('join expression tests', () => {
       const result = await runtime
         .loadQuery(
           `
-          run: table('malloytest.state_facts') -> {
-            join_one: sf is table('malloytest.state_facts') on sf.state = state
+          run: ${database}.table('malloytest.state_facts') -> {
+            join_one: sf is ${database}.table('malloytest.state_facts') on sf.state = state
             aggregate: x is sf.births.sum() { ? state = 'CA' }
           }
           `

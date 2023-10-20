@@ -35,8 +35,9 @@ const [describe, databases] = describeIfDatabaseAvailable([
   'duckdb',
 ]);
 
-const modelText = `
-source:ga_sessions is table('malloytest.ga_sample'){
+function modelText(databaseName: string) {
+  return `
+source:ga_sessions is ${databaseName}.table('malloytest.ga_sample'){
 
   measure:
     user_count is count(fullVisitorId)
@@ -124,6 +125,7 @@ query: sessions_dashboard is ga_sessions -> {
     }
 }
 `;
+}
 
 const runtimes = new RuntimeList(databases);
 describe.each(runtimes.runtimeList)(
@@ -131,7 +133,7 @@ describe.each(runtimes.runtimeList)(
   (databaseName, runtime) => {
     test(`repeated child of record - ${databaseName}`, async () => {
       const result = await runtime
-        .loadModel(modelText)
+        .loadModel(modelText(databaseName))
         .loadQuery(
           `
         query: ga_sessions->by_page_title
@@ -157,7 +159,7 @@ describe.each(runtimes.runtimeList)(
     //      Received: "Referral"
     test.skip(`search_index - ${databaseName}`, async () => {
       const result = await runtime
-        .loadModel(modelText)
+        .loadModel(modelText(databaseName))
         .loadQuery(
           `
         query: ga_sessions->search_index -> {
@@ -183,7 +185,7 @@ describe.each(runtimes.runtimeList)(
       const _result = await runtime
         .loadQuery(
           `
-        query: table('malloytest.ga_sample')-> {
+        run: ${databaseName}.table('malloytest.ga_sample')-> {
           index: everything
           sample: ${sampleSize}
         }
@@ -208,7 +210,7 @@ describe.each(runtimes.runtimeList)(
       const _result = await runtime
         .loadQuery(
           `
-          source: airports is table('malloytest.airports') + {
+          source: airports is ${databaseName}.table('malloytest.airports') + {
             measure:
               airport_count is count()
             query: by_elevation is {
@@ -246,7 +248,7 @@ describe.each(runtimes.runtimeList)(
       const result = await runtime
         .loadQuery(
           `
-        source: eone is  table('malloytest.airports') {}
+        source: eone is  ${databaseName}.table('malloytest.airports') {}
 
         query: eone -> {
           select:

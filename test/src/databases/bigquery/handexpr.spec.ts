@@ -587,8 +587,8 @@ describe('BigQuery hand-built expression test', () => {
                 total_seats2 is sum(aircraft_models.seats),
                 total_seats3 is aircraft_models.sum(aircraft_models.seats),
                 aircraft_models.boeing_seats,
-                boeing_seats2 is aircraft_models.sum(aircraft_models.seats) {? aircraft_models.manufacturer ? 'BOEING'},
-                boeing_seats3 is aircraft_models.boeing_seats {? aircraft_models.manufacturer ? ~'B%'}
+                boeing_seats2 is aircraft_models.sum(aircraft_models.seats) { where: aircraft_models.manufacturer ? 'BOEING'},
+                boeing_seats3 is aircraft_models.boeing_seats { where: aircraft_models.manufacturer ? ~'B%'}
             }
           `
       )
@@ -639,7 +639,7 @@ describe('BigQuery hand-built expression test', () => {
       .loadQuery(
         `
               query: aircraft->{
-                aggregate: boeing_seats is aircraft_models.total_seats {? aircraft_models.manufacturer ?'BOEING'}
+                aggregate: boeing_seats is aircraft_models.total_seats { where: aircraft_models.manufacturer ?'BOEING'}
               }
             `
       )
@@ -653,7 +653,7 @@ describe('BigQuery hand-built expression test', () => {
       .loadQuery(
         `
               query: aircraft->{
-                aggregate: boeing_aircraft is count() {?aircraft_models.manufacturer ?'BOEING'}
+                aggregate: boeing_aircraft is count() { where:aircraft_models.manufacturer ?'BOEING'}
               }
             `
       )

@@ -24,8 +24,12 @@
 import {
   QueryMaterializer,
   Result,
+  Runtime,
   SingleConnectionRuntime,
 } from '@malloydata/malloy';
+
+type ExpectedResultRow = Record<string, unknown>;
+type ExpectedResult = ExpectedResultRow | ExpectedResultRow[];
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -33,19 +37,19 @@ declare global {
     interface Matchers<R> {
       isSqlEq(): R;
       /**
-       * Jest matcher for running a Malloy query, assumes you only care about
-       * columns in the first row.
+       * Jest matcher for running a Malloy query, checks that each row
+       * contains the values matching the template. If you only want to
+       * check the first row, use the first form. If you want to check
+       * multiple rows, use the second.
        *
-       *     await expect(runtime).queryMatches('query', {colName: colValue});
+       *     await expect('query').resultEquals(runtime, {colName: colValue});
+       *     await expect('query').resultEquals(runtime, [{colName: colValue}]);
        *
-       * @param runtime Database connection runtime
        * @param querySrc Malloy source, last query in source will be run
-       * @param expected Key value pairs
+       * @param runtime Database connection runtime
+       * @param expected Key value pairs or array of key value pairs
        */
-      queryMatches(
-        querySrc: string,
-        matchVals: Record<string, unknown>
-      ): Promise<R>;
+      resultEquals(runtime: Runtime, matchVals: ExpectedResult): Promise<R>;
     }
   }
 }
@@ -73,10 +77,10 @@ expect.extend({
     };
   },
 
-  async queryMatches(
-    runtime: SingleConnectionRuntime,
+  async resultEquals(
     querySrc: string,
-    expected: Record<string, unknown>
+    runtime: SingleConnectionRuntime,
+    shouldEqual: ExpectedResult
   ) {
     if (!runtime.supportsNesting && querySrc.indexOf('nest:') >= 0) {
       return {
@@ -90,7 +94,23 @@ expect.extend({
     try {
       query = runtime.loadQuery(querySrc);
     } catch (e) {
-      return {pass: false, message: () => `loadQuery failed: ${e.message}`};
+      const [_n, withLines] = querySrc.split('\n').reduce<[number, string]>(
+        (acc, cur) => {
+          const [lineNo, withNums] = acc;
+          return [
+            lineNo + 1,
+            `${withNums}${lineNo.toString().padStart(3, ' ')} ${cur}`,
+          ];
+        },
+        [0, '']
+      );
+      // probably was a compile error because the test is under development, help
+      // out by printing the source code so the line numbers make sense
+      return {
+        pass: false,
+        message: () =>
+          `--- SOURCE CODE ---\n${withLines}\n-------------------\nloadQuery failed: ${e.message}`,
+      };
     }
 
     let result: Result;
@@ -102,18 +122,24 @@ expect.extend({
       return {pass: false, message: () => failMsg};
     }
 
+    const allRows = Array.isArray(shouldEqual) ? shouldEqual : [shouldEqual];
+    let i = 0;
     const fails: string[] = [];
-    for (const [name, value] of Object.entries(expected)) {
-      try {
-        const got = result.data.path(0, name).value;
-        const mustBe = value instanceof Date ? value.getTime() : value;
-        const actuallyGot = got instanceof Date ? got.getTime() : got;
-        if (actuallyGot !== mustBe) {
-          fails.push(`Expected {${name}: ${value}} Got: ${got}`);
+    for (const expected of allRows) {
+      for (const [name, value] of Object.entries(expected)) {
+        const row = allRows.length > 0 ? `[${i}]` : '';
+        try {
+          const got = result.data.path(0, name).value;
+          const mustBe = value instanceof Date ? value.getTime() : value;
+          const actuallyGot = got instanceof Date ? got.getTime() : got;
+          if (actuallyGot !== mustBe) {
+            fails.push(`Expected ${row}{${name}: ${value}} Got: ${got}`);
+          }
+        } catch (e) {
+          fails.push(`Expected ${row}{${name}: ${value}} Error: ${e.message}`);
         }
-      } catch (e) {
-        fails.push(`Expected {${name}: ${value}} Error: ${e.message}`);
       }
+      i += 1;
     }
     if (fails.length !== 0) {
       const failMsg = `SQL: ${await query.getSQL()}\n${fails.join('\n')}`;
@@ -122,7 +148,7 @@ expect.extend({
 
     return {
       pass: true,
-      message: () => `First row matched ${JSON.stringify(expected)}`,
+      message: () => 'All rows matched expected results',
     };
   },
 });

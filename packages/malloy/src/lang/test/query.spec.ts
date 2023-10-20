@@ -82,7 +82,7 @@ describe('query:', () => {
     });
     test('query with shortcut filtered turtle', () => {
       expect(`##! -m4warnings
-        query: allA is ab -> aturtle + {? astr ~ 'a%' }`).toTranslate();
+        query: allA is ab -> aturtle + { where: astr ~ 'a%' }`).toTranslate();
     });
     test('query with filtered turtle', () => {
       expect(
@@ -297,7 +297,7 @@ describe('query:', () => {
           'Cannot use an analytic field in a project operation, did you mean to use a calculate operation instead?'
         );
       });
-      test('cannot use analytic in declare', () => {
+      test('cannot use analytic in extended source', () => {
         expect(
           `##! -m4warnings
           run: a -> { group_by: a is 1; declare: s is row_number() }`

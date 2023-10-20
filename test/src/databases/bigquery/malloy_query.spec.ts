@@ -27,6 +27,7 @@ import {Query} from '@malloydata/malloy';
 import {testModel} from '../../models/faa_model';
 import {BigQueryTestConnection, RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable, fStringEq} from '../../util';
+import '../../util/db-jest-matchers';
 
 const runtimeList = new RuntimeList(['bigquery']);
 const runtime = runtimeList.runtimeMap.get('bigquery');
@@ -525,7 +526,7 @@ describe('BigQuery expression tests', () => {
     const result = await runQuery(
       faa,
       `
-      query: table('malloytest.airports')->{
+      run: bigquery.table('malloytest.airports')->{
         where: faa_region ? ~'A%'
         order_by: 1
         group_by: faa_region
@@ -690,7 +691,7 @@ describe('BigQuery expression tests', () => {
 });
 
 const airportModelText = `
-source: airports is table('malloy-data.malloytest.airports'){
+source: airports is bigquery.table('malloy-data.malloytest.airports'){
   primary_key: code
   measure: airport_count is count()
 
@@ -710,7 +711,7 @@ source: airports is table('malloy-data.malloytest.airports'){
   }
 }
 
-query: ca_airports is airports->by_fac_type{? state ? 'CA' | 'NY'}
+query: ca_airports is airports->by_fac_type{ where: state ? 'CA' | 'NY'}
 `;
 
 describe('airport_tests', () => {
@@ -840,7 +841,7 @@ describe('airport_tests', () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.airports')->{
+      run: bigquery.table('malloytest.airports')->{
         aggregate: airport_count is count()
         nest: pipe_turtle is {
           group_by:
@@ -941,7 +942,7 @@ describe('sql injection tests', () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.state_facts')->{ group_by: test is 'foo\\''
+      run: bigquery.table('malloytest.state_facts')->{ group_by: test is 'foo\\''
       }
     `
     );
@@ -952,7 +953,7 @@ describe('sql injection tests', () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo\\'' } }
+      run: bigquery.table('malloytest.state_facts')->{ aggregate: test is count() { where: state ? 'foo\\'' } }
     `
     );
     expect(result.data.value[0]['test']).toBe(0);
@@ -962,7 +963,7 @@ describe('sql injection tests', () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.state_facts')->{ group_by: test is 'foo\\\\\\''
+      run: bigquery.table('malloytest.state_facts')->{ group_by: test is 'foo\\\\\\''
       }
     `
     );
@@ -973,7 +974,7 @@ describe('sql injection tests', () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo\\\\\\'' }}
+      run: bigquery.table('malloytest.state_facts')->{ aggregate: test is count() { where: state ? 'foo\\\\\\'' }}
     `
     );
     expect(result.data.value[0]['test']).toBe(0);
@@ -983,7 +984,7 @@ describe('sql injection tests', () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.state_facts')->{ group_by: test is 'foo \\\\'--'
+      run: bigquery.table('malloytest.state_facts')->{ group_by: test is 'foo \\\\'--'
       }
     `
     );
@@ -996,7 +997,7 @@ describe('sql injection tests', () => {
       await runQuery(
         model,
         `
-        query: table('malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo \\\\' THEN 0 else 1 END) as test--'
+        run: bigquery.table('malloytest.state_facts')->{ aggregate: test is count() { where: state ? 'foo \\\\' THEN 0 else 1 END) as test--'
         }}      `
       );
     } catch (e) {
@@ -1023,11 +1024,9 @@ describe('unsupported type tests', () => {
   it('can read unsupported types in schema', async () => {
     const result = await runtime
       .loadQuery(
-        `
-        sql: badType is {
-          select: """SELECT ST_GEOGFROMTEXT('LINESTRING(1 2, 3 4)') as geo"""
-        }
-        query: from_sql(badType)->{ select: *}
+        `run:
+          bigquery.sql("SELECT ST_GEOGFROMTEXT('LINESTRING(1 2, 3 4)') as geo")
+          -> { select: geo }
       `
       )
       .run();

@@ -47,7 +47,7 @@ Malloy is not an officially supported Google product.
 Here is a simple example of a Malloy query:
 
 ```malloy
-query: table('malloy-data.faa.flights') -> {
+run: bigquery.table('malloy-data.faa.flights') -> {
   where: origin ? 'SFO'
   group_by: carrier
   aggregate:

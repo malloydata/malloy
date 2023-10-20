@@ -29,25 +29,27 @@ import * as malloy from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
-const expressionModelText = `
-source: aircraft_models is table('malloytest.aircraft_models'){
+function modelText(databaseName: string) {
+  return `
+source: aircraft_models is ${databaseName}.table('malloytest.aircraft_models'){
   primary_key: aircraft_model_code
 }
 
-source: aircraft is table('malloytest.aircraft'){
+source: aircraft is ${databaseName}.table('malloytest.aircraft'){
   primary_key: tail_num
   join_one: aircraft_models with aircraft_model_code
   measure: aircraft_count is count()
 }
 
-source: airports is table('malloytest.airports') {}
+source: airports is ${databaseName}.table('malloytest.airports') {}
 
-source: state_facts is table('malloytest.state_facts') {}
+source: state_facts is ${databaseName}.table('malloytest.state_facts') {}
 `;
+}
 
 const expressionModels = new Map<string, malloy.ModelMaterializer>();
 runtimes.runtimeMap.forEach((runtime, databaseName) =>
-  expressionModels.set(databaseName, runtime.loadModel(expressionModelText))
+  expressionModels.set(databaseName, runtime.loadModel(modelText(databaseName)))
 );
 
 expressionModels.forEach((expressionModel, databaseName) => {
