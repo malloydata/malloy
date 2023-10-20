@@ -108,7 +108,7 @@ source: postgres_aircraft is postgres.table('malloytest.aircraft'){
     const result = await runtime
       .loadQuery(
         `
-      run: postgres.table('postgres:malloytest.airports')->{
+      run: postgres.table('malloytest.airports')->{
         group_by:
           version is version!()
         aggregate:

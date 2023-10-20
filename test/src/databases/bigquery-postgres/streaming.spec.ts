@@ -58,7 +58,7 @@ describe('Streaming tests', () => {
     it(`basic stream test  - ${databaseName}`, async () => {
       const stream = runtime
         .loadModel(
-          "source: airports is ${databaseName}.table('malloytest.airports') {}"
+          `source: airports is ${databaseName}.table('malloytest.airports')`
         )
         .loadQuery('query: airports -> { select: code }')
         .runStream({rowLimit: 10});
@@ -73,7 +73,7 @@ describe('Streaming tests', () => {
     it(`stream to JSON - ${databaseName}`, async () => {
       const stream = runtime
         .loadModel(
-          "source: airports is ${databaseName}.table('malloytest.airports') {}"
+          `source: airports is ${databaseName}.table('malloytest.airports')`
         )
         .loadQuery('query: airports -> { select: code }')
         .runStream({rowLimit: 1});
@@ -93,7 +93,7 @@ describe('Streaming tests', () => {
     it(`stream to CSV - ${databaseName}`, async () => {
       const stream = runtime
         .loadModel(
-          "source: airports is ${databaseName}.table('malloytest.airports') {}"
+          `source: airports is ${databaseName}.table('malloytest.airports')`
         )
         .loadQuery('query: airports -> { select: code }')
         .runStream({rowLimit: 1});
