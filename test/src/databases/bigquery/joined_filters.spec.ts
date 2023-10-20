@@ -26,12 +26,12 @@ import {describeIfDatabaseAvailable} from '../../util';
 
 function sourceCodeWithFilter(filter: string) {
   return `
-  source: aircraft_models is table('malloy-data.faa.aircraft_models') {
+  source: aircraft_models is bigquery.table('malloy-data.faa.aircraft_models') {
     primary_key: aircraft_model_code
     where: ${filter}
   }
 
-  source: aircraft is table('malloy-data.faa.aircraft') {
+  source: aircraft is bigquery.table('malloy-data.faa.aircraft') {
     primary_key: tail_num
     measure: aircraft_count is count()
     join_one: aircraft_models with aircraft_model_code

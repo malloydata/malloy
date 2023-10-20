@@ -25,27 +25,19 @@
 
 import {describeIfDatabaseAvailable} from '../../util';
 import {RuntimeList} from '../../runtimes';
+import '../../util/db-jest-matchers';
 
 const [describe] = describeIfDatabaseAvailable(['bigquery']);
 
-const modelString = `
-  sql: source_sql is {
-    select: """
-        SELECT *
-        FROM UNNEST([
-          STRUCT( JSON '{"class_name": "A", "class" : {"students" : [{"name" : "Jane"}]}}' as j, 1 as r),
-          STRUCT( JSON '{"class_name": "B", "class" : {"students" : []}}', 2),
-          STRUCT( JSON '{"class_name": "C", "class" : {"students" : [{"name" : "John"}, {"name": "Jamie"}]}}', 3)
-      ]) AS t
-    """
-    connection: "bigquery"
-  }
-
-  source: s is from_sql(source_sql) {
-
-  }
-
-`;
+const tJson = `
+  bigquery.sql("""
+    SELECT *
+      FROM UNNEST([
+        STRUCT( JSON '{"class_name": "A", "class" : {"students" : [{"name" : "Jane"}]}}' as j, 1 as r),
+        STRUCT( JSON '{"class_name": "B", "class" : {"students" : []}}', 2),
+        STRUCT( JSON '{"class_name": "C", "class" : {"students" : [{"name" : "John"}, {"name": "Jamie"}]}}', 3)
+    ]) AS t
+  """)`;
 
 describe('JSON tests', () => {
   const runtimes = new RuntimeList(['bigquery']);
@@ -57,39 +49,23 @@ describe('JSON tests', () => {
   runtimes.runtimeMap.forEach((runtime, databaseName) => {
     // Issue: #151
     it(`JSON Scalar  - ${databaseName}`, async () => {
-      //it(`model: do filters force dependant joins? - ${databaseName}`, async () => {
-      const result = await runtime
-        .loadQuery(
-          `
-            ${modelString}
-
-            query: s-> {
-              group_by: class_name is json_extract_scalar!(j, '$.class_name')
-              order_by: 1 desc
-            }
-              `
-        )
-        .run();
-      // console.log(result.data.toObject());
-      expect(result.data.path(0, 'class_name').value).toBe('C');
+      await expect(`
+        run: ${tJson} -> {
+          group_by: class_name is json_extract_scalar!(j, '$.class_name')
+          order_by: 1 desc
+        }
+      `).resultEquals(runtime, {class_name: 'C'});
     });
 
-    it(`Return Json  - ${databaseName}`, async () => {
-      //it(`model: do filters force dependant joins? - ${databaseName}`, async () => {
-      const result = await runtime
-        .loadQuery(
-          `
-            ${modelString}
-
-            query: s-> {
-              select: j, r
-              order_by: 2 desc
-            }
-              `
-        )
-        .run();
-      // console.log(result.data.toObject());
-      expect(result.data.path(0, 'j').value).toContain('Jamie');
+    it(`Returns JSON as value - ${databaseName}`, async () => {
+      await expect(`
+        run: ${tJson} -> {
+          select: j, r
+          order_by: 2 desc
+        }
+      `).resultEquals(runtime, {
+        j: '{"class":{"students":[{"name":"John"},{"name":"Jamie"}]},"class_name":"C"}',
+      });
     });
   });
 });

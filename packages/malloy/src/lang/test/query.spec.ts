@@ -82,7 +82,7 @@ describe('query:', () => {
     });
     test('query with shortcut filtered turtle', () => {
       expect(`##! -m4warnings
-        query: allA is ab -> aturtle + {? astr ~ 'a%' }`).toTranslate();
+        query: allA is ab -> aturtle + { where: astr ~ 'a%' }`).toTranslate();
     });
     test('query with filtered turtle', () => {
       expect(
@@ -263,7 +263,7 @@ describe('query:', () => {
       });
       test('cannot use scalar in aggregate', () => {
         expect('run: a -> { aggregate: s is 1}').translationToFailWith(
-          'Cannot use a scalar field in an aggregate operation, did you mean to use a group_by or project operation instead?'
+          'Cannot use a scalar field in an aggregate operation, did you mean to use a group_by or select operation instead?'
         );
       });
       test('cannot use analytic in aggregate', () => {
@@ -277,7 +277,7 @@ describe('query:', () => {
         expect(
           'run: a -> { group_by: a is 1; calculate: s is 1 }'
         ).translationToFailWith(
-          'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or project operation instead?'
+          'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or select operation instead?'
         );
       });
       test('cannot use aggregate in calculate', () => {
@@ -289,15 +289,15 @@ describe('query:', () => {
       });
       test('cannot use aggregate in project', () => {
         expect('run: a -> { select: s is count() }').translationToFailWith(
-          'Cannot use an aggregate field in a project operation, did you mean to use an aggregate operation instead?'
+          'Cannot use an aggregate field in a select operation, did you mean to use an aggregate operation instead?'
         );
       });
       test('cannot use analytic in project', () => {
         expect('run: a -> { select: s is row_number() }').translationToFailWith(
-          'Cannot use an analytic field in a project operation, did you mean to use a calculate operation instead?'
+          'Cannot use an analytic field in a select operation, did you mean to use a calculate operation instead?'
         );
       });
-      test('cannot use analytic in declare', () => {
+      test('cannot use analytic in extended source', () => {
         expect(
           `##! -m4warnings
           run: a -> { group_by: a is 1; declare: s is row_number() }`
@@ -338,14 +338,14 @@ describe('query:', () => {
         expect(
           'run: a -> { extend: {dimension: aconst is 1} aggregate: aconst }'
         ).translationToFailWith(
-          'Cannot use a scalar field in an aggregate operation, did you mean to use a group_by or project operation instead?'
+          'Cannot use a scalar field in an aggregate operation, did you mean to use a group_by or select operation instead?'
         );
       });
       test('cannot use scalar in calculate', () => {
         expect(
           'run: a -> { extend: {dimension: aconst is 1} group_by: x is 1; calculate: aconst }'
         ).translationToFailWith(
-          'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or project operation instead?'
+          'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or select operation instead?'
         );
       });
       test('cannot use aggregate in calculate', () => {
@@ -359,7 +359,7 @@ describe('query:', () => {
         expect(
           'run: a extend { view: q is { group_by: x is 1 } } -> { select: q }'
         ).translationToFailWith(
-          'Cannot use a view field in a project operation, did you mean to use a nest operation instead?'
+          'Cannot use a view field in a select operation, did you mean to use a nest operation instead?'
         );
       });
       test('cannot use query in index', () => {
@@ -400,7 +400,7 @@ describe('query:', () => {
         run: a1 + {
           calculate: b is c
         }`).translationToFailWith(
-          'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or project operation instead?'
+          'Cannot use a scalar field in a calculate operation, did you mean to use a group_by or select operation instead?'
         );
       });
       test('cannot use analytic in group_by, preserved over refinement', () => {

@@ -26,6 +26,7 @@ import {RuntimeList} from '../../runtimes';
 import '../../util/db-jest-matchers';
 import {describeIfDatabaseAvailable} from '../../util';
 
+// TODO identify which tests need to run on wasm and move them into their own file
 const runtimes = ['duckdb', 'duckdb_wasm'];
 
 const [_describe, databases] = describeIfDatabaseAvailable(runtimes);
@@ -36,7 +37,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     const result = await runtime
       .loadQuery(
         `
-        query: table('duckdb:test/data/duckdb/flights/part.*.parquet') -> {
+        query: duckdb.table('test/data/duckdb/flights/part.*.parquet') -> {
           top: 1
           group_by: carrier;
         }
@@ -60,36 +61,32 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     ];
     const allFields = allInts.map(intType => `a${intType.toLowerCase()}`);
     const query = `
-      sql: allInts is { connection: "${dbName}" select: """
+      run: ${dbName}.sql("""
         SELECT
         ${allInts
           .map(intType => `1::${intType} as a${intType.toLowerCase()}`)
           .join(',\n')}
-      """}
-      query: from_sql(allInts) -> {
+      """) -> {
         aggregate:
         ${allFields
           .map(fieldType => `sum_${fieldType} is sum(${fieldType})`)
           .join('\n')}
       }
     `;
-    const result = await runtime.loadQuery(query).run();
-    for (const fieldType of allFields) {
-      expect(result.data.path(0, `sum_${fieldType}`).value).toEqual(1);
-    }
+    await expect(query).resultEquals(
+      runtime,
+      allInts.reduce<Record<string, number>>((building, ent) => {
+        building[`sum_a${ent.toLowerCase()}`] = 1;
+        return building;
+      }, {})
+    );
   });
 
   it('can open json files', async () => {
-    const result = await runtime
-      .loadQuery(
-        `
-          query: table('duckdb:test/data/duckdb/test.json') -> {
-            select: *
-          }
-        `
-      )
-      .run();
-    expect(result.data.path(0, 'foo').value).toEqual('bar');
+    await expect(`
+      run: duckdb.table('test/data/duckdb/test.json') -> {
+        select: *
+      }`).resultEquals(runtime, {foo: 'bar'});
   });
 
   it('supports timezones', async () => {
@@ -101,10 +98,9 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
   });
 
   it('supports varchars with parameters', async () => {
-    await expect(runtime).queryMatches(
-      "run: duckdb.sql(\"SELECT 'a'::VARCHAR as abc, 'a3'::VARCHAR(3) as abc3\")",
-      {abc: 'a', abc3: 'a3'}
-    );
+    await expect(
+      "run: duckdb.sql(\"SELECT 'a'::VARCHAR as abc, 'a3'::VARCHAR(3) as abc3\")"
+    ).resultEquals(runtime, {abc: 'a', abc3: 'a3'});
   });
 
   describe('time', () => {
@@ -118,17 +114,14 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
       second: 0,
       zone,
     });
-    // TODO: Investigate why its no working.
-    test.skip('can use unsupported types', async () => {
-      await expect(runtime).queryMatches(
-        `sql: timeData is { connection: "duckdb"  select: """
-          SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
-        """}
-      query: from_sql(timeData) -> {
-        select: mex_220 is t_tstz::timestamp
-      }`,
-        {mex_220: zone_2020.toJSDate()}
-      );
+    test('can cast TIMESTAMPTZ to timestamp', async () => {
+      await expect(
+        `run: duckdb.sql("""
+              SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
+          """) -> {
+            select: mex_220 is t_tstz::timestamp
+          }`
+      ).resultEquals(runtime, {mex_220: zone_2020.toJSDate()});
     });
   });
 });

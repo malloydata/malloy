@@ -39,7 +39,7 @@ describe('Wildcard BigQuery Tables', () => {
       const result = await runtime
         .loadQuery(
           `
-        source: aircraft is table('malloy-data.malloytest.wildcard_aircraft_*') {
+        source: aircraft is bigquery.table('malloy-data.malloytest.wildcard_aircraft_*') {
           primary_key: id
           measure: aircraft_count is count()
         }
@@ -61,7 +61,7 @@ describe('Wildcard BigQuery Tables', () => {
       const result = await runtime
         .loadQuery(
           `
-        source: aircraft is table('malloy-data.malloytest.wildcard_aircraft_*') {
+        source: aircraft is bigquery.table('malloy-data.malloytest.wildcard_aircraft_*') {
           primary_key: id
           measure: aircraft_count is count()
           where: _TABLE_SUFFIX = '01'
@@ -84,11 +84,11 @@ describe('Wildcard BigQuery Tables', () => {
       const result = await runtime
         .loadQuery(
           `
-        source: aircraft is table('malloy-data.malloytest.wildcard_aircraft_*') {
+        source: aircraft is bigquery.table('malloy-data.malloytest.wildcard_aircraft_*') {
           primary_key: id
         }
 
-        source: state_facts is table('malloy-data.malloytest.state_facts') {
+        source: state_facts is bigquery.table('malloy-data.malloytest.state_facts') {
           join_many: aircraft on state = aircraft.state
         }
         query: state_facts -> {
@@ -120,12 +120,12 @@ describe('Wildcard BigQuery Tables', () => {
       const result = await runtime
         .loadQuery(
           `
-        source: aircraft is table('malloy-data.malloytest.wildcard_aircraft_*') {
+        source: aircraft is bigquery.table('malloy-data.malloytest.wildcard_aircraft_*') {
           primary_key: id
           where: _TABLE_SUFFIX = '02'
         }
 
-        source: state_facts is table('malloy-data.malloytest.state_facts') {
+        source: state_facts is bigquery.table('malloy-data.malloytest.state_facts') {
           join_many: aircraft on state = aircraft.state
         }
         query: state_facts -> {
@@ -154,8 +154,8 @@ describe('Wildcard BigQuery Tables', () => {
       const result = await runtime
         .loadQuery(
           `
-        source: aircraft is table('malloy-data.malloytest.wildcard_aircraft_*') {
-          join_many: state_facts is table('malloy-data.malloytest.state_facts')
+        source: aircraft is bigquery.table('malloy-data.malloytest.wildcard_aircraft_*') {
+          join_many: state_facts is bigquery.table('malloy-data.malloytest.state_facts')
             on state_facts.state = state
         }
 
@@ -180,12 +180,12 @@ describe('Wildcard BigQuery Tables', () => {
       const result = await runtime
         .loadQuery(
           `
-        source: aircraft is table('malloy-data.malloytest.wildcard_aircraft_*') {
+        source: aircraft is bigquery.table('malloy-data.malloytest.wildcard_aircraft_*') {
           primary_key: id
           where: _TABLE_SUFFIX = '02'
         }
 
-        source: state_facts is table('malloy-data.malloytest.state_facts') {
+        source: state_facts is bigquery.table('malloy-data.malloytest.state_facts') {
           join_many: aircraft on state = aircraft.state
         }
         query: state_facts -> {
@@ -210,12 +210,12 @@ describe('Wildcard BigQuery Tables', () => {
       const result = await runtime
         .loadQuery(
           `
-        source: aircraft is table('malloy-data.malloytest.wildcard_aircraft_*') {
+        source: aircraft is bigquery.table('malloy-data.malloytest.wildcard_aircraft_*') {
           primary_key: id
           where: _TABLE_SUFFIX = '02'
         }
 
-        source: state_facts is table('malloy-data.malloytest.state_facts') {
+        source: state_facts is bigquery.table('malloy-data.malloytest.state_facts') {
           join_many: aircraft on state = aircraft.state
         }
         query: state_facts -> {

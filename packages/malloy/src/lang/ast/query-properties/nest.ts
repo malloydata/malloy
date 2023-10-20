@@ -87,7 +87,7 @@ abstract class TurtleDeclRoot
       }
     } else if (this.withRefinement) {
       throw this.internalError(
-        "Can't refine the head of a turtle in its definition"
+        "Can't refine the head of a view  in its definition"
       );
     }
 
@@ -240,7 +240,7 @@ export class NestReference
         useInstead = 'a calculate';
         kind = 'an analytic';
       } else if (expressionIsScalar(type.expressionType)) {
-        useInstead = 'a group_by or project';
+        useInstead = 'a group_by or select';
         kind = 'a scalar';
       } else if (expressionIsAggregate(type.expressionType)) {
         useInstead = 'an aggregate';

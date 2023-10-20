@@ -45,7 +45,7 @@ export class ProjectBuilder extends ReduceBuilder {
 
   execute(qp: QueryProperty): void {
     if (qp.elementType === 'having' || qp instanceof GroupBy) {
-      qp.log('Illegal statement in a project query operation');
+      qp.log('Illegal statement in a select query operation');
     } else {
       super.execute(qp);
     }
@@ -57,7 +57,7 @@ export class ProjectBuilder extends ReduceBuilder {
       if (isProjectSegment(fromSeg)) {
         from = fromSeg;
       } else {
-        this.resultFS.log(`Can't refine project with ${fromSeg.type}`);
+        this.resultFS.log(`Can't refine select with ${fromSeg.type}`);
         return ErrorFactory.projectSegment;
       }
     }

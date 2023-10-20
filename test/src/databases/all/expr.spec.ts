@@ -28,19 +28,20 @@ import {databasesFromEnvironmentOr, mkSqlEqWith, testIf} from '../../util';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
-const expressionModelText = `
-source: aircraft_models is table('malloytest.aircraft_models') extend {
+function modelText(databaseName: string): string {
+  return `
+source: aircraft_models is ${databaseName}.table('malloytest.aircraft_models') extend {
   primary_key: aircraft_model_code
   measure:
     aircraft_model_count is count(),
     total_seats is sum(seats),
-    boeing_seats is sum(seats) {? manufacturer ? 'BOEING'},
+    boeing_seats is sum(seats) { where: manufacturer ? 'BOEING'},
     percent_boeing is boeing_seats / total_seats * 100,
     percent_boeing_floor is floor(boeing_seats / total_seats * 100),
   dimension: seats_bucketed is floor(seats/20)*20.0
 }
 
-source: aircraft is table('malloytest.aircraft') extend {
+source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
   primary_key: tail_num
   join_one: aircraft_models with aircraft_model_code
   measure: aircraft_count is count()
@@ -51,9 +52,10 @@ source: aircraft is table('malloytest.aircraft') extend {
   }
 }
 `;
+}
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
-  const expressionModel = runtime.loadModel(expressionModelText);
+  const expressionModel = runtime.loadModel(modelText(databaseName));
   // basic calculations for sum, filtered sum, without a join.
   it('basic calculations', async () => {
     const result = await expressionModel
@@ -64,8 +66,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             total_seats,
             total_seats2 is sum(seats),
             boeing_seats,
-            boeing_seats2 is sum(seats) {? manufacturer ? 'BOEING'},
-            boeing_seats3 is total_seats {? manufacturer ? 'BOEING'},
+            boeing_seats2 is sum(seats) { where: manufacturer ? 'BOEING'},
+            boeing_seats3 is total_seats { where: manufacturer ? 'BOEING'},
             percent_boeing,
             percent_boeing2 is boeing_seats / total_seats * 100,
             -- percent_boeing_floor,
@@ -141,7 +143,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       .loadQuery(
         `
           query: aircraft->{
-            nest: b is by_manufacturer{? aircraft_models.manufacturer ?~'B%'}
+            nest: b is by_manufacturer{ where: aircraft_models.manufacturer ?~'B%'}
           }
         `
       )
@@ -224,21 +226,18 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   testIf(runtime.supportsNesting)(
     'model: having float group by partition',
     async () => {
-      await expect(runtime).queryMatches(
-        `${expressionModelText}
-      query: aircraft_models->{
-        order_by: 1
-        where: seats_bucketed > 0
-        having: aircraft_model_count > 400
-        group_by: seats_bucketed
-        aggregate: aircraft_model_count
-        nest: foo is {
-          group_by: engines
+      await expect(`${modelText(databaseName)}
+        run: aircraft_models->{
+          order_by: 1
+          where: seats_bucketed > 0
+          having: aircraft_model_count > 400
+          group_by: seats_bucketed
           aggregate: aircraft_model_count
-        }
-      }`,
-        {aircraft_model_count: 448}
-      );
+          nest: foo is {
+            group_by: engines
+            aggregate: aircraft_model_count
+          }
+      }`).resultEquals(runtime, {aircraft_model_count: 448});
     }
   );
 
@@ -249,15 +248,15 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         query: aircraft_models->{
           aggregate:
             distinct_seats is count(seats),
-            boeing_distinct_seats is count(seats) {?manufacturer ? 'BOEING'},
+            boeing_distinct_seats is count(seats) { where:manufacturer ? 'BOEING'},
             min_seats is min(seats),
-            cessna_min_seats is min(seats) {? manufacturer ? 'CESSNA'},
+            cessna_min_seats is min(seats) { where: manufacturer ? 'CESSNA'},
             max_seats is max(seats),
-            cessna_max_seats is max(seats) {? manufacturer ? 'CESSNA'},
+            cessna_max_seats is max(seats) { where: manufacturer ? 'CESSNA'},
             min_code is min(aircraft_model_code),
-            boeing_min_model is min(model) {? manufacturer ? 'BOEING'},
+            boeing_min_model is min(model) { where: manufacturer ? 'BOEING'},
             max_model is max(model),
-            boeing_max_model is max(model) {? manufacturer ? 'BOEING'},
+            boeing_max_model is max(model) { where: manufacturer ? 'BOEING'},
         }
         `
       )
@@ -280,7 +279,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       const result = await expressionModel
         .loadQuery(
           `
-        query: table('malloytest.alltypes')->{
+        run: ${databaseName}.table('malloytest.alltypes')->{
           group_by:
             t_date,
             t_date_month is t_date.month,
@@ -417,9 +416,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       .loadQuery(
         `
 
-        source: a is table('malloytest.aircraft')
+        source: a is ${databaseName}.table('malloytest.aircraft')
 
-        source: am is table('malloytest.aircraft_models') extend {
+        source: am is ${databaseName}.table('malloytest.aircraft_models') extend {
           join_many: a on a.aircraft_model_code = a.aircraft_model_code
           dimension: a_year_built is a.year_built
         }
@@ -477,11 +476,11 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-  source: a is table('malloytest.aircraft') {
+  source: a is ${databaseName}.table('malloytest.aircraft') {
     primary_key: tail_num
     measure: aircraft_count is count()
   }
-  query: table('malloytest.aircraft_models') {
+  run: ${databaseName}.table('malloytest.aircraft_models') {
     primary_key: aircraft_model_code
     join_many: a on a.aircraft_model_code
 
@@ -500,13 +499,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-    source: a_models is table('malloytest.aircraft_models'){
+    source: a_models is ${databaseName}.table('malloytest.aircraft_models'){
       where: manufacturer ? ~'B%'
       primary_key: aircraft_model_code
       measure:model_count is count()
     }
 
-    source: aircraft2 is table('malloytest.aircraft'){
+    source: aircraft2 is ${databaseName}.table('malloytest.aircraft'){
       join_one: model is a_models with aircraft_model_code
       measure: aircraft_count is count()
     }
@@ -529,7 +528,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         `
     source: bo_models is
       from(
-          table('malloytest.aircraft_models') {? manufacturer ? ~ 'BO%' }
+          ${databaseName}.table('malloytest.aircraft_models') { where: manufacturer ? ~ 'BO%' }
           -> { select: aircraft_model_code, manufacturer, seats }
         ) {
           primary_key: aircraft_model_code
@@ -538,7 +537,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
     source: b_models is
         from(
-          table('malloytest.aircraft_models') {? manufacturer ? ~ 'B%' }
+          ${databaseName}.table('malloytest.aircraft_models') { where: manufacturer ? ~ 'B%' }
           -> { select: aircraft_model_code, manufacturer, seats }
         ) {
           where: bo_models.seats > 200
@@ -547,7 +546,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           join_one: bo_models with aircraft_model_code
         }
 
-    source: models is table('malloytest.aircraft_models') {
+    source: models is ${databaseName}.table('malloytest.aircraft_models') {
       join_one: b_models with aircraft_model_code
       measure: model_count is count()
     }
@@ -601,9 +600,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-      source: f is table('malloytest.flights'){
-        join_one: a is table('malloytest.aircraft') {
-          join_one: state_facts is table('malloytest.state_facts'){primary_key: state} with state
+      source: f is ${databaseName}.table('malloytest.flights'){
+        join_one: a is ${databaseName}.table('malloytest.aircraft') {
+          join_one: state_facts is ${databaseName}.table('malloytest.state_facts'){primary_key: state} with state
         } on tail_num = a.tail_num
       }
 
@@ -624,8 +623,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 });
 
 describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
-  const sqlEq = mkSqlEqWith(runtime, {
-    malloy: `+ {
+  const sqlEq = mkSqlEqWith(runtime, databaseName, {
+    malloy: `extend {
       dimension: friName is 'friday'
       dimension: friDay is 5
       dimension: satName is 'saturday'
@@ -684,14 +683,11 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       expect(await sqlEq(`'${back}${tick}'`, tick)).isSqlEq();
     });
     test('quote double quote', async () => {
-      await expect(runtime).queryMatches(
-        `sql: x is {connection:"${databaseName}" select:"""SELECT 1 as x"""}
-        query: from_sql(x) -> {
+      await expect(
+        `run: ${databaseName}.sql("SELECT 1") -> {
           select: double_quote is "${back}${dq}"
-        }
-      `,
-        {double_quote: '"'}
-      );
+        }`
+      ).resultEquals(runtime, {double_quote: '"'});
     });
     test('quote backslash', async () => {
       expect(await sqlEq(`'${back}${back}'`, back)).isSqlEq();
@@ -699,36 +695,34 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   });
 
   test('nullish ?? operator', async () => {
-    await expect(runtime).queryMatches(
-      `sql: nullTest is { connection: "${databaseName}" select: """
+    await expect(
+      `run: ${databaseName}.sql("""
           SELECT '' as null_value, '' as string_value
           UNION ALL SELECT null, 'correct'
-      """ }
-      query: from_sql(nullTest) -> {
+      """) -> {
         where: null_value = null
         select:
           found_null is  null_value ?? 'correct',
           else_pass is string_value ?? 'incorrect'
           literal_null is null ?? 'correct'
-      }`,
-      {found_null: 'correct', else_pass: 'correct', literal_null: 'correct'}
-    );
+      }`
+    ).resultEquals(runtime, {
+      found_null: 'correct',
+      else_pass: 'correct',
+      literal_null: 'correct',
+    });
   });
 
   test('dimension expressions expanded with parens properly', async () => {
-    await expect(runtime).queryMatches(
-      `
-      sql: tbl is { connection: "${databaseName}" select: """SELECT 1 as n"""}
-      query: from_sql(tbl) + {
+    await expect(
+      `run: ${databaseName}.sql("SELECT 1") extend {
         dimension: fot is (false) or (true)
       } -> {
         select:
           no_paren is false and fot
           paren is    false and (fot)
-      }
-      `,
-      {paren: false, no_paren: false}
-    );
+      }`
+    ).resultEquals(runtime, {paren: false, no_paren: false});
   });
 });
 

@@ -73,7 +73,7 @@ function testLens(source: MarkedSource, path: number[]) {
 
 test('source symbols are included', () => {
   testSymbol(
-    markSource`source: ${"flights is table('my.table.flights')"}`,
+    markSource`source: ${"flights is DB.table('my.table.flights')"}`,
     'flights',
     'explore',
     [0]
@@ -111,7 +111,7 @@ test('run (ref) symbols are included', () => {
 test('expression field defs are included', () => {
   testSymbol(
     markSource`
-      source: flights is table('my.table.flights') {
+      source: flights is DB.table('my.table.flights') {
         dimension: ${'one is 1'}
       }
     `,
@@ -124,7 +124,7 @@ test('expression field defs are included', () => {
 test('renamed fields are included', () => {
   testSymbol(
     markSource`
-      source: flights is table('my.table.flights') {
+      source: flights is DB.table('my.table.flights') {
         rename: ${'field_two is field_2'}
       }
     `,
@@ -137,7 +137,7 @@ test('renamed fields are included', () => {
 test('name only fields are included', () => {
   testSymbol(
     markSource`
-      source: flights is table('my.table.flights') {
+      source: flights is DB.table('my.table.flights') {
         dimension: ${'field_two is field_2'}
       }
     `,
@@ -150,7 +150,7 @@ test('name only fields are included', () => {
 test('turtle fields are included', () => {
   testSymbol(
     markSource`
-      source: flights is table('my.table.flights') {
+      source: flights is DB.table('my.table.flights') {
         query: ${'my_turtle is { group_by: a }'}
       }
     `,
@@ -163,7 +163,7 @@ test('turtle fields are included', () => {
 test('turtle children fields are included', () => {
   testSymbol(
     markSource`
-      source: flights is table('my.table.flights') {
+      source: flights is DB.table('my.table.flights') {
         query: my_turtle is { group_by: ${'a'} }
       }
     `,
@@ -176,7 +176,7 @@ test('turtle children fields are included', () => {
 test('turtle children turtles are included', () => {
   testSymbol(
     markSource`
-      source: flights is table('my.table.flights') {
+      source: flights is DB.table('my.table.flights') {
         query: my_turtle is { nest: ${'inner_turtle is { group_by: a }'} }
       }
     `,
@@ -189,7 +189,7 @@ test('turtle children turtles are included', () => {
 test('join withs are included', () => {
   testSymbol(
     markSource`
-      source: flights is table('my.table.flights') {
+      source: flights is DB.table('my.table.flights') {
         join_one: ${'a is b with c'}
       }
     `,
@@ -202,7 +202,7 @@ test('join withs are included', () => {
 test('join ons are included', () => {
   testSymbol(
     markSource`
-      source: flights is table('my.table.flights') {
+      source: flights is DB.table('my.table.flights') {
         join_one: ${'a is b on c'}
       }
     `,
@@ -218,7 +218,7 @@ test('source lenses go before block annotations when one source', () => {
     # tag2
     source:
     # tag3
-    flights is table('my.table.flights')`}`,
+    flights is DB.table('my.table.flights')`}`,
     [0]
   );
 });
@@ -228,9 +228,9 @@ test('source lenses go before individual annotations when more than one source',
     markSource`# tag
     source:
       ${`# tag2
-      flights is table('my.table.flights')`}
+      flights is DB.table('my.table.flights')`}
 
-      flights2 is table('my.table.flights')`,
+      flights2 is DB.table('my.table.flights')`,
     [0]
   );
 });
@@ -282,7 +282,7 @@ test('run lenses go before block annotations', () => {
 
 test('(regression) query does not use source block range', () => {
   testLens(
-    markSource`source: a is table('b') {
+    markSource`source: a is DB.table('b') {
       query:
         ${'x is {select: *}'}
         y is {select: *}
