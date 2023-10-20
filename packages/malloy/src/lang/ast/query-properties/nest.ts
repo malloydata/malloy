@@ -87,7 +87,7 @@ abstract class TurtleDeclRoot
       }
     } else if (this.withRefinement) {
       throw this.internalError(
-        "Can't refine the head of a turtle in its definition"
+        "Can't refine the head of a view  in its definition"
       );
     }
 
