@@ -240,7 +240,7 @@ export class NestReference
         useInstead = 'a calculate';
         kind = 'an analytic';
       } else if (expressionIsScalar(type.expressionType)) {
-        useInstead = 'a group_by or project';
+        useInstead = 'a group_by or select';
         kind = 'a scalar';
       } else if (expressionIsAggregate(type.expressionType)) {
         useInstead = 'an aggregate';
