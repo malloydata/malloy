@@ -1,5 +1,6 @@
 import {join, dirname} from 'path';
 import {mergeConfig} from 'vite';
+import {StorybookConfig} from '@storybook/html-vite';
 
 /**
  * This function is used to resolve the absolute path of a package.
@@ -9,8 +10,7 @@ function getAbsolutePath(value) {
   return dirname(require.resolve(join(value, 'package.json')));
 }
 
-/** @type { import('@storybook/html-vite').StorybookConfig } */
-const config = {
+const config: StorybookConfig = {
   'stories': ['../src/**/*.mdx', '../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
   staticDirs: ['../src/stories/static'],
   'addons': [
@@ -19,7 +19,7 @@ const config = {
     getAbsolutePath('@storybook/addon-interactions'),
   ],
   'framework': {
-    'name': getAbsolutePath('@storybook/html-vite'),
+    'name': '@storybook/html-vite',
     'options': {},
   },
   'docs': {
