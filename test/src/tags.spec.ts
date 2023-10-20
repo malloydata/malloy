@@ -140,7 +140,7 @@ describe('tagParse to Tag', () => {
       },
     ],
     [
-      'image { alt=hello { field=department } }',
+      'image image.alt=hello image.alt.field=department',
       {
         image: {
           properties: {
