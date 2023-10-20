@@ -1,9 +1,12 @@
 {
   "name": "@malloydata/db-postgres",
-  "version": "0.0.94",
+  "version": "0.0.95",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=16"
+  },
   "homepage": "https://github.com/malloydata/malloy#readme",
   "repository": {
     "type": "git",
@@ -19,7 +22,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.94",
+    "@malloydata/malloy": "^0.0.95",
     "@types/pg": "^8.6.1",
     "pg": "^8.7.1",
     "pg-query-stream": "4.2.3"

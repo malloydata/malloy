@@ -1,9 +1,12 @@
 {
   "name": "@malloydata/malloy-sql",
-  "version": "0.0.94",
+  "version": "0.0.95",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "engines": {
+    "node": ">=16"
+  },
   "homepage": "https://github.com/malloydata/malloy#readme",
   "repository": {
     "type": "git",
@@ -21,7 +24,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.94"
+    "@malloydata/malloy": "^0.0.95"
   },
   "devDependencies": {
     "peggy": "^3.0.2"

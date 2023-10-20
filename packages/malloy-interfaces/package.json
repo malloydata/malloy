@@ -1,12 +1,12 @@
 {
   "name": "@malloydata/malloy-interfaces",
-  "version": "0.0.94",
+  "version": "0.0.95",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "homepage": "https://github.com/malloydata/malloy#readme",
   "engines": {
-    "node": ">=10"
+    "node": ">=16"
   },
   "repository": {
     "type": "git",

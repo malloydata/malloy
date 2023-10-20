@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.94",
+  "version": "0.0.95",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -8,6 +8,9 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/malloydata/malloy"
+  },
+  "engines": {
+    "node": ">=16"
   },
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
@@ -20,7 +23,7 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.94",
+    "@malloydata/malloy": "^0.0.95",
     "@types/luxon": "^2.4.0",
     "lodash": "^4.17.20",
     "luxon": "^2.4.0",
