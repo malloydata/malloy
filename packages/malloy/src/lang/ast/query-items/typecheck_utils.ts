@@ -125,7 +125,7 @@ export function typecheckCalculate(type: TypeDesc, logTo: MalloyElement) {
       useInstead = 'an aggregate';
       kind = 'an aggregate';
     } else if (expressionIsScalar(type.expressionType)) {
-      useInstead = 'a group_by or project';
+      useInstead = 'a group_by or select';
       kind = 'a scalar';
     } else {
       throw new Error(
@@ -152,7 +152,7 @@ export function typecheckAggregate(type: TypeDesc, logTo: MalloyElement) {
       useInstead = 'a calculate';
       kind = 'an analytic';
     } else if (expressionIsScalar(type.expressionType)) {
-      useInstead = 'a group_by or project';
+      useInstead = 'a group_by or select';
       kind = 'a scalar';
     } else {
       throw new Error(`Unexpected expression type ${type} not handled here`);
