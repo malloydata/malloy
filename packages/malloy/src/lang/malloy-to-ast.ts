@@ -130,6 +130,17 @@ export class MalloyToAST
     });
   }
 
+  protected m4Severity(): LogSeverity | false {
+    return this.compilerFlags.has('m4warnings') ? 'warn' : false;
+  }
+
+  protected m4advisory(cx: ParserRuleContext, msg: string): void {
+    const m4 = this.m4Severity();
+    if (m4) {
+      this.contextError(cx, msg, m4);
+    }
+  }
+
   protected only<T extends ast.MalloyElement>(
     els: ast.MalloyElement[],
     isGood: (el: ast.MalloyElement) => T | false,
@@ -148,10 +159,6 @@ export class MalloyToAST
       }
     }
     return acceptable;
-  }
-
-  protected m4WarningsEnabled(): boolean {
-    return this.compilerFlags.has('m4warnings');
   }
 
   protected getNumber(term: ParseTree): number {
@@ -218,13 +225,10 @@ export class MalloyToAST
 
   protected getFilterShortcut(cx: parse.FilterShortcutContext): ast.Filter {
     const el = this.getFilterElement(cx.fieldExpr());
-    if (this.m4WarningsEnabled()) {
-      this.astError(
-        el,
-        'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead',
-        'warn'
-      );
-    }
+    this.m4advisory(
+      cx,
+      'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead',
+    );
     return new ast.Filter([el]);
   }
 
@@ -255,8 +259,8 @@ export class MalloyToAST
     sqlStr: ast.SQLString
   ): void {
     for (const part of pcx.sqlInterpolation()) {
-      if (part.CLOSE_CODE() && this.m4WarningsEnabled()) {
-        this.contextError(part, 'Use %{ ... } instead of %{ ... }%', 'warn');
+      if (part.CLOSE_CODE()) {
+        this.m4advisory(part, 'Use %{ ... } instead of %{ ... }%');
       }
     }
     for (const part of getStringParts(pcx)) {
@@ -372,20 +376,16 @@ export class MalloyToAST
   ): ast.SourceDesc {
     const extensions = pcx?.exploreProperties();
     const sourceDesc = this.astAt(this.visitExploreProperties(extensions), pcx);
-    if (this.m4WarningsEnabled()) {
-      if (pcx.refineOperator()) {
-        this.contextError(
-          pcx,
-          'Source extension with "+" is deprecated, use the "extend" operator',
-          'warn'
-        );
-      } else if (pcx.EXTEND() === undefined && this.m4WarningsEnabled()) {
-        this.contextError(
-          pcx,
-          'Implicit source extension is deprecated, use the `extend` operator.',
-          'warn'
-        );
-      }
+    if (pcx.refineOperator()) {
+      this.m4advisory(
+        pcx,
+        'Source extension with "+" is deprecated, use the "extend" operator'
+      );
+    } else if (pcx.EXTEND() === undefined) {
+      this.m4advisory(
+        pcx,
+        'Implicit source extension is deprecated, use the `extend` operator.'
+      );
     }
     return sourceDesc;
   }
@@ -407,13 +407,10 @@ export class MalloyToAST
   visitTableFunction(pcx: parse.TableFunctionContext): ast.TableSource {
     const tableURI = this.getPlainString(pcx.tableURI());
     const el = this.astAt(new ast.TableFunctionSource(tableURI), pcx);
-    if (this.m4WarningsEnabled()) {
-      this.astError(
-        el,
-        "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`",
-        'warn'
-      );
-    }
+    this.m4advisory(
+      pcx,
+      "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`",
+    );
     return el;
   }
 
@@ -432,13 +429,6 @@ export class MalloyToAST
   ): ast.FromSQLSource {
     const name = this.getModelEntryName(pcx);
     const res = this.astAt(new ast.FromSQLSource(name), pcx);
-    if (this.m4WarningsEnabled()) {
-      this.astError(
-        res,
-        '`from_sql` is deprecated; use `connection_name.sql(...)` as a source directly',
-        'warn'
-      );
-    }
     return res;
   }
 
@@ -535,13 +525,10 @@ export class MalloyToAST
     pcx: parse.QueryJoinStatementContext
   ): ast.MalloyElement {
     const result = this.astAt(this.visit(pcx.joinStatement()), pcx);
-    if (this.m4WarningsEnabled()) {
-      this.astError(
-        result,
-        'Joins in queries are deprecated, move into an `extend:` block.',
-        'warn'
-      );
-    }
+    this.m4advisory(
+      pcx,
+      'Joins in queries are deprecated, move into an `extend:` block.'
+    );
     return result;
   }
 
@@ -628,13 +615,10 @@ export class MalloyToAST
     );
     const stmt = new ast.DeclareFields(defs);
     const result = this.astAt(stmt, pcx);
-    if (this.m4WarningsEnabled()) {
-      this.astError(
-        result,
-        '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block',
-        'warn'
-      );
-    }
+    this.m4advisory(
+      pcx,
+      '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
+    );
     return result;
   }
 
@@ -662,13 +646,10 @@ export class MalloyToAST
   visitFilterByShortcut(pcx: parse.FilterByShortcutContext): ast.Filter {
     const el = this.getFilterElement(pcx.fieldExpr());
     const res = this.astAt(new ast.Filter([el]), pcx);
-    if (this.m4WarningsEnabled()) {
-      this.astError(
-        el,
-        'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead',
-        'warn'
-      );
-    }
+    this.m4advisory(
+      pcx,
+      'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
+    );
     return res;
   }
 
@@ -695,12 +676,8 @@ export class MalloyToAST
     const queryDefs = this.visitSubQueryDefList(pcx.subQueryDefList());
     const blockNotes = this.getNotes(pcx.tags());
     queryDefs.extendNote({blockNotes});
-    if (this.m4WarningsEnabled() && pcx.QUERY()) {
-      this.contextError(
-        pcx,
-        'Use view: inside of a source instead of query:',
-        'warn'
-      );
+    if (pcx.QUERY()) {
+      this.m4advisory(pcx, 'Use view: inside of a source instead of query:');
     }
     return queryDefs;
   }
@@ -938,12 +915,8 @@ export class MalloyToAST
   visitProjectStatement(
     pcx: parse.ProjectStatementContext
   ): ast.ProjectStatement {
-    if (this.m4WarningsEnabled() && pcx.PROJECT()) {
-      this.contextError(
-        pcx,
-        'project: keyword is deprecated, use select:',
-        'warn'
-      );
+    if (pcx.PROJECT()) {
+      this.m4advisory(pcx, 'project: keyword is deprecated, use select:');
     }
     const stmt = this.visitFieldCollection(pcx.fieldCollection());
     stmt.extendNote({blockNotes: this.getNotes(pcx.tags())});
@@ -1019,13 +992,10 @@ export class MalloyToAST
     const topN = this.getNumber(pcx.INTEGER_LITERAL());
     let top: ast.Top | undefined;
     if (byCx) {
-      if (this.m4WarningsEnabled()) {
-        this.contextError(
-          byCx,
-          'by clause of top statement unupported. Use order_by instead',
-          'warn'
-        );
-      }
+      this.m4advisory(
+        byCx,
+        'by clause of top statement unupported. Use order_by instead'
+      );
       const nameCx = byCx.fieldName();
       if (nameCx) {
         const name = this.getFieldName(nameCx);
@@ -1051,11 +1021,10 @@ export class MalloyToAST
     pipeCx: parse.PipelineFromNameContext
   ): void {
     const firstCx = pipeCx.firstSegment();
-    if (this.m4WarningsEnabled() && firstCx.ARROW()) {
-      this.contextError(
+    if (firstCx.ARROW()) {
+      this.m4advisory(
         firstCx,
-        "Leading '->' in a view or nest definition is no longer needed.",
-        'warn'
+        "Leading '->' in a view or nest definition is no longer needed."
       );
     }
     const nameCx = firstCx.exploreQueryName();
@@ -1112,13 +1081,10 @@ export class MalloyToAST
     const notes = this.getNotes(pcx.topLevelAnonQueryDef().tags());
     const blockNotes = this.getNotes(pcx.tags());
     theQuery.extendNote({notes, blockNotes});
-    if (this.m4WarningsEnabled()) {
-      this.contextError(
-        defCx,
-        'Anonymous `query:` statements are deprecated, use `run:` instead',
-        'warn'
-      );
-    }
+    this.m4advisory(
+      defCx,
+      'Anonymous `query:` statements are deprecated, use `run:` instead'
+    );
     return this.astAt(theQuery, pcx);
   }
 
@@ -1310,13 +1276,10 @@ export class MalloyToAST
   visitExprCountDisinct(
     pcx: parse.ExprCountDisinctContext
   ): ast.ExprCountDistinct {
-    if (this.m4WarningsEnabled()) {
-      this.contextError(
+    this.m4advisory(
         pcx,
-        '`count(distinct expression)` deprecated, use `count(expression)` instead',
-        'warn'
+        '`count(distinct expression)` deprecated, use `count(expression)` instead'
       );
-    }
     return this.astAt(
       new ast.ExprCountDistinct(this.getFieldExpr(pcx.fieldExpr())),
       pcx
@@ -1400,10 +1363,8 @@ export class MalloyToAST
     const source = undefined;
     const aggFunc = pcx.aggregate().text.toLowerCase();
 
-    if (this.m4WarningsEnabled()) {
-      if (pcx.STAR()) {
-        this.contextError(pcx, `* illegal inside ${aggFunc}()`, 'warn');
-      }
+    if (pcx.STAR()) {
+      this.m4advisory(pcx, `* illegal inside ${aggFunc}()`);
     }
     if (aggFunc === 'count') {
       return this.astAt(
@@ -1662,13 +1623,10 @@ export class MalloyToAST
     }
     stmt.is = blockName;
     const result = this.astAt(stmt, pcx);
-    if (this.m4WarningsEnabled()) {
-      this.astError(
-        result,
-        '`sql:` statement is deprecated, use `connection_name.sql(...)` instead',
-        'warn'
+    this.m4advisory(
+        pcx,
+        '`sql:` statement is deprecated, use `connection_name.sql(...)` instead'
       );
-    }
     return result;
   }
 
@@ -1731,17 +1689,16 @@ export class MalloyToAST
     const sqExpr = this.getSqExpr(pcx.sqExpr());
     const hasPlus = !!pcx.PLUS();
     return this.astAt(
-      new ast.SQLegacyModify(sqExpr, plus, hasPlus, this.m4WarningsEnabled()),
+      new ast.SQLegacyModify(sqExpr, plus, hasPlus, this.m4Severity()),
       pcx
     );
   }
 
   visitSQID(pcx: parse.SQIDContext) {
-    if (this.m4WarningsEnabled() && pcx.ARROW()) {
-      this.contextError(
+    if (pcx.ARROW()) {
+      this.m4advisory(
         pcx,
-        'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow',
-        'warn'
+        'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow'
       );
     }
     const ref = this.getModelEntryName(pcx);
@@ -1809,11 +1766,10 @@ export class MalloyToAST
   visitSQRefinedQuery(pcx: parse.SQRefinedQueryContext) {
     const refineThis = this.getSqExpr(pcx.sqExpr());
     const refine = pcx.queryRefinement();
-    if (this.m4WarningsEnabled() && refine.REFINE()) {
-      this.contextError(
+    if (refine.REFINE()) {
+      this.m4advisory(
         refine,
-        'The `refine` keyword is deprecated, use the `+` operator',
-        'warn'
+        'The `refine` keyword is deprecated, use the `+` operator'
       );
     }
     const refined = new ast.SQRefinedQuery(
@@ -1825,11 +1781,10 @@ export class MalloyToAST
 
   visitSQFrom(pcx: parse.SQFromContext) {
     const fromThis = this.getSqExpr(pcx.sqExpr());
-    if (pcx.FROM() && this.m4WarningsEnabled()) {
-      this.contextError(
+    if (pcx.FROM()) {
+      this.m4advisory(
         pcx,
-        '`from(some_query)` is deprecated; use `some_query` directly',
-        'warn'
+        '`from(some_query)` is deprecated; use `some_query` directly'
       );
     }
     return this.astAt(new ast.SQFrom(fromThis), pcx);
@@ -1845,6 +1800,10 @@ export class MalloyToAST
   }
 
   visitSQLegacySQLBlock(pcx: parse.SQLegacySQLBlockContext) {
+    this.m4advisory(
+      pcx,
+      '`from_sql` is deprecated; use `connection_name.sql(...)` as a source directly'
+    );
     const theBlock = this.getLegacySQLSouce(pcx.sqlExploreNameRef());
     const sqExpr = new ast.SQSourceWrapper(theBlock);
     return this.astAt(sqExpr, pcx);
