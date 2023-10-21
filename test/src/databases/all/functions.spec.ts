@@ -31,11 +31,11 @@ const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
 function modelText(databaseName: string) {
   return `
-source: aircraft_models is ${databaseName}.table('malloytest.aircraft_models'){
+source: aircraft_models is ${databaseName}.table('malloytest.aircraft_models') extend {
   primary_key: aircraft_model_code
 }
 
-source: aircraft is ${databaseName}.table('malloytest.aircraft'){
+source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
   primary_key: tail_num
   join_one: aircraft_models with aircraft_model_code
   measure: aircraft_count is count()

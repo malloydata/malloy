@@ -464,7 +464,7 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
         extend: {join_one: joined is timeData on t_date = joined.t_date}
         group_by: t_month is joined.t_timestamp.month
       }
-    `).resultEquals(runtime, {t_month: new Date('2021-02-01')});
+    `).malloyResultMatches(runtime, {t_month: new Date('2021-02-01')});
   });
 
   describe('timezone set correctly', () => {
@@ -662,7 +662,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
           mex_midnight is hour(utc_midnight)
           mex_day is day(utc_midnight)
       }`
-    ).resultEquals(runtime, {mex_midnight: 18, mex_day: 19});
+    ).malloyResultMatches(runtime, {mex_midnight: 18, mex_day: 19});
   });
 
   test('truncate day', async () => {
@@ -675,7 +675,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
         extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
         select: mex_day is utc_midnight.day
       }`
-    ).resultEquals(runtime, {mex_day: mex_19.toJSDate()});
+    ).malloyResultMatches(runtime, {mex_day: mex_19.toJSDate()});
   });
 
   test('cast timestamp to date', async () => {
@@ -687,7 +687,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
         extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
         select: mex_day is day(utc_midnight::date)
       }`
-    ).resultEquals(runtime, {mex_day: 19});
+    ).malloyResultMatches(runtime, {mex_day: 19});
   });
 
   test('cast date to timestamp', async () => {
@@ -696,7 +696,7 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
         timezone: '${zone}'
         select: mex_ts is mex_20::timestamp
       }`
-    ).resultEquals(runtime, {mex_ts: zone_2020.toJSDate()});
+    ).malloyResultMatches(runtime, {mex_ts: zone_2020.toJSDate()});
   });
 });
 

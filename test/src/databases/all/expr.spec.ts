@@ -45,7 +45,7 @@ source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
   primary_key: tail_num
   join_one: aircraft_models with aircraft_model_code
   measure: aircraft_count is count()
-  query: by_manufacturer is {
+  view: by_manufacturer is {
     top: 5
     group_by: aircraft_models.manufacturer
     aggregate: aircraft_count
@@ -61,7 +61,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-        query: aircraft_models->{
+        run: aircraft_models->{
           aggregate:
             total_seats,
             total_seats2 is sum(seats),
@@ -96,7 +96,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-        query: aircraft_models->{
+        run: aircraft_models->{
           aggregate:
             percent_boeing_floor
             percent_boeing_floor2 is FLOOR(boeing_seats / total_seats * 100)
@@ -113,7 +113,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-            query: aircraft->{
+            run: aircraft->{
               aggregate:
                 aircraft_models.total_seats
                 aircraft_models.boeing_seats
@@ -128,11 +128,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   // turtle expressions
   it('model: turtle', async () => {
     const result = await expressionModel
-      .loadQuery(
-        `
-          query: aircraft->by_manufacturer
-          `
-      )
+      .loadQuery('run: aircraft->by_manufacturer')
       .run();
     expect(result.data.path(0, 'manufacturer').value).toBe('CESSNA');
   });
@@ -142,8 +138,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-          query: aircraft->{
-            nest: b is by_manufacturer{ where: aircraft_models.manufacturer ?~'B%'}
+          run: aircraft->{
+            nest: b is by_manufacturer refine { where: aircraft_models.manufacturer ?~'B%'}
           }
         `
       )
@@ -156,7 +152,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-          query: aircraft->{
+          run: aircraft->{
             having: aircraft_count >90
             group_by: state
             aggregate: aircraft_count
@@ -173,7 +169,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       .loadQuery(
         `
       -- hacking a null test for now
-      query: aircraft->{
+      run: aircraft->{
         top: 10
         order_by: 1
         where: region != NULL
@@ -196,7 +192,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-      query: aircraft->{
+      run: aircraft->{
         order_by: 2 asc
         having: aircraft_count ? >500
         group_by: region
@@ -237,7 +233,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
             group_by: engines
             aggregate: aircraft_model_count
           }
-      }`).resultEquals(runtime, {aircraft_model_count: 448});
+      }`).malloyResultMatches(runtime, {aircraft_model_count: 448});
     }
   );
 
@@ -245,7 +241,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-        query: aircraft_models->{
+        run: aircraft_models->{
           aggregate:
             distinct_seats is count(seats),
             boeing_distinct_seats is count(seats) { where:manufacturer ? 'BOEING'},
@@ -333,7 +329,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-        query: aircraft->{
+        run: aircraft->{
           aggregate: aircraft_count is count()
         }
         `
@@ -348,11 +344,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   it('named query metadata named', async () => {
     const result = await expressionModel
-      .loadQuery(
-        `
-        query: aircraft->by_manufacturer
-        `
-      )
+      .loadQuery('run: aircraft->by_manufacturer')
       .run();
     expect(result.resultExplore.name).toBe('by_manufacturer');
   });
@@ -361,7 +353,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-        query: aircraft->by_manufacturer->{ aggregate: c is count()}
+        run: aircraft->by_manufacturer->{ aggregate: c is count()}
         `
       )
       .run();
@@ -376,7 +368,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         `
         source: b is aircraft{ where: aircraft_models.manufacturer ? ~'B%' }
 
-        query: b->{aggregate: m_count is count(aircraft_models.manufacturer) }
+        run: b->{aggregate: m_count is count(aircraft_models.manufacturer) }
         `
       )
       .run();
@@ -387,7 +379,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-        query: aircraft -> {
+        run: aircraft -> {
           group_by: a is "312"::"integer"
         }
         `
@@ -400,7 +392,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       const result = await expressionModel
         .loadQuery(
           `
-          query: aircraft -> {
+          run: aircraft -> {
             group_by: a is "312":::"integer"
           }
           `
@@ -448,7 +440,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       const result = await expressionModel
         .loadQuery(
           `
-        query: aircraft->{
+        run: aircraft->{
           group_by: first is substr(city,1,1)
           aggregate: aircraft_count is count()
           nest: aircraft is {
@@ -510,7 +502,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       measure: aircraft_count is count()
     }
 
-    query: aircraft2->{
+    run: aircraft2->{
       aggregate:
         model.model_count
         aircraft_count
@@ -551,7 +543,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       measure: model_count is count()
     }
 
-    query: models -> {
+    run: models -> {
       aggregate: model_count
       aggregate: b_models.b_count
       -- aggregate: b_models.bo_models.bo_count
@@ -567,7 +559,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-        query: aircraft->{
+        run: aircraft->{
           group_by: aircraft_models
           aggregate: aircraft_count
         }
@@ -582,7 +574,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-        query: aircraft->{
+        run: aircraft->{
           group_by: aircraft_models
           aggregate: aircraft_count
         } -> {
@@ -606,7 +598,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         } on tail_num = a.tail_num
       }
 
-      query: f-> {
+      run: f-> {
         group_by: a.state_facts
         aggregate: flight_count is count()
       } -> {
@@ -687,7 +679,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         `run: ${databaseName}.sql("SELECT 1") -> {
           select: double_quote is "${back}${dq}"
         }`
-      ).resultEquals(runtime, {double_quote: '"'});
+      ).malloyResultMatches(runtime, {double_quote: '"'});
     });
     test('quote backslash', async () => {
       expect(await sqlEq(`'${back}${back}'`, back)).isSqlEq();
@@ -706,7 +698,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           else_pass is string_value ?? 'incorrect'
           literal_null is null ?? 'correct'
       }`
-    ).resultEquals(runtime, {
+    ).malloyResultMatches(runtime, {
       found_null: 'correct',
       else_pass: 'correct',
       literal_null: 'correct',
@@ -722,7 +714,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           no_paren is false and fot
           paren is    false and (fot)
       }`
-    ).resultEquals(runtime, {paren: false, no_paren: false});
+    ).malloyResultMatches(runtime, {paren: false, no_paren: false});
   });
 });
 

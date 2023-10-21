@@ -73,7 +73,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
           .join('\n')}
       }
     `;
-    await expect(query).resultEquals(
+    await expect(query).malloyResultMatches(
       runtime,
       allInts.reduce<Record<string, number>>((building, ent) => {
         building[`sum_a${ent.toLowerCase()}`] = 1;
@@ -86,7 +86,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     await expect(`
       run: duckdb.table('test/data/duckdb/test.json') -> {
         select: *
-      }`).resultEquals(runtime, {foo: 'bar'});
+      }`).malloyResultMatches(runtime, {foo: 'bar'});
   });
 
   it('supports timezones', async () => {
@@ -100,7 +100,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
   it('supports varchars with parameters', async () => {
     await expect(
       "run: duckdb.sql(\"SELECT 'a'::VARCHAR as abc, 'a3'::VARCHAR(3) as abc3\")"
-    ).resultEquals(runtime, {abc: 'a', abc3: 'a3'});
+    ).malloyResultMatches(runtime, {abc: 'a', abc3: 'a3'});
   });
 
   describe('time', () => {
@@ -121,7 +121,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
           """) -> {
             select: mex_220 is t_tstz::timestamp
           }`
-      ).resultEquals(runtime, {mex_220: zone_2020.toJSDate()});
+      ).malloyResultMatches(runtime, {mex_220: zone_2020.toJSDate()});
     });
   });
 });

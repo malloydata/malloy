@@ -59,7 +59,7 @@ class IgnoredElement extends ast.MalloyElement {
   }
 }
 
-const DEFAULT_COMPILER_FLAGS = ['##! m4warnings'];
+const DEFAULT_COMPILER_FLAGS = ['##! m4warnings=error'];
 
 type HasAnnotations = ParserRuleContext & {ANNOTATION: () => TerminalNode[]};
 
@@ -128,6 +128,21 @@ export class MalloyToAST
       at: this.getLocation(cx),
       severity: sev,
     });
+  }
+
+  protected m4Severity(): LogSeverity | false {
+    const sev = this.compilerFlags.text('m4warnings');
+    if (sev === 'warn' || sev === 'error') {
+      return sev;
+    }
+    return false;
+  }
+
+  protected m4advisory(cx: ParserRuleContext, msg: string): void {
+    const m4 = this.m4Severity();
+    if (m4) {
+      this.contextError(cx, msg, m4);
+    }
   }
 
   protected only<T extends ast.MalloyElement>(

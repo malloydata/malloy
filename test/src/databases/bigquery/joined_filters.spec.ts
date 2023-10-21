@@ -37,7 +37,7 @@ function sourceCodeWithFilter(filter: string) {
     join_one: aircraft_models with aircraft_model_code
   }
 
-  query: aircraft -> {
+  run: aircraft -> {
     group_by: aircraft_models.aircraft_model_code
   }
 `;

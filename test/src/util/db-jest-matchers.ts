@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /*
  * Copyright 2023 Google LLC
  *
@@ -42,14 +43,19 @@ declare global {
        * check the first row, use the first form. If you want to check
        * multiple rows, use the second.
        *
-       *     await expect('query').resultEquals(runtime, {colName: colValue});
-       *     await expect('query').resultEquals(runtime, [{colName: colValue}]);
+       *     await expect('query').malloyResultMatches(runtime, {colName: colValue});
+       *     await expect('query').malloyResultMatches(runtime, [{colName: colValue}]);
+       *
+       * If "colName" has a dot in it, it is assumed to be a reference to a value in a nest
        *
        * @param querySrc Malloy source, last query in source will be run
        * @param runtime Database connection runtime
        * @param expected Key value pairs or array of key value pairs
        */
-      resultEquals(runtime: Runtime, matchVals: ExpectedResult): Promise<R>;
+      malloyResultMatches(
+        runtime: Runtime,
+        matchVals: ExpectedResult
+      ): Promise<R>;
     }
   }
 }
@@ -77,7 +83,7 @@ expect.extend({
     };
   },
 
-  async resultEquals(
+  async malloyResultMatches(
     querySrc: string,
     runtime: SingleConnectionRuntime,
     shouldEqual: ExpectedResult
@@ -94,22 +100,9 @@ expect.extend({
     try {
       query = runtime.loadQuery(querySrc);
     } catch (e) {
-      const [_n, withLines] = querySrc.split('\n').reduce<[number, string]>(
-        (acc, cur) => {
-          const [lineNo, withNums] = acc;
-          return [
-            lineNo + 1,
-            `${withNums}${lineNo.toString().padStart(3, ' ')} ${cur}`,
-          ];
-        },
-        [0, '']
-      );
-      // probably was a compile error because the test is under development, help
-      // out by printing the source code so the line numbers make sense
       return {
         pass: false,
-        message: () =>
-          `--- SOURCE CODE ---\n${withLines}\n-------------------\nloadQuery failed: ${e.message}`,
+        message: () => `loadQuery failed: ${e.message}`,
       };
     }
 
@@ -117,26 +110,49 @@ expect.extend({
     try {
       result = await query.run();
     } catch (e) {
-      const failMsg =
-        `query.run failed: ${e.message}\n` + `SQL: ${await query.getSQL()}`;
+      let failMsg = `query.run failed: ${e.message}`;
+      try {
+        failMsg += `\nSQL: ${await query.getSQL()}`;
+      } catch (e2) {
+        //
+      }
       return {pass: false, message: () => failMsg};
     }
 
     const allRows = Array.isArray(shouldEqual) ? shouldEqual : [shouldEqual];
     let i = 0;
     const fails: string[] = [];
+    const gotRows = result.data.toObject().length;
+    if (Array.isArray(shouldEqual)) {
+      if (gotRows !== allRows.length) {
+        fails.push(`Expected result.rows=${allRows.length}  Got: ${gotRows}`);
+      }
+    }
     for (const expected of allRows) {
       for (const [name, value] of Object.entries(expected)) {
-        const row = allRows.length > 0 ? `[${i}]` : '';
+        const valueAs = value === 'null' ? "'null'" : value;
+        const row = allRows.length > 1 ? `[${i}]` : '';
+        const expected = `Expected ${row}{${name}: ${valueAs}}`;
         try {
-          const got = result.data.path(0, name).value;
+          let got;
+          const nestOne = name.split('.');
+          if (nestOne.length === 1) {
+            got = result.data.path(i, name).value;
+          } else if (nestOne.length === 2) {
+            got = result.data.path(i, nestOne[0], 0, nestOne[1]).value;
+          } else {
+            throw new Error(
+              "malloyResultMatcher doesn't handle paths that long yet"
+            );
+          }
           const mustBe = value instanceof Date ? value.getTime() : value;
           const actuallyGot = got instanceof Date ? got.getTime() : got;
+          const gotAs = got === 'null' ? "'null'" : got;
           if (actuallyGot !== mustBe) {
-            fails.push(`Expected ${row}{${name}: ${value}} Got: ${got}`);
+            fails.push(`${expected} Got: ${gotAs}`);
           }
         } catch (e) {
-          fails.push(`Expected ${row}{${name}: ${value}} Error: ${e.message}`);
+          fails.push(`${expected} Error: ${e.message}`);
         }
       }
       i += 1;
