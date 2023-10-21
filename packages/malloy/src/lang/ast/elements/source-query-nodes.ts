@@ -36,7 +36,7 @@ import {ViewFieldReference} from '../query-items/field-references';
 import {QueryProperty, isQueryProperty} from '../types/query-property';
 import {SourceProperty, isSourceProperty} from '../types/source-property';
 import {SQLSource} from '../sources/sql-source';
-import { LogSeverity } from '../../parse-log';
+import {LogSeverity} from '../../parse-log';
 
 export class SQReference extends SourceQueryNode {
   elementType = 'sqReference';
@@ -103,7 +103,7 @@ export class SQLegacyModify extends SourceQueryNode {
     readonly sourceQuery: SourceQueryNode,
     readonly plus: MalloyElement[],
     readonly hasPlus: boolean,
-    readonly m4Severity: LogSeverity | false,
+    readonly m4Severity: LogSeverity | false
   ) {
     super({sourceQuery, plus});
   }
