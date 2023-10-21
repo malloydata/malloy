@@ -36,6 +36,7 @@ import {ViewFieldReference} from '../query-items/field-references';
 import {QueryProperty, isQueryProperty} from '../types/query-property';
 import {SourceProperty, isSourceProperty} from '../types/source-property';
 import {SQLSource} from '../sources/sql-source';
+import { LogSeverity } from '../../parse-log';
 
 export class SQReference extends SourceQueryNode {
   elementType = 'sqReference';
@@ -102,7 +103,7 @@ export class SQLegacyModify extends SourceQueryNode {
     readonly sourceQuery: SourceQueryNode,
     readonly plus: MalloyElement[],
     readonly hasPlus: boolean,
-    readonly m4Warnings: boolean
+    readonly m4Severity: LogSeverity | false,
   ) {
     super({sourceQuery, plus});
   }
@@ -112,10 +113,10 @@ export class SQLegacyModify extends SourceQueryNode {
     if (!asQuery) {
       return;
     }
-    if (!this.hasPlus && this.m4Warnings) {
+    if (!this.hasPlus && this.m4Severity) {
       this.log(
         'Implicit query refinement is deprecated, use the `+` operator',
-        'warn'
+        this.m4Severity
       );
     }
     const stmts: QueryProperty[] = [];
@@ -137,16 +138,16 @@ export class SQLegacyModify extends SourceQueryNode {
     if (!asSource) {
       return;
     }
-    if (this.m4Warnings) {
+    if (this.m4Severity) {
       if (this.hasPlus) {
         this.log(
           'Source extension with "+" is deprecated, use the "extend" operator',
-          'warn'
+          this.m4Severity
         );
       } else {
         this.log(
           'Implicit source extension is deprecated, use the `extend` operator.',
-          'warn'
+          this.m4Severity
         );
       }
     }
