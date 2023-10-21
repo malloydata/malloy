@@ -227,7 +227,7 @@ export class MalloyToAST
     const el = this.getFilterElement(cx.fieldExpr());
     this.m4advisory(
       cx,
-      'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead',
+      'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
     );
     return new ast.Filter([el]);
   }
@@ -409,7 +409,7 @@ export class MalloyToAST
     const el = this.astAt(new ast.TableFunctionSource(tableURI), pcx);
     this.m4advisory(
       pcx,
-      "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`",
+      "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`"
     );
     return el;
   }
@@ -1277,9 +1277,9 @@ export class MalloyToAST
     pcx: parse.ExprCountDisinctContext
   ): ast.ExprCountDistinct {
     this.m4advisory(
-        pcx,
-        '`count(distinct expression)` deprecated, use `count(expression)` instead'
-      );
+      pcx,
+      '`count(distinct expression)` deprecated, use `count(expression)` instead'
+    );
     return this.astAt(
       new ast.ExprCountDistinct(this.getFieldExpr(pcx.fieldExpr())),
       pcx
@@ -1624,9 +1624,9 @@ export class MalloyToAST
     stmt.is = blockName;
     const result = this.astAt(stmt, pcx);
     this.m4advisory(
-        pcx,
-        '`sql:` statement is deprecated, use `connection_name.sql(...)` instead'
-      );
+      pcx,
+      '`sql:` statement is deprecated, use `connection_name.sql(...)` instead'
+    );
     return result;
   }
 
