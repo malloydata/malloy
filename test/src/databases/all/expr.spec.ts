@@ -366,7 +366,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-        source: b is aircraft{ where: aircraft_models.manufacturer ? ~'B%' }
+        source: b is aircraft extend { where: aircraft_models.manufacturer ? ~'B%' }
 
         run: b->{aggregate: m_count is count(aircraft_models.manufacturer) }
         `
@@ -519,19 +519,17 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
       .loadQuery(
         `
     source: bo_models is
-      from(
           ${databaseName}.table('malloytest.aircraft_models') { where: manufacturer ? ~ 'BO%' }
           -> { select: aircraft_model_code, manufacturer, seats }
-        ) {
+        extend {
           primary_key: aircraft_model_code
           measure: bo_count is count()
         }
 
     source: b_models is
-        from(
           ${databaseName}.table('malloytest.aircraft_models') { where: manufacturer ? ~ 'B%' }
           -> { select: aircraft_model_code, manufacturer, seats }
-        ) {
+        extend {
           where: bo_models.seats > 200
           primary_key: aircraft_model_code
           measure: b_count is count()
@@ -594,7 +592,9 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
         `
       source: f is ${databaseName}.table('malloytest.flights') extend {
         join_one: a is ${databaseName}.table('malloytest.aircraft') {
-          join_one: state_facts is ${databaseName}.table('malloytest.state_facts'){primary_key: state} with state
+          join_one: state_facts
+            is ${databaseName}.table('malloytest.state_facts') extend {primary_key: state}
+            with state
         } on tail_num = a.tail_num
       }
 
