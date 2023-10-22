@@ -23,14 +23,18 @@
  */
 
 import {
+  ModelMaterializer,
   QueryMaterializer,
   Result,
   Runtime,
   SingleConnectionRuntime,
+  MalloyError,
+  LogMessage,
 } from '@malloydata/malloy';
 
 type ExpectedResultRow = Record<string, unknown>;
 type ExpectedResult = ExpectedResultRow | ExpectedResultRow[];
+type Runner = Runtime | ModelMaterializer;
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -49,11 +53,11 @@ declare global {
        * If "colName" has a dot in it, it is assumed to be a reference to a value in a nest
        *
        * @param querySrc Malloy source, last query in source will be run
-       * @param runtime Database connection runtime
+       * @param runtime Database connection runtime OR Model ( for the call to loadQuery )
        * @param expected Key value pairs or array of key value pairs
        */
       malloyResultMatches(
-        runtime: Runtime,
+        runtime: Runner,
         matchVals: ExpectedResult
       ): Promise<R>;
     }
@@ -111,10 +115,17 @@ expect.extend({
       result = await query.run();
     } catch (e) {
       let failMsg = `query.run failed: ${e.message}`;
-      try {
-        failMsg += `\nSQL: ${await query.getSQL()}`;
-      } catch (e2) {
-        //
+      if (e instanceof MalloyError) {
+        failMsg = `Error in query compilation\n${errorLogToString(
+          querySrc,
+          e.problems
+        )}`;
+      } else {
+        try {
+          failMsg += `\nSQL: ${await query.getSQL()}`;
+        } catch (e2) {
+          // we could not show the SQL for unknown reasons
+        }
       }
       return {pass: false, message: () => failMsg};
     }
@@ -158,7 +169,8 @@ expect.extend({
       i += 1;
     }
     if (fails.length !== 0) {
-      const failMsg = `SQL: ${await query.getSQL()}\n${fails.join('\n')}`;
+      const fromSQL = '  ' + (await query.getSQL()).split('\n').join('\n  ');
+      const failMsg = `SQL Generated:\n${fromSQL}\n${fails.join('\n')}`;
       return {pass: false, message: () => failMsg};
     }
 
@@ -168,3 +180,21 @@ expect.extend({
     };
   },
 });
+
+function errorLogToString(src: string, msgs: LogMessage[]) {
+  let lovely = '';
+  let lineNo = 0;
+  for (const line of src.split('\n')) {
+    lovely += `    | ${line}\n`;
+    for (const entry of msgs) {
+      if (entry.at) {
+        if (entry.at.range.start.line === lineNo) {
+          const charFrom = entry.at.range.start.character;
+          lovely += `!!!!! ${' '.repeat(charFrom)}^ ${entry.message}\n`;
+        }
+      }
+    }
+    lineNo += 1;
+  }
+  return lovely;
+}
