@@ -39,7 +39,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   it(`basic index  - ${databaseName}`, async () => {
     const model = await runtime.loadModel(
       `
-        source: airports is ${databaseName}.table('malloytest.airports') {
+        source: airports is ${databaseName}.table('malloytest.airports') extend {
         }
     `
     );
@@ -69,7 +69,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   it(`index value map  - ${databaseName}`, async () => {
     const model = await runtime.loadModel(
       `
-        source: airports is ${databaseName}.table('malloytest.airports') {
+        source: airports is ${databaseName}.table('malloytest.airports') extend {
         }
     `
     );
@@ -90,7 +90,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        source: t is ${databaseName}.table('malloytest.state_facts') {
+        source: t is ${databaseName}.table('malloytest.state_facts') extend {
           dimension: one is 'one'
         }
 
@@ -111,7 +111,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       const result = await runtime
         .loadQuery(
           `
-        source: t is ${databaseName}.table('malloytest.state_facts') {
+        source: t is ${databaseName}.table('malloytest.state_facts') extend {
           dimension: one is 'one'
         }
 
@@ -129,7 +129,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     const result = await runtime
       .loadQuery(
         `
-        source: t is ${databaseName}.table('malloytest.flights') {
+        source: t is ${databaseName}.table('malloytest.flights') extend {
           dimension: one is 'one'
         }
 
@@ -148,7 +148,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   //   const result = await runtime
   //     .loadModel(
   //       `
-  //       source: movies is ${databaseName}.table('malloy-303216.imdb.movies') {
+  //       source: movies is ${databaseName}.table('malloy-303216.imdb.movies') extend {
   //       }
   //   `
   //     )

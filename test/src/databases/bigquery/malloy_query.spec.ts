@@ -818,7 +818,7 @@ describe('airport_tests', () => {
     const result = await runQuery(
       model,
       `
-        source: my_airports is airports {
+        source: my_airports is airports extend {
           view: pipe_turtle is {
             aggregate: a is airport_count
           } -> {

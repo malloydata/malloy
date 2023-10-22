@@ -57,7 +57,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) =>
   expressionModels.set(
     databaseName,
     runtime.loadModel(`
-    source: models is ${databaseName}.table('malloytest.aircraft_models'){
+    source: models is ${databaseName}.table('malloytest.aircraft_models') extend {
       measure: model_count is count()
     }
   `)
@@ -233,12 +233,12 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const sql = await orderByModel
       .loadQuery(
         `
-    source: a is ${databaseName}.table('malloytest.aircraft'){
+    source: a is ${databaseName}.table('malloytest.aircraft') extend {
       primary_key: tail_num
       measure: aircraft_count is count()
     }
 
-    source: f is ${databaseName}.table('malloytest.flights'){
+    source: f is ${databaseName}.table('malloytest.flights') extend {
       primary_key: id2
       join_one: a with tail_num
 

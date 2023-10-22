@@ -468,7 +468,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-  source: a is ${databaseName}.table('malloytest.aircraft') {
+  source: a is ${databaseName}.table('malloytest.aircraft') extend {
     primary_key: tail_num
     measure: aircraft_count is count()
   }
@@ -491,13 +491,13 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-    source: a_models is ${databaseName}.table('malloytest.aircraft_models'){
+    source: a_models is ${databaseName}.table('malloytest.aircraft_models') extend {
       where: manufacturer ? ~'B%'
       primary_key: aircraft_model_code
       measure:model_count is count()
     }
 
-    source: aircraft2 is ${databaseName}.table('malloytest.aircraft'){
+    source: aircraft2 is ${databaseName}.table('malloytest.aircraft') extend {
       join_one: model is a_models with aircraft_model_code
       measure: aircraft_count is count()
     }
@@ -538,7 +538,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
           join_one: bo_models with aircraft_model_code
         }
 
-    source: models is ${databaseName}.table('malloytest.aircraft_models') {
+    source: models is ${databaseName}.table('malloytest.aircraft_models') extend {
       join_one: b_models with aircraft_model_code
       measure: model_count is count()
     }
@@ -592,7 +592,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     const result = await expressionModel
       .loadQuery(
         `
-      source: f is ${databaseName}.table('malloytest.flights'){
+      source: f is ${databaseName}.table('malloytest.flights') extend {
         join_one: a is ${databaseName}.table('malloytest.aircraft') {
           join_one: state_facts is ${databaseName}.table('malloytest.state_facts'){primary_key: state} with state
         } on tail_num = a.tail_num

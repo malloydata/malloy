@@ -66,11 +66,11 @@ describe('Multi-connection', () => {
   });
 
   const expressionModelText = `
-source: bigquery_state_facts is bigquery.table('malloytest.state_facts'){
+source: bigquery_state_facts is bigquery.table('malloytest.state_facts') extend {
   measure: state_count is count(state)+2
 }
 
-source: postgres_aircraft is postgres.table('malloytest.aircraft'){
+source: postgres_aircraft is postgres.table('malloytest.aircraft') extend {
   measure: aircraft_count is count(tail_num)+4
 }
 `;

@@ -248,7 +248,7 @@ describe.each(runtimes.runtimeList)(
       const result = await runtime
         .loadQuery(
           `
-        source: eone is  ${databaseName}.table('malloytest.airports') {}
+        source: eone is  ${databaseName}.table('malloytest.airports')
 
         run: eone -> {
           select:
