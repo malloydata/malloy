@@ -136,7 +136,7 @@ describe.each(runtimes.runtimeList)(
         .loadModel(modelText(databaseName))
         .loadQuery(
           `
-        query: ga_sessions->by_page_title
+        run: ga_sessions->by_page_title
         `
         )
         .run();
@@ -162,7 +162,7 @@ describe.each(runtimes.runtimeList)(
         .loadModel(modelText(databaseName))
         .loadQuery(
           `
-        query: ga_sessions->search_index -> {
+        run: ga_sessions->search_index -> {
           where: fieldName != null
           select: *
           order_by: fieldName, weight desc

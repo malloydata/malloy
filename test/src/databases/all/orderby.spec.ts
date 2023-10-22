@@ -69,7 +69,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const result = await orderByModel
       .loadQuery(
         `
-        query: models-> {
+        run: models-> {
           group_by: big is seats >=20
           aggregate: model_count is count()
         }
@@ -84,7 +84,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const result = await orderByModel
       .loadQuery(
         `
-        query: models->{
+        run: models->{
           group_by:
             manufacturer,
             big is seats >=21
@@ -104,7 +104,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const result = await orderByModel
       .loadQuery(
         `
-        query: models->{
+        run: models->{
           aggregate: j_names is model_count {where: manufacturer ~ 'J%'}
         }
         -> {
@@ -120,7 +120,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const sql = await orderByModel
       .loadQuery(
         `
-      query: models->{
+      run: models->{
         aggregate: fetch is count()
       }->{
         group_by: fetch
@@ -135,7 +135,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const sql = await orderByModel
       .loadQuery(
         `
-      query: models->{
+      run: models->{
         nest: withx is {
           group_by: select is UPPER(manufacturer)
           aggregate: fetch is count()
@@ -155,7 +155,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const sql = await orderByModel
       .loadQuery(
         `
-      query: models->{
+      run: models->{
         nest: withx is {
           group_by: is select is UPPER(manufacturer)
           aggregate: fetch is count()
@@ -174,7 +174,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
     const sql = await orderByModel
       .loadQuery(
         `
-      query: models->{
+      run: models->{
         aggregate: model_count is count(){ where: manufacturer ? ~'A%' }
       }
       `
@@ -194,7 +194,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
           aggregate: model_count
         })
 
-        query: popular_names->{
+        run: popular_names->{
           order_by: 2
           select: manufacturer, model_count
         }
@@ -219,7 +219,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
           }
         })
 
-        query: popular_names->{
+        run: popular_names->{
          order_by: 2
          select: manufacturer, model_count
         }
@@ -249,7 +249,7 @@ expressionModels.forEach((orderByModel, databaseName) => {
         aggregate: a.aircraft_count
       }
     }
-    query: f->foo
+    run: f->foo
   `
       )
       .getSQL();

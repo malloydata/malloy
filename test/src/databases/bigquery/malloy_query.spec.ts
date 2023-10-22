@@ -791,7 +791,7 @@ describe('airport_tests', () => {
     const result = await runQuery(
       model,
       `
-      query: airports->{
+      run: airports->{
         aggregate: airport_count
         nest: by_state is {
           group_by: state
@@ -825,7 +825,7 @@ describe('airport_tests', () => {
             select: a
           }
         }
-        query: my_airports->pipe_turtle
+        run: my_airports->pipe_turtle
     `
     );
     expect(result.data.value[0]['a']).toBe(19793);
@@ -905,7 +905,7 @@ describe('airport_tests', () => {
     const result = await runQuery(
       model,
       `
-      query: airports->{
+      run: airports->{
         group_by: lower_state is lower(state)
         order_by: 1 DESC
         limit: 10
@@ -919,7 +919,7 @@ describe('airport_tests', () => {
     const result = await runQuery(
       model,
       `
-      query: airports->{
+      run: airports->{
         aggregate: half is airport_count/2.0
       }
     `
@@ -1006,7 +1006,7 @@ describe('sql injection tests', () => {
     const result = await runQuery(
       model,
       `
-      query: flights->{ group_by: test is 'foo \\\\'--'
+      run: flights->{ group_by: test is 'foo \\\\'--'
       }
     `
     );
