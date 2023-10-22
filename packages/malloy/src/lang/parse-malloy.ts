@@ -258,8 +258,8 @@ class ParseStep implements TranslationStep {
       sourceURL: that.sourceURL,
       importBaseURL: that.importBaseURL || that.sourceURL,
       rangeFromContext: cx => that.rangeFromContext(cx),
-      // TODO put the real version here
-      malloyVersion: '0.0.0-m4',
+      // TODO some way to not forget to update this
+      malloyVersion: '4.0.0',
     };
   }
 }
