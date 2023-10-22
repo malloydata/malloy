@@ -159,7 +159,9 @@ expect.extend({
           const mustBe = value instanceof Date ? value.getTime() : value;
           const actuallyGot = got instanceof Date ? got.getTime() : got;
           const gotAs = got === 'null' ? "'null'" : got;
-          if (actuallyGot !== mustBe) {
+          if (typeof mustBe === 'number' && typeof actuallyGot !== 'number') {
+            fails.push(`${expected} Got: Non Numeric '${gotAs}'`);
+          } else if (actuallyGot !== mustBe) {
             fails.push(`${expected} Got: ${gotAs}`);
           }
         } catch (e) {
