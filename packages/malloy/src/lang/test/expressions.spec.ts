@@ -175,7 +175,7 @@ describe('expressions', () => {
   });
   test('shortcut filtered measure m4warning', () => {
     expect(`
-      ##! m4warnings
+      ##! m4warnings=warn
       run: a -> {
         group_by: ai
         aggregate: x is avg(ai) {? astr = 'why?' }
@@ -203,43 +203,44 @@ describe('expressions', () => {
 
   describe('aggregate forms', () => {
     const m = model`
-      source: root is a {
+      source: root is a extend {
         rename: column is ai
         rename: nested is astruct
         rename: inline is aninline
         dimension: field is column * 2
         dimension: many_field is many.column * 2
         dimension: many_one_field is many.column + one.column
-        join_one: one is a {
+        join_one: one is a extend {
           rename: column is ai
           dimension: field is column * 2
           dimension: many_field is many.column * 2
-          join_many: many is a {
+          join_many: many is a extend {
             rename: column is ai
             dimension: field is column * 2
             dimension: constant is 1
           } on true
         } on true
-        join_many: many is a {
+        join_many: many is a extend {
           rename: column is ai
           dimension: field is column * 2
           dimension: constant is 1
-          join_one: one is a {
+          join_one: one is a extend {
             rename: column is ai
             dimension: field is column * 2
-            join_one: one is a {
+            join_one: one is a extend {
               rename: column is ai
               dimension: field is column * 2
             } on true
           } on true
         } on true
-        join_cross: cross is a {
+        join_cross: cross is a extend {
           rename: column is ai
           dimension: field is column * 2
         } on true
       }
     `;
     m.translator.translate();
+    expect(m).toTranslate();
     const modelX = makeModelFunc({
       model: m.translator.modelDef,
       wrap: x => `run: root -> { aggregate: x is ${x} }`,
@@ -510,7 +511,7 @@ describe('expressions', () => {
     });
     test('lag(sum(output))', () => {
       expect(model`
-      ##! m4warnings
+      ##! m4warnings=warn
       run: a -> {
         group_by: output is 1
         calculate: bar is lag(sum(output))
@@ -518,7 +519,7 @@ describe('expressions', () => {
     });
     test('count(distinct column)', () => {
       expect(model`
-      ##! m4warnings
+      ##! m4warnings=warn
       run: a -> {
         aggregate: x is count(distinct astr)
       }`).toTranslateWithWarnings(
