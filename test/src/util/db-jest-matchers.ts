@@ -147,7 +147,7 @@ expect.extend({
         try {
           const nestOne = name.split('.');
           const resultPath = [i, nestOne[0]];
-          for (const child in nestOne.slice(1)) {
+          for (const child of nestOne.slice(1)) {
             resultPath.push(0);
             resultPath.push(child);
           }
