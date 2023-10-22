@@ -45,7 +45,7 @@ describe('Wildcard BigQuery Tables', () => {
           where: _PARTITIONTIME = @2023-03-06 17:00:00 to @2023-03-06 19:00:00
         }
 
-        query: aircraft -> {
+        run: aircraft -> {
           aggregate: aircraft_count
         }
       `
@@ -68,7 +68,7 @@ describe('Wildcard BigQuery Tables', () => {
           where: _PARTITIONTIME = @2023-03-06 00:00:00
         }
 
-        query: aircraft -> {
+        run: aircraft -> {
           aggregate: aircraft_count
         }
       `
@@ -85,7 +85,7 @@ describe('Wildcard BigQuery Tables', () => {
           where: _PARTITIONTIME = @2023-03-06 00:00:01
         }
 
-        query: aircraft -> {
+        run: aircraft -> {
           aggregate: aircraft_count
         }
       `
@@ -108,7 +108,7 @@ describe('Wildcard BigQuery Tables', () => {
           where: _PARTITIONTIME = @2023-03-01 00:00:00
         }
 
-        query: aircraft -> {
+        run: aircraft -> {
           aggregate: aircraft_count
         }
       `
@@ -125,7 +125,7 @@ describe('Wildcard BigQuery Tables', () => {
           where: _PARTITIONTIME = @2023-03-01 00:00:01
         }
 
-        query: aircraft -> {
+        run: aircraft -> {
           aggregate: aircraft_count
         }
       `
@@ -150,7 +150,7 @@ describe('Wildcard BigQuery Tables', () => {
         source: state_facts is bigquery.table('malloy-data.malloytest.state_facts') {
           join_many: aircraft on state = aircraft.state
         }
-        query: state_facts -> {
+        run: state_facts -> {
           group_by: aircraft.state
           aggregate: aircraft_count is aircraft.count()
           order_by: 1
@@ -187,7 +187,7 @@ describe('Wildcard BigQuery Tables', () => {
           source: state_facts is bigquery.table('malloy-data.malloytest.state_facts') {
             join_many: aircraft on state = aircraft.state
           }
-          query: state_facts -> {
+          run: state_facts -> {
             group_by: aircraft.state
             aggregate: aircraft_count is aircraft.count()
             where: aircraft._PARTITIONTIME = @2023-03-06 18:00:00
@@ -217,7 +217,7 @@ describe('Wildcard BigQuery Tables', () => {
           measure: aircraft_count is count()
           where: _PARTITIONDATE = @2023-03-06
         }
-        query: aircraft -> {
+        run: aircraft -> {
           aggregate: aircraft_count
         }
       `
@@ -240,7 +240,7 @@ describe('Wildcard BigQuery Tables', () => {
           measure: aircraft_count is count()
           where: _PARTITIONDATE = @2023-03-06
         }
-        query: aircraft -> {
+        run: aircraft -> {
           aggregate: aircraft_count
         }
       `
@@ -256,7 +256,7 @@ describe('Wildcard BigQuery Tables', () => {
           measure: aircraft_count is count()
           where: _PARTITIONDATE = @2023-03-06
         }
-        query: aircraft -> {
+        run: aircraft -> {
           aggregate: aircraft_count
         }
       `

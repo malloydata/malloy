@@ -94,7 +94,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           dimension: one is 'one'
         }
 
-        query: t-> {index:one, state }
+        run: t-> {index:one, state }
           -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
     `
       )
@@ -115,7 +115,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           dimension: one is 'one'
         }
 
-        query: t-> {index:one, state; sample: 10 }
+        run: t-> {index:one, state; sample: 10 }
           -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
     `
         )
@@ -133,7 +133,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           dimension: one is 'one'
         }
 
-        query: t-> {index:one, tailnum; sample: 50% }
+        run: t-> {index:one, tailnum; sample: 50% }
           -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
     `
       )

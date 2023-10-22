@@ -227,7 +227,7 @@ describe.each(runtimes.runtimeList)(
             }
           }
 
-          query: airports -> {
+          run: airports -> {
             group_by: state is state
             aggregate: airport_count
             nest: by_elevation_bar_chart is by_elevation
@@ -250,7 +250,7 @@ describe.each(runtimes.runtimeList)(
           `
         source: eone is  ${databaseName}.table('malloytest.airports') {}
 
-        query: eone -> {
+        run: eone -> {
           select:
             bad_date is '123':::date
             bad_number is 'abc':::number

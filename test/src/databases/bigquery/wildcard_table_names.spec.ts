@@ -44,7 +44,7 @@ describe('Wildcard BigQuery Tables', () => {
           measure: aircraft_count is count()
         }
 
-        query: aircraft -> {
+        run: aircraft -> {
           aggregate: aircraft_count
         }
       `
@@ -67,7 +67,7 @@ describe('Wildcard BigQuery Tables', () => {
           where: _TABLE_SUFFIX = '01'
         }
 
-        query: aircraft -> {
+        run: aircraft -> {
           aggregate: aircraft_count
         }
 `
@@ -91,7 +91,7 @@ describe('Wildcard BigQuery Tables', () => {
         source: state_facts is bigquery.table('malloy-data.malloytest.state_facts') {
           join_many: aircraft on state = aircraft.state
         }
-        query: state_facts -> {
+        run: state_facts -> {
           group_by: aircraft.state
           aggregate: aircraft_count is aircraft.count()
           order_by: 1
@@ -128,7 +128,7 @@ describe('Wildcard BigQuery Tables', () => {
         source: state_facts is bigquery.table('malloy-data.malloytest.state_facts') {
           join_many: aircraft on state = aircraft.state
         }
-        query: state_facts -> {
+        run: state_facts -> {
           group_by: aircraft.state
           aggregate: aircraft_count is aircraft.count()
           order_by: 1
@@ -159,7 +159,7 @@ describe('Wildcard BigQuery Tables', () => {
             on state_facts.state = state
         }
 
-        query: aircraft -> {
+        run: aircraft -> {
           group_by: state_facts.state
           aggregate: aircraft_count is count()
           where: _TABLE_SUFFIX = '02'
@@ -188,7 +188,7 @@ describe('Wildcard BigQuery Tables', () => {
         source: state_facts is bigquery.table('malloy-data.malloytest.state_facts') {
           join_many: aircraft on state = aircraft.state
         }
-        query: state_facts -> {
+        run: state_facts -> {
           group_by: aircraft._TABLE_SUFFIX
           aggregate: aircraft_count is aircraft.count()
           order_by: 1
@@ -218,7 +218,7 @@ describe('Wildcard BigQuery Tables', () => {
         source: state_facts is bigquery.table('malloy-data.malloytest.state_facts') {
           join_many: aircraft on state = aircraft.state
         }
-        query: state_facts -> {
+        run: state_facts -> {
           group_by: aircraft._TABLE_SUFFIX
           aggregate: aircraft_count is aircraft.count()
           where: aircraft._TABLE_SUFFIX = '01'

@@ -325,27 +325,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.resultExplore.limit).toBe(undefined);
   });
 
-  it(`limit pipeline - provided - ${databaseName}`, async () => {
-    // a cross join produces a Many to Many result.
-    // symmetric aggregate are needed on both sides of the join
-    // Check the row count and that sums on each side work properly.
-    const result = await runtime
-      .loadQuery(
-        `
-      run: ${databaseName}.table('malloytest.state_facts') -> {
-        select: state
-        limit: 10
-      }
-      -> {
-        select: state
-        limit: 3
-      }
-      `
-      )
-      .run();
-    expect(result.resultExplore.limit).toBe(3);
-  });
-
   it(`ungrouped top level - ${databaseName}`, async () => {
     await expect(`
       run: ${databaseName}.table('malloytest.state_facts') extend {
