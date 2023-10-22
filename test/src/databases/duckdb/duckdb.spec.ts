@@ -34,17 +34,12 @@ const allDucks = new RuntimeList(databases);
 
 describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
   it('can open tables with wildcards', async () => {
-    const result = await runtime
-      .loadQuery(
-        `
-        query: duckdb.table('test/data/duckdb/flights/part.*.parquet') -> {
-          top: 1
-          group_by: carrier;
-        }
-      `
-      )
-      .run();
-    expect(result.data.path(0, 'carrier').value).toEqual('AA');
+    await expect(`
+      run: duckdb.table('test/data/duckdb/flights/part.*.parquet') -> {
+        top: 1
+        group_by: carrier;
+      }
+    `).malloyResultMatches(runtime, {carrier: 'AA'});
   });
 
   it('accepts all schema numbers', async () => {
