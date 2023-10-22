@@ -73,7 +73,7 @@ describe('db:BigQuery', () => {
       .loadModel(
         "source: carriers is bigquery.table('malloy-data.faa.carriers') extend { measure: carrier_count is count() }"
       )
-      .loadQuery('query: carriers -> { aggregate: carrier_count }')
+      .loadQuery('run: carriers -> { aggregate: carrier_count }')
       .getSQL();
     const res = await bq.runSQL(sql);
     expect(res.rows[0]['carrier_count']).toBe(21);
@@ -84,7 +84,7 @@ describe('db:BigQuery', () => {
       .loadModel(
         "source: carriers is bigquery.table('malloy-data.faa.carriers') extend { measure: carrier_count is count() }"
       )
-      .loadQuery('query: carriers -> { group_by: name }')
+      .loadQuery('run: carriers -> { group_by: name }')
       .getSQL();
     const res = await bq.downloadMalloyQuery(sql);
 
