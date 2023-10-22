@@ -33,25 +33,6 @@ afterAll(async () => {
   await runtimes.closeAll();
 });
 
-async function validateCompilation(
-  databaseName: string,
-  sql: string
-): Promise<boolean> {
-  try {
-    const runtime = runtimes.runtimeMap.get(databaseName);
-    if (runtime === undefined) {
-      throw new Error(`Unknown database ${databaseName}`);
-    }
-    await (
-      await runtime.connections.lookupConnection(databaseName)
-    ).runSQL(`WITH test AS(\n${sql}) SELECT '[{"foo":1}]' as results`);
-  } catch (e) {
-    console.log(`SQL: didn't compile\n=============\n${sql}`);
-    throw e;
-  }
-  return true;
-}
-
 const expressionModels = new Map<string, malloy.ModelMaterializer>();
 runtimes.runtimeMap.forEach((runtime, databaseName) =>
   expressionModels.set(
@@ -117,24 +98,17 @@ expressionModels.forEach((orderByModel, databaseName) => {
   });
 
   it(`reserved words are quoted - ${databaseName}`, async () => {
-    const sql = await orderByModel
-      .loadQuery(
-        `
+    await expect(`
       run: models->{
         aggregate: fetch is count()
       }->{
         group_by: fetch
       }
-      `
-      )
-      .getSQL();
-    await validateCompilation(databaseName, sql);
+    `).malloyResultMatches(orderByModel, {});
   });
 
   it(`reserved words are quoted in turtles - ${databaseName}`, async () => {
-    const sql = await orderByModel
-      .loadQuery(
-        `
+    await expect(`
       run: models->{
         nest: withx is {
           group_by: select is UPPER(manufacturer)
@@ -145,16 +119,11 @@ expressionModels.forEach((orderByModel, databaseName) => {
           withxz is lower(withx.select)
           fetch is withx.fetch
       }
-      `
-      )
-      .getSQL();
-    await validateCompilation(databaseName, sql);
+    `).malloyResultMatches(orderByModel, {});
   });
 
   it.skip('reserved words in structure definitions', async () => {
-    const sql = await orderByModel
-      .loadQuery(
-        `
+    await expect(`
       run: models->{
         nest: withx is {
           group_by: is select is UPPER(manufacturer)
@@ -164,95 +133,70 @@ expressionModels.forEach((orderByModel, databaseName) => {
         select: withxis lower(withx.select)
         select: fetch is with.fetch
       }
-      `
-      )
-      .getSQL();
-    await validateCompilation(databaseName, sql);
+    `).malloyResultMatches(orderByModel, {});
   });
 
   it(`aggregate and scalar conditions - ${databaseName}`, async () => {
-    const sql = await orderByModel
-      .loadQuery(
-        `
+    await expect(`
       run: models->{
         aggregate: model_count is count(){ where: manufacturer ? ~'A%' }
       }
-      `
-      )
-      .getSQL();
-    await validateCompilation(databaseName, sql);
+    `).malloyResultMatches(orderByModel, {});
   });
 
   // I'm not sure I have the syntax right here...
   it(`modeled having simple - ${databaseName}`, async () => {
-    const result = await orderByModel
-      .loadQuery(
-        `
-        source: popular_names is from(models->{
-          having: model_count > 100
-          group_by: manufacturer
-          aggregate: model_count
-        })
-
-        run: popular_names->{
-          order_by: 2
-          select: manufacturer, model_count
-        }
-        `
-      )
-      .run();
-    expect(result.data.row(0).cell('model_count').value).toBe(102);
+    await expect(`
+      source: popular_names is models->{
+        having: model_count > 100
+        group_by: manufacturer
+        aggregate: model_count
+      }
+      run: popular_names->{
+        order_by: 2
+        select: manufacturer, model_count
+      }
+    `).malloyResultMatches(orderByModel, {model_count: 102});
   });
 
   it(`modeled having complex - ${databaseName}`, async () => {
-    const result = await orderByModel
-      .loadQuery(
-        `
-        source: popular_names is from(models->{
-          having: model_count > 100
+    await expect(`
+      source: popular_names is from(models->{
+        having: model_count > 100
+        group_by: manufacturer
+        aggregate: model_count
+        nest: l is {
+          top: 5
           group_by: manufacturer
           aggregate: model_count
-          nest: l is {
-            top: 5
-            group_by: manufacturer
-            aggregate: model_count
-          }
-        })
-
-        run: popular_names->{
-         order_by: 2
-         select: manufacturer, model_count
         }
-        `
-      )
-      .run();
-    expect(result.data.row(0).cell('model_count').value).toBe(102);
+      })
+
+      run: popular_names->{
+        order_by: 2
+        select: manufacturer, model_count
+      }
+    `).malloyResultMatches(orderByModel, {model_count: 102});
   });
 
   it(`turtle references joined element - ${databaseName}`, async () => {
-    const sql = await orderByModel
-      .loadQuery(
-        `
-    source: a is ${databaseName}.table('malloytest.aircraft') extend {
-      primary_key: tail_num
-      measure: aircraft_count is count()
-    }
-
-    source: f is ${databaseName}.table('malloytest.flights') extend {
-      primary_key: id2
-      join_one: a with tail_num
-
-      measure: flight_count is count()
-      query: foo is {
-        group_by: carrier
-        aggregate: flight_count
-        aggregate: a.aircraft_count
+    await expect(`
+      source: a is ${databaseName}.table('malloytest.aircraft') extend {
+        primary_key: tail_num
+        measure: aircraft_count is count()
       }
-    }
-    run: f->foo
-  `
-      )
-      .getSQL();
-    await validateCompilation(databaseName, sql);
+
+      run: ${databaseName}.table('malloytest.flights') extend {
+        primary_key: id2
+        join_one: a with tail_num
+
+        measure: flight_count is count()
+        view: foo is {
+          group_by: carrier
+          aggregate: flight_count
+          aggregate: a.aircraft_count
+        }
+      } -> foo
+    `).malloyResultMatches(orderByModel, {});
   });
 });
