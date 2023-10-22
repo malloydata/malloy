@@ -25,7 +25,7 @@
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import {databasesFromEnvironmentOr} from '../../util';
+import {databasesFromEnvironmentOr, testIf} from '../../util';
 import '../../util/db-jest-matchers';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
@@ -87,61 +87,35 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   it(`index no sample rows - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
-        source: t is ${databaseName}.table('malloytest.state_facts') extend {
-          dimension: one is 'one'
-        }
-
-        run: t-> {index:one, state }
-          -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
-    `
-      )
-      .run();
-    // console.log(result.data.toObject());
-    expect(result.data.path(0, 'fieldName').value).toBe('one');
-    expect(result.data.path(0, 'weight').value).toBe(51);
+    await expect(`
+      run: ${databaseName}.table('malloytest.state_facts') extend {
+        dimension: one is 'one'
+      } -> {index:one, state }
+        -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
+    `).malloyResultMatches(runtime, {fieldName: 'one', weight: 51});
   });
 
   // bigquery doesn't support row count based sampling.
-  (databaseName === 'bigquery' ? it.skip : it)(
+  testIf(databaseName !== 'bigquery')(
     `index rows count - ${databaseName}`,
     async () => {
-      const result = await runtime
-        .loadQuery(
-          `
-        source: t is ${databaseName}.table('malloytest.state_facts') extend {
+      await expect(`
+        run: ${databaseName}.table('malloytest.state_facts') extend {
           dimension: one is 'one'
-        }
-
-        run: t-> {index:one, state; sample: 10 }
-          -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
-    `
-        )
-        .run();
-      expect(result.data.path(0, 'fieldName').value).toBe('one');
-      expect(result.data.path(0, 'weight').value).toBe(10);
+        } -> {index:one, state; sample: 10 }
+            -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
+      `).malloyResultMatches(runtime, {fieldName: 'one', weight: 10});
     }
   );
 
   it(`index rows count - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
-        source: t is ${databaseName}.table('malloytest.flights') extend {
-          dimension: one is 'one'
-        }
-
-        run: t-> {index:one, tailnum; sample: 50% }
-          -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
-    `
-      )
-      .run();
-    // console.log(result.sql);
+    await expect(`
+      run: ${databaseName}.table('malloytest.flights') extend {
+        dimension: one is 'one'
+      } -> {index:one, tailnum; sample: 50% }
+        -> {select: fieldName, weight, fieldValue; order_by: 2 desc; where: fieldName = 'one'}
+    `).malloyResultMatches(runtime, {fieldName: 'one'});
     // Hard to get consistent results here so just check that we get a value back.
-    //console.log(result.data.toObject());
-    expect(result.data.path(0, 'fieldName').value).toBe('one');
   });
 
   // it(`fanned data index  - ${databaseName}`, async () => {
