@@ -124,7 +124,7 @@ export function mkSqlEqWith(
           }`;
     } else if (typeof result === 'number') {
       query = `${sourceDef}
-          query: basicTypes
+          run: basicTypes
           -> {
             extend: {
               dimension: expect is ${result}
@@ -153,7 +153,7 @@ export function mkSqlEqWith(
     } else {
       const qResult = result.replace(/'/g, '`');
       query = `${sourceDef}
-          query: basicTypes
+          run: basicTypes
           -> {
             select: expect is ${result}
             select: got is ${expr}
