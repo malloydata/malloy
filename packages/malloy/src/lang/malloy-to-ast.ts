@@ -385,8 +385,7 @@ export class MalloyToAST
         pcx,
         'Source extension with "+" is deprecated, use the "extend" operator'
       );
-    }
-    if (pcx.EXTEND() === undefined) {
+    } else if (pcx.EXTEND() === undefined) {
       this.m4advisory(
         pcx,
         'Implicit source extension is deprecated, use the `extend` operator.'
