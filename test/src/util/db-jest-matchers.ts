@@ -27,7 +27,6 @@ import {
   QueryMaterializer,
   Result,
   Runtime,
-  SingleConnectionRuntime,
   MalloyError,
   LogMessage,
 } from '@malloydata/malloy';

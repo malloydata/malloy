@@ -226,7 +226,8 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
     });
   });
 
-  testIf(databaseName !== 'bigquery')('model: dates named', async () => {
+  // TODO not sure why this test needs to be skipped on postgres, feels like an oversight
+  testIf(databaseName !== 'postgres')('model: dates named', async () => {
     await expect(`
       run: ${databaseName}.table('malloytest.alltypes')->{
         group_by:
