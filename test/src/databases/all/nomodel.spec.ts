@@ -129,8 +129,8 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
   it(`join_many condition no primary key - ${databaseName}`, async () => {
     await expect(`
-      source: a is table('malloytest.airports')
-      source: b is table('malloytest.state_facts') extend {
+      source: a is ${databaseName}.table('malloytest.airports')
+      source: b ${databaseName}.is table('malloytest.state_facts') extend {
         join_many: a on state=a.state
       }
       run: b->{aggregate: c is airport_count.sum()}
