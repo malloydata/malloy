@@ -309,10 +309,16 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
 
   testIf(runtime.connection.name !== 'postgres')('sql safe cast', async () => {
     await expect(`
-      run: aircraft -> {
-        group_by: a is "312":::"integer"
+      run: ${databaseName}.sql('SELECT 1') -> { select:
+        bad_date is '123':::date
+        bad_number is 'abc':::number
+        good_number is "312":::"integer"
       }
-    `).malloyResultMatches(expressionModel, {a: 312});
+    `).malloyResultMatches(expressionModel, {
+      bad_date: null,
+      bad_number: null,
+      good_number: 312,
+    });
   });
 
   it('many_field.sum() has correct locality', async () => {
