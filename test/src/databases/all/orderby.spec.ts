@@ -23,9 +23,8 @@
  */
 
 import {RuntimeList, allDatabases} from '../../runtimes';
-import {databasesFromEnvironmentOr} from '../../util';
+import {databasesFromEnvironmentOr, testIf} from '../../util';
 import '../../util/db-jest-matchers';
-import * as malloy from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
@@ -33,68 +32,49 @@ afterAll(async () => {
   await runtimes.closeAll();
 });
 
-const expressionModels = new Map<string, malloy.ModelMaterializer>();
-runtimes.runtimeMap.forEach((runtime, databaseName) =>
-  expressionModels.set(
-    databaseName,
-    runtime.loadModel(`
+describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
+  const orderByModel = runtime.loadModel(`
     source: models is ${databaseName}.table('malloytest.aircraft_models') extend {
       measure: model_count is count()
-    }
-  `)
-  )
-);
+    }`);
 
-expressionModels.forEach((orderByModel, databaseName) => {
   it(`boolean type - ${databaseName}`, async () => {
-    const result = await orderByModel
-      .loadQuery(
-        `
-        run: models-> {
-          group_by: big is seats >=20
-          aggregate: model_count is count()
-        }
-        `
-      )
-      .run();
-    expect(result.data.row(0).cell('big').value).toBe(false);
-    expect(result.data.row(0).cell('model_count').value).toBe(58451);
+    await expect(`
+      run: models-> {
+        group_by: big is seats >=20
+        aggregate: model_count is count()
+      }
+    `).malloyResultMatches(orderByModel, {
+      big: false,
+      model_count: 58451,
+    });
   });
 
   it(`boolean in pipeline - ${databaseName}`, async () => {
-    const result = await orderByModel
-      .loadQuery(
-        `
-        run: models->{
-          group_by:
-            manufacturer,
-            big is seats >=21
-          aggregate: model_count is count()
-        }->{
-          group_by: big
-          aggregate: model_count is model_count.sum()
-        }
-        `
-      )
-      .run();
-    expect(result.data.row(0).cell('big').value).toBe(false);
-    expect(result.data.row(0).cell('model_count').value).toBe(58500);
+    await expect(`
+      run: models->{
+        group_by:
+          manufacturer,
+          big is seats >=21
+        aggregate: model_count is count()
+      }->{
+        group_by: big
+        aggregate: model_count is model_count.sum()
+      }
+    `).malloyResultMatches(orderByModel, {
+      big: false,
+      model_count: 58500,
+    });
   });
 
   it(`filtered measures in model are aggregates #352 - ${databaseName}`, async () => {
-    const result = await orderByModel
-      .loadQuery(
-        `
-        run: models->{
-          aggregate: j_names is model_count {where: manufacturer ~ 'J%'}
-        }
-        -> {
-          group_by: j_names
-        }
-        `
-      )
-      .run();
-    expect(result.data.row(0).cell('j_names').value).toBe(1358);
+    await expect(`
+      run: models->{
+        aggregate: j_names is model_count {where: manufacturer ~ 'J%'}
+      } -> {
+        group_by: j_names
+      }
+    `).malloyResultMatches(orderByModel, {j_names: 1358});
   });
 
   it(`reserved words are quoted - ${databaseName}`, async () => {
@@ -159,25 +139,27 @@ expressionModels.forEach((orderByModel, databaseName) => {
     `).malloyResultMatches(orderByModel, {model_count: 102});
   });
 
-  it(`modeled having complex - ${databaseName}`, async () => {
-    await expect(`
-      source: popular_names is from(models->{
-        having: model_count > 100
-        group_by: manufacturer
-        aggregate: model_count
-        nest: l is {
-          top: 5
+  testIf(runtime.supportsNesting)(
+    `modeled having complex - ${databaseName}`,
+    async () => {
+      await expect(`
+        source: popular_names is models->{
+          having: model_count > 100
           group_by: manufacturer
           aggregate: model_count
+          nest: l is {
+            top: 5
+            group_by: manufacturer
+            aggregate: model_count
+          }
         }
-      })
-
-      run: popular_names->{
-        order_by: 2
-        select: manufacturer, model_count
-      }
-    `).malloyResultMatches(orderByModel, {model_count: 102});
-  });
+        run: popular_names->{
+          order_by: 2
+          select: manufacturer, model_count
+        }
+      `).malloyResultMatches(orderByModel, {model_count: 102});
+    }
+  );
 
   it(`turtle references joined element - ${databaseName}`, async () => {
     await expect(`

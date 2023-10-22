@@ -49,7 +49,9 @@ declare global {
        *     await expect('query').malloyResultMatches(runtime, {colName: colValue});
        *     await expect('query').malloyResultMatches(runtime, [{colName: colValue}]);
        *
-       * If "colName" has a dot in it, it is assumed to be a reference to a value in a nest
+       *   * If "colName" has a dot in it, it is assumed to be a reference to a value in a nest
+       *   * If you use an array, the number of rows in the result must match the rows in the match
+       *   * The empty match {} accepts ANY data, but will errror if there is not a row
        *
        * @param querySrc Malloy source, last query in source will be run
        * @param runtime Database connection runtime OR Model ( for the call to loadQuery )
