@@ -145,17 +145,13 @@ expect.extend({
         const row = allRows.length > 1 ? `[${i}]` : '';
         const expected = `Expected ${row}{${name}: ${valueAs}}`;
         try {
-          let got;
           const nestOne = name.split('.');
-          if (nestOne.length === 1) {
-            got = result.data.path(i, name).value;
-          } else if (nestOne.length === 2) {
-            got = result.data.path(i, nestOne[0], 0, nestOne[1]).value;
-          } else {
-            throw new Error(
-              "malloyResultMatcher doesn't handle paths that long yet"
-            );
+          const resultPath = [i, nestOne[0]];
+          for (const child in nestOne.slice(1)) {
+            resultPath.push(0);
+            resultPath.push(child);
           }
+          const got = result.data.path(...resultPath).value;
           const mustBe = value instanceof Date ? value.getTime() : value;
           const actuallyGot = got instanceof Date ? got.getTime() : got;
           const gotAs = got === 'null' ? "'null'" : got;
