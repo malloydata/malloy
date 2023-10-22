@@ -54,7 +54,7 @@ function testSymbol(
   });
 }
 
-function testLens(source: MarkedSource, path: number[]) extend {
+function testLens(source: MarkedSource, path: number[]) {
   const doc = new MalloyExplore(source.code);
   let current: Partial<DocumentSymbol> & {children: DocumentSymbol[]} = {
     children: doc.symbols,
