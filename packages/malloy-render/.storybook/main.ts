@@ -1,5 +1,5 @@
 import {join, dirname} from 'path';
-import {mergeConfig} from 'vite';
+import {mergeConfig, InlineConfig} from 'vite';
 import {StorybookConfig} from '@storybook/html-vite';
 
 /**
@@ -32,14 +32,22 @@ const config: StorybookConfig = {
     if (configType === 'PRODUCTION') {
       // Your production configuration goes here.
     }
-    const finalConfig = mergeConfig(config, {
+    const configOverride: InlineConfig = {
       resolve: {
         preserveSymlinks: true,
+        alias: {
+          '@malloydata/malloy': join(__dirname, '../../malloy/src'),
+          '@malloydata/db-duckdb/wasm': join(
+            __dirname,
+            '../../malloy-db-duckdb/src/duckdb_wasm_connection_browser'
+          ),
+        },
       },
       define: {
         'process.env': {},
       },
-    });
+    };
+    const finalConfig = mergeConfig(config, configOverride);
     return finalConfig;
   },
 };
