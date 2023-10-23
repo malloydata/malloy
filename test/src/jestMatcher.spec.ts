@@ -28,7 +28,7 @@ import './util/db-jest-matchers';
 const runtime = runtimeFor('duckdb');
 
 // uncomment out the skip if you want to play with the matchers
-describe('malloyResultMatches', () => {
+describe.skip('malloyResultMatches', () => {
   const sampleSource = `duckdb.sql("""
           SELECT 42 as num, 'whynot' as reason
           UNION ALL SELECT 49, 'because'""")`;
