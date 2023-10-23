@@ -60,17 +60,19 @@ This will check the following things.
 
 ## Accessing nested results
 
-You can specify a nested key in a match using a dotted path to the value.
+You can specify a nested key in a match using a dotted path to the value. Note this
+example also shows passing a model instead of a runtime to the matcher.
 
 ```TypeScript
+  const model = runtime.loadModel(`source: sampleSource is ${sampleSource}`);
   test('nested', async () => {
     await expect(`
-        run: ${sampleSource} -> {
+        run: sampleSource -> {
             nest: the_nest is {
                 select: nestNum is num, nestWhy is reasons
             }
         }
-    `).malloyResultMatches(runtimeOrModel, {
+    `).malloyResultMatches(model, {
       'the_nest.nestNum': 42,
       'theNest.nestWhy': 'whynot',
     });

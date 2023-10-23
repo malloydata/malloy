@@ -28,27 +28,27 @@ import './util/db-jest-matchers';
 const runtime = runtimeFor('duckdb');
 
 // uncomment out the skip if you want to play with the matchers
-describe.skip('malloyResultMatches', () => {
+describe('malloyResultMatches', () => {
   const sampleSource = `duckdb.sql("""
           SELECT 42 as num, 'whynot' as reason
           UNION ALL SELECT 49, 'because'""")`;
-
-  const runtimeOrModel = runtime;
+  const model = runtime.loadModel(`source: sampleSource is ${sampleSource}`);
+  const runtimeOrModel = runtime || model;
 
   test('simple', async () => {
     await expect(`
       run: ${sampleSource}
-    `).malloyResultMatches(runtimeOrModel, {num: 42, reason: 'whynot'});
+    `).malloyResultMatches(runtime, {num: 42, reason: 'whynot'});
   });
 
   test('nested', async () => {
     await expect(`
-        run: ${sampleSource} -> {
+        run: sampleSource -> {
             nest: the_nest is {
                 select: nestNum is num, nestWhy is reasons
             }
         }
-    `).malloyResultMatches(runtimeOrModel, {
+    `).malloyResultMatches(model, {
       'the_nest.nestNum': 42,
       'theNest.nestWhy': 'whynot',
     });
@@ -57,7 +57,7 @@ describe.skip('malloyResultMatches', () => {
   test('multiple rows', async () => {
     await expect(`
         run: ${sampleSource}
-    `).malloyResultMatches(runtimeOrModel, [
+    `).malloyResultMatches(runtime, [
       {num: 42, reason: 'whynot'},
       {num: 49, reason: 'because'},
     ]);
@@ -75,7 +75,7 @@ describe.skip('malloyResultMatches', () => {
   test('wrong data', async () => {
     await expect(`
       run: ${sampleSource}
-    `).malloyResultMatches(runtimeOrModel, {num: 24, reason: 'i said so'});
+    `).malloyResultMatches(runtime, {num: 24, reason: 'i said so'});
   });
 
   test('failing exactly one row', async () => {
