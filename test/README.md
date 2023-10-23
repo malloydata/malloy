@@ -12,7 +12,7 @@ Assumes that postgres has been installed via nix (installs but doesn't configure
 
 ADD to environment: `export PGHOST=localhost`
 
-**postgres_init.sh** - builds a database as the current user in .tmp/data/malloytestdb. Starts server runing on localhost:5432
+**postgres_init.sh** - builds a database as the current user in .tmp/data/malloytestdb. Starts server running on localhost:5432
 copies the test data in `malloytest-postgres.sql.gz` into the database.
 
 **postgres_start.sh** - starts the postgres server, once it has been installed (use after a reboot, for example)
@@ -30,7 +30,7 @@ Setting up DuckDB:
 
 # Using the custom matcher for running queries
 
-There is now a custom matcher, `malloyResultMatches` for running queries. This does a bunch of things which are kind of nice, in addition to making the tests themselves more readable and concise.
+There is now a custom matcher, `malloyResultMatches` for running queries.  The customer matcher makes it easy to write readable tests which need to look at query results, and produces useful output when the test fails to make it easier to respond to develop tests or respond to the output of failing tests.
 
 ## Check for results in the first row of output
 
@@ -145,8 +145,8 @@ When the data return is incorrect, the matcher will always show you the generate
 ### Bad Malloy Code
 
 If the Malloy code in your test is in error, the matcher tries to make a
-it clear where the error is. Because many tests construct the query programtically,
-the matcher will print the entire text of the query in the failure messag. Look for the line
+it clear where the error is. Because many tests construct the query at runtime,
+the matcher will print the entire text of the query in the failure message. Look for the line
 starting with `!!!!!` to find your code error.
 
 ```TypeScript
@@ -220,3 +220,20 @@ If you specify match data, that will also be tested for rows which exist in both
 
       at Object.<anonymous> (test/src/api.spec.ts:128:8)``
 ```
+
+### What it doesn't do
+
+The old template for a test looked something like
+
+```TypeScript
+    const result = await runtime.loadQuery(`QUERYTEXT`);
+    expect(result ....).toBeCorrectSomehow();
+    expect(result ....).toBeCorrectADifferentWay();
+    expect(result ....).toBeCorrectThisWayToo();
+```
+
+The actual matcher for a result is limited to an equality test, in the old pattern you would have written something using an existing matcher for a data value
+```TypeScript
+    expect(result.data.patch(0, 'numThings').value).toBeGreaterThan(7);
+```
+and if this is desirable, more work on the custom matcher would be needed to allow expressions like this to be written.
