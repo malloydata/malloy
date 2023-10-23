@@ -60,7 +60,7 @@ describe('Streaming tests', () => {
         .loadModel(
           `source: airports is ${databaseName}.table('malloytest.airports')`
         )
-        .loadQuery('query: airports -> { select: code }')
+        .loadQuery('run: airports -> { select: code }')
         .runStream({rowLimit: 10});
       const rows: DataRecord[] = [];
       for await (const row of stream) {
@@ -75,7 +75,7 @@ describe('Streaming tests', () => {
         .loadModel(
           `source: airports is ${databaseName}.table('malloytest.airports')`
         )
-        .loadQuery('query: airports -> { select: code }')
+        .loadQuery('run: airports -> { select: code }')
         .runStream({rowLimit: 1});
       const accummulator = new StringAccumulator();
       const jsonWriter = new JSONWriter(accummulator);
@@ -95,7 +95,7 @@ describe('Streaming tests', () => {
         .loadModel(
           `source: airports is ${databaseName}.table('malloytest.airports')`
         )
-        .loadQuery('query: airports -> { select: code }')
+        .loadQuery('run: airports -> { select: code }')
         .runStream({rowLimit: 1});
       const accummulator = new StringAccumulator();
       const csvWriter = new CSVWriter(accummulator);

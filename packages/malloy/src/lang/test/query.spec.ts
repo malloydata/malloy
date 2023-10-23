@@ -31,7 +31,7 @@ describe('query:', () => {
       expect('run: a -> { group_by: astr }').toTranslate());
     test('query:anonymous query m4 warning', () => {
       expect(
-        markSource`##! m4warnings
+        markSource`##! m4warnings=warn
           query: ${'a  -> { group_by: astr }'}`
       ).toTranslateWithWarnings(
         'Anonymous `query:` statements are deprecated, use `run:` instead'
@@ -926,7 +926,7 @@ describe('query:', () => {
     });
     test('top N by field', () => {
       expect(
-        `##! m4warnings
+        `##! m4warnings=warn
         run: a->{top: 5 ${'by astr'}; group_by: astr}`
       ).toTranslateWithWarnings(
         'by clause of top statement unupported. Use order_by instead'
@@ -934,7 +934,7 @@ describe('query:', () => {
     });
     test('top N by expression', () => {
       expect(
-        `##! m4warnings
+        `##! m4warnings=warn
         run: ab->{top: 5 by ai + 1; group_by: ai}`
       ).toTranslateWithWarnings(
         'by clause of top statement unupported. Use order_by instead'
@@ -1105,7 +1105,7 @@ describe('query:', () => {
     describe('declare/query join warnings', () => {
       test('declare warning in query', () => {
         expect(
-          markSource`##! m4warnings
+          markSource`##! m4warnings=warn
           run: a -> { ${'declare: x is 1'}; group_by: x }`
         ).toTranslateWithWarnings(
           '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
@@ -1113,7 +1113,7 @@ describe('query:', () => {
       });
       test('declare warning in source', () => {
         expect(
-          markSource`##! m4warnings
+          markSource`##! m4warnings=warn
           source: a2 is a extend { ${'declare: x is 1'} }`
         ).toTranslateWithWarnings(
           '`declare:` is deprecated; use `dimension:` or `measure:` inside a source or `extend:` block'
@@ -1121,7 +1121,7 @@ describe('query:', () => {
       });
       test('joins in query', () => {
         expect(
-          markSource`##! m4warnings
+          markSource`##! m4warnings=warn
           run: a -> { ${'join_one: b on true'}; ${'join_many: c is b on true'}; ${'join_cross: d is b on true'}; group_by: b.astr }`
         ).toTranslateWithWarnings(
           'Joins in queries are deprecated, move into an `extend:` block.',

@@ -37,60 +37,40 @@ afterAll(async () => {
 
 runtimes.runtimeMap.forEach((runtime, databaseName) => {
   it(`sql expression with turducken - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
-        run: ${databaseName}.sql(
-          """SELECT * FROM (%{
-            ${databaseName}.table('malloytest.state_facts') -> {
-              aggregate: c is count()
-            }
-          }) AS state_facts """
-        ) -> {
-          select: *
-        }
-      `
-      )
-      .run();
-    expect(result.data.value[0]['c']).toBe(51);
-  });
-  it(`sql expression in second of two queries in same block, dependent on first query - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
-        query:
-          a is ${databaseName}.table('malloytest.state_facts') -> {
+    await expect(`
+      run: ${databaseName}.sql(
+        """SELECT * FROM (%{
+          ${databaseName}.table('malloytest.state_facts') -> {
             aggregate: c is count()
           }
-          b is ${databaseName}.sql(
-            """SELECT * FROM (%{ -> a -> { select: * } }) AS state_facts """
-          ) -> {
-            select: *
-          }
-        run: b
-      `
-      )
-      .run();
-    expect(result.data.value[0]['c']).toBe(51);
+        }) AS state_facts """
+      ) -> { select: * }
+    `).malloyResultMatches(runtime, {c: 51});
+  });
+  it(`sql expression in second of two queries in same block, dependent on first query - ${databaseName}`, async () => {
+    await expect(`
+      query:
+        a is ${databaseName}.table('malloytest.state_facts') -> {
+          aggregate: c is count()
+        }
+        b is ${databaseName}.sql(
+          """SELECT * FROM (%{ a -> { select: * } }) AS state_facts """
+        ) -> { select: * }
+      run: b
+    `).malloyResultMatches(runtime, {c: 51});
   });
   it(`sql expression in other sql expression - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(
-        `
-        run: ${databaseName}.sql("""
-          SELECT * from (%{
-            ${databaseName}.sql("""SELECT 1 as one""") -> { group_by: one }
-          }) as the_table
-        """) -> { group_by: one }
-      `
-      )
-      .run();
-    expect(result.data.value[0]['one']).toBe(1);
+    await expect(`
+      run: ${databaseName}.sql("""
+        SELECT * from (%{
+          ${databaseName}.sql("""SELECT 1 as one""") -> { group_by: one }
+        }) as the_table
+      """) -> { group_by: one }
+    `).malloyResultMatches(runtime, {one: 1});
   });
   it(`run sql expression as query - ${databaseName}`, async () => {
-    const result = await runtime
-      .loadQuery(`run: ${databaseName}.sql("""SELECT 1 as one""")`)
-      .run();
-    expect(result.data.value[0]['one']).toBe(1);
+    await expect(
+      `run: ${databaseName}.sql("""SELECT 1 as one""")`
+    ).malloyResultMatches(runtime, {one: 1});
   });
 });

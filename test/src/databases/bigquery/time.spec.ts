@@ -50,6 +50,6 @@ describe('time specific tests for standardsql', () => {
       `run: bigquery.sql("SELECT DATETIME '2020-02-20 00:00:00' as t_datetime") -> {
           select: mex_220 is t_datetime::timestamp
       }`
-    ).resultEquals(runtime!, {mex_220: utc_2020.toJSDate()});
+    ).malloyResultMatches(runtime!, {mex_220: utc_2020.toJSDate()});
   });
 });

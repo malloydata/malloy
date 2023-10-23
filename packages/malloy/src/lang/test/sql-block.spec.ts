@@ -103,7 +103,7 @@ describe('sql:', () => {
     const model = new TestTranslator(`
       ##! -m4warnings
       sql: users IS { select: """${selStmt}""" }
-      source: malloyUsers is from_sql(users) { primary_key: ai }
+      source: malloyUsers is from_sql(users) extend { primary_key: ai }
     `);
     expect(model).toParse();
     const needReq = model.translate();
@@ -236,7 +236,7 @@ describe('sql:', () => {
     const model = new TestTranslator(`
       ##! -m4warnings
       sql: sql_block IS { select: """${selStmt}""" }
-      source: malloy_source is from_sql(sql_block) { primary_key: ai }
+      source: malloy_source is from_sql(sql_block) extend { primary_key: ai }
 `);
     const sql = makeSQLBlock([{sql: selStmt}]);
     model.update({compileSQL: {[sql.name]: makeSchemaResponse(sql)}});

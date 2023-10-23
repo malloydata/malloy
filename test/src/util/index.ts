@@ -117,14 +117,14 @@ export function mkSqlEqWith(
         : `${notEq} when ${varName}`;
       const elsePick = result ? notEq : "'='";
       query = `${sourceDef}
-          query: basicTypes
+          run: basicTypes
           -> {
             extend: {dimension: ${varName} is ${expr}}
             select: calc is pick ${whenPick} else ${elsePick}
           }`;
     } else if (typeof result === 'number') {
       query = `${sourceDef}
-          query: basicTypes
+          run: basicTypes
           -> {
             extend: {
               dimension: expect is ${result}
@@ -139,7 +139,7 @@ export function mkSqlEqWith(
       const resultNoBacks = result.replace(/\\/g, '\\\\');
       const qResult = `'${resultNoBacks.replace(/'/g, "\\'")}'`;
       query = `${sourceDef}
-          query: basicTypes
+          run: basicTypes
           -> {
             select: expect is ${qResult}
             select: got is ${expr}
@@ -153,7 +153,7 @@ export function mkSqlEqWith(
     } else {
       const qResult = result.replace(/'/g, '`');
       query = `${sourceDef}
-          query: basicTypes
+          run: basicTypes
           -> {
             select: expect is ${result}
             select: got is ${expr}
