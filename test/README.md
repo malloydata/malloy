@@ -30,7 +30,7 @@ Setting up DuckDB:
 
 # Using the custom matcher for running queries
 
-There is now a custom matcher, `malloyResultMatches` for running queries.  The customer matcher makes it easy to write readable tests which need to look at query results, and produces useful output when the test fails to make it easier to respond to develop tests or respond to the output of failing tests.
+There is now a custom matcher, `malloyResultMatches` for running queries.  The customer matcher makes it easy to write readable tests which need to look at query results, and produces useful output when the test fails to make it easier to develop tests or respond to the output of failing tests.
 
 ## Check for results in the first row of output
 
