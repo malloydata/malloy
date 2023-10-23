@@ -77,11 +77,11 @@ export class HTMLImageRenderer implements Renderer {
       ? createNullElement(this.document)
       : this.document.createElement('img');
 
-    const width = imgTag.numeric('width');
-    const height = imgTag.numeric('height');
+    const width = imgTag.text('width');
+    const height = imgTag.text('height');
     // Both image and null placeholder get matching size
-    if (width) element.style.width = `${width}px`;
-    if (height) element.style.height = `${height}px`;
+    if (width) element.style.width = width;
+    if (height) element.style.height = height;
 
     const img = element as HTMLImageElement;
 
