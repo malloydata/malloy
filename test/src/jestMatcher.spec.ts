@@ -84,4 +84,5 @@ describe.skip('malloyResultMatches', () => {
     `).malloyResultMatches(runtimeOrModel, [{}]);
   });
 });
+
 afterAll(async () => await runtime.connection.close());
