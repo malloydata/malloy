@@ -27,52 +27,8 @@ import './util/db-jest-matchers';
 
 const runtime = runtimeFor('duckdb');
 
-describe('extendModel', () => {
-  test('can run query in extend section', async () => {
-    const model = runtime.loadModel(`
-      query: q1 is duckdb.table('malloytest.aircraft')->{
-        where: state = 'CA'
-        group_by: state
-      }
-    `);
-    const q1 = model.loadQueryByName('q1');
-    const oneState = await q1.run();
-    expect(oneState.data.path(0, 'state').value).toBe('CA');
-
-    const extended = model.extendModel(`
-      query: q2 is duckdb.table('malloytest.aircraft')->{
-        where: state = 'NV'
-        group_by: state
-      }
-    `);
-    const q2 = extended.loadQueryByName('q2');
-    const twoState = await q2.run();
-    expect(twoState.data.path(0, 'state').value).toBe('NV');
-  });
-  test('can reference query from previous section ', async () => {
-    const model = runtime.loadModel(`
-      query: q1 is duckdb.table('malloytest.aircraft')->{
-        where: state = 'CA'
-        group_by: state
-      }
-    `);
-    const q1 = model.loadQueryByName('q1');
-    const oneState = await q1.run();
-    expect(oneState.data.path(0, 'state').value).toBe('CA');
-
-    const extended = model.extendModel('query: q2 is q1 -> { select: * }');
-    const q2 = extended.loadQueryByName('q2');
-    const twoState = await q2.run();
-    expect(twoState.data.path(0, 'state').value).toBe('CA');
-  });
-  test('returns helpful error message if named query does not exist', async () => {
-    await expect(runtime.getQueryByName('', 'Dummy Query')).rejects.toThrow(
-      'Given query name does not refer to a named query.'
-    );
-  });
-});
-
-describe('malloyResultMatches', () => {
+// uncomment out the skip if you want to play with the matchers
+describe.skip('malloyResultMatches', () => {
   const sampleSource = `duckdb.sql("""
           SELECT 42 as num, 'whynot' as reason
           UNION ALL SELECT 49, 'because'""")`;

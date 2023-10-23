@@ -145,9 +145,9 @@ expect.extend({
     }
     for (const expected of allRows) {
       for (const [name, value] of Object.entries(expected)) {
-        const valueAs = value === 'null' ? "'null'" : value;
+        const pExpect = JSON.stringify(value);
         const row = allRows.length > 1 ? `[${i}]` : '';
-        const expected = `Expected ${row}{${name}: ${valueAs}}`;
+        const expected = `Expected ${row}{${name}: ${pExpect}}`;
         try {
           const nestOne = name.split('.');
           const resultPath = [i, nestOne[0]];
@@ -156,13 +156,13 @@ expect.extend({
             resultPath.push(child);
           }
           const got = result.data.path(...resultPath).value;
+          const pGot = JSON.stringify(got);
           const mustBe = value instanceof Date ? value.getTime() : value;
           const actuallyGot = got instanceof Date ? got.getTime() : got;
-          const gotAs = got === 'null' ? "'null'" : got;
           if (typeof mustBe === 'number' && typeof actuallyGot !== 'number') {
-            fails.push(`${expected} Got: Non Numeric '${gotAs}'`);
+            fails.push(`${expected} Got: Non Numeric '${pGot}'`);
           } else if (actuallyGot !== mustBe) {
-            fails.push(`${expected} Got: ${gotAs}`);
+            fails.push(`${expected} Got: ${pGot}`);
           }
         } catch (e) {
           fails.push(`${expected} Error: ${e.message}`);
