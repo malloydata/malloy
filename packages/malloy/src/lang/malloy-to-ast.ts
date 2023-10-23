@@ -131,9 +131,9 @@ export class MalloyToAST
   }
 
   protected m4Severity(): LogSeverity | false {
-    const sev = this.compilerFlags.text('m4warnings');
-    if (sev === 'warn' || sev === 'error') {
-      return sev;
+    const m4severityTag = this.compilerFlags.tag('m4warnings');
+    if (m4severityTag) {
+      return m4severityTag.text() === 'warn' ? 'warn' : 'error';
     }
     return false;
   }
