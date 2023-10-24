@@ -219,7 +219,7 @@ export class Malloy {
     model?: Model;
     refreshSchemaCache: boolean | undefined;
   }): Promise<Model> {
-    refreshSchemaCache = refreshSchemaCache ?? false;
+    const refreshTimestamp = refreshSchemaCache ? Date.now() : undefined;
     const translator = parse._translator;
     // eslint-disable-next-line no-constant-condition
     while (true) {
@@ -291,7 +291,7 @@ export class Malloy {
               //      the translator runs into an infinite loop fetching tables.
               const {schemas: tables, errors} =
                 await connection.fetchSchemaForTables(tablePathByKey, {
-                  refreshSchemaCache,
+                  refreshTimestamp,
                 });
               translator.update({tables, errors: {tables: errors}});
             } catch (error) {
@@ -317,7 +317,7 @@ export class Malloy {
               toCompile
             );
             const resolved = await conn.fetchSchemaForSQLBlock(expanded, {
-              refreshSchemaCache,
+              refreshTimestamp,
             });
             if (resolved.error) {
               translator.update({

@@ -69,7 +69,7 @@ export interface URLReader {
  */
 export interface FetchSchemaOptions {
   // Fetch a fresh copy of the schema instead of using cache
-  refreshSchemaCache: boolean;
+  refreshTimestamp?: number;
 }
 
 /**

@@ -31,6 +31,7 @@ import {
 } from '@malloydata/malloy';
 import {StructRow, Table, Vector} from 'apache-arrow';
 import {DuckDBCommon, QueryOptionsReader} from './duckdb_common';
+import {FetchSchemaOptions} from '@malloydata/malloy-interfaces';
 
 const TABLE_MATCH = /FROM\s*('([^']*)'|"([^"]*)")/gi;
 const TABLE_FUNCTION_MATCH = /FROM\s+[a-z0-9_]+\(('([^']*)'|"([^"]*)")/gi;
@@ -110,7 +111,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   private worker: Worker | null = null;
 
   private remoteFileCallbacks: RemoteFileCallback[] = [];
-  private remoteFileStatus: Record<string, Promise<boolean>> = {};
+  private remoteFileStatus: Record<string, Promise<number>> = {};
 
   constructor(
     public readonly name: string,
@@ -235,9 +236,9 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
 
   private async findTables(
     tables: string[],
-    options: FetchSchemaOptions
+    {refreshTimestamp}: FetchSchemaOptions
   ): Promise<void> {
-    const fetchRemoteFile = async (tablePath: string): Promise<boolean> => {
+    const fetchRemoteFile = async (tablePath: string): Promise<number> => {
       for (const callback of this.remoteFileCallbacks) {
         const data = await callback(tablePath);
         if (data) {
@@ -245,7 +246,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
           break;
         }
       }
-      return true;
+      return refreshTimestamp ?? Date.now();
     };
 
     await this.setup();
@@ -259,7 +260,8 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
         continue;
       }
       // If we're not trying to fetch start trying
-      if (!(tablePath in this.remoteFileStatus || options.refreshSchemaCache)) {
+      const mapped = this.remoteFileStatus[tablePath];
+      if (!mapped || (refreshTimestamp && refreshTimestamp > (await mapped))) {
         this.remoteFileStatus[tablePath] = fetchRemoteFile(tablePath);
       }
       // Wait for response
@@ -317,7 +319,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   }
 
   async registerRemoteTable(tableName: string, url: string): Promise<void> {
-    this.remoteFileStatus[tableName] = Promise.resolve(true);
+    this.remoteFileStatus[tableName] = Promise.resolve(Number.MIN_SAFE_INTEGER);
     this.database?.registerFileURL(
       tableName,
       url,

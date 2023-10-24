@@ -70,12 +70,12 @@ id,
 FROM "inventory_items.parquet"
 `,
       } as SQLBlock,
-      {refreshSchemaCache: true}
+      {}
     );
-    expect(findTables).toHaveBeenCalledWith([
-      'order_items.parquet',
-      'inventory_items.parquet',
-    ]);
+    expect(findTables).toHaveBeenCalledWith(
+      ['order_items.parquet', 'inventory_items.parquet'],
+      {}
+    );
   });
 
   it('finds table functions in SQL', async () => {
@@ -95,11 +95,11 @@ id,
 FROM read_parquet("inventory_items2.parquet")
 `,
       } as SQLBlock,
-      {refreshSchemaCache: true}
+      {}
     );
-    expect(findTables).toHaveBeenCalledWith([
-      'order_items2.parquet',
-      'inventory_items2.parquet',
-    ]);
+    expect(findTables).toHaveBeenCalledWith(
+      ['order_items2.parquet', 'inventory_items2.parquet'],
+      {}
+    );
   });
 });
