@@ -23,7 +23,13 @@
 
 import crypto from 'crypto';
 import {DuckDBCommon, QueryOptionsReader} from './duckdb_common';
-import {Connection, Database, OPEN_READWRITE, Row} from 'duckdb';
+import {
+  Connection,
+  Database,
+  DuckDbError,
+  OPEN_READWRITE,
+  TableData,
+} from 'duckdb';
 import {QueryDataRow, RunSQLOptions} from '@malloydata/malloy';
 
 export class DuckDBConnection extends DuckDBCommon {
@@ -102,10 +108,10 @@ export class DuckDBConnection extends DuckDBCommon {
 
   protected async runDuckDBQuery(
     sql: string
-  ): Promise<{rows: Row[]; totalRows: number}> {
+  ): Promise<{rows: TableData; totalRows: number}> {
     return new Promise((resolve, reject) => {
       if (this.connection) {
-        this.connection.all(sql, (err: Error, rows: Row[]) => {
+        this.connection.all(sql, (err: DuckDbError | null, rows: TableData) => {
           if (err) {
             reject(err);
           } else {
