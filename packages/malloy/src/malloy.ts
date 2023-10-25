@@ -96,7 +96,7 @@ export interface ParseOptions {
 }
 
 export interface CompileOptions {
-  refreshSchemaCache?: boolean;
+  refreshSchemaCache?: boolean | number;
 }
 
 export class Malloy {
@@ -217,9 +217,15 @@ export class Malloy {
     connections: LookupConnection<InfoConnection>;
     parse: Parse;
     model?: Model;
-    refreshSchemaCache: boolean | undefined;
+    refreshSchemaCache?: boolean | number;
   }): Promise<Model> {
-    const refreshTimestamp = refreshSchemaCache ? Date.now() : undefined;
+    let refreshTimestamp: number | undefined;
+    if (refreshSchemaCache) {
+      refreshTimestamp =
+        typeof refreshSchemaCache === 'number'
+          ? refreshSchemaCache
+          : Date.now();
+    }
     const translator = parse._translator;
     // eslint-disable-next-line no-constant-condition
     while (true) {
