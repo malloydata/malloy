@@ -2,53 +2,7 @@ source: products is duckdb.table("data/products.parquet") extend {
 
   # bar_chart
   view: category_bar is {
-      group_by: category
-      aggregate: avg_retail is retail_price.avg()
-    }
-
-
-  view: img_test is {
-    group_by:
-      # image { alt=fallback { field='department' } }
-      category
-      -- # hidden
-      department
-
-      # image
-      # image.alt.field='^department'
-      category2 is category
-    nest: n is {
-      group_by:
-        brand
-        # image image.alt=nested image.alt.field='^^department'
-        foo is 'url'
-      limit: 3
-    }
-  }
-};
-
-source: logos is duckdb.table("data/logos.csv") extend {
-  view: img_from_record is {
-    group_by:
-      brand
-      # image image.height=40px image.alt=fallback image.alt.field=brand
-      logo
-  }
-
-  view: img_from_parent is {
-    group_by:
-      brand
-      # image image.height=40px image.alt=fallback image.alt.field='^brand'
-      logo
-  }
-
-  view: img_from_grandparent is {
-    group_by:
-      brand
-      logo
-      nest: n is {
-        group_by:
-          foo
-      }
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
   }
 };

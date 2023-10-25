@@ -21,36 +21,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Explore, Field, Tag} from '@malloydata/malloy';
+import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {Renderer} from '../renderer';
-import {createErrorElement, createNullElement} from './utils';
+import {createErrorElement, createNullElement, getDynamicValue} from './utils';
 import {RendererFactory} from '../renderer_factory';
 import {ImageRenderOptions, StyleDefaults} from '../data_styles';
 import {RendererOptions} from '../renderer_types';
-
-function getParentRecord(data: DataColumn, n = 0) {
-  let record = data;
-  while (n > 0 && record.parentRecord) {
-    n -= 1;
-    record = record.parentRecord;
-  }
-  return record;
-}
-
-function getDynamicValue({tag, data}: {tag: Tag; data: DataColumn}) {
-  const match = tag
-    .tag('field')
-    ?.text()
-    ?.match(/^(\^*)(.*)/);
-  if (!match) return;
-
-  const [, parentScoping, fieldName] = match;
-
-  const ancestorCt = parentScoping.length;
-  const scope = getParentRecord(data, ancestorCt);
-  // @ts-ignore
-  return scope?.cell?.(fieldName)?.value;
-}
 
 export class HTMLImageRenderer implements Renderer {
   constructor(private readonly document: Document) {}
@@ -87,8 +63,8 @@ export class HTMLImageRenderer implements Renderer {
 
     const altTag = imgTag.tag('alt');
     if (altTag) {
-      const alt = getDynamicValue({tag: altTag, data}) ?? altTag?.text();
-      img.alt = alt;
+      const alt = getDynamicValue<string>({tag: altTag, data}) ?? altTag.text();
+      if (alt) img.alt = alt;
     }
 
     // Image specific props

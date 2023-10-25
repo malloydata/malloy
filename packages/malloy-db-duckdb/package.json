@@ -40,7 +40,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/duckdb-wasm": "0.0.5",
+    "@malloydata/duckdb-wasm": "0.0.2-rev3",
     "@malloydata/malloy": "^0.0.95",
     "apache-arrow": "^11.0.0",
     "duckdb": "0.8.1",

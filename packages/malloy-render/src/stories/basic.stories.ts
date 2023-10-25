@@ -22,31 +22,3 @@ export const ProductsBar = {
     view: 'category_bar',
   },
 };
-
-export const Image = {
-  args: {
-    source: 'products',
-    view: 'img_test',
-  },
-};
-
-export const ImageFromRecord = {
-  args: {
-    source: 'logos',
-    view: 'img_from_record',
-  },
-};
-
-export const ImageFromParent = {
-  args: {
-    source: 'logos',
-    view: 'img_from_parent',
-  },
-};
-
-export const ImageFromGrandparent = {
-  args: {
-    source: 'logos',
-    view: 'img_from_grandparent',
-  },
-};
