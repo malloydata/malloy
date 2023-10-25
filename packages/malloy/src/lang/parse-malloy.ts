@@ -387,9 +387,13 @@ class ASTStep implements TranslationStep {
         'TRANSLATOR INTERNAL ERROR: Translator parse response had no errors, but also no parser'
       );
     }
-    const secondPass = new MalloyToAST(parse, that.root.logger);
+    const secondPass = new MalloyToAST(
+      parse,
+      that.root.logger,
+      that.compilerFlags
+    );
     const newAst = secondPass.visit(parse.root);
-    that.root.compilerFlags = secondPass.compilerFlags;
+    that.compilerFlags = secondPass.compilerFlags;
     if (that.root.logger.hasErrors()) {
       this.response = that.fatalResponse();
       return this.response;
@@ -562,11 +566,21 @@ class HelpContextStep implements TranslationStep {
 
 class TranslateStep implements TranslationStep {
   response?: TranslateResponse;
+  importedFlags = false;
   constructor(readonly astStep: ASTStep) {}
 
   step(that: MalloyTranslation, extendingModel?: ModelDef): TranslateResponse {
     if (this.response) {
       return this.response;
+    }
+
+    // begin with the compiler flags of the model we are extending
+    if (extendingModel && !this.importedFlags) {
+      const tagParse = Tag.annotationToTag(extendingModel.annotation, {
+        prefix: /^##! /,
+      });
+      that.compilerFlags = tagParse.tag;
+      this.importedFlags = true;
     }
 
     const astResponse = this.astStep.step(that);
@@ -627,6 +641,7 @@ export abstract class MalloyTranslation {
   sqlBlocks: SQLBlockStructDef[] = [];
   modelDef: ModelDef;
   imports: ImportLocation[] = [];
+  compilerFlags = new Tag();
 
   readonly parseStep: ParseStep;
   readonly importsAndTablesStep: ImportsAndTablesStep;
@@ -933,7 +948,6 @@ export class MalloyTranslator extends MalloyTranslation {
   importZone = new Zone<string>();
   sqlQueryZone = new Zone<SQLBlockStructDef>();
   logger = new MessageLog();
-  compilerFlags = new Tag();
   readonly root: MalloyTranslator;
   constructor(
     rootURL: string,

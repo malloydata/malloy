@@ -34,6 +34,7 @@ malloyStatement
   | runStatement
   | docAnnotations
   | ignoredObjectAnnotations
+  | experimentalStatementForTesting
   ;
 
 defineSourceStatement
@@ -613,3 +614,7 @@ justExpr: fieldExpr EOF;
 sqlExploreNameRef: id;
 nameSQLBlock: id;
 connectionName: string;
+
+experimentalStatementForTesting // this only exists to enable tests for the experimental compiler flag
+  : SEMI SEMI OBRACK string CBRACK
+  ;

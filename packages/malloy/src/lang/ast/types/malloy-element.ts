@@ -35,7 +35,7 @@ import {
   SQLBlockStructDef,
   StructDef,
 } from '../../../model/malloy_types';
-
+import {Tag} from '../../../tags';
 import {LogSeverity, MessageLogger} from '../../parse-log';
 import {MalloyTranslation} from '../../parse-malloy';
 import {ModelDataRequest} from '../../translate-response';
@@ -156,6 +156,13 @@ export abstract class MalloyElement {
   }
 
   private xlate?: MalloyTranslation;
+
+  /**
+   * @returns The eldest of them all
+   */
+  kupuna(): MalloyElement {
+    return this.parent?.kupuna() || this;
+  }
 
   translator(): MalloyTranslation | undefined {
     if (this.xlate) {
@@ -288,6 +295,19 @@ export abstract class MalloyElement {
       if (childNeeds) return childNeeds;
     }
   }
+
+  inExperiment(experimentID: string) {
+    const experimental = this.translator()?.compilerFlags.tag('experimental');
+    const enabled =
+      experimental && (experimental.bare() || experimental.has(experimentID));
+    if (enabled) {
+      return true;
+    }
+    this.log(
+      `Experimental flag '${experimentID}' is not set, feature not available`
+    );
+    return false;
+  }
 }
 
 export class Unimplemented extends MalloyElement {
@@ -320,6 +340,20 @@ export class ModelEntryReference extends MalloyElement {
 
 export interface DocStatement extends MalloyElement {
   execute(doc: Document): void;
+}
+
+export class ExperimentalExperiment
+  extends MalloyElement
+  implements DocStatement
+{
+  elementType = 'experimentalExperiment';
+  constructor(readonly id: string) {
+    super();
+  }
+
+  execute(_doc: Document) {
+    this.inExperiment(this.id);
+  }
 }
 
 export function isDocStatement(e: MalloyElement): e is DocStatement {
@@ -451,6 +485,7 @@ export class Document extends MalloyElement implements NameSpace {
   statements: DocStatementList;
   didInitModel = false;
   notes: Note[] = [];
+  experiments = new Tag({});
 
   constructor(statements: (DocStatement | DocStatementList)[]) {
     super();

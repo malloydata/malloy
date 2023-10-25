@@ -71,10 +71,10 @@ export class MalloyToAST
   extends AbstractParseTreeVisitor<ast.MalloyElement>
   implements MalloyParserVisitor<ast.MalloyElement>
 {
-  compilerFlags = new Tag();
   constructor(
     readonly parseInfo: MalloyParseInfo,
-    readonly msgLog: MessageLogger
+    readonly msgLog: MessageLogger,
+    public compilerFlags: Tag
   ) {
     super();
     for (const flag of DEFAULT_COMPILER_FLAGS) {
@@ -128,6 +128,18 @@ export class MalloyToAST
       at: this.getLocation(cx),
       severity: sev,
     });
+  }
+
+  protected inExperiment(experimentID: string, cx: ParserRuleContext): boolean {
+    const experimental = this.compilerFlags.tag('experimental');
+    if (experimental) {
+      return experimental.bare() || experimental.has(experimentID);
+    }
+    this.contextError(
+      cx,
+      `Experimental flag '${experimentID}' required to enable this feature`
+    );
+    return false;
   }
 
   protected m4Severity(): LogSeverity | false {
@@ -1818,5 +1830,15 @@ export class MalloyToAST
       this.visitSqlSource(pcx.sqlSource())
     );
     return this.astAt(sqExpr, pcx);
+  }
+
+  visitExperimentalStatementForTesting(
+    pcx: parse.ExperimentalStatementForTestingContext
+  ) {
+    this.inExperiment('compilerTestExperimentParse', pcx);
+    return this.astAt(
+      new ast.ExperimentalExperiment('compilerTestExperimentTranslate'),
+      pcx
+    );
   }
 }
