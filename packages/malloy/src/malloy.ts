@@ -2572,7 +2572,7 @@ export class ModelMaterializer extends FluentState<Model> {
     }
 
     const searchMapMalloy = `
-      query: ${sourceName}
+      run: ${sourceName}
         -> ${indexQuery}
         -> {
           where: fieldType = 'string'

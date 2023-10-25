@@ -54,7 +54,7 @@ describe('JSON tests', () => {
           group_by: class_name is json_extract_scalar!(j, '$.class_name')
           order_by: 1 desc
         }
-      `).resultEquals(runtime, {class_name: 'C'});
+      `).malloyResultMatches(runtime, {class_name: 'C'});
     });
 
     it(`Returns JSON as value - ${databaseName}`, async () => {
@@ -63,7 +63,7 @@ describe('JSON tests', () => {
           select: j, r
           order_by: 2 desc
         }
-      `).resultEquals(runtime, {
+      `).malloyResultMatches(runtime, {
         j: '{"class":{"students":[{"name":"John"},{"name":"Jamie"}]},"class_name":"C"}',
       });
     });

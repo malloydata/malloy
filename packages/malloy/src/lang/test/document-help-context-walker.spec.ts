@@ -35,7 +35,7 @@ function testHelpContext(
   expect(helpContext).toEqual({type, token});
 }
 
-const source = `source: foo is DB.table('bar') {
+const source = `source: foo is DB.table('bar') extend {
   where: bazz ~ 'biff'
   query: foo is {
     group_by: bazz

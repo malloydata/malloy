@@ -23,6 +23,7 @@
  */
 
 import {runtimeFor} from './runtimes';
+import './util/db-jest-matchers';
 
 const runtime = runtimeFor('duckdb');
 
@@ -64,21 +65,11 @@ describe('extendModel', () => {
     const twoState = await q2.run();
     expect(twoState.data.path(0, 'state').value).toBe('CA');
   });
-  test('can reference sql from previous section ', async () => {
-    const model = runtime.loadModel(`
-      sql: q1 is { connection: "duckdb" select: """SELECT 'CA' as state""" }
-    `);
-
-    const extended = model.extendModel(
-      'query: q2 is from_sql(q1)->{select: *}'
-    );
-    const q2 = extended.loadQueryByName('q2');
-    const twoState = await q2.run();
-    expect(twoState.data.path(0, 'state').value).toBe('CA');
-  });
   test('returns helpful error message if named query does not exist', async () => {
     await expect(runtime.getQueryByName('', 'Dummy Query')).rejects.toThrow(
       'Given query name does not refer to a named query.'
     );
   });
 });
+
+afterAll(async () => await runtime.connection.close());

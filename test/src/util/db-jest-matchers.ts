@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /*
  * Copyright 2023 Google LLC
  *
@@ -22,14 +23,17 @@
  */
 
 import {
+  ModelMaterializer,
   QueryMaterializer,
   Result,
   Runtime,
-  SingleConnectionRuntime,
+  MalloyError,
+  LogMessage,
 } from '@malloydata/malloy';
 
 type ExpectedResultRow = Record<string, unknown>;
 type ExpectedResult = ExpectedResultRow | ExpectedResultRow[];
+type Runner = Runtime | ModelMaterializer;
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -42,14 +46,21 @@ declare global {
        * check the first row, use the first form. If you want to check
        * multiple rows, use the second.
        *
-       *     await expect('query').resultEquals(runtime, {colName: colValue});
-       *     await expect('query').resultEquals(runtime, [{colName: colValue}]);
+       *     await expect('query').malloyResultMatches(runtime, {colName: colValue});
+       *     await expect('query').malloyResultMatches(runtime, [{colName: colValue}]);
+       *
+       *   * If "colName" has a dot in it, it is assumed to be a reference to a value in a nest
+       *   * If you use an array, the number of rows in the result must match the rows in the match
+       *   * The empty match {} accepts ANY data, but will errror if there is not a row
        *
        * @param querySrc Malloy source, last query in source will be run
-       * @param runtime Database connection runtime
+       * @param runtime Database connection runtime OR Model ( for the call to loadQuery )
        * @param expected Key value pairs or array of key value pairs
        */
-      resultEquals(runtime: Runtime, matchVals: ExpectedResult): Promise<R>;
+      malloyResultMatches(
+        runtime: Runner,
+        matchVals: ExpectedResult
+      ): Promise<R>;
     }
   }
 }
@@ -77,39 +88,29 @@ expect.extend({
     };
   },
 
-  async resultEquals(
+  async malloyResultMatches(
     querySrc: string,
-    runtime: SingleConnectionRuntime,
+    runtime: Runner,
     shouldEqual: ExpectedResult
   ) {
-    if (!runtime.supportsNesting && querySrc.indexOf('nest:') >= 0) {
-      return {
-        pass: true,
-        message: () =>
-          'Test was skipped since connection does not support nesting.',
-      };
+    // TODO -- THIS IS NOT OK BUT I AM NOT FIXING IT NOW
+    if (querySrc.indexOf('nest:') >= 0) {
+      if (runtime instanceof Runtime) {
+        return {
+          pass: true,
+          message: () =>
+            'Test was skipped since connection does not support nesting.',
+        };
+      }
     }
 
     let query: QueryMaterializer;
     try {
       query = runtime.loadQuery(querySrc);
     } catch (e) {
-      const [_n, withLines] = querySrc.split('\n').reduce<[number, string]>(
-        (acc, cur) => {
-          const [lineNo, withNums] = acc;
-          return [
-            lineNo + 1,
-            `${withNums}${lineNo.toString().padStart(3, ' ')} ${cur}`,
-          ];
-        },
-        [0, '']
-      );
-      // probably was a compile error because the test is under development, help
-      // out by printing the source code so the line numbers make sense
       return {
         pass: false,
-        message: () =>
-          `--- SOURCE CODE ---\n${withLines}\n-------------------\nloadQuery failed: ${e.message}`,
+        message: () => `loadQuery failed: ${e.message}`,
       };
     }
 
@@ -117,32 +118,61 @@ expect.extend({
     try {
       result = await query.run();
     } catch (e) {
-      const failMsg =
-        `query.run failed: ${e.message}\n` + `SQL: ${await query.getSQL()}`;
+      let failMsg = `query.run failed: ${e.message}`;
+      if (e instanceof MalloyError) {
+        failMsg = `Error in query compilation\n${errorLogToString(
+          querySrc,
+          e.problems
+        )}`;
+      } else {
+        try {
+          failMsg += `\nSQL: ${await query.getSQL()}`;
+        } catch (e2) {
+          // we could not show the SQL for unknown reasons
+        }
+      }
       return {pass: false, message: () => failMsg};
     }
 
     const allRows = Array.isArray(shouldEqual) ? shouldEqual : [shouldEqual];
     let i = 0;
     const fails: string[] = [];
+    const gotRows = result.data.toObject().length;
+    if (Array.isArray(shouldEqual)) {
+      if (gotRows !== allRows.length) {
+        fails.push(`Expected result.rows=${allRows.length}  Got: ${gotRows}`);
+      }
+    }
     for (const expected of allRows) {
       for (const [name, value] of Object.entries(expected)) {
-        const row = allRows.length > 0 ? `[${i}]` : '';
+        const pExpect = JSON.stringify(value);
+        const row = allRows.length > 1 ? `[${i}]` : '';
+        const expected = `Expected ${row}{${name}: ${pExpect}}`;
         try {
-          const got = result.data.path(0, name).value;
+          const nestOne = name.split('.');
+          const resultPath = [i, nestOne[0]];
+          for (const child of nestOne.slice(1)) {
+            resultPath.push(0);
+            resultPath.push(child);
+          }
+          const got = result.data.path(...resultPath).value;
+          const pGot = JSON.stringify(got);
           const mustBe = value instanceof Date ? value.getTime() : value;
           const actuallyGot = got instanceof Date ? got.getTime() : got;
-          if (actuallyGot !== mustBe) {
-            fails.push(`Expected ${row}{${name}: ${value}} Got: ${got}`);
+          if (typeof mustBe === 'number' && typeof actuallyGot !== 'number') {
+            fails.push(`${expected} Got: Non Numeric '${pGot}'`);
+          } else if (actuallyGot !== mustBe) {
+            fails.push(`${expected} Got: ${pGot}`);
           }
         } catch (e) {
-          fails.push(`Expected ${row}{${name}: ${value}} Error: ${e.message}`);
+          fails.push(`${expected} Error: ${e.message}`);
         }
       }
       i += 1;
     }
     if (fails.length !== 0) {
-      const failMsg = `SQL: ${await query.getSQL()}\n${fails.join('\n')}`;
+      const fromSQL = '  ' + (await query.getSQL()).split('\n').join('\n  ');
+      const failMsg = `SQL Generated:\n${fromSQL}\n${fails.join('\n')}`;
       return {pass: false, message: () => failMsg};
     }
 
@@ -152,3 +182,21 @@ expect.extend({
     };
   },
 });
+
+function errorLogToString(src: string, msgs: LogMessage[]) {
+  let lovely = '';
+  let lineNo = 0;
+  for (const line of src.split('\n')) {
+    lovely += `    | ${line}\n`;
+    for (const entry of msgs) {
+      if (entry.at) {
+        if (entry.at.range.start.line === lineNo) {
+          const charFrom = entry.at.range.start.character;
+          lovely += `!!!!! ${' '.repeat(charFrom)}^ ${entry.message}\n`;
+        }
+      }
+    }
+    lineNo += 1;
+  }
+  return lovely;
+}

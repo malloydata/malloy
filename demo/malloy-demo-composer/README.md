@@ -45,7 +45,7 @@ The composer can write saved queries back to `.a.malloy` files in the Malloy mod
 2. [Import](https://malloydata.github.io/documentation/language/imports.html) the base file in this `.a.malloy` file, then create a refinement of a source named in the base file. For example, if your base file looks like:
 
 ```malloy
-source: flights_base is table('malloy-data.faa.flights'){}
+source: flights_base is table('malloy-data.faa.flights')
 ```
 
 Your `.a.malloy` file might look like this:
