@@ -17,3 +17,7 @@ Stories are written in the `src/stories` directory. To add more data and Malloy 
 - register data files be loaded into the DuckDB WASM connection by adding the file name to `.storybook/registered_data.json`
 
 [Take a look at the Basic story as an example.](./src/stories/basic.stories.ts)
+
+### On Reloading Changes
+
+When running `npm run storybook`, only changes in the malloy-render package will hot reload properly. Changes to dependencies like the core `malloy` package may require a browser reload to work properly.

@@ -23,7 +23,7 @@
 
 import {DataColumn, Explore, Field} from '@malloydata/malloy';
 import {Renderer} from '../renderer';
-import {createErrorElement, createNullElement} from './utils';
+import {createErrorElement, createNullElement, getDynamicValue} from './utils';
 import {RendererFactory} from '../renderer_factory';
 import {ImageRenderOptions, StyleDefaults} from '../data_styles';
 import {RendererOptions} from '../renderer_types';
@@ -39,21 +39,37 @@ export class HTMLImageRenderer implements Renderer {
       );
     }
 
+    const {tag} = data.field.tagParse();
+    const imgTag = tag.tag('image');
+
+    if (!imgTag) {
+      return createErrorElement(
+        this.document,
+        'Missing tag for Image renderer'
+      );
+    }
+
     const element: HTMLElement = data.isNull()
       ? createNullElement(this.document)
       : this.document.createElement('img');
-    const {tag} = data.field.tagParse();
-    const width = tag.text('image', 'width');
-    const height = tag.text('image', 'height');
+
+    const width = imgTag.text('width');
+    const height = imgTag.text('height');
     // Both image and null placeholder get matching size
     if (width) element.style.width = width;
     if (height) element.style.height = height;
+
+    const img = element as HTMLImageElement;
+
+    const altTag = imgTag.tag('alt');
+    if (altTag) {
+      const alt = getDynamicValue<string>({tag: altTag, data}) ?? altTag.text();
+      if (alt) img.alt = alt;
+    }
+
     // Image specific props
     if (!data.isNull()) {
-      const alt = tag.text('image', 'alt');
-      const img = element as HTMLImageElement;
       img.src = data.value;
-      if (alt) img.alt = alt;
     }
     return element;
   }

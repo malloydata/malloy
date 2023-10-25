@@ -21,7 +21,13 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DateTimeframe, Field, TimestampTimeframe} from '@malloydata/malloy';
+import {
+  DataColumn,
+  DateTimeframe,
+  Field,
+  Tag,
+  TimestampTimeframe,
+} from '@malloydata/malloy';
 import startCase from 'lodash/startCase';
 import {RenderDef} from '../data_styles';
 import {RendererOptions} from '../renderer_types';
@@ -256,4 +262,34 @@ export function formatTitle(
   }
 
   return title;
+}
+
+export function getParentRecord(data: DataColumn, n = 0) {
+  let record = data;
+  while (n > 0 && record.parentRecord) {
+    n -= 1;
+    record = record.parentRecord;
+  }
+  return record;
+}
+
+export function getDynamicValue<T = unknown>({
+  tag,
+  data,
+}: {
+  tag: Tag;
+  data: DataColumn;
+}): T | undefined {
+  const match = tag
+    .tag('field')
+    ?.text()
+    ?.match(/^(\^*)(.*)/);
+  if (!match) return undefined;
+
+  const [, parentScoping, fieldName] = match;
+
+  const ancestorCt = parentScoping.length;
+  const scope = getParentRecord(data, ancestorCt);
+  if ('cell' in scope) return scope.cell(fieldName)?.value as T;
+  return undefined;
 }

@@ -1,0 +1,26 @@
+source: logos is duckdb.table("data/logos.csv") extend {
+  view: img_from_record is {
+    group_by:
+      brand
+      # image image.height=40px image.alt=fallback image.alt.field=brand
+      logo
+  }
+
+  view: img_from_parent is {
+    group_by:
+      brand
+      # image image.height=40px image.alt=fallback image.alt.field='^brand'
+      logo
+  }
+
+  view: img_from_grandparent is {
+    group_by:
+      brand
+      nest: details is {
+        group_by:
+          product
+          # image image.height=40px image.alt=fallback image.alt.field='^^brand'
+          logo
+      }
+  }
+};
