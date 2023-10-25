@@ -89,8 +89,9 @@ export interface Taggable {
  * tag.numeric(p?)      => numeric value of tag.p or undefined
  * tag.textArray(p ?)   => string[] value of elements in tag.p or undefined
  * tag.numericArray(p?) => string[] value of elements in tag.p or undefined
- * tag.tag(p)           => Tag value of tag.p
- * tag.has(p)           => boolean "tag contains tag.p"
+ * tag.tag(p?)           => Tag value of tag.p
+ * tag.has(p?)           => boolean "tag contains tag.p"
+ * tag.bare(p?)          => tag.p exists and has no properties
  * tag.dict             => Record<string,Tag> of tag properties
  * ```
  */
@@ -267,6 +268,16 @@ export class Tag implements TagInterface {
         return num;
       }
     }
+  }
+
+  bare(...at: string[]): boolean | undefined {
+    const p = this.find(at);
+    if (p === undefined) {
+      return;
+    }
+    return (
+      p.properties === undefined || Object.entries(p.properties).length === 0
+    );
   }
 
   get dict(): Record<string, Tag> {

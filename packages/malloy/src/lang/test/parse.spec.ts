@@ -69,6 +69,30 @@ describe('model statements', () => {
       'query: q1 is a -> { select: * }, q1 is a -> { select: * }'
     ).translationToFailWith("'q1' is already defined, cannot redefine");
   });
+
+  test('##! experimental enables all experiments', () => {
+    expect('##! experimental\n;;[ "x" ]').toTranslate();
+  });
+
+  test('experimental explicit enable', () => {
+    expect(
+      '##! experimental { compilerTestExperimentParse compilerTestExperimentTranslate }\n;;[ "x" ]'
+    ).toTranslate();
+  });
+
+  test('experiment failures in parse are flagged', () => {
+    expect(';;[ "x" ]').translationToFailWith(
+      "Experimental flag 'compilerTestExperimentParse' required to enable this feature"
+    );
+  });
+
+  test('experiment failures in second pass are flagged', () => {
+    expect(
+      '##! experimental.compilerTestExperimentParse\n;;[ "x" ]'
+    ).translationToFailWith(
+      "Experimental flag 'compilerTestExperimentTranslate' is not set, feature not available"
+    );
+  });
 });
 
 describe('error handling', () => {
