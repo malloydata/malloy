@@ -28,6 +28,7 @@ export type {
   ConnectionParameter,
   ConnectionParameterValue,
   ConnectionConfigSchema,
+  FetchSchemaOptions,
   InfoConnection,
   LookupConnection,
   ModelString,

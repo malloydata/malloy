@@ -194,4 +194,105 @@ describe('db:BigQuery', () => {
       expect(results[0]).toStrictEqual({t: 1});
     });
   });
+
+  describe('Caching', () => {
+    let getTableFieldSchema: jest.SpyInstance;
+    let getSQLBlockSchema: jest.SpyInstance;
+
+    beforeEach(async () => {
+      getTableFieldSchema = jest
+        .spyOn(BigQueryConnection.prototype as any, 'getTableFieldSchema')
+        .mockResolvedValue({
+          schema: {},
+          needsTableSuffixPseudoColumn: false,
+          needsPartitionTimePseudoColumn: false,
+          needsPartitionDatePseudoColumn: false,
+        });
+      getSQLBlockSchema = jest
+        .spyOn(BigQueryConnection.prototype as any, 'getSQLBlockSchema')
+        .mockResolvedValue({
+          schema: {},
+          needsTableSuffixPseudoColumn: false,
+          needsPartitionTimePseudoColumn: false,
+          needsPartitionDatePseudoColumn: false,
+        });
+    });
+
+    afterEach(() => {
+      jest.resetAllMocks();
+    });
+
+    it('caches table schema', async () => {
+      await bq.fetchSchemaForTables({'test1': 'table1'}, {});
+      expect(getTableFieldSchema).toBeCalledTimes(1);
+      await new Promise(resolve => setTimeout(resolve));
+      await bq.fetchSchemaForTables({'test1': 'table1'}, {});
+      expect(getTableFieldSchema).toBeCalledTimes(1);
+    });
+
+    it('refreshes table schema', async () => {
+      await bq.fetchSchemaForTables({'test2': 'table2'}, {});
+      expect(getTableFieldSchema).toBeCalledTimes(1);
+      await new Promise(resolve => setTimeout(resolve));
+      await bq.fetchSchemaForTables(
+        {'test2': 'table2'},
+        {refreshTimestamp: Date.now()}
+      );
+      expect(getTableFieldSchema).toBeCalledTimes(2);
+    });
+
+    it('caches sql schema', async () => {
+      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+      expect(getSQLBlockSchema).toBeCalledTimes(1);
+      await new Promise(resolve => setTimeout(resolve));
+      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+      expect(getSQLBlockSchema).toBeCalledTimes(1);
+    });
+
+    it('refreshes sql schema', async () => {
+      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_2, {});
+      expect(getSQLBlockSchema).toBeCalledTimes(1);
+      await new Promise(resolve => setTimeout(resolve));
+      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_2, {
+        refreshTimestamp: Date.now(),
+      });
+      expect(getSQLBlockSchema).toBeCalledTimes(2);
+    });
+  });
 });
+
+const SQL_BLOCK_1 = {
+  type: 'sqlBlock',
+  name: 'block1',
+  selectStr: `
+SELECT
+created_at,
+sale_price,
+inventory_item_id
+FROM 'order_items.parquet'
+SELECT
+id,
+product_department,
+product_category,
+created_at AS inventory_items_created_at
+FROM "inventory_items.parquet"
+`,
+} as malloy.SQLBlock;
+
+const SQL_BLOCK_2 = {
+  type: 'sqlBlock',
+  name: 'block2',
+  selectStr: `
+SELECT
+created_at,
+sale_price,
+inventory_item_id
+FROM read_parquet('order_items2.parquet', arg='value')
+SELECT
+id,
+product_department,
+product_category,
+created_at AS inventory_items_created_at
+FROM read_parquet("inventory_items2.parquet")
+`,
+} as malloy.SQLBlock;

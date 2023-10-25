@@ -54,8 +54,9 @@ describe('DuckDBWasmConnection', () => {
   });
 
   it('finds simple tables in SQL', async () => {
-    await connection.fetchSchemaForSQLBlock({
-      selectStr: `
+    await connection.fetchSchemaForSQLBlock(
+      {
+        selectStr: `
 SELECT
   created_at,
   sale_price,
@@ -68,16 +69,19 @@ id,
   created_at AS inventory_items_created_at
 FROM "inventory_items.parquet"
 `,
-    } as SQLBlock);
-    expect(findTables).toHaveBeenCalledWith([
-      'order_items.parquet',
-      'inventory_items.parquet',
-    ]);
+      } as SQLBlock,
+      {}
+    );
+    expect(findTables).toHaveBeenCalledWith(
+      ['order_items.parquet', 'inventory_items.parquet'],
+      {}
+    );
   });
 
   it('finds table functions in SQL', async () => {
-    await connection.fetchSchemaForSQLBlock({
-      selectStr: `
+    await connection.fetchSchemaForSQLBlock(
+      {
+        selectStr: `
 SELECT
   created_at,
   sale_price,
@@ -90,10 +94,12 @@ id,
   created_at AS inventory_items_created_at
 FROM read_parquet("inventory_items2.parquet")
 `,
-    } as SQLBlock);
-    expect(findTables).toHaveBeenCalledWith([
-      'order_items2.parquet',
-      'inventory_items2.parquet',
-    ]);
+      } as SQLBlock,
+      {}
+    );
+    expect(findTables).toHaveBeenCalledWith(
+      ['order_items2.parquet', 'inventory_items2.parquet'],
+      {}
+    );
   });
 });

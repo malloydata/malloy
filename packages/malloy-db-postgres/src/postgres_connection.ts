@@ -46,6 +46,7 @@ import {
 import {Client, Pool, PoolClient} from 'pg';
 import QueryStream from 'pg-query-stream';
 import {randomUUID} from 'crypto';
+import {FetchSchemaOptions} from '@malloydata/malloy-interfaces';
 
 interface PostgresQueryConfiguration {
   rowLimit?: number;
@@ -78,12 +79,13 @@ export class PostgresConnection
   private isSetup = false;
   private schemaCache = new Map<
     string,
-    {schema: StructDef; error?: undefined} | {error: string; schema?: undefined}
+    | {schema: StructDef; error?: undefined; timestamp: number}
+    | {error: string; schema?: undefined; timestamp: number}
   >();
   private sqlSchemaCache = new Map<
     string,
-    | {structDef: StructDef; error?: undefined}
-    | {error: string; structDef?: undefined}
+    | {structDef: StructDef; error?: undefined; timestamp: number}
+    | {error: string; structDef?: undefined; timestamp: number}
   >();
   private queryConfigReader: PostgresQueryConfigurationReader;
   private configReader: PostgresConnectionConfigurationReader;
@@ -135,7 +137,10 @@ export class PostgresConnection
     return true;
   }
 
-  public async fetchSchemaForTables(missing: Record<string, string>): Promise<{
+  public async fetchSchemaForTables(
+    missing: Record<string, string>,
+    {refreshTimestamp}: FetchSchemaOptions
+  ): Promise<{
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;
   }> {
@@ -144,15 +149,20 @@ export class PostgresConnection
 
     for (const tableKey in missing) {
       let inCache = this.schemaCache.get(tableKey);
-      if (!inCache) {
+      if (
+        !inCache ||
+        (refreshTimestamp && refreshTimestamp > inCache.timestamp)
+      ) {
         const tablePath = missing[tableKey];
+        const timestamp = refreshTimestamp || Date.now();
         try {
           inCache = {
             schema: await this.getTableSchema(tableKey, tablePath),
+            timestamp,
           };
           this.schemaCache.set(tableKey, inCache);
         } catch (error) {
-          inCache = {error: error.message};
+          inCache = {error: error.message, timestamp};
         }
       }
       if (inCache.schema !== undefined) {
@@ -165,20 +175,26 @@ export class PostgresConnection
   }
 
   public async fetchSchemaForSQLBlock(
-    sqlRef: SQLBlock
+    sqlRef: SQLBlock,
+    {refreshTimestamp}: FetchSchemaOptions
   ): Promise<
     | {structDef: StructDef; error?: undefined}
     | {error: string; structDef?: undefined}
   > {
     const key = sqlRef.name;
     let inCache = this.sqlSchemaCache.get(key);
-    if (!inCache) {
+    if (
+      !inCache ||
+      (refreshTimestamp && refreshTimestamp > inCache.timestamp)
+    ) {
+      const timestamp = refreshTimestamp ?? Date.now();
       try {
         inCache = {
           structDef: await this.getSQLBlockSchema(sqlRef),
+          timestamp,
         };
       } catch (error) {
-        inCache = {error: error.message};
+        inCache = {error: error.message, timestamp};
       }
       this.sqlSchemaCache.set(key, inCache);
     }
