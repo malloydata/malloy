@@ -128,7 +128,7 @@ export class SQLegacyModify extends SourceQueryNode {
         stmt.log('Unable to add this refinement to query');
       }
     }
-    asQuery.refineWith(new QOPDesc(stmts));
+    asQuery.refineWith([new QOPDesc(stmts)]);
     this.has({asQuery});
     return asQuery;
   }
@@ -243,33 +243,20 @@ export class SQAppendView extends SourceQueryNode {
       this.has({querySrc});
       theQuery = new FullQuery(querySrc);
       this.has({theQuery});
+
       const head = views[0];
+      const refinements = views.slice(1);
+
       if (head instanceof ViewFieldReference) {
         theQuery.turtleName = head.list[0];
-        if (views.length === 1) {
-          return theQuery;
-        }
-        if (views.length === 2) {
-          if (views[1] instanceof QOPDesc) {
-            theQuery.refineWith(views[1]);
-            return theQuery;
-          } else {
-            this.sqLog('Cannot refine with a named view');
-            return;
-          }
-        } else {
-          this.sqLog('Cannot have multiple refinements');
-        }
-      } else if (views.length === 1) {
-        if (head instanceof QOPDesc) {
-          theQuery.addSegments(head);
-          return theQuery;
-        }
+      } else if (head instanceof QOPDesc) {
+        theQuery.addSegments(head);
       }
-      if (views.length > 0) {
-        this.sqLog('Cannot have multiple refinements');
-        return;
+
+      if (refinements) {
+        theQuery.refineWith(refinements);
       }
+
       return theQuery;
     }
 
@@ -313,7 +300,7 @@ export class SQRefinedQuery extends SourceQueryNode {
 
   constructor(
     readonly toRefine: SourceQueryNode,
-    readonly refine: QOPDesc
+    readonly refine: QOPDesc | ViewFieldReference
   ) {
     super({toRefine, refine});
   }
@@ -335,7 +322,7 @@ export class SQRefinedQuery extends SourceQueryNode {
         this.sqLog('Cannot refine a refined query');
         return;
       }
-      refinedQuery.refineWith(this.refine);
+      refinedQuery.refineWith([this.refine]);
       this.has({query: refinedQuery});
       return refinedQuery;
     }

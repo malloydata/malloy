@@ -296,16 +296,18 @@ export abstract class MalloyElement {
     }
   }
 
-  inExperiment(experimentID: string) {
+  inExperiment(experimentID: string, silent = false) {
     const experimental = this.translator()?.compilerFlags.tag('experimental');
     const enabled =
       experimental && (experimental.bare() || experimental.has(experimentID));
     if (enabled) {
       return true;
     }
-    this.log(
-      `Experimental flag '${experimentID}' is not set, feature not available`
-    );
+    if (!silent) {
+      this.log(
+        `Experimental flag '${experimentID}' is not set, feature not available`
+      );
+    }
     return false;
   }
 }

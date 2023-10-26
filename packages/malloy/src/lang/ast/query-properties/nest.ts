@@ -45,6 +45,7 @@ import {
   TypeDesc,
 } from '../../../model';
 import {FieldReference} from '../query-items/field-references';
+import {getFinalStruct} from '../struct-utils';
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
@@ -85,19 +86,26 @@ abstract class TurtleDeclRoot
       if (reportWrongType) {
         this.log(`Expected '${this.turtleName}' to be a query`);
       }
-    } else if (this.withRefinement) {
-      throw this.internalError(
-        "Can't refine the head of a view  in its definition"
-      );
     }
 
     let pipeOutFS = fs;
     if (modelPipe.pipeline.length > 0) {
-      const lastOut = this.getFinalStruct(fs.structDef(), modelPipe.pipeline);
+      const lastOut = getFinalStruct(this, fs.structDef(), modelPipe.pipeline);
       pipeOutFS = new StaticSpace(lastOut);
     }
     const appended = this.appendOps(pipeOutFS, modelPipe.pipeline);
     modelPipe.pipeline = appended.opList;
+    if (
+      this.refinements &&
+      this.refinements.length > 0 &&
+      this.turtleName === undefined
+    ) {
+      const refined = this.refinePipeline(fs, {
+        pipeline: modelPipe.pipeline,
+      }).pipeline;
+      modelPipe.pipeline = refined;
+      return modelPipe;
+    }
     return modelPipe;
   }
 

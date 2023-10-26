@@ -32,10 +32,10 @@ import {
 import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {QOPDesc} from '../query-properties/qop-desc';
-import {getStructFieldDef, opOutputStruct} from '../struct-utils';
+import {getStructFieldDef} from '../struct-utils';
 import {QueryInputSpace} from '../field-space/query-input-space';
-import {LegalRefinementStage} from '../types/query-property-interface';
-import {StaticSpace} from '../field-space/static-space';
+import {ViewFieldReference} from '../query-items/field-references';
+import {Refinement} from '../query-properties/refinements';
 
 interface AppendResult {
   opList: PipeSegment[];
@@ -48,17 +48,18 @@ interface AppendResult {
  * is refers to the first segment of the composed pipeline.
  */
 export abstract class PipelineDesc extends MalloyElement {
-  protected withRefinement?: QOPDesc;
+  protected refinements?: Refinement[];
   protected qops: QOPDesc[] = [];
   nestedInQuerySpace?: QueryInputSpace;
 
   alreadyRefined(): boolean {
-    return this.withRefinement !== undefined;
+    return this.refinements !== undefined;
   }
 
-  refineWith(refinement: QOPDesc): void {
-    this.withRefinement = refinement;
-    this.has({withRefinement: refinement});
+  refineWith(refinements: (QOPDesc | ViewFieldReference)[]): void {
+    const ref = refinements.map(refinement => Refinement.from(refinement));
+    this.refinements = ref;
+    this.has({refinements: ref});
   }
 
   addSegments(...segDesc: QOPDesc[]): void {
@@ -85,17 +86,8 @@ export abstract class PipelineDesc extends MalloyElement {
     };
   }
 
-  private refineSegment(
-    fs: FieldSpace,
-    refinement: QOPDesc,
-    seg: PipeSegment
-  ): PipeSegment {
-    refinement.refineFrom(seg);
-    return refinement.getOp(fs, this.nestedInQuerySpace).segment;
-  }
-
   protected refinePipeline(fs: FieldSpace, modelPipe: Pipeline): Pipeline {
-    if (!this.withRefinement) {
+    if (!this.refinements) {
       return modelPipe;
     }
     let pipeline: PipeSegment[] = [];
@@ -107,48 +99,10 @@ export abstract class PipelineDesc extends MalloyElement {
       pipeline.push(...turtlePipe);
     }
     pipeline.push(...modelPipe.pipeline);
-    const firstSeg = pipeline[0];
-    if (pipeline.length === 1) {
-      // I could let everything fall through to the head/tail case, it should be the
-      // same, but this does less computation and is the most common case.
-      pipeline = [this.refineSegment(fs, this.withRefinement, firstSeg)];
-      this.withRefinement = undefined;
-    } else {
-      const headRefinements = new QOPDesc([]);
-      const tailRefinements = new QOPDesc([]);
-      for (const qop of this.withRefinement.list) {
-        switch (qop.queryRefinementStage) {
-          case LegalRefinementStage.Head:
-            headRefinements.push(qop);
-            break;
-          case LegalRefinementStage.Single:
-            qop.log(
-              'Illegal in refinement of a query with more than one stage'
-            );
-            break;
-          case LegalRefinementStage.Tail:
-            tailRefinements.push(qop);
-            break;
-          default:
-            qop.log('Illegal query refinement');
-        }
-      }
-      if (headRefinements.notEmpty()) {
-        this.has({headRefinements});
-        pipeline[0] = this.refineSegment(fs, headRefinements, firstSeg);
-      }
-      if (tailRefinements.notEmpty()) {
-        const last = pipeline.length - 1;
-        this.has({tailRefinements});
-        const finalIn = this.getFinalStruct(fs.structDef(), pipeline.slice(-1));
-        pipeline[last] = this.refineSegment(
-          new StaticSpace(finalIn),
-          tailRefinements,
-          pipeline[last]
-        );
-      }
+    for (const refinement of this.refinements) {
+      pipeline = refinement.refine(fs, pipeline);
     }
-    this.withRefinement = undefined;
+    this.refinements = undefined;
     return {pipeline};
   }
 
@@ -173,16 +127,6 @@ export abstract class PipelineDesc extends MalloyElement {
       return {pipeline: turtle.pipeline, location: turtle.location, annotation};
     }
     return {pipeline: [], location: undefined, annotation};
-  }
-
-  protected getFinalStruct(
-    walkStruct: StructDef,
-    pipeline: PipeSegment[]
-  ): StructDef {
-    for (const modelQop of pipeline) {
-      walkStruct = opOutputStruct(this, walkStruct, modelQop);
-    }
-    return walkStruct;
   }
 }
 
