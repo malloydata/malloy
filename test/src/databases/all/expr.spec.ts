@@ -118,7 +118,7 @@ describe.each(runtimes.runtimeList)('%s', (databaseName, runtime) => {
   testIf(runtime.supportsNesting)('model: filtered turtle', async () => {
     await expect(`
       run: aircraft->{
-        nest: b is by_manufacturer refine { where: aircraft_models.manufacturer ?~'B%'}
+        nest: b is by_manufacturer + { where: aircraft_models.manufacturer ?~'B%'}
       }
     `).malloyResultMatches(expressionModel, {'b.manufacturer': 'BEECH'});
   });

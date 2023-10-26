@@ -649,7 +649,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
           extend: {dimension: c is a + 1}
           select: c
         }
-        view: baz is bar refine {
+        view: baz is bar +  {
           extend: {dimension: d is c + 1}
           select: d
         }

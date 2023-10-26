@@ -705,7 +705,7 @@ source: airports is bigquery.table('malloy-data.malloytest.airports') extend {
   }
 }
 
-query: ca_airports is airports->by_fac_type refine { where: state ? 'CA' | 'NY'}
+query: ca_airports is airports->by_fac_type + { where: state ? 'CA' | 'NY'}
 `;
 
 describe('airport_tests', () => {
