@@ -23,9 +23,8 @@
 
 /* eslint-disable no-console */
 
-import {ok} from 'assert';
 import {RuntimeList} from '../../runtimes';
-import {Runtime} from '@malloydata/malloy';
+import {AtomicField, Runtime} from '@malloydata/malloy';
 import {describeIfDatabaseAvailable} from '../../util';
 import '../../util/db-jest-matchers';
 import {DateTime} from 'luxon';
@@ -134,12 +133,32 @@ describe('Postgres tests', () => {
     });
     test('can cast TIMESTAMPTZ to timestamp', async () => {
       await expect(
-        `run: duckdb.sql("""
+        `run: postgres.sql("""
               SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
           """) -> {
             select: mex_220 is t_tstz::timestamp
           }`
       ).malloyResultMatches(runtime, {mex_220: zone_2020.toJSDate()});
+    });
+  });
+
+  describe('numbers', () => {
+    it.each([
+      'SMALLINT',
+      'INTEGER',
+      'BIGINT',
+      'DECIMAL',
+      'NUMERIC',
+      'REAL',
+      'DOUBLE PRECISION',
+    ])('supports %s', async sqlType => {
+      const result = await runtime
+        .loadQuery(`run: postgres.sql("SELECT 10::${sqlType} as d")`)
+        .run();
+      const field = result.data.field.allFields[0];
+      expect(field.isAtomicField()).toBe(true);
+      expect((field as AtomicField).isNumber()).toBe(true);
+      expect(result.data.value[0]['d']).toEqual(10);
     });
   });
 });
