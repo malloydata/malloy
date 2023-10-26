@@ -86,7 +86,6 @@ describe('PostgresConnection', () => {
   it('caches table schema', async () => {
     await connection.fetchSchemaForTables({'test1': 'table1'}, {});
     expect(getTableSchema).toBeCalledTimes(1);
-    await new Promise(resolve => setTimeout(resolve));
     await connection.fetchSchemaForTables({'test1': 'table1'}, {});
     expect(getTableSchema).toBeCalledTimes(1);
   });
@@ -94,10 +93,9 @@ describe('PostgresConnection', () => {
   it('refreshes table schema', async () => {
     await connection.fetchSchemaForTables({'test2': 'table2'}, {});
     expect(getTableSchema).toBeCalledTimes(1);
-    await new Promise(resolve => setTimeout(resolve));
     await connection.fetchSchemaForTables(
       {'test2': 'table2'},
-      {refreshTimestamp: Date.now()}
+      {refreshTimestamp: Date.now() + 10}
     );
     expect(getTableSchema).toBeCalledTimes(2);
   });
@@ -105,7 +103,6 @@ describe('PostgresConnection', () => {
   it('caches sql schema', async () => {
     await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
     expect(getSQLBlockSchema).toBeCalledTimes(1);
-    await new Promise(resolve => setTimeout(resolve));
     await connection.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
     expect(getSQLBlockSchema).toBeCalledTimes(1);
   });
@@ -113,9 +110,8 @@ describe('PostgresConnection', () => {
   it('refreshes sql schema', async () => {
     await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {});
     expect(getSQLBlockSchema).toBeCalledTimes(1);
-    await new Promise(resolve => setTimeout(resolve));
     await connection.fetchSchemaForSQLBlock(SQL_BLOCK_2, {
-      refreshTimestamp: Date.now(),
+      refreshTimestamp: Date.now() + 10,
     });
     expect(getSQLBlockSchema).toBeCalledTimes(2);
   });
