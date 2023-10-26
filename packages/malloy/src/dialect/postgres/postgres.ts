@@ -491,8 +491,8 @@ export class PostgresDialect extends Dialect {
 
   sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
     // Remove trailing params
-    const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
-    return postgresToMalloyTypes[baseSqlType.toLowerCase()];
+    const baseSqlType = sqlType.match(/^([\w\s]+)/)?.at(0) ?? sqlType;
+    return postgresToMalloyTypes[baseSqlType.trim().toLowerCase()];
   }
 
   castToString(expression: string): string {
