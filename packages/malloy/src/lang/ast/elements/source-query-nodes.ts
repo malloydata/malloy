@@ -234,7 +234,6 @@ export class SQAppendView extends SourceQueryNode {
   getQuery() {
     let theQuery: QueryElement;
     const views = [...this.viewList];
-    this.log(`number of views: ${this.viewList.length}`, 'warn');
     if (this.applyTo.isSource()) {
       const querySrc = this.applyTo.getSource();
       if (!querySrc) {

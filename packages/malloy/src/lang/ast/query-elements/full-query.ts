@@ -85,7 +85,7 @@ export class FullQuery extends TurtleHeadedPipe {
       );
       destQuery.location = location;
       let walkPipe = pipeline;
-      if (this.refinements) {
+      if (this.refinements && pipeline.length !== 0) {
         const refined = this.refinePipeline(pipeFS, {pipeline}).pipeline;
         // TODO there is an issue with losing the name of the turtle
         // which we need to fix, possibly adding a "name:" field to a segment
@@ -100,17 +100,19 @@ export class FullQuery extends TurtleHeadedPipe {
       }
       const pipeOutput = getFinalStruct(this, structDef, walkPipe);
       pipeFS = new StaticSpace(pipeOutput);
-    } else if (this.refinements) {
+    }
+    const appended = this.appendOps(pipeFS, destQuery.pipeline);
+    destQuery.pipeline = appended.opList;
+    if (!this.turtleName && this.refinements) {
       const refined = this.refinePipeline(pipeFS, {
         pipeline: destQuery.pipeline,
       }).pipeline;
       destQuery.pipeline = refined;
       const pipeOutput = getFinalStruct(this, structDef, refined);
-      pipeFS = new StaticSpace(pipeOutput);
+      return {outputStruct: pipeOutput, query: destQuery};
+    } else {
+      return {outputStruct: appended.structDef, query: destQuery};
     }
-    const appended = this.appendOps(pipeFS, destQuery.pipeline);
-    destQuery.pipeline = appended.opList;
-    return {outputStruct: appended.structDef, query: destQuery};
   }
 
   query(): Query {

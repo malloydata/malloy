@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {PipeSegment} from '../../../model/malloy_types';
+import {PipeSegment, QueryFieldDef} from '../../../model/malloy_types';
 import {QueryBuilder} from '../types/query-builder';
 import {IndexBuilder} from '../query-builders/index-builder';
 import {ProjectBuilder} from '../query-builders/project-builder';
@@ -39,6 +39,7 @@ import {
 import {QueryInputSpace} from '../field-space/query-input-space';
 import {QueryFieldStruct} from '../field-space/query-field-struct';
 import {ViewFieldReference} from '../query-items/field-references';
+import {QueryFieldAST} from './nest';
 
 export abstract class Refinement extends MalloyElement {
   abstract refine(inputFS: FieldSpace, pipeline: PipeSegment[]): PipeSegment[];
@@ -56,8 +57,11 @@ export class NamedRefinement extends Refinement {
       this.name.log(`no such view \`${this.name.refString}\``);
       return;
     }
-    // check type of pipeline?
-    if (res.found instanceof QueryFieldStruct) {
+    // TODO check type of pipeline?
+    if (
+      res.found instanceof QueryFieldStruct ||
+      res.found instanceof QueryFieldAST
+    ) {
       const turtleDef = res.found.fieldDef();
       if (turtleDef.pipeline.length > 1 || turtleDef.pipeHead !== undefined) {
         this.name.log(
@@ -67,30 +71,30 @@ export class NamedRefinement extends Refinement {
       }
       return turtleDef.pipeline[0];
     } else {
-      this.name.log(
-        `named refinement \`${this.name.refString}\` must be a view, found a ${
-          res.found.describeType().dataType
-        }`
-      );
-      return;
+      if (this.name.inExperiment('scalar_lenses', true)) {
+        return {type: 'reduce', fields: [this.name.refString]};
+      } else {
+        this.name.log(
+          `named refinement \`${
+            this.name.refString
+          }\` must be a view, found a ${res.found.describeType().dataType}`
+        );
+        return;
+      }
     }
   }
 
   refine(inputFS: FieldSpace, pipeline: PipeSegment[]): PipeSegment[] {
     if (pipeline.length === 1) {
-      return [this.getOp(inputFS, undefined, pipeline[0]).segment];
+      return [this.getOp(inputFS, pipeline[0]).segment];
     } else {
-      // TODO
-      throw new Error(`Haven't handled this yet ${pipeline}`);
+      this.name.log('Named refinements of multi-stage views are not supported');
+      // TODO better error pipeline?
+      return pipeline;
     }
   }
 
-  getOp(
-    inputFS: FieldSpace,
-    // TODO what is this parameter for here?
-    headFieldSpace: QueryInputSpace | undefined,
-    _to: PipeSegment
-  ): OpDesc {
+  getOp(inputFS: FieldSpace, _to: PipeSegment): OpDesc {
     const to = {..._to};
     const from = this.getRefinementSegment(inputFS);
     if (from) {
@@ -112,7 +116,32 @@ export class NamedRefinement extends Refinement {
           ? [...(to.filterList ?? []), ...(from.filterList ?? [])]
           : undefined;
 
-      to.fields = [...to.fields, ...from.fields];
+      const overlappingFields: (QueryFieldDef | string)[] = [];
+      const nonOverlappingFields: (QueryFieldDef | string)[] = [];
+      const existingNames = new Map<string, QueryFieldDef | string>(
+        to.fields.map(
+          (f: QueryFieldDef | string): [string, QueryFieldDef | string] => [
+            extractName(f),
+            f,
+          ]
+        )
+      );
+      for (const field of from.fields) {
+        if (existingNames.has(extractName(field))) {
+          overlappingFields.push(field);
+        } else {
+          nonOverlappingFields.push(field);
+        }
+      }
+
+      to.fields = [...to.fields, ...nonOverlappingFields];
+      if (overlappingFields.length > 0) {
+        this.log(
+          `overlapping fields in refinement: ${overlappingFields.map(
+            extractName
+          )}`
+        );
+      }
     }
 
     return {
@@ -121,6 +150,10 @@ export class NamedRefinement extends Refinement {
         new StaticSpace(opOutputStruct(this.name, inputFS.structDef(), to)),
     };
   }
+}
+
+function extractName(f1: QueryFieldDef | string): string {
+  return typeof f1 === 'string' ? f1 : f1.as ?? f1.name;
 }
 
 export class QOPDescRefinement extends Refinement {

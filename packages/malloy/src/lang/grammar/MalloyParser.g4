@@ -144,8 +144,8 @@ pipelineFromName
   ;
 
 firstSegment
-  : ARROW? queryProperties
-  | exploreQueryName queryRefinement?
+  : ARROW? queryProperties queryRefinement*
+  | exploreQueryName queryRefinement*
   ;
 
 pipeElement
@@ -273,7 +273,7 @@ sqExpr
   ;
 
 leadSeg
-  : id queryRefinement?
+  : id queryRefinement*
   | queryProperties
   ;
 
@@ -387,7 +387,7 @@ nestedQueryList
   ;
 
 nestEntry
-  : tags queryName queryRefinement?   # nestExisting
+  : tags queryName queryRefinement*   # nestExisting
   | tags queryName isDefine pipelineFromName            # nestDef
   ;
 

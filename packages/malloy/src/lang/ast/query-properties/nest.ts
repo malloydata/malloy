@@ -81,15 +81,19 @@ abstract class TurtleDeclRoot
             this.extendNote({inherits: headDef.annotation});
           }
           reportWrongType = false;
+        } else {
+          if (this.inExperiment('scalar_lenses', true)) {
+            const newPipe = this.refinePipeline(fs, {
+              pipeline: [{type: 'reduce', fields: [this.turtleName.refString]}],
+            });
+            modelPipe.pipeline = [...newPipe.pipeline];
+            reportWrongType = false;
+          }
         }
       }
       if (reportWrongType) {
         this.log(`Expected '${this.turtleName}' to be a query`);
       }
-    } else if (this.refinements) {
-      throw this.internalError(
-        "Can't refine the head of a view  in its definition"
-      );
     }
 
     let pipeOutFS = fs;
@@ -99,6 +103,13 @@ abstract class TurtleDeclRoot
     }
     const appended = this.appendOps(pipeOutFS, modelPipe.pipeline);
     modelPipe.pipeline = appended.opList;
+    if (this.refinements && this.turtleName === undefined) {
+      const refined = this.refinePipeline(fs, {
+        pipeline: modelPipe.pipeline,
+      }).pipeline;
+      modelPipe.pipeline = refined;
+      return modelPipe;
+    }
     return modelPipe;
   }
 

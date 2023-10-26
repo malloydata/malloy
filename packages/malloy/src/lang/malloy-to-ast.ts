@@ -1066,10 +1066,10 @@ export class MalloyToAST
       const queryDesc = this.visitQueryProperties(propsCx);
       pipe.addSegments(queryDesc);
     }
-    const rcx = firstCx.queryRefinement();
-    if (rcx) {
-      const queryDesc = this.getQueryRefinements(rcx);
-      pipe.refineWith([queryDesc]);
+    const rcxs = firstCx.queryRefinement();
+    if (rcxs.length > 0) {
+      const queryDescs = rcxs.map(rcx => this.getQueryRefinements(rcx));
+      pipe.refineWith(queryDescs);
     }
     const tail = this.getSegments(pipeCx.pipeElement());
     pipe.addSegments(...tail);
@@ -1146,12 +1146,12 @@ export class MalloyToAST
 
   visitNestExisting(pcx: parse.NestExistingContext): ast.NestedQuery {
     const name = this.getFieldName(pcx.queryName());
-    const rcx = pcx.queryRefinement();
+    const rcxs = pcx.queryRefinement();
     const notes = this.getNotes(pcx.tags());
-    if (rcx) {
+    if (rcxs.length > 0) {
       const nestRefine = new ast.NestRefinement(name);
-      const queryDesc = this.getQueryRefinements(rcx);
-      nestRefine.refineWith([queryDesc]);
+      const queryDesc = rcxs.map(rcx => this.getQueryRefinements(rcx));
+      nestRefine.refineWith(queryDesc);
       nestRefine.extendNote({notes});
       return this.astAt(nestRefine, pcx);
     }
@@ -1768,9 +1768,9 @@ export class MalloyToAST
           this.astAt(new ast.FieldName(headId), headIdCx),
         ])
       );
-      const andRefined = headCx.queryRefinement();
-      if (andRefined) {
-        viewParts.push(this.getQueryRefinements(andRefined));
+      const rcxs = headCx.queryRefinement();
+      if (rcxs.length > 0) {
+        viewParts.push(...rcxs.map(rcx => this.getQueryRefinements(rcx)));
       }
     }
     const qopCx = headCx.queryProperties();
