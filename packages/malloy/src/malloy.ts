@@ -1919,6 +1919,9 @@ export class UnsupportedField extends AtomicField {
     super(fieldUnsupportedDef, parent, source);
     this.fieldUnsupportedDef = fieldUnsupportedDef;
   }
+  get rawType(): string | undefined {
+    return this.fieldUnsupportedDef.rawType;
+  }
 }
 
 export class StringField extends AtomicField {
