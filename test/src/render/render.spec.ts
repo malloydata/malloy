@@ -318,11 +318,11 @@ describe('rendering results', () => {
             }
 
             # dashboard
-            view: by_name_db is by_name {}
+            view: by_name_db is by_name
           }
 
-          query: by_name is height -> by_name {}
-          query: by_name_db is height -> by_name_db {}
+          query: by_name is height -> by_name
+          query: by_name_db is height -> by_name_db
         `;
         modelMaterializer = duckdb.loadModel(src);
       });
