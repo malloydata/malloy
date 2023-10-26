@@ -87,19 +87,12 @@ export class PostgresConnection
     | {structDef: StructDef; error?: undefined; timestamp: number}
     | {error: string; structDef?: undefined; timestamp: number}
   >();
-  private queryConfigReader: PostgresQueryConfigurationReader;
-  private configReader: PostgresConnectionConfigurationReader;
-  public readonly name;
 
   constructor(
-    name: string,
-    queryConfigReader: PostgresQueryConfigurationReader = {},
-    configReader: PostgresConnectionConfigurationReader = {}
-  ) {
-    this.queryConfigReader = queryConfigReader;
-    this.configReader = configReader;
-    this.name = name;
-  }
+    public readonly name: string,
+    private queryConfigReader: PostgresQueryConfigurationReader = {},
+    private configReader: PostgresConnectionConfigurationReader = {}
+  ) {}
 
   private async readQueryConfig(): Promise<PostgresQueryConfiguration> {
     if (this.queryConfigReader instanceof Function) {
@@ -202,13 +195,19 @@ export class PostgresConnection
   }
 
   protected async getClient(): Promise<Client> {
-    const config = await this.readConfig();
+    const {
+      username: user,
+      password,
+      databaseName: database,
+      port,
+      host,
+    } = await this.readConfig();
     return new Client({
-      user: config.username,
-      password: config.password,
-      database: config.databaseName,
-      port: config.port,
-      host: config.host,
+      user,
+      password,
+      database,
+      port,
+      host,
     });
   }
 
@@ -432,8 +431,12 @@ export class PooledPostgresConnection
 {
   private pool: Pool;
 
-  constructor(name: string) {
-    super(name);
+  constructor(
+    name: string,
+    queryConfigReader: PostgresQueryConfigurationReader = {},
+    configReader: PostgresConnectionConfigurationReader = {}
+  ) {
+    super(name, queryConfigReader, configReader);
     this.pool = new Pool();
     this.pool.on('acquire', client => client.query("SET TIME ZONE 'UTC'"));
   }
