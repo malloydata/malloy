@@ -95,7 +95,11 @@ abstract class TurtleDeclRoot
     }
     const appended = this.appendOps(pipeOutFS, modelPipe.pipeline);
     modelPipe.pipeline = appended.opList;
-    if (this.refinements && this.turtleName === undefined) {
+    if (
+      this.refinements &&
+      this.refinements.length > 0 &&
+      this.turtleName === undefined
+    ) {
       const refined = this.refinePipeline(fs, {
         pipeline: modelPipe.pipeline,
       }).pipeline;

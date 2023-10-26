@@ -85,7 +85,11 @@ export class FullQuery extends TurtleHeadedPipe {
       );
       destQuery.location = location;
       let walkPipe = pipeline;
-      if (this.refinements && pipeline.length !== 0) {
+      if (
+        this.refinements &&
+        this.refinements.length > 0 &&
+        pipeline.length !== 0
+      ) {
         const refined = this.refinePipeline(pipeFS, {pipeline}).pipeline;
         // TODO there is an issue with losing the name of the turtle
         // which we need to fix, possibly adding a "name:" field to a segment

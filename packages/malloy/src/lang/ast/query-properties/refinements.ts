@@ -47,7 +47,7 @@ export abstract class Refinement extends MalloyElement {
 export class NamedRefinement extends Refinement {
   elementType = 'namedRefinement';
   constructor(private readonly name: ViewFieldReference) {
-    super();
+    super({name});
   }
 
   private getRefinementSegment(fs: FieldSpace): PipeSegment | undefined {
@@ -165,7 +165,7 @@ function extractName(f1: QueryFieldDef | string): string {
 export class QOPDescRefinement extends Refinement {
   elementType = 'qopdescRefinement';
   constructor(private readonly qOpDesc: QOPDesc) {
-    super();
+    super({qOpDesc});
   }
 
   private getOp(
