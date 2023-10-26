@@ -65,20 +65,20 @@ The model file should contain the Malloy model that your sample queries are base
 and defining the dimensions, measures and other model features. You can define multiple sources if you have including multiple data tables.
 
 ```malloy
-source: airports is table('duckdb:airports.parquet') {
+source: airports is duckdb,table('airports.parquet') extend {
   measure:
     airport_count is count()
     percent_of_all_airports is airport_count/all(airport_count)*100
     avg_elevation is elevation.avg()
-    heliport_count is airport_count {? fac_type = 'HELIPORT'}
+    heliport_count is airport_count {where: fac_type = 'HELIPORT'}
 
-  query: by_state is {
+  view: by_state is {
     where: state != null
     group_by: state
     aggregate: airport_count
   }
 
-  query: by_facility_type is {
+  view: by_facility_type is {
     group_by: fac_type
     aggregate:
       airport_count
@@ -98,7 +98,7 @@ import "./airports.malloy"
 // Name: Show all Data
 // The Equivqalent of a SELECT * in SQL.
 
-query: airports -> {
+run: airports -> {
   select: *
 }
 
@@ -106,7 +106,7 @@ query: airports -> {
 // Name: Filtering Data
 //  New York City District Airports
 
-query: airports -> {
+run: airports -> {
   where: faa_dist = 'NYC'
   select: *
 }

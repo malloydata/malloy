@@ -89,8 +89,9 @@ export interface Taggable {
  * tag.numeric(p?)      => numeric value of tag.p or undefined
  * tag.textArray(p ?)   => string[] value of elements in tag.p or undefined
  * tag.numericArray(p?) => string[] value of elements in tag.p or undefined
- * tag.tag(p)           => Tag value of tag.p
- * tag.has(p)           => boolean "tag contains tag.p"
+ * tag.tag(p?)           => Tag value of tag.p
+ * tag.has(p?)           => boolean "tag contains tag.p"
+ * tag.bare(p?)          => tag.p exists and has no properties
  * tag.dict             => Record<string,Tag> of tag properties
  * ```
  */
@@ -269,6 +270,16 @@ export class Tag implements TagInterface {
     }
   }
 
+  bare(...at: string[]): boolean | undefined {
+    const p = this.find(at);
+    if (p === undefined) {
+      return;
+    }
+    return (
+      p.properties === undefined || Object.entries(p.properties).length === 0
+    );
+  }
+
   get dict(): Record<string, Tag> {
     const newDict: Record<string, Tag> = {};
     if (this.properties) {
@@ -368,19 +379,26 @@ function getBuildOn(ctx: ParserRuleContext): Tag {
   return new Tag();
 }
 
-function parsePath(buildOn: Tag, path: string[]): [string, TagDict] {
-  let writeInto = buildOn.getProperties();
+/**
+ * When chasing a path reference, the two interesting gestures are to
+ * find the path-ed tag so it can be extended, or to find the path tag
+ * so it can be deleted. This returns the parent and the final tag
+ * so that the caller can delete the tag with delete parent.tagName
+ * or assign to it with parent[tagName] = new_value
+ */
+function pathToAccess(buildOn: Tag, path: string[]): [string, TagDict] {
+  let parentPropertyObject = buildOn.getProperties();
   for (const p of path.slice(0, path.length - 1)) {
     let next: Tag;
-    if (writeInto[p] === undefined) {
+    if (parentPropertyObject[p] === undefined) {
       next = new Tag({});
-      writeInto[p] = next;
+      parentPropertyObject[p] = next;
     } else {
-      next = Tag.tagFrom(writeInto[p]);
+      next = Tag.tagFrom(parentPropertyObject[p]);
     }
-    writeInto = next.getProperties();
+    parentPropertyObject = next.getProperties();
   }
-  return [path[path.length - 1], writeInto];
+  return [path[path.length - 1], parentPropertyObject];
 }
 
 function getString(ctx: StringContext) {
@@ -523,7 +541,7 @@ class TaglineParser
   visitTagEq(ctx: TagEqContext): Tag {
     const buildOn = getBuildOn(ctx);
     const name = this.getPropName(ctx.propName());
-    const [writeKey, writeInto] = parsePath(buildOn, name);
+    const [writeKey, writeInto] = pathToAccess(buildOn, name);
     const eq = this.visit(ctx.eqValue());
     const propCx = ctx.properties();
     if (propCx) {
@@ -545,7 +563,7 @@ class TaglineParser
   visitTagReplaceProperties(ctx: TagReplacePropertiesContext): Tag {
     const buildOn = getBuildOn(ctx);
     const name = this.getPropName(ctx.propName());
-    const [writeKey, writeInto] = parsePath(buildOn, name);
+    const [writeKey, writeInto] = pathToAccess(buildOn, name);
     const propCx = ctx.properties();
     const props = this.visitProperties(propCx);
     if (ctx.DOTTY() === undefined) {
@@ -561,11 +579,11 @@ class TaglineParser
   visitTagUpdateProperties(ctx: TagUpdatePropertiesContext): Tag {
     const buildOn = getBuildOn(ctx);
     const name = this.getPropName(ctx.propName());
-    const [writeKey, writeInto] = parsePath(buildOn, name);
+    const [writeKey, writeInto] = pathToAccess(buildOn, name);
     const propCx = ctx.properties();
     propCx['buildOn'] = Tag.tagFrom(writeInto[writeKey]);
     const props = this.visitProperties(propCx);
-    const thisObj = writeInto[writeKey] || {};
+    const thisObj = writeInto[writeKey] || new Tag({});
     const properties = {...thisObj.properties, ...props.dict};
     writeInto[writeKey] = {...thisObj, properties};
     return buildOn;
@@ -574,11 +592,11 @@ class TaglineParser
   visitTagDef(ctx: TagDefContext): Tag {
     const buildOn = getBuildOn(ctx);
     const path = this.getPropName(ctx.propName());
-    const [writeKey, writeInto] = parsePath(buildOn, path);
+    const [writeKey, writeInto] = pathToAccess(buildOn, path);
     if (ctx.MINUS()) {
       delete writeInto[writeKey];
     } else {
-      writeInto[writeKey] = {};
+      writeInto[writeKey] = new Tag({});
     }
     return buildOn;
   }

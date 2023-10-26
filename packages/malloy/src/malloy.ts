@@ -32,6 +32,7 @@ import {
 import {DocumentHelpContext} from './lang/parse-tree-walkers/document-help-context-walker';
 import {
   CompiledQuery,
+  DocumentLocation,
   DocumentReference,
   FieldBooleanDef,
   FieldDateDef,
@@ -92,6 +93,10 @@ export interface Loggable {
 
 export interface ParseOptions {
   importBaseURL?: URL;
+}
+
+export interface CompileOptions {
+  refreshSchemaCache?: boolean | number;
 }
 
 export class Malloy {
@@ -206,12 +211,21 @@ export class Malloy {
     connections,
     parse,
     model,
+    refreshSchemaCache,
   }: {
     urlReader: URLReader;
     connections: LookupConnection<InfoConnection>;
     parse: Parse;
     model?: Model;
+    refreshSchemaCache?: boolean | number;
   }): Promise<Model> {
+    let refreshTimestamp: number | undefined;
+    if (refreshSchemaCache) {
+      refreshTimestamp =
+        typeof refreshSchemaCache === 'number'
+          ? refreshSchemaCache
+          : Date.now();
+    }
     const translator = parse._translator;
     // eslint-disable-next-line no-constant-condition
     while (true) {
@@ -282,7 +296,9 @@ export class Malloy {
               //      as `Object.keys(tablePathByKey)`, i.e. that all tables are accounted for. Otherwise
               //      the translator runs into an infinite loop fetching tables.
               const {schemas: tables, errors} =
-                await connection.fetchSchemaForTables(tablePathByKey);
+                await connection.fetchSchemaForTables(tablePathByKey, {
+                  refreshTimestamp,
+                });
               translator.update({tables, errors: {tables: errors}});
             } catch (error) {
               // There was an exception getting the connection, associate that error
@@ -306,7 +322,9 @@ export class Malloy {
               result.partialModel,
               toCompile
             );
-            const resolved = await conn.fetchSchemaForSQLBlock(expanded);
+            const resolved = await conn.fetchSchemaForSQLBlock(expanded, {
+              refreshTimestamp,
+            });
             if (resolved.error) {
               translator.update({
                 errors: {compileSQL: {[expanded.name]: resolved.error}},
@@ -529,8 +547,8 @@ export class Malloy {
     if (!connection.canStream()) {
       throw new Error(`Connection '${connectionName}' cannot stream results.`);
     }
-    let sql;
-    let resultExplore;
+    let sql: string;
+    let resultExplore: Explore;
     if (sqlStruct) {
       if (sqlStruct.structRelationship.type !== 'basetable') {
         throw new Error(
@@ -549,7 +567,7 @@ export class Malloy {
     }
     let index = 0;
     for await (const row of connection.runSQLStream(sql, options)) {
-      yield new DataRecord(row, index, resultExplore, undefined);
+      yield new DataRecord(row, index, resultExplore, undefined, undefined);
       index += 1;
     }
   }
@@ -677,7 +695,7 @@ export class Model implements Taggable {
   public getPreparedQueryByName(queryName: string): PreparedQuery {
     const query = this.modelDef.contents[queryName];
     if (query?.type === 'query') {
-      return new PreparedQuery(query, this.modelDef, queryName);
+      return new PreparedQuery(query, this.modelDef, this.problems, queryName);
     }
 
     throw new Error('Given query name does not refer to a named query.');
@@ -695,7 +713,11 @@ export class Model implements Taggable {
     } else if (index >= this.queryList.length) {
       throw new Error(`Query index ${index} is out of bounds.`);
     }
-    return new PreparedQuery(this.queryList[index], this.modelDef);
+    return new PreparedQuery(
+      this.queryList[index],
+      this.modelDef,
+      this.problems
+    );
   }
 
   /**
@@ -739,7 +761,8 @@ export class Model implements Taggable {
     }
     return new PreparedQuery(
       this.queryList[this.queryList.length - 1],
-      this.modelDef
+      this.modelDef,
+      this.problems
     );
   }
 
@@ -794,6 +817,7 @@ export class PreparedQuery implements Taggable {
   constructor(
     query: InternalQuery,
     model: ModelDef,
+    public problems: LogMessage[],
     public name?: string
   ) {
     this._query = query;
@@ -856,6 +880,7 @@ export class PreparedQuery implements Taggable {
     return new PreparedQuery(
       {...turtleDef, structRef, type: 'query'},
       this._modelDef,
+      this.problems,
       this.name || turtleDef.as || turtleDef.name
     );
   }
@@ -1354,6 +1379,8 @@ abstract class Entity {
   }
 
   public abstract isIntrinsic(): boolean;
+
+  public abstract get location(): DocumentLocation | undefined;
 }
 
 export type Field = AtomicField | QueryField | ExploreField;
@@ -1413,7 +1440,7 @@ export class Explore extends Entity {
         },
       ],
     };
-    return new PreparedQuery(internalQuery, this.modelDef, name);
+    return new PreparedQuery(internalQuery, this.modelDef, [], name);
   }
 
   private get modelDef(): ModelDef {
@@ -1604,6 +1631,10 @@ export class Explore extends Entity {
         : undefined;
     return new Explore(main_explore._structDef, parentExplore, sourceExplore);
   }
+
+  public get location(): DocumentLocation | undefined {
+    return this.structDef.location;
+  }
 }
 
 export enum AtomicFieldType {
@@ -1750,6 +1781,10 @@ export class AtomicField extends Entity implements Taggable {
       this.fieldTypeDef.resultMetadata?.sourceField ||
       this.name
     );
+  }
+
+  public get location(): DocumentLocation | undefined {
+    return this.fieldTypeDef.location;
   }
 }
 
@@ -1913,6 +1948,10 @@ export class Query extends Entity {
 
   public isIntrinsic(): boolean {
     return false;
+  }
+
+  public get location(): DocumentLocation | undefined {
+    return this.turtleDef.location;
   }
 }
 
@@ -2087,7 +2126,7 @@ export class Runtime {
    */
   public loadModel(
     source: ModelURL | ModelString,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): ModelMaterializer {
     return new ModelMaterializer(this, async () => {
       const parse =
@@ -2105,6 +2144,7 @@ export class Runtime {
         urlReader: this.urlReader,
         connections: this.connections,
         parse,
+        refreshSchemaCache: options?.refreshSchemaCache,
       });
     });
   }
@@ -2128,7 +2168,7 @@ export class Runtime {
    */
   public loadQuery(
     query: QueryURL | QueryString,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): QueryMaterializer {
     return this.loadModel(query, options).loadFinalQuery();
   }
@@ -2145,7 +2185,7 @@ export class Runtime {
   public loadQueryByIndex(
     model: ModelURL | ModelString,
     index: number,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): QueryMaterializer {
     return this.loadModel(model, options).loadQueryByIndex(index);
   }
@@ -2162,7 +2202,7 @@ export class Runtime {
   public loadQueryByName(
     model: ModelURL | ModelString,
     name: string,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): QueryMaterializer {
     return this.loadModel(model, options).loadQueryByName(name);
   }
@@ -2179,7 +2219,7 @@ export class Runtime {
   public loadSQLBlockByName(
     model: ModelURL | ModelString,
     name: string,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): SQLBlockMaterializer {
     return this.loadModel(model, options).loadSQLBlockByName(name);
   }
@@ -2196,7 +2236,7 @@ export class Runtime {
   public loadSQLBlockByIndex(
     model: ModelURL | ModelString,
     index: number,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): SQLBlockMaterializer {
     return this.loadModel(model, options).loadSQLBlockByIndex(index);
   }
@@ -2210,7 +2250,7 @@ export class Runtime {
    */
   public getModel(
     source: ModelURL | ModelString,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): Promise<Model> {
     return this.loadModel(source, options).getModel();
   }
@@ -2223,7 +2263,7 @@ export class Runtime {
    */
   public getQuery(
     query: QueryURL | QueryString,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): Promise<PreparedQuery> {
     return this.loadQuery(query, options).getPreparedQuery();
   }
@@ -2239,7 +2279,7 @@ export class Runtime {
   public getQueryByIndex(
     model: ModelURL | ModelString,
     index: number,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): Promise<PreparedQuery> {
     return this.loadQueryByIndex(model, index, options).getPreparedQuery();
   }
@@ -2255,7 +2295,7 @@ export class Runtime {
   public getQueryByName(
     model: ModelURL | ModelString,
     name: string,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): Promise<PreparedQuery> {
     return this.loadQueryByName(model, name, options).getPreparedQuery();
   }
@@ -2271,7 +2311,7 @@ export class Runtime {
   public getSQLBlockByName(
     model: ModelURL | ModelString,
     name: string,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): Promise<SQLBlockStructDef> {
     return this.loadSQLBlockByName(model, name, options).getSQLBlock();
   }
@@ -2287,7 +2327,7 @@ export class Runtime {
   public getSQLBlockByIndex(
     model: ModelURL | ModelString,
     index: number,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): Promise<SQLBlockStructDef> {
     return this.loadSQLBlockByIndex(model, index, options).getSQLBlock();
   }
@@ -2442,7 +2482,7 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public loadQuery(
     query: QueryString | QueryURL,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       const urlReader = this.runtime.urlReader;
@@ -2464,6 +2504,7 @@ export class ModelMaterializer extends FluentState<Model> {
         connections,
         parse,
         model,
+        refreshSchemaCache: options?.refreshSchemaCache,
       });
       return queryModel.preparedQuery;
     });
@@ -2478,7 +2519,7 @@ export class ModelMaterializer extends FluentState<Model> {
    */
   public extendModel(
     query: QueryString | QueryURL,
-    options?: ParseOptions
+    options?: ParseOptions & CompileOptions
   ): ModelMaterializer {
     return new ModelMaterializer(this.runtime, async () => {
       const urlReader = this.runtime.urlReader;
@@ -2500,6 +2541,7 @@ export class ModelMaterializer extends FluentState<Model> {
         connections,
         parse,
         model,
+        refreshSchemaCache: options?.refreshSchemaCache,
       });
       return queryModel;
     });
@@ -2550,7 +2592,7 @@ export class ModelMaterializer extends FluentState<Model> {
     }
 
     const searchMapMalloy = `
-      query: ${sourceName}
+      run: ${sourceName}
         -> ${indexQuery}
         -> {
           where: fieldType = 'string'
@@ -2669,7 +2711,7 @@ export class ModelMaterializer extends FluentState<Model> {
   public _loadQueryFromQueryDef(query: InternalQuery): QueryMaterializer {
     return this.makeQueryMaterializer(async () => {
       const model = await this.materialize();
-      return new PreparedQuery(query, model._modelDef);
+      return new PreparedQuery(query, model._modelDef, model.problems);
     });
   }
 
@@ -2955,7 +2997,12 @@ export class Result extends PreparedResult {
    * @return The result data.
    */
   public get data(): DataArray {
-    return new DataArray(this.inner.result, this.resultExplore, undefined);
+    return new DataArray(
+      this.inner.result,
+      this.resultExplore,
+      undefined,
+      undefined
+    );
   }
 
   public get totalRows(): number {
@@ -2993,7 +3040,11 @@ export type DataArrayOrRecord = DataArray | DataRecord;
 abstract class Data<T> {
   protected _field: Field | Explore;
 
-  constructor(field: Field | Explore) {
+  constructor(
+    field: Field | Explore,
+    public readonly parent: DataArrayOrRecord | undefined,
+    public readonly parentRecord: DataRecord | undefined
+  ) {
     this._field = field;
   }
 
@@ -3122,8 +3173,13 @@ abstract class ScalarData<T> extends Data<T> {
   protected _value: T;
   protected _field: AtomicField;
 
-  constructor(value: T, field: AtomicField) {
-    super(field);
+  constructor(
+    value: T,
+    field: AtomicField,
+    parent: DataArrayOrRecord | undefined,
+    parentRecord: DataRecord | undefined
+  ) {
+    super(field, parent, parentRecord);
     this._value = value;
     this._field = field;
   }
@@ -3148,8 +3204,13 @@ abstract class ScalarData<T> extends Data<T> {
 class DataString extends ScalarData<string> {
   protected _field: StringField;
 
-  constructor(value: string, field: StringField) {
-    super(value, field);
+  constructor(
+    value: string,
+    field: StringField,
+    parent: DataArrayOrRecord | undefined,
+    parentRecord: DataRecord | undefined
+  ) {
+    super(value, field, parent, parentRecord);
     this._field = field;
   }
 
@@ -3171,8 +3232,13 @@ class DataString extends ScalarData<string> {
 class DataUnsupported extends ScalarData<unknown> {
   protected _field: UnsupportedField;
 
-  constructor(value: unknown, field: UnsupportedField) {
-    super(value, field);
+  constructor(
+    value: unknown,
+    field: UnsupportedField,
+    parent: DataArrayOrRecord | undefined,
+    parentRecord: DataRecord | undefined
+  ) {
+    super(value, field, parent, parentRecord);
     this._field = field;
   }
 
@@ -3192,8 +3258,13 @@ class DataUnsupported extends ScalarData<unknown> {
 class DataBoolean extends ScalarData<boolean> {
   protected _field: BooleanField;
 
-  constructor(value: boolean, field: BooleanField) {
-    super(value, field);
+  constructor(
+    value: boolean,
+    field: BooleanField,
+    parent: DataArrayOrRecord | undefined,
+    parentRecord: DataRecord | undefined
+  ) {
+    super(value, field, parent, parentRecord);
     this._field = field;
   }
 
@@ -3220,8 +3291,13 @@ class DataBoolean extends ScalarData<boolean> {
 class DataJSON extends ScalarData<string> {
   protected _field: JSONField;
 
-  constructor(value: string, field: JSONField) {
-    super(value, field);
+  constructor(
+    value: string,
+    field: JSONField,
+    parent: DataArrayOrRecord | undefined,
+    parentRecord: DataRecord | undefined
+  ) {
+    super(value, field, parent, parentRecord);
     this._field = field;
   }
 
@@ -3249,8 +3325,13 @@ class DataJSON extends ScalarData<string> {
 class DataNumber extends ScalarData<number> {
   protected _field: NumberField;
 
-  constructor(value: number, field: NumberField) {
-    super(value, field);
+  constructor(
+    value: number,
+    field: NumberField,
+    parent: DataArrayOrRecord | undefined,
+    parentRecord: DataRecord | undefined
+  ) {
+    super(value, field, parent, parentRecord);
     this._field = field;
   }
 
@@ -3303,8 +3384,13 @@ function valueToDate(value: Date): Date {
 class DataTimestamp extends ScalarData<Date> {
   protected _field: TimestampField;
 
-  constructor(value: Date, field: TimestampField) {
-    super(value, field);
+  constructor(
+    value: Date,
+    field: TimestampField,
+    parent: DataArrayOrRecord | undefined,
+    parentRecord: DataRecord | undefined
+  ) {
+    super(value, field, parent, parentRecord);
     this._field = field;
   }
 
@@ -3334,8 +3420,13 @@ class DataTimestamp extends ScalarData<Date> {
 class DataDate extends ScalarData<Date> {
   protected _field: DateField;
 
-  constructor(value: Date, field: DateField) {
-    super(value, field);
+  constructor(
+    value: Date,
+    field: DateField,
+    parent: DataArrayOrRecord | undefined,
+    parentRecord: DataRecord | undefined
+  ) {
+    super(value, field, parent, parentRecord);
     this._field = field;
   }
 
@@ -3397,9 +3488,10 @@ export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
   constructor(
     queryData: QueryData,
     field: Explore,
-    public readonly parent: DataArrayOrRecord | undefined
+    parent: DataArrayOrRecord | undefined,
+    parentRecord: DataRecord | undefined
   ) {
-    super(field);
+    super(field, parent, parentRecord);
     this.queryData = queryData;
     this._field = field;
   }
@@ -3423,7 +3515,13 @@ export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
   }
 
   row(index: number): DataRecord {
-    return new DataRecord(this.queryData[index], index, this.field, this);
+    return new DataRecord(
+      this.queryData[index],
+      index,
+      this.field,
+      this,
+      this.parentRecord
+    );
   }
 
   get rowCount(): number {
@@ -3476,9 +3574,10 @@ export class DataRecord extends Data<{[fieldName: string]: DataColumn}> {
     queryDataRow: QueryDataRow,
     index: number | undefined,
     field: Explore,
-    public readonly parent: DataArrayOrRecord | undefined
+    parent: DataArrayOrRecord | undefined,
+    parentRecord: DataRecord | undefined
   ) {
-    super(field);
+    super(field, parent, parentRecord);
     this.queryDataRow = queryDataRow;
     this._field = field;
     this.index = index;
@@ -3498,29 +3597,35 @@ export class DataRecord extends Data<{[fieldName: string]: DataColumn}> {
     const field = this._field.getFieldByName(fieldName);
     const value = this.queryDataRow[fieldName];
     if (value === null) {
-      return new DataNull(field);
+      return new DataNull(field, this, this);
     }
     if (field.isAtomicField()) {
       if (field.isBoolean()) {
-        return new DataBoolean(value as boolean, field);
+        return new DataBoolean(value as boolean, field, this, this);
       } else if (field.isDate()) {
-        return new DataDate(value as Date, field);
+        return new DataDate(value as Date, field, this, this);
       } else if (field.isJSON()) {
-        return new DataJSON(value as string, field);
+        return new DataJSON(value as string, field, this, this);
       } else if (field.isTimestamp()) {
-        return new DataTimestamp(value as Date, field);
+        return new DataTimestamp(value as Date, field, this, this);
       } else if (field.isNumber()) {
-        return new DataNumber(value as number, field);
+        return new DataNumber(value as number, field, this, this);
       } else if (field.isString()) {
-        return new DataString(value as string, field);
+        return new DataString(value as string, field, this, this);
       } else if (field.isUnsupported()) {
-        return new DataUnsupported(value as unknown, field);
+        return new DataUnsupported(value as unknown, field, this, this);
       }
     } else if (field.isExploreField()) {
       if (Array.isArray(value)) {
-        return new DataArray(value, field, this);
+        return new DataArray(value, field, this, this);
       } else {
-        return new DataRecord(value as QueryDataRow, undefined, field, this);
+        return new DataRecord(
+          value as QueryDataRow,
+          undefined,
+          field,
+          this,
+          this
+        );
       }
     }
     throw new Error(

@@ -14,8 +14,8 @@ const bigquery = require("@malloydata/db-bigquery")
 
 const connection = new bigquery.BigQueryConnection("bigquery");
 const runtime = new malloy.SingleConnectionRuntime(connection);
-const model = runtime.loadModel("source: airports is table('malloytest.airports')")
-const runner = model.loadQuery("query: airports->{aggregate: airport_count is count()}")
+const model = runtime.loadModel("source: airports is bigquery.table('malloytest.airports')")
+const runner = model.loadQuery("run: airports->{aggregate: airport_count is count()}")
 runner.run().then((result) => {
     console.log(result.data.value) // [ { airport_count: 19793 } ]
 })

@@ -71,7 +71,7 @@ describe('rendering results', () => {
     expect(runtime).toBeDefined();
     if (runtime) {
       const src = `
-        query: table('malloy-data.faa.flights') -> {
+        run: bigquery.table('malloy-data.faa.flights') -> {
           group_by: carrier
           aggregate: flight_count is count()
         }
@@ -216,7 +216,7 @@ describe('rendering results', () => {
         UNION ALL SELECT 'Miguel', 3, 35, 4.2, 31, 1
         UNION ALL SELECT 'Miguel', 4, 47, 4.3, 76, 0 """) extend {
 
-        query: by_name is {
+        view: by_name is {
           group_by: nm
           nest: height_by_age
             # line_chart
@@ -236,12 +236,10 @@ describe('rendering results', () => {
         }
       }
 
-      query: by_name is height -> by_name {
-      }
+      query: by_name is height -> by_name
 
       # transpose
-      query: by_name_transposed is height -> by_name {
-      }
+      query: by_name_transposed is height -> by_name
 
       source: names is duckdb.sql("""SELECT 'Pedro' as nm
       UNION ALL SELECT 'Sebastian'
@@ -291,7 +289,7 @@ describe('rendering results', () => {
             # hidden
             dimension: price is apptcost
 
-            query: by_name is {
+            view: by_name is {
               group_by: nm
               order_by: nm
               nest: height_by_age
@@ -320,7 +318,7 @@ describe('rendering results', () => {
             }
 
             # dashboard
-            query: by_name_db is by_name {}
+            view: by_name_db is by_name {}
           }
 
           query: by_name is height -> by_name {}
@@ -378,7 +376,7 @@ describe('rendering results', () => {
             # currency
             dimension: floc is loc
 
-            query: by_name is {
+            view: by_name is {
               group_by: nm
               # pivot  { dimensions=["dayito"] }
               nest: pivot_f is {
@@ -400,7 +398,7 @@ describe('rendering results', () => {
             }
           }
 
-          query: by_name is height -> by_name {}
+          query: by_name is height -> by_name
       `;
       const result = await (
         await duckdb.loadModel(src).loadQueryByName('by_name')
@@ -461,8 +459,8 @@ describe('rendering results', () => {
   describe('bar chart renderer', () => {
     test('date with timezone rendered correctly', async () => {
       const src = `
-        query: mex_query # bar_chart
-          is duckdb.sql('SELECT 1') -> {
+        query: mex_query is # bar_chart
+          duckdb.sql('SELECT 1') -> {
             timezone: 'America/Mexico_City'
             select: mex_time is @2021-02-24 03:05:06
           }

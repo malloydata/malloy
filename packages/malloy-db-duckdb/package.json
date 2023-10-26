@@ -1,11 +1,11 @@
 {
   "name": "@malloydata/db-duckdb",
-  "version": "0.0.94",
+  "version": "0.0.97",
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "engines": {
-    "node": ">=11"
+    "node": ">=16"
   },
   "exports": {
     ".": "./dist/index.js",
@@ -40,8 +40,9 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/duckdb-wasm": "0.0.2",
-    "@malloydata/malloy": "^0.0.94",
+    "@malloydata/duckdb-wasm": "0.0.2-rev3",
+    "@malloydata/malloy": "^0.0.97",
+    "@malloydata/malloy-interfaces": "^0.0.97",
     "apache-arrow": "^11.0.0",
     "duckdb": "0.8.1",
     "web-worker": "^1.2.0"

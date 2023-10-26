@@ -1,0 +1,11 @@
+id,brand,logo,product
+1,Google,https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Google_2015_logo.svg/2560px-Google_2015_logo.svg.png,gViz
+2,Google,https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Google_2015_logo.svg/2560px-Google_2015_logo.svg.png,Plex
+3,Google,https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Google_2015_logo.svg/2560px-Google_2015_logo.svg.png,Google Charts
+4,Looker,https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Looker.svg/2560px-Looker.svg.png,Looker
+5,Looker,https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Looker.svg/2560px-Looker.svg.png,Looker Studio
+6,Looker,https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Looker.svg/2560px-Looker.svg.png,Looker Studio Pro
+7,Malloy,https://malloydata.github.io/img/logo.png,Malloy
+8,Malloy,https://malloydata.github.io/img/logo.png,Malloy Composer
+9,Malloy,https://malloydata.github.io/img/logo.png,Malloy Py
+10,BrokenBrand,bad_url,Viz

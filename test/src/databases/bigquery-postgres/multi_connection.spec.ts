@@ -66,40 +66,22 @@ describe('Multi-connection', () => {
   });
 
   const expressionModelText = `
-source: default_aircraft is table('malloytest.aircraft'){
-  measure: aircraft_count is count(tail_num)
-}
-
-source: bigquery_state_facts is table('malloytest.state_facts'){
+source: bigquery_state_facts is bigquery.table('malloytest.state_facts') extend {
   measure: state_count is count(state)+2
 }
 
-source: postgres_aircraft is table('postgres:malloytest.aircraft'){
+source: postgres_aircraft is postgres.table('malloytest.aircraft') extend {
   measure: aircraft_count is count(tail_num)+4
 }
 `;
 
   const expressionModel = runtime.loadModel(expressionModelText);
 
-  it('default query', async () => {
-    const result = await expressionModel
-      .loadQuery(
-        `
-      query: default_aircraft-> {
-        aggregate: aircraft_count
-      }
-    `
-      )
-      .run();
-    // console.log(result.sql);
-    expect(result.data.path(0, 'aircraft_count').value).toBe(3599);
-  });
-
   it('bigquery query', async () => {
     const result = await expressionModel
       .loadQuery(
         `
-      query: bigquery_state_facts-> {
+      run: bigquery_state_facts-> {
         aggregate: state_count
       }
     `
@@ -113,7 +95,7 @@ source: postgres_aircraft is table('postgres:malloytest.aircraft'){
     const result = await expressionModel
       .loadQuery(
         `
-      query: postgres_aircraft-> {
+      run: postgres_aircraft-> {
         aggregate: aircraft_count
       }
     `
@@ -126,7 +108,7 @@ source: postgres_aircraft is table('postgres:malloytest.aircraft'){
     const result = await runtime
       .loadQuery(
         `
-      query: table('postgres:malloytest.airports')->{
+      run: postgres.table('malloytest.airports')->{
         group_by:
           version is version!()
         aggregate:

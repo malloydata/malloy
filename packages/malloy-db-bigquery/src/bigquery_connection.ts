@@ -51,6 +51,7 @@ import {
   StructDef,
   toAsyncGenerator,
 } from '@malloydata/malloy';
+import {FetchSchemaOptions} from '@malloydata/malloy-interfaces';
 
 export interface BigQueryManagerOptions {
   credentials?: {
@@ -147,12 +148,17 @@ export class BigQueryConnection
 
   private schemaCache = new Map<
     string,
-    {schema: StructDef; error?: undefined} | {error: string; schema?: undefined}
+    | {schema: StructDef; error?: undefined; timestamp: number}
+    | {error: string; schema?: undefined; timestamp: number}
   >();
   private sqlSchemaCache = new Map<
     string,
-    | {structDef: StructDef; error?: undefined}
-    | {error: string; structDef?: undefined}
+    | {
+        structDef: StructDef;
+        error?: undefined;
+        timestamp: number;
+      }
+    | {error: string; structDef?: undefined; timestamp: number}
   >();
 
   private queryOptions?: QueryOptionsReader;
@@ -595,7 +601,10 @@ export class BigQueryConnection
     return structDef;
   }
 
-  public async fetchSchemaForTables(missing: Record<string, string>): Promise<{
+  public async fetchSchemaForTables(
+    missing: Record<string, string>,
+    {refreshTimestamp}: FetchSchemaOptions
+  ): Promise<{
     schemas: Record<string, StructDef>;
     errors: Record<string, string>;
   }> {
@@ -604,7 +613,11 @@ export class BigQueryConnection
 
     for (const tableKey in missing) {
       let inCache = this.schemaCache.get(tableKey);
-      if (!inCache) {
+      if (
+        !inCache ||
+        (refreshTimestamp && refreshTimestamp > inCache.timestamp)
+      ) {
+        const timestamp = refreshTimestamp ?? Date.now();
         const tablePath = this.normalizeTablePath(missing[tableKey]);
         try {
           const tableFieldSchema = await this.getTableFieldSchema(tablePath);
@@ -614,10 +627,11 @@ export class BigQueryConnection
               tablePath,
               tableFieldSchema
             ),
+            timestamp,
           };
           this.schemaCache.set(tableKey, inCache);
         } catch (error) {
-          inCache = {error: error.message};
+          inCache = {error: error.message, timestamp};
         }
       }
       if (inCache.schema !== undefined) {
@@ -653,21 +667,27 @@ export class BigQueryConnection
   }
 
   public async fetchSchemaForSQLBlock(
-    sqlRef: SQLBlock
+    sqlRef: SQLBlock,
+    {refreshTimestamp}: FetchSchemaOptions
   ): Promise<
     | {structDef: StructDef; error?: undefined}
     | {error: string; structDef?: undefined}
   > {
     const key = sqlRef.name;
     let inCache = this.sqlSchemaCache.get(key);
-    if (!inCache) {
+    if (
+      !inCache ||
+      (refreshTimestamp && refreshTimestamp > inCache.timestamp)
+    ) {
+      const timestamp = refreshTimestamp ?? Date.now();
       try {
         const tableFieldSchema = await this.getSQLBlockSchema(sqlRef);
         inCache = {
           structDef: this.structDefFromSQLSchema(sqlRef, tableFieldSchema),
+          timestamp,
         };
       } catch (error) {
-        inCache = {error: error.message};
+        inCache = {error: error.message, timestamp};
       }
       this.sqlSchemaCache.set(key, inCache);
     }

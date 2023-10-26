@@ -39,13 +39,13 @@ describe('Wildcard BigQuery Tables', () => {
       const result = await runtime
         .loadQuery(
           `
-        source: aircraft is table('malloy-data.malloytest.itp_hourly_aircraft') {
+        source: aircraft is bigquery.table('malloy-data.malloytest.itp_hourly_aircraft') extend {
           primary_key: id
           measure: aircraft_count is count()
           where: _PARTITIONTIME = @2023-03-06 17:00:00 to @2023-03-06 19:00:00
         }
 
-        query: aircraft -> {
+        run: aircraft -> {
           aggregate: aircraft_count
         }
       `
@@ -62,13 +62,13 @@ describe('Wildcard BigQuery Tables', () => {
       const result = await runtime
         .loadQuery(
           `
-        source: aircraft is table('malloy-data.malloytest.itp_daily_aircraft') {
+        source: aircraft is bigquery.table('malloy-data.malloytest.itp_daily_aircraft') extend {
           primary_key: id
           measure: aircraft_count is count()
           where: _PARTITIONTIME = @2023-03-06 00:00:00
         }
 
-        query: aircraft -> {
+        run: aircraft -> {
           aggregate: aircraft_count
         }
       `
@@ -79,13 +79,13 @@ describe('Wildcard BigQuery Tables', () => {
       const empty_result = await runtime
         .loadQuery(
           `
-        source: aircraft is table('malloy-data.malloytest.itp_daily_aircraft') {
+        source: aircraft is bigquery.table('malloy-data.malloytest.itp_daily_aircraft') extend {
           primary_key: id
           measure: aircraft_count is count()
           where: _PARTITIONTIME = @2023-03-06 00:00:01
         }
 
-        query: aircraft -> {
+        run: aircraft -> {
           aggregate: aircraft_count
         }
       `
@@ -102,13 +102,13 @@ describe('Wildcard BigQuery Tables', () => {
       const result = await runtime
         .loadQuery(
           `
-        source: aircraft is table('malloy-data.malloytest.itp_monthly_aircraft') {
+        source: aircraft is bigquery.table('malloy-data.malloytest.itp_monthly_aircraft') extend {
           primary_key: id
           measure: aircraft_count is count()
           where: _PARTITIONTIME = @2023-03-01 00:00:00
         }
 
-        query: aircraft -> {
+        run: aircraft -> {
           aggregate: aircraft_count
         }
       `
@@ -119,13 +119,13 @@ describe('Wildcard BigQuery Tables', () => {
       const empty_result = await runtime
         .loadQuery(
           `
-        source: aircraft is table('malloy-data.malloytest.itp_monthly_aircraft') {
+        source: aircraft is bigquery.table('malloy-data.malloytest.itp_monthly_aircraft') extend {
           primary_key: id
           measure: aircraft_count is count()
           where: _PARTITIONTIME = @2023-03-01 00:00:01
         }
 
-        query: aircraft -> {
+        run: aircraft -> {
           aggregate: aircraft_count
         }
       `
@@ -142,15 +142,15 @@ describe('Wildcard BigQuery Tables', () => {
       const result = await runtime
         .loadQuery(
           `
-        source: aircraft is table('malloy-data.malloytest.itp_hourly_aircraft') {
+        source: aircraft is bigquery.table('malloy-data.malloytest.itp_hourly_aircraft') extend {
           primary_key: id
           measure: aircraft_count is count()
           where: _PARTITIONTIME = @2023-03-06 17:00:00 to @2023-03-06 19:00:00
         }
-        source: state_facts is table('malloy-data.malloytest.state_facts') {
+        source: state_facts is bigquery.table('malloy-data.malloytest.state_facts') extend {
           join_many: aircraft on state = aircraft.state
         }
-        query: state_facts -> {
+        run: state_facts -> {
           group_by: aircraft.state
           aggregate: aircraft_count is aircraft.count()
           order_by: 1
@@ -179,15 +179,15 @@ describe('Wildcard BigQuery Tables', () => {
       const result = await runtime
         .loadQuery(
           `
-          source: aircraft is table('malloy-data.malloytest.itp_hourly_aircraft') {
+          source: aircraft is bigquery.table('malloy-data.malloytest.itp_hourly_aircraft') extend {
             primary_key: id
             measure: aircraft_count is count()
             where: _PARTITIONTIME = @2023-03-06 17:00:00 to @2023-03-06 19:00:00
           }
-          source: state_facts is table('malloy-data.malloytest.state_facts') {
+          source: state_facts is bigquery.table('malloy-data.malloytest.state_facts') extend {
             join_many: aircraft on state = aircraft.state
           }
-          query: state_facts -> {
+          run: state_facts -> {
             group_by: aircraft.state
             aggregate: aircraft_count is aircraft.count()
             where: aircraft._PARTITIONTIME = @2023-03-06 18:00:00
@@ -212,12 +212,12 @@ describe('Wildcard BigQuery Tables', () => {
       const result = await runtime
         .loadQuery(
           `
-        source: aircraft is table('malloy-data.malloytest.itp_daily_aircraft') {
+        source: aircraft is bigquery.table('malloy-data.malloytest.itp_daily_aircraft') extend {
           primary_key: id
           measure: aircraft_count is count()
           where: _PARTITIONDATE = @2023-03-06
         }
-        query: aircraft -> {
+        run: aircraft -> {
           aggregate: aircraft_count
         }
       `
@@ -235,12 +235,12 @@ describe('Wildcard BigQuery Tables', () => {
         runtime
           .loadQuery(
             `
-        source: aircraft is table('malloy-data.malloytest.itp_hourly_aircraft') {
+        source: aircraft is bigquery.table('malloy-data.malloytest.itp_hourly_aircraft') extend {
           primary_key: id
           measure: aircraft_count is count()
           where: _PARTITIONDATE = @2023-03-06
         }
-        query: aircraft -> {
+        run: aircraft -> {
           aggregate: aircraft_count
         }
       `
@@ -251,12 +251,12 @@ describe('Wildcard BigQuery Tables', () => {
         runtime
           .loadQuery(
             `
-        source: aircraft is table('malloy-data.malloytest.itp_monthly_aircraft') {
+        source: aircraft is bigquery.table('malloy-data.malloytest.itp_monthly_aircraft') extend {
           primary_key: id
           measure: aircraft_count is count()
           where: _PARTITIONDATE = @2023-03-06
         }
-        query: aircraft -> {
+        run: aircraft -> {
           aggregate: aircraft_count
         }
       `

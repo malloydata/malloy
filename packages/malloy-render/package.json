@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.94",
+  "version": "0.0.97",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,16 +9,21 @@
     "type": "git",
     "url": "https://github.com/malloydata/malloy"
   },
+  "engines": {
+    "node": ">=16"
+  },
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
     "lint-fix": "eslint '**/*.ts{,x}' --fix",
     "test": "jest --config=../../jest.config.js",
     "build": "tsc --build",
     "clean": "tsc --build --clean",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.94",
+    "@malloydata/malloy": "^0.0.97",
     "@types/luxon": "^2.4.0",
     "lodash": "^4.17.20",
     "luxon": "^2.4.0",
@@ -26,5 +31,15 @@
     "us-atlas": "^3.0.0",
     "vega": "^5.21.0",
     "vega-lite": "^5.2.0"
+  },
+  "devDependencies": {
+    "@storybook/addon-essentials": "^7.5.0",
+    "@storybook/addon-interactions": "^7.5.0",
+    "@storybook/addon-links": "^7.5.0",
+    "@storybook/blocks": "^7.5.0",
+    "@storybook/html": "^7.5.0",
+    "@storybook/html-vite": "^7.5.0",
+    "@storybook/testing-library": "^0.2.2",
+    "storybook": "^7.5.0"
   }
 }

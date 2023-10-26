@@ -368,7 +368,7 @@ describe('BigQuery hand-built expression test', () => {
     const result = await handModel
       .loadQuery(
         `
-      query: aircraft->hand_turtle
+      run: aircraft->hand_turtle
   `
       )
       .run();
@@ -379,7 +379,7 @@ describe('BigQuery hand-built expression test', () => {
     const result = await handModel
       .loadQuery(
         `
-        query: aircraft->{
+        run: aircraft->{
           group_by: state
           aggregate: aircraft_count
           limit: 10
@@ -394,7 +394,7 @@ describe('BigQuery hand-built expression test', () => {
     const result = await handModel
       .loadQuery(
         `
-        query: aircraft->{
+        run: aircraft->{
           group_by: state
           aggregate: aircraft_count
           order_by: 2
@@ -581,14 +581,14 @@ describe('BigQuery hand-built expression test', () => {
     const result = await handModel
       .loadQuery(
         `
-            query: aircraft->{
+            run: aircraft->{
               aggregate:
                 aircraft_models.total_seats,
                 total_seats2 is sum(aircraft_models.seats),
                 total_seats3 is aircraft_models.sum(aircraft_models.seats),
                 aircraft_models.boeing_seats,
-                boeing_seats2 is aircraft_models.sum(aircraft_models.seats) {? aircraft_models.manufacturer ? 'BOEING'},
-                boeing_seats3 is aircraft_models.boeing_seats {? aircraft_models.manufacturer ? ~'B%'}
+                boeing_seats2 is aircraft_models.sum(aircraft_models.seats) { where: aircraft_models.manufacturer ? 'BOEING'},
+                boeing_seats3 is aircraft_models.boeing_seats { where: aircraft_models.manufacturer ? ~'B%'}
             }
           `
       )
@@ -606,7 +606,7 @@ describe('BigQuery hand-built expression test', () => {
     const result = await handModel
       .loadQuery(
         `
-          query: aircraft->{
+          run: aircraft->{
             aggregate: total_seats3 is aircraft_models.sum(aircraft_models.seats)
           }
             `
@@ -622,7 +622,7 @@ describe('BigQuery hand-built expression test', () => {
     const result = await handModel
       .loadQuery(
         `
-              query: aircraft->{
+              run: aircraft->{
                 aggregate:
                   aircraft_models.total_seats,
                   aircraft_models.boeing_seats
@@ -638,8 +638,8 @@ describe('BigQuery hand-built expression test', () => {
     const result = await handModel
       .loadQuery(
         `
-              query: aircraft->{
-                aggregate: boeing_seats is aircraft_models.total_seats {? aircraft_models.manufacturer ?'BOEING'}
+              run: aircraft->{
+                aggregate: boeing_seats is aircraft_models.total_seats { where: aircraft_models.manufacturer ?'BOEING'}
               }
             `
       )
@@ -652,8 +652,8 @@ describe('BigQuery hand-built expression test', () => {
     const result = await handModel
       .loadQuery(
         `
-              query: aircraft->{
-                aggregate: boeing_aircraft is count() {?aircraft_models.manufacturer ?'BOEING'}
+              run: aircraft->{
+                aggregate: boeing_aircraft is count() { where:aircraft_models.manufacturer ?'BOEING'}
               }
             `
       )

@@ -71,9 +71,9 @@ describe('db:BigQuery', () => {
   it('runs a Malloy query', async () => {
     const sql = await runtime
       .loadModel(
-        "source: carriers is table('malloy-data.faa.carriers') { measure: carrier_count is count() }"
+        "source: carriers is bigquery.table('malloy-data.faa.carriers') extend { measure: carrier_count is count() }"
       )
-      .loadQuery('query: carriers -> { aggregate: carrier_count }')
+      .loadQuery('run: carriers -> { aggregate: carrier_count }')
       .getSQL();
     const res = await bq.runSQL(sql);
     expect(res.rows[0]['carrier_count']).toBe(21);
@@ -82,9 +82,9 @@ describe('db:BigQuery', () => {
   it('streams a Malloy query for download', async () => {
     const sql = await runtime
       .loadModel(
-        "source: carriers is table('malloy-data.faa.carriers') { measure: carrier_count is count() }"
+        "source: carriers is bigquery.table('malloy-data.faa.carriers') extend { measure: carrier_count is count() }"
       )
-      .loadQuery('query: carriers -> { group_by: name }')
+      .loadQuery('run: carriers -> { group_by: name }')
       .getSQL();
     const res = await bq.downloadMalloyQuery(sql);
 
@@ -194,4 +194,105 @@ describe('db:BigQuery', () => {
       expect(results[0]).toStrictEqual({t: 1});
     });
   });
+
+  describe('Caching', () => {
+    let getTableFieldSchema: jest.SpyInstance;
+    let getSQLBlockSchema: jest.SpyInstance;
+
+    beforeEach(async () => {
+      getTableFieldSchema = jest
+        .spyOn(BigQueryConnection.prototype as any, 'getTableFieldSchema')
+        .mockResolvedValue({
+          schema: {},
+          needsTableSuffixPseudoColumn: false,
+          needsPartitionTimePseudoColumn: false,
+          needsPartitionDatePseudoColumn: false,
+        });
+      getSQLBlockSchema = jest
+        .spyOn(BigQueryConnection.prototype as any, 'getSQLBlockSchema')
+        .mockResolvedValue({
+          schema: {},
+          needsTableSuffixPseudoColumn: false,
+          needsPartitionTimePseudoColumn: false,
+          needsPartitionDatePseudoColumn: false,
+        });
+    });
+
+    afterEach(() => {
+      jest.resetAllMocks();
+    });
+
+    it('caches table schema', async () => {
+      await bq.fetchSchemaForTables({'test1': 'table1'}, {});
+      expect(getTableFieldSchema).toBeCalledTimes(1);
+      await new Promise(resolve => setTimeout(resolve));
+      await bq.fetchSchemaForTables({'test1': 'table1'}, {});
+      expect(getTableFieldSchema).toBeCalledTimes(1);
+    });
+
+    it('refreshes table schema', async () => {
+      await bq.fetchSchemaForTables({'test2': 'table2'}, {});
+      expect(getTableFieldSchema).toBeCalledTimes(1);
+      await new Promise(resolve => setTimeout(resolve));
+      await bq.fetchSchemaForTables(
+        {'test2': 'table2'},
+        {refreshTimestamp: Date.now()}
+      );
+      expect(getTableFieldSchema).toBeCalledTimes(2);
+    });
+
+    it('caches sql schema', async () => {
+      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+      expect(getSQLBlockSchema).toBeCalledTimes(1);
+      await new Promise(resolve => setTimeout(resolve));
+      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_1, {});
+      expect(getSQLBlockSchema).toBeCalledTimes(1);
+    });
+
+    it('refreshes sql schema', async () => {
+      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_2, {});
+      expect(getSQLBlockSchema).toBeCalledTimes(1);
+      await new Promise(resolve => setTimeout(resolve));
+      await bq.fetchSchemaForSQLBlock(SQL_BLOCK_2, {
+        refreshTimestamp: Date.now(),
+      });
+      expect(getSQLBlockSchema).toBeCalledTimes(2);
+    });
+  });
 });
+
+const SQL_BLOCK_1 = {
+  type: 'sqlBlock',
+  name: 'block1',
+  selectStr: `
+SELECT
+created_at,
+sale_price,
+inventory_item_id
+FROM 'order_items.parquet'
+SELECT
+id,
+product_department,
+product_category,
+created_at AS inventory_items_created_at
+FROM "inventory_items.parquet"
+`,
+} as malloy.SQLBlock;
+
+const SQL_BLOCK_2 = {
+  type: 'sqlBlock',
+  name: 'block2',
+  selectStr: `
+SELECT
+created_at,
+sale_price,
+inventory_item_id
+FROM read_parquet('order_items2.parquet', arg='value')
+SELECT
+id,
+product_department,
+product_category,
+created_at AS inventory_items_created_at
+FROM read_parquet("inventory_items2.parquet")
+`,
+} as malloy.SQLBlock;

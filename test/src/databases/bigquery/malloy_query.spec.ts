@@ -27,6 +27,7 @@ import {Query} from '@malloydata/malloy';
 import {testModel} from '../../models/faa_model';
 import {BigQueryTestConnection, RuntimeList} from '../../runtimes';
 import {describeIfDatabaseAvailable, fStringEq} from '../../util';
+import '../../util/db-jest-matchers';
 
 const runtimeList = new RuntimeList(['bigquery']);
 const runtime = runtimeList.runtimeMap.get('bigquery');
@@ -259,7 +260,7 @@ describe('BigQuery expression tests', () => {
   });
 
   it('flights_by_carrier', async () => {
-    const sql = await compileQuery(faa, 'query: flights->flights_by_carrier');
+    const sql = await compileQuery(faa, 'run: flights->flights_by_carrier');
     await bqCompile(sql);
   });
 
@@ -424,50 +425,47 @@ describe('BigQuery expression tests', () => {
   });
 
   it('flights.flights_by_model', async () => {
-    const sql = await compileQuery(faa, 'query: flights->flights_by_model');
+    const sql = await compileQuery(faa, 'run: flights->flights_by_model');
     await bqCompile(sql);
   });
 
   it('flights.aircraft_facts_test', async () => {
-    const sql = await compileQuery(faa, 'query: flights->aircraft_facts_test');
+    const sql = await compileQuery(faa, 'run: flights->aircraft_facts_test');
     await bqCompile(sql);
   });
 
   it('flights.measures_first', async () => {
-    const sql = await compileQuery(faa, 'query:flights->measures_first');
+    const sql = await compileQuery(faa, 'run:flights->measures_first');
     await bqCompile(sql);
   });
 
   it('flights.carriers_by_total_engines', async () => {
     const sql = await compileQuery(
       faa,
-      'query: flights->carriers_by_total_engines'
+      'run: flights->carriers_by_total_engines'
     );
     await bqCompile(sql);
   });
 
   it('flights.first_turtle', async () => {
-    const sql = await compileQuery(faa, 'query: flights->first_turtle');
+    const sql = await compileQuery(faa, 'run: flights->first_turtle');
     await bqCompile(sql);
   });
 
   it('flights.top_5_routes_carriers', async () => {
-    const sql = await compileQuery(
-      faa,
-      'query: flights->top_5_routes_carriers'
-    );
+    const sql = await compileQuery(faa, 'run: flights->top_5_routes_carriers');
     await bqCompile(sql);
   });
 
   it('flights.new_york_airports', async () => {
-    const sql = await compileQuery(faa, 'query: flights->new_york_airports');
+    const sql = await compileQuery(faa, 'run: flights->new_york_airports');
     await bqCompile(sql);
   });
 
   it('flights.flights_by_carrier_with_totals', async () => {
     const sql = await compileQuery(
       faa,
-      'query: flights->flights_by_carrier_with_totals'
+      'run: flights->flights_by_carrier_with_totals'
     );
     await bqCompile(sql);
   });
@@ -517,7 +515,7 @@ describe('BigQuery expression tests', () => {
   });
 
   it('flights.search_index', async () => {
-    const sql = await compileQuery(faa, 'query: flights->search_index');
+    const sql = await compileQuery(faa, 'run: flights->search_index');
     await bqCompile(sql);
   });
 
@@ -525,7 +523,7 @@ describe('BigQuery expression tests', () => {
     const result = await runQuery(
       faa,
       `
-      query: table('malloytest.airports')->{
+      run: bigquery.table('malloytest.airports')->{
         where: faa_region ? ~'A%'
         order_by: 1
         group_by: faa_region
@@ -551,27 +549,24 @@ describe('BigQuery expression tests', () => {
   });
 
   it('flights.search_index', async () => {
-    const sql = await compileQuery(faa, 'query: flights->search_index');
+    const sql = await compileQuery(faa, 'run: flights->search_index');
     await bqCompile(sql);
   });
 
   it('medicare_test.turtle_city_zip', async () => {
-    const sql = await compileQuery(
-      faa,
-      'query: medicare_test->turtle_city_zip'
-    );
+    const sql = await compileQuery(faa, 'run: medicare_test->turtle_city_zip');
     await bqCompile(sql);
   });
 
   it('medicare_test.triple_turtle', async () => {
-    const sql = await compileQuery(faa, 'query: medicare_test->triple_turtle');
+    const sql = await compileQuery(faa, 'run: medicare_test->triple_turtle');
     await bqCompile(sql);
   });
 
   it('medicare_test.rollup_by_location', async () => {
     const sql = await compileQuery(
       faa,
-      'query: medicare_test->rollup_by_location'
+      'run: medicare_test->rollup_by_location'
     );
     await bqCompile(sql);
   });
@@ -579,7 +574,7 @@ describe('BigQuery expression tests', () => {
   it('flights.flights_routes_sessionized', async () => {
     const sql = await compileQuery(
       faa,
-      'query: flights->flights_routes_sessionized'
+      'run: flights->flights_routes_sessionized'
     );
     await bqCompile(sql);
   });
@@ -587,7 +582,7 @@ describe('BigQuery expression tests', () => {
   it('flights.flights_aircraft_sessionized', async () => {
     const sql = await compileQuery(
       faa,
-      'query: flights->flights_aircraft_sessionized'
+      'run: flights->flights_aircraft_sessionized'
     );
     await bqCompile(sql);
   });
@@ -595,7 +590,7 @@ describe('BigQuery expression tests', () => {
   it('flights.flights_by_manufacturer', async () => {
     const sql = await compileQuery(
       faa,
-      'query: flights->flights_by_manufacturer'
+      'run: flights->flights_by_manufacturer'
     );
     await bqCompile(sql);
   });
@@ -603,7 +598,7 @@ describe('BigQuery expression tests', () => {
   it('flights.flights_by_carrier_2001_2002', async () => {
     const sql = await compileQuery(
       faa,
-      'query: flights->flights_by_carrier_2001_2002'
+      'run: flights->flights_by_carrier_2001_2002'
     );
     await bqCompile(sql);
   });
@@ -612,7 +607,7 @@ describe('BigQuery expression tests', () => {
     const sql = await compileQuery(
       faa,
       `
-      query: flights->{
+      run: flights->{
         group_by: mon is dep_time.month
       }
     `
@@ -624,7 +619,7 @@ describe('BigQuery expression tests', () => {
     const sql = await compileQuery(
       faa,
       `
-      query: flights->{
+      run: flights->{
         aggregate: carrier_count is count(carrier)
       }
     `
@@ -690,27 +685,27 @@ describe('BigQuery expression tests', () => {
 });
 
 const airportModelText = `
-source: airports is table('malloy-data.malloytest.airports'){
+source: airports is bigquery.table('malloy-data.malloytest.airports') extend {
   primary_key: code
   measure: airport_count is count()
 
-  query: by_fac_type is {
+  view: by_fac_type is {
     group_by: fac_type
     aggregate: airport_count
   }
 
-  query: by_state is {
+  view: by_state is {
     group_by: state
     aggregate: airport_count
   }
 
-  query: by_county is {
+  view: by_county is {
     group_by: county
     aggregate: airport_count
   }
 }
 
-query: ca_airports is airports->by_fac_type{? state ? 'CA' | 'NY'}
+query: ca_airports is airports->by_fac_type refine { where: state ? 'CA' | 'NY'}
 `;
 
 describe('airport_tests', () => {
@@ -723,7 +718,7 @@ describe('airport_tests', () => {
     const result = await runQuery(
       model,
       `
-      query: airports->{
+      run: airports->{
         aggregate: a is count()
       }
     `
@@ -735,7 +730,7 @@ describe('airport_tests', () => {
     const result = await runQuery(
       model,
       `
-      query: airports-> {
+      run: airports-> {
         nest: zero is {
           nest: by_faa_region_i is { where: county ~'I%' and  state != NULL
             group_by: faa_region
@@ -775,7 +770,7 @@ describe('airport_tests', () => {
     const result = await runQuery(
       model,
       `
-    query: airports -> {
+    run: airports -> {
       group_by: county
       nest: stuff is {
         select: elevation
@@ -796,7 +791,7 @@ describe('airport_tests', () => {
     const result = await runQuery(
       model,
       `
-      query: airports->{
+      run: airports->{
         aggregate: airport_count
         nest: by_state is {
           group_by: state
@@ -823,14 +818,14 @@ describe('airport_tests', () => {
     const result = await runQuery(
       model,
       `
-        source: my_airports is airports {
-          query: pipe_turtle is {
+        source: my_airports is airports extend {
+          view: pipe_turtle is {
             aggregate: a is airport_count
           } -> {
             select: a
           }
         }
-        query: my_airports->pipe_turtle
+        run: my_airports->pipe_turtle
     `
     );
     expect(result.data.value[0]['a']).toBe(19793);
@@ -840,7 +835,7 @@ describe('airport_tests', () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.airports')->{
+      run: bigquery.table('malloytest.airports')->{
         aggregate: airport_count is count()
         nest: pipe_turtle is {
           group_by:
@@ -910,7 +905,7 @@ describe('airport_tests', () => {
     const result = await runQuery(
       model,
       `
-      query: airports->{
+      run: airports->{
         group_by: lower_state is lower(state)
         order_by: 1 DESC
         limit: 10
@@ -924,7 +919,7 @@ describe('airport_tests', () => {
     const result = await runQuery(
       model,
       `
-      query: airports->{
+      run: airports->{
         aggregate: half is airport_count/2.0
       }
     `
@@ -941,7 +936,7 @@ describe('sql injection tests', () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.state_facts')->{ group_by: test is 'foo\\''
+      run: bigquery.table('malloytest.state_facts')->{ group_by: test is 'foo\\''
       }
     `
     );
@@ -952,7 +947,7 @@ describe('sql injection tests', () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo\\'' } }
+      run: bigquery.table('malloytest.state_facts')->{ aggregate: test is count() { where: state ? 'foo\\'' } }
     `
     );
     expect(result.data.value[0]['test']).toBe(0);
@@ -962,7 +957,7 @@ describe('sql injection tests', () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.state_facts')->{ group_by: test is 'foo\\\\\\''
+      run: bigquery.table('malloytest.state_facts')->{ group_by: test is 'foo\\\\\\''
       }
     `
     );
@@ -973,7 +968,7 @@ describe('sql injection tests', () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo\\\\\\'' }}
+      run: bigquery.table('malloytest.state_facts')->{ aggregate: test is count() { where: state ? 'foo\\\\\\'' }}
     `
     );
     expect(result.data.value[0]['test']).toBe(0);
@@ -983,7 +978,7 @@ describe('sql injection tests', () => {
     const result = await runQuery(
       model,
       `
-      query: table('malloytest.state_facts')->{ group_by: test is 'foo \\\\'--'
+      run: bigquery.table('malloytest.state_facts')->{ group_by: test is 'foo \\\\'--'
       }
     `
     );
@@ -996,7 +991,7 @@ describe('sql injection tests', () => {
       await runQuery(
         model,
         `
-        query: table('malloytest.state_facts')->{ aggregate: test is count() {? state ? 'foo \\\\' THEN 0 else 1 END) as test--'
+        run: bigquery.table('malloytest.state_facts')->{ aggregate: test is count() { where: state ? 'foo \\\\' THEN 0 else 1 END) as test--'
         }}      `
       );
     } catch (e) {
@@ -1011,7 +1006,7 @@ describe('sql injection tests', () => {
     const result = await runQuery(
       model,
       `
-      query: flights->{ group_by: test is 'foo \\\\'--'
+      run: flights->{ group_by: test is 'foo \\\\'--'
       }
     `
     );
@@ -1023,11 +1018,9 @@ describe('unsupported type tests', () => {
   it('can read unsupported types in schema', async () => {
     const result = await runtime
       .loadQuery(
-        `
-        sql: badType is {
-          select: """SELECT ST_GEOGFROMTEXT('LINESTRING(1 2, 3 4)') as geo"""
-        }
-        query: from_sql(badType)->{ select: *}
+        `run:
+          bigquery.sql("SELECT ST_GEOGFROMTEXT('LINESTRING(1 2, 3 4)') as geo")
+          -> { select: geo }
       `
       )
       .run();

@@ -83,7 +83,6 @@ export function describeIfDatabaseAvailable(
 interface InitValues {
   sql?: string;
   malloy?: string;
-  connection?: string;
 }
 
 function sqlSafe(str: string): string {
@@ -92,7 +91,12 @@ function sqlSafe(str: string): string {
     .replace(/\\/g, '{backslash}')
     .replace(/"/g, '{double-quote}');
 }
-export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
+
+export function mkSqlEqWith(
+  runtime: Runtime,
+  cName: string,
+  initV?: InitValues
+) {
   // eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
   return async function (
     expr: string,
@@ -101,12 +105,8 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
     const qExpr = expr.replace(/'/g, '`');
     const sqlV = initV?.sql || 'SELECT 1 as one';
     const malloyV = initV?.malloy || '';
-    const select = initV?.connection
-      ? ` connection: "${initV.connection}" select`
-      : 'select';
     const sourceDef = `
-      sql: sqlData is {${select}: """${sqlV}""" }
-      source: basicTypes is from_sql(sqlData) ${malloyV}
+      source: basicTypes is ${cName}.sql("""${sqlV}""") ${malloyV}
     `;
     let query: string;
     if (typeof result === 'boolean') {
@@ -117,17 +117,19 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
         : `${notEq} when ${varName}`;
       const elsePick = result ? notEq : "'='";
       query = `${sourceDef}
-          query: basicTypes
+          run: basicTypes
           -> {
-            declare: ${varName} is ${expr}
+            extend: {dimension: ${varName} is ${expr}}
             select: calc is pick ${whenPick} else ${elsePick}
           }`;
     } else if (typeof result === 'number') {
       query = `${sourceDef}
-          query: basicTypes
+          run: basicTypes
           -> {
-            declare: expect is ${result}
-            declare: got is ${expr}
+            extend: {
+              dimension: expect is ${result}
+              dimension: got is ${expr}
+            }
             select: calc is
               pick '=' when expect = got
               else concat('sqlEq failed', CHR(10), '    Expected: ${qExpr} == ${result}', CHR(10), '    Received: ', got::string)
@@ -137,7 +139,7 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
       const resultNoBacks = result.replace(/\\/g, '\\\\');
       const qResult = `'${resultNoBacks.replace(/'/g, "\\'")}'`;
       query = `${sourceDef}
-          query: basicTypes
+          run: basicTypes
           -> {
             select: expect is ${qResult}
             select: got is ${expr}
@@ -151,7 +153,7 @@ export function mkSqlEqWith(runtime: Runtime, initV?: InitValues) {
     } else {
       const qResult = result.replace(/'/g, '`');
       query = `${sourceDef}
-          query: basicTypes
+          run: basicTypes
           -> {
             select: expect is ${result}
             select: got is ${expr}

@@ -29,25 +29,27 @@ import * as malloy from '@malloydata/malloy';
 
 const runtimes = new RuntimeList(databasesFromEnvironmentOr(allDatabases));
 
-const expressionModelText = `
-source: aircraft_models is table('malloytest.aircraft_models'){
+function modelText(databaseName: string) {
+  return `
+source: aircraft_models is ${databaseName}.table('malloytest.aircraft_models') extend {
   primary_key: aircraft_model_code
 }
 
-source: aircraft is table('malloytest.aircraft'){
+source: aircraft is ${databaseName}.table('malloytest.aircraft') extend {
   primary_key: tail_num
   join_one: aircraft_models with aircraft_model_code
   measure: aircraft_count is count()
 }
 
-source: airports is table('malloytest.airports') {}
+source: airports is ${databaseName}.table('malloytest.airports')
 
-source: state_facts is table('malloytest.state_facts') {}
+source: state_facts is ${databaseName}.table('malloytest.state_facts')
 `;
+}
 
 const expressionModels = new Map<string, malloy.ModelMaterializer>();
 runtimes.runtimeMap.forEach((runtime, databaseName) =>
-  expressionModels.set(databaseName, runtime.loadModel(expressionModelText))
+  expressionModels.set(databaseName, runtime.loadModel(modelText(databaseName)))
 );
 
 expressionModels.forEach((expressionModel, databaseName) => {
@@ -62,7 +64,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       return await expressionModel
         .loadQuery(
           `
-      query: aircraft -> { ${type}: f is ${expr} }`
+      run: aircraft -> { ${type}: f is ${expr} }`
         )
         .run();
     };
@@ -90,7 +92,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       return await expressionModel
         .loadQuery(
           `
-      query: aircraft -> { ${testCases.map(
+      run: aircraft -> { ${testCases.map(
         (testCase, i) => `group_by: f${i} is ${testCase[0]}`
       )} }`
         )
@@ -277,7 +279,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works when the order by is a dimension  - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts -> {
+          `run: state_facts -> {
           group_by: state
           calculate: row_num is row_number()
         }`
@@ -290,7 +292,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works when the order by is a dimension in the other order  - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts -> {
+          `run: state_facts -> {
             calculate: row_num is row_number()
             group_by: state
         }`
@@ -303,7 +305,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works when the order by is a measure - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts -> {
+          `run: state_facts -> {
           group_by: popular_name
           aggregate: c is count()
           calculate: row_num is row_number()
@@ -317,7 +319,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works when the order by is a measure but there is no group by - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts -> {
+          `run: state_facts -> {
             aggregate: c is count()
             calculate: row_num is row_number()
           }`
@@ -329,7 +331,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works inside nest - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts { join_one: airports on airports.state = state } -> {
+          `run: state_facts extend { join_one: airports on airports.state = state } -> {
             group_by: state
             nest: q is {
               group_by: airports.county
@@ -347,7 +349,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     test(`works outside nest, but with a nest nearby - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts -> {
+          `run: state_facts -> {
             group_by: state
             calculate: row_num is row_number()
             nest: nested is {
@@ -365,7 +367,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works ordered by dimension - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts -> {
+          `run: state_facts -> {
             group_by:
               state,
               births_ballpark is ceil(births / 1000000) * 1000000
@@ -386,7 +388,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works ordered by aggregate - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts -> {
+          `run: state_facts -> {
             group_by: first_letter is substr(state, 1, 1)
             aggregate: states_with_first_letter_ish is round(count() / 2) * 2
             calculate: r is rank()
@@ -404,7 +406,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works with one param - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts -> {
+          `run: state_facts -> {
           group_by: state
           calculate: prev_state is lag(state)
         }`
@@ -420,7 +422,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works with expression field - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts -> {
+          `run: state_facts -> {
           group_by: lower_state is lower(state)
           calculate: prev_state is lag(lower_state)
         }`
@@ -436,7 +438,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works with expression - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts -> {
+          `run: state_facts -> {
           group_by: state
           calculate: prev_state is lag(lower(state))
         }`
@@ -452,7 +454,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works with field, ordering by expression field - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts -> {
+          `run: state_facts -> {
           group_by: lower_state is lower(state)
           aggregate: c is count()
           order_by: lower_state
@@ -470,7 +472,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works with offset - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts -> {
+          `run: state_facts -> {
           group_by: state
           calculate: prev_prev_state is lag(state, 2)
         }`
@@ -487,7 +489,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works with default value - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts -> {
+          `run: state_facts -> {
           group_by: state
           calculate: prev_state is lag(state, 1, 'NONE')
         }`
@@ -500,7 +502,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       const result = await expressionModel
         .loadQuery(
           `
-          query: state_facts -> {
+          run: state_facts -> {
             group_by: state
             calculate: lag_val is lag(@2011-11-11 11:11:11, 1, now).year = now.year
           }`
@@ -515,7 +517,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`output field referenceable in calculate - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: aircraft -> {
+          `run: aircraft -> {
             group_by: s is aircraft_models.seats
             calculate: a is lag(s)
           }`
@@ -532,7 +534,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       const result = await expressionModel
         .loadQuery(
           `
-          query: aircraft -> {
+          run: aircraft -> {
             group_by: state
             where: state != null
             nest: by_county is {
@@ -555,7 +557,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       const result = await expressionModel
         .loadQuery(
           `
-          query: state_facts -> {
+          run: state_facts -> {
             group_by: state, births
             order_by: births desc
             calculate: most_births is first_value(births)
@@ -570,7 +572,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       const result = await expressionModel
         .loadQuery(
           `
-          query: airports { measure: airport_count is count() } -> {
+          run: airports extend { measure: airport_count is count() } -> {
             group_by: state
             where: state != null
             calculate: prev_airport_count is lag(airport_count)
@@ -585,7 +587,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       const result = await expressionModel
         .loadQuery(
           `
-          query: aircraft -> {
+          run: aircraft -> {
             group_by: aircraft_models.seats,
             calculate: prev_sum_of_seats is lag(aircraft_models.seats.sum())
           }`
@@ -967,7 +969,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works with one param - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts -> {
+          `run: state_facts -> {
           group_by: state
           calculate: next_state is lead(state)
         }`
@@ -981,7 +983,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works with offset - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts -> {
+          `run: state_facts -> {
           group_by: state
           calculate: next_next_state is lead(state, 2)
         }`
@@ -998,7 +1000,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
     it(`works with default value - ${databaseName}`, async () => {
       const result = await expressionModel
         .loadQuery(
-          `query: state_facts -> { select: *; limit: 10 } -> {
+          `run: state_facts -> { select: *; limit: 10 } -> {
           group_by: state
           calculate: next_state is lead(state, 1, 'NONE')
         }`
@@ -1012,7 +1014,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       const result = await expressionModel
         .loadQuery(
           `
-          query: state_facts -> {
+          run: state_facts -> {
             group_by: state, births
             order_by: births desc
             calculate: least_births is last_value(births)
@@ -1030,7 +1032,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       const result = await expressionModel
         .loadQuery(
           `
-          query: state_facts -> {
+          run: state_facts -> {
             group_by: state, births
             order_by: births desc
             calculate: rolling_avg is avg_moving(births, 2)
@@ -1057,7 +1059,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       const result = await expressionModel
         .loadQuery(
           `
-          query: state_facts -> { select: *; limit: 3 } -> {
+          run: state_facts -> { select: *; limit: 3 } -> {
             group_by: state, births
             order_by: births desc
             calculate: rolling_avg is avg_moving(births, 0, 2)
@@ -1081,7 +1083,7 @@ expressionModels.forEach((expressionModel, databaseName) => {
       const result = await expressionModel
         .loadQuery(
           `
-          query: state_facts -> { select: *; limit: 5 } -> {
+          run: state_facts -> { select: *; limit: 5 } -> {
             group_by: state, births
             order_by: births asc
             calculate: min_c is min_cumulative(births)

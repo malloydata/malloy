@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-bigquery",
-  "version": "0.0.94",
+  "version": "0.0.97",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -10,7 +10,7 @@
     "url": "https://github.com/malloydata/malloy"
   },
   "engines": {
-    "node": ">=10"
+    "node": ">=16"
   },
   "scripts": {
     "lint": "eslint '**/*.ts{,x}'",
@@ -25,7 +25,8 @@
     "@google-cloud/bigquery": "^5.5.0",
     "@google-cloud/common": "^3.6.0",
     "@google-cloud/paginator": "^4.0.1",
-    "@malloydata/malloy": "^0.0.94",
+    "@malloydata/malloy": "^0.0.97",
+    "@malloydata/malloy-interfaces": "^0.0.97",
     "gaxios": "^4.2.0"
   }
 }

@@ -56,7 +56,7 @@ describe('model statements', () => {
       expect(m).translationToFailWith('a1 is not a connection');
     });
     test('table function is deprecated', () => {
-      expect(`##! m4warnings
+      expect(`##! m4warnings=warn
       source: testA is table('_db_:aTable')
     `).toTranslateWithWarnings(
         "`table('connection_name:table_path')` is deprecated; use `connection_name.table('table_path')`"
@@ -68,6 +68,30 @@ describe('model statements', () => {
     expect(
       'query: q1 is a -> { select: * }, q1 is a -> { select: * }'
     ).translationToFailWith("'q1' is already defined, cannot redefine");
+  });
+
+  test('##! experimental enables all experiments', () => {
+    expect('##! experimental\n;;[ "x" ]').toTranslate();
+  });
+
+  test('experimental explicit enable', () => {
+    expect(
+      '##! experimental { compilerTestExperimentParse compilerTestExperimentTranslate }\n;;[ "x" ]'
+    ).toTranslate();
+  });
+
+  test('experiment failures in parse are flagged', () => {
+    expect(';;[ "x" ]').translationToFailWith(
+      "Experimental flag 'compilerTestExperimentParse' required to enable this feature"
+    );
+  });
+
+  test('experiment failures in second pass are flagged', () => {
+    expect(
+      '##! experimental.compilerTestExperimentParse\n;;[ "x" ]'
+    ).translationToFailWith(
+      "Experimental flag 'compilerTestExperimentTranslate' is not set, feature not available"
+    );
   });
 });
 
@@ -615,7 +639,7 @@ describe('sql expressions', () => {
 
   test('sql statement deprecation warning', () => {
     const m = new TestTranslator(
-      `##! m4warnings
+      `##! m4warnings=warn
       sql: bad_sql is {select: """SELECT 1 as one"""}`
     );
     const req = m.translate().compileSQL;
@@ -631,7 +655,7 @@ describe('sql expressions', () => {
 
   test('from_sql deprecation warning', () => {
     const m = new TestTranslator(
-      `##! m4warnings
+      `##! m4warnings=warn
       sql: bad_sql is {select: """SELECT 1 as one"""}
       source: foo is from_sql(bad_sql)`
     );
@@ -955,7 +979,7 @@ describe('extend and refine', () => {
 
   describe('m4 warnings', () => {
     test('implicit refine in nest', () => {
-      expect(`##! m4warnings
+      expect(`##! m4warnings=warn
       source: c is a extend {
         view: x is { select: * }
       }
@@ -968,7 +992,7 @@ describe('extend and refine', () => {
     });
 
     test('implicit refine in turtle works', () => {
-      expect(`##! m4warnings
+      expect(`##! m4warnings=warn
       source: c is a extend {
         view: x is { select: * }
         view: y is x { limit: 1 }
@@ -978,7 +1002,7 @@ describe('extend and refine', () => {
     });
 
     test('implicit query refinement', () => {
-      expect(`##! m4warnings
+      expect(`##! m4warnings=warn
         query: q is a -> { group_by: ai }
         run: q { group_by: three is 3 }
       `).toTranslateWithWarnings(
@@ -988,7 +1012,7 @@ describe('extend and refine', () => {
 
     test('implicit source extension', () => {
       expect(
-        `##! m4warnings
+        `##! m4warnings=warn
         source: s is a { dimension: ai_2 is ai + ai }`
       ).toTranslateWithWarnings(
         'Implicit source extension is deprecated, use the `extend` operator.'
@@ -1000,7 +1024,7 @@ describe('extend and refine', () => {
 describe('miscellaneous m4 warnings', () => {
   test('from() is deprecated', () => {
     expect(`
-      ##! m4warnings
+      ##! m4warnings=warn
       query: q is a -> { select: * }
       source: c is from(q) extend {
         dimension: x is 1
@@ -1008,7 +1032,7 @@ describe('miscellaneous m4 warnings', () => {
       '`from(some_query)` is deprecated; use `some_query` directly'
     );
     expect(`
-      ##! m4warnings
+      ##! m4warnings=warn
       query: q is a -> { select: * }
       source: c is q extend {
         dimension: x is 1
@@ -1016,30 +1040,30 @@ describe('miscellaneous m4 warnings', () => {
   });
   test('project is deprecated', () => {
     expect(`
-      ##! m4warnings
+      ##! m4warnings=warn
       query: q is a -> { project: * }
     `).toTranslateWithWarnings('project: keyword is deprecated, use select:');
   });
   test('query leading arrow', () => {
     expect(`
-      ##! m4warnings
+      ##! m4warnings=warn
       query: x is a -> { select: * }
       run: x
     `).toTranslate();
     expect(`
-      ##! m4warnings
+      ##! m4warnings=warn
       query: x is a -> { select: * }
       run: x -> { select: * }
     `).toTranslate();
     expect(`
-      ##! m4warnings
+      ##! m4warnings=warn
       query: x is a -> { select: * }
       run: -> x
     `).toTranslateWithWarnings(
       'Leading arrow (`->`) when referencing a query is deprecated; remove the arrow'
     );
     expect(`
-      ##! m4warnings
+      ##! m4warnings=warn
       query: x is a -> { select: * }
       run: -> x -> { select: * }
     `).toTranslateWithWarnings(
@@ -1091,3 +1115,6 @@ describe('m3/m4 source query sentences', () => {
     `).toTranslate();
   });
 });
+
+test('non breaking space in source', () =>
+  expect('source:\u00a0z\u00a0is\u00a0a').toParse());

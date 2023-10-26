@@ -112,6 +112,7 @@ export class StandardSQLDialect extends Dialect {
   supportsQualify = true;
   supportsSafeCast = true;
   supportsNesting = true;
+  cantPartitionWindowFunctionsOnExpressions = true;
 
   quoteTablePath(tablePath: string): string {
     return `\`${tablePath}\``;
@@ -534,7 +535,9 @@ ${indent(sql)}
   }
 
   sqlTypeToMalloyType(sqlType: string): FieldAtomicTypeDef | undefined {
-    return bqToMalloyTypes[sqlType.toUpperCase()];
+    // Remove trailing params
+    const baseSqlType = sqlType.match(/^(\w+)/)?.at(0) ?? sqlType;
+    return bqToMalloyTypes[baseSqlType.toUpperCase()];
   }
 
   castToString(expression: string): string {

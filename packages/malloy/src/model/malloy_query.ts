@@ -2109,7 +2109,7 @@ class QueryQuery extends QueryField {
       if (
         isFunctionCallFragment(expr) &&
         expressionIsAnalytic(expr.overload.returnType.expressionType) &&
-        this.parent.dialect.name === 'standardsql'
+        this.parent.dialect.cantPartitionWindowFunctionsOnExpressions
       ) {
         // force the use of a lateral_join_bag
         resultStruct.root().isComplexQuery = true;
@@ -2250,7 +2250,7 @@ class QueryQuery extends QueryField {
       if (field instanceof QueryTurtle || field instanceof QueryQuery) {
         if (this.firstSegment.type === 'project') {
           throw new Error(
-            `Turtled Queries cannot be used in PROJECT - '${field.fieldDef.name}'`
+            `Nested views cannot be used in select - '${field.fieldDef.name}'`
           );
         }
         const fir = new FieldInstanceResult(
@@ -2269,7 +2269,7 @@ class QueryQuery extends QueryField {
         if (isAggregateField(field)) {
           if (this.firstSegment.type === 'project') {
             throw new Error(
-              `Aggregate Fields cannot be used in PROJECT - '${field.fieldDef.name}'`
+              `Aggregate Fields cannot be used in select - '${field.fieldDef.name}'`
             );
           }
         }
@@ -2831,7 +2831,7 @@ class QueryQuery extends QueryField {
           const exp = fi.getSQL();
           if (isScalarField(fi.f)) {
             if (
-              this.parent.dialect.name === 'standardsql' &&
+              this.parent.dialect.cantPartitionWindowFunctionsOnExpressions &&
               this.rootResult.queryUsesPartitioning
             ) {
               // BigQuery can't partition aggregate function except when the field has no

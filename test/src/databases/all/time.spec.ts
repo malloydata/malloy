@@ -34,7 +34,7 @@ const timeSQL =
 
 // MTOY todo look at this list for timezone problems, I know there are some
 describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
-  const sqlEq = mkSqlEqWith(runtime, {sql: timeSQL});
+  const sqlEq = mkSqlEqWith(runtime, dbName, {sql: timeSQL});
 
   describe('interval measurement', () => {
     test('forwards is positive', async () => {
@@ -458,16 +458,13 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
   });
 
   test('dependant join dialect fragments', async () => {
-    await expect(runtime).queryMatches(
-      `
-        sql: timeData is { connection: "${dbName}" select: """${timeSQL}""" }
-        query: from_sql(timeData) -> {
-          join_one: joined is from_sql(timeData) on t_date = joined.t_date
-          group_by: t_month is joined.t_timestamp.month
-        }
-    `,
-      {t_month: new Date('2021-02-01')}
-    );
+    await expect(`
+      source: timeData is ${dbName}.sql("""${timeSQL}""")
+      run: timeData -> {
+        extend: {join_one: joined is timeData on t_date = joined.t_date}
+        group_by: t_month is joined.t_timestamp.month
+      }
+    `).malloyResultMatches(runtime, {t_month: new Date('2021-02-01')});
   });
 
   describe('timezone set correctly', () => {
@@ -476,41 +473,35 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
         (
           await runQuery(
             runtime,
-            `sql: timeData is { connection: "${dbName}"  select: """SELECT 1"""}
-        source: timezone is from_sql(timeData) + {
-          timezone: 'America/Los_Angeles'
-          dimension: la_time is @2021-02-24 03:05:06
-        }
-        query: timezone -> {
-          group_by: la_time
-        }
-        `
+            `run: ${dbName}.sql("SELECT 1") extend {
+              timezone: 'America/Los_Angeles'
+              dimension: la_time is @2021-02-24 03:05:06
+            } -> {
+              group_by: la_time
+            }`
           )
         ).resultExplore.queryTimezone
       ).toBe('America/Los_Angeles');
     });
 
+    // TODO don't need to run this on all connections, so testIf not needed
     testIf(runtime.supportsNesting)(
-      'timezone set in query inside source',
+      'timezone set in view inside source',
       async () => {
         expect(
           (
             await runQuery(
               runtime,
-              `sql: timeData is { connection: "${dbName}"  select: """SELECT 1"""}
-        source: timezone is from_sql(timeData) + {
-          dimension: default_time is @2021-02-24 03:05:06
-          query: la_query is {
-            timezone: 'America/Los_Angeles'
-            select: la_time is @2021-02-24 03:05:06
-          }
-        }
-
-        query: timezone -> {
-           group_by: default_time
-           nest: la_query
-        }
-        `
+              `run: ${dbName}.sql("SELECT 1") extend {
+                dimension: default_time is @2021-02-24 03:05:06
+                view: la_query is {
+                  timezone: 'America/Los_Angeles'
+                  select: la_time is @2021-02-24 03:05:06
+                }
+              } -> {
+                group_by: default_time
+                nest: la_query
+              }`
             )
           ).resultExplore.structDef
         ).toMatchObject({
@@ -522,6 +513,7 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
       }
     );
 
+    // TODO don't need to run this on all connections, so testIf not needed
     testIf(runtime.supportsNesting)(
       'timezone set in query using source',
       async () => {
@@ -529,20 +521,16 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
           (
             await runQuery(
               runtime,
-              `sql: timeData is { connection: "${dbName}"  select: """SELECT 1"""}
-        source: timezone is from_sql(timeData) + {
-          dimension: default_time is @2021-02-24 03:05:06
-          query: undef_query is {
-            select: undef_time is @2021-02-24 03:05:06
-          }
-        }
-
-        query: timezone -> {
-           timezone: 'America/Los_Angeles'
-           group_by: default_time
-           nest: undef_query
-        }
-        `
+              `run: ${dbName}.sql("SELECT 1") extend {
+                dimension: default_time is @2021-02-24 03:05:06
+                view: undef_query is {
+                  select: undef_time is @2021-02-24 03:05:06
+                }
+              } -> {
+                timezone: 'America/Los_Angeles'
+                group_by: default_time
+                nest: undef_query
+              }`
             )
           ).resultExplore.queryTimezone
         ).toBe('America/Los_Angeles');
@@ -550,32 +538,25 @@ describe.each(runtimes.runtimeList)('%s date and time', (dbName, runtime) => {
     );
 
     testIf(runtime.supportsNesting)('multiple timezones', async () => {
-      expect(
-        (
-          await runQuery(
-            runtime,
-            `sql: timeData is { connection: "${dbName}"  select: """SELECT 1"""}
-        source: timezone is from_sql(timeData) + {
+      const theQuery = await runQuery(
+        runtime,
+        `run: ${dbName}.sql('SELECT 1') extend {
           timezone: 'America/New_York'
           dimension: ny_time is @2021-02-24 03:05:06
-          query: la_query is {
+          view: la_query is {
             timezone: 'America/Los_Angeles'
             select: la_time is @2021-02-24 03:05:06
           }
-          query: mex_query is {
+          view: mex_query is {
             timezone: 'America/Mexico_City'
             select: mex_time is @2021-02-24 03:05:06
           }
-        }
-
-        query: timezone -> {
-           group_by: ny_time
-           nest: la_query, mex_query
-        }
-        `
-          )
-        ).resultExplore.structDef
-      ).toMatchObject({
+        } -> {
+         group_by: ny_time
+         nest: la_query, mex_query
+        }`
+      );
+      expect(theQuery.resultExplore.structDef).toMatchObject({
         queryTimezone: 'America/New_York',
         fields: [
           {},
@@ -630,8 +611,7 @@ describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
     // really tests nothing, but I feel calmer with this here.
     const query = runtime.loadQuery(
       `
-        sql: tzTest is { connection: "${dbName}" select: """SELECT 1 as one""" }
-        query: from_sql(tzTest) -> {
+        run: ${dbName}.sql("SELECT 1") -> {
           group_by: literalTime is @2020-02-20 00:00:00
         }
 `
@@ -645,8 +625,7 @@ describe.each(runtimes.runtimeList)('%s: tz literals', (dbName, runtime) => {
   test('literal with zone name', async () => {
     const query = runtime.loadQuery(
       `
-        sql: tzTest is { connection: "${dbName}" select: """SELECT 1 as one""" }
-        query: from_sql(tzTest) -> {
+        run: ${dbName}.sql("SELECT 1") -> {
           group_by: literalTime is @2020-02-20 00:00:00[America/Mexico_City]
         }
 `
@@ -662,12 +641,11 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
   test('literal timestamps', async () => {
     const query = runtime.loadQuery(
       `
-        sql: tzTest is { connection: "${dbName}" select: """SELECT 1 as one""" }
-        query: from_sql(tzTest) -> {
+        run: ${dbName}.sql("SELECT 1") -> {
           timezone: '${zone}'
           group_by: literalTime is @2020-02-20 00:00:00
         }
-`
+      `
     );
     const result = await query.run();
     const literal = result.data.path(0, 'literalTime').value as Date;
@@ -676,84 +654,49 @@ describe.each(runtimes.runtimeList)('%s: query tz', (dbName, runtime) => {
   });
 
   test('extract', async () => {
-    await expect(runtime).queryMatches(
-      `sql: tzTest is { connection: "${dbName}" select: """SELECT 1 as one""" }
-      query: from_sql(tzTest) -> {
+    await expect(
+      `run: ${dbName}.sql("SELECT 1") -> {
         timezone: '${zone}'
-        declare: utc_midnight is @2020-02-20 00:00:00[UTC]
+        extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
         select:
           mex_midnight is hour(utc_midnight)
           mex_day is day(utc_midnight)
-      }`,
-      {mex_midnight: 18, mex_day: 19}
-    );
+      }`
+    ).malloyResultMatches(runtime, {mex_midnight: 18, mex_day: 19});
   });
 
   test('truncate day', async () => {
     // At midnight in london it the 19th in Mexico, so that truncates to
     // midnight on the 19th
     const mex_19 = LuxonDateTime.fromISO('2020-02-19T00:00:00', {zone});
-    await expect(runtime).queryMatches(
-      `sql: tzTest is { connection: "${dbName}" select: """SELECT 1 as one""" }
-      query: from_sql(tzTest) -> {
+    await expect(
+      `run: ${dbName}.sql("SELECT 1 as x") -> {
         timezone: '${zone}'
-        declare: utc_midnight is @2020-02-20 00:00:00[UTC]
-        select:
-          mex_day is utc_midnight.day
-      }`,
-      {mex_day: mex_19.toJSDate()}
-    );
+        extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
+        select: mex_day is utc_midnight.day
+      }`
+    ).malloyResultMatches(runtime, {mex_day: mex_19.toJSDate()});
   });
 
   test('cast timestamp to date', async () => {
-    // At midnight in london it the 19th in Mexico, so when we cast that
+    // At midnight in london it is the 19th in Mexico, so when we cast that
     // to a date, it should be the 19th.
-    await expect(runtime).queryMatches(
-      `sql: tzTest is { connection: "${dbName}" select: """SELECT 1 as one""" }
-      query: from_sql(tzTest) -> {
+    await expect(
+      `run: ${dbName}.sql("SELECT 1 as x") -> {
         timezone: '${zone}'
-        declare: utc_midnight is @2020-02-20 00:00:00[UTC]
+        extend: { dimension: utc_midnight is @2020-02-20 00:00:00[UTC] }
         select: mex_day is day(utc_midnight::date)
-      }`,
-      {mex_day: 19}
-    );
+      }`
+    ).malloyResultMatches(runtime, {mex_day: 19});
   });
 
   test('cast date to timestamp', async () => {
-    await expect(runtime).queryMatches(
-      `sql: tzTest is { connection: "${dbName}" select: """
-          SELECT DATE '2020-02-20'  AS mex_20
-      """ }
-      query: from_sql(tzTest) -> {
+    await expect(
+      `run: ${dbName}.sql(" SELECT DATE '2020-02-20'  AS mex_20") -> {
         timezone: '${zone}'
         select: mex_ts is mex_20::timestamp
-      }`,
-      {mex_ts: zone_2020.toJSDate()}
-    );
-  });
-
-  test('can use unsupported types', async () => {
-    if (dbName === 'bigquery') {
-      await expect(runtime).queryMatches(
-        `sql: timeData is { connection: "${dbName}" select: """
-            SELECT DATETIME '2020-02-20 00:00:00' as t_datetime
-            """}
-          query: from_sql(timeData) -> {
-            select: mex_220 is t_datetime::timestamp
-          }`,
-        {mex_220: utc_2020.toJSDate()}
-      );
-    } else if (dbName === 'duckdb' || dbName === 'postgres') {
-      await expect(runtime).queryMatches(
-        `sql: timeData is { connection: "duckdb"  select: """
-              SELECT TIMESTAMPTZ '2020-02-20 00:00:00 ${zone}' as t_tstz
-            """}
-          query: from_sql(timeData) -> {
-            select: mex_220 is t_tstz::timestamp
-          }`,
-        {mex_220: zone_2020.toJSDate()}
-      );
-    }
+      }`
+    ).malloyResultMatches(runtime, {mex_ts: zone_2020.toJSDate()});
   });
 });
 

@@ -23,13 +23,14 @@
  */
 
 import {runtimeFor} from './runtimes';
+import './util/db-jest-matchers';
 
 const runtime = runtimeFor('duckdb');
 
 describe('extendModel', () => {
   test('can run query in extend section', async () => {
     const model = runtime.loadModel(`
-      query: q1 is table('malloytest.aircraft')->{
+      query: q1 is duckdb.table('malloytest.aircraft')->{
         where: state = 'CA'
         group_by: state
       }
@@ -39,7 +40,7 @@ describe('extendModel', () => {
     expect(oneState.data.path(0, 'state').value).toBe('CA');
 
     const extended = model.extendModel(`
-      query: q2 is table('malloytest.aircraft')->{
+      query: q2 is duckdb.table('malloytest.aircraft')->{
         where: state = 'NV'
         group_by: state
       }
@@ -50,7 +51,7 @@ describe('extendModel', () => {
   });
   test('can reference query from previous section ', async () => {
     const model = runtime.loadModel(`
-      query: q1 is table('malloytest.aircraft')->{
+      query: q1 is duckdb.table('malloytest.aircraft')->{
         where: state = 'CA'
         group_by: state
       }
@@ -59,19 +60,7 @@ describe('extendModel', () => {
     const oneState = await q1.run();
     expect(oneState.data.path(0, 'state').value).toBe('CA');
 
-    const extended = model.extendModel('query: q2 is ->q1 -> { select: * }');
-    const q2 = extended.loadQueryByName('q2');
-    const twoState = await q2.run();
-    expect(twoState.data.path(0, 'state').value).toBe('CA');
-  });
-  test('can reference sql from previous section ', async () => {
-    const model = runtime.loadModel(`
-      sql: q1 is { connection: "duckdb" select: """SELECT 'CA' as state""" }
-    `);
-
-    const extended = model.extendModel(
-      'query: q2 is from_sql(q1)->{select: *}'
-    );
+    const extended = model.extendModel('query: q2 is q1 -> { select: * }');
     const q2 = extended.loadQueryByName('q2');
     const twoState = await q2.run();
     expect(twoState.data.path(0, 'state').value).toBe('CA');
@@ -82,3 +71,5 @@ describe('extendModel', () => {
     );
   });
 });
+
+afterAll(async () => await runtime.connection.close());

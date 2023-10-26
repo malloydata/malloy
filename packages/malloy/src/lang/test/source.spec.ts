@@ -36,7 +36,7 @@ describe('source:', () => {
   });
   test('shorcut fitlered table m4warning', () => {
     expect(`
-      ##! m4warnings
+      ##! m4warnings=warn
       source: xA is _db_.table('aTable') extend {? astr ~ 'a%' }
     `).toTranslateWithWarnings(
       'Filter shortcut `{? condition }` is deprecated; use `{ where: condition } instead'
@@ -246,7 +246,7 @@ describe('source:', () => {
     });
     test('turtle in source can be called query with m4 warning', () => {
       expect(
-        `##! m4warnings
+        `##! m4warnings=warn
           source: c is a extend {query: q is { group_by: astr } }
         `
       ).toTranslateWithWarnings(
@@ -255,7 +255,7 @@ describe('source:', () => {
     });
     test('turtle in source m4 warning on arrow', () => {
       expect(
-        `##! m4warnings
+        `##! m4warnings=warn
           source: c is a extend {view: q is -> { group_by: astr } }
         `
       ).toTranslateWithWarnings(
@@ -271,7 +271,7 @@ describe('source:', () => {
     });
     test('refined explore-query m4warning', () => {
       expect(`
-        ##! m4warnings
+        ##! m4warnings=warn
         source: abNew is ab extend {
           view: for1 is aturtle + {? ai = 1 }
         }
