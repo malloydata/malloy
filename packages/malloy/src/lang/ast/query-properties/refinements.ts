@@ -29,10 +29,9 @@ import {getFinalStruct, opOutputStruct} from '../struct-utils';
 import {StaticSpace} from '../field-space/static-space';
 import {LegalRefinementStage} from '../types/query-property-interface';
 import {QueryInputSpace} from '../field-space/query-input-space';
-import {QueryFieldStruct} from '../field-space/query-field-struct';
 import {ViewFieldReference} from '../query-items/field-references';
-import {QueryFieldAST} from './nest';
 import {QOPDesc} from './qop-desc';
+import {SpaceField} from '../types/space-field';
 
 export abstract class Refinement extends MalloyElement {
   abstract refine(inputFS: FieldSpace, pipeline: PipeSegment[]): PipeSegment[];
@@ -56,26 +55,23 @@ export class NamedRefinement extends Refinement {
       this.name.log(`no such view \`${this.name.refString}\``);
       return;
     }
-    if (
-      res.found instanceof QueryFieldStruct ||
-      res.found instanceof QueryFieldAST
-    ) {
-      const turtleDef = res.found.fieldDef();
-      if (turtleDef.pipeline.length > 1 || turtleDef.pipeHead !== undefined) {
-        this.name.log(
-          `named refinement \`${this.name.refString}\` must have exactly one stage`
-        );
-        return;
+    if (res.found instanceof SpaceField) {
+      const fieldDef = res.found.fieldDef();
+      if (fieldDef?.type === 'turtle') {
+        if (fieldDef.pipeline.length > 1 || fieldDef.pipeHead !== undefined) {
+          this.name.log(
+            `named refinement \`${this.name.refString}\` must have exactly one stage`
+          );
+          return;
+        }
+        return fieldDef.pipeline[0];
       }
-      return turtleDef.pipeline[0];
-    } else {
-      this.name.log(
-        `named refinement \`${this.name.refString}\` must be a view, found a ${
-          res.found.describeType().dataType
-        }`
-      );
-      return;
     }
+    this.name.log(
+      `named refinement \`${this.name.refString}\` must be a view, found a ${
+        res.found.describeType().dataType
+      }`
+    );
   }
 
   refine(inputFS: FieldSpace, pipeline: PipeSegment[]): PipeSegment[] {
