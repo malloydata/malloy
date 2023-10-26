@@ -374,16 +374,14 @@ export class MalloyToAST
         pcx
       );
       if (pcx.REFINE()) {
-        this.contextError(
+        this.m4advisory(
           pcx,
-          'The experimental "refine" operator is deprecated, use the "+" operator',
-          'warn'
+          'The experimental "refine" operator is deprecated, use the "+" operator'
         );
       } else if (!pcx.refineOperator()) {
-        this.contextError(
+        this.m4advisory(
           pcx,
-          'Implicit query refinement is deprecated, use the `+` operator',
-          'warn'
+          'Implicit query refinement is deprecated, use the `+` operator'
         );
       }
       return properties;
