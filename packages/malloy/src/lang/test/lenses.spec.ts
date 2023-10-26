@@ -114,4 +114,48 @@ describe('lenses', () => {
       'cannot refine index view with project view'
     );
   });
+  test('cannot reference dimension', () => {
+    expect(
+      markSource`
+        source: x is a extend {
+          dimension: n is 1
+          view: d is { group_by: n }
+        }
+        run: x -> d + n
+      `
+    ).translationToFailWith(
+      'named refinement `n` must be a view, found a number'
+    );
+  });
+  test('cannot reference join', () => {
+    expect(
+      markSource`
+        source: x is a extend {
+          join_one: b is a on true
+          dimension: n is 1
+          view: d is { group_by: n }
+        }
+        run: x -> d + b
+      `
+    ).translationToFailWith(
+      'named refinement `b` must be a view, found a struct'
+    );
+  });
+  test('cannot named-refine multi-stage query', () => {
+    expect(
+      markSource`
+        source: x is a extend {
+          join_one: b is a on true
+          dimension: n is 1
+          view: multi is { group_by: n } -> { group_by: n }
+          view: d is { group_by: n }
+        }
+        run: x -> multi + d
+        run: x -> d + multi
+      `
+    ).translationToFailWith(
+      'Named refinements of multi-stage views are not supported',
+      'named refinement `multi` must have exactly one stage'
+    );
+  });
 });
