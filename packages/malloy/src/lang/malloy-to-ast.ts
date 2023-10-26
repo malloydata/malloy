@@ -346,25 +346,39 @@ export class MalloyToAST
 
   protected getQueryRefinements(
     pcx: parse.QueryRefinementContext
-  ): ast.QOPDesc {
-    const properties = this.astAt(
-      this.visitQueryProperties(pcx.queryProperties()),
-      pcx
-    );
-    if (pcx.REFINE()) {
-      this.contextError(
-        pcx,
-        'The experimental "refine" operator is deprecated, use the "+" operator',
-        'warn'
+  ): ast.QOPDesc | ast.ViewFieldReference {
+    const propertiesCx = pcx.queryProperties();
+    if (propertiesCx) {
+      const properties = this.astAt(
+        this.visitQueryProperties(propertiesCx),
+        pcx
       );
-    } else if (!pcx.refineOperator()) {
-      this.contextError(
-        pcx,
-        'Implicit query refinement is deprecated, use the `+` operator',
-        'warn'
+      if (pcx.REFINE()) {
+        this.contextError(
+          pcx,
+          'The experimental "refine" operator is deprecated, use the "+" operator',
+          'warn'
+        );
+      } else if (!pcx.refineOperator()) {
+        this.contextError(
+          pcx,
+          'Implicit query refinement is deprecated, use the `+` operator',
+          'warn'
+        );
+      }
+      return properties;
+    }
+    const turtleNameCx = pcx.turtleName();
+    if (turtleNameCx) {
+      return this.astAt(
+        new ast.ViewFieldReference([this.getFieldName(turtleNameCx)]),
+        turtleNameCx
       );
     }
-    return properties;
+    throw this.internalError(
+      pcx,
+      'Expected either query properties or a view name in refinements'
+    );
   }
 
   protected getSourceExtensions(
@@ -1070,7 +1084,7 @@ export class MalloyToAST
     const rcx = firstCx.queryRefinement();
     if (rcx) {
       const queryDesc = this.getQueryRefinements(rcx);
-      pipe.refineWith(queryDesc);
+      pipe.refineWith([queryDesc]);
     }
     const tail = this.getSegments(pipeCx.pipeElement());
     pipe.addSegments(...tail);
@@ -1155,7 +1169,7 @@ export class MalloyToAST
     if (rcx) {
       const nestRefine = new ast.NestRefinement(name);
       const queryDesc = this.getQueryRefinements(rcx);
-      nestRefine.refineWith(queryDesc);
+      nestRefine.refineWith([queryDesc]);
       nestRefine.extendNote({notes});
       return this.astAt(nestRefine, pcx);
     }

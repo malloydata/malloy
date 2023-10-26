@@ -122,8 +122,12 @@ topLevelQueryDef
 
 refineOperator: PLUS ;
 
+turtleName
+  : id;
+
 queryRefinement
   : (REFINE | refineOperator)? queryProperties
+  | refineOperator turtleName
   ;
 
 sourceExtension

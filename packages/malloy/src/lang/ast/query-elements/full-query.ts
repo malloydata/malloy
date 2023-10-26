@@ -28,6 +28,7 @@ import {ErrorFactory} from '../error-factory';
 import {StaticSpace} from '../field-space/static-space';
 import {QueryComp} from '../types/query-comp';
 import {TurtleHeadedPipe} from '../elements/pipeline-desc';
+import {getFinalStruct} from '../struct-utils';
 
 export class FullQuery extends TurtleHeadedPipe {
   elementType = 'fullQuery';
@@ -84,7 +85,7 @@ export class FullQuery extends TurtleHeadedPipe {
       );
       destQuery.location = location;
       let walkPipe = pipeline;
-      if (this.withRefinement) {
+      if (this.refinements) {
         const refined = this.refinePipeline(pipeFS, {pipeline}).pipeline;
         // TODO there is an issue with losing the name of the turtle
         // which we need to fix, possibly adding a "name:" field to a segment
@@ -97,7 +98,14 @@ export class FullQuery extends TurtleHeadedPipe {
       if (annotation) {
         destQuery.annotation = annotation;
       }
-      const pipeOutput = this.getFinalStruct(structDef, walkPipe);
+      const pipeOutput = getFinalStruct(this, structDef, walkPipe);
+      pipeFS = new StaticSpace(pipeOutput);
+    } else if (this.refinements) {
+      const refined = this.refinePipeline(pipeFS, {
+        pipeline: destQuery.pipeline,
+      }).pipeline;
+      destQuery.pipeline = refined;
+      const pipeOutput = getFinalStruct(this, structDef, refined);
       pipeFS = new StaticSpace(pipeOutput);
     }
     const appended = this.appendOps(pipeFS, destQuery.pipeline);

@@ -49,6 +49,17 @@ export function opOutputStruct(
   return {...ErrorFactory.structDef, dialect: inputStruct.dialect};
 }
 
+export function getFinalStruct(
+  logTo: MalloyElement,
+  walkStruct: StructDef,
+  pipeline: PipeSegment[]
+): StructDef {
+  for (const modelQop of pipeline) {
+    walkStruct = opOutputStruct(logTo, walkStruct, modelQop);
+  }
+  return walkStruct;
+}
+
 export function getStructFieldDef(
   s: StructDef,
   fn: string

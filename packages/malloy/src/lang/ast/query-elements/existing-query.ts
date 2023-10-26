@@ -26,6 +26,7 @@ import {Query} from '../../../model/malloy_types';
 import {PipelineDesc} from '../elements/pipeline-desc';
 import {ErrorFactory} from '../error-factory';
 import {StaticSpace} from '../field-space/static-space';
+import {getFinalStruct} from '../struct-utils';
 import {ModelEntryReference} from '../types/malloy-element';
 import {QueryComp} from '../types/query-comp';
 import {QueryHeadStruct} from './query-head-struct';
@@ -67,7 +68,8 @@ export class ExistingQuery extends PipelineDesc {
       const exploreStruct = queryHead.structDef();
       const exploreFS = new StaticSpace(exploreStruct);
       const sourcePipe = this.refinePipeline(exploreFS, head);
-      const walkStruct = this.getFinalStruct(
+      const walkStruct = getFinalStruct(
+        this,
         exploreStruct,
         sourcePipe.pipeline
       );
