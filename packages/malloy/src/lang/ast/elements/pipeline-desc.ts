@@ -31,15 +31,11 @@ import {
 
 import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
-import {
-  NamedRefinement,
-  QOPDesc,
-  QOPDescRefinement,
-  Refinement,
-} from '../query-properties/qop-desc';
+import {QOPDesc} from '../query-properties/qop-desc';
 import {getStructFieldDef} from '../struct-utils';
 import {QueryInputSpace} from '../field-space/query-input-space';
 import {ViewFieldReference} from '../query-items/field-references';
+import {Refinement} from '../query-properties/refinements';
 
 interface AppendResult {
   opList: PipeSegment[];
@@ -61,11 +57,7 @@ export abstract class PipelineDesc extends MalloyElement {
   }
 
   refineWith(refinements: (QOPDesc | ViewFieldReference)[]): void {
-    const ref = refinements.map(refinement => {
-      return refinement instanceof QOPDesc
-        ? new QOPDescRefinement(refinement)
-        : new NamedRefinement(refinement);
-    });
+    const ref = refinements.map(refinement => Refinement.from(refinement));
     this.refinements = ref;
     this.has({refinements: ref});
   }
