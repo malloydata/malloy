@@ -127,15 +127,7 @@ export abstract class PipelineDesc extends MalloyElement {
     if (!turtle) {
       this.log(`Query '${turtleName}' is not defined in source`);
     } else if (turtle.type !== 'turtle') {
-      if (this.inExperiment('scalar_lenses', true)) {
-        return {
-          pipeline: [{type: 'reduce', fields: [turtle.name]}],
-          location: turtle.location,
-          annotation,
-        };
-      } else {
-        this.log(`'${turtleName}' is not a query`);
-      }
+      this.log(`'${turtleName}' is not a query`);
     } else {
       if (turtle.annotation) {
         annotation = {inherits: turtle.annotation};

@@ -81,14 +81,6 @@ abstract class TurtleDeclRoot
             this.extendNote({inherits: headDef.annotation});
           }
           reportWrongType = false;
-        } else {
-          if (this.inExperiment('scalar_lenses', true)) {
-            const newPipe = this.refinePipeline(fs, {
-              pipeline: [{type: 'reduce', fields: [this.turtleName.refString]}],
-            });
-            modelPipe.pipeline = [...newPipe.pipeline];
-            reportWrongType = false;
-          }
         }
       }
       if (reportWrongType) {

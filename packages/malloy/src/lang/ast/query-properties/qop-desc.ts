@@ -71,16 +71,12 @@ export class NamedRefinement extends Refinement {
       }
       return turtleDef.pipeline[0];
     } else {
-      if (this.name.inExperiment('scalar_lenses', true)) {
-        return {type: 'reduce', fields: [this.name.refString]};
-      } else {
-        this.name.log(
-          `named refinement \`${
-            this.name.refString
-          }\` must be a view, found a ${res.found.describeType().dataType}`
-        );
-        return;
-      }
+      this.name.log(
+        `named refinement \`${this.name.refString}\` must be a view, found a ${
+          res.found.describeType().dataType
+        }`
+      );
+      return;
     }
   }
 
@@ -99,15 +95,24 @@ export class NamedRefinement extends Refinement {
     const from = this.getRefinementSegment(inputFS);
     if (from) {
       if (from.type !== 'index' && to.type !== 'index') {
-        if (!to.orderBy) {
-          if (from.orderBy) {
-            to.orderBy = from.orderBy;
-          } else if (from.by) {
-            to.by = from.by;
+        if (from.orderBy !== undefined || from.by !== undefined) {
+          if (to.orderBy === undefined && to.by === undefined) {
+            if (from.orderBy) {
+              to.orderBy = from.orderBy;
+            } else if (from.by) {
+              to.by = from.by;
+            }
+          } else {
+            this.log('refinement cannot override existing ordering');
           }
         }
-        if (to.limit === undefined && from.limit !== undefined) {
-          to.limit = from.limit;
+
+        if (from.limit !== undefined) {
+          if (to.limit === undefined) {
+            to.limit = from.limit;
+          } else {
+            this.log('refinement cannot override existing limit');
+          }
         }
       }
 
