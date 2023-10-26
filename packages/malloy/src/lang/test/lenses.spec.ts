@@ -90,4 +90,28 @@ describe('lenses', () => {
       `
     ).toTranslate();
   });
+  test('cannot refine with incompatible view types', () => {
+    expect(
+      markSource`
+        source: x is a extend {
+          view: grp is { group_by: n1 is 1 }
+          view: proj is { select: n2 is 2 }
+          view: idx is { index: * }
+        }
+        run: x -> grp + proj
+        run: x -> grp + idx
+        run: x -> proj + idx
+        run: x -> proj + grp
+        run: x -> idx + grp
+        run: x -> idx + proj
+      `
+    ).translationToFailWith(
+      'cannot refine reduce view with project view',
+      'cannot refine reduce view with index view',
+      'cannot refine project view with index view',
+      'cannot refine project view with reduce view',
+      'cannot refine index view with reduce view',
+      'cannot refine index view with project view'
+    );
+  });
 });

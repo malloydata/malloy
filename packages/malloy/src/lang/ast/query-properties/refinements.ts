@@ -56,7 +56,6 @@ export class NamedRefinement extends Refinement {
       this.name.log(`no such view \`${this.name.refString}\``);
       return;
     }
-    // TODO check type of pipeline?
     if (
       res.found instanceof QueryFieldStruct ||
       res.found instanceof QueryFieldAST
@@ -93,6 +92,9 @@ export class NamedRefinement extends Refinement {
     const to = {..._to};
     const from = this.getRefinementSegment(inputFS);
     if (from) {
+      if (from.type !== to.type) {
+        this.log(`cannot refine ${to.type} view with ${from.type} view`);
+      }
       if (from.type !== 'index' && to.type !== 'index') {
         if (from.orderBy !== undefined || from.by !== undefined) {
           if (to.orderBy === undefined && to.by === undefined) {
