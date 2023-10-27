@@ -477,18 +477,18 @@ export class MalloyToAST
   }
 
   visitDefJoinMany(pcx: parse.DefJoinManyContext): ast.Joins {
-    const joinList = this.getJoinList(pcx.joinList());
     const joins: ast.Join[] = [];
-    for (const join of joinList) {
+    for (const joinCx of pcx.joinList().joinDef()) {
+      const join = this.visit(joinCx);
       if (join instanceof ast.Join) {
         joins.push(join);
         if (join instanceof ast.ExpressionJoin) {
           join.joinType = 'many';
           if (join.joinOn === undefined) {
-            join.log('join_many: requires ON expression');
+            this.contextError(pcx, 'join_many: requires ON expression');
           }
         } else if (join instanceof ast.KeyJoin) {
-          join.log('Foreign key join not legal in join_many:');
+          this.contextError(pcx, 'Foreign key join not legal in join_many:');
         }
       }
     }

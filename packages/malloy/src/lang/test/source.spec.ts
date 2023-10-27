@@ -161,6 +161,11 @@ describe('source:', () => {
           'source: nab is a extend { join_many: b on astr = b.astr }'
         ).toTranslate();
       });
+      test('many with', () => {
+        expect(
+          model`source: nab is a extend { ${'join_many: b with astr'} }`
+        ).translationToFailWith('Foreign key join not legal in join_many:');
+      });
       test('many is on', () => {
         expect(
           'source: y is a extend { join_many: x is b on astr = x.astr }'
