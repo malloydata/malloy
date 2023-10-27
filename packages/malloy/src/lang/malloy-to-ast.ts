@@ -490,7 +490,6 @@ export class MalloyToAST
         } else if (join instanceof ast.KeyJoin) {
           this.contextError(pcx, 'Foreign key join not legal in join_many:');
         }
-        joins.push(join);
       }
     }
     const joinMany = new ast.Joins(joins);
