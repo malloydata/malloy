@@ -35,6 +35,7 @@ import {
   StructDef,
   TestableConnection,
   DuckDBDialect,
+  FetchSchemaOptions,
 } from '@malloydata/malloy';
 import {FetchSchemaOptions} from '@malloydata/malloy';
 

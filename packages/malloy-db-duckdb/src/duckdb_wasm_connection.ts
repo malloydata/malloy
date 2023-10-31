@@ -27,6 +27,7 @@ import {
   QueryDataRow,
   RunSQLOptions,
   StructDef,
+  FetchSchemaOptions,
   SQLBlock,
 } from '@malloydata/malloy';
 import {StructRow, Table, Vector} from 'apache-arrow';

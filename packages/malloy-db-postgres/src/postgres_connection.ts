@@ -38,6 +38,7 @@ import {
   QueryData,
   QueryDataRow,
   QueryRunStats,
+  FetchSchemaOptions,
   RunSQLOptions,
   SQLBlock,
   StreamingConnection,
