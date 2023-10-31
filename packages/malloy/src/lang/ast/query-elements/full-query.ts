@@ -79,10 +79,8 @@ export class FullQuery extends TurtleHeadedPipe {
       const lookFor = this.turtleName.getField(pipeFS);
       if (lookFor.error) this.log(lookFor.error);
       const name = this.turtleName.refString;
-      const {pipeline, location, annotation} = this.expandTurtle(
-        name,
-        structDef
-      );
+      const {pipeline, location, annotation, needsExpansionDueToScalar} =
+        this.expandTurtle(name, structDef);
       destQuery.location = location;
       let walkPipe = pipeline;
       if (
@@ -96,6 +94,11 @@ export class FullQuery extends TurtleHeadedPipe {
         // TODO there was mention of promoting filters to the query
         destQuery.pipeline = refined;
         walkPipe = refined;
+      } else if (needsExpansionDueToScalar) {
+        // When there are no refinements but the head is a scalar, we are forced
+        // to expand the pipeHead anyway, because the compiler doesn't support scalar
+        // fields as pipe heads.
+        destQuery.pipeline = pipeline;
       } else {
         destQuery.pipeHead = {name};
       }
@@ -120,6 +123,12 @@ export class FullQuery extends TurtleHeadedPipe {
   }
 
   query(): Query {
-    return this.queryComp(true).query;
+    const q = this.queryComp(true).query;
+    if (q.pipeline[0] && q.pipeline[0].fields.length === 0) {
+      this.log(
+        "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
+      );
+    }
+    return q;
   }
 }

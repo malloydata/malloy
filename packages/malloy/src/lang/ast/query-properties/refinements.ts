@@ -66,6 +66,11 @@ export class NamedRefinement extends Refinement {
         }
         return fieldDef.pipeline[0];
       }
+      if (fieldDef?.type !== 'struct') {
+        if (this.name.inExperiment('scalar_lenses', true)) {
+          return {type: 'reduce', fields: [this.name.refString]};
+        }
+      }
     }
     this.name.log(
       `named refinement \`${this.name.refString}\` must be a view, found a ${

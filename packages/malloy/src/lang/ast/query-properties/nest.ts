@@ -46,6 +46,7 @@ import {
 } from '../../../model';
 import {FieldReference} from '../query-items/field-references';
 import {getFinalStruct} from '../struct-utils';
+import {ColumnSpaceField} from '../field-space/column-space-field';
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
@@ -80,6 +81,15 @@ abstract class TurtleDeclRoot
           if (headDef.annotation) {
             this.extendNote({inherits: headDef.annotation});
           }
+          reportWrongType = false;
+        }
+      } else if (headEnt.found instanceof ColumnSpaceField) {
+        const def = headEnt.found.fieldDef();
+        if (this.inExperiment('scalar_lenses', true) && def.type !== 'struct') {
+          const newPipe = this.refinePipeline(fs, {
+            pipeline: [{type: 'reduce', fields: [this.turtleName.refString]}],
+          });
+          modelPipe.pipeline = [...newPipe.pipeline];
           reportWrongType = false;
         }
       }
@@ -125,6 +135,11 @@ abstract class TurtleDeclRoot
     };
     if (this.note) {
       turtle.annotation = this.note;
+    }
+    if (pipe.pipeline && pipe.pipeline[0].fields.length === 0) {
+      this.log(
+        "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
+      );
     }
     return turtle;
   }

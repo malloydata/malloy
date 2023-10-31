@@ -655,7 +655,7 @@ describe('query:', () => {
       expect(`run: a -> {
         calculate: x is row_number()
       }`).translationToFailWith(
-        "Can't determine query type (group_by/aggregate/nest,project,index)"
+        "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
       );
     });
     // TODO someday make it so we can order by an analytic function

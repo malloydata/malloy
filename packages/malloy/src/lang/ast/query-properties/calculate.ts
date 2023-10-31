@@ -34,5 +34,6 @@ export class Calculate
 {
   elementType = 'calculate';
   forceQueryClass = undefined;
+  needsExplicitQueryClass = true;
   queryRefinementStage = LegalRefinementStage.Single;
 }

@@ -45,12 +45,59 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> d + m
     `).malloyResultMatches(runtime, {n: 1, c: 1});
   });
+  it(`named view plus measure - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        view: d is { group_by: n }
+        measure: c is count()
+      }
+      run: x -> d + c
+    `).malloyResultMatches(runtime, {n: 1, c: 1});
+  });
+  it(`dimension plus named view - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        view: m is { aggregate: c is count() }
+      }
+      run: x -> n + m
+    `).malloyResultMatches(runtime, {n: 1, c: 1});
+  });
+  it(`where headed - ${databaseName}`, async () => {
+    await expect(`
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        view: m is { aggregate: c is count() }
+      }
+      run: x -> { where: true } + m
+    `).malloyResultMatches(runtime, {c: 1});
+  });
   it(`named view plus named view in source - ${databaseName}`, async () => {
     await expect(`
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         view: d is { group_by: n }
         view: m is { aggregate: c is count() }
         view: y is d + m
+      }
+      run: x -> y
+    `).malloyResultMatches(runtime, {n: 1, c: 1});
+  });
+  it(`dimension plus named view in source - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        view: m is { aggregate: c is count() }
+        view: y is n + m
+      }
+      run: x -> y
+    `).malloyResultMatches(runtime, {n: 1, c: 1});
+  });
+  it(`named view plus dimension in source - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        view: m is { aggregate: c is count() }
+        view: y is m + n
       }
       run: x -> y
     `).malloyResultMatches(runtime, {n: 1, c: 1});
@@ -63,11 +110,39 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> { group_by: n } + m
     `).malloyResultMatches(runtime, {n: 1, c: 1});
   });
+  it(`literal view plus measure - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        measure: c is count()
+      }
+      run: x -> { group_by: n } + c
+    `).malloyResultMatches(runtime, {n: 1, c: 1});
+  });
+  it(`dimension plus literal view - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        measure: c is count()
+      }
+      run: x -> c + { group_by: n }
+    `).malloyResultMatches(runtime, {n: 1, c: 1});
+  });
   it(`literal view plus named view in source - ${databaseName}`, async () => {
     await expect(`
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
         view: m is { aggregate: c is count() }
         view: y is { group_by: n } + m
+      }
+      run: x -> y
+    `).malloyResultMatches(runtime, {n: 1, c: 1});
+  });
+  it(`literal view plus measure in source - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        measure: c is count()
+        view: y is { group_by: n } + c
       }
       run: x -> y
     `).malloyResultMatches(runtime, {n: 1, c: 1});
@@ -117,5 +192,43 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         nest: y is d + m
       }
     `).malloyResultMatches(runtime, {y: [{n: 1, c: 1}]});
+  });
+  it(`nested no name with dimension head - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        view: m is { aggregate: c is count() }
+      }
+      run: x -> {
+        nest: n + m
+      }
+    `).malloyResultMatches(runtime, {d: [{n: 1, c: 1}]});
+  });
+  it(`nest dimension only - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        view: m is { aggregate: c is count() }
+      }
+      run: x -> {
+        nest: n
+      }
+    `).malloyResultMatches(runtime, {d: [{n: 1}]});
+  });
+  it(`view dimension only - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        view: m is n
+      }
+      run: x -> m
+    `).malloyResultMatches(runtime, {n: 1});
+  });
+  it(`run dimension only - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n")
+      run: x -> n
+    `).malloyResultMatches(runtime, {n: 1});
   });
 });

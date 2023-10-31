@@ -42,6 +42,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
 
   protected computeType(): QueryClass {
     let mustBe: QueryClass | undefined;
+    let needsExplicitQueryClass = false;
     if (this.refineThis) {
       if (this.refineThis.type === 'reduce') {
         mustBe = QueryClass.Grouping;
@@ -61,13 +62,14 @@ export class QOPDesc extends ListOf<QueryProperty> {
           mustBe = el.forceQueryClass;
         }
       }
+      needsExplicitQueryClass ||= el.needsExplicitQueryClass ?? false;
     }
-    if (mustBe === undefined) {
+    if (mustBe === undefined && needsExplicitQueryClass) {
       this.log(
-        "Can't determine query type (group_by/aggregate/nest,project,index)"
+        "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
       );
     }
-    const guessType = mustBe || QueryClass.Grouping;
+    const guessType = mustBe ?? QueryClass.Grouping;
     this.opClass = guessType;
     return guessType;
   }

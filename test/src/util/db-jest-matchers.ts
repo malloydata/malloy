@@ -118,7 +118,7 @@ expect.extend({
     try {
       result = await query.run();
     } catch (e) {
-      let failMsg = `query.run failed: ${e.message}`;
+      let failMsg = `query.run failed: ${e.message}\n`;
       if (e instanceof MalloyError) {
         failMsg = `Error in query compilation\n${errorLogToString(
           querySrc,
@@ -126,10 +126,11 @@ expect.extend({
         )}`;
       } else {
         try {
-          failMsg += `\nSQL: ${await query.getSQL()}`;
+          failMsg += `SQL: ${await query.getSQL()}\n`;
         } catch (e2) {
           // we could not show the SQL for unknown reasons
         }
+        failMsg += e.stack;
       }
       return {pass: false, message: () => failMsg};
     }
