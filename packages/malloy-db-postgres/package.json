@@ -23,7 +23,6 @@
   },
   "dependencies": {
     "@malloydata/malloy": "^0.0.98",
-    "@malloydata/malloy-interfaces": "^0.0.98",
     "@types/pg": "^8.6.1",
     "pg": "^8.7.1",
     "pg-query-stream": "4.2.3"

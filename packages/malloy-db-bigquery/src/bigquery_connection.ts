@@ -51,7 +51,7 @@ import {
   StructDef,
   toAsyncGenerator,
 } from '@malloydata/malloy';
-import {FetchSchemaOptions} from '@malloydata/malloy-interfaces';
+import {FetchSchemaOptions} from '@malloydata/mallo';
 
 export interface BigQueryManagerOptions {
   credentials?: {
