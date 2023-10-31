@@ -22,8 +22,10 @@
  */
 
 import {
+  PartialSegment,
   PipeSegment,
   ProjectSegment,
+  isPartialSegment,
   isProjectSegment,
 } from '../../../model/malloy_types';
 
@@ -52,9 +54,9 @@ export class ProjectBuilder extends ReduceBuilder {
   }
 
   finalize(fromSeg: PipeSegment | undefined): PipeSegment {
-    let from: ProjectSegment | undefined;
+    let from: ProjectSegment | PartialSegment | undefined;
     if (fromSeg) {
-      if (isProjectSegment(fromSeg)) {
+      if (isProjectSegment(fromSeg) || isPartialSegment(fromSeg)) {
         from = fromSeg;
       } else {
         this.resultFS.log(`Can't refine select with ${fromSeg.type}`);

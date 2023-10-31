@@ -136,10 +136,20 @@ abstract class TurtleDeclRoot
     if (this.note) {
       turtle.annotation = this.note;
     }
-    if (pipe.pipeline && pipe.pipeline[0].fields.length === 0) {
+    if (pipe.pipeline && pipe.pipeline[0].type === 'partial') {
+      // TODO duplicate code here
       this.log(
         "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
       );
+      // We don't want to ever generate actual 'partial' stages, so convert this
+      // into a reduce so the compiler doesn't explode
+      return {
+        ...turtle,
+        pipeline: [
+          {...pipe.pipeline[0], type: 'reduce'},
+          ...pipe.pipeline.slice(1),
+        ],
+      };
     }
     return turtle;
   }

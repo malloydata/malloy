@@ -124,10 +124,16 @@ export class FullQuery extends TurtleHeadedPipe {
 
   query(): Query {
     const q = this.queryComp(true).query;
-    if (q.pipeline[0] && q.pipeline[0].fields.length === 0) {
+    if (q.pipeline[0] && q.pipeline[0].type === 'partial') {
       this.log(
         "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
       );
+      // We don't want to ever generate actual 'partial' stages, so convert this
+      // into a reduce so the compiler doesn't explode
+      return {
+        ...q,
+        pipeline: [{...q.pipeline[0], type: 'reduce'}, ...q.pipeline.slice(1)],
+      };
     }
     return q;
   }

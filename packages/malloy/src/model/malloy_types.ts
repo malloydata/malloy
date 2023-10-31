@@ -777,6 +777,13 @@ export function isReduceSegment(pe: PipeSegment): pe is ReduceSegment {
   return pe.type === 'reduce';
 }
 
+export interface PartialSegment extends QuerySegment {
+  type: 'partial';
+}
+export function isPartialSegment(pe: PipeSegment): pe is PartialSegment {
+  return pe.type === 'partial';
+}
+
 export interface ProjectSegment extends QuerySegment {
   type: 'project';
 }
@@ -826,7 +833,7 @@ export function isIndexSegment(pe: PipeSegment): pe is IndexSegment {
 }
 
 export interface QuerySegment extends Filtered {
-  type: 'reduce' | 'project';
+  type: 'reduce' | 'project' | 'partial';
   fields: QueryFieldDef[];
   extendSource?: FieldDef[];
   limit?: number;

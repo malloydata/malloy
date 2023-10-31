@@ -23,9 +23,11 @@
 
 import {
   FilterExpression,
+  PartialSegment,
   PipeSegment,
   QuerySegment,
   ReduceSegment,
+  isPartialSegment,
   isReduceSegment,
 } from '../../../model/malloy_types';
 
@@ -137,9 +139,9 @@ export class ReduceBuilder implements QueryBuilder {
   }
 
   finalize(fromSeg: PipeSegment | undefined): PipeSegment {
-    let from: ReduceSegment | undefined;
+    let from: ReduceSegment | PartialSegment | undefined;
     if (fromSeg) {
-      if (isReduceSegment(fromSeg)) {
+      if (isReduceSegment(fromSeg) || isPartialSegment(fromSeg)) {
         from = fromSeg;
       } else {
         this.resultFS.log(`Can't refine reduce with ${fromSeg.type}`);
