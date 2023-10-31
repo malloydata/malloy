@@ -638,4 +638,25 @@ describe('query operation annotations', () => {
       expect(note_b?.annotation).matchesAnnotation({inherits: defaultTags});
     }
   });
+  test('annotated references to measures on join preserve expression type', () => {
+    const m = model`
+    source: na is a extend {
+      measure:
+          one_count is sum(pick 1 when ai = 1 else 0)
+          pct_one is one_count / count();
+    }
+
+    run: na extend {
+      join_many: na on ai = na.ai
+    } -> {
+      group_by: ai
+      aggregate:
+        # percent
+        na.pct_one
+    }`;
+    expect(m).toTranslate();
+    const q = m.translator.queryList[0];
+    const fields = q.pipeline[0].fields;
+    expect(fields[1]).toMatchObject({expressionType: 'aggregate'});
+  });
 });
