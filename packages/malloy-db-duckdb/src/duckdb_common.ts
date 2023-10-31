@@ -36,7 +36,7 @@ import {
   TestableConnection,
   DuckDBDialect,
 } from '@malloydata/malloy';
-import {FetchSchemaOptions} from '@malloydata/mallo';
+import {FetchSchemaOptions} from '@malloydata/malloy';
 
 export interface DuckDBQueryOptions {
   rowLimit: number;

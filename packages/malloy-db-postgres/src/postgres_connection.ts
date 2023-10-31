@@ -46,7 +46,7 @@ import {
 import {Client, Pool, PoolClient} from 'pg';
 import QueryStream from 'pg-query-stream';
 import {randomUUID} from 'crypto';
-import {FetchSchemaOptions} from '@malloydata/mallo';
+import {FetchSchemaOptions} from '@malloydata/malloy';
 
 interface PostgresQueryConfiguration {
   rowLimit?: number;
