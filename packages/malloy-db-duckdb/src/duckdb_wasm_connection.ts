@@ -202,10 +202,16 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
   }
 
   protected async runDuckDBQuery(
-    sql: string
+    sql: string,
+    abortSignal?: AbortSignal
   ): Promise<{rows: QueryDataRow[]; totalRows: number}> {
+    const cancel = () => {
+      this.connection?.cancelSent();
+    };
+    abortSignal?.addEventListener('abort', cancel);
     const table = await this.connection?.query(sql);
-    if (table === undefined) {
+    abortSignal?.removeEventListener('abort', cancel);
+    if (!table) {
       throw new Error('Table is undefined.');
     }
     if (table?.numRows !== null) {
@@ -223,7 +229,7 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
 
   public async *runSQLStream(
     sql: string,
-    _options: RunSQLOptions = {}
+    {rowLimit, abortSignal}: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
     if (!this.connection) {
       throw new Error('duckdb-wasm not connected');
@@ -231,16 +237,35 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
     await this.setup();
     const statements = sql.split('-- hack: split on this');
 
+    let done = false;
+    const cancel = () => {
+      done = true;
+      this.connection?.cancelSent();
+    };
+    abortSignal?.addEventListener('abort', cancel);
+
     while (statements.length > 1) {
-      await this.runDuckDBQuery(statements[0]);
+      await this.runDuckDBQuery(statements[0], abortSignal);
       statements.shift();
     }
 
+    let index = 0;
     for await (const chunk of await this.connection.send(statements[0])) {
+      if (done) {
+        break;
+      }
       for (const row of chunk.toArray()) {
+        if (
+          (rowLimit !== undefined && index >= rowLimit) ||
+          abortSignal?.aborted
+        ) {
+          break;
+        }
         yield unwrapRow(row);
+        index++;
       }
     }
+    abortSignal?.removeEventListener('abort', cancel);
   }
 
   private async findTables(

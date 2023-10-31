@@ -23,4 +23,5 @@
 
 export interface RunSQLOptions {
   rowLimit?: number;
+  abortSignal?: AbortSignal;
 }

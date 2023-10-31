@@ -43,7 +43,7 @@ import {
   StreamingConnection,
   StructDef,
 } from '@malloydata/malloy';
-import {Client, Pool, QueryResult} from 'pg';
+import {Client, Pool} from 'pg';
 import QueryStream from 'pg-query-stream';
 import {randomUUID} from 'crypto';
 import {FetchSchemaOptions} from '@malloydata/malloy-interfaces';
@@ -76,7 +76,6 @@ export class PostgresConnection
   implements Connection, StreamingConnection, PersistSQLResults
 {
   private readonly dialect = new PostgresDialect();
-  private isSetup = false;
   private schemaCache = new Map<
     string,
     | {schema: StructDef; error?: undefined; timestamp: number}
@@ -359,16 +358,8 @@ export class PostgresConnection
     return structDef;
   }
 
-  public async executeSQLRaw(query: string): Promise<QueryResult> {
-    const client = await this.getClient();
-    await client.connect();
-    const results = await client.query(query);
-    await client.end();
-    return results;
-  }
-
   public async test(): Promise<void> {
-    await this.executeSQLRaw('SELECT 1');
+    await this.runSQL('SELECT 1');
   }
 
   public async connectionSetup(client: Client): Promise<void> {
@@ -382,28 +373,30 @@ export class PostgresConnection
   ): Promise<MalloyQueryData> {
     const config = await this.readQueryConfig();
 
-    const the_return = await this.runPostgresQuery(
+    return this.runPostgresQuery(
       sql,
       rowLimit ?? config.rowLimit ?? DEFAULT_PAGE_SIZE,
       rowIndex,
       true
     );
-    return the_return;
   }
 
   public async *runSQLStream(
     sqlCommand: string,
-    options?: {rowLimit?: number}
+    {rowLimit, abortSignal}: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
     const query = new QueryStream(sqlCommand);
     const client = await this.getClient();
-    client.connect();
+    await client.connect();
     const rowStream = client.query(query);
     let index = 0;
     for await (const row of rowStream) {
       yield row.row as QueryDataRow;
       index += 1;
-      if (options?.rowLimit !== undefined && index >= options.rowLimit) {
+      if (
+        (rowLimit !== undefined && index >= rowLimit) ||
+        abortSignal?.aborted
+      ) {
         query.destroy();
         break;
       }
@@ -480,7 +473,9 @@ export class PooledPostgresConnection
     deJSON: boolean
   ): Promise<MalloyQueryData> {
     const pool = await this.getPool();
-    let result = await pool.query(sqlCommand);
+    const client = await pool.connect();
+    let result = await client.query(sqlCommand);
+    client.release();
 
     if (Array.isArray(result)) {
       result = result.pop();
@@ -498,7 +493,7 @@ export class PooledPostgresConnection
 
   public async *runSQLStream(
     sqlCommand: string,
-    options?: {rowLimit?: number}
+    {rowLimit, abortSignal}: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
     const query = new QueryStream(sqlCommand);
     let index = 0;
@@ -512,7 +507,10 @@ export class PooledPostgresConnection
     for await (const row of resultStream) {
       yield row.row as QueryDataRow;
       index += 1;
-      if (options?.rowLimit !== undefined && index >= options.rowLimit) {
+      if (
+        (rowLimit !== undefined && index >= rowLimit) ||
+        abortSignal?.aborted
+      ) {
         query.destroy();
         break;
       }

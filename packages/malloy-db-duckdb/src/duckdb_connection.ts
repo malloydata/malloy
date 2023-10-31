@@ -132,7 +132,7 @@ export class DuckDBConnection extends DuckDBCommon {
 
   public async *runSQLStream(
     sql: string,
-    _options: RunSQLOptions = {}
+    {rowLimit, abortSignal}: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
     await this.setup();
     if (!this.connection) {
@@ -146,7 +146,15 @@ export class DuckDBConnection extends DuckDBCommon {
       statements.shift();
     }
 
+    let index = 0;
     for await (const row of this.connection.stream(statements[0])) {
+      if (
+        (rowLimit !== undefined && index >= rowLimit) ||
+        abortSignal?.aborted
+      ) {
+        break;
+      }
+      index++;
       yield row;
     }
   }
