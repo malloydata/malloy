@@ -32,7 +32,6 @@ import {
 } from '@malloydata/malloy';
 import {StructRow, Table, Vector} from 'apache-arrow';
 import {DuckDBCommon, QueryOptionsReader} from './duckdb_common';
-import {FetchSchemaOptions} from '@malloydata/malloy';
 
 const TABLE_MATCH = /FROM\s*('([^']*)'|"([^"]*)")/gi;
 const TABLE_FUNCTION_MATCH = /FROM\s+[a-z0-9_]+\(('([^']*)'|"([^"]*)")/gi;
