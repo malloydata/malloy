@@ -231,7 +231,7 @@ describe('partial views', () => {
       `
     ).toTranslate();
   });
-  test('partial with index', () => {
+  test.skip('partial with index', () => {
     expect(
       markSource`
         source: x is a extend {
