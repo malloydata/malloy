@@ -39,7 +39,7 @@ import {Refinement} from '../query-properties/refinements';
 
 interface AppendResult {
   opList: PipeSegment[];
-  structDef: StructDef;
+  structDef: () => StructDef;
 }
 
 /**
@@ -74,15 +74,15 @@ export abstract class PipelineDesc extends MalloyElement {
     const returnPipe: PipeSegment[] = [...modelPipe];
     const nestedIn =
       modelPipe.length === 0 ? this.nestedInQuerySpace : undefined;
-    let nextFS = pipelineOutput;
+    let nextFS = () => pipelineOutput;
     for (const qop of this.qops) {
-      const next = qop.getOp(nextFS, nestedIn);
+      const next = qop.getOp(nextFS(), nestedIn);
       returnPipe.push(next.segment);
-      nextFS = next.outputSpace();
+      nextFS = () => next.outputSpace();
     }
     return {
       opList: returnPipe,
-      structDef: nextFS.structDef(),
+      structDef: () => nextFS().structDef(),
     };
   }
 

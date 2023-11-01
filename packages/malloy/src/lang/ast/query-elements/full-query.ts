@@ -29,6 +29,7 @@ import {StaticSpace} from '../field-space/static-space';
 import {QueryComp} from '../types/query-comp';
 import {TurtleHeadedPipe} from '../elements/pipeline-desc';
 import {getFinalStruct} from '../struct-utils';
+import {detectAndRemovePartialStages} from '../query-utils';
 
 export class FullQuery extends TurtleHeadedPipe {
   elementType = 'fullQuery';
@@ -118,22 +119,18 @@ export class FullQuery extends TurtleHeadedPipe {
       const pipeOutput = getFinalStruct(this, structDef, refined);
       return {outputStruct: pipeOutput, query: destQuery};
     } else {
-      return {outputStruct: appended.structDef, query: destQuery};
+      return {outputStruct: appended.structDef(), query: destQuery};
     }
   }
 
   query(): Query {
     const q = this.queryComp(true).query;
-    if (q.pipeline[0] && q.pipeline[0].type === 'partial') {
+    const {hasPartials, pipeline} = detectAndRemovePartialStages(q.pipeline);
+    if (hasPartials) {
       this.log(
         "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
       );
-      // We don't want to ever generate actual 'partial' stages, so convert this
-      // into a reduce so the compiler doesn't explode
-      return {
-        ...q,
-        pipeline: [{...q.pipeline[0], type: 'reduce'}, ...q.pipeline.slice(1)],
-      };
+      return {...q, pipeline};
     }
     return q;
   }

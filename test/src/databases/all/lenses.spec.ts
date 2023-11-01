@@ -231,4 +231,30 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> n
     `).malloyResultMatches(runtime, {n: 1});
   });
+  it.skip(`second stage refinement chain - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n")
+      run: x -> n -> n + { aggregate: c is count() }
+    `).malloyResultMatches(runtime, {n: 1, c: 1});
+  });
+  it.skip(`second stage refinement chain in nest - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        view: v is n -> n + { aggregate: c is count() }
+      }
+    `).malloyResultMatches(runtime, {n: 1, c: 1});
+  });
+  it(`copy of view with lens - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        view: metrics is { aggregate: c is count() }
+        view: v is { group_by: n } + metrics
+        view: v2 is v
+      }
+      run: x -> v
+    `).malloyResultMatches(runtime, {n: 1, c: 1});
+  });
 });

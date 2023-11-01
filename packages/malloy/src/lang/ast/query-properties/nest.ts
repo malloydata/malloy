@@ -47,6 +47,7 @@ import {
 import {FieldReference} from '../query-items/field-references';
 import {getFinalStruct} from '../struct-utils';
 import {ColumnSpaceField} from '../field-space/column-space-field';
+import {detectAndRemovePartialStages} from '../query-utils';
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
@@ -136,20 +137,13 @@ abstract class TurtleDeclRoot
     if (this.note) {
       turtle.annotation = this.note;
     }
-    if (pipe.pipeline && pipe.pipeline[0].type === 'partial') {
-      // TODO duplicate code here
+    const {hasPartials, pipeline: cleanedPipeline} =
+      detectAndRemovePartialStages(pipe.pipeline);
+    if (hasPartials) {
       this.log(
         "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
       );
-      // We don't want to ever generate actual 'partial' stages, so convert this
-      // into a reduce so the compiler doesn't explode
-      return {
-        ...turtle,
-        pipeline: [
-          {...pipe.pipeline[0], type: 'reduce'},
-          ...pipe.pipeline.slice(1),
-        ],
-      };
+      return {...turtle, pipeline: cleanedPipeline};
     }
     return turtle;
   }

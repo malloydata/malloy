@@ -1902,9 +1902,7 @@ class QueryQuery extends QueryField {
       case 'index':
         return new QueryQueryIndex(flatTurtleDef, parent, stageWriter);
       case 'partial':
-        // TODO this is a hack... we should never get here
-        return new QueryQueryReduce(flatTurtleDef, parent, stageWriter);
-      // throw new Error('Attempt to make query out of partial stage');
+        throw new Error('Attempt to make query out of partial stage');
     }
   }
 

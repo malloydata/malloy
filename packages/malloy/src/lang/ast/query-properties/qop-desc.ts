@@ -69,6 +69,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
       this.log(
         "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
       );
+      guessType = QueryClass.Project;
     }
     this.opClass = guessType;
     return guessType;

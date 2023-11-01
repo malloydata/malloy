@@ -220,7 +220,7 @@ describe('lenses', () => {
   });
 });
 
-describe('assume reduce for views, check that they have fields later', () => {
+describe('partial views', () => {
   test('allow where-headed refinement chains', () => {
     expect(
       markSource`
@@ -231,7 +231,17 @@ describe('assume reduce for views, check that they have fields later', () => {
       `
     ).toTranslate();
   });
-  test('disallow chains that have no fields', () => {
+  test('partial with index', () => {
+    expect(
+      markSource`
+        source: x is a extend {
+          view: idx is { index: * }
+        }
+        run: x -> { where: true } + idx
+      `
+    ).toTranslate();
+  });
+  test('disallow chains that have no fields in view', () => {
     expect(
       markSource`
         source: x is a extend {
@@ -241,6 +251,26 @@ describe('assume reduce for views, check that they have fields later', () => {
       `
     ).translationToFailWith(
       "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)",
+      "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
+    );
+  });
+  test('disallow chains that have no fields in multi-stage', () => {
+    expect(
+      markSource`
+        source: x is a extend {
+          view: v is { group_by: ai }
+          view: v2 is v -> { where: true }
+          view: v3 is { where: true } -> { group_by: undef }
+        }
+        run: x -> v -> { where: true }
+        run: x -> { where: true } -> { group_by: undef }
+      `
+    ).translationToFailWith(
+      "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)",
+      "'undef' is not defined",
+      "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)",
+      "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)",
+      "'undef' is not defined",
       "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
     );
   });
