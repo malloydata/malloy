@@ -538,13 +538,10 @@ export function maxOfExpressionTypes(types: ExpressionType[]): ExpressionType {
   return types.reduce(maxExpressionType, 'scalar');
 }
 
-interface JustExpression {
-  e: Expr;
-}
-type HasExpression = FieldDef & JustExpression;
+type HasExpression = FieldDef & Expression & {e: Expr};
 /**  Grants access to the expression property of a FieldDef */
 export function hasExpression(f: FieldDef): f is HasExpression {
-  return (f as JustExpression).e !== undefined;
+  return (f as Expression).e !== undefined;
 }
 
 export type TimeFieldType = 'date' | 'timestamp';
