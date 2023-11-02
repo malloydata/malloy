@@ -30,7 +30,7 @@ describe('runtime', () => {
     await runtime
       .loadModel(
         `
-          ##! experimental.compilerTestExperimentParse
+          ##! experimental { compilerTestExperimentParse compilerTestExperimentTranslate }
           ;;[ "x" ]
         `
       )
