@@ -82,14 +82,19 @@ class FlattenedColumnField {
     if (baseRenderer instanceof HTMLTableRenderer) {
       return baseRenderer.childRenderers[this.field.name];
     } else {
-      throw Error('cannot flatten non-tables');
+      throw Error(
+        'Could not render flattened table. `# flatten` only supports nests.'
+      );
     }
   }
 
   getValue(row: DataRecord) {
     const parentRecord = row.cell(this.flattenedField);
     if (parentRecord.isRecord()) return parentRecord.cell(this.field);
-    else throw Error('Cannot find nested record');
+    else
+      throw Error(
+        'Cannot find nested record within flattened field. `# flatten` only supports nests with no group_bys.'
+      );
   }
 }
 
