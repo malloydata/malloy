@@ -62,6 +62,7 @@ const duckDBToMalloyTypes: {[key: string]: FieldAtomicTypeDef} = {
   'USMALLINT': {type: 'number', numberType: 'integer'},
   'HUGEINT': {type: 'number', numberType: 'integer'},
   'DOUBLE': {type: 'number', numberType: 'float'},
+  'FLOAT': {type: 'number', numberType: 'float'},
   'VARCHAR': {type: 'string'},
   'DATE': {type: 'date'},
   'TIMESTAMP': {type: 'timestamp'},

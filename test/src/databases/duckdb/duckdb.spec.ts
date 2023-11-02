@@ -43,7 +43,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
   });
 
   it('accepts all schema numbers', async () => {
-    const allInts = [
+    const allNumeric = [
       'BIGINT',
       'INTEGER',
       'TINYINT',
@@ -53,12 +53,14 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
       'UTINYINT',
       'USMALLINT',
       'HUGEINT',
+      'DOUBLE',
+      'FLOAT',
     ];
-    const allFields = allInts.map(intType => `a${intType.toLowerCase()}`);
+    const allFields = allNumeric.map(intType => `a${intType.toLowerCase()}`);
     const query = `
       run: ${dbName}.sql("""
         SELECT
-        ${allInts
+        ${allNumeric
           .map(intType => `1::${intType} as a${intType.toLowerCase()}`)
           .join(',\n')}
       """) -> {
@@ -70,7 +72,7 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
     `;
     await expect(query).malloyResultMatches(
       runtime,
-      allInts.reduce<Record<string, number>>((building, ent) => {
+      allNumeric.reduce<Record<string, number>>((building, ent) => {
         building[`sum_a${ent.toLowerCase()}`] = 1;
         return building;
       }, {})
