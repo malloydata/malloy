@@ -26,6 +26,7 @@ import {
   DataRecord,
   ExploreField,
   Field,
+  JoinRelationship,
   SortableField,
 } from '@malloydata/malloy';
 import {StyleDefaults} from '../data_styles';
@@ -108,7 +109,7 @@ function shouldFlattenField(field: Field) {
   return (
     field.isExploreField() &&
     tag.has('flatten') &&
-    field.structDef.structSource.type === 'inline'
+    field.joinRelationship === JoinRelationship.OneToOne
   );
 }
 
