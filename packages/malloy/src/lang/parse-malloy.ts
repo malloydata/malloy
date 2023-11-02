@@ -35,6 +35,7 @@ import {
   DocumentRange,
   DocumentReference,
   ImportLocation,
+  ModelAnnotation,
   ModelDef,
   NamedModelObject,
   Query,
@@ -621,7 +622,15 @@ class TranslateStep implements TranslationStep {
     } else {
       this.response = {
         translated: {
-          modelDef: that.modelDef,
+          modelDef: {
+            ...that.modelDef,
+            annotation: that.modelDef.annotation
+              ? {
+                  ...that.modelDef.annotation,
+                  inherits: extendingModel?.annotation,
+                }
+              : extendingModel?.annotation,
+          },
           queryList: that.queryList,
           sqlBlocks: that.sqlBlocks,
         },
@@ -642,6 +651,7 @@ export abstract class MalloyTranslation {
   modelDef: ModelDef;
   imports: ImportLocation[] = [];
   compilerFlags = new Tag();
+  inheritedAnnotations: ModelAnnotation | undefined;
 
   readonly parseStep: ParseStep;
   readonly importsAndTablesStep: ImportsAndTablesStep;
