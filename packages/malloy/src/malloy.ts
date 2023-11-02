@@ -91,6 +91,9 @@ export interface Loggable {
   error: (message?: any, ...optionalParams: any[]) => void;
 }
 
+// bad formatting to test prettier in CI
+const s = "s";
+
 export interface ParseOptions {
   importBaseURL?: URL;
 }

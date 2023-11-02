@@ -13,6 +13,7 @@
   "plugins": ["@malloydata/lint"],
   "rules": {
     "no-console": "warn",
+    "prettier/prettier": ["off", {"quoteProps": "preserve"}],
     "sort-keys": "off",
     "no-duplicate-imports": "error",
     "no-restricted-imports": [
