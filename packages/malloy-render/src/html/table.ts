@@ -21,14 +21,20 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DataColumn, Field, SortableField} from '@malloydata/malloy';
+import {
+  DataColumn,
+  DataRecord,
+  ExploreField,
+  Field,
+  SortableField,
+} from '@malloydata/malloy';
 import {StyleDefaults} from '../data_styles';
 import {getDrillQuery} from '../drill';
 import {ContainerRenderer} from './container';
 import {HTMLNumberRenderer} from './number';
 import {createDrillIcon, formatTitle, yieldTask} from './utils';
 import {isFieldHidden} from '../tags_utils';
-import {Renderer} from '../renderer';
+import {ChildRenderers, Renderer} from '../renderer';
 
 class PivotedField {
   readonly key: string;
@@ -60,7 +66,35 @@ class PivotedColumnField {
   }
 }
 
-type TableField = Field | PivotedColumnField;
+class FlattenedColumnField {
+  constructor(
+    readonly flattenedField: Field,
+    readonly field: Field,
+    readonly name: string
+  ) {}
+
+  isFlattenedColumnField(): this is FlattenedColumnField {
+    return this instanceof FlattenedColumnField;
+  }
+
+  getChildRenderer(childRenderers: ChildRenderers) {
+    const baseRenderer = childRenderers[this.flattenedField.name];
+    if (baseRenderer instanceof HTMLTableRenderer) {
+      return baseRenderer.childRenderers[this.field.name];
+    } else {
+      throw Error('cannot flatten non-tables');
+    }
+  }
+
+  getValue(row: DataRecord) {
+    const parentRecord = row.cell(this.flattenedField);
+    if (parentRecord.isRecord()) return parentRecord.cell(this.field);
+    else throw Error('Cannot find nested record');
+  }
+}
+
+type TableField = Field | PivotedColumnField | FlattenedColumnField;
+type NonDimension = SortableField & {flattenedField?: FlattenedColumnField};
 
 type SpannableCell = HTMLTableCellElement | undefined;
 
@@ -73,6 +107,8 @@ export class HTMLTableRenderer extends ContainerRenderer {
     if (table.isNull()) {
       return this.document.createElement('span');
     }
+
+    this.childRenderers;
 
     if (!table.isArray() && !table.isRecord()) {
       throw new Error('Invalid type for Table Renderer');
@@ -97,9 +133,14 @@ export class HTMLTableRenderer extends ContainerRenderer {
       }
 
       const childRenderer = this.childRenderers[field.name];
+
       const shouldPivot =
         childRenderer instanceof HTMLTableRenderer &&
         childRenderer.tagged.has('pivot');
+
+      const shouldFlatten =
+        childRenderer instanceof HTMLTableRenderer &&
+        childRenderer.tagged.has('flatten');
 
       if (shouldPivot) {
         const userDefinedDimensions = childRenderer.tagged.textArray(
@@ -108,7 +149,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
         );
 
         let dimensions: SortableField[] | undefined = undefined;
-        let nonDimensions: SortableField[] = [];
+        let nonDimensions: NonDimension[] = [];
         const pivotedFields: Map<string, PivotedField> = new Map();
         for (const row of table) {
           const dc = row.cell(field);
@@ -190,12 +231,35 @@ export class HTMLTableRenderer extends ContainerRenderer {
             );
             cells[rowIndex][columnIndex] = childRenderer.createHeaderCell(
               nonDimension.field,
-              shouldTranspose
+              shouldTranspose,
+              {
+                name: nonDimension.flattenedField?.name,
+                childRenderer: nonDimension.flattenedField?.getChildRenderer(
+                  childRenderer.childRenderers
+                ),
+              }
             );
             columnIndex++;
           }
         }
         pivotDepth = Math.max(pivotDepth, dimensions!.length);
+      } else if (shouldFlatten) {
+        const exField = field as ExploreField;
+        const flattenedFields = exField.allFields.map(
+          f => new FlattenedColumnField(exField, f, `${exField.name} ${f.name}`)
+        );
+        for (const flatField of flattenedFields) {
+          cells[rowIndex][columnIndex] = this.createHeaderCell(
+            flatField.field,
+            shouldTranspose,
+            {
+              name: flatField.name,
+              childRenderer: flatField.getChildRenderer(this.childRenderers),
+            }
+          );
+          columnFields.push(flatField);
+          columnIndex++;
+        }
       } else {
         cells[rowIndex][columnIndex] = this.createHeaderCell(
           field,
@@ -313,6 +377,13 @@ export class HTMLTableRenderer extends ContainerRenderer {
           }
           columnIndex++;
           // back
+        } else if (field instanceof FlattenedColumnField) {
+          cells[rowIndex][columnIndex] = await this.createCellAndRender(
+            field.getChildRenderer(this.childRenderers),
+            field.getValue(row),
+            shouldTranspose
+          );
+          columnIndex++;
         } else {
           if (isFieldHidden(field)) {
             continue;
@@ -391,7 +462,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
     userSpecifiedDimensions?: Array<string>
   ): {
     dimensions: SortableField[];
-    nonDimensions: SortableField[];
+    nonDimensions: NonDimension[];
   } {
     if (!table.isArray() && !table.isRecord()) {
       throw new Error(`Could not pivot ${table.field.name}`);
@@ -417,9 +488,30 @@ export class HTMLTableRenderer extends ContainerRenderer {
       dimensions = table.field.dimensions;
     }
 
-    const nonDimensions = table.field.allFieldsWithOrder.filter(
-      f => dimensions!.indexOf(f) < 0
-    );
+    const nonDimensions: NonDimension[] = [];
+    for (const f of table.field.allFieldsWithOrder) {
+      if (dimensions!.indexOf(f) >= 0) continue;
+
+      if (f.field.isExploreField()) {
+        const {tag} = f.field.tagParse();
+        if (tag.has('flatten')) {
+          const nestedFields = f.field.allFieldsWithOrder.map(nf => ({
+            dir: nf.dir,
+            field: nf.field,
+            flattenedField: new FlattenedColumnField(
+              f.field,
+              nf.field,
+              `${f.field.name} ${nf.field.name}`
+            ),
+          }));
+
+          nonDimensions.push(...nestedFields);
+        }
+      } else {
+        nonDimensions.push(f);
+      }
+    }
+
     if (nonDimensions.length === 0) {
       throw new Error(
         `Can not pivot ${table.field.name} since all of its fields are dimensions.`
@@ -448,6 +540,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
       table,
       userSpecifiedDimensions
     );
+
     for (const row of table) {
       const pf = new PivotedField(
         table.field as Field,
@@ -455,17 +548,23 @@ export class HTMLTableRenderer extends ContainerRenderer {
         nonDimensions.length
       );
       const renderedCells: Map<string, HTMLTableCellElement> = new Map();
-      for (const nonDimension of table.field.allFieldsWithOrder.filter(
-        f => dimensions.indexOf(f) < 0
-      )) {
-        const childRenderer = this.childRenderers[nonDimension.field.name];
+      for (const nonDimension of nonDimensions) {
+        let childRenderer;
+        let value;
+        if (nonDimension.flattenedField) {
+          childRenderer = nonDimension.flattenedField.getChildRenderer(
+            this.childRenderers
+          );
+
+          value = nonDimension.flattenedField.getValue(row);
+        } else {
+          childRenderer = this.childRenderers[nonDimension.field.name];
+          value = row.cell(nonDimension.field.name);
+        }
+
         renderedCells.set(
           nonDimension.field.name,
-          await this.createCellAndRender(
-            childRenderer,
-            row.cell(nonDimension.field.name),
-            shouldTranspose
-          )
+          await this.createCellAndRender(childRenderer, value, shouldTranspose)
         );
       }
 
@@ -513,17 +612,24 @@ export class HTMLTableRenderer extends ContainerRenderer {
 
   createHeaderCell(
     field: Field,
-    shouldTranspose: boolean
+    shouldTranspose: boolean,
+    override: {
+      name?: string;
+      childRenderer?: Renderer;
+    } = {}
   ): HTMLTableCellElement {
-    let name = formatTitle(
-      this.options,
-      field,
-      this.options.dataStyles[field.name],
-      field.parentExplore.queryTimezone
-    );
+    let name =
+      override.name ??
+      formatTitle(
+        this.options,
+        field,
+        this.options.dataStyles[field.name],
+        field.parentExplore.queryTimezone
+      );
 
-    const isNumeric =
-      this.childRenderers[field.name] instanceof HTMLNumberRenderer;
+    const childRenderer =
+      override.childRenderer ?? this.childRenderers[field.name];
+    const isNumeric = childRenderer instanceof HTMLNumberRenderer;
     const headerCell = this.document.createElement('th');
     headerCell.style.cssText = `
       padding: 8px;

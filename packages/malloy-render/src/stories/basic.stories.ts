@@ -22,3 +22,10 @@ export const ProductsBar = {
     view: 'category_bar',
   },
 };
+
+export const FlattenNestedMeasures = {
+  args: {
+    source: 'products',
+    view: 'flatten',
+  },
+};
