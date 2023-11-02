@@ -1,5 +1,6 @@
 # Change Log
-_Breaking changes indicated with *_
+
+_Breaking changes indicated with \*_
 
 We will use this space to highlight major and/or breaking changes to Malloy.
 
@@ -7,10 +8,9 @@ We will use this space to highlight major and/or breaking changes to Malloy.
 
 ### VS Code helper view windows relocated
 
-To improve discoverability and reduce extra clicking around in VS Code, we've relocated the Help, Connections, and Schema View Windows into the Explorer View. They will only appear when a `.malloy` file is opened. 
+To improve discoverability and reduce extra clicking around in VS Code, we've relocated the Help, Connections, and Schema View Windows into the Explorer View. They will only appear when a `.malloy` file is opened.
 
 <img width="1365" alt="Screen Shot 2022-08-08 at 11 32 26 AM" src="https://user-images.githubusercontent.com/7178946/183488595-0c88591d-a162-4272-a937-e15261bf50c5.png">
-
 
 ## v0.0.10
 
@@ -43,6 +43,7 @@ sourceName { where: fieldName ? value1|value2 }
 Prior to v0.0.9, lists of things were contained inside `[ ]`. Going forward, the brackets have been removed. Our hope is that this will be one less piece of punctuation to track, and will make it easier to change from a single item in a list to multiple without adding in brackets.
 
 For example, this syntax:
+
 ```malloy
 query: table('malloy-data.faa.airports') -> {
   top: 10
@@ -64,6 +65,7 @@ query: table('malloy-data.faa.airports') -> {
 ```
 
 Is now written:
+
 ```malloy
 query: table('malloy-data.faa.airports') -> {
   top: 10

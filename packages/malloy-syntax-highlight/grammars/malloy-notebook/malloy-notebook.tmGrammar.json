@@ -2,30 +2,30 @@
   "name": "Malloy Notebook",
   "scopeName": "source.malloy-notebook",
   "patterns": [
-    { "include": "#comments" },
-    { "include": "#malloysql-malloy" },
-    { "include": "#malloysql-sql" }
+    {"include": "#comments"},
+    {"include": "#malloysql-malloy"},
+    {"include": "#malloysql-sql"}
   ],
   "repository": {
     "malloysql-malloy": {
       "begin": ">>>malloy",
       "end": "(?=>>>)",
       "beginCaptures": {
-        "0": { "name": "entity.other.attribute.malloy-sql" }
+        "0": {"name": "entity.other.attribute.malloy-sql"}
       },
       "name": "meta.embedded.block.malloysql.malloy",
-      "patterns": [{ "include": "source.malloy" }]
+      "patterns": [{"include": "source.malloy"}]
     },
     "malloysql-sql": {
       "begin": "(>>>sql)(\\s*connection:.*?(?<!\n)(?<!//))?",
       "end": "(?=>>>)",
       "beginCaptures": {
-        "0": { "name": "entity.other.attribute.malloy-sql" },
-        "1": { "name": "entity.other.attribute.malloy-sql" },
-        "3": { "name": "comment.line.double-slash" }
+        "0": {"name": "entity.other.attribute.malloy-sql"},
+        "1": {"name": "entity.other.attribute.malloy-sql"},
+        "3": {"name": "comment.line.double-slash"}
       },
       "name": "meta.embedded.block.malloysql.sql",
-      "patterns": [{ "include": "source.malloy-sql" }]
+      "patterns": [{"include": "source.malloy-sql"}]
     }
   }
 }

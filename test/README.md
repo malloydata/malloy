@@ -30,7 +30,7 @@ Setting up DuckDB:
 
 # Using the custom matcher for running queries
 
-There is now a custom matcher, `malloyResultMatches` for running queries.  The customer matcher makes it easy to write readable tests which need to look at query results, and produces useful output when the test fails to make it easier to develop tests or respond to the output of failing tests.
+There is now a custom matcher, `malloyResultMatches` for running queries. The customer matcher makes it easy to write readable tests which need to look at query results, and produces useful output when the test fails to make it easier to develop tests or respond to the output of failing tests.
 
 ## Check for results in the first row of output
 
@@ -54,9 +54,9 @@ import './util/db-jest-matchers';
 
 This will check the following things.
 
-* There is at least one row of data in the output. So `.malloyQueryMatches(rt, {})` will fail if the query returns no rows
-* There are entries in that row for each key. `{}` matches any row
-* The entries are equal, but it will error if the expected data as a number and the returned data is a string.
+- There is at least one row of data in the output. So `.malloyQueryMatches(rt, {})` will fail if the query returns no rows
+- There are entries in that row for each key. `{}` matches any row
+- The entries are equal, but it will error if the expected data as a number and the returned data is a string.
 
 ## Accessing nested results
 
@@ -79,11 +79,11 @@ example also shows passing a model instead of a runtime to the matcher.
   });
 ```
 
-  > [!WARNING]
-  > There is currently a ... feature ... where if the source code of a test
-  > contains the characters `nest:` and the runtime connection does not support nesting,
-  > the test passes without actually doing anything. There will better handling of
-  > this problem in the future, but if your test is mysteriously passing, this is why.
+> [!WARNING]
+> There is currently a ... feature ... where if the source code of a test
+> contains the characters `nest:` and the runtime connection does not support nesting,
+> the test passes without actually doing anything. There will better handling of
+> this problem in the future, but if your test is mysteriously passing, this is why.
 
 ## Queries returning more than one row of data
 
@@ -102,8 +102,8 @@ An array of match rows may can also be used, if the test needs to verify more th
 
 This will pass if ..
 
-* There are exactly two rows of output. If there are not exactly two the matcher will fail. If the query makes more than two rows, you will need to add a `limit: 2` to allow the matcher to pass.
-* Each row is matches the matching criteria, again `{}` means "pass if there is a row"
+- There are exactly two rows of output. If there are not exactly two the matcher will fail. If the query makes more than two rows, you will need to add a `limit: 2` to allow the matcher to pass.
+- Each row is matches the matching criteria, again `{}` means "pass if there is a row"
 
 ## Reading failure output
 
@@ -235,7 +235,9 @@ The old template for a test looked something like
 ```
 
 The actual matcher for a result is limited to an equality test, in the old pattern you would have written something using an existing matcher for a data value
+
 ```TypeScript
     expect(result.data.patch(0, 'numThings').value).toBeGreaterThan(7);
 ```
+
 and if this is desirable, more work on the custom matcher would be needed to allow expressions like this to be written.

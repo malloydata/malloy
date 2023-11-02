@@ -37,38 +37,41 @@
     </style>
   </head>
   <body>
-    <div class="left"><textarea id="input">
+    <div class="left">
+      <textarea id="input">
 source: flights is duckdb.table('flights.parquet') extend {
   dimension: foo is 1
 }
-    </textarea></div>
+    </textarea
+      >
+    </div>
     <div class="right"><div id="output"></div></div>
     <script src="https://unpkg.com/shiki"></script>
     <script>
-      fetch("./malloy.tmGrammar.json").then(response => {
+      fetch('./malloy.tmGrammar.json').then(response => {
         const malloyGrammar = response.json();
-        const update = (el) => {
+        const update = el => {
           shiki
-          .getHighlighter({
-            theme: 'light-plus',
-            langs: [
-              "sql",
-              "json",
-              {
-                id: "malloy",
-                scopeName: "source.malloy",
-                embeddedLangs: ["sql"],
-                grammar: malloyGrammar,
-              },
-            ],
-          })
-          .then(highlighter => {
-            const code = highlighter.codeToHtml(el.value, { lang: 'malloy' })
-            document.getElementById('output').innerHTML = code
-          })
-        }
-        const inp = document.getElementById("input");
-        inp.addEventListener('input', (ev) => update(ev.target));
+            .getHighlighter({
+              theme: 'light-plus',
+              langs: [
+                'sql',
+                'json',
+                {
+                  id: 'malloy',
+                  scopeName: 'source.malloy',
+                  embeddedLangs: ['sql'],
+                  grammar: malloyGrammar,
+                },
+              ],
+            })
+            .then(highlighter => {
+              const code = highlighter.codeToHtml(el.value, {lang: 'malloy'});
+              document.getElementById('output').innerHTML = code;
+            });
+        };
+        const inp = document.getElementById('input');
+        inp.addEventListener('input', ev => update(ev.target));
         update(inp);
       });
     </script>

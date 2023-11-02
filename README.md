@@ -1,4 +1,5 @@
 # Malloy
+
 Malloy is an experimental language for describing data relationships and transformations. It is both a semantic modeling language and a querying language that runs queries against a relational database. Malloy currently supports BigQuery and Postgres, as well as querying Parquet and CSV files via DuckDB.
 
 ### [Click here](https://github.dev/malloydata/try-malloy/airports.malloy) to try Malloy in your browser!
@@ -9,16 +10,16 @@ Malloy is an experimental language for describing data relationships and transfo
 
 The easiest way to try Malloy is with our VS Code Extension, which provides a place to create Malloy models, execute queries, get help, and more. VS Code is a text editor and IDE (integrated development environment) that runs on your desktop or in your browser. A few ways to install the extension:
 
-* [I already have VS Code](https://malloydata.github.io/documentation/setup/extension.html#using-the-malloy-extension-on-your-desktop)
-* [I use BigQuery and Google Cloud](https://malloydata.github.io/documentation/setup/extension.html#using-the-malloy-extension-on-google-cloud-shell-editor).
-* [I have a Github account and want to try Malloy on a `.csv` or `.parquet` file in a repository](https://malloydata.github.io/documentation/setup/extension.html#using-the-malloy-extension-on-github-dev).
+- [I already have VS Code](https://malloydata.github.io/documentation/setup/extension.html#using-the-malloy-extension-on-your-desktop)
+- [I use BigQuery and Google Cloud](https://malloydata.github.io/documentation/setup/extension.html#using-the-malloy-extension-on-google-cloud-shell-editor).
+- [I have a Github account and want to try Malloy on a `.csv` or `.parquet` file in a repository](https://malloydata.github.io/documentation/setup/extension.html#using-the-malloy-extension-on-github-dev).
 
 ![show_run](https://user-images.githubusercontent.com/1093458/182458787-ca228186-c954-4a07-b298-f92dbf91e48d.gif)
 
 To get to know the Malloy language, follow [our Quickstart](https://malloydata.github.io/documentation/user_guides/basic.html).
 
 Note: The Malloy VSCode Extension tracks a small amount of anonymous usage data. You can opt out in the extension settings.
- [Learn more](https://policies.google.com/technologies/cookies).
+[Learn more](https://policies.google.com/technologies/cookies).
 
 ## Join the Community
 
@@ -44,6 +45,7 @@ To report security issues please see our [security policy](https://github.com/ma
 Malloy is not an officially supported Google product.
 
 ## Syntax Example
+
 Here is a simple example of a Malloy query:
 
 ```malloy
@@ -57,6 +59,7 @@ run: bigquery.table('malloy-data.faa.flights') -> {
 ```
 
 In SQL this would be expressed:
+
 ```sql
 SELECT
    carrier,

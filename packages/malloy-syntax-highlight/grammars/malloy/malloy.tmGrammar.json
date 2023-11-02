@@ -1,31 +1,31 @@
 {
   "scopeName": "source.malloy",
-  "patterns": [{ "include": "#malloy-language" }],
+  "patterns": [{"include": "#malloy-language"}],
   "repository": {
     "malloy-language": {
       "patterns": [
-        { "include": "#sql-string" },
-        { "include": "#comments" },
-        { "include": "#tags" },
-        { "include": "#strings" },
-        { "include": "#numbers" },
-        { "include": "#keywords" },
-        { "include": "#properties" },
-        { "include": "#functions" },
-        { "include": "#datetimes" },
-        { "include": "#identifiers-quoted" },
-        { "include": "#types" },
-        { "include": "#constants" },
-        { "include": "#timeframes" },
-        { "include": "#identifiers-unquoted" }
+        {"include": "#sql-string"},
+        {"include": "#comments"},
+        {"include": "#tags"},
+        {"include": "#strings"},
+        {"include": "#numbers"},
+        {"include": "#keywords"},
+        {"include": "#properties"},
+        {"include": "#functions"},
+        {"include": "#datetimes"},
+        {"include": "#identifiers-quoted"},
+        {"include": "#types"},
+        {"include": "#constants"},
+        {"include": "#timeframes"},
+        {"include": "#identifiers-unquoted"}
       ]
     },
     "malloy-matched": {
       "begin": "{",
       "end": "}",
       "patterns": [
-        { "include": "#malloy-matched" },
-        { "include": "#malloy-language" }
+        {"include": "#malloy-matched"},
+        {"include": "#malloy-language"}
       ]
     },
     "malloy-in-sql": {
@@ -33,8 +33,8 @@
       "name": "source.malloy-in-sql",
       "end": "}%?",
       "patterns": [
-        { "include": "#malloy-matched" },
-        { "include": "#malloy-language" }
+        {"include": "#malloy-matched"},
+        {"include": "#malloy-language"}
       ]
     },
     "sql-string": {
@@ -43,34 +43,28 @@
           "begin": "\\b(select)(\\s*:\\s*)(\"\"\")",
           "end": "\"\"\"",
           "beginCaptures": {
-            "1": { "name": "keyword.control.select" },
-            "3": { "name": "punctuation.sql-block.open" }
+            "1": {"name": "keyword.control.select"},
+            "3": {"name": "punctuation.sql-block.open"}
           },
           "endCaptures": {
-            "0": { "name": "punctuation.sql-block.close" }
+            "0": {"name": "punctuation.sql-block.close"}
           },
           "name": "source.sql",
-          "patterns": [
-            { "include": "#malloy-in-sql" },
-            { "include": "source.sql" }
-          ]
+          "patterns": [{"include": "#malloy-in-sql"}, {"include": "source.sql"}]
         },
         {
           "begin": "(\\b[A-Za-z_][A-Za-z_0-9]*)(\\s*\\.\\s*)(sql)(\\s*\\(\\s*)(\"\"\")",
           "end": "\"\"\"",
           "beginCaptures": {
-            "1": { "name": "variable.other" },
-            "3": { "name": "keyword.control.sql" },
-            "5": { "name": "punctuation.sql-block.open" }
+            "1": {"name": "variable.other"},
+            "3": {"name": "keyword.control.sql"},
+            "5": {"name": "punctuation.sql-block.open"}
           },
           "endCaptures": {
-            "0": { "name": "punctuation.sql-block.close" }
+            "0": {"name": "punctuation.sql-block.close"}
           },
           "name": "source.sql",
-          "patterns": [
-            { "include": "#malloy-in-sql" },
-            { "include": "source.sql" }
-          ]
+          "patterns": [{"include": "#malloy-in-sql"}, {"include": "source.sql"}]
         }
       ]
     },
@@ -79,27 +73,27 @@
         {
           "match": "(?i)\\b(count)(\\s*\\()(distinct)",
           "captures": {
-            "1": { "name": "entity.name.function" },
-            "3": { "name": "entity.name.function.modifier" }
+            "1": {"name": "entity.name.function"},
+            "3": {"name": "entity.name.function.modifier"}
           }
         },
         {
           "match": "(?i)\\b(AVG|COUNT|FIRST|FORMAT|LAST|LCASE|LEN|MAX|MID|MIN|MOD|NOW|ROUND|SUM|UCASE|TABLE|FROM|FROM_SQL|UNGROUPED)(\\s*\\()",
           "captures": {
-            "1": { "name": "entity.name.function" }
+            "1": {"name": "entity.name.function"}
           }
         },
         {
           "match": "(?i)\\b([a-zA-Z_][a-zA-Z_0-9]*)(\\s*\\()",
           "captures": {
-            "1": { "name": "entity.name.function" }
+            "1": {"name": "entity.name.function"}
           }
         },
         {
           "match": "(?i)\\b([a-zA-Z_][a-zA-Z_0-9]*)(!)(timestamp|number|string|boolean|date)?(\\s*\\()",
           "captures": {
-            "1": { "name": "entity.name.function" },
-            "3": { "name": "entity.name.type" }
+            "1": {"name": "entity.name.function"},
+            "3": {"name": "entity.name.type"}
           }
         }
       ]
@@ -150,10 +144,10 @@
           "begin": "/\\*",
           "end": "\\*/",
           "beginCaptures": {
-            "0": { "name": "punctuation.definition.comment.begin" }
+            "0": {"name": "punctuation.definition.comment.begin"}
           },
           "endCaptures": {
-            "0": { "name": "punctuation.definition.comment.end" }
+            "0": {"name": "punctuation.definition.comment.end"}
           },
           "name": "comment.block"
         },
@@ -161,7 +155,7 @@
           "begin": "//",
           "end": "\\n",
           "beginCaptures": {
-            "0": { "name": "punctuation.definition.comment" }
+            "0": {"name": "punctuation.definition.comment"}
           },
           "name": "comment.line.double-slash"
         },
@@ -169,7 +163,7 @@
           "begin": "--",
           "end": "\\n",
           "beginCaptures": {
-            "0": { "name": "punctuation.definition.comment" }
+            "0": {"name": "punctuation.definition.comment"}
           },
           "name": "comment.line.double-hyphen"
         }
@@ -181,14 +175,14 @@
           "match": "##\\n",
           "name": "string.quoted",
           "captures": {
-            "0": { "name": "string.quoted" }
+            "0": {"name": "string.quoted"}
           }
         },
         {
           "begin": "#\"",
           "end": "\\n",
           "beginCaptures": {
-            "0": { "name": "punctuation.definition.comment" }
+            "0": {"name": "punctuation.definition.comment"}
           },
           "name": "comment.line.double-slash"
         },
@@ -196,32 +190,32 @@
           "match": "#\\n",
           "name": "string.quoted",
           "captures": {
-            "0": { "name": "string.quoted" }
+            "0": {"name": "string.quoted"}
           }
         },
         {
           "begin": "#\\s",
           "end": "\\n",
           "beginCaptures": {
-            "0": { "name": "support.type.property-name.json" }
+            "0": {"name": "support.type.property-name.json"}
           },
           "name": "comment.line.double-slash",
-          "patterns": [{ "include": "#tag-values" }]
+          "patterns": [{"include": "#tag-values"}]
         },
         {
           "begin": "##\\s",
           "end": "\\n",
           "beginCaptures": {
-            "0": { "name": "support.type.property-name.json" }
+            "0": {"name": "support.type.property-name.json"}
           },
           "name": "comment.line.double-slash",
-          "patterns": [{ "include": "#tag-values" }]
+          "patterns": [{"include": "#tag-values"}]
         },
         {
           "begin": "#",
           "end": "\\n",
           "beginCaptures": {
-            "0": { "name": "string.quoted" }
+            "0": {"name": "string.quoted"}
           },
           "name": "string.quoted"
         }
@@ -231,10 +225,10 @@
           "name": "support.type.property-name.json",
           "match": "(-)?((?:[^\\s=#]+)|(?:\"[^#]+\"))(?:\\s*(=)\\s*((?:[^\\s=#]+)|(?:\"[^#]+\")))?",
           "captures": {
-            "1": { "name": "keyword.control.negate" },
-            "2": { "name": "support.type.property-name.json" },
-            "3": { "name": "keyword.operator.comparison.ts" },
-            "4": { "name": "string.quoted" }
+            "1": {"name": "keyword.control.negate"},
+            "2": {"name": "support.type.property-name.json"},
+            "3": {"name": "keyword.operator.comparison.ts"},
+            "4": {"name": "string.quoted"}
           }
         }
       }
@@ -245,34 +239,34 @@
           "begin": "'",
           "end": "'",
           "beginCaptures": {
-            "0": { "name": "punctuation.definition.string.begin" }
+            "0": {"name": "punctuation.definition.string.begin"}
           },
           "endCaptures": {
-            "0": { "name": "punctuation.definition.string.end" }
+            "0": {"name": "punctuation.definition.string.end"}
           },
           "name": "string.quoted.single",
-          "patterns": [{ "include": "#escapes" }]
+          "patterns": [{"include": "#escapes"}]
         },
         {
           "begin": "\"",
           "end": "\"",
           "beginCaptures": {
-            "0": { "name": "punctuation.definition.string.begin" }
+            "0": {"name": "punctuation.definition.string.begin"}
           },
           "endCaptures": {
-            "0": { "name": "punctuation.definition.string.end" }
+            "0": {"name": "punctuation.definition.string.end"}
           },
           "name": "string.quoted.double",
-          "patterns": [{ "include": "#escapes" }]
+          "patterns": [{"include": "#escapes"}]
         },
         {
           "begin": "\"\"\"",
           "end": "\"\"\"",
           "beginCaptures": {
-            "0": { "name": "punctuation.definition.string.begin" }
+            "0": {"name": "punctuation.definition.string.begin"}
           },
           "endCaptures": {
-            "0": { "name": "punctuation.definition.string.end" }
+            "0": {"name": "punctuation.definition.string.end"}
           },
           "name": "string.quoted.triple"
         },
@@ -280,7 +274,7 @@
           "begin": "(?i)[r|/]'",
           "end": "'",
           "name": "string.regexp",
-          "patterns": [{ "include": "#regex-escapes" }]
+          "patterns": [{"include": "#regex-escapes"}]
         }
       ],
       "repository": {
@@ -288,14 +282,14 @@
           "name": "constant.character.escape",
           "match": "\\\\(u[A-Fa-f0-9]{4}|.)",
           "captures": {
-            "0": { "name": "constant.character.escape" }
+            "0": {"name": "constant.character.escape"}
           }
         },
         "regex-escapes": {
           "name": "constant.character.escape",
           "match": "\\\\.",
           "captures": {
-            "0": { "name": "constant.character.escape" }
+            "0": {"name": "constant.character.escape"}
           }
         }
       }

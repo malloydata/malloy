@@ -1,8 +1,8 @@
 steps:
   - id: git-ssh-key
-    name: "gcr.io/cloud-builders/gcloud"
-    secretEnv: ["GITHUB_SSH_KEY"]
-    entrypoint: "bash"
+    name: 'gcr.io/cloud-builders/gcloud'
+    secretEnv: ['GITHUB_SSH_KEY']
+    entrypoint: 'bash'
     args:
       - -c
       - |
@@ -10,42 +10,42 @@ steps:
         chmod 400 /root/.ssh/id_rsa
         cp cloudbuild/known_hosts.github /root/.ssh/known_hosts
     volumes:
-      - name: "ssh"
+      - name: 'ssh'
         path: /root/.ssh
   - id: nix-quiet-install
     name: gcr.io/cloud-builders/docker
     args:
       - pull
-      - "-q"
+      - '-q'
       - nixos/nix:2.15.2
   - id: proxy-install
-    name: "nixos/nix:2.15.2"
+    name: 'nixos/nix:2.15.2'
     entrypoint: sh
     args:
       - -c
-      - "wget -q -O /workspace/cloud_sql_proxy https://dl.google.com/cloudsql/cloud_sql_proxy.linux.386 && chmod +x /workspace/cloud_sql_proxy"
-    waitFor: ["nix-quiet-install"]
+      - 'wget -q -O /workspace/cloud_sql_proxy https://dl.google.com/cloudsql/cloud_sql_proxy.linux.386 && chmod +x /workspace/cloud_sql_proxy'
+    waitFor: ['nix-quiet-install']
   - id: deploy-npm
-    name: "nixos/nix:2.15.2"
+    name: 'nixos/nix:2.15.2'
     entrypoint: sh
     args:
       - -c
-      - "(/workspace/cloud_sql_proxy -enable_iam_login -instances=malloy-303216:us-central1:pg-test=tcp:5432 -log_debug_stdout > /dev/null & sleep 2) && (./cloudbuild/deploy/$TRIGGER_NAME.sh)"
-    timeout: "1800s"
-    secretEnv: ["NPM_TOKEN", "GITHUB_SSH_KEY"]
+      - '(/workspace/cloud_sql_proxy -enable_iam_login -instances=malloy-303216:us-central1:pg-test=tcp:5432 -log_debug_stdout > /dev/null & sleep 2) && (./cloudbuild/deploy/$TRIGGER_NAME.sh)'
+    timeout: '1800s'
+    secretEnv: ['NPM_TOKEN', 'GITHUB_SSH_KEY']
     env:
-      - "BRANCH_NAME=$BRANCH_NAME"
+      - 'BRANCH_NAME=$BRANCH_NAME'
     volumes:
-      - name: "ssh"
+      - name: 'ssh'
         path: /root/.ssh
-    waitFor: ["git-ssh-key", "proxy-install"]
+    waitFor: ['git-ssh-key', 'proxy-install']
 options:
   logging: CLOUD_LOGGING_ONLY
-  machineType: "E2_HIGHCPU_8"
-timeout: "1800s"
+  machineType: 'E2_HIGHCPU_8'
+timeout: '1800s'
 availableSecrets:
   secretManager:
     - versionName: projects/malloy-303216/secrets/npm-publish/versions/latest
-      env: "NPM_TOKEN"
+      env: 'NPM_TOKEN'
     - versionName: projects/malloy-303216/secrets/github-ssh-key/versions/latest
-      env: "GITHUB_SSH_KEY"
+      env: 'GITHUB_SSH_KEY'

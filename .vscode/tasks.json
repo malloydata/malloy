@@ -10,7 +10,7 @@
       "problemMatcher": ["$tsc-watch"],
       "group": "build",
       "label": "tsc-compile-watch",
-      "runOptions": { "runOn": "folderOpen" },
+      "runOptions": {"runOn": "folderOpen"},
       "presentation": {
         "reveal": "silent",
         "revealProblems": "onProblem",

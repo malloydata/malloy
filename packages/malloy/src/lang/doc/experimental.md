@@ -24,5 +24,5 @@ If the experiment involves different code generation, you can generate an AST at
 
 Add yours to the list, make sure no one else is using yours.
 
-* `compilerTestExperimentParse`
-* `compilerTestExperimentTranslate`
+- `compilerTestExperimentParse`
+- `compilerTestExperimentTranslate`

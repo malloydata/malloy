@@ -4,23 +4,22 @@ Landmarks on the road to a "fully parameterized Malloy" would be.
 
 ## Phase 0
 
-1) Exploreable items can require filter definition to limit the size of a query
-2) Explorable itmes can have an optional filter definition to limit the size of a query
+1. Exploreable items can require filter definition to limit the size of a query
+2. Explorable itmes can have an optional filter definition to limit the size of a query
 
 ## No assigned phase
 
-* Measures with parameters
-* Turtles with parameters
-* Normal constant parameters at least at the outermost (model) scope, but possibly also at the explorable, measure, and turtle scopes.
+- Measures with parameters
+- Turtles with parameters
+- Normal constant parameters at least at the outermost (model) scope, but possibly also at the explorable, measure, and turtle scopes.
 
 ### Possibly on the plan
 
-* Because these are a LOT like functions, maybe there is a ways to write parameterized expressions at some level other than the field expressions, maybe even up at the level where we declare explorable items, then very likely these "functions" or paramterized expressions are declared and instantiated with the same gestures all of the above items use.
-
+- Because these are a LOT like functions, maybe there is a ways to write parameterized expressions at some level other than the field expressions, maybe even up at the level where we declare explorable items, then very likely these "functions" or paramterized expressions are declared and instantiated with the same gestures all of the above items use.
 
 ## Phase 0+
 
-It is not much additional work to move constant parameters into the phase zero, inside and explore, and so even though  constant parameters are not in the MVP for parameters, they are part of the MVP design
+It is not much additional work to move constant parameters into the phase zero, inside and explore, and so even though constant parameters are not in the MVP for parameters, they are part of the MVP design
 
 # Syntax
 
@@ -118,7 +117,6 @@ Here's an attempt with that in mind.
 
 This would need parentheses around declarations in measures, though not things that have field lists. , with `is` in invocations to seperate that from the definition, since that is an "is" also.
 
-
 ### has block, kind of like paramter lists ...
 
     define thingWithParams
@@ -149,7 +147,6 @@ Also the "has" followed by a list really makes it feel like each element in the 
 
       is ('project.schema.tableName'
         ...
-
 
 ### Rejected for sure ...
 
@@ -270,10 +267,9 @@ I guess we could require, for someone who wants params and fields ...
 But that is never going to feel as natural as "all parameter blocks have
 the same grouping syntax around them"
 
-
 ## Parentheses around parameter lists ...
 
-If you want this to look like a function call, parentheses can placed around the parameters, this could be optional syntax.  Commas between parameters will probably need to at least be optional because these look more like lists rather than commands and people will try and use commas.
+If you want this to look like a function call, parentheses can placed around the parameters, this could be optional syntax. Commas between parameters will probably need to at least be optional because these look more like lists rather than commands and people will try and use commas.
 
 ### Is in define statements with parentheses
 
@@ -300,7 +296,6 @@ This makes me thing there would be a different word, maybe this is where `requir
         uses optValue timestamp or @2003
     )
 
-
 ### Invocation with parentheses
 
 Invocation with `is` ... seems to scan pretty naturally
@@ -319,7 +314,7 @@ A reference to a value parameter will produce an expression fragment which looks
         path: string;
     };
 
- For condition valued parameters we need to be able to compile the condition to an expression, and then somehow apply the runtime value to that condition.
+For condition valued parameters we need to be able to compile the condition to an expression, and then somehow apply the runtime value to that condition.
 
     define xflights
         has dep_filter timestamp condition @2003
@@ -342,6 +337,7 @@ Needs to make a structdef, and the default value of that filter needs to expand 
  }
 }
 ```
+
 But then what does a compiled predicate expression look like, for for a default value, or for a query time provided value?
 Well, that is essentially a function which takes an argument and substitutes the passed in as the value of the argument.
 
@@ -476,10 +472,9 @@ And when I am writing the structdef for the join to rename the join I can fill i
 
 The question is where are all the places that a named thing can be referenced
 
-1) In a join
-2) In a query head
-3) In a define statement
-
+1. In a join
+2. In a query head
+3. In a define statement
 
 The bigger question is, for other things which can have parameters ( turtles and measures ) where do the parameter blocks sit for references and for declaration. In this case every reference is kind of a delcaration so copying the declaraiton into the reference isn't a problem, but maybe that isn't the case for the other parameterized things ?
 
@@ -489,7 +484,7 @@ And mahybe we don't care until then?
 
 This morning the think that I need before I can start actually generating code for parameters is what constant predicate expressions look like as expervalues?
 
- The problem is they have two types, they really are of the form `Predicate<BaseType>`, so probably they should be stored ...
+The problem is they have two types, they really are of the form `Predicate<BaseType>`, so probably they should be stored ...
 
      type: "predicate";
      baseType: AtomicFieldType;
@@ -511,6 +506,7 @@ Ok yes this is a problem. I have this magic thing called "requestTranslation" wh
     PKW dep_time_filter is @2003 EKW flights   | by_carrier
     DKW (dep_time_filter is @2003) | flights   | by_carrier
     (flights dep_time_filter is @2003) | by_carrier
+
 ---
 
 REMAINING TO DO ...

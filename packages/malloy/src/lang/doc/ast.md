@@ -35,7 +35,6 @@ export class Explore implements Element, ExploreInterface {
   pipeline: Pipestage[] = [];
 ```
 
-
 ## Methods on an AST object
 
 In general, the convention is, if an AST object knows how to make
@@ -84,15 +83,15 @@ or chained evaluation need to implement this.
 Do no quite have this factored right, but the "Realm" contains three pieces
 of data which many (but not all) AST nodes need to do translation.
 
-* The schema for any referenced tables, to resolve table reference4s
-* The model, to resolve explore name references
-* A log method for reporting semantic errors during translation
+- The schema for any referenced tables, to resolve table reference4s
+- The model, to resolve explore name references
+- A log method for reporting semantic errors during translation
 
 ## Field Space
 
 A `FieldSpace` is a symbol table roughly equivalent to a `StructDef`. You
 can ask a `FieldSpace` to look up a dotted path name, and you can
-ask a `FieldSpace` for its  `StructDef`
+ask a `FieldSpace` for its `StructDef`
 
 A `SpaceField` is the set of wrapper classes for `FieldDef` objects
 and is what you will get back if you ask a `FieldSpace` to lookup a field.

@@ -31,6 +31,8 @@
     "lint-build": "npm run build -w packages/malloy -w packages/malloy-lint",
     "lint": "npm run lint-build && gts lint",
     "lint-fix": "npm run lint-build && gts fix",
+    "prettier-fix": "prettier . --write",
+    "prettier-check": "prettier . --check",
     "test": "jest --runInBand",
     "test-bigquery": "MALLOY_DATABASE=bigquery jest --runInBand",
     "test-postgres": "MALLOY_DATABASE=postgres jest --runInBand",
