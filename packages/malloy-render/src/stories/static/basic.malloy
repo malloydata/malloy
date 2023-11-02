@@ -30,14 +30,14 @@ source: products is duckdb.table("data/products.parquet") extend {
         group_by: distribution_center_id
         aggregate: avg_retail is retail_price.avg()
         nest:
-          # flattenx
+          # flatten
           mens is {
             aggregate:
               avg_price is retail_price.avg()
               total_cost is cost.sum()
             where: department="Men"
           }
-          # flattenx
+          # flatten
           womens is {
             aggregate:
               avg_price is retail_price.avg()

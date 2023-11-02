@@ -491,22 +491,19 @@ export class HTMLTableRenderer extends ContainerRenderer {
     const nonDimensions: NonDimension[] = [];
     for (const f of table.field.allFieldsWithOrder) {
       if (dimensions!.indexOf(f) >= 0) continue;
+      const {tag} = f.field.tagParse();
+      if (f.field.isExploreField() && tag.has('flatten')) {
+        const nestedFields = f.field.allFieldsWithOrder.map(nf => ({
+          dir: nf.dir,
+          field: nf.field,
+          flattenedField: new FlattenedColumnField(
+            f.field,
+            nf.field,
+            `${f.field.name} ${nf.field.name}`
+          ),
+        }));
 
-      if (f.field.isExploreField()) {
-        const {tag} = f.field.tagParse();
-        if (tag.has('flatten')) {
-          const nestedFields = f.field.allFieldsWithOrder.map(nf => ({
-            dir: nf.dir,
-            field: nf.field,
-            flattenedField: new FlattenedColumnField(
-              f.field,
-              nf.field,
-              `${f.field.name} ${nf.field.name}`
-            ),
-          }));
-
-          nonDimensions.push(...nestedFields);
-        }
+        nonDimensions.push(...nestedFields);
       } else {
         nonDimensions.push(f);
       }
@@ -555,7 +552,6 @@ export class HTMLTableRenderer extends ContainerRenderer {
           childRenderer = nonDimension.flattenedField.getChildRenderer(
             this.childRenderers
           );
-
           value = nonDimension.flattenedField.getValue(row);
         } else {
           childRenderer = this.childRenderers[nonDimension.field.name];
