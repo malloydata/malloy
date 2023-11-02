@@ -113,8 +113,6 @@ export class HTMLTableRenderer extends ContainerRenderer {
       return this.document.createElement('span');
     }
 
-    this.childRenderers;
-
     if (!table.isArray() && !table.isRecord()) {
       throw new Error('Invalid type for Table Renderer');
     }
@@ -249,9 +247,14 @@ export class HTMLTableRenderer extends ContainerRenderer {
         }
         pivotDepth = Math.max(pivotDepth, dimensions!.length);
       } else if (shouldFlatten) {
-        const exField = field as ExploreField;
-        const flattenedFields = exField.allFields.map(
-          f => new FlattenedColumnField(exField, f, `${exField.name} ${f.name}`)
+        const parentField = field as ExploreField;
+        const flattenedFields = parentField.allFields.map(
+          f =>
+            new FlattenedColumnField(
+              parentField,
+              f,
+              `${parentField.name} ${f.name}`
+            )
         );
         for (const flatField of flattenedFields) {
           cells[rowIndex][columnIndex] = this.createHeaderCell(
