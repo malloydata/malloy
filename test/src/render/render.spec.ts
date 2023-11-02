@@ -435,6 +435,7 @@ describe('rendering results', () => {
             view: flatten is {
               group_by: nm
               aggregate: avg_height is height.avg()
+              order_by: 2 desc, 1 desc
               nest:
                 # flatten
                 monday is {
