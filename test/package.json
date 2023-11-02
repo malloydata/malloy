@@ -29,7 +29,7 @@
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.1",
-    "@types/luxon": "^1.26.4"
+    "@types/luxon": "^2.4.0"
   },
   "version": "0.0.99"
 }
