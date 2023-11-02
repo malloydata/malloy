@@ -106,11 +106,7 @@ type SpannableCell = HTMLTableCellElement | undefined;
 
 function shouldFlattenField(field: Field) {
   const {tag} = field.tagParse();
-  return (
-    field.isExploreField() &&
-    tag.has('flatten') &&
-    field.joinRelationship === JoinRelationship.OneToOne
-  );
+  return field.isExploreField() && tag.has('flatten') && field.isRecord;
 }
 
 export class HTMLTableRenderer extends ContainerRenderer {

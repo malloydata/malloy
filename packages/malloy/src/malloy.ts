@@ -2035,6 +2035,14 @@ export class ExploreField extends Explore implements Taggable {
     }
   }
 
+  public get isRecord(): boolean {
+    return this.joinRelationship === JoinRelationship.OneToOne;
+  }
+
+  public get isArray(): boolean {
+    return this.joinRelationship !== JoinRelationship.OneToOne;
+  }
+
   tagParse(spec?: TagParseSpec) {
     spec = Tag.addModelScope(spec, this._parentExplore.modelTag);
     return Tag.annotationToTag(this._structDef.annotation, spec);
