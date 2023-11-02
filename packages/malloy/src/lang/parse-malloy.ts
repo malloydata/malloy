@@ -35,7 +35,6 @@ import {
   DocumentRange,
   DocumentReference,
   ImportLocation,
-  ModelAnnotation,
   ModelDef,
   NamedModelObject,
   Query,
