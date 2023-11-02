@@ -25,7 +25,7 @@
     "assert": "^2.0.0",
     "jest-diff": "^29.6.2",
     "lodash": "^4.17.20",
-    "luxon": "^1.26.0",
+    "luxon": "^2.4.0",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
