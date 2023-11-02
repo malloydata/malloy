@@ -24,12 +24,12 @@
     "@malloydata/malloy": "^0.0.99",
     "@malloydata/render": "^0.0.99",
     "jsdom": "^22.1.0",
-    "luxon": "^1.26.4",
+    "luxon": "^2.4.0",
     "madge": "^6.0.0"
   },
   "devDependencies": {
     "@types/jsdom": "^21.1.1",
-    "@types/luxon": "^1.26.4"
+    "@types/luxon": "^2.4.0"
   },
   "version": "0.0.99"
 }
