@@ -103,6 +103,15 @@ type NonDimension = SortableField & {flattenedField?: FlattenedColumnField};
 
 type SpannableCell = HTMLTableCellElement | undefined;
 
+function shouldFlattenField(field: Field) {
+  const {tag} = field.tagParse();
+  return (
+    field.isExploreField() &&
+    tag.has('flatten') &&
+    field.structDef.structSource.type === 'inline'
+  );
+}
+
 export class HTMLTableRenderer extends ContainerRenderer {
   protected childrenStyleDefaults: StyleDefaults = {
     size: 'medium',
@@ -140,10 +149,6 @@ export class HTMLTableRenderer extends ContainerRenderer {
       const shouldPivot =
         childRenderer instanceof HTMLTableRenderer &&
         childRenderer.tagged.has('pivot');
-
-      const shouldFlatten =
-        childRenderer instanceof HTMLTableRenderer &&
-        childRenderer.tagged.has('flatten');
 
       if (shouldPivot) {
         const userDefinedDimensions = childRenderer.tagged.textArray(
@@ -246,7 +251,7 @@ export class HTMLTableRenderer extends ContainerRenderer {
           }
         }
         pivotDepth = Math.max(pivotDepth, dimensions!.length);
-      } else if (shouldFlatten) {
+      } else if (shouldFlattenField(field)) {
         const parentField = field as ExploreField;
         const flattenedFields = parentField.allFields.map(
           f =>
@@ -499,17 +504,18 @@ export class HTMLTableRenderer extends ContainerRenderer {
     const nonDimensions: NonDimension[] = [];
     for (const f of table.field.allFieldsWithOrder) {
       if (dimensions!.indexOf(f) >= 0) continue;
-      const {tag} = f.field.tagParse();
-      if (f.field.isExploreField() && tag.has('flatten')) {
-        const nestedFields = f.field.allFieldsWithOrder.map(nf => ({
-          dir: nf.dir,
-          field: nf.field,
-          flattenedField: new FlattenedColumnField(
-            f.field,
-            nf.field,
-            `${f.field.name} ${nf.field.name}`
-          ),
-        }));
+      if (shouldFlattenField(f.field)) {
+        const nestedFields = (f.field as ExploreField).allFieldsWithOrder.map(
+          nf => ({
+            dir: nf.dir,
+            field: nf.field,
+            flattenedField: new FlattenedColumnField(
+              f.field,
+              nf.field,
+              `${f.field.name} ${nf.field.name}`
+            ),
+          })
+        );
 
         nonDimensions.push(...nestedFields);
       } else {
