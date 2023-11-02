@@ -13,7 +13,7 @@ npm run build
 
 Use the [VS Code ESLint extension](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint) for highlighting linter errors, or run `npm run lint --fix`.
 
-Use the [VSCode Prettier extension](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) for code formatting, or run `npm run prettier-fix`.
+Use the [VS Code Prettier extension](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode) for code formatting, or run `npm run prettier-fix`.
 To auto-format files on save:
 
 1. Go to Settings > Workspace, search for "format on save", and turn "Editor: Format on Save" to on
