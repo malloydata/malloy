@@ -47,6 +47,14 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
       'BIGINT',
       'INTEGER',
       'TINYINT',
+      'INT1',
+      'INT2',
+      'SHORT',
+      'INT4',
+      'INT',
+      'SIGNED',
+      'LONG',
+      'INT8',
       'SMALLINT',
       'UBIGINT',
       'UINTEGER',
@@ -54,14 +62,17 @@ describe.each(allDucks.runtimeList)('duckdb:%s', (dbName, runtime) => {
       'USMALLINT',
       'HUGEINT',
       'DOUBLE',
+      'FLOAT8',
       'FLOAT',
+      'FLOAT4',
+      'REAL',
     ];
-    const allFields = allNumeric.map(intType => `a${intType.toLowerCase()}`);
+    const allFields = allNumeric.map(numType => `a${numType.toLowerCase()}`);
     const query = `
       run: ${dbName}.sql("""
         SELECT
         ${allNumeric
-          .map(intType => `1::${intType} as a${intType.toLowerCase()}`)
+          .map(numType => `1::${numType} as a${numType.toLowerCase()}`)
           .join(',\n')}
       """) -> {
         aggregate:
