@@ -21,6 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+// taze: RegExpExecArray.groups from //third_party/javascript/node_modules/typescript:es2018.regexp
 import {DocumentRange, DocumentPosition} from '@malloydata/malloy';
 import * as parser from './grammar/malloySQLSQL';
 import {
@@ -70,7 +71,7 @@ export class MalloySQLSQLParser {
     let parsed: MalloySQLSQLParseResults;
 
     try {
-      parsed = parser.parse(document);
+      parsed = parser.parse(document, undefined);
     } catch (e) {
       return {
         comments: [],
