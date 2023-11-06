@@ -72,7 +72,7 @@ export class MalloySQLParser {
     let parsed: MalloySQLParseResults;
 
     try {
-      const p = parser.parse(document);
+      const p = parser.parse(document, undefined);
       parsed = {
         initialComments: p[0],
         statements: p[1],
