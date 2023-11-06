@@ -30,7 +30,7 @@ parenthesized_embedded_malloy
   }
 }
 plain_embedded_malloy
-  = '%{' m:malloy '}%' {
+  = '%{' m:malloy '}' '%'|0..1| {
   return {
     type: "malloy",
     text:text(),
@@ -41,7 +41,7 @@ plain_embedded_malloy
   }
 }
 malloy
-  = (!'}%' .)* {
+  = (!'}' .)* {
   return {
     malloyRange: location(),
     text:text()

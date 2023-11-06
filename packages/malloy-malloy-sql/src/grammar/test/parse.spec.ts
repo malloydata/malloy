@@ -179,7 +179,7 @@ SELECT 2
     });
   });
 
-  describe('Embedded Malloy', () => {
+  describe('Legacy Embedded Malloy (with }%)', () => {
     test('Parenthesized embedded malloy can handle space between ( and {%', () => {
       const parse = MalloySQLParser.parse(
         '>>>sql connection:bigquery\nSELECT (  %{ malloy }%  )'
@@ -195,6 +195,32 @@ SELECT 2
     test('Non-parenthesized embedded malloy', () => {
       const parse = MalloySQLParser.parse(
         '>>>sql connection:bigquery\nSELECT %{ malloy }%'
+      );
+      const stmt = parse.statements[0] as MalloySQLSQLStatement;
+      const embeddedMalloy = stmt.embeddedMalloyQueries[0];
+      expect(embeddedMalloy.query).toBe(' malloy ');
+      expect(embeddedMalloy.parenthesized).toBeFalsy();
+      expect(embeddedMalloy.range.start.character).toBe(7);
+      expect(embeddedMalloy.malloyRange.start.character).toBe(9);
+    });
+  });
+
+  describe('Embedded Malloy (with })', () => {
+    test('Parenthesized embedded malloy can handle space between ( and {%', () => {
+      const parse = MalloySQLParser.parse(
+        '>>>sql connection:bigquery\nSELECT (  %{ malloy }  )'
+      );
+      const stmt = parse.statements[0] as MalloySQLSQLStatement;
+      const embeddedMalloy = stmt.embeddedMalloyQueries[0];
+      expect(embeddedMalloy.query).toBe(' malloy ');
+      expect(embeddedMalloy.parenthesized).toBeTruthy();
+      expect(embeddedMalloy.range.start.character).toBe(7);
+      expect(embeddedMalloy.malloyRange.start.character).toBe(12);
+    });
+
+    test('Non-parenthesized embedded malloy', () => {
+      const parse = MalloySQLParser.parse(
+        '>>>sql connection:bigquery\nSELECT %{ malloy }'
       );
       const stmt = parse.statements[0] as MalloySQLSQLStatement;
       const embeddedMalloy = stmt.embeddedMalloyQueries[0];
