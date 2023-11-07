@@ -566,7 +566,7 @@ class HelpContextStep implements TranslationStep {
 
 class TranslateStep implements TranslationStep {
   response?: TranslateResponse;
-  importedFlags = false;
+  importedAnnotations = false;
   constructor(readonly astStep: ASTStep) {}
 
   step(that: MalloyTranslation, extendingModel?: ModelDef): TranslateResponse {
@@ -575,12 +575,12 @@ class TranslateStep implements TranslationStep {
     }
 
     // begin with the compiler flags of the model we are extending
-    if (extendingModel && !this.importedFlags) {
+    if (extendingModel && !this.importedAnnotations) {
       const tagParse = Tag.annotationToTag(extendingModel.annotation, {
         prefix: /^##! /,
       });
       that.compilerFlags = tagParse.tag;
-      this.importedFlags = true;
+      this.importedAnnotations = true;
     }
 
     const astResponse = this.astStep.step(that);

@@ -3,16 +3,10 @@
     "outDir": "dist",
     "skipLibCheck": true,
     "downlevelIteration": true,
+    "moduleResolution": "node",
     "noPropertyAccessFromIndexSignature": false,
     "lib": ["ES2021.String", "dom"],
     "target": "es6",
-    "paths": {
-      "monaco-editor": [
-        "../../node_modules/monaco-editor/esm/vs/editor/editor.api"
-      ],
-      "vscode-textmate": ["../../node_modules/vscode-textmate/release/main"],
-      "vscode-oniguruma": ["../../node_modules/vscode-oniguruma/main"]
-    },
     "types": ["node", "jasmine"]
   },
   "include": [

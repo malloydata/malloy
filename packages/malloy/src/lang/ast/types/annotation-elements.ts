@@ -58,6 +58,9 @@ export class ModelAnnotation extends ObjectAnnotation implements DocStatement {
   }
 
   execute(doc: Document): void {
-    doc.notes = doc.notes.concat(this.notes);
+    if (doc.annotation.notes === undefined) {
+      doc.annotation.notes = [];
+    }
+    doc.annotation.notes.push(...this.notes);
   }
 }

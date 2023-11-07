@@ -5,4 +5,46 @@ source: products is duckdb.table("data/products.parquet") extend {
     group_by: category
     aggregate: avg_retail is retail_price.avg()
   }
+
+  view: flatten is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    nest:
+      # flatten
+      mens is {
+        aggregate:
+          avg_price is retail_price.avg()
+          total_cost is cost.sum()
+        where: department="Men"
+      }
+      # flatten
+      womens is {
+        aggregate:
+          avg_price is retail_price.avg()
+          total_cost is cost.sum()
+        where: department="Women"
+      }
+
+      # pivot
+      test is {
+        group_by: distribution_center_id
+        aggregate: avg_retail is retail_price.avg()
+        nest:
+          # flatten
+          mens is {
+            aggregate:
+              avg_price is retail_price.avg()
+              total_cost is cost.sum()
+            where: department="Men"
+          }
+          # flatten
+          womens is {
+            aggregate:
+              avg_price1 is retail_price.avg()
+              total_cost1 is cost.sum()
+            where: department="Women"
+          }
+        where: distribution_center_id=1 or distribution_center_id=2
+      }
+  }
 };

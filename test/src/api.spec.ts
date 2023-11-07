@@ -70,6 +70,18 @@ describe('extendModel', () => {
       'Given query name does not refer to a named query.'
     );
   });
+  test('extending models keep annotations', async () => {
+    await runtime
+      .loadModel(
+        `
+          ##! experimental { compilerTestExperimentParse compilerTestExperimentTranslate }
+          ;;[ "x" ]
+        `
+      )
+      .extendModel(';;[ "x" ]')
+      .extendModel(';;[ "x" ]')
+      .getModel();
+  });
 });
 
 afterAll(async () => await runtime.connection.close());

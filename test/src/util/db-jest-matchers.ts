@@ -29,6 +29,7 @@ import {
   Runtime,
   MalloyError,
   LogMessage,
+  SingleConnectionRuntime,
 } from '@malloydata/malloy';
 
 type ExpectedResultRow = Record<string, unknown>;
@@ -95,7 +96,10 @@ expect.extend({
   ) {
     // TODO -- THIS IS NOT OK BUT I AM NOT FIXING IT NOW
     if (querySrc.indexOf('nest:') >= 0) {
-      if (runtime instanceof Runtime) {
+      if (
+        runtime instanceof SingleConnectionRuntime &&
+        !runtime.supportsNesting
+      ) {
         return {
           pass: true,
           message: () =>
