@@ -154,7 +154,10 @@ class DocumentSymbolWalker implements MalloyParserListener {
   handleNestEntry(pcx: parser.NestExistingContext | parser.NestDefContext) {
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
-      name: pcx.queryName().id().text,
+      name:
+        pcx instanceof parser.NestExistingContext
+          ? pcx.fieldPath().text
+          : pcx.queryName().id().text,
       type: 'query',
       children: [],
     };

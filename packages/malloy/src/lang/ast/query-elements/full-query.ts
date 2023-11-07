@@ -79,9 +79,8 @@ export class FullQuery extends TurtleHeadedPipe {
     if (this.turtleName) {
       const lookFor = this.turtleName.getField(pipeFS);
       if (lookFor.error) this.log(lookFor.error);
-      const name = this.turtleName.refString;
       const {pipeline, location, annotation, needsExpansionDueToScalar} =
-        this.expandTurtle(name, structDef);
+        this.expandTurtle(this.turtleName, structDef);
       destQuery.location = location;
       let walkPipe = pipeline;
       if (
@@ -101,7 +100,7 @@ export class FullQuery extends TurtleHeadedPipe {
         // fields as pipe heads.
         destQuery.pipeline = pipeline;
       } else {
-        destQuery.pipeHead = {name};
+        destQuery.pipeHead = {name: this.turtleName.refString};
       }
       if (annotation) {
         destQuery.annotation = annotation;

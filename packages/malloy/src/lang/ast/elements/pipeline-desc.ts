@@ -27,15 +27,19 @@ import {
   PipeSegment,
   Pipeline,
   StructDef,
+  isAtomicField,
+  isAtomicFieldType,
+  isTurtleDef,
 } from '../../../model/malloy_types';
 
 import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {QOPDesc} from '../query-properties/qop-desc';
-import {getStructFieldDef} from '../struct-utils';
 import {QueryInputSpace} from '../field-space/query-input-space';
 import {ViewFieldReference} from '../query-items/field-references';
 import {Refinement} from '../query-properties/refinements';
+import {StaticSpace} from '../field-space/static-space';
+import {SpaceField} from '../types/space-field';
 
 interface AppendResult {
   opList: PipeSegment[];
@@ -92,10 +96,11 @@ export abstract class PipelineDesc extends MalloyElement {
     }
     let pipeline: PipeSegment[] = [];
     if (modelPipe.pipeHead) {
-      const {pipeline: turtlePipe} = this.expandTurtle(
-        modelPipe.pipeHead.name,
-        fs.structDef()
-      );
+      const ref = new ViewFieldReference([
+        new FieldName(modelPipe.pipeHead.name),
+      ]);
+      this.has({ref});
+      const {pipeline: turtlePipe} = this.expandTurtle(ref, fs.structDef());
       pipeline.push(...turtlePipe);
     }
     pipeline.push(...modelPipe.pipeline);
@@ -107,7 +112,7 @@ export abstract class PipelineDesc extends MalloyElement {
   }
 
   protected expandTurtle(
-    turtleName: string,
+    turtleName: ViewFieldReference,
     fromStruct: StructDef
   ): {
     needsExpansionDueToScalar: boolean;
@@ -115,31 +120,49 @@ export abstract class PipelineDesc extends MalloyElement {
     location: DocumentLocation | undefined;
     annotation: Annotation | undefined;
   } {
-    const turtle = getStructFieldDef(fromStruct, turtleName);
+    const fs = new StaticSpace(fromStruct);
+    const lookup = turtleName.getField(fs);
     let annotation: Annotation | undefined;
-    if (!turtle) {
+    if (!lookup.found) {
       this.log(`Query '${turtleName}' is not defined in source`);
-    } else if (turtle.type !== 'turtle') {
-      if (this.inExperiment('scalar_lenses', true)) {
+    } else if (lookup.found instanceof SpaceField) {
+      const fieldDef = lookup.found.fieldDef();
+      if (fieldDef && isAtomicField(fieldDef)) {
+        if (this.inExperiment('scalar_lenses', true)) {
+          return {
+            needsExpansionDueToScalar: true,
+            pipeline: [
+              {
+                type: 'reduce',
+                fields: [
+                  {
+                    type: fieldDef.type,
+                    name: fieldDef.as ?? fieldDef.name,
+                    expressionType: fieldDef.expressionType,
+                    e: [{type: 'field', path: turtleName.refString}],
+                  },
+                ],
+              },
+            ],
+            location: fieldDef.location,
+            annotation,
+          };
+        } else {
+          this.log(`'${turtleName}' is not a query`);
+        }
+      } else if (turtleName.list.length > 1) {
+        this.log('Cannot use view from join');
+      } else if (fieldDef && isTurtleDef(fieldDef)) {
+        if (fieldDef.annotation) {
+          annotation = {inherits: fieldDef.annotation};
+        }
         return {
-          needsExpansionDueToScalar: true,
-          pipeline: [{type: 'reduce', fields: [turtle.name]}],
-          location: turtle.location,
+          pipeline: fieldDef.pipeline,
+          location: fieldDef.location,
           annotation,
+          needsExpansionDueToScalar: false,
         };
-      } else {
-        this.log(`'${turtleName}' is not a query`);
       }
-    } else {
-      if (turtle.annotation) {
-        annotation = {inherits: turtle.annotation};
-      }
-      return {
-        pipeline: turtle.pipeline,
-        location: turtle.location,
-        annotation,
-        needsExpansionDueToScalar: false,
-      };
     }
     return {
       pipeline: [],
@@ -151,14 +174,14 @@ export abstract class PipelineDesc extends MalloyElement {
 }
 
 export abstract class TurtleHeadedPipe extends PipelineDesc {
-  _turtleName?: FieldName;
+  _turtleName?: ViewFieldReference;
 
-  set turtleName(turtleName: FieldName | undefined) {
+  set turtleName(turtleName: ViewFieldReference | undefined) {
     this._turtleName = turtleName;
     this.has({turtleName: turtleName});
   }
 
-  get turtleName(): FieldName | undefined {
+  get turtleName(): ViewFieldReference | undefined {
     return this._turtleName;
   }
 }

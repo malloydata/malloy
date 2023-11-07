@@ -22,7 +22,7 @@
  */
 
 import * as model from '../../../model/malloy_types';
-import {FieldName, FieldSpace} from '../types/field-space';
+import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
 import {QueryField} from '../field-space/query-space-field';
@@ -44,7 +44,10 @@ import {
   expressionIsScalar,
   TypeDesc,
 } from '../../../model';
-import {FieldReference} from '../query-items/field-references';
+import {
+  FieldReference,
+  ViewFieldReference,
+} from '../query-items/field-references';
 import {getFinalStruct} from '../struct-utils';
 import {ColumnSpaceField} from '../field-space/column-space-field';
 import {detectAndRemovePartialStages} from '../query-utils';
@@ -167,8 +170,8 @@ export class NestRefinement
   queryRefinementStage = LegalRefinementStage.Single;
   forceQueryClass = QueryClass.Grouping;
 
-  constructor(turtleName: FieldName) {
-    super(turtleName.refString);
+  constructor(turtleName: ViewFieldReference) {
+    super(turtleName.outputName);
     this.turtleName = turtleName;
   }
 
@@ -258,8 +261,8 @@ export class NestReference
   forceQueryClass = QueryClass.Grouping;
   queryRefinementStage = LegalRefinementStage.Single;
 
-  constructor(readonly name: FieldName) {
-    super([name]);
+  constructor(readonly name: FieldReference) {
+    super([...name.list]);
   }
   typecheck(type: TypeDesc) {
     if (type.dataType !== 'turtle') {
@@ -295,18 +298,35 @@ export class NestReference
       const lookup = this.name.getField(fs.inputSpace());
       if (lookup.found instanceof SpaceField) {
         const field = lookup.found.fieldDef();
-        if (field && model.isAtomicFieldType(field.type)) {
+        if (field && model.isAtomicField(field)) {
+          const name = field.as ?? field.name;
           fs.newEntry(
-            this.name.refString,
+            name,
             this,
             new QueryFieldStruct(fs, {
               type: 'turtle',
-              name: this.name.refString,
-              pipeline: [{type: 'reduce', fields: [this.name.refString]}],
+              name,
+              pipeline: [
+                {
+                  type: 'reduce',
+                  fields: [
+                    {
+                      type: field.type,
+                      name,
+                      expressionType: field.expressionType,
+                      e: [{type: 'field', path: this.name.refString}],
+                    },
+                  ],
+                },
+              ],
             })
           );
           return;
         }
+      }
+      if (this.name.list.length > 1) {
+        this.log('Cannot nest view from join');
+        return;
       }
       super.makeEntry(fs);
     }
