@@ -204,7 +204,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
     `).malloyResultMatches(runtime, {'n.n': 1, 'n.c': 1});
   });
-  it.skip(`nest dimension only - ${databaseName}`, async () => {
+  it(`nest dimension only - ${databaseName}`, async () => {
     await expect(`
       ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
@@ -213,7 +213,29 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> {
         nest: n
       }
-    `).malloyResultMatches(runtime, {n: [{n: 1}]});
+    `).malloyResultMatches(runtime, {'n.n': 1});
+  });
+  it(`nest measure only in second stage - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        view: m is { aggregate: c is count() }
+      }
+      run: x -> m -> {
+        nest: c
+      }
+    `).malloyResultMatches(runtime, {m: [{c: 1}]});
+  });
+  it(`nest dimension only in refinement - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        view: m is { aggregate: c is count() }
+      }
+      run: x -> m + {
+        nest: n
+      }
+    `).malloyResultMatches(runtime, {m: [{n: 1}]});
   });
   it(`view dimension only - ${databaseName}`, async () => {
     await expect(`

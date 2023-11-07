@@ -48,6 +48,8 @@ import {FieldReference} from '../query-items/field-references';
 import {getFinalStruct} from '../struct-utils';
 import {ColumnSpaceField} from '../field-space/column-space-field';
 import {detectAndRemovePartialStages} from '../query-utils';
+import {SpaceField} from '../types/space-field';
+import {QueryFieldStruct} from '../field-space/query-field-struct';
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
@@ -266,19 +268,49 @@ export class NestReference
       if (expressionIsAnalytic(type.expressionType)) {
         useInstead = 'a calculate';
         kind = 'an analytic';
-      } else if (expressionIsScalar(type.expressionType)) {
-        useInstead = 'a group_by or select';
-        kind = 'a scalar';
-      } else if (expressionIsAggregate(type.expressionType)) {
-        useInstead = 'an aggregate';
-        kind = 'an aggregate';
       } else {
-        throw new Error(`Unexpected expression type ${type} not handled here`);
+        if (this.inExperiment('scalar_lenses', true)) {
+          return;
+        }
+        if (expressionIsScalar(type.expressionType)) {
+          useInstead = 'a group_by or select';
+          kind = 'a scalar';
+        } else if (expressionIsAggregate(type.expressionType)) {
+          useInstead = 'an aggregate';
+          kind = 'an aggregate';
+        } else {
+          throw new Error(
+            `Unexpected expression type ${type} not handled here`
+          );
+        }
+        this.log(
+          `Cannot use ${kind} field in a nest operation, did you mean to use ${useInstead} operation instead?`
+        );
       }
-      this.log(
-        `Cannot use ${kind} field in a nest operation, did you mean to use ${useInstead} operation instead?`
-      );
     }
+  }
+
+  makeEntry(fs: DynamicSpace): void {
+    if (fs instanceof QuerySpace) {
+      const lookup = this.name.getField(fs.inputSpace());
+      if (lookup.found instanceof SpaceField) {
+        const field = lookup.found.fieldDef();
+        if (field && model.isAtomicFieldType(field.type)) {
+          fs.newEntry(
+            this.name.refString,
+            this,
+            new QueryFieldStruct(fs, {
+              type: 'turtle',
+              name: this.name.refString,
+              pipeline: [{type: 'reduce', fields: [this.name.refString]}],
+            })
+          );
+          return;
+        }
+      }
+      super.makeEntry(fs);
+    }
+    throw this.internalError('Unexpected namespace for nest');
   }
 
   queryExecute(executeFor: QueryBuilder) {
