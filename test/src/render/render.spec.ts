@@ -410,6 +410,58 @@ describe('rendering results', () => {
 
       expect(html).toMatchSnapshot();
     });
+
+    test('flattened nests render correctly', async () => {
+      const src = `
+          source: height
+          is duckdb.sql("""SELECT 'Pedro' as nm, 'Monday' as dayito, 1 as loc, 2 as lac, 1 as monthy, 20 as height, 3 as wt, 50 apptcost, 1 as vaccine, 'A' as btype
+          UNION ALL SELECT 'Pedro', 'Tuesday', 1, 2, 2, 25, 3.4, 100, 1, 'B'
+          UNION ALL SELECT 'Pedro', 'Tuesday', 1, 2, 3, 38, 3.6, 200, 0, 'A'
+          UNION ALL SELECT 'Pedro', 'Wednesday', 1, 2, 4, 45, 3.7, 300, 1, 'O'
+          UNION ALL SELECT 'Sebastian', 'Thursday', 1, 2, 1, 23, 2, 400, 1, 'C'
+          UNION ALL SELECT 'Sebastian', 'Thursday', 1, 2, 2, 28, 2.6, 500, 1, 'A'
+          UNION ALL SELECT 'Sebastian', 'Monday', 1, 2, 3, 35, 3.6, 650, 0, 'A'
+          UNION ALL SELECT 'Sebastian', 'Monday', 1, 2, 4, 47, 4.2, 70, 1, 'B'
+          UNION ALL SELECT 'Alex', 'Tuesday', 1, 2, 1, 23, 2.5, 85, 0, 'X'
+          UNION ALL SELECT 'Alex', 'Thursday', 1, 2, 2, 28, 3, 42, 1, 'P'
+          UNION ALL SELECT 'Alex', 'Thursday', 1, 2,  3, 35, 3.2, 63, 1, 'A'
+          UNION ALL SELECT 'Alex', 'Monday', 1, 2, 4, 47, 3.4, 81, 1, 'D'
+          UNION ALL SELECT 'Miguel', 'Monday', 1, 2, 1, 23, 4, 34, 0, 'E'
+          UNION ALL SELECT 'Miguel', 'Monday', 1, 2, 2, 28, 4.1, 64, 1, 'R'
+          UNION ALL SELECT 'Miguel', 'Wednesday', 1, 2, 3, 35, 4.2, 31, 1, 'E'
+          UNION ALL SELECT 'Miguel', 'Wednesday', 1, 2, 4, 47, 4.3, 76, 0, 'F' """) extend {
+
+
+            view: flatten is {
+              group_by: nm
+              aggregate: avg_height is height.avg()
+              order_by: 2 desc, 1 desc
+              nest:
+                # flatten
+                monday is {
+                  aggregate: avg_height is height.avg()
+                  where: dayito='Monday'
+                },
+                # flatten
+                thursday is {
+                  aggregate: avg_height is height.avg()
+                  where: dayito='Thursday'
+                }
+            }
+          }
+
+          query: flatten is height -> flatten
+      `;
+      const result = await (
+        await duckdb.loadModel(src).loadQueryByName('flatten')
+      ).run();
+      const document = new JSDOM().window.document;
+      const html = await new HTMLView(document).render(result, {
+        dataStyles: {},
+      });
+
+      expect(html).toMatchSnapshot();
+    });
   });
 
   describe('date renderer', () => {

@@ -105,7 +105,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> {
         nest: d + m
       }
-    `).malloyResultMatches(runtime, {d: [{n: 1, c: 1}]});
+    `).malloyResultMatches(runtime, {'d.n': 1, 'd.c': 1});
   });
   it(`nested with name - ${databaseName}`, async () => {
     await expect(`
@@ -116,6 +116,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> {
         nest: y is d + m
       }
-    `).malloyResultMatches(runtime, {y: [{n: 1, c: 1}]});
+    `).malloyResultMatches(runtime, {'y.n': 1, 'y.c': 1});
   });
 });
