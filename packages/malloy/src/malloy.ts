@@ -92,7 +92,7 @@ export interface Loggable {
 }
 
 // bad formatting to test prettier in CI
-const s = "s";
+const s = 's';
 
 export interface ParseOptions {
   importBaseURL?: URL;
