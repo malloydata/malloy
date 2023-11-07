@@ -34,40 +34,43 @@ import {QueryProperty} from '../types/query-property';
 import {StaticSpace} from '../field-space/static-space';
 import {QueryClass} from '../types/query-property-interface';
 import {QueryInputSpace} from '../field-space/query-input-space';
+import {PartialBuilder} from '../query-builders/partial-builder';
 
 export class QOPDesc extends ListOf<QueryProperty> {
   elementType = 'queryOperation';
-  opClass = QueryClass.Grouping;
+  opClass: QueryClass | undefined;
   private refineThis?: PipeSegment;
 
-  protected computeType(): QueryClass {
-    let mustBe: QueryClass | undefined;
+  protected computeType(): QueryClass | undefined {
+    let guessType: QueryClass | undefined;
+    let needsExplicitQueryClass = false;
     if (this.refineThis) {
       if (this.refineThis.type === 'reduce') {
-        mustBe = QueryClass.Grouping;
+        guessType = QueryClass.Grouping;
       } else if (this.refineThis.type === 'project') {
-        mustBe = QueryClass.Project;
-      } else {
-        mustBe = QueryClass.Index;
+        guessType = QueryClass.Project;
+      } else if (this.refineThis.type === 'index') {
+        guessType = QueryClass.Index;
       }
     }
     for (const el of this.list) {
       if (el.forceQueryClass) {
-        if (mustBe) {
-          if (mustBe !== el.forceQueryClass) {
-            el.log(`Not legal in ${mustBe} query`);
+        if (guessType) {
+          if (guessType !== el.forceQueryClass) {
+            el.log(`Not legal in ${guessType} query`);
           }
         } else {
-          mustBe = el.forceQueryClass;
+          guessType = el.forceQueryClass;
         }
       }
+      needsExplicitQueryClass ||= el.needsExplicitQueryClass ?? false;
     }
-    if (mustBe === undefined) {
+    if (guessType === undefined && needsExplicitQueryClass) {
       this.log(
-        "Can't determine query type (group_by/aggregate/nest,project,index)"
+        "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
       );
+      guessType = QueryClass.Project;
     }
-    const guessType = mustBe || QueryClass.Grouping;
     this.opClass = guessType;
     return guessType;
   }
@@ -84,6 +87,8 @@ export class QOPDesc extends ListOf<QueryProperty> {
         return new ProjectBuilder(baseFS, this.refineThis);
       case QueryClass.Index:
         return new IndexBuilder(baseFS, this.refineThis);
+      case undefined:
+        return new PartialBuilder(baseFS, this.refineThis);
     }
   }
 

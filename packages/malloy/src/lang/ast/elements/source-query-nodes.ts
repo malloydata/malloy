@@ -273,10 +273,12 @@ export class SQAppendView extends SourceQueryNode {
         theQuery.addSegments(head);
         views.shift();
       } else {
+        // TODO implement scalar_lenses in subsequent stages
         this.sqLog(`Cannot reference view '${head}' in output of query`);
         return;
       }
     } else {
+      // TODO implement combinations for subsequent stages
       this.sqLog('query definition by combining not yet supported');
       return;
     }

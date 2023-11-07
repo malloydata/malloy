@@ -21,19 +21,23 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {DefinitionList} from '../types/definition-list';
-import {QueryItem} from '../types/query-item';
-import {
-  LegalRefinementStage,
-  QueryPropertyInterface,
-} from '../types/query-property-interface';
+import {PipeSegment, isPartialSegment} from '../../model';
 
-export class Calculate
-  extends DefinitionList<QueryItem>
-  implements QueryPropertyInterface
-{
-  elementType = 'calculate';
-  forceQueryClass = undefined;
-  needsExplicitQueryClass = true;
-  queryRefinementStage = LegalRefinementStage.Single;
+// We don't want to ever generate actual 'partial' stages, so convert this
+// into a reduce so the compiler doesn't explode
+export function detectAndRemovePartialStages(pipeline: PipeSegment[]): {
+  hasPartials: boolean;
+  pipeline: PipeSegment[];
+} {
+  const cleaned: PipeSegment[] = [];
+  let hasPartials = false;
+  for (const segment of pipeline) {
+    if (isPartialSegment(segment)) {
+      cleaned.push({...segment, type: 'reduce'});
+      hasPartials = true;
+    } else {
+      cleaned.push(segment);
+    }
+  }
+  return {hasPartials, pipeline: cleaned};
 }

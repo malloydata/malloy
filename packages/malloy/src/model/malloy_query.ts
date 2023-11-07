@@ -1901,6 +1901,8 @@ class QueryQuery extends QueryField {
         return new QueryQueryProject(flatTurtleDef, parent, stageWriter);
       case 'index':
         return new QueryQueryIndex(flatTurtleDef, parent, stageWriter);
+      case 'partial':
+        throw new Error('Attempt to make query out of partial stage');
     }
   }
 

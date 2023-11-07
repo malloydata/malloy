@@ -66,6 +66,11 @@ export class NamedRefinement extends Refinement {
         }
         return fieldDef.pipeline[0];
       }
+      if (fieldDef?.type !== 'struct') {
+        if (this.name.inExperiment('scalar_lenses', true)) {
+          return {type: 'reduce', fields: [this.name.refString]};
+        }
+      }
     }
     this.name.log(
       `named refinement \`${this.name.refString}\` must be a view, found a ${
@@ -88,9 +93,13 @@ export class NamedRefinement extends Refinement {
     const to = {..._to};
     const from = this.getRefinementSegment(inputFS);
     if (from) {
-      if (from.type !== to.type) {
+      // TODO need to disallow partial + index for now to make the types happy
+      if (to.type === 'partial' && from.type !== 'index') {
+        to.type = from.type;
+      } else if (from.type !== to.type) {
         this.log(`cannot refine ${to.type} view with ${from.type} view`);
       }
+
       if (from.type !== 'index' && to.type !== 'index') {
         if (from.orderBy !== undefined || from.by !== undefined) {
           if (to.orderBy === undefined && to.by === undefined) {

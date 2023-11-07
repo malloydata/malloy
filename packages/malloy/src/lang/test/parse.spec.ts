@@ -151,7 +151,7 @@ describe('error handling', () => {
   });
   test('query without fields', () => {
     expect('run: a -> { top: 5 }').translationToFailWith(
-      "Can't determine query type (group_by/aggregate/nest,project,index)"
+      "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
     );
   });
   test('refine cannot change query type', () => {

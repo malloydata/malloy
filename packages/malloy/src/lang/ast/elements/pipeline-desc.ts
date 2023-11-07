@@ -39,7 +39,7 @@ import {Refinement} from '../query-properties/refinements';
 
 interface AppendResult {
   opList: PipeSegment[];
-  structDef: StructDef;
+  structDef: () => StructDef;
 }
 
 /**
@@ -74,15 +74,15 @@ export abstract class PipelineDesc extends MalloyElement {
     const returnPipe: PipeSegment[] = [...modelPipe];
     const nestedIn =
       modelPipe.length === 0 ? this.nestedInQuerySpace : undefined;
-    let nextFS = pipelineOutput;
+    let nextFS = () => pipelineOutput;
     for (const qop of this.qops) {
-      const next = qop.getOp(nextFS, nestedIn);
+      const next = qop.getOp(nextFS(), nestedIn);
       returnPipe.push(next.segment);
-      nextFS = next.outputSpace();
+      nextFS = () => next.outputSpace();
     }
     return {
       opList: returnPipe,
-      structDef: nextFS.structDef(),
+      structDef: () => nextFS().structDef(),
     };
   }
 
@@ -110,6 +110,7 @@ export abstract class PipelineDesc extends MalloyElement {
     turtleName: string,
     fromStruct: StructDef
   ): {
+    needsExpansionDueToScalar: boolean;
     pipeline: PipeSegment[];
     location: DocumentLocation | undefined;
     annotation: Annotation | undefined;
@@ -119,14 +120,33 @@ export abstract class PipelineDesc extends MalloyElement {
     if (!turtle) {
       this.log(`Query '${turtleName}' is not defined in source`);
     } else if (turtle.type !== 'turtle') {
-      this.log(`'${turtleName}' is not a query`);
+      if (this.inExperiment('scalar_lenses', true)) {
+        return {
+          needsExpansionDueToScalar: true,
+          pipeline: [{type: 'reduce', fields: [turtle.name]}],
+          location: turtle.location,
+          annotation,
+        };
+      } else {
+        this.log(`'${turtleName}' is not a query`);
+      }
     } else {
       if (turtle.annotation) {
         annotation = {inherits: turtle.annotation};
       }
-      return {pipeline: turtle.pipeline, location: turtle.location, annotation};
+      return {
+        pipeline: turtle.pipeline,
+        location: turtle.location,
+        annotation,
+        needsExpansionDueToScalar: false,
+      };
     }
-    return {pipeline: [], location: undefined, annotation};
+    return {
+      pipeline: [],
+      location: undefined,
+      annotation,
+      needsExpansionDueToScalar: false,
+    };
   }
 }
 

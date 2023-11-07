@@ -20,20 +20,12 @@
  * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
+import {PipeSegment} from '../../../model';
+import {ReduceBuilder} from './reduce-builder';
 
-import {DefinitionList} from '../types/definition-list';
-import {QueryItem} from '../types/query-item';
-import {
-  LegalRefinementStage,
-  QueryPropertyInterface,
-} from '../types/query-property-interface';
-
-export class Calculate
-  extends DefinitionList<QueryItem>
-  implements QueryPropertyInterface
-{
-  elementType = 'calculate';
-  forceQueryClass = undefined;
-  needsExplicitQueryClass = true;
-  queryRefinementStage = LegalRefinementStage.Single;
+export class PartialBuilder extends ReduceBuilder {
+  finalize(fromSeg: PipeSegment | undefined): PipeSegment {
+    const seg = super.finalize(fromSeg);
+    return {...seg, type: 'partial'};
+  }
 }
