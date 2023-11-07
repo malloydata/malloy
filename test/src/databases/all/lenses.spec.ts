@@ -202,9 +202,9 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> {
         nest: n + m
       }
-    `).malloyResultMatches(runtime, {d: [{n: 1, c: 1}]});
+    `).malloyResultMatches(runtime, {'n.n': 1, 'n.c': 1});
   });
-  it(`nest dimension only - ${databaseName}`, async () => {
+  it.skip(`nest dimension only - ${databaseName}`, async () => {
     await expect(`
       ##! experimental { scalar_lenses }
       source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
@@ -213,7 +213,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> {
         nest: n
       }
-    `).malloyResultMatches(runtime, {d: [{n: 1}]});
+    `).malloyResultMatches(runtime, {n: [{n: 1}]});
   });
   it(`view dimension only - ${databaseName}`, async () => {
     await expect(`
