@@ -266,7 +266,11 @@ export class PostgresConnection
           = (e.object_catalog, e.object_schema, e.object_name, e.object_type, e.collection_type_identifier))
       where table_name='${tempTableName}';
     `;
-    await this.schemaFromQuery(infoQuery, structDef);
+    try {
+      await this.schemaFromQuery(infoQuery, structDef);
+    } catch (error) {
+      throw new Error(`Error fetching schema for ${sqlRef.name}: ${error}`);
+    }
     return structDef;
   }
 
@@ -274,13 +278,16 @@ export class PostgresConnection
     infoQuery: string,
     structDef: StructDef
   ): Promise<void> {
-    const result = await this.runPostgresQuery(
+    const {rows, totalRows} = await this.runPostgresQuery(
       infoQuery,
       SCHEMA_PAGE_SIZE,
       0,
       false
     );
-    for (const row of result.rows) {
+    if (!totalRows) {
+      throw new Error('Unable to read schema.');
+    }
+    for (const row of rows) {
       const postgresDataType = row['data_type'] as string;
       let s = structDef;
       let malloyType = this.dialect.sqlTypeToMalloyType(postgresDataType);
@@ -344,7 +351,11 @@ export class PostgresConnection
           AND table_schema = '${schema}'
     `;
 
-    await this.schemaFromQuery(infoQuery, structDef);
+    try {
+      await this.schemaFromQuery(infoQuery, structDef);
+    } catch (error) {
+      throw new Error(`Error fetching schema for ${tablePath}: ${error}`);
+    }
     return structDef;
   }
 
