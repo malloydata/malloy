@@ -331,7 +331,7 @@ export class NestReference
         this.log('Cannot nest view from join');
         return;
       }
-      super.makeEntry(fs);
+      return super.makeEntry(fs);
     }
     throw this.internalError('Unexpected namespace for nest');
   }
