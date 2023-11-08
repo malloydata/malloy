@@ -80,6 +80,9 @@ abstract class TurtleDeclRoot
         this.log(headEnt.error);
         reportWrongType = false;
       } else if (headEnt.found instanceof QueryField) {
+        if (this.turtleName.list.length > 1) {
+          this.turtleName.log('Cannot use view from join');
+        }
         const headDef = headEnt.found.getQueryFieldDef(fs);
         if (isTurtle(headDef)) {
           const newPipe = this.refinePipeline(fs, headDef);

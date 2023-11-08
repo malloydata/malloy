@@ -386,11 +386,11 @@ export class MalloyToAST
       }
       return properties;
     }
-    const turtleNameCx = pcx.turtleName();
-    if (turtleNameCx) {
+    const fieldPathCx = pcx.fieldPath();
+    if (fieldPathCx) {
       return this.astAt(
-        new ast.ViewFieldReference([this.getFieldName(turtleNameCx)]),
-        turtleNameCx
+        this.getFieldPath(fieldPathCx, ast.ViewFieldReference),
+        fieldPathCx
       );
     }
     throw this.internalError(

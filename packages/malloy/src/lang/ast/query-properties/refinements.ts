@@ -64,6 +64,10 @@ export class NamedRefinement extends Refinement {
           );
           return;
         }
+        if (this.name.list.length > 1) {
+          this.log('Cannot use view from join as refinement');
+          return;
+        }
         return fieldDef.pipeline[0];
       }
       if (fieldDef?.type !== 'struct') {

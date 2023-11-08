@@ -269,6 +269,16 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> y.n
     `).malloyResultMatches(runtime, {'n': 2});
   });
+  it(`joined dimension nest refinement - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        join_one: y is ${databaseName}.sql("SELECT 2 AS n") on true
+        view: m is { aggregate: c is count() }
+      }
+      run: x -> { nest: m + y.n }
+    `).malloyResultMatches(runtime, {'m.c': 1, 'm.n': 2});
+  });
   it.skip(`nest measure only in second stage - ${databaseName}`, async () => {
     await expect(`
       ##! experimental { scalar_lenses }

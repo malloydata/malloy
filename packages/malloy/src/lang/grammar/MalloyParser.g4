@@ -128,7 +128,7 @@ turtleName
 
 queryRefinement
   : (REFINE | refineOperator)? queryProperties
-  | refineOperator turtleName
+  | refineOperator fieldPath
   ;
 
 sourceExtension

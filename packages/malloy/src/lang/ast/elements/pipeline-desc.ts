@@ -28,7 +28,6 @@ import {
   Pipeline,
   StructDef,
   isAtomicField,
-  isAtomicFieldType,
   isTurtleDef,
 } from '../../../model/malloy_types';
 
@@ -148,7 +147,7 @@ export abstract class PipelineDesc extends MalloyElement {
             annotation,
           };
         } else {
-          this.log(`'${turtleName}' is not a query`);
+          this.log(`'${turtleName.refString}' is not a query`);
         }
       } else if (turtleName.list.length > 1) {
         this.log('Cannot use view from join');
