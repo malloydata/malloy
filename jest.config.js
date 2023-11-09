@@ -28,8 +28,18 @@ module.exports = {
   setupFilesAfterEnv: ['jest-expect-message'],
   testMatch: ['**/?(*.)spec.(ts|js)?(x)'],
   testPathIgnorePatterns: ['/node_modules/', '/dist/', '/out/'],
+  transformIgnorePatterns: [
+    'node_modules/(?!(lit-html|lit-element|lit|@lit|@lit-labs)/)',
+  ],
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {tsconfig: '<rootDir>/tsconfig.json'}],
+    '^.+\\.(js|jsx)$': [
+      'babel-jest',
+      {
+        'presets': ['@babel/preset-env'],
+        'plugins': [['@babel/transform-runtime']],
+      },
+    ],
   },
   testTimeout: 100000,
   verbose: true,
