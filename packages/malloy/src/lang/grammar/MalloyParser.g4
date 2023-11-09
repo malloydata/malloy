@@ -121,7 +121,7 @@ topLevelQueryDef
   : tags queryName isDefine sqExpr
   ;
 
-refineOperator: PLUS ;
+refineOperator: PLUS | COMMA;
 
 turtleName
   : id;

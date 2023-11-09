@@ -274,4 +274,25 @@ describe('partial views', () => {
       "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
     );
   });
+  test('comma allowed in experiment', () => {
+    expect(
+      markSource`
+        ##! experimental.scalar_lenses
+        run: a -> ai, astr
+      `
+    ).toTranslate();
+  });
+  test('comma not allowed not in experiment', () => {
+    expect(
+      markSource`
+        source: x is a extend {
+          view: i is { group_by: i is 1 }
+          view: j is { group_by: j is 1 }
+        }
+        run: x -> i${','} j
+      `
+    ).translationToFailWith(
+      "Experimental flag 'scalar_lenses' required to enable this feature"
+    );
+  });
 });

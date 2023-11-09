@@ -132,8 +132,11 @@ export class MalloyToAST
 
   protected inExperiment(experimentID: string, cx: ParserRuleContext): boolean {
     const experimental = this.compilerFlags.tag('experimental');
-    if (experimental) {
-      return experimental.bare() || experimental.has(experimentID);
+    if (
+      experimental &&
+      (experimental.bare() || experimental.has(experimentID))
+    ) {
+      return true;
     }
     this.contextError(
       cx,
@@ -368,22 +371,30 @@ export class MalloyToAST
     pcx: parse.QueryRefinementContext
   ): ast.QOPDesc | ast.ViewFieldReference {
     const propertiesCx = pcx.queryProperties();
+    if (pcx.REFINE()) {
+      this.m4advisory(
+        pcx,
+        'The experimental "refine" operator is deprecated, use the "+" operator'
+      );
+    } else {
+      const refOp = pcx.refineOperator();
+      if (!refOp) {
+        this.m4advisory(
+          pcx,
+          'Implicit query refinement is deprecated, use the `+` operator'
+        );
+      } else {
+        const comma = refOp.COMMA();
+        if (comma) {
+          this.inExperiment('scalar_lenses', refOp);
+        }
+      }
+    }
     if (propertiesCx) {
       const properties = this.astAt(
         this.visitQueryProperties(propertiesCx),
         pcx
       );
-      if (pcx.REFINE()) {
-        this.m4advisory(
-          pcx,
-          'The experimental "refine" operator is deprecated, use the "+" operator'
-        );
-      } else if (!pcx.refineOperator()) {
-        this.m4advisory(
-          pcx,
-          'Implicit query refinement is deprecated, use the `+` operator'
-        );
-      }
       return properties;
     }
     const turtleNameCx = pcx.turtleName();
