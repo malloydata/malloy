@@ -353,4 +353,48 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       run: x -> v
     `).malloyResultMatches(runtime, {n: 1, c: 1});
   });
+  it(`aggregate copy bug with only old refinement - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        measure: c is count()
+      }
+      run: x -> c + {
+        aggregate: e is c { where: false }
+      }
+    `).malloyResultMatches(runtime, {c: 1, e: 0});
+  });
+  it(`aggregate copy bug with only old old refinement - ${databaseName}`, async () => {
+    await expect(`
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        measure: c is count()
+        view: v is { aggregate: c }
+      }
+      run: x -> v + {
+        aggregate: e is c { where: false }
+      }
+    `).malloyResultMatches(runtime, {c: 1, e: 0});
+  });
+  it(`but still need to be able to use as output field - ${databaseName}`, async () => {
+    await expect(`
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        measure: c is count()
+        view: v is { aggregate: c }
+      }
+      run: x -> v + {
+        calculate: e is lag(c)
+      }
+    `).malloyResultMatches(runtime, {c: 1, e: null});
+  });
+  it(`aggregate copy bug - ${databaseName}`, async () => {
+    await expect(`
+      ##! experimental { scalar_lenses }
+      source: x is ${databaseName}.sql("SELECT 1 AS n") extend {
+        measure: c is count()
+      }
+      run: x -> n + c + {
+        aggregate: e is c { where: false }
+      }
+    `).malloyResultMatches(runtime, {n: 1, c: 1, e: 0});
+  });
 });

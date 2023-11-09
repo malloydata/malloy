@@ -65,19 +65,22 @@ export abstract class QuerySpace
       if (typeof field === 'string') {
         const ent = this.exprSpace.entry(field);
         if (ent) {
-          this.setEntry(field, ent);
+          this.setInputEntry(field, ent);
         }
       } else if (model.isFilteredAliasedName(field)) {
         const name = field.as ?? field.name;
         const ent = this.exprSpace.entry(name);
         if (ent) {
-          this.setEntry(name, ent);
+          this.setInputEntry(name, ent);
         }
       } else {
         // TODO can you reference fields in a turtle as fields in the output space,
         // e.g. order_by: my_turtle.foo, or lag(my_turtle.foo)
         if (field.type !== 'turtle') {
-          this.setEntry(field.as ?? field.name, new ColumnSpaceField(field));
+          this.setInputEntry(
+            field.as ?? field.name,
+            new ColumnSpaceField(field)
+          );
         }
       }
     }
@@ -97,6 +100,10 @@ export abstract class QuerySpace
         super.pushFields(f);
       }
     }
+  }
+
+  private setInputEntry(name: string, value: SpaceEntry): void {
+    super.setEntry(name, value);
   }
 
   setEntry(name: string, value: SpaceEntry): void {
