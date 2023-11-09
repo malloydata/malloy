@@ -2,7 +2,7 @@ import script from './static/image.malloy?raw';
 import {renderMalloy} from './render-malloy';
 
 export default {
-  title: 'Malloy/Image',
+  title: 'Malloy Legacy/Image',
   render: ({source, view}, {globals: {connection}}) => {
     return renderMalloy({script, source, view, connection});
   },

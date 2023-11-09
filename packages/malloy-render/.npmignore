@@ -2,3 +2,4 @@ src/
 *.map
 tsconfig*
 *.spec
+storybook-static

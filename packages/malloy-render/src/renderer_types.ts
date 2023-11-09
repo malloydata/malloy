@@ -29,6 +29,7 @@ export interface RendererOptions {
   onDrill?: DrillFunction;
   titleCase?: boolean;
   queryTimezone?: string;
+  target?: HTMLElement;
 }
 
 export type DrillFunction = (

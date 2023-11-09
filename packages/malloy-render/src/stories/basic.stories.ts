@@ -2,7 +2,7 @@ import script from './static/basic.malloy?raw';
 import {renderMalloy} from './render-malloy';
 
 export default {
-  title: 'Malloy/Basic',
+  title: 'Malloy Legacy/Basic',
   render: ({source, view}, {globals: {connection}}) => {
     return renderMalloy({script, source, view, connection});
   },

@@ -1,0 +1,15 @@
+## renderer_next
+
+source: products is duckdb.table("data/products.parquet") extend {
+
+  view: records is{
+    select: *
+    limit: 1000
+  }
+
+  # bar_chart renderer_next
+  view: category_bar is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+  }
+};
