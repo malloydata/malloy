@@ -22,7 +22,7 @@
  */
 
 import * as model from '../../../model/malloy_types';
-import {FieldName, FieldSpace} from '../types/field-space';
+import {FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
 import {QueryField} from '../field-space/query-space-field';
@@ -44,10 +44,15 @@ import {
   expressionIsScalar,
   TypeDesc,
 } from '../../../model';
-import {FieldReference} from '../query-items/field-references';
+import {
+  FieldReference,
+  ViewFieldReference,
+} from '../query-items/field-references';
 import {getFinalStruct} from '../struct-utils';
 import {ColumnSpaceField} from '../field-space/column-space-field';
 import {detectAndRemovePartialStages} from '../query-utils';
+import {SpaceField} from '../types/space-field';
+import {QueryFieldStruct} from '../field-space/query-field-struct';
 
 function isTurtle(fd: model.QueryFieldDef | undefined): fd is model.TurtleDef {
   const ret =
@@ -75,6 +80,9 @@ abstract class TurtleDeclRoot
         this.log(headEnt.error);
         reportWrongType = false;
       } else if (headEnt.found instanceof QueryField) {
+        if (this.turtleName.list.length > 1) {
+          this.turtleName.log('Cannot use view from join');
+        }
         const headDef = headEnt.found.getQueryFieldDef(fs);
         if (isTurtle(headDef)) {
           const newPipe = this.refinePipeline(fs, headDef);
@@ -165,8 +173,8 @@ export class NestRefinement
   queryRefinementStage = LegalRefinementStage.Single;
   forceQueryClass = QueryClass.Grouping;
 
-  constructor(turtleName: FieldName) {
-    super(turtleName.refString);
+  constructor(turtleName: ViewFieldReference) {
+    super(turtleName.outputName);
     this.turtleName = turtleName;
   }
 
@@ -256,8 +264,8 @@ export class NestReference
   forceQueryClass = QueryClass.Grouping;
   queryRefinementStage = LegalRefinementStage.Single;
 
-  constructor(readonly name: FieldName) {
-    super([name]);
+  constructor(readonly name: FieldReference) {
+    super([...name.list]);
   }
   typecheck(type: TypeDesc) {
     if (type.dataType !== 'turtle') {
@@ -266,19 +274,66 @@ export class NestReference
       if (expressionIsAnalytic(type.expressionType)) {
         useInstead = 'a calculate';
         kind = 'an analytic';
-      } else if (expressionIsScalar(type.expressionType)) {
-        useInstead = 'a group_by or select';
-        kind = 'a scalar';
-      } else if (expressionIsAggregate(type.expressionType)) {
-        useInstead = 'an aggregate';
-        kind = 'an aggregate';
       } else {
-        throw new Error(`Unexpected expression type ${type} not handled here`);
+        if (this.inExperiment('scalar_lenses', true)) {
+          return;
+        }
+        if (expressionIsScalar(type.expressionType)) {
+          useInstead = 'a group_by or select';
+          kind = 'a scalar';
+        } else if (expressionIsAggregate(type.expressionType)) {
+          useInstead = 'an aggregate';
+          kind = 'an aggregate';
+        } else {
+          throw new Error(
+            `Unexpected expression type ${type} not handled here`
+          );
+        }
+        this.log(
+          `Cannot use ${kind} field in a nest operation, did you mean to use ${useInstead} operation instead?`
+        );
       }
-      this.log(
-        `Cannot use ${kind} field in a nest operation, did you mean to use ${useInstead} operation instead?`
-      );
     }
+  }
+
+  makeEntry(fs: DynamicSpace): void {
+    if (fs instanceof QuerySpace) {
+      const lookup = this.name.getField(fs.inputSpace());
+      if (lookup.found instanceof SpaceField) {
+        const field = lookup.found.fieldDef();
+        if (field && model.isAtomicField(field)) {
+          const name = field.as ?? field.name;
+          fs.newEntry(
+            name,
+            this,
+            new QueryFieldStruct(fs, {
+              type: 'turtle',
+              name,
+              pipeline: [
+                {
+                  type: 'reduce',
+                  fields: [
+                    {
+                      type: field.type,
+                      name,
+                      expressionType: field.expressionType,
+                      e: [{type: 'field', path: this.name.refString}],
+                    },
+                  ],
+                },
+              ],
+            })
+          );
+          return;
+        }
+      }
+      if (this.name.list.length > 1) {
+        this.log('Cannot nest view from join');
+        return;
+      }
+      return super.makeEntry(fs);
+    }
+    throw this.internalError('Unexpected namespace for nest');
   }
 
   queryExecute(executeFor: QueryBuilder) {

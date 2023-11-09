@@ -248,7 +248,7 @@ export class SQAppendView extends SourceQueryNode {
       const refinements = views.slice(1);
 
       if (head instanceof ViewFieldReference) {
-        theQuery.turtleName = head.list[0];
+        theQuery.turtleName = head;
       } else if (head instanceof QOPDesc) {
         theQuery.addSegments(head);
       }

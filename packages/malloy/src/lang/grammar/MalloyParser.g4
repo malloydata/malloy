@@ -128,7 +128,7 @@ turtleName
 
 queryRefinement
   : (REFINE | refineOperator)? queryProperties
-  | refineOperator turtleName
+  | refineOperator fieldPath
   ;
 
 sourceExtension
@@ -145,7 +145,7 @@ pipelineFromName
 
 firstSegment
   : ARROW? queryProperties queryRefinement*
-  | exploreQueryName queryRefinement*
+  | fieldPath queryRefinement*
   ;
 
 pipeElement
@@ -169,7 +169,6 @@ filterShortcut
   : OCURLY QMARK fieldExpr CCURLY
   ;
 
-exploreQueryName : id;
 queryName : id;
 
 sourcePropertyList
@@ -273,12 +272,12 @@ sqExpr
   ;
 
 leadSeg
-  : id queryRefinement*
+  : fieldPath queryRefinement*
   | queryProperties
   ;
 
 qSeg
-  : id
+  : fieldPath
   | queryProperties
   ;
 
@@ -387,7 +386,7 @@ nestedQueryList
   ;
 
 nestEntry
-  : tags queryName queryRefinement*   # nestExisting
+  : tags fieldPath queryRefinement*   # nestExisting
   | tags queryName isDefine pipelineFromName            # nestDef
   ;
 

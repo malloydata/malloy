@@ -161,7 +161,40 @@ describe('lenses', () => {
       `
     ).toTranslate();
   });
-  test('cannot nest dimension even when experiment is enabled', () => {
+  test('can reference join field when experiment is enabled', () => {
+    expect(
+      markSource`
+        ##! experimental { scalar_lenses }
+        source: x is a extend {
+          join_cross: y is a extend { dimension: n is 1 } on true
+        }
+        run: x -> y.n
+      `
+    ).toTranslate();
+  });
+  test('can reference join field in refinement when experiment is enabled', () => {
+    expect(
+      markSource`
+        ##! experimental { scalar_lenses }
+        source: x is a extend {
+          join_cross: y is a extend { dimension: n is 1 } on true
+        }
+        run: x -> ai + y.n
+      `
+    ).toTranslate();
+  });
+  test('can reference join field in nest refinement when experiment is enabled', () => {
+    expect(
+      markSource`
+        ##! experimental { scalar_lenses }
+        source: x is a extend {
+          join_cross: y is a extend { dimension: n is 1 } on true
+        }
+        run: x -> { nest: ai + y.n }
+      `
+    ).toTranslate();
+  });
+  test('can nest dimension when experiment is enabled', () => {
     expect(
       markSource`
         ##! experimental { scalar_lenses }
@@ -171,9 +204,85 @@ describe('lenses', () => {
         }
         run: x -> d
       `
+    ).toTranslate();
+  });
+  test('cannot use join_name in refinement shortcut', () => {
+    expect(
+      markSource`
+        ##! experimental { scalar_lenses }
+        source: x is a extend {
+          join_one: y is a on true
+          view: m is { aggregate: c is count() }
+        }
+        run: x -> m + y + { limit: 1 }`
     ).translationToFailWith(
-      'Cannot use a scalar field in a nest operation, did you mean to use a group_by or select operation instead?'
+      'named refinement `y` must be a view, found a struct'
     );
+  });
+  test('cannot use view from join as whole pipeline', () => {
+    expect(
+      markSource`
+        ##! experimental { scalar_lenses }
+        source: x is a extend {
+          join_one: y is a extend {
+            view: z is { group_by: d is 1 }
+          } on true
+        }
+        run: x -> y.z
+      `
+    ).translationToFailWith('Cannot use view from join');
+  });
+  test('cannot use view from join in nest', () => {
+    expect(
+      markSource`
+        ##! experimental { scalar_lenses }
+        source: x is a extend {
+          join_one: y is a extend {
+            view: z is { group_by: d is 1 }
+          } on true
+        }
+        run: x -> { nest: y.z }
+      `
+    ).translationToFailWith('Cannot nest view from join');
+  });
+  test('cannot use view from join as nest view head', () => {
+    expect(
+      markSource`
+        ##! experimental { scalar_lenses }
+        source: x is a extend {
+          join_one: y is a extend {
+            view: z is { group_by: d is 1 }
+          } on true
+        }
+        run: x -> { nest: y.z + { limit: 1 } }
+      `
+    ).translationToFailWith('Cannot use view from join');
+  });
+  test('cannot use view from join as lens in query', () => {
+    expect(
+      markSource`
+        ##! experimental { scalar_lenses }
+        source: x is a extend {
+          join_one: y is a extend {
+            view: z is { group_by: d is 1 }
+          } on true
+        }
+        run: x -> ai + y.z
+      `
+    ).translationToFailWith('Cannot use view from join as refinement');
+  });
+  test('cannot use view from join as lens in nest', () => {
+    expect(
+      markSource`
+        ##! experimental { scalar_lenses }
+        source: x is a extend {
+          join_one: y is a extend {
+            view: z is { group_by: d is 1 }
+          } on true
+        }
+        run: x -> { nest: ai + y.z }
+      `
+    ).translationToFailWith('Cannot use view from join as refinement');
   });
   test('can nest dimension with refinement when experiment is enabled', () => {
     expect(

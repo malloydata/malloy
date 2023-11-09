@@ -1175,6 +1175,10 @@ export function isTurtleDef(def: FieldDef): def is TurtleDef {
   return def.type === 'turtle';
 }
 
+export function isAtomicField(def: FieldDef): def is FieldAtomicDef {
+  return isAtomicFieldType(def.type);
+}
+
 export interface SearchResultRow {
   field_name: string; // eslint-disable-line camelcase
   field_value: string; // eslint-disable-line camelcase
