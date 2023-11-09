@@ -43,6 +43,7 @@
   },
   "devDependencies": {
     "@babel/plugin-transform-runtime": "^7.23.3",
+    "@babel/preset-env": "^7.23.2",
     "@jest/globals": "^26.6.2",
     "@malloydata/db-bigquery": "*",
     "@malloydata/malloy": "*",
@@ -54,6 +55,7 @@
     "@typescript-eslint/eslint-plugin": "^5.51.0",
     "@typescript-eslint/parser": "^5.51.0",
     "axios": "^1.4.0",
+    "babel-jest": "^29.3.1",
     "cross-os": "^1.5.0",
     "csv-stringify": "^5.6.5",
     "dotenv-cli": "^6.0.0",
