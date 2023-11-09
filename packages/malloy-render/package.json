@@ -41,6 +41,7 @@
     "@storybook/html": "^7.5.0",
     "@storybook/html-vite": "^7.5.0",
     "@storybook/testing-library": "^0.2.2",
+    "@storybook/types": "^7.5.3",
     "storybook": "^7.5.0"
   }
 }

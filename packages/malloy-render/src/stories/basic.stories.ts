@@ -1,5 +1,5 @@
 import script from './static/basic.malloy?raw';
-import {renderMalloy} from './render-malloy';
+import {renderMalloy} from './render-malloy-legacy';
 
 export default {
   title: 'Malloy Legacy/Basic',

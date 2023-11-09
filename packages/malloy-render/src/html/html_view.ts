@@ -33,7 +33,7 @@ import {ContainerRenderer} from './container';
 import {createErrorElement} from './utils';
 import {MainRendererFactory} from '../main_renderer_factory';
 import {HTMLListRenderer} from './list';
-import '../component/table';
+import '../component/render';
 
 export class HTMLView {
   constructor(private document: Document) {}
@@ -41,16 +41,9 @@ export class HTMLView {
   async render(result: Result, options: RendererOptions): Promise<HTMLElement> {
     const isNextRenderer = result.resultExplore.modelTag.has('renderer_next');
     if (isNextRenderer) {
-      const el = document.createElement('malloy-table');
-      el.table = result.data;
-      if (options.target) {
-        options.target.replaceChildren(el);
-        return Promise.resolve(el);
-      }
-      return createErrorElement(
-        this.document,
-        'The renderer requires a target element to render into. Please set via options.target.'
-      );
+      const el = document.createElement('malloy-render');
+      el.result = result;
+      return el;
     }
 
     const table = result.data;
