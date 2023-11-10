@@ -33,17 +33,9 @@ export abstract class SpaceEntry {
    */
   abstract describeType(): TypeDesc;
   abstract refType: 'field' | 'parameter';
-  outputField = false;
 
   typeDesc(): TypeDesc {
-    const type = this.describeType();
-    if (this.outputField) {
-      return {
-        ...type,
-        evalSpace: type.evalSpace === 'constant' ? 'constant' : 'output',
-      };
-    }
-    return type;
+    return this.describeType();
   }
 }
 

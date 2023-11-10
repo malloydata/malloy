@@ -62,7 +62,7 @@ export class Top extends MalloyElement implements QueryPropertyInterface {
           if (entry.error) {
             this.by.log(entry.error);
           }
-          if (entry.found?.typeDesc().evalSpace === 'input') {
+          if (!entry.found || !entry.isOutputField) {
             this.by.log(`Unknown field ${this.by.refString} in output space`);
           }
           if (expressionIsAnalytic(entry.found?.typeDesc().expressionType)) {

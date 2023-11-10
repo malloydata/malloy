@@ -34,7 +34,6 @@ import {LookupResult} from '../types/lookup-result';
 import {ColumnSpaceField} from './column-space-field';
 import {StructSpaceField} from './static-space';
 import {QueryInputSpace} from './query-input-space';
-import {SpaceEntry} from '../types/space-entry';
 
 /**
  * The output space of a query operation, it is not named "QueryOutputSpace"
@@ -65,22 +64,19 @@ export abstract class QuerySpace
       if (typeof field === 'string') {
         const ent = this.exprSpace.entry(field);
         if (ent) {
-          this.setInputEntry(field, ent);
+          this.setEntry(field, ent);
         }
       } else if (model.isFilteredAliasedName(field)) {
         const name = field.as ?? field.name;
         const ent = this.exprSpace.entry(name);
         if (ent) {
-          this.setInputEntry(name, ent);
+          this.setEntry(name, ent);
         }
       } else {
         // TODO can you reference fields in a turtle as fields in the output space,
         // e.g. order_by: my_turtle.foo, or lag(my_turtle.foo)
         if (field.type !== 'turtle') {
-          this.setInputEntry(
-            field.as ?? field.name,
-            new ColumnSpaceField(field)
-          );
+          this.setEntry(field.as ?? field.name, new ColumnSpaceField(field));
         }
       }
     }
@@ -100,16 +96,6 @@ export abstract class QuerySpace
         super.pushFields(f);
       }
     }
-  }
-
-  private setInputEntry(name: string, value: SpaceEntry): void {
-    super.setEntry(name, value);
-  }
-
-  setEntry(name: string, value: SpaceEntry): void {
-    super.setEntry(name, value);
-    // Everything in this namespace is an output field
-    value.outputField = true;
   }
 
   protected addWild(wild: WildcardFieldReference): void {
@@ -223,9 +209,9 @@ export abstract class QuerySpace
         // (see creation of a QuerySpace) we add references to all the fields from
         // the refinement, but they don't have definitions. So in the case where we
         // don't have a field def, we "know" that that field is already in the query,
-        // and we don't need to worry about actually adding it. This is also true for
-        // project statements, where we add "*" as a field and also all the individuala
-        // fields, but the individual fields don't have field defs.
+        // and we don't need to worry about actually adding it. Previously, this was also true for
+        // project statements, where we added "*" as a field and also all the individual
+        // fields, but the individual fields didn't have field defs.
       }
     }
     this.isComplete();
@@ -288,7 +274,7 @@ export abstract class QuerySpace
   lookup(path: FieldName[]): LookupResult {
     const result = super.lookup(path);
     if (result.found) {
-      return result;
+      return {...result, isOutputField: true};
     }
     return this.exprSpace.lookup(path);
   }

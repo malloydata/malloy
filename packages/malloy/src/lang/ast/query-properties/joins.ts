@@ -57,7 +57,7 @@ export abstract class Join
   note?: Annotation;
 
   makeEntry(fs: DynamicSpace) {
-    fs.newEntry(this.name.refString, this, new JoinSpaceField(fs, this));
+    fs.newEntry(this.name.refString, this, new JoinSpaceField(this));
   }
 
   protected getStructDefFromExpr() {

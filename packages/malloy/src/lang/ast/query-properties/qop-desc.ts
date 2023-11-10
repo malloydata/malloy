@@ -109,7 +109,7 @@ export class QOPDesc extends ListOf<QueryProperty> {
       segment,
       outputSpace: () =>
         // TODO someday we'd like to get rid of the call to opOutputStruct here.
-        // If the `qex.resultFS` is correct, then we should be able to just use that
+        // If the `build.resultFS` is correct, then we should be able to just use that
         // in a more direct way.
         new StaticSpace(opOutputStruct(this, inputFS.structDef(), segment)),
     };
