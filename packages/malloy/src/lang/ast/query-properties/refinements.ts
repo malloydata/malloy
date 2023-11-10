@@ -78,7 +78,7 @@ export class NamedRefinement extends Refinement {
     }
     this.name.log(
       `named refinement \`${this.name.refString}\` must be a view, found a ${
-        res.found.describeType().dataType
+        res.found.typeDesc().dataType
       }`
     );
   }

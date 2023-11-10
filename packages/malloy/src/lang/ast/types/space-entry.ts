@@ -26,17 +26,8 @@ import {DynamicSpace} from '../field-space/dynamic-space';
 import {MalloyElement} from './malloy-element';
 
 export abstract class SpaceEntry {
-  /**
-   * Once upon a time this was called `typeDesc()` but now that is implemented here
-   * as a wrapper which knows about output spaces. Individual entries should describe
-   * themselves with describeType() and the typeDesc() here will call that.
-   */
-  abstract describeType(): TypeDesc;
+  abstract typeDesc(): TypeDesc;
   abstract refType: 'field' | 'parameter';
-
-  typeDesc(): TypeDesc {
-    return this.describeType();
-  }
 }
 
 export interface MakeEntry {
