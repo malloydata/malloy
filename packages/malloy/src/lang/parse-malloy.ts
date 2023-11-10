@@ -625,6 +625,7 @@ class TranslateStep implements TranslationStep {
           queryList: that.queryList,
           sqlBlocks: that.sqlBlocks,
         },
+        fromSources: that.getDependencies(),
         ...that.problemResponse(),
         final: true,
       };
@@ -685,6 +686,14 @@ export abstract class MalloyTranslation {
     if (!this.childTranslators.get(url)) {
       this.childTranslators.set(url, new MalloyChildTranslator(url, this.root));
     }
+  }
+
+  getDependencies(): string[] {
+    const dependencies = [this.sourceURL];
+    for (const [_childURL, child] of this.childTranslators) {
+      dependencies.push(...child.getDependencies());
+    }
+    return dependencies;
   }
 
   addReference(reference: DocumentReference): void {
@@ -827,7 +836,6 @@ export abstract class MalloyTranslation {
     const attempt = this.translateStep.step(this, extendingModel);
     if (attempt.final) {
       this.finalAnswer = attempt;
-      this.buildImports();
     }
     return attempt;
   }
@@ -946,6 +954,7 @@ export class MalloyChildTranslator extends MalloyTranslation {
 export class MalloyTranslator extends MalloyTranslation {
   schemaZone = new Zone<StructDef>();
   importZone = new Zone<string>();
+  imporList: string[] = [];
   sqlQueryZone = new Zone<SQLBlockStructDef>();
   logger = new MessageLog();
   readonly root: MalloyTranslator;
