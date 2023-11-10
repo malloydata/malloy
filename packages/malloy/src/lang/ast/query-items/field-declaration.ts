@@ -306,7 +306,7 @@ export class FieldDefinitionValue extends SpaceField {
   // really know what type we have. However since we have the FieldSpace,
   // we can compile the expression to find out, this might result in
   // some expressions being compiled twice.
-  describeType(): TypeDesc {
+  typeDesc(): TypeDesc {
     const typeFrom = this.qfd || this.fieldDef();
     return this.fieldTypeFromFieldDef(typeFrom);
   }

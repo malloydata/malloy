@@ -296,6 +296,50 @@ describe('source:', () => {
         }
       `).toTranslate();
     });
+    test('chained explore-query with refinement two steps', () => {
+      expect(`
+        source: c is a extend {
+          view: base is {
+            group_by: astr
+          } + {
+            group_by: ai
+          }
+          view: chain2 is base -> {
+            top: 10; order_by: astr
+            select: *
+          }
+        }
+      `).toTranslate();
+    });
+    test('pipelined explore-query with refinement', () => {
+      expect(`
+        source: c is a extend {
+          view: base is {
+            group_by: astr
+          }
+          view: chain is base + {
+            group_by: ai
+          } -> {
+            top: 10; order_by: astr
+            select: *
+          }
+        }
+      `).toTranslate();
+    });
+    test.skip('pipelined explore-query with view chain', () => {
+      expect(`
+        source: c is a extend {
+          view: chain is {
+            group_by: astr
+          } + {
+            group_by: ai
+          } -> {
+            top: 10; order_by: astr
+            select: *
+          }
+        }
+      `).toTranslate();
+    });
     test('multiple explore-query', () => {
       expect(`
         source: abNew is ab extend {

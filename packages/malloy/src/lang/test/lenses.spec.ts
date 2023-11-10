@@ -72,12 +72,21 @@ describe('lenses', () => {
     expect(
       markSource`
         source: x is a extend {
-          view: d1 is { group_by: n1 is 1; order_by: n1 }
-          view: d2 is { group_by: n2 is 2; order_by: n2 }
+          view: d1 is { group_by: n1 is ai; order_by: n1 }
+          view: d2 is { group_by: n2 is 1; order_by: n2 }
         }
         run: x -> d1 + d2
       `
     ).translationToFailWith('refinement cannot override existing ordering');
+  });
+  test('weird issue with order by constant group by', () => {
+    expect(
+      markSource`
+        source: x is a extend {
+          view: d1 is { group_by: n1 is 1; order_by: n1 }
+        }
+      `
+    ).toTranslate();
   });
   test('can add a limit late', () => {
     expect(
@@ -309,6 +318,16 @@ describe('lenses', () => {
     ).translationToFailWith(
       'named refinement `b` must be a view, found a struct'
     );
+  });
+  test('cannot reference field in LHS of refinement in group_by', () => {
+    expect(
+      markSource`
+        source: x is a extend {
+          view: v is { group_by: i is 1 }
+        }
+        run: x -> v + { group_by: j is ${'i'} }
+      `
+    ).translationToFailWith("'i' is not defined");
   });
   test('cannot named-refine multi-stage query', () => {
     expect(

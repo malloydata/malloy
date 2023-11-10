@@ -67,11 +67,11 @@ export class ReferenceField extends SpaceField {
     return this.queryFieldDef;
   }
 
-  describeType(): TypeDesc {
+  typeDesc(): TypeDesc {
     if (this.memoTypeDesc) return this.memoTypeDesc;
     const refTo = this.referenceTo;
     if (refTo) {
-      this.memoTypeDesc = refTo.describeType();
+      this.memoTypeDesc = refTo.typeDesc();
       return this.memoTypeDesc;
     }
     return {dataType: 'error', expressionType: 'scalar', evalSpace: 'input'};

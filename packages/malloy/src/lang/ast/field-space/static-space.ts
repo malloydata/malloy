@@ -182,7 +182,7 @@ export class StaticSpace implements FieldSpace {
         found: undefined,
       };
     }
-    return {found, error: undefined, relationship};
+    return {found, error: undefined, relationship, isOutputField: false};
   }
 
   isQueryFieldSpace(): this is QueryFieldSpace {
