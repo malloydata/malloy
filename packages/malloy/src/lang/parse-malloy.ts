@@ -298,6 +298,10 @@ class ImportsAndTablesStep implements TranslationStep {
             ).toString()
           );
           that.addChild(ref);
+          that.imports.push({
+            importURL: ref,
+            location: {url: that.sourceURL, range: firstRef},
+          });
           that.root.importZone.reference(ref, {
             url: that.sourceURL,
             range: firstRef,
@@ -850,16 +854,6 @@ export abstract class MalloyTranslation {
       }
     }
     return undefined;
-  }
-
-  private buildImports(): void {
-    for (const [key, value] of Object.entries(this.root.importZone.location)) {
-      // Ignore any import in another file
-      if (value.url !== this.sourceURL) {
-        continue;
-      }
-      this.imports.push({importURL: key, location: value});
-    }
   }
 
   metadata(): MetadataResponse {
