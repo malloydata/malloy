@@ -237,6 +237,7 @@ export class Malloy {
             result.translated.queryList,
             result.translated.sqlBlocks,
             result.problems || [],
+            [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
             (position: ModelDocumentPosition) =>
               translator.referenceAt(position),
             (position: ModelDocumentPosition) => translator.importAt(position)
@@ -641,6 +642,7 @@ export class Model implements Taggable {
     private queryList: InternalQuery[],
     private sqlBlocks: SQLBlockStructDef[],
     readonly problems: LogMessage[],
+    readonly fromSources: string[],
     referenceAt: (
       location: ModelDocumentPosition
     ) => DocumentReference | undefined = () => undefined,
@@ -1452,7 +1454,7 @@ export class Explore extends Entity {
   }
 
   public getSingleExploreModel(): Model {
-    return new Model(this.modelDef, [], [], []);
+    return new Model(this.modelDef, [], [], [], []);
   }
 
   private get fieldMap(): Map<string, Field> {
@@ -2166,7 +2168,7 @@ export class Runtime {
   //      be used in tests.
   public _loadModelFromModelDef(modelDef: ModelDef): ModelMaterializer {
     return new ModelMaterializer(this, async () => {
-      return new Model(modelDef, [], [], []);
+      return new Model(modelDef, [], [], [], []);
     });
   }
 
