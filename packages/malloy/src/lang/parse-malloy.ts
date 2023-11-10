@@ -298,6 +298,10 @@ class ImportsAndTablesStep implements TranslationStep {
             ).toString()
           );
           that.addChild(ref);
+          that.imports.push({
+            importURL: ref,
+            location: {url: that.sourceURL, range: firstRef},
+          });
           that.root.importZone.reference(ref, {
             url: that.sourceURL,
             range: firstRef,
@@ -625,6 +629,7 @@ class TranslateStep implements TranslationStep {
           queryList: that.queryList,
           sqlBlocks: that.sqlBlocks,
         },
+        fromSources: that.getDependencies(),
         ...that.problemResponse(),
         final: true,
       };
@@ -685,6 +690,14 @@ export abstract class MalloyTranslation {
     if (!this.childTranslators.get(url)) {
       this.childTranslators.set(url, new MalloyChildTranslator(url, this.root));
     }
+  }
+
+  getDependencies(): string[] {
+    const dependencies = [this.sourceURL];
+    for (const [_childURL, child] of this.childTranslators) {
+      dependencies.push(...child.getDependencies());
+    }
+    return dependencies;
   }
 
   addReference(reference: DocumentReference): void {
@@ -827,7 +840,6 @@ export abstract class MalloyTranslation {
     const attempt = this.translateStep.step(this, extendingModel);
     if (attempt.final) {
       this.finalAnswer = attempt;
-      this.buildImports();
     }
     return attempt;
   }
@@ -842,16 +854,6 @@ export abstract class MalloyTranslation {
       }
     }
     return undefined;
-  }
-
-  private buildImports(): void {
-    for (const [key, value] of Object.entries(this.root.importZone.location)) {
-      // Ignore any import in another file
-      if (value.url !== this.sourceURL) {
-        continue;
-      }
-      this.imports.push({importURL: key, location: value});
-    }
   }
 
   metadata(): MetadataResponse {

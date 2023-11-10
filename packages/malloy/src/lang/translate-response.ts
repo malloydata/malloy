@@ -96,6 +96,7 @@ interface TranslatedResponseData
     queryList: Query[];
     sqlBlocks: SQLBlockStructDef[];
   };
+  fromSources: string[];
 }
 
 export type TranslateResponse = Partial<TranslatedResponseData>;

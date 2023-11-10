@@ -121,6 +121,16 @@ source: botProjQSrc is botProjQ
     const xr = docParse.unresolved();
     expect(docParse).toParse();
     expect(xr).toEqual({urls: ['internal://test/langtests/grandChild']});
+    docParse.update({
+      urls: {'internal://test/langtests/grandChild': '// empty file'},
+    });
+    expect(docParse).toTranslate();
+    const sources = docParse.translate().fromSources;
+    expect(sources).toEqual([
+      'internal://test/langtests/root.malloy',
+      'internal://test/langtests/child',
+      'internal://test/langtests/grandChild',
+    ]);
   });
   test('relative imports', () => {
     const docParse = new TestTranslator('import "../parent.malloy"');
