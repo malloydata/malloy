@@ -954,7 +954,6 @@ export class MalloyChildTranslator extends MalloyTranslation {
 export class MalloyTranslator extends MalloyTranslation {
   schemaZone = new Zone<StructDef>();
   importZone = new Zone<string>();
-  imporList: string[] = [];
   sqlQueryZone = new Zone<SQLBlockStructDef>();
   logger = new MessageLog();
   readonly root: MalloyTranslator;
