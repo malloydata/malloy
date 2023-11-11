@@ -166,7 +166,7 @@ export type {
   WriteStream,
   SerializedExplore,
 } from './malloy';
-export type {RunSQLOptions} from './run_sql_options';
+export type {QueryOptionsReader, RunSQLOptions} from './run_sql_options';
 export type {
   Connection,
   ConnectionConfig,
@@ -174,11 +174,11 @@ export type {
   ConnectionParameter,
   ConnectionParameterValue,
   ConnectionConfigSchema,
+  FetchSchemaOptions,
   InfoConnection,
   LookupConnection,
   ModelString,
   ModelURL,
-  FetchSchemaOptions,
   PersistSQLResults,
   PooledConnection,
   QueryString,

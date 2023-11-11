@@ -31,3 +31,5 @@ export interface RunSQLOptions {
   /* This is an experimental feature */
   queryAnnotation?: Annotation;
 }
+
+export type QueryOptionsReader = RunSQLOptions | (() => RunSQLOptions);

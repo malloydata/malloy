@@ -36,6 +36,7 @@ import * as googleCommon from '@google-cloud/common';
 import {GaxiosError} from 'gaxios';
 import {
   Connection,
+  ConnectionConfig,
   FetchSchemaOptions,
   FieldTypeDef,
   Malloy,
@@ -45,6 +46,7 @@ import {
   PooledConnection,
   QueryData,
   QueryDataRow,
+  QueryOptionsReader,
   QueryRunStats,
   RunSQLOptions,
   SQLBlock,
@@ -64,10 +66,6 @@ export interface BigQueryManagerOptions {
   userAgent: string;
 }
 
-export interface BigQueryQueryOptions {
-  rowLimit: number;
-}
-
 // From BigQuery/Google Auth SDK
 interface CredentialBody {
   client_email?: string;
@@ -75,7 +73,8 @@ interface CredentialBody {
 }
 
 interface BigQueryConnectionConfiguration {
-  projectId?: string /** This ID is used for Bigquery Table Normalization */;
+  /** This ID is used for Bigquery Table Normalization */
+  projectId?: string;
   serviceAccountKeyPath?: string;
   location?: string;
   maximumBytesBilled?: string;
@@ -84,16 +83,24 @@ interface BigQueryConnectionConfiguration {
   credentials?: CredentialBody;
 }
 
+interface BigQueryConnectionOptions extends ConnectionConfig {
+  /** This ID is used for Bigquery Table Normalization */
+  projectId?: string;
+  serviceAccountKeyPath?: string;
+  location?: string;
+  maximumBytesBilled?: string;
+  timeoutMs?: string;
+  billingProjectId?: string;
+  client_email?: string;
+  private_key?: string;
+}
+
 interface SchemaInfo {
   schema: bigquery.ITableFieldSchema;
   needsTableSuffixPseudoColumn: boolean;
   needsPartitionTimePseudoColumn: boolean;
   needsPartitionDatePseudoColumn: boolean;
 }
-
-type QueryOptionsReader =
-  | Partial<BigQueryQueryOptions>
-  | (() => Partial<BigQueryQueryOptions>);
 
 // BigQuery SDK apparently throws various authentication errors from Gaxios (https://github.com/googleapis/gaxios) and from
 // @google-cloud/common (https://www.npmjs.com/package/@google-cloud/common)
@@ -137,13 +144,14 @@ const TIMEOUT_MS = 1000 * 60 * 10;
 export class BigQueryConnection
   implements Connection, PersistSQLResults, StreamingConnection
 {
+  public readonly name: string;
   private readonly dialect = new StandardSQLDialect();
-  static DEFAULT_QUERY_OPTIONS: BigQueryQueryOptions = {
+  static DEFAULT_QUERY_OPTIONS: RunSQLOptions = {
     rowLimit: 10,
   };
 
   private bigQuery: BigQuerySDK;
-  private billingProjectId;
+  private billingProjectId: string;
   private temporaryTables = new Map<string, string>();
 
   // This is the project we will use for table normalization. If someone
@@ -173,10 +181,32 @@ export class BigQueryConnection
   private location: string;
 
   constructor(
-    public readonly name: string,
+    option: BigQueryConnectionOptions,
+    queryOptions?: QueryOptionsReader
+  );
+  constructor(
+    name: string,
+    queryOptions?: QueryOptionsReader,
+    config?: BigQueryConnectionConfiguration
+  );
+  constructor(
+    arg: string | BigQueryConnectionOptions,
     queryOptions?: QueryOptionsReader,
     config: BigQueryConnectionConfiguration = {}
   ) {
+    if (typeof arg === 'string') {
+      this.name = arg;
+    } else {
+      const {name, client_email, private_key, ...args} = arg;
+      this.name = name;
+      config = args;
+      if (client_email || private_key) {
+        config.credentials = {
+          client_email,
+          private_key,
+        };
+      }
+    }
     this.bigQuery = new BigQuerySDK({
       userAgent: `Malloy/${Malloy.version}`,
       keyFilename: config.serviceAccountKeyPath,
@@ -198,7 +228,7 @@ export class BigQueryConnection
     return 'standardsql';
   }
 
-  private readQueryOptions(): BigQueryQueryOptions {
+  private readQueryOptions(): RunSQLOptions {
     const options = BigQueryConnection.DEFAULT_QUERY_OPTIONS;
     if (this.queryOptions) {
       if (this.queryOptions instanceof Function) {
@@ -274,7 +304,7 @@ export class BigQueryConnection
 
   public async runSQL(
     sqlCommand: string,
-    options: Partial<BigQueryQueryOptions> = {},
+    options: RunSQLOptions = {},
     rowIndex = 0
   ): Promise<MalloyQueryData> {
     const {data} = await this._runSQL(sqlCommand, options, rowIndex);
@@ -283,7 +313,7 @@ export class BigQueryConnection
 
   public async runSQLBlockAndFetchResultSchema(
     sqlBlock: SQLBlock,
-    options?: {rowLimit?: number | undefined}
+    options?: RunSQLOptions
   ): Promise<{data: MalloyQueryData; schema: StructDef}> {
     const {data, schema: schemaRaw} = await this._runSQL(
       sqlBlock.selectStr,

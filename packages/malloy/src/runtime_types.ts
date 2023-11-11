@@ -130,7 +130,10 @@ export interface ConnectionParameter {
 
 export type ConnectionConfigSchema = ConnectionParameter[];
 
-export type ConnectionConfig = Record<string, ConnectionParameterValue>;
+export interface ConnectionConfig {
+  name: string;
+  [key: string]: ConnectionParameterValue | undefined;
+}
 
 export interface ConnectionFactory {
   connectionName: string;
