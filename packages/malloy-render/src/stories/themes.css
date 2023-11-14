@@ -1,0 +1,7 @@
+.night {
+  --table-body-color: white;
+  --table-header-color: #b1cad6;
+  --table-body-weight: 400;
+  --table-background: #212122;
+  --table-border: 1px solid #4c505b;
+}

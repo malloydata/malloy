@@ -33,11 +33,19 @@ import {ContainerRenderer} from './container';
 import {createErrorElement} from './utils';
 import {MainRendererFactory} from '../main_renderer_factory';
 import {HTMLListRenderer} from './list';
+import '../component/render';
 
 export class HTMLView {
   constructor(private document: Document) {}
 
   async render(result: Result, options: RendererOptions): Promise<HTMLElement> {
+    const isNextRenderer = result.resultExplore.modelTag.has('renderer_next');
+    if (isNextRenderer) {
+      const el = this.document.createElement('malloy-render');
+      el.result = result;
+      return el;
+    }
+
     const table = result.data;
     const renderer = makeRenderer(
       table.field,
