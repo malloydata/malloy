@@ -142,9 +142,9 @@ export class BigQueryConnection
   };
 
   private bigQuery: BigQuerySDK;
-  private projectId;
+  private projectId: string;
   private temporaryTables = new Map<string, string>();
-  private defaultProject;
+  private defaultProject: string;
 
   private schemaCache = new Map<
     string,
@@ -176,7 +176,7 @@ export class BigQueryConnection
       userAgent: `Malloy/${Malloy.version}`,
       keyFilename: config.serviceAccountKeyPath,
       credentials: config.credentials,
-      projectId: config.projectId,
+      projectId: config.projectId || config.defaultProject,
     });
 
     // record project ID because for unclear reasons we have to modify the project ID on the SDK when
