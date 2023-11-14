@@ -236,7 +236,7 @@ describe('db:BigQuery', () => {
       await new Promise(resolve => setTimeout(resolve));
       await bq.fetchSchemaForTables(
         {'test2': 'table2'},
-        {refreshTimestamp: Date.now()}
+        {refreshTimestamp: Date.now() + 10}
       );
       expect(getTableFieldSchema).toBeCalledTimes(2);
     });
@@ -254,7 +254,7 @@ describe('db:BigQuery', () => {
       expect(getSQLBlockSchema).toBeCalledTimes(1);
       await new Promise(resolve => setTimeout(resolve));
       await bq.fetchSchemaForSQLBlock(SQL_BLOCK_2, {
-        refreshTimestamp: Date.now(),
+        refreshTimestamp: Date.now() + 10,
       });
       expect(getSQLBlockSchema).toBeCalledTimes(2);
     });
