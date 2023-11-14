@@ -97,6 +97,7 @@ export interface ParseOptions {
 
 export interface CompileOptions {
   refreshSchemaCache?: boolean | number;
+  noThrowOnError?: boolean;
 }
 
 export class Malloy {
@@ -212,13 +213,13 @@ export class Malloy {
     parse,
     model,
     refreshSchemaCache,
+    noThrowOnError,
   }: {
     urlReader: URLReader;
     connections: LookupConnection<InfoConnection>;
     parse: Parse;
     model?: Model;
-    refreshSchemaCache?: boolean | number;
-  }): Promise<Model> {
+  } & CompileOptions): Promise<Model> {
     let refreshTimestamp: number | undefined;
     if (refreshSchemaCache) {
       refreshTimestamp =
@@ -236,6 +237,23 @@ export class Malloy {
             result.translated.modelDef,
             result.translated.queryList,
             result.translated.sqlBlocks,
+            result.problems || [],
+            [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
+            (position: ModelDocumentPosition) =>
+              translator.referenceAt(position),
+            (position: ModelDocumentPosition) => translator.importAt(position)
+          );
+        } else if (noThrowOnError) {
+          const emptyModel = {
+            name: 'modelDidNotCompile',
+            exports: [],
+            contents: {},
+          };
+          const modelFromCompile = model?._modelDef || emptyModel;
+          return new Model(
+            modelFromCompile,
+            [],
+            [],
             result.problems || [],
             [...(model?.fromSources ?? []), ...(result.fromSources ?? [])],
             (position: ModelDocumentPosition) =>
@@ -2141,6 +2159,7 @@ export class Runtime {
     source: ModelURL | ModelString,
     options?: ParseOptions & CompileOptions
   ): ModelMaterializer {
+    const {refreshSchemaCache, noThrowOnError} = options || {};
     return new ModelMaterializer(this, async () => {
       const parse =
         source instanceof URL
@@ -2157,7 +2176,8 @@ export class Runtime {
         urlReader: this.urlReader,
         connections: this.connections,
         parse,
-        refreshSchemaCache: options?.refreshSchemaCache,
+        refreshSchemaCache,
+        noThrowOnError,
       });
     });
   }
@@ -2497,6 +2517,7 @@ export class ModelMaterializer extends FluentState<Model> {
     query: QueryString | QueryURL,
     options?: ParseOptions & CompileOptions
   ): QueryMaterializer {
+    const {refreshSchemaCache, noThrowOnError} = options || {};
     return this.makeQueryMaterializer(async () => {
       const urlReader = this.runtime.urlReader;
       const connections = this.runtime.connections;
@@ -2517,7 +2538,8 @@ export class ModelMaterializer extends FluentState<Model> {
         connections,
         parse,
         model,
-        refreshSchemaCache: options?.refreshSchemaCache,
+        refreshSchemaCache,
+        noThrowOnError,
       });
       return queryModel.preparedQuery;
     });

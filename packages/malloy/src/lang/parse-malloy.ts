@@ -621,7 +621,10 @@ class TranslateStep implements TranslationStep {
     }
 
     if (that.root.logger.hasErrors()) {
-      this.response = that.fatalResponse();
+      this.response = {
+        fromSources: that.getDependencies(),
+        ...that.fatalResponse(),
+      };
     } else {
       this.response = {
         translated: {
