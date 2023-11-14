@@ -1145,6 +1145,7 @@ export type MalloyQueryData = {
   rows: QueryDataRow[];
   totalRows: number;
   runStats?: QueryRunStats;
+  profilingUrl?: string;
 };
 
 export interface DrillSource {
