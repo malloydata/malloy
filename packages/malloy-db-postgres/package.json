@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-postgres",
-  "version": "0.0.101",
+  "version": "0.0.102",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,8 +22,8 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.101",
-    "@malloydata/malloy-interfaces": "^0.0.101",
+    "@malloydata/malloy": "^0.0.102",
+    "@malloydata/malloy-interfaces": "^0.0.102",
     "@types/pg": "^8.6.1",
     "pg": "^8.7.1",
     "pg-query-stream": "4.2.3"
