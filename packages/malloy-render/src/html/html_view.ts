@@ -41,7 +41,7 @@ export class HTMLView {
   async render(result: Result, options: RendererOptions): Promise<HTMLElement> {
     const isNextRenderer = result.resultExplore.modelTag.has('renderer_next');
     if (isNextRenderer) {
-      const el = document.createElement('malloy-render');
+      const el = this.document.createElement('malloy-render');
       el.result = result;
       return el;
     }

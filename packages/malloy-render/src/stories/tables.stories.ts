@@ -2,6 +2,7 @@ import {Meta} from '@storybook/html';
 import script from './static/tables.malloy?raw';
 import {createLoader} from './util';
 import './themes.css';
+import '../component/render';
 
 const meta: Meta = {
   title: 'Malloy Next/Tables',

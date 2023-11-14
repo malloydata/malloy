@@ -19,7 +19,6 @@ export function renderMalloy(options: RenderOptions) {
   const div = document.createElement('div');
   runAndRender(options, {
     dataStyles: {},
-    target: div,
   }).then(el => {
     if (options.classes) el.classList.add(options.classes);
     div.replaceChildren(el);
