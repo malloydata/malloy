@@ -12,4 +12,42 @@ source: products is duckdb.table("data/products.parquet") extend {
     group_by: category
     aggregate: avg_retail is retail_price.avg()
   }
+
+  view: nested is {
+    group_by: category
+    aggregate: avg_retail is retail_price.avg()
+    nest:
+      nested_column_1 is {
+        group_by: brand
+        aggregate: avg_retail is retail_price.avg()
+        limit: 10
+      }
+      another_nested is {
+        group_by: department
+        aggregate: avg_retail is retail_price.avg()
+        nest: deeply_nested is {
+          group_by: `sku`
+          aggregate: total_cost is cost.sum()
+          limit: 3
+        }
+        limit: 5
+      }
+      record is {
+        nest: nested_record is {
+          group_by: id
+          aggregate: total_cost is cost.sum()
+          limit: 5
+        }
+      }
+      another_nested2 is {
+        group_by: department
+        aggregate: avg_retail is retail_price.avg()
+        nest: deeply_nested is {
+          group_by: `sku`
+          aggregate: total_cost is cost.sum()
+          limit: 3
+        }
+        limit: 5
+      }
+  }
 };

@@ -3,7 +3,9 @@ import {Preview} from '@storybook/html';
 import registeredData from './registered_data.json';
 
 async function createConnection() {
-  const connection = new DuckDBWASMConnection('duckdb');
+  const connection = new DuckDBWASMConnection('duckdb', null, undefined, {
+    rowLimit: 1000,
+  });
   await connection.connecting;
   for (let tableName of registeredData) {
     const fullTableName = `data/${tableName}`;

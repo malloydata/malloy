@@ -12,7 +12,7 @@ export default {
 export const ProductsTable = {
   args: {
     source: 'products',
-    view: '{ select: * }',
+    view: 'records',
   },
 };
 
