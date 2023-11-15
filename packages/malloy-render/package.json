@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.102",
+  "version": "0.0.103",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -23,7 +23,7 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
-    "@malloydata/malloy": "^0.0.102",
+    "@malloydata/malloy": "^0.0.103",
     "@types/luxon": "^2.4.0",
     "lit": "^3.0.2",
     "lodash": "^4.17.20",
