@@ -184,6 +184,15 @@ export abstract class DuckDBWASMConnection extends DuckDBCommon {
       // for (const ext of ['json', 'httpfs', 'icu']) {
       //   await this.loadExtension(ext);
       // }
+      const setupCmds = ["SET TimeZone='UTC'"];
+      for (const cmd of setupCmds) {
+        try {
+          await this.runDuckDBQuery(cmd);
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error(`duckdb setup ${cmd} => ${error}`);
+        }
+      }
     };
     await this.connecting;
     if (!this.isSetup) {
