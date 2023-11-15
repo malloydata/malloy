@@ -28,7 +28,7 @@ import './table';
 
 @customElement('malloy-render')
 export class MalloyRender extends LitElement {
-  static styles = css`
+  static override styles = css`
     :host {
       --table-font-size: 12px;
       --table-row-height: 36px;
