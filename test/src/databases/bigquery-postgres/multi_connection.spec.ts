@@ -44,7 +44,7 @@ describe('Multi-connection', () => {
   const bqConnection = new BigQueryTestConnection(
     'bigquery',
     {},
-    {defaultProject: 'malloy-data'}
+    {projectId: 'malloy-data'}
   );
   const postgresConnection = new PostgresTestConnection('postgres');
   const files = new EmptyURLReader();

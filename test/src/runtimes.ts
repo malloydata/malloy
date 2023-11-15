@@ -124,7 +124,7 @@ export function runtimeFor(dbName: string): SingleConnectionRuntime {
       connection = new BigQueryTestConnection(
         dbName,
         {},
-        {defaultProject: 'malloy-data'}
+        {projectId: 'malloy-data'}
       );
       break;
     case 'postgres':
