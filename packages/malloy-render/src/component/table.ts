@@ -13,12 +13,18 @@ function getPath(f: Field | Explore) {
   return path;
 }
 
+function getLocationInParent(f: Field) {
+  const parent = f.parentExplore;
+  return parent.allFields.findIndex(pf => pf.name === f.name);
+}
+
 @customElement('malloy-table')
 export class Table extends LitElement {
   static styles = css`
     table {
       border-collapse: collapse;
-      background: var(--table-background);
+      // background: var(--table-background);
+      // background: #fdb7b8;
     }
 
     table * {
@@ -28,7 +34,7 @@ export class Table extends LitElement {
     .column-cell {
       height: var(--table-row-height);
       border-top: var(--table-border);
-      border-inline: 1px solid red;
+      // border-inline: 1px solid red;
       overflow: hidden;
       white-space: nowrap;
       text-align: left;
@@ -38,18 +44,60 @@ export class Table extends LitElement {
       // width: 200px;
       // max-width: 200px;
       // min-width: 200px;
+      // border-inline: 1px solid red;
+      // box-shadow: red 1px 0px 0px 0px inset;
+      position: relative;
     }
+
+    // .column-cell::after {
+    //   position: absolute;
+    //   height: 12px;
+    //   width: 12px;
+    //   background: red;
+    //   content: ' ';
+    //   right: 0px;
+    //   top: 12px;
+    //   display: none;
+    // }
+
+    // .column-cell:hover::after {
+    //   display: block;
+    // }
 
     .column-cell-table {
       padding: 0px;
-      padding-left: 15px;
+      // padding-left: 15px;
+      // padding-right: 0px;
+      height: 100%;
     }
+
+    .column-cell.last-col {
+      // border: 1px solid red;
+      // border-bottom: none;
+      // border-top: none;
+    }
+
+    // .column-cell.last-col .cell-wrapper {
+    //   border-top: 1px solid black;
+    //   display: inline-block;
+    // }
+
+    // .column-cell.last-col::after {
+    //   width: 15px;
+    //   height: 15px;
+    //   background: red;
+    //   content: 'x';
+    //   display: inline-block;
+    // }
 
     .cell-wrapper {
       height: var(--table-row-height);
       display: flex;
       align-items: center;
-      border-inline: 1px solid red;
+      overflow: hidden;
+      // background: #eee;
+      // height: 100%;
+      // border-inline: 1px solid red;
     }
 
     th.column-cell {
@@ -66,14 +114,14 @@ export class Table extends LitElement {
       color: var(--table-body-color);
     }
 
-    // th.column-cell:first-child,
-    // td.column-cell:first-child {
-    //   padding-left: 0px;
-    // }
-    // th.column-cell:last-child,
-    // td.column-cell:last-child {
-    //   padding-right: 0px;
-    // }
+    th.column-cell:first-child,
+    td.column-cell:first-child {
+      padding-left: 0px;
+    }
+    th.column-cell:last-child,
+    td.column-cell:last-child {
+      padding-right: 0px;
+    }
   `;
 
   @property({attribute: false})
@@ -99,17 +147,41 @@ export class Table extends LitElement {
 
     const atomicStyle = (f: Field) =>
       f.isAtomicField()
-        ? 'width: 200px; min-width: 200px; max-width: 200px;'
+        ? 'width: 100px; min-width: 100px; max-width: 100px;'
         : '';
 
     const getTestStyle = (f: Field, i: number) => {
+      // return '';
       // const field = f;
       // const prevField = fields[(i - 1)];
       // console.log({field, prevField});
+      const locationInParent = getLocationInParent(f);
+      if (f.isExploreField() && locationInParent === 0)
+        return 'padding-left: 0px';
       if (fields[i - 1]?.isExploreField()) {
         return 'padding-left: 30px;';
       }
+
+      if (locationInParent === 0) return '';
+      // return
+      // return '';
       return 'padding-left: 15px;';
+    };
+
+    const getTestHeaderStyle = (f: Field, i: number) => {
+      const prevField = fields[i - 1];
+      if (f.isExploreField() && getPath(f).length < 40) {
+        const locationInParent = getLocationInParent(f);
+        if (locationInParent === 0) return 'padding-left: 0px';
+        console.log({
+          f,
+          path: getPath(f),
+          locationInParent: getLocationInParent(f),
+        });
+        if (prevField && prevField.isExploreField())
+          return 'padding-left: 30px';
+        return 'padding-left: 15px';
+      } else return '';
     };
 
     /**
@@ -117,9 +189,9 @@ export class Table extends LitElement {
      */
 
     const headers = fields.map(
-      f =>
-        html`<th class="column-cell">
-          <div class="cell-wrapper" style=${atomicStyle(f)}>${f.name}</div>
+      (f, i) =>
+        html`<th class="column-cell" style="${getTestHeaderStyle(f, i)}">
+          <div class="cell-wrapper" style="${atomicStyle(f)}">${f.name}</div>
         </th>`
     );
 
@@ -132,6 +204,9 @@ export class Table extends LitElement {
               html`<td
                 class="column-cell ${classMap({
                   'column-cell-table': f.isExploreField(),
+                  'last-col':
+                    getLocationInParent(f) ===
+                    f.parentExplore.allFields.length - 1,
                 })}"
                 style="${atomicStyle(f)} ${getTestStyle(f, i)}"
               >
