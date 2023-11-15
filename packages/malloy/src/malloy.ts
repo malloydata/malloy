@@ -493,6 +493,7 @@ export class Malloy {
           result: result.rows,
           totalRows: result.totalRows,
           runStats: result.runStats,
+          profilingUrl: result.profilingUrl,
         },
         preparedResult._modelDef
       );
