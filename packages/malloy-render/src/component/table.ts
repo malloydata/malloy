@@ -27,7 +27,7 @@ import {customElement, property} from 'lit/decorators.js';
 
 @customElement('malloy-table')
 export class Table extends LitElement {
-  static styles = css`
+  static override styles = css`
     table {
       border-collapse: collapse;
       background: var(--table-background);
