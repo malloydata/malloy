@@ -1170,6 +1170,7 @@ export interface QueryResult extends CompiledQuery {
   totalRows: number;
   error?: string;
   runStats?: QueryRunStats;
+  profilingUrl?: string;
 }
 
 export function isTurtleDef(def: FieldDef): def is TurtleDef {
