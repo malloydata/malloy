@@ -66,7 +66,7 @@ export class Table extends LitElement {
   @property({attribute: false})
   data!: DataArray;
 
-  render() {
+  override render() {
     const fields = this.data.field.allFields;
 
     const headers = fields.map(
