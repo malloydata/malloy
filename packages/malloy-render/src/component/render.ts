@@ -15,6 +15,7 @@ export class MalloyRender extends LitElement {
       --table-body-weight: 400;
       --table-border: 1px solid #e5e7eb;
       --table-background: white;
+      --table-gutter-size: 15px;
 
       font-family: Inter, system-ui, sans-serif;
       font-size: var(--table-font-size);
