@@ -106,7 +106,6 @@ export abstract class PipelineDesc extends MalloyElement {
     for (const refinement of this.refinements) {
       pipeline = refinement.refine(fs, pipeline);
     }
-    this.refinements = undefined;
     return {pipeline};
   }
 

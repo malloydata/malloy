@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/db-bigquery",
-  "version": "0.0.101",
+  "version": "0.0.104",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -22,11 +22,11 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@google-cloud/bigquery": "^5.5.0",
-    "@google-cloud/common": "^3.6.0",
-    "@google-cloud/paginator": "^4.0.1",
-    "@malloydata/malloy": "^0.0.101",
-    "@malloydata/malloy-interfaces": "^0.0.101",
+    "@google-cloud/bigquery": "^7.3.0",
+    "@google-cloud/common": "^5.0.1",
+    "@google-cloud/paginator": "^5.0.0",
+    "@malloydata/malloy": "^0.0.104",
+    "@malloydata/malloy-interfaces": "^0.0.104",
     "gaxios": "^4.2.0"
   }
 }

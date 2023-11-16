@@ -45,6 +45,7 @@ import {
   QueryData,
   QueryDataRow,
   QueryRunStats,
+  RunSQLOptions,
   SQLBlock,
   StandardSQLDialect,
   StreamingConnection,
@@ -224,17 +225,17 @@ export class BigQueryConnection
 
   private async _runSQL(
     sqlCommand: string,
-    options: Partial<BigQueryQueryOptions> = {},
+    {rowLimit, abortSignal}: RunSQLOptions = {},
     rowIndex = 0
   ): Promise<{
     data: MalloyQueryData;
     schema: bigquery.ITableFieldSchema | undefined;
   }> {
     const defaultOptions = this.readQueryOptions();
-    const pageSize = options.rowLimit ?? defaultOptions.rowLimit;
+    const pageSize = rowLimit ?? defaultOptions.rowLimit;
 
     try {
-      const queryResultsOptions = {
+      const queryResultsOptions: QueryResultsOptions = {
         maxResults: pageSize,
         startIndex: rowIndex.toString(),
       };
@@ -242,7 +243,8 @@ export class BigQueryConnection
       const jobResult = await this.createBigQueryJobAndGetResults(
         sqlCommand,
         undefined,
-        queryResultsOptions
+        queryResultsOptions,
+        abortSignal
       );
 
       const totalRows = +(jobResult[2]?.totalRows
@@ -700,7 +702,8 @@ export class BigQueryConnection
   private async createBigQueryJobAndGetResults(
     sqlCommand: string,
     createQueryJobOptions?: Query,
-    getQueryResultsOptions?: QueryResultsOptions
+    getQueryResultsOptions?: QueryResultsOptions,
+    abortSignal?: AbortSignal
   ): Promise<
     PagedResponse<RowMetadata, Query, bigquery.IGetQueryResultsResponse>
   > {
@@ -709,6 +712,10 @@ export class BigQueryConnection
         query: sqlCommand,
         ...createQueryJobOptions,
       });
+      const cancel = () => {
+        job.cancel();
+      };
+      abortSignal?.addEventListener('abort', cancel);
 
       // TODO we should check if this is still required?
       // We do a simple retry-loop here, as a temporary fix for a transient
@@ -725,6 +732,8 @@ export class BigQueryConnection
           });
         } catch (fetchError) {
           lastFetchError = fetchError;
+        } finally {
+          abortSignal?.removeEventListener('abort', cancel);
         }
       }
       throw lastFetchError;
@@ -758,14 +767,13 @@ export class BigQueryConnection
 
   public runSQLStream(
     sqlCommand: string,
-    options: Partial<BigQueryQueryOptions> = {}
+    {rowLimit, abortSignal}: RunSQLOptions = {}
   ): AsyncIterableIterator<QueryDataRow> {
-    const bigQuery = this.bigQuery;
-    function streamBigQuery(
+    const streamBigQuery = (
       onError: (error: Error) => void,
       onData: (data: QueryDataRow) => void,
       onEnd: () => void
-    ) {
+    ) => {
       let index = 0;
       function handleData(
         this: ResourceStream<RowMetadata>,
@@ -773,16 +781,19 @@ export class BigQueryConnection
       ) {
         onData(rowMetadata);
         index += 1;
-        if (options.rowLimit !== undefined && index >= options.rowLimit) {
+        if (
+          (rowLimit !== undefined && index >= rowLimit) ||
+          abortSignal?.aborted
+        ) {
           this.end();
         }
       }
-      bigQuery
+      this.bigQuery
         .createQueryStream(sqlCommand)
         .on('error', onError)
         .on('data', handleData)
         .on('end', onEnd);
-    }
+    };
     return toAsyncGenerator<QueryDataRow>(streamBigQuery);
   }
 

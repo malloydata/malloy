@@ -402,4 +402,16 @@ describe('partial views', () => {
       "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
     );
   });
+  test('copy of view with refinement should work', () => {
+    expect(
+      markSource`
+        ##! experimental { scalar_lenses }
+        source: x is a extend {
+          view: metrics is { aggregate: c is count() }
+          view: v is { group_by: ai } + metrics
+          view: v2 is v + { order_by: c }
+        }
+      `
+    ).toTranslate();
+  });
 });

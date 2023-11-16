@@ -478,6 +478,7 @@ export class Malloy {
           // TODO feature-sql-block There is no source explore...
           sourceExplore: '',
           sourceFilters: [],
+          profilingUrl: data.profilingUrl,
         },
         {
           name: 'empty_model',
@@ -493,6 +494,7 @@ export class Malloy {
           result: result.rows,
           totalRows: result.totalRows,
           runStats: result.runStats,
+          profilingUrl: result.profilingUrl,
         },
         preparedResult._modelDef
       );
@@ -3050,6 +3052,10 @@ export class Result extends PreparedResult {
 
   public get runStats(): QueryRunStats | undefined {
     return this.inner.runStats;
+  }
+
+  public get profilingUrl(): string | undefined {
+    return this.inner.profilingUrl;
   }
 
   public toJSON(): ResultJSON {

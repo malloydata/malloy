@@ -350,7 +350,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
         view: v is { group_by: n } + metrics
         view: v2 is v
       }
-      run: x -> v
+      run: x -> v2
     `).malloyResultMatches(runtime, {n: 1, c: 1});
   });
   it(`aggregate copy bug with only old refinement - ${databaseName}`, async () => {
