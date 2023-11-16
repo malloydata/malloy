@@ -473,9 +473,7 @@ export class PooledPostgresConnection
     deJSON: boolean
   ): Promise<MalloyQueryData> {
     const pool = await this.getPool();
-    const client = await pool.connect();
-    let result = await client.query(sqlCommand);
-    client.release();
+    let result = await pool.query(sqlCommand);
 
     if (Array.isArray(result)) {
       result = result.pop();
