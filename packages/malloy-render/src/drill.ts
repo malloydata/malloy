@@ -34,7 +34,7 @@ import {timeToString} from './html/utils';
 type FilterItem = {key: string; value: string | undefined};
 
 function filterQuote(s: string): string {
-  return `'${s.replace(/'/g, "\\'")}'`;
+  return `'${s.replace(/(['\\])/g, '\\$1')}'`;
 }
 
 function timestampToDateFilter(
