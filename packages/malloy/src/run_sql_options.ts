@@ -21,7 +21,11 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
+import {Annotation} from './model';
+
 export interface RunSQLOptions {
   rowLimit?: number;
   abortSignal?: AbortSignal;
+  modelAnnotation?: Annotation;
+  queryAnnotation?: Annotation;
 }
