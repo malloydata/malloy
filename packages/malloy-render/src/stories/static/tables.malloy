@@ -31,21 +31,6 @@ source: products is duckdb.table("data/products.parquet") extend {
             aggregate: total_cost is cost.sum()
             limit: 3
           }
-          -- deeply_nested_next is {
-          --   group_by: `brand`
-          --   aggregate: total_cost is cost.sum()
-          --   nest: in_the_mines is {
-          --     group_by: id
-          --     limit: 3
-          --   }
-          --   limit: 3
-          -- }
-          -- deeply_nested_dup is {
-          --   group_by: `sku`
-          --   aggregate: total_cost is cost.sum()
-          --   limit: 3
-          -- }
-        -- aggregate: total_cost is cost.sum()
         limit: 5
       }
       record is {
