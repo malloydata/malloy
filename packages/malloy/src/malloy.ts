@@ -1436,6 +1436,10 @@ export class Explore extends Entity {
     return FieldIsIntrinsic(this._structDef);
   }
 
+  public isExploreField(): this is ExploreField {
+    return false;
+  }
+
   private parsedModelTag?: Tag;
   public get modelTag(): Tag {
     this.parsedModelTag ||= Tag.annotationToTag(

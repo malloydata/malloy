@@ -39,3 +39,10 @@ export const Products2Column = {
     view: 'category_bar',
   },
 };
+
+export const Nested = {
+  args: {
+    source: 'products',
+    view: 'nested',
+  },
+};
