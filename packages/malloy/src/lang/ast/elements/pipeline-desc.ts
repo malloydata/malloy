@@ -62,8 +62,8 @@ export abstract class PipelineDesc extends MalloyElement {
    * "ungrouping" expressions.
    *
    * This is only here so that it can be used when a Builder is created
-   * so the builder can also know that it is nested and what it's parent
-   * is.
+   * so the query space created by the builder can also know that it is
+   * nested.
    */
   declareAsNestInside(qs: QuerySpace) {
     this.isNestIn = qs;

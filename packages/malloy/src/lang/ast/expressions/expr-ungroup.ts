@@ -75,10 +75,12 @@ export class ExprUngroup extends ExpressionDef {
         const isExclude = this.control === 'exclude';
         for (const mentionedField of this.fields) {
           let ofs: FieldSpace | undefined = fs.outputSpace();
-          let foundInOutput = false;
+          let notFound = true;
           while (ofs) {
-            if (ofs.entry(mentionedField.refString)) {
-              foundInOutput = true;
+            const entryInfo = ofs.lookup([mentionedField]);
+            if (entryInfo.found && entryInfo.isOutputField) {
+              dstFields.push(mentionedField.refString);
+              notFound = false;
             } else if (ofs instanceof QuerySpace) {
               // should always be true, but don't have types right, thus the if
               ofs = ofs.nestParent;
@@ -86,9 +88,7 @@ export class ExprUngroup extends ExpressionDef {
             }
             break;
           }
-          if (foundInOutput) {
-            dstFields.push(mentionedField.refString);
-          } else {
+          if (notFound) {
             const uName = isExclude ? 'exclude()' : 'all()';
             mentionedField.log(
               `${uName} '${mentionedField.refString}' is missing from query output`
