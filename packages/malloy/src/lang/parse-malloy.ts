@@ -80,10 +80,12 @@ import {
   NeedURLData,
   TranslateResponse,
   isNeedResponse,
+  ModelAnnotationResponse,
 } from './translate-response';
 import {locationContainsPosition} from './utils';
 import {Tag} from '../tags';
 import {MalloyParseInfo} from './malloy-parse-info';
+import {walkForModelAnnotation} from './parse-tree-walkers/model-annotation-walker';
 
 export type StepResponses =
   | DataRequestResponse
@@ -568,6 +570,28 @@ class HelpContextStep implements TranslationStep {
   }
 }
 
+class ModelAnnotationStep implements TranslationStep {
+  response?: ModelAnnotationResponse;
+  constructor(readonly parseStep: ParseStep) {}
+
+  step(that: MalloyTranslation): ModelAnnotationResponse {
+    if (!this.response) {
+      const tryParse = this.parseStep.step(that);
+      if (!tryParse.parse || tryParse.final) {
+        return tryParse;
+      } else {
+        const modelAnnotation = walkForModelAnnotation(
+          that,
+          tryParse.parse.tokenStream,
+          tryParse.parse
+        );
+        this.response = {modelAnnotation};
+      }
+    }
+    return this.response;
+  }
+}
+
 class TranslateStep implements TranslationStep {
   response?: TranslateResponse;
   importedAnnotations = false;
@@ -652,6 +676,7 @@ export abstract class MalloyTranslation {
   compilerFlags = new Tag();
 
   readonly parseStep: ParseStep;
+  readonly modelAnnotationStep: ModelAnnotationStep;
   readonly importsAndTablesStep: ImportsAndTablesStep;
   readonly astStep: ASTStep;
   readonly metadataStep: MetadataStep;
@@ -680,6 +705,7 @@ export abstract class MalloyTranslation {
      * things will happen automatically.
      */
     this.parseStep = new ParseStep();
+    this.modelAnnotationStep = new ModelAnnotationStep(this.parseStep);
     this.metadataStep = new MetadataStep(this.parseStep);
     this.completionsStep = new CompletionsStep(this.parseStep);
     this.helpContextStep = new HelpContextStep(this.parseStep);
@@ -861,6 +887,10 @@ export abstract class MalloyTranslation {
 
   metadata(): MetadataResponse {
     return this.metadataStep.step(this);
+  }
+
+  modelAnnotation(): ModelAnnotationResponse {
+    return this.modelAnnotationStep.step(this);
   }
 
   completions(position: {
