@@ -574,7 +574,10 @@ class ModelAnnotationStep implements TranslationStep {
   response?: ModelAnnotationResponse;
   constructor(readonly parseStep: ParseStep) {}
 
-  step(that: MalloyTranslation): ModelAnnotationResponse {
+  step(
+    that: MalloyTranslation,
+    extendingModel?: ModelDef
+  ): ModelAnnotationResponse {
     if (!this.response) {
       const tryParse = this.parseStep.step(that);
       if (!tryParse.parse || tryParse.final) {
@@ -585,7 +588,12 @@ class ModelAnnotationStep implements TranslationStep {
           tryParse.parse.tokenStream,
           tryParse.parse
         );
-        this.response = {modelAnnotation};
+        this.response = {
+          modelAnnotation: {
+            ...modelAnnotation,
+            inherits: extendingModel?.annotation,
+          },
+        };
       }
     }
     return this.response;
@@ -889,8 +897,8 @@ export abstract class MalloyTranslation {
     return this.metadataStep.step(this);
   }
 
-  modelAnnotation(): ModelAnnotationResponse {
-    return this.modelAnnotationStep.step(this);
+  modelAnnotation(extendingModel?: ModelDef): ModelAnnotationResponse {
+    return this.modelAnnotationStep.step(this, extendingModel);
   }
 
   completions(position: {

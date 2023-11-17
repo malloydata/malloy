@@ -290,7 +290,7 @@ export class Malloy {
             }
           }
         }
-        const {modelAnnotation} = translator.modelAnnotation();
+        const {modelAnnotation} = translator.modelAnnotation(model?._modelDef);
         if (result.tables) {
           // collect tables by connection name since there may be multiple connections
           const tablesByConnection: Map<
