@@ -60,9 +60,6 @@ class ConstantFieldSpace implements FieldSpace {
   dialectObj(): undefined {
     return undefined;
   }
-  whenComplete(step: () => void): void {
-    step();
-  }
   isQueryFieldSpace(): this is QueryFieldSpace {
     return false;
   }

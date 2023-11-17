@@ -247,10 +247,6 @@ export class DefSpace implements FieldSpace {
   dialectObj(): Dialect | undefined {
     return this.realFS.dialectObj();
   }
-  whenComplete(step: () => void): void {
-    this.realFS.whenComplete(step);
-  }
-
   isQueryFieldSpace(): this is QueryFieldSpace {
     return this.realFS.isQueryFieldSpace();
   }

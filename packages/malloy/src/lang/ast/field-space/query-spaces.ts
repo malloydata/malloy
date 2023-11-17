@@ -49,6 +49,7 @@ export abstract class QuerySpace
   astEl?: MalloyElement | undefined;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
   expandedWild: Record<string, string[]> = {};
+  nestParent?: QuerySpace;
 
   constructor(
     readonly queryInputSpace: FieldSpace,
@@ -147,32 +148,6 @@ export abstract class QuerySpace
           this.setEntry(name, entry);
           this.expandedWild[name] = joinPath.concat(name);
         }
-      }
-    }
-  }
-
-  /**
-   * Check for the definition of an ungrouping reference in the result space,
-   * or in the case of an exclude reference, if this query is nested
-   * in another query, in the result space of a query that this query
-   * is nested inside of.
-   */
-  checkUngroup(fn: FieldName, isExclude: boolean): void {
-    if (!this.entry(fn.refString)) {
-      const parent = this.exprSpace.nestParent;
-      if (isExclude && parent) {
-        parent.whenComplete(() => {
-          const pOut = parent.outputSpace();
-          // a little ugly, but it breaks a circularity problem
-          if (pOut instanceof QuerySpace) {
-            pOut.checkUngroup(fn, isExclude);
-          } else {
-            throw new Error('OUCH');
-          }
-        });
-      } else {
-        const uName = isExclude ? 'exclude()' : 'all()';
-        fn.log(`${uName} '${fn.refString}' is missing from query output`);
       }
     }
   }
