@@ -92,13 +92,10 @@ export class QOPDesc extends ListOf<QueryProperty> {
     }
   }
 
-  getOp(
-    inputFS: FieldSpace,
-    isNestedInPipeline: QuerySpace | undefined
-  ): OpDesc {
+  getOp(inputFS: FieldSpace, isNestIn: QuerySpace | undefined): OpDesc {
     const build = this.getBuilder(inputFS);
-    if (isNestedInPipeline) {
-      build.resultFS.nestParent = isNestedInPipeline;
+    if (isNestIn) {
+      build.resultFS.nestParent = isNestIn;
     }
     build.resultFS.astEl = this;
     for (const qp of this.list) {

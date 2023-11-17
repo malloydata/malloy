@@ -251,10 +251,10 @@ export class NestField extends ViewField {
     fs: FieldSpace,
     turtle: TurtleDecl,
     name: string,
-    nestedInPipeline: QuerySpace
+    spaceContainingNest: QuerySpace
   ) {
     super(fs, turtle, name);
-    turtle.nestedInQuerySpace = nestedInPipeline;
+    turtle.declareAsNestInside(spaceContainingNest);
   }
 }
 

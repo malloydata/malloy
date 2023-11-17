@@ -33,13 +33,16 @@ import {QOPDesc} from './qop-desc';
 import {SpaceField} from '../types/space-field';
 import {QuerySpace} from '../field-space/query-spaces';
 
-type NestedInsFS = QuerySpace | undefined;
-
 export abstract class Refinement extends MalloyElement {
+  /**
+   * @param inputFS
+   * @param pipeline
+   * @param isNestIn The pipeline being refined is a nest, and this is the space which contains the nest statement
+   */
   abstract refine(
     inputFS: FieldSpace,
     pipeline: PipeSegment[],
-    nest: NestedInsFS
+    isNestIn: QuerySpace | undefined
   ): PipeSegment[];
 
   static from(base: QOPDesc | ViewFieldReference) {
@@ -92,7 +95,7 @@ export class NamedRefinement extends Refinement {
   refine(
     inputFS: FieldSpace,
     pipeline: PipeSegment[],
-    _nfs: NestedInsFS
+    _isNestIn: QuerySpace | undefined
   ): PipeSegment[] {
     if (pipeline.length === 1) {
       return [this.getOp(inputFS, pipeline[0]).segment];
@@ -189,23 +192,23 @@ export class QOPDescRefinement extends Refinement {
 
   private getOp(
     inputFS: FieldSpace,
-    isNestedInPipeline: NestedInsFS,
+    isNestIn: QuerySpace | undefined,
     qOpDesc: QOPDesc,
     refineThis: PipeSegment
   ): PipeSegment {
     qOpDesc.refineFrom(refineThis);
-    return qOpDesc.getOp(inputFS, isNestedInPipeline).segment;
+    return qOpDesc.getOp(inputFS, isNestIn).segment;
   }
 
   refine(
     inputFS: FieldSpace,
     _pipeline: PipeSegment[],
-    nestedInPipeline: NestedInsFS
+    isNestIn: QuerySpace | undefined
   ): PipeSegment[] {
     const pipeline = [..._pipeline];
     if (pipeline.length === 1) {
       this.qOpDesc.refineFrom(pipeline[0]);
-      return [this.getOp(inputFS, nestedInPipeline, this.qOpDesc, pipeline[0])];
+      return [this.getOp(inputFS, isNestIn, this.qOpDesc, pipeline[0])];
     }
     const headRefinements = new QOPDesc([]);
     const tailRefinements = new QOPDesc([]);
