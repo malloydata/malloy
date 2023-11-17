@@ -21,13 +21,25 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Annotation} from './model/malloy_types';
+import {TestTranslator, markSource} from './test-translator';
 
-export interface RunSQLOptions {
-  rowLimit?: number;
-  abortSignal?: AbortSignal;
-  /* This is an experimental feature */
-  modelAnnotation?: Annotation;
-  /* This is an experimental feature */
-  queryAnnotation?: Annotation;
-}
+test('model annotations can be retrieved', () => {
+  const src = markSource`${'## foo'}`;
+  const doc = new TestTranslator(src.code);
+  const {modelAnnotation} = doc.modelAnnotation();
+  expect(modelAnnotation?.notes?.length).toBe(1);
+  const notes = modelAnnotation?.notes ?? [];
+  expect(notes[0].text).toBe('## foo');
+  expect(notes[0].at).toMatchObject(src.locations[0]);
+});
+
+test('does not explode if bad parse', () => {
+  const src = markSource`
+    ${'## foo'}
+    asd afsjei ; duavby {{}}}
+  `;
+  const doc = new TestTranslator(src.code);
+  const response = doc.modelAnnotation();
+  expect(response.modelAnnotation).toBe(undefined);
+  expect(response.final).toBe(true);
+});

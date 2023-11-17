@@ -23,6 +23,7 @@
 
 import {RunSQLOptions} from './run_sql_options';
 import {
+  Annotation,
   MalloyQueryData,
   QueryDataRow,
   QueryRunStats,
@@ -70,6 +71,8 @@ export interface URLReader {
 export interface FetchSchemaOptions {
   // Fetch a fresh copy of the schema instead of using cache
   refreshTimestamp?: number;
+  /* This is an experimental feature */
+  modelAnnotation?: Annotation;
 }
 
 /**
