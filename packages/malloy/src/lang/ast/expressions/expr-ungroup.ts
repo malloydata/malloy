@@ -52,11 +52,6 @@ export class ExprUngroup extends ExpressionDef {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
-    const isQuery = fs instanceof QuerySpace || fs instanceof QueryInputSpace;
-    if (!isQuery) {
-      this.expr.log(`${this.control}() only legal in a query`);
-      return errorFor('ungroup non query');
-    }
     const exprVal = this.expr.getExpression(fs);
     if (!expressionIsAggregate(exprVal.expressionType)) {
       this.expr.log(`${this.control}() expression must be an aggregate`);
@@ -73,19 +68,33 @@ export class ExprUngroup extends ExpressionDef {
       e: exprVal.value,
     };
     if (this.typeCheck(this.expr, {...exprVal, expressionType: 'scalar'})) {
-      if (this.fields.length > 0) {
+      if (fs.isQueryFieldSpace()_ && this.fields.length > 0) {
         const dstFields: string[] = [];
         const isExclude = this.control === 'exclude';
         // Now every mentioned field must be in the output space of one of the queries
         // of the nest tree leading to this query. This was originally deferred to
         // completion time, which may or may not be neccessary
-        const ofs = fs.outputSpace();
-        if (ofs instanceof QuerySpace) {
-          for (const mentionedField of this.fields) {
-            ofs.whenComplete(() => {
-              ofs.checkUngroup(mentionedField, isExclude);
-            });
+        for (const mentionedField of this.fields) {
+          let ofs: FieldSpace | undefined = fs.outputSpace();
+          let foundInOutput = false;
+          while (ofs) {
+            if (ofs.entry(mentionedField.refString)) {
+              foundInOutput = true;
+              break;
+            }
+            if (ofs instanceof QuerySpace) {
+              ofs = ofs.nestParent;
+            } else {
+              break;
+            }
+          }
+          if (foundInOutput) {
             dstFields.push(mentionedField.refString);
+          } else {
+            const uName = isExclude ? 'exclude()' : 'all()';
+            mentionedField.log(
+              `${uName} '${mentionedField.refString}' is missing from query output`
+            );
           }
         }
         ungroup.fields = dstFields;
