@@ -29,7 +29,6 @@ import {
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
-import {QueryInputSpace} from '../field-space/query-input-space';
 import {QuerySpace} from '../field-space/query-spaces';
 import {FT} from '../fragtype-utils';
 import {ExprValue} from '../types/expr-value';
@@ -80,13 +79,12 @@ export class ExprUngroup extends ExpressionDef {
           while (ofs) {
             if (ofs.entry(mentionedField.refString)) {
               foundInOutput = true;
-              break;
-            }
-            if (ofs instanceof QuerySpace) {
+            } else if (ofs instanceof QuerySpace) {
+              // should always be true, but don't have types right, thus the if
               ofs = ofs.nestParent;
-            } else {
-              break;
+              continue;
             }
+            break;
           }
           if (foundInOutput) {
             dstFields.push(mentionedField.refString);
