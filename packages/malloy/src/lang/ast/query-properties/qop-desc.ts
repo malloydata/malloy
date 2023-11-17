@@ -33,8 +33,8 @@ import {opOutputStruct} from '../struct-utils';
 import {QueryProperty} from '../types/query-property';
 import {StaticSpace} from '../field-space/static-space';
 import {QueryClass} from '../types/query-property-interface';
-import {QueryInputSpace} from '../field-space/query-input-space';
 import {PartialBuilder} from '../query-builders/partial-builder';
+import {QuerySpace} from '../field-space/query-spaces';
 
 export class QOPDesc extends ListOf<QueryProperty> {
   elementType = 'queryOperation';
@@ -94,11 +94,11 @@ export class QOPDesc extends ListOf<QueryProperty> {
 
   getOp(
     inputFS: FieldSpace,
-    headFieldSpace: QueryInputSpace | undefined
+    isNestedInPipeline: QuerySpace | undefined
   ): OpDesc {
     const build = this.getBuilder(inputFS);
-    if (headFieldSpace) {
-      build.inputFS.nestParent = headFieldSpace;
+    if (isNestedInPipeline) {
+      build.resultFS.nestParent = isNestedInPipeline;
     }
     build.resultFS.astEl = this;
     for (const qp of this.list) {

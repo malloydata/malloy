@@ -204,6 +204,25 @@ describe('query:', () => {
       }
     `).toTranslate();
     });
+    test('1474', () => {
+      const nestExclude = model`
+        source: flights is a extend {
+          dimension: carrier is astr, destination is astr
+          measure: flight_count is count()
+          view: by_dest is {
+            group_by: destination
+            aggregate: flight_count
+          }
+        }
+        run: flights -> {
+          group_by: carrier
+          nest: broken is by_dest + {
+            top: 5
+            aggregate: flights_to_dest_all_carriers is exclude(flight_count, carrier)
+          }
+        }`;
+      expect(nestExclude).toTranslate();
+    });
   });
   describe('query operation typechecking', () => {
     describe('field declarations', () => {
@@ -236,9 +255,7 @@ describe('query:', () => {
       test('cannot use ungrouped_aggregate in dimension', () => {
         expect(
           'source: a1 is a extend { dimension: s is all(count())}'
-        ).translationToFailWith(
-          'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?'
-        );
+        ).translationToFailWith('all() only legal in a query');
       });
       test('cannot use analytic in dimension', () => {
         expect(

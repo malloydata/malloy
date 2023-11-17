@@ -49,6 +49,7 @@ export abstract class QuerySpace
   astEl?: MalloyElement | undefined;
   abstract readonly segmentType: 'reduce' | 'project' | 'index';
   expandedWild: Record<string, string[]> = {};
+  nestParent?: QuerySpace;
 
   constructor(
     readonly queryInputSpace: FieldSpace,
@@ -159,13 +160,11 @@ export abstract class QuerySpace
    */
   checkUngroup(fn: FieldName, isExclude: boolean): void {
     if (!this.entry(fn.refString)) {
-      const parent = this.exprSpace.nestParent;
+      const parent = this.nestParent;
       if (isExclude && parent) {
         parent.whenComplete(() => {
-          const pOut = parent.outputSpace();
-          // a little ugly, but it breaks a circularity problem
-          if (pOut instanceof QuerySpace) {
-            pOut.checkUngroup(fn, isExclude);
+          if (parent instanceof QuerySpace) {
+            parent.checkUngroup(fn, isExclude);
           } else {
             throw new Error('OUCH');
           }

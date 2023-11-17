@@ -34,7 +34,7 @@ import {
 import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {QOPDesc} from '../query-properties/qop-desc';
-import {QueryInputSpace} from '../field-space/query-input-space';
+import {QuerySpace} from '../field-space/query-spaces';
 import {ViewFieldReference} from '../query-items/field-references';
 import {Refinement} from '../query-properties/refinements';
 import {StaticSpace} from '../field-space/static-space';
@@ -53,7 +53,7 @@ interface AppendResult {
 export abstract class PipelineDesc extends MalloyElement {
   protected refinements?: Refinement[];
   protected qops: QOPDesc[] = [];
-  nestedInQuerySpace?: QueryInputSpace;
+  nestedInQuerySpace?: QuerySpace;
 
   alreadyRefined(): boolean {
     return this.refinements !== undefined;
@@ -104,7 +104,7 @@ export abstract class PipelineDesc extends MalloyElement {
     }
     pipeline.push(...modelPipe.pipeline);
     for (const refinement of this.refinements) {
-      pipeline = refinement.refine(fs, pipeline);
+      pipeline = refinement.refine(fs, pipeline, this.nestedInQuerySpace);
     }
     this.refinements = undefined;
     return {pipeline};

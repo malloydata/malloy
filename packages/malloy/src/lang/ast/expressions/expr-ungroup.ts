@@ -29,6 +29,7 @@ import {
 } from '../../../model/malloy_types';
 
 import {errorFor} from '../ast-utils';
+import {QueryInputSpace} from '../field-space/query-input-space';
 import {QuerySpace} from '../field-space/query-spaces';
 import {FT} from '../fragtype-utils';
 import {ExprValue} from '../types/expr-value';
@@ -51,6 +52,11 @@ export class ExprUngroup extends ExpressionDef {
   }
 
   getExpression(fs: FieldSpace): ExprValue {
+    const isQuery = fs instanceof QuerySpace || fs instanceof QueryInputSpace;
+    if (!isQuery) {
+      this.expr.log(`${this.control}() only legal in a query`);
+      return errorFor('ungroup non query');
+    }
     const exprVal = this.expr.getExpression(fs);
     if (!expressionIsAggregate(exprVal.expressionType)) {
       this.expr.log(`${this.control}() expression must be an aggregate`);
@@ -68,31 +74,20 @@ export class ExprUngroup extends ExpressionDef {
     };
     if (this.typeCheck(this.expr, {...exprVal, expressionType: 'scalar'})) {
       if (this.fields.length > 0) {
-        if (!fs.isQueryFieldSpace()) {
-          this.log(
-            `${this.control}() must be in a query -- weird internal error`
-          );
-          return errorFor('ungroup query check');
-        }
-        const output = fs.outputSpace();
-        if (!(output instanceof QuerySpace)) {
-          // TODO maybe make OutputSpace return an interface which has checkUngroup
-          this.log(
-            `${this.control}() must be in a query -- weird internal error`
-          );
-          return errorFor('ungroup query check');
-        }
         const dstFields: string[] = [];
         const isExclude = this.control === 'exclude';
-        for (const mustBeInOutput of this.fields) {
-          output.whenComplete(() => {
-            output.checkUngroup(mustBeInOutput, isExclude);
-          });
-          dstFields.push(mustBeInOutput.refString);
+        // Now every mentioned field must be in the output space of one of the queries
+        // of the nest tree leading to this query. This was originally deferred to
+        // completion time, which may or may not be neccessary
+        const ofs = fs.outputSpace();
+        if (ofs instanceof QuerySpace) {
+          for (const mentionedField of this.fields) {
+            ofs.whenComplete(() => {
+              ofs.checkUngroup(mentionedField, isExclude);
+            });
+            dstFields.push(mentionedField.refString);
+          }
         }
-        // TODO maybe now we can just look up the fields in the output space now and ensure
-        // they're all there, rather than waiting until the query is finished to do it?
-        // See `order_by` for an example of how this could work.
         ungroup.fields = dstFields;
       }
       return {
