@@ -204,7 +204,8 @@ describe('query:', () => {
       }
     `).toTranslate();
     });
-    test('1474', () => {
+    test('exclude output checking survives refinement', () => {
+      // This was https://github.com/malloydata/malloy/issues/1474
       const nestExclude = model`
         source: flights is a extend {
           dimension: carrier is astr, destination is astr
@@ -255,7 +256,9 @@ describe('query:', () => {
       test('cannot use ungrouped_aggregate in dimension', () => {
         expect(
           'source: a1 is a extend { dimension: s is all(count())}'
-        ).translationToFailWith('all() only legal in a query');
+        ).translationToFailWith(
+          'Cannot use an aggregate field in a dimension declaration, did you mean to use a measure declaration instead?'
+        );
       });
       test('cannot use analytic in dimension', () => {
         expect(
