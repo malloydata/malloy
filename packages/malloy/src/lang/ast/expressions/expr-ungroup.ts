@@ -68,12 +68,12 @@ export class ExprUngroup extends ExpressionDef {
       e: exprVal.value,
     };
     if (this.typeCheck(this.expr, {...exprVal, expressionType: 'scalar'})) {
-      if (fs.isQueryFieldSpace()_ && this.fields.length > 0) {
+      // Now every mentioned field must be in the output space of one of the queries
+      // of the nest tree leading to this query. If this is a source definition,
+      // this is not checked until sql generation time.
+      if (fs.isQueryFieldSpace() && this.fields.length > 0) {
         const dstFields: string[] = [];
         const isExclude = this.control === 'exclude';
-        // Now every mentioned field must be in the output space of one of the queries
-        // of the nest tree leading to this query. This was originally deferred to
-        // completion time, which may or may not be neccessary
         for (const mentionedField of this.fields) {
           let ofs: FieldSpace | undefined = fs.outputSpace();
           let foundInOutput = false;

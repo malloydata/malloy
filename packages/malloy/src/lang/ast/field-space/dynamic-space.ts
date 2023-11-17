@@ -51,20 +51,8 @@ export abstract class DynamicSpace extends StaticSpace {
     this.source = source;
   }
 
-  whenComplete(finalizeStep: () => void): void {
-    if (this.complete) {
-      finalizeStep();
-    } else {
-      this.completions.push(finalizeStep);
-    }
-  }
-
   isComplete(): void {
     this.complete = true;
-    for (const step of this.completions) {
-      step();
-    }
-    this.completions = [];
   }
 
   protected setEntry(name: string, value: SpaceEntry): void {

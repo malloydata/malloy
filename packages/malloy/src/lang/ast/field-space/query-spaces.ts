@@ -152,30 +152,6 @@ export abstract class QuerySpace
     }
   }
 
-  /**
-   * Check for the definition of an ungrouping reference in the result space,
-   * or in the case of an exclude reference, if this query is nested
-   * in another query, in the result space of a query that this query
-   * is nested inside of.
-   */
-  checkUngroup(fn: FieldName, isExclude: boolean): void {
-    if (!this.entry(fn.refString)) {
-      const parent = this.nestParent;
-      if (isExclude && parent) {
-        parent.whenComplete(() => {
-          if (parent instanceof QuerySpace) {
-            parent.checkUngroup(fn, isExclude);
-          } else {
-            throw new Error('OUCH');
-          }
-        });
-      } else {
-        const uName = isExclude ? 'exclude()' : 'all()';
-        fn.log(`${uName} '${fn.refString}' is missing from query output`);
-      }
-    }
-  }
-
   canContain(_typeDesc: model.TypeDesc): boolean {
     return true;
   }

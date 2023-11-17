@@ -40,7 +40,6 @@ export interface FieldSpace {
   entry(symbol: string): SpaceEntry | undefined;
   entries(): [string, SpaceEntry][];
   dialectObj(): Dialect | undefined;
-  whenComplete: (step: () => void) => void;
   isQueryFieldSpace(): this is QueryFieldSpace;
 }
 
