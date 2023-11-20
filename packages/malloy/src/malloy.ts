@@ -1814,11 +1814,7 @@ export class AtomicField extends Entity implements Taggable {
   }
 
   get expression(): string {
-    return (
-      this.fieldTypeDef.resultMetadata?.sourceExpression ||
-      this.fieldTypeDef.resultMetadata?.sourceField ||
-      this.name
-    );
+    return this.fieldTypeDef.resultMetadata?.sourceExpression || this.name;
   }
 
   public get location(): DocumentLocation | undefined {
