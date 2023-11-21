@@ -201,10 +201,11 @@ export class Table extends LitElement {
       border-top: var(--table-border);
       height: var(--table-row-height);
       width: var(--table-gutter-size);
+      transition: border-color 0.25s;
     }
 
     .cell-gutter.hide-gutter-border {
-      border-top: none;
+      border-color: transparent;
     }
 
     .pinned-header table {
