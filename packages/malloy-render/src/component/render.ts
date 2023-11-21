@@ -45,6 +45,25 @@ export class MalloyRender extends LitElement {
       font-family: Inter, system-ui, sans-serif;
       font-size: var(--table-font-size);
     }
+
+    @supports (font-variation-settings: normal) {
+      :host {
+        font-family:
+          InterVariable,
+          Inter,
+          system-ui sans-serif;
+
+        font-variant-numeric: tabular-nums;
+        font-feature-settings:
+          'cv01' 1,
+          'cv02' 1,
+          'cv03' 1,
+          'cv04' 1,
+          'cv09' 1,
+          'liga' 1,
+          'calt' 1;
+      }
+    }
   `;
 
   @property({attribute: false})

@@ -151,7 +151,6 @@ export class Table extends LitElement {
     table {
       border-collapse: collapse;
       background: var(--table-background);
-      font-variant-numeric: tabular-nums;
     }
 
     th {
