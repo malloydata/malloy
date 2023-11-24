@@ -825,7 +825,32 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    console.log(result.sql);
+    expect(result.sql).not.toContain('ORDER BY');
+  });
+
+  it(`removes surpuflous order_by - joined_query pipeline - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      query: foo is  ${databaseName}.table('malloytest.state_facts') -> {
+        group_by: state
+        aggregate: airport_count.sum()
+        order_by: state desc
+      } -> {
+        group_by: state
+        aggregate: airport_count.sum()
+        order_by: state desc
+      }
+
+      run: ${databaseName}.table('malloytest.state_facts') -> {
+        extend: {
+          join_one: foo on state = foo.state
+        }
+        aggregate: x is foo.airport_count.sum()
+      }
+      `
+      )
+      .run();
     expect(result.sql).not.toContain('ORDER BY');
   });
 
