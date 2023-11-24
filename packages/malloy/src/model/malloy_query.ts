@@ -1833,12 +1833,11 @@ class QueryQuery extends QueryField {
   rootResult: FieldInstanceResultRoot;
   resultStage: string | undefined;
   stageWriter: StageWriter | undefined;
-  isIntermediate = false;
+  isSubQuery = false; // this query is a joined subquery.
 
   constructor(
     fieldDef: TurtleDef,
     parent: QueryStruct,
-    isIntermediate: boolean,
     stageWriter: StageWriter | undefined
   ) {
     super(fieldDef, parent);
@@ -1847,7 +1846,6 @@ class QueryQuery extends QueryField {
     this.stageWriter = stageWriter;
     // do some magic here to get the first segment.
     this.firstSegment = fieldDef.pipeline[0] as QuerySegment;
-    this.isIntermediate = isIntermediate;
   }
 
   static makeQuery(
@@ -1899,26 +1897,11 @@ class QueryQuery extends QueryField {
 
     switch (firstStage.type) {
       case 'reduce':
-        return new QueryQueryReduce(
-          flatTurtleDef,
-          parent,
-          flatTurtleDef.pipeline.length > 1,
-          stageWriter
-        );
+        return new QueryQueryReduce(flatTurtleDef, parent, stageWriter);
       case 'project':
-        return new QueryQueryProject(
-          flatTurtleDef,
-          parent,
-          flatTurtleDef.pipeline.length > 1,
-          stageWriter
-        );
+        return new QueryQueryProject(flatTurtleDef, parent, stageWriter);
       case 'index':
-        return new QueryQueryIndex(
-          flatTurtleDef,
-          parent,
-          flatTurtleDef.pipeline.length > 1,
-          stageWriter
-        );
+        return new QueryQueryIndex(flatTurtleDef, parent, stageWriter);
       case 'partial':
         throw new Error('Attempt to make query out of partial stage');
     }
@@ -2747,11 +2730,15 @@ class QueryQuery extends QueryField {
     }
     // Intermediate results (in a pipeline or join) that have no limit, don't need an orderby
     //  Some database don't have this optimization.
-    if (this.isIntermediate && queryDef.limit === undefined) {
+    if (this.fieldDef.pipeline.length > 1 && queryDef.limit === undefined) {
       return '';
     }
     // ignore orderby if all aggregates.
     if (resultStruct.getRepeatedResultType() === 'inline_all_numbers') {
+      return '';
+    }
+
+    if (this.isSubQuery && this.fieldDef.pipeline.length === 1) {
       return '';
     }
 
@@ -3471,7 +3458,6 @@ class QueryQuery extends QueryField {
 
   generateSQLFromPipeline(stageWriter: StageWriter) {
     this.prepare(stageWriter);
-    this.isIntermediate = this.fieldDef.pipeline.length > 1;
     let lastStageName = this.generateSQL(stageWriter);
     let outputStruct = this.getResultStructDef();
     if (this.fieldDef.pipeline.length > 1) {
@@ -3516,10 +3502,9 @@ class QueryQueryIndexStage extends QueryQuery {
   constructor(
     fieldDef: TurtleDef,
     parent: QueryStruct,
-    isIntermediateStage: boolean,
     stageWriter: StageWriter | undefined
   ) {
-    super(fieldDef, parent, isIntermediateStage, stageWriter);
+    super(fieldDef, parent, stageWriter);
     this.fieldDef = fieldDef;
   }
   // get a field ref and expand it.
@@ -3665,10 +3650,9 @@ class QueryQueryIndex extends QueryQuery {
   constructor(
     fieldDef: TurtleDef,
     parent: QueryStruct,
-    isIntermediateStage: boolean,
     stageWriter: StageWriter | undefined
   ) {
-    super(fieldDef, parent, isIntermediateStage, stageWriter);
+    super(fieldDef, parent, stageWriter);
     this.fieldDef = fieldDef;
     this.findFanPrefexes(parent);
   }
@@ -3769,7 +3753,6 @@ class QueryQueryIndex extends QueryQuery {
           ],
         },
         this.parent,
-        this.isIntermediate,
         stageWriter
       );
       q.prepare(stageWriter);
@@ -4466,6 +4449,7 @@ export class QueryModel {
       this.getStructFromRef(query.structRef),
       stageWriter
     );
+    q.isSubQuery = isJoinedSubquery;
 
     const ret = q.generateSQLFromPipeline(stageWriter);
     if (emitFinalStage && q.parent.dialect.hasFinalStage) {
