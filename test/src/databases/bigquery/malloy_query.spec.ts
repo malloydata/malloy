@@ -778,8 +778,10 @@ describe('airport_tests', () => {
         limit: 10
       }
       order_by: 1
+      limit: 1
     } -> {
       select: stuff.elevation
+      order_by: 1 desc
       limit: 1
     }
     `
