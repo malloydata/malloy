@@ -783,7 +783,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    console.log(result.sql);
     expect(result.sql).not.toContain('ORDER BY');
   });
 
@@ -802,7 +801,6 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       `
       )
       .run();
-    console.log(result.sql);
     expect(result.sql).not.toContain('ORDER BY');
   });
 
