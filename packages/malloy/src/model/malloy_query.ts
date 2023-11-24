@@ -1806,6 +1806,7 @@ export class Segment {
     const queryQueryQuery = QueryQuery.makeQuery(
       turtleDef,
       qs,
+      false, // since we aren't actually writing code, we don't care if this is correct.
       new StageWriter(true, undefined) // stage write indicates we want to get a result.
     );
     return queryQueryQuery.getResultStructDef();
@@ -1833,10 +1834,12 @@ class QueryQuery extends QueryField {
   rootResult: FieldInstanceResultRoot;
   resultStage: string | undefined;
   stageWriter: StageWriter | undefined;
+  isIntermediate = false;
 
   constructor(
     fieldDef: TurtleDef,
     parent: QueryStruct,
+    isIntermediate: boolean,
     stageWriter: StageWriter | undefined
   ) {
     super(fieldDef, parent);
@@ -1845,11 +1848,13 @@ class QueryQuery extends QueryField {
     this.stageWriter = stageWriter;
     // do some magic here to get the first segment.
     this.firstSegment = fieldDef.pipeline[0] as QuerySegment;
+    this.isIntermediate = isIntermediate;
   }
 
   static makeQuery(
     fieldDef: TurtleDef,
     parentStruct: QueryStruct,
+    isIntermedateStage: boolean,
     stageWriter: StageWriter | undefined = undefined
   ): QueryQuery {
     let flatTurtleDef = parentStruct.flattenTurtleDef(fieldDef);
@@ -1896,11 +1901,26 @@ class QueryQuery extends QueryField {
 
     switch (firstStage.type) {
       case 'reduce':
-        return new QueryQueryReduce(flatTurtleDef, parent, stageWriter);
+        return new QueryQueryReduce(
+          flatTurtleDef,
+          parent,
+          isIntermedateStage,
+          stageWriter
+        );
       case 'project':
-        return new QueryQueryProject(flatTurtleDef, parent, stageWriter);
+        return new QueryQueryProject(
+          flatTurtleDef,
+          parent,
+          isIntermedateStage,
+          stageWriter
+        );
       case 'index':
-        return new QueryQueryIndex(flatTurtleDef, parent, stageWriter);
+        return new QueryQueryIndex(
+          flatTurtleDef,
+          parent,
+          isIntermedateStage,
+          stageWriter
+        );
       case 'partial':
         throw new Error('Attempt to make query out of partial stage');
     }
@@ -1962,7 +1982,7 @@ class QueryQuery extends QueryField {
         const newFieldDef: TurtleDefPlus = cloneDeep(field.fieldDef);
         newFieldDef.as = f.name;
         newFieldDef.filterList = f.filterList;
-        field = QueryQuery.makeQuery(newFieldDef, this.parent);
+        field = QueryQuery.makeQuery(newFieldDef, this.parent, false);
       } else if (
         !(
           field instanceof QueryFieldTimestamp ||
@@ -2727,6 +2747,11 @@ class QueryQuery extends QueryField {
     if (this.firstSegment.type === 'project' && !queryDef.orderBy) {
       return ''; // No default ordering for project.
     }
+    // Intermediate results (in a pipeline or join) that have no limit, don't need an orderby
+    //  Some database don't have this optimization.
+    if (this.isIntermediate && queryDef.limit === undefined) {
+      return '';
+    }
     const orderBy = queryDef.orderBy || resultStruct.calculateDefaultOrderBy();
     const o: string[] = [];
     for (const f of orderBy) {
@@ -3393,7 +3418,12 @@ class QueryQuery extends QueryField {
       const qs = new QueryStruct(structDef, {
         model: this.parent.getModel(),
       });
-      const q = QueryQuery.makeQuery(newTurtle, qs, stageWriter);
+      const q = QueryQuery.makeQuery(
+        newTurtle,
+        qs,
+        pipeline.length > 0, // intermediate stage if there are more stages.
+        stageWriter
+      );
       pipeOut = q.generateSQLFromPipeline(stageWriter);
       // console.log(stageWriter.generateSQLStages());
       structDef = pipeOut.outputStruct;
@@ -3460,6 +3490,7 @@ class QueryQuery extends QueryField {
         const q = QueryQuery.makeQuery(
           {type: 'turtle', name: 'ignoreme', pipeline: [transform]},
           s,
+          pipeline.length > 0, // intermediate if there are more stages
           stageWriter
         );
         q.prepare(stageWriter);
@@ -3487,9 +3518,10 @@ class QueryQueryIndexStage extends QueryQuery {
   constructor(
     fieldDef: TurtleDef,
     parent: QueryStruct,
+    isIntermediateStage: boolean,
     stageWriter: StageWriter | undefined
   ) {
-    super(fieldDef, parent, stageWriter);
+    super(fieldDef, parent, isIntermediateStage, stageWriter);
     this.fieldDef = fieldDef;
   }
   // get a field ref and expand it.
@@ -3635,9 +3667,10 @@ class QueryQueryIndex extends QueryQuery {
   constructor(
     fieldDef: TurtleDef,
     parent: QueryStruct,
+    isIntermediateStage: boolean,
     stageWriter: StageWriter | undefined
   ) {
-    super(fieldDef, parent, stageWriter);
+    super(fieldDef, parent, isIntermediateStage, stageWriter);
     this.fieldDef = fieldDef;
     this.findFanPrefexes(parent);
   }
@@ -3738,6 +3771,7 @@ class QueryQueryIndex extends QueryQuery {
           ],
         },
         this.parent,
+        this.isIntermediate,
         stageWriter
       );
       q.prepare(stageWriter);
@@ -3839,7 +3873,7 @@ class QueryStruct extends QueryNode {
         // case "reduce" || "project" || "index": {
         case 'turtle': {
           // not sure why we need to cast here...
-          this.addFieldToNameMap(as, QueryQuery.makeQuery(field, this));
+          this.addFieldToNameMap(as, QueryQuery.makeQuery(field, this, false));
           break;
         }
         default: {
@@ -4155,7 +4189,9 @@ class QueryStruct extends QueryNode {
           // returns the stage name.
           return this.model.loadQuery(
             this.fieldDef.structSource.query,
-            stageWriter
+            stageWriter,
+            false,
+            true // this is an intermediate stage.
           ).lastStageName;
         }
       }
@@ -4405,7 +4441,8 @@ export class QueryModel {
   loadQuery(
     query: Query,
     stageWriter: StageWriter | undefined,
-    emitFinalStage = false
+    emitFinalStage = false,
+    isIntermedateStage = false
   ): QueryResults {
     const malloy = '';
 
@@ -4424,6 +4461,7 @@ export class QueryModel {
     const q = QueryQuery.makeQuery(
       turtleDef,
       this.getStructFromRef(query.structRef),
+      isIntermedateStage,
       stageWriter
     );
 
