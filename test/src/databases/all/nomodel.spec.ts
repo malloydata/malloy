@@ -506,7 +506,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
 
   it(`run simple sql - ${databaseName}`, async () => {
     const result = await runtime
-      .loadQuery(`run: conn.sql("select 1 as one")`)
+      .loadQuery('run: conn.sql("select 1 as one")')
       .run();
     expect(result.data.value[0]['one']).toBe(1);
   });
@@ -772,6 +772,25 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       expect(result.data.path(0, 'ugly', 0, 'foo').value).toBe(null);
     }
   );
+
+  it(`removes surpuflous order_by - pipeline - ${databaseName}`, async () => {
+    const result = await runtime
+      .loadQuery(
+        `
+      run: ${databaseName}.table('malloytest.state_facts') -> {
+        group_by: state
+        aggregate: airport_count.sum()
+        order_by: state desc
+      }
+      -> {
+        aggregate: airport_count.sum()
+      }
+      `
+      )
+      .run();
+    console.log(result.sql);
+    expect(result.sql).not.toContain('ORDER BY');
+  });
 
   describe('quoting and strings', () => {
     const tick = "'";
