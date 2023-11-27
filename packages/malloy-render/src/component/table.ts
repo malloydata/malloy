@@ -86,19 +86,22 @@ const renderFieldContent = (
       .rowLimit=${options.pinnedHeader ? 1 : Infinity}
     ></malloy-table>`;
   }
-  if (options.pinnedHeader)
-    return renderCell(f, '', {
-      hideStartGutter: isFirstChild(f),
-      hideEndGutter: isLastChild(f),
-    });
-  return renderCell(f, row.cell(f).value, {
+  let value = row.cell(f).value;
+  if (options.pinnedHeader) value = '';
+  if (!!f.isNumber?.()) value = value.toLocaleString();
+
+  return renderCell(f, value, {
     hideStartGutter: isFirstChild(f),
     hideEndGutter: isLastChild(f),
   });
 };
 
 const renderField = (row: DataRecord, f: Field, options: RenderOptions) => {
-  return html`<td class="column-cell">
+  return html`<td
+    class="column-cell ${classMap({
+      numeric: !!f.isNumber?.(),
+    })}"
+  >
     ${renderFieldContent(row, f, options)}
   </td>`;
 };
@@ -113,7 +116,11 @@ const renderHeader = (f: Field) => {
   const isParentLast = isLastChild(f.parentExplore);
   const hideEndGutter = isLast && (isParentLast || isParentNotAField);
 
-  return html`<th class="column-cell">
+  return html`<th
+    class="column-cell ${classMap({
+      numeric: !!f.isNumber?.(),
+    })}"
+  >
     ${renderCell(f, f.name, {
       hideStartGutter,
       hideEndGutter,
@@ -179,6 +186,10 @@ export class Table extends LitElement {
     th.column-cell {
       font-weight: var(--table-header-weight);
       color: var(--table-header-color);
+    }
+
+    .column-cell.numeric {
+      text-align: right;
     }
 
     .cell-wrapper {
