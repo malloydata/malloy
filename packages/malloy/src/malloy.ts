@@ -3564,6 +3564,7 @@ class DataNull extends Data<null> {
 export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
   private queryData: QueryData;
   protected _field: Explore;
+  private rowCache: Map<number, DataRecord> = new Map();
 
   constructor(
     queryData: QueryData,
@@ -3595,6 +3596,18 @@ export class DataArray extends Data<QueryData> implements Iterable<DataRecord> {
   }
 
   row(index: number): DataRecord {
+    let record = this.rowCache.get(index);
+    if (!record) {
+      record = new DataRecord(
+        this.queryData[index],
+        index,
+        this.field,
+        this,
+        this.parentRecord
+      );
+      this.rowCache.set(index, record);
+    }
+    return record;
     return new DataRecord(
       this.queryData[index],
       index,
@@ -3649,6 +3662,7 @@ export class DataRecord extends Data<{[fieldName: string]: DataColumn}> {
   private queryDataRow: QueryDataRow;
   protected _field: Explore;
   public readonly index: number | undefined;
+  private cellCache: Map<string, DataColumn> = new Map();
 
   constructor(
     queryDataRow: QueryDataRow,
@@ -3675,39 +3689,45 @@ export class DataRecord extends Data<{[fieldName: string]: DataColumn}> {
     const fieldName =
       typeof fieldOrName === 'string' ? fieldOrName : fieldOrName.name;
     const field = this._field.getFieldByName(fieldName);
-    const value = this.queryDataRow[fieldName];
-    if (value === null) {
-      return new DataNull(field, this, this);
-    }
-    if (field.isAtomicField()) {
-      if (field.isBoolean()) {
-        return new DataBoolean(value as boolean, field, this, this);
-      } else if (field.isDate()) {
-        return new DataDate(value as Date, field, this, this);
-      } else if (field.isJSON()) {
-        return new DataJSON(value as string, field, this, this);
-      } else if (field.isTimestamp()) {
-        return new DataTimestamp(value as Date, field, this, this);
-      } else if (field.isNumber()) {
-        return new DataNumber(value as number, field, this, this);
-      } else if (field.isString()) {
-        return new DataString(value as string, field, this, this);
-      } else if (field.isUnsupported()) {
-        return new DataUnsupported(value as unknown, field, this, this);
+    let column = this.cellCache.get(fieldName);
+    if (!column) {
+      const value = this.queryDataRow[fieldName];
+      if (value === null) {
+        column = new DataNull(field, this, this);
+      } else if (field.isAtomicField()) {
+        if (field.isBoolean()) {
+          column = new DataBoolean(value as boolean, field, this, this);
+        } else if (field.isDate()) {
+          column = new DataDate(value as Date, field, this, this);
+        } else if (field.isJSON()) {
+          column = new DataJSON(value as string, field, this, this);
+        } else if (field.isTimestamp()) {
+          column = new DataTimestamp(value as Date, field, this, this);
+        } else if (field.isNumber()) {
+          column = new DataNumber(value as number, field, this, this);
+        } else if (field.isString()) {
+          column = new DataString(value as string, field, this, this);
+        } else if (field.isUnsupported()) {
+          column = new DataUnsupported(value as unknown, field, this, this);
+        }
+      } else if (field.isExploreField()) {
+        if (Array.isArray(value)) {
+          column = new DataArray(value, field, this, this);
+        } else {
+          column = new DataRecord(
+            value as QueryDataRow,
+            undefined,
+            field,
+            this,
+            this
+          );
+        }
       }
-    } else if (field.isExploreField()) {
-      if (Array.isArray(value)) {
-        return new DataArray(value, field, this, this);
-      } else {
-        return new DataRecord(
-          value as QueryDataRow,
-          undefined,
-          field,
-          this,
-          this
-        );
-      }
+      if (column) this.cellCache.set(fieldName, column);
     }
+
+    if (column) return column;
+
     throw new Error(
       `Internal Error: could not construct data column for field '${fieldName}'.`
     );

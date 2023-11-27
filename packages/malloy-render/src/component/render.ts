@@ -39,9 +39,30 @@ export class MalloyRender extends LitElement {
       --table-border: 1px solid #e5e7eb;
       --table-background: white;
       --table-gutter-size: 15px;
+      --table-pinned-background: #f5fafc;
+      --table-pinned-border: 1px solid #daedf3;
 
       font-family: Inter, system-ui, sans-serif;
       font-size: var(--table-font-size);
+    }
+
+    @supports (font-variation-settings: normal) {
+      :host {
+        font-family:
+          InterVariable,
+          Inter,
+          system-ui sans-serif;
+
+        font-variant-numeric: tabular-nums;
+        font-feature-settings:
+          'cv01' 1,
+          'cv02' 1,
+          'cv03' 1,
+          'cv04' 1,
+          'cv09' 1,
+          'liga' 1,
+          'calt' 1;
+      }
     }
   `;
 

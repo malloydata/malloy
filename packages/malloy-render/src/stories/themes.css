@@ -5,3 +5,8 @@
   --table-background: #212122;
   --table-border: 1px solid #4c505b;
 }
+
+.compact {
+  --table-row-height: 28px;
+  --table-font-size: 12px;
+}
