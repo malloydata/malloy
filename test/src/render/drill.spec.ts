@@ -35,7 +35,6 @@ describe('drill query', () => {
       source: flights is duckdb.table('test/data/duckdb/flights/part.*.parquet') extend {
         primary_key: id2
         // rename some fields as from their physical names
-        rename: divert is diverted
         rename: \`Origin Code\` is origin
         measure: flight_count is count()
         join_one: carriers with carrier
@@ -63,7 +62,7 @@ describe('drill query', () => {
       query: over_time is flights -> over_time
       query: by_origin is flights -> by_origin
     `;
-  test('can handle renamed fields', async () => {
+  test('can handle joined-in table fields', async () => {
     const result = duckdb
       .loadModel(model)
       .loadQueryByName('top_carriers')
@@ -89,7 +88,7 @@ describe('drill query', () => {
     expect(getDrillQuery(row).drillQuery).toEqual(expDrillQuery);
   });
 
-  test('can handle multi-word field names', async () => {
+  test('can handle renamed and multi-word field names', async () => {
     const result = duckdb.loadModel(model).loadQueryByName('by_origin').run();
     const table = (await result).data;
     const expDrillQuery =
