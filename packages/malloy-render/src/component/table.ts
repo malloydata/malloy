@@ -88,7 +88,7 @@ const renderFieldContent = (
   }
   let value = row.cell(f).value;
   if (options.pinnedHeader) value = '';
-  if (f.isAtomicField() && f.isNumber())
+  else if (f.isAtomicField() && f.isNumber())
     value = (value as number).toLocaleString();
 
   return renderCell(f, value, {
