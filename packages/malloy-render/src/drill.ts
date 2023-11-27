@@ -146,9 +146,9 @@ export function getDrillQuery(data: DataArrayOrRecord): {
   const {formattedFilters, source} = getDrillFilters(data);
   let ret = `run: ${source?.name || '"unable to compute source"'} -> `;
   if (formattedFilters.length) {
-    ret += `{ \n  select: *\n  where: \n    ${formattedFilters.join(
+    ret += `{ \n  where: \n    ${formattedFilters.join(
       ',\n    '
-    )}\n  \n}\n`;
+    )}\n  \n} + {select: *}\n`;
   }
   return {drillQuery: ret, drillFilters: formattedFilters};
 }
