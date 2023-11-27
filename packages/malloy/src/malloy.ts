@@ -1819,8 +1819,8 @@ export class AtomicField extends Entity implements Taggable {
   get expression(): string {
     const dot = '.';
     const resultMetadata = this.fieldTypeDef.resultMetadata;
-    // If field is joined-in from another table i.e. `tableName.columnName,
-    // return sourceField, else return name.
+    // If field is joined-in from another table i.e. of type `tableName.columnName`,
+    // return sourceField, else return name because this could be a renamed field.
     return resultMetadata?.sourceExpression ||
       resultMetadata?.sourceField.includes(dot)
       ? resultMetadata?.sourceField
