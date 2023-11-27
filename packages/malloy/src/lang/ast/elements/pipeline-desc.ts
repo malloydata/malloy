@@ -34,7 +34,7 @@ import {
 import {FieldName, FieldSpace} from '../types/field-space';
 import {MalloyElement} from '../types/malloy-element';
 import {QOPDesc} from '../query-properties/qop-desc';
-import {QueryInputSpace} from '../field-space/query-input-space';
+import {QuerySpace} from '../field-space/query-spaces';
 import {ViewFieldReference} from '../query-items/field-references';
 import {Refinement} from '../query-properties/refinements';
 import {StaticSpace} from '../field-space/static-space';
@@ -53,7 +53,21 @@ interface AppendResult {
 export abstract class PipelineDesc extends MalloyElement {
   protected refinements?: Refinement[];
   protected qops: QOPDesc[] = [];
-  nestedInQuerySpace?: QueryInputSpace;
+  private isNestIn?: QuerySpace;
+
+  /**
+   * This pipeline is actually a nest statement, and the passed query space
+   * is the space for the query which contains the nest statement. This is
+   * used so that nest queries can walk up a nest chain to check
+   * "ungrouping" expressions.
+   *
+   * This is only here so that it can be used when a Builder is created
+   * so the query space created by the builder can also know that it is
+   * nested.
+   */
+  declareAsNestInside(qs: QuerySpace) {
+    this.isNestIn = qs;
+  }
 
   alreadyRefined(): boolean {
     return this.refinements !== undefined;
@@ -75,8 +89,7 @@ export abstract class PipelineDesc extends MalloyElement {
     modelPipe: PipeSegment[]
   ): AppendResult {
     const returnPipe: PipeSegment[] = [...modelPipe];
-    const nestedIn =
-      modelPipe.length === 0 ? this.nestedInQuerySpace : undefined;
+    const nestedIn = modelPipe.length === 0 ? this.isNestIn : undefined;
     let nextFS = () => pipelineOutput;
     for (const qop of this.qops) {
       const next = qop.getOp(nextFS(), nestedIn);
@@ -104,7 +117,7 @@ export abstract class PipelineDesc extends MalloyElement {
     }
     pipeline.push(...modelPipe.pipeline);
     for (const refinement of this.refinements) {
-      pipeline = refinement.refine(fs, pipeline);
+      pipeline = refinement.refine(fs, pipeline, this.isNestIn);
     }
     return {pipeline};
   }

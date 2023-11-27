@@ -22,6 +22,7 @@
  */
 
 import {
+  Annotation,
   ModelDef,
   Query,
   SQLBlockSource,
@@ -79,6 +80,13 @@ interface Metadata extends NeededData, ProblemResponse, FinalResponse {
   highlights: DocumentHighlight[];
 }
 export type MetadataResponse = Partial<Metadata>;
+interface ModelAnnotationData
+  extends NeededData,
+    ProblemResponse,
+    FinalResponse {
+  modelAnnotation: Annotation;
+}
+export type ModelAnnotationResponse = Partial<ModelAnnotationData>;
 interface Completions extends NeededData, ProblemResponse, FinalResponse {
   completions: DocumentCompletion[];
 }

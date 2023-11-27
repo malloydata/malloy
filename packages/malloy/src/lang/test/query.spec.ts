@@ -204,6 +204,26 @@ describe('query:', () => {
       }
     `).toTranslate();
     });
+    test('exclude output checking survives refinement', () => {
+      // This was https://github.com/malloydata/malloy/issues/1474
+      const nestExclude = model`
+        source: flights is a extend {
+          dimension: carrier is astr, destination is astr
+          measure: flight_count is count()
+          view: by_dest is {
+            group_by: destination
+            aggregate: flight_count
+          }
+        }
+        run: flights -> {
+          group_by: carrier
+          nest: broken is by_dest + {
+            top: 5
+            aggregate: flights_to_dest_all_carriers is exclude(flight_count, carrier)
+          }
+        }`;
+      expect(nestExclude).toTranslate();
+    });
   });
   describe('query operation typechecking', () => {
     describe('field declarations', () => {

@@ -27,7 +27,6 @@ import {MalloyElement} from '../types/malloy-element';
 import {Noteable, extendNoteMethod} from '../types/noteable';
 import {QueryField} from '../field-space/query-space-field';
 import {TurtleHeadedPipe} from '../elements/pipeline-desc';
-import {QueryInputSpace} from '../field-space/query-input-space';
 import {StaticSpace} from '../field-space/static-space';
 import {
   LegalRefinementStage,
@@ -128,13 +127,7 @@ abstract class TurtleDeclRoot
     return modelPipe;
   }
 
-  getFieldDef(
-    fs: FieldSpace,
-    nestParent: QueryInputSpace | undefined
-  ): model.TurtleDef {
-    if (nestParent) {
-      this.nestedInQuerySpace = nestParent;
-    }
+  getFieldDef(fs: FieldSpace): model.TurtleDef {
     const pipe = this.getPipeline(fs);
     const turtle: model.TurtleDef = {
       type: 'turtle',
@@ -157,7 +150,7 @@ abstract class TurtleDeclRoot
   }
 
   makeEntry(fs: DynamicSpace) {
-    fs.newEntry(this.name, this, new QueryFieldAST(fs, this, this.name));
+    fs.newEntry(this.name, this, new ViewField(fs, this, this.name));
   }
 }
 
@@ -184,8 +177,7 @@ export class NestRefinement
 
   makeEntry(fs: DynamicSpace) {
     if (fs instanceof QuerySpace) {
-      const qf = new QueryFieldAST(fs, this, this.name);
-      qf.nestParent = fs.inputSpace();
+      const qf = new NestField(fs, this, this.name, fs);
       fs.newEntry(this.name, this, qf);
       return;
     }
@@ -211,8 +203,7 @@ export class NestDefinition
 
   makeEntry(fs: DynamicSpace) {
     if (fs instanceof QuerySpace) {
-      const qf = new QueryFieldAST(fs, this, this.name);
-      qf.nestParent = fs.inputSpace();
+      const qf = new NestField(fs, this, this.name, fs);
       fs.newEntry(this.name, this, qf);
       return;
     }
@@ -228,9 +219,8 @@ export function isNestedQuery(me: MalloyElement): me is NestedQuery {
   );
 }
 
-export class QueryFieldAST extends QueryField {
+export class ViewField extends QueryField {
   renameAs?: string;
-  nestParent?: QueryInputSpace;
   constructor(
     fs: FieldSpace,
     readonly turtle: TurtleDecl,
@@ -240,7 +230,7 @@ export class QueryFieldAST extends QueryField {
   }
 
   getQueryFieldDef(fs: FieldSpace): model.QueryFieldDef {
-    const def = this.turtle.getFieldDef(fs, this.nestParent);
+    const def = this.turtle.getFieldDef(fs);
     if (this.renameAs) {
       def.as = this.renameAs;
     }
@@ -248,11 +238,23 @@ export class QueryFieldAST extends QueryField {
   }
 
   fieldDef(): model.TurtleDef {
-    const def = this.turtle.getFieldDef(this.inSpace, this.nestParent);
+    const def = this.turtle.getFieldDef(this.inSpace);
     if (this.renameAs) {
       def.as = this.renameAs;
     }
     return def;
+  }
+}
+
+export class NestField extends ViewField {
+  constructor(
+    fs: FieldSpace,
+    turtle: TurtleDecl,
+    name: string,
+    spaceContainingNest: QuerySpace
+  ) {
+    super(fs, turtle, name);
+    turtle.declareAsNestInside(spaceContainingNest);
   }
 }
 

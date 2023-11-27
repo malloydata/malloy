@@ -34,7 +34,7 @@ import {timeToString} from './html/utils';
 type FilterItem = {key: string; value: string | undefined};
 
 function filterQuote(s: string): string {
-  return `'${s.replace("'", "\\'")}'`;
+  return `'${s.replace(/(['\\])/g, '\\$1')}'`;
 }
 
 function timestampToDateFilter(
@@ -69,8 +69,12 @@ function getRowFilters(row: DataRecord): FilterItem[] {
   for (const dim of dimensions) {
     const cell = row.cell(dim);
     // if we have an expression, use it instead of the name of the field.
-    const key =
+    let key =
       dim.isAtomicField() || dim.isQueryField() ? dim.expression : undefined;
+    // Multi word column names.
+    if (key !== undefined && key.includes(' ') && key === dim.name) {
+      key = '`' + key + '`';
+    }
     if (key && !cell.isArray()) {
       if (cell.isNull()) {
         filters.push({key, value: 'null'});
@@ -79,9 +83,12 @@ function getRowFilters(row: DataRecord): FilterItem[] {
       } else if (cell.isNumber() || cell.isBoolean()) {
         filters.push({key, value: cell.value.toString()});
       } else if (cell.isTimestamp() || cell.isDate()) {
-        filters.push(
-          timestampToDateFilter(key, cell.value, cell.field.timeframe)
-        );
+        let timeframe = cell.field.timeframe;
+        // Dont let the timeframe for Date go down to seconds.
+        if (cell.isDate() && timeframe === undefined) {
+          timeframe = DateTimeframe.Day;
+        }
+        filters.push(timestampToDateFilter(key, cell.value, timeframe));
       }
     }
   }
@@ -113,7 +120,7 @@ export function getDrillFilters(data: DataArrayOrRecord): {
   const formattedFilters: string[] = [];
   for (const {key, value} of filters) {
     if (value !== undefined) {
-      formattedFilters.push(`${key}: ${value}`);
+      formattedFilters.push(`${key} = ${value}`);
     } else {
       formattedFilters.push(key);
     }
@@ -137,10 +144,11 @@ export function getDrillQuery(data: DataArrayOrRecord): {
   drillFilters: string[];
 } {
   const {formattedFilters, source} = getDrillFilters(data);
-  let ret = `run: ${source?.name || '"unable to compute source"'} `;
+  let ret = `run: ${source?.name || '"unable to compute source"'} -> `;
   if (formattedFilters.length) {
-    ret += `{ \n  where: \n    ${formattedFilters.join(',\n    ')}\n  \n}\n`;
+    ret += `{ \n  select: *\n  where: \n    ${formattedFilters.join(
+      ',\n    '
+    )}\n  \n}\n`;
   }
-  const drillQuery = ret + '-> ';
-  return {drillQuery, drillFilters: formattedFilters};
+  return {drillQuery: ret, drillFilters: formattedFilters};
 }
