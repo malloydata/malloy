@@ -22,15 +22,17 @@
  */
 
 import {DataArray, DataRecord, Field} from '@malloydata/malloy';
-import {LitElement, TemplateResult, css, html} from 'lit';
+import {LitElement, TemplateResult, css, html, nothing} from 'lit';
 import {customElement, eventOptions, property, state} from 'lit/decorators.js';
 import {classMap} from 'lit/directives/class-map.js';
 import {createContext, provide, consume} from '@lit/context';
 import {isFirstChild, isLastChild} from './util';
 
-const tableContext = createContext<{
+type TableContext = {
   root: boolean;
-}>('table');
+};
+
+const tableContext = createContext<TableContext | undefined>('table');
 
 type RenderOptions = {
   pinnedHeader?: boolean;
@@ -244,7 +246,7 @@ export class Table extends LitElement {
 
   @consume({context: tableContext})
   @property({attribute: false})
-  public parentCtx;
+  public parentCtx: TableContext | undefined;
 
   @provide({context: tableContext})
   ctx = {root: false};
@@ -292,7 +294,7 @@ export class Table extends LitElement {
     }
 
     const renderStickyHeader = () => {
-      if (this.ctx.root)
+      if (this.ctx.root) {
         return html`<div class="sticky-header">
           <div class="sticky-header-content">
             <malloy-table
@@ -306,6 +308,9 @@ export class Table extends LitElement {
             ></malloy-table>
           </div>
         </div>`;
+      }
+
+      return nothing;
     };
 
     return html`<div @scroll=${this._handleScroll} class="table-wrapper">
