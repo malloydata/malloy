@@ -1813,8 +1813,18 @@ export class AtomicField extends Entity implements Taggable {
     return this.parent;
   }
 
+  /**
+   * @return Field name for drill.
+   */
   get expression(): string {
-    return this.fieldTypeDef.resultMetadata?.sourceExpression || this.name;
+    const dot = '.';
+    const resultMetadata = this.fieldTypeDef.resultMetadata;
+    // If field is joined-in from another table i.e. `tableName.columnName,
+    // return sourceField, else return name.
+    return resultMetadata?.sourceExpression ||
+      resultMetadata?.sourceField.includes(dot)
+      ? resultMetadata?.sourceField
+      : this.name;
   }
 
   public get location(): DocumentLocation | undefined {
