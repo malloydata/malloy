@@ -88,7 +88,8 @@ const renderFieldContent = (
   }
   let value = row.cell(f).value;
   if (options.pinnedHeader) value = '';
-  if (!!f.isNumber?.()) value = value.toLocaleString();
+  if (f.isAtomicField() && f.isNumber())
+    value = (value as number).toLocaleString();
 
   return renderCell(f, value, {
     hideStartGutter: isFirstChild(f),
@@ -99,7 +100,7 @@ const renderFieldContent = (
 const renderField = (row: DataRecord, f: Field, options: RenderOptions) => {
   return html`<td
     class="column-cell ${classMap({
-      numeric: !!f.isNumber?.(),
+      numeric: f.isAtomicField() && f.isNumber(),
     })}"
   >
     ${renderFieldContent(row, f, options)}
@@ -118,7 +119,7 @@ const renderHeader = (f: Field) => {
 
   return html`<th
     class="column-cell ${classMap({
-      numeric: !!f.isNumber?.(),
+      numeric: f.isAtomicField() && f.isNumber(),
     })}"
   >
     ${renderCell(f, f.name, {
