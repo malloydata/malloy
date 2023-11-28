@@ -83,7 +83,7 @@ describe('drill query', () => {
     const table = (await result).data;
     const expDrillQuery =
       'run: flights -> { \n  where: \n    ' +
-      'dep_month = 8\n  \n} + {select: *}\n';
+      'month(dep_time) = 8\n  \n} + {select: *}\n';
     const row = table.row(0);
     expect(getDrillQuery(row).drillQuery).toEqual(expDrillQuery);
   });

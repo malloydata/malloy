@@ -1821,10 +1821,12 @@ export class AtomicField extends Entity implements Taggable {
     const resultMetadata = this.fieldTypeDef.resultMetadata;
     // If field is joined-in from another table i.e. of type `tableName.columnName`,
     // return sourceField, else return name because this could be a renamed field.
-    return resultMetadata?.sourceExpression ||
-      resultMetadata?.sourceField.includes(dot)
-      ? resultMetadata?.sourceField
-      : this.name;
+    return (
+      resultMetadata?.sourceExpression ||
+      (resultMetadata?.sourceField.includes(dot)
+        ? resultMetadata?.sourceField
+        : this.name)
+    );
   }
 
   public get location(): DocumentLocation | undefined {
