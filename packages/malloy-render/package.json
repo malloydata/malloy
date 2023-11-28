@@ -1,6 +1,6 @@
 {
   "name": "@malloydata/render",
-  "version": "0.0.105",
+  "version": "0.0.106",
   "license": "MIT",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@lit/context": "^1.1.0",
-    "@malloydata/malloy": "^0.0.105",
+    "@malloydata/malloy": "^0.0.106",
     "@types/luxon": "^2.4.0",
     "lit": "^3.0.2",
     "lodash": "^4.17.20",
