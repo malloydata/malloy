@@ -57,10 +57,15 @@ describe('drill query', () => {
           aggregate: flight_count
           limit: 1
         }
+
+        view: no_filter is {
+          aggregate: flight_count
+        }
       }
       query: top_carriers is flights -> top_carriers
       query: over_time is flights -> over_time
       query: by_origin is flights -> by_origin
+      query: no_filter is flights -> no_filter
     `;
   test('can handle joined-in table fields', async () => {
     const result = duckdb
@@ -94,6 +99,14 @@ describe('drill query', () => {
     const expDrillQuery =
       'run: flights -> { \n  where: \n    ' +
       "`Origin Code` = 'ATL'  \n} + {select: *}\n";
+    const row = table.row(0);
+    expect(getDrillQuery(row).drillQuery).toEqual(expDrillQuery);
+  });
+
+  test('can handle queries with no filter', async () => {
+    const result = duckdb.loadModel(model).loadQueryByName('no_filter').run();
+    const table = (await result).data;
+    const expDrillQuery = 'run: flights -> {select: *}';
     const row = table.row(0);
     expect(getDrillQuery(row).drillQuery).toEqual(expDrillQuery);
   });

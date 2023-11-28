@@ -149,6 +149,8 @@ export function getDrillQuery(data: DataArrayOrRecord): {
     ret += `{ \n  where: \n    ${formattedFilters.join(
       ',\n    '
     )}  \n} + {select: *}\n`;
+  } else {
+    ret += '{select: *}';
   }
   return {drillQuery: ret, drillFilters: formattedFilters};
 }
