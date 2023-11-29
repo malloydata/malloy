@@ -325,7 +325,11 @@ export class Table extends LitElement {
       return nothing;
     };
 
-    return html`<div @scroll=${this._handleScroll} class="table-wrapper">
+    return html`<div
+      @scroll=${this._handleScroll}
+      class="table-wrapper"
+      part=${this.ctx.root ? 'table-container' : nothing}
+    >
       ${renderStickyHeader()}
       <table>
         <thead>
