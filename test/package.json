@@ -18,11 +18,11 @@
   },
   "dependencies": {
     "@jest/globals": "^29.4.3",
-    "@malloydata/db-bigquery": "^0.0.107",
-    "@malloydata/db-duckdb": "^0.0.107",
-    "@malloydata/db-postgres": "^0.0.107",
-    "@malloydata/malloy": "^0.0.107",
-    "@malloydata/render": "^0.0.107",
+    "@malloydata/db-bigquery": "^0.0.108",
+    "@malloydata/db-duckdb": "^0.0.108",
+    "@malloydata/db-postgres": "^0.0.108",
+    "@malloydata/malloy": "^0.0.108",
+    "@malloydata/render": "^0.0.108",
     "jsdom": "^22.1.0",
     "luxon": "^2.4.0",
     "madge": "^6.0.0"
@@ -31,5 +31,5 @@
     "@types/jsdom": "^21.1.1",
     "@types/luxon": "^2.4.0"
   },
-  "version": "0.0.107"
+  "version": "0.0.108"
 }
