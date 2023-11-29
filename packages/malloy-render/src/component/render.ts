@@ -31,7 +31,6 @@ export class MalloyRender extends LitElement {
   static override styles = css`
     :host {
       --table-font-size: 12px;
-      --table-row-height: 36px;
       --table-header-color: #5d626b;
       --table-header-weight: bold;
       --table-body-color: #727883;
@@ -53,13 +52,7 @@ export class MalloyRender extends LitElement {
           Inter,
           system-ui sans-serif;
 
-        font-variant-numeric: tabular-nums;
         font-feature-settings:
-          'cv01' 1,
-          'cv02' 1,
-          'cv03' 1,
-          'cv04' 1,
-          'cv09' 1,
           'liga' 1,
           'calt' 1;
       }
@@ -70,7 +63,21 @@ export class MalloyRender extends LitElement {
   result!: Result;
 
   override render() {
-    return html`<malloy-table .data=${this.result.data}></malloy-table>`;
+    const isCompact = this.result.resultExplore.modelTag.has(
+      'renderer_next',
+      'compact'
+    );
+
+    const dynamicStyle = html`<style>
+      :host {
+        --table-row-height: ${isCompact ? '28px' : '36px'};
+      }
+    </style>`;
+
+    return html`${dynamicStyle}<malloy-table
+        exportparts="table-container: container"
+        .data=${this.result.data}
+      ></malloy-table>`;
   }
 }
 

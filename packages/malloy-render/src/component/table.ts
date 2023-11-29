@@ -193,6 +193,7 @@ export class Table extends LitElement {
 
     .column-cell.numeric {
       text-align: right;
+      font-variant-numeric: tabular-nums;
     }
 
     .cell-wrapper {
@@ -325,7 +326,11 @@ export class Table extends LitElement {
       return nothing;
     };
 
-    return html`<div @scroll=${this._handleScroll} class="table-wrapper">
+    return html`<div
+      @scroll=${this._handleScroll}
+      class="table-wrapper"
+      part=${this.ctx.root ? 'table-container' : nothing}
+    >
       ${renderStickyHeader()}
       <table>
         <thead>
