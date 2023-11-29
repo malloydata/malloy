@@ -52,13 +52,7 @@ export class MalloyRender extends LitElement {
           Inter,
           system-ui sans-serif;
 
-        font-variant-numeric: tabular-nums;
         font-feature-settings:
-          'cv01' 1,
-          'cv02' 1,
-          'cv03' 1,
-          'cv04' 1,
-          'cv09' 1,
           'liga' 1,
           'calt' 1;
       }

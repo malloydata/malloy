@@ -193,6 +193,7 @@ export class Table extends LitElement {
 
     .column-cell.numeric {
       text-align: right;
+      font-variant-numeric: tabular-nums;
     }
 
     .cell-wrapper {
