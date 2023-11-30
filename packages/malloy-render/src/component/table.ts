@@ -160,7 +160,7 @@ export class Table extends LitElement {
 
     table {
       border-collapse: collapse;
-      background: var(--table-background);
+      background: var(--malloy-render--table-background);
     }
 
     th {
@@ -172,7 +172,7 @@ export class Table extends LitElement {
     }
 
     .column-cell {
-      height: var(--table-row-height);
+      height: var(--malloy-render--table-row-height);
       overflow: hidden;
       white-space: nowrap;
       text-align: left;
@@ -182,13 +182,13 @@ export class Table extends LitElement {
     }
 
     td.column-cell {
-      font-weight: var(--table-body-weight);
-      color: var(--table-body-color);
+      font-weight: var(--malloy-render--table-body-weight);
+      color: var(--malloy-render--table-body-color);
     }
 
     th.column-cell {
-      font-weight: var(--table-header-weight);
-      color: var(--table-header-color);
+      font-weight: var(--malloy-render--table-header-weight);
+      color: var(--malloy-render--table-header-color);
     }
 
     .column-cell.numeric {
@@ -197,25 +197,25 @@ export class Table extends LitElement {
     }
 
     .cell-wrapper {
-      height: var(--table-row-height);
+      height: var(--malloy-render--table-row-height);
       display: flex;
       align-items: center;
       overflow: hidden;
     }
 
     .cell-content {
-      border-top: var(--table-border);
-      height: var(--table-row-height);
-      line-height: var(--table-row-height);
+      border-top: var(--malloy-render--table-border);
+      height: var(--malloy-render--table-row-height);
+      line-height: var(--malloy-render--table-row-height);
       flex: 1;
       overflow: hidden;
       text-overflow: ellipsis;
     }
 
     .cell-gutter {
-      border-top: var(--table-border);
-      height: var(--table-row-height);
-      width: var(--table-gutter-size);
+      border-top: var(--malloy-render--table-border);
+      height: var(--malloy-render--table-row-height);
+      width: var(--malloy-render--table-gutter-size);
       transition: border-color 0.25s;
     }
 
@@ -228,11 +228,11 @@ export class Table extends LitElement {
     }
 
     .pinned-header th {
-      background: var(--table-background);
+      background: var(--malloy-render--table-background);
     }
 
     .pinned-header.scrolled th {
-      background: var(--table-pinned-background);
+      background: var(--malloy-render--table-pinned-background);
       box-shadow: 0 0 0.5em rgba(0, 0, 0, 0.5);
     }
 
@@ -240,7 +240,7 @@ export class Table extends LitElement {
       .cell-content,
       .cell-gutter,
       .cell-gutter.hide-gutter-border {
-        border-top: var(--table-pinned-border);
+        border-top: var(--malloy-render--table-pinned-border);
       }
     }
   `;
