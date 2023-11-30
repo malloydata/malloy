@@ -117,11 +117,11 @@ export abstract class FieldDeclaration
     }
     const compressValue = compressExpr(exprValue.value);
     let retType = exprValue.dataType;
-    this.expr.log(
-      'null value defaults to type number, use "null::TYPE" to specify correct type',
-      'warn'
-    );
     if (retType === 'null') {
+      this.expr.log(
+        'null value defaults to type number, use "null::TYPE" to specify correct type',
+        'warn'
+      );
       retType = 'number';
     }
     if (isAtomicFieldType(retType) && retType !== 'error') {
