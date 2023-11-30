@@ -420,7 +420,7 @@ describe('error cascading', () => {
         }
         run: a1 -> {
           group_by:
-            ${'err is null'}
+            ${'err is nothing'}
           aggregate:
             measure_err is count(foo)
           calculate:
@@ -432,10 +432,7 @@ describe('error cascading', () => {
               .join('\n            ')}
         }
       `
-    ).translationToFailWith(
-      "Cannot define 'err', unexpected type: null",
-      "'foo' is not defined"
-    );
+    ).translationToFailWith("'nothing' is not defined", "'foo' is not defined");
   });
 });
 
