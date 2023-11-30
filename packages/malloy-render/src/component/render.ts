@@ -25,24 +25,14 @@ import {Result} from '@malloydata/malloy';
 import {LitElement, html, css} from 'lit';
 import {customElement, property} from 'lit/decorators.js';
 import './table';
+import {getThemeValue} from './theme';
 
 @customElement('malloy-render')
 export class MalloyRender extends LitElement {
   static override styles = css`
     :host {
-      --table-font-size: 12px;
-      --table-header-color: #5d626b;
-      --table-header-weight: bold;
-      --table-body-color: #727883;
-      --table-body-weight: 400;
-      --table-border: 1px solid #e5e7eb;
-      --table-background: white;
-      --table-gutter-size: 15px;
-      --table-pinned-background: #f5fafc;
-      --table-pinned-border: 1px solid #daedf3;
-
       font-family: Inter, system-ui, sans-serif;
-      font-size: var(--table-font-size);
+      font-size: var(--malloy-render--table-font-size);
     }
 
     @supports (font-variation-settings: normal) {
@@ -63,14 +53,76 @@ export class MalloyRender extends LitElement {
   result!: Result;
 
   override render() {
-    const isCompact = this.result.resultExplore.modelTag.has(
-      'renderer_next',
-      'compact'
+    const modelTag = this.result.resultExplore.modelTag;
+    const {tag: resultTag} = this.result.tagParse();
+
+    const modelTheme = modelTag.tag('theme');
+    const localTheme = resultTag.tag('theme');
+    const tableRowHeight = getThemeValue(
+      'tableRowHeight',
+      localTheme,
+      modelTheme
+    );
+    const tableBodyColor = getThemeValue(
+      'tableBodyColor',
+      localTheme,
+      modelTheme
+    );
+    const tableFontSize = getThemeValue(
+      'tableFontSize',
+      localTheme,
+      modelTheme
+    );
+    const tableHeaderColor = getThemeValue(
+      'tableHeaderColor',
+      localTheme,
+      modelTheme
+    );
+    const tableHeaderWeight = getThemeValue(
+      'tableHeaderWeight',
+      localTheme,
+      modelTheme
+    );
+    const tableBodyWeight = getThemeValue(
+      'tableBodyWeight',
+      localTheme,
+      modelTheme
+    );
+    const tableBorder = getThemeValue('tableBorder', localTheme, modelTheme);
+    const tableBackground = getThemeValue(
+      'tableBackground',
+      localTheme,
+      modelTheme
+    );
+    const tableGutterSize = getThemeValue(
+      'tableGutterSize',
+      localTheme,
+      modelTheme
+    );
+    const tablePinnedBackground = getThemeValue(
+      'tablePinnedBackground',
+      localTheme,
+      modelTheme
+    );
+    const tablePinnedBorder = getThemeValue(
+      'tablePinnedBorder',
+      localTheme,
+      modelTheme
     );
 
     const dynamicStyle = html`<style>
       :host {
-        --table-row-height: ${isCompact ? '28px' : '36px'};
+        --malloy-render--table-row-height: ${tableRowHeight};
+        --malloy-render--table-body-color: ${tableBodyColor};
+        --malloy-render--table-font-size: ${tableFontSize};
+        --malloy-render--table-header-color: ${tableHeaderColor};
+        --malloy-render--table-header-weight: ${tableHeaderWeight};
+        --malloy-render--table-body-weight: ${tableBodyWeight};
+        --malloy-render--table-border: ${tableBorder};
+        --malloy-render--table-background: ${tableBackground};
+        --malloy-render--table-gutter-size: ${tableGutterSize};
+        --malloy-render--table-pinned-background: ${tablePinnedBackground};
+        --malloy-render--table-pinned-border: ${tablePinnedBorder};
       }
     </style>`;
 

@@ -1,12 +1,7 @@
 .night {
-  --table-body-color: white;
-  --table-header-color: #b1cad6;
-  --table-body-weight: 400;
-  --table-background: #212122;
-  --table-border: 1px solid #4c505b;
-}
-
-.compact {
-  --table-row-height: 28px;
-  --table-font-size: 12px;
+  --malloy-render--table-body-color: white;
+  --malloy-render--table-header-color: #b1cad6;
+  --malloy-render--table-body-weight: 400;
+  --malloy-render--table-background: #212122;
+  --malloy-render--table-border: 1px solid #4c505b;
 }
