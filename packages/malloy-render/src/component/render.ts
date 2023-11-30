@@ -21,11 +21,26 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Result} from '@malloydata/malloy';
+import {Result, Tag} from '@malloydata/malloy';
 import {LitElement, html, css} from 'lit';
 import {customElement, property} from 'lit/decorators.js';
 import './table';
-import {getThemeValue} from './theme';
+
+// Get the first valid theme value or fallback to CSS variable
+function getThemeValue(prop: string, ...themes: Array<Tag | undefined>) {
+  let value: string | undefined;
+  for (const theme of themes) {
+    value = theme?.text(prop);
+    if (typeof value !== 'undefined') break;
+  }
+  // If no theme overrides, convert prop name from camelCase to kebab and pull from --malloy-theme-- variable
+  return (
+    value ??
+    `var(--malloy-theme--${prop
+      .replace(/([a-z])([A-Z])/g, '$1-$2')
+      .toLowerCase()})`
+  );
+}
 
 @customElement('malloy-render')
 export class MalloyRender extends LitElement {
