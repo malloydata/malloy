@@ -35,3 +35,11 @@ export const ViewThemeOverride = {
     view: `records_override`,
   },
 };
+
+export const ViewThemeOverrideCSS = {
+  args: {
+    source: 'products',
+    view: `records_override`,
+    classes: 'night',
+  },
+};

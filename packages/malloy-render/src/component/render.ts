@@ -31,6 +31,18 @@ import {getThemeValue} from './theme';
 export class MalloyRender extends LitElement {
   static override styles = css`
     :host {
+      --malloy-theme--table-row-height: 28px;
+      --malloy-theme--table-font-size: 12px;
+      --malloy-theme--table-header-color: #5d626b;
+      --malloy-theme--table-header-weight: bold;
+      --malloy-theme--table-body-color: #727883;
+      --malloy-theme--table-body-weight: 400;
+      --malloy-theme--table-border: 1px solid #e5e7eb;
+      --malloy-theme--table-background: white;
+      --malloy-theme--table-gutter-size: 15px;
+      --malloy-theme--table-pinned-background: #f5fafc;
+      --malloy-theme--table-pinned-border: 1px solid #daedf3;
+
       font-family: Inter, system-ui, sans-serif;
       font-size: var(--malloy-render--table-font-size);
     }
