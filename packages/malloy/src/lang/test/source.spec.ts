@@ -73,6 +73,9 @@ describe('source:', () => {
     test('single dimension', () => {
       expect('source: aa is a extend { dimension: x is 1 }').toTranslate();
     });
+    test('field def with null value', () => {
+      expect('source: aa is a extend { dimension: x is null }').toTranslate();
+    });
     test('multiple dimensions', () => {
       expect(`
         source: aa is a extend {
