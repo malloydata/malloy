@@ -366,7 +366,7 @@ export class MalloyToAST
 
   protected getQueryRefinements(
     pcx: parse.QueryRefinementContext
-  ): ast.QOPDesc | ast.ViewFieldReference {
+  ): ast.QOPDesc | ast.ViewOrScalarFieldReference {
     const propertiesCx = pcx.queryProperties();
     if (propertiesCx) {
       const properties = this.astAt(
@@ -389,7 +389,7 @@ export class MalloyToAST
     const fieldPathCx = pcx.fieldPath();
     if (fieldPathCx) {
       return this.astAt(
-        this.getFieldPath(fieldPathCx, ast.ViewFieldReference),
+        this.getFieldPath(fieldPathCx, ast.ViewOrScalarFieldReference),
         fieldPathCx
       );
     }
@@ -1057,7 +1057,10 @@ export class MalloyToAST
     }
     const nameCx = firstCx.fieldPath();
     if (nameCx) {
-      pipe.turtleName = this.getFieldPath(nameCx, ast.ViewFieldReference);
+      pipe.turtleName = this.getFieldPath(
+        nameCx,
+        ast.ViewOrScalarFieldReference
+      );
     }
     const propsCx = firstCx.queryProperties();
     if (propsCx) {
@@ -1756,31 +1759,23 @@ export class MalloyToAST
 
   visitSQArrow(pcx: parse.SQArrowContext) {
     const applyTo = this.getSqExpr(pcx.sqExpr());
-    const viewParts: ast.ArrowViewComponent[] = [];
-    const headCx = pcx.leadSeg();
+    const headCx = pcx.qSeg();
     const headIdCx = headCx.fieldPath();
+    let head: ast.QOPDesc | ast.ViewOrScalarFieldReference | undefined;
     if (headIdCx) {
-      viewParts.push(this.getFieldPath(headIdCx, ast.ViewFieldReference));
-      const rcxs = headCx.queryRefinement();
-      if (rcxs.length > 0) {
-        viewParts.push(...rcxs.map(rcx => this.getQueryRefinements(rcx)));
-      }
+      head = this.getFieldPath(headIdCx, ast.ViewOrScalarFieldReference);
     }
     const qopCx = headCx.queryProperties();
     if (qopCx) {
-      viewParts.push(this.visitQueryProperties(qopCx));
+      head = this.visitQueryProperties(qopCx);
     }
-    for (const seg of pcx.qSeg()) {
-      const asQop = seg.queryProperties();
-      if (asQop) {
-        viewParts.push(this.visitQueryProperties(asQop));
-      }
-      const viewName = seg.fieldPath();
-      if (viewName) {
-        viewParts.push(this.getFieldPath(viewName, ast.ViewFieldReference));
-      }
+    if (head === undefined) {
+      throw this.internalError(
+        pcx,
+        'Expected either a head reference or query operations'
+      );
     }
-    const sqExpr = new ast.SQAppendView(applyTo, viewParts);
+    const sqExpr = new ast.SQAppendView(applyTo, head);
     return this.astAt(sqExpr, pcx);
   }
 

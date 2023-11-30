@@ -28,7 +28,7 @@ import {OpDesc} from '../types/op-desc';
 import {getFinalStruct, opOutputStruct} from '../struct-utils';
 import {StaticSpace} from '../field-space/static-space';
 import {LegalRefinementStage} from '../types/query-property-interface';
-import {ViewFieldReference} from '../query-items/field-references';
+import {ViewOrScalarFieldReference} from '../query-items/field-references';
 import {QOPDesc} from './qop-desc';
 import {SpaceField} from '../types/space-field';
 import {QuerySpace} from '../field-space/query-spaces';
@@ -45,7 +45,7 @@ export abstract class Refinement extends MalloyElement {
     isNestIn: QuerySpace | undefined
   ): PipeSegment[];
 
-  static from(base: QOPDesc | ViewFieldReference) {
+  static from(base: QOPDesc | ViewOrScalarFieldReference) {
     return base instanceof QOPDesc
       ? new QOPDescRefinement(base)
       : new NamedRefinement(base);
@@ -54,7 +54,7 @@ export abstract class Refinement extends MalloyElement {
 
 export class NamedRefinement extends Refinement {
   elementType = 'namedRefinement';
-  constructor(private readonly name: ViewFieldReference) {
+  constructor(private readonly name: ViewOrScalarFieldReference) {
     super({name});
   }
 

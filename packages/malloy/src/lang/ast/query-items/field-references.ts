@@ -184,6 +184,11 @@ export class ViewFieldReference extends FieldReference {
   typecheck(_type: TypeDesc) {}
 }
 
+export class ViewOrScalarFieldReference extends FieldReference {
+  elementType = 'viewOrScalarFieldReference';
+  typecheck(_type: TypeDesc) {}
+}
+
 export class WildcardFieldReference extends MalloyElement implements Noteable {
   elementType = 'wildcardFieldReference';
   note?: Annotation;

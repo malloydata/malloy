@@ -21,28 +21,56 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Query, refIsStructDef} from '../../../model/malloy_types';
-
-import {Source} from '../elements/source';
-import {ErrorFactory} from '../error-factory';
+import {Query} from '../../../model/malloy_types';
 import {StaticSpace} from '../field-space/static-space';
-import {QueryComp} from '../types/query-comp';
-import {TurtleHeadedPipe} from '../elements/pipeline-desc';
-import {getFinalStruct} from '../struct-utils';
+import {ViewOrScalarFieldReference} from '../query-items/field-references';
+import {QOPDesc} from '../query-properties/qop-desc';
+import {Refinement} from '../query-properties/refinements';
 import {detectAndRemovePartialStages} from '../query-utils';
+import {getFinalStruct} from '../struct-utils';
+import {MalloyElement} from '../types/malloy-element';
+import {QueryComp} from '../types/query-comp';
+import {QueryElement} from '../types/query-element';
 
-export class FullQuery extends TurtleHeadedPipe {
-  elementType = 'fullQuery';
-  constructor(readonly explore: Source) {
-    super({explore: explore});
+export class Refine extends MalloyElement {
+  elementType = 'refine';
+
+  constructor(
+    readonly queryToRefine: QueryElement,
+    readonly refinement: QOPDesc | ViewOrScalarFieldReference
+  ) {
+    super(queryToRefine ? {queryToRefine, refinement} : {refinement});
   }
 
   queryComp(isRefOk: boolean): QueryComp {
-    throw new Error('this class is deprecated');
+    const refinement = Refinement.from(this.refinement);
+    this.has({refinementCls: refinement});
+    const query = this.queryToRefine.queryComp(isRefOk);
+    const refineFS = new StaticSpace(query.refineInputStruct);
+    // TODO deal with nest
+    const resultPipe = refinement.refine(
+      refineFS,
+      query.query.pipeline,
+      undefined
+    );
+    return {
+      query: {
+        ...query.query,
+        pipeline: resultPipe,
+      },
+      outputStruct: getFinalStruct(
+        this.refinement,
+        query.refineInputStruct,
+        resultPipe
+      ),
+      refineInputStruct: query.refineInputStruct,
+    };
   }
 
+  // TODO this code is duplicated in Arrow
   query(): Query {
     const q = this.queryComp(true).query;
+    // TODO reconsider whether this is still necessary?
     const {hasPartials, pipeline} = detectAndRemovePartialStages(q.pipeline);
     if (hasPartials) {
       this.log(

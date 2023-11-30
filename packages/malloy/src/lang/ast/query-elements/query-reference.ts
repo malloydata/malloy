@@ -21,35 +21,50 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {Query, refIsStructDef} from '../../../model/malloy_types';
-
-import {Source} from '../elements/source';
 import {ErrorFactory} from '../error-factory';
-import {StaticSpace} from '../field-space/static-space';
+import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
 import {QueryComp} from '../types/query-comp';
-import {TurtleHeadedPipe} from '../elements/pipeline-desc';
-import {getFinalStruct} from '../struct-utils';
-import {detectAndRemovePartialStages} from '../query-utils';
+import {QueryHeadStruct} from './query-head-struct';
+import {Query} from '../../../model/malloy_types';
 
-export class FullQuery extends TurtleHeadedPipe {
-  elementType = 'fullQuery';
-  constructor(readonly explore: Source) {
-    super({explore: explore});
+export class QueryReference extends MalloyElement {
+  elementType = 'query-reference';
+
+  constructor(readonly name: ModelEntryReference) {
+    super();
   }
 
+  // TODO not using isRefOk
   queryComp(isRefOk: boolean): QueryComp {
-    throw new Error('this class is deprecated');
+    const headEntry = this.modelEntry(this.name);
+    const head = headEntry?.entry;
+    const oops = function () {
+      return {
+        refineInputStruct: ErrorFactory.structDef,
+        outputStruct: ErrorFactory.structDef,
+        query: ErrorFactory.query,
+      };
+    };
+    if (!head) {
+      this.log(`Reference to undefined query '${this.name.refString}'`);
+      return oops();
+    }
+    if (head.type === 'query') {
+      const queryHead = new QueryHeadStruct(head.structRef);
+      this.has({queryHead: queryHead});
+      const exploreStruct = queryHead.structDef();
+      // TODO one of these is definitely wrong...
+      return {
+        query: head,
+        outputStruct: exploreStruct,
+        refineInputStruct: exploreStruct,
+      };
+    }
+    this.log(`Illegal reference to '${this.name}', query expected`);
+    return oops();
   }
 
   query(): Query {
-    const q = this.queryComp(true).query;
-    const {hasPartials, pipeline} = detectAndRemovePartialStages(q.pipeline);
-    if (hasPartials) {
-      this.log(
-        "Can't determine view type (`group_by` / `aggregate` / `nest`, `project`, `index`)"
-      );
-      return {...q, pipeline};
-    }
-    return q;
+    return this.queryComp(true).query;
   }
 }

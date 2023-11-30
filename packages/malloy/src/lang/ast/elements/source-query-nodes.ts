@@ -26,17 +26,20 @@ import {MalloyElement, ModelEntryReference} from '../types/malloy-element';
 import {Source} from './source';
 import {SourceQueryNode} from './source-query';
 import {QueryElement} from '../types/query-element';
-import {ExistingQuery} from '../query-elements/existing-query';
 import {QuerySource} from '../sources/query-source';
 import {NamedSource} from '../sources/named-source';
 import {SourceDesc} from '../types/source-desc';
 import {QOPDesc} from '../query-properties/qop-desc';
-import {FullQuery} from '../query-elements/full-query';
-import {ViewFieldReference} from '../query-items/field-references';
+import {
+  ViewFieldReference,
+  ViewOrScalarFieldReference,
+} from '../query-items/field-references';
 import {QueryProperty, isQueryProperty} from '../types/query-property';
 import {SourceProperty, isSourceProperty} from '../types/source-property';
-import {SQLSource} from '../sources/sql-source';
 import {LogSeverity} from '../../parse-log';
+import {Arrow} from '../query-elements/arrow';
+import {Refine} from '../query-elements/refine';
+import {QueryReference} from '../query-elements/query-reference';
 
 export class SQReference extends SourceQueryNode {
   elementType = 'sqReference';
@@ -50,8 +53,7 @@ export class SQReference extends SourceQueryNode {
     const entry = this.ref.getNamed();
     if (entry) {
       if (entry.type === 'query') {
-        const query = new ExistingQuery();
-        query.head = this.ref.name;
+        const query = new QueryReference(this.ref);
         this.has({query});
         return query;
       } else {
@@ -81,8 +83,7 @@ export class SQReference extends SourceQueryNode {
       return;
     }
     if (entry.type === 'query') {
-      const existingQuery = new ExistingQuery();
-      existingQuery.head = this.ref.name;
+      const existingQuery = new QueryReference(this.ref);
       this.asSource = new QuerySource(existingQuery);
     } else if (entry.type === 'struct') {
       this.asSource = new NamedSource(this.ref);
@@ -128,9 +129,9 @@ export class SQLegacyModify extends SourceQueryNode {
         stmt.log('Unable to add this refinement to query');
       }
     }
-    asQuery.refineWith([new QOPDesc(stmts)]);
-    this.has({asQuery});
-    return asQuery;
+    const refinedQuery = new Refine(asQuery, new QOPDesc(stmts));
+    this.has({refinedQuery});
+    return refinedQuery;
   }
 
   getSource() {
@@ -200,15 +201,15 @@ export class SQExtendedSource extends SourceQueryNode {
   }
 }
 
-export type ArrowViewComponent = ViewFieldReference | QOPDesc;
+export type ArrowViewComponent = ViewOrScalarFieldReference | QOPDesc;
 
 export class SQAppendView extends SourceQueryNode {
   elementType = 'sqAppendView';
   constructor(
     readonly applyTo: SourceQueryNode,
-    readonly viewList: ArrowViewComponent[]
+    readonly operation: ViewOrScalarFieldReference | QOPDesc
   ) {
-    super({applyTo, viewList});
+    super({applyTo, operation});
   }
 
   /*
@@ -232,57 +233,16 @@ export class SQAppendView extends SourceQueryNode {
 
   */
   getQuery() {
-    let theQuery: QueryElement;
-    const views = [...this.viewList];
-    if (this.applyTo.isSource()) {
-      const querySrc = this.applyTo.getSource();
-      if (!querySrc) {
-        this.sqLog('Could not get source for query');
-        return;
-      }
-      this.has({querySrc});
-      theQuery = new FullQuery(querySrc);
-      this.has({theQuery});
-
-      const head = views[0];
-      const refinements = views.slice(1);
-
-      if (head instanceof ViewFieldReference) {
-        theQuery.turtleName = head;
-      } else if (head instanceof QOPDesc) {
-        theQuery.addSegments(head);
-      }
-
-      if (refinements) {
-        theQuery.refineWith(refinements);
-      }
-
-      return theQuery;
-    }
-
-    const found = this.applyTo.getQuery();
-    if (!found) {
-      this.sqLog('Could not create query to extend');
+    const lhs = this.applyTo.isSource()
+      ? this.applyTo.getSource()
+      : this.applyTo.getQuery();
+    if (lhs === undefined) {
+      this.sqLog('Could not get LHS of arrow operation');
       return;
     }
-    theQuery = found;
-    this.has({theQuery});
-    const head = views[0];
-    if (views.length === 1) {
-      if (head instanceof QOPDesc) {
-        theQuery.addSegments(head);
-        views.shift();
-      } else {
-        // TODO implement scalar_lenses in subsequent stages
-        this.sqLog(`Cannot reference view '${head}' in output of query`);
-        return;
-      }
-    } else {
-      // TODO implement combinations for subsequent stages
-      this.sqLog('query definition by combining not yet supported');
-      return;
-    }
-    return theQuery;
+    const arr = new Arrow(lhs, this.operation);
+    this.has({query: arr});
+    return arr;
   }
 
   getSource(): Source | undefined {
@@ -302,7 +262,7 @@ export class SQRefinedQuery extends SourceQueryNode {
 
   constructor(
     readonly toRefine: SourceQueryNode,
-    readonly refine: QOPDesc | ViewFieldReference
+    readonly refine: QOPDesc | ViewOrScalarFieldReference
   ) {
     super({toRefine, refine});
   }
@@ -320,13 +280,9 @@ export class SQRefinedQuery extends SourceQueryNode {
     }
     const refinedQuery = this.toRefine.getQuery();
     if (refinedQuery) {
-      if (refinedQuery.alreadyRefined()) {
-        this.sqLog('Cannot refine a refined query');
-        return;
-      }
-      refinedQuery.refineWith([this.refine]);
-      this.has({query: refinedQuery});
-      return refinedQuery;
+      const resultQuery = new Refine(refinedQuery, this.refine);
+      this.has({query: resultQuery});
+      return resultQuery;
     }
   }
 
@@ -376,15 +332,10 @@ export class SQSourceWrapper extends SourceQueryNode {
   }
 
   getQuery() {
-    if (this.theSource instanceof SQLSource) {
-      const queryObj = new FullQuery(this.theSource);
-      this.has({sqlAsQUery: queryObj});
-      return queryObj;
-    }
-    if (this.theSource instanceof NamedSource) {
-      this.sqLog(
-        `Illegal reference to '${this.theSource.refName}', query expected`
-      );
-    }
+    // TODO previously this returned an "empty" full query... I'm not sure when this is necessary
+    this.sqLog(
+      'This source should be explicity wrapped in an Arrow, not auto-wrapped'
+    );
+    return undefined;
   }
 }

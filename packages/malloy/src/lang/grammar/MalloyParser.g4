@@ -261,7 +261,7 @@ modEither
 
 sqExpr
   : ARROW? id                                 # SQID
-  | sqExpr ARROW leadSeg (PLUS qSeg)*         # SQArrow
+  | sqExpr ARROW qSeg                         # SQArrow
   | sqExpr PLUS? ambiguousModification        # SQAmbiguous
   | sqExpr sourceExtension                    # SQExtendedSource
   | sqExpr queryRefinement                    # SQRefinedQuery
@@ -269,11 +269,6 @@ sqExpr
   | exploreTable                              # SQTable
   | FROM_SQL OPAREN sqlExploreNameRef CPAREN  # SQLegacySQLBlock
   | sqlSource                                 # SQSQL
-  ;
-
-leadSeg
-  : fieldPath queryRefinement*
-  | queryProperties
   ;
 
 qSeg

@@ -47,50 +47,7 @@ export class ExistingQuery extends PipelineDesc {
   }
 
   queryComp(isRefOk: boolean): QueryComp {
-    if (!this.head) {
-      throw this.internalError("can't make query from nameless query");
-    }
-    const headEntry = this.modelEntry(this.head);
-    const head = headEntry?.entry;
-    const oops = function () {
-      return {
-        outputStruct: ErrorFactory.structDef,
-        query: ErrorFactory.query,
-      };
-    };
-    if (!head) {
-      this.log(`Reference to undefined query '${this.head}'`);
-      return oops();
-    }
-    if (head.type === 'query') {
-      const queryHead = new QueryHeadStruct(head.structRef);
-      this.has({queryHead: queryHead});
-      const exploreStruct = queryHead.structDef();
-      const exploreFS = new StaticSpace(exploreStruct);
-      const sourcePipe = this.refinePipeline(exploreFS, head);
-      const walkStruct = getFinalStruct(
-        this,
-        exploreStruct,
-        sourcePipe.pipeline
-      );
-      const appended = this.appendOps(
-        new StaticSpace(walkStruct),
-        sourcePipe.pipeline
-      );
-      const destPipe = {...sourcePipe, pipeline: appended.opList};
-      const query: Query = {
-        type: 'query',
-        ...destPipe,
-        structRef: isRefOk ? queryHead.structRef() : queryHead.structDef(),
-        location: this.location,
-      };
-      if (head.annotation) {
-        query.annotation = head.annotation;
-      }
-      return {outputStruct: appended.structDef(), query};
-    }
-    this.log(`Illegal reference to '${this.head}', query expected`);
-    return oops();
+    throw new Error('This class is deprecated');
   }
 
   query(): Query {
