@@ -390,10 +390,7 @@ describe('error cascading', () => {
               .join('\n            ')}
         }
       `
-    ).translationToFailWith(
-      "'nothing' is not defined",
-      "'foo' is not defined"
-    );
+    ).translationToFailWith("'nothing' is not defined", "'foo' is not defined");
   });
 
   test('error type inference is good', () => {
