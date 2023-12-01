@@ -50,3 +50,10 @@ export const Nested = {
     view: 'nested',
   },
 };
+
+export const NumberFormatting = {
+  args: {
+    source: 'products',
+    view: 'number_formats',
+  },
+};
