@@ -25,6 +25,7 @@ import {Result, Tag} from '@malloydata/malloy';
 import {LitElement, html, css} from 'lit';
 import {customElement, property} from 'lit/decorators.js';
 import './table';
+import {RendererOptions} from '../renderer_types';
 
 // Get the first valid theme value or fallback to CSS variable
 function getThemeValue(prop: string, ...themes: Array<Tag | undefined>) {
@@ -44,6 +45,8 @@ function getThemeValue(prop: string, ...themes: Array<Tag | undefined>) {
 
 @customElement('malloy-render')
 export class MalloyRender extends LitElement {
+  el: {isDrillingEnabled: true};
+  [x: string]: {isDrillingEnabled: true};
   static override styles = css`
     :host {
       --malloy-theme--table-row-height: 28px;
@@ -78,6 +81,9 @@ export class MalloyRender extends LitElement {
 
   @property({attribute: false})
   result!: Result;
+
+  @property({attribute: false})
+  options!: RendererOptions;
 
   override render() {
     const modelTag = this.result.resultExplore.modelTag;
@@ -156,6 +162,7 @@ export class MalloyRender extends LitElement {
     return html`${dynamicStyle}<malloy-table
         exportparts="table-container: container"
         .data=${this.result.data}
+        .options=${this.options}
       ></malloy-table>`;
   }
 }

@@ -43,6 +43,7 @@ export class HTMLView {
     if (isNextRenderer) {
       const el = this.document.createElement('malloy-render');
       el.result = result;
+      el.options = options;
       return el;
     }
 

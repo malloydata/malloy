@@ -3,12 +3,12 @@ source: products is duckdb.table("data/products.parquet") extend {
 
   view: records is{
     select: *
-    limit: 1000
+    limit: 5
   }
 
   # theme.tableBodyColor=red
   view: records_override is{
     select: *
-    limit: 1000
+    limit: 5
   }
 }

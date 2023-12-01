@@ -25,6 +25,7 @@ import {DataStyles} from './data_styles';
 
 export interface RendererOptions {
   dataStyles: DataStyles;
+  pinnedHeader?: boolean;
   isDrillingEnabled?: boolean;
   onDrill?: DrillFunction;
   titleCase?: boolean;

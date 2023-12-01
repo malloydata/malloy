@@ -27,6 +27,8 @@ import {customElement, eventOptions, property, state} from 'lit/decorators.js';
 import {classMap} from 'lit/directives/class-map.js';
 import {createContext, provide, consume} from '@lit/context';
 import {isFirstChild, isLastChild} from './util';
+import {RendererOptions} from '../renderer_types';
+import {getDrillQuery} from '../drill';
 
 type TableContext = {
   root: boolean;
@@ -43,8 +45,8 @@ function getColumnWidth() {
   return 130;
 }
 
-const getContentStyle = (f: Field) => {
-  if (f.isAtomicField()) {
+const getContentStyle = (f: Field | null) => {
+  if (f !== null && f.isAtomicField()) {
     const width = getColumnWidth();
     return `width: ${width}px; min-width: ${width}px; max-width: ${width}px;`;
   }
@@ -52,7 +54,7 @@ const getContentStyle = (f: Field) => {
 };
 
 const renderCell = (
-  f: Field,
+  f: Field | null,
   value: unknown,
   options: {
     hideStartGutter: boolean;
@@ -76,16 +78,70 @@ const renderCell = (
   </div>`;
 };
 
+function clicked(e: Event, row: DataRecord, options: RendererOptions) {
+  if (options.onDrill) {
+    const {drillQuery, drillFilters} = getDrillQuery(row);
+    options.onDrill(drillQuery, e.target! as HTMLElement, drillFilters);
+  }
+}
+
+const renderDrillCell = (row: DataRecord, options: RendererOptions) => {
+  return html`<div class="cell-wrapper">
+    <div
+      class=${classMap({
+        'cell-gutter': true,
+        'hide-gutter-border': false,
+      })}
+    ></div>
+    <div
+      class="cell-content drill-icon"
+      style=""
+      @click="${e => clicked(e, row, options)}"
+    >
+      <svg
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle cx="12" cy="12" r="12" fill="none" class="copy-circle" />
+        <svg
+          x="6"
+          y="6"
+          width="12"
+          height="14"
+          viewBox="0 0 12 14"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M4 10.6667C3.63333 10.6667 3.31944 10.5361 3.05833 10.275C2.79722 10.0139 2.66667 9.7 2.66667 9.33333V1.33333C2.66667 0.966667 2.79722 0.652778 3.05833 0.391667C3.31944 0.130556 3.63333 0 4 0H10C10.3667 0 10.6806 0.130556 10.9417 0.391667C11.2028 0.652778 11.3333 0.966667 11.3333 1.33333V9.33333C11.3333 9.7 11.2028 10.0139 10.9417 10.275C10.6806 10.5361 10.3667 10.6667 10 10.6667H4ZM4 9.33333H10V1.33333H4V9.33333ZM1.33333 13.3333C0.966667 13.3333 0.652778 13.2028 0.391667 12.9417C0.130556 12.6806 0 12.3667 0 12V2.66667H1.33333V12H8.66667V13.3333H1.33333Z"
+            fill="#E7E7E7"
+            class="copy-icon"
+          />
+        </svg>
+      </svg>
+    </div>
+    <div
+      class=${classMap({
+        'cell-gutter': true,
+        'hide-gutter-border': true,
+      })}
+    ></div>
+  </div>`;
+};
+
 const renderFieldContent = (
   row: DataRecord,
   f: Field,
-  options: RenderOptions
+  options: RendererOptions
 ) => {
   if (f.isExploreField()) {
     return html`<malloy-table
       .data=${row.cell(f) as DataArray}
-      .pinnedHeader=${options.pinnedHeader ?? false}
-      .rowLimit=${options.pinnedHeader ? 1 : Infinity}
+      .options=${options}
+      .rowLimit=${options.pinnedHeader ?? false ? 1 : Infinity}
     ></malloy-table>`;
   }
   let value = row.cell(f).value;
@@ -95,21 +151,33 @@ const renderFieldContent = (
 
   return renderCell(f, value, {
     hideStartGutter: isFirstChild(f),
-    hideEndGutter: isLastChild(f),
+    hideEndGutter: isLastChild(f) && (options.isDrillingEnabled ?? false),
   });
 };
 
-const renderField = (row: DataRecord, f: Field, options: RenderOptions) => {
+const renderField = (row: DataRecord, f: Field, options: RendererOptions) => {
+  const isLast = isLastChild(f);
+  let drillCell;
+
+  if (isLast && (options.isDrillingEnabled ?? false)) {
+    drillCell = html`<td class="column-cell">
+      ${renderDrillCell(row, options)}
+    </td>`;
+  } else {
+    drillCell = '';
+  }
+
   return html`<td
-    class="column-cell ${classMap({
-      numeric: f.isAtomicField() && f.isNumber(),
-    })}"
-  >
-    ${renderFieldContent(row, f, options)}
-  </td>`;
+      class="column-cell ${classMap({
+        numeric: f.isAtomicField() && f.isNumber(),
+      })}"
+    >
+      ${renderFieldContent(row, f, options)}
+    </td>
+    ${drillCell} `;
 };
 
-const renderHeader = (f: Field) => {
+const renderHeader = (f: Field, drillingEnabled: boolean) => {
   const isFirst = isFirstChild(f);
   const isParentFirst = isFirstChild(f.parentExplore);
   const isParentNotAField = !f.parentExplore.isExploreField();
@@ -119,16 +187,29 @@ const renderHeader = (f: Field) => {
   const isParentLast = isLastChild(f.parentExplore);
   const hideEndGutter = isLast && (isParentLast || isParentNotAField);
 
+  let drillHeader;
+  if (isLast && drillingEnabled) {
+    drillHeader = html`<th class="column-cell">
+      ${renderCell(null, '', {
+        hideStartGutter,
+        hideEndGutter,
+      })}
+    </th>`;
+  } else {
+    drillHeader = '';
+  }
+
   return html`<th
-    class="column-cell ${classMap({
-      numeric: f.isAtomicField() && f.isNumber(),
-    })}"
-  >
-    ${renderCell(f, f.name, {
-      hideStartGutter,
-      hideEndGutter,
-    })}
-  </th>`;
+      class="column-cell ${classMap({
+        numeric: f.isAtomicField() && f.isNumber(),
+      })}"
+    >
+      ${renderCell(f, f.name, {
+        hideStartGutter,
+        hideEndGutter: hideEndGutter && !drillingEnabled,
+      })}
+    </th>
+    ${drillHeader}`;
 };
 
 @customElement('malloy-table')
@@ -243,16 +324,32 @@ export class Table extends LitElement {
         border-top: var(--malloy-render--table-pinned-border);
       }
     }
+
+    .drill-icon:hover .copy-circle {
+      fill: #eef7f9;
+    }
+
+    .drill-icon:active .copy-circle {
+      fill: #cfe9f0;
+    }
+
+    .drill-icon:hover .copy-icon,
+    .drill-icon:active .copy-icon {
+      fill: #53b2c8;
+    }
   `;
 
   @property({attribute: false})
   data!: DataArray;
 
+  @property({attribute: false})
+  options!: RendererOptions;
+
   @property({type: Number})
   rowLimit = Infinity;
 
-  @property({type: Boolean})
-  pinnedHeader = false;
+  // @property({type: Boolean})
+  // pinnedHeader = false;
 
   @state()
   protected _scrolling = false;
@@ -281,18 +378,19 @@ export class Table extends LitElement {
 
   // If rendering a pinned header, render it within the current ShadowDOM root so we can use CSS to style the nested table headers when scrolling
   protected override createRenderRoot(): HTMLElement | DocumentFragment {
-    if (this.pinnedHeader) return this;
+    if (this.options.pinnedHeader ?? false) return this;
     return super.createRenderRoot();
   }
 
   override render() {
     const fields = this.data.field.allFields;
+    const drillingEnabled: boolean = this.options.isDrillingEnabled ?? false;
 
-    const headers = fields.map(f => renderHeader(f));
+    const headers = fields.map(f => renderHeader(f, drillingEnabled));
 
-    const renderOptions: RenderOptions = {
-      pinnedHeader: this.pinnedHeader,
-    };
+    // const renderOptions: RenderOptions = {
+    //   pinnedHeader: this.pinnedHeader,
+    // };
 
     const rows: TemplateResult[] = [];
     let i = 0;
@@ -300,7 +398,7 @@ export class Table extends LitElement {
       if (i >= this.rowLimit) break;
       rows.push(
         html`<tr>
-          ${fields.map(f => renderField(row, f, renderOptions))}
+          ${fields.map(f => renderField(row, f, this.options))}
         </tr>`
       );
       i++;
@@ -317,7 +415,7 @@ export class Table extends LitElement {
               })}
               .rowLimit=${1}
               .data=${this.data}
-              .pinnedHeader=${true}
+              .options=${this.options}
             ></malloy-table>
           </div>
         </div>`;

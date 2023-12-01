@@ -13,6 +13,17 @@ const meta: Meta = {
     const el = document.createElement('malloy-render');
     if (classes) el.classList.add(classes);
     el.result = context.loaded['result'];
+    el.options = {
+      dataStyles: {},
+      isDrillingEnabled: true,
+      onDrill: (
+        drillQuery: string,
+        _target: HTMLElement,
+        _drillFilters: string[]
+      ) => {
+        navigator.clipboard.writeText(drillQuery);
+      },
+    };
     parent.appendChild(el);
     return parent;
   },
