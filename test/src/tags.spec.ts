@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TagDict, Tag, Annotation} from '@malloydata/malloy';
+import {TagDict, Tag} from '@malloydata/malloy';
 import {runtimeFor} from './runtimes';
 
 declare global {
