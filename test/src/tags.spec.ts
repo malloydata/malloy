@@ -21,7 +21,7 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import {TagDict, Tag} from '@malloydata/malloy';
+import {TagDict, Tag, Annotation} from '@malloydata/malloy';
 import {runtimeFor} from './runtimes';
 
 declare global {
@@ -156,6 +156,21 @@ describe('tagParse to Tag', () => {
   test.skip('unskip to debug just one of the expressions', () => {
     const x: TagTestTuple = ['x x.y', {x: {properties: {y: {}}}}];
     expect(x[0]).tagsAre(x[1]);
+  });
+  test('inherits can be over-ridden', () => {
+    const loc1 = {
+      url: 'inherit-test',
+      range: {start: {line: 1, character: 0}, end: {line: 1, character: 0}},
+    };
+    const loc2 = loc1;
+    loc2.range.start.line = 1;
+    loc2.range.end.line = 2;
+    const nestedTags = Tag.annotationToTag({
+      inherits: {notes: [{text: '## from=inherits\n', at: loc1}]},
+      notes: [{text: '## from=notes\n', at: loc2}],
+    });
+    const fromVal = nestedTags.tag.text('from');
+    expect(fromVal).toEqual('notes');
   });
 });
 

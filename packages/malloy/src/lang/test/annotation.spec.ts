@@ -266,6 +266,19 @@ describe('document annotation', () => {
     expect(m).toTranslate();
     expect(m.translator.compilerFlags.has('flagThis')).toBeTruthy();
   });
+  test('extended models inherit model flags', () => {
+    const first = model`## from=1\n`;
+    expect(first).toTranslate();
+    const firstModel = first.translator.translate()?.translated?.modelDef;
+    expect(firstModel).toBeDefined();
+    const second = model`## from=2\n`;
+    second.translator.internalModel = firstModel!;
+    const secondModel = second.translator.translate()?.translated?.modelDef;
+    expect(secondModel?.annotation).matchesAnnotation({
+      inherits: {notes: ['## from=1\n']},
+      notes: ['## from=2\n'],
+    });
+  });
 });
 describe('source definition annotations', () => {
   test('turtle block annotation', () => {
