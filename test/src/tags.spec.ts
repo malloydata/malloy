@@ -477,4 +477,14 @@ describe('tags in results', () => {
     tp = field.tagParse({scopes: [globalScope, sessionScope]}).tag;
     expect(tp).tagsAre({valueFrom: {eq: 'global'}});
   });
+  test('inherited model tags override', async () => {
+    const model = runtime.loadModel(
+      '## from=cell1\nsource: one is duckdb.sql("select 1")'
+    );
+    const model2 = model.extendModel('## from=cell2');
+    const query = model2.loadQuery('run: one -> {select: `1`}');
+    const result = await query.run();
+    const modelTags = result.modelTag;
+    expect(modelTags.text('from')).toEqual('cell2');
+  });
 });
