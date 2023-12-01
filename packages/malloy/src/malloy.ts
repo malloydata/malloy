@@ -66,6 +66,7 @@ import {
   QueryRunStats,
   ImportLocation,
   Annotation,
+  NamedModelObject,
 } from './model';
 import {
   Connection,
@@ -812,14 +813,24 @@ export class Model implements Taggable {
    * @return An array of `Explore`s contained in the model.
    */
   public get explores(): Explore[] {
-    const explores: Explore[] = [];
-    for (const me in this.modelDef.contents) {
-      const ent = this.modelDef.contents[me];
-      if (ent.type === 'struct') {
-        explores.push(new Explore(ent));
-      }
-    }
-    return explores;
+    const isStructDef = (object: NamedModelObject): object is StructDef =>
+      object.type === 'struct';
+
+    return Object.values(this.modelDef.contents)
+      .filter(isStructDef)
+      .map(structDef => new Explore(structDef));
+  }
+
+  /**
+   * Get an array of `NamedQuery`s contained in the model.
+   *
+   * @return An array of `NamedQuery`s contained in the model.
+   */
+  public get namedQueries(): NamedQuery[] {
+    const isNamedQuery = (object: NamedModelObject): object is NamedQuery =>
+      object.type === 'query';
+
+    return Object.values(this.modelDef.contents).filter(isNamedQuery);
   }
 
   public get exportedExplores(): Explore[] {

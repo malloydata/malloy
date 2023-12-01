@@ -28,6 +28,7 @@ import {MalloyParserListener} from '../lib/Malloy/MalloyParserListener';
 import * as parser from '../lib/Malloy/MalloyParser';
 import {DocumentRange} from '../../model/malloy_types';
 import {MalloyTranslation} from '../parse-malloy';
+import {getStringIfShort} from '../parse-utils';
 
 export interface DocumentSymbol {
   range: DocumentRange;
@@ -247,11 +248,45 @@ class DocumentSymbolWalker implements MalloyParserListener {
     const name = pcx.nameSQLBlock().text;
     const symbol = {
       range: this.translator.rangeFromContext(pcx),
-      name: name,
+      name,
       type: 'sql',
       children: [],
     };
     this.symbols.push(symbol);
+  }
+
+  enterImportStatement(pcx: parser.ImportStatementContext) {
+    const name = getStringIfShort(pcx.importURL());
+    if (name) {
+      this.scopes.push({
+        range: this.translator.rangeFromContext(pcx),
+        name,
+        type: 'import',
+        children: [],
+      });
+    }
+  }
+
+  exitImportStatement() {
+    const scope = this.popScope();
+    if (scope) {
+      this.symbols.push(scope);
+    }
+  }
+
+  enterImportSelect(pcx: parser.ImportSelectContext) {
+    const parent = this.peekScope();
+    if (parent) {
+      for (const item of pcx.importItem()) {
+        const symbol = {
+          range: this.translator.rangeFromContext(pcx),
+          name: item.text,
+          type: 'import_item',
+          children: [],
+        };
+        parent.children.push(symbol);
+      }
+    }
   }
 }
 
