@@ -162,9 +162,10 @@ describe('tagParse to Tag', () => {
       url: 'inherit-test',
       range: {start: {line: 1, character: 0}, end: {line: 1, character: 0}},
     };
-    const loc2 = loc1;
-    loc2.range.start.line = 1;
-    loc2.range.end.line = 2;
+    const loc2 = {
+      url: 'inherit-test',
+      range: {start: {line: 2, character: 0}, end: {line: 2, character: 0}},
+    };
     const nestedTags = Tag.annotationToTag({
       inherits: {notes: [{text: '## from=inherits\n', at: loc1}]},
       notes: [{text: '## from=notes\n', at: loc2}],
