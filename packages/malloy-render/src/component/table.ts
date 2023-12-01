@@ -27,6 +27,7 @@ import {customElement, eventOptions, property, state} from 'lit/decorators.js';
 import {classMap} from 'lit/directives/class-map.js';
 import {createContext, provide, consume} from '@lit/context';
 import {isFirstChild, isLastChild} from './util';
+import {renderNumericField} from './render-numeric-field';
 
 type TableContext = {
   root: boolean;
@@ -88,10 +89,11 @@ const renderFieldContent = (
       .rowLimit=${options.pinnedHeader ? 1 : Infinity}
     ></malloy-table>`;
   }
-  let value = row.cell(f).value;
+  let value: number | string = row.cell(f).value as number;
   if (options.pinnedHeader) value = '';
-  else if (f.isAtomicField() && f.isNumber())
-    value = (value as number).toLocaleString();
+  else if (f.isAtomicField() && f.isNumber()) {
+    value = renderNumericField(f, value);
+  }
 
   return renderCell(f, value, {
     hideStartGutter: isFirstChild(f),

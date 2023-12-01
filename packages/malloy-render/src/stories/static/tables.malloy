@@ -49,4 +49,17 @@ source: products is duckdb.table("data/products.parquet") extend {
         limit: 5
       }
   }
+
+  view: number_formats is {
+    group_by: category
+    aggregate:
+      # currency
+      avg_retail_currency is retail_price.avg()
+      # percent
+      avg_retail_percent is retail_price.avg()
+      # number="#,##0.00"
+      avg_retail_number is retail_price.avg()
+      # duration
+      avg_retail_duration is round(retail_price.avg())
+  }
 };
