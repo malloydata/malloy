@@ -157,6 +157,22 @@ describe('tagParse to Tag', () => {
     const x: TagTestTuple = ['x x.y', {x: {properties: {y: {}}}}];
     expect(x[0]).tagsAre(x[1]);
   });
+  test('inherits can be over-ridden', () => {
+    const loc1 = {
+      url: 'inherit-test',
+      range: {start: {line: 1, character: 0}, end: {line: 1, character: 0}},
+    };
+    const loc2 = {
+      url: 'inherit-test',
+      range: {start: {line: 2, character: 0}, end: {line: 2, character: 0}},
+    };
+    const nestedTags = Tag.annotationToTag({
+      inherits: {notes: [{text: '## from=inherits\n', at: loc1}]},
+      notes: [{text: '## from=notes\n', at: loc2}],
+    });
+    const fromVal = nestedTags.tag.text('from');
+    expect(fromVal).toEqual('notes');
+  });
 });
 
 describe('Tag access', () => {
