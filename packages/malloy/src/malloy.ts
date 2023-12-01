@@ -1201,6 +1201,10 @@ export class PreparedResult implements Taggable {
     return this.modelDef.annotation;
   }
 
+  get modelTag(): Tag {
+    return Tag.annotationToTag(this.modelDef.annotation).tag;
+  }
+
   /**
    * @return The name of the connection this query should be run against.
    */
