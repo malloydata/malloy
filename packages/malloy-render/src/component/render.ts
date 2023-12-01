@@ -80,7 +80,7 @@ export class MalloyRender extends LitElement {
   result!: Result;
 
   override render() {
-    const modelTag = this.result.resultExplore.modelTag;
+    const modelTag = this.result.modelTag;
     const {tag: resultTag} = this.result.tagParse();
 
     const modelTheme = modelTag.tag('theme');
