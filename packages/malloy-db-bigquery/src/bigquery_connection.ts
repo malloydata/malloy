@@ -74,7 +74,7 @@ interface CredentialBody {
 }
 
 interface BigQueryConnectionConfiguration {
-  projectId?: string;
+  projectId?: string /** This ID is used for Bigquery Table Normalization */;
   serviceAccountKeyPath?: string;
   location?: string;
   maximumBytesBilled?: string;
