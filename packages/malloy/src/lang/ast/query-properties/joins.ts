@@ -86,6 +86,7 @@ export class KeyJoin extends Join {
       ...sourceDef,
       structRelationship: {
         type: 'one',
+        matrixOperation: 'left',
         onExpression: ["('join fixup'='not done yet')"],
       },
       location: this.location,
@@ -114,6 +115,7 @@ export class KeyJoin extends Join {
         if (pkey.type === exprX.dataType) {
           inStruct.structRelationship = {
             type: 'one',
+            matrixOperation: 'left',
             onExpression: [
               {
                 type: 'field',
@@ -183,7 +185,8 @@ export class ExpressionJoin extends Join {
     const sourceDef = source.structDef();
     const joinStruct: StructDef = {
       ...sourceDef,
-      structRelationship: {type: this.joinType},
+      // MTOY: add matrix type here
+      structRelationship: {type: this.joinType, matrixOperation: 'left'},
       location: this.location,
     };
     if (sourceDef.structSource.type === 'query') {

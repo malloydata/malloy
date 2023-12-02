@@ -30,6 +30,7 @@ import {medicareModel, medicareStateFacts} from './medicare_model';
 function withJoin(leftKey: string, rightKey: string): StructRelationship {
   return {
     type: 'one',
+    matrixOperation: 'left',
     onExpression: [
       {type: 'field', path: `${leftKey}`},
       '=',
@@ -98,6 +99,7 @@ export const FLIGHTS_EXPLORE: StructDef = {
       },
       structRelationship: {
         type: 'one',
+        matrixOperation: 'left',
         onExpression: [
           {type: 'field', path: 'carrier'},
           '=',

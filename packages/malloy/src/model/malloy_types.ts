@@ -852,6 +852,7 @@ export type JoinRelationship =
 
 export interface JoinOn {
   type: 'one' | 'many' | 'cross';
+  matrixOperation: 'left' | 'right' | 'full' | 'inner';
   onExpression?: Expr;
 }
 

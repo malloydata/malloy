@@ -1089,6 +1089,7 @@ class QueryFieldStruct extends QueryAtomicField {
       ...this.parent.fieldDef,
       structRelationship: {
         type: 'one',
+        matrixOperation: 'left',
         onExpression: [
           {
             type: 'field',
@@ -2595,6 +2596,7 @@ class QueryQuery extends QueryField {
     const structRelationship = qs.fieldDef.structRelationship;
     let structSQL = qs.structSourceSQL(stageWriter);
     if (isJoinOn(structRelationship)) {
+      const matrixOperation = structRelationship.matrixOperation.toUpperCase();
       if (ji.makeUniqueKey) {
         const passKeys = this.generateSQLPassthroughKeys(qs);
         structSQL = `(SELECT ${qs.dialect.sqlGenerateUUID()} as __distinct_key, x.* ${passKeys} FROM ${structSQL} as x)`;
@@ -2626,7 +2628,7 @@ class QueryQuery extends QueryField {
         if (conditions !== undefined && conditions.length >= 1) {
           filters = ` AND (${conditions.join(' AND ')})`;
         }
-        s += `LEFT JOIN ${structSQL} AS ${ji.alias}\n  ON ${onCondition}${filters}\n`;
+        s += ` ${matrixOperation} JOIN ${structSQL} AS ${ji.alias}\n  ON ${onCondition}${filters}\n`;
       } else {
         let select = `SELECT ${ji.alias}.*`;
         let joins = '';
@@ -2645,7 +2647,7 @@ class QueryQuery extends QueryField {
         select += `\nFROM ${structSQL} AS ${
           ji.alias
         }\n${joins}\nWHERE ${conditions?.join(' AND ')}\n`;
-        s += `LEFT JOIN (\n${indent(select)}) AS ${
+        s += `${matrixOperation} JOIN (\n${indent(select)}) AS ${
           ji.alias
         }\n  ON ${onCondition}\n`;
         return s;
