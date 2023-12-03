@@ -185,12 +185,17 @@ export class ExpressionJoin extends Join {
       return ErrorFactory.structDef;
     }
     const sourceDef = source.structDef();
+    let matrixOperation: MatrixOperation = 'left';
+    if (this.inExperiment('join_types', true)) {
+      matrixOperation = this.matrixOperation;
+    }
+
     const joinStruct: StructDef = {
       ...sourceDef,
       // MTOY: add matrix type here
       structRelationship: {
         type: this.joinType,
-        matrixOperation: this.matrixOperation,
+        matrixOperation,
       },
       location: this.location,
     };

@@ -277,6 +277,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
   });
 
   const matrixModel = `
+      ##! experimental.join_types
       source: am_states is ${databaseName}.table('malloytest.state_facts') -> {
         select: *
         where: state ~ r'^(A|M)'
