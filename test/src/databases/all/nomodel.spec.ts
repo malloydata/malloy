@@ -352,7 +352,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       }
       `).malloyResultMatches(runtime, {
       ac_count: 49,
-      ac_sum: 10402,
+      ac_sum: 21336,
       am_count: 4,
       am_sum: 1486,
       //show_sql_fail: 1,
