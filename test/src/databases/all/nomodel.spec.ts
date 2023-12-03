@@ -329,6 +329,7 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
       ac_sum: 10402,
       am_count: 4,
       am_sum: 1486,
+      //show_sql_fail: 1,
     });
   });
 
