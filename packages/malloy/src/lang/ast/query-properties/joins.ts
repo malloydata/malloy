@@ -141,9 +141,11 @@ export class KeyJoin extends Join {
 }
 
 type ExpressionJoinType = 'many' | 'one' | 'cross';
+export type MatrixOperation = 'left' | 'inner' | 'right' | 'full';
 export class ExpressionJoin extends Join {
   elementType = 'joinOnExpr';
   joinType: ExpressionJoinType = 'one';
+  matrixOperation: MatrixOperation = 'left';
   private expr?: ExpressionDef;
   constructor(
     readonly name: ModelEntryReference,
@@ -186,7 +188,10 @@ export class ExpressionJoin extends Join {
     const joinStruct: StructDef = {
       ...sourceDef,
       // MTOY: add matrix type here
-      structRelationship: {type: this.joinType, matrixOperation: 'left'},
+      structRelationship: {
+        type: this.joinType,
+        matrixOperation: this.matrixOperation,
+      },
       location: this.location,
     };
     if (sourceDef.structSource.type === 'query') {

@@ -565,6 +565,11 @@ export class MalloyToAST
     const {joinFrom, notes} = this.getJoinSource(joinAs, pcx.isExplore());
     const join = new ast.ExpressionJoin(joinAs, joinFrom);
     const onCx = pcx.joinExpression();
+    const matrixOperationCx = pcx.matrixOperation();
+    if (matrixOperationCx) {
+      join.matrixOperation =
+        matrixOperationCx.text.toLowerCase() as ast.MatrixOperation;
+    }
     if (onCx) {
       join.joinOn = this.getFieldExpr(onCx);
     }

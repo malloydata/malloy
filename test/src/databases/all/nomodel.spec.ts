@@ -276,6 +276,58 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.resultExplore.limit).toBe(3);
   });
 
+  it(`join inner- ${databaseName}`, async () => {
+    // a cross join produces a Many to Many result.
+    // symmetric aggregate are needed on both sides of the join
+    // Check the row count and that sums on each side work properly.
+    await expect(`
+
+        source: a_states is ${databaseName}.table('malloytest.state_facts') -> {
+          select: *
+          where: state ~ 'A%'
+        }
+
+        source: states is ${databaseName}.table('malloytest.state_facts') extend {
+          join_one: a_states inner on state = a_states.state
+        }
+
+      run: states -> {
+        aggregate:
+          state_count is count()
+          a_state_count is a_states.count()
+      }
+      `).malloyResultMatches(runtime, {
+      state_count: 4,
+      a_state_count: 4,
+    });
+  });
+
+  it(`join left- ${databaseName}`, async () => {
+    // a cross join produces a Many to Many result.
+    // symmetric aggregate are needed on both sides of the join
+    // Check the row count and that sums on each side work properly.
+    await expect(`
+
+        source: a_states is ${databaseName}.table('malloytest.state_facts') -> {
+          select: *
+          where: state ~ 'A%'
+        }
+
+        source: states is ${databaseName}.table('malloytest.state_facts') extend {
+          join_one: a_states left on state = a_states.state
+        }
+
+      run: states -> {
+        aggregate:
+          state_count is count()
+          a_state_count is a_states.count()
+      }
+      `).malloyResultMatches(runtime, {
+      state_count: 51,
+      a_state_count: 4,
+    });
+  });
+
   testIf(runtime.supportsNesting)(
     `number as null- ${databaseName}`,
     async () => {
