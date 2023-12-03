@@ -1669,7 +1669,10 @@ class FieldInstanceResultRoot extends FieldInstanceResult {
     for (const [name, join] of this.joins) {
       // first join is by default the
       const relationship = join.parentRelationship();
-      if (relationship === 'many_to_many') {
+      if (
+        relationship === 'many_to_many' ||
+        join.forceAllSymmetricCalculations()
+      ) {
         // everything must be calculated with symmetric aggregates
         leafiest = '0never';
       } else if (leafiest === undefined) {
@@ -1768,6 +1771,21 @@ class JoinInstance {
           `Internal error unknown relationship type to parent for ${this.queryStruct.fieldDef.name}`
         );
     }
+  }
+
+  // For now, we force all symmetric calculations for full and right joins
+  //  because we need distinct keys for COUNT(xx) operations.  Don't really need
+  //  this for sums.  This will produce correct results and we can optimize this
+  //  at some point..
+  forceAllSymmetricCalculations(): boolean {
+    const sr = this.queryStruct.fieldDef.structRelationship;
+    if (this.queryStruct.parent === undefined || !isJoinOn(sr)) {
+      return false;
+    }
+    if (sr.matrixOperation === 'right' || sr.matrixOperation === 'full') {
+      return true;
+    }
+    return false;
   }
 
   // postgres unnest needs to know the names of the physical fields.

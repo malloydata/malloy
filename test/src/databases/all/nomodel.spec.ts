@@ -276,55 +276,135 @@ runtimes.runtimeMap.forEach((runtime, databaseName) => {
     expect(result.resultExplore.limit).toBe(3);
   });
 
+  const matrixModel = `
+      source: am_states is ${databaseName}.table('malloytest.state_facts') -> {
+        select: *
+        where: state ~ r'^(A|M)'
+      } extend {
+        measure:
+          am_count is count()
+          am_sum is airport_count.sum()
+      }
+
+      query: ac_states_base is ${databaseName}.table('malloytest.state_facts') -> {
+        select: *
+        where: state ~ r'^(A|C)'
+      }
+
+      // mulitply the number of rows in ac_states so we have a many to one join
+      source: ac_states is ac_states_base -> {
+        extend: {
+          join_cross: b is ac_states_base
+        }
+        select:
+          b.state
+          b.airport_count
+      } extend {
+        measure:
+          ac_count is count()
+          ac_sum is airport_count.sum()
+      }
+  `;
+
   it(`join inner- ${databaseName}`, async () => {
     // a cross join produces a Many to Many result.
     // symmetric aggregate are needed on both sides of the join
     // Check the row count and that sums on each side work properly.
     await expect(`
-
-        source: a_states is ${databaseName}.table('malloytest.state_facts') -> {
-          select: *
-          where: state ~ 'A%'
+      ${matrixModel}
+      run: ac_states -> {
+        extend: {
+          join_one: am_states inner on state = am_states.state
         }
-
-        source: states is ${databaseName}.table('malloytest.state_facts') extend {
-          join_one: a_states inner on state = a_states.state
-        }
-
-      run: states -> {
         aggregate:
-          state_count is count()
-          a_state_count is a_states.count()
+          ac_count
+          ac_sum
+          am_states.am_sum
+          am_states.am_count
+
       }
       `).malloyResultMatches(runtime, {
-      state_count: 4,
-      a_state_count: 4,
+      ac_count: 28,
+      ac_sum: 10402,
+      am_count: 4,
+      am_sum: 1486,
     });
   });
 
-  it(`join left- ${databaseName}`, async () => {
+  it(`join left - ${databaseName}`, async () => {
     // a cross join produces a Many to Many result.
     // symmetric aggregate are needed on both sides of the join
     // Check the row count and that sums on each side work properly.
     await expect(`
-
-        source: a_states is ${databaseName}.table('malloytest.state_facts') -> {
-          select: *
-          where: state ~ 'A%'
+      ${matrixModel}
+      run: ac_states -> {
+        extend: {
+          join_one: am_states left on state = am_states.state
         }
-
-        source: states is ${databaseName}.table('malloytest.state_facts') extend {
-          join_one: a_states left on state = a_states.state
-        }
-
-      run: states -> {
         aggregate:
-          state_count is count()
-          a_state_count is a_states.count()
+          ac_count
+          ac_sum
+          am_states.am_sum
+          am_states.am_count
+
       }
       `).malloyResultMatches(runtime, {
-      state_count: 51,
-      a_state_count: 4,
+      ac_count: 49,
+      ac_sum: 10402,
+      am_count: 4,
+      am_sum: 1486,
+      //show_sql_fail: 1,
+    });
+  });
+
+  it(`join right - ${databaseName}`, async () => {
+    // a cross join produces a Many to Many result.
+    // symmetric aggregate are needed on both sides of the join
+    // Check the row count and that sums on each side work properly.
+    await expect(`
+      ${matrixModel}
+      run: ac_states -> {
+        extend: {
+          join_one: am_states right on state = am_states.state
+        }
+        aggregate:
+          ac_count
+          ac_sum
+          am_states.am_sum
+          am_states.am_count
+
+      }
+      `).malloyResultMatches(runtime, {
+      ac_count: 28,
+      ac_sum: 10402,
+      am_count: 12,
+      am_sum: 4139,
+      //show_sql_fail: 1,
+    });
+  });
+
+  it(`join full - ${databaseName}`, async () => {
+    // a cross join produces a Many to Many result.
+    // symmetric aggregate are needed on both sides of the join
+    // Check the row count and that sums on each side work properly.
+    await expect(`
+      ${matrixModel}
+      run: ac_states -> {
+        extend: {
+          join_one: am_states full on state = am_states.state
+        }
+        aggregate:
+          ac_count
+          ac_sum
+          am_states.am_sum
+          am_states.am_count
+
+      }
+      `).malloyResultMatches(runtime, {
+      ac_count: 49,
+      ac_sum: 21336,
+      am_count: 12,
+      am_sum: 4139,
     });
   });
 
